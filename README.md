@@ -12,7 +12,7 @@ If we want ZK hardware today we have FPGAs or GPUs which are relatively inexpens
 
 ## Zero Knowledge on GPU
 
-ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE currently provides support for MSM, NTT, and ECNTT, with plans to support Hash functons soon.
+ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE currently provides support for MSM, NTT, and ECNTT, with plans to support Hash functions soon.
 
 ### Supported primitives
 
