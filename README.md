@@ -67,7 +67,6 @@ You'll find a release ready library at `target/release/libicicle_utils.rlib`.
 
 An example of using the Rust bindings library can be found in our [fast-danksharding implementation][FDI]
 
-
 ## Contributions
 
 Join our [Discord Server](https://discord.gg/Y4SkbDf2Ff) and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
