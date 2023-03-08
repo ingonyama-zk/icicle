@@ -1,5 +1,6 @@
 # ICICLE
 Icicle is a library for ZK acceleration using CUDA-enabled GPUs. 
+![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
 
 
 ## Usage
