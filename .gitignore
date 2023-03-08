@@ -1,0 +1,13 @@
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.bin
+*.fatbin
+**/target
+**/.vscode
+**/.*lock*csv#
+**/__pycache__/
+**/.DS_Store
+Cargo.lock
