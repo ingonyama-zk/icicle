@@ -10,4 +10,4 @@
 **/.*lock*csv#
 **/__pycache__/
 **/.DS_Store
-Cargo.lock
+**/Cargo.lock

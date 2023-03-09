@@ -5,8 +5,6 @@
 #include "../../primitives/projective.cuh"
 
 
-/// TESTING
-// #define VECTOR_SIZE 2048
 #define MAX_THREADS_PER_BLOCK 256
 
 template <typename E, typename S>
