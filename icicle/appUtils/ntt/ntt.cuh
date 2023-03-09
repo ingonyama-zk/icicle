@@ -4,7 +4,6 @@
 
 const uint32_t MAX_NUM_THREADS = 1024;
 
-// Twiddle Factors
 
 /**
  * Copy twiddle factors array to device (returns a pointer to the device allocated array).
@@ -140,7 +139,6 @@ template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr
         int number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
         int number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
         template_butterfly_kernel < E, S > <<< number_of_threads, number_of_blocks >>> (d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
-        cudaDeviceSynchronize();
     }
     m <<= 1;
   }
@@ -207,7 +205,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
  int ntt_end2end(scalar_t * arr, uint32_t n, bool inverse) {
-  uint32_t n_twiddles = n;
+  uint32_t n_twiddles = 4096; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
   scalar_t * twiddles = new scalar_t[n_twiddles];
   if (inverse){
     fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega_inv());
@@ -231,7 +229,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
  int ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
-  uint32_t n_twiddles = n;
+  uint32_t n_twiddles = 4096; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
   scalar_t * twiddles = new scalar_t[n_twiddles];
   if (inverse){
     fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega_inv());
