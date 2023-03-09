@@ -50,3 +50,41 @@ int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments) // TODO: in
 
     return 0;
 }
+
+extern "C" int32_t vec_mod_mult_point(projective_t *inout,
+                                      scalar_t *scalar_vec,
+                                      size_t n_elments,
+                                      size_t device_id)
+{
+  try
+  {
+    // TODO: device_id
+    vector_mod_mult<projective_t, scalar_t>(scalar_vec, inout, inout, n_elments);
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what()); // TODO: error code and message
+    // out->z = 0; //TODO: .set_infinity()
+    return -1;
+  }
+}
+
+extern "C" int32_t vec_mod_mult_scalar(scalar_t *inout,
+                                       scalar_t *scalar_vec,
+                                       size_t n_elments,
+                                       size_t device_id)
+{
+  try
+  {
+    // TODO: device_id
+    vector_mod_mult<scalar_t, scalar_t>(scalar_vec, inout, inout, n_elments);
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what()); // TODO: error code and message
+    // out->z = 0; //TODO: .set_infinity()
+    return -1;
+  }
+}
