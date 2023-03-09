@@ -221,27 +221,6 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
   return 0; 
 }
 
-/**
- * Cooley-Tuckey (scalar) NTT. 
- * @param arr input array of type scalar_t. 
- * @param n length of d_arr (must be either 4, 256, 512, 4096).
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
- scalar_t * ntt_end2end_not_in_place(scalar_t * arr, uint32_t n, bool inverse) {
-  uint32_t logn = uint32_t(log(n) / log(2));
-  uint32_t n_twiddles = n;
-  scalar_t * twiddles = new scalar_t[n_twiddles];
-  if (inverse){
-    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega_inv(logn));
-  } else{
-    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega(logn));
-  }
-  scalar_t * d_twiddles = copy_twiddle_factors_to_device(twiddles, n_twiddles);
-  scalar_t * result = ntt_template < scalar_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
-  cudaFree(d_twiddles);
-  return result; 
-}
-
 
 /**
  * Cooley-Tuckey (scalar) NTT. 
@@ -264,6 +243,6 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
     arr[i] = result[i]; 
   }
   cudaFree(d_twiddles);
-  return 0; 
+  return 0; // TODO add
 }
 
