@@ -4,7 +4,6 @@
 
 const uint32_t MAX_NUM_THREADS = 1024;
 
-
 /**
  * Copy twiddle factors array to device (returns a pointer to the device allocated array).
  * @param twiddles input empty array. 
@@ -164,7 +163,7 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
   if (inverse == true) {
     int NUM_THREADS = MAX_NUM_THREADS;
     int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arrReversed, d_arrReversed, n, S::inv_size(n));
+    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arrReversed, d_arrReversed, n, S::inv_log_size(logn));
   }
   cudaMemcpy(arrReversed, d_arrReversed, size_E, cudaMemcpyDeviceToHost);
   cudaFree(d_arrReversed);
@@ -205,12 +204,13 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
  int ntt_end2end(scalar_t * arr, uint32_t n, bool inverse) {
-  uint32_t n_twiddles = 4096; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
+  uint32_t logn = uint32_t(log(n) / log(2));
+  uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
   scalar_t * twiddles = new scalar_t[n_twiddles];
   if (inverse){
-    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega_inv());
+    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega_inv(logn));
   } else{
-    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega());
+    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega(logn));
   }
   scalar_t * d_twiddles = copy_twiddle_factors_to_device(twiddles, n_twiddles);
   scalar_t * result = ntt_template < scalar_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
@@ -229,12 +229,13 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
  int ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
-  uint32_t n_twiddles = 4096; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
+  uint32_t logn = uint32_t(log(n) / log(2));
+  uint32_t n_twiddles = n; 
   scalar_t * twiddles = new scalar_t[n_twiddles];
   if (inverse){
-    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega_inv());
+    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega_inv(logn));
   } else{
-    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega());
+    fill_twiddle_factors_array(twiddles, n_twiddles, scalar_t::omega(logn));
   }
   scalar_t * d_twiddles = copy_twiddle_factors_to_device(twiddles, n_twiddles);
   projective_t * result = ntt_template < projective_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
@@ -242,6 +243,6 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
     arr[i] = result[i]; 
   }
   cudaFree(d_twiddles);
-  return 0; 
+  return 0; // TODO add
 }
 
