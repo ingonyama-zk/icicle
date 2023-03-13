@@ -3,6 +3,11 @@ name: Build
 on: 
   pull_request:
     branches: [ "main" ]
+    paths:
+      - "icicle/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "build.rs"
 
 env:
   CARGO_TERM_COLOR: always
