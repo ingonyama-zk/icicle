@@ -36,7 +36,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ```sh
 mkdir -p build
-nvcc -o build/<ENTER_DIR_NAME> icicle/lib.cu --cuda -arch=native
+nvcc -o build/<ENTER_DIR_NAME> icicle/lib.cu -arch=native
 ```
 
 ### Rust Bindings
@@ -53,7 +53,9 @@ For convenience, we also provide rust bindings to the ICICLE library for the fol
 - Scalar Vector Multiplication
 - Point Vector Multiplication
 
-A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. Make sure to change the `arch` flag depending on your GPU type or leave it as `native` for the compiler to detect the installed GPU type.
+A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environement variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
+
+> NOTE: A GPU must be detectable and therefore installed if the `ARCH_TYPE` is not set.
 
 Once you have your parameters set, run:
 
