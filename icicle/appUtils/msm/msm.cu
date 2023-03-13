@@ -278,7 +278,7 @@ __global__ void to_proj_kernel(A* affine_points, P* proj_points, unsigned N){
 
 //the function computes msm using ssm
 template <typename S, typename P, typename A>
-void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result){ //works up to 2^10
+void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result){ //works up to 2^8
   
   S *scalars;
   A *a_points;
