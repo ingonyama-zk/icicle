@@ -22,7 +22,9 @@ Please provide a clear and concise description of what you expected to happen.
 Please complete the following information:
 
 OS + Version:
+
 Cargo Version:
+
 GPU type:
 
 ## Additional context
