@@ -7,8 +7,6 @@
 #include "ve_mod_mult.cuh"
 
 
-/// TESTING 
-#define ELEMENTS_SIZE 8192
 #define MAX_THREADS_PER_BLOCK 256
 
 // TODO: headers for prototypes and .c .cpp .cu files for implementations
@@ -53,46 +51,40 @@ int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments) // TODO: in
     return 0;
 }
 
-
-int main()
+extern "C" int32_t vec_mod_mult_point(projective_t *inout,
+                                      scalar_t *scalar_vec,
+                                      size_t n_elments,
+                                      size_t device_id)
 {
-    // Allocate memory on the host for two input vectors, the output vector, and the modulus
-    scalar_t *vec_a = (scalar_t*)malloc(ELEMENTS_SIZE * sizeof(scalar_t));
-    projective_t *vec_b = (projective_t*)malloc(ELEMENTS_SIZE * sizeof(projective_t));
-    projective_t *result = (projective_t*)malloc(ELEMENTS_SIZE * sizeof(projective_t));
-    projective_t some_point; // ONE
-    affine_t *res_affine = (affine_t*)malloc(ELEMENTS_SIZE * sizeof(affine_t));
-    
-    // Initialize the input vectors
-    some_point.x = {0};
-    some_point.y = {2};
-    some_point.z = {1};
+  try
+  {
+    // TODO: device_id
+    vector_mod_mult<projective_t, scalar_t>(scalar_vec, inout, inout, n_elments);
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what()); // TODO: error code and message
+    // out->z = 0; //TODO: .set_infinity()
+    return -1;
+  }
+}
 
-    vec_a[ELEMENTS_SIZE - 1] = {0};  // test correctness for last point is zero
-    
-    // Set the grid and block dimensions
-    int num_blocks = (int)ceil((float)ELEMENTS_SIZE/MAX_THREADS_PER_BLOCK);
-    int threads_per_block = MAX_THREADS_PER_BLOCK;
-    
-    // Allocate memory on the device for the input vectors, the output vector, and the modulus
-    scalar_t *d_vec_a;
-    projective_t *d_vec_b, *d_result;
-    cudaMalloc(&d_vec_a, ELEMENTS_SIZE * sizeof(scalar_t));
-    cudaMalloc(&d_vec_b, ELEMENTS_SIZE * sizeof(projective_t));
-    cudaMalloc(&d_result, ELEMENTS_SIZE * sizeof(projective_t));
-    
-    // // Copy the input vectors and the modulus from the host to the device
-    cudaMemcpy(d_vec_a, vec_a, ELEMENTS_SIZE * sizeof(scalar_t), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_vec_b, vec_b, ELEMENTS_SIZE * sizeof(projective_t), cudaMemcpyHostToDevice);
-    
-    // // Call the kernel to perform element-wise modular multiplication
-    vectorModMult< projective_t, scalar_t><<<num_blocks, threads_per_block>>>(d_vec_a, d_vec_b, d_result, ELEMENTS_SIZE);
-    
-    cudaMemcpy(result, d_result, ELEMENTS_SIZE * sizeof(projective_t), cudaMemcpyDeviceToHost);    
-    
-
-    cudaFree(d_vec_a);
-    cudaFree(d_vec_b);
-    cudaFree(d_result);
-
+extern "C" int32_t vec_mod_mult_scalar(scalar_t *inout,
+                                       scalar_t *scalar_vec,
+                                       size_t n_elments,
+                                       size_t device_id)
+{
+  try
+  {
+    // TODO: device_id
+    vector_mod_mult<scalar_t, scalar_t>(scalar_vec, inout, inout, n_elments);
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what()); // TODO: error code and message
+    // out->z = 0; //TODO: .set_infinity()
+    return -1;
+  }
 }

@@ -10,6 +10,10 @@ fn main() {
     nvcc.cuda(true);
     nvcc.debug(false);
     nvcc.flag("-arch=native");
-    nvcc.file("./icicle/lib.cu").compile("ingo_icicle"); //TODO: extension??
-
+    nvcc.files([
+        "./icicle/lib.cu",
+        "./icicle/appUtils/msm/msm.cu",
+        "./icicle/appUtils/vector_manipulation/ve_mod_mult.cu",
+    ]);
+    nvcc.compile("ingo_icicle"); //TODO: extension??
 }

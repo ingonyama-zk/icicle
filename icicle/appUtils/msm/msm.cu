@@ -7,6 +7,7 @@
 #include "../../primitives/projective.cuh"
 #include "../../primitives/base_curve.cuh"
 #include "../../curves/curve_config.cuh"
+#include "msm.cuh"
 
 
 #define BIG_TRIANGLE

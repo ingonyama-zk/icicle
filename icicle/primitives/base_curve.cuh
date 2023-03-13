@@ -17,51 +17,23 @@ template <class CONFIG> class Field {
     static constexpr HOST_DEVICE_INLINE Field zero() {
       return Field { CONFIG::zero };
     }
-
     static constexpr HOST_DEVICE_INLINE Field one() {
       return Field { CONFIG::one };
     }
-
-    static constexpr HOST_DEVICE_INLINE Field omega() {
-      return Field { CONFIG::omega };
+    static constexpr HOST_INLINE Field omega(uint32_t log_size) {
+      return Field { CONFIG::omega[log_size-1] };
     }
-    static constexpr HOST_DEVICE_INLINE Field omega_inv() {
-      return Field { CONFIG::omega_inv };
+    static constexpr HOST_INLINE Field omega_inv(uint32_t log_size) {
+      return Field { CONFIG::omega_inv[log_size-1] };
     }
-
-    static constexpr HOST_DEVICE_INLINE Field number_of_twiddles() {
-      return Field { CONFIG::number_of_twiddles };
+    static constexpr HOST_INLINE Field inv_log_size(uint32_t log_size) {
+      return Field { CONFIG::inv[log_size-1] };
     }
     static constexpr HOST_DEVICE_INLINE Field modulus() {
       return Field { CONFIG::modulus };
     }
- 
-    static constexpr HOST_DEVICE_INLINE Field inv_size(uint32_t size) {
-      switch (size)
-      {
-          case 2:
-              return Field { CONFIG::inv_2 };
-              break;
-          case 4:
-              return Field { CONFIG::inv_4 };
-              break;
-          case 32:
-              return Field { CONFIG::inv_32 };
-              break;
-          case 256:
-              return Field { CONFIG::inv_256 };
-              break;
-          case 512:
-              return Field { CONFIG::inv_512 };
-              break;
-          case 4096:
-              return Field { CONFIG::inv_4096 };
-              break;
-          default:
-              return Field { CONFIG::zero };
-              break;
-      }
-    }
+
+
   private:
     typedef storage<TLC> ff_storage;
     typedef storage<2 * TLC> ff_wide_storage;
@@ -377,7 +349,7 @@ template <class CONFIG> class Field {
       multiply_raw(l_hi.limbs_storage, get_modulus(), lp.limbs_storage);
       wide r_wide = xy - lp;
       wide r_wide_reduced = {};
-      u_int32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
+      uint32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
       r_wide = reduced ? r_wide : r_wide_reduced;
       Field r = r_wide.get_lower();
       return reduce<1>(r);
