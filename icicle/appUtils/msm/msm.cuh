@@ -32,3 +32,4 @@ int msm_cuda(projective_t *out, affine_t points[],
         return -1;
     }
 }
+

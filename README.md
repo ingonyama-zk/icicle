@@ -36,7 +36,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ```sh
 mkdir -p build
-nvcc -o build/<ENTER_DIR_NAME> icicle/lib.cu
+nvcc -o build/<ENTER_DIR_NAME> icicle/lib.cu --cuda -arch=native
 ```
 
 ### Rust Bindings
