@@ -1,0 +1,46 @@
+name: Build
+
+on: 
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "icicle/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "build.rs"
+
+env:
+  CARGO_TERM_COLOR: always
+  ARCH_TYPE: sm_70
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout code
+    - uses: actions/checkout@v3
+    # Download (or from cache) and install CUDA Toolkit 12.1.0
+    - uses: Jimver/cuda-toolkit@v0.2.9
+      id: cuda-toolkit
+      with:
+        cuda: '12.1.0'
+        use-github-cache: true
+      # Build from cargo - Rust utils are preinstalled on latest images
+      # https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md#rust-tools
+    - name: Build
+      run: cargo build --release --verbose
+      
+  
+  build-windows:
+    runs-on: windows-latest
+
+    steps:     
+    - uses: actions/checkout@v3
+    - uses: Jimver/cuda-toolkit@v0.2.9
+      id: cuda-toolkit
+      with:
+        cuda: '12.1.0'
+        use-github-cache: true
+    - name: Build
+      run: cargo build --release --verbose
