@@ -1,4 +1,6 @@
+#pragma once
 #include "../../curves/curve_config.cuh"
+#include <cuda.h>
 
 const uint32_t MAX_NUM_THREADS = 1024;
 
@@ -201,7 +203,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param n length of d_arr (must be either 4, 256, 512, 4096).
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- int ntt_end2end(scalar_t * arr, uint32_t n, bool inverse) {
+int ntt_end2end(scalar_t * arr, uint32_t n, bool inverse) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
   scalar_t * twiddles = new scalar_t[n_twiddles];
@@ -216,7 +218,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
     arr[i] = result[i]; 
   }
   cudaFree(d_twiddles);
-  return 0; 
+  return CUDA_SUCCESS; 
 }
 
 
@@ -226,7 +228,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param n length of d_arr (must be either 4, 256, 512, 4096).
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- int ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
+int ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; 
   scalar_t * twiddles = new scalar_t[n_twiddles];
@@ -241,6 +243,6 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
     arr[i] = result[i]; 
   }
   cudaFree(d_twiddles);
-  return 0; // TODO add
+  return CUDA_SUCCESS;
 }
 

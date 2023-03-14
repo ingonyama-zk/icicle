@@ -1,14 +1,14 @@
-use std::mem::transmute_copy;
+use std::ffi::c_uint;
+use std::{mem::transmute_copy};
 
-use ark_bls12_381::{Fr, G1Affine, G1Projective};
-use rand::RngCore;
-
-use crate::utils::get_fixed_limbs;
+use ark_bls12_381::{Fq, Fr, G1Affine, G1Projective};
+use ark_ec::AffineCurve;
+use ark_ff::{BigInteger256, BigInteger384, PrimeField};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
 pub struct Field<const NUM_LIMBS: usize> {
-    pub(crate) s: [u32; NUM_LIMBS],
+    pub s: [u32; NUM_LIMBS],
 }
 
 impl<const NUM_LIMBS: usize> Default for Field<NUM_LIMBS> {
@@ -29,6 +29,14 @@ impl<const NUM_LIMBS: usize> Field<NUM_LIMBS> {
         s[0] = 1;
         Field { s }
     }
+
+    fn to_bytes_le(&self) -> Vec<u8> {
+        self.s
+            .iter()
+            .map(|s| s.to_le_bytes().to_vec())
+            .flatten()
+            .collect::<Vec<_>>()
+    }
 }
 
 pub const BASE_LIMBS: usize = 12;
@@ -42,9 +50,35 @@ pub const SCALAR_LIMBS: usize = 8;
 pub type BaseField = Field<BASE_LIMBS>;
 pub type ScalarField = Field<SCALAR_LIMBS>;
 
+fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
+    match val.len() {
+        n if n < NUM_LIMBS => {
+            let mut padded: [u32; NUM_LIMBS] = [0; NUM_LIMBS];
+            padded[..val.len()].copy_from_slice(&val);
+            padded
+        }
+        n if n == NUM_LIMBS => val.try_into().unwrap(),
+        _ => panic!("slice has to much elements"),
+    }
+}
+
 impl BaseField {
     pub fn limbs(&self) -> [u32; BASE_LIMBS] {
         self.s
+    }
+
+    pub fn from_limbs(value: &[u32]) -> BaseField {
+        BaseField {
+            s: get_fixed_limbs(value),
+        }
+    }
+
+    pub fn to_ark(&self) -> BigInteger384 {
+        unsafe { transmute_copy::<BaseField, BigInteger384>(self) } //TODO:safe version
+    }
+
+    pub fn from_ark(ark: BigInteger384) -> BaseField {
+        unsafe { transmute_copy::<BigInteger384, BaseField>(&ark) } //TODO:safe version
     }
 }
 
@@ -52,23 +86,27 @@ impl ScalarField {
     pub fn limbs(&self) -> [u32; SCALAR_LIMBS] {
         self.s
     }
+
+    pub fn to_ark(&self) -> BigInteger256 {
+        unsafe { transmute_copy::<ScalarField, BigInteger256>(self) } //TODO:safe version
+    }
+
+    pub fn from_ark(ark: BigInteger256) -> ScalarField {
+        unsafe { transmute_copy::<BigInteger256, ScalarField>(&ark) } //TODO:safe version
+    }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct Point {
-    pub(crate) x: BaseField,
-    pub(crate) y: BaseField,
-    pub(crate) z: BaseField,
+    pub x: BaseField,
+    pub y: BaseField,
+    pub z: BaseField,
 }
 
 impl Default for Point {
     fn default() -> Self {
-        Point {
-            x: BaseField::zero(),
-            y: BaseField::one(),
-            z: BaseField::zero(),
-        }
+        Point::zero()
     }
 }
 
@@ -76,30 +114,113 @@ impl Point {
     pub fn zero() -> Self {
         Point {
             x: BaseField::zero(),
-            y: BaseField::zero(),
+            y: BaseField::one(),
             z: BaseField::zero(),
         }
     }
 
-    pub fn one() -> Self {
-        //TODO: ??
+    pub fn infinity() -> Self {
+        Self::zero()
+    }
+
+    pub fn to_ark(&self) -> G1Projective {
+        //TODO: generic conversion
+        self.to_ark_affine().into_projective()
+    }
+
+    pub fn to_ark_affine(&self) -> G1Affine {
+        //TODO: generic conversion
+        use ark_ff::Field;
+        use std::ops::Mul;
+        let proj_x_field = Fq::from_le_bytes_mod_order(&self.x.to_bytes_le());
+        let proj_y_field = Fq::from_le_bytes_mod_order(&self.y.to_bytes_le());
+        let proj_z_field = Fq::from_le_bytes_mod_order(&self.z.to_bytes_le());
+        let inverse_z = proj_z_field.inverse().unwrap();
+        let aff_x = proj_x_field.mul(inverse_z);
+        let aff_y = proj_y_field.mul(inverse_z);
+        G1Affine::new(aff_x, aff_y, false)
+    }
+
+    pub fn from_ark(ark: G1Projective) -> Point {
+        use ark_ff::Field;
+        let z_inv = ark.z.inverse().unwrap();
+        let z_invsq = z_inv * z_inv;
+        let z_invq3 = z_invsq * z_inv;
         Point {
-            x: BaseField::one(),
+            x: BaseField::from_ark((ark.x * z_invsq).into_repr()),
+            y: BaseField::from_ark((ark.y * z_invq3).into_repr()),
+            z: BaseField::one(),
+        }
+    }
+
+    pub fn from_xy1_be_limbs(value: &[u32]) -> Point {
+        let l = value.len();
+        assert_eq!(l, 2 * BASE_LIMBS, "length must be 2 * {}", BASE_LIMBS);
+        let mut value = value.to_vec();
+        value.reverse();
+
+        let py_inf = Point::py_zero();
+
+        let x = BaseField {
+            s: value[BASE_LIMBS..BASE_LIMBS * 2].try_into().unwrap(),
+        };
+        let y = BaseField {
+            s: value[..BASE_LIMBS].try_into().unwrap(),
+        };
+
+        if x == py_inf.x && y == py_inf.y {
+            return Point::infinity();
+        }
+        Point {
+            x,
+            y,
+            z: BaseField::one(),
+        }
+    }
+
+    pub fn from_xy1_le_limbs(value: &[u32]) -> Point {
+        let l = value.len();
+        assert_eq!(l, 2 * BASE_LIMBS, "length must be 2 * {}", BASE_LIMBS);
+        let py_inf = Point::py_zero();
+
+        let x = BaseField {
+            s: value[..BASE_LIMBS].try_into().unwrap(),
+        };
+        let y = BaseField {
+            s: value[BASE_LIMBS..BASE_LIMBS * 2].try_into().unwrap(),
+        };
+
+        if x == py_inf.x && y == py_inf.y {
+            return py_inf;
+        }
+        Point {
+            x,
+            y,
+            z: BaseField::one(),
+        }
+    }
+
+    fn py_zero() -> Point {
+        Point {
+            x: BaseField {
+                s: [
+                    00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000,
+                    00000000, 00000000, 00000000, 0x40000000,
+                ],
+            },
             y: BaseField::zero(),
             z: BaseField::zero(),
         }
     }
+}
 
-    fn to_ark(&self) -> G1Projective {
-        G1Projective::new(
-            unsafe { transmute_copy(&self.x) },
-            unsafe { transmute_copy(&self.y) },
-            unsafe { transmute_copy(&self.z) },
-        )
-    }
+extern "C" {
+    fn eq(point1: *const Point, point2: *const Point) -> c_uint;
+}
 
-    pub(crate) fn from_ark(ark: G1Projective) -> Point {
-        unsafe { transmute_copy(&ark) }
+impl PartialEq for Point {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { eq(self, other) != 0 }
     }
 }
 
@@ -133,25 +254,11 @@ impl PointAffineNoInfinity {
         }
     }
 
-    pub fn from_xy_limbs(value: &[u32]) -> PointAffineNoInfinity {
-        let l = value.len();
-        assert_eq!(l, 2 * BASE_LIMBS, "length must be 2 * {}", BASE_LIMBS);
-        PointAffineNoInfinity {
-            x: BaseField {
-                s: value[..BASE_LIMBS].try_into().unwrap(),
-            },
-            y: BaseField {
-                s: value[BASE_LIMBS..].try_into().unwrap(),
-            },
-        }
-    }
-
     pub fn limbs(&self) -> Vec<u32> {
         [self.x.limbs(), self.y.limbs()].concat()
     }
 
     pub fn to_projective(&self) -> Point {
-        //TODO: !!!review this!!!
         Point {
             x: self.x,
             y: self.y,
@@ -159,12 +266,23 @@ impl PointAffineNoInfinity {
         }
     }
 
-    fn to_ark(&self) -> G1Affine {
+    pub fn to_ark(&self) -> G1Affine {
+        G1Affine::new(Fq::new(self.x.to_ark()), Fq::new(self.y.to_ark()), false)
+    }
+
+    pub fn to_ark_repr(&self) -> G1Affine {
         G1Affine::new(
-            unsafe { transmute_copy(&self.x) },
-            unsafe { transmute_copy(&self.y) },
+            Fq::from_repr(self.x.to_ark()).unwrap(),
+            Fq::from_repr(self.y.to_ark()).unwrap(),
             false,
         )
+    }
+
+    pub fn from_ark(p: &G1Affine) -> Self {
+        PointAffineNoInfinity {
+            x: BaseField::from_ark(p.x.into_repr()),
+            y: BaseField::from_ark(p.y.into_repr()),
+        }
     }
 }
 
@@ -202,7 +320,14 @@ impl Point {
     }
 
     pub fn to_affine(&self) -> PointAffineNoInfinity {
-        //assert_eq!(self.z, BaseField::one()); //TODO: !!!review this!!!
+        let ark_affine = self.to_ark_affine();
+        PointAffineNoInfinity {
+            x: BaseField::from_ark(ark_affine.x.into_repr()),
+            y: BaseField::from_ark(ark_affine.y.into_repr()),
+        }
+    }
+
+    pub fn to_xy_strip_z(&self) -> PointAffineNoInfinity {
         PointAffineNoInfinity {
             x: self.x,
             y: self.y,
@@ -225,10 +350,16 @@ pub struct Scalar {
 }
 
 impl Scalar {
-    pub fn from_limbs(value: &[u32]) -> Scalar {
+    pub fn from_limbs_le(value: &[u32]) -> Scalar {
         Scalar {
             s: ScalarField::from_limbs(value),
         }
+    }
+
+    pub fn from_limbs_be(value: &[u32]) -> Scalar {
+        let mut value = value.to_vec();
+        value.reverse();
+        Self::from_limbs_le(&value)
     }
 
     pub fn limbs(&self) -> Vec<u32> {
@@ -249,12 +380,26 @@ impl Scalar {
 }
 
 impl Scalar {
-    pub fn to_ark(&self) -> Fr {
+    pub fn to_ark_mod_p(&self) -> Fr {
+        Fr::new(self.s.to_ark())
+    }
+
+    pub fn to_ark_repr(&self) -> Fr {
+        Fr::from_repr(self.s.to_ark()).unwrap()
+    }
+
+    pub fn to_ark_transmute(&self) -> Fr {
         unsafe { std::mem::transmute(*self) }
     }
 
-    pub(crate) fn from_ark(v: Fr) -> Scalar {
-        unsafe { std::mem::transmute(v) }
+    pub fn from_ark_transmute(v: &Fr) -> Scalar {
+        unsafe { std::mem::transmute_copy(v) }
+    }
+
+    pub fn from_ark(v: &Fr) -> Scalar {
+        Scalar {
+            s: ScalarField::from_ark(v.into_repr()),
+        }
     }
 }
 
@@ -264,31 +409,4 @@ impl Default for Scalar {
             s: ScalarField::zero(),
         }
     }
-}
-
-pub fn generate_random_points(
-    count: usize,
-    mut rng: Box<dyn RngCore>,
-) -> Vec<PointAffineNoInfinity> {
-    (0..count)
-        .map(|_| {
-            //TODO: replace with CUDA?
-            let mut var_name = [rng.next_u32(); 2 * BASE_LIMBS];
-            var_name[0] = 0x01u32; //x first byte = 1
-            var_name[BASE_LIMBS - 1] = 0xfau32;
-            var_name[BASE_LIMBS] = 0x02u32; //x first byte = 2
-            var_name[2 * BASE_LIMBS - 1] = 0xfbu32;
-            PointAffineNoInfinity::from_xy_limbs(&var_name)
-        })
-        .collect()
-}
-
-pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Scalar> {
-    (0..count)
-        .map(|_| Scalar {
-            s: ScalarField {
-                s: [rng.next_u32(); SCALAR_LIMBS],
-            },
-        })
-        .collect()
 }

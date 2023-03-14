@@ -65,7 +65,6 @@ extern "C" int32_t vec_mod_mult_point(projective_t *inout,
   catch (const std::runtime_error &ex)
   {
     printf("error %s", ex.what()); // TODO: error code and message
-    // out->z = 0; //TODO: .set_infinity()
     return -1;
   }
 }
@@ -84,7 +83,6 @@ extern "C" int32_t vec_mod_mult_scalar(scalar_t *inout,
   catch (const std::runtime_error &ex)
   {
     printf("error %s", ex.what()); // TODO: error code and message
-    // out->z = 0; //TODO: .set_infinity()
     return -1;
   }
 }
