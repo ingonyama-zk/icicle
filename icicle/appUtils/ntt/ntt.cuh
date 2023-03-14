@@ -1,3 +1,4 @@
+#pragma once
 #include <bits/stdc++.h>
 
 #include "../../curves/curve_config.cuh"
@@ -201,7 +202,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- int ntt_end2end(scalar_t * arr, uint32_t n, bool inverse) {
+ extern "C" uint32_t ntt_end2end(scalar_t * arr, uint32_t n, bool inverse) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
   scalar_t * d_twiddles;
@@ -225,7 +226,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- int ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
+ extern "C" uint32_t ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; 
   scalar_t * twiddles = new scalar_t[n_twiddles];
@@ -294,6 +295,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
  */
  template < typename E, typename S > __global__ void ntt_template_kernel(E * arr, uint32_t n, uint32_t logn, S * twiddles, uint32_t n_twiddles) {
   int task = (blockIdx.x * blockDim.x) + threadIdx.x;
+  printf("task %d\n",task);
   reverseOrder_batch<E>(arr, n, logn, task);
   uint32_t m = 2;
   for (uint32_t s = 0; s < logn; s++) {
@@ -316,7 +318,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
  * @param n size of batch.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- int ntt_end2end_batch(scalar_t * arr, uint32_t arr_size, uint32_t n, bool inverse) {
+ extern "C" uint32_t ntt_end2end_batch(scalar_t * arr, uint32_t arr_size, uint32_t n, bool inverse) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
   size_t size_E = arr_size * sizeof(scalar_t);
@@ -332,7 +334,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
   ntt_template_kernel<scalar_t,scalar_t><<<1,int(arr_size/n)>>>(d_arr, n, logn, d_twiddles, n_twiddles);
   if (inverse == true) {
     int NUM_THREADS = MAX_NUM_THREADS;
-    int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
+    int NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
     template_normalize_kernel < scalar_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
@@ -350,7 +352,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
  * @param n size of batch.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- int ecntt_end2end_batch(projective_t * arr, uint32_t arr_size, uint32_t n, bool inverse) {
+ extern "C" uint32_t ecntt_end2end_batch(projective_t * arr, uint32_t arr_size, uint32_t n, bool inverse) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
   size_t size_E = arr_size * sizeof(projective_t);
@@ -366,7 +368,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
   ntt_template_kernel<projective_t,scalar_t><<<1,int(arr_size/n)>>>(d_arr, n, logn, d_twiddles, n_twiddles);
   if (inverse == true) {
     int NUM_THREADS = MAX_NUM_THREADS;
-    int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
+    int NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
     template_normalize_kernel < projective_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
@@ -374,4 +376,3 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
   cudaFree(d_twiddles);
   return 0; 
 }
-
