@@ -4,6 +4,7 @@
 #include "../../curves/curve_config.cuh"
 
 const uint32_t MAX_NUM_THREADS = 1024;
+const uint32_t MAX_THREADS_BATCH = 256;
 
 /**
  * Copy twiddle factors array to device (returns a pointer to the device allocated array).
@@ -293,18 +294,19 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
  * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2). 
  * @param n_twiddles length of d_twiddles. 
  */
- template < typename E, typename S > __global__ void ntt_template_kernel(E * arr, uint32_t n, uint32_t logn, S * twiddles, uint32_t n_twiddles) {
+ template < typename E, typename S > __global__ void ntt_template_kernel(E * arr, uint32_t n, uint32_t logn, S * twiddles, uint32_t n_twiddles, uint32_t max_task) {
   int task = (blockIdx.x * blockDim.x) + threadIdx.x;
-  printf("task %d\n",task);
-  reverseOrder_batch<E>(arr, n, logn, task);
-  uint32_t m = 2;
-  for (uint32_t s = 0; s < logn; s++) {
-      for (uint32_t i = 0; i < n; i += m) {
-          for (uint32_t j = 0; j < (m >> 1); j++) {
-            butterfly < E, S > (arr, twiddles, n, n_twiddles, m, i, j, task * n);
-          }
-      }
-      m <<= 1;
+  if (task < max_task){
+    reverseOrder_batch<E>(arr, n, logn, task);
+    uint32_t m = 2;
+    for (uint32_t s = 0; s < logn; s++) {
+        for (uint32_t i = 0; i < n; i += m) {
+            for (uint32_t j = 0; j < (m >> 1); j++) {
+              butterfly < E, S > (arr, twiddles, n, n_twiddles, m, i, j, task * n);
+            }
+        }
+        m <<= 1;
+    }
   }
 }
 
@@ -331,10 +333,12 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
   scalar_t * d_arr;
   cudaMalloc( & d_arr, size_E);
   cudaMemcpy(d_arr, arr, size_E, cudaMemcpyHostToDevice);
-  ntt_template_kernel<scalar_t,scalar_t><<<1,int(arr_size/n)>>>(d_arr, n, logn, d_twiddles, n_twiddles);
+  int NUM_THREADS = MAX_THREADS_BATCH;
+  int NUM_BLOCKS = (int(arr_size/n) + NUM_THREADS - 1) / NUM_THREADS;
+  ntt_template_kernel<scalar_t,scalar_t><<<NUM_BLOCKS,NUM_THREADS>>>(d_arr, n, logn, d_twiddles, n_twiddles, int(arr_size/n));
   if (inverse == true) {
-    int NUM_THREADS = MAX_NUM_THREADS;
-    int NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
+    NUM_THREADS = MAX_NUM_THREADS;
+    NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
     template_normalize_kernel < scalar_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
@@ -365,10 +369,12 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
   projective_t * d_arr;
   cudaMalloc( & d_arr, size_E);
   cudaMemcpy(d_arr, arr, size_E, cudaMemcpyHostToDevice);
-  ntt_template_kernel<projective_t,scalar_t><<<1,int(arr_size/n)>>>(d_arr, n, logn, d_twiddles, n_twiddles);
+  int NUM_THREADS = MAX_THREADS_BATCH;
+  int NUM_BLOCKS = (int(arr_size/n) + NUM_THREADS - 1) / NUM_THREADS;
+  ntt_template_kernel<projective_t,scalar_t><<<NUM_BLOCKS,NUM_THREADS>>>(d_arr, n, logn, d_twiddles, n_twiddles, int(arr_size/n));
   if (inverse == true) {
-    int NUM_THREADS = MAX_NUM_THREADS;
-    int NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
+    NUM_THREADS = MAX_NUM_THREADS;
+    NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
     template_normalize_kernel < projective_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
