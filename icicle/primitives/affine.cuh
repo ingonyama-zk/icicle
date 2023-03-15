@@ -12,7 +12,7 @@ class Affine {
       return {point.x, FF::neg(point.y)}; 
     }
 
-    friend DEVICE_INLINE bool operator==(const Affine& xs, const Affine& ys) {
+    friend HOST_DEVICE_INLINE bool operator==(const Affine& xs, const Affine& ys) {
       return (xs.x == ys.x) && (xs.y == ys.y);
     }
 

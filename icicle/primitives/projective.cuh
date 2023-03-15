@@ -103,4 +103,8 @@ class Projective {
       }
       return res;
     }
+
+    friend HOST_DEVICE_INLINE bool operator==(const Projective& p1, const Projective& p2) {
+      return (p1.x * p2.z == p2.x * p1.z) && (p1.y * p2.z == p2.y * p1.z);
+    }
 };
