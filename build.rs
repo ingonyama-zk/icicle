@@ -21,7 +21,7 @@ fn main() {
     nvcc.debug(false);
     nvcc.flag(&arch);
     nvcc.files([
-        "./icicle/lib.cu",
+        "./icicle/appUtils/ntt/ntt.cu",
         "./icicle/appUtils/msm/msm.cu",
         "./icicle/appUtils/vector_manipulation/ve_mod_mult.cu",
     ]);

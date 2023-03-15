@@ -1,3 +1,4 @@
+#pragma once
 #include <stdexcept>
 #include <cuda.h>
 #include "../../primitives/base_curve.cuh"

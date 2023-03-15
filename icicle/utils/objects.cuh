@@ -1,6 +1,4 @@
-#ifndef OBJECTS
-#define OBJECTS
-
+#pragma once
 template < class F > class Element {
     public: 
       int v;
@@ -73,5 +71,3 @@ template < class F > class Scalar {
         return Scalar<F>(0);
     }
 };
-
-#endif
