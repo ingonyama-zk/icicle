@@ -24,6 +24,7 @@ fn main() {
         "./icicle/appUtils/ntt/ntt.cu",
         "./icicle/appUtils/msm/msm.cu",
         "./icicle/appUtils/vector_manipulation/ve_mod_mult.cu",
+        "./icicle/primitives/projective.cu",
     ]);
     nvcc.compile("ingo_icicle"); //TODO: extension??
 }

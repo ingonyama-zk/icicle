@@ -355,7 +355,8 @@ template <class CONFIG> class Field {
       return reduce<1>(r);
     }
 
-    friend DEVICE_INLINE bool operator==(const Field& xs, const Field& ys) {
+    friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys) {
+    #ifdef __CUDA_ARCH__
       const uint32_t *x = xs.limbs_storage.limbs;
       const uint32_t *y = ys.limbs_storage.limbs;
       uint32_t limbs_or = x[0] ^ y[0];
@@ -363,6 +364,12 @@ template <class CONFIG> class Field {
       for (unsigned i = 1; i < TLC; i++)
         limbs_or |= x[i] ^ y[i];
       return limbs_or == 0;
+    #else
+      for (unsigned i = 0; i < TLC; i++)
+      if (xs.limbs_storage.limbs[i] != ys.limbs_storage.limbs[i])
+        return false;
+      return true;
+    #endif
     }
 
     template <unsigned REDUCTION_SIZE = 1>
