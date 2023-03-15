@@ -1,6 +1,6 @@
-#include "affine.cuh"
-
 #pragma once
+
+#include "affine.cuh"
 
 template <class FF, unsigned B_VALUE>
 class Projective {

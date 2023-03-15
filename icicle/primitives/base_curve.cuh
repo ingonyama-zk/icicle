@@ -349,7 +349,7 @@ template <class CONFIG> class Field {
       multiply_raw(l_hi.limbs_storage, get_modulus(), lp.limbs_storage);
       wide r_wide = xy - lp;
       wide r_wide_reduced = {};
-      u_int32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
+      uint32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
       r_wide = reduced ? r_wide : r_wide_reduced;
       Field r = r_wide.get_lower();
       return reduce<1>(r);

@@ -259,13 +259,13 @@ fn ecntt_internal(
     is_naive: u32, // TODO: for testing only
 ) -> i32 {
     return 0;
-    unsafe {
-        ecntt_end2end(
-            values.as_mut_ptr() as *mut Point,
-            values.len(),
-            inverse,
-        )
-    }
+    // unsafe {
+    //     ecntt_end2end(
+    //         values.as_mut_ptr() as *mut Point,
+    //         values.len(),
+    //         inverse,
+    //     )
+    // }
 }
 
 pub fn ecntt(values: &mut [Point], device_id: usize) {
