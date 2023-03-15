@@ -1,6 +1,4 @@
 #pragma once
-#include <bits/stdc++.h>
-
 #include "../../curves/curve_config.cuh"
 
 const uint32_t MAX_NUM_THREADS = 1024;
