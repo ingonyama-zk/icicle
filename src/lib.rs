@@ -500,22 +500,6 @@ mod tests {
 
     #[test]
     #[allow(non_snake_case)]
-    fn test_equality() {
-        let left = Point::zero();
-        let right = Point::zero();
-        assert_eq!(left, right);
-        let right = Point::from_limbs(&[0; 12], &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0; 12]);
-        assert_eq!(left, right);
-        let right = Point::from_limbs(
-            &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            &[0; 12],
-            &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        );
-        assert!(left != right);
-    }
-
-    #[test]
-    #[allow(non_snake_case)]
     fn test_vec_point_mul() {
         let dummy_one = Point {
             x: BaseField::one(),

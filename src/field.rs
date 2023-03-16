@@ -221,7 +221,7 @@ impl PointAffineNoInfinity {
 
 impl Point {
     // TODO: generics
-    ///From u32 limbs x,y
+
     pub fn from_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
         Point {
             x: BaseField {
@@ -327,7 +327,7 @@ mod tests {
     use ark_bls12_381::Fr;
     use ark_ff::{BigInteger256, PrimeField};
 
-    use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
+    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::Point};
 
     use super::{Scalar, ScalarField};
 
@@ -384,5 +384,21 @@ mod tests {
             scalar.to_ark(),
             scalar.to_ark_transmute()
         )
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_point_equality() {
+        let left = Point::zero();
+        let right = Point::zero();
+        assert_eq!(left, right);
+        let right = Point::from_limbs(&[0; 12], &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0; 12]);
+        assert_eq!(left, right);
+        let right = Point::from_limbs(
+            &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            &[0; 12],
+            &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        );
+        assert!(left != right);
     }
 }
