@@ -59,7 +59,7 @@ fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
             padded
         }
         n if n == NUM_LIMBS => val.try_into().unwrap(),
-        _ => panic!("slice has to much elements"),
+        _ => panic!("slice has too many elements"),
     }
 }
 
