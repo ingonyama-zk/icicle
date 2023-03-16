@@ -30,7 +30,6 @@ extern "C" int ecntt_cuda(projective_t *arr, uint32_t n, bool inverse, size_t de
 
 extern "C" int ntt_batch_cuda(scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0)
 {
-    fp_config::omega_inv;
     try
     {
         return ntt_end2end_batch(arr, arr_size, batch_size, inverse); // TODO: pass device_id
