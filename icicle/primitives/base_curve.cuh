@@ -30,7 +30,7 @@ template <class CONFIG> class Field {
         case 3:
           return Field { CONFIG::omega3 };
         case 4:
-          return Field { CONFIG::omega3 };
+          return Field { CONFIG::omega4 };
         case 5:
           return Field { CONFIG::omega5 };
         case 6:
