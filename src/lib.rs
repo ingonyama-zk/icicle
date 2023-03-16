@@ -379,7 +379,7 @@ mod tests {
         let test_size = 1 << 9;
         let batches = 4;
 
-        let mut scalars_batch: Vec<Scalar> =
+        let scalars_batch: Vec<Scalar> =
             generate_random_scalars(test_size * batches, get_rng(seed));
 
         let mut scalar_vec_of_vec: Vec<Vec<Scalar>> = Vec::new();

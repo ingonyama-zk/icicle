@@ -1,9 +1,10 @@
 use std::ffi::c_uint;
-use std::{mem::transmute_copy};
 
-use ark_bls12_381::{Fq, Fr, G1Affine, G1Projective};
+use ark_bls12_381::{Fq, G1Affine, G1Projective};
 use ark_ec::AffineCurve;
-use ark_ff::{BigInteger256, BigInteger384, PrimeField};
+use ark_ff::{BigInteger384, PrimeField};
+
+use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -67,32 +68,24 @@ impl BaseField {
         self.s
     }
 
-    pub fn from_limbs(value: &[u32]) -> BaseField {
-        BaseField {
+    pub fn from_limbs(value: &[u32]) -> Self {
+        Self {
             s: get_fixed_limbs(value),
         }
     }
 
     pub fn to_ark(&self) -> BigInteger384 {
-        unsafe { transmute_copy::<BaseField, BigInteger384>(self) } //TODO:safe version
+        BigInteger384::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
     }
 
-    pub fn from_ark(ark: BigInteger384) -> BaseField {
-        unsafe { transmute_copy::<BigInteger384, BaseField>(&ark) } //TODO:safe version
+    pub fn from_ark(ark: BigInteger384) -> Self {
+        Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
     }
 }
 
 impl ScalarField {
     pub fn limbs(&self) -> [u32; SCALAR_LIMBS] {
         self.s
-    }
-
-    pub fn to_ark(&self) -> BigInteger256 {
-        unsafe { transmute_copy::<ScalarField, BigInteger256>(self) } //TODO:safe version
-    }
-
-    pub fn from_ark(ark: BigInteger256) -> ScalarField {
-        unsafe { transmute_copy::<BigInteger256, ScalarField>(&ark) } //TODO:safe version
     }
 }
 
@@ -150,66 +143,6 @@ impl Point {
             x: BaseField::from_ark((ark.x * z_invsq).into_repr()),
             y: BaseField::from_ark((ark.y * z_invq3).into_repr()),
             z: BaseField::one(),
-        }
-    }
-
-    pub fn from_xy1_be_limbs(value: &[u32]) -> Point {
-        let l = value.len();
-        assert_eq!(l, 2 * BASE_LIMBS, "length must be 2 * {}", BASE_LIMBS);
-        let mut value = value.to_vec();
-        value.reverse();
-
-        let py_inf = Point::py_zero();
-
-        let x = BaseField {
-            s: value[BASE_LIMBS..BASE_LIMBS * 2].try_into().unwrap(),
-        };
-        let y = BaseField {
-            s: value[..BASE_LIMBS].try_into().unwrap(),
-        };
-
-        if x == py_inf.x && y == py_inf.y {
-            return Point::infinity();
-        }
-        Point {
-            x,
-            y,
-            z: BaseField::one(),
-        }
-    }
-
-    pub fn from_xy1_le_limbs(value: &[u32]) -> Point {
-        let l = value.len();
-        assert_eq!(l, 2 * BASE_LIMBS, "length must be 2 * {}", BASE_LIMBS);
-        let py_inf = Point::py_zero();
-
-        let x = BaseField {
-            s: value[..BASE_LIMBS].try_into().unwrap(),
-        };
-        let y = BaseField {
-            s: value[BASE_LIMBS..BASE_LIMBS * 2].try_into().unwrap(),
-        };
-
-        if x == py_inf.x && y == py_inf.y {
-            return py_inf;
-        }
-        Point {
-            x,
-            y,
-            z: BaseField::one(),
-        }
-    }
-
-    fn py_zero() -> Point {
-        Point {
-            x: BaseField {
-                s: [
-                    00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000,
-                    00000000, 00000000, 00000000, 0x40000000,
-                ],
-            },
-            y: BaseField::zero(),
-            z: BaseField::zero(),
         }
     }
 }
@@ -379,34 +312,77 @@ impl Scalar {
     }
 }
 
-impl Scalar {
-    pub fn to_ark_mod_p(&self) -> Fr {
-        Fr::new(self.s.to_ark())
-    }
-
-    pub fn to_ark_repr(&self) -> Fr {
-        Fr::from_repr(self.s.to_ark()).unwrap()
-    }
-
-    pub fn to_ark_transmute(&self) -> Fr {
-        unsafe { std::mem::transmute(*self) }
-    }
-
-    pub fn from_ark_transmute(v: &Fr) -> Scalar {
-        unsafe { std::mem::transmute_copy(v) }
-    }
-
-    pub fn from_ark(v: &Fr) -> Scalar {
-        Scalar {
-            s: ScalarField::from_ark(v.into_repr()),
-        }
-    }
-}
-
 impl Default for Scalar {
     fn default() -> Self {
         Scalar {
             s: ScalarField::zero(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::mem::transmute;
+
+    use ark_bls12_381::Fr;
+    use ark_ff::{BigInteger256, PrimeField};
+
+    use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
+
+    use super::{Scalar, ScalarField};
+
+    impl ScalarField {
+        pub fn to_ark(&self) -> BigInteger256 {
+            BigInteger256::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
+        }
+
+        pub fn from_ark(ark: BigInteger256) -> Self {
+            Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
+        }
+
+        pub fn to_ark_transmute(&self) -> BigInteger256 {
+            unsafe { transmute(*self) }
+        }
+
+        pub fn from_ark_transmute(v: BigInteger256) -> ScalarField {
+            unsafe { transmute(v) }
+        }
+    }
+
+    impl Scalar {
+        pub fn to_ark_mod_p(&self) -> Fr {
+            Fr::new(self.s.to_ark())
+        }
+
+        pub fn to_ark_repr(&self) -> Fr {
+            Fr::from_repr(self.s.to_ark()).unwrap()
+        }
+
+        pub fn to_ark_transmute(&self) -> Fr {
+            unsafe { std::mem::transmute(*self) }
+        }
+
+        pub fn from_ark_transmute(v: &Fr) -> Scalar {
+            unsafe { std::mem::transmute_copy(v) }
+        }
+
+        pub fn from_ark(v: &Fr) -> Scalar {
+            Scalar {
+                s: ScalarField::from_ark(v.into_repr()),
+            }
+        }
+    }
+
+    #[test]
+    fn test_ark_scalar_convert() {
+        let limbs = [0x0fffffff, 1, 0x2fffffff, 3, 0x4fffffff, 5, 0x6fffffff, 7];
+        let scalar = ScalarField::from_limbs(&limbs);
+        assert_eq!(
+            scalar.to_ark(),
+            scalar.to_ark_transmute(),
+            "{:08X?} {:08X?}",
+            scalar.to_ark(),
+            scalar.to_ark_transmute()
+        )
     }
 }
