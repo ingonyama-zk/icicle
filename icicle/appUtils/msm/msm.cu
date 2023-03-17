@@ -5,7 +5,7 @@
 #include <cub/device/device_scan.cuh>
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
-#include "../../primitives/base_curve.cuh"
+#include "../../primitives/field.cuh"
 #include "../../curves/curve_config.cuh"
 #include "msm.cuh"
 

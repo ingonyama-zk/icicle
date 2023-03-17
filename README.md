@@ -36,7 +36,18 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ```sh
 mkdir -p build
-nvcc -o build/<ENTER_DIR_NAME> icicle/lib.cu -arch=native
+nvcc -o build/<ENTER_DIR_NAME> ./icicle/appUtils/ntt/ntt.cu ./icicle/appUtils/msm/msm.cu ./icicle/appUtils/vector_manipulation/ve_mod_mult.cu ./icicle/primitives/projective.cu -arch=native
+```
+
+### Testing the CUDA code
+
+We are using [googletest] library for testing. To build and run the test suite for finite field and elliptic curve arithmetic, run from the `icicle` folder:
+
+```sh
+mkdir -p build
+cmake -S . -B build
+cmake --build build
+cd build && ctest
 ```
 
 ### Rust Bindings
@@ -87,4 +98,6 @@ See [LICENSE-MIT][LMIT] for details.
 [B_SCRIPT]: ./build.rs
 [FDI]: https://github.com/ingonyama-zk/fast-danksharding
 [LMIT]: ./LICENSE
+[googletest]: https://github.com/google/googletest/
+
 <!-- End Links -->

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "../utils/storage.cuh"
 #include "../utils/ptx.cuh"
 #include "../utils/host_math.cuh"
@@ -17,9 +18,11 @@ template <class CONFIG> class Field {
     static constexpr HOST_DEVICE_INLINE Field zero() {
       return Field { CONFIG::zero };
     }
+
     static constexpr HOST_DEVICE_INLINE Field one() {
       return Field { CONFIG::one };
     }
+
     static constexpr HOST_INLINE Field omega(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
@@ -90,6 +93,7 @@ template <class CONFIG> class Field {
       }
       // return Field { CONFIG::omega[log_size-1] };
     }
+
     static constexpr HOST_INLINE Field omega_inv(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
@@ -160,6 +164,7 @@ template <class CONFIG> class Field {
       }
       // return Field { CONFIG::omega_inv[log_size-1] };
     }
+
     static constexpr HOST_INLINE Field inv_log_size(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
@@ -230,6 +235,7 @@ template <class CONFIG> class Field {
       }
       // return Field { CONFIG::inv[log_size-1] };
     }
+
     static constexpr HOST_DEVICE_INLINE Field modulus() {
       return Field { CONFIG::modulus };
     }
@@ -243,12 +249,7 @@ template <class CONFIG> class Field {
 
     struct wide {
       ff_wide_storage limbs_storage;
-
-      friend HOST_DEVICE_INLINE wide operator+(wide xs, const wide& ys) {   
-        // TODO: change the dummy implementation
-        return xs;
-      }
-
+      
       Field HOST_DEVICE_INLINE get_lower() {
         Field out{};
       #ifdef __CUDA_ARCH__
@@ -274,6 +275,12 @@ template <class CONFIG> class Field {
         return out;
       }
     };
+
+    friend HOST_DEVICE_INLINE wide operator+(wide xs, const wide& ys) {   
+      wide rs = {};
+      add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+      return rs;
+    }
 
     // an incomplete impl that assumes that xs > ys
     friend HOST_DEVICE_INLINE wide operator-(wide xs, const wide& ys) {   
@@ -491,16 +498,6 @@ template <class CONFIG> class Field {
       return value;
     }
 
-    static constexpr DEVICE_INLINE bool eq(const Field &xs, const Field &ys) {
-      const uint32_t *x = xs.limbs_storage.limbs;
-      const uint32_t *y = ys.limbs_storage.limbs;
-      uint32_t limbs_or = x[0] ^ y[0];
-  #pragma unroll
-      for (unsigned i = 1; i < TLC; i++)
-        limbs_or |= x[i] ^ y[i];
-      return limbs_or == 0;
-    }
-
     template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE Field reduce(const Field &xs) {
       if (REDUCTION_SIZE == 0)
         return xs;
@@ -573,13 +570,19 @@ template <class CONFIG> class Field {
     #endif
     }
 
+    friend HOST_DEVICE_INLINE bool operator!=(const Field& xs, const Field& ys) {
+      return !(xs == ys);
+    }
+
     template <unsigned REDUCTION_SIZE = 1>
-    static constexpr DEVICE_INLINE Field mul(const unsigned scalar, const Field &xs) {
+    static constexpr HOST_DEVICE_INLINE Field mul(const unsigned scalar, const Field &xs) {
       Field rs = {};
       Field temp = xs;
       unsigned l = scalar;
       bool is_zero = true;
+  #ifdef __CUDA_ARCH__
   #pragma unroll
+  #endif
       for (unsigned i = 0; i < 32; i++) {
         if (l & 1) {
           rs = is_zero ? temp : (rs + temp);
@@ -594,19 +597,19 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr DEVICE_INLINE wide sqr_wide(const Field& xs) {
+    static constexpr HOST_DEVICE_INLINE wide sqr_wide(const Field& xs) {
       // TODO: change to a more efficient squaring
       return mul_wide<MODULUS_MULTIPLE>(xs, xs);
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr DEVICE_INLINE Field sqr(const Field& xs) {
+    static constexpr HOST_DEVICE_INLINE Field sqr(const Field& xs) {
       // TODO: change to a more efficient squaring
       return xs * xs;
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr DEVICE_INLINE Field neg(const Field& xs) {
+    static constexpr HOST_DEVICE_INLINE Field neg(const Field& xs) {
       const ff_storage modulus = get_modulus<MODULUS_MULTIPLE>();
       Field rs = {};
       sub_limbs<false>(modulus, xs.limbs_storage, rs.limbs_storage);
@@ -614,13 +617,20 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1> 
-    static constexpr DEVICE_INLINE Field div2(const Field &xs) {
+    static constexpr HOST_DEVICE_INLINE Field div2(const Field &xs) {
       const uint32_t *x = xs.limbs_storage.limbs;
       Field rs = {};
       uint32_t *r = rs.limbs_storage.limbs;
+  #ifdef __CUDA_ARCH__
   #pragma unroll
-      for (unsigned i = 0; i < TLC - 1; i++)
+  #endif
+      for (unsigned i = 0; i < TLC - 1; i++) {
+    #ifdef __CUDA_ARCH__
         r[i] = __funnelshift_rc(x[i], x[i + 1], 1);
+    #else
+        r[i] = (x[i] >> 1) | (x[i + 1] << 31);
+    #endif
+      }
       r[TLC - 1] = x[TLC - 1] >> 1;
       return reduce<MODULUS_MULTIPLE>(rs);
     }
@@ -640,7 +650,7 @@ template <class CONFIG> class Field {
     }
 
     // inverse assumes that xs is nonzero
-    static constexpr DEVICE_INLINE Field inverse(const Field& xs) {
+    static constexpr HOST_DEVICE_INLINE Field inverse(const Field& xs) {
       constexpr Field one = Field { CONFIG::one };
       constexpr ff_storage modulus = CONFIG::modulus;
       Field u = xs;

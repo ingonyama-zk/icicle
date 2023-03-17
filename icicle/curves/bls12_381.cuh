@@ -166,5 +166,12 @@ struct fq_config {
   static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 };
 
+struct group_generator {
+  static constexpr storage<fq_config::limbs_count> generator_x = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 
+                                                                  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+  static constexpr storage<fq_config::limbs_count> generator_y = {0x4abe706c, 0x5ea93e35, 0x00e1de5d, 0x6346b8ed, 0x92848344, 0xda9dd85e, 
+                                                                  0xc9926b26, 0xc760f988, 0xf3763e9b, 0xb33cffc3, 0xd40d6212, 0x0a989bad};
+};
+
 static constexpr unsigned weierstrass_b = 4;
 
