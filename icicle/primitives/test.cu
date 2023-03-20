@@ -5,6 +5,7 @@
 #include "../curves/bls12_381.cuh"
 #include "projective.cuh"
 #include "field.cuh"
+#include "test_kernels.cuh"
 
 
 typedef Field<fp_config> scalar_field;
@@ -67,6 +68,13 @@ protected:
 TEST_F(PrimitivesTest, RandomPointsAreOnCurve) {
   for (unsigned i = 0; i < n; i++)
     ASSERT_PRED1(proj::is_on_curve, points1[i]);
+}
+
+TEST_F(PrimitivesTest, ECPointAdditionAndSubtractionCancel) {
+  ASSERT_EQ(vec_add<proj>(points1, points2, res1, n), cudaSuccess);
+  ASSERT_EQ(vec_sub<proj>(res1, points2, res2, n), cudaSuccess);
+  for (unsigned i = 0; i < n; i++)
+    ASSERT_EQ(points1[i], res2[i]);
 }
 
 

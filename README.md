@@ -36,7 +36,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ```sh
 mkdir -p build
-nvcc -o build/<ENTER_DIR_NAME> ./icicle/appUtils/ntt/ntt.cu ./icicle/appUtils/msm/msm.cu ./icicle/appUtils/vector_manipulation/ve_mod_mult.cu ./icicle/primitives/projective.cu -arch=native
+nvcc -o build/<ENTER_DIR_NAME> ./icicle/appUtils/ntt/ntt.cu ./icicle/appUtils/msm/msm.cu ./icicle/appUtils/vector_manipulation/ve_mod_mult.cu ./icicle/primitives/projective.cu -lib -arch=native
 ```
 
 ### Testing the CUDA code
