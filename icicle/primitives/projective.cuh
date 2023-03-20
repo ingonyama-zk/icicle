@@ -2,7 +2,7 @@
 
 #include "affine.cuh"
 
-template <class FF, unsigned B_VALUE>
+template <class FF, class SCALAR_FF, class GEN, unsigned B_VALUE>
 class Projective {
   friend Affine<FF>;
 
@@ -11,24 +11,28 @@ class Projective {
     FF y;
     FF z;
 
-    static DEVICE_INLINE Projective zero() {
+    static HOST_DEVICE_INLINE Projective generator() {
+      return { FF { GEN::generator_x }, FF { GEN::generator_y }, FF::one()};
+    }
+
+    static HOST_DEVICE_INLINE Projective zero() {
       return {FF::zero(), FF::one(), FF::zero()};
     }
 
-    static DEVICE_INLINE Affine<FF> to_affine(const Projective &point) {
+    static HOST_DEVICE_INLINE Affine<FF> to_affine(const Projective &point) {
       FF denom = FF::inverse(point.z);
       return {point.x * denom, point.y * denom};
     }
 
-    static DEVICE_INLINE Projective from_affine(const Affine<FF> &point) {
+    static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF> &point) {
       return {point.x, point.y, FF::one()};
     }
 
-    static DEVICE_INLINE Projective neg(const Projective &point) { 
+    static HOST_DEVICE_INLINE Projective neg(const Projective &point) { 
       return {point.x, FF::neg(point.y), point.z};
     }
 
-    friend DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2) {   
+    friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2) {   
       const FF X1 = p1.x;                                      //                   < 2
       const FF Y1 = p1.y;                                      //                   < 2
       const FF Z1 = p1.z;                                      //                   < 2
@@ -55,10 +59,10 @@ class Projective {
       const FF t17 = t15 - t16;                                // t17 ← t15 − t16   < 2
       const FF t18 = t00 + t00;                                // t18 ← t00 + t00   < 2
       const FF t19 = t18 + t00;                                // t19 ← t18 + t00   < 2
-      const FF t20 = FF::mul<1>(3 * B_VALUE, t02);             // t20 ← b3 · t02    < 2
+      const FF t20 = FF::mul(3 * B_VALUE, t02);                // t20 ← b3 · t02    < 2
       const FF t21 = t01 + t20;                                // t21 ← t01 + t20   < 2
       const FF t22 = t01 - t20;                                // t22 ← t01 − t20   < 2
-      const FF t23 = FF::mul<1>(3 * B_VALUE, t17);             // t23 ← b3 · t17    < 2
+      const FF t23 = FF::mul(3 * B_VALUE, t17);                // t23 ← b3 · t17    < 2
       const FF t24 = t12 * t23;                                // t24 ← t12 · t23   < 2
       const FF t25 = t07 * t22;                                // t25 ← t07 · t22   < 2
       const FF X3 = t25 - t24;                                 // X3 ← t25 − t24    < 2
@@ -71,28 +75,29 @@ class Projective {
       return {X3, Y3, Z3};
     }
 
-    friend DEVICE_INLINE Projective operator-(Projective p1, const Projective& p2) {   
+    friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Projective& p2) {   
       return p1 + neg(p2);
     }
 
-    friend DEVICE_INLINE Projective operator+(Projective p1, const Affine<FF>& p2) {   
+    friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Affine<FF>& p2) {   
       // TODO: change the implementation to a more efficient mixed adder later on
       return p1 + from_affine(p2);
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const Projective& point) {
+    friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Projective& point) {
       os << "x: " << point.x << "; y: " << point.y << "; z: " << point.z;
       return os;
     }
 
-    friend DEVICE_INLINE Projective operator-(Projective p1, const Affine<FF>& p2) {   
+    friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Affine<FF>& p2) {   
       return p1 + Affine<FF>::neg(p2);
     }
 
-    template <class SCALAR_FF>
-    friend DEVICE_INLINE Projective operator*(SCALAR_FF scalar, const Projective& point) {   
+    friend HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar, const Projective& point) {   
       Projective res = zero();
+  #ifdef CUDA_ARCH
   #pragma unroll
+  #endif
       for (int i = 0; i < SCALAR_FF::NBITS; i++) {
         if (i > 0) {
           res = res + res;
@@ -106,5 +111,21 @@ class Projective {
 
     friend HOST_DEVICE_INLINE bool operator==(const Projective& p1, const Projective& p2) {
       return (p1.x * p2.z == p2.x * p1.z) && (p1.y * p2.z == p2.y * p1.z);
+    }
+
+    static HOST_DEVICE_INLINE bool is_zero(const Projective &point) {
+      return point.x == FF::zero() && point.y != FF::zero() && point.z == FF::zero();
+    }
+
+    static HOST_DEVICE_INLINE bool is_on_curve(const Projective &point) {
+      if (is_zero(point))
+        return true;
+      bool eq_holds = (FF::mul(B_VALUE, FF::sqr(point.z) * point.z) + FF::sqr(point.x) * point.x == point.z * FF::sqr(point.y));
+      return point.z != FF::zero() && eq_holds;
+    }
+
+    static HOST_INLINE Projective rand_host() {
+      SCALAR_FF rand_scalar = SCALAR_FF::rand_host();
+      return rand_scalar * generator();
     }
 };
