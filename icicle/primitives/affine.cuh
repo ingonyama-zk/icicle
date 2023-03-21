@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_curve.cuh"
+#include "field.cuh"
 
 template <class FF>
 class Affine {  
@@ -16,7 +16,7 @@ class Affine {
       return (xs.x == ys.x) && (xs.y == ys.y);
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const Affine& point) {
+    friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Affine& point) {
       os << "x: " << point.x << "; y: " << point.y;
       return os;
     }

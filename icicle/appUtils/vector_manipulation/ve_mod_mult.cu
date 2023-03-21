@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <iostream>
-#include "../../primitives/base_curve.cuh"
+#include "../../primitives/field.cuh"
 #include "../../utils/storage.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../curves/curve_config.cuh"

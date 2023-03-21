@@ -1,7 +1,7 @@
 #pragma once
 #include <stdexcept>
 #include <cuda.h>
-#include "../../primitives/base_curve.cuh"
+#include "../../primitives/field.cuh"
 #include "../../curves/curve_config.cuh"
 #include "../../primitives/projective.cuh"
 
