@@ -183,7 +183,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
   unsigned nof_buckets = nof_bms << c;
   cudaMalloc(&buckets, sizeof(P) * nof_buckets);
 
-  // lanch the bucket initialization kernel with maximum threads
+  // launch the bucket initialization kernel with maximum threads
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, nof_buckets);
