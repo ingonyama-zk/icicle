@@ -50,8 +50,7 @@ template <typename P>
 __global__ void initialize_buckets_kernel(P *buckets, unsigned N) {
   
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  // if (tid < N) buckets[tid] = P::zero(); //zero point
-  if (tid < N) buckets[tid] = P().zero(); //zero point
+  if (tid < N) buckets[tid] = P::zero(); //zero point
 
 }
 
