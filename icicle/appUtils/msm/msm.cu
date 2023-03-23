@@ -515,7 +515,7 @@ void large_msm(S *scalars, A *points, unsigned size, P *result)
   bucket_method_msm(bitsize, c, scalars, points, size, result);
 }
 
-// this function is used to compute a baths of msms of size larger than 256
+// this function is used to compute a batches of msms of size larger than 256
 template <typename S, typename P, typename A>
 void batched_large_msm(S *scalars, A *points, unsigned batch_size, unsigned msm_size, P *result)
 {
@@ -539,6 +539,22 @@ extern "C" int msm_cuda(projective_t *out, affine_t points[],
     {
       short_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out);
     }
+
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
+                              scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0)
+{
+  try
+  {
+    batched_large_msm<scalar_t, projective_t, affine_t>(scalars, points, batch_size, msm_size, out);
 
     return CUDA_SUCCESS;
   }

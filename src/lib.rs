@@ -10,7 +10,16 @@ extern "C" {
         out: *mut Point,
         points: *const PointAffineNoInfinity,
         scalars: *const ScalarField,
-        count: usize, //TODO: is needed?
+        count: usize,
+        device_id: usize,
+    ) -> c_uint;
+
+    fn msm_batch_cuda(
+        out: *mut Point,
+        points: *const PointAffineNoInfinity,
+        scalars: *const ScalarField,
+        batch_size: usize,
+        msm_size: usize,
         device_id: usize,
     ) -> c_uint;
 
@@ -55,6 +64,33 @@ pub fn msm(points: &[PointAffineNoInfinity], scalars: &[Scalar], device_id: usiz
             points as *const _ as *const PointAffineNoInfinity,
             scalars as *const _ as *const ScalarField,
             scalars.len(),
+            device_id,
+        )
+    };
+
+    ret
+}
+
+pub fn msm_batch(
+    points: &[PointAffineNoInfinity],
+    scalars: &[Scalar],
+    batch_size: usize,
+    device_id: usize,
+) -> Vec<Point> {
+    let count = points.len();
+    if count != scalars.len() {
+        todo!("variable length")
+    }
+
+    let mut ret = vec![Point::zero(); batch_size];
+
+    unsafe {
+        msm_batch_cuda(
+            &mut ret[0] as *mut _ as *mut Point,
+            points as *const _ as *const PointAffineNoInfinity,
+            scalars as *const _ as *const ScalarField,
+            batch_size,
+            count / batch_size,
             device_id,
         )
     };
@@ -184,11 +220,11 @@ mod tests {
 
     use std::ops::Add;
 
-    use ark_bls12_381::{Fr, G1Projective, G1Affine};
+    use ark_bls12_381::{Fr, G1Affine, G1Projective};
     use ark_ec::{msm::VariableBaseMSM, AffineCurve, ProjectiveCurve};
     use ark_ff::{FftField, Field, Zero};
     use ark_std::UniformRand;
-    use rand::{RngCore, rngs::StdRng, SeedableRng};
+    use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use crate::{field::*, *};
 
@@ -303,6 +339,36 @@ mod tests {
                 msm_result.to_ark_affine(),
                 Point::from_ark(msm_result_ark).to_ark_affine()
             );
+        }
+    }
+
+    #[test]
+    fn test_batch_msm() {
+        for batch_pow2 in 7..10 {
+            for pow2 in [7, 8, 12] {
+                let count = 1 << pow2;
+                let batch_size = 1 << batch_pow2;
+                let seed = None; //set Some to provide seed
+                let points = generate_random_points(count, get_rng(seed));
+                let scalars = generate_random_scalars(count, get_rng(seed));
+
+                let scalars_batch: Vec<_> = vec![scalars.clone(); batch_size]
+                    .into_iter()
+                    .flatten()
+                    .collect();
+                let points_batch: Vec<_> = vec![points.clone(); batch_size]
+                    .into_iter()
+                    .flatten()
+                    .collect();
+
+                let msm_result = msm(&points, &scalars, 0);
+
+                let expected = vec![msm_result; batch_size];
+
+                let result = msm_batch(&points_batch, &scalars_batch, batch_size, 0);
+
+                assert_eq!(expected, result, "total {} x {}", count, batch_size);
+            }
         }
     }
 
