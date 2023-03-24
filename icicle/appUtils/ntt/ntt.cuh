@@ -148,14 +148,14 @@ __global__ void template_normalize_kernel(E *arr, E *res, uint32_t n, S scalar)
 template <typename E, typename S>
 void template_ntt_on_device_memory(E *d_arr, uint32_t n, uint32_t logn, S *d_twiddles, uint32_t n_twiddles)
 {
-  uint32_t m = 128;
-  int number_of_threads = min(m, MAX_NUM_THREADS);
-  int number_of_blocks = (m + MAX_NUM_THREADS - 1) / MAX_NUM_THREADS;
-
+  uint32_t m = 2;
   for (uint32_t s = 0; s < logn; s++)
   {
     for (uint32_t i = 0; i < n; i += m)
     {
+      int shifted_m = m >> 1;
+      int number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
+      int number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
       template_butterfly_kernel<E, S><<<number_of_threads, number_of_blocks>>>(d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
     }
     m <<= 1;
