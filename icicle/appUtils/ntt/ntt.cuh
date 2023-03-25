@@ -2,7 +2,7 @@
 #include "../../curves/curve_config.cuh"
 
 const uint32_t MAX_NUM_THREADS = 1024;
-const uint32_t MAX_THREADS_BATCH = 256;
+const uint32_t MAX_THREADS_BATCH = 128;
 
 /**
  * Copy twiddle factors array to device (returns a pointer to the device allocated array).
@@ -335,18 +335,32 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, uint32_t logn, S *twiddl
   int task = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (task < max_task)
   {
+    uint32_t offset = task * n;
     reverseOrder_batch<E>(arr, n, logn, task);
-    uint32_t m = 2;
+
     for (uint32_t s = 0; s < logn; s++)
     {
-      for (uint32_t i = 0; i < n; i += m)
+      uint32_t i = 0;
+      uint32_t shift_s = 1 << s;
+      uint32_t shift2_s = 2 << s;
+      uint32_t loop_limit = n >> 1;
+      uint32_t n_twiddles_div = n_twiddles >> (s + 1); // Equivalent to: n_twiddles / (2 << s)
+
+      for (uint32_t l = 0; l < loop_limit; l++)
       {
-        for (uint32_t j = 0; j < (m >> 1); j++)
+        uint32_t j = l & (shift_s - 1); // Equivalent to: l % (1 << s)
+        uint32_t k = i + j + shift_s;
+
+        E u = arr[offset + i + j];
+        E v = twiddles[j * n_twiddles_div] * arr[offset + k];
+        arr[offset + i + j] = u + v;
+        arr[offset + k] = u - v;
+
+        if (j == 0)
         {
-          butterfly<E, S>(arr, twiddles, n, n_twiddles, m, i, j, task * n);
+          i = (i + shift2_s) % n;
         }
       }
-      m <<= 1;
     }
   }
 }
