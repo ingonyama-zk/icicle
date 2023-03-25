@@ -112,7 +112,7 @@ __global__ void template_butterfly_kernel(E *arr, S *twiddles, uint32_t n, uint3
   {
     uint32_t g = j * (n / m);
     uint32_t k = i + j + (m >> 1);
-    E u = S::one() * arr[i + j];
+    E u = arr[i + j];
     E v = twiddles[g * n_twiddles / n] * arr[k];
     arr[i + j] = u + v;
     arr[k] = u - v;
@@ -154,9 +154,9 @@ void template_ntt_on_device_memory(E *d_arr, uint32_t n, uint32_t logn, S *d_twi
     for (uint32_t i = 0; i < n; i += m)
     {
       int shifted_m = m >> 1;
-      int number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
-      int number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
-      template_butterfly_kernel<E, S><<<number_of_threads, number_of_blocks>>>(d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
+      int number_of_threads = min(shifted_m, MAX_NUM_THREADS);
+      int number_of_blocks = (shifted_m + number_of_threads - 1) / number_of_threads;
+      template_butterfly_kernel<E, S><<<number_of_blocks, number_of_threads>>>(d_arr, d_twiddles, n, n_twiddles, m, i, shifted_m);
     }
     m <<= 1;
   }
@@ -314,10 +314,9 @@ __device__ __host__ void reverseOrder_batch(T *arr, uint32_t n, uint32_t logn, u
 template <typename E, typename S>
 __device__ __host__ void butterfly(E *arrReversed, S *omegas, uint32_t n, uint32_t n_omegas, uint32_t m, uint32_t i, uint32_t j, uint32_t offset)
 {
-  uint32_t g = j * (n / m);
   uint32_t k = i + j + (m >> 1);
   E u = arrReversed[offset + i + j];
-  E v = omegas[g * n_omegas / n] * arrReversed[offset + k];
+  E v = omegas[j * n_omegas / m] * arrReversed[offset + k];
   arrReversed[offset + i + j] = u + v;
   arrReversed[offset + k] = u - v;
 }
@@ -385,7 +384,7 @@ extern "C" uint32_t ntt_end2end_batch(scalar_t *arr, uint32_t arr_size, uint32_t
   {
     NUM_THREADS = MAX_NUM_THREADS;
     NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel<scalar_t, scalar_t><<<NUM_THREADS, NUM_BLOCKS>>>(d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
+    template_normalize_kernel<scalar_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
   cudaFree(d_arr);
@@ -421,7 +420,7 @@ extern "C" uint32_t ecntt_end2end_batch(projective_t *arr, uint32_t arr_size, ui
   cudaMemcpy(d_arr, arr, size_E, cudaMemcpyHostToDevice);
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (int(arr_size / n) + NUM_THREADS - 1) / NUM_THREADS;
-  ntt_template_kernel<projective_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, logn, d_twiddles, n_twiddles, int(arr_size / n));
+  ntt_template_kernel<projective_t, scalar_t><<<n, 64>>>(d_arr, n, logn, d_twiddles, n_twiddles, int(arr_size / n));
   if (inverse == true)
   {
     NUM_THREADS = MAX_NUM_THREADS;

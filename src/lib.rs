@@ -373,6 +373,70 @@ mod tests {
     }
 
     #[test]
+    fn test_ntt_quick() {
+        //NTT
+        let seed = None; //some value to fix the rng
+        let test_size = 1 << 8;
+
+        let scalars = generate_random_scalars(test_size, get_rng(seed));
+
+        let mut ntt_result = scalars.clone();
+        ntt(&mut ntt_result, 0);
+
+        assert_ne!(ntt_result, scalars);
+
+        let mut intt_result = ntt_result.clone();
+
+        intt(&mut intt_result, 0);
+
+        assert_eq!(intt_result, scalars);
+
+        //ECNTT
+        let points_proj = generate_random_points_proj(test_size, get_rng(seed));
+
+        assert!(points_proj[0].to_ark().into_affine().is_on_curve());
+
+        //naive ark
+        let points_proj_ark = points_proj
+            .iter()
+            .map(|p| p.to_ark())
+            .collect::<Vec<G1Projective>>();
+
+        let ecntt_result_naive = ecntt_arc_naive(&points_proj_ark, points_proj_ark.len(), false);
+
+        let iecntt_result_naive = ecntt_arc_naive(&ecntt_result_naive, points_proj_ark.len(), true);
+
+        assert_eq!(points_proj_ark, iecntt_result_naive);
+
+        //ingo gpu
+        let mut ecntt_result = points_proj.to_vec();
+        ecntt(&mut ecntt_result, 0);
+
+        assert_ne!(ecntt_result, points_proj);
+
+        let mut iecntt_result = ecntt_result.clone();
+        iecntt(&mut iecntt_result, 0);
+
+        assert_eq!(
+            iecntt_result_naive,
+            points_proj
+                .iter()
+                .map(|p| p.to_ark_affine())
+                .collect::<Vec<G1Affine>>()
+        );
+        assert_eq!(
+            iecntt_result
+                .iter()
+                .map(|p| p.to_ark_affine())
+                .collect::<Vec<G1Affine>>(),
+            points_proj
+                .iter()
+                .map(|p| p.to_ark_affine())
+                .collect::<Vec<G1Affine>>()
+        );
+    }
+
+    #[test]
     fn test_ntt() {
         //NTT
         let seed = None; //some value to fix the rng
