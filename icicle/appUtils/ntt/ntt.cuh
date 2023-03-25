@@ -420,11 +420,12 @@ extern "C" uint32_t ecntt_end2end_batch(projective_t *arr, uint32_t arr_size, ui
   cudaMemcpy(d_arr, arr, size_E, cudaMemcpyHostToDevice);
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (int(arr_size / n) + NUM_THREADS - 1) / NUM_THREADS;
-  ntt_template_kernel<projective_t, scalar_t><<<n, 64>>>(d_arr, n, logn, d_twiddles, n_twiddles, int(arr_size / n));
+  ntt_template_kernel<projective_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, logn, d_twiddles, n_twiddles, int(arr_size / n));
   if (inverse == true)
   {
     NUM_THREADS = MAX_NUM_THREADS;
     NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
+    //TODO: no correctnes when swapped
     template_normalize_kernel<projective_t, scalar_t><<<NUM_THREADS, NUM_BLOCKS>>>(d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
