@@ -174,4 +174,3 @@ struct group_generator {
 };
 
 static constexpr unsigned weierstrass_b = 4;
-
