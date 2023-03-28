@@ -132,11 +132,11 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
   
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid>nof_msms) return;
-  P final_result = P().zero();
+  P final_result = P::zero();
   S digit_base = {unsigned(1<<c)};
   for (unsigned i = nof_bms; i >0; i--)
   {
-    final_result = digit_base*final_result + final_sums[i-1];
+    final_result = digit_base*final_result + final_sums[i-1 + tid*nof_bms];
   }
   final_results[tid] = final_result;
 
@@ -247,7 +247,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
     //launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = nof_bms;
     NUM_BLOCKS = 1;
-    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_buckets, c);
+    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c);
   #endif
 
   P* final_result;
@@ -380,7 +380,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
     //launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = 1<<8;
     NUM_BLOCKS = (nof_bms*batch_size + NUM_THREADS - 1) / NUM_THREADS;
-    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, total_nof_buckets, c);
+    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, nof_bms*batch_size, c);
   #endif
 
   P* final_results;
@@ -490,7 +490,7 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 template <typename S, typename P, typename A>
 void large_msm(S* scalars, A* points, unsigned size, P* result){
   unsigned c = 10;
-  // unsigned c = 4;
+  // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
   bucket_method_msm(bitsize, c, scalars, points, size, result);
@@ -500,7 +500,7 @@ void large_msm(S* scalars, A* points, unsigned size, P* result){
 template <typename S, typename P, typename A>
 void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result){
   unsigned c = 10;
-  // unsigned c = 4;
+  // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
   batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result);
