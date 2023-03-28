@@ -55,9 +55,8 @@ __global__ void initialize_buckets_kernel(P *buckets, unsigned N)
 {
 
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  // if (tid < N) buckets[tid] = P::zero(); //zero point
   if (tid < N)
-    buckets[tid] = P().zero(); // zero point
+    buckets[tid] = P::zero(); // zero point
 }
 
 // this kernel splits the scalars into digits of size c
@@ -147,7 +146,7 @@ __global__ void final_accumulation_kernel(P *final_sums, P *final_results, unsig
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid > nof_msms)
     return;
-  P final_result = P().zero();
+  P final_result = P::zero();
   S digit_base = {unsigned(1 << c)};
   for (unsigned i = nof_bms; i > 0; i--)
   {
@@ -509,7 +508,7 @@ template <typename S, typename P, typename A>
 void large_msm(S *scalars, A *points, unsigned size, P *result)
 {
   unsigned c = 10;
-  // unsigned c = 4;
+  // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
   bucket_method_msm(bitsize, c, scalars, points, size, result);
@@ -520,7 +519,7 @@ template <typename S, typename P, typename A>
 void batched_large_msm(S *scalars, A *points, unsigned batch_size, unsigned msm_size, P *result)
 {
   unsigned c = 10;
-  // unsigned c = 4;
+  // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
   batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result);
