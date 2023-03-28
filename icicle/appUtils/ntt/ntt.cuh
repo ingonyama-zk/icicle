@@ -98,7 +98,7 @@ template < typename E, typename S > __global__ void template_butterfly_kernel(E 
   if (j < max_thread_num) {
     uint32_t g = j * (n / m);
     uint32_t k = i + j + (m >> 1);
-    E u = S::one() * arr[i + j];
+    E u = arr[i + j];
     E v = twiddles[g * n_twiddles / n] * arr[k];
     arr[i + j] = u + v;
     arr[k] = u - v;
