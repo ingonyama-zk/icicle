@@ -150,7 +150,7 @@ __global__ void final_accumulation_kernel(P *final_sums, P *final_results, unsig
   S digit_base = {unsigned(1 << c)};
   for (unsigned i = nof_bms; i > 0; i--)
   {
-    final_result = digit_base * final_result + final_sums[i - 1];
+    final_result = digit_base * final_result + final_sums[i - 1 + tid * nof_bms];
   }
   final_results[tid] = final_result;
 }
@@ -263,7 +263,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
   // launch the bucket module sum kernel - a thread for each bucket module
   NUM_THREADS = nof_bms;
   NUM_BLOCKS = 1;
-  big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_buckets, c);
+  big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c);
 #endif
 
   P *final_result;
@@ -398,7 +398,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   // launch the bucket module sum kernel - a thread for each bucket module
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (nof_bms * batch_size + NUM_THREADS - 1) / NUM_THREADS;
-  big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, total_nof_buckets, c);
+  big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, nof_bms * batch_size, c);
 #endif
 
   P *final_results;
