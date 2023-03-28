@@ -7,6 +7,9 @@
 #include "../../curves/curve_config.cuh"
 
 template <typename S, typename P, typename A>
+void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result);
+
+template <typename S, typename P, typename A>
 void large_msm(S* scalars, A* points, unsigned size, P* result);
 
 template <typename S, typename P, typename A>
