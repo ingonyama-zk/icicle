@@ -51,6 +51,48 @@ int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments) // TODO: in
     return 0;
 }
 
+template <typename E>
+__global__ void matrixVectorMult(E *matrix_elements, E *vector_elements, E *result, size_t dim)
+{
+
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid < dim)
+    {
+        result[tid] = E::zero();
+        for (int i = 0; i < dim; i++)
+            result[tid] = result[tid] + matrix_elements[tid * dim + i] * vector_elements[i];
+    }
+}
+
+template <typename E>
+int matrix_mod_mult(E *matrix_elements, E *vector_elements, E *result, size_t dim)
+{
+    // Set the grid and block dimensions
+    int num_blocks = (int)ceil((float)dim / MAX_THREADS_PER_BLOCK);
+    int threads_per_block = MAX_THREADS_PER_BLOCK;
+
+    // Allocate memory on the device for the input vectors, the output vector, and the modulus
+    E *d_matrix, *d_vector, *d_result;
+    cudaMalloc(&d_matrix, (dim * dim) * sizeof(E));
+    cudaMalloc(&d_vector, dim * sizeof(E));
+    cudaMalloc(&d_result, dim * sizeof(E));
+
+    // Copy the input vectors and the modulus from the host to the device
+    cudaMemcpy(d_matrix, matrix_elements, (dim * dim) * sizeof(E), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_vector, vector_elements, dim * sizeof(E), cudaMemcpyHostToDevice);
+
+    // Call the kernel to perform element-wise modular multiplication
+    matrixVectorMult<<<num_blocks, threads_per_block>>>(d_matrix, d_vector, d_result, dim);
+
+    cudaMemcpy(result, d_result, dim * sizeof(E), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_matrix);
+    cudaFree(d_vector);
+    cudaFree(d_result);
+
+    return 0;
+}
+
 extern "C" int32_t vec_mod_mult_point(projective_t *inout,
                                       scalar_t *scalar_vec,
                                       size_t n_elments,
@@ -78,6 +120,25 @@ extern "C" int32_t vec_mod_mult_scalar(scalar_t *inout,
   {
     // TODO: device_id
     vector_mod_mult<scalar_t, scalar_t>(scalar_vec, inout, inout, n_elments);
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what()); // TODO: error code and message
+    return -1;
+  }
+}
+
+extern "C" int32_t matrix_vec_mod_mult(scalar_t *matrix_flattened,
+                                       scalar_t *input,
+                                       scalar_t *output,
+                                       size_t n_elments,
+                                       size_t device_id)
+{
+  try
+  {
+    // TODO: device_id
+    matrix_mod_mult<scalar_t>(matrix_flattened, input, output, n_elments);
     return CUDA_SUCCESS;
   }
   catch (const std::runtime_error &ex)

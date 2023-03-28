@@ -40,6 +40,14 @@ extern "C" {
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
+
+    fn matrix_vec_mod_mult(
+        matrix_flattened: *const ScalarField,
+        input: *const ScalarField,
+        output: *mut ScalarField,
+        n_elements: usize,
+        device_id: usize,
+    ) -> c_int;
 }
 
 pub fn msm(points: &[PointAffineNoInfinity], scalars: &[Scalar], device_id: usize) -> Point {
@@ -177,6 +185,26 @@ pub fn mult_sc_vec(a: &mut [Scalar], b: &[Scalar], device_id: usize) {
             device_id,
         );
     }
+}
+
+// Multiply a matrix by a scalar:
+//  `a` - flattenned matrix;
+//  `b` - vector to multiply `a` by;
+pub fn mult_matrix_by_vec(a: &[Scalar], b: &[Scalar], device_id: usize) -> Vec<Scalar> {
+    let mut c = Vec::with_capacity(b.len());
+    for i in 0..b.len() {
+        c.push(Scalar::zero());
+    }
+    unsafe {
+        matrix_vec_mod_mult(
+            a as *const _ as *const ScalarField,
+            b as *const _ as *const ScalarField,
+            c.as_mut_slice() as *mut _ as *mut ScalarField,
+            b.len(),
+            device_id,
+        );
+    }
+    c
 }
 
 #[cfg(test)]
@@ -487,6 +515,31 @@ mod tests {
         }
 
         assert_eq!(intt_result_points, points_proj);
+    }
+
+    // testing matrix multiplication by comparing the result of FFT with the naive multiplication by the DFT matrix
+    #[test]
+    fn test_matrix_multiplication() {
+        let seed = None; // some value to fix the rng
+        let test_size = 1 << 5;
+        let rou = Fr::get_root_of_unity(test_size).unwrap();
+        let matrix_flattened: Vec<Scalar> = (0..test_size).map(
+            |row_num| { (0..test_size).map( 
+                |col_num| {
+                    let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
+                    Scalar::from_ark(&Fr::pow(&rou, &pow))
+                }).collect::<Vec<Scalar>>()
+            }).flatten().collect::<Vec<_>>();
+        let vector: Vec<Scalar> = generate_random_scalars(test_size, get_rng(seed));
+
+        let result = mult_matrix_by_vec(&matrix_flattened, &vector, 0);
+        let mut ntt_result = vector.clone();
+        ntt(&mut ntt_result, 0);
+        
+        // we don't use the same roots of unity as arkworks, so the results are permutations
+        // of one another and the only guaranteed fixed scalars are the following ones:
+        assert_eq!(result[0], ntt_result[0]);
+        assert_eq!(result[test_size >> 1], ntt_result[test_size >> 1]);
     }
 
     #[test]
