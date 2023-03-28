@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [7, 8, 12];
+        let test_sizes = [7, 8, 9, 12];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -344,30 +344,27 @@ mod tests {
 
     #[test]
     fn test_batch_msm() {
-        for batch_pow2 in 7..10 {
-            for pow2 in [7, 8, 12] {
-                let count = 1 << pow2;
+        for batch_pow2 in [5, 6, 8, 9] {
+            for pow2 in [9, 12] {
+                let msm_size = 1 << pow2;
                 let batch_size = 1 << batch_pow2;
                 let seed = None; //set Some to provide seed
-                let points = generate_random_points(count, get_rng(seed));
-                let scalars = generate_random_scalars(count, get_rng(seed));
+                let points_batch = generate_random_points(msm_size * batch_size, get_rng(seed));
+                let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
 
-                let scalars_batch: Vec<_> = vec![scalars.clone(); batch_size]
-                    .into_iter()
-                    .flatten()
+                let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
+                let scalars_r_ark: Vec<_> =
+                    scalars_batch.iter().map(|x| x.to_ark_mod_p().0).collect();
+
+                let expected: Vec<_> = point_r_ark
+                    .chunks(msm_size)
+                    .zip(scalars_r_ark.chunks(msm_size))
+                    .map(|p| Point::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
                     .collect();
-                let points_batch: Vec<_> = vec![points.clone(); batch_size]
-                    .into_iter()
-                    .flatten()
-                    .collect();
-
-                let msm_result = msm(&points, &scalars, 0);
-
-                let expected = vec![msm_result; batch_size];
 
                 let result = msm_batch(&points_batch, &scalars_batch, batch_size, 0);
 
-                assert_eq!(expected, result, "total {} x {}", count, batch_size);
+                assert_eq!(result, expected);
             }
         }
     }
