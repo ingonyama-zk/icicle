@@ -167,7 +167,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
   unsigned nof_buckets = nof_bms<<c;
   cudaMalloc(&buckets, sizeof(P) * nof_buckets); 
 
-  //lanch the bucket initialization kernel with maximum threads
+  // launch the bucket initialization kernel with maximum threads
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, nof_buckets);
@@ -496,7 +496,7 @@ void large_msm(S* scalars, A* points, unsigned size, P* result){
   bucket_method_msm(bitsize, c, scalars, points, size, result);
 }
 
-//this function is used to compute a baths of msms of size larger than 256
+// this function is used to compute a batches of msms of size larger than 256
 template <typename S, typename P, typename A>
 void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result){
   unsigned c = 10;
@@ -528,3 +528,18 @@ int msm_cuda(projective_t *out, affine_t points[],
     }
 }
 
+extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
+                              scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0)
+{
+  try
+  {
+    batched_large_msm<scalar_t, projective_t, affine_t>(scalars, points, batch_size, msm_size, out);
+
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
