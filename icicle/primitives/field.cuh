@@ -243,7 +243,7 @@ template <class CONFIG> class Field {
 
   private:
     typedef storage<TLC> ff_storage;
-    typedef storage<2 * TLC> ff_wide_storage;
+    typedef storage<2*TLC> ff_wide_storage;
 
     static constexpr unsigned slack_bits = 32 * TLC - NBITS;
 

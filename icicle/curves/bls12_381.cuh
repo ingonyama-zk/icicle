@@ -167,11 +167,10 @@ struct fq_config {
 };
 
 struct group_generator {
-  static constexpr storage<fq_config::limbs_count> generator_x = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 
-                                                                  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-  static constexpr storage<fq_config::limbs_count> generator_y = {0x4abe706c, 0x5ea93e35, 0x00e1de5d, 0x6346b8ed, 0x92848344, 0xda9dd85e, 
-                                                                  0xc9926b26, 0xc760f988, 0xf3763e9b, 0xb33cffc3, 0xd40d6212, 0x0a989bad};
+  static constexpr storage<fq_config::limbs_count> generator_x = {0xdb22c6bb, 0xfb3af00a, 0xf97a1aef, 0x6c55e83f, 0x171bac58, 0xa14e3a3f, 
+                                                                  0x9774b905, 0xc3688c4f, 0x4fa9ac0f, 0x2695638c, 0x3197d794, 0x17f1d3a7};
+  static constexpr storage<fq_config::limbs_count> generator_y = {0x46c5e7e1, 0x0caa2329, 0xa2888ae4, 0xd03cc744, 0x2c04b3ed, 0x00db18cb, 
+                                                                  0xd5d00af6, 0xfcf5e095, 0x741d8ae4, 0xa09e30ed, 0xe3aaa0f1, 0x08b3f481};
 };
 
 static constexpr unsigned weierstrass_b = 4;
-
