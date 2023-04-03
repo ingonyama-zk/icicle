@@ -319,17 +319,24 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + msm_size, point_indices + msm_size, scalars, total_size, msm_log_size, nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
 
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
+  unsigned *sorted_bucket_indices;
+  unsigned *sorted_point_indices;
+  cudaMalloc(&sorted_bucket_indices, sizeof(unsigned) * (total_size * nof_bms));
+  cudaMalloc(&sorted_point_indices, sizeof(unsigned) * (total_size * nof_bms));
+
   unsigned *sort_indices_temp_storage{};
   size_t sort_indices_temp_storage_bytes;
-  cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, bucket_indices,
-                                 point_indices + msm_size, point_indices, msm_size);
+  cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
+                                 point_indices + msm_size, sorted_point_indices, total_size * nof_bms);
   cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
-  for (unsigned i = 0; i < nof_bms*batch_size; i++) {
-    unsigned offset_out = i * msm_size;
-    unsigned offset_in = offset_out + msm_size;
-    cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
-                                  bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, msm_size);
-  }
+  // for (unsigned i = 0; i < nof_bms*batch_size; i++) {
+  //   unsigned offset_out = i * msm_size;
+  //   unsigned offset_in = offset_out + msm_size;
+  //   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
+  //                                 bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, msm_size);
+  // }
+  cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
+                                 point_indices + msm_size, sorted_point_indices, total_size * nof_bms);
   cudaFree(sort_indices_temp_storage);
 
   //find bucket_sizes
@@ -341,10 +348,10 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   cudaMalloc(&total_nof_buckets_to_compute, sizeof(unsigned));
   unsigned *encode_temp_storage{};
   size_t encode_temp_storage_bytes = 0;
-  cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
+  cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
                                         total_nof_buckets_to_compute, nof_bms*total_size);
   cudaMalloc(&encode_temp_storage, encode_temp_storage_bytes);
-  cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
+  cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
                                         total_nof_buckets_to_compute, nof_bms*total_size);
   cudaFree(encode_temp_storage);
 
@@ -361,7 +368,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   //launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, nof_buckets, batch_size, c+bm_bitsize);
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices, points, nof_buckets, batch_size, c+bm_bitsize);
 
   #ifdef SSM_SUM
     //sum each bucket
@@ -403,6 +410,8 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   cudaFree(scalars);
   cudaFree(bucket_indices);
   cudaFree(point_indices);
+  cudaFree(sorted_bucket_indices);
+  cudaFree(sorted_point_indices);
   cudaFree(single_bucket_indices);
   cudaFree(bucket_sizes);
   cudaFree(total_nof_buckets_to_compute);
