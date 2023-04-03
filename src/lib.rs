@@ -10,7 +10,16 @@ extern "C" {
         out: *mut Point,
         points: *const PointAffineNoInfinity,
         scalars: *const ScalarField,
-        count: usize, //TODO: is needed?
+        count: usize,
+        device_id: usize,
+    ) -> c_uint;
+
+    fn msm_batch_cuda(
+        out: *mut Point,
+        points: *const PointAffineNoInfinity,
+        scalars: *const ScalarField,
+        batch_size: usize,
+        msm_size: usize,
         device_id: usize,
     ) -> c_uint;
 
@@ -40,6 +49,14 @@ extern "C" {
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
+
+    fn matrix_vec_mod_mult(
+        matrix_flattened: *const ScalarField,
+        input: *const ScalarField,
+        output: *mut ScalarField,
+        n_elements: usize,
+        device_id: usize,
+    ) -> c_int;
 }
 
 pub fn msm(points: &[PointAffineNoInfinity], scalars: &[Scalar], device_id: usize) -> Point {
@@ -55,6 +72,33 @@ pub fn msm(points: &[PointAffineNoInfinity], scalars: &[Scalar], device_id: usiz
             points as *const _ as *const PointAffineNoInfinity,
             scalars as *const _ as *const ScalarField,
             scalars.len(),
+            device_id,
+        )
+    };
+
+    ret
+}
+
+pub fn msm_batch(
+    points: &[PointAffineNoInfinity],
+    scalars: &[Scalar],
+    batch_size: usize,
+    device_id: usize,
+) -> Vec<Point> {
+    let count = points.len();
+    if count != scalars.len() {
+        todo!("variable length")
+    }
+
+    let mut ret = vec![Point::zero(); batch_size];
+
+    unsafe {
+        msm_batch_cuda(
+            &mut ret[0] as *mut _ as *mut Point,
+            points as *const _ as *const PointAffineNoInfinity,
+            scalars as *const _ as *const ScalarField,
+            batch_size,
+            count / batch_size,
             device_id,
         )
     };
@@ -179,16 +223,36 @@ pub fn mult_sc_vec(a: &mut [Scalar], b: &[Scalar], device_id: usize) {
     }
 }
 
+// Multiply a matrix by a scalar:
+//  `a` - flattenned matrix;
+//  `b` - vector to multiply `a` by;
+pub fn mult_matrix_by_vec(a: &[Scalar], b: &[Scalar], device_id: usize) -> Vec<Scalar> {
+    let mut c = Vec::with_capacity(b.len());
+    for i in 0..b.len() {
+        c.push(Scalar::zero());
+    }
+    unsafe {
+        matrix_vec_mod_mult(
+            a as *const _ as *const ScalarField,
+            b as *const _ as *const ScalarField,
+            c.as_mut_slice() as *mut _ as *mut ScalarField,
+            b.len(),
+            device_id,
+        );
+    }
+    c
+}
+
 #[cfg(test)]
 mod tests {
 
     use std::ops::Add;
 
-    use ark_bls12_381::{Fr, G1Projective, G1Affine};
+    use ark_bls12_381::{Fr, G1Affine, G1Projective};
     use ark_ec::{msm::VariableBaseMSM, AffineCurve, ProjectiveCurve};
     use ark_ff::{FftField, Field, Zero};
     use ark_std::UniformRand;
-    use rand::{RngCore, rngs::StdRng, SeedableRng};
+    use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use crate::{field::*, *};
 
@@ -282,7 +346,7 @@ mod tests {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [7, 8, 12];
+        let test_sizes = [7, 8, 9, 12];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -303,6 +367,33 @@ mod tests {
                 msm_result.to_ark_affine(),
                 Point::from_ark(msm_result_ark).to_ark_affine()
             );
+        }
+    }
+
+    #[test]
+    fn test_batch_msm() {
+        for batch_pow2 in [5, 6, 8, 9] {
+            for pow2 in [9, 12] {
+                let msm_size = 1 << pow2;
+                let batch_size = 1 << batch_pow2;
+                let seed = None; //set Some to provide seed
+                let points_batch = generate_random_points(msm_size * batch_size, get_rng(seed));
+                let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
+
+                let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
+                let scalars_r_ark: Vec<_> =
+                    scalars_batch.iter().map(|x| x.to_ark_mod_p().0).collect();
+
+                let expected: Vec<_> = point_r_ark
+                    .chunks(msm_size)
+                    .zip(scalars_r_ark.chunks(msm_size))
+                    .map(|p| Point::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
+                    .collect();
+
+                let result = msm_batch(&points_batch, &scalars_batch, batch_size, 0);
+
+                assert_eq!(result, expected);
+            }
         }
     }
 
@@ -487,6 +578,31 @@ mod tests {
         }
 
         assert_eq!(intt_result_points, points_proj);
+    }
+
+    // testing matrix multiplication by comparing the result of FFT with the naive multiplication by the DFT matrix
+    #[test]
+    fn test_matrix_multiplication() {
+        let seed = None; // some value to fix the rng
+        let test_size = 1 << 5;
+        let rou = Fr::get_root_of_unity(test_size).unwrap();
+        let matrix_flattened: Vec<Scalar> = (0..test_size).map(
+            |row_num| { (0..test_size).map( 
+                |col_num| {
+                    let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
+                    Scalar::from_ark(&Fr::pow(&rou, &pow))
+                }).collect::<Vec<Scalar>>()
+            }).flatten().collect::<Vec<_>>();
+        let vector: Vec<Scalar> = generate_random_scalars(test_size, get_rng(seed));
+
+        let result = mult_matrix_by_vec(&matrix_flattened, &vector, 0);
+        let mut ntt_result = vector.clone();
+        ntt(&mut ntt_result, 0);
+        
+        // we don't use the same roots of unity as arkworks, so the results are permutations
+        // of one another and the only guaranteed fixed scalars are the following ones:
+        assert_eq!(result[0], ntt_result[0]);
+        assert_eq!(result[test_size >> 1], ntt_result[test_size >> 1]);
     }
 
     #[test]
