@@ -133,12 +133,15 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid>nof_msms) return;
   P final_result = P::zero();
-  S digit_base = {unsigned(1<<c)};
-  for (unsigned i = nof_bms; i >0; i--)
+  for (unsigned i = nof_bms; i >1; i--)
   {
-    final_result = digit_base*final_result + final_sums[i-1 + tid*nof_bms];
+    final_result = final_result + final_sums[i-1 + tid*nof_bms];  //add
+    for (unsigned j=0; j<c; j++)  //double
+    {
+      final_result = final_result + final_result;
+    }
   }
-  final_results[tid] = final_result;
+  final_results[tid] = final_result + final_sums[tid*nof_bms];
 
 }
 
