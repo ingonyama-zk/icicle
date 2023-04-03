@@ -314,7 +314,7 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
       uint32_t shift2_s = 1 << (s + 1);
       uint32_t n_twiddles_div = n_twiddles >> (s + 1);
 
-      l = ntw_i * blockDim.x + l;
+      l = ntw_i * blockDim.x + l; //to l from chunks to full
 
       uint32_t j = l & (shift_s - 1); // Equivalent to: l % (1 << s)
       uint32_t i = ((l / shift_s) * shift2_s) % n;
@@ -440,7 +440,7 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   {
     NUM_THREADS = MAX_NUM_THREADS;
     NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
-    // TODO: no correctnes when swapped
+    // TODO: no correctnes when swapped NUM_THREADS, NUM_BLOCKS
     template_normalize_kernel < projective_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
