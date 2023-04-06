@@ -2,6 +2,9 @@ use std::ffi::{c_int, c_uint};
 
 use field::*;
 
+use rustacuda::prelude::*;
+use rustacuda_core::DevicePointer;
+
 pub mod field;
 pub mod utils;
 
@@ -23,6 +26,25 @@ extern "C" {
         device_id: usize,
     ) -> c_uint;
 
+    fn commit_cuda(
+        d_out: *mut Point,
+        d_scalars: *const ScalarField,
+        d_points: *const PointAffineNoInfinity,
+        count: usize,
+        device_id: usize,
+    ) -> c_int;
+
+    fn commit_batch_cuda(
+        d_out: *mut Point,
+        d_scalars: *const ScalarField,
+        d_points: *const PointAffineNoInfinity,
+        count: usize,
+        batch_size: usize,
+        device_id: usize,
+    ) -> c_int;
+
+    fn build_domain_cuda(d_domain: *mut ScalarField, logn: usize, inverse: bool, device_id: usize) -> c_int;
+
     fn ntt_cuda(inout: *mut ScalarField, n: usize, inverse: bool, device_id: usize) -> c_int;
 
     fn ecntt_cuda(inout: *mut Point, n: usize, inverse: bool, device_id: usize) -> c_int;
@@ -35,6 +57,120 @@ extern "C" {
     ) -> c_int;
 
     fn ecntt_end2end_batch(inout: *mut Point, arr_size: usize, n: usize, inverse: bool) -> c_int;
+
+    fn interpolate_scalars_cuda(
+        res: DevicePointer<ScalarField>,
+        d_evaluations: DevicePointer<ScalarField>,
+        d_domain: DevicePointer<ScalarField>, 
+        n: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn interpolate_scalars_batch_cuda(
+        res: *mut ScalarField,
+        d_evaluations: *const ScalarField,
+        d_domain: *const ScalarField, 
+        n: usize,
+        batch_size: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn interpolate_points_cuda(
+        res: *mut Point,
+        d_evaluations: *const Point,
+        d_domain: *const ScalarField, 
+        n: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn interpolate_points_batch_cuda(
+        res: *mut Point,
+        d_evaluations: *const Point,
+        d_domain: *const ScalarField, 
+        n: usize,
+        batch_size: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_scalars_cuda(
+        res: *mut ScalarField,
+        d_coefficients: *const ScalarField,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_scalars_batch_cuda(
+        res: *mut ScalarField,
+        d_coefficients: *const ScalarField,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        batch_size: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_points_cuda(
+        res: *mut Point,
+        d_coefficients: *const Point,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_points_batch_cuda(
+        res: *mut Point,
+        d_coefficients: *const Point,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        batch_size: usize,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_scalars_on_coset_cuda(
+        res: *mut ScalarField,
+        d_coefficients: *const ScalarField,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        coset_powers: *const ScalarField,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_scalars_on_coset_batch_cuda(
+        res: *mut ScalarField,
+        d_coefficients: *const ScalarField,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        batch_size: usize,
+        coset_powers: *const ScalarField,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_points_on_coset_cuda(
+        res: *mut Point,
+        d_coefficients: *const Point,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        coset_powers: *const ScalarField,
+        device_id: usize
+    ) -> c_int;
+
+    fn evaluate_points_on_coset_batch_cuda(
+        res: *mut Point,
+        d_coefficients: *const Point,
+        d_domain: *const ScalarField,
+        domain_size: usize,
+        n: usize,
+        batch_size: usize,
+        coset_powers: *const ScalarField,
+        device_id: usize
+    ) -> c_int;
 
     fn vec_mod_mult_point(
         inout: *mut Point,
@@ -57,6 +193,22 @@ extern "C" {
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
+}
+
+pub fn build_domain(logn: usize, inverse: bool, device_id: usize) -> DeviceBuffer<ScalarField> {
+    let mut d_domain = unsafe { DeviceBuffer::uninitialized(1 << logn).unwrap() };
+    unsafe {
+        build_domain_cuda(
+            d_domain.as_mut_ptr(),
+            logn,
+            inverse,
+            device_id
+        )
+    };
+    let mut h_domain: Vec<ScalarField> = (0..(1 << logn)).map(|_| ScalarField::zero()).collect();
+    d_domain.copy_to(&mut h_domain[..]).unwrap();
+
+    d_domain
 }
 
 pub fn msm(points: &[PointAffineNoInfinity], scalars: &[Scalar], device_id: usize) -> Point {
@@ -199,6 +351,24 @@ pub fn iecntt_batch(values: &mut [Point], batch_size: usize, device_id: usize) {
     ecntt_internal_batch(values, 0, batch_size, true);
 }
 
+pub fn interpolate_scalars(
+    d_out: &mut DeviceBuffer<ScalarField>,
+    mut d_scalars: DeviceBuffer<ScalarField>,
+    mut d_domain: DeviceBuffer<ScalarField>,
+    n: usize,
+    device_id: usize
+) {
+    unsafe {
+        interpolate_scalars_cuda(
+            d_out.as_device_ptr(),
+            d_scalars.as_device_ptr(),
+            d_domain.as_device_ptr(),
+            n,
+            device_id
+        );
+    }
+}
+
 pub fn multp_vec(a: &mut [Point], b: &[Scalar], device_id: usize) {
     assert_eq!(a.len(), b.len());
     unsafe {
@@ -250,7 +420,7 @@ mod tests {
 
     use ark_bls12_381::{Fr, G1Affine, G1Projective};
     use ark_ec::{msm::VariableBaseMSM, AffineCurve, ProjectiveCurve};
-    use ark_ff::{FftField, Field, Zero};
+    use ark_ff::{FftField, Field, Zero, PrimeField};
     use ark_std::UniformRand;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -341,6 +511,12 @@ mod tests {
     fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Scalar> {
         (0..count)
             .map(|_| Scalar::from_ark(&Fr::rand(&mut rng)))
+            .collect()
+    }
+
+    fn generate_random_scalars_field(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
+        (0..count)
+            .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
             .collect()
     }
 
@@ -578,6 +754,36 @@ mod tests {
         }
 
         assert_eq!(intt_result_points, points_proj);
+    }
+
+    #[test]
+    fn test_scalar_interpolation() {
+        // Set up the context, load the module, and create a stream to run kernels in.
+        rustacuda::init(CudaFlags::empty()).unwrap();
+        let device = Device::get_device(0).unwrap();
+        let _ctx = Context::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device).unwrap();
+        let log_test_size = 5;
+        let test_size = 1 << log_test_size;
+
+        let mut d_domain = build_domain(log_test_size, true, 0);
+
+        let seed = Some(0); // fix the rng to get two equal scalar 
+        let vector = generate_random_scalars_field(test_size, get_rng(seed));
+        let mut vector_mut = generate_random_scalars(test_size, get_rng(seed));
+
+        let d_vector = DeviceBuffer::from_slice(&vector[..]).unwrap();
+        let mut d_coeffs = unsafe { DeviceBuffer::uninitialized(test_size).unwrap() };
+
+        interpolate_scalars(&mut d_coeffs, d_vector, d_domain, test_size, 0);
+        intt(&mut vector_mut, 0);
+
+        let mut h_coeffs: Vec<ScalarField> = (0..test_size).map(|_| ScalarField::zero()).collect();
+        d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
+        
+        assert_eq!(h_coeffs[0], vector_mut[0].s);
+        assert_eq!(h_coeffs[test_size - 1], vector_mut[test_size - 1].s);
+        // inequality here because of bit reversal
+        assert_ne!(h_coeffs[1], vector_mut[1].s);
     }
 
     // testing matrix multiplication by comparing the result of FFT with the naive multiplication by the DFT matrix

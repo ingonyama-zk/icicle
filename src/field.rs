@@ -4,13 +4,19 @@ use ark_bls12_381::{Fq, G1Affine, G1Projective};
 use ark_ec::AffineCurve;
 use ark_ff::{BigInteger384, PrimeField};
 
+use rustacuda_derive::DeviceCopy;
+use rustacuda_core::DeviceCopy;
+
 use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
-pub struct Field<const NUM_LIMBS: usize> {
+pub struct Field<const NUM_LIMBS: usize>
+{
     pub s: [u32; NUM_LIMBS],
 }
+
+unsafe impl<const NUM_LIMBS: usize> DeviceCopy for Field<NUM_LIMBS> {}
 
 impl<const NUM_LIMBS: usize> Default for Field<NUM_LIMBS> {
     fn default() -> Self {
@@ -89,7 +95,7 @@ impl ScalarField {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, DeviceCopy)]
 #[repr(C)]
 pub struct Point {
     pub x: BaseField,
@@ -157,7 +163,7 @@ impl PartialEq for Point {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, DeviceCopy)]
 #[repr(C)]
 pub struct PointAffineNoInfinity {
     pub x: BaseField,
@@ -276,7 +282,7 @@ impl ScalarField {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, DeviceCopy)]
 #[repr(C)]
 pub struct Scalar {
     pub s: ScalarField, //TODO: do we need this wrapping struct?

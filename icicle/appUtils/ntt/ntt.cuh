@@ -32,6 +32,7 @@ __global__ void twiddle_factors_kernel(scalar_t * d_twiddles, uint32_t n_twiddle
   for (uint32_t i = 0; i < n_twiddles - 1; i++) {
     d_twiddles[i + 1] = omega * d_twiddles[i];
   }
+  printf("twddl: %d \n", d_twiddles->limbs_storage.limbs[0]);
 }
 
 /**
@@ -96,6 +97,10 @@ template < typename T > T * template_reverse_order(T * arr, uint32_t n, uint32_t
 template < typename E, typename S > __global__ void template_butterfly_kernel(E * arr, S * twiddles, uint32_t n, uint32_t n_twiddles, uint32_t m, uint32_t i, uint32_t max_thread_num) {
   int j = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (j < max_thread_num) {
+    if (j == 0) {
+      printf("seconds before...");
+      printf("d_twddls: %d \n", twiddles[1].limbs_storage.limbs[0]);
+    }
     uint32_t g = j * (n / m);
     uint32_t k = i + j + (m >> 1);
     E u = arr[i + j];
@@ -106,16 +111,15 @@ template < typename E, typename S > __global__ void template_butterfly_kernel(E 
 }
 
 /**
- * Set the elements of arr to be the elements of res multiplied by some scalar. 
- * @param arr input array. 
- * @param res result array. 
- * @param n size of arr. 
- * @param n_inv scalar of type S (scalar). 
+ * Multiply the elements of an input array by a scalar in-place.
+ * @param arr input array.
+ * @param n size of arr.
+ * @param n_inv scalar of type S (scalar).
  */
-template < typename E, typename S > __global__ void template_normalize_kernel(E * arr, E * res, uint32_t n, S scalar) {
+template < typename E, typename S > __global__ void template_normalize_kernel(E * arr, uint32_t n, S scalar) {
   int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid < n) {
-    res[tid] = scalar * arr[tid];
+    arr[tid] = scalar * arr[tid];
   }
 }
 
@@ -161,7 +165,7 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
   if (inverse == true) {
     int NUM_THREADS = MAX_NUM_THREADS;
     int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arrReversed, d_arrReversed, n, S::inv_log_size(logn));
+    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arrReversed, n, S::inv_log_size(logn));
   }
   cudaMemcpy(arrReversed, d_arrReversed, size_E, cudaMemcpyDeviceToHost);
   cudaFree(d_arrReversed);
@@ -207,7 +211,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
   scalar_t * d_twiddles;
   if (inverse){
     d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega_inv(logn));
-  } else{
+  } else {
     d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega(logn));
   }
   scalar_t * result = ntt_template < scalar_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
@@ -337,7 +341,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
   if (inverse == true) {
     NUM_THREADS = MAX_NUM_THREADS;
     NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < scalar_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
+    template_normalize_kernel < scalar_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
   cudaFree(d_arr);
@@ -373,7 +377,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
   if (inverse == true) {
     NUM_THREADS = MAX_NUM_THREADS;
     NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < projective_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, d_arr, arr_size, scalar_t::inv_log_size(logn));
+    template_normalize_kernel < projective_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, arr_size, scalar_t::inv_log_size(logn));
   }
   cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
   cudaFree(d_arr);

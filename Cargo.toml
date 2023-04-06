@@ -15,6 +15,10 @@ ark-poly = "0.3.0"
 ark-ec = { version = "0.3.0", features = [ "parallel" ] }
 ark-bls12-381 = { version = "0.3.0", optional = true }
 
+rustacuda = "0.1"
+rustacuda_core = "0.1"
+rustacuda_derive = "0.1"
+
 rand="*" #TODO: sort dependencies that are not required by the release
 
 [build-dependencies]

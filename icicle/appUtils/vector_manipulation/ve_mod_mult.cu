@@ -13,7 +13,6 @@
 template <typename E, typename S>
 __global__ void vectorModMult(S *scalar_vec, E *element_vec, E *result, size_t n_elments)
 {
-
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid < n_elments)
     {
@@ -48,6 +47,27 @@ int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments) // TODO: in
     cudaFree(d_vec_b);
     cudaFree(d_result);
 
+    return 0;
+}
+
+template <typename E, typename S>
+__global__ void batchVectorMult(S *scalar_vec, E *element_vec, size_t n_scalars, size_t batch_size)
+{
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid < n_scalars * batch_size)
+    {
+        int scalar_id = tid % n_scalars;
+        element_vec[tid] = scalar_vec[scalar_id] * element_vec[tid];
+    }
+}
+
+template <typename E, typename S>
+int batch_vector_mult(S *scalar_vec, E *element_vec, size_t n_scalars, size_t batch_size)
+{
+    // Set the grid and block dimensions
+    int NUM_THREADS = MAX_THREADS_PER_BLOCK;
+    int NUM_BLOCKS = (n_scalars * batch_size + NUM_THREADS - 1) / NUM_THREADS;
+    batchVectorMult<<<NUM_BLOCKS, NUM_THREADS>>>(scalar_vec, element_vec, n_scalars, batch_size);
     return 0;
 }
 

@@ -144,16 +144,17 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
 
 //this function computes msm using the bucket method
 template <typename S, typename P, typename A>
-void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, unsigned size, P*h_final_result){
+void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned size, P* final_result, bool on_device) {
   
-  //copy scalars and point to gpu
-  S *scalars;
-  A *points;
-
-  cudaMalloc(&scalars, sizeof(S) * size);
-  cudaMalloc(&points, sizeof(A) * size);
-  cudaMemcpy(scalars, h_scalars, sizeof(S) * size, cudaMemcpyHostToDevice);
-  cudaMemcpy(points, h_points, sizeof(A) * size, cudaMemcpyHostToDevice);
+  S *d_scalars;
+  A *d_points;
+  if (!on_device) {
+    //copy scalars and point to gpu
+    cudaMalloc(&d_scalars, sizeof(S) * size);
+    cudaMalloc(&d_points, sizeof(A) * size);
+    cudaMemcpy(d_scalars, scalars, sizeof(S) * size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_points, points, sizeof(A) * size, cudaMemcpyHostToDevice);
+  }
 
   P *buckets;
   //compute number of bucket modules and number of buckets in each module
@@ -180,7 +181,8 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
   //split scalars into digits
   NUM_THREADS = 1 << 10;
   NUM_BLOCKS = (size * (nof_bms+1) + NUM_THREADS - 1) / NUM_THREADS;
-  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + size, point_indices + size, scalars, size, msm_log_size, nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
+  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + size, point_indices + size, on_device ? scalars : d_scalars, size, msm_log_size, 
+                                                    nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
 
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sort_indices_temp_storage{};
@@ -225,7 +227,8 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
   //launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, nof_buckets, 1, c+bm_bitsize);
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, 
+                                                         on_device ? points : d_points, nof_buckets, 1, c+bm_bitsize);
 
   #ifdef SSM_SUM
     //sum each bucket
@@ -250,19 +253,23 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c);
   #endif
 
-  P* final_result;
-  cudaMalloc(&final_result, sizeof(P));
+  P* d_final_result;
+  if (!on_device)
+    cudaMalloc(&d_final_result, sizeof(P));
+
   //launch the double and add kernel, a single thread
-  final_accumulation_kernel<P, S><<<1,1>>>(final_results, final_result,1, nof_bms, c);
+  final_accumulation_kernel<P, S><<<1,1>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
   
   //copy final result to host
   cudaDeviceSynchronize();
-  cudaMemcpy(h_final_result, final_result, sizeof(P), cudaMemcpyDeviceToHost);
+  if (!on_device)
+    cudaMemcpy(final_result, d_final_result, sizeof(P), cudaMemcpyDeviceToHost);
 
   //free memory
+  cudaFree(d_points);
+  cudaFree(d_scalars);
+  cudaFree(d_final_result);
   cudaFree(buckets);
-  cudaFree(points);
-  cudaFree(scalars);
   cudaFree(bucket_indices);
   cudaFree(point_indices);
   cudaFree(single_bucket_indices);
@@ -270,23 +277,22 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, 
   cudaFree(nof_buckets_to_compute);
   cudaFree(bucket_offsets);
   cudaFree(final_results);
-  cudaFree(final_result);
-
 }
 
 //this function computes msm using the bucket method
 template <typename S, typename P, typename A>
-void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_points, unsigned batch_size, unsigned msm_size, P*h_final_results){
-  
-  //copy scalars and point to gpu
-  S *scalars;
-  A *points;
+void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned batch_size, unsigned msm_size, P* final_results, bool on_device=false){
 
   unsigned total_size = batch_size * msm_size;
-  cudaMalloc(&scalars, sizeof(S) * total_size);
-  cudaMalloc(&points, sizeof(A) * total_size);
-  cudaMemcpy(scalars, h_scalars, sizeof(S) * total_size, cudaMemcpyHostToDevice);
-  cudaMemcpy(points, h_points, sizeof(A) * total_size, cudaMemcpyHostToDevice);
+  S *d_scalars;
+  A *d_points;
+  if (!on_device) {
+    //copy scalars and point to gpu
+    cudaMalloc(&d_scalars, sizeof(S) * total_size);
+    cudaMalloc(&d_points, sizeof(A) * total_size);
+    cudaMemcpy(d_scalars, scalars, sizeof(S) * total_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_points, points, sizeof(A) * total_size, cudaMemcpyHostToDevice);
+  }
 
   P *buckets;
   //compute number of bucket modules and number of buckets in each module
@@ -313,7 +319,8 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   //split scalars into digits
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_size * nof_bms + msm_size + NUM_THREADS - 1) / NUM_THREADS;
-  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + msm_size, point_indices + msm_size, scalars, total_size, msm_log_size, nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
+  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + msm_size, point_indices + msm_size, on_device ? scalars : d_scalars, total_size, 
+                                                    msm_log_size, nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
 
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sort_indices_temp_storage{};
@@ -358,7 +365,8 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   //launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, nof_buckets, batch_size, c+bm_bitsize);
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices,
+                                                         on_device ? points : d_points, nof_buckets, batch_size, c+bm_bitsize);
 
   #ifdef SSM_SUM
     //sum each bucket
@@ -383,21 +391,25 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, nof_bms*batch_size, c);
   #endif
 
-  P* final_results;
-  cudaMalloc(&final_results, sizeof(P)*batch_size);
+  P* d_final_results;
+  if (!on_device)
+    cudaMalloc(&d_final_results, sizeof(P)*batch_size);
+
   //launch the double and add kernel, a single thread for each msm
   NUM_THREADS = 1<<8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
-  final_accumulation_kernel<P, S><<<NUM_BLOCKS,NUM_THREADS>>>(bm_sums, final_results, batch_size, nof_bms, c);
+  final_accumulation_kernel<P, S><<<NUM_BLOCKS,NUM_THREADS>>>(bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
   
   //copy final result to host
   cudaDeviceSynchronize();
-  cudaMemcpy(h_final_results, final_results, sizeof(P)*batch_size, cudaMemcpyDeviceToHost);
+  if (!on_device)
+    cudaMemcpy(final_results, d_final_results, sizeof(P)*batch_size, cudaMemcpyDeviceToHost);
 
   //free memory
+  cudaFree(d_points);
+  cudaFree(d_scalars);
+  cudaFree(d_final_results);
   cudaFree(buckets);
-  cudaFree(points);
-  cudaFree(scalars);
   cudaFree(bucket_indices);
   cudaFree(point_indices);
   cudaFree(single_bucket_indices);
@@ -405,7 +417,6 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *h_scalars, A *h_
   cudaFree(total_nof_buckets_to_compute);
   cudaFree(bucket_offsets);
   cudaFree(bm_sums);
-  cudaFree(final_results);
 
 }
 
@@ -493,7 +504,7 @@ void large_msm(S* scalars, A* points, unsigned size, P* result){
   // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
-  bucket_method_msm(bitsize, c, scalars, points, size, result);
+  bucket_method_msm(bitsize, c, scalars, points, size, result, false);
 }
 
 // this function is used to compute a batches of msms of size larger than 256
@@ -503,7 +514,7 @@ void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_
   // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
-  batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result);
+  batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, false);
 }
 
 extern "C"
