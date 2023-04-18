@@ -803,96 +803,96 @@ mod tests {
         (vector_mut, d_vector, d_domain)
     }
 
-    // #[test]
-    // fn test_msm() {
-    //     let test_sizes = [7, 8, 9, 12];
+    #[test]
+    fn test_msm() {
+        let test_sizes = [7, 8, 9, 12];
 
-    //     for pow2 in test_sizes {
-    //         let count = 1 << pow2;
-    //         let seed = None; // set Some to provide seed
-    //         let points = generate_random_points(count, get_rng(seed));
-    //         let scalars = generate_random_scalars(count, get_rng(seed));
+        for pow2 in test_sizes {
+            let count = 1 << pow2;
+            let seed = None; // set Some to provide seed
+            let points = generate_random_points(count, get_rng(seed));
+            let scalars = generate_random_scalars(count, get_rng(seed));
 
-    //         let msm_result = msm(&points, &scalars, 0);
+            let msm_result = msm(&points, &scalars, 0);
 
-    //         let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
-    //         let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark_mod_p().0).collect();
+            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
+            let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark_mod_p().0).collect();
 
-    //         let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
+            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
 
-    //         assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
-    //         assert_eq!(msm_result.to_ark(), msm_result_ark);
-    //         assert_eq!(
-    //             msm_result.to_ark_affine(),
-    //             Point::from_ark(msm_result_ark).to_ark_affine()
-    //         );
-    //     }
-    // }
+            assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
+            assert_eq!(msm_result.to_ark(), msm_result_ark);
+            assert_eq!(
+                msm_result.to_ark_affine(),
+                Point::from_ark(msm_result_ark).to_ark_affine()
+            );
+        }
+    }
 
-    // #[test]
-    // fn test_batch_msm() {
-    //     for batch_pow2 in [2, 4] {
-    //         for pow2 in [9, 12] {
-    //             let msm_size = 1 << pow2;
-    //             let batch_size = 1 << batch_pow2;
-    //             let seed = None; // set Some to provide seed
-    //             let points_batch = generate_random_points(msm_size * batch_size, get_rng(seed));
-    //             let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
+    #[test]
+    fn test_batch_msm() {
+        for batch_pow2 in [2, 4] {
+            for pow2 in [9, 12] {
+                let msm_size = 1 << pow2;
+                let batch_size = 1 << batch_pow2;
+                let seed = None; // set Some to provide seed
+                let points_batch = generate_random_points(msm_size * batch_size, get_rng(seed));
+                let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
 
-    //             let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
-    //             let scalars_r_ark: Vec<_> =
-    //                 scalars_batch.iter().map(|x| x.to_ark_mod_p().0).collect();
+                let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
+                let scalars_r_ark: Vec<_> =
+                    scalars_batch.iter().map(|x| x.to_ark_mod_p().0).collect();
 
-    //             let expected: Vec<_> = point_r_ark
-    //                 .chunks(msm_size)
-    //                 .zip(scalars_r_ark.chunks(msm_size))
-    //                 .map(|p| Point::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
-    //                 .collect();
+                let expected: Vec<_> = point_r_ark
+                    .chunks(msm_size)
+                    .zip(scalars_r_ark.chunks(msm_size))
+                    .map(|p| Point::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
+                    .collect();
 
-    //             let result = msm_batch(&points_batch, &scalars_batch, batch_size, 0);
+                let result = msm_batch(&points_batch, &scalars_batch, batch_size, 0);
 
-    //             assert_eq!(result, expected);
-    //         }
-    //     }
-    // }
+                assert_eq!(result, expected);
+            }
+        }
+    }
 
-    // #[test]
-    // fn test_commit() {
-    //     let test_size = 1 << 4;
-    //     let seed = Some(0);
-    //     let (mut scalars, mut d_scalars, _) = set_up_scalars(test_size, 0, false);
-    //     let mut points = generate_random_points(test_size, get_rng(seed));
-    //     let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
+    #[test]
+    fn test_commit() {
+        let test_size = 1 << 4;
+        let seed = Some(0);
+        let (mut scalars, mut d_scalars, _) = set_up_scalars(test_size, 0, false);
+        let mut points = generate_random_points(test_size, get_rng(seed));
+        let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
         
-    //     let msm_result = msm(&points, &scalars, 0);
-    //     let mut d_commit_result = unsafe { DeviceBuffer::from_raw_parts(commit(&mut d_points, &mut d_scalars), 1) };
-    //     let mut h_commit_result: Vec<Point> = (0..1).map(|_| Point::zero()).collect();
-    //     d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
+        let msm_result = msm(&points, &scalars, 0);
+        let mut d_commit_result = unsafe { DeviceBuffer::from_raw_parts(commit(&mut d_points, &mut d_scalars), 1) };
+        let mut h_commit_result: Vec<Point> = (0..1).map(|_| Point::zero()).collect();
+        d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
 
-    //     assert_eq!(msm_result, h_commit_result[0]);
-    //     assert_ne!(msm_result, Point::zero());
-    //     assert_ne!(h_commit_result[0], Point::zero());
-    // }
+        assert_eq!(msm_result, h_commit_result[0]);
+        assert_ne!(msm_result, Point::zero());
+        assert_ne!(h_commit_result[0], Point::zero());
+    }
 
-    // #[test]
-    // fn test_batch_commit() {
-    //     let batch_size = 2;
-    //     let test_size = 1 << 4;
-    //     let seed = Some(0);
-    //     let (scalars, mut d_scalars, _) = set_up_scalars(test_size * batch_size, 0, false);
-    //     let points = generate_random_points(test_size * batch_size, get_rng(seed));
-    //     let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
+    #[test]
+    fn test_batch_commit() {
+        let batch_size = 2;
+        let test_size = 1 << 4;
+        let seed = Some(0);
+        let (scalars, mut d_scalars, _) = set_up_scalars(test_size * batch_size, 0, false);
+        let points = generate_random_points(test_size * batch_size, get_rng(seed));
+        let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
 
-    //     let msm_result = msm_batch(&points, &scalars, batch_size, 0);
-    //     let d_commit_result = commit_batch(&mut d_points, &mut d_scalars, batch_size);
-    //     let mut h_commit_result: Vec<Point> = (0..batch_size).map(|_| Point::zero()).collect();
-    //     d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
+        let msm_result = msm_batch(&points, &scalars, batch_size, 0);
+        let d_commit_result = commit_batch(&mut d_points, &mut d_scalars, batch_size);
+        let mut h_commit_result: Vec<Point> = (0..batch_size).map(|_| Point::zero()).collect();
+        d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
 
-    //     assert_eq!(msm_result, h_commit_result);
-    //     for h in h_commit_result {
-    //         assert_ne!(h, Point::zero());
-    //     }
-    // }
+        assert_eq!(msm_result, h_commit_result);
+        for h in h_commit_result {
+            assert_ne!(h, Point::zero());
+        }
+    }
 
     #[test]
     fn test_ntt() {
