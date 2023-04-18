@@ -26,6 +26,8 @@ template <class CONFIG> class Field {
     static constexpr HOST_INLINE Field omega(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
+        case 0:
+          return Field { CONFIG::one };
         case 1:
           return Field { CONFIG::omega1 };
         case 2:
@@ -97,6 +99,8 @@ template <class CONFIG> class Field {
     static constexpr HOST_INLINE Field omega_inv(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
+        case 0:
+          return Field { CONFIG::one };
         case 1:
           return Field { CONFIG::omega_inv1 };
         case 2:

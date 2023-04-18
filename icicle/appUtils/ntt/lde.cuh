@@ -19,7 +19,7 @@ template < typename E, typename S > E * interpolate(E * d_evaluations, S * d_dom
   cudaMalloc(&d_coefficients, sizeof(E) * n);
   cudaMemcpy(d_coefficients, d_evaluations, sizeof(E) * n, cudaMemcpyDeviceToDevice);
   template_ntt_on_device_memory < E, S > (d_coefficients, n, logn, d_domain, n);
-  int NUM_THREADS = MAX_NUM_THREADS;
+  int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
   template_normalize_kernel < E, S > <<< NUM_BLOCKS, NUM_THREADS >>> (d_coefficients, n, S::inv_log_size(logn));
   return d_coefficients;
@@ -47,6 +47,13 @@ template < typename E, typename S > E * interpolate_batch(E * d_evaluations, S *
   return d_coefficients;
 }
 
+template < typename E > __global__ void fill_array(E * arr, E val, uint32_t n) {
+  int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (tid < n) {
+    arr[tid] = val;
+  }
+}
+
 /**
  * Evaluate a polynomial on a coset.
  * Note: this function does not preform any bit-reverse permutations on its inputs or outputs, so the order of outputs is bit-reversed.
@@ -60,17 +67,21 @@ template < typename E, typename S > E * interpolate_batch(E * d_evaluations, S *
  */
 template < typename E, typename S > 
 E * evaluate(E * d_coefficients, S * d_domain, unsigned domain_size, unsigned n, bool coset, S * coset_powers) {
-  uint32_t logn = uint32_t(log(n) / log(2));
+  uint32_t logn = uint32_t(log(domain_size) / log(2));
   E * d_evaluations;
   cudaMalloc(&d_evaluations, sizeof(E) * domain_size);
   if (domain_size > n) {
     cudaMemcpy(d_evaluations, d_coefficients, n * sizeof(E), cudaMemcpyDeviceToDevice);
-    cudaMemset(&d_evaluations[n], 0, (domain_size - n) * sizeof(E));
+    int NUM_THREADS = MAX_THREADS_BATCH;
+    int NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
+    fill_array <E> <<< NUM_BLOCKS, NUM_THREADS >>> (&d_evaluations[n], E::zero(), domain_size - n);
   } else
     cudaMemcpy(d_evaluations, d_coefficients, sizeof(E) * domain_size, cudaMemcpyDeviceToDevice);
 
   if (coset)
     batch_vector_mult(coset_powers, d_evaluations, domain_size, 1);
+
+  reverse_order(d_evaluations, domain_size, logn);
 
   template_ntt_on_device_memory < E, S > (d_evaluations, domain_size, logn, d_domain, domain_size);
   return d_evaluations;
@@ -90,28 +101,33 @@ E * evaluate(E * d_coefficients, S * d_domain, unsigned domain_size, unsigned n,
  */
 template < typename E, typename S > 
 E * evaluate_batch(E * d_coefficients, S * d_domain, unsigned domain_size, unsigned n, unsigned batch_size, bool coset, S * coset_powers) {
-  uint32_t logn = uint32_t(log(n) / log(2));
+  uint32_t logn = uint32_t(log(domain_size) / log(2));
   E * d_evaluations;
   cudaMalloc(&d_evaluations, sizeof(E) * domain_size * batch_size);
   if (domain_size > n) {
-    cudaStream_t memcpy_streams[batch_size];
-    for (int i = 0; i < batch_size; i++) {
-      cudaMemcpyAsync(&d_evaluations[i * domain_size], &d_coefficients[i * n], n * sizeof(E), cudaMemcpyDeviceToDevice, memcpy_streams[i]);
-      cudaMemsetAsync(&d_evaluations[(i + 1) * n], 0, (domain_size - n) * sizeof(E), memcpy_streams[i]);
-    }
+    // allocate and initialize an array of stream handles to parallelize data copying across batches
+    cudaStream_t *memcpy_streams = (cudaStream_t *) malloc(batch_size * sizeof(cudaStream_t));
+    for (int i = 0; i < batch_size; i++)
+    {
+      cudaStreamCreate(&(memcpy_streams[i]));
 
-    // synchronize streams
-    for (int i = 0; i < batch_size; i++) {
-        cudaStreamSynchronize(memcpy_streams[i]);
-        cudaStreamDestroy(memcpy_streams[i]);
+      cudaMemcpyAsync(&d_evaluations[i * domain_size], &d_coefficients[i * n], n * sizeof(E), cudaMemcpyDeviceToDevice, memcpy_streams[i]);
+      int NUM_THREADS = MAX_THREADS_BATCH;
+      int NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
+      fill_array <E> <<< NUM_BLOCKS, NUM_THREADS, 0, memcpy_streams[i] >>> (&d_evaluations[i * domain_size + n], E::zero(), domain_size - n);
+
+      cudaStreamSynchronize(memcpy_streams[i]);
+      cudaStreamDestroy(memcpy_streams[i]);
     }
   } else
     cudaMemcpy(d_evaluations, d_coefficients, sizeof(E) * domain_size * batch_size, cudaMemcpyDeviceToDevice);
 
-  int NUM_THREADS = MAX_THREADS_BATCH;
+  // reverse_order_batch(d_evaluations, domain_size, logn, batch_size);
+
   if (coset)
     batch_vector_mult(coset_powers, d_evaluations, domain_size, batch_size);
 
+  int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   ntt_template_kernel < E, S > <<< NUM_BLOCKS, NUM_THREADS >>>(d_evaluations, domain_size, logn, d_domain, domain_size, batch_size);
   return d_evaluations;

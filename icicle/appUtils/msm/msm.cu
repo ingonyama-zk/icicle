@@ -266,9 +266,11 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     cudaMemcpy(final_result, d_final_result, sizeof(P), cudaMemcpyDeviceToHost);
 
   //free memory
-  cudaFree(d_points);
-  cudaFree(d_scalars);
-  cudaFree(d_final_result);
+  if (!on_device) {
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    cudaFree(d_final_result);
+  }
   cudaFree(buckets);
   cudaFree(bucket_indices);
   cudaFree(point_indices);
@@ -406,9 +408,11 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
     cudaMemcpy(final_results, d_final_results, sizeof(P)*batch_size, cudaMemcpyDeviceToHost);
 
   //free memory
-  cudaFree(d_points);
-  cudaFree(d_scalars);
-  cudaFree(d_final_results);
+  if (!on_device) {
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    cudaFree(d_final_results);
+  }
   cudaFree(buckets);
   cudaFree(bucket_indices);
   cudaFree(point_indices);

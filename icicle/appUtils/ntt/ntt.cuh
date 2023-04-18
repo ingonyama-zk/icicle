@@ -25,14 +25,13 @@ const uint32_t MAX_THREADS_BATCH = 256;
  * @param omega multiplying factor. 
  */
 __global__ void twiddle_factors_kernel(scalar_t * d_twiddles, uint32_t n_twiddles, scalar_t omega) {
-  for (uint32_t i = 0; i < n_twiddles; i++) {
-    d_twiddles[i] = scalar_t::zero();
-  }
+  // for (uint32_t i = 0; i < n_twiddles; i++) {
+  //   d_twiddles[i] = scalar_t::zero();
+  // }
   d_twiddles[0] = scalar_t::one();
   for (uint32_t i = 0; i < n_twiddles - 1; i++) {
     d_twiddles[i + 1] = omega * d_twiddles[i];
   }
-  printf("twddl: %d \n", d_twiddles->limbs_storage.limbs[0]);
 }
 
 /**
@@ -50,28 +49,27 @@ scalar_t * fill_twiddle_factors_array(uint32_t n_twiddles, scalar_t omega) {
 }
 
 /**
- * Returens the bit reversed order of a number. 
+ * Returns the bit reversed order of a number. 
  * for example: on inputs num = 6 (110 in binary) and logn = 3
  * the function should return 3 (011 in binary.)
  * @param num some number with bit representation of size logn.
- * @param logn length of bit representation of num.
- * @return bit reveresed order or num.
+ * @param logn length of bit representation of `num`.
+ * @return bit reveresed order or `num`.
  */
 __device__ __host__ uint32_t reverseBits(uint32_t num, uint32_t logn) {
   unsigned int reverse_num = 0;
-  int i;
-  for (i = 0; i < logn; i++) {
+  for (int i = 0; i < logn; i++) {
     if ((num & (1 << i))) reverse_num |= 1 << ((logn - 1) - i);
   }
   return reverse_num;
 }
 
 /**
- * Returens the bit reversal ordering of the input array.
+ * Returns the bit reversal ordering of the input array.
  * for example: on input ([a[0],a[1],a[2],a[3]], 4, 2) it returns
  * [a[0],a[3],a[2],a[1]] (elements in indices 3,1 swhich places).
  * @param arr array of some object of type T of size which is a power of 2. 
- * @param n length of arr.
+ * @param n length of `arr`.
  * @param logn log(n).
  * @return A new array which is the bit reversed version of input array. 
  */
@@ -82,6 +80,47 @@ template < typename T > T * template_reverse_order(T * arr, uint32_t n, uint32_t
     arrReversed[i] = arr[reversed];
   }
   return arrReversed;
+}
+
+template < typename T > __global__ void reverse_order_kernel(T* arr, T* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size) {
+  int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (threadId < n * batch_size) {
+    int idx = threadId % n;
+    int batch_idx = threadId / n;
+    int idx_reversed = __brev(idx) >> (32 - logn);
+    arr_reversed[batch_idx * n + idx_reversed] = arr[batch_idx * n + idx];
+  }
+}
+
+/**
+ * Bit-reverses a batch of input arrays in-place inside GPU.
+ * for example: on input array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
+ * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
+ * @param arr arrays of some object of type T of size which is a power of 2. Should be on GPU.
+ * @param n length of `arr`.
+ * @param logn log(n).
+ * @param batch_size the size of the batch.
+ */
+template < typename T > void reverse_order_batch(T* arr, uint32_t n, uint32_t logn, uint32_t batch_size) {
+  T* arr_reversed;
+  cudaMalloc(&arr_reversed, n * batch_size * sizeof(T));
+  int number_of_threads = MAX_NUM_THREADS;
+  int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
+  reverse_order_kernel <T> <<<number_of_blocks, number_of_threads>>> (arr, arr_reversed, n, logn, batch_size);
+  cudaMemcpy(arr, arr_reversed, n * sizeof(T), cudaMemcpyDeviceToDevice);
+  cudaFree(arr_reversed);
+}
+
+/**
+ * Bit-reverses an input array in-place inside GPU.
+ * for example: on array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
+ * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
+ * @param arr array of some object of type T of size which is a power of 2. Should be on GPU.
+ * @param n length of `arr`.
+ * @param logn log(n).
+ */
+template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn) {
+  reverse_order_batch(arr, n, logn, 1);
 }
 
 /**
@@ -97,10 +136,6 @@ template < typename T > T * template_reverse_order(T * arr, uint32_t n, uint32_t
 template < typename E, typename S > __global__ void template_butterfly_kernel(E * arr, S * twiddles, uint32_t n, uint32_t n_twiddles, uint32_t m, uint32_t i, uint32_t max_thread_num) {
   int j = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (j < max_thread_num) {
-    if (j == 0) {
-      printf("seconds before...");
-      printf("d_twddls: %d \n", twiddles[1].limbs_storage.limbs[0]);
-    }
     uint32_t g = j * (n / m);
     uint32_t k = i + j + (m >> 1);
     E u = arr[i + j];
@@ -162,7 +197,7 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
   cudaMalloc( & d_arrReversed, size_E);
   cudaMemcpy(d_arrReversed, arrReversed, size_E, cudaMemcpyHostToDevice);
   template_ntt_on_device_memory < E, S > (d_arrReversed, n, logn, d_twiddles, n_twiddles);
-  if (inverse == true) {
+  if (inverse) {
     int NUM_THREADS = MAX_NUM_THREADS;
     int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
     template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arrReversed, n, S::inv_log_size(logn));

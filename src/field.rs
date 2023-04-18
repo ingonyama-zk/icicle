@@ -4,15 +4,14 @@ use ark_bls12_381::{Fq, G1Affine, G1Projective};
 use ark_ec::AffineCurve;
 use ark_ff::{BigInteger384, PrimeField};
 
-use rustacuda_derive::DeviceCopy;
 use rustacuda_core::DeviceCopy;
+use rustacuda_derive::DeviceCopy;
 
 use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
-pub struct Field<const NUM_LIMBS: usize>
-{
+pub struct Field<const NUM_LIMBS: usize> {
     pub s: [u32; NUM_LIMBS],
 }
 
@@ -333,7 +332,10 @@ mod tests {
     use ark_bls12_381::Fr;
     use ark_ff::{BigInteger256, PrimeField};
 
-    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::Point};
+    use crate::{
+        field::Point,
+        utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec},
+    };
 
     use super::{Scalar, ScalarField};
 

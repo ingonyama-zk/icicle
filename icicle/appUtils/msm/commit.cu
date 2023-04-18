@@ -12,18 +12,20 @@
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
 extern "C"
-int commit_cuda(projective_t *d_out, scalar_t* d_scalars, affine_t* d_points, size_t count, size_t device_id = 0)
+projective_t* commit_cuda(scalar_t* d_scalars, affine_t* d_points, size_t count, size_t device_id = 0)
 {
     try
     {
+        projective_t* d_out;
+        cudaMalloc(&d_out, sizeof(projective_t));
         // TODO: set c depending on `count` instead of just 10
         bucket_method_msm(scalar_t::NBITS, 10, d_scalars, d_points, count, d_out, true);
-        return CUDA_SUCCESS;
+        return d_out;
     }
     catch (const std::runtime_error &ex)
     {
         printf("error %s", ex.what());
-        return -1;
+        return nullptr;
     }
 }
 
@@ -37,18 +39,19 @@ int commit_cuda(projective_t *d_out, scalar_t* d_scalars, affine_t* d_points, si
  * @param batch_size Size of the batch.
  */
 extern "C"
-int commit_batch_cuda(projective_t *d_out, scalar_t* d_scalars, affine_t* d_points, 
-                      size_t count, size_t batch_size, size_t device_id = 0)
+projective_t* commit_batch_cuda(scalar_t* d_scalars, affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
 {
     try
     {
+        projective_t* d_out;
+        cudaMalloc(&d_out, sizeof(projective_t) * batch_size);
         // TODO: set c depending on `count` instead of just 10
         batched_bucket_method_msm(scalar_t::NBITS, 10, d_scalars, d_points, batch_size, count, d_out, true);
-        return CUDA_SUCCESS;
+        return d_out;
     }
     catch (const std::runtime_error &ex)
     {
         printf("error %s", ex.what());
-        return -1;
+        return nullptr;
     }
 }
