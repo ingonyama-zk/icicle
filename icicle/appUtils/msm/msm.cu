@@ -133,12 +133,15 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid>nof_msms) return;
   P final_result = P::zero();
-  S digit_base = {unsigned(1<<c)};
-  for (unsigned i = nof_bms; i >0; i--)
+  for (unsigned i = nof_bms; i >1; i--)
   {
-    final_result = digit_base*final_result + final_sums[i-1 + tid*nof_bms];
+    final_result = final_result + final_sums[i-1 + tid*nof_bms];  //add
+    for (unsigned j=0; j<c; j++)  //double
+    {
+      final_result = final_result + final_result;
+    }
   }
-  final_results[tid] = final_result;
+  final_results[tid] = final_result + final_sums[tid*nof_bms];
 
 }
 
@@ -166,7 +169,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     nof_bms++;
   }
   unsigned nof_buckets = nof_bms<<c;
-  cudaMalloc(&buckets, sizeof(P) * nof_buckets); 
+  cudaMalloc(&buckets, sizeof(P) * nof_buckets);
 
   // launch the bucket initialization kernel with maximum threads
   unsigned NUM_THREADS = 1 << 10;
@@ -283,7 +286,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 
 //this function computes msm using the bucket method
 template <typename S, typename P, typename A>
-void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned batch_size, unsigned msm_size, P* final_results, bool on_device=false){
+void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned batch_size, unsigned msm_size, P* final_results, bool on_device){
 
   unsigned total_size = batch_size * msm_size;
   S *d_scalars;
@@ -436,7 +439,7 @@ __global__ void to_proj_kernel(A* affine_points, P* proj_points, unsigned N){
 
 //the function computes msm using ssm
 template <typename S, typename P, typename A>
-void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result){ //works up to 2^8
+void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool on_device){ //works up to 2^8
   
   S *scalars;
   A *a_points;
@@ -503,22 +506,22 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 
 //this function is used to compute msms of size larger than 256
 template <typename S, typename P, typename A>
-void large_msm(S* scalars, A* points, unsigned size, P* result){
+void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device){
   unsigned c = 10;
   // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
-  bucket_method_msm(bitsize, c, scalars, points, size, result, false);
+  bucket_method_msm(bitsize, c, scalars, points, size, result, on_device);
 }
 
 // this function is used to compute a batches of msms of size larger than 256
 template <typename S, typename P, typename A>
-void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result){
+void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result, bool on_device){
   unsigned c = 10;
   // unsigned c = 6;
   // unsigned bitsize = 32;
   unsigned bitsize = 255;
-  batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, false);
+  batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device);
 }
 
 extern "C"
@@ -528,10 +531,10 @@ int msm_cuda(projective_t *out, affine_t points[],
     try
     {
         if (count>256){
-            large_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out);
+            large_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out, false);
         }
         else{
-            short_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out);
+            short_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out, false);
         }
 
         return CUDA_SUCCESS;
@@ -548,7 +551,7 @@ extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
 {
   try
   {
-    batched_large_msm<scalar_t, projective_t, affine_t>(scalars, points, batch_size, msm_size, out);
+    batched_large_msm<scalar_t, projective_t, affine_t>(scalars, points, batch_size, msm_size, out, false);
 
     return CUDA_SUCCESS;
   }

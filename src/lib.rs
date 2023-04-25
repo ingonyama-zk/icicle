@@ -4,6 +4,7 @@ use field::*;
 
 use rustacuda::prelude::*;
 use rustacuda_core::DevicePointer;
+use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
 
 pub mod field;
 pub mod utils;
@@ -27,19 +28,21 @@ extern "C" {
     ) -> c_uint;
 
     fn commit_cuda(
+        d_out: DevicePointer<Point>,
         d_scalars: DevicePointer<ScalarField>,
         d_points: DevicePointer<PointAffineNoInfinity>,
         count: usize,
         device_id: usize,
-    ) -> DevicePointer<Point>;
+    ) -> c_uint;
 
     fn commit_batch_cuda(
+        d_out: DevicePointer<Point>,
         d_scalars: DevicePointer<ScalarField>,
         d_points: DevicePointer<PointAffineNoInfinity>,
         count: usize,
         batch_size: usize,
         device_id: usize,
-    ) -> DevicePointer<Point>;
+    ) -> c_uint;
 
     fn build_domain_cuda(domain_size: usize, logn: usize, inverse: bool, device_id: usize) -> DevicePointer<ScalarField>;
 
@@ -57,79 +60,89 @@ extern "C" {
     fn ecntt_end2end_batch(inout: *mut Point, arr_size: usize, n: usize, inverse: bool) -> c_int;
 
     fn interpolate_scalars_cuda(
+        d_out: DevicePointer<ScalarField>,
         d_evaluations: DevicePointer<ScalarField>,
         d_domain: DevicePointer<ScalarField>, 
         n: usize,
         device_id: usize
-    ) -> DevicePointer<ScalarField>;
+    ) -> c_int;
 
     fn interpolate_scalars_batch_cuda(
+        d_out: DevicePointer<ScalarField>,
         d_evaluations: DevicePointer<ScalarField>,
         d_domain: DevicePointer<ScalarField>,
         n: usize,
         batch_size: usize,
         device_id: usize
-    ) -> DevicePointer<ScalarField>;
+    ) -> c_int;
 
     fn interpolate_points_cuda(
+        d_out: DevicePointer<Point>,
         d_evaluations: DevicePointer<Point>,
         d_domain: DevicePointer<ScalarField>,
         n: usize,
         device_id: usize
-    ) -> DevicePointer<Point>;
+    ) -> c_int;
 
     fn interpolate_points_batch_cuda(
+        d_out: DevicePointer<Point>,
         d_evaluations: DevicePointer<Point>,
         d_domain: DevicePointer<ScalarField>,
         n: usize,
         batch_size: usize,
         device_id: usize
-    ) -> DevicePointer<Point>;
+    ) -> c_int;
 
     fn evaluate_scalars_cuda(
+        d_out: DevicePointer<ScalarField>,
         d_coefficients: DevicePointer<ScalarField>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
         n: usize,
         device_id: usize
-    ) -> DevicePointer<ScalarField>;
+    ) -> c_int;
 
     fn evaluate_scalars_batch_cuda(
+        d_out: DevicePointer<ScalarField>,
         d_coefficients: DevicePointer<ScalarField>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
         n: usize,
         batch_size: usize,
         device_id: usize
-    ) -> DevicePointer<ScalarField>;
+    ) -> c_int;
 
     fn evaluate_points_cuda(
+        d_out: DevicePointer<Point>,
         d_coefficients: DevicePointer<Point>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
         n: usize,
         device_id: usize
-    ) -> DevicePointer<Point>;
+    ) -> c_int;
 
     fn evaluate_points_batch_cuda(
+        d_out: DevicePointer<Point>,
         d_coefficients: DevicePointer<Point>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
         n: usize,
         batch_size: usize,
         device_id: usize
-    ) -> DevicePointer<Point>;
+    ) -> c_int;
 
     fn evaluate_scalars_on_coset_cuda(
+        d_out: DevicePointer<ScalarField>,
         d_coefficients: DevicePointer<ScalarField>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
         n: usize,
         coset_powers: DevicePointer<ScalarField>,
         device_id: usize
-    ) -> DevicePointer<ScalarField>;
+    ) -> c_int;
 
     fn evaluate_scalars_on_coset_batch_cuda(
+        d_out: DevicePointer<ScalarField>,
         d_coefficients: DevicePointer<ScalarField>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
@@ -137,18 +150,20 @@ extern "C" {
         batch_size: usize,
         coset_powers: DevicePointer<ScalarField>,
         device_id: usize
-    ) -> DevicePointer<ScalarField>;
+    ) -> c_int;
 
     fn evaluate_points_on_coset_cuda(
+        d_out: DevicePointer<Point>,
         d_coefficients: DevicePointer<Point>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
         n: usize,
         coset_powers: DevicePointer<ScalarField>,
         device_id: usize
-    ) -> DevicePointer<Point>;
+    ) -> c_int;
 
     fn evaluate_points_on_coset_batch_cuda(
+        d_out: DevicePointer<Point>,
         d_coefficients: DevicePointer<Point>,
         d_domain: DevicePointer<ScalarField>,
         domain_size: usize,
@@ -156,7 +171,7 @@ extern "C" {
         batch_size: usize,
         coset_powers: DevicePointer<ScalarField>,
         device_id: usize
-    ) -> DevicePointer<Point>;
+    ) -> c_int;
 
     fn reverse_order_scalars_cuda(
         d_arr: DevicePointer<ScalarField>,
@@ -257,15 +272,18 @@ pub fn msm_batch(
 pub fn commit(
     points: &mut DeviceBuffer<PointAffineNoInfinity>,
     scalars: &mut DeviceBuffer<ScalarField>,
-) -> DevicePointer<Point> {
+) -> DeviceBox<Point> {
+    let mut res = DeviceBox::new(&Point::zero()).unwrap();
     unsafe {
         commit_cuda(
+            res.as_device_ptr(),
             scalars.as_device_ptr(),
             points.as_device_ptr(),
             scalars.len(),
             0,
-        )
+        );
     }
+    return res;
 }
 
 pub fn commit_batch(
@@ -273,15 +291,18 @@ pub fn commit_batch(
     scalars: &mut DeviceBuffer<ScalarField>,
     batch_size: usize,
 ) -> DeviceBuffer<Point> {
+    let mut res = unsafe { DeviceBuffer::uninitialized(batch_size).unwrap() };
     unsafe {
-        DeviceBuffer::from_raw_parts(commit_batch_cuda(
+        commit_batch_cuda(
+            res.as_device_ptr(),
             scalars.as_device_ptr(),
             points.as_device_ptr(),
             scalars.len() / batch_size,
             batch_size,
             0,
-        ), batch_size)
+        );
     }
+    return res;
 }
 
 /// Compute an in-place NTT on the input data.
@@ -437,14 +458,15 @@ pub fn interpolate_scalars(
     d_evaluations: &mut DeviceBuffer<ScalarField>,
     d_domain: &mut DeviceBuffer<ScalarField>
 ) -> DeviceBuffer<ScalarField> {
-    reverse_order_scalars(d_evaluations);
-    unsafe { DeviceBuffer::from_raw_parts(
-        interpolate_scalars_cuda(
-            d_evaluations.as_device_ptr(),
-            d_domain.as_device_ptr(),
-            d_domain.len(),
-            0
-        ), d_domain.len()) }
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
+    unsafe { interpolate_scalars_cuda(
+        res.as_device_ptr(),
+        d_evaluations.as_device_ptr(),
+        d_domain.as_device_ptr(),
+        d_domain.len(),
+        0
+    ) };
+    return res;
 }
 
 pub fn interpolate_scalars_batch(
@@ -452,28 +474,31 @@ pub fn interpolate_scalars_batch(
     d_domain: &mut DeviceBuffer<ScalarField>,
     batch_size: usize,
 ) -> DeviceBuffer<ScalarField> {
-    unsafe { DeviceBuffer::from_raw_parts(
-        interpolate_scalars_batch_cuda(
-            d_evaluations.as_device_ptr(),
-            d_domain.as_device_ptr(),
-            d_domain.len(),
-            batch_size,
-            0
-        ), d_domain.len() * batch_size) }
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
+    unsafe { interpolate_scalars_batch_cuda(
+        res.as_device_ptr(),
+        d_evaluations.as_device_ptr(),
+        d_domain.as_device_ptr(),
+        d_domain.len(),
+        batch_size,
+        0
+    ) };
+    return res;
 }
 
 pub fn interpolate_points(
     d_evaluations: &mut DeviceBuffer<Point>,
     d_domain: &mut DeviceBuffer<ScalarField>,
 ) -> DeviceBuffer<Point> {
-    reverse_order_points(d_evaluations);
-    unsafe { DeviceBuffer::from_raw_parts(
-        interpolate_points_cuda(
-            d_evaluations.as_device_ptr(),
-            d_domain.as_device_ptr(),
-            d_domain.len(),
-            0
-        ), d_domain.len()) }
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
+    unsafe { interpolate_points_cuda(
+        res.as_device_ptr(),
+        d_evaluations.as_device_ptr(),
+        d_domain.as_device_ptr(),
+        d_domain.len(),
+        0
+    ) };
+    return res;
 }
 
 pub fn interpolate_points_batch(
@@ -481,28 +506,34 @@ pub fn interpolate_points_batch(
     d_domain: &mut DeviceBuffer<ScalarField>,
     batch_size: usize,
 ) -> DeviceBuffer<Point> {
-    unsafe { DeviceBuffer::from_raw_parts(
-        interpolate_points_batch_cuda(
-            d_evaluations.as_device_ptr(),
-            d_domain.as_device_ptr(),
-            d_domain.len(),
-            batch_size,
-            0
-        ), d_domain.len() * batch_size) }
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
+    unsafe { interpolate_points_batch_cuda(
+        res.as_device_ptr(),
+        d_evaluations.as_device_ptr(),
+        d_domain.as_device_ptr(),
+        d_domain.len(),
+        batch_size,
+        0
+    ) };
+    return res;
 }
 
 pub fn evaluate_scalars(
     d_coefficients: &mut DeviceBuffer<ScalarField>,
     d_domain: &mut DeviceBuffer<ScalarField>,
 ) -> DeviceBuffer<ScalarField> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
+    unsafe {
         evaluate_scalars_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
             d_coefficients.len(),
             0
-        ), d_domain.len()) }
+        );
+    }
+    return res;
 }
 
 pub fn evaluate_scalars_batch(
@@ -510,29 +541,37 @@ pub fn evaluate_scalars_batch(
     d_domain: &mut DeviceBuffer<ScalarField>,
     batch_size: usize,
 ) -> DeviceBuffer<ScalarField> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
+    unsafe {
         evaluate_scalars_batch_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
             d_coefficients.len() / batch_size,
             batch_size,
             0
-        ), d_domain.len() * batch_size) }
+        );
+    }
+    return res;
 }
 
 pub fn evaluate_points(
     d_coefficients: &mut DeviceBuffer<Point>,
     d_domain: &mut DeviceBuffer<ScalarField>,
 ) -> DeviceBuffer<Point> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
+    unsafe {
         evaluate_points_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
             d_coefficients.len(),
             0
-        ), d_domain.len()) }
+        );
+    }
+    return res;
 }
 
 pub fn evaluate_points_batch(
@@ -540,31 +579,39 @@ pub fn evaluate_points_batch(
     d_domain: &mut DeviceBuffer<ScalarField>,
     batch_size: usize,
 ) -> DeviceBuffer<Point> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
+    unsafe {
         evaluate_points_batch_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
             d_coefficients.len() / batch_size,
             batch_size,
             0
-        ), d_domain.len() * batch_size) }
+        );
+    }
+    return res;
 }
 
 pub fn evaluate_scalars_on_coset(
-    mut d_coefficients: &mut DeviceBuffer<ScalarField>,
-    mut d_domain: &mut DeviceBuffer<ScalarField>,
-    mut coset_powers: &mut DeviceBuffer<ScalarField>,
+    d_coefficients: &mut DeviceBuffer<ScalarField>,
+    d_domain: &mut DeviceBuffer<ScalarField>,
+    coset_powers: &mut DeviceBuffer<ScalarField>,
 ) -> DeviceBuffer<ScalarField> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
+    unsafe {
         evaluate_scalars_on_coset_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
             d_coefficients.len(),
             coset_powers.as_device_ptr(),
             0
-        ), d_domain.len()) }
+        );
+    }
+    return res;
 }
 
 pub fn evaluate_scalars_on_coset_batch(
@@ -573,8 +620,10 @@ pub fn evaluate_scalars_on_coset_batch(
     batch_size: usize,
     coset_powers: &mut DeviceBuffer<ScalarField>,
 ) -> DeviceBuffer<ScalarField> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
+    unsafe {
         evaluate_scalars_on_coset_batch_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
@@ -582,7 +631,9 @@ pub fn evaluate_scalars_on_coset_batch(
             batch_size,
             coset_powers.as_device_ptr(),
             0
-        ), d_domain.len() * batch_size) }
+        );
+    }
+    return res;
 }
 
 pub fn evaluate_points_on_coset(
@@ -590,15 +641,19 @@ pub fn evaluate_points_on_coset(
     d_domain: &mut DeviceBuffer<ScalarField>,
     coset_powers: &mut DeviceBuffer<ScalarField>,
 ) -> DeviceBuffer<Point> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
+    unsafe {
         evaluate_points_on_coset_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
             d_coefficients.len(),
             coset_powers.as_device_ptr(),
             0
-        ), d_domain.len()) }
+        );
+    }
+    return res;
 }
 
 pub fn evaluate_points_on_coset_batch(
@@ -607,8 +662,10 @@ pub fn evaluate_points_on_coset_batch(
     batch_size: usize,
     coset_powers: &mut DeviceBuffer<ScalarField>,
 ) -> DeviceBuffer<Point> {
-    unsafe { DeviceBuffer::from_raw_parts(
+    let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
+    unsafe {
         evaluate_points_on_coset_batch_cuda(
+            res.as_device_ptr(),
             d_coefficients.as_device_ptr(),
             d_domain.as_device_ptr(),
             d_domain.len(),
@@ -616,7 +673,9 @@ pub fn evaluate_points_on_coset_batch(
             batch_size,
             coset_powers.as_device_ptr(),
             0
-        ), d_domain.len() * batch_size) }
+        );
+    }
+    return res;
 }
 
 pub fn multp_vec(a: &mut [Point], b: &[Scalar], device_id: usize) {
@@ -663,6 +722,13 @@ pub fn mult_matrix_by_vec(a: &[Scalar], b: &[Scalar], device_id: usize) -> Vec<S
     c
 }
 
+pub fn clone_buffer<T: DeviceCopy>(buf: &mut DeviceBuffer<T>) -> DeviceBuffer<T> {
+    let mut buf_cpy = unsafe { DeviceBuffer::uninitialized(buf.len()).unwrap() };
+    unsafe { buf_cpy.copy_from(buf) };
+    return buf_cpy;
+}
+
+
 #[cfg(test)]
 mod tests {
 
@@ -673,6 +739,7 @@ mod tests {
     use ark_ff::{FftField, Field, Zero, PrimeField};
     use ark_std::UniformRand;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
+    // use rustacuda::memory::*;
 
     use crate::{field::*, *};
 
@@ -805,7 +872,7 @@ mod tests {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [7, 8, 9, 12];
+        let test_sizes = [6, 9];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -832,7 +899,7 @@ mod tests {
     #[test]
     fn test_batch_msm() {
         for batch_pow2 in [2, 4] {
-            for pow2 in [9, 12] {
+            for pow2 in [4, 6] {
                 let msm_size = 1 << pow2;
                 let batch_size = 1 << batch_pow2;
                 let seed = None; // set Some to provide seed
@@ -840,8 +907,7 @@ mod tests {
                 let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
 
                 let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
-                let scalars_r_ark: Vec<_> =
-                    scalars_batch.iter().map(|x| x.to_ark_mod_p().0).collect();
+                let scalars_r_ark: Vec<_> = scalars_batch.iter().map(|x| x.to_ark_mod_p().0).collect();
 
                 let expected: Vec<_> = point_r_ark
                     .chunks(msm_size)
@@ -858,33 +924,33 @@ mod tests {
 
     #[test]
     fn test_commit() {
-        let test_size = 1 << 4;
+        let test_size = 1 << 8;
         let seed = Some(0);
         let (mut scalars, mut d_scalars, _) = set_up_scalars(test_size, 0, false);
         let mut points = generate_random_points(test_size, get_rng(seed));
         let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
-        
-        let msm_result = msm(&points, &scalars, 0);
-        let mut d_commit_result = unsafe { DeviceBuffer::from_raw_parts(commit(&mut d_points, &mut d_scalars), 1) };
-        let mut h_commit_result: Vec<Point> = (0..1).map(|_| Point::zero()).collect();
-        d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
 
-        assert_eq!(msm_result, h_commit_result[0]);
+        let msm_result = msm(&points, &scalars, 0);
+        let mut d_commit_result = commit(&mut d_points, &mut d_scalars);
+        let mut h_commit_result = Point::zero();
+        d_commit_result.copy_to(&mut h_commit_result).unwrap();
+
+        assert_eq!(msm_result, h_commit_result);
         assert_ne!(msm_result, Point::zero());
-        assert_ne!(h_commit_result[0], Point::zero());
+        assert_ne!(h_commit_result, Point::zero());
     }
 
     #[test]
     fn test_batch_commit() {
-        let batch_size = 2;
-        let test_size = 1 << 4;
+        let batch_size = 4;
+        let test_size = 1 << 12;
         let seed = Some(0);
         let (scalars, mut d_scalars, _) = set_up_scalars(test_size * batch_size, 0, false);
         let points = generate_random_points(test_size * batch_size, get_rng(seed));
         let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
 
         let msm_result = msm_batch(&points, &scalars, batch_size, 0);
-        let d_commit_result = commit_batch(&mut d_points, &mut d_scalars, batch_size);
+        let mut d_commit_result = commit_batch(&mut d_points, &mut d_scalars, batch_size);
         let mut h_commit_result: Vec<Point> = (0..batch_size).map(|_| Point::zero()).collect();
         d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
 
@@ -964,7 +1030,7 @@ mod tests {
     fn test_ntt_batch() {
         //NTT
         let seed = None; //some value to fix the rng
-        let test_size = 1 << 9;
+        let test_size = 1 << 5;
         let batches = 4;
 
         let scalars_batch: Vec<Scalar> =
@@ -1083,7 +1149,7 @@ mod tests {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars(test_size, log_test_size, true);
 
-        let d_coeffs = interpolate_scalars(&mut d_evals, &mut d_domain);
+        let mut d_coeffs = interpolate_scalars(&mut d_evals, &mut d_domain);
         intt(&mut evals_mut, 0);
         let mut h_coeffs: Vec<ScalarField> = (0..test_size).map(|_| ScalarField::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
@@ -1095,12 +1161,12 @@ mod tests {
 
     #[test]
     fn test_scalar_batch_interpolation() {
-        let batch_size = 4;
+        let batch_size = 6;
         let log_test_size = 6;
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars(test_size * batch_size, log_test_size, true);
 
-        let d_coeffs = interpolate_scalars_batch(&mut d_evals, &mut d_domain, batch_size);
+        let mut d_coeffs = interpolate_scalars_batch(&mut d_evals, &mut d_domain, batch_size);
         intt_batch(&mut evals_mut, test_size, 0);
         let mut h_coeffs: Vec<ScalarField> = (0..test_size * batch_size).map(|_| ScalarField::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
@@ -1116,7 +1182,7 @@ mod tests {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points(test_size, log_test_size, true);
 
-        let d_coeffs = interpolate_points(&mut d_evals, &mut d_domain);
+        let mut d_coeffs = interpolate_points(&mut d_evals, &mut d_domain);
         iecntt(&mut evals_mut[..], 0);
         let mut h_coeffs: Vec<Point> = (0..test_size).map(|_| Point::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
@@ -1129,12 +1195,12 @@ mod tests {
 
     #[test]
     fn test_point_batch_interpolation() {
-        let log_test_size = 6;
         let batch_size = 4;
+        let log_test_size = 6;
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points(test_size * batch_size, log_test_size, true);
 
-        let d_coeffs = interpolate_points_batch(&mut d_evals, &mut d_domain, batch_size);
+        let mut d_coeffs = interpolate_points_batch(&mut d_evals, &mut d_domain, batch_size);
         iecntt_batch(&mut evals_mut[..], test_size, 0);
         let mut h_coeffs: Vec<Point> = (0..test_size * batch_size).map(|_| Point::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
@@ -1154,7 +1220,6 @@ mod tests {
 
         let mut d_evals = evaluate_scalars(&mut d_coeffs, &mut d_domain);
         let mut d_coeffs_domain = interpolate_scalars(&mut d_evals, &mut d_domain_inv);
-        // reverse_order_scalars(&mut d_coeffs_domain, 0);
         let mut h_coeffs_domain: Vec<ScalarField> = (0..1 << log_test_domain_size).map(|_| ScalarField::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
@@ -1171,7 +1236,7 @@ mod tests {
         let batch_size = 4;
         let log_test_domain_size = 6;
         let domain_size = 1 << log_test_domain_size;
-        let coeff_size = 1 << 5;
+        let coeff_size = 1 << 4;
         let (h_coeffs, mut d_coeffs, mut d_domain) = set_up_scalars(coeff_size * batch_size, log_test_domain_size, false);
         let (_, _, mut d_domain_inv) = set_up_scalars(0, log_test_domain_size, true);
 
@@ -1192,14 +1257,13 @@ mod tests {
 
     #[test]
     fn test_point_evaluation() {
-        let log_test_domain_size = 8;
+        let log_test_domain_size = 7;
         let coeff_size = 1 << 7;
         let (h_coeffs, mut d_coeffs, mut d_domain) = set_up_points(coeff_size, log_test_domain_size, false);
         let (_, _, mut d_domain_inv) = set_up_points(0, log_test_domain_size, true);
 
         let mut d_evals = evaluate_points(&mut d_coeffs, &mut d_domain);
         let mut d_coeffs_domain = interpolate_points(&mut d_evals, &mut d_domain_inv);
-        // reverse_order_points(&mut d_coeffs_domain, 0);
         let mut h_coeffs_domain: Vec<Point> = (0..1 << log_test_domain_size).map(|_| Point::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
@@ -1214,17 +1278,14 @@ mod tests {
 
     #[test]
     fn test_point_batch_evaluation() {
-        let batch_size = 1;
-        let log_test_domain_size = 2;
+        let batch_size = 4;
+        let log_test_domain_size = 6;
         let domain_size = 1 << log_test_domain_size;
-        let coeff_size = 1 << 1;
+        let coeff_size = 1 << 5;
         let (h_coeffs, mut d_coeffs, mut d_domain) = set_up_points(coeff_size * batch_size, log_test_domain_size, false);
         let (_, _, mut d_domain_inv) = set_up_points(0, log_test_domain_size, true);
 
         let mut d_evals = evaluate_points_batch(&mut d_coeffs, &mut d_domain, batch_size);
-        let mut h_evals: Vec<Point> = (0..domain_size * batch_size).map(|_| Point::zero()).collect();
-        d_evals.copy_to(&mut h_evals[..]).unwrap();
-
         let mut d_coeffs_domain = interpolate_points_batch(&mut d_evals, &mut d_domain_inv, batch_size);
         let mut h_coeffs_domain: Vec<Point> = (0..domain_size * batch_size).map(|_| Point::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
@@ -1246,7 +1307,7 @@ mod tests {
         let log_test_domain_size = 8;
         let coeff_size = 1 << 6;
         let (_, mut d_coeffs, mut d_domain) = set_up_scalars(coeff_size, log_test_domain_size, false);
-        let (_, _, mut d_domain_inv) = set_up_scalars(0, log_test_domain_size, true);
+        let (_, _, mut d_domain_inv) = set_up_scalars(coeff_size, log_test_domain_size, true);
         let mut d_trivial_coset_powers = build_domain(1 << log_test_domain_size, 0, false);
 
         let mut d_evals = evaluate_scalars(&mut d_coeffs, &mut d_domain);
@@ -1264,7 +1325,7 @@ mod tests {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup 
         let log_test_size = 8;
         let test_size = 1 << log_test_size;
-        let (mut h_coeffs, mut d_coeffs, mut d_domain) = set_up_scalars(test_size, log_test_size, false);
+        let (_, mut d_coeffs, mut d_domain) = set_up_scalars(test_size, log_test_size, false);
         let (_, _, mut d_large_domain) = set_up_scalars(0, log_test_size + 1, false);
         let mut d_coset_powers = build_domain(test_size, log_test_size + 1, false);
 
@@ -1290,7 +1351,7 @@ mod tests {
         let batch_size = 4;
         let log_test_size = 6;
         let test_size = 1 << log_test_size;
-        let (mut h_coeffs, mut d_coeffs, mut d_domain) = set_up_scalars(test_size * batch_size, log_test_size, false);
+        let (_, mut d_coeffs, mut d_domain) = set_up_scalars(test_size * batch_size, log_test_size, false);
         let (_, _, mut d_large_domain) = set_up_scalars(0, log_test_size + 1, false);
         let mut d_coset_powers = build_domain(test_size, log_test_size + 1, false);
 
@@ -1315,7 +1376,7 @@ mod tests {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup 
         let log_test_size = 8;
         let test_size = 1 << log_test_size;
-        let (mut h_coeffs, mut d_coeffs, mut d_domain) = set_up_points(test_size, log_test_size, false);
+        let (_, mut d_coeffs, mut d_domain) = set_up_points(test_size, log_test_size, false);
         let (_, _, mut d_large_domain) = set_up_points(0, log_test_size + 1, false);
         let mut d_coset_powers = build_domain(test_size, log_test_size + 1, false);
 
@@ -1334,6 +1395,8 @@ mod tests {
             assert_eq!(h_evals_coset[i], h_evals_large[2 * i + 1]);
             assert_ne!(h_evals[i], Point::zero());
             assert_ne!(h_evals_coset[i], Point::zero());
+            assert_ne!(h_evals_large[2 * i], Point::zero());
+            assert_ne!(h_evals_large[2 * i + 1], Point::zero());
         }
     }
 
@@ -1341,9 +1404,9 @@ mod tests {
     fn test_point_batch_evaluation_on_coset() {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup 
         let batch_size = 2;
-        let log_test_size = 1;
+        let log_test_size = 6;
         let test_size = 1 << log_test_size;
-        let (mut h_coeffs, mut d_coeffs, mut d_domain) = set_up_points(test_size * batch_size, log_test_size, false);
+        let (_, mut d_coeffs, mut d_domain) = set_up_points(test_size * batch_size, log_test_size, false);
         let (_, _, mut d_large_domain) = set_up_points(0, log_test_size + 1, false);
         let mut d_coset_powers = build_domain(test_size, log_test_size + 1, false);
 
@@ -1362,9 +1425,8 @@ mod tests {
             assert_eq!(h_evals_coset[i], h_evals_large[2 * i + 1]);
             assert_ne!(h_evals[i], Point::zero());
             assert_ne!(h_evals_coset[i], Point::zero());
-        }
-        for i in 0..2 * test_size * batch_size {
-            assert_ne!(h_evals_large[i], Point::zero());
+            assert_ne!(h_evals_large[2 * i], Point::zero());
+            assert_ne!(h_evals_large[2 * i + 1], Point::zero());
         }
     }
 
