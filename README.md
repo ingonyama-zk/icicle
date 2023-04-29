@@ -84,6 +84,10 @@ An example of using the Rust bindings library can be found in our [fast-dankshar
 
 Join our [Discord Server](https://discord.gg/Y4SkbDf2Ff) and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
 
+### Hall of Fame
+
+- [Robik](https://github.com/robik75), for his on-going support and mentorship 
+
 ## License
 
 ICICLE is distributed under the terms of the MIT License.
