@@ -5,27 +5,6 @@
 
 
 /**
- * Interpolate a polynomial from its evaluations on a subgroup.
- * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
- * @param d_out The variable to write coefficients of the resulting polynomial into (the coefficients are in bit-reversed order if the evaluations weren't bit-reversed and vice-versa).
- * @param d_evaluations Input array of evaluations that have type E (elements).
- * @param d_domain Domain on which the polynomial is evaluated. Must be a subgroup.
- * @param n Length of `d_evaluations` and the size `d_domain` arrays (they should have equal length).
- */
-template <typename E, typename S> int interpolate(E * d_out, E * d_evaluations, S * d_domain, unsigned n) {
-  // TODO: call batch interpolate with batch size 1 once batch interpolation is as efficient as this function
-  uint32_t logn = uint32_t(log(n) / log(2));
-  cudaMemcpy(d_out, d_evaluations, sizeof(E) * n, cudaMemcpyDeviceToDevice);
-  reverse_order(d_out, n, logn);
-
-  template_ntt_on_device_memory <E, S> (d_out, n, logn, d_domain, n);
-  int NUM_THREADS = MAX_THREADS_BATCH;
-  int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
-  template_normalize_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS>>> (d_out, n, S::inv_log_size(logn));
-  return 0;
-}
-
-/**
  * Interpolate a batch of polynomials from their evaluations on the same subgroup.
  * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
  * @param d_out The variable to write coefficients of the resulting polynomials into (the coefficients are in bit-reversed order if the evaluations weren't bit-reversed and vice-versa).
@@ -37,13 +16,12 @@ template <typename E, typename S> int interpolate(E * d_out, E * d_evaluations, 
 template <typename E, typename S> int interpolate_batch(E * d_out, E * d_evaluations, S * d_domain, unsigned n, unsigned batch_size) {
   uint32_t logn = uint32_t(log(n) / log(2));
   cudaMemcpy(d_out, d_evaluations, sizeof(E) * n * batch_size, cudaMemcpyDeviceToDevice);
-  reverse_order_batch(d_out, n, logn, batch_size);
   
   int NUM_THREADS = min(n / 2, MAX_THREADS_BATCH);
   int NUM_BLOCKS = batch_size * max(int((n / 2) / NUM_THREADS), 1);
   for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
   {
-    ntt_template_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS>>>(d_out, n, d_domain, n, NUM_BLOCKS, s);
+    ntt_template_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS>>>(d_out, n, d_domain, n, NUM_BLOCKS, s, false);
   }
 
   NUM_BLOCKS = (n * batch_size + NUM_THREADS - 1) / NUM_THREADS;
@@ -51,42 +29,23 @@ template <typename E, typename S> int interpolate_batch(E * d_out, E * d_evaluat
   return 0;
 }
 
+/**
+ * Interpolate a polynomial from its evaluations on a subgroup.
+ * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
+ * @param d_out The variable to write coefficients of the resulting polynomial into (the coefficients are in bit-reversed order if the evaluations weren't bit-reversed and vice-versa).
+ * @param d_evaluations Input array of evaluations that have type E (elements).
+ * @param d_domain Domain on which the polynomial is evaluated. Must be a subgroup.
+ * @param n Length of `d_evaluations` and the size `d_domain` arrays (they should have equal length).
+ */
+template <typename E, typename S> int interpolate(E * d_out, E * d_evaluations, S * d_domain, unsigned n) {
+  return interpolate_batch <E, S> (d_out, d_evaluations, d_domain, n, 1);
+}
+
 template < typename E > __global__ void fill_array(E * arr, E val, uint32_t n) {
   int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid < n) {
     arr[tid] = val;
   }
-}
-
-/**
- * Evaluate a polynomial on a coset.
- * Note: this function does not preform any bit-reverse permutations on its inputs or outputs, so the order of outputs is bit-reversed.
- * @param d_out The evaluations of the polynomial on coset `u` * `d_domain`.
- * @param d_coefficients Input array of coefficients of a polynomial of type E (elements).
- * @param d_domain Domain on which the polynomial is evaluated (see `coset` flag). Must be a subgroup.
- * @param domain_size Length of `d_domain` array, on which the polynomial is computed.
- * @param n The number of coefficients, which might be different from `domain_size`.
- * @param coset The flag that indicates whether to evaluate on a coset. If false, evaluate on a subgroup `d_domain`.
- * @param coset_powers If `coset` is true, a list of powers `[1, u, u^2, ..., u^{n-1}]` where `u` is the generator of the coset.
- */
-template <typename E, typename S> 
-int evaluate(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_size, unsigned n, bool coset, S * coset_powers) {
-  uint32_t logn = uint32_t(log(domain_size) / log(2));
-  if (domain_size > n) {
-    cudaMemcpy(d_out, d_coefficients, n * sizeof(E), cudaMemcpyDeviceToDevice);
-    int NUM_THREADS = MAX_THREADS_BATCH;
-    int NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
-    fill_array <E> <<<NUM_BLOCKS, NUM_THREADS>>> (&d_out[n], E::zero(), domain_size - n);
-  } else
-    cudaMemcpy(d_out, d_coefficients, sizeof(E) * domain_size, cudaMemcpyDeviceToDevice);
-
-  if (coset)
-    batch_vector_mult(coset_powers, d_out, domain_size, 1);
-
-  reverse_order(d_out, domain_size, logn);
-
-  template_ntt_on_device_memory <E, S> (d_out, domain_size, logn, d_domain, domain_size);
-  return 0;
 }
 
 /**
@@ -121,21 +80,33 @@ int evaluate_batch(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_
   } else
     cudaMemcpy(d_out, d_coefficients, sizeof(E) * domain_size * batch_size, cudaMemcpyDeviceToDevice);
 
-  // reverse_order_batch(d_evaluations, domain_size, logn, batch_size);
-
   if (coset)
     batch_vector_mult(coset_powers, d_out, domain_size, batch_size);
-
-  reverse_order_batch(d_out, domain_size, logn, batch_size);
 
   int NUM_THREADS = min(domain_size / 2, MAX_THREADS_BATCH);
   int chunks = max(int((domain_size / 2) / NUM_THREADS), 1);
   int NUM_BLOCKS = batch_size * chunks;
   for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
   {
-    ntt_template_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS>>>(d_out, domain_size, d_domain, domain_size, batch_size * chunks, s);
+    ntt_template_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS>>>(d_out, domain_size, d_domain, domain_size, batch_size * chunks, logn - s - 1, true);
   }
   return 0;
+}
+
+/**
+ * Evaluate a polynomial on a coset.
+ * Note: this function does not preform any bit-reverse permutations on its inputs or outputs, so the order of outputs is bit-reversed.
+ * @param d_out The evaluations of the polynomial on coset `u` * `d_domain`.
+ * @param d_coefficients Input array of coefficients of a polynomial of type E (elements).
+ * @param d_domain Domain on which the polynomial is evaluated (see `coset` flag). Must be a subgroup.
+ * @param domain_size Length of `d_domain` array, on which the polynomial is computed.
+ * @param n The number of coefficients, which might be different from `domain_size`.
+ * @param coset The flag that indicates whether to evaluate on a coset. If false, evaluate on a subgroup `d_domain`.
+ * @param coset_powers If `coset` is true, a list of powers `[1, u, u^2, ..., u^{n-1}]` where `u` is the generator of the coset.
+ */
+template <typename E, typename S> 
+int evaluate(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_size, unsigned n, bool coset, S * coset_powers) {
+  return evaluate_batch <E, S> (d_out, d_coefficients, d_domain, domain_size, n, 1, coset, coset_powers);
 }
 
 int interpolate_scalars(scalar_t* d_out, scalar_t* d_evaluations, scalar_t* d_domain, unsigned n) {

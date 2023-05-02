@@ -130,7 +130,7 @@ template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn) {
  * @param n size of arr. 
  * @param n_twiddles size of omegas.
  * @param m "pair distance" - indicate distance of butterflies inputs.
- * @param i Cooley-TUckey FFT stage number.
+ * @param i Cooley-Tuckey FFT stage number.
  * @param max_thread_num maximal number of threads in stage. 
  */
 template < typename E, typename S > __global__ void template_butterfly_kernel(E * arr, S * twiddles, uint32_t n, uint32_t n_twiddles, uint32_t m, uint32_t i, uint32_t max_thread_num) {
@@ -163,9 +163,9 @@ template < typename E, typename S > __global__ void template_normalize_kernel(E 
  * NOTE! this function assumes that d_arr and d_twiddles are located in the device memory.
  * @param d_arr input array of type E (elements) allocated on the device memory.
  * @param n length of d_arr.
- * @param logn log(n). 
- * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2). 
- * @param n_twiddles length of d_twiddles. 
+ * @param logn log(n).
+ * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
+ * @param n_twiddles length of d_twiddles.
  */
 template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr, uint32_t n, uint32_t logn, S * d_twiddles, uint32_t n_twiddles) {
   uint32_t m = 2;
@@ -334,7 +334,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
  * @param s log2(n) loop index.
  */
 template <typename E, typename S>
-__global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s)
+__global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, bool rev)
 {
   int task = blockIdx.x;
   int chunks = n / (blockDim.x * 2);
@@ -360,10 +360,13 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
       uint32_t k = i + j + shift_s;
 
       uint32_t offset = (task / chunks) * n;
-      E u = arr[offset + i + j];
-      E v = twiddles[j * n_twiddles_div] * arr[offset + k];
-      arr[offset + i + j] = u + v;
-      arr[offset + k] = u - v;
+      if (!rev)
+        arr[offset + k] = twiddles[j * n_twiddles_div] * arr[offset + k];
+      E u = arr[offset + i + j] - arr[offset + k];
+      arr[offset + i + j] = arr[offset + i + j] + arr[offset + k];
+      arr[offset + k] = u;
+      if (rev)
+        arr[offset + k] = twiddles[j * n_twiddles_div] * arr[offset + k];
     }
   }
 }
@@ -424,7 +427,7 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
 
   for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
   {
-    ntt_template_kernel<scalar_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s);
+    ntt_template_kernel<scalar_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s, false);
   }
 
   if (inverse == true)
@@ -473,7 +476,7 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
 
   for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
   {
-    ntt_template_kernel<projective_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s);
+    ntt_template_kernel<projective_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s, false);
   }
   if (inverse == true)
   {

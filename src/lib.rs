@@ -222,7 +222,7 @@ extern "C" {
     ) -> c_int;
 }
 
-pub fn msm(points: &[PointAffineNoInfinity], scalars: &[Scalar], device_id: usize) -> Point {
+pub fn msm(points: &[PointAffineNoInfinity], scalars: &[ScalarField], device_id: usize) -> Point {
     let count = points.len();
     if count != scalars.len() {
         todo!("variable length")
@@ -244,7 +244,7 @@ pub fn msm(points: &[PointAffineNoInfinity], scalars: &[Scalar], device_id: usiz
 
 pub fn msm_batch(
     points: &[PointAffineNoInfinity],
-    scalars: &[Scalar],
+    scalars: &[ScalarField],
     batch_size: usize,
     device_id: usize,
 ) -> Vec<Point> {
@@ -306,7 +306,7 @@ pub fn commit_batch(
 }
 
 /// Compute an in-place NTT on the input data.
-fn ntt_internal(values: &mut [Scalar], device_id: usize, inverse: bool) -> i32 {
+fn ntt_internal(values: &mut [ScalarField], device_id: usize, inverse: bool) -> i32 {
     let ret_code = unsafe {
         ntt_cuda(
             values as *mut _ as *mut ScalarField,
@@ -318,17 +318,17 @@ fn ntt_internal(values: &mut [Scalar], device_id: usize, inverse: bool) -> i32 {
     ret_code
 }
 
-pub fn ntt(values: &mut [Scalar], device_id: usize) {
+pub fn ntt(values: &mut [ScalarField], device_id: usize) {
     ntt_internal(values, device_id, false);
 }
 
-pub fn intt(values: &mut [Scalar], device_id: usize) {
+pub fn intt(values: &mut [ScalarField], device_id: usize) {
     ntt_internal(values, device_id, true);
 }
 
 /// Compute an in-place NTT on the input data.
 fn ntt_internal_batch(
-    values: &mut [Scalar],
+    values: &mut [ScalarField],
     device_id: usize,
     batch_size: usize,
     inverse: bool,
@@ -343,11 +343,11 @@ fn ntt_internal_batch(
     }
 }
 
-pub fn ntt_batch(values: &mut [Scalar], batch_size: usize, device_id: usize) {
+pub fn ntt_batch(values: &mut [ScalarField], batch_size: usize, device_id: usize) {
     ntt_internal_batch(values, 0, batch_size, false);
 }
 
-pub fn intt_batch(values: &mut [Scalar], batch_size: usize, device_id: usize) {
+pub fn intt_batch(values: &mut [ScalarField], batch_size: usize, device_id: usize) {
     ntt_internal_batch(values, 0, batch_size, true);
 }
 
@@ -678,7 +678,7 @@ pub fn evaluate_points_on_coset_batch(
     return res;
 }
 
-pub fn multp_vec(a: &mut [Point], b: &[Scalar], device_id: usize) {
+pub fn multp_vec(a: &mut [Point], b: &[ScalarField], device_id: usize) {
     assert_eq!(a.len(), b.len());
     unsafe {
         vec_mod_mult_point(
@@ -690,7 +690,7 @@ pub fn multp_vec(a: &mut [Point], b: &[Scalar], device_id: usize) {
     }
 }
 
-pub fn mult_sc_vec(a: &mut [Scalar], b: &[Scalar], device_id: usize) {
+pub fn mult_sc_vec(a: &mut [ScalarField], b: &[ScalarField], device_id: usize) {
     assert_eq!(a.len(), b.len());
     unsafe {
         vec_mod_mult_scalar(
@@ -705,10 +705,10 @@ pub fn mult_sc_vec(a: &mut [Scalar], b: &[Scalar], device_id: usize) {
 // Multiply a matrix by a scalar:
 //  `a` - flattenned matrix;
 //  `b` - vector to multiply `a` by;
-pub fn mult_matrix_by_vec(a: &[Scalar], b: &[Scalar], device_id: usize) -> Vec<Scalar> {
+pub fn mult_matrix_by_vec(a: &[ScalarField], b: &[ScalarField], device_id: usize) -> Vec<ScalarField> {
     let mut c = Vec::with_capacity(b.len());
     for i in 0..b.len() {
-        c.push(Scalar::zero());
+        c.push(ScalarField::zero());
     }
     unsafe {
         matrix_vec_mod_mult(
@@ -825,13 +825,7 @@ mod tests {
             .collect()
     }
 
-    fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Scalar> {
-        (0..count)
-            .map(|_| Scalar::from_ark(&Fr::rand(&mut rng)))
-            .collect()
-    }
-
-    fn generate_random_scalars_field(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
+    fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
         (0..count)
             .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
             .collect()
@@ -844,16 +838,15 @@ mod tests {
         let _ctx = Context::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device).unwrap();
     }
 
-    fn set_up_scalars(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<Scalar>, DeviceBuffer<ScalarField>, DeviceBuffer<ScalarField>) {
+    fn set_up_scalars(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<ScalarField>, DeviceBuffer<ScalarField>, DeviceBuffer<ScalarField>) {
         set_up_device();
 
         let d_domain = build_domain(1 << log_domain_size, log_domain_size, inverse);
 
         let seed = Some(0); // fix the rng to get two equal scalars
-        let vector = generate_random_scalars_field(test_size, get_rng(seed));
         let mut vector_mut = generate_random_scalars(test_size, get_rng(seed));
 
-        let mut d_vector = DeviceBuffer::from_slice(&vector[..]).unwrap();
+        let mut d_vector = DeviceBuffer::from_slice(&vector_mut[..]).unwrap();
         (vector_mut, d_vector, d_domain)
     }
 
@@ -883,7 +876,7 @@ mod tests {
             let msm_result = msm(&points, &scalars, 0);
 
             let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
-            let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark_mod_p().0).collect();
+            let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
 
             let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
 
@@ -907,7 +900,7 @@ mod tests {
                 let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
 
                 let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
-                let scalars_r_ark: Vec<_> = scalars_batch.iter().map(|x| x.to_ark_mod_p().0).collect();
+                let scalars_r_ark: Vec<_> = scalars_batch.iter().map(|x| x.to_ark()).collect();
 
                 let expected: Vec<_> = point_r_ark
                     .chunks(msm_size)
@@ -964,7 +957,7 @@ mod tests {
     fn test_ntt() {
         //NTT
         let seed = None; //some value to fix the rng
-        let test_size = 1 << 5;
+        let test_size = 1 << 3;
 
         let scalars = generate_random_scalars(test_size, get_rng(seed));
 
@@ -1033,10 +1026,10 @@ mod tests {
         let test_size = 1 << 5;
         let batches = 4;
 
-        let scalars_batch: Vec<Scalar> =
+        let scalars_batch: Vec<ScalarField> =
             generate_random_scalars(test_size * batches, get_rng(seed));
 
-        let mut scalar_vec_of_vec: Vec<Vec<Scalar>> = Vec::new();
+        let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
 
         for i in 0..batches {
             scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
@@ -1145,35 +1138,33 @@ mod tests {
 
     #[test]
     fn test_scalar_interpolation() {
-        let log_test_size = 8;
+        let log_test_size = 7;
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars(test_size, log_test_size, true);
 
+        reverse_order_scalars(&mut d_evals);
         let mut d_coeffs = interpolate_scalars(&mut d_evals, &mut d_domain);
         intt(&mut evals_mut, 0);
         let mut h_coeffs: Vec<ScalarField> = (0..test_size).map(|_| ScalarField::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
 
-        for i in 0..test_size {
-            assert_eq!(h_coeffs[i], evals_mut[i].s);
-        }
+        assert_eq!(h_coeffs, evals_mut);
     }
 
     #[test]
     fn test_scalar_batch_interpolation() {
-        let batch_size = 6;
-        let log_test_size = 6;
+        let batch_size = 4;
+        let log_test_size = 10;
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars(test_size * batch_size, log_test_size, true);
 
+        reverse_order_scalars_batch(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_scalars_batch(&mut d_evals, &mut d_domain, batch_size);
         intt_batch(&mut evals_mut, test_size, 0);
         let mut h_coeffs: Vec<ScalarField> = (0..test_size * batch_size).map(|_| ScalarField::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
 
-        for i in 0..test_size {
-            assert_eq!(h_coeffs[i], evals_mut[i].s);
-        }
+        assert_eq!(h_coeffs, evals_mut);
     }
 
     #[test]
@@ -1182,6 +1173,7 @@ mod tests {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points(test_size, log_test_size, true);
 
+        reverse_order_points(&mut d_evals);
         let mut d_coeffs = interpolate_points(&mut d_evals, &mut d_domain);
         iecntt(&mut evals_mut[..], 0);
         let mut h_coeffs: Vec<Point> = (0..test_size).map(|_| Point::zero()).collect();
@@ -1200,6 +1192,7 @@ mod tests {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points(test_size * batch_size, log_test_size, true);
 
+        reverse_order_points_batch(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_points_batch(&mut d_evals, &mut d_domain, batch_size);
         iecntt_batch(&mut evals_mut[..], test_size, 0);
         let mut h_coeffs: Vec<Point> = (0..test_size * batch_size).map(|_| Point::zero()).collect();
@@ -1223,9 +1216,7 @@ mod tests {
         let mut h_coeffs_domain: Vec<ScalarField> = (0..1 << log_test_domain_size).map(|_| ScalarField::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
-        for i in 0..coeff_size {
-            assert_eq!(h_coeffs[i].s, h_coeffs_domain[i]);
-        }
+        assert_eq!(h_coeffs, h_coeffs_domain[..coeff_size]);
         for i in coeff_size.. (1 << log_test_domain_size) {
             assert_eq!(ScalarField::zero(), h_coeffs_domain[i]);
         }
@@ -1233,10 +1224,10 @@ mod tests {
 
     #[test]
     fn test_scalar_batch_evaluation() {
-        let batch_size = 4;
-        let log_test_domain_size = 6;
+        let batch_size = 6;
+        let log_test_domain_size = 8;
         let domain_size = 1 << log_test_domain_size;
-        let coeff_size = 1 << 4;
+        let coeff_size = 1 << 6;
         let (h_coeffs, mut d_coeffs, mut d_domain) = set_up_scalars(coeff_size * batch_size, log_test_domain_size, false);
         let (_, _, mut d_domain_inv) = set_up_scalars(0, log_test_domain_size, true);
 
@@ -1246,9 +1237,7 @@ mod tests {
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
         for j in 0..batch_size {
-            for i in 0..coeff_size {
-                assert_eq!(h_coeffs[j * coeff_size + i].s, h_coeffs_domain[j * domain_size + i]);
-            }
+            assert_eq!(h_coeffs[j * coeff_size..(j + 1) * coeff_size], h_coeffs_domain[j * domain_size..j * domain_size + coeff_size]);
             for i in coeff_size..domain_size {
                 assert_eq!(ScalarField::zero(), h_coeffs_domain[j * domain_size + i]);
             }
@@ -1339,10 +1328,8 @@ mod tests {
         let mut h_evals_coset: Vec<ScalarField> = (0..test_size).map(|_| ScalarField::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
-        for i in 0..test_size {
-            assert_eq!(h_evals[i], h_evals_large[2 * i]);
-            assert_eq!(h_evals_coset[i], h_evals_large[2 * i + 1]);
-        }
+        assert_eq!(h_evals[..], h_evals_large[..test_size]);
+        assert_eq!(h_evals_coset[..], h_evals_large[test_size..2 * test_size]);
     }
 
     #[test]
@@ -1365,9 +1352,9 @@ mod tests {
         let mut h_evals_coset: Vec<ScalarField> = (0..test_size * batch_size).map(|_| ScalarField::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
-        for i in 0..test_size * batch_size {
-            assert_eq!(h_evals[i], h_evals_large[2 * i]);
-            assert_eq!(h_evals_coset[i], h_evals_large[2 * i + 1]);
+        for i in 0..batch_size {
+            assert_eq!(h_evals_large[2 * i * test_size..(2 * i + 1) * test_size], h_evals[i * test_size..(i + 1) * test_size]);
+            assert_eq!(h_evals_large[(2 * i + 1) * test_size..(2 * i + 2) * test_size], h_evals_coset[i * test_size..(i + 1) * test_size]);
         }
     }
 
@@ -1390,9 +1377,9 @@ mod tests {
         let mut h_evals_coset: Vec<Point> = (0..test_size).map(|_| Point::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
+        assert_eq!(h_evals[..], h_evals_large[..test_size]);
+        assert_eq!(h_evals_coset[..], h_evals_large[test_size..2 * test_size]);
         for i in 0..test_size {
-            assert_eq!(h_evals[i], h_evals_large[2 * i]);
-            assert_eq!(h_evals_coset[i], h_evals_large[2 * i + 1]);
             assert_ne!(h_evals[i], Point::zero());
             assert_ne!(h_evals_coset[i], Point::zero());
             assert_ne!(h_evals_large[2 * i], Point::zero());
@@ -1420,9 +1407,11 @@ mod tests {
         let mut h_evals_coset: Vec<Point> = (0..test_size * batch_size).map(|_| Point::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
+        for i in 0..batch_size {
+            assert_eq!(h_evals_large[2 * i * test_size..(2 * i + 1) * test_size], h_evals[i * test_size..(i + 1) * test_size]);
+            assert_eq!(h_evals_large[(2 * i + 1) * test_size..(2 * i + 2) * test_size], h_evals_coset[i * test_size..(i + 1) * test_size]);
+        }
         for i in 0..test_size * batch_size {
-            assert_eq!(h_evals[i], h_evals_large[2 * i]);
-            assert_eq!(h_evals_coset[i], h_evals_large[2 * i + 1]);
             assert_ne!(h_evals[i], Point::zero());
             assert_ne!(h_evals_coset[i], Point::zero());
             assert_ne!(h_evals_large[2 * i], Point::zero());
@@ -1436,14 +1425,14 @@ mod tests {
         let seed = None; // some value to fix the rng
         let test_size = 1 << 5;
         let rou = Fr::get_root_of_unity(test_size).unwrap();
-        let matrix_flattened: Vec<Scalar> = (0..test_size).map(
+        let matrix_flattened: Vec<ScalarField> = (0..test_size).map(
             |row_num| { (0..test_size).map( 
                 |col_num| {
                     let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
-                    Scalar::from_ark(&Fr::pow(&rou, &pow))
-                }).collect::<Vec<Scalar>>()
+                    ScalarField::from_ark(Fr::pow(&rou, &pow).into_repr())
+                }).collect::<Vec<ScalarField>>()
             }).flatten().collect::<Vec<_>>();
-        let vector: Vec<Scalar> = generate_random_scalars(test_size, get_rng(seed));
+        let vector: Vec<ScalarField> = generate_random_scalars(test_size, get_rng(seed));
 
         let result = mult_matrix_by_vec(&matrix_flattened, &vector, 0);
         let mut ntt_result = vector.clone();
@@ -1458,8 +1447,8 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_vec_scalar_mul() {
-        let mut intoo = [Scalar::one(), Scalar::one(), Scalar::zero()];
-        let expected = [Scalar::one(), Scalar::zero(), Scalar::zero()];
+        let mut intoo = [ScalarField::one(), ScalarField::one(), ScalarField::zero()];
+        let expected = [ScalarField::one(), ScalarField::zero(), ScalarField::zero()];
         mult_sc_vec(&mut intoo, &expected, 0);
         assert_eq!(intoo, expected);
     }
@@ -1474,7 +1463,7 @@ mod tests {
         };
 
         let mut inout = [dummy_one, dummy_one, Point::zero()];
-        let scalars = [Scalar::one(), Scalar::zero(), Scalar::zero()];
+        let scalars = [ScalarField::one(), ScalarField::zero(), ScalarField::zero()];
         let expected = [
             Point::zero(),
             Point {

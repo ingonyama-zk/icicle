@@ -281,49 +281,6 @@ impl ScalarField {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DeviceCopy)]
-#[repr(C)]
-pub struct Scalar {
-    pub s: ScalarField, //TODO: do we need this wrapping struct?
-}
-
-impl Scalar {
-    pub fn from_limbs_le(value: &[u32]) -> Scalar {
-        Scalar {
-            s: ScalarField::from_limbs(value),
-        }
-    }
-
-    pub fn from_limbs_be(value: &[u32]) -> Scalar {
-        let mut value = value.to_vec();
-        value.reverse();
-        Self::from_limbs_le(&value)
-    }
-
-    pub fn limbs(&self) -> Vec<u32> {
-        self.s.limbs().to_vec()
-    }
-
-    pub fn one() -> Self {
-        Scalar {
-            s: ScalarField::one(),
-        }
-    }
-
-    pub fn zero() -> Self {
-        Scalar {
-            s: ScalarField::zero(),
-        }
-    }
-}
-
-impl Default for Scalar {
-    fn default() -> Self {
-        Scalar {
-            s: ScalarField::zero(),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -332,12 +289,7 @@ mod tests {
     use ark_bls12_381::Fr;
     use ark_ff::{BigInteger256, PrimeField};
 
-    use crate::{
-        field::Point,
-        utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec},
-    };
-
-    use super::{Scalar, ScalarField};
+    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::{Point, ScalarField}};
 
     impl ScalarField {
         pub fn to_ark(&self) -> BigInteger256 {
@@ -354,30 +306,6 @@ mod tests {
 
         pub fn from_ark_transmute(v: BigInteger256) -> ScalarField {
             unsafe { transmute(v) }
-        }
-    }
-
-    impl Scalar {
-        pub fn to_ark_mod_p(&self) -> Fr {
-            Fr::new(self.s.to_ark())
-        }
-
-        pub fn to_ark_repr(&self) -> Fr {
-            Fr::from_repr(self.s.to_ark()).unwrap()
-        }
-
-        pub fn to_ark_transmute(&self) -> Fr {
-            unsafe { std::mem::transmute(*self) }
-        }
-
-        pub fn from_ark_transmute(v: &Fr) -> Scalar {
-            unsafe { std::mem::transmute_copy(v) }
-        }
-
-        pub fn from_ark(v: &Fr) -> Scalar {
-            Scalar {
-                s: ScalarField::from_ark(v.into_repr()),
-            }
         }
     }
 
