@@ -1,8 +1,9 @@
 use std::ffi::c_uint;
+use std::mem::transmute;
 
 use ark_bls12_381::{Fq, G1Affine, G1Projective};
 use ark_ec::AffineCurve;
-use ark_ff::{BigInteger384, PrimeField};
+use ark_ff::{BigInteger384, BigInteger256, PrimeField};
 
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
@@ -91,6 +92,22 @@ impl BaseField {
 impl ScalarField {
     pub fn limbs(&self) -> [u32; SCALAR_LIMBS] {
         self.s
+    }
+
+    pub fn to_ark(&self) -> BigInteger256 {
+        BigInteger256::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
+    }
+
+    pub fn from_ark(ark: BigInteger256) -> Self {
+        Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
+    }
+
+    pub fn to_ark_transmute(&self) -> BigInteger256 {
+        unsafe { transmute(*self) }
+    }
+
+    pub fn from_ark_transmute(v: BigInteger256) -> ScalarField {
+        unsafe { transmute(v) }
     }
 }
 
@@ -284,30 +301,9 @@ impl ScalarField {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::transmute;
-
     use ark_bls12_381::Fr;
-    use ark_ff::{BigInteger256, PrimeField};
 
     use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::{Point, ScalarField}};
-
-    impl ScalarField {
-        pub fn to_ark(&self) -> BigInteger256 {
-            BigInteger256::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
-        }
-
-        pub fn from_ark(ark: BigInteger256) -> Self {
-            Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
-        }
-
-        pub fn to_ark_transmute(&self) -> BigInteger256 {
-            unsafe { transmute(*self) }
-        }
-
-        pub fn from_ark_transmute(v: BigInteger256) -> ScalarField {
-            unsafe { transmute(v) }
-        }
-    }
 
     #[test]
     fn test_ark_scalar_convert() {

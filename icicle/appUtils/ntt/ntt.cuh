@@ -25,9 +25,6 @@ const uint32_t MAX_THREADS_BATCH = 256;
  * @param omega multiplying factor. 
  */
 __global__ void twiddle_factors_kernel(scalar_t * d_twiddles, uint32_t n_twiddles, scalar_t omega) {
-  // for (uint32_t i = 0; i < n_twiddles; i++) {
-  //   d_twiddles[i] = scalar_t::zero();
-  // }
   d_twiddles[0] = scalar_t::one();
   for (uint32_t i = 0; i < n_twiddles - 1; i++) {
     d_twiddles[i + 1] = omega * d_twiddles[i];
@@ -124,13 +121,13 @@ template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn) {
 }
 
 /**
- * Cooley-Tuckey butterfly kernel. 
+ * Cooley-Tukey butterfly kernel. 
  * @param arr array of objects of type E (elements). 
  * @param twiddles array of twiddle factors of type S (scalars). 
  * @param n size of arr. 
  * @param n_twiddles size of omegas.
  * @param m "pair distance" - indicate distance of butterflies inputs.
- * @param i Cooley-Tuckey FFT stage number.
+ * @param i Cooley-Tukey FFT stage number.
  * @param max_thread_num maximal number of threads in stage. 
  */
 template < typename E, typename S > __global__ void template_butterfly_kernel(E * arr, S * twiddles, uint32_t n, uint32_t n_twiddles, uint32_t m, uint32_t i, uint32_t max_thread_num) {
@@ -159,7 +156,7 @@ template < typename E, typename S > __global__ void template_normalize_kernel(E 
 }
 
 /**
- * Cooley-Tuckey NTT.
+ * Cooley-Tukey NTT.
  * NOTE! this function assumes that d_arr and d_twiddles are located in the device memory.
  * @param d_arr input array of type E (elements) allocated on the device memory.
  * @param n length of d_arr.
@@ -181,7 +178,7 @@ template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr
 }
 
 /**
- * Cooley-Tuckey NTT. 
+ * Cooley-Tukey NTT. 
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type E (elements). 
  * @param n length of d_arr.
@@ -208,7 +205,7 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
 }
 
 /**
- * Cooley-Tuckey Elliptic Curve NTT. 
+ * Cooley-Tukey Elliptic Curve NTT. 
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type projective_t. 
  * @param n length of d_arr.
@@ -221,7 +218,7 @@ projective_t * ecntt(projective_t * arr, uint32_t n, scalar_t * d_twiddles, uint
 }
 
 /**
- * Cooley-Tuckey (scalar) NTT. 
+ * Cooley-Tukey (scalar) NTT. 
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type scalar_t. 
  * @param n length of d_arr.
@@ -235,7 +232,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
 
 
 /**
- * Cooley-Tuckey (scalar) NTT. 
+ * Cooley-Tukey (scalar) NTT. 
  * @param arr input array of type scalar_t. 
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
@@ -259,7 +256,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
 
 
 /**
- * Cooley-Tuckey (scalar) NTT. 
+ * Cooley-Tukey (scalar) NTT. 
  * @param arr input array of type projective_t. 
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
@@ -305,7 +302,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
 
 
 /**
- * Cooley-Tuckey butterfly kernel. 
+ * Cooley-Tukey butterfly kernel. 
  * @param arr array of objects of type E (elements). 
  * @param twiddles array of twiddle factors of type S (scalars). 
  * @param n size of arr. 
@@ -324,7 +321,7 @@ template < typename E, typename S > __device__ __host__ void butterfly(E * arrRe
 }
 
 /**
- * Cooley-Tuckey NTT. 
+ * Cooley-Tukey NTT. 
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type E (elements). 
  * @param n length of d_arr.
@@ -360,11 +357,10 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
       uint32_t k = i + j + shift_s;
 
       uint32_t offset = (task / chunks) * n;
-      if (!rev)
-        arr[offset + k] = twiddles[j * n_twiddles_div] * arr[offset + k];
-      E u = arr[offset + i + j] - arr[offset + k];
-      arr[offset + i + j] = arr[offset + i + j] + arr[offset + k];
-      arr[offset + k] = u;
+      E u = arr[offset + i + j];
+      E v = rev ? arr[offset + k] : twiddles[j * n_twiddles_div] * arr[offset + k];
+      arr[offset + i + j] = u + v;
+      arr[offset + k] = u - v;
       if (rev)
         arr[offset + k] = twiddles[j * n_twiddles_div] * arr[offset + k];
     }
@@ -373,7 +369,7 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
 
 
 /**
- * Cooley-Tuckey NTT.
+ * Cooley-Tukey NTT.
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type E (elements).
  * @param n length of arr.
@@ -394,7 +390,7 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
 
 //TODO: batch ntt and ecntt can be unified into batch_template
 /**
- * Cooley-Tuckey (scalar) NTT.
+ * Cooley-Tukey (scalar) NTT.
  * This is a bached version - meaning it assumes than the input array 
  * consists of N arrays of size n. The function performs n-size NTT on each small array.
  * @param arr input array of type scalar_t. 
@@ -443,7 +439,7 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
 }
 
 /**
- * Cooley-Tuckey (scalar) NTT.
+ * Cooley-Tukey (scalar) NTT.
  * This is a bached version - meaning it assumes than the input array 
  * consists of N arrays of size n. The function performs n-size NTT on each small array.
  * @param arr input array of type scalar_t. 

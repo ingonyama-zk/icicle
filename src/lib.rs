@@ -1,6 +1,11 @@
 use std::ffi::{c_int, c_uint};
 
+use rand::{rngs::StdRng, RngCore, SeedableRng};
+
 use field::*;
+use ark_bls12_381::{Fr, G1Affine, G1Projective};
+use ark_ff::PrimeField;
+use ark_std::UniformRand;
 
 use rustacuda::prelude::*;
 use rustacuda_core::DevicePointer;
@@ -728,18 +733,74 @@ pub fn clone_buffer<T: DeviceCopy>(buf: &mut DeviceBuffer<T>) -> DeviceBuffer<T>
     return buf_cpy;
 }
 
+pub fn get_rng(seed: Option<u64>) -> Box<dyn RngCore> {
+    let rng: Box<dyn RngCore> = match seed {
+        Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
+        None => Box::new(rand::thread_rng()),
+    };
+    rng
+}
+
+fn set_up_device() {
+    // Set up the context, load the module, and create a stream to run kernels in.
+    rustacuda::init(CudaFlags::empty()).unwrap();
+    let device = Device::get_device(0).unwrap();
+    let _ctx = Context::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device).unwrap();
+}
+
+pub fn generate_random_points(
+    count: usize,
+    mut rng: Box<dyn RngCore>,
+) -> Vec<PointAffineNoInfinity> {
+    (0..count)
+        .map(|_| Point::from_ark(G1Projective::rand(&mut rng)).to_xy_strip_z())
+        .collect()
+}
+
+pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
+    (0..count)
+        .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
+        .collect()
+}
+
+pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
+    (0..count)
+        .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
+        .collect()
+}
+
+pub fn set_up_points(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<Point>, DeviceBuffer<Point>, DeviceBuffer<ScalarField>) {
+    set_up_device();
+
+    let d_domain = build_domain(1 << log_domain_size, log_domain_size, inverse);
+
+    let seed = Some(0); // fix the rng to get two equal scalar 
+    let vector = generate_random_points_proj(test_size, get_rng(seed));
+    let mut vector_mut = vector.clone();
+
+    let mut d_vector = DeviceBuffer::from_slice(&vector[..]).unwrap();
+    (vector_mut, d_vector, d_domain)
+}
+
+pub fn set_up_scalars(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<ScalarField>, DeviceBuffer<ScalarField>, DeviceBuffer<ScalarField>) {
+    set_up_device();
+
+    let d_domain = build_domain(1 << log_domain_size, log_domain_size, inverse);
+
+    let seed = Some(0); // fix the rng to get two equal scalars
+    let mut vector_mut = generate_random_scalars(test_size, get_rng(seed));
+
+    let mut d_vector = DeviceBuffer::from_slice(&vector_mut[..]).unwrap();
+    (vector_mut, d_vector, d_domain)
+}
+
 
 #[cfg(test)]
-mod tests {
-
+pub(crate) mod tests {
     use std::ops::Add;
 
-    use ark_bls12_381::{Fr, G1Affine, G1Projective};
     use ark_ec::{msm::VariableBaseMSM, AffineCurve, ProjectiveCurve};
     use ark_ff::{FftField, Field, Zero, PrimeField};
-    use ark_std::UniformRand;
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
-    // use rustacuda::memory::*;
 
     use crate::{field::*, *};
 
@@ -802,65 +863,6 @@ mod tests {
         let result2: Vec<G1Projective> = ecntt_arc_naive(&result1, size, true);
         assert!(!check_eq(&result2, &result1));
         assert!(check_eq(&result2, &points));
-    }
-    fn get_rng(seed: Option<u64>) -> Box<dyn RngCore> {
-        let rng: Box<dyn RngCore> = match seed {
-            Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
-            None => Box::new(rand::thread_rng()),
-        };
-        rng
-    }
-
-    fn generate_random_points(
-        count: usize,
-        mut rng: Box<dyn RngCore>,
-    ) -> Vec<PointAffineNoInfinity> {
-        (0..count)
-            .map(|_| Point::from_ark(G1Projective::rand(&mut rng)).to_xy_strip_z())
-            .collect()
-    }
-    fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
-        (0..count)
-            .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
-            .collect()
-    }
-
-    fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
-        (0..count)
-            .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
-            .collect()
-    }
-
-    fn set_up_device() {
-        // Set up the context, load the module, and create a stream to run kernels in.
-        rustacuda::init(CudaFlags::empty()).unwrap();
-        let device = Device::get_device(0).unwrap();
-        let _ctx = Context::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device).unwrap();
-    }
-
-    fn set_up_scalars(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<ScalarField>, DeviceBuffer<ScalarField>, DeviceBuffer<ScalarField>) {
-        set_up_device();
-
-        let d_domain = build_domain(1 << log_domain_size, log_domain_size, inverse);
-
-        let seed = Some(0); // fix the rng to get two equal scalars
-        let mut vector_mut = generate_random_scalars(test_size, get_rng(seed));
-
-        let mut d_vector = DeviceBuffer::from_slice(&vector_mut[..]).unwrap();
-        (vector_mut, d_vector, d_domain)
-    }
-
-    fn set_up_points(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<Point>, DeviceBuffer<Point>, DeviceBuffer<ScalarField>) {
-        set_up_device();
-
-        let d_domain = build_domain(1 << log_domain_size, log_domain_size, inverse);
-
-        let seed = Some(0); // fix the rng to get two equal scalar 
-        let vector = generate_random_points_proj(test_size, get_rng(seed));
-        let mut vector_mut = vector.clone();
-
-        let mut d_vector = DeviceBuffer::from_slice(&vector[..]).unwrap();
-        (vector_mut, d_vector, d_domain)
     }
 
     #[test]
