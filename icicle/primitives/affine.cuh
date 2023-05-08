@@ -1,6 +1,6 @@
 #pragma once
 
-#include "field.cuh"
+#include <iostream>
 
 template <class FF>
 class Affine {  

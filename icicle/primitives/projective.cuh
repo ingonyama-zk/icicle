@@ -85,7 +85,7 @@ class Projective {
     }
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Projective& point) {
-      os << "x: " << point.x << "; y: " << point.y << "; z: " << point.z;
+      os << "Point { x: " << point.x << "; y: " << point.y << "; z: " << point.z << " }";
       return os;
     }
 
