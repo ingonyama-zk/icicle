@@ -65,7 +65,12 @@ mod tests {
 
     #[test]
     fn test_u64_vec_to_u32_vec() {
-        let arr_u64 = [0x2FFFFFFF00000001, 0x4FFFFFFF00000003, 0x6FFFFFFF00000005, 0x8FFFFFFF00000007];
+        let arr_u64 = [
+            0x2FFFFFFF00000001,
+            0x4FFFFFFF00000003,
+            0x6FFFFFFF00000005,
+            0x8FFFFFFF00000007,
+        ];
 
         let arr_u32_expected = [1, 0x2fffffff, 3, 0x4fffffff, 5, 0x6fffffff, 7, 0x8fffffff];
 

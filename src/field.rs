@@ -1,8 +1,12 @@
 use std::ffi::c_uint;
+use std::mem::transmute;
 
 use ark_bls12_381::{Fq, G1Affine, G1Projective};
 use ark_ec::AffineCurve;
-use ark_ff::{BigInteger384, PrimeField};
+use ark_ff::{BigInteger384, BigInteger256, PrimeField};
+
+use rustacuda_core::DeviceCopy;
+use rustacuda_derive::DeviceCopy;
 
 use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 
@@ -11,6 +15,8 @@ use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 pub struct Field<const NUM_LIMBS: usize> {
     pub s: [u32; NUM_LIMBS],
 }
+
+unsafe impl<const NUM_LIMBS: usize> DeviceCopy for Field<NUM_LIMBS> {}
 
 impl<const NUM_LIMBS: usize> Default for Field<NUM_LIMBS> {
     fn default() -> Self {
@@ -87,9 +93,25 @@ impl ScalarField {
     pub fn limbs(&self) -> [u32; SCALAR_LIMBS] {
         self.s
     }
+
+    pub fn to_ark(&self) -> BigInteger256 {
+        BigInteger256::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
+    }
+
+    pub fn from_ark(ark: BigInteger256) -> Self {
+        Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
+    }
+
+    pub fn to_ark_transmute(&self) -> BigInteger256 {
+        unsafe { transmute(*self) }
+    }
+
+    pub fn from_ark_transmute(v: BigInteger256) -> ScalarField {
+        unsafe { transmute(v) }
+    }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, DeviceCopy)]
 #[repr(C)]
 pub struct Point {
     pub x: BaseField,
@@ -157,7 +179,7 @@ impl PartialEq for Point {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, DeviceCopy)]
 #[repr(C)]
 pub struct PointAffineNoInfinity {
     pub x: BaseField,
@@ -276,102 +298,12 @@ impl ScalarField {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-#[repr(C)]
-pub struct Scalar {
-    pub s: ScalarField, //TODO: do we need this wrapping struct?
-}
-
-impl Scalar {
-    pub fn from_limbs_le(value: &[u32]) -> Scalar {
-        Scalar {
-            s: ScalarField::from_limbs(value),
-        }
-    }
-
-    pub fn from_limbs_be(value: &[u32]) -> Scalar {
-        let mut value = value.to_vec();
-        value.reverse();
-        Self::from_limbs_le(&value)
-    }
-
-    pub fn limbs(&self) -> Vec<u32> {
-        self.s.limbs().to_vec()
-    }
-
-    pub fn one() -> Self {
-        Scalar {
-            s: ScalarField::one(),
-        }
-    }
-
-    pub fn zero() -> Self {
-        Scalar {
-            s: ScalarField::zero(),
-        }
-    }
-}
-
-impl Default for Scalar {
-    fn default() -> Self {
-        Scalar {
-            s: ScalarField::zero(),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
-    use std::mem::transmute;
-
     use ark_bls12_381::Fr;
-    use ark_ff::{BigInteger256, PrimeField};
 
-    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::Point};
-
-    use super::{Scalar, ScalarField};
-
-    impl ScalarField {
-        pub fn to_ark(&self) -> BigInteger256 {
-            BigInteger256::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
-        }
-
-        pub fn from_ark(ark: BigInteger256) -> Self {
-            Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
-        }
-
-        pub fn to_ark_transmute(&self) -> BigInteger256 {
-            unsafe { transmute(*self) }
-        }
-
-        pub fn from_ark_transmute(v: BigInteger256) -> ScalarField {
-            unsafe { transmute(v) }
-        }
-    }
-
-    impl Scalar {
-        pub fn to_ark_mod_p(&self) -> Fr {
-            Fr::new(self.s.to_ark())
-        }
-
-        pub fn to_ark_repr(&self) -> Fr {
-            Fr::from_repr(self.s.to_ark()).unwrap()
-        }
-
-        pub fn to_ark_transmute(&self) -> Fr {
-            unsafe { std::mem::transmute(*self) }
-        }
-
-        pub fn from_ark_transmute(v: &Fr) -> Scalar {
-            unsafe { std::mem::transmute_copy(v) }
-        }
-
-        pub fn from_ark(v: &Fr) -> Scalar {
-            Scalar {
-                s: ScalarField::from_ark(v.into_repr()),
-            }
-        }
-    }
+    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::{Point, ScalarField}};
 
     #[test]
     fn test_ark_scalar_convert() {

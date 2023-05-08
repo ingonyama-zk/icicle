@@ -7,8 +7,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=./icicle");
 
-    let arch_type = env::var("ARCH_TYPE")
-        .unwrap_or(String::from("native"));
+    let arch_type = env::var("ARCH_TYPE").unwrap_or(String::from("native"));
 
     let mut arch = String::from("-arch=");
     arch.push_str(&arch_type);
@@ -21,9 +20,9 @@ fn main() {
     nvcc.debug(false);
     nvcc.flag(&arch);
     nvcc.files([
-        "./icicle/appUtils/ntt/ntt.cu",
-        "./icicle/appUtils/msm/msm.cu",
         "./icicle/appUtils/vector_manipulation/ve_mod_mult.cu",
+        "./icicle/appUtils/ntt/lde.cu",
+        "./icicle/appUtils/msm/msm.cu",
         "./icicle/primitives/projective.cu",
     ]);
     nvcc.compile("ingo_icicle"); //TODO: extension??

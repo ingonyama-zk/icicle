@@ -76,6 +76,15 @@ cargo build --release
 
 You'll find a release ready library at `target/release/libicicle_utils.rlib`.
 
+To benchmark and test the functionality available in RUST, run:
+
+```
+cargo bench
+cargo test -- --test-threads=1
+```
+
+The flag `--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.
+
 ### Example Usage
 
 An example of using the Rust bindings library can be found in our [fast-danksharding implementation][FDI]
