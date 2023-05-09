@@ -164,6 +164,10 @@ struct fq_config {
   static constexpr storage<limbs_count> m = {0xd59646e8, 0xec4f881f, 0x8163c701, 0x4e65c59e, 0x80a19de7, 0x2f7d1dc7, 0x7fda82a5, 0xa46e09d0, 0x331e9ae8, 0x38a0406c, 0xcf327917, 0x2760d74b};
   static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
   static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+  // i^2, the square of the imaginary unit for the extension field
+  static constexpr unsigned i_squared = 1;
+  // true if i^2 is negative
+  static constexpr bool i_squared_is_negative = true;
 };
 
 struct group_generator {
@@ -173,4 +177,16 @@ struct group_generator {
                                                                   0xd5d00af6, 0xfcf5e095, 0x741d8ae4, 0xa09e30ed, 0xe3aaa0f1, 0x08b3f481};
 };
 
+struct g2_group_generator {
+  static constexpr storage<2*fq_config::limbs_count> generator_x = {0xc121bdb8, 0xd48056c8, 0xa805bbef, 0xbac0326, 0x7ae3d177, 0xb4510b64,
+                                                                    0xfa403b02, 0xc6e47ad4, 0x2dc51051, 0x26080527, 0xf08f0a91, 0x24aa2b2, 
+                                                                    0x5d042b7e, 0xe5ac7d05, 0x13945d57, 0x334cf112, 0xdc7f5049, 0xb5da61bb,
+                                                                    0x9920b61a, 0x596bd0d0, 0x88274f65, 0x7dacd3a0, 0x52719f60, 0x13e02b60};
+  static constexpr storage<2*fq_config::limbs_count> generator_y = {0x8b82801, 0xe1935486, 0x3baca289, 0x923ac9cc, 0x5160d12c, 0x6d429a69,
+                                                                    0x8cbdd3a7, 0xadfd9baa, 0xda2e351a, 0x8cc9cdc6, 0x727d6e11, 0xce5d527,
+                                                                    0xf05f79be, 0xaaa9075f, 0x5cec1da1, 0x3f370d27, 0x572e99ab, 0x267492ab,
+                                                                    0x85a763af, 0xcb3e287e, 0x2bc28b99, 0x32acd2b0, 0x2ea734cc, 0x606c4a0};
+};
+
 static constexpr unsigned weierstrass_b = 4;
+static constexpr unsigned g2_weierstrass_b = 4;

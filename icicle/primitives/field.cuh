@@ -481,8 +481,6 @@ template <class CONFIG> class Field {
       const uint32_t limb_lsb_idx = (digit_num*digit_width) / 32;
       const uint32_t shift_bits = (digit_num*digit_width) % 32;
       unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
-      // printf("get_scalar_func digit %u rv %u\n",digit_num,rv);
-      // if (shift_bits + digit_width > 32) {
       if ((shift_bits + digit_width > 32) && (limb_lsb_idx+1 < TLC)) {
         rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
       }
@@ -578,10 +576,10 @@ template <class CONFIG> class Field {
       return !(xs == ys);
     }
 
-    template <unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE Field mul(const unsigned scalar, const Field &xs) {
-      Field rs = {};
-      Field temp = xs;
+    template <class T, unsigned REDUCTION_SIZE = 1>
+    static constexpr HOST_DEVICE_INLINE T mul(const unsigned scalar, const T &xs) {
+      T rs = {};
+      T temp = xs;
       unsigned l = scalar;
       bool is_zero = true;
   #ifdef __CUDA_ARCH__
