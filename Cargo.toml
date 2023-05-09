@@ -25,6 +25,7 @@ ark-poly = "0.3.0"
 ark-ec = { version = "0.3.0", features = [ "parallel" ] }
 ark-bls12-381 = "0.3.0"
 ark-bls12-377 = "0.3.0"
+ark-bn254 = "0.3.0"
 
 rustacuda = "0.1"
 rustacuda_core = "0.1"

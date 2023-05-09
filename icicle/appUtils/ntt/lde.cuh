@@ -1,3 +1,5 @@
+#ifndef LDE
+#define LDE
 #include <cuda.h>
 #include "ntt.cuh"
 #include "../vector_manipulation/ve_mod_mult.cuh"
@@ -107,3 +109,5 @@ template <typename E, typename S>
 int evaluate(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_size, unsigned n, bool coset, S * coset_powers) {
   return evaluate_batch <E, S> (d_out, d_coefficients, d_domain, domain_size, n, 1, coset, coset_powers);
 }
+
+#endif

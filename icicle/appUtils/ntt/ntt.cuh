@@ -1,3 +1,5 @@
+#ifndef NTT
+#define NTT
 #pragma once
 #include "../../curves/curve_config.cuh"
 
@@ -373,3 +375,5 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   cudaFree(d_twiddles);
   return 0; 
 }
+
+#endif

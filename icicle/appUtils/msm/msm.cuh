@@ -1,3 +1,5 @@
+#ifndef MSM
+#define MSM
 #pragma once
 #include <stdexcept>
 #include <cuda.h>
@@ -547,3 +549,4 @@ void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_
   unsigned bitsize = 255;
   batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device);
 }
+#endif
