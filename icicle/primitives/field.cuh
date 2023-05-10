@@ -23,6 +23,17 @@ template <class CONFIG> class Field {
       return Field { CONFIG::one };
     }
 
+    static constexpr HOST_DEVICE_INLINE Field generator_x() {
+      #ifndef __CUDA_ARCH__
+      std::cout << "in field generator";
+      #endif
+      return Field { CONFIG::generator_x };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field generator_y() {
+      return Field { CONFIG::generator_y };
+    }
+
     static constexpr HOST_INLINE Field omega(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
@@ -245,7 +256,7 @@ template <class CONFIG> class Field {
     }
 
 
-  private:
+  //private:
     typedef storage<TLC> ff_storage;
     typedef storage<2*TLC> ff_wide_storage;
 

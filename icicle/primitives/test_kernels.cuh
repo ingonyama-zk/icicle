@@ -3,12 +3,15 @@
 // TODO: change the curve depending on env variable
 #include "../curves/bls12_381.cuh"
 #include "projective.cuh"
-#include "field.cuh"
+#include "extension_field.cuh"
 
 typedef Field<fp_config> scalar_field;
 typedef Field<fq_config> base_field;
 typedef Affine<base_field> affine;
-typedef Projective<base_field, scalar_field, group_generator, weierstrass_b> proj;
+typedef Projective<base_field, scalar_field, weierstrass_b> proj;
+typedef ExtensionField<fq_config> base_extension_field;
+typedef Affine<base_extension_field> g2_affine;
+typedef Projective<base_extension_field, scalar_field, g2_weierstrass_b> g2_proj;
 
 
 template <class T1, class T2>
@@ -93,15 +96,16 @@ int field_vec_sqr(const scalar_field *x, scalar_field *result, const unsigned co
   return error ? error : cudaDeviceSynchronize();
 }
 
-__global__ void to_affine_points_kernel(const proj *x, affine *result, const unsigned count) {
+template <class P, class A>
+__global__ void to_affine_points_kernel(const P *x, A *result, const unsigned count) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= count)
     return;
-  result[gid] = proj::to_affine(x[gid]);
+  result[gid] = P::to_affine(x[gid]);
 }
 
-int point_vec_to_affine(const proj *x, affine *result, const unsigned count) {
-  to_affine_points_kernel<<<(count - 1) / 32 + 1, 32>>>(x, result, count);
+template <class P, class A> int point_vec_to_affine(const P *x, A *result, const unsigned count) {
+  to_affine_points_kernel<P, A><<<(count - 1) / 32 + 1, 32>>>(x, result, count);
   int error = cudaGetLastError();
   return error ? error : cudaDeviceSynchronize();
 }

@@ -2,7 +2,7 @@
 
 #include "affine.cuh"
 
-template <class FF, class SCALAR_FF, class GEN, unsigned B_VALUE>
+template <class FF, class SCALAR_FF, unsigned B_VALUE>
 class Projective {
   friend Affine<FF>;
 
@@ -10,10 +10,6 @@ class Projective {
     FF x;
     FF y;
     FF z;
-
-    static HOST_DEVICE_INLINE Projective generator() {
-      return { FF { GEN::generator_x }, FF { GEN::generator_y }, FF::one()};
-    }
 
     static HOST_DEVICE_INLINE Projective zero() {
       return {FF::zero(), FF::one(), FF::zero()};
@@ -26,6 +22,10 @@ class Projective {
 
     static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF> &point) {
       return {point.x, point.y, FF::one()};
+    }
+
+    static HOST_DEVICE_INLINE Projective generator() {
+      return {FF::generator_x(), FF::generator_y(), FF::one()};
     }
 
     static HOST_DEVICE_INLINE Projective neg(const Projective &point) { 
@@ -95,7 +95,7 @@ class Projective {
 
     friend HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar, const Projective& point) {   
       Projective res = zero();
-  #ifdef CUDA_ARCH
+  #ifdef __CUDA_ARCH__
   #pragma unroll
   #endif
       for (int i = 0; i < SCALAR_FF::NBITS; i++) {
@@ -118,6 +118,9 @@ class Projective {
     }
 
     static HOST_DEVICE_INLINE bool is_on_curve(const Projective &point) {
+      #ifndef __CUDA_ARCH__
+      std::cout << "Inside is_on_curve: " << point << std::endl;
+      #endif
       if (is_zero(point))
         return true;
       bool eq_holds = (FF::mul(B_VALUE, FF::sqr(point.z) * point.z) + FF::sqr(point.x) * point.x == point.z * FF::sqr(point.y));

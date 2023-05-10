@@ -8,11 +8,11 @@
 
 template <typename CONFIG> class ExtensionField {
   private:
-    struct ExtensionWide {
-      typedef Field<CONFIG> Wide Fwide;
+    typedef typename Field<CONFIG>::Wide FWide;
 
-      Fwide real_wide;
-      Fwide imaginary_wide;
+    struct ExtensionWide {
+      FWide real_wide;
+      FWide imaginary_wide;
       
       ExtensionField HOST_DEVICE_INLINE get_lower() {
         return ExtensionField { real_wide.get_lower(), imaginary_wide.get_lower() };
@@ -43,8 +43,20 @@ template <typename CONFIG> class ExtensionField {
     }
 
     static constexpr HOST_DEVICE_INLINE ExtensionField one() {
-      return ExtensionField { FF::one(), FF::one() };
+      return ExtensionField { FF::one(), FF::zero() };
     }
+
+    static constexpr HOST_DEVICE_INLINE ExtensionField generator_x() {
+      #ifndef __CUDA_ARCH__
+      std::cout << "in extension generator";
+      #endif
+      return ExtensionField { FF { CONFIG::generator_x_re }, FF { CONFIG::generator_x_im } };
+    }
+
+    static constexpr HOST_DEVICE_INLINE ExtensionField generator_y() {
+      return ExtensionField { FF { CONFIG::generator_y_re }, FF { CONFIG::generator_y_im } };
+    }
+
 
     static HOST_INLINE ExtensionField rand_host() {
       return ExtensionField { FF::rand_host(), FF::rand_host() };
@@ -69,12 +81,12 @@ template <typename CONFIG> class ExtensionField {
 
     template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ExtensionField& xs, const ExtensionField& ys) {
-      FF::Wide real_prod = FF::mul_wide(xs.real * ys.real);
-      FF::Wide imaginary_prod = FF::mul_wide(xs.imaginary * ys.imaginary);
-      FF::Wide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
-      FF::Wide i_sq_times_im = FF::mul(CONFIG::i_squared, imaginary_prod);
+      FWide real_prod = FF::mul_wide(xs.real * ys.real);
+      FWide imaginary_prod = FF::mul_wide(xs.imaginary * ys.imaginary);
+      FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
+      FWide i_sq_times_im = FF::mul(CONFIG::i_squared, imaginary_prod);
       i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
-      ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
+      return ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
     }
 
     friend HOST_DEVICE_INLINE ExtensionField operator*(const ExtensionField& xs, const ExtensionField& ys) {
@@ -83,7 +95,7 @@ template <typename CONFIG> class ExtensionField {
       FF prod_of_sums = (xs.real + xs.imaginary) * (ys.real + ys.imaginary);
       FF i_sq_times_im = FF::mul(CONFIG::i_squared, imaginary_prod);
       i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
-      ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
+      return ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
     }
 
     friend HOST_DEVICE_INLINE bool operator==(const ExtensionField& xs, const ExtensionField& ys) {
@@ -91,6 +103,12 @@ template <typename CONFIG> class ExtensionField {
     }
 
     friend HOST_DEVICE_INLINE bool operator!=(const ExtensionField& xs, const ExtensionField& ys) {
+      #ifndef __CUDA_ARCH__
+      std::cout << "X Re: " << xs.real << std::endl;
+      std::cout << "X Im: " << xs.imaginary << std::endl;
+      std::cout << "Y Re: " << ys.real << std::endl;
+      std::cout << "Y Im: " << ys.imaginary << std::endl;
+      #endif
       return !(xs == ys);
     }
 
