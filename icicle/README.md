@@ -32,6 +32,12 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
 ```
 
+Then you can select with the following command
+
+```sh
+sudo update-alternatives --config gcc
+```
+
 ### 3 - Check for conflicting binaries in PATH
 
 Make sure that there are no conflicting binaries in the PATH environment variable. For example, if `/home/linuxbrew/.linuxbrew/bin` precedes `/usr/bin/` in the PATH, it will override the `update-alternatives` settings.
