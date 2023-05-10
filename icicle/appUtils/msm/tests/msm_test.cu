@@ -124,7 +124,7 @@ class Dummy_Projective {
       return {point.x};
     }
 
-    DEVICE_INLINE Dummy_Projective from_affine(const Dummy_Projective &point) {
+    static HOST_DEVICE_INLINE Dummy_Projective from_affine(const Dummy_Projective &point) {
       return {point.x};
     }
 
@@ -174,13 +174,13 @@ class Dummy_Projective {
     }
 };
 
-typedef scalar_t test_scalar;
-typedef projective_t test_projective;
-typedef affine_t test_affine;
+// typedef scalar_t test_scalar;
+// typedef projective_t test_projective;
+// typedef affine_t test_affine;
 
-// typedef Dummy_Scalar test_scalar;
-// typedef Dummy_Projective test_projective;
-// typedef Dummy_Projective test_affine;
+typedef Dummy_Scalar test_scalar;
+typedef Dummy_Projective test_projective;
+typedef Dummy_Projective test_affine;
 
 int main()
 {
@@ -193,7 +193,7 @@ int main()
   // unsigned N = 4;
   // unsigned batch_size = 1<<0;
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<20;
+  unsigned msm_size = 1<<26;
   unsigned N = batch_size*msm_size;
 
   //1<<2, 1<<4 - gets stuck..? V but not for c=10 with real
@@ -378,10 +378,12 @@ int main()
   //   // std::cout<<test_projective::to_affine(*large_res)<<std::endl;
   // }
   auto begin = std::chrono::high_resolution_clock::now();
-  batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res);
+  // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res, false);
+  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
+  std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   // large_msm<fake_scalar, fake_point, fake_point>(scalars, points, 4, large_res);
   // batched_large_msm<fake_scalar, fake_point, fake_point>(scalars, points, 256, 4, batched_large_res);
 
@@ -393,12 +395,12 @@ int main()
   // std::cout<<*large_res<<std::endl;
   reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
-  std::cout<<"final results batched large"<<std::endl;
+  // std::cout<<"final results batched large"<<std::endl;
   // std::cout<<projective_t::to_affine(batched_large_res[0])<<std::endl;
   // bool success = true;
-  for (unsigned i = 0; i < batch_size; i++)
-  {
-    std::cout<<test_projective::to_affine(batched_large_res[i])<<std::endl;
+  // for (unsigned i = 0; i < batch_size; i++)
+  // {
+    // std::cout<<test_projective::to_affine(batched_large_res[i])<<std::endl;
     // if (test_projective::to_affine(large_res[i])==test_projective::to_affine(batched_large_res[i])){
     //   std::cout<<"good"<<std::endl;
     // }
@@ -407,7 +409,7 @@ int main()
     //   std::cout<<test_projective::to_affine(large_res[i])<<std::endl;
     //   success = false;
     // }
-  }
+  // }
   // if (success){
   //   std::cout<<"success!"<<std::endl;
   // }

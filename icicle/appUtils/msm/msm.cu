@@ -102,6 +102,7 @@ __global__ void big_triangle_sum_kernel(P* buckets, P* final_sums, unsigned nof_
 
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid>nof_bms) return;
+  printf("%u",tid);
   P line_sum = buckets[(tid+1)*(1<<c)-1];
   final_sums[tid] = line_sum;
   for (unsigned i = (1<<c)-2; i >0; i--)
@@ -409,6 +410,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
     NUM_THREADS = 1<<8;
     NUM_BLOCKS = (nof_bms*batch_size + NUM_THREADS - 1) / NUM_THREADS;
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, nof_bms*batch_size, c);
+    printf("triangle cuda error %u",cudaGetLastError());
   #endif
 
   P* d_final_results;
@@ -419,7 +421,8 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   NUM_THREADS = 1<<8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   final_accumulation_kernel<P, S><<<NUM_BLOCKS,NUM_THREADS>>>(bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
-  
+  printf("final cuda error %u",cudaGetLastError());
+
   //copy final result to host
   cudaDeviceSynchronize();
   if (!on_device)
@@ -502,12 +505,12 @@ void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool
 template <typename A, typename S, typename P>
 void reference_msm(S* scalars, A* a_points, unsigned size){
   
-  P points[size];
+  P *points = new P[size];
+  // P points[size];
   for (unsigned i = 0; i < size ; i++)
   {
     points[i] = P::from_affine(a_points[i]);
   }
-  
 
   P res = P::zero();
   

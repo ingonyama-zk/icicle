@@ -892,6 +892,32 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn test_msm_debug() {
+        let test_sizes = [15];
+
+        for pow2 in test_sizes {
+            let count = 1 << pow2;
+            let seed = None; // set Some to provide seed
+            let points = generate_random_points(count, get_rng(seed));
+            let scalars = generate_random_scalars(count, get_rng(seed));
+
+            let msm_result = msm(&points, &scalars, 0);
+
+            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
+            let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
+
+            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
+
+            assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
+            assert_eq!(msm_result.to_ark(), msm_result_ark);
+            assert_eq!(
+                msm_result.to_ark_affine(),
+                Point::from_ark(msm_result_ark).to_ark_affine()
+            );
+        }
+    }
+
+    #[test]
     fn test_batch_msm() {
         for batch_pow2 in [2, 4] {
             for pow2 in [4, 6] {
