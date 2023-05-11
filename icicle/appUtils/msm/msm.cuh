@@ -12,7 +12,6 @@
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
-#include "../../curves/curve_config.cuh"
 
 
 #define BIG_TRIANGLE

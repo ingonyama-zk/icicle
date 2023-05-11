@@ -1,12 +1,12 @@
-#ifndef _CURVE_NAME_U
-#define _CURVE_NAME_U
+#ifndef _CURVE_NAME_U_VEC_MULT
+#define _CURVE_NAME_U_VEC_MULT
 #include <stdio.h>
 #include <iostream>
 #include "../../primitives/field.cuh"
 #include "../../utils/storage.cuh"
 #include "../../primitives/projective.cuh"
-#include "../../curves/curve_config.cuh"
-#include "ve_mod_mult.cuh"
+#include "curve_config.cuh"
+#include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
 
 
 extern "C" int32_t vec_mod_mult_point_CURVE_NAME_L(CURVE_NAME_U::projective_t *inout,

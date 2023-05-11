@@ -1,20 +1,21 @@
 import math
+import os
 from sympy.ntheory import isprime, primitive_root
 import subprocess
 import random 
 import sys
 
-# curve_name = "bls12_381"
-# modolus_p = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-# bit_count_p = 255
-# limb_p =  8
-# ntt_size = 32
-# modolus_q = 4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787
-# bit_count_q = 381 
-# limb_q = 12
-# weierstrass_b = 4
-# gen_x = 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507
-# gen_y = 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569
+curve_name = "bls12_381"
+modolus_p = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+bit_count_p = 255
+limb_p =  8
+ntt_size = 32
+modolus_q = 4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787
+bit_count_q = 381 
+limb_q = 12
+weierstrass_b = 4
+gen_x = 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507
+gen_y = 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569
 
 
 # curve_name = "bls12_377"
@@ -30,17 +31,17 @@ import sys
 # gen_y = 241266749859715473739788878240585681733927191168601896383759122102112907357779751001206799952863815012735208165030
 
 
-curve_name = "bn254"
-modolus_p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
-bit_count_p = 254
-limb_p =  8
-ntt_size = 16
-modolus_q = 21888242871839275222246405745257275088696311157297823662689037894645226208583
-bit_count_q = 254 
-limb_q = 8
-weierstrass_b = 3
-gen_x = 1
-gen_y = 2
+# curve_name = "bn254"
+# modolus_p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+# bit_count_p = 254
+# limb_p =  8
+# ntt_size = 16
+# modolus_q = 21888242871839275222246405745257275088696311157297823662689037894645226208583
+# bit_count_q = 254 
+# limb_q = 8
+# weierstrass_b = 3
+# gen_x = 1
+# gen_y = 2
 
 
 def to_hex(val, length):
@@ -98,7 +99,7 @@ def create_gen():
 
 def get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q, bit_count_q, limb_q, weierstrass_b):
     file_content = ""
-    file_content += "#pragma once\n#include \"../utils/storage.cuh\"\n"
+    file_content += "#pragma once\n#include \"../../utils/storage.cuh\"\n"
     file_content += "namespace PARAMS_"+curve_name.upper()+"{\n"
     file_content += create_field_parameters_struct(modolus_p,bit_count_p,limb_p,True,ntt_size,"fp_config")
     file_content += create_field_parameters_struct(modolus_q,bit_count_q,limb_q,False,0,"fq_config")
@@ -107,66 +108,74 @@ def get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q,
     file_content+="}\n"
     return file_content
 
+
+newpath = "./icicle/curves/"+curve_name 
+if not os.path.exists(newpath):
+    os.makedirs(newpath)
+
 fc = get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q, bit_count_q, limb_q, weierstrass_b)
-print(fc)
-# text_file = open("./icicle/curves/"+curve_name+".cuh", "w")
-# n = text_file.write(fc)
-# text_file.close()
+text_file = open("./icicle/curves/"+curve_name+"/params.cuh", "w")
+n = text_file.write(fc)
+text_file.close()
 
-# with open("./icicle/curves/new_curve_files_templates/lde.cuh", "r") as lde_file:
-#     content = lde_file.read()
-#     content = content.replace("CURVE_NAME_U",curve_name.upper())
-#     content = content.replace("CURVE_NAME_L",curve_name.lower())
-#     text_file = open("./icicle/appUtils/ntt/lde_"+curve_name+".cuh", "w")
-#     n = text_file.write(content)
-#     text_file.close()
+with open("./icicle/curves/curve_template/lde.cu", "r") as lde_file:
+    content = lde_file.read()
+    content = content.replace("CURVE_NAME_U",curve_name.upper())
+    content = content.replace("CURVE_NAME_L",curve_name.lower())
+    text_file = open("./icicle/curves/"+curve_name+"/lde.cu", "w")
+    n = text_file.write(content)
+    text_file.close()
+    
+with open("./icicle/curves/curve_template/msm.cu", "r") as msm_file:
+    content = msm_file.read()
+    content = content.replace("CURVE_NAME_U",curve_name.upper())
+    content = content.replace("CURVE_NAME_L",curve_name.lower())
+    text_file = open("./icicle/curves/"+curve_name+"/msm.cu", "w")
+    n = text_file.write(content)
+    text_file.close()
 
-# with open('./icicle/appUtils/ntt/lde.cu', 'a') as f:
-#     f.write('\n#include "lde_'+curve_name+'.cuh"')
+with open("./icicle/curves/curve_template/ve_mod_mult.cu", "r") as ve_mod_mult_file:
+    content = ve_mod_mult_file.read()
+    content = content.replace("CURVE_NAME_U",curve_name.upper())
+    content = content.replace("CURVE_NAME_L",curve_name.lower())
+    text_file = open("./icicle/curves/"+curve_name+"/ve_mod_mult.cu", "w")
+    n = text_file.write(content)
+    text_file.close()
+    
 
-# with open("./icicle/curves/new_curve_files_templates/msm.cuh", "r") as lde_file:
-#     content = lde_file.read()
-#     content = content.replace("CURVE_NAME_U",curve_name.upper())
-#     content = content.replace("CURVE_NAME_L",curve_name.lower())
-#     text_file = open("./icicle/appUtils/msm/msm_"+curve_name+".cuh", "w")
-#     n = text_file.write(content)
-#     text_file.close()
+namespace = '#include "params.cuh"\n'+'''namespace CURVE_NAME_U {
+    typedef Field<PARAMS_CURVE_NAME_U::fp_config> scalar_field_t;\
+    typedef scalar_field_t scalar_t;\
+    typedef Field<PARAMS_CURVE_NAME_U::fq_config> point_field_t;
+    typedef Projective<point_field_t, scalar_field_t, PARAMS_CURVE_NAME_U::group_generator, PARAMS_CURVE_NAME_U::weierstrass_b> projective_t;
+    typedef Affine<point_field_t> affine_t;
+}'''
 
-# with open('./icicle/appUtils/msm/msm.cu', 'a') as f:
-#     f.write('\n#include "msm_'+curve_name+'.cuh"')
+with open('./icicle/curves/'+curve_name+'/curve_config.cuh', 'w') as f:
+    f.write(namespace.replace("CURVE_NAME_U",curve_name.upper()))
     
-# with open("./icicle/curves/new_curve_files_templates/ve_mod_mult.cuh", "r") as lde_file:
-#     content = lde_file.read()
-#     content = content.replace("CURVE_NAME_U",curve_name.upper())
-#     content = content.replace("CURVE_NAME_L",curve_name.lower())
-#     text_file = open("./icicle/appUtils/vector_manipulation/ve_mod_mult_"+curve_name+".cuh", "w")
-#     n = text_file.write(content)
-#     text_file.close()
     
-# with open('./icicle/appUtils/vector_manipulation/ve_mod_mult.cu', 'a') as f:
-#     f.write('\n#include "ve_mod_mult_'+curve_name+'.cuh"')
-    
-# with open('./icicle/curves/curve_config.cuh', 'a') as f:
-#     f.write('\n#include "'+curve_name+'.cuh"')
-    
-# namespace = '''namespace CURVE_NAME_U {
-#     typedef Field<PARAMS_CURVE_NAME_U::fp_config> scalar_field_t;\
-#     typedef scalar_field_t scalar_t;\
-#     typedef Field<PARAMS_CURVE_NAME_U::fq_config> point_field_t;
-#     typedef Projective<point_field_t, scalar_field_t, PARAMS_CURVE_NAME_U::group_generator, PARAMS_CURVE_NAME_U::weierstrass_b> projective_t;
-#     typedef Affine<point_field_t> affine_t;
-# }'''
+eq = '''
+#include <cuda.h>\n
+#include "curve_config.cuh"\n
+#include "../../primitives/projective.cuh"\n
+extern "C" bool eq_CURVE_NAME_L(CURVE_NAME_U::projective_t *point1, CURVE_NAME_U::projective_t *point2, size_t device_id = 0)
+{
+    return (*point1 == *point2);
+}'''
 
-# with open('./icicle/curves/curve_config.cuh', 'a') as f:
-#     f.write(namespace.replace("CURVE_NAME_U",curve_name.upper()))
-    
-    
-# eq = '''extern "C" bool eq_CURVE_NAME_L(CURVE_NAME_U::projective_t *point1, CURVE_NAME_U::projective_t *point2, size_t device_id = 0)
-# {
-#     return (*point1 == *point2);
-# }
-# }'''
+with open('./icicle/curves/'+curve_name+'/projective.cu', 'w') as f:
+    f.write(eq.replace("CURVE_NAME_U",curve_name.upper()).replace("CURVE_NAME_L",curve_name.lower()))
 
-# with open('./icicle/primitives/projective.cuh', 'a') as f:
-#     f.write(eq.replace("CURVE_NAME_U",curve_name.upper()).replace("CURVE_NAME_L",curve_name.lower()))
+supported_operations = '''
+#include "projective.cu"
+#include "lde.cu"
+#include "msm.cu"
+#include "ve_mod_mult.cu"
+'''
+
+with open('./icicle/curves/'+curve_name+'/supported_operations.cu', 'w') as f:
+    f.write(supported_operations.replace("CURVE_NAME_U",curve_name.upper()).replace("CURVE_NAME_L",curve_name.lower()))
     
+with open('./icicle/curves/index.cu', 'a') as f:
+    f.write('\n#include "'+curve_name.lower()+'/supported_operations.cu"')

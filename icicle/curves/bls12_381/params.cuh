@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utils/storage.cuh"
+#include "../../utils/storage.cuh"
 
 namespace PARAMS_BLS12_381{
   struct fp_config {

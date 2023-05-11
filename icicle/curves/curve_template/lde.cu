@@ -1,9 +1,10 @@
-#ifndef _CURVE_NAME_U
-#define _CURVE_NAME_U
+#ifndef _CURVE_NAME_U_LDE
+#define _CURVE_NAME_U_LDE
 #include <cuda.h>
-#include "lde.cuh"
-#include "ntt.cuh"
-#include "../vector_manipulation/ve_mod_mult.cuh"
+#include "../../appUtils/ntt/lde.cuh"
+#include "../../appUtils/ntt/ntt.cuh"
+#include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
+#include "curve_config.cuh"
 
 extern "C" CURVE_NAME_U::scalar_t* build_domain_cuda_CURVE_NAME_L(uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0)
 {

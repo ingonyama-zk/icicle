@@ -1,5 +1,5 @@
 #pragma once
-#include "../utils/storage.cuh"
+#include "../../utils/storage.cuh"
 namespace PARAMS_BN254{
  struct fp_config{
   static constexpr unsigned limbs_count = 8;
@@ -119,7 +119,6 @@ namespace PARAMS_BN254{
    static constexpr storage<limbs_count> inv14= {0x19b04001, 0x819ce60c, 0xd89789ab, 0xc6bf4778, 0x6aa75257, 0x37a96475, 0xa7661b63, 0x30638ce1};
    static constexpr storage<limbs_count> inv15= {0x04d82001, 0x62bf6dd0, 0xa9287d1e, 0x777997e0, 0xf614555a, 0x77fcd515, 0x444bddc6, 0x3063edaa};
    static constexpr storage<limbs_count> inv16= {0xfa6c1001, 0xd350b1b1, 0x9170f6d7, 0xcfd6c014, 0x3bcad6db, 0x18268d66, 0x92bebef8, 0x30641e0e};
- 
   };
   struct fq_config{
     static constexpr unsigned limbs_count = 8;
@@ -135,7 +134,7 @@ namespace PARAMS_BN254{
     static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
   };
-  static constexpr unsigned weierstrass_b = 2;
+  static constexpr unsigned weierstrass_b = 3;
   struct group_generator {
    static constexpr storage<fq_config::limbs_count> generator_x = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
    static constexpr storage<fq_config::limbs_count> generator_y = {0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};

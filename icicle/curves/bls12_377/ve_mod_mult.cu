@@ -1,23 +1,23 @@
-#ifndef _BN254
-#define _BN254
+#ifndef _BLS12_377_VEC_MULT
+#define _BLS12_377_VEC_MULT
 #include <stdio.h>
 #include <iostream>
 #include "../../primitives/field.cuh"
 #include "../../utils/storage.cuh"
 #include "../../primitives/projective.cuh"
-#include "../../curves/curve_config.cuh"
-#include "ve_mod_mult.cuh"
+#include "curve_config.cuh"
+#include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
 
 
-extern "C" int32_t vec_mod_mult_point_bn254(BN254::projective_t *inout,
-                                      BN254::scalar_t *scalar_vec,
+extern "C" int32_t vec_mod_mult_point_bls12_377(BLS12_377::projective_t *inout,
+                                      BLS12_377::scalar_t *scalar_vec,
                                       size_t n_elments,
                                       size_t device_id)
 {
   try
   {
     // TODO: device_id
-    vector_mod_mult<BN254::projective_t, BN254::scalar_t>(scalar_vec, inout, inout, n_elments);
+    vector_mod_mult<BLS12_377::projective_t, BLS12_377::scalar_t>(scalar_vec, inout, inout, n_elments);
     return CUDA_SUCCESS;
   }
   catch (const std::runtime_error &ex)
@@ -27,15 +27,15 @@ extern "C" int32_t vec_mod_mult_point_bn254(BN254::projective_t *inout,
   }
 }
 
-extern "C" int32_t vec_mod_mult_scalar_bn254(BN254::scalar_t *inout,
-                                       BN254::scalar_t *scalar_vec,
+extern "C" int32_t vec_mod_mult_scalar_bls12_377(BLS12_377::scalar_t *inout,
+                                       BLS12_377::scalar_t *scalar_vec,
                                        size_t n_elments,
                                        size_t device_id)
 {
   try
   {
     // TODO: device_id
-    vector_mod_mult<BN254::scalar_t, BN254::scalar_t>(scalar_vec, inout, inout, n_elments);
+    vector_mod_mult<BLS12_377::scalar_t, BLS12_377::scalar_t>(scalar_vec, inout, inout, n_elments);
     return CUDA_SUCCESS;
   }
   catch (const std::runtime_error &ex)
@@ -45,16 +45,16 @@ extern "C" int32_t vec_mod_mult_scalar_bn254(BN254::scalar_t *inout,
   }
 }
 
-extern "C" int32_t matrix_vec_mod_mult_bn254(BN254::scalar_t *matrix_flattened,
-                                       BN254::scalar_t *input,
-                                       BN254::scalar_t *output,
+extern "C" int32_t matrix_vec_mod_mult_bls12_377(BLS12_377::scalar_t *matrix_flattened,
+                                       BLS12_377::scalar_t *input,
+                                       BLS12_377::scalar_t *output,
                                        size_t n_elments,
                                        size_t device_id)
 {
   try
   {
     // TODO: device_id
-    matrix_mod_mult<BN254::scalar_t>(matrix_flattened, input, output, n_elments);
+    matrix_mod_mult<BLS12_377::scalar_t>(matrix_flattened, input, output, n_elments);
     return CUDA_SUCCESS;
   }
   catch (const std::runtime_error &ex)

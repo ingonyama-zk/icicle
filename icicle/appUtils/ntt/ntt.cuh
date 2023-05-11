@@ -1,7 +1,6 @@
 #ifndef NTT
 #define NTT
 #pragma once
-#include "../../curves/curve_config.cuh"
 
 const uint32_t MAX_NUM_THREADS = 1024;
 const uint32_t MAX_THREADS_BATCH = 256;

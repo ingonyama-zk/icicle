@@ -1,21 +1,22 @@
-#ifndef _CURVE_NAME_U
-#define _CURVE_NAME_U
-#include "msm.cuh"
+#ifndef _BN254_MSM
+#define _BN254_MSM
+#include "../../appUtils/msm/msm.cuh"
 #include <stdexcept>
 #include <cuda.h>
+#include "curve_config.cuh"
 
 
 extern "C"
-int msm_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t *out, CURVE_NAME_U::affine_t points[],
-              CURVE_NAME_U::scalar_t scalars[], size_t count, size_t device_id = 0)
+int msm_cuda_bn254(BN254::projective_t *out, BN254::affine_t points[],
+              BN254::scalar_t scalars[], size_t count, size_t device_id = 0)
 {
     try
     {
         if (count>256){
-            large_msm<CURVE_NAME_U::scalar_t, CURVE_NAME_U::projective_t, CURVE_NAME_U::affine_t>(scalars, points, count, out, false);
+            large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false);
         }
         else{
-            short_msm<CURVE_NAME_U::scalar_t, CURVE_NAME_U::projective_t, CURVE_NAME_U::affine_t>(scalars, points, count, out, false);
+            short_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false);
         }
 
         return CUDA_SUCCESS;
@@ -27,12 +28,12 @@ int msm_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t *out, CURVE_NAME_U::affine_
     }
 }
 
-extern "C" int msm_batch_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t* out, CURVE_NAME_U::affine_t points[],
-                              CURVE_NAME_U::scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0)
+extern "C" int msm_batch_cuda_bn254(BN254::projective_t* out, BN254::affine_t points[],
+                              BN254::scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0)
 {
   try
   {
-    batched_large_msm<CURVE_NAME_U::scalar_t, CURVE_NAME_U::projective_t, CURVE_NAME_U::affine_t>(scalars, points, batch_size, msm_size, out, false);
+    batched_large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, batch_size, msm_size, out, false);
 
     return CUDA_SUCCESS;
   }
@@ -52,7 +53,7 @@ extern "C" int msm_batch_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t* out, CURV
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
  extern "C"
- int commit_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t* d_out, CURVE_NAME_U::scalar_t* d_scalars, CURVE_NAME_U::affine_t* d_points, size_t count, size_t device_id = 0)
+ int commit_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scalars, BN254::affine_t* d_points, size_t count, size_t device_id = 0)
  {
      try
      {
@@ -76,7 +77,7 @@ extern "C" int msm_batch_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t* out, CURV
   * @param batch_size Size of the batch.
   */
  extern "C"
- int commit_batch_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t* d_out, CURVE_NAME_U::scalar_t* d_scalars, CURVE_NAME_U::affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
+ int commit_batch_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scalars, BN254::affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
  {
      try
      {
