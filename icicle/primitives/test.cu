@@ -280,10 +280,8 @@ TEST_F(PrimitivesTest, ECMixedAdditionOfNegatedPointEqSubtraction) {
 }
 
 TEST_F(PrimitivesTest, G2ECRandomPointsAreOnCurve) {
-  g2_proj s = g2_proj::rand_host();
-  g2_proj::is_on_curve(s);
-  // for (unsigned i = 0; i < 2; i++)
-  //   ASSERT_PRED1(g2_proj::is_on_curve, g2_points1[i]);
+  for (unsigned i = 0; i < 2; i++)
+    ASSERT_PRED1(g2_proj::is_on_curve, g2_points1[i]);
 }
 
 TEST_F(PrimitivesTest, G2ECPointAdditionSubtractionCancel) {

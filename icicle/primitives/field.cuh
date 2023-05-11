@@ -24,9 +24,6 @@ template <class CONFIG> class Field {
     }
 
     static constexpr HOST_DEVICE_INLINE Field generator_x() {
-      #ifndef __CUDA_ARCH__
-      std::cout << "in field generator";
-      #endif
       return Field { CONFIG::generator_x };
     }
 
@@ -255,8 +252,7 @@ template <class CONFIG> class Field {
       return Field { CONFIG::modulus };
     }
 
-
-  //private:
+  // private:
     typedef storage<TLC> ff_storage;
     typedef storage<2*TLC> ff_wide_storage;
 
@@ -587,22 +583,24 @@ template <class CONFIG> class Field {
       return !(xs == ys);
     }
 
-    template <class T, unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE T mul(const unsigned scalar, const T &xs) {
+    template <const Field& multiplier, class T> static constexpr HOST_DEVICE_INLINE T mul_const(const T &xs) {
+      return mul_unsigned<multiplier.limbs_storage.limbs[0], T>(xs);
+    }
+
+    template <uint32_t mutliplier, class T, unsigned REDUCTION_SIZE = 1>
+    static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T &xs) {
       T rs = {};
       T temp = xs;
-      unsigned l = scalar;
       bool is_zero = true;
   #ifdef __CUDA_ARCH__
   #pragma unroll
   #endif
       for (unsigned i = 0; i < 32; i++) {
-        if (l & 1) {
+        if (mutliplier & (1 << i)) {
           rs = is_zero ? temp : (rs + temp);
           is_zero = false;
         }
-        l >>= 1;
-        if (l == 0)
+        if (mutliplier & ((1 << (31 - i) - 1) << (i + 1)))
           break;
         temp = temp + temp;
       }

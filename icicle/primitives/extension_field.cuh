@@ -11,15 +11,15 @@ template <typename CONFIG> class ExtensionField {
     typedef typename Field<CONFIG>::Wide FWide;
 
     struct ExtensionWide {
-      FWide real_wide;
-      FWide imaginary_wide;
+      FWide real;
+      FWide imaginary;
       
       ExtensionField HOST_DEVICE_INLINE get_lower() {
-        return ExtensionField { real_wide.get_lower(), imaginary_wide.get_lower() };
+        return ExtensionField { real.get_lower(), imaginary.get_lower() };
       }
 
       ExtensionField HOST_DEVICE_INLINE get_higher_with_slack() {
-        return ExtensionField { real_wide.get_higher_with_slack(), imaginary_wide.get_higher_with_slack() };
+        return ExtensionField { real.get_higher_with_slack(), imaginary.get_higher_with_slack() };
       }
     };
 
@@ -34,6 +34,7 @@ template <typename CONFIG> class ExtensionField {
 
   public:
     typedef Field<CONFIG> FF;
+    static constexpr unsigned TLC = 2 * CONFIG::limbs_count;
 
     FF real;
     FF imaginary;
@@ -47,9 +48,6 @@ template <typename CONFIG> class ExtensionField {
     }
 
     static constexpr HOST_DEVICE_INLINE ExtensionField generator_x() {
-      #ifndef __CUDA_ARCH__
-      std::cout << "in extension generator";
-      #endif
       return ExtensionField { FF { CONFIG::generator_x_re }, FF { CONFIG::generator_x_im } };
     }
 
@@ -84,7 +82,7 @@ template <typename CONFIG> class ExtensionField {
       FWide real_prod = FF::mul_wide(xs.real * ys.real);
       FWide imaginary_prod = FF::mul_wide(xs.imaginary * ys.imaginary);
       FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
-      FWide i_sq_times_im = FF::mul(CONFIG::i_squared, imaginary_prod);
+      FWide i_sq_times_im = FF::mul_unsigned<CONFIG::i_squared>(imaginary_prod);
       i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
       return ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
     }
@@ -93,7 +91,7 @@ template <typename CONFIG> class ExtensionField {
       FF real_prod = xs.real * ys.real;
       FF imaginary_prod = xs.imaginary * ys.imaginary;
       FF prod_of_sums = (xs.real + xs.imaginary) * (ys.real + ys.imaginary);
-      FF i_sq_times_im = FF::mul(CONFIG::i_squared, imaginary_prod);
+      FF i_sq_times_im = FF::template mul_unsigned<CONFIG::i_squared>(imaginary_prod);
       i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
       return ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
     }
@@ -103,36 +101,25 @@ template <typename CONFIG> class ExtensionField {
     }
 
     friend HOST_DEVICE_INLINE bool operator!=(const ExtensionField& xs, const ExtensionField& ys) {
-      #ifndef __CUDA_ARCH__
-      std::cout << "X Re: " << xs.real << std::endl;
-      std::cout << "X Im: " << xs.imaginary << std::endl;
-      std::cout << "Y Re: " << ys.real << std::endl;
-      std::cout << "Y Im: " << ys.imaginary << std::endl;
-      #endif
       return !(xs == ys);
     }
 
-    template <class T, unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE T mul(const unsigned scalar, const T &xs) {
-      T rs = {};
-      T temp = xs;
-      unsigned l = scalar;
-      bool is_zero = true;
-  #ifdef __CUDA_ARCH__
-  #pragma unroll
-  #endif
-      for (unsigned i = 0; i < 32; i++) {
-        if (l & 1) {
-          rs = is_zero ? temp : (rs + temp);
-          is_zero = false;
-        }
-        l >>= 1;
-        if (l == 0)
-          break;
-        // todo: impl doubling
-        temp = temp + temp;
-      }
-      return rs;
+    template <const ExtensionField& mutliplier>
+    static constexpr HOST_DEVICE_INLINE ExtensionField mul_const(const ExtensionField &xs) {
+      constexpr uint32_t mul_real = mutliplier.real.limbs_storage.limbs[0];
+      constexpr uint32_t mul_imaginary = mutliplier.imaginary.limbs_storage.limbs[0];
+      FF real_prod = FF::template mul_unsigned<mul_real>(xs.real);
+      FF imaginary_prod = FF::template mul_unsigned<mul_imaginary>(xs.imaginary);
+      FF re_im = FF::template mul_unsigned<mul_real>(xs.imaginary);
+      FF im_re = FF::template mul_unsigned<mul_imaginary>(xs.real);
+      FF i_sq_times_im = FF::template mul_unsigned<CONFIG::i_squared>(imaginary_prod);
+      i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
+      return ExtensionField { real_prod + i_sq_times_im, re_im + im_re };
+    }
+
+    template <uint32_t mutliplier, unsigned REDUCTION_SIZE = 1>
+    static constexpr HOST_DEVICE_INLINE ExtensionField mul_unsigned(const ExtensionField &xs) {
+      return { FF::template mul_unsigned<mutliplier>(xs.real), FF::template mul_unsigned<mutliplier>(xs.imaginary) };
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
@@ -157,6 +144,6 @@ template <typename CONFIG> class ExtensionField {
       ExtensionField xs_conjugate = { xs.real, FF::neg(xs.imaginary) };
       // TODO: wide here
       FF xs_modulus_squared = FF::sqr(xs.real) + FF::sqr(xs.imaginary);
-      return xs_conjugate * FF::inverse(xs_modulus_squared);
+      return xs_conjugate * ExtensionField { FF::inverse(xs_modulus_squared), FF::zero() };
     }
 };

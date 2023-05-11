@@ -8,10 +8,12 @@
 typedef Field<fp_config> scalar_field;
 typedef Field<fq_config> base_field;
 typedef Affine<base_field> affine;
-typedef Projective<base_field, scalar_field, weierstrass_b> proj;
+static constexpr base_field b = base_field{ weierstrass_b };
+typedef Projective<base_field, scalar_field, b> proj;
 typedef ExtensionField<fq_config> base_extension_field;
 typedef Affine<base_extension_field> g2_affine;
-typedef Projective<base_extension_field, scalar_field, g2_weierstrass_b> g2_proj;
+static constexpr base_extension_field b2 = base_extension_field{ base_field {b_re},  base_field {b_im}};
+typedef Projective<base_extension_field, scalar_field, b2> g2_proj;
 
 
 template <class T1, class T2>
