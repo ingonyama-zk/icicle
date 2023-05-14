@@ -893,7 +893,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_msm_debug() {
-        let test_sizes = [15];
+        let test_sizes = [15,16,17,18,19,20];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -907,6 +907,15 @@ pub(crate) mod tests {
             let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
 
             let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
+
+            println!("\n{:?}", pow2);
+            println!("\nark\n");
+            println!("{:?}", msm_result_ark);
+            println!("{:?}", Point::from_ark(msm_result_ark).to_ark_affine());
+            println!("\nicicle\n");
+            println!("{:?}", msm_result);
+            println!("{:?}", msm_result.to_ark_affine());
+            println!("{:?}", msm_result.to_ark());
 
             assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
             assert_eq!(msm_result.to_ark(), msm_result_ark);

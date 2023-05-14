@@ -174,13 +174,13 @@ class Dummy_Projective {
     }
 };
 
-// typedef scalar_t test_scalar;
-// typedef projective_t test_projective;
-// typedef affine_t test_affine;
+typedef scalar_t test_scalar;
+typedef projective_t test_projective;
+typedef affine_t test_affine;
 
-typedef Dummy_Scalar test_scalar;
-typedef Dummy_Projective test_projective;
-typedef Dummy_Projective test_affine;
+// typedef Dummy_Scalar test_scalar;
+// typedef Dummy_Projective test_projective;
+// typedef Dummy_Projective test_affine;
 
 int main()
 {
@@ -193,7 +193,7 @@ int main()
   // unsigned N = 4;
   // unsigned batch_size = 1<<0;
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<26;
+  unsigned msm_size = 1<<16;
   unsigned N = batch_size*msm_size;
 
   //1<<2, 1<<4 - gets stuck..? V but not for c=10 with real
@@ -256,6 +256,8 @@ int main()
   for (unsigned i=0;i<N;i++){
     scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
+    // scalars[i] = test_scalar::rand_host();
+    // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
 
@@ -393,7 +395,7 @@ int main()
   // std::cout<<projective_t::to_affine(*large_res)<<std::endl;
   // std::cout<<*large_res<<std::endl;
   // std::cout<<*large_res<<std::endl;
-  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // std::cout<<projective_t::to_affine(batched_large_res[0])<<std::endl;
