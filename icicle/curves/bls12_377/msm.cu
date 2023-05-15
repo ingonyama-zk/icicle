@@ -1,6 +1,6 @@
 #ifndef _BLS12_377_MSM
 #define _BLS12_377_MSM
-#include "../../appUtils/msm/msm.cuh"
+#include "../../appUtils/msm/msm.cu"
 #include <stdexcept>
 #include <cuda.h>
 #include "curve_config.cuh"

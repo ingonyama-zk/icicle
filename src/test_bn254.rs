@@ -2,8 +2,8 @@ use std::ffi::{c_int, c_uint};
 
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
+
 use crate::curves::bn254::*;
-use crate::scalar_t::*;
 
 use ark_bn254::{Fr as Fr_BN254, G1Projective as G1Projective_BN254};
 use ark_ff::PrimeField;
@@ -15,101 +15,101 @@ use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
 
 extern "C" {
     fn msm_cuda_bn254(
-        out: *mut Point_BN_254,
-        points: *const PointAffineNoInfinity_BN_254,
-        scalars: *const ScalarField_BN_254,
+        out: *mut Point_BN254,
+        points: *const PointAffineNoInfinity_BN254,
+        scalars: *const ScalarField_BN254,
         count: usize,
         device_id: usize,
     ) -> c_uint;
 
     fn msm_batch_cuda_bn254(
-        out: *mut Point_BN_254,
-        points: *const PointAffineNoInfinity_BN_254,
-        scalars: *const ScalarField_BN_254,
+        out: *mut Point_BN254,
+        points: *const PointAffineNoInfinity_BN254,
+        scalars: *const ScalarField_BN254,
         batch_size: usize,
         msm_size: usize,
         device_id: usize,
     ) -> c_uint;
 
     fn commit_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_scalars: DevicePointer<ScalarField_BN_254>,
-        d_points: DevicePointer<PointAffineNoInfinity_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_scalars: DevicePointer<ScalarField_BN254>,
+        d_points: DevicePointer<PointAffineNoInfinity_BN254>,
         count: usize,
         device_id: usize,
     ) -> c_uint;
 
     fn commit_batch_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_scalars: DevicePointer<ScalarField_BN_254>,
-        d_points: DevicePointer<PointAffineNoInfinity_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_scalars: DevicePointer<ScalarField_BN254>,
+        d_points: DevicePointer<PointAffineNoInfinity_BN254>,
         count: usize,
         batch_size: usize,
         device_id: usize,
     ) -> c_uint;
 
-    fn build_domain_cuda_bn254(domain_size: usize, logn: usize, inverse: bool, device_id: usize) -> DevicePointer<ScalarField_BN_254>;
+    fn build_domain_cuda_bn254(domain_size: usize, logn: usize, inverse: bool, device_id: usize) -> DevicePointer<ScalarField_BN254>;
 
-    fn ntt_cuda_bn254(inout: *mut ScalarField_BN_254, n: usize, inverse: bool, device_id: usize) -> c_int;
+    fn ntt_cuda_bn254(inout: *mut ScalarField_BN254, n: usize, inverse: bool, device_id: usize) -> c_int;
 
-    fn ecntt_cuda_bn254(inout: *mut Point_BN_254, n: usize, inverse: bool, device_id: usize) -> c_int;
+    fn ecntt_cuda_bn254(inout: *mut Point_BN254, n: usize, inverse: bool, device_id: usize) -> c_int;
 
     fn ntt_batch_cuda_bn254(
-        inout: *mut ScalarField_BN_254,
+        inout: *mut ScalarField_BN254,
         arr_size: usize,
         n: usize,
         inverse: bool,
     ) -> c_int;
 
-    fn ecntt_batch_cuda_bn254(inout: *mut Point_BN_254, arr_size: usize, n: usize, inverse: bool) -> c_int;
+    fn ecntt_batch_cuda_bn254(inout: *mut Point_BN254, arr_size: usize, n: usize, inverse: bool) -> c_int;
 
     fn interpolate_scalars_cuda_bn254(
-        d_out: DevicePointer<ScalarField_BN_254>,
-        d_evaluations: DevicePointer<ScalarField_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>, 
+        d_out: DevicePointer<ScalarField_BN254>,
+        d_evaluations: DevicePointer<ScalarField_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>, 
         n: usize,
         device_id: usize
     ) -> c_int;
 
     fn interpolate_scalars_batch_cuda_bn254(
-        d_out: DevicePointer<ScalarField_BN_254>,
-        d_evaluations: DevicePointer<ScalarField_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<ScalarField_BN254>,
+        d_evaluations: DevicePointer<ScalarField_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         n: usize,
         batch_size: usize,
         device_id: usize
     ) -> c_int;
 
     fn interpolate_points_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_evaluations: DevicePointer<Point_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_evaluations: DevicePointer<Point_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         n: usize,
         device_id: usize
     ) -> c_int;
 
     fn interpolate_points_batch_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_evaluations: DevicePointer<Point_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_evaluations: DevicePointer<Point_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         n: usize,
         batch_size: usize,
         device_id: usize
     ) -> c_int;
 
     fn evaluate_scalars_cuda_bn254(
-        d_out: DevicePointer<ScalarField_BN_254>,
-        d_coefficients: DevicePointer<ScalarField_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<ScalarField_BN254>,
+        d_coefficients: DevicePointer<ScalarField_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
         device_id: usize
     ) -> c_int;
 
     fn evaluate_scalars_batch_cuda_bn254(
-        d_out: DevicePointer<ScalarField_BN_254>,
-        d_coefficients: DevicePointer<ScalarField_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<ScalarField_BN254>,
+        d_coefficients: DevicePointer<ScalarField_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
         batch_size: usize,
@@ -117,18 +117,18 @@ extern "C" {
     ) -> c_int;
 
     fn evaluate_points_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_coefficients: DevicePointer<Point_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_coefficients: DevicePointer<Point_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
         device_id: usize
     ) -> c_int;
 
     fn evaluate_points_batch_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_coefficients: DevicePointer<Point_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_coefficients: DevicePointer<Point_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
         batch_size: usize,
@@ -136,108 +136,108 @@ extern "C" {
     ) -> c_int;
 
     fn evaluate_scalars_on_coset_cuda_bn254(
-        d_out: DevicePointer<ScalarField_BN_254>,
-        d_coefficients: DevicePointer<ScalarField_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<ScalarField_BN254>,
+        d_coefficients: DevicePointer<ScalarField_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
-        coset_powers: DevicePointer<ScalarField_BN_254>,
+        coset_powers: DevicePointer<ScalarField_BN254>,
         device_id: usize
     ) -> c_int;
 
     fn evaluate_scalars_on_coset_batch_cuda_bn254(
-        d_out: DevicePointer<ScalarField_BN_254>,
-        d_coefficients: DevicePointer<ScalarField_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<ScalarField_BN254>,
+        d_coefficients: DevicePointer<ScalarField_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
         batch_size: usize,
-        coset_powers: DevicePointer<ScalarField_BN_254>,
+        coset_powers: DevicePointer<ScalarField_BN254>,
         device_id: usize
     ) -> c_int;
 
     fn evaluate_points_on_coset_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_coefficients: DevicePointer<Point_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_coefficients: DevicePointer<Point_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
-        coset_powers: DevicePointer<ScalarField_BN_254>,
+        coset_powers: DevicePointer<ScalarField_BN254>,
         device_id: usize
     ) -> c_int;
 
     fn evaluate_points_on_coset_batch_cuda_bn254(
-        d_out: DevicePointer<Point_BN_254>,
-        d_coefficients: DevicePointer<Point_BN_254>,
-        d_domain: DevicePointer<ScalarField_BN_254>,
+        d_out: DevicePointer<Point_BN254>,
+        d_coefficients: DevicePointer<Point_BN254>,
+        d_domain: DevicePointer<ScalarField_BN254>,
         domain_size: usize,
         n: usize,
         batch_size: usize,
-        coset_powers: DevicePointer<ScalarField_BN_254>,
+        coset_powers: DevicePointer<ScalarField_BN254>,
         device_id: usize
     ) -> c_int;
 
     fn reverse_order_scalars_cuda_bn254(
-        d_arr: DevicePointer<ScalarField_BN_254>,
+        d_arr: DevicePointer<ScalarField_BN254>,
         n: usize,
         device_id: usize
     ) -> c_int;
 
     fn reverse_order_scalars_batch_cuda_bn254(
-        d_arr: DevicePointer<ScalarField_BN_254>,
+        d_arr: DevicePointer<ScalarField_BN254>,
         n: usize,
         batch_size: usize,
         device_id: usize
     ) -> c_int;
 
     fn reverse_order_points_cuda_bn254(
-        d_arr: DevicePointer<Point_BN_254>,
+        d_arr: DevicePointer<Point_BN254>,
         n: usize,
         device_id: usize
     ) -> c_int;
 
     fn reverse_order_points_batch_cuda_bn254(
-        d_arr: DevicePointer<Point_BN_254>,
+        d_arr: DevicePointer<Point_BN254>,
         n: usize,
         batch_size: usize,
         device_id: usize
     ) -> c_int;
 
     fn vec_mod_mult_point_bn254(
-        inout: *mut Point_BN_254,
-        scalars: *const ScalarField_BN_254,
+        inout: *mut Point_BN254,
+        scalars: *const ScalarField_BN254,
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
 
     fn vec_mod_mult_scalar_bn254(
-        inout: *mut ScalarField_BN_254,
-        scalars: *const ScalarField_BN_254,
+        inout: *mut ScalarField_BN254,
+        scalars: *const ScalarField_BN254,
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
 
     fn matrix_vec_mod_mult_bn254(
-        matrix_flattened: *const ScalarField_BN_254,
-        input: *const ScalarField_BN_254,
-        output: *mut ScalarField_BN_254,
+        matrix_flattened: *const ScalarField_BN254,
+        input: *const ScalarField_BN254,
+        output: *mut ScalarField_BN254,
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
 }
 
-pub fn msm_bn254(points: &[PointAffineNoInfinity_BN_254], scalars: &[ScalarField_BN_254], device_id: usize) -> Point_BN_254 {
+pub fn msm_bn254(points: &[PointAffineNoInfinity_BN254], scalars: &[ScalarField_BN254], device_id: usize) -> Point_BN254 {
     let count = points.len();
     if count != scalars.len() {
         todo!("variable length")
     }
 
-    let mut ret = Point_BN_254::zero();
+    let mut ret = Point_BN254::zero();
     unsafe {
         msm_cuda_bn254(
-            &mut ret as *mut _ as *mut Point_BN_254,
-            points as *const _ as *const PointAffineNoInfinity_BN_254,
-            scalars as *const _ as *const ScalarField_BN_254,
+            &mut ret as *mut _ as *mut Point_BN254,
+            points as *const _ as *const PointAffineNoInfinity_BN254,
+            scalars as *const _ as *const ScalarField_BN254,
             scalars.len(),
             device_id,
         )
@@ -247,23 +247,23 @@ pub fn msm_bn254(points: &[PointAffineNoInfinity_BN_254], scalars: &[ScalarField
 }
 
 pub fn msm_batch_bn254(
-    points: &[PointAffineNoInfinity_BN_254],
-    scalars: &[ScalarField_BN_254],
+    points: &[PointAffineNoInfinity_BN254],
+    scalars: &[ScalarField_BN254],
     batch_size: usize,
     device_id: usize,
-) -> Vec<Point_BN_254> {
+) -> Vec<Point_BN254> {
     let count = points.len();
     if count != scalars.len() {
         todo!("variable length")
     }
 
-    let mut ret = vec![Point_BN_254::zero(); batch_size];
+    let mut ret = vec![Point_BN254::zero(); batch_size];
 
     unsafe {
         msm_batch_cuda_bn254(
-            &mut ret[0] as *mut _ as *mut Point_BN_254,
-            points as *const _ as *const PointAffineNoInfinity_BN_254,
-            scalars as *const _ as *const ScalarField_BN_254,
+            &mut ret[0] as *mut _ as *mut Point_BN254,
+            points as *const _ as *const PointAffineNoInfinity_BN254,
+            scalars as *const _ as *const ScalarField_BN254,
             batch_size,
             count / batch_size,
             device_id,
@@ -274,10 +274,10 @@ pub fn msm_batch_bn254(
 }
 
 pub fn commit_bn254(
-    points: &mut DeviceBuffer<PointAffineNoInfinity_BN_254>,
-    scalars: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBox<Point_BN_254> {
-    let mut res = DeviceBox::new(&Point_BN_254::zero()).unwrap();
+    points: &mut DeviceBuffer<PointAffineNoInfinity_BN254>,
+    scalars: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBox<Point_BN254> {
+    let mut res = DeviceBox::new(&Point_BN254::zero()).unwrap();
     unsafe {
         commit_cuda_bn254(
             res.as_device_ptr(),
@@ -291,10 +291,10 @@ pub fn commit_bn254(
 }
 
 pub fn commit_batch_bn254(
-    points: &mut DeviceBuffer<PointAffineNoInfinity_BN_254>,
-    scalars: &mut DeviceBuffer<ScalarField_BN_254>,
+    points: &mut DeviceBuffer<PointAffineNoInfinity_BN254>,
+    scalars: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
-) -> DeviceBuffer<Point_BN_254> {
+) -> DeviceBuffer<Point_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(batch_size).unwrap() };
     unsafe {
         commit_batch_cuda_bn254(
@@ -310,10 +310,10 @@ pub fn commit_batch_bn254(
 }
 
 /// Compute an in-place NTT on the input data.
-fn ntt_internal_bn254(values: &mut [ScalarField_BN_254], device_id: usize, inverse: bool) -> i32 {
+fn ntt_internal_bn254(values: &mut [ScalarField_BN254], device_id: usize, inverse: bool) -> i32 {
     let ret_code = unsafe {
         ntt_cuda_bn254(
-            values as *mut _ as *mut ScalarField_BN_254,
+            values as *mut _ as *mut ScalarField_BN254,
             values.len(),
             inverse,
             device_id,
@@ -322,24 +322,24 @@ fn ntt_internal_bn254(values: &mut [ScalarField_BN_254], device_id: usize, inver
     ret_code
 }
 
-pub fn ntt_bn254(values: &mut [ScalarField_BN_254], device_id: usize) {
+pub fn ntt_bn254(values: &mut [ScalarField_BN254], device_id: usize) {
     ntt_internal_bn254(values, device_id, false);
 }
 
-pub fn intt_bn254(values: &mut [ScalarField_BN_254], device_id: usize) {
+pub fn intt_bn254(values: &mut [ScalarField_BN254], device_id: usize) {
     ntt_internal_bn254(values, device_id, true);
 }
 
 /// Compute an in-place NTT on the input data.
 fn ntt_internal_batch_bn254(
-    values: &mut [ScalarField_BN_254],
+    values: &mut [ScalarField_BN254],
     device_id: usize,
     batch_size: usize,
     inverse: bool,
 ) -> i32 {
     unsafe {
         ntt_batch_cuda_bn254(
-            values as *mut _ as *mut ScalarField_BN_254,
+            values as *mut _ as *mut ScalarField_BN254,
             values.len(),
             batch_size,
             inverse,
@@ -347,19 +347,19 @@ fn ntt_internal_batch_bn254(
     }
 }
 
-pub fn ntt_batch_bn254(values: &mut [ScalarField_BN_254], batch_size: usize, device_id: usize) {
+pub fn ntt_batch_bn254(values: &mut [ScalarField_BN254], batch_size: usize, device_id: usize) {
     ntt_internal_batch_bn254(values, 0, batch_size, false);
 }
 
-pub fn intt_batch_bn254(values: &mut [ScalarField_BN_254], batch_size: usize, device_id: usize) {
+pub fn intt_batch_bn254(values: &mut [ScalarField_BN254], batch_size: usize, device_id: usize) {
     ntt_internal_batch_bn254(values, 0, batch_size, true);
 }
 
 /// Compute an in-place ECNTT on the input data.
-fn ecntt_internal_bn254(values: &mut [Point_BN_254], inverse: bool, device_id: usize) -> i32 {
+fn ecntt_internal_bn254(values: &mut [Point_BN254], inverse: bool, device_id: usize) -> i32 {
     unsafe {
         ecntt_cuda_bn254(
-            values as *mut _ as *mut Point_BN_254,
+            values as *mut _ as *mut Point_BN254,
             values.len(),
             inverse,
             device_id,
@@ -367,25 +367,25 @@ fn ecntt_internal_bn254(values: &mut [Point_BN_254], inverse: bool, device_id: u
     }
 }
 
-pub fn ecntt_bn254(values: &mut [Point_BN_254], device_id: usize) {
+pub fn ecntt_bn254(values: &mut [Point_BN254], device_id: usize) {
     ecntt_internal_bn254(values, false, device_id);
 }
 
 /// Compute an in-place iECNTT on the input data.
-pub fn iecntt_bn254(values: &mut [Point_BN_254], device_id: usize) {
+pub fn iecntt_bn254(values: &mut [Point_BN254], device_id: usize) {
     ecntt_internal_bn254(values, true, device_id);
 }
 
 /// Compute an in-place ECNTT on the input data.
 fn ecntt_internal_batch_bn254(
-    values: &mut [Point_BN_254],
+    values: &mut [Point_BN254],
     device_id: usize,
     batch_size: usize,
     inverse: bool,
 ) -> i32 {
     unsafe {
         ecntt_batch_cuda_bn254(
-            values as *mut _ as *mut Point_BN_254,
+            values as *mut _ as *mut Point_BN254,
             values.len(),
             batch_size,
             inverse,
@@ -393,16 +393,16 @@ fn ecntt_internal_batch_bn254(
     }
 }
 
-pub fn ecntt_batch_bn254(values: &mut [Point_BN_254], batch_size: usize, device_id: usize) {
+pub fn ecntt_batch_bn254(values: &mut [Point_BN254], batch_size: usize, device_id: usize) {
     ecntt_internal_batch_bn254(values, 0, batch_size, false);
 }
 
 /// Compute an in-place iECNTT on the input data.
-pub fn iecntt_batch_bn254(values: &mut [Point_BN_254], batch_size: usize, device_id: usize) {
+pub fn iecntt_batch_bn254(values: &mut [Point_BN254], batch_size: usize, device_id: usize) {
     ecntt_internal_batch_bn254(values, 0, batch_size, true);
 }
 
-pub fn build_domain_bn254(domain_size: usize, logn: usize, inverse: bool) -> DeviceBuffer<ScalarField_BN_254> {
+pub fn build_domain_bn254(domain_size: usize, logn: usize, inverse: bool) -> DeviceBuffer<ScalarField_BN254> {
     unsafe {
         DeviceBuffer::from_raw_parts(build_domain_cuda_bn254(
             domain_size,
@@ -415,7 +415,7 @@ pub fn build_domain_bn254(domain_size: usize, logn: usize, inverse: bool) -> Dev
 
 
 pub fn reverse_order_scalars_bn254(
-    d_scalars: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_scalars: &mut DeviceBuffer<ScalarField_BN254>,
 ) {
     unsafe { reverse_order_scalars_cuda_bn254(
         d_scalars.as_device_ptr(),
@@ -425,7 +425,7 @@ pub fn reverse_order_scalars_bn254(
 }
 
 pub fn reverse_order_scalars_batch_bn254(
-    d_scalars: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_scalars: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
 ) {
     unsafe { reverse_order_scalars_batch_cuda_bn254(
@@ -437,7 +437,7 @@ pub fn reverse_order_scalars_batch_bn254(
 }
 
 pub fn reverse_order_points_bn254(
-    d_points: &mut DeviceBuffer<Point_BN_254>,
+    d_points: &mut DeviceBuffer<Point_BN254>,
 ) {
     unsafe { reverse_order_points_cuda_bn254(
         d_points.as_device_ptr(),
@@ -447,7 +447,7 @@ pub fn reverse_order_points_bn254(
 }
 
 pub fn reverse_order_points_batch_bn254(
-    d_points: &mut DeviceBuffer<Point_BN_254>,
+    d_points: &mut DeviceBuffer<Point_BN254>,
     batch_size: usize,
 ) {
     unsafe { reverse_order_points_batch_cuda_bn254(
@@ -459,9 +459,9 @@ pub fn reverse_order_points_batch_bn254(
 }
 
 pub fn interpolate_scalars_bn254(
-    d_evaluations: &mut DeviceBuffer<ScalarField_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>
-) -> DeviceBuffer<ScalarField_BN_254> {
+    d_evaluations: &mut DeviceBuffer<ScalarField_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>
+) -> DeviceBuffer<ScalarField_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
     unsafe { interpolate_scalars_cuda_bn254(
         res.as_device_ptr(),
@@ -474,10 +474,10 @@ pub fn interpolate_scalars_bn254(
 }
 
 pub fn interpolate_scalars_batch_bn254(
-    d_evaluations: &mut DeviceBuffer<ScalarField_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_evaluations: &mut DeviceBuffer<ScalarField_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
-) -> DeviceBuffer<ScalarField_BN_254> {
+) -> DeviceBuffer<ScalarField_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe { interpolate_scalars_batch_cuda_bn254(
         res.as_device_ptr(),
@@ -491,9 +491,9 @@ pub fn interpolate_scalars_batch_bn254(
 }
 
 pub fn interpolate_points_bn254(
-    d_evaluations: &mut DeviceBuffer<Point_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBuffer<Point_BN_254> {
+    d_evaluations: &mut DeviceBuffer<Point_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBuffer<Point_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
     unsafe { interpolate_points_cuda_bn254(
         res.as_device_ptr(),
@@ -506,10 +506,10 @@ pub fn interpolate_points_bn254(
 }
 
 pub fn interpolate_points_batch_bn254(
-    d_evaluations: &mut DeviceBuffer<Point_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_evaluations: &mut DeviceBuffer<Point_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
-) -> DeviceBuffer<Point_BN_254> {
+) -> DeviceBuffer<Point_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe { interpolate_points_batch_cuda_bn254(
         res.as_device_ptr(),
@@ -523,9 +523,9 @@ pub fn interpolate_points_batch_bn254(
 }
 
 pub fn evaluate_scalars_bn254(
-    d_coefficients: &mut DeviceBuffer<ScalarField_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBuffer<ScalarField_BN_254> {
+    d_coefficients: &mut DeviceBuffer<ScalarField_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBuffer<ScalarField_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
     unsafe {
         evaluate_scalars_cuda_bn254(
@@ -541,10 +541,10 @@ pub fn evaluate_scalars_bn254(
 }
 
 pub fn evaluate_scalars_batch_bn254(
-    d_coefficients: &mut DeviceBuffer<ScalarField_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_coefficients: &mut DeviceBuffer<ScalarField_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
-) -> DeviceBuffer<ScalarField_BN_254> {
+) -> DeviceBuffer<ScalarField_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe {
         evaluate_scalars_batch_cuda_bn254(
@@ -561,9 +561,9 @@ pub fn evaluate_scalars_batch_bn254(
 }
 
 pub fn evaluate_points_bn254(
-    d_coefficients: &mut DeviceBuffer<Point_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBuffer<Point_BN_254> {
+    d_coefficients: &mut DeviceBuffer<Point_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBuffer<Point_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
     unsafe {
         evaluate_points_cuda_bn254(
@@ -579,10 +579,10 @@ pub fn evaluate_points_bn254(
 }
 
 pub fn evaluate_points_batch_bn254(
-    d_coefficients: &mut DeviceBuffer<Point_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_coefficients: &mut DeviceBuffer<Point_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
-) -> DeviceBuffer<Point_BN_254> {
+) -> DeviceBuffer<Point_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe {
         evaluate_points_batch_cuda_bn254(
@@ -599,10 +599,10 @@ pub fn evaluate_points_batch_bn254(
 }
 
 pub fn evaluate_scalars_on_coset_bn254(
-    d_coefficients: &mut DeviceBuffer<ScalarField_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
-    coset_powers: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBuffer<ScalarField_BN_254> {
+    d_coefficients: &mut DeviceBuffer<ScalarField_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
+    coset_powers: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBuffer<ScalarField_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
     unsafe {
         evaluate_scalars_on_coset_cuda_bn254(
@@ -619,11 +619,11 @@ pub fn evaluate_scalars_on_coset_bn254(
 }
 
 pub fn evaluate_scalars_on_coset_batch_bn254(
-    d_coefficients: &mut DeviceBuffer<ScalarField_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_coefficients: &mut DeviceBuffer<ScalarField_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
-    coset_powers: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBuffer<ScalarField_BN_254> {
+    coset_powers: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBuffer<ScalarField_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe {
         evaluate_scalars_on_coset_batch_cuda_bn254(
@@ -641,10 +641,10 @@ pub fn evaluate_scalars_on_coset_batch_bn254(
 }
 
 pub fn evaluate_points_on_coset_bn254(
-    d_coefficients: &mut DeviceBuffer<Point_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
-    coset_powers: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBuffer<Point_BN_254> {
+    d_coefficients: &mut DeviceBuffer<Point_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
+    coset_powers: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBuffer<Point_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len()).unwrap() };
     unsafe {
         evaluate_points_on_coset_cuda_bn254(
@@ -661,11 +661,11 @@ pub fn evaluate_points_on_coset_bn254(
 }
 
 pub fn evaluate_points_on_coset_batch_bn254(
-    d_coefficients: &mut DeviceBuffer<Point_BN_254>,
-    d_domain: &mut DeviceBuffer<ScalarField_BN_254>,
+    d_coefficients: &mut DeviceBuffer<Point_BN254>,
+    d_domain: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
-    coset_powers: &mut DeviceBuffer<ScalarField_BN_254>,
-) -> DeviceBuffer<Point_BN_254> {
+    coset_powers: &mut DeviceBuffer<ScalarField_BN254>,
+) -> DeviceBuffer<Point_BN254> {
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe {
         evaluate_points_on_coset_batch_cuda_bn254(
@@ -682,24 +682,24 @@ pub fn evaluate_points_on_coset_batch_bn254(
     return res;
 }
 
-pub fn multp_vec_bn254(a: &mut [Point_BN_254], b: &[ScalarField_BN_254], device_id: usize) {
+pub fn multp_vec_bn254(a: &mut [Point_BN254], b: &[ScalarField_BN254], device_id: usize) {
     assert_eq!(a.len(), b.len());
     unsafe {
         vec_mod_mult_point_bn254(
-            a as *mut _ as *mut Point_BN_254,
-            b as *const _ as *const ScalarField_BN_254,
+            a as *mut _ as *mut Point_BN254,
+            b as *const _ as *const ScalarField_BN254,
             a.len(),
             device_id,
         );
     }
 }
 
-pub fn mult_sc_vec_bn254(a: &mut [ScalarField_BN_254], b: &[ScalarField_BN_254], device_id: usize) {
+pub fn mult_sc_vec_bn254(a: &mut [ScalarField_BN254], b: &[ScalarField_BN254], device_id: usize) {
     assert_eq!(a.len(), b.len());
     unsafe {
         vec_mod_mult_scalar_bn254(
-            a as *mut _ as *mut ScalarField_BN_254,
-            b as *const _ as *const ScalarField_BN_254,
+            a as *mut _ as *mut ScalarField_BN254,
+            b as *const _ as *const ScalarField_BN254,
             a.len(),
             device_id,
         );
@@ -709,16 +709,16 @@ pub fn mult_sc_vec_bn254(a: &mut [ScalarField_BN_254], b: &[ScalarField_BN_254],
 // Multiply a matrix by a scalar:
 //  `a` - flattenned matrix;
 //  `b` - vector to multiply `a` by;
-pub fn mult_matrix_by_vec_bn254(a: &[ScalarField_BN_254], b: &[ScalarField_BN_254], device_id: usize) -> Vec<ScalarField_BN_254> {
+pub fn mult_matrix_by_vec_bn254(a: &[ScalarField_BN254], b: &[ScalarField_BN254], device_id: usize) -> Vec<ScalarField_BN254> {
     let mut c = Vec::with_capacity(b.len());
     for i in 0..b.len() {
-        c.push(ScalarField_BN_254{inner_scalar: ScalarT::zero()});
+        c.push(ScalarField_BN254::zero());
     }
     unsafe {
         matrix_vec_mod_mult_bn254(
-            a as *const _ as *const ScalarField_BN_254,
-            b as *const _ as *const ScalarField_BN_254,
-            c.as_mut_slice() as *mut _ as *mut ScalarField_BN_254,
+            a as *const _ as *const ScalarField_BN254,
+            b as *const _ as *const ScalarField_BN254,
+            c.as_mut_slice() as *mut _ as *mut ScalarField_BN254,
             b.len(),
             device_id,
         );
@@ -750,25 +750,25 @@ fn set_up_device_bn254() {
 pub fn generate_random_points_bn254(
     count: usize,
     mut rng: Box<dyn RngCore>,
-) -> Vec<PointAffineNoInfinity_BN_254> {
+) -> Vec<PointAffineNoInfinity_BN254> {
     (0..count)
-        .map(|_| Point_BN_254::from_ark(G1Projective_BN254::rand(&mut rng)).to_xy_strip_z())
+        .map(|_| Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)).to_xy_strip_z())
         .collect()
 }
 
-pub fn generate_random_points_proj_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point_BN_254> {
+pub fn generate_random_points_proj_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point_BN254> {
     (0..count)
-        .map(|_| Point_BN_254::from_ark(G1Projective_BN254::rand(&mut rng)))
+        .map(|_| Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)))
         .collect()
 }
 
-pub fn generate_random_scalars_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField_BN_254> {
+pub fn generate_random_scalars_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField_BN254> {
     (0..count)
-        .map(|_| ScalarField_BN_254::from_ark(Fr_BN254::rand(&mut rng).into_repr()))
+        .map(|_| ScalarField_BN254::from_ark(Fr_BN254::rand(&mut rng).into_repr()))
         .collect()
 }
 
-pub fn set_up_points_bn254(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<Point_BN_254>, DeviceBuffer<Point_BN_254>, DeviceBuffer<ScalarField_BN_254>) {
+pub fn set_up_points_bn254(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<Point_BN254>, DeviceBuffer<Point_BN254>, DeviceBuffer<ScalarField_BN254>) {
     set_up_device_bn254();
 
     let d_domain = build_domain_bn254(1 << log_domain_size, log_domain_size, inverse);
@@ -781,7 +781,7 @@ pub fn set_up_points_bn254(test_size: usize, log_domain_size: usize, inverse: bo
     (vector_mut, d_vector, d_domain)
 }
 
-pub fn set_up_scalars_bn254(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<ScalarField_BN_254>, DeviceBuffer<ScalarField_BN_254>, DeviceBuffer<ScalarField_BN_254>) {
+pub fn set_up_scalars_bn254(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<ScalarField_BN254>, DeviceBuffer<ScalarField_BN254>, DeviceBuffer<ScalarField_BN254>) {
     set_up_device_bn254();
 
     let d_domain = build_domain_bn254(1 << log_domain_size, log_domain_size, inverse);
@@ -868,7 +868,7 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [4,9];
+        let test_sizes = [6, 9];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -881,14 +881,14 @@ pub(crate) mod tests_bn254 {
             let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
             let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
 
-            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark).into_affine();
+            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
 
             assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
             assert_eq!(msm_result.to_ark(), msm_result_ark);
-            // assert_eq!(
-            //     msm_result.to_ark_affine(),
-            //     Point_BN_254::from_ark(msm_result_ark).to_ark_affine()
-            // );
+            assert_eq!(
+                msm_result.to_ark_affine(),
+                Point_BN254::from_ark(msm_result_ark).to_ark_affine()
+            );
         }
     }
 
@@ -908,7 +908,7 @@ pub(crate) mod tests_bn254 {
                 let expected: Vec<_> = point_r_ark
                     .chunks(msm_size)
                     .zip(scalars_r_ark.chunks(msm_size))
-                    .map(|p| Point_BN_254::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
+                    .map(|p| Point_BN254::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
                     .collect();
 
                 let result = msm_batch_bn254(&points_batch, &scalars_batch, batch_size, 0);
@@ -920,7 +920,7 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_commit() {
-        let test_size = 1 << 3;
+        let test_size = 1 << 8;
         let seed = Some(0);
         let (mut scalars, mut d_scalars, _) = set_up_scalars_bn254(test_size, 0, false);
         let mut points = generate_random_points_bn254(test_size, get_rng_bn254(seed));
@@ -928,12 +928,12 @@ pub(crate) mod tests_bn254 {
 
         let msm_result = msm_bn254(&points, &scalars, 0);
         let mut d_commit_result = commit_bn254(&mut d_points, &mut d_scalars);
-        let mut h_commit_result = Point_BN_254::zero();
+        let mut h_commit_result = Point_BN254::zero();
         d_commit_result.copy_to(&mut h_commit_result).unwrap();
 
         assert_eq!(msm_result, h_commit_result);
-        assert_ne!(msm_result, Point_BN_254::zero());
-        assert_ne!(h_commit_result, Point_BN_254::zero());
+        assert_ne!(msm_result, Point_BN254::zero());
+        assert_ne!(h_commit_result, Point_BN254::zero());
     }
 
     #[test]
@@ -947,12 +947,12 @@ pub(crate) mod tests_bn254 {
 
         let msm_result = msm_batch_bn254(&points, &scalars, batch_size, 0);
         let mut d_commit_result = commit_batch_bn254(&mut d_points, &mut d_scalars, batch_size);
-        let mut h_commit_result: Vec<Point_BN_254> = (0..batch_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_commit_result: Vec<Point_BN254> = (0..batch_size).map(|_| Point_BN254::zero()).collect();
         d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
 
         assert_eq!(msm_result, h_commit_result);
         for h in h_commit_result {
-            assert_ne!(h, Point_BN_254::zero());
+            assert_ne!(h, Point_BN254::zero());
         }
     }
 
@@ -1029,10 +1029,10 @@ pub(crate) mod tests_bn254 {
         let test_size = 1 << 5;
         let batches = 4;
 
-        let scalars_batch: Vec<ScalarField_BN_254> =
+        let scalars_batch: Vec<ScalarField_BN254> =
             generate_random_scalars_bn254(test_size * batches, get_rng_bn254(seed));
 
-        let mut scalar_vec_of_vec: Vec<Vec<ScalarField_BN_254>> = Vec::new();
+        let mut scalar_vec_of_vec: Vec<Vec<ScalarField_BN254>> = Vec::new();
 
         for i in 0..batches {
             scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
@@ -1088,7 +1088,7 @@ pub(crate) mod tests_bn254 {
         // //ECNTT
         let points_proj = generate_random_points_proj_bn254(test_size * batches, get_rng_bn254(seed));
 
-        let mut points_vec_of_vec: Vec<Vec<Point_BN_254>> = Vec::new();
+        let mut points_vec_of_vec: Vec<Vec<Point_BN254>> = Vec::new();
 
         for i in 0..batches {
             points_vec_of_vec.push(points_proj[i * test_size..(i + 1) * test_size].to_vec());
@@ -1148,7 +1148,7 @@ pub(crate) mod tests_bn254 {
         reverse_order_scalars_bn254(&mut d_evals);
         let mut d_coeffs = interpolate_scalars_bn254(&mut d_evals, &mut d_domain);
         intt_bn254(&mut evals_mut, 0);
-        let mut h_coeffs: Vec<ScalarField_BN_254> = (0..test_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_coeffs: Vec<ScalarField_BN254> = (0..test_size).map(|_| ScalarField_BN254::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
 
         assert_eq!(h_coeffs, evals_mut);
@@ -1164,7 +1164,7 @@ pub(crate) mod tests_bn254 {
         reverse_order_scalars_batch_bn254(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_scalars_batch_bn254(&mut d_evals, &mut d_domain, batch_size);
         intt_batch_bn254(&mut evals_mut, test_size, 0);
-        let mut h_coeffs: Vec<ScalarField_BN_254> = (0..test_size * batch_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_coeffs: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
 
         assert_eq!(h_coeffs, evals_mut);
@@ -1179,12 +1179,12 @@ pub(crate) mod tests_bn254 {
         reverse_order_points_bn254(&mut d_evals);
         let mut d_coeffs = interpolate_points_bn254(&mut d_evals, &mut d_domain);
         iecntt_bn254(&mut evals_mut[..], 0);
-        let mut h_coeffs: Vec<Point_BN_254> = (0..test_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_coeffs: Vec<Point_BN254> = (0..test_size).map(|_| Point_BN254::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
         
         assert_eq!(h_coeffs, *evals_mut);
         for h in h_coeffs.iter() {
-            assert_ne!(*h, Point_BN_254::zero());
+            assert_ne!(*h, Point_BN254::zero());
         }
     }
 
@@ -1198,12 +1198,12 @@ pub(crate) mod tests_bn254 {
         reverse_order_points_batch_bn254(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_points_batch_bn254(&mut d_evals, &mut d_domain, batch_size);
         iecntt_batch_bn254(&mut evals_mut[..], test_size, 0);
-        let mut h_coeffs: Vec<Point_BN_254> = (0..test_size * batch_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_coeffs: Vec<Point_BN254> = (0..test_size * batch_size).map(|_| Point_BN254::zero()).collect();
         d_coeffs.copy_to(&mut h_coeffs[..]).unwrap();
         
         assert_eq!(h_coeffs, *evals_mut);
         for h in h_coeffs.iter() {
-            assert_ne!(*h, Point_BN_254::zero());
+            assert_ne!(*h, Point_BN254::zero());
         }
     }
 
@@ -1216,12 +1216,12 @@ pub(crate) mod tests_bn254 {
 
         let mut d_evals = evaluate_scalars_bn254(&mut d_coeffs, &mut d_domain);
         let mut d_coeffs_domain = interpolate_scalars_bn254(&mut d_evals, &mut d_domain_inv);
-        let mut h_coeffs_domain: Vec<ScalarField_BN_254> = (0..1 << log_test_domain_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_coeffs_domain: Vec<ScalarField_BN254> = (0..1 << log_test_domain_size).map(|_| ScalarField_BN254::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
         assert_eq!(h_coeffs, h_coeffs_domain[..coeff_size]);
         for i in coeff_size.. (1 << log_test_domain_size) {
-            assert_eq!(ScalarField_BN_254{inner_scalar: ScalarT::zero()}, h_coeffs_domain[i]);
+            assert_eq!(ScalarField_BN254::zero(), h_coeffs_domain[i]);
         }
     }
 
@@ -1236,13 +1236,13 @@ pub(crate) mod tests_bn254 {
 
         let mut d_evals = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
         let mut d_coeffs_domain = interpolate_scalars_batch_bn254(&mut d_evals, &mut d_domain_inv, batch_size);
-        let mut h_coeffs_domain: Vec<ScalarField_BN_254> = (0..domain_size * batch_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_coeffs_domain: Vec<ScalarField_BN254> = (0..domain_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
         for j in 0..batch_size {
             assert_eq!(h_coeffs[j * coeff_size..(j + 1) * coeff_size], h_coeffs_domain[j * domain_size..j * domain_size + coeff_size]);
             for i in coeff_size..domain_size {
-                assert_eq!(ScalarField_BN_254{inner_scalar: ScalarT::zero()}, h_coeffs_domain[j * domain_size + i]);
+                assert_eq!(ScalarField_BN254::zero(), h_coeffs_domain[j * domain_size + i]);
             }
         }
     }
@@ -1256,15 +1256,15 @@ pub(crate) mod tests_bn254 {
 
         let mut d_evals = evaluate_points_bn254(&mut d_coeffs, &mut d_domain);
         let mut d_coeffs_domain = interpolate_points_bn254(&mut d_evals, &mut d_domain_inv);
-        let mut h_coeffs_domain: Vec<Point_BN_254> = (0..1 << log_test_domain_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_coeffs_domain: Vec<Point_BN254> = (0..1 << log_test_domain_size).map(|_| Point_BN254::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
         assert_eq!(h_coeffs[..], h_coeffs_domain[..coeff_size]);
         for i in coeff_size..(1 << log_test_domain_size) {
-            assert_eq!(Point_BN_254::zero(), h_coeffs_domain[i]);
+            assert_eq!(Point_BN254::zero(), h_coeffs_domain[i]);
         }
         for i in 0..coeff_size {
-            assert_ne!(h_coeffs_domain[i], Point_BN_254::zero());
+            assert_ne!(h_coeffs_domain[i], Point_BN254::zero());
         }
     }
 
@@ -1279,16 +1279,16 @@ pub(crate) mod tests_bn254 {
 
         let mut d_evals = evaluate_points_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
         let mut d_coeffs_domain = interpolate_points_batch_bn254(&mut d_evals, &mut d_domain_inv, batch_size);
-        let mut h_coeffs_domain: Vec<Point_BN_254> = (0..domain_size * batch_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_coeffs_domain: Vec<Point_BN254> = (0..domain_size * batch_size).map(|_| Point_BN254::zero()).collect();
         d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
 
         for j in 0..batch_size {
             assert_eq!(h_coeffs[j * coeff_size..(j + 1) * coeff_size], h_coeffs_domain[j * domain_size..(j * domain_size + coeff_size)]);
             for i in coeff_size..domain_size {
-                assert_eq!(Point_BN_254::zero(), h_coeffs_domain[j * domain_size + i]);
+                assert_eq!(Point_BN254::zero(), h_coeffs_domain[j * domain_size + i]);
             }
             for i in j * domain_size..(j * domain_size + coeff_size) {
-                assert_ne!(h_coeffs_domain[i], Point_BN_254::zero());
+                assert_ne!(h_coeffs_domain[i], Point_BN254::zero());
             }
         }
     }
@@ -1303,10 +1303,10 @@ pub(crate) mod tests_bn254 {
         let mut d_trivial_coset_powers = build_domain_bn254(1 << log_test_domain_size, 0, false);
 
         let mut d_evals = evaluate_scalars_bn254(&mut d_coeffs, &mut d_domain);
-        let mut h_coeffs: Vec<ScalarField_BN_254> = (0..1 << log_test_domain_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_coeffs: Vec<ScalarField_BN254> = (0..1 << log_test_domain_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals.copy_to(&mut h_coeffs[..]).unwrap();
         let mut d_evals_coset = evaluate_scalars_on_coset_bn254(&mut d_coeffs, &mut d_domain, &mut d_trivial_coset_powers);
-        let mut h_evals_coset: Vec<ScalarField_BN_254> = (0..1 << log_test_domain_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_evals_coset: Vec<ScalarField_BN254> = (0..1 << log_test_domain_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
         assert_eq!(h_coeffs, h_evals_coset);
@@ -1322,13 +1322,13 @@ pub(crate) mod tests_bn254 {
         let mut d_coset_powers = build_domain_bn254(test_size, log_test_size + 1, false);
 
         let mut d_evals_large = evaluate_scalars_bn254(&mut d_coeffs, &mut d_large_domain);
-        let mut h_evals_large: Vec<ScalarField_BN_254> = (0..2 * test_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_evals_large: Vec<ScalarField_BN254> = (0..2 * test_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_large.copy_to(&mut h_evals_large[..]).unwrap();
         let mut d_evals = evaluate_scalars_bn254(&mut d_coeffs, &mut d_domain);
-        let mut h_evals: Vec<ScalarField_BN_254> = (0..test_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_evals: Vec<ScalarField_BN254> = (0..test_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals.copy_to(&mut h_evals[..]).unwrap();
         let mut d_evals_coset = evaluate_scalars_on_coset_bn254(&mut d_coeffs, &mut d_domain, &mut d_coset_powers);
-        let mut h_evals_coset: Vec<ScalarField_BN_254> = (0..test_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_evals_coset: Vec<ScalarField_BN254> = (0..test_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
         assert_eq!(h_evals[..], h_evals_large[..test_size]);
@@ -1346,13 +1346,13 @@ pub(crate) mod tests_bn254 {
         let mut d_coset_powers = build_domain_bn254(test_size, log_test_size + 1, false);
 
         let mut d_evals_large = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_large_domain, batch_size);
-        let mut h_evals_large: Vec<ScalarField_BN_254> = (0..2 * test_size * batch_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_evals_large: Vec<ScalarField_BN254> = (0..2 * test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_large.copy_to(&mut h_evals_large[..]).unwrap();
         let mut d_evals = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
-        let mut h_evals: Vec<ScalarField_BN_254> = (0..test_size * batch_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_evals: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals.copy_to(&mut h_evals[..]).unwrap();
         let mut d_evals_coset = evaluate_scalars_on_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, &mut d_coset_powers);
-        let mut h_evals_coset: Vec<ScalarField_BN_254> = (0..test_size * batch_size).map(|_| ScalarField_BN_254{inner_scalar: ScalarT::zero()}).collect();
+        let mut h_evals_coset: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
         for i in 0..batch_size {
@@ -1371,22 +1371,22 @@ pub(crate) mod tests_bn254 {
         let mut d_coset_powers = build_domain_bn254(test_size, log_test_size + 1, false);
 
         let mut d_evals_large = evaluate_points_bn254(&mut d_coeffs, &mut d_large_domain);
-        let mut h_evals_large: Vec<Point_BN_254> = (0..2 * test_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_evals_large: Vec<Point_BN254> = (0..2 * test_size).map(|_| Point_BN254::zero()).collect();
         d_evals_large.copy_to(&mut h_evals_large[..]).unwrap();
         let mut d_evals = evaluate_points_bn254(&mut d_coeffs, &mut d_domain);
-        let mut h_evals: Vec<Point_BN_254> = (0..test_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_evals: Vec<Point_BN254> = (0..test_size).map(|_| Point_BN254::zero()).collect();
         d_evals.copy_to(&mut h_evals[..]).unwrap();
         let mut d_evals_coset = evaluate_points_on_coset_bn254(&mut d_coeffs, &mut d_domain, &mut d_coset_powers);
-        let mut h_evals_coset: Vec<Point_BN_254> = (0..test_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_evals_coset: Vec<Point_BN254> = (0..test_size).map(|_| Point_BN254::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
         assert_eq!(h_evals[..], h_evals_large[..test_size]);
         assert_eq!(h_evals_coset[..], h_evals_large[test_size..2 * test_size]);
         for i in 0..test_size {
-            assert_ne!(h_evals[i], Point_BN_254::zero());
-            assert_ne!(h_evals_coset[i], Point_BN_254::zero());
-            assert_ne!(h_evals_large[2 * i], Point_BN_254::zero());
-            assert_ne!(h_evals_large[2 * i + 1], Point_BN_254::zero());
+            assert_ne!(h_evals[i], Point_BN254::zero());
+            assert_ne!(h_evals_coset[i], Point_BN254::zero());
+            assert_ne!(h_evals_large[2 * i], Point_BN254::zero());
+            assert_ne!(h_evals_large[2 * i + 1], Point_BN254::zero());
         }
     }
 
@@ -1401,13 +1401,13 @@ pub(crate) mod tests_bn254 {
         let mut d_coset_powers = build_domain_bn254(test_size, log_test_size + 1, false);
 
         let mut d_evals_large = evaluate_points_batch_bn254(&mut d_coeffs, &mut d_large_domain, batch_size);
-        let mut h_evals_large: Vec<Point_BN_254> = (0..2 * test_size * batch_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_evals_large: Vec<Point_BN254> = (0..2 * test_size * batch_size).map(|_| Point_BN254::zero()).collect();
         d_evals_large.copy_to(&mut h_evals_large[..]).unwrap();
         let mut d_evals = evaluate_points_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
-        let mut h_evals: Vec<Point_BN_254> = (0..test_size * batch_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_evals: Vec<Point_BN254> = (0..test_size * batch_size).map(|_| Point_BN254::zero()).collect();
         d_evals.copy_to(&mut h_evals[..]).unwrap();
         let mut d_evals_coset = evaluate_points_on_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, &mut d_coset_powers);
-        let mut h_evals_coset: Vec<Point_BN_254> = (0..test_size * batch_size).map(|_| Point_BN_254::zero()).collect();
+        let mut h_evals_coset: Vec<Point_BN254> = (0..test_size * batch_size).map(|_| Point_BN254::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
         for i in 0..batch_size {
@@ -1415,10 +1415,10 @@ pub(crate) mod tests_bn254 {
             assert_eq!(h_evals_large[(2 * i + 1) * test_size..(2 * i + 2) * test_size], h_evals_coset[i * test_size..(i + 1) * test_size]);
         }
         for i in 0..test_size * batch_size {
-            assert_ne!(h_evals[i], Point_BN_254::zero());
-            assert_ne!(h_evals_coset[i], Point_BN_254::zero());
-            assert_ne!(h_evals_large[2 * i], Point_BN_254::zero());
-            assert_ne!(h_evals_large[2 * i + 1], Point_BN_254::zero());
+            assert_ne!(h_evals[i], Point_BN254::zero());
+            assert_ne!(h_evals_coset[i], Point_BN254::zero());
+            assert_ne!(h_evals_large[2 * i], Point_BN254::zero());
+            assert_ne!(h_evals_large[2 * i + 1], Point_BN254::zero());
         }
     }
 
@@ -1428,14 +1428,14 @@ pub(crate) mod tests_bn254 {
         let seed = None; // some value to fix the rng
         let test_size = 1 << 5;
         let rou = Fr::get_root_of_unity(test_size).unwrap();
-        let matrix_flattened: Vec<ScalarField_BN_254> = (0..test_size).map(
+        let matrix_flattened: Vec<ScalarField_BN254> = (0..test_size).map(
             |row_num| { (0..test_size).map( 
                 |col_num| {
                     let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
-                    ScalarField_BN_254::from_ark(Fr::pow(&rou, &pow).into_repr())
-                }).collect::<Vec<ScalarField_BN_254>>()
+                    ScalarField_BN254::from_ark(Fr::pow(&rou, &pow).into_repr())
+                }).collect::<Vec<ScalarField_BN254>>()
             }).flatten().collect::<Vec<_>>();
-        let vector: Vec<ScalarField_BN_254> = generate_random_scalars_bn254(test_size, get_rng_bn254(seed));
+        let vector: Vec<ScalarField_BN254> = generate_random_scalars_bn254(test_size, get_rng_bn254(seed));
 
         let result = mult_matrix_by_vec_bn254(&matrix_flattened, &vector, 0);
         let mut ntt_result = vector.clone();
@@ -1450,8 +1450,8 @@ pub(crate) mod tests_bn254 {
     #[test]
     #[allow(non_snake_case)]
     fn test_vec_scalar_mul() {
-        let mut intoo = [ScalarField_BN_254{inner_scalar: ScalarT::one()}, ScalarField_BN_254{inner_scalar: ScalarT::one()}, ScalarField_BN_254{inner_scalar: ScalarT::zero()}];
-        let expected = [ScalarField_BN_254{inner_scalar: ScalarT::one()}, ScalarField_BN_254{inner_scalar: ScalarT::zero()}, ScalarField_BN_254{inner_scalar: ScalarT::zero()}];
+        let mut intoo = [ScalarField_BN254::one(), ScalarField_BN254::one(), ScalarField_BN254::zero()];
+        let expected = [ScalarField_BN254::one(), ScalarField_BN254::zero(), ScalarField_BN254::zero()];
         mult_sc_vec_bn254(&mut intoo, &expected, 0);
         assert_eq!(intoo, expected);
     }
@@ -1459,25 +1459,25 @@ pub(crate) mod tests_bn254 {
     #[test]
     #[allow(non_snake_case)]
     fn test_vec_point_mul() {
-        let dummy_one = Point_BN_254 {
-            x: BaseField_BN_254{ inner_scalar: ScalarT::one()},
-            y: BaseField_BN_254{ inner_scalar: ScalarT::zero()},
-            z: BaseField_BN_254{ inner_scalar: ScalarT::one()},
+        let dummy_one = Point_BN254 {
+            x: BaseField_BN254::one(),
+            y: BaseField_BN254::zero(),
+            z: BaseField_BN254::one(),
         };
 
-        let mut inout = [dummy_one, dummy_one, Point_BN_254::zero()];
-        let scalars = [ScalarField_BN_254{inner_scalar: ScalarT::one()}, ScalarField_BN_254{inner_scalar: ScalarT::zero()}, ScalarField_BN_254{inner_scalar: ScalarT::zero()}];
+        let mut inout = [dummy_one, dummy_one, Point_BN254::zero()];
+        let scalars = [ScalarField_BN254::one(), ScalarField_BN254::zero(), ScalarField_BN254::zero()];
         let expected = [
-            Point_BN_254::zero(),
-            Point_BN_254 {
-                x: BaseField_BN_254{ inner_scalar: ScalarT::zero()},
-                y: BaseField_BN_254{ inner_scalar: ScalarT::one()},
-                z: BaseField_BN_254{ inner_scalar: ScalarT::zero()},
+            Point_BN254::zero(),
+            Point_BN254 {
+                x: BaseField_BN254::zero(),
+                y: BaseField_BN254::one(),
+                z: BaseField_BN254::zero(),
             },
-            Point_BN_254 {
-                x: BaseField_BN_254{ inner_scalar: ScalarT::zero()},
-                y: BaseField_BN_254{ inner_scalar: ScalarT::one()},
-                z: BaseField_BN_254{ inner_scalar: ScalarT::zero()},
+            Point_BN254 {
+                x: BaseField_BN254::zero(),
+                y: BaseField_BN254::one(),
+                z: BaseField_BN254::zero(),
             },
         ];
         multp_vec_bn254(&mut inout, &scalars, 0);

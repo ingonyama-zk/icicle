@@ -1,6 +1,6 @@
 #ifndef _CURVE_NAME_U_MSM
 #define _CURVE_NAME_U_MSM
-#include "../../appUtils/msm/msm.cuh"
+#include "../../appUtils/msm/msm.cu"
 #include <stdexcept>
 #include <cuda.h>
 #include "curve_config.cuh"

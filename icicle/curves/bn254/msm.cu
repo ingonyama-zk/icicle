@@ -1,6 +1,6 @@
 #ifndef _BN254_MSM
 #define _BN254_MSM
-#include "../../appUtils/msm/msm.cuh"
+#include "../../appUtils/msm/msm.cu"
 #include <stdexcept>
 #include <cuda.h>
 #include "curve_config.cuh"

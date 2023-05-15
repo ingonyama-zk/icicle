@@ -1,7 +1,7 @@
 #ifndef _CURVE_NAME_U_LDE
 #define _CURVE_NAME_U_LDE
 #include <cuda.h>
-#include "../../appUtils/ntt/lde.cuh"
+#include "../../appUtils/ntt/lde.cu"
 #include "../../appUtils/ntt/ntt.cuh"
 #include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
 #include "curve_config.cuh"

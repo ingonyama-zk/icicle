@@ -1,3 +1,4 @@
+import json
 import math
 import os
 from sympy.ntheory import isprime, primitive_root
@@ -5,43 +6,21 @@ import subprocess
 import random 
 import sys
 
-curve_name = "bls12_381"
-modolus_p = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-bit_count_p = 255
-limb_p =  8
-ntt_size = 32
-modolus_q = 4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787
-bit_count_q = 381 
-limb_q = 12
-weierstrass_b = 4
-gen_x = 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507
-gen_y = 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569
+data = None
+with open(sys.argv[1]) as json_file:
+    data = json.load(json_file)
 
-
-# curve_name = "bls12_377"
-# modolus_p = 8444461749428370424248824938781546531375899335154063827935233455917409239041
-# bit_count_p = 253
-# limb_p =  8
-# ntt_size = 32
-# modolus_q = 258664426012969094010652733694893533536393512754914660539884262666720468348340822774968888139573360124440321458177
-# bit_count_q = 377 
-# limb_q = 12
-# weierstrass_b = 1
-# gen_x = 81937999373150964239938255573465948239988671502647976594219695644855304257327692006745978603320413799295628339695
-# gen_y = 241266749859715473739788878240585681733927191168601896383759122102112907357779751001206799952863815012735208165030
-
-
-# curve_name = "bn254"
-# modolus_p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
-# bit_count_p = 254
-# limb_p =  8
-# ntt_size = 16
-# modolus_q = 21888242871839275222246405745257275088696311157297823662689037894645226208583
-# bit_count_q = 254 
-# limb_q = 8
-# weierstrass_b = 3
-# gen_x = 1
-# gen_y = 2
+curve_name = data["curve_name"]
+modolus_p = data["modolus_p"]
+bit_count_p = data["bit_count_p"]
+limb_p =  data["limb_p"]
+ntt_size = data["ntt_size"]
+modolus_q = data["modolus_q"]
+bit_count_q = data["bit_count_q"] 
+limb_q = data["limb_q"]
+weierstrass_b = data["weierstrass_b"]
+gen_x = data["gen_x"]
+gen_y = data["gen_y"]
 
 
 def to_hex(val, length):
@@ -108,6 +87,8 @@ def get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q,
     file_content+="}\n"
     return file_content
 
+
+# Create Cuda interface
 
 newpath = "./icicle/curves/"+curve_name 
 if not os.path.exists(newpath):
@@ -179,3 +160,29 @@ with open('./icicle/curves/'+curve_name+'/supported_operations.cu', 'w') as f:
     
 with open('./icicle/curves/index.cu', 'a') as f:
     f.write('\n#include "'+curve_name.lower()+'/supported_operations.cu"')
+    
+
+
+# Create Rust interface and tests
+
+with open("./src/curve_templates/curve.rs", "r") as curve_file:
+    content = curve_file.read()
+    content = content.replace("CURVE_NAME_U",curve_name.upper())
+    content = content.replace("CURVE_NAME_L",curve_name.lower())
+    text_file = open("./src/curves/"+curve_name+".rs", "w")
+    n = text_file.write(content)
+    text_file.close()
+
+with open("./src/curve_templates/test.rs", "r") as test_file:
+    content = test_file.read()
+    content = content.replace("CURVE_NAME_U",curve_name.upper())
+    content = content.replace("CURVE_NAME_L",curve_name.lower())
+    text_file = open("./src/test_"+curve_name+".rs", "w")
+    n = text_file.write(content)
+    text_file.close()
+    
+with open('./src/curves/mod.rs', 'a') as f:
+    f.write('\n pub mod ' + curve_name + ';')
+
+with open('./src/lib.rs', 'a') as f:
+    f.write('\npub mod ' + curve_name + ';')
