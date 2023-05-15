@@ -3,7 +3,7 @@ use std::ffi::c_uint;
 use ark_CURVE_NAME_L::{Fq as Fq_CURVE_NAME_U, Fr as Fr_CURVE_NAME_U, G1Affine as G1Affine_CURVE_NAME_U, G1Projective as G1Projective_CURVE_NAME_U};
 
 use ark_ec::AffineCurve;
-use ark_ff::{BigInteger384, BigInteger256, PrimeField};
+use ark_ff::{BigInteger_limbs_q, BigInteger_limbs_p, PrimeField};
 use std::mem::transmute;
 use ark_ff::Field;
 use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}};
@@ -47,8 +47,8 @@ impl<const NUM_LIMBS: usize> Field_CURVE_NAME_U<NUM_LIMBS> {
     }
 }
 
-pub const BASE_LIMBS_CURVE_NAME_U: usize = 12;
-pub const SCALAR_LIMBS_CURVE_NAME_U: usize = 8;
+pub const BASE_LIMBS_CURVE_NAME_U: usize = limbs_q;
+pub const SCALAR_LIMBS_CURVE_NAME_U: usize = limbs_p;
 
 pub type BaseField_CURVE_NAME_U = Field_CURVE_NAME_U<BASE_LIMBS_CURVE_NAME_U>;
 pub type ScalarField_CURVE_NAME_U = Field_CURVE_NAME_U<SCALAR_LIMBS_CURVE_NAME_U>;
@@ -65,6 +65,7 @@ fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
     }
 }
 
+// 
 impl BaseField_CURVE_NAME_U {
     pub fn limbs(&self) -> [u32; BASE_LIMBS_CURVE_NAME_U] {
         self.s
@@ -76,33 +77,34 @@ impl BaseField_CURVE_NAME_U {
         }
     }
 
-    pub fn to_ark(&self) -> BigInteger384 {
-        BigInteger384::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
+    pub fn to_ark(&self) -> BigInteger_limbs_q {
+        BigInteger_limbs_q::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
     }
 
-    pub fn from_ark(ark: BigInteger384) -> Self {
+    pub fn from_ark(ark: BigInteger_limbs_q) -> Self {
         Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
     }
 }
+//
 
 impl ScalarField_CURVE_NAME_U {
     pub fn limbs(&self) -> [u32; SCALAR_LIMBS_CURVE_NAME_U] {
         self.s
     }
 
-    pub fn to_ark(&self) -> BigInteger256 {
-        BigInteger256::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
+    pub fn to_ark(&self) -> BigInteger_limbs_p {
+        BigInteger_limbs_p::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
     }
 
-    pub fn from_ark(ark: BigInteger256) -> Self {
+    pub fn from_ark(ark: BigInteger_limbs_p) -> Self {
         Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
     }
 
-    pub fn to_ark_transmute(&self) -> BigInteger256 {
+    pub fn to_ark_transmute(&self) -> BigInteger_limbs_p {
         unsafe { transmute(*self) }
     }
 
-    pub fn from_ark_transmute(v: BigInteger256) -> ScalarField_CURVE_NAME_U {
+    pub fn from_ark_transmute(v: BigInteger_limbs_p) -> ScalarField_CURVE_NAME_U {
         unsafe { transmute(v) }
     }
 }

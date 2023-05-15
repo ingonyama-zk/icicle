@@ -41,18 +41,18 @@ def get_root_of_unity(order: int) -> int:
     assert (modolus_p - 1) % order == 0
     return pow(5, (modolus_p - 1) // order, modolus_p)
 
-def create_field_parameters_struct(modolus, modulus_bits_count,limbs,ntt,size,name):
+def create_field_parameters_struct(modulus, modulus_bits_count,limbs,ntt,size,name):
     s = " struct "+name+"{\n"
     s += "   static constexpr unsigned limbs_count = " + str(limbs)+";\n"
-    s += "   static constexpr storage<limbs_count> modulus = {"+to_hex(modolus,8*limbs)[:-2]+"};\n"
-    s += "   static constexpr storage<limbs_count> modulus_2 = {"+to_hex(modolus*2,8*limbs)[:-2]+"};\n"   
-    s += "   static constexpr storage<limbs_count> modulus_4 = {"+to_hex(modolus*4,8*limbs)[:-2]+"};\n"
-    s += "   static constexpr storage<2*limbs_count> modulus_wide = {"+to_hex(modolus,8*limbs*2)[:-2]+"};\n"
-    s += "   static constexpr storage<2*limbs_count> modulus_sqared = {"+to_hex(modolus*modolus,8*limbs)[:-2]+"};\n"  
-    s += "   static constexpr storage<2*limbs_count> modulus_sqared_2 = {"+to_hex(modolus*modolus*2,8*limbs)[:-2]+"};\n"   
-    s += "   static constexpr storage<2*limbs_count> modulus_sqared_4 = {"+to_hex(modolus*modolus*2*2,8*limbs)[:-2]+"};\n"   
+    s += "   static constexpr storage<limbs_count> modulus = {"+to_hex(modulus,8*limbs)[:-2]+"};\n"
+    s += "   static constexpr storage<limbs_count> modulus_2 = {"+to_hex(modulus*2,8*limbs)[:-2]+"};\n"   
+    s += "   static constexpr storage<limbs_count> modulus_4 = {"+to_hex(modulus*4,8*limbs)[:-2]+"};\n"
+    s += "   static constexpr storage<2*limbs_count> modulus_wide = {"+to_hex(modulus,8*limbs*2)[:-2]+"};\n"
+    s += "   static constexpr storage<2*limbs_count> modulus_sqared = {"+to_hex(modulus*modulus,8*limbs)[:-2]+"};\n"  
+    s += "   static constexpr storage<2*limbs_count> modulus_sqared_2 = {"+to_hex(modulus*modulus*2,8*limbs)[:-2]+"};\n"   
+    s += "   static constexpr storage<2*limbs_count> modulus_sqared_4 = {"+to_hex(modulus*modulus*2*2,8*limbs)[:-2]+"};\n"   
     s += "   static constexpr unsigned modulus_bits_count = "+str(modulus_bits_count)+";\n"
-    m = int(math.floor(int(pow(2,2*modulus_bits_count) // modolus)))
+    m = int(math.floor(int(pow(2,2*modulus_bits_count) // modulus)))
     s += "   static constexpr storage<limbs_count> m = {"+ to_hex(m,8*limbs)[:-2] +"};\n"
     s += "   static constexpr storage<limbs_count> one = {"+ to_hex(1,8*limbs)[:-2] +"};\n"
     s += "   static constexpr storage<limbs_count> zero = {"+ to_hex(0,8*limbs)[:-2] +"};\n"
@@ -63,9 +63,9 @@ def create_field_parameters_struct(modolus, modulus_bits_count,limbs,ntt,size,na
             s += "   static constexpr storage<limbs_count> omega"+str(k+1)+"= {"+ to_hex(omega,8*limbs)[:-2]+"};\n"
         for k in range(size):
             omega = get_root_of_unity(int(pow(2,k+1)))
-            s += "   static constexpr storage<limbs_count> omega_inv"+str(k+1)+"= {"+ to_hex(pow(omega, -1, modolus),8*limbs)[:-2]+"};\n"
+            s += "   static constexpr storage<limbs_count> omega_inv"+str(k+1)+"= {"+ to_hex(pow(omega, -1, modulus),8*limbs)[:-2]+"};\n"
         for k in range(size):
-            s += "   static constexpr storage<limbs_count> inv"+str(k+1)+"= {"+ to_hex(pow(int(pow(2,k+1)), -1, modolus),8*limbs)[:-2]+"};\n"  
+            s += "   static constexpr storage<limbs_count> inv"+str(k+1)+"= {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),8*limbs)[:-2]+"};\n"  
     s+=" };\n"   
     return s
 
@@ -165,13 +165,28 @@ with open('./icicle/curves/index.cu', 'a') as f:
 
 # Create Rust interface and tests
 
-with open("./src/curve_templates/curve.rs", "r") as curve_file:
-    content = curve_file.read()
-    content = content.replace("CURVE_NAME_U",curve_name.upper())
-    content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./src/curves/"+curve_name+".rs", "w")
-    n = text_file.write(content)
-    text_file.close()
+if limb_p == limb_q: 
+    with open("./src/curve_templates/curve_same_limbs.rs", "r") as curve_file:
+        content = curve_file.read()
+        content = content.replace("CURVE_NAME_U",curve_name.upper())
+        content = content.replace("CURVE_NAME_L",curve_name.lower())
+        content = content.replace("_limbs_p",str(limb_p * 8 * 4))
+        content = content.replace("limbs_p",str(limb_p))
+        text_file = open("./src/curves/"+curve_name+".rs", "w")
+        n = text_file.write(content)
+        text_file.close()
+else:
+    with open("./src/curve_templates/curve_different_limbs.rs", "r") as curve_file:
+        content = curve_file.read()
+        content = content.replace("CURVE_NAME_U",curve_name.upper())
+        content = content.replace("CURVE_NAME_L",curve_name.lower())
+        content = content.replace("_limbs_p",str(limb_p * 8 * 4))
+        content = content.replace("limbs_p",str(limb_p))
+        content = content.replace("_limbs_q",str(limb_q * 8 * 4))
+        content = content.replace("limbs_q",str(limb_q))
+        text_file = open("./src/curves/"+curve_name+".rs", "w")
+        n = text_file.write(content)
+        text_file.close()
 
 with open("./src/curve_templates/test.rs", "r") as test_file:
     content = test_file.read()
