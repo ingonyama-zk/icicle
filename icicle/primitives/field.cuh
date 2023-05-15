@@ -245,7 +245,7 @@ template <class CONFIG> class Field {
     }
 
 
-  private:
+  // private:
     typedef storage<TLC> ff_storage;
     typedef storage<2*TLC> ff_wide_storage;
 
@@ -412,6 +412,8 @@ template <class CONFIG> class Field {
     }
 
     static DEVICE_INLINE void cmad_n(uint32_t *acc, const uint32_t *a, uint32_t bi, size_t n = TLC) {
+      // multiply scalar by vector
+      // acc = acc + bi*A
       acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
       acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
   #pragma unroll
@@ -422,6 +424,8 @@ template <class CONFIG> class Field {
     }
 
     static DEVICE_INLINE void mad_row(uint32_t *odd, uint32_t *even, const uint32_t *a, uint32_t bi, size_t n = TLC) {
+      // odd = odd + bi*A
+      // even = even + bi*A
       cmad_n(odd, a + 1, bi, n - 2);
       odd[n - 2] = ptx::madc_lo_cc(a[n - 1], bi, 0);
       odd[n - 1] = ptx::madc_hi(a[n - 1], bi, 0);
@@ -446,6 +450,39 @@ template <class CONFIG> class Field {
       // merge |even| and |odd|
       even[1] = ptx::add_cc(even[1], odd[0]);
       for (i = 1; i < 2 * TLC - 2; i++)
+        even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+      even[i + 1] = ptx::addc(even[i + 1], 0);
+    }
+
+    // LSB helper functions
+    static DEVICE_INLINE void mad_row_truncated(uint32_t *odd, uint32_t *even, const uint32_t *a, uint32_t bi, uint32_t i, size_t n = TLC) {
+      // odd = odd + bi*A
+      // even = even + bi*A
+      // use i to truncate bi*A multiplication (calculate up to A[n-i])
+      cmad_n(odd, a + 1, bi, n - 2 - i);
+      odd[n - 2] = ptx::madc_lo_cc(a[n - 1 - i], bi, 0);
+      odd[n - 1] = ptx::madc_hi(a[n - 1 - i], bi, 0);
+      cmad_n(even, a, bi, n - i);
+      odd[n - 1] = ptx::addc(odd[n - 1 - i], 0);
+    }
+
+    static DEVICE_INLINE void multiply_lsb_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
+      const uint32_t *a = as.limbs;
+      const uint32_t *b = bs.limbs;
+      uint32_t *even = rs.limbs;
+      __align__(8) uint32_t odd[2 * TLC - 2];
+      mul_n(even, a, b[0]);
+      mul_n(odd, a + 1, b[0]);
+      mad_row_truncated(&even[2], &odd[0], a, b[1], 1);
+      size_t i;
+    #pragma unroll
+      for (i = 2; i < TLC - 1; i += 2) {
+        mad_row_truncated(&odd[i], &even[i], a, b[i], i);
+        mad_row_truncated(&even[i + 2], &odd[i], a, b[i + 1], i + 1);
+      }
+      // merge |even| and |odd|
+      even[1] = ptx::add_cc(even[1], odd[0]);
+      for (i = 1; i < TLC; i++)
         even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
       even[i + 1] = ptx::addc(even[i + 1], 0);
     }

@@ -105,3 +105,32 @@ int point_vec_to_affine(const proj *x, affine *result, const unsigned count) {
   int error = cudaGetLastError();
   return error ? error : cudaDeviceSynchronize();
 }
+
+
+__global__ void mp_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  scalar_field::multiply_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
+}
+
+
+int mp_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result)
+{
+  mp_mult_kernel<<<1, 32>>>(x, y, result);
+  int error = cudaGetLastError();
+  return error ? error :  cudaDeviceSynchronize();
+}
+
+
+
+__global__ void mp_lsb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  scalar_field::multiply_lsb_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
+}
+
+
+int mp_lsb_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result)
+{
+  mp_lsb_mult_kernel<<<1, 32>>>(x, y, result);
+  int error = cudaGetLastError();
+  return error ? error :  cudaDeviceSynchronize();
+}

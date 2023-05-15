@@ -1,8 +1,7 @@
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
-
 #include "test_kernels.cuh"
-
+#include <iostream>
 
 template <class T>
 int device_populate_random(T* d_elements, unsigned n) {
@@ -36,6 +35,7 @@ protected:
   proj *res_points2{};
   scalar_field *res_scalars1{};
   scalar_field *res_scalars2{};
+  scalar_field::wide *res_scalars_wide{};
 
   PrimitivesTest() {
     assert(!cudaDeviceReset());
@@ -51,6 +51,8 @@ protected:
     assert(!cudaMallocManaged(&res_points2, n * sizeof(proj)));
     assert(!cudaMallocManaged(&res_scalars1, n * sizeof(scalar_field)));
     assert(!cudaMallocManaged(&res_scalars2, n * sizeof(scalar_field)));
+    assert(!cudaMallocManaged(&res_scalars_wide, n * sizeof(scalar_field::wide)));
+
   }
 
   ~PrimitivesTest() override {
@@ -66,6 +68,9 @@ protected:
     cudaFree(res_points2);
     cudaFree(res_scalars1);
     cudaFree(res_scalars2);
+
+    cudaFree(res_scalars_wide);
+
     cudaDeviceReset();
   }
 
@@ -82,6 +87,8 @@ protected:
     ASSERT_EQ(cudaMemset(res_points2, 0, n * sizeof(proj)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_scalars1, 0, n * sizeof(scalar_field)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_scalars2, 0, n * sizeof(scalar_field)), cudaSuccess);
+    
+    ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_field::wide)), cudaSuccess);
   }
 };
 
@@ -253,6 +260,29 @@ TEST_F(PrimitivesTest, ECMixedAdditionOfNegatedPointEqSubtraction) {
   ASSERT_EQ(vec_neg(points2, res_points2, n), cudaSuccess);
   for (unsigned i = 0; i < n; i++)
     ASSERT_EQ(res_points1[i], points1[i] + res_points2[i]);
+}
+
+TEST_F(PrimitivesTest, MP_LSB_MULT) {
+
+
+  ASSERT_EQ(mp_lsb_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
+  std::cout << "GPU lsb mult output  = 0x";
+  for (int i=0; i<2*scalar_field::TLC; i++)
+  {
+    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i];
+  }
+  std::cout << std::endl;
+
+  ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_field::wide)), cudaSuccess);
+
+  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
+  std::cout << "GPU full mult output = 0x";
+  for (int i=0; i<2*scalar_field::TLC; i++)
+  {
+    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i];
+  }
+  std::cout << std::endl;
+
 }
 
 
