@@ -184,75 +184,13 @@ typedef affine_t test_affine;
 
 int main()
 {
-  // fake_point p1;
-  // fake_point p2;
-  // p1.val = 8;
-  // p2.val = 9;
-  // std::cout<<(p1+p2)<<std::endl;
-
-  // unsigned N = 4;
-  // unsigned batch_size = 1<<0;
   unsigned batch_size = 1;
   unsigned msm_size = 1<<16;
   unsigned N = batch_size*msm_size;
 
-  //1<<2, 1<<4 - gets stuck..? V but not for c=10 with real
-  //1<<2, 1<<12 - first results for all.. 
-  //1<<3, 1<<6 - first for all  VV
-  //1<<2, 1<<6 - wrong results for all V but not for c=10 with real
-
-  //c==10
-  //3,4 - stuck V
-  //2,7 - wrong
-  //2,6 - wrong V
-  //2,10 - wrong
-  //2,11 - good
-  //2,12 - good
-  //3,6 - good
-  //3,5 - good
-  //4,4 - good
-  //4,3 - good
-  //8,12 - good V
-
-  // fake_scalar scalars[N];
-  // fake_point points[N];
-
   test_scalar *scalars = new test_scalar[N];
   test_affine *points = new test_affine[N];
   
-  // std::vector<scalar_t> scalars;
-  // std::vector<affine_t> points;
-  // scalars.reserve(N);
-  // points.reserve(N);
-
-  // srand(time(NULL));
-  // for (unsigned i = 0; i < N; i++)
-  // {
-  //   // scalars[i].val = rand()%(1<<10);
-  //   scalars[i] = {unsigned(rand()%(1<<10))};
-  //   // std::cout<<scalars[i].val<<std::endl;
-  //   // points[i].val = rand()%(1<<10);
-  //   points[i] = {{unsigned(rand()%(1<<10)), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  //             {unsigned(rand()%(1<<10)), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-  //   // std::cout<<points[i].val<<std::endl;
-  // }
-
-  // scalars[0] = {3827484040, 2874625294, 4134484179, 2522098891, 1684039639, 4190761864, 1674792009, 1733172596};
-  // scalars[1] = {2859778174, 247198543, 1069683537, 986951671, 18230349, 1865405355, 3834758898, 1605705230};
-  // scalars[2] = {870702623, 2140804196, 1118323047, 4097847923, 733285949, 2517599604, 2748585063, 1465198310};
-  // scalars[3] = {2997668077, 4130616472, 4255624276, 3713720096, 813455961, 1818410993, 1796699074, 1289452986};
-
-  // points[0].x = {927572523, 3123811016, 1178179586, 448270957, 3269025417, 873655910, 946685814, 846160237, 2311665546, 894701547, 1123227996, 414748152};
-  // points[0].y = {2100670837, 1657590303, 4206131811, 3111559769, 3261363570, 430821050, 2016803245, 2664358421, 3132350727, 189414955, 1844185218, 11036570};
-  // points[1].x = {606938594, 3862011666, 3396180143, 765820065, 3281167117, 634141057, 210831039, 670764991, 3442481388, 2417967610, 1382165347, 243748907};
-  // points[1].y = {2486871565, 3199940895, 3186416593, 2451721591, 4108712975, 2604984942, 1165376591, 854454192, 1479545654, 1006124383, 1570319433, 22366661};
-  // points[2].x = {183039612, 256454025, 4250922080, 2485970688, 3679755773, 1397028634, 1298805238, 3413182507, 2291846949, 1280816489, 1119750210, 122833203};
-  // points[2].y = {3025851512, 1147574033, 1323495323, 569405769, 382481561, 1330634004, 3879950484, 1158208050, 2740575984, 2745897444, 3101936482, 405605297};
-  // points[3].x = {4006417784, 3580973450, 2524244405, 3414509667, 4142213295, 3876406748, 4116037682, 877187559, 3606672288, 3459819278, 3198860768, 30571621};
-  // points[3].y = {182896763, 2741166359, 626891178, 1601768019, 1967793394, 706302600, 2612369182, 2051460370, 2918333441, 1902350841, 475238909, 239719017};
-
-  srand(11);
-
   for (unsigned i=0;i<N;i++){
     scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
@@ -261,108 +199,6 @@ int main()
   }
   std::cout<<"finished generating"<<std::endl;
 
-  // scalars[0] = scalar_t::rand_host();
-  // scalars[1] = scalar_t::rand_host();
-  // scalars[2] = scalar_t::rand_host();
-  // scalars[3] = scalar_t::rand_host();
-
-  // points[0] = projective_t::to_affine(projective_t::rand_host());
-  // points[1] = projective_t::to_affine(projective_t::rand_host());
-  // points[2] = projective_t::to_affine(projective_t::rand_host());
-  // points[3] = projective_t::to_affine(projective_t::rand_host());
-/*correct result:
-1557917178, 269077943, 1116505460, 728110787, 4176849812, 3140203189, 2756051319, 197704154, 1838744007, 2201658078, 1505047534, 239949230, 
-2029063365, 2557489072, 3905272471, 2418563649, 2077595491, 357415053, 3188715161, 1890916285, 354886608, 410171932, 1437862573, 206970588, 
-4160033405, 2697065480, 1940009895, 2097886176, 4019146882, 2931880476, 3425684730, 2783686325, 1918054479, 1505257125, 3268347217, 269536830, */
-
-// scalars[0].val = 456;
-//   scalars[1].val = 51;
-//   scalars[2].val = 984;
-//   scalars[3].val = 15;
-
-//   points[0].val = 0;
-//   points[1].val = 1;
-//   points[2].val = 2;
-//   points[3].val = 3;
-
-  // for (unsigned i = 1; i < N/4; i++)
-  // {
-  //   scalars[4*i+0] = scalars[0];
-  //   scalars[4*i+1] = scalars[1];
-  //   scalars[4*i+2] = scalars[2];
-  //   scalars[4*i+3] = scalars[3];
-  //   points[4*i+0] = points[0];
-  //   points[4*i+1] = points[1];
-  //   points[4*i+2] = points[2];
-  //   points[4*i+3] = points[3];
-  // }
-  
-
-  // std::cout<<"scalars"<<std::endl;
-  // for (unsigned j = 0; j<N ; j++){
-
-  // for (unsigned i = 0; i < 8; i++) {
-  //   std::cout << scalars[j].limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-
-  // }
-
-  // std::cout<<"points"<<std::endl;
-  // for (unsigned j = 0; j<N ; j++){
-  // for (unsigned i = 0; i < 12; i++) {
-  //   std::cout << points[j].x.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-  // for (unsigned i = 0; i < 12; i++) {
-  //   std::cout << points[j].y.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-
-  // // return 0;
-  // // for (unsigned i = 0; i < 8; i++) {
-  // //   std::cout << points[j].z.limbs_storage.limbs[i] << ", ";
-  // // }
-  // // std::cout << "\n";
-  // }
-  
-  // projective_t test_p = projective_t::zero();
-
-  // for (unsigned i = 0; i < 8; i++) {
-  //   std::cout << test_p.x.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-  // for (unsigned i = 0; i < 8; i++) {
-  //   std::cout << test_p.y.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-  // for (unsigned i = 0; i < 8; i++) {
-  //   std::cout << test_p.z.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-
-  // projective_t test_mul = scalars[0]*points[0];
-
-  // for (unsigned i = 0; i < 8; i++) {
-  //   std::cout << test_mul.x.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-  // for (unsigned i = 0; i < 8; i++) {
-  //   std::cout << test_mul.y.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-  // for (unsigned i = 0; i < 8; i++) {
-  //   std::cout << test_mul.z.limbs_storage.limbs[i] << ", ";
-  // }
-  // std::cout << "\n";
-
-
-  // cuda_ctx my_ctx = cuda_ctx(0);
-  // large_msm<fake_point, fake_scalar>(my_ctx, points, scalars, N);
-
-  // bucket_method_msm<scalar_t,projective_t, affine_t>(255, 10, scalars, points, N);
-  // projective_t pr=short_msm<scalar_t,projective_t,affine_t>(scalars, points, N);
-
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
   // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
   test_projective large_res[batch_size];
@@ -370,8 +206,6 @@ int main()
   // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
   // fake_point batched_large_res[256];
 
-  // projective_t short_res[1];
-  // projective_t large_res[1];
 
   // short_msm<scalar_t, projective_t, affine_t>(scalars, points, N, short_res);
   // for (unsigned i=0;i<batch_size;i++){
