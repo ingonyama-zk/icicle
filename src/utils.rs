@@ -33,7 +33,7 @@ pub fn u64_vec_to_u32_vec(arr_u64: &[u64]) -> Vec<u32> {
 mod tests {
     use ark_ff::BigInteger256;
 
-    use crate::field::ScalarField;
+    use crate::field::{ScalarField, LimbsField, tests::from_ark_transmute};
 
     use super::*;
 
@@ -41,12 +41,12 @@ mod tests {
     fn test_u32_vec_to_u64_vec() {
         let arr_u32 = [1, 0x0fffffff, 3, 0x2fffffff, 5, 0x4fffffff, 7, 0x6fffffff];
 
-        let s = ScalarField::from_ark_transmute(BigInteger256::new(
+        let s = from_ark_transmute(BigInteger256::new(
             u32_vec_to_u64_vec(&arr_u32).try_into().unwrap(),
         ))
         .limbs();
 
-        assert_eq!(arr_u32, s);
+        assert_eq!(arr_u32.to_vec(), s);
 
         let arr_u64_expected = [
             0x0FFFFFFF00000001,

@@ -143,7 +143,7 @@ template <typename CONFIG> class ExtensionField {
     static constexpr HOST_DEVICE_INLINE ExtensionField inverse(const ExtensionField& xs) {
       ExtensionField xs_conjugate = { xs.real, FF::neg(xs.imaginary) };
       // TODO: wide here
-      FF xs_modulus_squared = FF::sqr(xs.real) + FF::sqr(xs.imaginary);
-      return xs_conjugate * ExtensionField { FF::inverse(xs_modulus_squared), FF::zero() };
+      FF xs_norm_squared = FF::sqr(xs.real) + FF::sqr(xs.imaginary);
+      return xs_conjugate * ExtensionField { FF::inverse(xs_norm_squared), FF::zero() };
     }
 };
