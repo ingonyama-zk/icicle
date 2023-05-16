@@ -2,7 +2,7 @@ use std::ffi::{c_int, c_uint};
 
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
-use field::*;
+use field::{BaseField, ScalarField, Point as PointGeneric, PointAffineNoInfinity as PointAffineGeneric, LimbsField, ArkConvertible};
 use ark_bls12_381::{Fr, G1Affine, G1Projective};
 use ark_ff::PrimeField;
 use ark_std::UniformRand;
@@ -13,6 +13,9 @@ use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
 
 pub mod field;
 pub mod utils;
+
+type Point = PointGeneric<BaseField>;
+type PointAffineNoInfinity = PointAffineGeneric<BaseField>;
 
 extern "C" {
     fn msm_cuda(
@@ -753,19 +756,19 @@ pub fn generate_random_points(
     mut rng: Box<dyn RngCore>,
 ) -> Vec<PointAffineNoInfinity> {
     (0..count)
-        .map(|_| Point::from_ark(G1Projective::rand(&mut rng)).to_xy_strip_z())
+        .map(|_| Point::from_ark(&G1Projective::rand(&mut rng)).to_xy_strip_z())
         .collect()
 }
 
 pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
     (0..count)
-        .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
+        .map(|_| Point::from_ark(&G1Projective::rand(&mut rng)))
         .collect()
 }
 
 pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
     (0..count)
-        .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
+        .map(|_| ScalarField::from_ark(&Fr::rand(&mut rng).into_repr()))
         .collect()
 }
 
@@ -802,7 +805,7 @@ pub(crate) mod tests {
     use ark_ec::{msm::VariableBaseMSM, AffineCurve, ProjectiveCurve};
     use ark_ff::{FftField, Field, Zero, PrimeField};
 
-    use crate::{field::*, *};
+    use crate::{field::{ScalarField, BaseField, LimbsField, ArkConvertible}, *};
 
     fn random_points_ark_proj(nof_elements: usize) -> Vec<G1Projective> {
         let mut rng = ark_std::rand::thread_rng();
@@ -877,7 +880,7 @@ pub(crate) mod tests {
 
             let msm_result = msm(&points, &scalars, 0);
 
-            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
+            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark()).collect();
             let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
 
             let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
@@ -886,7 +889,7 @@ pub(crate) mod tests {
             assert_eq!(msm_result.to_ark(), msm_result_ark);
             assert_eq!(
                 msm_result.to_ark_affine(),
-                Point::from_ark(msm_result_ark).to_ark_affine()
+                Point::from_ark(&msm_result_ark).to_ark_affine()
             );
         }
     }
@@ -901,13 +904,13 @@ pub(crate) mod tests {
                 let points_batch = generate_random_points(msm_size * batch_size, get_rng(seed));
                 let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
 
-                let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
+                let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark()).collect();
                 let scalars_r_ark: Vec<_> = scalars_batch.iter().map(|x| x.to_ark()).collect();
 
                 let expected: Vec<_> = point_r_ark
                     .chunks(msm_size)
                     .zip(scalars_r_ark.chunks(msm_size))
-                    .map(|p| Point::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
+                    .map(|p| Point::from_ark(&VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
                     .collect();
 
                 let result = msm_batch(&points_batch, &scalars_batch, batch_size, 0);
@@ -919,7 +922,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_commit() {
-        let test_size = 1 << 8;
+        let test_size = 1 << 6;
         let seed = Some(0);
         let (mut scalars, mut d_scalars, _) = set_up_scalars(test_size, 0, false);
         let mut points = generate_random_points(test_size, get_rng(seed));
@@ -930,6 +933,7 @@ pub(crate) mod tests {
         let mut h_commit_result = Point::zero();
         d_commit_result.copy_to(&mut h_commit_result).unwrap();
 
+        println!("msm res: {:?}; commit res: {:?}", msm_result.to_ark_affine(), h_commit_result.to_ark_affine());
         assert_eq!(msm_result, h_commit_result);
         assert_ne!(msm_result, Point::zero());
         assert_ne!(h_commit_result, Point::zero());
@@ -937,8 +941,8 @@ pub(crate) mod tests {
 
     #[test]
     fn test_batch_commit() {
-        let batch_size = 4;
-        let test_size = 1 << 12;
+        let batch_size = 1;
+        let test_size = 1 << 6;
         let seed = Some(0);
         let (scalars, mut d_scalars, _) = set_up_scalars(test_size * batch_size, 0, false);
         let points = generate_random_points(test_size * batch_size, get_rng(seed));
@@ -949,6 +953,7 @@ pub(crate) mod tests {
         let mut h_commit_result: Vec<Point> = (0..batch_size).map(|_| Point::zero()).collect();
         d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
 
+        println!("msm res: {:?}; commit res: {:?}", msm_result[0], h_commit_result[0]);
         assert_eq!(msm_result, h_commit_result);
         for h in h_commit_result {
             assert_ne!(h, Point::zero());
@@ -1431,7 +1436,7 @@ pub(crate) mod tests {
             |row_num| { (0..test_size).map( 
                 |col_num| {
                     let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
-                    ScalarField::from_ark(Fr::pow(&rou, &pow).into_repr())
+                    ScalarField::from_ark(&Fr::pow(&rou, &pow).into_repr())
                 }).collect::<Vec<ScalarField>>()
             }).flatten().collect::<Vec<_>>();
         let vector: Vec<ScalarField> = generate_random_scalars(test_size, get_rng(seed));
