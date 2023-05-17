@@ -622,8 +622,8 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 }
 
 unsigned get_optimal_c(const unsigned size) {
-  // return 10;
-  return ceil(log2(size))-4;
+  return 10;
+  // return ceil(log2(size))-4;
 }
 
 //this function is used to compute msms of size larger than 256

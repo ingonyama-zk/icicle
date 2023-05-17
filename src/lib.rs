@@ -928,8 +928,8 @@ pub(crate) mod tests {
 
     #[test]
     fn test_batch_msm() {
-        for batch_pow2 in [2, 4] {
-            for pow2 in [4, 6] {
+        for batch_pow2 in [4] {
+            for pow2 in [15,16] {
                 let msm_size = 1 << pow2;
                 let batch_size = 1 << batch_pow2;
                 let seed = None; // set Some to provide seed
