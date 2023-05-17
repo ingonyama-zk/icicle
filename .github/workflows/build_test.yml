@@ -1,4 +1,4 @@
-name: Build
+name: Build & Test
 
 on: 
   pull_request:
@@ -30,6 +30,8 @@ jobs:
       # https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md#rust-tools
     - name: Build
       run: cargo build --release --verbose
+    - name: Test
+      run: cargo test --release --verbose
       
   
   build-windows:
@@ -44,3 +46,5 @@ jobs:
         use-github-cache: true
     - name: Build
       run: cargo build --release --verbose
+    - name: Test
+      run: cargo test --release --verbose
