@@ -23,6 +23,23 @@ template <class CONFIG> class Field {
       return Field { CONFIG::one };
     }
 
+    static constexpr HOST_DEVICE_INLINE Field from_limbs(uint32_t * limbs) {
+      storage<TLC> scalar;
+      for (int i = 0; i < TLC; i++) {
+        scalar.limbs[i] = limbs[i];
+      }
+      return Field { scalar };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field from(uint32_t value) {
+      storage<TLC> scalar;
+      scalar.limbs[0] = value;
+      for (int i = 1; i < TLC; i++) {
+        scalar.limbs[i] = 0;
+      }
+      return Field { scalar };
+    }
+
     static constexpr HOST_INLINE Field omega(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
