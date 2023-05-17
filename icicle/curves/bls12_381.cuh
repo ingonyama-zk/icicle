@@ -186,7 +186,7 @@ struct fq_config {
 static constexpr storage<fq_config::limbs_count> weierstrass_b = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                                   0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 
-static constexpr storage<fq_config::limbs_count> b_re = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                                         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-static constexpr storage<fq_config::limbs_count> b_im = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                                         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_re = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                                                        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                                                                        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};

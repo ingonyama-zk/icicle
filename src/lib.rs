@@ -3,8 +3,10 @@ use std::ffi::{c_int, c_uint};
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 use field::{BaseField, ScalarField, Point as PointGeneric, PointAffineNoInfinity as PointAffineGeneric, LimbsField, ArkConvertible};
+#[cfg(feature = "g2")]
+use field::ExtensionField;
 use ark_bls12_381::{Fr, G1Affine, G1Projective};
-use ark_ff::PrimeField;
+use ark_ff::{PrimeField, Field};
 use ark_std::UniformRand;
 
 use rustacuda::prelude::*;
@@ -16,6 +18,10 @@ pub mod utils;
 
 type Point = PointGeneric<BaseField>;
 type PointAffineNoInfinity = PointAffineGeneric<BaseField>;
+#[cfg(feature = "g2")]
+type PointG2 = PointGeneric<ExtensionField>;
+#[cfg(feature = "g2")]
+type PointAffineNoInfinityG2 = PointAffineGeneric<ExtensionField>;
 
 extern "C" {
     fn msm_cuda(
@@ -47,6 +53,25 @@ extern "C" {
         d_out: DevicePointer<Point>,
         d_scalars: DevicePointer<ScalarField>,
         d_points: DevicePointer<PointAffineNoInfinity>,
+        count: usize,
+        batch_size: usize,
+        device_id: usize,
+    ) -> c_uint;
+
+    #[cfg(feature = "g2")]
+    fn commit_g2_cuda(
+        d_out: DevicePointer<PointG2>,
+        d_scalars: DevicePointer<ScalarField>,
+        d_points: DevicePointer<PointAffineNoInfinityG2>,
+        count: usize,
+        device_id: usize,
+    ) -> c_uint;
+
+    #[cfg(feature = "g2")]
+    fn commit_batch_g2_cuda(
+        d_out: DevicePointer<PointG2>,
+        d_scalars: DevicePointer<ScalarField>,
+        d_points: DevicePointer<PointAffineNoInfinityG2>,
         count: usize,
         batch_size: usize,
         device_id: usize,
@@ -302,6 +327,44 @@ pub fn commit_batch(
     let mut res = unsafe { DeviceBuffer::uninitialized(batch_size).unwrap() };
     unsafe {
         commit_batch_cuda(
+            res.as_device_ptr(),
+            scalars.as_device_ptr(),
+            points.as_device_ptr(),
+            scalars.len() / batch_size,
+            batch_size,
+            0,
+        );
+    }
+    return res;
+}
+
+#[cfg(feature = "g2")]
+pub fn commit_g2(
+    points: &mut DeviceBuffer<PointAffineNoInfinityG2>,
+    scalars: &mut DeviceBuffer<ScalarField>,
+) -> DeviceBox<PointG2> {
+    let mut res = DeviceBox::new(&PointG2::zero()).unwrap();
+    unsafe {
+        commit_g2_cuda(
+            res.as_device_ptr(),
+            scalars.as_device_ptr(),
+            points.as_device_ptr(),
+            scalars.len(),
+            0,
+        );
+    }
+    return res;
+}
+
+#[cfg(feature = "g2")]
+pub fn commit_batch_g2(
+    points: &mut DeviceBuffer<PointAffineNoInfinityG2>,
+    scalars: &mut DeviceBuffer<ScalarField>,
+    batch_size: usize,
+) -> DeviceBuffer<PointG2> {
+    let mut res = unsafe { DeviceBuffer::uninitialized(batch_size).unwrap() };
+    unsafe {
+        commit_batch_g2_cuda(
             res.as_device_ptr(),
             scalars.as_device_ptr(),
             points.as_device_ptr(),
@@ -751,12 +814,16 @@ fn set_up_device() {
     let _ctx = Context::create_and_push(ContextFlags::MAP_HOST | ContextFlags::SCHED_AUTO, device).unwrap();
 }
 
-pub fn generate_random_points(
+// this function is generic to be able to generate both G1 and G2 points
+pub fn generate_random_points<F: ArkConvertible<ArkEquivalent = impl Field> + LimbsField + Copy>(
     count: usize,
     mut rng: Box<dyn RngCore>,
-) -> Vec<PointAffineNoInfinity> {
+) -> Vec<PointAffineGeneric<F>> where
+    PointGeneric<F>: ArkConvertible,
+    <PointGeneric<F> as ArkConvertible>::ArkEquivalent: UniformRand,
+{
     (0..count)
-        .map(|_| Point::from_ark(&G1Projective::rand(&mut rng)).to_xy_strip_z())
+        .map(|_| PointGeneric::<F>::from_ark(&<PointGeneric::<F> as ArkConvertible>::ArkEquivalent::rand(&mut rng)).to_xy_strip_z())
         .collect()
 }
 
@@ -875,15 +942,15 @@ pub(crate) mod tests {
         for pow2 in test_sizes {
             let count = 1 << pow2;
             let seed = None; // set Some to provide seed
-            let points = generate_random_points(count, get_rng(seed));
+            let points = generate_random_points::<BaseField>(count, get_rng(seed));
             let scalars = generate_random_scalars(count, get_rng(seed));
 
             let msm_result = msm(&points, &scalars, 0);
 
-            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark()).collect();
+            let points_r_ark: Vec<_> = points.iter().map(|x| x.to_ark()).collect();
             let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
 
-            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
+            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&points_r_ark, &scalars_r_ark);
 
             assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
             assert_eq!(msm_result.to_ark(), msm_result_ark);
@@ -901,13 +968,13 @@ pub(crate) mod tests {
                 let msm_size = 1 << pow2;
                 let batch_size = 1 << batch_pow2;
                 let seed = None; // set Some to provide seed
-                let points_batch = generate_random_points(msm_size * batch_size, get_rng(seed));
+                let points_batch = generate_random_points::<BaseField>(msm_size * batch_size, get_rng(seed));
                 let scalars_batch = generate_random_scalars(msm_size * batch_size, get_rng(seed));
 
-                let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark()).collect();
+                let points_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark()).collect();
                 let scalars_r_ark: Vec<_> = scalars_batch.iter().map(|x| x.to_ark()).collect();
 
-                let expected: Vec<_> = point_r_ark
+                let expected: Vec<_> = points_r_ark
                     .chunks(msm_size)
                     .zip(scalars_r_ark.chunks(msm_size))
                     .map(|p| Point::from_ark(&VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
@@ -925,7 +992,7 @@ pub(crate) mod tests {
         let test_size = 1 << 6;
         let seed = Some(0);
         let (mut scalars, mut d_scalars, _) = set_up_scalars(test_size, 0, false);
-        let mut points = generate_random_points(test_size, get_rng(seed));
+        let mut points = generate_random_points::<BaseField>(test_size, get_rng(seed));
         let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
 
         let msm_result = msm(&points, &scalars, 0);
@@ -933,7 +1000,6 @@ pub(crate) mod tests {
         let mut h_commit_result = Point::zero();
         d_commit_result.copy_to(&mut h_commit_result).unwrap();
 
-        println!("msm res: {:?}; commit res: {:?}", msm_result.to_ark_affine(), h_commit_result.to_ark_affine());
         assert_eq!(msm_result, h_commit_result);
         assert_ne!(msm_result, Point::zero());
         assert_ne!(h_commit_result, Point::zero());
@@ -941,11 +1007,11 @@ pub(crate) mod tests {
 
     #[test]
     fn test_batch_commit() {
-        let batch_size = 1;
-        let test_size = 1 << 6;
+        let batch_size = 4;
+        let test_size = 1 << 12;
         let seed = Some(0);
         let (scalars, mut d_scalars, _) = set_up_scalars(test_size * batch_size, 0, false);
-        let points = generate_random_points(test_size * batch_size, get_rng(seed));
+        let points = generate_random_points::<BaseField>(test_size * batch_size, get_rng(seed));
         let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
 
         let msm_result = msm_batch(&points, &scalars, batch_size, 0);
@@ -953,10 +1019,69 @@ pub(crate) mod tests {
         let mut h_commit_result: Vec<Point> = (0..batch_size).map(|_| Point::zero()).collect();
         d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
 
-        println!("msm res: {:?}; commit res: {:?}", msm_result[0], h_commit_result[0]);
         assert_eq!(msm_result, h_commit_result);
         for h in h_commit_result {
             assert_ne!(h, Point::zero());
+        }
+    }
+
+    #[cfg(feature = "g2")]
+    #[test]
+    fn test_msm_g2() {
+        let test_sizes = [6, 9];
+
+        for pow2 in test_sizes {
+            let count = 1 << pow2;
+            let seed = None; // set Some to provide seed
+            let (scalars, mut d_scalars, _) = set_up_scalars(count, 0, false);
+            let points = generate_random_points::<ExtensionField>(count, get_rng(seed));
+            let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
+
+            let mut d_commit_result = commit_g2(&mut d_points, &mut d_scalars);
+            let mut h_commit_result = PointG2::zero();
+            d_commit_result.copy_to(&mut h_commit_result).unwrap();
+
+            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark()).collect();
+            let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
+
+            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
+
+            assert_eq!(h_commit_result.to_ark_affine(), msm_result_ark);
+            assert_eq!(h_commit_result.to_ark(), msm_result_ark);
+            assert_eq!(
+                h_commit_result.to_ark_affine(),
+                PointG2::from_ark(&msm_result_ark).to_ark_affine()
+            );
+        }
+    }
+
+    #[cfg(feature = "g2")]
+    #[test]
+    fn test_batch_msm_g2() {
+        for batch_pow2 in [2, 4] {
+            for pow2 in [4, 6] {
+                let msm_size = 1 << pow2;
+                let batch_size = 1 << batch_pow2;
+                let seed = None; // set Some to provide seed
+                let (scalars, mut d_scalars, _) = set_up_scalars(msm_size * batch_size, 0, false);
+                let points = generate_random_points::<ExtensionField>(msm_size * batch_size, get_rng(seed));
+                let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
+
+                let points_r_ark: Vec<_> = points.iter().map(|x| x.to_ark()).collect();
+                let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
+
+                let expected: Vec<_> = points_r_ark
+                    .chunks(msm_size)
+                    .zip(scalars_r_ark.chunks(msm_size))
+                    .map(|p| PointG2::from_ark(&VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
+                    .collect();
+
+                let mut d_commit_result = commit_batch_g2(&mut d_points, &mut d_scalars, batch_size);
+                let mut h_commit_result: Vec<PointG2> = (0..batch_size).map(|_| PointG2::zero()).collect();
+                d_commit_result.copy_to(&mut h_commit_result[..]).unwrap();
+
+                assert_eq!(h_commit_result, expected);
+            }
         }
     }
 

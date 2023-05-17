@@ -14,20 +14,6 @@ use rustacuda_derive::DeviceCopy;
 use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 
 
-fn bytes_to_u32_vector(bytes: &[u8]) -> Vec<u32> {
-    // Ensure the byte array length is divisible by 4
-    assert_eq!(bytes.len() % 4, 0);
-    let mut result = Vec::with_capacity(bytes.len() / 4);
-    for i in (0..bytes.len()).step_by(4) {
-        let value = (bytes[i] as u32) << 24
-            | (bytes[i + 1] as u32) << 16
-            | (bytes[i + 2] as u32) << 8
-            | (bytes[i + 3] as u32);
-        result.push(value);
-    }
-    result
-}
-
 fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
     match val.len() {
         n if n < NUM_LIMBS => {
@@ -96,17 +82,19 @@ impl<const NUM_LIMBS: usize> Default for FiniteField<NUM_LIMBS> {
 
 pub const BASE_LIMBS: usize = 12;
 pub const SCALAR_LIMBS: usize = 8;
+#[cfg(feature = "g2")]
 pub const EXTENSION_LIMBS: usize = 2 * BASE_LIMBS;
 
 #[cfg(feature = "bn254")]
 pub const BASE_LIMBS: usize = 8;
 #[cfg(feature = "bn254")]
 pub const SCALAR_LIMBS: usize = 8;
-#[cfg(feature = "bn254")]
+#[cfg(all(feature = "bn254", feature = "g2"))]
 pub const EXTENSION_LIMBS: usize = 2 * BASE_LIMBS;
 
 pub type BaseField = FiniteField<BASE_LIMBS>;
 pub type ScalarField = FiniteField<SCALAR_LIMBS>;
+#[cfg(feature = "g2")]
 pub type ExtensionField = FiniteField<EXTENSION_LIMBS>;
 
 pub trait ArkConvertible {
@@ -124,7 +112,7 @@ impl ArkConvertible for BaseField {
     }
 
     fn from_ark(ark: &Fq) -> Self {
-        Self::from_limbs(&u64_vec_to_u32_vec(&ark.0.0))
+        Self::from_limbs(&u64_vec_to_u32_vec(&ark.into_repr().0))
     }
 }
 
@@ -140,6 +128,7 @@ impl ArkConvertible for ScalarField {
     }
 }
 
+#[cfg(feature = "g2")]
 impl ArkConvertible for ExtensionField {
     type ArkEquivalent = Fq2;
 
@@ -150,8 +139,8 @@ impl ArkConvertible for ExtensionField {
     }
 
     fn from_ark(ark: &Fq2) -> Self {
-        let re_part = get_fixed_limbs::<BASE_LIMBS>(&u64_vec_to_u32_vec(&ark.c0.0.0));
-        let im_part = get_fixed_limbs::<BASE_LIMBS>(&u64_vec_to_u32_vec(&ark.c1.0.0));
+        let re_part = u64_vec_to_u32_vec(&ark.c0.into_repr().0);
+        let im_part = u64_vec_to_u32_vec(&ark.c1.into_repr().0);
         Self::from_limbs(&[re_part, im_part].concat())
     }
 }
@@ -217,6 +206,7 @@ impl ArkConvertible for PointAffineNoInfinity<BaseField> {
     }
 }
 
+#[cfg(feature = "g2")]
 impl ArkConvertible for PointAffineNoInfinity<ExtensionField> {
     type ArkEquivalent = G2Affine;
 
@@ -323,6 +313,7 @@ impl Point<BaseField> {
     }
 }
 
+#[cfg(feature = "g2")]
 impl ArkConvertible for Point<ExtensionField> {
     type ArkEquivalent = G2Projective;
 
@@ -335,6 +326,7 @@ impl ArkConvertible for Point<ExtensionField> {
     }
 }
 
+#[cfg(feature = "g2")]
 impl Point<ExtensionField> {
     pub fn to_ark_affine(&self) -> G2Affine {
         self.to_ark_affine_internal::<G2Parameters>()
@@ -345,9 +337,21 @@ extern "C" {
     fn eq(point1: *const Point<BaseField>, point2: *const Point<BaseField>) -> c_uint;
 }
 
+#[cfg(feature = "g2")]
+extern "C" {
+    fn eq_g2(point1: *const Point<ExtensionField>, point2: *const Point<ExtensionField>) -> c_uint;
+}
+
 impl PartialEq for Point<BaseField> {
     fn eq(&self, other: &Self) -> bool {
         unsafe { eq(self, other) != 0 }
+    }
+}
+
+#[cfg(feature = "g2")]
+impl PartialEq for Point<ExtensionField> {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { eq_g2(self, other) != 0 }
     }
 }
 
@@ -358,7 +362,7 @@ pub(crate) mod tests {
     use ark_ff::BigInteger256;
     use std::mem::transmute;
 
-    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::{Point, ScalarField, LimbsField, ArkConvertible}};
+    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::{Point, ScalarField, LimbsField, ArkConvertible, BaseField}};
 
     fn to_ark_transmute(v: &ScalarField) -> BigInteger256 {
         unsafe { transmute(*v) }
@@ -384,12 +388,12 @@ pub(crate) mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_point_equality() {
-        let left = Point::zero();
-        let right = Point::zero();
+        let left = Point::<BaseField>::zero();
+        let right = Point::<BaseField>::zero();
         assert_eq!(left, right);
-        let right = Point::from_limbs(&[0; 12], &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0; 12]);
+        let right = Point::<BaseField>::from_limbs(&[0; 12], &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0; 12]);
         assert_eq!(left, right);
-        let right = Point::from_limbs(
+        let right = Point::<BaseField>::from_limbs(
             &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             &[0; 12],
             &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
