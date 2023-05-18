@@ -1590,24 +1590,16 @@ pub(crate) mod tests {
     fn test_vec_point_mul() {
         let dummy_one = Point {
             x: BaseField::one(),
-            y: BaseField::zero(),
+            y: BaseField::one(),
             z: BaseField::one(),
         };
 
         let mut inout = [dummy_one, dummy_one, Point::zero()];
         let scalars = [ScalarField::one(), ScalarField::zero(), ScalarField::zero()];
         let expected = [
+            dummy_one,
             Point::zero(),
-            Point {
-                x: BaseField::zero(),
-                y: BaseField::one(),
-                z: BaseField::zero(),
-            },
-            Point {
-                x: BaseField::zero(),
-                y: BaseField::one(),
-                z: BaseField::zero(),
-            },
+            Point::zero(),
         ];
         multp_vec(&mut inout, &scalars, 0);
         assert_eq!(inout, expected);

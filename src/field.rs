@@ -398,6 +398,25 @@ pub(crate) mod tests {
             &[0; 12],
             &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         );
-        assert!(left != right);
+        assert_ne!(left, right);
+    }
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_zero_memory_equality() {
+        let zero_memory = Point {
+            x: BaseField::zero(),
+            y: BaseField::zero(),
+            z: BaseField::zero(),
+        };
+        let valid_point = Point::<BaseField>::from_limbs(
+            &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            &[0; 12],
+            &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        );
+        assert_ne!(zero_memory, valid_point);
+        assert_ne!(valid_point, zero_memory);
+        assert_ne!(zero_memory, Point::<BaseField>::zero());
+        assert_ne!(Point::<BaseField>::zero(), zero_memory);
     }
 }
