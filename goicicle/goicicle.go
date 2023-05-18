@@ -8,7 +8,7 @@ import "C"
 // Version returns the version of the CUDA driver
 func Version() int {
 	var v C.int
-	if err := result(C.cuDriverGetVersion(&v)); err != nil {
+	if err := C.cuDriverGetVersion(&v); err != 0 {
 		return -1
 	}
 	return int(v)
