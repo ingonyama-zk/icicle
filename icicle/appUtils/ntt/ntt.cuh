@@ -55,7 +55,7 @@ scalar_t * fill_twiddle_factors_array(uint32_t n_twiddles, scalar_t omega) {
  */
 __device__ __host__ uint32_t reverseBits(uint32_t num, uint32_t logn) {
   unsigned int reverse_num = 0;
-  for (int i = 0; i < logn; i++) {
+  for (uint32_t i = 0; i < logn; i++) {
     if ((num & (1 << i))) reverse_num |= 1 << ((logn - 1) - i);
   }
   return reverse_num;
@@ -168,9 +168,9 @@ template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr
   uint32_t m = 2;
   for (uint32_t s = 0; s < logn; s++) {
     for (uint32_t i = 0; i < n; i += m) {
-        int shifted_m = m >> 1;
-        int number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
-        int number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
+        uint32_t shifted_m = m >> 1;
+        uint32_t number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
+        uint32_t number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
         template_butterfly_kernel < E, S > <<< number_of_threads, number_of_blocks >>> (d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
     }
     m <<= 1;
@@ -205,19 +205,6 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
 }
 
 /**
- * Cooley-Tukey Elliptic Curve NTT. 
- * NOTE! this function assumes that d_twiddles are located in the device memory.
- * @param arr input array of type projective_t. 
- * @param n length of d_arr.
- * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2). 
- * @param n_twiddles length of d_twiddles. 
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
-projective_t * ecntt(projective_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twiddles, bool inverse) {
-  return ntt_template < projective_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
-}
-
-/**
  * Cooley-Tukey (scalar) NTT. 
  * NOTE! this function assumes that d_twiddles are located in the device memory.
  * @param arr input array of type scalar_t. 
@@ -247,7 +234,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
     d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega(logn));
   }
   scalar_t * result = ntt_template < scalar_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
-  for(int i = 0; i < n; i++){
+  for(uint32_t i = 0; i < n; i++){
     arr[i] = result[i]; 
   }
   cudaFree(d_twiddles);
@@ -261,7 +248,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- extern "C" uint32_t ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
+extern "C" uint32_t ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; 
   scalar_t * twiddles = new scalar_t[n_twiddles];
@@ -272,7 +259,7 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
     d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega(logn));
   }
   projective_t * result = ntt_template < projective_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
-  for(int i = 0; i < n; i++){
+  for(uint32_t i = 0; i < n; i++){
     arr[i] = result[i]; 
   }
   cudaFree(d_twiddles);
@@ -289,14 +276,14 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param logn log(n).
  * @param task log(n).
  */
- template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uint32_t n, uint32_t logn, uint32_t task) {
+template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uint32_t n, uint32_t logn, uint32_t task) {
   for (uint32_t i = 0; i < n; i++) {
-      uint32_t reversed = reverseBits(i, logn);
-      if (reversed > i) {
-          T tmp = arr[task * n + i];
-          arr[task * n + i] = arr[task * n + reversed];
-          arr[task * n + reversed] = tmp;
-      }
+    uint32_t reversed = reverseBits(i, logn);
+    if (reversed > i) {
+      T tmp = arr[task * n + i];
+      arr[task * n + i] = arr[task * n + reversed];
+      arr[task * n + reversed] = tmp;
+    }
   }
 }
 

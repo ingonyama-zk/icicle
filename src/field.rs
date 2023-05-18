@@ -1,9 +1,9 @@
 use std::ffi::c_uint;
-use std::ops::Mul;
 
 // TODO: change curve here based on the features
-use ark_bls12_381::{Fq, Fq2, G1Affine, G1Projective, G2Affine, G2Projective,
-    g1::Parameters as G1Parameters, g2::Parameters as G2Parameters};
+use ark_bls12_381::{Fq, G1Affine, G1Projective, g1::Parameters as G1Parameters};
+#[cfg(feature = "g2")]
+use ark_bls12_381::{Fq2, G2Affine, G2Projective, g2::Parameters as G2Parameters};
 use ark_ec::{AffineCurve, ProjectiveCurve, SWModelParameters,
     models::short_weierstrass_jacobian::{GroupAffine, GroupProjective}};
 use ark_ff::{BigInteger384, BigInteger256, PrimeField, Field};
@@ -358,11 +358,11 @@ impl PartialEq for Point<ExtensionField> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bls12_381::Fr;
-    use ark_ff::BigInteger256;
     use std::mem::transmute;
 
-    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, field::{Point, ScalarField, LimbsField, ArkConvertible, BaseField}};
+    use ark_ff::BigInteger256;
+
+    use crate::field::{Point, ScalarField, LimbsField, ArkConvertible, BaseField};
 
     fn to_ark_transmute(v: &ScalarField) -> BigInteger256 {
         unsafe { transmute(*v) }

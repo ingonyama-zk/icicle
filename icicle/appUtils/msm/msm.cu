@@ -456,8 +456,7 @@ __global__ void to_proj_kernel(A* affine_points, P* proj_points, unsigned N){
 
 //the function computes msm using ssm
 template <typename S, typename P, typename A>
-void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool on_device){ //works up to 2^8
-  
+void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result){ //works up to 2^8
   S *scalars;
   A *a_points;
   P *p_points;
@@ -522,6 +521,8 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 }
 
 unsigned get_optimal_c(const unsigned size) {
+  if (size == 0)
+    return 1;
   return 10;
 }
 
@@ -549,27 +550,31 @@ extern "C"
 int msm_cuda(projective_t *out, affine_t points[],
               scalar_t scalars[], size_t count, size_t device_id = 0)
 {
-    try
-    {
-        if (count>256){
-            large_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out, false);
-        }
-        else{
-            short_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out, false);
-        }
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
+  try
+  {
+    if (count>256){
+        large_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out, false);
+    }
+    else{
+        short_msm<scalar_t, projective_t, affine_t>(scalars, points, count, out);
+    }
 
-        return CUDA_SUCCESS;
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
+    return CUDA_SUCCESS;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what());
+    return -1;
+  }
 }
 
 extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
                               scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+  (void)device_id;
   try
   {
     batched_large_msm<scalar_t, projective_t, affine_t>(scalars, points, batch_size, msm_size, out, false);
@@ -591,20 +596,22 @@ extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
  * @param d_points Affine points for the MSM. Must be on device.
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
- extern "C"
- int commit_cuda(projective_t* d_out, scalar_t* d_scalars, affine_t* d_points, size_t count, size_t device_id = 0)
- {
-     try
-     {
-         large_msm(d_scalars, d_points, count, d_out, true);
-         return 0;
-     }
-     catch (const std::runtime_error &ex)
-     {
-         printf("error %s", ex.what());
-         return -1;
-     }
- }
+extern "C"
+int commit_cuda(projective_t* d_out, scalar_t* d_scalars, affine_t* d_points, size_t count, size_t device_id = 0)
+{
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
+  try
+  {
+    large_msm(d_scalars, d_points, count, d_out, true);
+    return 0;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
  
  /**
   * Commit to a batch of polynomials using the MSM.
@@ -615,20 +622,22 @@ extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
   * @param count Length of `d_points` array, `d_scalar` has length `count` * `batch_size`.
   * @param batch_size Size of the batch.
   */
- extern "C"
- int commit_batch_cuda(projective_t* d_out, scalar_t* d_scalars, affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
- {
-     try
-     {
-         batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true);
-         return 0;
-     }
-     catch (const std::runtime_error &ex)
-     {
-         printf("error %s", ex.what());
-         return -1;
-     }
- }
+extern "C"
+int commit_batch_cuda(projective_t* d_out, scalar_t* d_scalars, affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
+{
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
+  try
+  {
+    batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true);
+    return 0;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
 
 #if defined(G2_DEFINED)
 /**
@@ -639,20 +648,22 @@ extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
  * @param d_points G2 affine points for the MSM. Must be on device.
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
- extern "C"
- int commit_g2_cuda(g2_projective_t* d_out, scalar_t* d_scalars, g2_affine_t* d_points, size_t count, size_t device_id = 0)
- {
-     try
-     {
-         large_msm(d_scalars, d_points, count, d_out, true);
-         return 0;
-     }
-     catch (const std::runtime_error &ex)
-     {
-         printf("error %s", ex.what());
-         return -1;
-     }
- }
+extern "C"
+int commit_g2_cuda(g2_projective_t* d_out, scalar_t* d_scalars, g2_affine_t* d_points, size_t count, size_t device_id = 0)
+{
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
+  try
+  {
+    large_msm(d_scalars, d_points, count, d_out, true);
+    return 0;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
  
  /**
   * Commit to a batch of polynomials using the MSM.
@@ -663,18 +674,20 @@ extern "C" int msm_batch_cuda(projective_t* out, affine_t points[],
   * @param count Length of `d_points` array, `d_scalar` has length `count` * `batch_size`.
   * @param batch_size Size of the batch.
   */
- extern "C"
- int commit_batch_g2_cuda(g2_projective_t* d_out, scalar_t* d_scalars, g2_affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
- {
-     try
-     {
-         batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true);
-         return 0;
-     }
-     catch (const std::runtime_error &ex)
-     {
-         printf("error %s", ex.what());
-         return -1;
-     }
- }
- #endif
+extern "C"
+int commit_batch_g2_cuda(g2_projective_t* d_out, scalar_t* d_scalars, g2_affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
+{
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
+  try
+  {
+    batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true);
+    return 0;
+  }
+  catch (const std::runtime_error &ex)
+  {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+#endif

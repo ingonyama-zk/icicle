@@ -101,6 +101,7 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::omega32 };        
       }
+      return Field { CONFIG::one };
       // return Field { CONFIG::omega[log_size-1] };
     }
 
@@ -174,6 +175,7 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::omega_inv32 };        
       }
+      return Field { CONFIG::one };
       // return Field { CONFIG::omega_inv[log_size-1] };
     }
 
@@ -245,6 +247,7 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::inv32 };        
       }
+      return Field { CONFIG::one };
       // return Field { CONFIG::inv[log_size-1] };
     }
 
@@ -344,7 +347,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? TLC : TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -360,7 +365,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? 2 * TLC : 2 * TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -421,7 +428,7 @@ template <class CONFIG> class Field {
     static DEVICE_INLINE void cmad_n(uint32_t *acc, const uint32_t *a, uint32_t bi, size_t n = TLC) {
       acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
       acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
-  #pragma unroll
+    #pragma unroll
       for (size_t i = 2; i < n; i += 2) {
         acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
         acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);

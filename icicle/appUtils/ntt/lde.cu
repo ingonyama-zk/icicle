@@ -65,13 +65,13 @@ int evaluate_batch(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_
   if (domain_size > n) {
     // allocate and initialize an array of stream handles to parallelize data copying across batches
     cudaStream_t *memcpy_streams = (cudaStream_t *) malloc(batch_size * sizeof(cudaStream_t));
-    for (int i = 0; i < batch_size; i++)
+    for (unsigned i = 0; i < batch_size; i++)
     {
       cudaStreamCreate(&(memcpy_streams[i]));
 
       cudaMemcpyAsync(&d_out[i * domain_size], &d_coefficients[i * n], n * sizeof(E), cudaMemcpyDeviceToDevice, memcpy_streams[i]);
-      int NUM_THREADS = MAX_THREADS_BATCH;
-      int NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
+      uint32_t NUM_THREADS = MAX_THREADS_BATCH;
+      uint32_t NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
       fill_array <E> <<<NUM_BLOCKS, NUM_THREADS, 0, memcpy_streams[i]>>> (&d_out[i * domain_size + n], E::zero(), domain_size - n);
 
       cudaStreamSynchronize(memcpy_streams[i]);
@@ -168,6 +168,8 @@ int evaluate_points_on_coset_batch(projective_t* d_out, projective_t* d_coeffici
 
 extern "C" scalar_t* build_domain_cuda(uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         if (inverse) {
@@ -185,6 +187,8 @@ extern "C" scalar_t* build_domain_cuda(uint32_t domain_size, uint32_t logn, bool
 
 extern "C" int ntt_cuda(scalar_t *arr, uint32_t n, bool inverse, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return ntt_end2end(arr, n, inverse); // TODO: pass device_id
@@ -199,6 +203,8 @@ extern "C" int ntt_cuda(scalar_t *arr, uint32_t n, bool inverse, size_t device_i
 
 extern "C" int ecntt_cuda(projective_t *arr, uint32_t n, bool inverse, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return ecntt_end2end(arr, n, inverse); // TODO: pass device_id
@@ -212,6 +218,8 @@ extern "C" int ecntt_cuda(projective_t *arr, uint32_t n, bool inverse, size_t de
 
 extern "C" int ntt_batch_cuda(scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return ntt_end2end_batch(arr, arr_size, batch_size, inverse); // TODO: pass device_id
@@ -225,6 +233,8 @@ extern "C" int ntt_batch_cuda(scalar_t *arr, uint32_t arr_size, uint32_t batch_s
 
 extern "C" int ecntt_batch_cuda(projective_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return ecntt_end2end_batch(arr, arr_size, batch_size, inverse); // TODO: pass device_id
@@ -238,6 +248,8 @@ extern "C" int ecntt_batch_cuda(projective_t *arr, uint32_t arr_size, uint32_t b
 
 extern "C" int interpolate_scalars_cuda(scalar_t* d_out, scalar_t *d_evaluations, scalar_t *d_domain, unsigned n, unsigned device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return interpolate_scalars(d_out, d_evaluations, d_domain, n); // TODO: pass device_id
@@ -252,6 +264,8 @@ extern "C" int interpolate_scalars_cuda(scalar_t* d_out, scalar_t *d_evaluations
 extern "C" int interpolate_scalars_batch_cuda(scalar_t* d_out, scalar_t* d_evaluations, scalar_t* d_domain, unsigned n,
                                               unsigned batch_size, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return interpolate_scalars_batch(d_out, d_evaluations, d_domain, n, batch_size); // TODO: pass device_id
@@ -265,6 +279,8 @@ extern "C" int interpolate_scalars_batch_cuda(scalar_t* d_out, scalar_t* d_evalu
 
 extern "C" int interpolate_points_cuda(projective_t* d_out, projective_t *d_evaluations, scalar_t *d_domain, unsigned n, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return interpolate_points(d_out, d_evaluations, d_domain, n); // TODO: pass device_id
@@ -279,6 +295,8 @@ extern "C" int interpolate_points_cuda(projective_t* d_out, projective_t *d_eval
 extern "C" int interpolate_points_batch_cuda(projective_t* d_out, projective_t* d_evaluations, scalar_t* d_domain,
                                              unsigned n, unsigned batch_size, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return interpolate_points_batch(d_out, d_evaluations, d_domain, n, batch_size); // TODO: pass device_id
@@ -293,6 +311,8 @@ extern "C" int interpolate_points_batch_cuda(projective_t* d_out, projective_t* 
 extern "C" int evaluate_scalars_cuda(scalar_t* d_out, scalar_t *d_coefficients, scalar_t *d_domain, 
                                      unsigned domain_size, unsigned n, unsigned device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_scalars(d_out, d_coefficients, d_domain, domain_size, n); // TODO: pass device_id
@@ -307,6 +327,8 @@ extern "C" int evaluate_scalars_cuda(scalar_t* d_out, scalar_t *d_coefficients, 
 extern "C" int evaluate_scalars_batch_cuda(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size,
                                            unsigned n, unsigned batch_size, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_scalars_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size); // TODO: pass device_id
@@ -321,6 +343,8 @@ extern "C" int evaluate_scalars_batch_cuda(scalar_t* d_out, scalar_t* d_coeffici
 extern "C" int evaluate_points_cuda(projective_t* d_out, projective_t *d_coefficients, scalar_t *d_domain, 
                                     unsigned domain_size, unsigned n, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_points(d_out, d_coefficients, d_domain, domain_size, n); // TODO: pass device_id
@@ -335,6 +359,8 @@ extern "C" int evaluate_points_cuda(projective_t* d_out, projective_t *d_coeffic
 extern "C" int evaluate_points_batch_cuda(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size,
                                           unsigned n, unsigned batch_size, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_points_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size); // TODO: pass device_id
@@ -349,6 +375,8 @@ extern "C" int evaluate_points_batch_cuda(projective_t* d_out, projective_t* d_c
 extern "C" int evaluate_scalars_on_coset_cuda(scalar_t* d_out, scalar_t *d_coefficients, scalar_t *d_domain, unsigned domain_size,
                                               unsigned n, scalar_t *coset_powers, unsigned device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_scalars_on_coset(d_out, d_coefficients, d_domain, domain_size, n, coset_powers); // TODO: pass device_id
@@ -363,6 +391,8 @@ extern "C" int evaluate_scalars_on_coset_cuda(scalar_t* d_out, scalar_t *d_coeff
 extern "C" int evaluate_scalars_on_coset_batch_cuda(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, 
                                                     unsigned n, unsigned batch_size, scalar_t *coset_powers, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_scalars_on_coset_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, coset_powers); // TODO: pass device_id
@@ -377,6 +407,8 @@ extern "C" int evaluate_scalars_on_coset_batch_cuda(scalar_t* d_out, scalar_t* d
 extern "C" int evaluate_points_on_coset_cuda(projective_t* d_out, projective_t *d_coefficients, scalar_t *d_domain, unsigned domain_size,
                                              unsigned n, scalar_t *coset_powers, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_points_on_coset(d_out, d_coefficients, d_domain, domain_size, n, coset_powers); // TODO: pass device_id
@@ -391,6 +423,8 @@ extern "C" int evaluate_points_on_coset_cuda(projective_t* d_out, projective_t *
 extern "C" int evaluate_points_on_coset_batch_cuda(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, 
                                                    unsigned n, unsigned batch_size, scalar_t *coset_powers, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         return evaluate_points_on_coset_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, coset_powers); // TODO: pass device_id
@@ -404,6 +438,8 @@ extern "C" int evaluate_points_on_coset_batch_cuda(projective_t* d_out, projecti
 
 extern "C" int reverse_order_scalars_cuda(scalar_t* arr, int n, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));
@@ -419,6 +455,8 @@ extern "C" int reverse_order_scalars_cuda(scalar_t* arr, int n, size_t device_id
 
 extern "C" int reverse_order_scalars_batch_cuda(scalar_t* arr, int n, int batch_size, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));
@@ -434,6 +472,8 @@ extern "C" int reverse_order_scalars_batch_cuda(scalar_t* arr, int n, int batch_
 
 extern "C" int reverse_order_points_cuda(projective_t* arr, int n, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));
@@ -449,6 +489,8 @@ extern "C" int reverse_order_points_cuda(projective_t* arr, int n, size_t device
 
 extern "C" int reverse_order_points_batch_cuda(projective_t* arr, int n, int batch_size, size_t device_id = 0)
 {
+    // TODO: use device_id when working with multiple devices
+    (void)device_id;
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));

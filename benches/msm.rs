@@ -2,9 +2,9 @@ extern crate criterion;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use icicle_utils::{set_up_scalars, generate_random_points, commit_batch, commit_batch_g2, get_rng, field::BaseField};
+use icicle_utils::{set_up_scalars, generate_random_points, commit_batch, get_rng, field::BaseField};
 #[cfg(feature = "g2")]
-use icicle_utils::field::ExtensionField;
+use icicle_utils::{commit_batch_g2, field::ExtensionField};
 
 use rustacuda::prelude::*;
 
