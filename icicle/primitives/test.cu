@@ -36,6 +36,7 @@ protected:
   scalar_field *res_scalars1{};
   scalar_field *res_scalars2{};
   scalar_field::wide *res_scalars_wide{};
+  scalar_field::wide *res_scalars_wide_full{};
 
   PrimitivesTest() {
     assert(!cudaDeviceReset());
@@ -52,6 +53,7 @@ protected:
     assert(!cudaMallocManaged(&res_scalars1, n * sizeof(scalar_field)));
     assert(!cudaMallocManaged(&res_scalars2, n * sizeof(scalar_field)));
     assert(!cudaMallocManaged(&res_scalars_wide, n * sizeof(scalar_field::wide)));
+    assert(!cudaMallocManaged(&res_scalars_wide_full, n * sizeof(scalar_field::wide)));
 
   }
 
@@ -70,6 +72,7 @@ protected:
     cudaFree(res_scalars2);
 
     cudaFree(res_scalars_wide);
+    cudaFree(res_scalars_wide_full);
 
     cudaDeviceReset();
   }
@@ -89,6 +92,7 @@ protected:
     ASSERT_EQ(cudaMemset(res_scalars2, 0, n * sizeof(scalar_field)), cudaSuccess);
     
     ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_field::wide)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars_wide_full, 0, n * sizeof(scalar_field::wide)), cudaSuccess);
   }
 };
 
@@ -273,15 +277,20 @@ TEST_F(PrimitivesTest, MP_LSB_MULT) {
   }
   std::cout << std::endl;
 
-  ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_field::wide)), cudaSuccess);
 
-  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
+  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
   std::cout << "GPU full mult output = 0x";
   for (int i=0; i<2*scalar_field::TLC; i++)
   {
-    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i];
+    std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i];
   }
   std::cout << std::endl;
+
+  for (int i=0; i<2*scalar_field::TLC; i++)
+  {
+    if (res_scalars_wide_full[0].limbs_storage.limbs[i] == res_scalars_wide[0].limbs_storage.limbs[i])
+    std::cout << "matched index = " << i << std::endl;
+  }
 
 }
 
