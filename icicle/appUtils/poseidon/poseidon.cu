@@ -1,9 +1,8 @@
 #include "poseidon.cuh"
 
-// Used in matrix multiplication
-extern __shared__ scalar_t shared_states[];
 
-__global__ void prepare_poseidon_states(scalar_t * inp, scalar_t * states, size_t number_of_states, scalar_t domain_tag, const PoseidonConfiguration config) {
+template <typename S>
+__global__ void prepare_poseidon_states(S * inp, S * states, size_t number_of_states, S domain_tag, const PoseidonConfiguration<S> config) {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     int state_number = idx / config.t;
     if (state_number >= number_of_states) {
@@ -11,7 +10,7 @@ __global__ void prepare_poseidon_states(scalar_t * inp, scalar_t * states, size_
     }
     int element_number = idx % config.t;
 
-    scalar_t prepared_element;
+    S prepared_element;
 
     // Domain separation
     if (element_number == 0) {
@@ -27,17 +26,19 @@ __global__ void prepare_poseidon_states(scalar_t * inp, scalar_t * states, size_
     states[idx] = prepared_element;
 }
 
-__device__ __forceinline__ scalar_t sbox_alpha_five(scalar_t element) {
-    scalar_t result = element * element;
-    result = result * result;
+template <typename S>
+__device__ __forceinline__ S sbox_alpha_five(S element) {
+    S result = S::sqr(element);
+    result = S::sqr(result);
     return result * element;
 }
 
-__device__ scalar_t vecs_mul_matrix(scalar_t element, scalar_t * matrix, int element_number, int vec_number, int size) {
+template <typename S>
+__device__ S vecs_mul_matrix(S element, S * matrix, int element_number, int vec_number, int size, S * shared_states) {
     shared_states[threadIdx.x] = element;
     __syncthreads();
 
-    element = scalar_t::zero();
+    element = S::zero();
     for (int i = 0; i < size; i++) {
         element = element + (shared_states[vec_number * size + i] * matrix[i * size + element_number]);
     }
@@ -45,25 +46,30 @@ __device__ scalar_t vecs_mul_matrix(scalar_t element, scalar_t * matrix, int ele
     return element;
 }
 
-__device__ scalar_t full_round(scalar_t element,
-                               size_t rc_offset,
-                               int local_state_number,
-                               int element_number,
-                               bool multiply_by_mds,
-                               bool add_round_constant,
-                               const PoseidonConfiguration config) {
+template <typename S>
+__device__ S full_round(S element,
+                        size_t rc_offset,
+                        int local_state_number,
+                        int element_number,
+                        bool multiply_by_mds,
+                        bool add_round_constant,
+                        S * shared_states,
+                        const PoseidonConfiguration<S> config) {
     element = sbox_alpha_five(element);
     if (add_round_constant) {
         element = element + config.round_constants[rc_offset + element_number];
     }
 
     // Multiply all the states by mds matrix
-    scalar_t * matrix = multiply_by_mds ? config.mds_matrix : config.non_sparse_matrix;
-    return vecs_mul_matrix(element, matrix, element_number, local_state_number, config.t);
+    S * matrix = multiply_by_mds ? config.mds_matrix : config.non_sparse_matrix;
+    return vecs_mul_matrix(element, matrix, element_number, local_state_number, config.t, shared_states);
 }
 
 // Execute full rounds
-__global__ void full_rounds(scalar_t * states, size_t number_of_states, size_t rc_offset, bool first_half, const PoseidonConfiguration config) {
+template <typename S>
+__global__ void full_rounds(S * states, size_t number_of_states, size_t rc_offset, bool first_half, const PoseidonConfiguration<S> config) {
+    extern __shared__ S shared_states[];
+
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     int state_number = idx / config.t;
     if (state_number >= number_of_states) {
@@ -79,6 +85,7 @@ __global__ void full_rounds(scalar_t * states, size_t number_of_states, size_t r
                                  element_number,
                                  true,
                                  true,
+                                 shared_states,
                                  config);
         rc_offset += config.t;
     }
@@ -89,18 +96,20 @@ __global__ void full_rounds(scalar_t * states, size_t number_of_states, size_t r
                              element_number,
                              !first_half,
                              first_half,
+                             shared_states,
                              config);
 }
 
-__device__ scalar_t partial_round(scalar_t * state,
+template <typename S>
+__device__ S partial_round(S * state,
                                   size_t rc_offset,
                                   int round_number,
-                                  const PoseidonConfiguration config) {
-    scalar_t element = state[0];
+                                  const PoseidonConfiguration<S> config) {
+    S element = state[0];
     element = sbox_alpha_five(element);
     element = element + config.round_constants[rc_offset];
 
-    scalar_t * sparse_matrix = &config.sparse_matrices[(config.t * 2 - 1) * round_number];
+    S * sparse_matrix = &config.sparse_matrices[(config.t * 2 - 1) * round_number];
 
     state[0] = element * sparse_matrix[0];
     for (int i = 1; i < config.t; i++) {
@@ -113,13 +122,14 @@ __device__ scalar_t partial_round(scalar_t * state,
 }
 
 // Execute partial rounds
-__global__ void partial_rounds(scalar_t * states, size_t number_of_states, size_t rc_offset, const PoseidonConfiguration config) {
+template <typename S>
+__global__ void partial_rounds(S * states, size_t number_of_states, size_t rc_offset, const PoseidonConfiguration<S> config) {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) {
         return;
     }
 
-    scalar_t * state = &states[idx * config.t];
+    S * state = &states[idx * config.t];
 
     for (int i = 0; i < config.partial_rounds; i++) {
         partial_round(state, rc_offset, i, config);
@@ -128,7 +138,8 @@ __global__ void partial_rounds(scalar_t * states, size_t number_of_states, size_
 }
 
 // These function is just doing copy from the states to the output
-__global__ void get_hash_results(scalar_t * states, size_t number_of_states, scalar_t * out, int t) {
+template <typename S>
+__global__ void get_hash_results(S * states, size_t number_of_states, S * out, int t) {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) {
         return;
@@ -137,16 +148,18 @@ __global__ void get_hash_results(scalar_t * states, size_t number_of_states, sca
     out[idx] = states[idx * t + 1];
 }
 
-#ifndef __CUDA_ARCH__
-void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, HashType hash_type) {
-    scalar_t * states, * inp_device;
+template <typename S>
+__host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, HashType hash_type) {
+    // Used in matrix multiplication
+
+    S * states, * inp_device;
 
     // allocate memory for {blocks} states of {t} scalars each
-    cudaMalloc(&states, blocks * this->t * sizeof(scalar_t));
+    cudaMalloc(&states, blocks * this->t * sizeof(S));
 
     // Move input to cuda
-    cudaMalloc(&inp_device, blocks * (this->t - 1) * sizeof(scalar_t));
-    cudaMemcpy(inp_device, inp, blocks * (this->t - 1) * sizeof(scalar_t), cudaMemcpyHostToDevice);
+    cudaMalloc(&inp_device, blocks * (this->t - 1) * sizeof(S));
+    cudaMemcpy(inp_device, inp, blocks * (this->t - 1) * sizeof(S), cudaMemcpyHostToDevice);
 
     size_t rc_offset = 0;
 
@@ -164,7 +177,7 @@ void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, 
     int number_of_singlehash_blocks = blocks / singlehash_block_size + static_cast<bool>(blocks % singlehash_block_size);
 
     // Pick the domain_tag accordinaly
-    scalar_t domain_tag;
+    S domain_tag;
     switch (hash_type) {
         case HashType::ConstInputLen:
             domain_tag = this->const_input_no_pad_domain_tag;
@@ -174,7 +187,7 @@ void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, 
             domain_tag = this->tree_domain_tag;
     }
 
-    #ifdef DEBUG
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
     auto start_time = std::chrono::high_resolution_clock::now();
     #endif
 
@@ -183,10 +196,10 @@ void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, 
     rc_offset += this->t;
     cudaFree(inp_device);
 
-    #ifdef DEBUG
-    cudaThreadSynchronize();
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceSynchronize();
     std::cout << "Domain separation: " << rc_offset << std::endl;
-    // print_buffer_from_cuda(states, blocks * this->t);
+    //print_buffer_from_cuda<S>(states, blocks * this->t);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -195,13 +208,13 @@ void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, 
     #endif
 
     // execute half full rounds
-    full_rounds <<< number_of_blocks, number_of_threads, sizeof(scalar_t) * hashes_per_block * this->t >>> (states, blocks, rc_offset, true, this->config);
+    full_rounds <<< number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t >>> (states, blocks, rc_offset, true, this->config);
     rc_offset += this->t * this->config.full_rounds_half;
 
-    #ifdef DEBUG
-    cudaThreadSynchronize();
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceSynchronize();
     std::cout << "Full rounds 1. RCOFFSET: " << rc_offset << std::endl;
-    // print_buffer_from_cuda(states, blocks * this->t);
+    //print_buffer_from_cuda<S>(states, blocks * this->t);
 
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -213,10 +226,10 @@ void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, 
     partial_rounds <<< number_of_singlehash_blocks, singlehash_block_size >>> (states, blocks, rc_offset, this->config);
     rc_offset += this->config.partial_rounds;
 
-    #ifdef DEBUG
-    cudaThreadSynchronize();
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceSynchronize();
     std::cout << "Partial rounds. RCOFFSET: " << rc_offset << std::endl;
-    // print_buffer_from_cuda(states, blocks * this->t);
+    //print_buffer_from_cuda<S>(states, blocks * this->t);
 
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -225,12 +238,12 @@ void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, 
     #endif
 
     // execute half full rounds
-    full_rounds <<< number_of_blocks, number_of_threads, sizeof(scalar_t) * hashes_per_block * this->t >>> (states, blocks, rc_offset, false, this->config);
+    full_rounds <<< number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t >>> (states, blocks, rc_offset, false, this->config);
 
-    #ifdef DEBUG
-    cudaThreadSynchronize();
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceSynchronize();
     std::cout << "Full rounds 2. RCOFFSET: " << rc_offset << std::endl;
-    // print_buffer_from_cuda(states, blocks * this->t);
+    //print_buffer_from_cuda<S>(states, blocks * this->t);
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "Elapsed time: " << elapsed_time.count() << " ms" << std::endl;
@@ -238,19 +251,22 @@ void Poseidon::hash_blocks(const scalar_t * inp, size_t blocks, scalar_t * out, 
     #endif
 
     // get output
-    scalar_t * out_device;
-    cudaMalloc(&out_device, blocks * sizeof(scalar_t));
+    S * out_device;
+    cudaMalloc(&out_device, blocks * sizeof(S));
     get_hash_results <<< number_of_singlehash_blocks, singlehash_block_size >>> (states, blocks, out_device, this->config.t);
 
-    #ifdef DEBUG
-    cudaThreadSynchronize();
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceSynchronize();
     std::cout << "Get hash results" << std::endl;
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "Elapsed time: " << elapsed_time.count() << " ms" << std::endl;
     #endif
-    cudaMemcpy(out, out_device, blocks * sizeof(scalar_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(out, out_device, blocks * sizeof(S), cudaMemcpyDeviceToHost);
     cudaFree(out_device);
     cudaFree(states);
+
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceReset();
+    #endif
 }
-#endif
