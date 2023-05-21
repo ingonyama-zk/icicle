@@ -2,12 +2,17 @@ package bn254
 
 import (
 	"encoding/binary"
+	"unsafe"
 )
 
 // #cgo CFLAGS: -I../../icicle/curves/bn254/
 // #cgo LDFLAGS: -L../../icicle/curves/bn254/ -lbn254
 // #include "c_api.h"
 import "C"
+
+/*
+ * FieldBN254
+ */
 
 type FieldBN254 struct {
 	// todo make 8 gloabl const
@@ -27,11 +32,6 @@ func NewFieldBN254Zero() *FieldBN254 {
 	return &field
 }
 
-type BaseFieldBN254 interface {
-	limbs() [8]uint32
-	toBytesLe() []byte
-}
-
 func (f *FieldBN254) limbs() [8]uint32 {
 	return f.s
 }
@@ -44,6 +44,10 @@ func (f *FieldBN254) toBytesLe() []byte {
 
 	return bytes
 }
+
+/*
+ * PointBN254
+ */
 
 type PointBN254 struct {
 	x, y, z FieldBN254
@@ -65,12 +69,33 @@ func NewPointBN254Infinity() *PointBN254 {
 	}
 }
 
-type BasePointBN254 interface {
-	eq(*PointBN254) bool
+func (p *PointBN254) eq(pCompare *PointBN254) bool {
+	// Cast *PointBN254 to *C.BN254_projective_t
+	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
+	// between different pointer types.
+	// It's your responsibility to ensure that the types are compatible.
+	pC := (*C.BN254_projective_t)(unsafe.Pointer(p))
+	pCompareC := (*C.BN254_projective_t)(unsafe.Pointer(pCompare))
+
+	// Call the C function
+	// The C function doesn't keep any references to the data,
+	// so it's fine if the Go garbage collector moves or deletes the data later.
+	return bool(C.eq_bn254(pC, pCompareC, 0))
 }
 
-func (p *PointBN254) eq(pCompare *PointBN254) bool {
-	return bool(C.eq_bn254(p, pCompare, 0))
+func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {
+	return &PointAffineNoInfinityBN254{
+		x: p.x,
+		y: p.y,
+	}
+}
+
+func PointBN254fromLimbs(x, y, z *[]uint32) *PointBN254 {
+	return &PointBN254{
+		x: FieldBN254{s: getFixedLimbs(x)},
+		y: FieldBN254{s: getFixedLimbs(y)},
+		z: FieldBN254{s: getFixedLimbs(z)},
+	}
 }
 
 type PointAffineNoInfinityBN254 struct {
@@ -99,13 +124,22 @@ func (p *PointAffineNoInfinityBN254) toProjective() *PointBN254 {
 	}
 }
 
-/**
-func (p *PointAffineNoInfinityBN254) fromLimbs(x, y *[]uint32) *PointAffineNoInfinityBN254 {
+func PointAffineNoInfinityBN254FromLimbs(x, y *[]uint32) *PointAffineNoInfinityBN254 {
 	return &PointAffineNoInfinityBN254{
-		x: FieldBN254{ s }
-		y:
+		x: FieldBN254{s: getFixedLimbs(x)},
+		y: FieldBN254{s: getFixedLimbs(y)},
 	}
 }
 
-func getFixedLimbs
-*/
+/*
+ * Utils
+ */
+
+func getFixedLimbs(slice *[]uint32) [8]uint32 {
+	if len(*slice) < 8 {
+		limbs := [8]uint32(*slice)
+		return limbs
+	}
+
+	panic("slice has too many elements")
+}

@@ -185,6 +185,7 @@ impl PointAffineNoInfinity_BN254 {
         }
     }
 
+
     pub fn limbs(&self) -> Vec<u32> {
         [self.x.limbs(), self.y.limbs()].concat()
     }
