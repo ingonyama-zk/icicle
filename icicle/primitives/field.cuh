@@ -561,7 +561,6 @@ template <class CONFIG> class Field {
         
       }
 
-      i = 7;
       odd[i - 1] =  ptx::mad_lo_cc(a[0], b[i], odd[i - 1]);
       odd[i] =      ptx::madc_hi_cc(a[0], b[i], odd[i]);
       // for loop carry in carry out  
@@ -589,6 +588,10 @@ template <class CONFIG> class Field {
         even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
       even[i + 1] = ptx::addc(even[i + 1], 0);
     }
+
+
+
+
       
 
     static DEVICE_INLINE void multiply_lsb_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
