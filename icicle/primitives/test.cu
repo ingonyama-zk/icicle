@@ -267,10 +267,9 @@ TEST_F(PrimitivesTest, ECMixedAdditionOfNegatedPointEqSubtraction) {
 }
 
 TEST_F(PrimitivesTest, MP_LSB_MULT) {
-
-
+  // LSB multiply, check correctness of first TLC + 1 digits result.
   ASSERT_EQ(mp_lsb_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
-  std::cout << "GPU lsb mult output  = 0x";
+  std::cout << "first GPU lsb mult output  = 0x";
   for (int i=0; i<2*scalar_field::TLC; i++)
   {
     std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i];
@@ -279,20 +278,84 @@ TEST_F(PrimitivesTest, MP_LSB_MULT) {
 
 
   ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
-  std::cout << "GPU full mult output = 0x";
+  std::cout << "first GPU full mult output = 0x";
   for (int i=0; i<2*scalar_field::TLC; i++)
   {
     std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i];
   }
   std::cout << std::endl;
+  for (int j = 0; j < n; j++)
+  {
+    for (int i=0; i<scalar_field::TLC + 1; i++)
+    {
+      ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
+    }
+  }
+}
 
-  for (int i=0; i<2*scalar_field::TLC; i++)
+TEST_F(PrimitivesTest, MP_MSB_MULT) {
+  // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
+  ASSERT_EQ(mp_msb_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
+  std::cout << "first GPU msb mult output  = 0x";
+  for (int i=2*scalar_field::TLC - 1; i >=0 ; i--)
+  {
+    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
+  }
+  std::cout << std::endl;
+
+
+  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
+  std::cout << "first GPU full mult output = 0x";
+  for (int i=2*scalar_field::TLC - 1; i >=0 ; i--)
+  {
+    std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
+  }
+
+  std::cout << std::endl;
+
+  for (int i=0; i < 2*scalar_field::TLC - 1; i++)
   {
     if (res_scalars_wide_full[0].limbs_storage.limbs[i] == res_scalars_wide[0].limbs_storage.limbs[i])
-    std::cout << "matched index = " << i << std::endl;
+        std::cout << "matched word idx = " << i << std::endl;
   }
 
 }
+
+TEST_F(PrimitivesTest, INGO_MP_MULT) {
+  // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
+  ASSERT_EQ(ingo_mp_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
+  std::cout << "INGO   = 0x";
+  for (int i=0; i < 2*scalar_field::TLC ; i++)
+  {
+    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
+  }
+  std::cout << std::endl;
+
+
+  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
+  std::cout << "ZKSYNC = 0x";
+  for (int i=0; i < 2*scalar_field::TLC ; i++)
+  {
+    std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
+  }
+
+  std::cout << std::endl;
+
+  for (int i=0; i < 2*scalar_field::TLC - 1; i++)
+  {
+    if (res_scalars_wide_full[0].limbs_storage.limbs[i] == res_scalars_wide[0].limbs_storage.limbs[i])
+        std::cout << "matched word idx = " << i << std::endl;
+  }
+  for (int j=0; j<n; j++)
+  {
+    for (int i=0; i < 2*scalar_field::TLC - 1; i++)
+    {
+      ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
+    }
+  }
+
+}
+
 
 
 int main(int argc, char **argv) {

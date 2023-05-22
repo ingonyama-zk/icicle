@@ -411,6 +411,14 @@ template <class CONFIG> class Field {
       }
     }
 
+    static DEVICE_INLINE void mul_n_msb(uint32_t *acc, const uint32_t *a, uint32_t bi, size_t n = TLC, size_t start_i = 0) {
+      #pragma unroll
+        for (size_t i = start_i; i < n; i += 2) {
+          acc[i] = ptx::mul_lo(a[i], bi);
+          acc[i + 1] = ptx::mul_hi(a[i], bi);
+        }
+      }
+
     static DEVICE_INLINE void cmad_n(uint32_t *acc, const uint32_t *a, uint32_t bi, size_t n = TLC) {
       // multiply scalar by vector
       // acc = acc + bi*A[::2]
@@ -423,6 +431,18 @@ template <class CONFIG> class Field {
       }
     }
 
+    static DEVICE_INLINE void cmad_n_msb(uint32_t *acc, const uint32_t *a, uint32_t bi, size_t n = TLC, size_t a_start_idx=0) {
+      // multiply scalar by vector
+      // acc = acc + bi*A[::2]
+      acc[a_start_idx] = ptx::mad_lo_cc(a[a_start_idx], bi, acc[a_start_idx]);
+      acc[a_start_idx + 1] = ptx::madc_hi_cc(a[a_start_idx], bi, acc[a_start_idx + 1]);
+  #pragma unroll
+      for (size_t i = a_start_idx + 2; i < n; i += 2) {
+        acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
+        acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
+      }
+    }
+
     static DEVICE_INLINE void mad_row(uint32_t *odd, uint32_t *even, const uint32_t *a, uint32_t bi, size_t n = TLC) {
       // odd = odd + bi*A
       // even = even + bi*A
@@ -430,6 +450,16 @@ template <class CONFIG> class Field {
       odd[n - 2] = ptx::madc_lo_cc(a[n - 1], bi, 0);
       odd[n - 1] = ptx::madc_hi(a[n - 1], bi, 0);
       cmad_n(even, a, bi, n);
+      odd[n - 1] = ptx::addc(odd[n - 1], 0);
+    }
+
+    static DEVICE_INLINE void mad_row_msb(uint32_t *odd, uint32_t *even, const uint32_t *a, uint32_t bi, size_t n = TLC, size_t a_start_idx = 0) {
+      // odd = odd + bi*A
+      // even = even + bi*A
+      cmad_n_msb(odd, a + 1, bi, n - 2, a_start_idx - 1);
+      odd[n - 2] = ptx::madc_lo_cc(a[n - 1], bi, 0);
+      odd[n - 1] = ptx::madc_hi(a[n - 1], bi, 0);
+      cmad_n_msb(even, a, bi, n, a_start_idx);
       odd[n - 1] = ptx::addc(odd[n - 1], 0);
     }
 
@@ -454,6 +484,113 @@ template <class CONFIG> class Field {
       even[i + 1] = ptx::addc(even[i + 1], 0);
     }
 
+    static DEVICE_INLINE void mult_no_carry(uint32_t a, uint32_t b, uint32_t *r) {
+      r[0] = ptx::mul_lo(a, b);
+      r[1] = ptx::mul_hi(a, b);
+    }
+
+    static DEVICE_INLINE void ingo_multiply_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
+      const uint32_t *a = as.limbs;
+      const uint32_t *b = bs.limbs;
+      uint32_t *r = rs.limbs;
+      uint32_t i, j;
+      uint32_t *even = rs.limbs;
+      __align__(8) uint32_t odd[2 * TLC];
+      for (uint32_t i = 0; i < 2 * TLC; i++)
+      {
+        even[i] = 0;
+        odd[i] = 0;
+      }
+      // first row special case, no carry in no carry out. split to non parts, even and odd.
+      for (i = 0; i < TLC - 1; i+=2 )
+      {
+        mult_no_carry(b[0], a[i], &even[i]);
+        mult_no_carry(b[0], a[i + 1], &odd[i]);
+      }
+
+      // doing two rows at one loop
+      for (i = 1; i < TLC - 1; i+=2)
+      {
+        // odd bi's 
+        // multiply accumulate even part of new row with odd part prev row (needs a carry)
+        // // j = 0, no carry in, only carry out
+        odd[i - 1] =  ptx::mad_lo_cc(a[0], b[i], odd[i - 1]);
+        odd[i] =      ptx::madc_hi_cc(a[0], b[i], odd[i]);
+        // for loop carry in carry out  
+        for (j = 2; j < TLC; j+=2) // 2, 4, 6
+        {
+          odd[i + j - 1] =  ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
+          odd[i + j] =      ptx::madc_hi_cc(a[j], b[i], odd[i + j]);  
+        }
+        odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
+
+        // multiply accumulate odd part of new row with even part prev row (doesnt need a carry)
+        // j = 1, no carry in, only carry out
+        even[i + 1] =  ptx::mad_lo_cc(a[1], b[i], even[i + 1]);
+        even[i + 2] =  ptx::madc_hi_cc(a[1], b[i], even[i + 2]);  
+        // for loop carry in carry out
+        for (j = 3; j < TLC; j+=2)
+        {
+          even[i + j] =  ptx::madc_lo_cc(a[j], b[i], even[i + j]);
+          even[i + j + 1] =      ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);  
+        }
+
+        // even bi's
+        // multiply accumulate even part of new row with even part of prev row // needs a carry
+        // j = 0, no carry in, only carry out
+        even[i + 1] = ptx::mad_lo_cc(a[0], b[i + 1], even[i + 1]);
+        even[i + 2] = ptx::madc_hi_cc(a[0], b[i + 1], even[i + 2]);  
+        // for loop, carry in, carry out.
+        for (j = 2; j < TLC; j+=2)
+        {
+          even[i + j + 1] = ptx::madc_lo_cc(a[j], b[i + 1], even[i + j + 1]);
+          even[i + j + 2] = ptx::madc_hi_cc(a[j], b[i + 1], even[i + j + 2]);  
+        }
+        even[i + j + 1] = ptx::addc(even[i + j + 1], 0); // handling last carry
+        
+        // multiply accumulate odd part of new row with odd part of prev row
+        // j = 1, no carry in, only carry out
+        odd[i + 1] = ptx::mad_lo_cc(a[1], b[i + 1], odd[i + 1]);
+        odd[i + 2] = ptx::madc_hi_cc(a[1], b[i + 1], odd[i + 2]);  
+        // for loop, carry in, carry out.
+        for (j = 3; j < TLC; j+=2)
+        {
+          odd[i + j]      = ptx::madc_lo_cc(a[j], b[i + 1], odd[i + j]);
+          odd[i + j + 1]  = ptx::madc_hi_cc(a[j], b[i + 1], odd[i + j + 1]);  
+        }
+        
+      }
+
+      i = 7;
+      odd[i - 1] =  ptx::mad_lo_cc(a[0], b[i], odd[i - 1]);
+      odd[i] =      ptx::madc_hi_cc(a[0], b[i], odd[i]);
+      // for loop carry in carry out  
+      for (j = 2; j < TLC; j+=2)
+      {
+        odd[i + j - 1] =  ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
+        odd[i + j] =      ptx::madc_hi_cc(a[j], b[i], odd[i + j]);  
+      }
+      odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
+
+      // multiply accumulate odd part of new row with even part prev row
+      // j = 1, no carry in, only carry out
+      even[i + 1] =  ptx::mad_lo_cc(a[1], b[i], even[i + 1]);
+      even[i + 2] =  ptx::madc_hi_cc(a[1], b[i], even[i + 2]);  
+      // for loop carry in carry out
+      for (j = 3; j < TLC; j+=2)
+      {
+        even[i + j] =  ptx::madc_lo_cc(a[j], b[i], even[i + j]);
+        even[i + j + 1] =      ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);  
+      }
+
+      // add even and odd parts
+      even[1] = ptx::add_cc(even[1], odd[0]);
+      for (i = 1; i < 2 * TLC - 2; i++)
+        even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+      even[i + 1] = ptx::addc(even[i + 1], 0);
+    }
+      
+
     static DEVICE_INLINE void multiply_lsb_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
       // r = a * b is correcrt for the first TLC + 1 digits. (not computing from TLC + 1 to 2*TLC - 2).
       const uint32_t *a = as.limbs;
@@ -477,13 +614,45 @@ template <class CONFIG> class Field {
       even[i + 1] = ptx::addc(even[i + 1], 0);
     }
 
+    static DEVICE_INLINE void multiply_msb_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
+      const uint32_t *a = as.limbs;
+      const uint32_t *b = bs.limbs;
+      uint32_t *even = rs.limbs;
+      __align__(8) uint32_t odd[2 * TLC - 2];
+      for (int i=0; i<2*TLC - 1; i++)
+      {
+        even[i] = 0;
+        odd[i] = 0;
+      }
+      uint32_t min_indexes_sum = TLC - 1;
+      // only diagonal
+      mul_n_msb(even, a, b[0], TLC, min_indexes_sum);
+      mul_n_msb(odd, a + 1, b[0], TLC, min_indexes_sum - 1);
+      mad_row_msb(&even[2], &odd[0], a, b[1], TLC, min_indexes_sum - 1);
+      size_t i;
+    #pragma unroll
+      for (i = 2; i < TLC - 1; i += 2) {
+        mad_row(&odd[i], &even[i], a, b[i]);
+        mad_row(&even[i + 2], &odd[i], a, b[i + 1]);
+      }
+      // merge |even| and |odd|
+      even[1] = ptx::add_cc(even[1], odd[0]);
+      for (i = 1; i < 2 * TLC - 2; i++)
+        even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+      even[i + 1] = ptx::addc(even[i + 1], 0);
+    }
+
+
+
+
+
     static HOST_INLINE void multiply_raw_host(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
       const uint32_t *a = as.limbs;
       const uint32_t *b = bs.limbs;
       uint32_t *r = rs.limbs;
       for (unsigned i = 0; i < TLC; i++) {
         uint32_t carry = 0;
-        for (unsigned j = 0; j < TLC; j++)
+        for (unsigned j = 0; j < TLC; j++) 
           r[j + i] = host_math::madc_cc(a[j], b[i], r[j + i], carry);
         r[TLC + i] = carry;
       }
