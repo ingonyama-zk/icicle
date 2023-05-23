@@ -23,10 +23,7 @@ fn main() {
     nvcc.debug(false);
     nvcc.flag(&arch);
     nvcc.files([
-        "./icicle/appUtils/vector_manipulation/ve_mod_mult.cu",
-        "./icicle/appUtils/ntt/lde.cu",
-        "./icicle/appUtils/msm/msm.cu",
-        "./icicle/primitives/projective.cu",
+        "./icicle/curves/index.cu",
     ]);
     nvcc.compile("ingo_icicle"); //TODO: extension??
 }

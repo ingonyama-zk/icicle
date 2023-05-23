@@ -1,3 +1,9 @@
+#ifndef MSM
+#define MSM
+#pragma once
+#include <stdexcept>
+#include <cuda.h>
+#include "../../primitives/affine.cuh"
 #include <iostream>
 #include <vector>
 #include <cub/device/device_radix_sort.cuh>
@@ -6,7 +12,6 @@
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
-#include "../../curves/curve_config.cuh"
 #include "msm.cuh"
 
 
