@@ -590,6 +590,117 @@ template <class CONFIG> class Field {
     }
 
 
+    static DEVICE_INLINE void ingo_msb_multiply_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
+      const uint32_t *a = as.limbs;
+      const uint32_t *b = bs.limbs;
+      uint32_t *r = rs.limbs;
+      uint32_t i, j;
+      uint32_t *even = rs.limbs;
+      __align__(8) uint32_t odd[2 * TLC];
+      for (uint32_t i = 0; i < 2 * TLC; i++)
+      {
+        even[i] = 0;
+        odd[i] = 0;
+      }
+      // only last element from first row.
+      mult_no_carry(b[0], a[TLC - 1], &odd[TLC - 2]);
+      
+      // doing two rows at one loop
+      #pragma unroll
+      for (i = 1; i < TLC - 1; i+=2)
+      {
+        const uint32_t first_active_j = TLC - 1 - i;
+        const uint32_t first_active_j_odd = first_active_j + (1 - (first_active_j % 2));
+        const uint32_t first_active_j_even = first_active_j + first_active_j % 2  ;
+        // odd bi's 
+        // multiply accumulate even part of new row with odd part prev row (needs a carry)
+        // j = 0, no carry in, only carry out
+        odd[first_active_j_even + i - 1] =  ptx::mad_lo_cc(a[first_active_j_even], b[i],  odd[first_active_j_even + i - 1]);
+        odd[first_active_j_even + i]     =  ptx::madc_hi_cc(a[first_active_j_even], b[i], odd[first_active_j_even + i]);
+        // for loop carry in carry out
+        #pragma unroll  
+        for (j = first_active_j_even + 2; j < TLC; j+=2)
+        {
+          odd[i + j - 1] =  ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
+          odd[i + j] =      ptx::madc_hi_cc(a[j], b[i], odd[i + j]);  
+        }
+        odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
+
+        // multiply accumulate odd part of new row with even part prev row (doesnt need a carry)
+        // j = 1, no carry in, only carry out
+        even[i + first_active_j_odd]      =  ptx::mad_lo_cc(a[first_active_j_odd], b[i], even[i + first_active_j_odd]);
+        even[i + first_active_j_odd + 1]  =  ptx::madc_hi_cc(a[first_active_j_odd], b[i], even[i + first_active_j_odd + 1]);  
+        // for loop carry in carry out
+        #pragma unroll
+        for (j = first_active_j_odd + 2; j < TLC; j+=2)
+        {
+          even[i + j] =  ptx::madc_lo_cc(a[j], b[i], even[i + j]);
+          even[i + j + 1] =      ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);  
+        }
+
+        // even bi's
+        uint32_t const first_active_j1 = TLC - 1 - (i + 1) ;
+        uint32_t const first_active_j_odd1 = first_active_j1 + (1 - (first_active_j1 % 2));  
+        uint32_t const first_active_j_even1 = first_active_j1 + first_active_j1 % 2;
+        // multiply accumulate even part of new row with even part of prev row // needs a carry
+        // j = 0, no carry in, only carry out
+        even[first_active_j_even1 + i + 1] = ptx::mad_lo_cc(a[first_active_j_even1], b[i + 1], even[first_active_j_even1 + i + 1]);
+        even[first_active_j_even1 + i + 2] = ptx::madc_hi_cc(a[first_active_j_even1], b[i + 1], even[first_active_j_even1 + i + 2]);  
+        // for loop, carry in, carry out.
+        #pragma unroll
+        for (j = first_active_j_even1 + 2; j < TLC; j+=2)
+        {
+          even[i + j + 1] = ptx::madc_lo_cc(a[j], b[i + 1], even[i + j + 1]);
+          even[i + j + 2] = ptx::madc_hi_cc(a[j], b[i + 1], even[i + j + 2]);  
+        }
+        even[i + j + 1] = ptx::addc(even[i + j + 1], 0); // handling last carry
+        
+        // multiply accumulate odd part of new row with odd part of prev row
+        // j = 1, no carry in, only carry out
+        odd[first_active_j_odd1 + i] = ptx::mad_lo_cc(a[first_active_j_odd1], b[i + 1], odd[first_active_j_odd1 + i]);
+        odd[first_active_j_odd1+ i + 1] = ptx::madc_hi_cc(a[first_active_j_odd1], b[i + 1], odd[first_active_j_odd1 + i + 1]);  
+        // for loop, carry in, carry out.
+        #pragma unroll
+        for (j = first_active_j_odd1 + 2; j < TLC; j+=2)
+        {
+          odd[i + j]      = ptx::madc_lo_cc(a[j], b[i + 1], odd[i + j]);
+          odd[i + j + 1]  = ptx::madc_hi_cc(a[j], b[i + 1], odd[i + j + 1]);  
+        }
+        
+      }
+
+      // last round, i = TLC - 1
+      odd[i - 1] =  ptx::mad_lo_cc(a[0], b[i], odd[i - 1]);
+      odd[i] =      ptx::madc_hi_cc(a[0], b[i], odd[i]);
+      // for loop carry in carry out
+      #pragma unroll  
+      for (j = 2; j < TLC; j+=2)
+      {
+        odd[i + j - 1] =  ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
+        odd[i + j] =      ptx::madc_hi_cc(a[j], b[i], odd[i + j]);  
+      }
+      odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
+
+      // multiply accumulate odd part of new row with even part prev row
+      // j = 1, no carry in, only carry out
+      even[i + 1] =  ptx::mad_lo_cc(a[1], b[i], even[i + 1]);
+      even[i + 2] =  ptx::madc_hi_cc(a[1], b[i], even[i + 2]);  
+      // for loop carry in carry out
+      #pragma unroll
+      for (j = 3; j < TLC; j+=2)
+      {
+        even[i + j] =  ptx::madc_lo_cc(a[j], b[i], even[i + j]);
+        even[i + j + 1] =      ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);  
+      }
+
+      // add even and odd parts
+      even[1] = ptx::add_cc(even[1], odd[0]);
+      #pragma unroll
+      for (i = 1; i < 2 * TLC - 2; i++)
+        even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+      even[i + 1] = ptx::addc(even[i + 1], 0);
+    }
+
 
 
       

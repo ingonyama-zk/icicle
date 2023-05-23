@@ -161,3 +161,17 @@ int ingo_mp_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *res
   int error = cudaGetLastError();
   return error ? error :  cudaDeviceSynchronize();
 }
+
+
+__global__ void ingo_mp_msb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  scalar_field::ingo_msb_multiply_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
+}
+
+
+int ingo_mp_msb_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result, const unsigned n)
+{
+  ingo_mp_msb_mult_kernel<<<1, n>>>(x, y, result);
+  int error = cudaGetLastError();
+  return error ? error :  cudaDeviceSynchronize();
+}
