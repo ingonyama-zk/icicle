@@ -21,19 +21,19 @@ int device_set(T* d_elements, T el, unsigned n) {
     return cudaMemcpy(d_elements, h_elements, sizeof(T) * n, cudaMemcpyHostToDevice);
 }
 
-mp::uint1024_t convert_to_boost_mp(uint32_t *a, uint32_t length)
+mp::int1024_t convert_to_boost_mp(uint32_t *a, uint32_t length)
 {
-  mp::uint1024_t res = 0;
+  mp::int1024_t res = 0;
   for (uint32_t i = 0; i < length; i++)
   {
-    res += (mp::uint1024_t)(a[i]) << 32 * i;
+    res += (mp::int1024_t)(a[i]) << 32 * i;
   }
   return res;
 }
 
 class PrimitivesTest : public ::testing::Test {
 protected:
-  static const unsigned n = 1 << 5;
+  static const unsigned n = 1 << 10;
 
   proj *points1{};
   proj *points2{};
@@ -401,10 +401,10 @@ TEST_F(PrimitivesTest, INGO_MP_MSB_MULT) {
   //   }
   // }
   // mp testing
-  mp::uint1024_t scalar_1_mp = 0;
-  mp::uint1024_t scalar_2_mp = 0;
-  mp::uint1024_t res_mp = 0;
-  mp::uint1024_t res_gpu = 0;
+  mp::int1024_t scalar_1_mp = 0;
+  mp::int1024_t scalar_2_mp = 0;
+  mp::int1024_t res_mp = 0;
+  mp::int1024_t res_gpu = 0;
   uint32_t num_limbs = scalar_field::TLC;
   
   for (int j=0; j<n; j++)
@@ -425,6 +425,38 @@ TEST_F(PrimitivesTest, INGO_MP_MSB_MULT) {
     
     
     ASSERT_EQ(in_bound, true);
+  }
+}
+
+TEST_F(PrimitivesTest, INGO_MP_MOD_MULT) {
+  std::cout  << " taking num limbs " <<  std::endl;
+  uint32_t num_limbs = scalar_field::TLC;
+  std::cout  << " calling gpu... = " <<  std::endl;
+  ASSERT_EQ(ingo_mp_mod_mult(scalars1, scalars2, res_scalars1, n), cudaSuccess);
+  std::cout  << " gpu call done " <<  std::endl;
+  // mp testing
+  mp::int1024_t scalar_1_mp = 0;
+  mp::int1024_t scalar_2_mp = 0;
+  mp::int1024_t res_mp = 0;
+  mp::int1024_t res_gpu = 0;
+  mp::int1024_t p = convert_to_boost_mp(scalar_field::get_modulus().limbs, num_limbs);
+  std::cout << " p = " << p << std::endl;
+  
+  
+  for (int j=0; j<n; j++)
+  {
+    uint32_t* scalar1_limbs = scalars1[j].limbs_storage.limbs;
+    uint32_t* scalar2_limbs = scalars2[j].limbs_storage.limbs;
+    scalar_1_mp = convert_to_boost_mp(scalar1_limbs, num_limbs);
+    scalar_2_mp = convert_to_boost_mp(scalar2_limbs, num_limbs);
+    // std::cout << " s1 = " << scalar_1_mp << std::endl;
+    // std::cout << " s2 = " << scalar_2_mp << std::endl;
+    res_mp = (scalar_1_mp * scalar_2_mp) % p;
+    res_gpu = convert_to_boost_mp((res_scalars1[j]).limbs_storage.limbs, num_limbs);
+    std::cout  << "res  mp = " << res_mp << std::endl;
+    std::cout << "res gpu = " << res_gpu << std::endl;
+    std::cout << "error = " << res_mp - res_gpu << std::endl;
+    ASSERT_EQ(res_gpu, res_mp);
   }
 }
 

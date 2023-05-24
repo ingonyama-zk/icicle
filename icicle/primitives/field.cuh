@@ -387,6 +387,14 @@ template <class CONFIG> class Field {
       return CARRY_OUT ? carry : 0;
     }
 
+    static constexpr HOST_INLINE uint32_t sub_limbs_partial_host(uint32_t* x, uint32_t* y, uint32_t* r, uint32_t num_limbs) {
+      uint32_t carry = 0;
+      host_math::carry_chain<2 * TLC, false, true> chain;
+      for (unsigned i = 0; i < num_limbs; i++)
+        r[i] = chain.sub(x[i], y[i], carry);
+      return carry;
+    }
+
     template <bool CARRY_OUT, typename T> static constexpr HOST_DEVICE_INLINE uint32_t add_limbs(const T &xs, const T &ys, T &rs) {
     #ifdef __CUDA_ARCH__
       return add_sub_limbs_device<false, CARRY_OUT>(xs, ys, rs);
@@ -780,6 +788,22 @@ template <class CONFIG> class Field {
     #endif
     }
 
+    static HOST_DEVICE_INLINE void multiply_raw_lsb(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
+      #ifdef __CUDA_ARCH__
+        return multiply_lsb_raw_device(as, bs, rs);
+      #else
+        return multiply_raw_host(as, bs, rs);
+      #endif
+      }
+
+      static HOST_DEVICE_INLINE void multiply_raw_msb(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
+        #ifdef __CUDA_ARCH__
+          return ingo_msb_multiply_raw_device(as, bs, rs);
+        #else
+          return multiply_raw_host(as, bs, rs);
+        #endif
+        }
+
   public:
     ff_storage limbs_storage;
 
@@ -851,20 +875,47 @@ template <class CONFIG> class Field {
       return rs;
     }
 
+    static constexpr DEVICE_INLINE uint32_t sub_limbs_partial_device(uint32_t *x, uint32_t *y, uint32_t *r, uint32_t num_limbs) {
+      r[0] = ptx::sub_cc(x[0], y[0]);
+      #pragma unroll
+      for (unsigned i = 1; i < num_limbs; i++)
+        r[i] = ptx::subc_cc(x[i], y[i]);
+      return ptx::subc(0, 0);
+    }
+
+    static constexpr HOST_DEVICE_INLINE uint32_t sub_limbs_partial(uint32_t *x, uint32_t *y, uint32_t *r, uint32_t num_limbs) {
+    #ifdef __CUDA_ARCH__
+      return sub_limbs_partial_device(x, y, r, num_limbs);
+    #else
+      return sub_limbs_partial_host(x, y, r, num_limbs);
+    #endif
+    }
+
     friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys) {
-      wide xy = mul_wide(xs, ys);
-      Field xy_hi = xy.get_higher_with_slack();
+      //printf("operator* called \n");
+      wide xy = mul_wide(xs, ys); // full mult
+      Field xy_hi = xy.get_higher_with_slack(); // xy << slack_bits
       wide l = {};
-      multiply_raw(xy_hi.limbs_storage, get_m(), l.limbs_storage);
+      multiply_raw_msb(xy_hi.limbs_storage, get_m(), l.limbs_storage);      // MSB mult
       Field l_hi = l.get_higher_with_slack();
       wide lp = {};
-      multiply_raw(l_hi.limbs_storage, get_modulus(), lp.limbs_storage);
-      wide r_wide = xy - lp;
+      multiply_raw_lsb(l_hi.limbs_storage, get_modulus(), lp.limbs_storage); // LSB mult
+      wide r_wide = xy - lp; 
       wide r_wide_reduced = {};
-      uint32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
-      r_wide = reduced ? r_wide : r_wide_reduced;
+      // uint32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
+      // r_wide = reduced ? r_wide : r_wide_reduced;
+      for (unsigned i = 0; i < TLC + 1; i++)
+      {
+        uint32_t carry = sub_limbs_partial(r_wide.limbs_storage.limbs, modulus_wide().limbs, r_wide_reduced.limbs_storage.limbs, TLC + 1);
+        if (carry == 0) // continue to reduce
+          r_wide = r_wide_reduced;
+        else // done
+            break;
+      }
+      
+      // number of wrap around is bounded by TLC +  1 times.
       Field r = r_wide.get_lower();
-      return reduce<1>(r);
+      return (r);
     }
 
     friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys) {
