@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
-project(icicle)
+cmake_minimum_required(VERSION 3.16)
 
 # GoogleTest requires at least C++14
 set(CMAKE_CXX_STANDARD 17)
@@ -9,9 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # add the target cuda architectures
 # each additional architecture increases the compilation time and output file size
 if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES 80)
+    set(CMAKE_CUDA_ARCHITECTURES native) # on 3.24+, on earlier it is ignored, and the target is not passed
 endif ()
-project(bellman-cuda LANGUAGES CUDA CXX)
+project(icicle LANGUAGES CUDA CXX)
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 set(CMAKE_CUDA_FLAGS_RELEASE "")

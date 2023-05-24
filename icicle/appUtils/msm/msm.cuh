@@ -1,10 +1,6 @@
+#ifndef MSM_H
+#define MSM_H
 #pragma once
-#include <stdexcept>
-#include <cuda.h>
-
-#include "../../primitives/projective.cuh"
-#include "../../primitives/affine.cuh"
-#include "../../curves/curve_config.cuh"
 
 template <typename S, typename P, typename A>
 void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned size, P* final_result, bool on_device);
@@ -23,3 +19,4 @@ void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool
 
 template <typename A, typename S, typename P>
 void reference_msm(S* scalars, A* a_points, unsigned size);
+#endif

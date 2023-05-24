@@ -23,8 +23,8 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
         - Affine: {x, y}
 - Curves
     - [BLS12-381]
-
-> NOTE: _Support for BN254 and BLS12-377 are planned_
+    - [BLS12-377]
+    - [BN254]
 
 ## Build and usage
 
@@ -41,7 +41,7 @@ nvcc -o build/<ENTER_DIR_NAME> ./icicle/appUtils/ntt/ntt.cu ./icicle/appUtils/ms
 
 ### Testing the CUDA code
 
-We are using [googletest] library for testing. To build and run the test suite for finite field and elliptic curve arithmetic, run from the `icicle` folder:
+We are using [googletest] library for testing. To build and run [the test suite](./icicle/README.md) for finite field and elliptic curve arithmetic, run from the `icicle` folder:
 
 ```sh
 mkdir -p build
@@ -89,6 +89,55 @@ The flag `--test-threads=1` is needed because currently some tests might interfe
 
 An example of using the Rust bindings library can be found in our [fast-danksharding implementation][FDI]
 
+### Supporting Additional Curves
+
+Supporting additional curves can be done as follows:
+
+Create a JSON file with the curve parameters. The curve is defined by the following parameters: 
+- ``curve_name`` - e.g. ``bls12_381``.
+- ``modolus_p`` - scalar field modolus (in decimal).
+- ``bit_count_p`` - number of bits needed to represent `` modolus_p`` .
+- ``limb_p`` - number of bytes needed to represent `` modolus_p``  (rounded).
+- ``ntt_size`` - log of the maximal size subgroup of the scalar field.    
+- ``modolus_q`` - base field modulus (in decimal).
+- ``bit_count_q`` - number of bits needed to represent `` modolus_q`` .
+- ``limb_q`` number of bytes needed to represent `` modolus_p``  (rounded).
+- ``weierstrass_b`` - Weierstrauss constant of the curve. 
+- ``gen_x`` - x-value of a generator element for the curve. 
+- ``gen_y`` - y-value of a generator element for the curve.
+
+Here's an example for BLS12-381.
+```
+{
+    "curve_name" : "bls12_381", 
+    "modolus_p" : 52435875175126190479447740508185965837690552500527637822603658699938581184513,
+    "bit_count_p" : 255,
+    "limb_p" :  8,
+    "ntt_size" : 32,
+    "modolus_q" : 4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787,
+    "bit_count_q" : 381,
+    "limb_q" : 12,
+    "weierstrass_b" : 4,
+    "gen_x" : 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507,
+    "gen_y" : 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569
+}
+```
+
+Save the parameters JSON file in ``curve_parameters``.
+
+Then run the Python script ``new_curve_script.py `` from the main icicle folder:
+
+```
+python3 ./curve_parameters/new_curve_script_rust.py ./curve_parameters/bls12_381.json
+```
+
+The script does the following:
+- Creates a folder in ``icicle/curves`` with the curve name, which contains all of the files needed for the supported operations in cuda.
+- Adds the curve exported operations to ``icicle/curves/index.cu``. 
+- Creates a file with the curve name in ``src/curves`` with the relevant objects for the curve. 
+- Creates a test file with the curve name in ``src``. 
+
+Testing the new curve could be done by running the tests in ``tests_curve_name`` (e.g. ``tests_bls12_381``).
 ## Contributions
 
 Join our [Discord Server](https://discord.gg/Y4SkbDf2Ff) and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.

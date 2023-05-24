@@ -1,7 +1,9 @@
+#ifndef LDE
+#define LDE
 #include <cuda.h>
 #include "ntt.cuh"
-#include "../vector_manipulation/ve_mod_mult.cuh"
 #include "lde.cuh"
+#include "../vector_manipulation/ve_mod_mult.cuh"
 
 
 /**
@@ -25,7 +27,7 @@ template <typename E, typename S> int interpolate_batch(E * d_out, E * d_evaluat
   }
 
   NUM_BLOCKS = (n * batch_size + NUM_THREADS - 1) / NUM_THREADS;
-  template_normalize_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS>>> (d_out, n * batch_size, scalar_t::inv_log_size(logn));
+  template_normalize_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS>>> (d_out, n * batch_size, S::inv_log_size(logn));
   return 0;
 }
 
@@ -65,13 +67,13 @@ int evaluate_batch(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_
   if (domain_size > n) {
     // allocate and initialize an array of stream handles to parallelize data copying across batches
     cudaStream_t *memcpy_streams = (cudaStream_t *) malloc(batch_size * sizeof(cudaStream_t));
-    for (int i = 0; i < batch_size; i++)
+    for (unsigned i = 0; i < batch_size; i++)
     {
       cudaStreamCreate(&(memcpy_streams[i]));
 
       cudaMemcpyAsync(&d_out[i * domain_size], &d_coefficients[i * n], n * sizeof(E), cudaMemcpyDeviceToDevice, memcpy_streams[i]);
-      int NUM_THREADS = MAX_THREADS_BATCH;
-      int NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
+      uint32_t NUM_THREADS = MAX_THREADS_BATCH;
+      uint32_t NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
       fill_array <E> <<<NUM_BLOCKS, NUM_THREADS, 0, memcpy_streams[i]>>> (&d_out[i * domain_size + n], E::zero(), domain_size - n);
 
       cudaStreamSynchronize(memcpy_streams[i]);
@@ -109,355 +111,72 @@ int evaluate(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_size, 
   return evaluate_batch <E, S> (d_out, d_coefficients, d_domain, domain_size, n, 1, coset, coset_powers);
 }
 
-int interpolate_scalars(scalar_t* d_out, scalar_t* d_evaluations, scalar_t* d_domain, unsigned n) {
+template <typename S> 
+int interpolate_scalars(S* d_out, S* d_evaluations, S* d_domain, unsigned n) {
   return interpolate(d_out, d_evaluations, d_domain, n);
 }
 
-int interpolate_scalars_batch(scalar_t* d_out, scalar_t* d_evaluations, scalar_t* d_domain, unsigned n, unsigned batch_size) {
+template <typename S> 
+int interpolate_scalars_batch(S* d_out, S* d_evaluations, S* d_domain, unsigned n, unsigned batch_size) {
   return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size);
 }
 
-int interpolate_points(projective_t* d_out, projective_t* d_evaluations, scalar_t* d_domain, unsigned n) {
+template <typename E, typename S> 
+int interpolate_points(E* d_out, E* d_evaluations, S* d_domain, unsigned n) {
   return interpolate(d_out, d_evaluations, d_domain, n);
 }
 
-int interpolate_points_batch(projective_t* d_out, projective_t* d_evaluations, scalar_t* d_domain, unsigned n, unsigned batch_size) {
+template <typename E, typename S> 
+int interpolate_points_batch(E* d_out, E* d_evaluations, S* d_domain, unsigned n, unsigned batch_size) {
   return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size);
 }
 
-int evaluate_scalars(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, unsigned n) {
-  scalar_t* _null = nullptr;
+template <typename S> 
+int evaluate_scalars(S* d_out, S* d_coefficients, S* d_domain, unsigned domain_size, unsigned n) {
+  S* _null = nullptr;
   return evaluate(d_out, d_coefficients, d_domain, domain_size, n, false, _null);
 }
 
-int evaluate_scalars_batch(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, unsigned n, unsigned batch_size) {
-  scalar_t* _null = nullptr;
+template <typename S> 
+int evaluate_scalars_batch(S* d_out, S* d_coefficients, S* d_domain, unsigned domain_size, unsigned n, unsigned batch_size) {
+  S* _null = nullptr;
   return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null);
 }
 
-int evaluate_points(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, unsigned n) {
-  scalar_t* _null = nullptr;
+template <typename E, typename S> 
+int evaluate_points(E* d_out, E* d_coefficients, S* d_domain, unsigned domain_size, unsigned n) {
+  S* _null = nullptr;
   return evaluate(d_out, d_coefficients, d_domain, domain_size, n, false, _null);
 }
 
-int evaluate_points_batch(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, 
+template <typename E, typename S> 
+int evaluate_points_batch(E* d_out, E* d_coefficients, S* d_domain, 
                           unsigned domain_size, unsigned n, unsigned batch_size) {
-  scalar_t* _null = nullptr;
+  S* _null = nullptr;
   return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null);
 }
 
-int evaluate_scalars_on_coset(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, 
-                              unsigned domain_size, unsigned n, scalar_t* coset_powers) {
+template <typename S> 
+int evaluate_scalars_on_coset(S* d_out, S* d_coefficients, S* d_domain, 
+                              unsigned domain_size, unsigned n, S* coset_powers) {
   return evaluate(d_out, d_coefficients, d_domain, domain_size, n, true, coset_powers);
 }
 
-int evaluate_scalars_on_coset_batch(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, 
-                                    unsigned n, unsigned batch_size, scalar_t* coset_powers) {
+template <typename E, typename S> 
+int evaluate_scalars_on_coset_batch(S* d_out, S* d_coefficients, S* d_domain, unsigned domain_size, 
+                                    unsigned n, unsigned batch_size, S* coset_powers) {
   return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers);
 }
 
-int evaluate_points_on_coset(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, 
-                             unsigned domain_size, unsigned n, scalar_t* coset_powers) {
+template <typename E, typename S> 
+int evaluate_points_on_coset(E* d_out, E* d_coefficients, S* d_domain, 
+                             unsigned domain_size, unsigned n, S* coset_powers) {
   return evaluate(d_out, d_coefficients, d_domain, domain_size, n, true, coset_powers);
 }
 
-int evaluate_points_on_coset_batch(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size,
-                                   unsigned n, unsigned batch_size, scalar_t* coset_powers) {
+template <typename E, typename S> 
+int evaluate_points_on_coset_batch(E* d_out, E* d_coefficients, S* d_domain, unsigned domain_size,
+                                   unsigned n, unsigned batch_size, S* coset_powers) {
   return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers);
 }
-
-extern "C" scalar_t* build_domain_cuda(uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0)
-{
-    try
-    {
-        if (inverse) {
-            return fill_twiddle_factors_array(domain_size, scalar_t::omega_inv(logn));
-        } else {
-            return fill_twiddle_factors_array(domain_size, scalar_t::omega(logn));
-        }
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return nullptr;
-    }
-}
-
-extern "C" int ntt_cuda(scalar_t *arr, uint32_t n, bool inverse, size_t device_id = 0)
-{
-    try
-    {
-        return ntt_end2end(arr, n, inverse); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        
-        return -1;        
-    }
-}
-
-extern "C" int ecntt_cuda(projective_t *arr, uint32_t n, bool inverse, size_t device_id = 0)
-{
-    try
-    {
-        return ecntt_end2end(arr, n, inverse); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int ntt_batch_cuda(scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0)
-{
-    try
-    {
-        return ntt_end2end_batch(arr, arr_size, batch_size, inverse); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int ecntt_batch_cuda(projective_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0)
-{
-    try
-    {
-        return ecntt_end2end_batch(arr, arr_size, batch_size, inverse); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int interpolate_scalars_cuda(scalar_t* d_out, scalar_t *d_evaluations, scalar_t *d_domain, unsigned n, unsigned device_id = 0)
-{
-    try
-    {
-        return interpolate_scalars(d_out, d_evaluations, d_domain, n); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int interpolate_scalars_batch_cuda(scalar_t* d_out, scalar_t* d_evaluations, scalar_t* d_domain, unsigned n,
-                                              unsigned batch_size, size_t device_id = 0)
-{
-    try
-    {
-        return interpolate_scalars_batch(d_out, d_evaluations, d_domain, n, batch_size); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int interpolate_points_cuda(projective_t* d_out, projective_t *d_evaluations, scalar_t *d_domain, unsigned n, size_t device_id = 0)
-{
-    try
-    {
-        return interpolate_points(d_out, d_evaluations, d_domain, n); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int interpolate_points_batch_cuda(projective_t* d_out, projective_t* d_evaluations, scalar_t* d_domain,
-                                             unsigned n, unsigned batch_size, size_t device_id = 0)
-{
-    try
-    {
-        return interpolate_points_batch(d_out, d_evaluations, d_domain, n, batch_size); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_scalars_cuda(scalar_t* d_out, scalar_t *d_coefficients, scalar_t *d_domain, 
-                                     unsigned domain_size, unsigned n, unsigned device_id = 0)
-{
-    try
-    {
-        return evaluate_scalars(d_out, d_coefficients, d_domain, domain_size, n); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_scalars_batch_cuda(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size,
-                                           unsigned n, unsigned batch_size, size_t device_id = 0)
-{
-    try
-    {
-        return evaluate_scalars_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_points_cuda(projective_t* d_out, projective_t *d_coefficients, scalar_t *d_domain, 
-                                    unsigned domain_size, unsigned n, size_t device_id = 0)
-{
-    try
-    {
-        return evaluate_points(d_out, d_coefficients, d_domain, domain_size, n); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_points_batch_cuda(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size,
-                                          unsigned n, unsigned batch_size, size_t device_id = 0)
-{
-    try
-    {
-        return evaluate_points_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_scalars_on_coset_cuda(scalar_t* d_out, scalar_t *d_coefficients, scalar_t *d_domain, unsigned domain_size,
-                                              unsigned n, scalar_t *coset_powers, unsigned device_id = 0)
-{
-    try
-    {
-        return evaluate_scalars_on_coset(d_out, d_coefficients, d_domain, domain_size, n, coset_powers); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_scalars_on_coset_batch_cuda(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, 
-                                                    unsigned n, unsigned batch_size, scalar_t *coset_powers, size_t device_id = 0)
-{
-    try
-    {
-        return evaluate_scalars_on_coset_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, coset_powers); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_points_on_coset_cuda(projective_t* d_out, projective_t *d_coefficients, scalar_t *d_domain, unsigned domain_size,
-                                             unsigned n, scalar_t *coset_powers, size_t device_id = 0)
-{
-    try
-    {
-        return evaluate_points_on_coset(d_out, d_coefficients, d_domain, domain_size, n, coset_powers); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int evaluate_points_on_coset_batch_cuda(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, 
-                                                   unsigned n, unsigned batch_size, scalar_t *coset_powers, size_t device_id = 0)
-{
-    try
-    {
-        return evaluate_points_on_coset_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, coset_powers); // TODO: pass device_id
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int reverse_order_scalars_cuda(scalar_t* arr, int n, size_t device_id = 0)
-{
-    try
-    {
-        uint32_t logn = uint32_t(log(n) / log(2));
-        reverse_order(arr, n, logn);
-        return 0;
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int reverse_order_scalars_batch_cuda(scalar_t* arr, int n, int batch_size, size_t device_id = 0)
-{
-    try
-    {
-        uint32_t logn = uint32_t(log(n) / log(2));
-        reverse_order_batch(arr, n, logn, batch_size);
-        return 0;
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int reverse_order_points_cuda(projective_t* arr, int n, size_t device_id = 0)
-{
-    try
-    {
-        uint32_t logn = uint32_t(log(n) / log(2));
-        reverse_order(arr, n, logn);
-        return 0;
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
-
-extern "C" int reverse_order_points_batch_cuda(projective_t* arr, int n, int batch_size, size_t device_id = 0)
-{
-    try
-    {
-        uint32_t logn = uint32_t(log(n) / log(2));
-        reverse_order_batch(arr, n, logn, batch_size);
-        return 0;
-    }
-    catch (const std::runtime_error &ex)
-    {
-        printf("error %s", ex.what());
-        return -1;
-    }
-}
+#endif

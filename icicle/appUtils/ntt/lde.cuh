@@ -1,31 +1,46 @@
+#ifndef LDE_H
+#define LDE_H
 #pragma once
 
+template <typename S> 
+int interpolate_scalars(S* d_out, S* d_evaluations, S* d_domain, unsigned n);
 
-int interpolate_scalars(scalar_t* d_out, scalar_t* d_evaluations, scalar_t* d_domain, unsigned n);
+template <typename S> 
+int interpolate_scalars_batch(S* d_out, S* d_evaluations, S* d_domain, unsigned n, unsigned batch_size);
 
-int interpolate_scalars_batch(scalar_t* d_out, scalar_t* d_evaluations, scalar_t* d_domain, unsigned n, unsigned batch_size);
+template <typename E, typename S> 
+int interpolate_points(E* d_out, E* d_evaluations, S* d_domain, unsigned n);
 
-int interpolate_points(projective_t* d_out, projective_t* d_evaluations, scalar_t* d_domain, unsigned n);
+template <typename E, typename S> 
+int interpolate_points_batch(E* d_out, E* d_evaluations, S* d_domain, unsigned n, unsigned batch_size);
 
-int interpolate_points_batch(projective_t* d_out, projective_t* d_evaluations, scalar_t* d_domain, unsigned n, unsigned batch_size);
+template <typename S> 
+int evaluate_scalars(S* d_out, S* d_coefficients, S* d_domain, unsigned domain_size, unsigned n);
 
-int evaluate_scalars(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, unsigned n);
+template <typename S> 
+int evaluate_scalars_batch(S* d_out, S* d_coefficients, S* d_domain, unsigned domain_size, unsigned n, unsigned batch_size);
 
-int evaluate_scalars_batch(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, unsigned n, unsigned batch_size);
+template <typename E, typename S> 
+int evaluate_points(E* d_out, E* d_coefficients, S* d_domain, unsigned domain_size, unsigned n);
 
-int evaluate_points(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, unsigned n);
-
-int evaluate_points_batch(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, 
+template <typename E, typename S> 
+int evaluate_points_batch(E* d_out, E* d_coefficients, S* d_domain, 
                           unsigned domain_size, unsigned n, unsigned batch_size);
 
-int evaluate_scalars_on_coset(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, 
-                              unsigned domain_size, unsigned n, scalar_t* coset_powers);
+template <typename S> 
+int evaluate_scalars_on_coset(S* d_out, S* d_coefficients, S* d_domain, 
+                              unsigned domain_size, unsigned n, S* coset_powers);
 
-int evaluate_scalars_on_coset_batch(scalar_t* d_out, scalar_t* d_coefficients, scalar_t* d_domain, unsigned domain_size, 
-                                    unsigned n, unsigned batch_size, scalar_t* coset_powers);
+template <typename S>                               
+int evaluate_scalars_on_coset_batch(S* d_out, S* d_coefficients, S* d_domain, unsigned domain_size, 
+                                    unsigned n, unsigned batch_size, S* coset_powers);
 
-int evaluate_points_on_coset(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, 
-                             unsigned domain_size, unsigned n, scalar_t* coset_powers);
+template <typename E, typename S> 
+int evaluate_points_on_coset(E* d_out, E* d_coefficients, S* d_domain, 
+                             unsigned domain_size, unsigned n, S* coset_powers);
 
-int evaluate_points_on_coset_batch(projective_t* d_out, projective_t* d_coefficients, scalar_t* d_domain, unsigned domain_size,
-                                   unsigned n, unsigned batch_size, scalar_t* coset_powers);
+template <typename E, typename S> 
+int evaluate_points_on_coset_batch(E* d_out, E* d_coefficients, S* d_domain, unsigned domain_size,
+                                   unsigned n, unsigned batch_size, S* coset_powers);
+
+#endif
