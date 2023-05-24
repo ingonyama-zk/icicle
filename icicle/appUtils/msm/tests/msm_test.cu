@@ -5,8 +5,9 @@
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
-#include "../../curves/curve_config.cuh"
+#include "../../curves/bls12_381/curve_config.cuh"
 
+using namespace BLS12_381;
 
 struct fake_point
 {
@@ -185,7 +186,7 @@ typedef affine_t test_affine;
 int main()
 {
   unsigned batch_size = 4;
-  unsigned msm_size = 1<<16;
+  unsigned msm_size = 1<<8;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
