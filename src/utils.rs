@@ -41,7 +41,7 @@ mod tests {
     fn test_u32_vec_to_u64_vec() {
         let arr_u32 = [1, 0x0fffffff, 3, 0x2fffffff, 5, 0x4fffffff, 7, 0x6fffffff];
 
-        let s = from_ark_transmute(BigInteger256::new(
+        let s = ScalarField::from_ark_transmute(BigInteger256::new(
             u32_vec_to_u64_vec(&arr_u32).try_into().unwrap(),
         ))
         .limbs();
