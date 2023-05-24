@@ -295,7 +295,14 @@ pub fn commit_batch_bls12_377(
     scalars: &mut DeviceBuffer<ScalarField_BLS12_377>,
     batch_size: usize,
 ) -> DeviceBuffer<Point_BLS12_377> {
-    let mut res = unsafe { DeviceBuffer::uninitialized(batch_size).unwrap() };
+    let res_unsafe = unsafe { DeviceBuffer::uninitialized(batch_size) };
+    let mut res = match res_unsafe {
+        Ok(buffer) => buffer,
+        Err(message) => {
+            println!("Couldnt allocate DeviceBuffer: {}", message);
+            panic!("WHOOOPS")
+        }
+    };
     unsafe {
         commit_batch_cuda_bls12_377(
             res.as_device_ptr(),

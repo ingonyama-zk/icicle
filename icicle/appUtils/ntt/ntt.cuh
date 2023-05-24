@@ -33,6 +33,7 @@ const uint32_t MAX_THREADS_BATCH = 256;
   S * d_twiddles;
   cudaMallocAsync(& d_twiddles, size_twiddles, stream);
   twiddle_factors_kernel<S> <<< 1, 1, 0, stream>>> (d_twiddles, n_twiddles, omega);
+  cudaStreamSynchronize(stream);
   return d_twiddles;
 }
 
@@ -193,6 +194,7 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
   }
   cudaMemcpyAsync(arrReversed, d_arrReversed, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arrReversed, stream);
+  cudaStreamSynchronize(stream);
   return arrReversed;
 }
 
@@ -216,8 +218,8 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
   for(int i = 0; i < n; i++){
     arr[i] = result[i]; 
   }
+  cudaFreeAsync(d_twiddles, stream);
   cudaStreamSynchronize(stream);
-  cudaFree(d_twiddles);
   return 0; // TODO add
 }
 
@@ -362,10 +364,10 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   NUM_BLOCKS = total_tasks;
 
   //TODO: this loop also can be unrolled
-  //TODO: use shared memory across streams; one stream per iteration
   for (uint32_t s = 0; s < logn; s++)
   {
     ntt_template_kernel<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s, false);
+    cudaStreamSynchronize(stream);
   }
   if (inverse == true)
   {
@@ -375,9 +377,8 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   }
   cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arr, stream);
-  // syncing stream before returning
+  cudaFreeAsync(d_twiddles, stream);
   cudaStreamSynchronize(stream);
-  cudaFree(d_twiddles);
   return 0; 
 }
 

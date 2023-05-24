@@ -28,6 +28,7 @@ template <typename E, typename S> int interpolate_batch(E * d_out, E * d_evaluat
 
   NUM_BLOCKS = (n * batch_size + NUM_THREADS - 1) / NUM_THREADS;
   template_normalize_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS, 0, stream>>> (d_out, n * batch_size, S::inv_log_size(logn));
+  cudaStreamSynchronize(stream);
   return 0;
 }
 
@@ -92,6 +93,7 @@ int evaluate_batch(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_
   {
     ntt_template_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_out, domain_size, d_domain, domain_size, batch_size * chunks, logn - s - 1, true);
   }
+  cudaStreamSynchronize(stream);
   return 0;
 }
 

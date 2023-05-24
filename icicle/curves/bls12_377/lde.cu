@@ -10,6 +10,7 @@ extern "C" BLS12_377::scalar_t* build_domain_cuda_bls12_377(uint32_t domain_size
 {
     try
     {
+        cudaStreamCreate(&stream);
         if (inverse) {
             return fill_twiddle_factors_array(domain_size, BLS12_377::scalar_t::omega_inv(logn), stream);
         } else {
@@ -27,6 +28,7 @@ extern "C" int ntt_cuda_bls12_377(BLS12_377::scalar_t *arr, uint32_t n, bool inv
 {
     try
     {
+        cudaStreamCreate(&stream);
         return ntt_end2end_template<BLS12_377::scalar_t,BLS12_377::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
@@ -41,6 +43,7 @@ extern "C" int ecntt_cuda_bls12_377(BLS12_377::projective_t *arr, uint32_t n, bo
 {
     try
     {
+        cudaStreamCreate(&stream);
         return ntt_end2end_template<BLS12_377::projective_t,BLS12_377::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
@@ -54,6 +57,7 @@ extern "C" int ntt_batch_cuda_bls12_377(BLS12_377::scalar_t *arr, uint32_t arr_s
 {
     try
     {
+        cudaStreamCreate(&stream);
         return ntt_end2end_batch_template<BLS12_377::scalar_t,BLS12_377::scalar_t>(arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
@@ -67,6 +71,7 @@ extern "C" int ecntt_batch_cuda_bls12_377(BLS12_377::projective_t *arr, uint32_t
 {
     try
     {
+        cudaStreamCreate(&stream);
         return ntt_end2end_batch_template<BLS12_377::projective_t,BLS12_377::scalar_t>(arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
@@ -94,6 +99,7 @@ extern "C" int interpolate_scalars_batch_cuda_bls12_377(BLS12_377::scalar_t* d_o
 {
     try
     {
+        cudaStreamCreate(&stream);
         return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
     }
     catch (const std::runtime_error &ex)
@@ -121,6 +127,7 @@ extern "C" int interpolate_points_batch_cuda_bls12_377(BLS12_377::projective_t* 
 {
     try
     {
+        cudaStreamCreate(&stream);
         return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
     }
     catch (const std::runtime_error &ex)
@@ -136,6 +143,7 @@ extern "C" int evaluate_scalars_cuda_bls12_377(BLS12_377::scalar_t* d_out, BLS12
     try
     {
         BLS12_377::scalar_t* _null = nullptr;
+        cudaStreamCreate(&stream);
         return evaluate(d_out, d_coefficients, d_domain, domain_size, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
@@ -151,6 +159,7 @@ extern "C" int evaluate_scalars_batch_cuda_bls12_377(BLS12_377::scalar_t* d_out,
     try
     {
         BLS12_377::scalar_t* _null = nullptr;
+        cudaStreamCreate(&stream);
         return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
@@ -166,6 +175,7 @@ extern "C" int evaluate_points_cuda_bls12_377(BLS12_377::projective_t* d_out, BL
     try
     {
         BLS12_377::scalar_t* _null = nullptr;
+        cudaStreamCreate(&stream);
         return evaluate(d_out, d_coefficients, d_domain, domain_size, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
@@ -181,6 +191,7 @@ extern "C" int evaluate_points_batch_cuda_bls12_377(BLS12_377::projective_t* d_o
     try
     {
         BLS12_377::scalar_t* _null = nullptr;
+        cudaStreamCreate(&stream);
         return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
@@ -195,6 +206,7 @@ extern "C" int evaluate_scalars_on_coset_cuda_bls12_377(BLS12_377::scalar_t* d_o
 {
     try
     {
+        cudaStreamCreate(&stream);
         return evaluate(d_out, d_coefficients, d_domain, domain_size, n, true, coset_powers, stream);
     }
     catch (const std::runtime_error &ex)
@@ -209,6 +221,7 @@ extern "C" int evaluate_scalars_on_coset_batch_cuda_bls12_377(BLS12_377::scalar_
 {
     try
     {
+        cudaStreamCreate(&stream);
         return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers, stream);
     }
     catch (const std::runtime_error &ex)
@@ -223,6 +236,7 @@ extern "C" int evaluate_points_on_coset_cuda_bls12_377(BLS12_377::projective_t* 
 {
     try
     {
+        cudaStreamCreate(&stream);
         return evaluate(d_out, d_coefficients, d_domain, domain_size, n, true, coset_powers, stream);
     }
     catch (const std::runtime_error &ex)
@@ -237,6 +251,7 @@ extern "C" int evaluate_points_on_coset_batch_cuda_bls12_377(BLS12_377::projecti
 {
     try
     {
+        cudaStreamCreate(&stream);
         return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers, stream);
     }
     catch (const std::runtime_error &ex)
@@ -251,6 +266,7 @@ extern "C" int reverse_order_scalars_cuda_bls12_377(BLS12_377::scalar_t* arr, in
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));
+        cudaStreamCreate(&stream);
         reverse_order(arr, n, logn, stream);
         return 0;
     }
@@ -266,6 +282,7 @@ extern "C" int reverse_order_scalars_batch_cuda_bls12_377(BLS12_377::scalar_t* a
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));
+        cudaStreamCreate(&stream);
         reverse_order_batch(arr, n, logn, batch_size, stream);
         return 0;
     }
@@ -281,6 +298,7 @@ extern "C" int reverse_order_points_cuda_bls12_377(BLS12_377::projective_t* arr,
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));
+        cudaStreamCreate(&stream);
         reverse_order(arr, n, logn, stream);
         return 0;
     }
@@ -296,6 +314,7 @@ extern "C" int reverse_order_points_batch_cuda_bls12_377(BLS12_377::projective_t
     try
     {
         uint32_t logn = uint32_t(log(n) / log(2));
+        cudaStreamCreate(&stream);
         reverse_order_batch(arr, n, logn, batch_size, stream);
         return 0;
     }
