@@ -185,8 +185,8 @@ typedef affine_t test_affine;
 
 int main()
 {
-  unsigned batch_size = 4;
-  unsigned msm_size = 1<<8;
+  unsigned batch_size = 8;
+  unsigned msm_size = 1<<15;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];

@@ -94,11 +94,17 @@ __global__ void accumulate_buckets_kernel(P *buckets, unsigned *bucket_offsets, 
   }
   unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
   unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid]&((1<<msm_idx_shift)-1));
+  // unsigned bucket_index = single_bucket_indices[tid];
   // unsigned bucket_size = bucket_sizes[tid];
   unsigned bucket_offset = bucket_offsets[tid];
-  // if (bucket_offset>(1<<16) * 26){
+  // if (bucket_index>(1<<12) * 22*4){
   //   printf("tid %u\n",tid);
-  //   printf("offset %u\n",bucket_offset);
+  //   printf("bucket_index %u\n",bucket_index);
+  //   return;
+  // } 
+  // if (bucket_offset>4 * 22*4){
+  //   printf("tid %u\n",tid);
+  //   printf("bucket_offset %u\n",bucket_offset);
   //   return;
   // } 
   for (unsigned i = 0; i < bucket_sizes[tid]; i++)  //add the relevant points starting from the relevant offset up to the bucket size
@@ -113,8 +119,8 @@ template <typename P>
 __global__ void big_triangle_sum_kernel(P* buckets, P* final_sums, unsigned nof_bms, unsigned c){
 
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid>nof_bms) return;
-  printf("%u",tid);
+  if (tid>=nof_bms) return;
+  // printf("%u",tid);
   P line_sum = buckets[(tid+1)*(1<<c)-1];
   final_sums[tid] = line_sum;
   for (unsigned i = (1<<c)-2; i >0; i--)
@@ -162,18 +168,18 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
 template <typename S, typename P, typename A>
 void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned size, P* final_result, bool on_device) {
   
-  std::cout<<"scalars"<<std::endl;
-  for (int i = 0; i < 20; i++)
-  {
-    std::cout<<scalars[i]<<" ";
-  }
-  std::cout<<std::endl;
-  std::cout<<"points"<<std::endl;
-  for (int i = 0; i < 20; i++)
-  {
-    std::cout<<points[i]<<" ";
-  }
-  std::cout<<std::endl;
+  // std::cout<<"scalars"<<std::endl;
+  // for (int i = 0; i < 20; i++)
+  // {
+  //   std::cout<<scalars[i]<<" ";
+  // }
+  // std::cout<<std::endl;
+  // std::cout<<"points"<<std::endl;
+  // for (int i = 0; i < 20; i++)
+  // {
+  //   std::cout<<points[i]<<" ";
+  // }
+  // std::cout<<std::endl;
 
   S *d_scalars;
   A *d_points;
@@ -205,6 +211,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, nof_buckets);
+  cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 
   unsigned *bucket_indices;
@@ -217,27 +224,27 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   NUM_BLOCKS = (size * (nof_bms+1) + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
                                                     nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
+                                                    cudaDeviceSynchronize();
                                                     printf("cuda error %u\n",cudaGetLastError());
-cudaDeviceSynchronize();
-  std::vector<unsigned> h_bucket_ind;
-  std::vector<unsigned> h_point_ind;
-  h_bucket_ind.reserve(size * (nof_bms+1));
-  h_point_ind.reserve(size * (nof_bms+1));
-  cudaMemcpy(h_bucket_ind.data(), bucket_indices, sizeof(unsigned) * size * (nof_bms+1), cudaMemcpyDeviceToHost);
-  cudaMemcpy(h_point_ind.data(), point_indices, sizeof(unsigned) * size * (nof_bms+1), cudaMemcpyDeviceToHost);
-    std::cout<<cudaGetLastError()<<std::endl;
-  std::cout<<"buckets inds"<<std::endl;
-  for (int i = 0; i < 20 * (nof_bms+1); i++)
-  {
-    std::cout<<h_bucket_ind[size+i]<<" ";
-  }
-  std::cout<<std::endl;
-  std::cout<<"points inds"<<std::endl;
-  for (int i = 0; i < 20 * (nof_bms+1); i++)
-  {
-    std::cout<<h_point_ind[size+i]<<" ";
-  }
-  std::cout<<std::endl;
+  // std::vector<unsigned> h_bucket_ind;
+  // std::vector<unsigned> h_point_ind;
+  // h_bucket_ind.reserve(size * (nof_bms+1));
+  // h_point_ind.reserve(size * (nof_bms+1));
+  // cudaMemcpy(h_bucket_ind.data(), bucket_indices, sizeof(unsigned) * size * (nof_bms+1), cudaMemcpyDeviceToHost);
+  // cudaMemcpy(h_point_ind.data(), point_indices, sizeof(unsigned) * size * (nof_bms+1), cudaMemcpyDeviceToHost);
+  //   std::cout<<cudaGetLastError()<<std::endl;
+  // std::cout<<"buckets inds"<<std::endl;
+  // for (int i = 0; i < size * (nof_bms+1); i++)
+  // {
+  //   std::cout<<h_bucket_ind[i]<<" ";
+  // }
+  // std::cout<<std::endl;
+  // std::cout<<"points inds"<<std::endl;
+  // for (int i = 0; i < size * (nof_bms+1); i++)
+  // {
+  //   std::cout<<h_point_ind[i]<<" ";
+  // }
+  // std::cout<<std::endl;
 
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sort_indices_temp_storage{};
@@ -291,19 +298,19 @@ cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
   cudaFree(offsets_temp_storage);
 
-  cudaDeviceSynchronize();
-  std::vector<P> h_buckets;
-    h_buckets.reserve(nof_buckets);
-      cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
-      // printf("buckets to compute %u",(*nof_buckets_to_compute));
-      // printf("buckets to compute %u",nof_buckets_to_compute[0]);
-      // std::cout<<nof_buckets_to_compute[0]<<std::endl;
-      std::cout<<"buckets"<<std::endl;
-      for (unsigned i = 0; i < (1<<c); i++)
-      {
-        std::cout<<h_buckets[i]<<" \n";
-      }
-      std::cout<<std::endl; 
+  // cudaDeviceSynchronize();
+  // std::vector<P> h_buckets;
+  //   h_buckets.reserve(nof_buckets);
+  //     cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
+  //     // printf("buckets to compute %u",(*nof_buckets_to_compute));
+  //     // printf("buckets to compute %u",nof_buckets_to_compute[0]);
+  //     // std::cout<<nof_buckets_to_compute[0]<<std::endl;
+  //     std::cout<<"buckets"<<std::endl;
+  //     for (unsigned i = 0; i < (1<<c); i++)
+  //     {
+  //       std::cout<<h_buckets[i]<<" \n";
+  //     }
+  //     std::cout<<std::endl; 
   //launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
@@ -312,15 +319,15 @@ cudaDeviceSynchronize();
                                                          
                                                          cudaDeviceSynchronize();
                                                          printf("cuda error %u\n",cudaGetLastError());
-  // std::vector<P> h_buckets;
-    // h_buckets.reserve(nof_buckets);
-      cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
-      std::cout<<"buckets accumulated"<<std::endl;
-      for (unsigned i = 0; i < (1<<c); i++)
-      {
-        std::cout<<h_buckets[i]<<" \n";
-      }
-      std::cout<<std::endl;                                                          
+  // // std::vector<P> h_buckets;
+  //   // h_buckets.reserve(nof_buckets);
+  //     cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
+  //     std::cout<<"buckets accumulated"<<std::endl;
+  //     for (unsigned i = 0; i < (1<<c); i++)
+  //     {
+  //       std::cout<<h_buckets[i]<<" \n";
+  //     }
+  //     std::cout<<std::endl;                                                          
 
   #ifdef SSM_SUM
     printf("???");
@@ -348,16 +355,16 @@ cudaDeviceSynchronize();
 
     cudaDeviceSynchronize();
     printf("cuda error %u\n",cudaGetLastError());
-    std::vector<P> h_final_results;
-    h_final_results.reserve(nof_bms);
-    cudaMemcpy(h_final_results.data(), final_results, sizeof(P) * nof_bms, cudaMemcpyDeviceToHost);
-    printf("cuda error %u\n",cudaGetLastError());
-    std::cout<<"buckets summed"<<std::endl;
-    for (unsigned i = 0; i < nof_bms; i++)
-    {
-      std::cout<<h_final_results[i]<<" ";
-    }
-    std::cout<<std::endl;
+    // std::vector<P> h_final_results;
+    // h_final_results.reserve(nof_bms);
+    // cudaMemcpy(h_final_results.data(), final_results, sizeof(P) * nof_bms, cudaMemcpyDeviceToHost);
+    // printf("cuda error %u\n",cudaGetLastError());
+    // std::cout<<"buckets summed"<<std::endl;
+    // for (unsigned i = 0; i < nof_bms; i++)
+    // {
+    //   std::cout<<h_final_results[i]<<" ";
+    // }
+    // std::cout<<std::endl;
   #endif
 
   P* d_final_result;
@@ -438,6 +445,27 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, 
                                                     msm_log_size, nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
 
+//  cudaDeviceSynchronize();
+//   std::vector<unsigned> h_bucket_ind;
+//   std::vector<unsigned> h_point_ind;
+//   h_bucket_ind.reserve(total_size * nof_bms + msm_size); //fix - remove extra msm size (not needed for sort)
+//   h_point_ind.reserve(total_size * nof_bms + msm_size);
+//   cudaMemcpy(h_bucket_ind.data(), bucket_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size), cudaMemcpyDeviceToHost);
+//   cudaMemcpy(h_point_ind.data(), point_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size), cudaMemcpyDeviceToHost);
+//   std::cout<<cudaGetLastError()<<std::endl;
+//   std::cout<<"batched buckets inds"<<std::endl;
+//   for (int i = 0; i < total_size * nof_bms + msm_size; i++)
+//   {
+//     std::cout<<(h_bucket_ind[i]&((1<<17)-1))<<" ";
+//   }
+//   std::cout<<std::endl;
+//   std::cout<<"batched points inds"<<std::endl;
+//   for (int i = 0; i < total_size * nof_bms + msm_size; i++)
+//   {
+//     std::cout<<(h_point_ind[i]&((1<<17)-1))<<" ";
+//   }
+//   std::cout<<std::endl;
+
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sorted_bucket_indices;
   unsigned *sorted_point_indices;
@@ -512,7 +540,19 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
     NUM_THREADS = 1<<8;
     NUM_BLOCKS = (nof_bms*batch_size + NUM_THREADS - 1) / NUM_THREADS;
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, nof_bms*batch_size, c);
+    cudaDeviceSynchronize();
     printf("triangle cuda error %u",cudaGetLastError());
+
+      //   cudaDeviceSynchronize();
+      // std::vector<P> h_final_sums;
+      // h_final_sums.reserve(nof_bms*batch_size);
+      // cudaMemcpy(h_final_sums.data(), bm_sums, sizeof(P) * nof_bms*batch_size, cudaMemcpyDeviceToHost);
+      // std::cout<<"buckets summed"<<std::endl;
+      // for (unsigned i = 0; i < nof_bms*batch_size; i++)
+      // {
+      //   std::cout<<h_final_sums[i]<<" ";
+      // }
+      // std::cout<<std::endl;
   #endif
 
   P* d_final_results;
@@ -523,6 +563,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   NUM_THREADS = 1<<8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   final_accumulation_kernel<P, S><<<NUM_BLOCKS,NUM_THREADS>>>(bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
+  cudaDeviceSynchronize();
   printf("final cuda error %u",cudaGetLastError());
 
   //copy final result to host
@@ -628,8 +669,8 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 unsigned get_optimal_c(const unsigned size) {
   if (size == 0)
     return 1;
-  return 10;
-  // return ceil(log2(size))-4;
+  // return 15;
+  return ceil(log2(size))-4;
 }
 
 //this function is used to compute msms of size larger than 256

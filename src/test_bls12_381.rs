@@ -929,7 +929,7 @@ pub(crate) mod tests_bls12_381 {
 
     #[test]
     fn test_batch_msm() {
-        for batch_pow2 in [4] {
+        for batch_pow2 in [4,8,16] {
             for pow2 in [15,16] {
                 let msm_size = 1 << pow2;
                 let batch_size = 1 << batch_pow2;
