@@ -45,6 +45,7 @@ int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments, cudaStream_
     cudaFreeAsync(d_vec_b, stream);
     cudaFreeAsync(d_result, stream);
 
+    cudaStreamSynchronize(stream);
     return 0;
 }
 
@@ -108,6 +109,7 @@ int matrix_mod_mult(E *matrix_elements, E *vector_elements, E *result, size_t di
     cudaFreeAsync(d_vector, stream);
     cudaFreeAsync(d_result, stream);
 
+    cudaStreamSynchronize(stream);
     return 0;
 }
 #endif
