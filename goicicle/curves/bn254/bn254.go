@@ -3,6 +3,9 @@ package bn254
 import (
 	"encoding/binary"
 	"unsafe"
+
+	"github.com/consensys/gnark-crypto/ecc/bn254"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 )
 
 // #cgo CFLAGS: -I../../../icicle/curves/bn254/
@@ -30,6 +33,12 @@ func NewFieldBN254Zero() *FieldBN254 {
 	var field FieldBN254
 
 	return &field
+}
+
+func FieldBN254FromGnark(arr64 [4]uint64) *FieldBN254 {
+	s := convertUint64ArrToUint32Arr(arr64)
+
+	return &FieldBN254{s}
 }
 
 func (f *FieldBN254) limbs() [8]uint32 {
@@ -62,11 +71,7 @@ func NewPointBN254Zero() *PointBN254 {
 }
 
 func NewPointBN254Infinity() *PointBN254 {
-	return &PointBN254{
-		x: *NewFieldBN254Zero(),
-		y: *NewFieldBN254One(),
-		z: *NewFieldBN254Zero(),
-	}
+	return NewPointBN254Zero()
 }
 
 func (p *PointBN254) eq(pCompare *PointBN254) bool {
@@ -87,6 +92,29 @@ func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {
 	return &PointAffineNoInfinityBN254{
 		x: p.x,
 		y: p.y,
+	}
+}
+
+// converts jac fromat to projective
+func PointBN254FromGnark(gnark *bn254.G1Jac) *PointBN254 {
+	// Initialize the pointers
+	z_inv := new(fp.Element)
+	z_invsq := new(fp.Element)
+	z_invq3 := new(fp.Element)
+	x := new(fp.Element)
+	y := new(fp.Element)
+
+	z_inv.Inverse(&gnark.Z)
+	z_invsq.Mul(z_inv, z_inv)
+	z_invq3.Mul(z_invsq, z_inv)
+
+	x.Mul(&gnark.X, z_invsq)
+	y.Mul(&gnark.Y, z_invq3)
+
+	return &PointBN254{
+		x: *FieldBN254FromGnark(*x),
+		y: *FieldBN254FromGnark(*y),
+		z: *NewFieldBN254One(),
 	}
 }
 
@@ -140,7 +168,7 @@ func PointAffineNoInfinityBN254FromLimbs(x, y *[]uint32) *PointAffineNoInfinityB
  */
 
 func getFixedLimbs(slice *[]uint32) [8]uint32 {
-	if len(*slice) < 8 {
+	if len(*slice) <= 8 {
 		limbs := [8]uint32(*slice)
 		return limbs
 	}

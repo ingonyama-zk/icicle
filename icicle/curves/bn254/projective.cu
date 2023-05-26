@@ -1,5 +1,4 @@
 #include <cuda.h>
-#include "c_api.h"
 #include "curve_config.cuh"
 #include "../../primitives/projective.cuh"
 
