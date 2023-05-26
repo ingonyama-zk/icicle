@@ -30,7 +30,7 @@ func TestFieldBN254FromGnark(t *testing.T) {
 
 	s := FieldBN254FromGnark(rand)
 
-	assert.Equal(t, s.limbs(), convertUint64ArrToUint32Arr(rand))
+	assert.Equal(t, s.limbs(), ConvertUint64ArrToUint32Arr(rand))
 }
 
 func TestFieldBN254GetLimbs(t *testing.T) {

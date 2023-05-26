@@ -36,7 +36,7 @@ func NewFieldBN254Zero() *FieldBN254 {
 }
 
 func FieldBN254FromGnark(arr64 [4]uint64) *FieldBN254 {
-	s := convertUint64ArrToUint32Arr(arr64)
+	s := ConvertUint64ArrToUint32Arr(arr64)
 
 	return &FieldBN254{s}
 }
