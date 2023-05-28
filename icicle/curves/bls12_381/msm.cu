@@ -12,13 +12,7 @@ int msm_cuda_bls12_381(BLS12_381::projective_t *out, BLS12_381::affine_t points[
 {
     try
     {
-        if (count>256){
-            large_msm<BLS12_381::scalar_t, BLS12_381::projective_t, BLS12_381::affine_t>(scalars, points, count, out, false);
-        }
-        else{
-            short_msm<BLS12_381::scalar_t, BLS12_381::projective_t, BLS12_381::affine_t>(scalars, points, count, out, false);
-        }
-
+        large_msm<BLS12_381::scalar_t, BLS12_381::projective_t, BLS12_381::affine_t>(scalars, points, count, out, false);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
