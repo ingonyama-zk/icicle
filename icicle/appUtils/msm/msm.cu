@@ -83,16 +83,17 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
 
 //this kernel adds up the points in each bucket
 template <typename P, typename A>
-__global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__restrict__ bucket_offsets,
-               unsigned *__restrict__ bucket_sizes, unsigned *__restrict__ single_bucket_indices, unsigned *__restrict__ point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
+// __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__restrict__ bucket_offsets,
+              //  unsigned *__restrict__ bucket_sizes, unsigned *__restrict__ single_bucket_indices, unsigned *__restrict__ point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
+__global__ void accumulate_buckets_kernel(P *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned *point_indices, A *points, unsigned nof_buckets, unsigned *nof_buckets_to_compute, unsigned msm_idx_shift){
   
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
-  unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid]&((1<<msm_idx_shift)-1));
-  unsigned bucket_size = bucket_sizes[tid];
-  if (tid>=nof_buckets*batch_size || bucket_size == 0){ //if the bucket is empty we don't need to continue
+  if (tid ==0) printf("nof buckets to comp: %u", *nof_buckets_to_compute);
+  if (tid>=*nof_buckets_to_compute){ 
     return;
   }
+  unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
+  unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid]&((1<<msm_idx_shift)-1));
   unsigned bucket_offset = bucket_offsets[tid];
   for (unsigned i = 0; i < bucket_sizes[tid]; i++)  //add the relevant points starting from the relevant offset up to the bucket size
   {
@@ -106,7 +107,8 @@ template <typename P>
 __global__ void big_triangle_sum_kernel(P* buckets, P* final_sums, unsigned nof_bms, unsigned c){
 
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid>nof_bms) return;
+  if (tid>=nof_bms) return;
+  // printf("%u",tid);
   P line_sum = buckets[(tid+1)*(1<<c)-1];
   final_sums[tid] = line_sum;
   for (unsigned i = (1<<c)-2; i >0; i--)
@@ -195,12 +197,13 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   NUM_BLOCKS = (size * (nof_bms+1) + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
                                                     nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
-
+  
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sort_indices_temp_storage{};
   size_t sort_indices_temp_storage_bytes;
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + size, bucket_indices,
                                  point_indices + size, point_indices, size);
+
   cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
   for (unsigned i = 0; i < nof_bms; i++) {
     unsigned offset_out = i * size;
@@ -240,7 +243,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, 
-                                                         d_points, nof_buckets, 1, c+bm_bitsize);
+                                                         d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize);                                              
 
   #ifdef SSM_SUM
     //sum each bucket
@@ -351,12 +354,6 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
                                  point_indices + msm_size, sorted_point_indices, total_size * nof_bms);
   cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
-  // for (unsigned i = 0; i < nof_bms*batch_size; i++) {
-  //   unsigned offset_out = i * msm_size;
-  //   unsigned offset_in = offset_out + msm_size;
-  //   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
-  //                                 bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, msm_size);
-  // }
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
                                  point_indices + msm_size, sorted_point_indices, total_size * nof_bms);
   cudaFree(sort_indices_temp_storage);
@@ -391,7 +388,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices,
-                                                        d_points, nof_buckets, batch_size, c+bm_bitsize);
+                                                        d_points, nof_buckets, total_nof_buckets_to_compute, c+bm_bitsize);
 
   #ifdef SSM_SUM
     //sum each bucket
@@ -424,7 +421,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   NUM_THREADS = 1<<8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   final_accumulation_kernel<P, S><<<NUM_BLOCKS,NUM_THREADS>>>(bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
-  
+
   //copy final result to host
   cudaDeviceSynchronize();
   if (!on_device)
@@ -461,8 +458,7 @@ __global__ void to_proj_kernel(A* affine_points, P* proj_points, unsigned N){
 
 //the function computes msm using ssm
 template <typename S, typename P, typename A>
-void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool on_device){ //works up to 2^8
-  
+void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result){ //works up to 2^8
   S *scalars;
   A *a_points;
   P *p_points;
@@ -507,12 +503,12 @@ void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool
 template <typename A, typename S, typename P>
 void reference_msm(S* scalars, A* a_points, unsigned size){
   
-  P points[size];
+  P *points = new P[size];
+  // P points[size];
   for (unsigned i = 0; i < size ; i++)
   {
     points[i] = P::from_affine(a_points[i]);
   }
-  
 
   P res = P::zero();
   
@@ -527,7 +523,10 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 }
 
 unsigned get_optimal_c(const unsigned size) {
-  return 10;
+  if (size < 17)
+    return 1;
+  // return 15;
+  return ceil(log2(size))-4;
 }
 
 //this function is used to compute msms of size larger than 256
