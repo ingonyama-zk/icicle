@@ -494,7 +494,7 @@ void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool
   sum_reduction_kernel<<<1,NUM_THREADS, 0, stream>>>(results, final_result);
 
   //copy result to host
-  cudaDeviceSynchronize();
+  cudaStreamSynchronize(stream);
   cudaMemcpyAsync(h_final_result, final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
 
   //free memory
