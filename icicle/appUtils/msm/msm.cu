@@ -107,7 +107,7 @@ template <typename P>
 __global__ void big_triangle_sum_kernel(P* buckets, P* final_sums, unsigned nof_bms, unsigned c){
 
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid>nof_bms) return;
+  if (tid >= nof_bms) return;
   P line_sum = buckets[(tid+1)*(1<<c)-1];
   final_sums[tid] = line_sum;
   for (unsigned i = (1<<c)-2; i >0; i--)
@@ -161,7 +161,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     //copy scalars and point to gpu
     cudaMallocAsync(&d_scalars, sizeof(S) * size, stream);
     cudaMallocAsync(&d_points, sizeof(A) * size, stream);
-    cudaMemcpyAsync(d_scalars, scalars, sizeof(5) * size, cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_scalars, scalars, sizeof(S) * size, cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_points, points, sizeof(A) * size, cudaMemcpyHostToDevice, stream);
   }
   else {
