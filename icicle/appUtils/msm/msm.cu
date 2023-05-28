@@ -667,7 +667,7 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 }
 
 unsigned get_optimal_c(const unsigned size) {
-  if (size == 0)
+  if (size < 17)
     return 1;
   // return 15;
   return ceil(log2(size))-4;
