@@ -88,7 +88,6 @@ template <typename P, typename A>
 __global__ void accumulate_buckets_kernel(P *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned *point_indices, A *points, unsigned nof_buckets, unsigned *nof_buckets_to_compute, unsigned msm_idx_shift){
   
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid ==0) printf("nof buckets to comp: %u", *nof_buckets_to_compute);
   if (tid>=*nof_buckets_to_compute){ 
     return;
   }
@@ -108,7 +107,6 @@ __global__ void big_triangle_sum_kernel(P* buckets, P* final_sums, unsigned nof_
 
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid>=nof_bms) return;
-  // printf("%u",tid);
   P line_sum = buckets[(tid+1)*(1<<c)-1];
   final_sums[tid] = line_sum;
   for (unsigned i = (1<<c)-2; i >0; i--)
