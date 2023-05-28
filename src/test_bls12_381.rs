@@ -892,45 +892,11 @@ pub(crate) mod tests_bls12_381 {
         }
     }
     
-    #[test]
-    fn test_msm_debug() {
-        let test_sizes = [15,16];
-
-        for pow2 in test_sizes {
-            let count = 1 << pow2;
-            let seed = None; // set Some to provide seed
-            let points = generate_random_points_bls12_381(count, get_rng_bls12_381(seed));
-            let scalars = generate_random_scalars_bls12_381(count, get_rng_bls12_381(seed));
-
-            let msm_result = msm_bls12_381(&points, &scalars, 0);
-
-            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
-            let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
-
-            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
-
-            println!("\n{:?}", pow2);
-            println!("\nark\n");
-            println!("{:?}", msm_result_ark);
-            println!("{:?}", Point_BLS12_381::from_ark(msm_result_ark).to_ark_affine());
-            println!("\nicicle\n");
-            println!("{:?}", msm_result);
-            println!("{:?}", msm_result.to_ark_affine());
-            println!("{:?}", msm_result.to_ark());
-
-            assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
-            assert_eq!(msm_result.to_ark(), msm_result_ark);
-            assert_eq!(
-                msm_result.to_ark_affine(),
-                Point_BLS12_381::from_ark(msm_result_ark).to_ark_affine()
-            );
-        }
-    }
 
     #[test]
     fn test_batch_msm() {
-        for batch_pow2 in [4,8,16] {
-            for pow2 in [15,16] {
+        for batch_pow2 in [2, 4] {
+            for pow2 in [4, 6] {
                 let msm_size = 1 << pow2;
                 let batch_size = 1 << batch_pow2;
                 let seed = None; // set Some to provide seed
@@ -952,32 +918,6 @@ pub(crate) mod tests_bls12_381 {
             }
         }
     }
-
-    // #[test]
-    // fn test_batch_msm() {
-    //     for batch_pow2 in [2, 4] {
-    //         for pow2 in [4, 6] {
-    //             let msm_size = 1 << pow2;
-    //             let batch_size = 1 << batch_pow2;
-    //             let seed = None; // set Some to provide seed
-    //             let points_batch = generate_random_points_bls12_381(msm_size * batch_size, get_rng_bls12_381(seed));
-    //             let scalars_batch = generate_random_scalars_bls12_381(msm_size * batch_size, get_rng_bls12_381(seed));
-
-    //             let point_r_ark: Vec<_> = points_batch.iter().map(|x| x.to_ark_repr()).collect();
-    //             let scalars_r_ark: Vec<_> = scalars_batch.iter().map(|x| x.to_ark()).collect();
-
-    //             let expected: Vec<_> = point_r_ark
-    //                 .chunks(msm_size)
-    //                 .zip(scalars_r_ark.chunks(msm_size))
-    //                 .map(|p| Point_BLS12_381::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
-    //                 .collect();
-
-    //             let result = msm_batch_bls12_381(&points_batch, &scalars_batch, batch_size, 0);
-
-    //             assert_eq!(result, expected);
-    //         }
-    //     }
-    // }
 
     #[test]
     fn test_commit() {
