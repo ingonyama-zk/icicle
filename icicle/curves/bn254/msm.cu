@@ -12,7 +12,6 @@ int msm_cuda_bn254(BN254::projective_t *out, BN254::affine_t points[],
 {
     try
     {
-        cudaStreamCreate(&stream);
         if (count>256){
             large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, stream);
         }
@@ -60,7 +59,6 @@ extern "C" int msm_batch_cuda_bn254(BN254::projective_t* out, BN254::affine_t po
  {
      try
      {
-        cudaStreamCreate(&stream);
          large_msm(d_scalars, d_points, count, d_out, true, stream);
          cudaStreamSynchronize(stream);
          return 0;

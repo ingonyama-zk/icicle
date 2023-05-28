@@ -12,7 +12,6 @@ int msm_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t *out, CURVE_NAME_U::affine_
 {
     try
     {
-        cudaStreamCreate(&stream);
         if (count>256){
             large_msm<CURVE_NAME_U::scalar_t, CURVE_NAME_U::projective_t, CURVE_NAME_U::affine_t>(scalars, points, count, out, false, stream);
         }
@@ -61,7 +60,6 @@ extern "C" int msm_batch_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t* out, CURV
  {
      try
      {
-        cudaStreamCreate(&stream);
          large_msm(d_scalars, d_points, count, d_out, true, stream);
          cudaStreamSynchronize(stream);
          return 0;
