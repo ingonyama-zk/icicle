@@ -1,9 +1,13 @@
 #pragma once
 
 #include <map>
+#include <stdexcept>
 #include <cassert>
-#include <fstream>
-#include <string>
+
+#include "constants/constants_2.h"
+#include "constants/constants_4.h"
+#include "constants/constants_8.h"
+#include "constants/constants_11.h"
 
 const std::map<uint, uint> ARITY_TO_ROUND_NUMBERS = {
     {2, 55},
@@ -23,22 +27,25 @@ static void get_round_numbers(const uint arity, uint * partial_rounds, uint * ha
     *half_full_rounds = FULL_ROUNDS_DEFAULT;
 }
 
-template <typename S>
-S * load_scalars_from_file(const std::string filepath) {
-    std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-    assert(file.is_open());
-
-    size_t size = file.tellg();
-    S * scalars = static_cast< S * >(malloc(size));
-    file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(scalars), size);
-    file.close();
-
-    return scalars;
-}
-
 // TO-DO: for now, the constants are only generated in bls12_381
 template <typename S>
 S * load_constants(const uint arity) {
-    return load_scalars_from_file<S>(std::string("constants/constants_") + std::to_string(arity));
+    unsigned char * constants;
+    switch (arity) {
+        case 2:
+            constants = constants_2;
+            break;
+        case 4:
+            constants = constants_4;
+            break;
+        case 8:
+            constants = constants_8;
+            break;
+        case 11:
+            constants = constants_11;
+            break;
+        default:
+            throw std::invalid_argument( "unsupported arity" );
+    }
+    return reinterpret_cast< S * >(constants);
 }

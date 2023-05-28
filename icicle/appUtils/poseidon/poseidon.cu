@@ -1,6 +1,5 @@
 #include "poseidon.cuh"
 
-
 template <typename S>
 __global__ void prepare_poseidon_states(S * inp, S * states, size_t number_of_states, S domain_tag, const PoseidonConfiguration<S> config) {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -199,7 +198,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     #if !defined(__CUDA_ARCH__) && defined(DEBUG)
     cudaDeviceSynchronize();
     std::cout << "Domain separation: " << rc_offset << std::endl;
-    //print_buffer_from_cuda<S>(states, blocks * this->t);
+    print_buffer_from_cuda<S>(states, blocks * this->t);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -214,7 +213,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     #if !defined(__CUDA_ARCH__) && defined(DEBUG)
     cudaDeviceSynchronize();
     std::cout << "Full rounds 1. RCOFFSET: " << rc_offset << std::endl;
-    //print_buffer_from_cuda<S>(states, blocks * this->t);
+    print_buffer_from_cuda<S>(states, blocks * this->t);
 
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -229,7 +228,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     #if !defined(__CUDA_ARCH__) && defined(DEBUG)
     cudaDeviceSynchronize();
     std::cout << "Partial rounds. RCOFFSET: " << rc_offset << std::endl;
-    //print_buffer_from_cuda<S>(states, blocks * this->t);
+    print_buffer_from_cuda<S>(states, blocks * this->t);
 
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -243,7 +242,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     #if !defined(__CUDA_ARCH__) && defined(DEBUG)
     cudaDeviceSynchronize();
     std::cout << "Full rounds 2. RCOFFSET: " << rc_offset << std::endl;
-    //print_buffer_from_cuda<S>(states, blocks * this->t);
+    print_buffer_from_cuda<S>(states, blocks * this->t);
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "Elapsed time: " << elapsed_time.count() << " ms" << std::endl;

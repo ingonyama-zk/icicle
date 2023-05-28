@@ -8,16 +8,18 @@
 #include <sstream>
 #include <chrono>
 
+#define ARITY 3
+
 template <typename S>
 __host__ void print_buffer_from_cuda(S * device_ptr, size_t size) {
   S * buffer = static_cast< S * >(malloc(size * sizeof(S)));
   cudaMemcpy(buffer, device_ptr, size * sizeof(S), cudaMemcpyDeviceToHost);
 
   std::cout << "Start print" << std::endl;
-  for(int i = 0; i < size / 9; i++) {
+  for(int i = 0; i < size / ARITY; i++) {
     std::cout << "State #" << i << std::endl;
-    for (int j = 0; j < 9; j++) {
-      std::cout << buffer[i * 9 + j] << std::endl;
+    for (int j = 0; j < ARITY; j++) {
+      std::cout << buffer[i * ARITY + j] << std::endl;
     }
     std::cout << std::endl;
   }
@@ -113,8 +115,6 @@ class Poseidon {
         cudaMemcpy(this->config.sparse_matrices, sparse_matrices_offset,
                 sizeof(S) * sparse_matrices_len,
                 cudaMemcpyHostToDevice);
-
-        free(constants);
     }
 
     ~Poseidon() {
