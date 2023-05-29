@@ -12,13 +12,7 @@ int msm_cuda_bn254(BN254::projective_t *out, BN254::affine_t points[],
 {
     try
     {
-        if (count>256){
-            large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false);
-        }
-        else{
-            short_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false);
-        }
-
+        large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)

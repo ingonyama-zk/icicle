@@ -4,6 +4,7 @@ use ark_bls12_381::{Fq as Fq_BLS12_381, Fr as Fr_BLS12_381, G1Affine as G1Affine
 
 use ark_ec::AffineCurve;
 use ark_ff::{BigInteger384, BigInteger256, PrimeField};
+use serde::{Serialize, Deserialize};
 use std::mem::transmute;
 use ark_ff::Field;
 use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}};
@@ -52,6 +53,25 @@ pub const SCALAR_LIMBS_BLS12_381: usize = 8;
 
 pub type BaseField_BLS12_381 = Field_BLS12_381<BASE_LIMBS_BLS12_381>;
 pub type ScalarField_BLS12_381 = Field_BLS12_381<SCALAR_LIMBS_BLS12_381>;
+
+impl Serialize for ScalarField_BLS12_381 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.s.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ScalarField_BLS12_381 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = <[u32; SCALAR_LIMBS_BLS12_381] as Deserialize<'de>>::deserialize(deserializer)?;
+        Ok(ScalarField_BLS12_381 { s })
+    }
+}
 
 fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
     match val.len() {
