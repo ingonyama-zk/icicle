@@ -1,6 +1,7 @@
 package bn254
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -69,5 +70,22 @@ func TestNttBatchBN254(t *testing.T) {
 		if !reflect.DeepEqual(nttResultVecOfVec[i], nttBatchResult[i*count:((i+1)*count)]) {
 			t.Errorf("ntt of vec of scalars not equal to intt of specific batch")
 		}
+	}
+}
+
+func BenchmarkNTT(b *testing.B) {
+	LOG_NTT_SIZES := []int{12, 15, 20, 21, 22, 23, 24, 25, 26}
+
+	for _, logNTTSize := range LOG_NTT_SIZES {
+		nttSize := 1 << logNTTSize
+		b.Run(fmt.Sprintf("NTT %d", logNTTSize), func(b *testing.B) {
+			scalars, _ := GenerateScalars(nttSize)
+
+			nttResult := make([]FieldBN254, len(scalars)) // Make a new slice with the same length
+			copy(nttResult, scalars)
+			for n := 0; n < b.N; n++ {
+				NttBN254(&nttResult, false, 0)
+			}
+		})
 	}
 }
