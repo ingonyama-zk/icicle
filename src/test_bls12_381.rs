@@ -732,7 +732,7 @@ pub fn clone_buffer_bls12_381<T: DeviceCopy>(buf: &mut DeviceBuffer<T>) -> Devic
     return buf_cpy;
 }
 
-pub fn get_rng_bls12_381(seed: Option<u64>) -> Box<dyn RngCore> {
+pub fn get_rng_bls12_381(seed: Option<u64>) -> Box<dyn RngCore> { //TODO: not curve specific
     let rng: Box<dyn RngCore> = match seed {
         Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
         None => Box::new(rand::thread_rng()),
