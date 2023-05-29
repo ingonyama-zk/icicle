@@ -17,4 +17,6 @@ void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device);
 template <typename S, typename P, typename A>
 void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool on_device);
 
+template <typename A, typename S, typename P>
+void reference_msm(S* scalars, A* a_points, unsigned size);
 #endif
