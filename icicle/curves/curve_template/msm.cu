@@ -12,14 +12,7 @@ int msm_cuda_CURVE_NAME_L(CURVE_NAME_U::projective_t *out, CURVE_NAME_U::affine_
 {
     try
     {
-        if (count>256){
-            large_msm<CURVE_NAME_U::scalar_t, CURVE_NAME_U::projective_t, CURVE_NAME_U::affine_t>(scalars, points, count, out, false, stream);
-        }
-        else{
-            short_msm<CURVE_NAME_U::scalar_t, CURVE_NAME_U::projective_t, CURVE_NAME_U::affine_t>(scalars, points, count, out, false, stream);
-        }
-        cudaStreamSynchronize(stream);
-
+        large_msm<CURVE_NAME_U::scalar_t, CURVE_NAME_U::projective_t, CURVE_NAME_U::affine_t>(scalars, points, count, out, false, stream);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)

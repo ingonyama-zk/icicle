@@ -15,6 +15,8 @@ template <typename S, typename P, typename A>
 void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, cudaStream_t stream);
 
 template <typename S, typename P, typename A>
-void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, bool on_device, cudaStream_t stream);
+void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, cudaStream_t stream);
 
+template <typename A, typename S, typename P>
+void reference_msm(S* scalars, A* a_points, unsigned size);
 #endif

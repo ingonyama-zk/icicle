@@ -12,14 +12,7 @@ int msm_cuda_bls12_377(BLS12_377::projective_t *out, BLS12_377::affine_t points[
 {
     try
     {
-        if (count>256){
-            large_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, count, out, false, stream);
-        }
-        else{
-            short_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, count, out, false, stream);
-        }
-        cudaStreamSynchronize(stream);
-
+        large_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, count, out, false, stream);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
