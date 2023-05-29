@@ -54,6 +54,7 @@ func TestFieldBN254ToBytesLe(t *testing.T) {
 	}
 
 	assert.Equal(t, f.toBytesLe(), expected)
+	assert.Equal(t, len(f.toBytesLe()), 32)
 }
 
 func TestNewPointBN254Zero(t *testing.T) {
@@ -188,10 +189,7 @@ func TestGetFixedLimbs(t *testing.T) {
 		expected := [8]uint32{1, 2, 3, 4, 5, 6, 7, 0}
 
 		result := getFixedLimbs(&slice)
-		assert.NotEqual(t, result, expected)
-		if result != expected {
-			t.Errorf("expected %v, got %v", expected, result)
-		}
+		assert.Equal(t, result, expected)
 	})
 
 	t.Run("case of valid input of length 8", func(t *testing.T) {
@@ -199,9 +197,7 @@ func TestGetFixedLimbs(t *testing.T) {
 		expected := [8]uint32{1, 2, 3, 4, 5, 6, 7, 8}
 
 		result := getFixedLimbs(&slice)
-		if result != expected {
-			t.Errorf("expected %v, got %v", expected, result)
-		}
+		assert.Equal(t, result, expected)
 	})
 
 	t.Run("case of empty input", func(t *testing.T) {
@@ -209,9 +205,7 @@ func TestGetFixedLimbs(t *testing.T) {
 		expected := [8]uint32{0, 0, 0, 0, 0, 0, 0, 0}
 
 		result := getFixedLimbs(&slice)
-		if result != expected {
-			t.Errorf("expected %v, got %v", expected, result)
-		}
+		assert.Equal(t, result, expected)
 	})
 
 	t.Run("case of input length greater than 8", func(t *testing.T) {

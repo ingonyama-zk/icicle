@@ -35,8 +35,8 @@ func NewFieldBN254One() *FieldBN254 {
 	return &FieldBN254{s}
 }
 
-func (f *FieldBN254) toBytesLe() [32]byte {
-	var bytes [32]byte
+func (f *FieldBN254) toBytesLe() []byte {
+	bytes := make([]byte, len(f.s)*4)
 	for i, v := range f.s {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)
 	}
@@ -186,7 +186,8 @@ func PointAffineNoInfinityBN254FromLimbs(x, y *[]uint32) *PointAffineNoInfinityB
 
 func getFixedLimbs(slice *[]uint32) [8]uint32 {
 	if len(*slice) <= 8 {
-		limbs := [8]uint32(*slice)
+		limbs := [8]uint32{}
+		copy(limbs[:len(*slice)], *slice)
 		return limbs
 	}
 
