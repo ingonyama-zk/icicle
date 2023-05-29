@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func randG1Projective() (bn254.G1Jac, error) {
+func randG1Jac() (bn254.G1Jac, error) {
 	var point bn254.G1Jac
 	var scalar fr.Element
 
@@ -39,10 +39,9 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 
 	// Use a loop to populate the slice
 	for i := 0; i < count; i++ {
-		gnarkP, _ := randG1Projective()
+		gnarkP, _ := randG1Jac()
 		var pointAffine bn254.G1Affine
-		pointAffine.X.Set(&gnarkP.X)
-		pointAffine.Y.Set(&gnarkP.X)
+		pointAffine.FromJacobian(&gnarkP)
 
 		p := PointBN254FromGnark(&gnarkP).strip_z()
 
@@ -85,11 +84,10 @@ func TestMSM(t *testing.T) {
 
 		assert.Equal(t, e, nil, "error should be nil")
 
-		var bb bn254.G1Jac
+		var bn254AffineLib bn254.G1Affine
 
-		a1, _ := bb.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
-		assert.Equal(t, PointBN254FromGnark(a1), a, "lord helpme")
-
+		a1, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
+		assert.Equal(t, a.toGnarkAffine(), a1)
 	}
 }
 
@@ -113,12 +111,25 @@ func TestBenchMSM(t *testing.T) {
 			if len(a) != batchSize {
 				t.Errorf("Expected length %d, but got %d", batchSize, len(a))
 			}
+		}
+	}
+}
 
-			for _, point := range a {
-				if point == nil {
-					fmt.Printf("Point %d: is nil!\n ", point)
+func BenchmarkMSM(b *testing.B) {
+	LOG_MSM_SIZES := []int{20, 21, 22, 23, 24, 25, 26}
+
+	for _, logMsmSize := range LOG_MSM_SIZES {
+		msmSize := 1 << logMsmSize
+		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
+			points, _ := GeneratePoints(msmSize)
+			scalars, _ := GenerateScalars(msmSize)
+			for n := 0; n < b.N; n++ {
+				_, e := MsmBN254(points, scalars, 0)
+
+				if e != nil {
+					panic("Error occured")
 				}
 			}
-		}
+		})
 	}
 }

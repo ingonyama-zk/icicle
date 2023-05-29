@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/stretchr/testify/assert"
 
@@ -86,7 +87,7 @@ func TestBN254StripZ(t *testing.T) {
 }
 
 func TestPointBN254FromGnark(t *testing.T) {
-	gnarkP, _ := randG1Projective()
+	gnarkP, _ := randG1Jac()
 
 	p := PointBN254FromGnark(&gnarkP)
 
@@ -109,7 +110,7 @@ func TestPointBN254FromGnark(t *testing.T) {
 }
 
 func TestPointBN254fromLimbs(t *testing.T) {
-	gnarkP, _ := randG1Projective()
+	gnarkP, _ := randG1Jac()
 	p := PointBN254FromGnark(&gnarkP)
 
 	x := p.x.limbs()
@@ -133,7 +134,7 @@ func TestNewPointAffineNoInfinityBN254Zero(t *testing.T) {
 }
 
 func TestPointAffineNoInfinityBN254GetLimbs(t *testing.T) {
-	gnarkP, _ := randG1Projective()
+	gnarkP, _ := randG1Jac()
 	p := PointBN254FromGnark(&gnarkP).strip_z()
 	sliceX := p.x.limbs()
 	sliceY := p.y.limbs()
@@ -142,7 +143,7 @@ func TestPointAffineNoInfinityBN254GetLimbs(t *testing.T) {
 }
 
 func TestPointAffineNoInfinityBN254ToProjective(t *testing.T) {
-	gnarkP, _ := randG1Projective()
+	gnarkP, _ := randG1Jac()
 	affine := PointBN254FromGnark(&gnarkP).strip_z()
 	proj := affine.toProjective()
 
@@ -169,12 +170,25 @@ func TestPointAffineNoInfinityBN254FromLimbs(t *testing.T) {
 	assert.Equal(t, result, expected)
 }
 
+func TestToGnarkAffine(t *testing.T) {
+	gJac, _ := randG1Jac()
+	proj := PointBN254FromGnark(&gJac)
+
+	var gAffine bn254.G1Affine
+	gAffine.FromJacobian(&gJac)
+
+	affine := *proj.toGnarkAffine()
+
+	assert.Equal(t, affine, gAffine)
+}
+
 func TestGetFixedLimbs(t *testing.T) {
 	t.Run("case of valid input of length less than 8", func(t *testing.T) {
 		slice := []uint32{1, 2, 3, 4, 5, 6, 7}
 		expected := [8]uint32{1, 2, 3, 4, 5, 6, 7, 0}
 
 		result := getFixedLimbs(&slice)
+		assert.NotEqual(t, result, expected)
 		if result != expected {
 			t.Errorf("expected %v, got %v", expected, result)
 		}

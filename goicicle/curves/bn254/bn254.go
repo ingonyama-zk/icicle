@@ -22,6 +22,12 @@ type FieldBN254 struct {
 	s [8]uint32
 }
 
+func NewFieldBN254Zero() *FieldBN254 {
+	var field FieldBN254
+
+	return &field
+}
+
 func NewFieldBN254One() *FieldBN254 {
 	var s [8]uint32
 	s[0] = 1
@@ -29,29 +35,32 @@ func NewFieldBN254One() *FieldBN254 {
 	return &FieldBN254{s}
 }
 
-func NewFieldBN254Zero() *FieldBN254 {
-	var field FieldBN254
+func (f *FieldBN254) toBytesLe() [32]byte {
+	var bytes [32]byte
+	for i, v := range f.s {
+		binary.LittleEndian.PutUint32(bytes[i*4:], v)
+	}
 
-	return &field
-}
-
-func FieldBN254FromGnark(arr64 [4]uint64) *FieldBN254 {
-	s := ConvertUint64ArrToUint32Arr(arr64)
-
-	return &FieldBN254{s}
+	return bytes
 }
 
 func (f *FieldBN254) limbs() [8]uint32 {
 	return f.s
 }
 
-func (f *FieldBN254) toBytesLe() []byte {
-	bytes := make([]byte, len(f.s)*4) // each uint32 takes 4 bytes
-	for i, v := range f.s {
-		binary.LittleEndian.PutUint32(bytes[i*4:], v)
-	}
+func (f *FieldBN254) toGnark() *fp.Element {
+	s := ConvertUint32ArrToUint64Arr(f.limbs())
+	element := fp.Element(s)
 
-	return bytes
+	var v fp.Element
+	v.Set(&element)
+
+	return &v
+}
+
+func FieldBN254FromGnark(arr64 [4]uint64) *FieldBN254 {
+	s := ConvertUint64ArrToUint32Arr(arr64)
+	return &FieldBN254{s}
 }
 
 /*
@@ -93,6 +102,10 @@ func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {
 		x: p.x,
 		y: p.y,
 	}
+}
+
+func (p *PointBN254) toGnarkAffine() *bn254.G1Affine {
+	return &bn254.G1Affine{X: *p.x.toGnark(), Y: *p.y.toGnark()}
 }
 
 // converts jac fromat to projective
@@ -154,6 +167,10 @@ func (p *PointAffineNoInfinityBN254) toProjective() *PointBN254 {
 		y: p.y,
 		z: *NewFieldBN254One(),
 	}
+}
+
+func (p *PointAffineNoInfinityBN254) toGnarkAffine() *bn254.G1Affine {
+	return p.toProjective().toGnarkAffine()
 }
 
 func PointAffineNoInfinityBN254FromLimbs(x, y *[]uint32) *PointAffineNoInfinityBN254 {
