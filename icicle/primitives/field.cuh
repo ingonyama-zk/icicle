@@ -5,6 +5,9 @@
 #include "../utils/host_math.cuh"
 #include <random>
 #include <iostream>
+#include <iomanip>
+#include <string>
+#include <sstream>
 
 #define HOST_INLINE __host__ __forceinline__
 #define DEVICE_INLINE __device__ __forceinline__
@@ -21,6 +24,15 @@ template <class CONFIG> class Field {
 
     static constexpr HOST_DEVICE_INLINE Field one() {
       return Field { CONFIG::one };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field from(uint32_t value) {
+      storage<TLC> scalar;
+      scalar.limbs[0] = value;
+      for (int i = 1; i < TLC; i++) {
+        scalar.limbs[i] = 0;
+      }
+      return Field { scalar };
     }
 
     static constexpr HOST_DEVICE_INLINE Field generator_x() {
@@ -523,10 +535,14 @@ template <class CONFIG> class Field {
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Field& xs) {
-      os << "{";
-      for (int i = 0; i < TLC; i++)
-        os << xs.limbs_storage.limbs[i] << ", ";
-      os << "}";
+      std::stringstream hex_string;
+      hex_string << std::hex << std::setfill('0');
+
+      for (int i = 0; i < TLC; i++) {
+          hex_string << std::setw(8) << xs.limbs_storage.limbs[i];
+      }
+
+      os << "0x" << hex_string.str();
       return os;
     }
 
