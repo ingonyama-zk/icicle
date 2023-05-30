@@ -25,25 +25,25 @@ func NttBatchBN254(scalars *[]FieldBN254, isInverse bool, batchSize, deviceId in
 	return uint64(ret)
 }
 
-func EcNttBN254(scalars *[]FieldBN254, isInverse bool, deviceId int) uint64 {
-	scalarsC := (*C.BN254_projective_t)(unsafe.Pointer(&(*scalars)[0]))
+func EcNttBN254(values *[]PointBN254, isInverse bool, deviceId int) uint64 {
+	valuesC := (*C.BN254_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
-	n := C.uint32_t(len(*scalars))
+	n := C.uint32_t(len(*values))
 
-	ret := C.ecntt_cuda_bn254(scalarsC, n, isInverseC, deviceIdC)
+	ret := C.ecntt_cuda_bn254(valuesC, n, isInverseC, deviceIdC)
 
 	return uint64(ret)
 }
 
-func EcNttBatchBN254(scalars *[]FieldBN254, isInverse bool, batchSize, deviceId int) uint64 {
-	scalarsC := (*C.BN254_projective_t)(unsafe.Pointer(&(*scalars)[0]))
+func EcNttBatchBN254(values *[]PointBN254, isInverse bool, batchSize, deviceId int) uint64 {
+	valuesC := (*C.BN254_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
-	n := C.uint32_t(len(*scalars))
+	n := C.uint32_t(len(*values))
 	batchSizeC := C.uint32_t(batchSize)
 
-	ret := C.ecntt_batch_cuda_bn254(scalarsC, n, batchSizeC, isInverseC, deviceIdC)
+	ret := C.ecntt_batch_cuda_bn254(valuesC, n, batchSizeC, isInverseC, deviceIdC)
 
 	return uint64(ret)
 }

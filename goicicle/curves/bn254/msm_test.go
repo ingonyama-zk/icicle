@@ -52,6 +52,23 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 	return points, pointsAffine
 }
 
+func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
+	// Declare a slice of integers
+	var points []PointBN254
+	var pointsAffine []bn254.G1Jac
+
+	// Use a loop to populate the slice
+	for i := 0; i < count; i++ {
+		gnarkP, _ := randG1Jac()
+		p := PointBN254FromGnark(&gnarkP)
+
+		pointsAffine = append(pointsAffine, gnarkP)
+		points = append(points, *p)
+	}
+
+	return points, pointsAffine
+}
+
 func GenerateScalars(count int) ([]FieldBN254, []fr.Element) {
 	// Declare a slice of integers
 	var scalars []FieldBN254

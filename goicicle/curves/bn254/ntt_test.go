@@ -25,7 +25,7 @@ func TestNttBN254(t *testing.T) {
 
 	assert.Equal(t, inttResult, nttResult)
 	NttBN254(&inttResult, true, 0)
-	assert.NotEqual(t, inttResult, scalars)
+	assert.Equal(t, inttResult, scalars)
 }
 
 func TestNttBatchBN254(t *testing.T) {
