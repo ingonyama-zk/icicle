@@ -6,8 +6,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/stretchr/testify/assert"
 )
 
 func randG1Jac() (bn254.G1Jac, error) {
@@ -56,13 +58,9 @@ func GenerateScalars(count int) ([]FieldBN254, []fr.Element) {
 	var scalars_fr []fr.Element
 
 	var rand fr.Element
-
-	// Generate a random fr.Element
-
-	// Use a loop to populate the slice
 	for i := 0; i < count; i++ {
 		rand.SetRandom()
-		s := FieldBN254FromGnark(rand)
+		s := FieldBN254FromGnark(rand.Bits())
 
 		scalars_fr = append(scalars_fr, rand)
 		scalars = append(scalars, *s)
@@ -78,14 +76,15 @@ func TestMSM(t *testing.T) {
 		points, gnarkPoints := GeneratePoints(count)
 		scalars, gnarkScalars := GenerateScalars(count)
 
-		a, e := MsmBN254(points, scalars, 0)
+		result, e := MsmBN254(points, scalars, 0) // non mont
 
 		assert.Equal(t, e, nil, "error should be nil")
 
 		var bn254AffineLib bn254.G1Affine
 
-		a1, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
-		assert.Equal(t, a.toGnarkAffine(), a1)
+		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
+
+		assert.Equal(t, result.toGnarkAffine(), gResult)
 	}
 }
 

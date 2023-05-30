@@ -2,6 +2,7 @@ package bn254
 
 import (
 	"encoding/binary"
+	"fmt"
 	"unsafe"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254"
@@ -49,15 +50,20 @@ func (f *FieldBN254) limbs() [8]uint32 {
 }
 
 func (f *FieldBN254) toGnark() *fp.Element {
-	s := ConvertUint32ArrToUint64Arr(f.limbs())
-	element := fp.Element(s)
+	fb := f.toBytesLe()
+	var b32 [32]byte
+	copy(b32[:], fb[:32])
 
-	var v fp.Element
-	v.Set(&element)
+	v, e := fp.LittleEndian.Element(&b32)
+
+	if e != nil {
+		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
+	}
 
 	return &v
 }
 
+// todo: implement a scalar field
 func FieldBN254FromGnark(arr64 [4]uint64) *FieldBN254 {
 	s := ConvertUint64ArrToUint32Arr(arr64)
 	return &FieldBN254{s}
@@ -105,30 +111,34 @@ func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {
 }
 
 func (p *PointBN254) toGnarkAffine() *bn254.G1Affine {
-	return &bn254.G1Affine{X: *p.x.toGnark(), Y: *p.y.toGnark()}
+	px := p.x.toGnark()
+	py := p.y.toGnark()
+	pz := p.z.toGnark()
+
+	zInv := new(fp.Element)
+	x := new(fp.Element)
+	y := new(fp.Element)
+
+	zInv.Inverse(pz)
+
+	x.Mul(px, zInv)
+	y.Mul(py, zInv)
+
+	return &bn254.G1Affine{X: *x, Y: *y}
 }
 
 // converts jac fromat to projective
 func PointBN254FromGnark(gnark *bn254.G1Jac) *PointBN254 {
-	// Initialize the pointers
-	z_inv := new(fp.Element)
-	z_invsq := new(fp.Element)
-	z_invq3 := new(fp.Element)
-	x := new(fp.Element)
-	y := new(fp.Element)
+	var pointAffine bn254.G1Affine
+	pointAffine.FromJacobian(gnark)
 
-	z_inv.Inverse(&gnark.Z)
-	z_invsq.Mul(z_inv, z_inv)
-	z_invq3.Mul(z_invsq, z_inv)
-
-	x.Mul(&gnark.X, z_invsq)
-	y.Mul(&gnark.Y, z_invq3)
-
-	return &PointBN254{
-		x: *FieldBN254FromGnark(*x),
-		y: *FieldBN254FromGnark(*y),
+	point := PointBN254{
+		x: *FieldBN254FromGnark(pointAffine.X.Bits()), // get non-montgomry
+		y: *FieldBN254FromGnark(pointAffine.Y.Bits()), // get non-montgomry
 		z: *NewFieldBN254One(),
 	}
+
+	return &point
 }
 
 func PointBN254fromLimbs(x, y, z *[]uint32) *PointBN254 {

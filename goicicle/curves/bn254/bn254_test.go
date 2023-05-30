@@ -179,7 +179,6 @@ func TestToGnarkAffine(t *testing.T) {
 	gAffine.FromJacobian(&gJac)
 
 	affine := *proj.toGnarkAffine()
-
 	assert.Equal(t, affine, gAffine)
 }
 
