@@ -35,6 +35,14 @@ template <class CONFIG> class Field {
       return Field { scalar };
     }
 
+    static constexpr HOST_DEVICE_INLINE Field generator_x() {
+      return Field { CONFIG::generator_x };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field generator_y() {
+      return Field { CONFIG::generator_y };
+    }
+
     static constexpr HOST_INLINE Field omega(uint32_t log_size) {
       // Quick fix to linking issue, permanent fix will follow
       switch (log_size) {
@@ -105,6 +113,7 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::omega32 };        
       }
+      return Field { CONFIG::one };
       // return Field { CONFIG::omega[log_size-1] };
     }
 
@@ -178,6 +187,7 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::omega_inv32 };        
       }
+      return Field { CONFIG::one };
       // return Field { CONFIG::omega_inv[log_size-1] };
     }
 
@@ -249,6 +259,7 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::inv32 };        
       }
+      return Field { CONFIG::one };
       // return Field { CONFIG::inv[log_size-1] };
     }
 
@@ -256,14 +267,13 @@ template <class CONFIG> class Field {
       return Field { CONFIG::modulus };
     }
 
-
-  private:
+  // private:
     typedef storage<TLC> ff_storage;
     typedef storage<2*TLC> ff_wide_storage;
 
     static constexpr unsigned slack_bits = 32 * TLC - NBITS;
 
-    struct wide {
+    struct Wide {
       ff_wide_storage limbs_storage;
       
       Field HOST_DEVICE_INLINE get_lower() {
@@ -292,15 +302,15 @@ template <class CONFIG> class Field {
       }
     };
 
-    friend HOST_DEVICE_INLINE wide operator+(wide xs, const wide& ys) {   
-      wide rs = {};
+    friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys) {   
+      Wide rs = {};
       add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return rs;
     }
 
     // an incomplete impl that assumes that xs > ys
-    friend HOST_DEVICE_INLINE wide operator-(wide xs, const wide& ys) {   
-      wide rs = {};
+    friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys) {   
+      Wide rs = {};
       sub_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return rs;
     }
@@ -349,7 +359,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? TLC : TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -365,7 +377,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? 2 * TLC : 2 * TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -426,7 +440,7 @@ template <class CONFIG> class Field {
     static DEVICE_INLINE void cmad_n(uint32_t *acc, const uint32_t *a, uint32_t bi, size_t n = TLC) {
       acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
       acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
-  #pragma unroll
+    #pragma unroll
       for (size_t i = 2; i < n; i += 2) {
         acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
         acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
@@ -493,8 +507,6 @@ template <class CONFIG> class Field {
       const uint32_t limb_lsb_idx = (digit_num*digit_width) / 32;
       const uint32_t shift_bits = (digit_num*digit_width) % 32;
       unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
-      // printf("get_scalar_func digit %u rv %u\n",digit_num,rv);
-      // if (shift_bits + digit_width > 32) {
       if ((shift_bits + digit_width > 32) && (limb_lsb_idx+1 < TLC)) {
         rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
       }
@@ -534,13 +546,13 @@ template <class CONFIG> class Field {
       return os;
     }
 
-    friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys) {   
+    friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys) {
       Field rs = {};
       add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return reduce<1>(rs);
     }
 
-    friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys) {   
+    friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys) {
       Field rs = {};
       uint32_t carry = sub_limbs<true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       if (carry == 0)
@@ -551,22 +563,22 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE wide mul_wide(const Field& xs, const Field& ys) {
-      wide rs = {};
+    static constexpr HOST_DEVICE_INLINE Wide mul_wide(const Field& xs, const Field& ys) {
+      Wide rs = {};
       multiply_raw(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return rs;
     }
 
     friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys) {
-      wide xy = mul_wide(xs, ys);
+      Wide xy = mul_wide(xs, ys);
       Field xy_hi = xy.get_higher_with_slack();
-      wide l = {};
+      Wide l = {};
       multiply_raw(xy_hi.limbs_storage, get_m(), l.limbs_storage);
       Field l_hi = l.get_higher_with_slack();
-      wide lp = {};
+      Wide lp = {};
       multiply_raw(l_hi.limbs_storage, get_modulus(), lp.limbs_storage);
-      wide r_wide = xy - lp;
-      wide r_wide_reduced = {};
+      Wide r_wide = xy - lp;
+      Wide r_wide_reduced = {};
       uint32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
       r_wide = reduced ? r_wide : r_wide_reduced;
       Field r = r_wide.get_lower();
@@ -594,22 +606,24 @@ template <class CONFIG> class Field {
       return !(xs == ys);
     }
 
-    template <unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE Field mul(const unsigned scalar, const Field &xs) {
-      Field rs = {};
-      Field temp = xs;
-      unsigned l = scalar;
+    template <const Field& multiplier, class T> static constexpr HOST_DEVICE_INLINE T mul_const(const T &xs) {
+      return mul_unsigned<multiplier.limbs_storage.limbs[0], T>(xs);
+    }
+
+    template <uint32_t mutliplier, class T, unsigned REDUCTION_SIZE = 1>
+    static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T &xs) {
+      T rs = {};
+      T temp = xs;
       bool is_zero = true;
   #ifdef __CUDA_ARCH__
   #pragma unroll
   #endif
       for (unsigned i = 0; i < 32; i++) {
-        if (l & 1) {
+        if (mutliplier & (1 << i)) {
           rs = is_zero ? temp : (rs + temp);
           is_zero = false;
         }
-        l >>= 1;
-        if (l == 0)
+        if (mutliplier & ((1 << (31 - i) - 1) << (i + 1)))
           break;
         temp = temp + temp;
       }
@@ -617,7 +631,7 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE wide sqr_wide(const Field& xs) {
+    static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const Field& xs) {
       // TODO: change to a more efficient squaring
       return mul_wide<MODULUS_MULTIPLE>(xs, xs);
     }
