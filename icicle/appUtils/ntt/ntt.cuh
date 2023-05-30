@@ -46,7 +46,7 @@ const uint32_t MAX_THREADS_BATCH = 256;
  */
 __device__ __host__ uint32_t reverseBits(uint32_t num, uint32_t logn) {
   unsigned int reverse_num = 0;
-  for (int i = 0; i < logn; i++) {
+  for (uint32_t i = 0; i < logn; i++) {
     if ((num & (1 << i))) reverse_num |= 1 << ((logn - 1) - i);
   }
   return reverse_num;
@@ -159,9 +159,9 @@ template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr
   uint32_t m = 2;
   for (uint32_t s = 0; s < logn; s++) {
     for (uint32_t i = 0; i < n; i += m) {
-        int shifted_m = m >> 1;
-        int number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
-        int number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
+        uint32_t shifted_m = m >> 1;
+        uint32_t number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
+        uint32_t number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
         template_butterfly_kernel < E, S > <<< number_of_threads, number_of_blocks >>> (d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
     }
     m <<= 1;
@@ -229,14 +229,14 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
  * @param logn log(n).
  * @param task log(n).
  */
- template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uint32_t n, uint32_t logn, uint32_t task) {
+template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uint32_t n, uint32_t logn, uint32_t task) {
   for (uint32_t i = 0; i < n; i++) {
-      uint32_t reversed = reverseBits(i, logn);
-      if (reversed > i) {
-          T tmp = arr[task * n + i];
-          arr[task * n + i] = arr[task * n + reversed];
-          arr[task * n + reversed] = tmp;
-      }
+    uint32_t reversed = reverseBits(i, logn);
+    if (reversed > i) {
+      T tmp = arr[task * n + i];
+      arr[task * n + i] = arr[task * n + reversed];
+      arr[task * n + reversed] = tmp;
+    }
   }
 }
 

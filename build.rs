@@ -16,6 +16,9 @@ fn main() {
 
     println!("Compiling icicle library using arch: {}", &arch);
 
+    if cfg!(feature = "g2") {
+        nvcc.define("G2_DEFINED", None);
+    }
     nvcc.cuda(true);
     nvcc.debug(false);
     nvcc.flag(&arch);

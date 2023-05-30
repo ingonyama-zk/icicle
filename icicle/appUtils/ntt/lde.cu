@@ -67,13 +67,13 @@ int evaluate_batch(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_
   if (domain_size > n) {
     // allocate and initialize an array of stream handles to parallelize data copying across batches
     cudaStream_t *memcpy_streams = (cudaStream_t *) malloc(batch_size * sizeof(cudaStream_t));
-    for (int i = 0; i < batch_size; i++)
+    for (unsigned i = 0; i < batch_size; i++)
     {
       cudaStreamCreate(&(memcpy_streams[i]));
 
       cudaMemcpyAsync(&d_out[i * domain_size], &d_coefficients[i * n], n * sizeof(E), cudaMemcpyDeviceToDevice, memcpy_streams[i]);
-      int NUM_THREADS = MAX_THREADS_BATCH;
-      int NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
+      uint32_t NUM_THREADS = MAX_THREADS_BATCH;
+      uint32_t NUM_BLOCKS = (domain_size - n + NUM_THREADS - 1) / NUM_THREADS;
       fill_array <E> <<<NUM_BLOCKS, NUM_THREADS, 0, memcpy_streams[i]>>> (&d_out[i * domain_size + n], E::zero(), domain_size - n);
 
       cudaStreamSynchronize(memcpy_streams[i]);
@@ -179,5 +179,4 @@ int evaluate_points_on_coset_batch(E* d_out, E* d_coefficients, S* d_domain, uns
                                    unsigned n, unsigned batch_size, S* coset_powers) {
   return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers);
 }
-
 #endif
