@@ -1,5 +1,3 @@
-#ifndef VEC_MULT
-#define VEC_MULT
 #pragma once
 #include <stdexcept>
 #include <cuda.h>
@@ -110,4 +108,3 @@ int matrix_mod_mult(E *matrix_elements, E *vector_elements, E *result, size_t di
 
     return 0;
 }
-#endif

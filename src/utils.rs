@@ -33,7 +33,7 @@ pub fn u64_vec_to_u32_vec(arr_u64: &[u64]) -> Vec<u32> {
 mod tests {
     use ark_ff::BigInteger256;
 
-    use crate::curves::bls12_381::{ScalarField_BLS12_381 as ScalarField};
+    use crate::field::ScalarField;
 
     use super::*;
 
