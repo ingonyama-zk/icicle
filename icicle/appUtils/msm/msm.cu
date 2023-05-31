@@ -199,12 +199,16 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sort_indices_temp_storage{};
   size_t sort_indices_temp_storage_bytes;
+  // The second to last parameter is the default value supplied explicitly to allow passing the stream
+  // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + size, bucket_indices,
                                  point_indices + size, point_indices, size, 0, sizeof(unsigned) * 8, stream);
   cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream);
   for (unsigned i = 0; i < nof_bms; i++) {
     unsigned offset_out = i * size;
     unsigned offset_in = offset_out + size;
+    // The second to last parameter is the default value supplied explicitly to allow passing the stream
+    // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
     cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in, bucket_indices + offset_out,
                                  point_indices + offset_in, point_indices + offset_out, size, 0, sizeof(unsigned) * 8, stream);
   }
@@ -350,9 +354,13 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
 
   unsigned *sort_indices_temp_storage{};
   size_t sort_indices_temp_storage_bytes;
+  // The second to last parameter is the default value supplied explicitly to allow passing the stream
+  // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
                                  point_indices + msm_size, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned)*8, stream);
   cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream);
+  // The second to last parameter is the default value supplied explicitly to allow passing the stream
+  // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
                                  point_indices + msm_size, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned)*8, stream);
   cudaFreeAsync(sort_indices_temp_storage, stream);
