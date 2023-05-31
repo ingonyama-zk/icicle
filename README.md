@@ -41,7 +41,7 @@ nvcc -o build/<ENTER_DIR_NAME> ./icicle/appUtils/ntt/ntt.cu ./icicle/appUtils/ms
 
 ### Testing the CUDA code
 
-We are using [googletest] library for testing. To build and run [the test suite](./icicle/README.md) for finite field and elliptic curve arithmetic, run from the `icicle` folder:
+We are using [googletest] library for testing. To build and run the test suite for finite field and elliptic curve arithmetic, run from the `icicle` folder:
 
 ```sh
 mkdir -p build
