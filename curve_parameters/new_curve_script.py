@@ -140,7 +140,7 @@ eq = '''
 #include <cuda.h>\n
 #include "curve_config.cuh"\n
 #include "../../primitives/projective.cuh"\n
-extern "C" bool eq_CURVE_NAME_L(CURVE_NAME_U::projective_t *point1, CURVE_NAME_U::projective_t *point2, size_t device_id = 0)
+extern "C" bool eq_CURVE_NAME_L(CURVE_NAME_U::projective_t *point1, CURVE_NAME_U::projective_t *point2)
 {
     return (*point1 == *point2);
 }'''

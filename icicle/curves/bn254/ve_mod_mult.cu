@@ -15,6 +15,8 @@ extern "C" int32_t vec_mod_mult_point_bn254(BN254::projective_t *inout,
                                       size_t device_id,
                                       cudaStream_t stream = 0)
 {
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
   try
   {
     // TODO: device_id
@@ -34,6 +36,8 @@ extern "C" int32_t vec_mod_mult_scalar_bn254(BN254::scalar_t *inout,
                                        size_t device_id,
                                        cudaStream_t stream = 0)
 {
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
   try
   {
     // TODO: device_id
@@ -54,6 +58,8 @@ extern "C" int32_t matrix_vec_mod_mult_bn254(BN254::scalar_t *matrix_flattened,
                                        size_t device_id,
                                        cudaStream_t stream = 0)
 {
+  // TODO: use device_id when working with multiple devices
+  (void)device_id;
   try
   {
     // TODO: device_id
