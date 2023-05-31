@@ -1,21 +1,9 @@
+#ifndef NTT
+#define NTT
 #pragma once
-#include "../../curves/curve_config.cuh"
 
 const uint32_t MAX_NUM_THREADS = 1024;
 const uint32_t MAX_THREADS_BATCH = 256;
-
-/**
- * Copy twiddle factors array to device (returns a pointer to the device allocated array).
- * @param twiddles input empty array. 
- * @param n_twiddles length of twiddle factors. 
- */
- scalar_t * copy_twiddle_factors_to_device(scalar_t * twiddles, uint32_t n_twiddles) {
-  size_t size_twiddles = n_twiddles * sizeof(scalar_t);
-  scalar_t * d_twiddles;
-  cudaMalloc( & d_twiddles, size_twiddles);
-  cudaMemcpy(d_twiddles, twiddles, size_twiddles, cudaMemcpyHostToDevice);
-  return d_twiddles;
-}
 
 /**
  * Computes the twiddle factors.  
@@ -24,8 +12,11 @@ const uint32_t MAX_THREADS_BATCH = 256;
  * @param n_twiddles number of twiddle factors. 
  * @param omega multiplying factor. 
  */
-__global__ void twiddle_factors_kernel(scalar_t * d_twiddles, uint32_t n_twiddles, scalar_t omega) {
-  d_twiddles[0] = scalar_t::one();
+ template < typename S > __global__ void twiddle_factors_kernel(S * d_twiddles, uint32_t n_twiddles, S omega) {
+  for (uint32_t i = 0; i < n_twiddles; i++) {
+    d_twiddles[i] = S::zero();
+  }
+  d_twiddles[0] = S::one();
   for (uint32_t i = 0; i < n_twiddles - 1; i++) {
     d_twiddles[i + 1] = omega * d_twiddles[i];
   }
@@ -37,11 +28,12 @@ __global__ void twiddle_factors_kernel(scalar_t * d_twiddles, uint32_t n_twiddle
  * @param n_twiddles number of twiddle factors. 
  * @param omega multiplying factor. 
  */
-scalar_t * fill_twiddle_factors_array(uint32_t n_twiddles, scalar_t omega) {
-  size_t size_twiddles = n_twiddles * sizeof(scalar_t);
-  scalar_t * d_twiddles;
-  cudaMalloc( & d_twiddles, size_twiddles);
-  twiddle_factors_kernel <<< 1, 1 >>> (d_twiddles, n_twiddles, omega);
+ template < typename S > S * fill_twiddle_factors_array(uint32_t n_twiddles, S omega, cudaStream_t stream) {
+  size_t size_twiddles = n_twiddles * sizeof(S);
+  S * d_twiddles;
+  cudaMallocAsync(& d_twiddles, size_twiddles, stream);
+  twiddle_factors_kernel<S> <<< 1, 1, 0, stream>>> (d_twiddles, n_twiddles, omega);
+  cudaStreamSynchronize(stream);
   return d_twiddles;
 }
 
@@ -55,7 +47,7 @@ scalar_t * fill_twiddle_factors_array(uint32_t n_twiddles, scalar_t omega) {
  */
 __device__ __host__ uint32_t reverseBits(uint32_t num, uint32_t logn) {
   unsigned int reverse_num = 0;
-  for (int i = 0; i < logn; i++) {
+  for (uint32_t i = 0; i < logn; i++) {
     if ((num & (1 << i))) reverse_num |= 1 << ((logn - 1) - i);
   }
   return reverse_num;
@@ -98,14 +90,14 @@ template < typename T > __global__ void reverse_order_kernel(T* arr, T* arr_reve
  * @param logn log(n).
  * @param batch_size the size of the batch.
  */
-template < typename T > void reverse_order_batch(T* arr, uint32_t n, uint32_t logn, uint32_t batch_size) {
+template < typename T > void reverse_order_batch(T* arr, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream) {
   T* arr_reversed;
-  cudaMalloc(&arr_reversed, n * batch_size * sizeof(T));
+  cudaMallocAsync(&arr_reversed, n * batch_size * sizeof(T), stream);
   int number_of_threads = MAX_THREADS_BATCH;
   int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
-  reverse_order_kernel <<<number_of_blocks, number_of_threads>>> (arr, arr_reversed, n, logn, batch_size);
-  cudaMemcpy(arr, arr_reversed, n * batch_size * sizeof(T), cudaMemcpyDeviceToDevice);
-  cudaFree(arr_reversed);
+  reverse_order_kernel <<<number_of_blocks, number_of_threads, 0, stream>>> (arr, arr_reversed, n, logn, batch_size);
+  cudaMemcpyAsync(arr, arr_reversed, n * batch_size * sizeof(T), cudaMemcpyDeviceToDevice, stream);
+  cudaFreeAsync(arr_reversed, stream);
 }
 
 /**
@@ -116,8 +108,8 @@ template < typename T > void reverse_order_batch(T* arr, uint32_t n, uint32_t lo
  * @param n length of `arr`.
  * @param logn log(n).
  */
-template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn) {
-  reverse_order_batch(arr, n, logn, 1);
+template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn, cudaStream_t stream) {
+  reverse_order_batch(arr, n, logn, 1, stream);
 }
 
 /**
@@ -164,14 +156,15 @@ template < typename E, typename S > __global__ void template_normalize_kernel(E 
  * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
  * @param n_twiddles length of d_twiddles.
  */
-template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr, uint32_t n, uint32_t logn, S * d_twiddles, uint32_t n_twiddles) {
+template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr, uint32_t n, uint32_t logn, S * d_twiddles, uint32_t n_twiddles, cudaStream_t stream) {
   uint32_t m = 2;
+  // TODO: optimize with separate streams for each iteration
   for (uint32_t s = 0; s < logn; s++) {
     for (uint32_t i = 0; i < n; i += m) {
-        int shifted_m = m >> 1;
-        int number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
-        int number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
-        template_butterfly_kernel < E, S > <<< number_of_threads, number_of_blocks >>> (d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
+        uint32_t shifted_m = m >> 1;
+        uint32_t number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
+        uint32_t number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
+        template_butterfly_kernel < E, S > <<< number_of_threads, number_of_blocks, 0, stream >>> (d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
     }
     m <<= 1;
   }
@@ -186,96 +179,47 @@ template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr
  * @param n_twiddles length of d_twiddles. 
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
-template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_twiddles, uint32_t n_twiddles, bool inverse) {
+template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_twiddles, uint32_t n_twiddles, bool inverse, cudaStream_t stream) {
   uint32_t logn = uint32_t(log(n) / log(2));
   size_t size_E = n * sizeof(E);
   E * arrReversed = template_reverse_order < E > (arr, n, logn);
   E * d_arrReversed;
-  cudaMalloc( & d_arrReversed, size_E);
-  cudaMemcpy(d_arrReversed, arrReversed, size_E, cudaMemcpyHostToDevice);
-  template_ntt_on_device_memory < E, S > (d_arrReversed, n, logn, d_twiddles, n_twiddles);
+  cudaMallocAsync( & d_arrReversed, size_E, stream);
+  cudaMemcpyAsync(d_arrReversed, arrReversed, size_E, cudaMemcpyHostToDevice, stream);
+  template_ntt_on_device_memory < E, S > (d_arrReversed, n, logn, d_twiddles, n_twiddles, stream);
   if (inverse) {
     int NUM_THREADS = MAX_NUM_THREADS;
     int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arrReversed, n, S::inv_log_size(logn));
+    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS, 0, stream >>> (d_arrReversed, n, S::inv_log_size(logn));
   }
-  cudaMemcpy(arrReversed, d_arrReversed, size_E, cudaMemcpyDeviceToHost);
-  cudaFree(d_arrReversed);
+  cudaMemcpyAsync(arrReversed, d_arrReversed, size_E, cudaMemcpyDeviceToHost, stream);
+  cudaFreeAsync(d_arrReversed, stream);
+  cudaStreamSynchronize(stream);
   return arrReversed;
 }
 
 /**
- * Cooley-Tukey Elliptic Curve NTT. 
- * NOTE! this function assumes that d_twiddles are located in the device memory.
- * @param arr input array of type projective_t. 
- * @param n length of d_arr.
- * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2). 
- * @param n_twiddles length of d_twiddles. 
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
-projective_t * ecntt(projective_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twiddles, bool inverse) {
-  return ntt_template < projective_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
-}
-
-/**
  * Cooley-Tukey (scalar) NTT. 
- * NOTE! this function assumes that d_twiddles are located in the device memory.
- * @param arr input array of type scalar_t. 
- * @param n length of d_arr.
- * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2). 
- * @param n_twiddles length of d_twiddles. 
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
-scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twiddles, bool inverse) {
-  return ntt_template < scalar_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
-}
-
-
-/**
- * Cooley-Tukey (scalar) NTT. 
- * @param arr input array of type scalar_t. 
+ * @param arr input array of type E (element). 
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- extern "C" uint32_t ntt_end2end(scalar_t * arr, uint32_t n, bool inverse) {
-  uint32_t logn = uint32_t(log(n) / log(2));
-  uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
-  scalar_t * d_twiddles;
-  if (inverse){
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega_inv(logn));
-  } else {
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega(logn));
-  }
-  scalar_t * result = ntt_template < scalar_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
-  for(int i = 0; i < n; i++){
-    arr[i] = result[i]; 
-  }
-  cudaFree(d_twiddles);
-  return 0; 
-}
-
-
-/**
- * Cooley-Tukey (scalar) NTT. 
- * @param arr input array of type projective_t. 
- * @param n length of d_arr.
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
- extern "C" uint32_t ecntt_end2end(projective_t * arr, uint32_t n, bool inverse) {
+ template<typename E,typename S> uint32_t ntt_end2end_template(E * arr, uint32_t n, bool inverse, cudaStream_t stream) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; 
-  scalar_t * twiddles = new scalar_t[n_twiddles];
-  scalar_t * d_twiddles;
+  S * twiddles = new S[n_twiddles];
+  S * d_twiddles;
   if (inverse){
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega_inv(logn));
+    d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega_inv(logn), stream);
   } else{
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega(logn));
+    d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega(logn), stream);
   }
-  projective_t * result = ntt_template < projective_t, scalar_t > (arr, n, d_twiddles, n_twiddles, inverse);
+  E * result = ntt_template < E, S > (arr, n, d_twiddles, n_twiddles, inverse, stream);
   for(int i = 0; i < n; i++){
     arr[i] = result[i]; 
   }
-  cudaFree(d_twiddles);
+  cudaFreeAsync(d_twiddles, stream);
+  cudaStreamSynchronize(stream);
   return 0; // TODO add
 }
 
@@ -289,14 +233,14 @@ scalar_t * ntt(scalar_t * arr, uint32_t n, scalar_t * d_twiddles, uint32_t n_twi
  * @param logn log(n).
  * @param task log(n).
  */
- template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uint32_t n, uint32_t logn, uint32_t task) {
+template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uint32_t n, uint32_t logn, uint32_t task) {
   for (uint32_t i = 0; i < n; i++) {
-      uint32_t reversed = reverseBits(i, logn);
-      if (reversed > i) {
-          T tmp = arr[task * n + i];
-          arr[task * n + i] = arr[task * n + reversed];
-          arr[task * n + reversed] = tmp;
-      }
+    uint32_t reversed = reverseBits(i, logn);
+    if (reversed > i) {
+      T tmp = arr[task * n + i];
+      arr[task * n + i] = arr[task * n + reversed];
+      arr[task * n + reversed] = tmp;
+    }
   }
 }
 
@@ -387,101 +331,55 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   }
 }
 
-
-//TODO: batch ntt and ecntt can be unified into batch_template
 /**
  * Cooley-Tukey (scalar) NTT.
  * This is a bached version - meaning it assumes than the input array 
  * consists of N arrays of size n. The function performs n-size NTT on each small array.
- * @param arr input array of type scalar_t. 
+ * @param arr input array of type BLS12_381::scalar_t. 
  * @param arr_size number of total elements = n * N.  
  * @param n size of batch.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- extern "C" uint32_t ntt_end2end_batch(scalar_t * arr, uint32_t arr_size, uint32_t n, bool inverse) {
+ template <typename E, typename S> uint32_t ntt_end2end_batch_template(E * arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream) {
   int batches = int(arr_size / n);
   uint32_t logn = uint32_t(log(n) / log(2));
-  uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
-  size_t size_E = arr_size * sizeof(scalar_t);
-  scalar_t * d_twiddles;
+  uint32_t n_twiddles = n; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order. 
+  size_t size_E = arr_size * sizeof(E);
+  S * d_twiddles;
   if (inverse){
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega_inv(logn));
+    d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega_inv(logn), stream);
   } else{
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega(logn));
+    d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega(logn), stream);
   }
-  scalar_t * d_arr;
-  cudaMalloc( & d_arr, size_E);
-  cudaMemcpy(d_arr, arr, size_E, cudaMemcpyHostToDevice);
+  E * d_arr;
+  cudaMallocAsync( & d_arr, size_E, stream);
+  cudaMemcpyAsync(d_arr, arr, size_E, cudaMemcpyHostToDevice, stream);
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
-  ntt_template_kernel_rev_ord<scalar_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, logn, batches);
+  ntt_template_kernel_rev_ord<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, logn, batches);
 
   NUM_THREADS = min(n / 2, MAX_THREADS_BATCH);
   int chunks = max(int((n / 2) / NUM_THREADS), 1);
   int total_tasks = batches * chunks;
   NUM_BLOCKS = total_tasks;
 
-  for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
+  //TODO: this loop also can be unrolled
+  for (uint32_t s = 0; s < logn; s++)
   {
-    ntt_template_kernel<scalar_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s, false);
-  }
-
-  if (inverse == true)
-  {
-    NUM_THREADS = MAX_NUM_THREADS;
-    NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < scalar_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, arr_size, scalar_t::inv_log_size(logn));
-  }
-  cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
-  cudaFree(d_arr);
-  cudaFree(d_twiddles);
-  return 0; 
-}
-
-/**
- * Cooley-Tukey (scalar) NTT.
- * This is a bached version - meaning it assumes than the input array 
- * consists of N arrays of size n. The function performs n-size NTT on each small array.
- * @param arr input array of type scalar_t. 
- * @param arr_size number of total elements = n * N.  
- * @param n size of batch.
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
- extern "C" uint32_t ecntt_end2end_batch(projective_t * arr, uint32_t arr_size, uint32_t n, bool inverse) {
-  int batches = int(arr_size / n);
-  uint32_t logn = uint32_t(log(n) / log(2));
-  uint32_t n_twiddles = n; // n_twiddles is set to 4096 as scalar_t::omega() is of that order. 
-  size_t size_E = arr_size * sizeof(projective_t);
-  scalar_t * d_twiddles;
-  if (inverse){
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega_inv(logn));
-  } else{
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, scalar_t::omega(logn));
-  }
-  projective_t * d_arr;
-  cudaMalloc( & d_arr, size_E);
-  cudaMemcpy(d_arr, arr, size_E, cudaMemcpyHostToDevice);
-  int NUM_THREADS = MAX_THREADS_BATCH;
-  int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
-  ntt_template_kernel_rev_ord<projective_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, logn, batches);
-
-  NUM_THREADS = min(n / 2, MAX_THREADS_BATCH);
-  int chunks = max(int((n / 2) / NUM_THREADS), 1);
-  int total_tasks = batches * chunks;
-  NUM_BLOCKS = total_tasks;
-
-  for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
-  {
-    ntt_template_kernel<projective_t, scalar_t><<<NUM_BLOCKS, NUM_THREADS>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s, false);
+    ntt_template_kernel<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s, false);
+    cudaStreamSynchronize(stream);
   }
   if (inverse == true)
   {
     NUM_THREADS = MAX_NUM_THREADS;
     NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < projective_t, scalar_t > <<< NUM_THREADS, NUM_BLOCKS >>> (d_arr, arr_size, scalar_t::inv_log_size(logn));
+    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS, 0, stream>>> (d_arr, arr_size, S::inv_log_size(logn));
   }
-  cudaMemcpy(arr, d_arr, size_E, cudaMemcpyDeviceToHost);
-  cudaFree(d_arr);
-  cudaFree(d_twiddles);
+  cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
+  cudaFreeAsync(d_arr, stream);
+  cudaFreeAsync(d_twiddles, stream);
+  cudaStreamSynchronize(stream);
   return 0; 
 }
+
+#endif
