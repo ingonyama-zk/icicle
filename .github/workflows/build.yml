@@ -12,6 +12,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   ARCH_TYPE: sm_70
+  DEFAULT_STREAM: per-thread
 
 jobs:
   build-linux:
