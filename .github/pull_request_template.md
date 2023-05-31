@@ -4,4 +4,4 @@ This PR...
 
 ## Linked Issues
 
-Closes #
+Resolves #

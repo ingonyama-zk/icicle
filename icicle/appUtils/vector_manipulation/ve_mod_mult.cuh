@@ -19,7 +19,7 @@ __global__ void vectorModMult(S *scalar_vec, E *element_vec, E *result, size_t n
 }
 
 template <typename E, typename S>
-int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments) // TODO: in place so no need for third result vector
+int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments, cudaStream_t stream) // TODO: in place so no need for third result vector
 {
     // Set the grid and block dimensions
     int num_blocks = (int)ceil((float)n_elments / MAX_THREADS_PER_BLOCK);
@@ -28,23 +28,24 @@ int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments) // TODO: in
     // Allocate memory on the device for the input vectors, the output vector, and the modulus
     S *d_vec_a;
     E *d_vec_b, *d_result;
-    cudaMalloc(&d_vec_a, n_elments * sizeof(S));
-    cudaMalloc(&d_vec_b, n_elments * sizeof(E));
-    cudaMalloc(&d_result, n_elments * sizeof(E));
+    cudaMallocAsync(&d_vec_a, n_elments * sizeof(S), stream);
+    cudaMallocAsync(&d_vec_b, n_elments * sizeof(E), stream);
+    cudaMallocAsync(&d_result, n_elments * sizeof(E), stream);
 
     // Copy the input vectors and the modulus from the host to the device
-    cudaMemcpy(d_vec_a, vec_a, n_elments * sizeof(S), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_vec_b, vec_b, n_elments * sizeof(E), cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(d_vec_a, vec_a, n_elments * sizeof(S), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_vec_b, vec_b, n_elments * sizeof(E), cudaMemcpyHostToDevice, stream);
 
     // Call the kernel to perform element-wise modular multiplication
-    vectorModMult<<<num_blocks, threads_per_block>>>(d_vec_a, d_vec_b, d_result, n_elments);
+    vectorModMult<<<num_blocks, threads_per_block, 0, stream>>>(d_vec_a, d_vec_b, d_result, n_elments);
 
-    cudaMemcpy(result, d_result, n_elments * sizeof(E), cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(result, d_result, n_elments * sizeof(E), cudaMemcpyDeviceToHost, stream);
 
-    cudaFree(d_vec_a);
-    cudaFree(d_vec_b);
-    cudaFree(d_result);
+    cudaFreeAsync(d_vec_a, stream);
+    cudaFreeAsync(d_vec_b, stream);
+    cudaFreeAsync(d_result, stream);
 
+    cudaStreamSynchronize(stream);
     return 0;
 }
 
@@ -60,12 +61,12 @@ __global__ void batchVectorMult(S *scalar_vec, E *element_vec, unsigned n_scalar
 }
 
 template <typename E, typename S>
-int batch_vector_mult(S *scalar_vec, E *element_vec, unsigned n_scalars, unsigned batch_size)
+int batch_vector_mult(S *scalar_vec, E *element_vec, unsigned n_scalars, unsigned batch_size, cudaStream_t stream)
 {
     // Set the grid and block dimensions
     int NUM_THREADS = MAX_THREADS_PER_BLOCK;
     int NUM_BLOCKS = (n_scalars * batch_size + NUM_THREADS - 1) / NUM_THREADS;
-    batchVectorMult<<<NUM_BLOCKS, NUM_THREADS>>>(scalar_vec, element_vec, n_scalars, batch_size);
+    batchVectorMult<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(scalar_vec, element_vec, n_scalars, batch_size);
     return 0;
 }
 
@@ -83,7 +84,7 @@ __global__ void matrixVectorMult(E *matrix_elements, E *vector_elements, E *resu
 }
 
 template <typename E>
-int matrix_mod_mult(E *matrix_elements, E *vector_elements, E *result, size_t dim)
+int matrix_mod_mult(E *matrix_elements, E *vector_elements, E *result, size_t dim, cudaStream_t stream)
 {
     // Set the grid and block dimensions
     int num_blocks = (int)ceil((float)dim / MAX_THREADS_PER_BLOCK);
@@ -91,23 +92,24 @@ int matrix_mod_mult(E *matrix_elements, E *vector_elements, E *result, size_t di
 
     // Allocate memory on the device for the input vectors, the output vector, and the modulus
     E *d_matrix, *d_vector, *d_result;
-    cudaMalloc(&d_matrix, (dim * dim) * sizeof(E));
-    cudaMalloc(&d_vector, dim * sizeof(E));
-    cudaMalloc(&d_result, dim * sizeof(E));
+    cudaMallocAsync(&d_matrix, (dim * dim) * sizeof(E), stream);
+    cudaMallocAsync(&d_vector, dim * sizeof(E), stream);
+    cudaMallocAsync(&d_result, dim * sizeof(E), stream);
 
     // Copy the input vectors and the modulus from the host to the device
-    cudaMemcpy(d_matrix, matrix_elements, (dim * dim) * sizeof(E), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_vector, vector_elements, dim * sizeof(E), cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(d_matrix, matrix_elements, (dim * dim) * sizeof(E), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_vector, vector_elements, dim * sizeof(E), cudaMemcpyHostToDevice, stream);
 
     // Call the kernel to perform element-wise modular multiplication
-    matrixVectorMult<<<num_blocks, threads_per_block>>>(d_matrix, d_vector, d_result, dim);
+    matrixVectorMult<<<num_blocks, threads_per_block, 0, stream>>>(d_matrix, d_vector, d_result, dim);
 
-    cudaMemcpy(result, d_result, dim * sizeof(E), cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(result, d_result, dim * sizeof(E), cudaMemcpyDeviceToHost, stream);
 
-    cudaFree(d_matrix);
-    cudaFree(d_vector);
-    cudaFree(d_result);
+    cudaFreeAsync(d_matrix, stream);
+    cudaFreeAsync(d_vector, stream);
+    cudaFreeAsync(d_result, stream);
 
+    cudaStreamSynchronize(stream);
     return 0;
 }
 #endif
