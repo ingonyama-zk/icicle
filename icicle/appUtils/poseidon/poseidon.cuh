@@ -48,14 +48,14 @@ __device__ void print_scalar(S element, int data) {
 
 template <typename S>
 struct PoseidonConfiguration {
-    uint partial_rounds, full_rounds_half, t;
+    uint32_t partial_rounds, full_rounds_half, t;
     S * round_constants, * mds_matrix, * non_sparse_matrix, *sparse_matrices;
 };
 
 template <typename S>
 class Poseidon {
   public:
-    uint t;
+    uint32_t t;
     PoseidonConfiguration<S> config;
 
     enum HashType {
@@ -63,7 +63,7 @@ class Poseidon {
         MerkleTree,
     };
 
-    Poseidon(const uint arity) {
+    Poseidon(const uint32_t arity) {
         t = arity + 1;
         this->config.t = t;
 
@@ -81,9 +81,9 @@ class Poseidon {
 
         get_round_numbers(arity, &this->config.partial_rounds, &this->config.full_rounds_half);
 
-        uint round_constants_len = t * this->config.full_rounds_half * 2 + this->config.partial_rounds;
-        uint mds_matrix_len = t * t;
-        uint sparse_matrices_len = (t * 2 - 1) * this->config.partial_rounds;
+        uint32_t round_constants_len = t * this->config.full_rounds_half * 2 + this->config.partial_rounds;
+        uint32_t mds_matrix_len = t * t;
+        uint32_t sparse_matrices_len = (t * 2 - 1) * this->config.partial_rounds;
 
         // All the constants are stored in a single file
         S * constants = load_constants<S>(arity);

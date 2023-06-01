@@ -9,7 +9,7 @@
 #include "constants/constants_8.h"
 #include "constants/constants_11.h"
 
-const std::map<uint, uint> ARITY_TO_ROUND_NUMBERS = {
+const std::map<uint32_t, uint32_t> ARITY_TO_ROUND_NUMBERS = {
     {2, 55},
     {4, 56},
     {8, 57},
@@ -17,9 +17,9 @@ const std::map<uint, uint> ARITY_TO_ROUND_NUMBERS = {
 };
 
 // TO-DO: change to mapping
-const uint FULL_ROUNDS_DEFAULT = 4;
+const uint32_t FULL_ROUNDS_DEFAULT = 4;
 
-static void get_round_numbers(const uint arity, uint * partial_rounds, uint * half_full_rounds) {
+static void get_round_numbers(const uint32_t arity, uint32_t * partial_rounds, uint32_t * half_full_rounds) {
     auto partial = ARITY_TO_ROUND_NUMBERS.find(arity);
     assert(partial != ARITY_TO_ROUND_NUMBERS.end());
 
@@ -29,7 +29,7 @@ static void get_round_numbers(const uint arity, uint * partial_rounds, uint * ha
 
 // TO-DO: for now, the constants are only generated in bls12_381
 template <typename S>
-S * load_constants(const uint arity) {
+S * load_constants(const uint32_t arity) {
     unsigned char * constants;
     switch (arity) {
         case 2:
