@@ -8,17 +8,11 @@
 
 extern "C"
 int msm_cuda_bls12_377(BLS12_377::projective_t *out, BLS12_377::affine_t points[],
-              BLS12_377::scalar_t scalars[], size_t count, size_t device_id = 0)
+              BLS12_377::scalar_t scalars[], size_t count, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
-        if (count>256){
-            large_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, count, out, false);
-        }
-        else{
-            short_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, count, out, false);
-        }
-
+        large_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, count, out, false, stream);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
@@ -29,11 +23,13 @@ int msm_cuda_bls12_377(BLS12_377::projective_t *out, BLS12_377::affine_t points[
 }
 
 extern "C" int msm_batch_cuda_bls12_377(BLS12_377::projective_t* out, BLS12_377::affine_t points[],
-                              BLS12_377::scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0)
+                              BLS12_377::scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try
   {
-    batched_large_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, batch_size, msm_size, out, false);
+    cudaStreamCreate(&stream);
+    batched_large_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(scalars, points, batch_size, msm_size, out, false, stream);
+    cudaStreamSynchronize(stream);
 
     return CUDA_SUCCESS;
   }
@@ -53,11 +49,12 @@ extern "C" int msm_batch_cuda_bls12_377(BLS12_377::projective_t* out, BLS12_377:
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
  extern "C"
- int commit_cuda_bls12_377(BLS12_377::projective_t* d_out, BLS12_377::scalar_t* d_scalars, BLS12_377::affine_t* d_points, size_t count, size_t device_id = 0)
+ int commit_cuda_bls12_377(BLS12_377::projective_t* d_out, BLS12_377::scalar_t* d_scalars, BLS12_377::affine_t* d_points, size_t count, size_t device_id = 0, cudaStream_t stream = 0)
  {
      try
      {
-         large_msm(d_scalars, d_points, count, d_out, true);
+         large_msm<BLS12_377::scalar_t, BLS12_377::projective_t, BLS12_377::affine_t>(d_scalars, d_points, count, d_out, true, stream);
+         cudaStreamSynchronize(stream);
          return 0;
      }
      catch (const std::runtime_error &ex)
@@ -77,11 +74,13 @@ extern "C" int msm_batch_cuda_bls12_377(BLS12_377::projective_t* out, BLS12_377:
   * @param batch_size Size of the batch.
   */
  extern "C"
- int commit_batch_cuda_bls12_377(BLS12_377::projective_t* d_out, BLS12_377::scalar_t* d_scalars, BLS12_377::affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0)
+ int commit_batch_cuda_bls12_377(BLS12_377::projective_t* d_out, BLS12_377::scalar_t* d_scalars, BLS12_377::affine_t* d_points, size_t count, size_t batch_size, size_t device_id = 0, cudaStream_t stream = 0)
  {
      try
      {
-         batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true);
+        cudaStreamCreate(&stream);
+         batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true, stream);
+         cudaStreamSynchronize(stream);
          return 0;
      }
      catch (const std::runtime_error &ex)
@@ -91,4 +90,4 @@ extern "C" int msm_batch_cuda_bls12_377(BLS12_377::projective_t* out, BLS12_377:
      }
  }
 
- #endif
+#endif

@@ -58,7 +58,7 @@ mod tests {
         ))
         .limbs();
 
-        assert_eq!(arr_u32, s);
+        assert_eq!(arr_u32.to_vec(), s);
 
         let arr_u64_expected = [
             0x0FFFFFFF00000001,

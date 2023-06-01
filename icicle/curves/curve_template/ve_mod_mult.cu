@@ -12,12 +12,13 @@
 extern "C" int32_t vec_mod_mult_point_CURVE_NAME_L(CURVE_NAME_U::projective_t *inout,
                                       CURVE_NAME_U::scalar_t *scalar_vec,
                                       size_t n_elments,
-                                      size_t device_id)
+                                      size_t device_id,
+                                      cudaStream_t stream = 0)
 {
   try
   {
     // TODO: device_id
-    vector_mod_mult<CURVE_NAME_U::projective_t, CURVE_NAME_U::scalar_t>(scalar_vec, inout, inout, n_elments);
+    vector_mod_mult<CURVE_NAME_U::projective_t, CURVE_NAME_U::scalar_t>(scalar_vec, inout, inout, n_elments, stream);
     return CUDA_SUCCESS;
   }
   catch (const std::runtime_error &ex)
@@ -30,12 +31,13 @@ extern "C" int32_t vec_mod_mult_point_CURVE_NAME_L(CURVE_NAME_U::projective_t *i
 extern "C" int32_t vec_mod_mult_scalar_CURVE_NAME_L(CURVE_NAME_U::scalar_t *inout,
                                        CURVE_NAME_U::scalar_t *scalar_vec,
                                        size_t n_elments,
-                                       size_t device_id)
+                                       size_t device_id,
+                                       cudaStream_t stream = 0)
 {
   try
   {
     // TODO: device_id
-    vector_mod_mult<CURVE_NAME_U::scalar_t, CURVE_NAME_U::scalar_t>(scalar_vec, inout, inout, n_elments);
+    vector_mod_mult<CURVE_NAME_U::scalar_t, CURVE_NAME_U::scalar_t>(scalar_vec, inout, inout, n_elments, stream);
     return CUDA_SUCCESS;
   }
   catch (const std::runtime_error &ex)
@@ -49,12 +51,13 @@ extern "C" int32_t matrix_vec_mod_mult_CURVE_NAME_L(CURVE_NAME_U::scalar_t *matr
                                        CURVE_NAME_U::scalar_t *input,
                                        CURVE_NAME_U::scalar_t *output,
                                        size_t n_elments,
-                                       size_t device_id)
+                                       size_t device_id,
+                                       cudaStream_t stream = 0)
 {
   try
   {
     // TODO: device_id
-    matrix_mod_mult<CURVE_NAME_U::scalar_t>(matrix_flattened, input, output, n_elments);
+    matrix_mod_mult<CURVE_NAME_U::scalar_t>(matrix_flattened, input, output, n_elments, stream);
     return CUDA_SUCCESS;
   }
   catch (const std::runtime_error &ex)
