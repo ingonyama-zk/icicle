@@ -79,7 +79,8 @@ class Poseidon {
         // const_input_no_pad_domain_tag = S::one() << 64;
         // const_input_no_pad_domain_tag *= S::from(arity);
 
-        get_round_numbers(arity, &this->config.partial_rounds, &this->config.full_rounds_half);
+        this->config.full_rounds_half = FULL_ROUNDS_DEFAULT;
+        this->config.partial_rounds = partial_rounds_number_from_arity(arity);
 
         uint32_t round_constants_len = t * this->config.full_rounds_half * 2 + this->config.partial_rounds;
         uint32_t mds_matrix_len = t * t;
