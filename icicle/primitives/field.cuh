@@ -43,224 +43,31 @@ template <class CONFIG> class Field {
       return Field { CONFIG::generator_y };
     }
 
-    static constexpr HOST_INLINE Field omega(uint32_t log_size) {
-      // Quick fix to linking issue, permanent fix will follow
-      switch (log_size) {
-        case 0:
-          return Field { CONFIG::one };
-        case 1:
-          return Field { CONFIG::omega1 };
-        case 2:
-          return Field { CONFIG::omega2 };
-        case 3:
-          return Field { CONFIG::omega3 };
-        case 4:
-          return Field { CONFIG::omega4 };
-        case 5:
-          return Field { CONFIG::omega5 };
-        case 6:
-          return Field { CONFIG::omega6 };
-        case 7:
-          return Field { CONFIG::omega7 };
-        case 8:
-          return Field { CONFIG::omega8 };
-        case 9:
-          return Field { CONFIG::omega9 };
-        case 10:
-          return Field { CONFIG::omega10 };
-        case 11:
-          return Field { CONFIG::omega11 };
-        case 12:
-          return Field { CONFIG::omega12 };
-        case 13:
-          return Field { CONFIG::omega13 };
-        case 14:
-          return Field { CONFIG::omega14 };
-        case 15:
-          return Field { CONFIG::omega15 };
-        case 16:
-          return Field { CONFIG::omega16 };
-        case 17:
-          return Field { CONFIG::omega17 };
-        case 18:
-          return Field { CONFIG::omega18 };
-        case 19:
-          return Field { CONFIG::omega19 };
-        case 20:
-          return Field { CONFIG::omega20 };
-        case 21:
-          return Field { CONFIG::omega21 };
-        case 22:
-          return Field { CONFIG::omega22 };
-        case 23:
-          return Field { CONFIG::omega23 };
-        case 24:
-          return Field { CONFIG::omega24 };
-        case 25:
-          return Field { CONFIG::omega25 };
-        case 26:
-          return Field { CONFIG::omega26 };
-        case 27:
-          return Field { CONFIG::omega27 };
-        case 28:
-          return Field { CONFIG::omega28 };
-        case 29:
-          return Field { CONFIG::omega29 };
-        case 30:
-          return Field { CONFIG::omega30 };
-        case 31:
-          return Field { CONFIG::omega31 };
-        case 32:
-          return Field { CONFIG::omega32 };        
-      }
-      return Field { CONFIG::one };
-      // return Field { CONFIG::omega[log_size-1] };
+    static HOST_INLINE Field omega(uint32_t logn) {
+        if (logn == 0 || logn > CONFIG::omegas_count) {
+            return Field { CONFIG::one };
+        }
+
+        storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
+        return Field { omega.storages[logn-1] };
+    }      
+
+    static HOST_INLINE Field omega_inv(uint32_t logn) {
+        if (logn == 0 || logn > CONFIG::omegas_count) {
+            return Field { CONFIG::one };
+        }
+
+        storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
+        return Field { omega_inv.storages[logn-1] };
     }
 
-    static constexpr HOST_INLINE Field omega_inv(uint32_t log_size) {
-      // Quick fix to linking issue, permanent fix will follow
-      switch (log_size) {
-        case 0:
-          return Field { CONFIG::one };
-        case 1:
-          return Field { CONFIG::omega_inv1 };
-        case 2:
-          return Field { CONFIG::omega_inv2 };
-        case 3:
-          return Field { CONFIG::omega_inv3 };
-        case 4:
-          return Field { CONFIG::omega_inv4 };
-        case 5:
-          return Field { CONFIG::omega_inv5 };
-        case 6:
-          return Field { CONFIG::omega_inv6 };
-        case 7:
-          return Field { CONFIG::omega_inv7 };
-        case 8:
-          return Field { CONFIG::omega_inv8 };
-        case 9:
-          return Field { CONFIG::omega_inv9 };
-        case 10:
-          return Field { CONFIG::omega_inv10 };
-        case 11:
-          return Field { CONFIG::omega_inv11 };
-        case 12:
-          return Field { CONFIG::omega_inv12 };
-        case 13:
-          return Field { CONFIG::omega_inv13 };
-        case 14:
-          return Field { CONFIG::omega_inv14 };
-        case 15:
-          return Field { CONFIG::omega_inv15 };
-        case 16:
-          return Field { CONFIG::omega_inv16 };
-        case 17:
-          return Field { CONFIG::omega_inv17 };
-        case 18:
-          return Field { CONFIG::omega_inv18 };
-        case 19:
-          return Field { CONFIG::omega_inv19 };
-        case 20:
-          return Field { CONFIG::omega_inv20 };
-        case 21:
-          return Field { CONFIG::omega_inv21 };
-        case 22:
-          return Field { CONFIG::omega_inv22 };
-        case 23:
-          return Field { CONFIG::omega_inv23 };
-        case 24:
-          return Field { CONFIG::omega_inv24 };
-        case 25:
-          return Field { CONFIG::omega_inv25 };
-        case 26:
-          return Field { CONFIG::omega_inv26 };
-        case 27:
-          return Field { CONFIG::omega_inv27 };
-        case 28:
-          return Field { CONFIG::omega_inv28 };
-        case 29:
-          return Field { CONFIG::omega_inv29 };
-        case 30:
-          return Field { CONFIG::omega_inv30 };
-        case 31:
-          return Field { CONFIG::omega_inv31 };
-        case 32:
-          return Field { CONFIG::omega_inv32 };        
-      }
-      return Field { CONFIG::one };
-      // return Field { CONFIG::omega_inv[log_size-1] };
-    }
+    static HOST_INLINE Field inv_log_size(uint32_t logn) {
+        if (logn == 0 || logn > CONFIG::omegas_count) {
+            return Field { CONFIG::one };
+        }
 
-    static constexpr HOST_INLINE Field inv_log_size(uint32_t log_size) {
-      // Quick fix to linking issue, permanent fix will follow
-      switch (log_size) {
-        case 1:
-          return Field { CONFIG::inv1 };
-        case 2:
-          return Field { CONFIG::inv2 };
-        case 3:
-          return Field { CONFIG::inv3 };
-        case 4:
-          return Field { CONFIG::inv4 };
-        case 5:
-          return Field { CONFIG::inv5 };
-        case 6:
-          return Field { CONFIG::inv6 };
-        case 7:
-          return Field { CONFIG::inv7 };
-        case 8:
-          return Field { CONFIG::inv8 };
-        case 9:
-          return Field { CONFIG::inv9 };
-        case 10:
-          return Field { CONFIG::inv10 };
-        case 11:
-          return Field { CONFIG::inv11 };
-        case 12:
-          return Field { CONFIG::inv12 };
-        case 13:
-          return Field { CONFIG::inv13 };
-        case 14:
-          return Field { CONFIG::inv14 };
-        case 15:
-          return Field { CONFIG::inv15 };
-        case 16:
-          return Field { CONFIG::inv16 };
-        case 17:
-          return Field { CONFIG::inv17 };
-        case 18:
-          return Field { CONFIG::inv18 };
-        case 19:
-          return Field { CONFIG::inv19 };
-        case 20:
-          return Field { CONFIG::inv20 };
-        case 21:
-          return Field { CONFIG::inv21 };
-        case 22:
-          return Field { CONFIG::inv22 };
-        case 23:
-          return Field { CONFIG::inv23 };
-        case 24:
-          return Field { CONFIG::inv24 };
-        case 25:
-          return Field { CONFIG::inv25 };
-        case 26:
-          return Field { CONFIG::inv26 };
-        case 27:
-          return Field { CONFIG::inv27 };
-        case 28:
-          return Field { CONFIG::inv28 };
-        case 29:
-          return Field { CONFIG::inv29 };
-        case 30:
-          return Field { CONFIG::inv30 };
-        case 31:
-          return Field { CONFIG::inv31 };
-        case 32:
-          return Field { CONFIG::inv32 };        
-      }
-      return Field { CONFIG::one };
-      // return Field { CONFIG::inv[log_size-1] };
+        storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
+        return Field { inv.storages[logn-1] };
     }
 
     static constexpr HOST_DEVICE_INLINE Field modulus() {

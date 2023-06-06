@@ -7,3 +7,7 @@ template <unsigned LIMBS_COUNT> struct __align__(LIMBS_ALIGNMENT(LIMBS_COUNT)) s
   static constexpr unsigned LC = LIMBS_COUNT;
   uint32_t limbs[LIMBS_COUNT];
 };
+
+template <unsigned OMEGAS_COUNT, unsigned LIMBS_COUNT> struct __align__(LIMBS_ALIGNMENT(LIMBS_COUNT)) storage_array {
+    storage<LIMBS_COUNT> storages[OMEGAS_COUNT];
+};
