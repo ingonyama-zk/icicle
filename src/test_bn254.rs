@@ -1461,24 +1461,16 @@ pub(crate) mod tests_bn254 {
     fn test_vec_point_mul() {
         let dummy_one = Point_BN254 {
             x: BaseField_BN254::one(),
-            y: BaseField_BN254::zero(),
+            y: BaseField_BN254::one(),
             z: BaseField_BN254::one(),
         };
 
         let mut inout = [dummy_one, dummy_one, Point_BN254::zero()];
         let scalars = [ScalarField_BN254::one(), ScalarField_BN254::zero(), ScalarField_BN254::zero()];
         let expected = [
+            dummy_one,
             Point_BN254::zero(),
-            Point_BN254 {
-                x: BaseField_BN254::zero(),
-                y: BaseField_BN254::one(),
-                z: BaseField_BN254::zero(),
-            },
-            Point_BN254 {
-                x: BaseField_BN254::zero(),
-                y: BaseField_BN254::one(),
-                z: BaseField_BN254::zero(),
-            },
+            Point_BN254::zero(),
         ];
         multp_vec_bn254(&mut inout, &scalars, 0);
         assert_eq!(inout, expected);

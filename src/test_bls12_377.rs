@@ -1461,25 +1461,13 @@ pub(crate) mod tests_bls12_377 {
     fn test_vec_point_mul() {
         let dummy_one = Point_BLS12_377 {
             x: BaseField_BLS12_377::one(),
-            y: BaseField_BLS12_377::zero(),
+            y: BaseField_BLS12_377::one(),
             z: BaseField_BLS12_377::one(),
         };
 
         let mut inout = [dummy_one, dummy_one, Point_BLS12_377::zero()];
         let scalars = [ScalarField_BLS12_377::one(), ScalarField_BLS12_377::zero(), ScalarField_BLS12_377::zero()];
-        let expected = [
-            Point_BLS12_377::zero(),
-            Point_BLS12_377 {
-                x: BaseField_BLS12_377::zero(),
-                y: BaseField_BLS12_377::one(),
-                z: BaseField_BLS12_377::zero(),
-            },
-            Point_BLS12_377 {
-                x: BaseField_BLS12_377::zero(),
-                y: BaseField_BLS12_377::one(),
-                z: BaseField_BLS12_377::zero(),
-            },
-        ];
+        let expected = [dummy_one, Point_BLS12_377::zero(), Point_BLS12_377::zero()];
         multp_vec_bls12_377(&mut inout, &scalars, 0);
         assert_eq!(inout, expected);
     }

@@ -755,7 +755,7 @@ pub fn clone_buffer_bls12_381<T: DeviceCopy>(buf: &mut DeviceBuffer<T>) -> Devic
     return buf_cpy;
 }
 
-pub fn get_rng_bls12_381(seed: Option<u64>) -> Box<dyn RngCore> {
+pub fn get_rng_bls12_381(seed: Option<u64>) -> Box<dyn RngCore> { //TODO: not curve specific
     let rng: Box<dyn RngCore> = match seed {
         Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
         None => Box::new(rand::thread_rng()),
@@ -1504,24 +1504,16 @@ pub(crate) mod tests_bls12_381 {
     fn test_vec_point_mul() {
         let dummy_one = Point_BLS12_381 {
             x: BaseField_BLS12_381::one(),
-            y: BaseField_BLS12_381::zero(),
+            y: BaseField_BLS12_381::one(),
             z: BaseField_BLS12_381::one(),
         };
 
         let mut inout = [dummy_one, dummy_one, Point_BLS12_381::zero()];
         let scalars = [ScalarField_BLS12_381::one(), ScalarField_BLS12_381::zero(), ScalarField_BLS12_381::zero()];
         let expected = [
+            dummy_one,
             Point_BLS12_381::zero(),
-            Point_BLS12_381 {
-                x: BaseField_BLS12_381::zero(),
-                y: BaseField_BLS12_381::one(),
-                z: BaseField_BLS12_381::zero(),
-            },
-            Point_BLS12_381 {
-                x: BaseField_BLS12_381::zero(),
-                y: BaseField_BLS12_381::one(),
-                z: BaseField_BLS12_381::zero(),
-            },
+            Point_BLS12_381::zero(),
         ];
         multp_vec_bls12_381(&mut inout, &scalars, 0);
         assert_eq!(inout, expected);
