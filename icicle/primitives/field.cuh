@@ -45,7 +45,7 @@ template <class CONFIG> class Field {
 
     static HOST_INLINE Field omega(uint32_t logn) {
         if (logn == 0 || logn > CONFIG::omegas_count) {
-            return Field { CONFIG::one };
+            throw std::invalid_argument( "Field: Invalid omega index" );
         }
 
         storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
@@ -54,7 +54,7 @@ template <class CONFIG> class Field {
 
     static HOST_INLINE Field omega_inv(uint32_t logn) {
         if (logn == 0 || logn > CONFIG::omegas_count) {
-            return Field { CONFIG::one };
+            throw std::invalid_argument( "Field: Invalid omega_inv index" );
         }
 
         storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
@@ -63,7 +63,7 @@ template <class CONFIG> class Field {
 
     static HOST_INLINE Field inv_log_size(uint32_t logn) {
         if (logn == 0 || logn > CONFIG::omegas_count) {
-            return Field { CONFIG::one };
+            throw std::invalid_argument( "Field: Invalid inv index" );
         }
 
         storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
