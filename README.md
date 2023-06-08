@@ -5,10 +5,13 @@
 ![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
 
 
-![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/buil.yml/badge.svg)
+ <div align="center">
 
+![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/buil.yml/badge.svg)
 ![Discord server](https://img.shields.io/discord/1063033227788423299?label=Discord&logo=Discord&logoColor=%23&style=plastic)
 ![Follow us on twitter](https://img.shields.io/twitter/follow/Ingo_zk?style=social)
+
+</div>
 
 ## Background
 
