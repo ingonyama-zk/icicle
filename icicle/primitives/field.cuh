@@ -45,7 +45,7 @@ template <class CONFIG> class Field {
 
     static HOST_INLINE Field omega(uint32_t logn) {
         if (logn == 0) {
-            return Field { CONFIG::one }
+            return Field { CONFIG::one };
         }
 
         if (logn > CONFIG::omegas_count) {
@@ -58,7 +58,7 @@ template <class CONFIG> class Field {
 
     static HOST_INLINE Field omega_inv(uint32_t logn) {
         if (logn == 0) {
-            return Field { CONFIG::one }
+            return Field { CONFIG::one };
         }
 
         if (logn > CONFIG::omegas_count) {
@@ -71,7 +71,7 @@ template <class CONFIG> class Field {
 
     static HOST_INLINE Field inv_log_size(uint32_t logn) {
         if (logn == 0) {
-            return Field { CONFIG::one }
+            return Field { CONFIG::one };
         }
 
         if (logn > CONFIG::omegas_count) {
