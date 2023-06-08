@@ -41,6 +41,27 @@ def get_root_of_unity(order: int) -> int:
     assert (modolus_p - 1) % order == 0
     return pow(5, (modolus_p - 1) // order, modolus_p)
 
+omega = """static constexpr storage_array<omegas_count, limbs_count> omega = {
+        omega1, omega2, omega3, omega4, omega5, omega6, omega7, omega8, 
+        omega9, omega10, omega11, omega12, omega13, omega14, omega15, omega16,
+        omega17, omega18, omega19, omega20, omega21, omega22, omega23, omega24,
+        omega25, omega26, omega27, omega28, omega29, omega30, omega31, omega32,
+    };"""
+
+omega_inv = """static constexpr storage_array<omegas_count, limbs_count> omega_inv = {
+        omega_inv1, omega_inv2, omega_inv3, omega_inv4, omega_inv5, omega_inv6, omega_inv7, omega_inv8, 
+        omega_inv9, omega_inv10, omega_inv11, omega_inv12, omega_inv13, omega_inv14, omega_inv15, omega_inv16,
+        omega_inv17, omega_inv18, omega_inv19, omega_inv20, omega_inv21, omega_inv22, omega_inv23, omega_inv24,
+        omega_inv25, omega_inv26, omega_inv27, omega_inv28, omega_inv29, omega_inv30, omega_inv31, omega_inv32,
+    };"""
+
+inv = """static constexpr storage_array<omegas_count, limbs_count> inv = {
+        inv1, inv2, inv3, inv4, inv5, inv6, inv7, inv8, 
+        inv9, inv10, inv11, inv12, inv13, inv14, inv15, inv16,
+        inv17, inv18, inv19, inv20, inv21, inv22, inv23, inv24,
+        inv25, inv26, inv27, inv28, inv29, inv30, inv31, inv32,
+    };"""
+
 def create_field_parameters_struct(modulus, modulus_bits_count,limbs,ntt,size,name):
     s = " struct "+name+"{\n"
     s += "   static constexpr unsigned limbs_count = " + str(limbs)+";\n"
@@ -61,11 +82,14 @@ def create_field_parameters_struct(modulus, modulus_bits_count,limbs,ntt,size,na
         for k in range(size):
             omega = get_root_of_unity(int(pow(2,k+1)))
             s += "   static constexpr storage<limbs_count> omega"+str(k+1)+"= {"+ to_hex(omega,8*limbs)[:-2]+"};\n"
+        s += omega
         for k in range(size):
             omega = get_root_of_unity(int(pow(2,k+1)))
             s += "   static constexpr storage<limbs_count> omega_inv"+str(k+1)+"= {"+ to_hex(pow(omega, -1, modulus),8*limbs)[:-2]+"};\n"
+        s += omega_inv
         for k in range(size):
             s += "   static constexpr storage<limbs_count> inv"+str(k+1)+"= {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),8*limbs)[:-2]+"};\n"  
+        s += inv
     s+=" };\n"   
     return s
 
