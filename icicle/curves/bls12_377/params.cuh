@@ -1,8 +1,11 @@
 #pragma once
 #include "../../utils/storage.cuh"
+
 namespace PARAMS_BLS12_377{
   struct fp_config{
     static constexpr unsigned limbs_count = 8;
+    static constexpr unsigned omegas_count = 32;
+
     static constexpr storage<limbs_count> modulus = {0x00000001, 0x0a118000, 0xd0000001, 0x59aa76fe, 0x5c37b001, 0x60b44d1e, 0x9a2ca556, 0x12ab655e};
     static constexpr storage<limbs_count> modulus_2 = {0x00000002, 0x14230000, 0xa0000002, 0xb354edfd, 0xb86f6002, 0xc1689a3c, 0x34594aac, 0x2556cabd};
     static constexpr storage<limbs_count> modulus_4 = {0x00000004, 0x28460000, 0x40000004, 0x66a9dbfb, 0x70dec005, 0x82d13479, 0x68b29559, 0x4aad957a};
@@ -14,6 +17,7 @@ namespace PARAMS_BLS12_377{
     static constexpr storage<limbs_count> m = {0x151e79ea, 0xf5204c21, 0x8d69e258, 0xfd0a180b, 0xfaa80548, 0xe4e51e49, 0xc40b2c9e, 0x36d9491e};
     static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+
     static constexpr storage<limbs_count> omega1= {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> omega2= {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> omega3= {0x00000000, 0x0a118000, 0xd0000001, 0x59aa76fe, 0x5c37b001, 0x60b44d1e, 0x9a2ca556, 0x12ab655e};
@@ -46,6 +50,14 @@ namespace PARAMS_BLS12_377{
     static constexpr storage<limbs_count> omega30= {0x2be70731, 0x287abbb1, 0x7c35c5aa, 0x5cbcfd1e, 0x1671f4df, 0x7585b3fe, 0xb899c011, 0x08350ecf};
     static constexpr storage<limbs_count> omega31= {0x09f7c5e2, 0x3400c14e, 0x0a649ea1, 0xc112e60c, 0x067ce95e, 0xf7510758, 0xf9daf17c, 0x040a66a5};
     static constexpr storage<limbs_count> omega32= {0x43efecd3, 0x89d65957, 0x3bd6c318, 0x29246adc, 0xce01533c, 0xf9fb5ef6, 0x849078c3, 0x020410e4};
+
+    static constexpr storage_array<omegas_count, limbs_count> omega = {
+        omega1, omega2, omega3, omega4, omega5, omega6, omega7, omega8, 
+        omega9, omega10, omega11, omega12, omega13, omega14, omega15, omega16,
+        omega17, omega18, omega19, omega20, omega21, omega22, omega23, omega24,
+        omega25, omega26, omega27, omega28, omega29, omega30, omega31, omega32,
+    };
+
     static constexpr storage<limbs_count> omega_inv1= {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> omega_inv2= {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> omega_inv3= {0x00000000, 0x0a118000, 0xd0000001, 0x59aa76fe, 0x5c37b001, 0x60b44d1e, 0x9a2ca556, 0x12ab655e};
@@ -78,6 +90,14 @@ namespace PARAMS_BLS12_377{
     static constexpr storage<limbs_count> omega_inv30= {0x123a81f6, 0xc03a3272, 0x115b15e8, 0x377e6d2f, 0x2d6d7206, 0xed5575e4, 0x714004f2, 0x0b1e37e4};
     static constexpr storage<limbs_count> omega_inv31= {0xdde8ffc5, 0x62a29589, 0x618c5d62, 0xfb6716e8, 0x88d61f25, 0x787e561c, 0xd2b21c7e, 0x0e351761};
     static constexpr storage<limbs_count> omega_inv32= {0x7aca7fbe, 0xc9fea0e9, 0xb41a8854, 0x965ff314, 0x810eea7e, 0x743415d4, 0x8275bbd1, 0x0431c01b};
+    
+    static constexpr storage_array<omegas_count, limbs_count> omega_inv = {
+        omega_inv1, omega_inv2, omega_inv3, omega_inv4, omega_inv5, omega_inv6, omega_inv7, omega_inv8, 
+        omega_inv9, omega_inv10, omega_inv11, omega_inv12, omega_inv13, omega_inv14, omega_inv15, omega_inv16,
+        omega_inv17, omega_inv18, omega_inv19, omega_inv20, omega_inv21, omega_inv22, omega_inv23, omega_inv24,
+        omega_inv25, omega_inv26, omega_inv27, omega_inv28, omega_inv29, omega_inv30, omega_inv31, omega_inv32,
+    };
+
     static constexpr storage<limbs_count> inv1= {0x00000001, 0x8508c000, 0x68000000, 0xacd53b7f, 0x2e1bd800, 0x305a268f, 0x4d1652ab, 0x0955b2af};
     static constexpr storage<limbs_count> inv2= {0x00000001, 0xc78d2000, 0x1c000000, 0x033fd93f, 0xc529c401, 0xc88739d6, 0xf3a17c00, 0x0e008c06};
     static constexpr storage<limbs_count> inv3= {0x00000001, 0xe8cf5000, 0xf6000000, 0x2e75281e, 0x90b0ba01, 0x949dc37a, 0xc6e710ab, 0x1055f8b2};
@@ -110,6 +130,13 @@ namespace PARAMS_BLS12_377{
     static constexpr storage<limbs_count> inv30= {0xd7ba0001, 0xca117ffb, 0x69562405, 0xe8cbb6f9, 0xd9667b87, 0xf801b7c4, 0x4f7f0fdb, 0x12ab655e};
     static constexpr storage<limbs_count> inv31= {0xebdd0001, 0x6a117ffd, 0x1cab1203, 0xa13b16fc, 0x9acf15c4, 0x2c5b0271, 0x74d5da99, 0x12ab655e};
     static constexpr storage<limbs_count> inv32= {0xf5ee8001, 0x3a117ffe, 0x76558902, 0xfd72c6fd, 0xfb8362e2, 0xc687a7c7, 0x87813ff7, 0x12ab655e};
+
+    static constexpr storage_array<omegas_count, limbs_count> inv = {
+        inv1, inv2, inv3, inv4, inv5, inv6, inv7, inv8, 
+        inv9, inv10, inv11, inv12, inv13, inv14, inv15, inv16,
+        inv17, inv18, inv19, inv20, inv21, inv22, inv23, inv24,
+        inv25, inv26, inv27, inv28, inv29, inv30, inv31, inv32,
+    };    
   };
 
   struct fq_config{
