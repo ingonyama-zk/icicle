@@ -1,30 +1,12 @@
 import json
 import math
 import os
-from sympy.ntheory import isprime, primitive_root
-import subprocess
-import random 
+from string import Template
 import sys
 
-data = None
-with open(sys.argv[1]) as json_file:
-    data = json.load(json_file)
 
-curve_name = data["curve_name"]
-modolus_p = data["modolus_p"]
-bit_count_p = data["bit_count_p"]
-limb_p =  data["limb_p"]
-ntt_size = data["ntt_size"]
-modolus_q = data["modolus_q"]
-bit_count_q = data["bit_count_q"] 
-limb_q = data["limb_q"]
-weierstrass_b = data["weierstrass_b"]
-gen_x = data["gen_x"]
-gen_y = data["gen_y"]
-
-
-def to_hex(val, length):
-    x = str(hex(val))[2:]
+def to_hex(val: int, length):
+    x = hex(val)[2:]
     if len(x) % 8 != 0:
         x = "0" * (8-len(x) % 8) + x
     if len(x) != length:
@@ -33,133 +15,269 @@ def to_hex(val, length):
     chunks = [x[i:i+n] for i in range(0, len(x), n)][::-1]
     s = ""
     for c in chunks:
-        s += "0x" + c + ", "
-    return s
+        s += f'0x{c}, '
+        
+    return s[:-2]
 
 
-def get_root_of_unity(order: int) -> int:
-    assert (modolus_p - 1) % order == 0
-    return pow(5, (modolus_p - 1) // order, modolus_p)
+def get_root_of_unity(modulus_p, order: int) -> int:
+    assert (modulus_p - 1) % order == 0
+    return pow(5, (modulus_p - 1) // order, modulus_p)
 
-def create_field_parameters_struct(modulus, modulus_bits_count,limbs,ntt,size,name):
-    s = " struct "+name+"{\n"
-    s += "   static constexpr unsigned limbs_count = " + str(limbs)+";\n"
-    s += "   static constexpr storage<limbs_count> modulus = {"+to_hex(modulus,8*limbs)[:-2]+"};\n"
-    s += "   static constexpr storage<limbs_count> modulus_2 = {"+to_hex(modulus*2,8*limbs)[:-2]+"};\n"   
-    s += "   static constexpr storage<limbs_count> modulus_4 = {"+to_hex(modulus*4,8*limbs)[:-2]+"};\n"
-    s += "   static constexpr storage<2*limbs_count> modulus_wide = {"+to_hex(modulus,8*limbs*2)[:-2]+"};\n"
-    s += "   static constexpr storage<2*limbs_count> modulus_sqared = {"+to_hex(modulus*modulus,8*limbs)[:-2]+"};\n"  
-    s += "   static constexpr storage<2*limbs_count> modulus_sqared_2 = {"+to_hex(modulus*modulus*2,8*limbs)[:-2]+"};\n"   
-    s += "   static constexpr storage<2*limbs_count> modulus_sqared_4 = {"+to_hex(modulus*modulus*2*2,8*limbs)[:-2]+"};\n"   
-    s += "   static constexpr unsigned modulus_bits_count = "+str(modulus_bits_count)+";\n"
-    m = int(math.floor(int(pow(2,2*modulus_bits_count) // modulus)))
-    s += "   static constexpr storage<limbs_count> m = {"+ to_hex(m,8*limbs)[:-2] +"};\n"
-    s += "   static constexpr storage<limbs_count> one = {"+ to_hex(1,8*limbs)[:-2] +"};\n"
-    s += "   static constexpr storage<limbs_count> zero = {"+ to_hex(0,8*limbs)[:-2] +"};\n"
 
-    if ntt:
-        for k in range(size):
-            omega = get_root_of_unity(int(pow(2,k+1)))
-            s += "   static constexpr storage<limbs_count> omega"+str(k+1)+"= {"+ to_hex(omega,8*limbs)[:-2]+"};\n"
-        for k in range(size):
-            omega = get_root_of_unity(int(pow(2,k+1)))
-            s += "   static constexpr storage<limbs_count> omega_inv"+str(k+1)+"= {"+ to_hex(pow(omega, -1, modulus),8*limbs)[:-2]+"};\n"
-        for k in range(size):
-            s += "   static constexpr storage<limbs_count> inv"+str(k+1)+"= {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),8*limbs)[:-2]+"};\n"  
-    s+=" };\n"   
-    return s
+def compute_values(modulus, modulus_bit_count, limbs):
+    limb_size = 8*limbs
+    modulus_ = to_hex(modulus,limb_size)
+    modulus_2 = to_hex(modulus*2,limb_size)
+    modulus_4 = to_hex(modulus*4,limb_size)
+    modulus_wide = to_hex(modulus,limb_size*2)
+    modulus_squared = to_hex(modulus*modulus,limb_size)
+    modulus_squared_2 = to_hex(modulus*modulus*2,limb_size)
+    modulus_squared_4 = to_hex(modulus*modulus*4,limb_size)
+    m_raw = int(math.floor(int(pow(2,2*modulus_bit_count) // modulus)))
+    m = to_hex(m_raw,limb_size)
+    one = to_hex(1,limb_size)
+    zero = to_hex(0,limb_size)
 
-def create_gen():
-    s = " struct group_generator {\n"
-    s += "  static constexpr storage<fq_config::limbs_count> generator_x = {"+to_hex(gen_x,8*limb_q)[:-2]+ "};\n"
-    s += "  static constexpr storage<fq_config::limbs_count> generator_y = {"+to_hex(gen_y,8*limb_q)[:-2]+ "};\n"
-    s+=" };\n" 
-    return s
+    return (
+        modulus_,
+        modulus_2,
+        modulus_4,
+        modulus_wide,
+        modulus_squared,
+        modulus_squared_2,
+        modulus_squared_4,
+        m,
+        one,
+        zero
+    )
 
-def get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q, bit_count_q, limb_q, weierstrass_b):
-    file_content = ""
-    file_content += "#pragma once\n#include \"../../utils/storage.cuh\"\n"
-    file_content += "namespace PARAMS_"+curve_name.upper()+"{\n"
-    file_content += create_field_parameters_struct(modolus_p,bit_count_p,limb_p,True,ntt_size,"fp_config")
-    file_content += create_field_parameters_struct(modolus_q,bit_count_q,limb_q,False,0,"fq_config")
-    file_content += " static constexpr unsigned weierstrass_b = " + str(weierstrass_b)+ ";\n"
-    file_content += create_gen()
-    file_content+="}\n"
-    return file_content
 
+def get_fq_params(modulus, modulus_bit_count, limbs, gen_x, gen_y, gen_x_re, gen_x_im, gen_y_re, gen_y_im):
+    (
+        modulus,
+        modulus_2,
+        modulus_4,
+        modulus_wide,
+        modulus_squared,
+        modulus_squared_2,
+        modulus_squared_4,
+        m,
+        one,
+        zero
+    ) = compute_values(modulus, modulus_bit_count, limbs)
+
+    limb_size = 8*limbs
+    return {
+        'fq_modulus': modulus,
+        'fq_modulus_2': modulus_2,
+        'fq_modulus_4': modulus_4,
+        'fq_modulus_wide': modulus_wide,
+        'fq_modulus_squared': modulus_squared,
+        'fq_modulus_squared_2': modulus_squared_2,
+        'fq_modulus_squared_4': modulus_squared_4,
+        'fq_m': m,
+        'fq_one': one,
+        'fq_zero': zero,
+        'fq_gen_x': to_hex(gen_x, limb_size),
+        'fq_gen_y': to_hex(gen_y, limb_size),
+        'fq_gen_x_re': to_hex(gen_x_re, limb_size),
+        'fq_gen_x_im': to_hex(gen_x_im, limb_size),
+        'fq_gen_y_re': to_hex(gen_y_re, limb_size),
+        'fq_gen_y_im': to_hex(gen_y_im, limb_size)
+    }
+
+
+def get_fp_params(modulus, modulus_bit_count, limbs, size=0):
+    (
+        modulus_,
+        modulus_2,
+        modulus_4,
+        modulus_wide,
+        modulus_squared,
+        modulus_squared_2,
+        modulus_squared_4,
+        m,
+        one,
+        zero
+    ) = compute_values(modulus, modulus_bit_count, limbs)
+    limb_size = 8*limbs
+    if size > 0:
+        omega = ''
+        omegas = ''
+        omega_inv = ''
+        omega_invs = ''
+        inv = ''
+        invs = ''
+
+        for k in range(1, size+1):
+            om = get_root_of_unity(modulus, int(pow(2,k)))
+            omegas += "static constexpr storage<limbs_count> omega"+str(k)+"= {"+ to_hex(om,limb_size)+"};"
+            omega += f'omega{k}'
+
+            om = get_root_of_unity(modulus, int(pow(2,k)))
+            omega_invs += "static constexpr storage<limbs_count> omega_inv"+str(k)+"= {"+ to_hex(pow(om, -1, modulus),limb_size)+"};"
+            omega_inv += f'omega_inv{k}'
+
+            invs += "static constexpr storage<limbs_count> inv"+str(k)+"= {"+ to_hex(pow(int(pow(2,k)), -1, modulus),limb_size)+"};"
+            inv += f'inv{k}'
+
+            if k != size:
+                omegas += "\n    "
+                omega += ", "
+                omega_invs += "\n    "
+                omega_inv += ", "
+                invs += "\n    "
+                inv += ", "
+
+  
+    return {
+        'fp_modulus': modulus_,
+        'fp_modulus_2': modulus_2,
+        'fp_modulus_4': modulus_4,
+        'fp_modulus_wide': modulus_wide,
+        'fp_modulus_squared': modulus_squared,
+        'fp_modulus_squared_2': modulus_squared_2,
+        'fp_modulus_squared_4': modulus_squared_4,
+        'fp_m': m,
+        'fp_one': one,
+        'fp_zero': zero,
+        'omegas': omegas,
+        'omega': omega,
+        'omega_invs': omega_invs,
+        'omega_inv': omega_inv,
+        'invs': invs,
+        'inv': inv,
+    }
+
+
+def get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, size):
+    
+    return {
+        'weier_b': to_hex(weierstrass_b, size),
+        'weier_b_g2_re': to_hex(weierstrass_b_g2_re, size),
+        'weier_b_g2_im': to_hex(weierstrass_b_g2_im, size),
+    }
+
+
+def get_params(config):
+    curve_name = config["curve_name"]
+    modulus_p = config["modulus_p"]
+    bit_count_p = config["bit_count_p"]
+    limb_p =  config["limb_p"]
+    ntt_size = config["ntt_size"]
+    modulus_q = config["modulus_q"]
+    bit_count_q = config["bit_count_q"] 
+    limb_q = config["limb_q"]
+    weierstrass_b = config["weierstrass_b"]
+    weierstrass_b_g2_re = config["weierstrass_b_g2_re"]
+    weierstrass_b_g2_im = config["weierstrass_b_g2_im"]
+    gen_x = config["gen_x"]
+    gen_y = config["gen_y"]
+    generator_x_re = config["gen_x_re"]
+    generator_x_im = config["gen_x_im"]
+    generator_y_re = config["gen_y_re"]
+    generator_y_im = config["gen_y_im"]
+
+    params = {
+        'curve_name_U': curve_name.upper(),
+        'fp_num_limbs': limb_p,
+        'fq_num_limbs': limb_q,
+        'fp_modulus_bit_count': bit_count_p,
+        'fq_modulus_bit_count': bit_count_q,
+        'num_omegas': ntt_size
+    }
+    
+    fp_params = get_fp_params(modulus_p, bit_count_p, limb_p, ntt_size)
+    fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, gen_x, gen_y, generator_x_re, generator_x_im, generator_y_re, generator_y_im)
+    weier_params = get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, 8*limb_q)
+
+    return {
+        **params,
+        **fp_params,
+        **fq_params,
+        **weier_params
+    }
+
+
+config = None
+with open(sys.argv[1]) as json_file:
+    config = json.load(json_file)
+
+curve_name_lower = config["curve_name"].lower()
+curve_name_upper = config["curve_name"].upper()
+limb_q = config["limb_q"]
+limb_p = config["limb_p"]
 
 # Create Cuda interface
 
-newpath = "./icicle/curves/"+curve_name 
+newpath = f'./icicle/curves/{curve_name_lower}'
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 
-fc = get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q, bit_count_q, limb_q, weierstrass_b)
-text_file = open("./icicle/curves/"+curve_name+"/params.cuh", "w")
-n = text_file.write(fc)
-text_file.close()
+with open("./icicle/curves/curve_template/params.cuh", "r") as params_file:
+    params_file_template = Template(params_file.read())
+    params = get_params(config)
+    params_content = params_file_template.safe_substitute(params)
+    with open(f'./icicle/curves/{curve_name_lower}/params.cuh', 'w') as f:
+        f.write(params_content)
 
 with open("./icicle/curves/curve_template/lde.cu", "r") as lde_file:
-    content = lde_file.read()
-    content = content.replace("CURVE_NAME_U",curve_name.upper())
-    content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./icicle/curves/"+curve_name+"/lde.cu", "w")
-    n = text_file.write(content)
-    text_file.close()
+    template_content = Template(lde_file.read())
+    lde_content = template_content.safe_substitute(
+        CURVE_NAME_U=curve_name_upper, 
+        CURVE_NAME_L=curve_name_lower
+    )
+    with open(f'./icicle/curves/{curve_name_lower}/lde.cu', 'w') as f:
+        f.write(lde_content)
     
 with open("./icicle/curves/curve_template/msm.cu", "r") as msm_file:
-    content = msm_file.read()
-    content = content.replace("CURVE_NAME_U",curve_name.upper())
-    content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./icicle/curves/"+curve_name+"/msm.cu", "w")
-    n = text_file.write(content)
-    text_file.close()
+    template_content = Template(msm_file.read())
+    msm_content = template_content.safe_substitute(
+        CURVE_NAME_U=curve_name_upper, 
+        CURVE_NAME_L=curve_name_lower
+    )
+    with open(f'./icicle/curves/{curve_name_lower}/msm.cu', 'w') as f:
+        f.write(msm_content)
 
 with open("./icicle/curves/curve_template/ve_mod_mult.cu", "r") as ve_mod_mult_file:
-    content = ve_mod_mult_file.read()
-    content = content.replace("CURVE_NAME_U",curve_name.upper())
-    content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./icicle/curves/"+curve_name+"/ve_mod_mult.cu", "w")
-    n = text_file.write(content)
-    text_file.close()
+    template_content = Template(ve_mod_mult_file.read())
+    ve_mod_mult_content = template_content.safe_substitute(
+        CURVE_NAME_U=curve_name_upper, 
+        CURVE_NAME_L=curve_name_lower
+    )
+    with open(f'./icicle/curves/{curve_name_lower}/ve_mod_mult.cu', 'w') as f:
+        f.write(ve_mod_mult_content)
     
 
-namespace = '#include "params.cuh"\n'+'''namespace CURVE_NAME_U {
-    typedef Field<PARAMS_CURVE_NAME_U::fp_config> scalar_field_t;\
-    typedef scalar_field_t scalar_t;\
-    typedef Field<PARAMS_CURVE_NAME_U::fq_config> point_field_t;
-    typedef Projective<point_field_t, scalar_field_t, PARAMS_CURVE_NAME_U::group_generator, PARAMS_CURVE_NAME_U::weierstrass_b> projective_t;
-    typedef Affine<point_field_t> affine_t;
-}'''
-
-with open('./icicle/curves/'+curve_name+'/curve_config.cuh', 'w') as f:
-    f.write(namespace.replace("CURVE_NAME_U",curve_name.upper()))
+with open(f'./icicle/curves/curve_template/curve_config.cuh', 'r') as cc:
+    template_content = Template(cc.read())
+    cc_content = template_content.safe_substitute(
+        CURVE_NAME_U=curve_name_upper,
+    )
+    with open(f'./icicle/curves/{curve_name_lower}/curve_config.cuh', 'w') as f:
+        f.write(cc_content)
     
-    
-eq = '''
-#include <cuda.h>\n
-#include "curve_config.cuh"\n
-#include "../../primitives/projective.cuh"\n
-extern "C" bool eq_CURVE_NAME_L(CURVE_NAME_U::projective_t *point1, CURVE_NAME_U::projective_t *point2)
-{
-    return (*point1 == *point2);
-}'''
 
-with open('./icicle/curves/'+curve_name+'/projective.cu', 'w') as f:
-    f.write(eq.replace("CURVE_NAME_U",curve_name.upper()).replace("CURVE_NAME_L",curve_name.lower()))
+with open(f'./icicle/curves/curve_template/projective.cu', 'r') as proj:
+    template_content = Template(proj.read())
+    proj_content = template_content.safe_substitute(
+        CURVE_NAME_U=curve_name_upper, 
+        CURVE_NAME_L=curve_name_lower
+    )
+    with open(f'./icicle/curves/{curve_name_lower}/projective.cu', 'w') as f:
+        f.write(proj_content)
 
-supported_operations = '''
-#include "projective.cu"
-#include "lde.cu"
-#include "msm.cu"
-#include "ve_mod_mult.cu"
-'''
 
-with open('./icicle/curves/'+curve_name+'/supported_operations.cu', 'w') as f:
-    f.write(supported_operations.replace("CURVE_NAME_U",curve_name.upper()).replace("CURVE_NAME_L",curve_name.lower()))
-    
+with open(f'./icicle/curves/curve_template/supported_operations.cu', 'r') as supp_ops:
+    template_content = Template(supp_ops.read())
+    supp_ops_content = template_content.safe_substitute()
+    with open(f'./icicle/curves/{curve_name_lower}/supported_operations.cu', 'w') as f:
+        f.write(supp_ops_content)
+
+
 with open('./icicle/curves/index.cu', 'a') as f:
-    f.write('\n#include "'+curve_name.lower()+'/supported_operations.cu"')
+    f.write(f'\n#include "{curve_name_lower}/supported_operations.cu"')
     
 
 
@@ -168,36 +286,36 @@ with open('./icicle/curves/index.cu', 'a') as f:
 if limb_p == limb_q: 
     with open("./src/curve_templates/curve_same_limbs.rs", "r") as curve_file:
         content = curve_file.read()
-        content = content.replace("CURVE_NAME_U",curve_name.upper())
-        content = content.replace("CURVE_NAME_L",curve_name.lower())
+        content = content.replace("CURVE_NAME_U",curve_name_upper)
+        content = content.replace("CURVE_NAME_L",curve_name_lower)
         content = content.replace("_limbs_p",str(limb_p * 8 * 4))
         content = content.replace("limbs_p",str(limb_p))
-        text_file = open("./src/curves/"+curve_name+".rs", "w")
+        text_file = open("./src/curves/"+curve_name_lower+".rs", "w")
         n = text_file.write(content)
         text_file.close()
 else:
     with open("./src/curve_templates/curve_different_limbs.rs", "r") as curve_file:
         content = curve_file.read()
-        content = content.replace("CURVE_NAME_U",curve_name.upper())
-        content = content.replace("CURVE_NAME_L",curve_name.lower())
+        content = content.replace("CURVE_NAME_U",curve_name_upper)
+        content = content.replace("CURVE_NAME_L",curve_name_lower)
         content = content.replace("_limbs_p",str(limb_p * 8 * 4))
         content = content.replace("limbs_p",str(limb_p))
         content = content.replace("_limbs_q",str(limb_q * 8 * 4))
         content = content.replace("limbs_q",str(limb_q))
-        text_file = open("./src/curves/"+curve_name+".rs", "w")
+        text_file = open("./src/curves/"+curve_name_lower+".rs", "w")
         n = text_file.write(content)
         text_file.close()
 
 with open("./src/curve_templates/test.rs", "r") as test_file:
     content = test_file.read()
-    content = content.replace("CURVE_NAME_U",curve_name.upper())
-    content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./src/test_"+curve_name+".rs", "w")
+    content = content.replace("CURVE_NAME_U",curve_name_upper)
+    content = content.replace("CURVE_NAME_L",curve_name_lower)
+    text_file = open("./src/test_"+curve_name_lower+".rs", "w")
     n = text_file.write(content)
     text_file.close()
     
 with open('./src/curves/mod.rs', 'a') as f:
-    f.write('\n pub mod ' + curve_name + ';')
+    f.write('\n pub mod ' + curve_name_lower + ';')
 
 with open('./src/lib.rs', 'a') as f:
-    f.write('\npub mod ' + curve_name + ';')
+    f.write('\npub mod ' + curve_name_lower + ';')
