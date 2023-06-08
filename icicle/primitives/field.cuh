@@ -36,15 +36,19 @@ template <class CONFIG> class Field {
     }
 
     static constexpr HOST_DEVICE_INLINE Field generator_x() {
-      return Field { CONFIG::generator_x };
+      return Field { CONFIG::g1_gen_x };
     }
 
     static constexpr HOST_DEVICE_INLINE Field generator_y() {
-      return Field { CONFIG::generator_y };
+      return Field { CONFIG::g1_gen_y };
     }
 
     static HOST_INLINE Field omega(uint32_t logn) {
-        if (logn == 0 || logn > CONFIG::omegas_count) {
+        if (logn == 0) {
+            return Field { CONFIG::one }
+        }
+
+        if (logn > CONFIG::omegas_count) {
             throw std::invalid_argument( "Field: Invalid omega index" );
         }
 
@@ -53,7 +57,11 @@ template <class CONFIG> class Field {
     }      
 
     static HOST_INLINE Field omega_inv(uint32_t logn) {
-        if (logn == 0 || logn > CONFIG::omegas_count) {
+        if (logn == 0) {
+            return Field { CONFIG::one }
+        }
+
+        if (logn > CONFIG::omegas_count) {
             throw std::invalid_argument( "Field: Invalid omega_inv index" );
         }
 
@@ -62,7 +70,11 @@ template <class CONFIG> class Field {
     }
 
     static HOST_INLINE Field inv_log_size(uint32_t logn) {
-        if (logn == 0 || logn > CONFIG::omegas_count) {
+        if (logn == 0) {
+            return Field { CONFIG::one }
+        }
+
+        if (logn > CONFIG::omegas_count) {
             throw std::invalid_argument( "Field: Invalid inv index" );
         }
 

@@ -15,11 +15,9 @@ namespace PARAMS_${curve_name_U} {
     static constexpr storage<2*limbs_count> modulus_squared_2 = {${fp_modulus_squared_2}};
     static constexpr storage<2*limbs_count> modulus_squared_4 = {${fp_modulus_squared_4}};
 
-
     static constexpr storage<limbs_count> m = {${fp_m}};
     static constexpr storage<limbs_count> one = {${fp_one}};
     static constexpr storage<limbs_count> zero = {${fp_zero}};
-
 
     static constexpr storage_array<omegas_count, limbs_count> omega = { {
         ${omega}
@@ -54,12 +52,12 @@ namespace PARAMS_${curve_name_U} {
     // true if i^2 is negative
     static constexpr bool i_squared_is_negative = true;
     // G1 and G2 generators 
-    static constexpr storage<limbs_count> generator_x = {${fq_gen_x}};
-    static constexpr storage<limbs_count> generator_y = {${fq_gen_y}};
-    static constexpr storage<limbs_count> generator_x_re = {${fq_gen_x_re}};
-    static constexpr storage<limbs_count> generator_x_im = {${fq_gen_x_im}};
-    static constexpr storage<limbs_count> generator_y_re = {${fq_gen_y_re}};
-    static constexpr storage<limbs_count> generator_y_im = {${fq_gen_y_im}};
+    static constexpr storage<limbs_count> g1_gen_x = {${fq_gen_x}};
+    static constexpr storage<limbs_count> g1_gen_y = {${fq_gen_y}};
+    static constexpr storage<limbs_count> g2_gen_x_re = {${fq_gen_x_re}};
+    static constexpr storage<limbs_count> g2_gen_x_im = {${fq_gen_x_im}};
+    static constexpr storage<limbs_count> g2_gen_y_re = {${fq_gen_y_re}};
+    static constexpr storage<limbs_count> g2_gen_y_im = {${fq_gen_y_im}};
   };
 
   static constexpr storage<fq_config::limbs_count> weierstrass_b = {${weier_b}};
