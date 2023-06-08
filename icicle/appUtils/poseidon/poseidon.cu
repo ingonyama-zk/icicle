@@ -152,7 +152,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     S * states;
 
     // allocate memory for {blocks} states of {t} scalars each
-    if (cudaMalloc(&states, blocks * this->t * sizeof(S))) {
+    if (cudaMalloc(&states, blocks * this->t * sizeof(S)) != CUDA_SUCCESS) {
         throw std::runtime_error("Failed memory allocation on the device");
     }
 
