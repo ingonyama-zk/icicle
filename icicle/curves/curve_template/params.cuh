@@ -5,6 +5,7 @@ namespace PARAMS_${curve_name_U} {
   struct fp_config {
     static constexpr unsigned limbs_count = ${fp_num_limbs};
     static constexpr unsigned omegas_count = ${num_omegas};
+    static constexpr unsigned modulus_bit_count = ${fp_modulus_bit_count};
     
     static constexpr storage<limbs_count> modulus = {${fp_modulus}};
     static constexpr storage<limbs_count> modulus_2 = {${fp_modulus_2}};
@@ -14,33 +15,30 @@ namespace PARAMS_${curve_name_U} {
     static constexpr storage<2*limbs_count> modulus_squared_2 = {${fp_modulus_squared_2}};
     static constexpr storage<2*limbs_count> modulus_squared_4 = {${fp_modulus_squared_4}};
 
-    static constexpr unsigned modulus_bit_count = ${fp_modulus_bit_count};
 
     static constexpr storage<limbs_count> m = {${fp_m}};
     static constexpr storage<limbs_count> one = {${fp_one}};
     static constexpr storage<limbs_count> zero = {${fp_zero}};
 
-    ${omegas}
 
-    static constexpr storage_array<omegas_count, limbs_count> omega = {
+    static constexpr storage_array<omegas_count, limbs_count> omega = { {
         ${omega}
-    };
+    } };
 
-    ${omega_invs}
 
-    static constexpr storage_array<omegas_count, limbs_count> omega_inv = {
+    static constexpr storage_array<omegas_count, limbs_count> omega_inv = { {
         ${omega_inv}
-    };
+    } };
     
-    ${invs}
 
-    static constexpr storage_array<omegas_count, limbs_count> inv = {
+    static constexpr storage_array<omegas_count, limbs_count> inv = { {
         ${inv}
-    }; 
+    } }; 
   };
 
   struct fq_config {
     static constexpr unsigned limbs_count = ${fq_num_limbs};
+    static constexpr unsigned modulus_bit_count = ${fq_modulus_bit_count};
     static constexpr storage<limbs_count> modulus = {${fq_modulus}};
     static constexpr storage<limbs_count> modulus_2 = {${fq_modulus_2}};
     static constexpr storage<limbs_count> modulus_4 = {${fq_modulus_4}};
@@ -48,7 +46,6 @@ namespace PARAMS_${curve_name_U} {
     static constexpr storage<2*limbs_count> modulus_squared = {${fq_modulus_squared}};
     static constexpr storage<2*limbs_count> modulus_squared_2 = {${fq_modulus_squared_2}};
     static constexpr storage<2*limbs_count> modulus_squared_4 = {${fq_modulus_squared_4}};
-    static constexpr unsigned modulus_bit_count = ${fq_modulus_bit_count};
     static constexpr storage<limbs_count> m = {${fq_m}};
     static constexpr storage<limbs_count> one = {${fq_one}};
     static constexpr storage<limbs_count> zero = {${fq_zero}};
