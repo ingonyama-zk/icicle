@@ -53,7 +53,7 @@ def compute_values(modulus, modulus_bit_count, limbs):
     )
 
 
-def get_fq_params(modulus, modulus_bit_count, limbs, gen_x, gen_y, gen_x_re, gen_x_im, gen_y_re, gen_y_im):
+def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_x_re, g2_gen_x_im, g2_gen_y_re, g2_gen_y_im):
     (
         modulus,
         modulus_2,
@@ -79,12 +79,12 @@ def get_fq_params(modulus, modulus_bit_count, limbs, gen_x, gen_y, gen_x_re, gen
         'fq_m': m,
         'fq_one': one,
         'fq_zero': zero,
-        'fq_gen_x': to_hex(gen_x, limb_size),
-        'fq_gen_y': to_hex(gen_y, limb_size),
-        'fq_gen_x_re': to_hex(gen_x_re, limb_size),
-        'fq_gen_x_im': to_hex(gen_x_im, limb_size),
-        'fq_gen_y_re': to_hex(gen_y_re, limb_size),
-        'fq_gen_y_im': to_hex(gen_y_im, limb_size)
+        'fq_gen_x': to_hex(g1_gen_x, limb_size),
+        'fq_gen_y': to_hex(g1_gen_y, limb_size),
+        'fq_gen_x_re': to_hex(g2_gen_x_re, limb_size),
+        'fq_gen_x_im': to_hex(g2_gen_x_im, limb_size),
+        'fq_gen_y_re': to_hex(g2_gen_y_re, limb_size),
+        'fq_gen_y_im': to_hex(g2_gen_y_im, limb_size)
     }
 
 
@@ -154,12 +154,12 @@ def get_params(config):
     weierstrass_b = config["weierstrass_b"]
     weierstrass_b_g2_re = config["weierstrass_b_g2_re"]
     weierstrass_b_g2_im = config["weierstrass_b_g2_im"]
-    gen_x = config["gen_x"]
-    gen_y = config["gen_y"]
-    generator_x_re = config["gen_x_re"]
-    generator_x_im = config["gen_x_im"]
-    generator_y_re = config["gen_y_re"]
-    generator_y_im = config["gen_y_im"]
+    g1_gen_x = config["g1_gen_x"]
+    g1_gen_y = config["g1_gen_y"]
+    g2_generator_x_re = config["g2_gen_x_re"]
+    g2_generator_x_im = config["g2_gen_x_im"]
+    g2_generator_y_re = config["g2_gen_y_re"]
+    g2_generator_y_im = config["g2_gen_y_im"]
 
     params = {
         'curve_name_U': curve_name.upper(),
@@ -171,7 +171,7 @@ def get_params(config):
     }
     
     fp_params = get_fp_params(modulus_p, bit_count_p, limb_p, ntt_size)
-    fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, gen_x, gen_y, generator_x_re, generator_x_im, generator_y_re, generator_y_im)
+    fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, g1_gen_x, g1_gen_y, g2_generator_x_re, g2_generator_x_im, g2_generator_y_re, g2_generator_y_im)
     weier_params = get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, 8*limb_q)
 
     return {
