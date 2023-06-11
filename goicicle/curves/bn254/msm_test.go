@@ -1,7 +1,6 @@
 package bn254
 
 import (
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"testing"
@@ -23,10 +22,9 @@ func randG1Jac() (bn254.G1Jac, error) {
 
 	genG1Jac, _, _, _ := bn254.Generators()
 
-	randomBigInt, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	if err != nil {
-		panic(err)
-	}
+	//randomBigInt, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 63))
+	//randomBigInt, err := rand.Int(rand.Reader, big.NewInt(100))
+	randomBigInt := big.NewInt(100)
 
 	point.ScalarMultiplication(&genG1Jac, scalar.BigInt(randomBigInt))
 	return point, nil
@@ -37,7 +35,7 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 	var points []PointAffineNoInfinityBN254
 	var pointsAffine []bn254.G1Affine
 
-	// Use a loop to populate the slice
+	// populate the slice
 	for i := 0; i < count; i++ {
 		gnarkP, _ := randG1Jac()
 		var pointAffine bn254.G1Affine
@@ -69,15 +67,15 @@ func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
 	return points, pointsAffine
 }
 
-func GenerateScalars(count int) ([]FieldBN254, []fr.Element) {
+func GenerateScalars(count int) ([]ScalarField, []fr.Element) {
 	// Declare a slice of integers
-	var scalars []FieldBN254
+	var scalars []ScalarField
 	var scalars_fr []fr.Element
 
 	var rand fr.Element
 	for i := 0; i < count; i++ {
 		rand.SetRandom()
-		s := FieldBN254FromGnark(rand.Bits())
+		s := NewFieldFromFrGnark[ScalarField](rand)
 
 		scalars_fr = append(scalars_fr, rand)
 		scalars = append(scalars, *s)
@@ -110,7 +108,6 @@ func TestBenchMSM(t *testing.T) {
 		for _, pow2 := range []int{4, 6} {
 			msmSize := 1 << pow2
 			batchSize := 1 << batchPow2
-
 			count := msmSize * batchSize
 
 			points, _ := GeneratePoints(count)

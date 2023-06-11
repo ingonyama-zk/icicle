@@ -1,42 +1,85 @@
 package bn254
 
 import (
+	"unsafe"
+
 	"encoding/binary"
 	"fmt"
-	"unsafe"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 )
 
-// #cgo CFLAGS: -I../../../icicle/curves/bn254/
-// #cgo LDFLAGS: -L../../../icicle/curves/bn254/ -lbn254
+// #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bn254/
+// #cgo LDFLAGS: -L${SRCDIR}/icicle/curves/bn254/ -lbn254
 // #include "c_api.h"
 import "C"
 
-/*
- * FieldBN254
- */
+const SIZE = 8
 
-type FieldBN254 struct {
-	// todo make 8 gloabl const
-	s [8]uint32
+type ScalarField struct {
+	s [SIZE]uint32
 }
 
-func NewFieldBN254Zero() *FieldBN254 {
-	var field FieldBN254
+type BaseField struct {
+	s [SIZE]uint32
+}
+
+type Field interface {
+	ScalarField | BaseField
+}
+
+/*
+ * Common Constrctors
+ */
+
+func NewFieldZero[T Field]() *T {
+	var field T
 
 	return &field
 }
 
-func NewFieldBN254One() *FieldBN254 {
-	var s [8]uint32
+func NewFieldOne[T Field]() *T {
+	var s [SIZE]uint32
+
 	s[0] = 1
 
-	return &FieldBN254{s}
+	return &T{s}
 }
 
-func (f *FieldBN254) toBytesLe() []byte {
+func NewFieldFromFrGnark[T Field](element fr.Element) *T {
+	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
+
+	return &T{s}
+}
+
+func NewFieldFromFpGnark[T BaseField | ScalarField](element fp.Element) *T {
+	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
+
+	return &T{s}
+}
+
+/*
+ * BaseField Constrctors
+ */
+
+func BaseFieldFromLimbs(limbs [8]uint32) *BaseField {
+	bf := NewFieldZero[BaseField]()
+	copy(bf.s[:], limbs[:])
+
+	return bf
+}
+
+/*
+ * BaseField methods
+ */
+
+func (f *BaseField) limbs() [SIZE]uint32 {
+	return f.s
+}
+
+func (f *BaseField) toBytesLe() []byte {
 	bytes := make([]byte, len(f.s)*4)
 	for i, v := range f.s {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)
@@ -45,11 +88,21 @@ func (f *FieldBN254) toBytesLe() []byte {
 	return bytes
 }
 
-func (f *FieldBN254) limbs() [8]uint32 {
-	return f.s
+func (f *BaseField) toGnarkFr() *fr.Element {
+	fb := f.toBytesLe()
+	var b32 [32]byte
+	copy(b32[:], fb[:32])
+
+	v, e := fr.LittleEndian.Element(&b32)
+
+	if e != nil {
+		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
+	}
+
+	return &v
 }
 
-func (f *FieldBN254) toGnark() *fp.Element {
+func (f *BaseField) toGnarkFp() *fp.Element {
 	fb := f.toBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
@@ -63,10 +116,49 @@ func (f *FieldBN254) toGnark() *fp.Element {
 	return &v
 }
 
-// todo: implement a scalar field
-func FieldBN254FromGnark(arr64 [4]uint64) *FieldBN254 {
-	s := ConvertUint64ArrToUint32Arr(arr64)
-	return &FieldBN254{s}
+/*
+ * ScalarField methods
+ */
+
+func (f *ScalarField) limbs() [SIZE]uint32 {
+	return f.s
+}
+
+func (f *ScalarField) toBytesLe() []byte {
+	bytes := make([]byte, len(f.s)*4)
+	for i, v := range f.s {
+		binary.LittleEndian.PutUint32(bytes[i*4:], v)
+	}
+
+	return bytes
+}
+
+func (f *ScalarField) toGnarkFr() *fr.Element {
+	fb := f.toBytesLe()
+	var b32 [32]byte
+	copy(b32[:], fb[:32])
+
+	v, e := fr.LittleEndian.Element(&b32)
+
+	if e != nil {
+		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
+	}
+
+	return &v
+}
+
+func (f *ScalarField) toGnarkFp() *fp.Element {
+	fb := f.toBytesLe()
+	var b32 [32]byte
+	copy(b32[:], fb[:32])
+
+	v, e := fp.LittleEndian.Element(&b32)
+
+	if e != nil {
+		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
+	}
+
+	return &v
 }
 
 /*
@@ -74,19 +166,15 @@ func FieldBN254FromGnark(arr64 [4]uint64) *FieldBN254 {
  */
 
 type PointBN254 struct {
-	x, y, z FieldBN254
+	x, y, z BaseField
 }
 
 func NewPointBN254Zero() *PointBN254 {
 	return &PointBN254{
-		x: *NewFieldBN254Zero(),
-		y: *NewFieldBN254One(),
-		z: *NewFieldBN254Zero(),
+		x: *NewFieldZero[BaseField](),
+		y: *NewFieldOne[BaseField](),
+		z: *NewFieldZero[BaseField](),
 	}
-}
-
-func NewPointBN254Infinity() *PointBN254 {
-	return NewPointBN254Zero()
 }
 
 func (p *PointBN254) eq(pCompare *PointBN254) bool {
@@ -111,9 +199,9 @@ func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {
 }
 
 func (p *PointBN254) toGnarkAffine() *bn254.G1Affine {
-	px := p.x.toGnark()
-	py := p.y.toGnark()
-	pz := p.z.toGnark()
+	px := p.x.toGnarkFp()
+	py := p.y.toGnarkFp()
+	pz := p.z.toGnarkFp()
 
 	zInv := new(fp.Element)
 	x := new(fp.Element)
@@ -133,9 +221,9 @@ func PointBN254FromGnark(gnark *bn254.G1Jac) *PointBN254 {
 	pointAffine.FromJacobian(gnark)
 
 	point := PointBN254{
-		x: *FieldBN254FromGnark(pointAffine.X.Bits()), // get non-montgomry
-		y: *FieldBN254FromGnark(pointAffine.Y.Bits()), // get non-montgomry
-		z: *NewFieldBN254One(),
+		x: *NewFieldFromFpGnark[BaseField](pointAffine.X),
+		y: *NewFieldFromFpGnark[BaseField](pointAffine.Y),
+		z: *NewFieldOne[BaseField](),
 	}
 
 	return &point
@@ -143,9 +231,9 @@ func PointBN254FromGnark(gnark *bn254.G1Jac) *PointBN254 {
 
 func PointBN254fromLimbs(x, y, z *[]uint32) *PointBN254 {
 	return &PointBN254{
-		x: FieldBN254{s: getFixedLimbs(x)},
-		y: FieldBN254{s: getFixedLimbs(y)},
-		z: FieldBN254{s: getFixedLimbs(z)},
+		x: *BaseFieldFromLimbs(getFixedLimbs(x)),
+		y: *BaseFieldFromLimbs(getFixedLimbs(y)),
+		z: *BaseFieldFromLimbs(getFixedLimbs(z)),
 	}
 }
 
@@ -154,28 +242,21 @@ func PointBN254fromLimbs(x, y, z *[]uint32) *PointBN254 {
  */
 
 type PointAffineNoInfinityBN254 struct {
-	x, y FieldBN254
+	x, y BaseField
 }
 
 func NewPointAffineNoInfinityBN254Zero() *PointAffineNoInfinityBN254 {
 	return &PointAffineNoInfinityBN254{
-		x: *NewFieldBN254Zero(),
-		y: *NewFieldBN254Zero(),
+		x: *NewFieldZero[BaseField](),
+		y: *NewFieldZero[BaseField](),
 	}
-}
-
-func (p *PointAffineNoInfinityBN254) limbs() []uint32 {
-	sliceX := p.x.limbs()
-	sliceY := p.y.limbs()
-
-	return append(sliceX[:], sliceY[:]...)
 }
 
 func (p *PointAffineNoInfinityBN254) toProjective() *PointBN254 {
 	return &PointBN254{
 		x: p.x,
 		y: p.y,
-		z: *NewFieldBN254One(),
+		z: *NewFieldOne[BaseField](),
 	}
 }
 
@@ -185,8 +266,8 @@ func (p *PointAffineNoInfinityBN254) toGnarkAffine() *bn254.G1Affine {
 
 func PointAffineNoInfinityBN254FromLimbs(x, y *[]uint32) *PointAffineNoInfinityBN254 {
 	return &PointAffineNoInfinityBN254{
-		x: FieldBN254{s: getFixedLimbs(x)},
-		y: FieldBN254{s: getFixedLimbs(y)},
+		x: *BaseFieldFromLimbs(getFixedLimbs(x)),
+		y: *BaseFieldFromLimbs(getFixedLimbs(y)),
 	}
 }
 

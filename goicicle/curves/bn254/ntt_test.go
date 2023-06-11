@@ -13,14 +13,14 @@ func TestNttBN254(t *testing.T) {
 
 	scalars, _ := GenerateScalars(count)
 
-	nttResult := make([]FieldBN254, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
 	NttBN254(&nttResult, false, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
-	inttResult := make([]FieldBN254, len(nttResult))
+	inttResult := make([]ScalarField, len(nttResult))
 	copy(inttResult, nttResult)
 
 	assert.Equal(t, inttResult, nttResult)
@@ -34,26 +34,26 @@ func TestNttBatchBN254(t *testing.T) {
 
 	scalars, _ := GenerateScalars(count * batches)
 
-	var scalarVecOfVec [][]FieldBN254 = make([][]FieldBN254, 0)
+	var scalarVecOfVec [][]ScalarField = make([][]ScalarField, 0)
 
 	for i := 0; i < batches; i++ {
 		start := i * count
 		end := (i + 1) * count
-		batch := make([]FieldBN254, len(scalars[start:end]))
+		batch := make([]ScalarField, len(scalars[start:end]))
 		copy(batch, scalars[start:end])
 		scalarVecOfVec = append(scalarVecOfVec, batch)
 	}
 
-	nttBatchResult := make([]FieldBN254, len(scalars))
+	nttBatchResult := make([]ScalarField, len(scalars))
 	copy(nttBatchResult, scalars)
 
 	NttBatchBN254(&nttBatchResult, false, count, 0)
 
-	var nttResultVecOfVec [][]FieldBN254
+	var nttResultVecOfVec [][]ScalarField
 
 	for i := 0; i < batches; i++ {
 		// Clone the slice
-		clone := make([]FieldBN254, len(scalarVecOfVec[i]))
+		clone := make([]ScalarField, len(scalarVecOfVec[i]))
 		copy(clone, scalarVecOfVec[i])
 
 		// Add it to the result vector of vectors
@@ -81,7 +81,7 @@ func BenchmarkNTT(b *testing.B) {
 		b.Run(fmt.Sprintf("NTT %d", logNTTSize), func(b *testing.B) {
 			scalars, _ := GenerateScalars(nttSize)
 
-			nttResult := make([]FieldBN254, len(scalars)) // Make a new slice with the same length
+			nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)
 			for n := 0; n < b.N; n++ {
 				NttBN254(&nttResult, false, 0)

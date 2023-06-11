@@ -11,7 +11,7 @@ import (
 // #include "msm.h"
 import "C"
 
-func MsmBN254(points []PointAffineNoInfinityBN254, scalars []FieldBN254, device_id int) (*PointBN254, error) {
+func MsmBN254(points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -31,7 +31,7 @@ func MsmBN254(points []PointAffineNoInfinityBN254, scalars []FieldBN254, device_
 	return out, nil
 }
 
-func MsmBatchBN254(points *[]PointAffineNoInfinityBN254, scalars *[]FieldBN254, batchSize, deviceId int) ([]*PointBN254, error) {
+func MsmBatchBN254(points *[]PointAffineNoInfinityBN254, scalars *[]ScalarField, batchSize, deviceId int) ([]*PointBN254, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")
