@@ -14,12 +14,11 @@ int main(int argc, char* argv[]) {
 
   Poseidon<BLS12_381::scalar_t> poseidon(arity);
 
-  int number_of_blocks = 4;
+  int number_of_blocks = 1024;
 
   BLS12_381::scalar_t input = BLS12_381::scalar_t::zero();
   BLS12_381::scalar_t * in_ptr = static_cast< BLS12_381::scalar_t * >(malloc(number_of_blocks * arity * sizeof(BLS12_381::scalar_t)));
   for (uint32_t i = 0; i < number_of_blocks * arity; i++) {
-    // std::cout << input << std::endl;
     in_ptr[i] = input;
     input = input + BLS12_381::scalar_t::one();
   }
