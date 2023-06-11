@@ -12,7 +12,7 @@ import (
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bn254/
-// #cgo LDFLAGS: -L${SRCDIR}/icicle/curves/bn254/ -lbn254
+// #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "c_api.h"
 // #include "ve_mod_mult.h"
 import "C"
