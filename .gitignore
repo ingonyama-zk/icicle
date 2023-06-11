@@ -5,6 +5,7 @@
 *.cubin
 *.bin
 *.fatbin
+*.so
 **/target
 **/.vscode
 **/.*lock*csv#
