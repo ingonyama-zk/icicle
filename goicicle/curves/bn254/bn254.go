@@ -14,6 +14,7 @@ import (
 // #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bn254/
 // #cgo LDFLAGS: -L${SRCDIR}/icicle/curves/bn254/ -lbn254
 // #include "c_api.h"
+// #include "ve_mod_mult.h"
 import "C"
 
 const SIZE = 8
@@ -269,6 +270,51 @@ func PointAffineNoInfinityBN254FromLimbs(x, y *[]uint32) *PointAffineNoInfinityB
 		x: *BaseFieldFromLimbs(getFixedLimbs(x)),
 		y: *BaseFieldFromLimbs(getFixedLimbs(y)),
 	}
+}
+
+/*
+ * Multiplication
+ */
+
+func MultiplyVec(a []PointBN254, b []ScalarField, deviceID int) {
+	if len(a) != len(b) {
+		panic("a and b have different lengths")
+	}
+
+	pointsC := (*C.BN254_projective_t)(unsafe.Pointer(&a[0]))
+	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&b[0]))
+	deviceIdC := C.size_t(deviceID)
+	nElementsC := C.size_t(len(a))
+
+	C.vec_mod_mult_point_bn254(pointsC, scalarsC, nElementsC, deviceIdC)
+}
+
+func MultiplyScalar(a []ScalarField, b []ScalarField, deviceID int) {
+	if len(a) != len(b) {
+		panic("a and b have different lengths")
+	}
+
+	aC := (*C.BN254_scalar_t)(unsafe.Pointer(&a[0]))
+	bC := (*C.BN254_scalar_t)(unsafe.Pointer(&b[0]))
+	deviceIdC := C.size_t(deviceID)
+	nElementsC := C.size_t(len(a))
+
+	C.vec_mod_mult_scalar_bn254(aC, bC, nElementsC, deviceIdC)
+}
+
+func MultiplyMatrix(a []ScalarField, b []ScalarField, deviceID int) {
+	c := make([]ScalarField, len(b))
+	for i := range c {
+		c[i] = *NewFieldZero[ScalarField]()
+	}
+
+	aC := (*C.BN254_scalar_t)(unsafe.Pointer(&a[0]))
+	bC := (*C.BN254_scalar_t)(unsafe.Pointer(&b[0]))
+	cC := (*C.BN254_scalar_t)(unsafe.Pointer(&c[0]))
+	deviceIdC := C.size_t(deviceID)
+	nElementsC := C.size_t(len(a))
+
+	C.matrix_vec_mod_mult_bn254(aC, bC, cC, nElementsC, deviceIdC)
 }
 
 /*
