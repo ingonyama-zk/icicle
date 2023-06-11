@@ -302,6 +302,10 @@ func MultiplyScalar(a []ScalarField, b []ScalarField, deviceID int) {
 	C.vec_mod_mult_scalar_bn254(aC, bC, nElementsC, deviceIdC)
 }
 
+// Multiply a matrix by a scalar:
+//
+//	`a` - flattenned matrix;
+//	`b` - vector to multiply `a` by;
 func MultiplyMatrix(a []ScalarField, b []ScalarField, deviceID int) {
 	c := make([]ScalarField, len(b))
 	for i := range c {
