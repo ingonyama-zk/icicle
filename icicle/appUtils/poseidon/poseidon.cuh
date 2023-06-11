@@ -8,18 +8,16 @@
 #include <sstream>
 #include <chrono>
 
-#define ARITY 3
-
 template <typename S>
-__host__ void print_buffer_from_cuda(S * device_ptr, size_t size) {
+__host__ void print_buffer_from_cuda(S * device_ptr, size_t size, size_t t) {
   S * buffer = static_cast< S * >(malloc(size * sizeof(S)));
   cudaMemcpy(buffer, device_ptr, size * sizeof(S), cudaMemcpyDeviceToHost);
 
   std::cout << "Start print" << std::endl;
-  for(int i = 0; i < size / ARITY; i++) {
+  for(int i = 0; i < size / t; i++) {
     std::cout << "State #" << i << std::endl;
-    for (int j = 0; j < ARITY; j++) {
-      std::cout << buffer[i * ARITY + j] << std::endl;
+    for (int j = 0; j < t; j++) {
+      std::cout << buffer[i * t + j] << std::endl;
     }
     std::cout << std::endl;
   }
