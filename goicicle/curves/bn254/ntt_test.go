@@ -5,8 +5,56 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNttBN254CompareToGnark(t *testing.T) {
+	count := 1 << 3
+	scalars, frScalars := GenerateScalars(count)
+
+	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	copy(nttResult, scalars)
+
+	assert.Equal(t, nttResult, scalars)
+	NttBN254(&nttResult, false, 0)
+	assert.NotEqual(t, nttResult, scalars)
+
+	domain := fft.NewDomain(uint64(len(scalars)))
+	domain.FFT(frScalars, fft.DIT)
+
+	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
+
+	for k, v := range nttResult {
+		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+	}
+
+	assert.Equal(t, nttResultTransformedToGnark, frScalars)
+}
+
+func TestINttBN254CompareToGnark(t *testing.T) {
+	count := 1 << 3
+	scalars, frScalars := GenerateScalars(count)
+
+	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	copy(nttResult, scalars)
+
+	assert.Equal(t, nttResult, scalars)
+	NttBN254(&nttResult, true, 0)
+	assert.NotEqual(t, nttResult, scalars)
+
+	domain := fft.NewDomain(uint64(len(scalars)))
+	domain.FFTInverse(frScalars, fft.DIT)
+
+	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
+
+	for k, v := range nttResult {
+		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+	}
+
+	assert.Equal(t, nttResultTransformedToGnark, frScalars)
+}
 
 func TestNttBN254(t *testing.T) {
 	count := 1 << 3
