@@ -17,39 +17,28 @@ import (
 // #include "ve_mod_mult.h"
 import "C"
 
-const SIZE = 8
+const SCALAR_SIZE = 8
+const BASE_SIZE = 8
 
 type ScalarField struct {
-	s [SIZE]uint32
+	s [SCALAR_SIZE]uint32
 }
 
 type BaseField struct {
-	s [SIZE]uint32
-}
-
-type Field interface {
-	ScalarField | BaseField
+	s [BASE_SIZE]uint32
 }
 
 /*
  * Common Constrctors
  */
 
-func NewFieldZero[T Field]() *T {
+func NewFieldZero[T BaseField | ScalarField]() *T {
 	var field T
 
 	return &field
 }
 
-func NewFieldOne[T Field]() *T {
-	var s [SIZE]uint32
-
-	s[0] = 1
-
-	return &T{s}
-}
-
-func NewFieldFromFrGnark[T Field](element fr.Element) *T {
+func NewFieldFromFrGnark[T BaseField | ScalarField](element fr.Element) *T {
 	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
 
 	return &T{s}
@@ -65,6 +54,14 @@ func NewFieldFromFpGnark[T BaseField | ScalarField](element fp.Element) *T {
  * BaseField Constrctors
  */
 
+func NewBaseFieldOne() *BaseField {
+	var s [BASE_SIZE]uint32
+
+	s[0] = 1
+
+	return &BaseField{s}
+}
+
 func BaseFieldFromLimbs(limbs [8]uint32) *BaseField {
 	bf := NewFieldZero[BaseField]()
 	copy(bf.s[:], limbs[:])
@@ -76,7 +73,7 @@ func BaseFieldFromLimbs(limbs [8]uint32) *BaseField {
  * BaseField methods
  */
 
-func (f *BaseField) limbs() [SIZE]uint32 {
+func (f *BaseField) limbs() [BASE_SIZE]uint32 {
 	return f.s
 }
 
@@ -121,7 +118,19 @@ func (f *BaseField) toGnarkFp() *fp.Element {
  * ScalarField methods
  */
 
-func (f *ScalarField) limbs() [SIZE]uint32 {
+func NewScalarFieldOne() *ScalarField {
+	var s [SCALAR_SIZE]uint32
+
+	s[0] = 1
+
+	return &ScalarField{s}
+}
+
+/*
+ * ScalarField methods
+ */
+
+func (f *ScalarField) limbs() [SCALAR_SIZE]uint32 {
 	return f.s
 }
 
@@ -173,7 +182,7 @@ type PointBN254 struct {
 func NewPointBN254Zero() *PointBN254 {
 	return &PointBN254{
 		x: *NewFieldZero[BaseField](),
-		y: *NewFieldOne[BaseField](),
+		y: *NewBaseFieldOne(),
 		z: *NewFieldZero[BaseField](),
 	}
 }
@@ -224,7 +233,7 @@ func PointBN254FromGnark(gnark *bn254.G1Jac) *PointBN254 {
 	point := PointBN254{
 		x: *NewFieldFromFpGnark[BaseField](pointAffine.X),
 		y: *NewFieldFromFpGnark[BaseField](pointAffine.Y),
-		z: *NewFieldOne[BaseField](),
+		z: *NewBaseFieldOne(),
 	}
 
 	return &point
@@ -257,7 +266,7 @@ func (p *PointAffineNoInfinityBN254) toProjective() *PointBN254 {
 	return &PointBN254{
 		x: p.x,
 		y: p.y,
-		z: *NewFieldOne[BaseField](),
+		z: *NewBaseFieldOne(),
 	}
 }
 

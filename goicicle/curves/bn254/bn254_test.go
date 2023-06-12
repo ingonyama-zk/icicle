@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewFieldBN254One(t *testing.T) {
-	oneField := NewFieldOne[BaseField]()
+	oneField := NewBaseFieldOne()
 	rawOneField := [8]uint32([8]uint32{0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
 
 	assert.Equal(t, oneField.s, rawOneField)
@@ -53,7 +53,7 @@ func TestNewPointBN254Zero(t *testing.T) {
 	point := NewPointBN254Zero()
 
 	assert.Equal(t, point.x, *NewFieldZero[BaseField]())
-	assert.Equal(t, point.y, *NewFieldOne[BaseField]())
+	assert.Equal(t, point.y, *NewBaseFieldOne())
 	assert.Equal(t, point.z, *NewFieldZero[BaseField]())
 }
 
@@ -61,9 +61,9 @@ func TestBN254Eq(t *testing.T) {
 	p1 := NewPointBN254Zero()
 	p2 := NewPointBN254Zero()
 	p3 := &PointBN254{
-		x: *NewFieldOne[BaseField](),
-		y: *NewFieldOne[BaseField](),
-		z: *NewFieldOne[BaseField](),
+		x: *NewBaseFieldOne(),
+		y: *NewBaseFieldOne(),
+		z: *NewBaseFieldOne(),
 	}
 
 	assert.Equal(t, p1.eq(p2), true)
@@ -99,7 +99,7 @@ func TestPointBN254FromGnark(t *testing.T) {
 
 	assert.Equal(t, p.x, *NewFieldFromFpGnark[BaseField](*x))
 	assert.Equal(t, p.y, *NewFieldFromFpGnark[BaseField](*y))
-	assert.Equal(t, p.z, *NewFieldOne[BaseField]())
+	assert.Equal(t, p.z, *NewBaseFieldOne())
 }
 
 func TestPointBN254fromLimbs(t *testing.T) {
@@ -133,7 +133,7 @@ func TestPointAffineNoInfinityBN254ToProjective(t *testing.T) {
 
 	assert.Equal(t, proj.x, affine.x)
 	assert.Equal(t, proj.x, affine.x)
-	assert.Equal(t, proj.z, *NewFieldOne[BaseField]())
+	assert.Equal(t, proj.z, *NewBaseFieldOne())
 }
 
 func TestPointAffineNoInfinityBN254FromLimbs(t *testing.T) {
