@@ -61,7 +61,7 @@ class Poseidon {
         MerkleTree,
     };
 
-    Poseidon(const uint32_t arity) {
+    Poseidon(const uint32_t arity, cudaStream_t stream) {
         t = arity + 1;
         this->config.t = t;
 
@@ -95,25 +95,69 @@ class Poseidon {
         std::cout << "P: " << this->config.partial_rounds << " F: " << this->config.full_rounds_half << std::endl;
         #endif
 
-        // Allocate the memory for constants
-        cudaMalloc(&this->config.round_constants, sizeof(S) * round_constants_len);
-        cudaMalloc(&this->config.mds_matrix, sizeof(S) * mds_matrix_len);
-        cudaMalloc(&this->config.non_sparse_matrix, sizeof(S) * mds_matrix_len);
-        cudaMalloc(&this->config.sparse_matrices, sizeof(S) * sparse_matrices_len);
-
-        // Copy the constants to device
-        cudaMemcpy(this->config.round_constants, constants,
+        // Allocate the memory for constants and copy async
+        cudaStream_t stream_copy_round_constants;
+        cudaEvent_t event_copied_round_constants;
+        cudaEventCreateWithFlags(&event_copied_round_constants, cudaEventDisableTiming);
+        cudaStreamCreate(&stream_copy_round_constants);
+        cudaMallocAsync(&this->config.round_constants, sizeof(S) * round_constants_len, stream_copy_round_constants);
+        cudaMemcpyAsync(this->config.round_constants, constants,
                 sizeof(S) * round_constants_len,
-                cudaMemcpyHostToDevice);
-        cudaMemcpy(this->config.mds_matrix, mds_offset,
+                cudaMemcpyHostToDevice, stream_copy_round_constants);
+        cudaEventRecord(event_copied_round_constants, stream_copy_round_constants);
+        
+        cudaStream_t stream_copy_mds_matrix;
+        cudaEvent_t event_copy_mds_matrix;
+        cudaEventCreateWithFlags(&event_copy_mds_matrix, cudaEventDisableTiming);
+        cudaStreamCreate(&stream_copy_mds_matrix);
+        cudaMallocAsync(&this->config.mds_matrix, sizeof(S) * mds_matrix_len, stream_copy_mds_matrix);
+        cudaMemcpyAsync(this->config.mds_matrix, mds_offset,
                 sizeof(S) * mds_matrix_len,
-                cudaMemcpyHostToDevice);
-        cudaMemcpy(this->config.non_sparse_matrix, non_sparse_offset,
+                cudaMemcpyHostToDevice, stream_copy_mds_matrix);
+        cudaEventRecord(event_copy_mds_matrix, stream_copy_mds_matrix);
+        
+        cudaStream_t stream_copy_non_sparse;
+        cudaEvent_t event_copy_non_sparse;
+        cudaEventCreateWithFlags(&event_copy_non_sparse, cudaEventDisableTiming);
+        cudaStreamCreate(&stream_copy_non_sparse);
+        cudaMallocAsync(&this->config.non_sparse_matrix, sizeof(S) * mds_matrix_len, stream_copy_non_sparse);
+        cudaMemcpyAsync(this->config.non_sparse_matrix, non_sparse_offset,
                 sizeof(S) * mds_matrix_len,
-                cudaMemcpyHostToDevice);
-        cudaMemcpy(this->config.sparse_matrices, sparse_matrices_offset,
+                cudaMemcpyHostToDevice, stream_copy_non_sparse);
+        cudaEventRecord(event_copy_non_sparse, stream_copy_non_sparse);
+
+        cudaStream_t stream_copy_sparse_matrices;
+        cudaEvent_t event_copy_sparse_matrices;
+        cudaEventCreateWithFlags(&event_copy_sparse_matrices, cudaEventDisableTiming);
+        cudaStreamCreate(&stream_copy_sparse_matrices);
+        cudaMallocAsync(&this->config.sparse_matrices, sizeof(S) * sparse_matrices_len, stream_copy_sparse_matrices);
+        cudaMemcpyAsync(this->config.sparse_matrices, sparse_matrices_offset,
                 sizeof(S) * sparse_matrices_len,
-                cudaMemcpyHostToDevice);
+                cudaMemcpyHostToDevice, stream_copy_sparse_matrices);
+        cudaEventRecord(event_copy_sparse_matrices, stream_copy_sparse_matrices);
+
+        cudaStreamWaitEvent(stream, event_copied_round_constants);
+        cudaStreamWaitEvent(stream, event_copy_mds_matrix);
+        cudaStreamWaitEvent(stream, event_copy_non_sparse);
+        cudaStreamWaitEvent(stream, event_copy_sparse_matrices);
+
+        // cudaMallocAsync(&this->config.round_constants, sizeof(S) * round_constants_len, stream);
+        // cudaMallocAsync(&this->config.mds_matrix, sizeof(S) * mds_matrix_len, stream);
+        // cudaMallocAsync(&this->config.non_sparse_matrix, sizeof(S) * mds_matrix_len, stream);
+        // cudaMallocAsync(&this->config.sparse_matrices, sizeof(S) * sparse_matrices_len, stream);
+        
+        // cudaMemcpyAsync(this->config.round_constants, constants,
+        //         sizeof(S) * round_constants_len,
+        //         cudaMemcpyHostToDevice, stream);
+        // cudaMemcpyAsync(this->config.mds_matrix, mds_offset,
+        //         sizeof(S) * mds_matrix_len,
+        //         cudaMemcpyHostToDevice, stream);
+        // cudaMemcpyAsync(this->config.non_sparse_matrix, non_sparse_offset,
+        //         sizeof(S) * mds_matrix_len,
+        //         cudaMemcpyHostToDevice, stream);
+        // cudaMemcpyAsync(this->config.sparse_matrices, sparse_matrices_offset,
+        //         sizeof(S) * sparse_matrices_len,
+        //         cudaMemcpyHostToDevice, stream);
     }
 
     ~Poseidon() {
@@ -124,7 +168,7 @@ class Poseidon {
     }
 
     // Hash multiple preimages in parallel
-    void hash_blocks(const S * inp, size_t blocks, S * out, HashType hash_type);
+    void hash_blocks(const S * inp, size_t blocks, S * out, HashType hash_type, cudaStream_t stream);
 
   private:
     S tree_domain_tag, const_input_no_pad_domain_tag;
