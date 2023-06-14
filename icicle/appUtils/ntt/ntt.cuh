@@ -170,6 +170,12 @@ template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr
   }
 }
 
+enum Decimation {
+  NONE = 0,
+  DIF = 1,
+  DIT = 2,
+};
+
 /**
  * Cooley-Tukey NTT. 
  * NOTE! this function assumes that d_twiddles are located in the device memory.
@@ -179,10 +185,15 @@ template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr
  * @param n_twiddles length of d_twiddles. 
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
-template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_twiddles, uint32_t n_twiddles, bool inverse, cudaStream_t stream) {
+template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_twiddles, uint32_t n_twiddles, bool inverse, Decimation decimation, cudaStream_t stream) {
   uint32_t logn = uint32_t(log(n) / log(2));
   size_t size_E = n * sizeof(E);
-  E * arrReversed = template_reverse_order < E > (arr, n, logn);
+  E * arrReversed = arr;
+
+  if (decimation != Decimation::DIT) {
+    arrReversed = template_reverse_order < E > (arr, n, logn);
+  }
+
   E * d_arrReversed;
   cudaMallocAsync( & d_arrReversed, size_E, stream);
   cudaMemcpyAsync(d_arrReversed, arrReversed, size_E, cudaMemcpyHostToDevice, stream);
@@ -195,6 +206,12 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
   cudaMemcpyAsync(arrReversed, d_arrReversed, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arrReversed, stream);
   cudaStreamSynchronize(stream);
+  
+  if (decimation == Decimation::DIF) {
+    E * result = template_reverse_order < E > (arrReversed, n, logn);
+    return result;
+  }
+
   return arrReversed;
 }
 
@@ -204,7 +221,7 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- template<typename E,typename S> uint32_t ntt_end2end_template(E * arr, uint32_t n, bool inverse, cudaStream_t stream) {
+ template<typename E,typename S> uint32_t ntt_end2end_template(E * arr, uint32_t n, bool inverse, Decimation decimation, cudaStream_t stream) {
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; 
   S * twiddles = new S[n_twiddles];
@@ -214,7 +231,7 @@ template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_
   } else{
     d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega(logn), stream);
   }
-  E * result = ntt_template < E, S > (arr, n, d_twiddles, n_twiddles, inverse, stream);
+  E * result = ntt_template < E, S > (arr, n, d_twiddles, n_twiddles, inverse, decimation, stream);
   for(int i = 0; i < n; i++){
     arr[i] = result[i]; 
   }

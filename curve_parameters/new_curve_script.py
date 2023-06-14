@@ -11,16 +11,19 @@ with open(sys.argv[1]) as json_file:
     data = json.load(json_file)
 
 curve_name = data["curve_name"]
+# scalar field
 modolus_p = data["modolus_p"]
 bit_count_p = data["bit_count_p"]
 limb_p =  data["limb_p"]
 ntt_size = data["ntt_size"]
+# base field
 modolus_q = data["modolus_q"]
 bit_count_q = data["bit_count_q"] 
 limb_q = data["limb_q"]
 weierstrass_b = data["weierstrass_b"]
 gen_x = data["gen_x"]
 gen_y = data["gen_y"]
+root_of_unity = data["root_of_unity"]
 
 
 def to_hex(val, length):
@@ -39,7 +42,7 @@ def to_hex(val, length):
 
 def get_root_of_unity(order: int) -> int:
     assert (modolus_p - 1) % order == 0
-    return pow(5, (modolus_p - 1) // order, modolus_p)
+    return pow(root_of_unity, (1 << ntt_size) // order, modolus_p)
 
 omega = """static constexpr storage_array<omegas_count, limbs_count> omega = {
         omega1, omega2, omega3, omega4, omega5, omega6, omega7, omega8, 
@@ -79,17 +82,18 @@ def create_field_parameters_struct(modulus, modulus_bits_count,limbs,ntt,size,na
     s += "   static constexpr storage<limbs_count> zero = {"+ to_hex(0,8*limbs)[:-2] +"};\n"
 
     if ntt:
+        # size -> log size 
         for k in range(size):
             omega = get_root_of_unity(int(pow(2,k+1)))
             s += "   static constexpr storage<limbs_count> omega"+str(k+1)+"= {"+ to_hex(omega,8*limbs)[:-2]+"};\n"
-        s += omega
+        s += str(omega)
         for k in range(size):
             omega = get_root_of_unity(int(pow(2,k+1)))
             s += "   static constexpr storage<limbs_count> omega_inv"+str(k+1)+"= {"+ to_hex(pow(omega, -1, modulus),8*limbs)[:-2]+"};\n"
-        s += omega_inv
+        s += str(omega_inv)
         for k in range(size):
             s += "   static constexpr storage<limbs_count> inv"+str(k+1)+"= {"+ to_hex(pow(int(pow(2,k+1)), -1, modulus),8*limbs)[:-2]+"};\n"  
-        s += inv
+        s += str(inv)
     s+=" };\n"   
     return s
 

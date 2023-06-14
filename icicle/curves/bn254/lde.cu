@@ -24,12 +24,12 @@ extern "C" BN254::scalar_t* build_domain_cuda_bn254(uint32_t domain_size, uint32
     }
 }
 
-extern "C" int ntt_cuda_bn254(BN254::scalar_t *arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ntt_cuda_bn254(BN254::scalar_t *arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BN254::scalar_t,BN254::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
+        return ntt_end2end_template<BN254::scalar_t,BN254::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -39,12 +39,12 @@ extern "C" int ntt_cuda_bn254(BN254::scalar_t *arr, uint32_t n, bool inverse, si
     }
 }
 
-extern "C" int ecntt_cuda_bn254(BN254::projective_t *arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ecntt_cuda_bn254(BN254::projective_t *arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BN254::projective_t,BN254::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
+        return ntt_end2end_template<BN254::projective_t,BN254::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
