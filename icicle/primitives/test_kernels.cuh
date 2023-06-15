@@ -1,18 +1,18 @@
 #pragma once
 
 // TODO: change the curve depending on env variable
-#include "../curves/bls12_381.cuh"
+#include "../curves/bls12_381/curve_config.cuh"
 #include "projective.cuh"
 #include "extension_field.cuh"
 
-typedef Field<fp_config> scalar_field;
-typedef Field<fq_config> base_field;
+typedef Field<PARAMS_BLS12_381::fp_config> scalar_field;
+typedef Field<PARAMS_BLS12_381::fq_config> base_field;
 typedef Affine<base_field> affine;
-static constexpr base_field b = base_field{ weierstrass_b };
+static constexpr base_field b = base_field{ PARAMS_BLS12_381::weierstrass_b };
 typedef Projective<base_field, scalar_field, b> proj;
-typedef ExtensionField<fq_config> base_extension_field;
+typedef ExtensionField<PARAMS_BLS12_381::fq_config> base_extension_field;
 typedef Affine<base_extension_field> g2_affine;
-static constexpr base_extension_field b2 = base_extension_field{ base_field {b_re},  base_field {b_im}};
+static constexpr base_extension_field b2 = base_extension_field{ base_field {PARAMS_BLS12_381::weierstrass_b_g2_re },  base_field {PARAMS_BLS12_381::weierstrass_b_g2_im }};
 typedef Projective<base_extension_field, scalar_field, b2> g2_proj;
 
 
