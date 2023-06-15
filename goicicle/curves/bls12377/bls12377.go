@@ -19,8 +19,30 @@ package bls12377
 
 import (
 	"unsafe"
+
 	"encoding/binary"
 	"fmt"
+
+    
+
+
+	"github.com/consensys/gnark-crypto/ecc/bls12-377"
+
+
+
+	
+
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fp"
+
+
+
+	
+
+
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
+
+
+
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bls12377/
@@ -210,7 +232,7 @@ func (p *PointBLS12377) eq(pCompare *PointBLS12377) bool {
 	// Call the C function
 	// The C function doesn't keep any references to the data,
 	// so it's fine if the Go garbage collector moves or deletes the data later.
-	return bool(C.eq_bls12377(pC, pCompareC, 0))
+	return bool(C.eq_bls12_377(pC, pCompareC, 0))
 }
 
 func (p *PointBLS12377) strip_z() *PointAffineNoInfinityBLS12377 {
@@ -307,7 +329,7 @@ func MultiplyVec(a []PointBLS12377, b []ScalarField, deviceID int) {
 	deviceIdC := C.size_t(deviceID)
 	nElementsC := C.size_t(len(a))
 
-	C.vec_mod_mult_point_bls12377(pointsC, scalarsC, nElementsC, deviceIdC)
+	C.vec_mod_mult_point_bls12_377(pointsC, scalarsC, nElementsC, deviceIdC)
 }
 
 func MultiplyScalar(a []ScalarField, b []ScalarField, deviceID int) {
@@ -320,7 +342,7 @@ func MultiplyScalar(a []ScalarField, b []ScalarField, deviceID int) {
 	deviceIdC := C.size_t(deviceID)
 	nElementsC := C.size_t(len(a))
 
-	C.vec_mod_mult_scalar_bls12377(aC, bC, nElementsC, deviceIdC)
+	C.vec_mod_mult_scalar_bls12_377(aC, bC, nElementsC, deviceIdC)
 }
 
 // Multiply a matrix by a scalar:
@@ -339,7 +361,7 @@ func MultiplyMatrix(a []ScalarField, b []ScalarField, deviceID int) {
 	deviceIdC := C.size_t(deviceID)
 	nElementsC := C.size_t(len(a))
 
-	C.matrix_vec_mod_mult_bls12377(aC, bC, cC, nElementsC, deviceIdC)
+	C.matrix_vec_mod_mult_bls12_377(aC, bC, cC, nElementsC, deviceIdC)
 }
 
 /*

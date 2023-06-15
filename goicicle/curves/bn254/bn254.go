@@ -17,15 +17,32 @@
 
 package bn254
 
-
 import (
 	"unsafe"
+
 	"encoding/binary"
 	"fmt"
 
+    
+
+
 	"github.com/consensys/gnark-crypto/ecc/bn254"
+
+
+
+	
+
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+
+
+
+	
+
+
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+
+
+
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bn254/
