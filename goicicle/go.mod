@@ -12,7 +12,7 @@ require (
 
 require (
 	github.com/bits-and-blooms/bitset v1.5.0 // indirect
-	github.com/consensys/bavard v0.1.13 // indirect
+	github.com/consensys/bavard v0.1.13
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/stretchr/testify v1.8.3
 	golang.org/x/sys v0.2.0 // indirect
