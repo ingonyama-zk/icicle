@@ -1,0 +1,20 @@
+{{ define "import_fr" }}
+
+{{ if eq .CurveName "BN254"}}
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+{{end}}
+{{end}}
+
+{{ define "import_fp" }}
+
+{{ if eq .CurveName "BN254"}}
+	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+{{end}}
+{{end}}
+
+{{ define "import_ecc" }}
+
+{{ if eq .CurveName "BN254"}}
+	"github.com/consensys/gnark-crypto/ecc/bn254"
+{{end}}
+{{end}}
