@@ -190,11 +190,4 @@ namespace PARAMS_BLS12_381{
                                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-
-  constexpr storage<fq_config::limbs_count> fq_config::m;
-  constexpr storage<fq_config::limbs_count> fq_config::modulus;
-  constexpr storage<2*fq_config::limbs_count> fq_config::modulus_wide;
-  constexpr storage<fp_config::limbs_count> fp_config::m;
-  constexpr storage<fp_config::limbs_count> fp_config::modulus;
-  constexpr storage<2*fp_config::limbs_count> fp_config::modulus_wide;
 }
