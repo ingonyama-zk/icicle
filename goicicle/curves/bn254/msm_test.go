@@ -41,7 +41,7 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 		var pointAffine bn254.G1Affine
 		pointAffine.FromJacobian(&gnarkP)
 
-		p := PointBN254FromGnark(&gnarkP).strip_z()
+		p := PointBN254FromJacGnark(&gnarkP).strip_z()
 
 		pointsAffine = append(pointsAffine, pointAffine)
 		points = append(points, *p)
@@ -58,7 +58,7 @@ func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
 	// Use a loop to populate the slice
 	for i := 0; i < count; i++ {
 		gnarkP, _ := randG1Jac()
-		p := PointBN254FromGnark(&gnarkP)
+		p := PointBN254FromJacGnark(&gnarkP)
 
 		pointsAffine = append(pointsAffine, gnarkP)
 		points = append(points, *p)
@@ -91,7 +91,8 @@ func TestMSM(t *testing.T) {
 		points, gnarkPoints := GeneratePoints(count)
 		scalars, gnarkScalars := GenerateScalars(count)
 
-		result, e := MsmBN254(points, scalars, 0) // non mont
+		out := new(PointBN254)
+		_, e := MsmBN254(out, points, scalars, 0) // non mont
 
 		assert.Equal(t, e, nil, "error should be nil")
 
@@ -99,7 +100,7 @@ func TestMSM(t *testing.T) {
 
 		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
 
-		assert.Equal(t, result.toGnarkAffine(), gResult)
+		assert.Equal(t, out.toGnarkAffine(), gResult)
 	}
 }
 
@@ -135,7 +136,8 @@ func BenchmarkMSM(b *testing.B) {
 			points, _ := GeneratePoints(msmSize)
 			scalars, _ := GenerateScalars(msmSize)
 			for n := 0; n < b.N; n++ {
-				_, e := MsmBN254(points, scalars, 0)
+				out := new(PointBN254)
+				_, e := MsmBN254(out, points, scalars, 0)
 
 				if e != nil {
 					panic("Error occured")

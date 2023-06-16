@@ -62,6 +62,10 @@ type BaseField struct {
 	s [BASE_SIZE]uint32
 }
 
+type Field interface {
+	toGnarkFr() *fr.Element
+}
+
 /*
  * Common Constrctors
  */
@@ -259,8 +263,25 @@ func (p *PointBN254) toGnarkAffine() *bn254.G1Affine {
 	return &bn254.G1Affine{X: *x, Y: *y}
 }
 
+func (p *PointBN254) toGnarkJac() *bn254.G1Jac {
+	var p1 bn254.G1Jac
+	p1.FromAffine(p.toGnarkAffine())
+	
+	return &p1
+}
+
+func PointBN254FromG1AffineGnark(gnark *bn254.G1Affine) *PointBN254 {
+	point := PointBN254{
+		x: *NewFieldFromFpGnark[BaseField](gnark.X),
+		y: *NewFieldFromFpGnark[BaseField](gnark.Y),
+		z: *NewBaseFieldOne(),
+	}
+
+	return &point
+}
+
 // converts jac fromat to projective
-func PointBN254FromGnark(gnark *bn254.G1Jac) *PointBN254 {
+func PointBN254FromJacGnark(gnark *bn254.G1Jac) *PointBN254 {
 	var pointAffine bn254.G1Affine
 	pointAffine.FromJacobian(gnark)
 
@@ -376,4 +397,35 @@ func getFixedLimbs(slice *[]uint32) [BASE_SIZE]uint32 {
 	}
 
 	panic("slice has too many elements")
+}
+
+func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) []T {
+	var newElements []T
+	for i, e := range elements {
+		converted := NewFieldFromFrGnark[T](e)
+
+		newElements[i] = *converted
+	}
+
+	return newElements
+}
+
+func BatchConvertToFrGnark[T Field](elements []T) []fr.Element {
+	var newElements []fr.Element
+	for i, e := range elements {
+		converted := e.toGnarkFr()
+
+		newElements[i] = *converted
+	}
+
+	return newElements
+}
+
+func BatchConvertFromG1Affine(elements []bn254.G1Affine) []PointAffineNoInfinityBN254 {
+	var newElements []PointAffineNoInfinityBN254
+	for i, e := range elements {
+		newElements[i] = *PointBN254FromG1AffineGnark(&e).strip_z()
+	}
+
+	return newElements
 }

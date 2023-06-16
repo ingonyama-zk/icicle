@@ -82,7 +82,7 @@ func TestBN254StripZ(t *testing.T) {
 func TestPointBN254FromGnark(t *testing.T) {
 	gnarkP, _ := randG1Jac()
 
-	p := PointBN254FromGnark(&gnarkP)
+	p := PointBN254FromJacGnark(&gnarkP)
 
 	z_inv := new(fp.Element)
 	z_invsq := new(fp.Element)
@@ -104,7 +104,7 @@ func TestPointBN254FromGnark(t *testing.T) {
 
 func TestPointBN254fromLimbs(t *testing.T) {
 	gnarkP, _ := randG1Jac()
-	p := PointBN254FromGnark(&gnarkP)
+	p := PointBN254FromJacGnark(&gnarkP)
 
 	x := p.x.limbs()
 	y := p.y.limbs()
@@ -128,7 +128,7 @@ func TestNewPointAffineNoInfinityBN254Zero(t *testing.T) {
 
 func TestPointAffineNoInfinityBN254ToProjective(t *testing.T) {
 	gnarkP, _ := randG1Jac()
-	affine := PointBN254FromGnark(&gnarkP).strip_z()
+	affine := PointBN254FromJacGnark(&gnarkP).strip_z()
 	proj := affine.toProjective()
 
 	assert.Equal(t, proj.x, affine.x)
@@ -156,7 +156,7 @@ func TestPointAffineNoInfinityBN254FromLimbs(t *testing.T) {
 
 func TestToGnarkAffine(t *testing.T) {
 	gJac, _ := randG1Jac()
-	proj := PointBN254FromGnark(&gJac)
+	proj := PointBN254FromJacGnark(&gJac)
 
 	var gAffine bn254.G1Affine
 	gAffine.FromJacobian(&gJac)
