@@ -1,6 +1,6 @@
 module github.com/ingonyama-zk/icicle/goicicle
 
-go 1.18
+go 1.20
 
 require github.com/consensys/gnark-crypto v0.11.0
 

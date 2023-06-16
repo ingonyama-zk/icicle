@@ -181,7 +181,7 @@ func (f *ScalarField) toBytesLe() []byte {
 	return bytes
 }
 
-func (f *ScalarField) toGnarkFr() *fr.Element {
+func (f ScalarField) toGnarkFr() *fr.Element {
 	fb := f.toBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
