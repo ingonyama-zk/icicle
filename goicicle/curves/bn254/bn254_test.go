@@ -51,6 +51,8 @@ func TestFieldBN254ToBytesLe(t *testing.T) {
 
 func TestNewPointBN254Zero(t *testing.T) {
 	point := NewPointBN254Zero()
+	a := new(PointBN254)
+	a.ToGnarkJac()
 
 	assert.Equal(t, point.x, *NewFieldZero[BaseField]())
 	assert.Equal(t, point.y, *NewBaseFieldOne())
