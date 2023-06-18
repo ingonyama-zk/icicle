@@ -155,6 +155,9 @@ def get_params(config):
     bit_count_q = config["bit_count_q"] 
     limb_q = config["limb_q"]
     root_of_unity = config["root_of_unity"]
+    if root_of_unity == modulus_p:
+        sys.exit("Invalid root_of_unity value; please update in curve parameters")
+
     weierstrass_b = config["weierstrass_b"]
     weierstrass_b_g2_re = config["weierstrass_b_g2_re"]
     weierstrass_b_g2_im = config["weierstrass_b_g2_im"]
