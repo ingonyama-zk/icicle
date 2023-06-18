@@ -20,10 +20,10 @@ def to_hex(val: int, length):
     return s[:-2]
 
 
-def get_root_of_unity(modulus_p, order: int, root_of_unity) -> int:
+def get_root_of_unity(modulus_p, order: int, root_of_unity_seed) -> int:
     global ntt_size
     assert (modulus_p - 1) % order == 0
-    return pow(root_of_unity, (modulus_p - 1) // order, modulus_p)
+    return pow(root_of_unity_seed, (modulus_p - 1) // order, modulus_p)
 
 
 def compute_values(modulus, modulus_bit_count, limbs):
@@ -89,7 +89,7 @@ def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_
     }
 
 
-def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
+def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity_seed, size=0):
     (
         modulus_,
         modulus_2,
@@ -109,10 +109,10 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
         inv = ''
 
         for k in range(1, size+1):
-            om = get_root_of_unity(modulus, int(pow(2,k)), root_of_unity)
+            om = get_root_of_unity(modulus, int(pow(2,k)), root_of_unity_seed)
             omega += "\n              {"+ to_hex(om,limb_size)+"}," if k>1 else "      {"+ to_hex(om,limb_size)+"},"
 
-            om = get_root_of_unity(modulus, int(pow(2,k)), root_of_unity)
+            om = get_root_of_unity(modulus, int(pow(2,k)), root_of_unity_seed)
             omega_inv += "\n              {"+ to_hex(pow(om, -1, modulus),limb_size)+"}," if k>1 else "      {"+ to_hex(pow(om, -1, modulus),limb_size)+"},"
 
             inv += "\n              {"+ to_hex(pow(int(pow(2,k)), -1, modulus),limb_size)+"}," if k>1 else "      {"+ to_hex(pow(int(pow(2,k)), -1, modulus),limb_size)+"},"
@@ -153,9 +153,9 @@ def get_params(config):
     modulus_q = config["modulus_q"]
     bit_count_q = config["bit_count_q"] 
     limb_q = config["limb_q"]
-    root_of_unity = config["root_of_unity"]
-    if root_of_unity == modulus_p:
-        sys.exit("Invalid root_of_unity value; please update in curve parameters")
+    root_of_unity_seed = config["root_of_unity_seed"]
+    if root_of_unity_seed == modulus_p:
+        sys.exit("Invalid root_of_unity_seed value; please update in curve parameters")
 
     weierstrass_b = config["weierstrass_b"]
     weierstrass_b_g2_re = config["weierstrass_b_g2_re"]
@@ -176,7 +176,7 @@ def get_params(config):
         'num_omegas': ntt_size
     }
     
-    fp_params = get_fp_params(modulus_p, bit_count_p, limb_p, root_of_unity, ntt_size)
+    fp_params = get_fp_params(modulus_p, bit_count_p, limb_p, root_of_unity_seed, ntt_size)
     fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, g1_gen_x, g1_gen_y, g2_generator_x_re, g2_generator_x_im, g2_generator_y_re, g2_generator_y_im)
     weier_params = get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, 8*limb_q)
 
