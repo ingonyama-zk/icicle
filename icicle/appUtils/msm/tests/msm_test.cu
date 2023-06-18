@@ -5,9 +5,10 @@
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
-#include "../../curves/bls12_381/curve_config.cuh"
+#include "../../curves/bls12_377/curve_config.cuh"
+// #include "../../curves/bn254/curve_config.cuh"
 
-using namespace BLS12_381;
+using namespace BLS12_377;
 
 class Dummy_Scalar {
   public:
@@ -51,6 +52,10 @@ class Dummy_Projective {
 
     static HOST_DEVICE_INLINE Dummy_Projective zero() {
       return {0};
+    }
+
+    static HOST_DEVICE_INLINE Dummy_Projective one() {
+      return {1};
     }
 
     static HOST_DEVICE_INLINE Dummy_Projective to_affine(const Dummy_Projective &point) {
@@ -120,16 +125,16 @@ typedef affine_t test_affine;
 int main()
 {
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<20;
+  unsigned msm_size = 1<<24;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
   test_affine *points = new test_affine[N];
   
   for (unsigned i=0;i<N;i++){
-    scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
+    // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
-    // scalars[i] = test_scalar::rand_host();
+    scalars[i] = test_scalar::rand_host();
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;

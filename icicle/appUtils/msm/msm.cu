@@ -18,6 +18,43 @@
 #define BIG_TRIANGLE
 // #define SSM_SUM  //WIP
 
+template <typename T>
+static constexpr __device__ __forceinline__ T ld_single(const T *ptr) {
+return __ldg(ptr);
+};
+
+template <class T, typename U, unsigned STRIDE>
+static constexpr __device__ __forceinline__ T ld(const T *address, const unsigned offset) {
+  static_assert(alignof(T) % alignof(U) == 0);
+  static_assert(sizeof(T) % sizeof(U) == 0);
+  constexpr size_t count = sizeof(T) / sizeof(U);
+  T result = {};
+  auto pa = reinterpret_cast<const U *>(address) + offset;
+  auto pr = reinterpret_cast<U *>(&result);
+#pragma unroll
+  for (unsigned i = 0; i < count; i++) {
+    const auto pai = pa + i * STRIDE;
+    const auto pri = pr + i;
+    *pri = ld_single<U>(pai);
+  }
+  return result;
+}
+
+template <class T, unsigned STRIDE = 1, typename U = std::enable_if_t<sizeof(T) % sizeof(uint4) == 0, uint4>>
+static constexpr __device__ __forceinline__ T memory_load(const T *address, const unsigned offset = 0, [[maybe_unused]] uint4 _dummy = {}) {
+  return ld<T, U, STRIDE>(address, offset);
+};
+
+template <class T, unsigned STRIDE = 1, typename U = std::enable_if_t<(sizeof(T) % sizeof(uint4) != 0) && (sizeof(T) % sizeof(uint2) == 0), uint2>>
+static constexpr __device__ __forceinline__ T memory_load(const T *address, const unsigned offset = 0, [[maybe_unused]] uint2 _dummy = {}) {
+  return ld<T, U, STRIDE>(address, offset);
+};
+
+template <class T, unsigned STRIDE = 1, typename U = std::enable_if_t<sizeof(T) % sizeof(uint2) != 0, unsigned>>
+static constexpr __device__ __forceinline__ T memory_load(const T *address, const unsigned offset = 0, [[maybe_unused]] unsigned _dummy = {}) {
+  return ld<T, U, STRIDE>(address, offset);
+};
+
 //this kernel performs single scalar multiplication
 //each thread multilies a single scalar and point
 template <typename P, typename S>
@@ -82,22 +119,41 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
 }
 
 //this kernel adds up the points in each bucket
-template <typename P, typename A>
 // __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__restrict__ bucket_offsets,
-              //  unsigned *__restrict__ bucket_sizes, unsigned *__restrict__ single_bucket_indices, unsigned *__restrict__ point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
-__global__ void accumulate_buckets_kernel(P *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned *point_indices, A *points, unsigned nof_buckets, unsigned *nof_buckets_to_compute, unsigned msm_idx_shift){
+  //  unsigned *__restrict__ bucket_sizes, unsigned *__restrict__ single_bucket_indices, unsigned *__restrict__ point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
+template <typename P, typename A>
+__global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigned *__restrict__ bucket_offsets, const unsigned *__restrict__ bucket_sizes, const unsigned *__restrict__ single_bucket_indices, const unsigned *__restrict__ point_indices, A *__restrict__ points, const unsigned nof_buckets, const unsigned *nof_buckets_to_compute, const unsigned msm_idx_shift){
   
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+  // if (tid>=*nof_buckets_to_compute || tid<11){ 
   if (tid>=*nof_buckets_to_compute){ 
     return;
   }
-  unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
-  unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid]&((1<<msm_idx_shift)-1));
-  unsigned bucket_offset = bucket_offsets[tid];
+  const unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
+  const unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid]&((1<<msm_idx_shift)-1));
+  const unsigned bucket_offset = bucket_offsets[tid];
+  // if (tid<10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
+  if ((bucket_index>>20)==13) return;
+  // if (bucket_sizes[tid]==16777216) printf("tid %u size %u bucket %u offset %u\n", tid, bucket_sizes[tid], bucket_index, bucket_offset);
+  // const unsigned *indexes = point_indices + bucket_offset;
+  P bucket = P::zero(); //todo: get rid of init buckets? no.. because what about buckets with no points
+  // unsigned point_ind;
   for (unsigned i = 0; i < bucket_sizes[tid]; i++)  //add the relevant points starting from the relevant offset up to the bucket size
   {
-    buckets[bucket_index] = buckets[bucket_index] + points[point_indices[bucket_offset+i]];
+    // unsigned point_ind = *indexes++;
+    // auto point = memory_load<A>(points + point_ind);
+    // point_ind = point_indices[bucket_offset+i];
+    // bucket = bucket + P::one();
+    bucket = bucket + points[point_indices[bucket_offset+i]];
+    // const unsigned* pa = reinterpret_cast<const unsigned*>(points[point_ind]);
+    // P point;
+    // Dummy_Scalar scal;
+    // scal.x = __ldg(pa);
+    // point.x = scal;
+    // bucket = bucket + point;
   }
+  // buckets[tid] = bucket;
+  buckets[bucket_index] = bucket;
 }
 
 //this kernel sums the entire bucket module
@@ -237,10 +293,38 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, nof_buckets);
   cudaFree(offsets_temp_storage);
 
+  //sort by bucket sizes
+  unsigned* sorted_bucket_sizes;
+  unsigned* sorted_bucket_offsets;
+  unsigned* sorted_single_bucket_indices;
+  cudaMalloc(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets);
+  cudaMalloc(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets);
+  cudaMalloc(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets);
+  unsigned* sort_offsets_temp_storage{};
+  size_t sort_offsets_temp_storage_bytes = 0;
+  unsigned* sort_single_temp_storage{};
+  size_t sort_single_temp_storage_bytes = 0;
+  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
+  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
+  cudaMalloc(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes);
+  cudaMalloc(&sort_single_temp_storage, sort_single_temp_storage_bytes);
+  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
+  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
+  cudaFree(sort_offsets_temp_storage);
+  cudaFree(sort_single_temp_storage);
+  
+
   //launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
+  // NUM_THREADS = 1 << 5;
   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, 
+  // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, 
+                                                        //  d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize);                                              
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
                                                          d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize);                                              
 
   #ifdef SSM_SUM
@@ -291,6 +375,9 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   cudaFree(bucket_sizes);
   cudaFree(nof_buckets_to_compute);
   cudaFree(bucket_offsets);
+  cudaFree(sorted_bucket_sizes);
+  cudaFree(sorted_bucket_offsets);
+  cudaFree(sorted_single_bucket_indices);
   cudaFree(final_results);
 }
 
@@ -523,7 +610,7 @@ void reference_msm(S* scalars, A* a_points, unsigned size){
 unsigned get_optimal_c(const unsigned size) {
   if (size < 17)
     return 1;
-  // return 15;
+  // return 17;
   return ceil(log2(size))-4;
 }
 
