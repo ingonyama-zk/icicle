@@ -1,0 +1,27 @@
+#include <stdbool.h>
+#include <cuda.h>
+// ntt.h
+
+#ifndef _{{.CurveName}}_NTT_H
+#define _{{.CurveName}}_NTT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Incomplete declaration of {{.CurveName}} projective and affine structs
+typedef struct {{.CurveName}}_projective_t {{.CurveName}}_projective_t;
+typedef struct {{.CurveName}}_affine_t {{.CurveName}}_affine_t;
+typedef struct {{.CurveName}}_scalar_t {{.CurveName}}_scalar_t;
+
+int ntt_cuda_{{.Prefix}}({{.CurveName}}_scalar_t *arr, uint32_t n, bool inverse, size_t decimation, size_t device_id);
+int ntt_batch_cuda_{{.Prefix}}({{.CurveName}}_scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
+
+int ecntt_cuda_{{.Prefix}}({{.CurveName}}_projective_t *arr, uint32_t n, bool inverse, size_t device_id);
+int ecntt_batch_cuda_{{.Prefix}}({{.CurveName}}_projective_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _{{.CurveName}}_NTT_H */

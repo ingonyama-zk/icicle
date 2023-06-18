@@ -26,6 +26,10 @@ type BaseField struct {
 	s [BASE_SIZE]uint32
 }
 
+type Field interface {
+	toGnarkFr() *fr.Element
+}
+
 /*
  * Common Constrctors
  */
@@ -141,7 +145,7 @@ func (f *ScalarField) toBytesLe() []byte {
 	return bytes
 }
 
-func (f *ScalarField) toGnarkFr() *fr.Element {
+func (f ScalarField) toGnarkFr() *fr.Element {
 	fb := f.toBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
@@ -223,9 +227,26 @@ func (p *Point{{.CurveName}}) toGnarkAffine() *{{toLower .CurveName}}.G1Affine {
 	return &{{toLower .CurveName}}.G1Affine{X: *x, Y: *y}
 }
 
+func (p *Point{{.CurveName}}) ToGnarkJac() *{{.Prefix}}.G1Jac {
+	var p1 {{.Prefix}}.G1Jac
+	p1.FromAffine(p.toGnarkAffine())
+
+	return &p1
+}
+
+func Point{{.CurveName}}FromG1AffineGnark(gnark *{{.Prefix}}.G1Affine) *Point{{.CurveName}} {
+	point := Point{{.CurveName}}{
+		x: *NewFieldFromFpGnark[BaseField](gnark.X),
+		y: *NewFieldFromFpGnark[BaseField](gnark.Y),
+		z: *NewBaseFieldOne(),
+	}
+
+	return &point
+}
+
 // converts jac fromat to projective
-func Point{{.CurveName}}FromGnark(gnark *{{toLower .CurveName}}.G1Jac) *Point{{.CurveName}} {
-	var pointAffine {{toLower .CurveName}}.G1Affine
+func Point{{.CurveName}}FromJacGnark(gnark *{{.Prefix}}.G1Jac) *Point{{.CurveName}} {
+	var pointAffine {{.Prefix}}.G1Affine
 	pointAffine.FromJacobian(gnark)
 
 	point := Point{{.CurveName}}{
@@ -268,7 +289,7 @@ func (p *PointAffineNoInfinity{{.CurveName}}) toProjective() *Point{{.CurveName}
 	}
 }
 
-func (p *PointAffineNoInfinity{{.CurveName}}) toGnarkAffine() *{{toLower .CurveName}}.G1Affine {
+func (p *PointAffineNoInfinity{{.CurveName}}) toGnarkAffine() *{{.Prefix}}.G1Affine {
 	return p.toProjective().toGnarkAffine()
 }
 
@@ -340,4 +361,33 @@ func getFixedLimbs(slice *[]uint32) [BASE_SIZE]uint32 {
 	}
 
 	panic("slice has too many elements")
+}
+
+func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) []T {
+	var newElements []T
+	for _, e := range elements {
+		converted := NewFieldFromFrGnark[T](e)
+		newElements = append(newElements, *converted)
+	}
+
+	return newElements
+}
+
+func BatchConvertToFrGnark[T Field](elements []T) []fr.Element {
+	var newElements []fr.Element
+	for _, e := range elements {
+		converted := e.toGnarkFr()
+		newElements = append(newElements, *converted)
+	}
+
+	return newElements
+}
+
+func BatchConvertFromG1Affine(elements []{{.Prefix}}.G1Affine) []PointAffineNoInfinity{{.CurveName}} {
+	var newElements []PointAffineNoInfinity{{.CurveName}}
+	for _, e := range elements {
+		newElement := Point{{.CurveName}}FromG1AffineGnark(&e).strip_z()
+		newElements = append(newElements, *newElement)
+	}
+	return newElements
 }

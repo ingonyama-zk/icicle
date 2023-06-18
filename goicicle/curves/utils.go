@@ -1,4 +1,4 @@
-package bn254
+package curve
 
 import "encoding/binary"
 
