@@ -14,7 +14,7 @@ class Dummy_Scalar {
   public:
     static constexpr unsigned NBITS = 32;
 
-    unsigned x;
+    int x;
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
@@ -37,11 +37,11 @@ class Dummy_Scalar {
       return (p1.x == p2);
     }
 
-    // static HOST_DEVICE_INLINE Dummy_Scalar neg(const Dummy_Scalar &scalar) { 
-    //   return {Dummy_Scalar::neg(point.x)};
-    // }
+    static HOST_DEVICE_INLINE Dummy_Scalar neg(const Dummy_Scalar &scalar) { 
+      return {-scalar.x};
+    }
     static HOST_INLINE Dummy_Scalar rand_host() {
-      return {(unsigned)rand()};
+      return {rand()};
     }
 };
 
@@ -66,9 +66,9 @@ class Dummy_Projective {
       return {point.x};
     }
 
-    // static HOST_DEVICE_INLINE Dummy_Projective neg(const Dummy_Projective &point) { 
-    //   return {Dummy_Scalar::neg(point.x)};
-    // }
+    static HOST_DEVICE_INLINE Dummy_Projective neg(const Dummy_Projective &point) { 
+      return {Dummy_Scalar::neg(point.x)};
+    }
 
     friend HOST_DEVICE_INLINE Dummy_Projective operator+(Dummy_Projective p1, const Dummy_Projective& p2) {   
       return {p1.x+p2.x};
@@ -108,19 +108,19 @@ class Dummy_Projective {
     }
 
     static HOST_INLINE Dummy_Projective rand_host() {
-      return {(unsigned)rand()};
+      return {rand()};
     }
 };
 
 //switch between dummy and real:
 
-typedef scalar_t test_scalar;
-typedef projective_t test_projective;
-typedef affine_t test_affine;
+// typedef scalar_t test_scalar;
+// typedef projective_t test_projective;
+// typedef affine_t test_affine;
 
-// typedef Dummy_Scalar test_scalar;
-// typedef Dummy_Projective test_projective;
-// typedef Dummy_Projective test_affine;
+typedef Dummy_Scalar test_scalar;
+typedef Dummy_Projective test_projective;
+typedef Dummy_Projective test_affine;
 
 int main()
 {
@@ -161,7 +161,7 @@ int main()
   printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
   std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
 
-  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;

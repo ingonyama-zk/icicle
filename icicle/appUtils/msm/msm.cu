@@ -99,21 +99,38 @@ __global__ void initialize_buckets_kernel(P *buckets, unsigned N) {
 //this kernel splits the scalars into digits of size c
 //each thread splits a single scalar into nof_bms digits
 template <typename S>
-__global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_indices, S *scalars, unsigned total_size, unsigned msm_log_size, unsigned nof_bms, unsigned bm_bitsize, unsigned c){
+__global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_indices, S *scalars, unsigned total_size, unsigned msm_log_size, unsigned nof_bms, unsigned bm_bitsize, unsigned c, unsigned top_bm_nof_missing_bits){
   
+  constexpr unsigned sign_mask = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   unsigned bucket_index;
+  unsigned bucket_index2;
   unsigned current_index;
   unsigned msm_index = tid >> msm_log_size;
+  unsigned borrow = 0;
   if (tid < total_size){
     S scalar = scalars[tid];
 
     for (unsigned bm = 0; bm < nof_bms; bm++)
     {
+      // bucket_index = scalar.get_scalar_digit(bm, c) + (bm==nof_bms-1? ((tid&top_bm_nof_missing_bits)<<(c-top_bm_nof_missing_bits)) : 0);
       bucket_index = scalar.get_scalar_digit(bm, c);
+      bucket_index += borrow;
+      borrow = 0;
+      unsigned sign = 0;
+      if (bucket_index > (1<<(c-1))) {
+        bucket_index = (1 << c) - bucket_index;
+        borrow = 1;
+        sign = sign_mask;
+      }
+      // if (bm==nof_bms-1) {
+      //   bucket_index2 = bucket_index + ((tid&((1<<top_bm_nof_missing_bits)-1))<<(c-top_bm_nof_missing_bits));
+      //   if (tid<10) printf("tid %u bi1 %u bi2 %u\n",tid, bucket_index, bucket_index2);
+      //   bucket_index = bucket_index2;
+      // }
       current_index = bm * total_size + tid;
       buckets_indices[current_index] = (msm_index<<(c+bm_bitsize)) | (bm<<c) | bucket_index;  //the bucket module number and the msm number are appended at the msbs
-      point_indices[current_index] = tid; //the point index is saved for later
+      point_indices[current_index] = sign | tid; //the point index is saved for later
     }
   }
 }
@@ -124,6 +141,7 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
 template <typename P, typename A>
 __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigned *__restrict__ bucket_offsets, const unsigned *__restrict__ bucket_sizes, const unsigned *__restrict__ single_bucket_indices, const unsigned *__restrict__ point_indices, A *__restrict__ points, const unsigned nof_buckets, const unsigned *nof_buckets_to_compute, const unsigned msm_idx_shift){
   
+  constexpr unsigned sign_mask = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   // if (tid>=*nof_buckets_to_compute || tid<11){ 
   if (tid>=*nof_buckets_to_compute){ 
@@ -132,8 +150,9 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigne
   const unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
   const unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid]&((1<<msm_idx_shift)-1));
   const unsigned bucket_offset = bucket_offsets[tid];
-  // if (tid<10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
-  if ((bucket_index>>20)==13) return;
+  if (tid<10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
+  // if (tid==0) return;
+  // if ((bucket_index>>20)==13) return;
   // if (bucket_sizes[tid]==16777216) printf("tid %u size %u bucket %u offset %u\n", tid, bucket_sizes[tid], bucket_index, bucket_offset);
   // const unsigned *indexes = point_indices + bucket_offset;
   P bucket = P::zero(); //todo: get rid of init buckets? no.. because what about buckets with no points
@@ -144,7 +163,12 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigne
     // auto point = memory_load<A>(points + point_ind);
     // point_ind = point_indices[bucket_offset+i];
     // bucket = bucket + P::one();
-    bucket = bucket + points[point_indices[bucket_offset+i]];
+    unsigned point_ind = point_indices[bucket_offset+i];
+    unsigned sign = point_ind & sign_mask;
+    point_ind &= ~sign_mask;
+    A point = points[point_ind];
+    if (sign) point = A::neg(point);
+    bucket = bucket + points[point_ind];
     // const unsigned* pa = reinterpret_cast<const unsigned*>(points[point_ind]);
     // P point;
     // Dummy_Scalar scal;
@@ -229,11 +253,13 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned nof_bms = bitsize/c;
   unsigned msm_log_size = ceil(log2(size));
   unsigned bm_bitsize = ceil(log2(nof_bms));
-
   if (bitsize%c){
     nof_bms++;
   }
-  unsigned nof_buckets = nof_bms<<c;
+  unsigned top_bm_nof_missing_bits = c*nof_bms - bitsize;
+  std::cout << "top_bm_nof_missing_bits" << top_bm_nof_missing_bits <<std::endl;
+  // unsigned nof_buckets = nof_bms<<c;
+  unsigned nof_buckets = nof_bms<<(c-1); //signed digits
   cudaMalloc(&buckets, sizeof(P) * nof_buckets);
 
   // launch the bucket initialization kernel with maximum threads
@@ -250,7 +276,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   NUM_THREADS = 1 << 10;
   NUM_BLOCKS = (size * (nof_bms+1) + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
-                                                    nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
+                                                    nof_bms, bm_bitsize, c, top_bm_nof_missing_bits); //+size - leaving the first bm free for the out of place sort later
   
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sort_indices_temp_storage{};
@@ -347,7 +373,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     //launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = nof_bms;
     NUM_BLOCKS = 1;
-    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c);
+    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c-1); //sighed digits
   #endif
 
   P* d_final_result;
@@ -620,7 +646,7 @@ void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device){
   unsigned c = get_optimal_c(size);
   // unsigned c = 6;
   // unsigned bitsize = 32;
-  unsigned bitsize = 255;
+  unsigned bitsize = 253; //get from field
   bucket_method_msm(bitsize, c, scalars, points, size, result, on_device);
 }
 
