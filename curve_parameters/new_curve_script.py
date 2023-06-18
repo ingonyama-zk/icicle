@@ -22,9 +22,8 @@ def to_hex(val: int, length):
 
 def get_root_of_unity(modulus_p, order: int, root_of_unity) -> int:
     global ntt_size
-    assert not root_of_unity == modulus_p
     assert (modulus_p - 1) % order == 0
-    return pow(root_of_unity, (1 << ntt_size) // order, modulus_p)
+    return pow(root_of_unity, (modulus_p - 1) // order, modulus_p)
 
 
 def compute_values(modulus, modulus_bit_count, limbs):
