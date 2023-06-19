@@ -30,7 +30,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 )
 
-// #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bls12381/
+// #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bls12_381/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn12_381
 // #include "c_api.h"
 // #include "ve_mod_mult.h"

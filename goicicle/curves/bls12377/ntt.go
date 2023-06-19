@@ -18,7 +18,7 @@
 package bls12377
 
 
-// #cgo CFLAGS: -I../../../icicle/curves//bls12377/
+// #cgo CFLAGS: -I../../../icicle/curves/bls12_377/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn12_377
 // #include "ntt.h"
 import "C"

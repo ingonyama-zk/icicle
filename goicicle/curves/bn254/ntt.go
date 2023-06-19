@@ -18,7 +18,7 @@
 package bn254
 
 
-// #cgo CFLAGS: -I../../../icicle/curves//bn254/
+// #cgo CFLAGS: -I../../../icicle/curves/bn254/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "ntt.h"
 import "C"
