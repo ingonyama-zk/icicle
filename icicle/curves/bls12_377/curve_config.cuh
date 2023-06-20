@@ -2,6 +2,9 @@
 
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
+#if defined(G2_DEFINED)
+#include "../../primitives/extension_field.cuh"
+#endif
 
 #include "params.cuh"
 

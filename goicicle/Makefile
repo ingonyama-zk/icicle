@@ -2,7 +2,7 @@ CUDA_ROOT_DIR = /usr/local/cuda
 NVCC = $(CUDA_ROOT_DIR)/bin/nvcc
 CFLAGS = -Xcompiler -fPIC
 LDFLAGS = -shared
-FEATURES = # -DG2_DEFINED
+FEATURES = -DG2_DEFINED
 
 TARGET_BN254 = libbn254.so
 TARGET_BLS12_381 = libbls12_381.so
