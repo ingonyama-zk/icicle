@@ -28,12 +28,10 @@ import (
 // #include "msm.h"
 import "C"
 
-func MsmBN254(points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
+func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
-
-	out := new(PointBN254)
 
 	pointsC := (*C.BN254_affine_t)(unsafe.Pointer(&points[0]))
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&scalars[0]))

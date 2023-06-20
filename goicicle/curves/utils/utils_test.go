@@ -1,4 +1,4 @@
-package curve
+package curve_utils
 
 import (
 	"testing"
