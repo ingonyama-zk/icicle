@@ -20,6 +20,7 @@ extern "C" {
         number_of_blocks: usize,
         arity: c_uint,
         device_id: usize,
+        stream: usize // TODO: provide a real stream
     ) -> c_uint;
 
     fn msm_cuda_bls12_381(
@@ -243,7 +244,8 @@ pub fn poseidon_multi_bls12_381(input: &[ScalarField_BLS12_381], arity: usize, d
             out.as_mut_slice() as *mut _ as *mut ScalarField_BLS12_381,
             number_of_blocks,
             arity as c_uint,
-            device_id
+            device_id,
+            0
         );
         
         // TO-DO: go for better expression of error types
