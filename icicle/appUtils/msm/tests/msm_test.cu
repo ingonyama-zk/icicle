@@ -14,7 +14,8 @@ class Dummy_Scalar {
   public:
     static constexpr unsigned NBITS = 32;
 
-    int x;
+    unsigned x;
+    unsigned p = 1<<31;
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
@@ -26,7 +27,7 @@ class Dummy_Scalar {
     }
 
     friend HOST_DEVICE_INLINE Dummy_Scalar operator+(Dummy_Scalar p1, const Dummy_Scalar& p2) {   
-      return {p1.x+p2.x};
+      return {(p1.x+p2.x)%p1.p};
     }
 
     friend HOST_DEVICE_INLINE bool operator==(const Dummy_Scalar& p1, const Dummy_Scalar& p2) {
@@ -38,10 +39,10 @@ class Dummy_Scalar {
     }
 
     static HOST_DEVICE_INLINE Dummy_Scalar neg(const Dummy_Scalar &scalar) { 
-      return {-scalar.x};
+      return {scalar.p-scalar.x};
     }
     static HOST_INLINE Dummy_Scalar rand_host() {
-      return {rand()};
+      return {(unsigned)rand()};
     }
 };
 
@@ -108,19 +109,19 @@ class Dummy_Projective {
     }
 
     static HOST_INLINE Dummy_Projective rand_host() {
-      return {rand()};
+      return {(unsigned)rand()};
     }
 };
 
 //switch between dummy and real:
 
-// typedef scalar_t test_scalar;
-// typedef projective_t test_projective;
-// typedef affine_t test_affine;
+typedef scalar_t test_scalar;
+typedef projective_t test_projective;
+typedef affine_t test_affine;
 
-typedef Dummy_Scalar test_scalar;
-typedef Dummy_Projective test_projective;
-typedef Dummy_Projective test_affine;
+// typedef Dummy_Scalar test_scalar;
+// typedef Dummy_Projective test_projective;
+// typedef Dummy_Projective test_affine;
 
 int main()
 {
@@ -161,7 +162,7 @@ int main()
   printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
   std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
 
-  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;
