@@ -152,10 +152,9 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     S * states;
 
     // allocate memory for {blocks} states of {t} scalars each
-    cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream);
-    // if (cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream) != CUDA_SUCCESS) {
-    //     throw std::runtime_error("Failed memory allocation on the device");
-    // }
+    if (cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream) != cudaSuccess) {
+        throw std::runtime_error("Failed memory allocation on the device");
+    }
 
     // This is where the input matrix of size Arity x NumberOfBlocks is
     // padded and coppied to device in a T x NumberOfBlocks matrix
