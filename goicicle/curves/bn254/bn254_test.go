@@ -7,7 +7,6 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	curve_utils "github.com/ingonyama-zk/icicle/goicicle/curves/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +30,7 @@ func TestFieldBN254FromGnark(t *testing.T) {
 
 	f := NewFieldFromFrGnark[ScalarField](rand)
 
-	assert.Equal(t, f.s, curve_utils.ConvertUint64ArrToUint32Arr(rand.Bits()))
+	assert.Equal(t, f.s, ConvertUint64ArrToUint32Arr(rand.Bits()))
 }
 
 func TestFieldBN254ToBytesLe(t *testing.T) {
