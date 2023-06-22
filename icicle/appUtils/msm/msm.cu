@@ -296,6 +296,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   cudaFreeAsync(bucket_offsets, stream);
   cudaFreeAsync(final_results, stream);
 
+  std::cout<< cudaGetLastError() <<std::endl;
   cudaStreamSynchronize(stream);
 }
 

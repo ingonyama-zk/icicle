@@ -25,9 +25,28 @@ import (
 // #cgo CFLAGS: -I../../../icicle/curves/bn254/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "msm.h"
+// #include "cuda.h"
+// #include "cuda_runtime.h"
 import "C"
 
+type Stream struct {
+	s C.CUstream
+}
+
+// MakeStream creates a stream. The flags determines the behaviors of the stream.
+func MakeStream(flags byte) Stream {
+	var s Stream
+	C.cuStreamCreate(&s.s, C.uint(flags))
+	return s
+}
+
+func DestroyStream(hStream *Stream) {
+	C.cuStreamDestroy(hStream.s)
+}
+
 func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
+
+	stream := MakeStream(0)
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -35,8 +54,9 @@ func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []Sc
 	pointsC := (*C.BN254_affine_t)(unsafe.Pointer(&points[0]))
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&scalars[0]))
 	outC := (*C.BN254_projective_t)(unsafe.Pointer(out))
+	streamC := (C.CudaStream_t)(unsafe.Pointer(&stream))
 
-	ret := C.msm_cuda_bn254(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
+	ret := C.msm_cuda_bn254(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id), streamC)
 
 	if ret != 0 {
 		return nil, fmt.Errorf("msm_cuda_bn254 returned error code: %d", ret)
