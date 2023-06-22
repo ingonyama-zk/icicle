@@ -90,36 +90,36 @@ def get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q,
 
 # Create Cuda interface
 
-newpath = "./icicle/curves/"+curve_name 
+newpath = "./icicle-cuda/curves/"+curve_name 
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 
 fc = get_config_file_content(modolus_p, bit_count_p, limb_p, ntt_size, modolus_q, bit_count_q, limb_q, weierstrass_b)
-text_file = open("./icicle/curves/"+curve_name+"/params.cuh", "w")
+text_file = open("./icicle-cuda/curves/"+curve_name+"/params.cuh", "w")
 n = text_file.write(fc)
 text_file.close()
 
-with open("./icicle/curves/curve_template/lde.cu", "r") as lde_file:
+with open("./icicle-cuda/curves/curve_template/lde.cu", "r") as lde_file:
     content = lde_file.read()
     content = content.replace("CURVE_NAME_U",curve_name.upper())
     content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./icicle/curves/"+curve_name+"/lde.cu", "w")
+    text_file = open("./icicle-cuda/curves/"+curve_name+"/lde.cu", "w")
     n = text_file.write(content)
     text_file.close()
     
-with open("./icicle/curves/curve_template/msm.cu", "r") as msm_file:
+with open("./icicle-cuda/curves/curve_template/msm.cu", "r") as msm_file:
     content = msm_file.read()
     content = content.replace("CURVE_NAME_U",curve_name.upper())
     content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./icicle/curves/"+curve_name+"/msm.cu", "w")
+    text_file = open("./icicle-cuda/curves/"+curve_name+"/msm.cu", "w")
     n = text_file.write(content)
     text_file.close()
 
-with open("./icicle/curves/curve_template/ve_mod_mult.cu", "r") as ve_mod_mult_file:
+with open("./icicle-cuda/curves/curve_template/ve_mod_mult.cu", "r") as ve_mod_mult_file:
     content = ve_mod_mult_file.read()
     content = content.replace("CURVE_NAME_U",curve_name.upper())
     content = content.replace("CURVE_NAME_L",curve_name.lower())
-    text_file = open("./icicle/curves/"+curve_name+"/ve_mod_mult.cu", "w")
+    text_file = open("./icicle-cuda/curves/"+curve_name+"/ve_mod_mult.cu", "w")
     n = text_file.write(content)
     text_file.close()
     
@@ -132,7 +132,7 @@ namespace = '#include "params.cuh"\n'+'''namespace CURVE_NAME_U {
     typedef Affine<point_field_t> affine_t;
 }'''
 
-with open('./icicle/curves/'+curve_name+'/curve_config.cuh', 'w') as f:
+with open('./icicle-cuda/curves/'+curve_name+'/curve_config.cuh', 'w') as f:
     f.write(namespace.replace("CURVE_NAME_U",curve_name.upper()))
     
     
@@ -145,7 +145,7 @@ extern "C" bool eq_CURVE_NAME_L(CURVE_NAME_U::projective_t *point1, CURVE_NAME_U
     return (*point1 == *point2);
 }'''
 
-with open('./icicle/curves/'+curve_name+'/projective.cu', 'w') as f:
+with open('./icicle-cuda/curves/'+curve_name+'/projective.cu', 'w') as f:
     f.write(eq.replace("CURVE_NAME_U",curve_name.upper()).replace("CURVE_NAME_L",curve_name.lower()))
 
 supported_operations = '''
@@ -155,10 +155,10 @@ supported_operations = '''
 #include "ve_mod_mult.cu"
 '''
 
-with open('./icicle/curves/'+curve_name+'/supported_operations.cu', 'w') as f:
+with open('./icicle-cuda/curves/'+curve_name+'/supported_operations.cu', 'w') as f:
     f.write(supported_operations.replace("CURVE_NAME_U",curve_name.upper()).replace("CURVE_NAME_L",curve_name.lower()))
     
-with open('./icicle/curves/index.cu', 'a') as f:
+with open('./icicle-cuda/curves/index.cu', 'a') as f:
     f.write('\n#include "'+curve_name.lower()+'/supported_operations.cu"')
     
 
