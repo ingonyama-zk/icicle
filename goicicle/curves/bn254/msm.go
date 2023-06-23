@@ -29,7 +29,7 @@ import (
 import "C"
 
 func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
-	defer TimeTrack(time.Now(), "MSM")
+	defer TimeTrack(time.Now(), "MSM G1")
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}

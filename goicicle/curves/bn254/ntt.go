@@ -32,7 +32,12 @@ const (
 )
 
 func NttBN254(scalars *[]ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
-	defer TimeTrack(time.Now(), "NTT")
+	name := "FFT"
+	if isInverse {
+		name = "FFT INVERSE"
+	}
+	defer TimeTrack(time.Now(), name)
+
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
 	ret := C.ntt_cuda_bn254(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
