@@ -798,7 +798,7 @@ template <class CONFIG> class Field {
 
       static HOST_DEVICE_INLINE void multiply_raw_msb(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
         #ifdef __CUDA_ARCH__
-          return ingo_msb_multiply_raw_device(as, bs, rs);
+          return multiply_raw_device(as, bs, rs);
         #else
           return multiply_raw_host(as, bs, rs);
         #endif
