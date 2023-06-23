@@ -20,7 +20,10 @@ package bn254
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "ntt.h"
 import "C"
-import "unsafe"
+import (
+	"time"
+	"unsafe"
+)
 
 const (
 	NONE = 0
@@ -29,6 +32,7 @@ const (
 )
 
 func NttBN254(scalars *[]ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
+	defer TimeTrack(time.Now(), "NTT")
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
 	ret := C.ntt_cuda_bn254(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))

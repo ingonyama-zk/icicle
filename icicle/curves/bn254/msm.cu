@@ -11,8 +11,10 @@ int msm_cuda_bn254(BN254::projective_t *out, BN254::affine_t points[],
               BN254::scalar_t scalars[], size_t count, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
-    {
+    {   
+        cudaStreamCreate(&stream);
         large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, stream);
+        cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)

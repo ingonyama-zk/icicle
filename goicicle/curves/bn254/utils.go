@@ -1,6 +1,10 @@
 package bn254
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"log"
+	"time"
+)
 
 // Function to convert [8]uint32 to [4]uint64
 func ConvertUint32ArrToUint64Arr(arr32 [8]uint32) [4]uint64 {
@@ -22,4 +26,9 @@ func ConvertUint64ArrToUint32Arr(arr64 [4]uint64) [8]uint32 {
 	}
 
 	return arr32
+}
+
+func TimeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Printf("%s took %s", name, elapsed)
 }
