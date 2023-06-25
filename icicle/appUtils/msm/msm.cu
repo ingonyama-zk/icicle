@@ -14,9 +14,31 @@
 #include "../../primitives/field.cuh"
 #include "msm.cuh"
 
-
-#define BIG_TRIANGLE
+// #define SIGNED_DIG
+// #define BIG_TRIANGLE
 // #define SSM_SUM  //WIP
+
+unsigned log2_floor(const unsigned value) {
+  unsigned v = value;
+  unsigned result = 0;
+  while (v >>= 1)
+    result++;
+  return result;
+}
+
+unsigned log2_ceiling(const unsigned value) { return value <= 1 ? 0 : log2_floor(value - 1) + 1; }
+
+unsigned get_optimal_log_data_split(const unsigned mpc, const unsigned source_window_bits, const unsigned target_window_bits,
+  const unsigned target_windows_count) {
+#define MAX_THREADS 32
+#define MIN_BLOCKS 12
+const unsigned full_occupancy = mpc * MAX_THREADS * MIN_BLOCKS;
+const unsigned target = full_occupancy << 6;
+const unsigned unit_threads_count = target_windows_count << target_window_bits;
+const unsigned split_target = log2_ceiling(target / unit_threads_count);
+const unsigned split_limit = source_window_bits - target_window_bits - 1;
+return std::min(split_target, split_limit);
+}
 
 template <typename T>
 static constexpr __device__ __forceinline__ T ld_single(const T *ptr) {
@@ -110,22 +132,24 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
   unsigned borrow = 0;
   if (tid < total_size){
     S scalar = scalars[tid];
-    if (tid == 0) printf("scalar %u", scalar);
+    // if (tid == 0) printf("scalar %u", scalar);
 
     for (unsigned bm = 0; bm < nof_bms; bm++)
     {
       // bucket_index = scalar.get_scalar_digit(bm, c) + (bm==nof_bms-1? ((tid&top_bm_nof_missing_bits)<<(c-top_bm_nof_missing_bits)) : 0);
       bucket_index = scalar.get_scalar_digit(bm, c);
+      #ifdef SIGNED_DIG
       bucket_index += borrow;
       borrow = 0;
       unsigned sign = 0;
-      if (tid == 0) printf("index %u", bucket_index);
+      // if (tid == 0) printf("index %u", bucket_index);
       if (bucket_index > (1<<(c-1))) {
         bucket_index = (1 << c) - bucket_index;
         borrow = 1;
         sign = sign_mask;
       }
-      if (tid == 0) printf("new index %u", bucket_index);
+      #endif
+      // if (tid == 0) printf("new index %u", bucket_index);
       // if (bm==nof_bms-1) {
       //   bucket_index2 = bucket_index + ((tid&((1<<top_bm_nof_missing_bits)-1))<<(c-top_bm_nof_missing_bits));
       //   if (tid<10) printf("tid %u bi1 %u bi2 %u\n",tid, bucket_index, bucket_index2);
@@ -134,8 +158,11 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
       current_index = bm * total_size + tid;
       buckets_indices[current_index] = (msm_index<<(c+bm_bitsize)) | (bm<<c) | bucket_index;  //the bucket module number and the msm number are appended at the msbs
       // buckets_indices[current_index] = (msm_index<<(c-1+bm_bitsize)) | (bm<<(c-1)) | bucket_index;  //the bucket module number and the msm number are appended at the msbs
-      // point_indices[current_index] = tid; //the point index is saved for later
+      #ifdef SIGNED_DIG
       point_indices[current_index] = sign | tid; //the point index is saved for later
+      #else
+      point_indices[current_index] = tid; //the point index is saved for later
+      #endif
     }
   }
 }
@@ -152,9 +179,14 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigne
   if (tid>=*nof_buckets_to_compute){ 
     return;
   }
+  #ifdef SIGNED_DIG //todo - fix
   const unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
   const unsigned bm_index = (single_bucket_indices[tid]&((1<<msm_idx_shift)-1))>>c;
   const unsigned bucket_index = msm_index * nof_buckets + bm_index * ((1<<(c-1))+1) + (single_bucket_indices[tid]&((1<<c)-1));
+  #else
+  unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
+  unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid]&((1<<msm_idx_shift)-1));
+  #endif
   const unsigned bucket_offset = bucket_offsets[tid];
   // if (tid<10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
   // if (tid==0) return;
@@ -170,11 +202,15 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigne
     // point_ind = point_indices[bucket_offset+i];
     // bucket = bucket + P::one();
     unsigned point_ind = point_indices[bucket_offset+i];
+    #ifdef SIGNED_DIG
     unsigned sign = point_ind & sign_mask;
     point_ind &= ~sign_mask;
     // printf("tid %u sign %u point ind %u \n", tid,sign, point_ind);
     A point = points[point_ind];
     if (sign) point = A::neg(point);
+    #else
+    A point = points[point_ind];
+    #endif
     bucket = bucket + point;
     // const unsigned* pa = reinterpret_cast<const unsigned*>(points[point_ind]);
     // P point;
@@ -194,13 +230,89 @@ __global__ void big_triangle_sum_kernel(P* buckets, P* final_sums, unsigned nof_
 
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid>=nof_bms) return;
-  P line_sum = buckets[(tid+1)*((1<<c)+1)-1];
+  #ifdef SIGNED_DIG
+  unsigned buckets_in_bm = (1<<c)+1;
+  #else
+  unsigned buckets_in_bm = (1<<c);
+  #endif
+  P line_sum = buckets[(tid+1)*buckets_in_bm-1];
   final_sums[tid] = line_sum;
-  for (unsigned i = (1<<c)-1; i >0; i--)
+  for (unsigned i = buckets_in_bm-2; i >0; i--)
   {
-    line_sum = line_sum + buckets[tid*((1<<c)+1) + i];  //using the running sum method
+    line_sum = line_sum + buckets[tid*buckets_in_bm + i];  //using the running sum method
     final_sums[tid] = final_sums[tid] + line_sum;
   }
+}
+
+template <typename P>
+__global__ void split_windows_kernel_inner(const unsigned source_window_bits_count, const unsigned source_windows_count,
+  const P *__restrict__ source_buckets, P *__restrict__ target_buckets, const unsigned count) {
+const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+if (gid >= count) //0,1,2,2^8,2^8+1,2^8+2,32*2^8,32*2^8+1,32*2^8+2^8,32*2^8+2^8+1
+return;
+const unsigned target_window_bits_count = (source_window_bits_count + 1) >> 1; //8
+const unsigned target_windows_count = source_windows_count << 1; //32
+const unsigned target_partition_buckets_count = target_windows_count << target_window_bits_count; // 32*2^8
+const unsigned target_partitions_count = count / target_partition_buckets_count; //2^7
+const unsigned target_partition_index = gid / target_partition_buckets_count; //*0,0,0,0,0,0,1,1,1,1
+const unsigned target_partition_tid = gid % target_partition_buckets_count; //*0,1,2,2^8,2^8+1,2^8+2,0,1,2^8,2^8+1
+const unsigned target_window_buckets_count = 1 << target_window_bits_count; // 2^8
+const unsigned target_window_index = target_partition_tid / target_window_buckets_count; //* 0,0.0,1,1,1,0,0,1,1
+const unsigned target_window_tid = target_partition_tid % target_window_buckets_count; //* 0,1,2,0,1,2,0,1,0,1,2
+const unsigned split_index = target_window_index & 1; //*0,0,0,1,1,1,0,0,1,1,1
+const unsigned source_window_buckets_per_target = source_window_bits_count & 1 // is c odd?
+? split_index ? (target_window_tid >> (target_window_bits_count - 1) ? 0 : target_window_buckets_count) //is the target odd?
+             : 1 << (source_window_bits_count - target_window_bits_count)
+: target_window_buckets_count; //2^8
+const unsigned source_window_index = target_window_index >> 1; //*0,0,0,0,0,0,0,0,0,0,0
+const unsigned source_offset = source_window_index << source_window_bits_count; //*0,0,0,0,0,0,0,0,0,0,
+const unsigned target_shift = target_window_bits_count * split_index; //*0,0,0,8,8,8,0,0,8,8,8
+const unsigned target_offset = target_window_tid << target_shift;//*0,1,2,0,2^8,2^9,0,1,0,2^8,2*2^8
+const unsigned global_offset = source_offset + target_offset;//*0,1,2,0,2^8,2^9,0,1
+const unsigned index_mask = (1 << target_shift) - 1; //*0,0,0,2^8-1,2^8-1,2^8-1,0,0,2^8-1,2^8-1
+P target_bucket = P::zero();
+#pragma unroll 1
+for (unsigned i = target_partition_index; i < source_window_buckets_per_target; i += target_partitions_count) { //from the partition start(*0,0,0,0,0,0,1,1,1,1), stride 2^7, until 2^8 = loop twice
+const unsigned index_offset = i & index_mask | (i & ~index_mask) << target_window_bits_count; //*0 2^15,0 2^15,0 2^15,0 2^15,0 2^15,0 2^15,2^8 2^8+2^15,2^8 2^8+2^15,2^8 2^8+2^15,2^8 2^8+2^15
+const unsigned load_offset = global_offset + index_offset;//*0 2^15,1 2^15+1,2 2^15+2, 0 2^15, 2^8 2^8+2^15, 2^8 2^8+2^15, 2^8+1 2^8+2^15+1
+const auto source_bucket = source_buckets[load_offset];
+target_bucket = i == target_partition_index ? source_bucket : target_bucket + source_bucket; //*0+2^15,1+2^15+1,2+2^15+2,...2^8-1+2^15+2^8-1| 0+2^7, 2^8+2^8+2^7...||2^8+2^8+2^15, 2^8+1+2^8+2^15+1...2^9-1+2^9-1+2^15|1+2^7+1, 2^8+1+2^8+2^7+1...
+}
+target_buckets[gid] = target_bucket; //0,1,2^8,2^8+1,32*2^8,32*2^8+1
+}
+
+template <typename P>
+__global__ void reduce_buckets_kernel(P *buckets, const unsigned count) {
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= count)
+    return;
+  // buckets += gid;
+  const auto a = buckets[gid];
+  const auto b = buckets[gid+count];
+  const P result = a+b;
+  buckets[gid] = result;
+}
+
+template <typename P>
+__global__ void last_pass_gather_kernel(const unsigned bits_count_pass_one, const P *__restrict__ source, P *__restrict__ target,
+  const unsigned count) {
+const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+if (gid >= count)
+return;
+unsigned window_index = gid / bits_count_pass_one;
+unsigned window_tid = gid % bits_count_pass_one;
+for (unsigned bits_count = bits_count_pass_one; bits_count > 1;) {
+bits_count = (bits_count + 1) >> 1;
+window_index <<= 1;
+if (window_tid >= bits_count) {
+window_index++;
+window_tid -= bits_count;
+}
+}
+const unsigned sid = (window_index << 1) + 1;
+const auto pz = source[sid];
+// const point_jacobian pj = point_xyzz::to_jacobian(pz, f);
+target[gid] = pz;
 }
 
 //this kernel uses single scalar multiplication to multiply each bucket by its index
@@ -239,7 +351,7 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
 
 //this function computes msm using the bucket method
 template <typename S, typename P, typename A>
-void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned size, P* final_result, bool on_device) {
+void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned size, P* final_result, bool on_device, bool big_triangle) {
   
   // std::cout<<"points"<<std::endl;
   // for (int i = 0; i < size; i++)
@@ -277,9 +389,13 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     nof_bms++;
   }
   unsigned top_bm_nof_missing_bits = c*nof_bms - bitsize;
-  std::cout << "top_bm_nof_missing_bits" << top_bm_nof_missing_bits <<std::endl;
+  // std::cout << "top_bm_nof_missing_bits" << top_bm_nof_missing_bits <<std::endl;
   // unsigned nof_buckets = nof_bms<<c;
+  #ifdef SIGNED_DIG
   unsigned nof_buckets = nof_bms*((1<<(c-1))+1); //signed digits
+  #else
+  unsigned nof_buckets = nof_bms<<c;
+  #endif
   cudaMalloc(&buckets, sizeof(P) * nof_buckets);
 
   // launch the bucket initialization kernel with maximum threads
@@ -287,7 +403,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, nof_buckets);
   cudaDeviceSynchronize();
-  printf("cuda error %u",cudaGetLastError());
+  printf("cuda error %u\n",cudaGetLastError());
 
   unsigned *bucket_indices;
   unsigned *point_indices;
@@ -300,7 +416,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
                                                     nof_bms, bm_bitsize, c, top_bm_nof_missing_bits); //+size - leaving the first bm free for the out of place sort later
                                                     cudaDeviceSynchronize();
-                                                    printf("cuda error %u",cudaGetLastError());
+                                                    printf("cuda error %u\n",cudaGetLastError());
 
 
   // cudaDeviceSynchronize();
@@ -415,7 +531,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
   //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
                                                          cudaDeviceSynchronize();
-                                                         printf("cuda error %u",cudaGetLastError());
+                                                         printf("cuda error %u\n",cudaGetLastError());
 
 //   cudaDeviceSynchronize();
 // std::vector<P> h_buckets;
@@ -441,17 +557,83 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     sum_reduction_kernel<<<NUM_BLOCKS,NUM_THREADS>>>(buckets, final_results);
   #endif
 
-  #ifdef BIG_TRIANGLE
-    P* final_results;
+  P* final_results;
+  if (big_triangle){
     cudaMalloc(&final_results, sizeof(P) * nof_bms);
     //launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = nof_bms;
     NUM_BLOCKS = 1;
+    #ifdef SIGNED_DIG
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c-1); //sighed digits
-    // big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c); 
-  #endif
-  cudaDeviceSynchronize();
-  printf("cuda error %u",cudaGetLastError());
+    #else
+    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c); 
+    #endif
+    cudaDeviceSynchronize();
+    printf("cuda error %u\n",cudaGetLastError());
+  }
+  else{
+
+  unsigned source_bits_count = c;
+  unsigned source_windows_count = nof_bms;
+  P *source_buckets = buckets;
+  buckets = nullptr;
+  P *target_buckets;
+  for (unsigned i = 0;; i++) {
+    const unsigned target_bits_count = (source_bits_count + 1) >> 1; //c/2=8
+    const unsigned target_windows_count = source_windows_count << 1; //nof bms*2 = 32
+    const unsigned target_buckets_count = target_windows_count << target_bits_count; // bms*2^c = 32*2^8
+    const unsigned log_data_split =
+        get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
+    const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
+    cudaMalloc(&target_buckets, sizeof(P) * total_buckets_count); //32*2^8*2^7 buckets
+    NUM_THREADS = 32;
+    NUM_BLOCKS = (total_buckets_count + NUM_THREADS - 1) / NUM_THREADS;
+    // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
+    // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
+    split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
+    cudaFree(source_buckets);
+
+    for (unsigned j = 0; j < log_data_split; j++){
+    const unsigned count = total_buckets_count >> (j + 1);
+    // const unsigned block_dim = count < 32 ? count : 32;
+    // const unsigned grid_dim = (count - 1) / block_dim.x + 1;
+    NUM_THREADS = 32;
+    NUM_BLOCKS = (count + NUM_THREADS - 1) / NUM_THREADS;
+    reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(target_buckets, count);
+    }
+    if (target_bits_count == 1) {
+      // P results;
+      // // const unsigned result_windows_count = min(fd_q::MBC, windows_count_pass_one * bits_count_pass_one);
+      const unsigned result_windows_count = bitsize;
+      // if (copy_results)
+      //   HANDLE_CUDA_ERROR(allocate(results, result_windows_count, pool, stream));
+      // HANDLE_CUDA_ERROR(last_pass_gather(bits_count_pass_one, target_buckets, copy_results ? results : ec.results, result_windows_count, stream));
+      // if (copy_results) {
+      //   HANDLE_CUDA_ERROR(cudaMemcpyAsync(ec.results, results, sizeof(point_jacobian) * result_windows_count, cudaMemcpyDeviceToHost, stream));
+      //   if (ec.d2h_copy_finished)
+      //     HANDLE_CUDA_ERROR(cudaEventRecord(ec.d2h_copy_finished, stream));
+      //   if (ec.d2h_copy_finished_callback)
+      //     HANDLE_CUDA_ERROR(cudaLaunchHostFunc(stream, ec.d2h_copy_finished_callback, ec.d2h_copy_finished_callback_data));
+      // }
+      // if (copy_results)
+      //   HANDLE_CUDA_ERROR(free(results, stream));
+      // HANDLE_CUDA_ERROR(free(target_buckets, stream));
+      nof_bms = bitsize;
+      cudaMalloc(&final_results, sizeof(P) * nof_bms);
+      NUM_THREADS = 32;
+      NUM_BLOCKS = (result_windows_count + NUM_THREADS - 1) / NUM_THREADS;
+      // const dim3 block_dim = result_windows_count < 32 ? count : 32;
+      // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
+      last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(c, target_buckets, final_results, result_windows_count);
+      c = 1;
+      break;
+    }
+    source_buckets = target_buckets;
+    target_buckets = nullptr;
+    source_bits_count = target_bits_count;
+    source_windows_count = target_windows_count;
+  }
+}
 
   // cudaDeviceSynchronize();
   //   std::vector<P> h_final_results;
@@ -472,7 +654,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   //launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S><<<1,1>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
   cudaDeviceSynchronize();
-  printf("cuda error %u",cudaGetLastError());
+  printf("cuda error %u\n",cudaGetLastError());
   //copy final result to host
   cudaDeviceSynchronize();
   if (!on_device)
@@ -591,28 +773,28 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices,
                                                         d_points, nof_buckets, total_nof_buckets_to_compute, c+bm_bitsize);
 
-  #ifdef SSM_SUM
-    //sum each bucket
-    NUM_THREADS = 1 << 10;
-    NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-    ssm_buckets_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS>>>(buckets, single_bucket_indices, nof_buckets, c);
+  // #ifdef SSM_SUM
+  //   //sum each bucket
+  //   NUM_THREADS = 1 << 10;
+  //   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
+  //   ssm_buckets_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS>>>(buckets, single_bucket_indices, nof_buckets, c);
    
-    //sum each bucket module
-    P* final_results;
-    cudaMalloc(&final_results, sizeof(P) * nof_bms);
-    NUM_THREADS = 1<<c;
-    NUM_BLOCKS = nof_bms;
-    sum_reduction_kernel<<<NUM_BLOCKS,NUM_THREADS>>>(buckets, final_results);
-  #endif
+  //   //sum each bucket module
+  //   P* final_results;
+  //   cudaMalloc(&final_results, sizeof(P) * nof_bms);
+  //   NUM_THREADS = 1<<c;
+  //   NUM_BLOCKS = nof_bms;
+  //   sum_reduction_kernel<<<NUM_BLOCKS,NUM_THREADS>>>(buckets, final_results);
+  // #endif
 
-  #ifdef BIG_TRIANGLE
+  // #ifdef BIG_TRIANGLE
     P* bm_sums;
     cudaMalloc(&bm_sums, sizeof(P) * nof_bms * batch_size);
     //launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = 1<<8;
     NUM_BLOCKS = (nof_bms*batch_size + NUM_THREADS - 1) / NUM_THREADS;
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, nof_bms*batch_size, c);
-  #endif
+  // #endif
 
   P* d_final_results;
   if (!on_device)
@@ -732,12 +914,12 @@ unsigned get_optimal_c(const unsigned size) {
 
 //this function is used to compute msms of size larger than 256
 template <typename S, typename P, typename A>
-void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device){
-  unsigned c = get_optimal_c(size);
-  // unsigned c = 4;
+void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, bool big_triangle){
+  // unsigned c = get_optimal_c(size);
+  unsigned c = 15;
   // unsigned bitsize = 32;
   unsigned bitsize = 253; //get from field
-  bucket_method_msm(bitsize, c, scalars, points, size, result, on_device);
+  bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle);
 }
 
 // this function is used to compute a batches of msms of size larger than 256

@@ -156,7 +156,9 @@ int main()
   // }
   auto begin = std::chrono::high_resolution_clock::now();
   // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res, false);
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false);
+  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true);
+  std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, false);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
