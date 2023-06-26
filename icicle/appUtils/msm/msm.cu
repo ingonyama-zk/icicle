@@ -68,7 +68,7 @@ __device__ void warpReduce(P* shmem_ptr, int t, int first, int last) {
 // 	}
 // }
 
-template <typename P>
+template <typename P> //todo-add SM and device function
 __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *target_buckets, const unsigned source_c, const unsigned source_nof_bms) {
 	// Allocate shared memory
 	// __shared__ int partial_sum[SHMEM_SIZE];
@@ -82,6 +82,7 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
   // const unsigned target_nof_buckets = target_nof_bms<<target_c;
   const unsigned target_nof_bm_buckets = 1<<target_c;
   unsigned nof_threads_per_bm = source_nof_bm_buckets>>1;
+  // unsigned nof_threads_per_bm = target_nof_bm_buckets>>1;
   if (tid > source_nof_buckets>>1) return;
   unsigned bm_index = tid/nof_threads_per_bm;
   unsigned bm_bucket_index = tid%nof_threads_per_bm;
@@ -150,19 +151,20 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
   const unsigned target_nof_bms = source_nof_bms<<1;
   const unsigned target_c = source_c>>1;
   // const unsigned target_nof_buckets = target_nof_bms<<target_c;
-  const unsigned target_nof_bm_buckets = 1<<target_c;
-  unsigned nof_threads_per_bm = source_nof_bm_buckets>>1;
+  unsigned target_nof_bm_buckets = 1<<target_c;
+  unsigned temp_nof_bm_buckets = 1<<target_c;
+  unsigned nof_threads_per_segment = target_nof_bm_buckets>>1; //only difference between kernels
   if (tid > source_nof_buckets>>1) return;
-  unsigned bm_index = tid/nof_threads_per_bm;
-  unsigned bm_bucket_index = tid%nof_threads_per_bm;
-  unsigned bucket_index = bm_index*source_nof_bm_buckets + bm_bucket_index;
+  unsigned segment_index = tid/nof_threads_per_segment;
+  unsigned segment_bucket_index = tid%nof_threads_per_segment;
+  unsigned bucket_index = segment_index*target_nof_bm_buckets + segment_bucket_index;
 
 	// Load elements AND do first add of reduction
 	// Vector now 2x as long as number of threads, so scale i
 	// int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
 
 	// Store first partial result instead of just the elements
-	temp_buckets[tid] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_bm];
+	temp_buckets[tid] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_segment];
 	__syncthreads();
 
   if (tid ==0){ 
@@ -173,13 +175,13 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
 	// Start at 1/2 block stride and divide by two each iteration
 	// Stop early (call device function instead)
 	// for (int s = blockDim.x / 2; s > 32; s >>= 1) {
-	for (int s = nof_threads_per_bm/2; s > target_nof_bm_buckets/2; s >>= 1) {
+	for (int s = nof_threads_per_segment/2; s > 0; s >>= 1) {
 		// Each thread does work unless it is further than the stride
-    source_nof_bm_buckets = source_nof_bm_buckets>>1;
-    nof_threads_per_bm = source_nof_bm_buckets>>1;
-    bm_index = tid/nof_threads_per_bm;
-    bm_bucket_index = tid%nof_threads_per_bm;
-    bucket_index = bm_index*source_nof_bm_buckets + bm_bucket_index;
+    temp_nof_bm_buckets = temp_nof_bm_buckets>>1;
+    nof_threads_per_segment = temp_nof_bm_buckets>>1;
+    segment_index = tid/nof_threads_per_segment;
+    segment_bucket_index = tid%nof_threads_per_segment;
+    bucket_index = segment_index*temp_nof_bm_buckets + segment_bucket_index;
 		if (tid < source_nof_bms*s) {
 			temp_buckets[tid] = temp_buckets[bucket_index] + temp_buckets[bucket_index + s];
 		}
@@ -192,14 +194,18 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
 	}
 
 
-	// if (threadIdx.x < 32) {
-	// 	warpReduce(partial_sum, threadIdx.x);
+	// if (bm_bucket_index < 32) {
+	// 	warpReduce(temp_buckets, bucket_index, min(32,nof_threads_per_bm/2), target_nof_bm_buckets/2);
 	// }
 
 	// Let the thread 0 for this block write it's result to main memory
 	// Result is inexed by this block
-	if (bm_bucket_index < target_nof_bm_buckets) {
-		target_buckets[bucket_index] = temp_buckets[bucket_index];
+
+	if (tid < source_nof_bms*target_nof_bm_buckets) {
+    segment_index = tid/target_nof_bm_buckets;
+    segment_bucket_index = tid%target_nof_bm_buckets;
+    bucket_index = target_nof_bm_buckets + segment_index*target_nof_bm_buckets*2 + segment_bucket_index;
+		target_buckets[bucket_index] = temp_buckets[tid];
 	}
   if (tid ==0){ 
     for (int i=0;i<64;i++)
@@ -563,6 +569,23 @@ void test_reduce_triangle(P* h_buckets){
   cudaMalloc(&temp, sizeof(P) * count);
   cudaMalloc(&target, sizeof(P) * count);
   reduce_triangles_kernel<<<2,32>>>(buckets,temp,target,4,4);
+  cudaDeviceSynchronize();
+  printf("cuda error %u\n",cudaGetLastError());
+}
+
+template <typename P>
+void test_reduce_rectangle(P* h_buckets){
+  for (int i=0; i<64; i++) std::cout<<h_buckets[i]<<" ";
+  std::cout<<std::endl;
+  P*buckets;
+  P*temp;
+  P*target;
+  unsigned count = 64;
+  cudaMalloc(&buckets, sizeof(P) * count);
+  cudaMemcpy(buckets, h_buckets, sizeof(P) * count, cudaMemcpyHostToDevice);
+  cudaMalloc(&temp, sizeof(P) * count);
+  cudaMalloc(&target, sizeof(P) * count);
+  reduce_rectangles_kernel<<<2,32>>>(buckets,temp,target,4,4);
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 }
