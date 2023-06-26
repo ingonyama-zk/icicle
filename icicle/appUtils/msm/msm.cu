@@ -96,11 +96,11 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 	temp_buckets[tid] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_bm];
 	__syncthreads();
 
-  if (tid ==0){ 
-    for (int i=0;i<64;i++)
-     {printf("%u ",temp_buckets[i]);}
-     printf("\n");
-    }
+  // if (tid ==0){ 
+  //   for (int i=0;i<64;i++)
+  //    {printf("%u ",temp_buckets[i]);}
+  //    printf("\n");
+  //   }
 	// Start at 1/2 block stride and divide by two each iteration
 	// Stop early (call device function instead)
 	// for (int s = blockDim.x / 2; s > 32; s >>= 1) {
@@ -115,11 +115,11 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 			temp_buckets[tid] = temp_buckets[bucket_index] + temp_buckets[bucket_index + s];
 		}
 		__syncthreads();
-    if (tid ==0){ 
-      for (int i=0;i<64;i++)
-       {printf("%u ",temp_buckets[i]);}
-       printf("\n");
-      }
+    // if (tid ==0){ 
+    //   for (int i=0;i<64;i++)
+    //    {printf("%u ",temp_buckets[i]);}
+    //    printf("\n");
+    //   }
 	}
 
 
@@ -132,11 +132,11 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 	if (tid < source_nof_bms*target_nof_bm_buckets) {
 		target_buckets[bucket_index] = temp_buckets[tid];
 	}
-  if (tid ==0){ 
-    for (int i=0;i<64;i++)
-     {printf("%u ",target_buckets[i]);}
-     printf("\n");
-    }
+  // if (tid ==0){ 
+  //   for (int i=0;i<64;i++)
+  //    {printf("%u ",target_buckets[i]);}
+  //    printf("\n");
+  //   }
 }
 
 template <typename P>
@@ -167,11 +167,11 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
 	temp_buckets[tid] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_segment];
 	__syncthreads();
 
-  if (tid ==0){ 
-    for (int i=0;i<64;i++)
-     {printf("%u ",temp_buckets[i]);}
-     printf("\n");
-    }
+  // if (tid ==0){ 
+  //   for (int i=0;i<64;i++)
+  //    {printf("%u ",temp_buckets[i]);}
+  //    printf("\n");
+  //   }
 	// Start at 1/2 block stride and divide by two each iteration
 	// Stop early (call device function instead)
 	// for (int s = blockDim.x / 2; s > 32; s >>= 1) {
@@ -186,11 +186,11 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
 			temp_buckets[tid] = temp_buckets[bucket_index] + temp_buckets[bucket_index + s];
 		}
 		__syncthreads();
-    if (tid ==0){ 
-      for (int i=0;i<64;i++)
-       {printf("%u ",temp_buckets[i]);}
-       printf("\n");
-      }
+    // if (tid ==0){ 
+    //   for (int i=0;i<64;i++)
+    //    {printf("%u ",temp_buckets[i]);}
+    //    printf("\n");
+    //   }
 	}
 
 
@@ -207,11 +207,11 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
     bucket_index = target_nof_bm_buckets + segment_index*target_nof_bm_buckets*2 + segment_bucket_index;
 		target_buckets[bucket_index] = temp_buckets[tid];
 	}
-  if (tid ==0){ 
-    for (int i=0;i<64;i++)
-     {printf("%u ",target_buckets[i]);}
-     printf("\n");
-    }
+  // if (tid ==0){ 
+  //   for (int i=0;i<64;i++)
+  //    {printf("%u ",target_buckets[i]);}
+  //    printf("\n");
+  //   }
 }
 
 unsigned log2_floor(const unsigned value) {
@@ -904,42 +904,61 @@ else{
     // reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,0>>>(source_buckets, target_buckets, source_windows_count>>1);
     // for (unsigned j = 0; j < target_windows_count-1; j++) //another loop
     // reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,0>>>(target_buckets, target_buckets, source_windows_count>>(j+2));
-    unsigned NUM_STREAMS = source_windows_count + source_windows_count*target_window_buckets_count;
-    cudaStream_t streams[NUM_STREAMS];
-    for (int k = 0; k < NUM_STREAMS; ++k) { cudaStreamCreate(&streams[k]); }
+
+    cudaStream_t streams[2];
+    cudaStreamCreate(&streams[0]);
+    cudaStreamCreate(&streams[1]);
 
     NUM_THREADS = 32;
-    for (unsigned j = 0; j < source_windows_count; j++){ //loop on every source bm //0-15
-      unsigned source_offset = j*source_window_buckets_count; //0,2^16,2*2^16
-      unsigned target_offset = j*target_window_buckets_count*2; //0,2^16,2*2^16
-      NUM_BLOCKS = ((source_window_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS; //2^15
-      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(source_buckets+source_offset, temp_buckets1+source_offset, source_window_buckets_count>>1); //same source different target
-      for (unsigned k = 0; k < target_bits_count-2; k++){ //0..5
-      NUM_BLOCKS = ((source_window_buckets_count>>(k+2)) + NUM_THREADS - 1) / NUM_THREADS;//2^14..2^9
-      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(temp_buckets1+source_offset, temp_buckets1+source_offset, source_window_buckets_count>>(k+2)); //stream j
-      }
-      NUM_BLOCKS = ((source_window_buckets_count>>target_bits_count) + NUM_THREADS - 1) / NUM_THREADS;//2^8
-      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(temp_buckets1+source_offset, target_buckets+target_offset, source_window_buckets_count>>target_bits_count); //stream j
-    }
+    NUM_BLOCKS = ((source_buckets_count>>1) + NUM_THREADS - 1);
+    reduce_triangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets1,target_buckets,source_bits_count,source_windows_count);
+    // cudaDeviceSynchronize();
+    // printf("cuda error %u\n",cudaGetLastError());
+    reduce_rectangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(source_buckets,temp_buckets2,target_buckets,source_bits_count,source_windows_count);
+    cudaDeviceSynchronize();
+    printf("cuda error %u\n",cudaGetLastError());
 
-    for (unsigned j = 0; j < source_windows_count*target_window_buckets_count; j++){ //loop on every segment of every source bm // 0..16*2^8-1
-      unsigned source_offset = j*target_window_buckets_count;
-      unsigned target_offset = j%target_window_buckets_count+(j/target_window_buckets_count)*target_window_buckets_count*2 + target_window_buckets_count;
-      NUM_BLOCKS = ((target_window_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS; //2^7
-      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(source_buckets+source_offset, temp_buckets2+source_offset, target_window_buckets_count>>1); //same source different target
-      for (unsigned k = 0; k < target_bits_count-2; k++){ //0..5
-      NUM_BLOCKS = ((target_window_buckets_count>>(k+2)) + NUM_THREADS - 1) / NUM_THREADS; //last blocks are single threaded.. //2^6..2^1
-      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(temp_buckets2+source_offset, temp_buckets2+source_offset, target_window_buckets_count>>(k+2));// stream j + source_windows_count
-      }
-      NUM_BLOCKS = 1; //last blocks are single threaded.. //
-      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(temp_buckets2+source_offset, target_buckets+target_offset, 1);// stream j + source_windows_count
-    }
+    cudaStreamSynchronize(streams[0]);
+    cudaStreamDestroy(streams[0]);
+    cudaStreamSynchronize(streams[1]);
+    cudaStreamDestroy(streams[1]);
 
-    for (int k = 0; k < NUM_STREAMS; ++k)
-    {
-        cudaStreamSynchronize(streams[k]);
-        cudaStreamDestroy(streams[k]);
-    }
+    // unsigned NUM_STREAMS = source_windows_count + source_windows_count*target_window_buckets_count;
+    // cudaStream_t streams[NUM_STREAMS];
+    // for (int k = 0; k < NUM_STREAMS; ++k) { cudaStreamCreate(&streams[k]); }
+
+    // NUM_THREADS = 32;
+    // for (unsigned j = 0; j < source_windows_count; j++){ //loop on every source bm //0-15
+    //   unsigned source_offset = j*source_window_buckets_count; //0,2^16,2*2^16
+    //   unsigned target_offset = j*target_window_buckets_count*2; //0,2^16,2*2^16
+    //   NUM_BLOCKS = ((source_window_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS; //2^15
+    //   reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(source_buckets+source_offset, temp_buckets1+source_offset, source_window_buckets_count>>1); //same source different target
+    //   for (unsigned k = 0; k < target_bits_count-2; k++){ //0..5
+    //   NUM_BLOCKS = ((source_window_buckets_count>>(k+2)) + NUM_THREADS - 1) / NUM_THREADS;//2^14..2^9
+    //   reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(temp_buckets1+source_offset, temp_buckets1+source_offset, source_window_buckets_count>>(k+2)); //stream j
+    //   }
+    //   NUM_BLOCKS = ((source_window_buckets_count>>target_bits_count) + NUM_THREADS - 1) / NUM_THREADS;//2^8
+    //   reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(temp_buckets1+source_offset, target_buckets+target_offset, source_window_buckets_count>>target_bits_count); //stream j
+    // }
+
+    // for (unsigned j = 0; j < source_windows_count*target_window_buckets_count; j++){ //loop on every segment of every source bm // 0..16*2^8-1
+    //   unsigned source_offset = j*target_window_buckets_count;
+    //   unsigned target_offset = j%target_window_buckets_count+(j/target_window_buckets_count)*target_window_buckets_count*2 + target_window_buckets_count;
+    //   NUM_BLOCKS = ((target_window_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS; //2^7
+    //   reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(source_buckets+source_offset, temp_buckets2+source_offset, target_window_buckets_count>>1); //same source different target
+    //   for (unsigned k = 0; k < target_bits_count-2; k++){ //0..5
+    //   NUM_BLOCKS = ((target_window_buckets_count>>(k+2)) + NUM_THREADS - 1) / NUM_THREADS; //last blocks are single threaded.. //2^6..2^1
+    //   reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(temp_buckets2+source_offset, temp_buckets2+source_offset, target_window_buckets_count>>(k+2));// stream j + source_windows_count
+    //   }
+    //   NUM_BLOCKS = 1; //last blocks are single threaded.. //
+    //   reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(temp_buckets2+source_offset, target_buckets+target_offset, 1);// stream j + source_windows_count
+    // }
+
+    // for (int k = 0; k < NUM_STREAMS; ++k)
+    // {
+    //     cudaStreamSynchronize(streams[k]);
+    //     cudaStreamDestroy(streams[k]);
+    // }
 
     cudaFree(source_buckets);
     if (target_bits_count == 1) {
