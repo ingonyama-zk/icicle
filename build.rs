@@ -20,6 +20,7 @@ fn main() {
     nvcc.cuda(true);
     nvcc.debug(false);
     nvcc.flag(&arch);
+    nvcc.flag("--std=c++17");
     nvcc.files([
         "./icicle/appUtils/ntt/ntt.cu",
         "./icicle/appUtils/msm/msm.cu",
