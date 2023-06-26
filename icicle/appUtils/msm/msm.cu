@@ -18,6 +18,196 @@
 // #define BIG_TRIANGLE
 // #define SSM_SUM  //WIP
 
+// #define SIZE 256
+// #define SHMEM_SIZE 256 * 4
+
+// For last iteration (saves useless work)
+// Use volatile to prevent caching in registers (compiler optimization)
+// No __syncthreads() necessary!
+template <typename P>
+__device__ void warpReduce(P* shmem_ptr, int t, int first, int last) {
+  for (int i=first; i>last; i>>=1){
+    shmem_ptr[t] = shmem_ptr[t] + shmem_ptr[t + i];
+  }
+}
+
+// __global__ void sum_reduction(int *v, int *v_r) {
+// 	// Allocate shared memory
+// 	// __shared__ int partial_sum[SHMEM_SIZE];
+// 	int partial_sum[];
+
+// 	// Calculate thread ID
+// 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+// 	// Load elements AND do first add of reduction
+// 	// Vector now 2x as long as number of threads, so scale i
+// 	int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+
+// 	// Store first partial result instead of just the elements
+// 	partial_sum[threadIdx.x] = v[i] + v[i + blockDim.x];
+// 	__syncthreads();
+
+// 	// Start at 1/2 block stride and divide by two each iteration
+// 	// Stop early (call device function instead)
+// 	for (int s = blockDim.x / 2; s > 32; s >>= 1) {
+// 		// Each thread does work unless it is further than the stride
+// 		if (threadIdx.x < s) {
+// 			partial_sum[threadIdx.x] += partial_sum[threadIdx.x + s];
+// 		}
+// 		__syncthreads();
+// 	}
+
+// 	if (threadIdx.x < 32) {
+// 		warpReduce(partial_sum, threadIdx.x);
+// 	}
+
+// 	// Let the thread 0 for this block write it's result to main memory
+// 	// Result is inexed by this block
+// 	if (threadIdx.x == 0) {
+// 		v_r[blockIdx.x] = partial_sum[0];
+// 	}
+// }
+
+template <typename P>
+__global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *target_buckets, const unsigned source_c, const unsigned source_nof_bms) {
+	// Allocate shared memory
+	// __shared__ int partial_sum[SHMEM_SIZE];
+	
+	// Calculate thread ID
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned source_nof_buckets = source_nof_bms<<source_c;
+  unsigned source_nof_bm_buckets = 1<<source_c;
+  const unsigned target_nof_bms = source_nof_bms<<1;
+  const unsigned target_c = source_c>>1;
+  // const unsigned target_nof_buckets = target_nof_bms<<target_c;
+  const unsigned target_nof_bm_buckets = 1<<target_c;
+  unsigned nof_threads_per_bm = source_nof_bm_buckets>>1;
+  if (tid > source_nof_buckets>>1) return;
+  unsigned bm_index = tid/nof_threads_per_bm;
+  unsigned bm_bucket_index = tid%nof_threads_per_bm;
+  unsigned bucket_index = bm_index*source_nof_bm_buckets + bm_bucket_index;
+
+	// Load elements AND do first add of reduction
+	// Vector now 2x as long as number of threads, so scale i
+	// int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+
+	// Store first partial result instead of just the elements
+	temp_buckets[tid] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_bm];
+	__syncthreads();
+
+  if (tid ==0){ 
+    for (int i=0;i<64;i++)
+     {printf("%u ",temp_buckets[i]);}
+     printf("\n");
+    }
+	// Start at 1/2 block stride and divide by two each iteration
+	// Stop early (call device function instead)
+	// for (int s = blockDim.x / 2; s > 32; s >>= 1) {
+	for (int s = nof_threads_per_bm/2; s > target_nof_bm_buckets/2; s >>= 1) {
+		// Each thread does work unless it is further than the stride
+    source_nof_bm_buckets = source_nof_bm_buckets>>1;
+    nof_threads_per_bm = source_nof_bm_buckets>>1;
+    bm_index = tid/nof_threads_per_bm;
+    bm_bucket_index = tid%nof_threads_per_bm;
+    bucket_index = bm_index*source_nof_bm_buckets + bm_bucket_index;
+		if (tid < source_nof_bms*s) {
+			temp_buckets[tid] = temp_buckets[bucket_index] + temp_buckets[bucket_index + s];
+		}
+		__syncthreads();
+    if (tid ==0){ 
+      for (int i=0;i<64;i++)
+       {printf("%u ",temp_buckets[i]);}
+       printf("\n");
+      }
+	}
+
+
+	// if (bm_bucket_index < 32) {
+	// 	warpReduce(temp_buckets, bucket_index, min(32,nof_threads_per_bm/2), target_nof_bm_buckets/2);
+	// }
+
+	// Let the thread 0 for this block write it's result to main memory
+	// Result is inexed by this block
+	if (tid < source_nof_bms*target_nof_bm_buckets) {
+		target_buckets[bucket_index] = temp_buckets[tid];
+	}
+  if (tid ==0){ 
+    for (int i=0;i<64;i++)
+     {printf("%u ",target_buckets[i]);}
+     printf("\n");
+    }
+}
+
+template <typename P>
+__global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *target_buckets, const unsigned source_c, const unsigned source_nof_bms) {
+	// Allocate shared memory
+	// __shared__ int partial_sum[SHMEM_SIZE];
+	
+	// Calculate thread ID
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned source_nof_buckets = source_nof_bms<<source_c;
+  unsigned source_nof_bm_buckets = 1<<source_c;
+  const unsigned target_nof_bms = source_nof_bms<<1;
+  const unsigned target_c = source_c>>1;
+  // const unsigned target_nof_buckets = target_nof_bms<<target_c;
+  const unsigned target_nof_bm_buckets = 1<<target_c;
+  unsigned nof_threads_per_bm = source_nof_bm_buckets>>1;
+  if (tid > source_nof_buckets>>1) return;
+  unsigned bm_index = tid/nof_threads_per_bm;
+  unsigned bm_bucket_index = tid%nof_threads_per_bm;
+  unsigned bucket_index = bm_index*source_nof_bm_buckets + bm_bucket_index;
+
+	// Load elements AND do first add of reduction
+	// Vector now 2x as long as number of threads, so scale i
+	// int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+
+	// Store first partial result instead of just the elements
+	temp_buckets[tid] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_bm];
+	__syncthreads();
+
+  if (tid ==0){ 
+    for (int i=0;i<64;i++)
+     {printf("%u ",temp_buckets[i]);}
+     printf("\n");
+    }
+	// Start at 1/2 block stride and divide by two each iteration
+	// Stop early (call device function instead)
+	// for (int s = blockDim.x / 2; s > 32; s >>= 1) {
+	for (int s = nof_threads_per_bm/2; s > target_nof_bm_buckets/2; s >>= 1) {
+		// Each thread does work unless it is further than the stride
+    source_nof_bm_buckets = source_nof_bm_buckets>>1;
+    nof_threads_per_bm = source_nof_bm_buckets>>1;
+    bm_index = tid/nof_threads_per_bm;
+    bm_bucket_index = tid%nof_threads_per_bm;
+    bucket_index = bm_index*source_nof_bm_buckets + bm_bucket_index;
+		if (tid < source_nof_bms*s) {
+			temp_buckets[tid] = temp_buckets[bucket_index] + temp_buckets[bucket_index + s];
+		}
+		__syncthreads();
+    if (tid ==0){ 
+      for (int i=0;i<64;i++)
+       {printf("%u ",temp_buckets[i]);}
+       printf("\n");
+      }
+	}
+
+
+	// if (threadIdx.x < 32) {
+	// 	warpReduce(partial_sum, threadIdx.x);
+	// }
+
+	// Let the thread 0 for this block write it's result to main memory
+	// Result is inexed by this block
+	if (bm_bucket_index < target_nof_bm_buckets) {
+		target_buckets[bucket_index] = temp_buckets[bucket_index];
+	}
+  if (tid ==0){ 
+    for (int i=0;i<64;i++)
+     {printf("%u ",target_buckets[i]);}
+     printf("\n");
+    }
+}
+
 unsigned log2_floor(const unsigned value) {
   unsigned v = value;
   unsigned result = 0;
@@ -294,6 +484,17 @@ __global__ void reduce_buckets_kernel(P *buckets, const unsigned count) {
 }
 
 template <typename P>
+__global__ void reduce_buckets_kernel2(P *source, P *target, const unsigned count) {
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= count)
+    return;
+  const auto a = source[gid];
+  const auto b = source[gid+count];
+  const P result = a+b;
+  target[gid] = result;
+}
+
+template <typename P>
 __global__ void last_pass_gather_kernel(const unsigned bits_count_pass_one, const P *__restrict__ source, P *__restrict__ target,
   const unsigned count) {
 const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -348,6 +549,24 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
   final_results[tid] = final_result + final_sums[tid*nof_bms];
 
 }
+
+template <typename P>
+void test_reduce_triangle(P* h_buckets){
+  for (int i=0; i<64; i++) std::cout<<h_buckets[i]<<" ";
+  std::cout<<std::endl;
+  P*buckets;
+  P*temp;
+  P*target;
+  unsigned count = 64;
+  cudaMalloc(&buckets, sizeof(P) * count);
+  cudaMemcpy(buckets, h_buckets, sizeof(P) * count, cudaMemcpyHostToDevice);
+  cudaMalloc(&temp, sizeof(P) * count);
+  cudaMalloc(&target, sizeof(P) * count);
+  reduce_triangles_kernel<<<2,32>>>(buckets,temp,target,4,4);
+  cudaDeviceSynchronize();
+  printf("cuda error %u\n",cudaGetLastError());
+}
+
 
 //this function computes msm using the bucket method
 template <typename S, typename P, typename A>
@@ -571,36 +790,135 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     cudaDeviceSynchronize();
     printf("cuda error %u\n",cudaGetLastError());
   }
-  else{
+//   else{
 
+//   unsigned source_bits_count = c;
+//   unsigned source_windows_count = nof_bms;
+//   P *source_buckets = buckets;
+//   buckets = nullptr;
+//   P *target_buckets;
+//   for (unsigned i = 0;; i++) {
+//     const unsigned target_bits_count = (source_bits_count + 1) >> 1; //c/2=8
+//     const unsigned target_windows_count = source_windows_count << 1; //nof bms*2 = 32
+//     const unsigned target_buckets_count = target_windows_count << target_bits_count; // bms*2^c = 32*2^8
+//     const unsigned log_data_split =
+//         get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
+//     const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
+//     cudaMalloc(&target_buckets, sizeof(P) * total_buckets_count); //32*2^8*2^7 buckets
+//     NUM_THREADS = 32;
+//     NUM_BLOCKS = (total_buckets_count + NUM_THREADS - 1) / NUM_THREADS;
+//     // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
+//     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
+//     split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
+//     cudaFree(source_buckets);
+
+//     for (unsigned j = 0; j < log_data_split; j++){
+//     const unsigned count = total_buckets_count >> (j + 1);
+//     // const unsigned block_dim = count < 32 ? count : 32;
+//     // const unsigned grid_dim = (count - 1) / block_dim.x + 1;
+//     NUM_THREADS = 32;
+//     NUM_BLOCKS = (count + NUM_THREADS - 1) / NUM_THREADS;
+//     reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(target_buckets, count);
+//     }
+//     if (target_bits_count == 1) {
+//       // P results;
+//       // // const unsigned result_windows_count = min(fd_q::MBC, windows_count_pass_one * bits_count_pass_one);
+//       const unsigned result_windows_count = bitsize;
+//       // if (copy_results)
+//       //   HANDLE_CUDA_ERROR(allocate(results, result_windows_count, pool, stream));
+//       // HANDLE_CUDA_ERROR(last_pass_gather(bits_count_pass_one, target_buckets, copy_results ? results : ec.results, result_windows_count, stream));
+//       // if (copy_results) {
+//       //   HANDLE_CUDA_ERROR(cudaMemcpyAsync(ec.results, results, sizeof(point_jacobian) * result_windows_count, cudaMemcpyDeviceToHost, stream));
+//       //   if (ec.d2h_copy_finished)
+//       //     HANDLE_CUDA_ERROR(cudaEventRecord(ec.d2h_copy_finished, stream));
+//       //   if (ec.d2h_copy_finished_callback)
+//       //     HANDLE_CUDA_ERROR(cudaLaunchHostFunc(stream, ec.d2h_copy_finished_callback, ec.d2h_copy_finished_callback_data));
+//       // }
+//       // if (copy_results)
+//       //   HANDLE_CUDA_ERROR(free(results, stream));
+//       // HANDLE_CUDA_ERROR(free(target_buckets, stream));
+//       nof_bms = bitsize;
+//       cudaMalloc(&final_results, sizeof(P) * nof_bms);
+//       NUM_THREADS = 32;
+//       NUM_BLOCKS = (result_windows_count + NUM_THREADS - 1) / NUM_THREADS;
+//       // const dim3 block_dim = result_windows_count < 32 ? count : 32;
+//       // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
+//       last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(c, target_buckets, final_results, result_windows_count);
+//       c = 1;
+//       break;
+//     }
+//     source_buckets = target_buckets;
+//     target_buckets = nullptr;
+//     source_bits_count = target_bits_count;
+//     source_windows_count = target_windows_count;
+//   }
+// }
+else{
   unsigned source_bits_count = c;
   unsigned source_windows_count = nof_bms;
+  unsigned source_window_buckets_count = 1 << source_bits_count;
+  unsigned source_buckets_count = nof_buckets;
   P *source_buckets = buckets;
   buckets = nullptr;
   P *target_buckets;
+  P *temp_buckets1;
+  P *temp_buckets2;
+  cudaMalloc(&temp_buckets1, sizeof(P) * source_buckets_count); //32*2^8*2^7 buckets
+  cudaMalloc(&temp_buckets2, sizeof(P) * source_buckets_count); //32*2^8*2^7 buckets
   for (unsigned i = 0;; i++) {
     const unsigned target_bits_count = (source_bits_count + 1) >> 1; //c/2=8
     const unsigned target_windows_count = source_windows_count << 1; //nof bms*2 = 32
+    const unsigned target_window_buckets_count = 1 << target_bits_count; // 2^8
     const unsigned target_buckets_count = target_windows_count << target_bits_count; // bms*2^c = 32*2^8
-    const unsigned log_data_split =
-        get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
-    const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
-    cudaMalloc(&target_buckets, sizeof(P) * total_buckets_count); //32*2^8*2^7 buckets
-    NUM_THREADS = 32;
-    NUM_BLOCKS = (total_buckets_count + NUM_THREADS - 1) / NUM_THREADS;
+    // const unsigned log_data_split =
+    //     get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
+    // const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
+    cudaMalloc(&target_buckets, sizeof(P) * target_buckets_count); //32*2^8*2^7 buckets
+   
     // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
-    split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
-    cudaFree(source_buckets);
+    //input output, streams
+    // reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,0>>>(source_buckets, target_buckets, source_windows_count>>1);
+    // for (unsigned j = 0; j < target_windows_count-1; j++) //another loop
+    // reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,0>>>(target_buckets, target_buckets, source_windows_count>>(j+2));
+    unsigned NUM_STREAMS = source_windows_count + source_windows_count*target_window_buckets_count;
+    cudaStream_t streams[NUM_STREAMS];
+    for (int k = 0; k < NUM_STREAMS; ++k) { cudaStreamCreate(&streams[k]); }
 
-    for (unsigned j = 0; j < log_data_split; j++){
-    const unsigned count = total_buckets_count >> (j + 1);
-    // const unsigned block_dim = count < 32 ? count : 32;
-    // const unsigned grid_dim = (count - 1) / block_dim.x + 1;
     NUM_THREADS = 32;
-    NUM_BLOCKS = (count + NUM_THREADS - 1) / NUM_THREADS;
-    reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(target_buckets, count);
+    for (unsigned j = 0; j < source_windows_count; j++){ //loop on every source bm //0-15
+      unsigned source_offset = j*source_window_buckets_count; //0,2^16,2*2^16
+      unsigned target_offset = j*target_window_buckets_count*2; //0,2^16,2*2^16
+      NUM_BLOCKS = ((source_window_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS; //2^15
+      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(source_buckets+source_offset, temp_buckets1+source_offset, source_window_buckets_count>>1); //same source different target
+      for (unsigned k = 0; k < target_bits_count-2; k++){ //0..5
+      NUM_BLOCKS = ((source_window_buckets_count>>(k+2)) + NUM_THREADS - 1) / NUM_THREADS;//2^14..2^9
+      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(temp_buckets1+source_offset, temp_buckets1+source_offset, source_window_buckets_count>>(k+2)); //stream j
+      }
+      NUM_BLOCKS = ((source_window_buckets_count>>target_bits_count) + NUM_THREADS - 1) / NUM_THREADS;//2^8
+      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j]>>>(temp_buckets1+source_offset, target_buckets+target_offset, source_window_buckets_count>>target_bits_count); //stream j
     }
+
+    for (unsigned j = 0; j < source_windows_count*target_window_buckets_count; j++){ //loop on every segment of every source bm // 0..16*2^8-1
+      unsigned source_offset = j*target_window_buckets_count;
+      unsigned target_offset = j%target_window_buckets_count+(j/target_window_buckets_count)*target_window_buckets_count*2 + target_window_buckets_count;
+      NUM_BLOCKS = ((target_window_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS; //2^7
+      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(source_buckets+source_offset, temp_buckets2+source_offset, target_window_buckets_count>>1); //same source different target
+      for (unsigned k = 0; k < target_bits_count-2; k++){ //0..5
+      NUM_BLOCKS = ((target_window_buckets_count>>(k+2)) + NUM_THREADS - 1) / NUM_THREADS; //last blocks are single threaded.. //2^6..2^1
+      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(temp_buckets2+source_offset, temp_buckets2+source_offset, target_window_buckets_count>>(k+2));// stream j + source_windows_count
+      }
+      NUM_BLOCKS = 1; //last blocks are single threaded.. //
+      reduce_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS,0,streams[j+source_windows_count]>>>(temp_buckets2+source_offset, target_buckets+target_offset, 1);// stream j + source_windows_count
+    }
+
+    for (int k = 0; k < NUM_STREAMS; ++k)
+    {
+        cudaStreamSynchronize(streams[k]);
+        cudaStreamDestroy(streams[k]);
+    }
+
+    cudaFree(source_buckets);
     if (target_bits_count == 1) {
       // P results;
       // // const unsigned result_windows_count = min(fd_q::MBC, windows_count_pass_one * bits_count_pass_one);
@@ -620,11 +938,6 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
       // HANDLE_CUDA_ERROR(free(target_buckets, stream));
       nof_bms = bitsize;
       cudaMalloc(&final_results, sizeof(P) * nof_bms);
-      NUM_THREADS = 32;
-      NUM_BLOCKS = (result_windows_count + NUM_THREADS - 1) / NUM_THREADS;
-      // const dim3 block_dim = result_windows_count < 32 ? count : 32;
-      // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
-      last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(c, target_buckets, final_results, result_windows_count);
       c = 1;
       break;
     }
@@ -632,6 +945,8 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     target_buckets = nullptr;
     source_bits_count = target_bits_count;
     source_windows_count = target_windows_count;
+    source_window_buckets_count = 1 << source_bits_count;
+    source_buckets_count = target_buckets_count;
   }
 }
 
@@ -916,7 +1231,7 @@ unsigned get_optimal_c(const unsigned size) {
 template <typename S, typename P, typename A>
 void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, bool big_triangle){
   // unsigned c = get_optimal_c(size);
-  unsigned c = 15;
+  unsigned c = 16;
   // unsigned bitsize = 32;
   unsigned bitsize = 253; //get from field
   bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle);
