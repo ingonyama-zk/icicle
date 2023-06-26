@@ -20,6 +20,7 @@ extern "C" {
         number_of_blocks: usize,
         arity: c_uint,
         device_id: usize,
+        stream: usize // TODO: provide a real stream
     ) -> c_uint;
 
     fn msm_cuda_bls12_381(
@@ -234,19 +235,26 @@ extern "C" {
     ) -> c_int;
 }
 
-pub fn poseidon_multi_bls12_381(input: &[ScalarField_BLS12_381], arity: usize, device_id: usize) -> Vec<ScalarField_BLS12_381> {
+pub fn poseidon_multi_bls12_381(input: &[ScalarField_BLS12_381], arity: usize, device_id: usize) -> Result<Vec<ScalarField_BLS12_381>, std::io::Error> {
     let number_of_blocks = input.len() / arity;
     let mut out = vec![ScalarField_BLS12_381::zero(); number_of_blocks];
     unsafe {
-        poseidon_multi_cuda_bls12_381(
+        let res = poseidon_multi_cuda_bls12_381(
             input as *const _ as *const ScalarField_BLS12_381,
             out.as_mut_slice() as *mut _ as *mut ScalarField_BLS12_381,
             number_of_blocks,
             arity as c_uint,
-            device_id);
+            device_id,
+            0
+        );
+        
+        // TO-DO: go for better expression of error types
+        if res != 0 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Error executing poseidon_multi"));
+        }
     }
 
-    out
+    Ok(out)
 }
 
 pub fn msm_bls12_381(points: &[PointAffineNoInfinity_BLS12_381], scalars: &[ScalarField_BLS12_381], device_id: usize) -> Point_BLS12_381 {
@@ -925,7 +933,7 @@ pub(crate) mod tests_bls12_381 {
         for arity in arities {
             // Generate scalars sequence [0, 1, ... arity * number_of_blocks]
             let scalars: Vec<ScalarField_BLS12_381> = (0..arity * number_of_blocks).map(|i| ScalarField_BLS12_381::from_ark(Fr_BLS12_381::from(i as i32).into_repr())).collect();
-            let out = poseidon_multi_bls12_381(&scalars, arity, 0);
+            let out = poseidon_multi_bls12_381(&scalars, arity, 0).unwrap();
 
             let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             path.push(format!("test_vectors/poseidon_1024_{}", arity));
