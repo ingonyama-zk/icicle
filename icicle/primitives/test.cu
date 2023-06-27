@@ -3,7 +3,6 @@
 
 #include "test_kernels.cuh"
 
-namespace BLS12_381 {
 
 template <class T>
 int device_populate_random(T* d_elements, unsigned n) {
@@ -381,5 +380,4 @@ TEST_F(PrimitivesTest, G2ECMixedAdditionOfNegatedPointEqSubtraction) {
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
-}
 }

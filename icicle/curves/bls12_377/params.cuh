@@ -174,7 +174,6 @@ namespace PARAMS_BLS12_377{
   static constexpr storage<fq_config::limbs_count> weierstrass_b = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 
-  // TODO: correct parameters for G2 here
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_re = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {0x9999999a, 0x1c9ed999, 0x1ccccccd, 0xdd39e5c, 0x3c6bf800, 0x129207b6,
