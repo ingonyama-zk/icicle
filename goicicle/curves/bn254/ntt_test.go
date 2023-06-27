@@ -71,8 +71,13 @@ func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 	NttBN254(&nttResult, true, DIT, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
+	frResScalars := make([]fr.Element, len(frScalars)) // Make a new slice with the same length
+	copy(frResScalars, frScalars)
+
 	domain := fft.NewDomain(uint64(len(scalars)))
-	domain.FFTInverse(frScalars, fft.DIT)
+	domain.FFTInverse(frResScalars, fft.DIT)
+
+	assert.NotEqual(t, frResScalars, frScalars)
 
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
@@ -80,7 +85,7 @@ func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 		nttResultTransformedToGnark[k] = *v.toGnarkFr()
 	}
 
-	assert.Equal(t, nttResultTransformedToGnark, frScalars)
+	assert.Equal(t, nttResultTransformedToGnark, frResScalars)
 }
 
 func TestINttBN254CompareToGnarkDIF(t *testing.T) {

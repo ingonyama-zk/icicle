@@ -1,4 +1,4 @@
-package curve_utils
+package bls12381
 
 import (
 	"testing"

@@ -18,6 +18,7 @@
 
 #include <stdbool.h>
 #include <cuda.h>
+#include <cuda_runtime.h>
 // msm.h
 
 #ifndef _BN254_MSM_H
@@ -31,6 +32,7 @@ extern "C" {
 typedef struct BN254_projective_t BN254_projective_t;
 typedef struct BN254_affine_t BN254_affine_t;
 typedef struct BN254_scalar_t BN254_scalar_t;
+typedef cudaStream_t CudaStream_t;
 
 int msm_cuda_bn254(BN254_projective_t* out, BN254_affine_t* points,
                    BN254_scalar_t* scalars, size_t count, size_t device_id);

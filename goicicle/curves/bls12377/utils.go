@@ -1,4 +1,4 @@
-package curve_utils
+package bls12377
 
 import "encoding/binary"
 

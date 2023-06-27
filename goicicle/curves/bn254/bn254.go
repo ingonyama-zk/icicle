@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254"
-	curve_utils "github.com/ingonyama-zk/icicle/goicicle/curves/utils"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 
@@ -62,13 +61,13 @@ func NewFieldZero[T BaseField | ScalarField]() *T {
 }
 
 func NewFieldFromFrGnark[T BaseField | ScalarField](element fr.Element) *T {
-	s := curve_utils.ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
+	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
 
 	return &T{s}
 }
 
 func NewFieldFromFpGnark[T BaseField | ScalarField](element fp.Element) *T {
-	s := curve_utils.ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
+	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
 
 	return &T{s}
 }
