@@ -55,7 +55,6 @@ template <typename CONFIG> class ExtensionField {
       return ExtensionField { FF { CONFIG::generator_y_re }, FF { CONFIG::generator_y_im } };
     }
 
-
     static HOST_INLINE ExtensionField rand_host() {
       return ExtensionField { FF::rand_host(), FF::rand_host() };
     }
@@ -104,14 +103,16 @@ template <typename CONFIG> class ExtensionField {
       return !(xs == ys);
     }
 
-    template <const ExtensionField& mutliplier>
-    static constexpr HOST_DEVICE_INLINE ExtensionField mul_const(const ExtensionField &xs) {
-      constexpr uint32_t mul_real = mutliplier.real.limbs_storage.limbs[0];
-      constexpr uint32_t mul_imaginary = mutliplier.imaginary.limbs_storage.limbs[0];
-      FF real_prod = FF::template mul_unsigned<mul_real>(xs.real);
-      FF imaginary_prod = FF::template mul_unsigned<mul_imaginary>(xs.imaginary);
-      FF re_im = FF::template mul_unsigned<mul_real>(xs.imaginary);
-      FF im_re = FF::template mul_unsigned<mul_imaginary>(xs.real);
+    template <const ExtensionField& multiplier>
+    static HOST_DEVICE_INLINE ExtensionField mul_const(const ExtensionField &xs) {
+      static constexpr FF mul_real = multiplier.real;
+      static constexpr FF mul_imaginary = multiplier.imaginary;
+      const FF xs_real = xs.real;
+      const FF xs_imaginary = xs.imaginary;
+      FF real_prod = FF::template mul_const<mul_real>(xs_real);
+      FF imaginary_prod = FF::template mul_const<mul_imaginary>(xs_imaginary);
+      FF re_im = FF::template mul_const<mul_real>(xs_imaginary);
+      FF im_re = FF::template mul_const<mul_imaginary>(xs_real);
       FF i_sq_times_im = FF::template mul_unsigned<CONFIG::i_squared>(imaginary_prod);
       i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
       return ExtensionField { real_prod + i_sq_times_im, re_im + im_re };
@@ -142,8 +143,10 @@ template <typename CONFIG> class ExtensionField {
     // inverse assumes that xs is nonzero
     static constexpr HOST_DEVICE_INLINE ExtensionField inverse(const ExtensionField& xs) {
       ExtensionField xs_conjugate = { xs.real, FF::neg(xs.imaginary) };
+      FF i_sq_times_im = FF::template mul_unsigned<CONFIG::i_squared>(FF::sqr(xs.imaginary));
+      i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
       // TODO: wide here
-      FF xs_norm_squared = FF::sqr(xs.real) + FF::sqr(xs.imaginary);
+      FF xs_norm_squared = FF::sqr(xs.real) - i_sq_times_im;
       return xs_conjugate * ExtensionField { FF::inverse(xs_norm_squared), FF::zero() };
     }
 };

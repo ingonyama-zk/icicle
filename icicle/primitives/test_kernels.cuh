@@ -1,20 +1,16 @@
 #pragma once
 
+#ifndef G2_DEFINED
+#define G2_DEFINED
+
 // TODO: change the curve depending on env variable
-#include "../curves/bls12_381.cuh"
+#include "../curves/bn254/curve_config.cuh"
 #include "projective.cuh"
 #include "extension_field.cuh"
 
-typedef Field<fp_config> scalar_field;
-typedef Field<fq_config> base_field;
-typedef Affine<base_field> affine;
-static constexpr base_field b = base_field{ weierstrass_b };
-typedef Projective<base_field, scalar_field, b> proj;
-typedef ExtensionField<fq_config> base_extension_field;
-typedef Affine<base_extension_field> g2_affine;
-static constexpr base_extension_field b2 = base_extension_field{ base_field {b_re},  base_field {b_im}};
-typedef Projective<base_extension_field, scalar_field, b2> g2_proj;
+#endif
 
+using namespace BN254;
 
 template <class T1, class T2>
 __global__ void add_elements_kernel(const T1 *x, const T2 *y, T1 *result, const unsigned count) {
@@ -72,27 +68,27 @@ template <class F, class G> int vec_mul(const F *x, const G *y, G *result, const
   return error ? error : cudaDeviceSynchronize();
 }
 
-__global__ void inv_field_elements_kernel(const scalar_field *x, scalar_field *result, const unsigned count) {
+__global__ void inv_field_elements_kernel(const scalar_field_t *x, scalar_field_t *result, const unsigned count) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= count)
     return;
-  result[gid] = scalar_field::inverse(x[gid]);
+  result[gid] = scalar_field_t::inverse(x[gid]);
 }
 
-int field_vec_inv(const scalar_field *x, scalar_field *result, const unsigned count) {
+int field_vec_inv(const scalar_field_t *x, scalar_field_t *result, const unsigned count) {
   inv_field_elements_kernel<<<(count - 1) / 32 + 1, 32>>>(x, result, count);
   int error = cudaGetLastError();
   return error ? error : cudaDeviceSynchronize();
 }
 
-__global__ void sqr_field_elements_kernel(const scalar_field *x, scalar_field *result, const unsigned count) {
+__global__ void sqr_field_elements_kernel(const scalar_field_t *x, scalar_field_t *result, const unsigned count) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= count)
     return;
-  result[gid] = scalar_field::sqr(x[gid]);
+  result[gid] = scalar_field_t::sqr(x[gid]);
 }
 
-int field_vec_sqr(const scalar_field *x, scalar_field *result, const unsigned count) {
+int field_vec_sqr(const scalar_field_t *x, scalar_field_t *result, const unsigned count) {
   sqr_field_elements_kernel<<<(count - 1) / 32 + 1, 32>>>(x, result, count);
   int error = cudaGetLastError();
   return error ? error : cudaDeviceSynchronize();

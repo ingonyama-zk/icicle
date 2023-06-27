@@ -153,7 +153,7 @@ namespace PARAMS_BLS12_377{
     static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     // i^2, the square of the imaginary unit for the extension field
-    static constexpr uint32_t i_squared = 1;
+    static constexpr uint32_t i_squared = 5;
     // true if i^2 is negative
     static constexpr bool i_squared_is_negative = true;
     // G1 and G2 generators 
@@ -161,22 +161,22 @@ namespace PARAMS_BLS12_377{
                                                          0xaa9d41bb, 0x85951e2c, 0xbf87ff54, 0xc8fc6225, 0xfe740a67, 0x008848de};
     static constexpr storage<limbs_count> generator_y = {0x559c8ea6, 0xfd82de55, 0x34a9591a, 0xc2fe3d36, 0x4fb82305, 0x6d182ad4,
                                                          0xca3e52d9, 0xbd7fb348, 0x30afeec4, 0x1f674f5d, 0xc5102eff, 0x01914a69};
-    static constexpr storage<limbs_count> generator_x_re = {0xc121bdb8, 0xd48056c8, 0xa805bbef, 0xbac0326, 0x7ae3d177, 0xb4510b64,
-                                                            0xfa403b02, 0xc6e47ad4, 0x2dc51051, 0x26080527, 0xf08f0a91, 0x24aa2b2};
-    static constexpr storage<limbs_count> generator_x_im = {0x5d042b7e, 0xe5ac7d05, 0x13945d57, 0x334cf112, 0xdc7f5049, 0xb5da61bb,
-                                                            0x9920b61a, 0x596bd0d0, 0x88274f65, 0x7dacd3a0, 0x52719f60, 0x13e02b60};
-    static constexpr storage<limbs_count> generator_y_re = {0x8b82801, 0xe1935486, 0x3baca289, 0x923ac9cc, 0x5160d12c, 0x6d429a69,
-                                                            0x8cbdd3a7, 0xadfd9baa, 0xda2e351a, 0x8cc9cdc6, 0x727d6e11, 0xce5d527};
-    static constexpr storage<limbs_count> generator_y_im = {0xf05f79be, 0xaaa9075f, 0x5cec1da1, 0x3f370d27, 0x572e99ab, 0x267492ab,
-                                                            0x85a763af, 0xcb3e287e, 0x2bc28b99, 0x32acd2b0, 0x2ea734cc, 0x606c4a0};
+    static constexpr storage<limbs_count> generator_x_re = {0x7c005196, 0x74e3e48f, 0xbb535402, 0x71889f52, 0x57db6b9b, 0x7ea501f5,
+                                                            0x203e5031, 0xc565f071, 0xa3841d01, 0xc89630a2, 0x71c785fe, 0x18480be};
+    static constexpr storage<limbs_count> generator_x_im = {0x6ea16afe, 0xb26bfefa, 0xbff76fe6, 0x5cf89984, 0x799c9de, 0xe7223ece,
+                                                            0x6651cecb, 0x532777ee, 0xb1b140d5, 0x70dc5a51, 0xe7004031, 0xea6040};
+    static constexpr storage<limbs_count> generator_y_re = {0x9fd4ddf, 0xf0940944, 0x6d8c7c2e, 0xf2cf8888, 0xf832d204, 0xe458c282,
+                                                            0x74b49a58, 0xde03ed72, 0xcbb2efb4, 0xd960736b, 0x5d446f7b, 0x690d66};
+    static constexpr storage<limbs_count> generator_y_im = {0x85eb8f93, 0xd9a1cdd1, 0x5e52270b, 0x4279b83f, 0xcee304c2, 0x2463b01a,
+                                                            0x3d591bf1, 0x61ef11ac, 0x151a70aa, 0x9e549da3, 0xd2835518, 0xf8169f};
   };
 
   static constexpr storage<fq_config::limbs_count> weierstrass_b = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 
   // TODO: correct parameters for G2 here
-  static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_re = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+  static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_re = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-  static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                                                          0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+  static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {0x9999999a, 0x1c9ed999, 0x1ccccccd, 0xdd39e5c, 0x3c6bf800, 0x129207b6,
+                                                                          0xcd5fd889, 0xdc7b4f91, 0x7460c589, 0x43bd0373, 0xdb0fd6f3, 0x10222f6};
 }

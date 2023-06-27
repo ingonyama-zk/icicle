@@ -413,8 +413,22 @@ template <class CONFIG> class Field {
       return !(xs == ys);
     }
 
-    template <const Field& multiplier, class T> static constexpr HOST_DEVICE_INLINE T mul_const(const T &xs) {
-      return mul_unsigned<multiplier.limbs_storage.limbs[0], T>(xs);
+    template <const Field& multiplier>
+    static constexpr HOST_DEVICE_INLINE Field mul_const(const Field& xs) {
+      auto is_unsigned = [](const Field& val) constexpr {
+        bool is_u32 = true;
+      #ifdef __CUDA_ARCH__
+      #pragma unroll
+      #endif
+        for (unsigned i = 1; i < TLC; i++)
+          is_u32 &= (val.limbs_storage.limbs[i] == 0);
+        return is_u32;
+      };
+
+      if (is_unsigned(multiplier))
+        return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
+      Field mul = multiplier;
+      return mul * xs;
     }
 
     template <uint32_t mutliplier, class T, unsigned REDUCTION_SIZE = 1>
