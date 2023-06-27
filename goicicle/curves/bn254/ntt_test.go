@@ -10,6 +10,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNttBN254BBB(t *testing.T) {
+	count := 1 << 20
+	scalars, frScalars := GenerateScalars(count)
+
+	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	copy(nttResult, scalars)
+
+	assert.Equal(t, nttResult, scalars)
+	NttBatchBN254(&nttResult, false, count, 0)
+	assert.NotEqual(t, nttResult, scalars)
+
+	domain := fft.NewDomain(uint64(len(scalars)))
+	// DIT WITH NO INVERSE
+	// DIF WITH INVERSE
+	domain.FFT(frScalars, fft.DIT) //DIF
+
+	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
+
+	for k, v := range nttResult {
+		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+	}
+
+	assert.Equal(t, nttResultTransformedToGnark, frScalars)
+}
+
 func TestNttBN254CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 2
 	scalars, frScalars := GenerateScalars(count)
