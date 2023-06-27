@@ -302,8 +302,12 @@ with open("./src/curve_templates/test.rs", "r") as test_file:
     n = text_file.write(content)
     text_file.close()
     
-with open('./src/curves/mod.rs', 'a') as f:
-    f.write('\n pub mod ' + curve_name_lower + ';')
+with open('./src/curves/mod.rs', 'r+') as f:
+    mod_text = f.read()
+    if mod_text.find(curve_name_lower) == -1:
+        f.write('\npub mod ' + curve_name_lower + ';')
 
-with open('./src/lib.rs', 'a') as f:
-    f.write('\npub mod ' + curve_name_lower + ';')
+with open('./src/lib.rs', 'r+') as f:
+    lib_text = f.read()
+    if lib_text.find(curve_name_lower) == -1:
+        f.write('\npub mod ' + curve_name_lower + ';')
