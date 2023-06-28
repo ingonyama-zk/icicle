@@ -15,8 +15,8 @@ class Dummy_Scalar {
     static constexpr unsigned NBITS = 32;
 
     unsigned x;
-    // unsigned p = 10;
-    unsigned p = 1<<31;
+    unsigned p = 10;
+    // unsigned p = 1<<30;
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
@@ -43,8 +43,8 @@ class Dummy_Scalar {
       return {scalar.p-scalar.x};
     }
     static HOST_INLINE Dummy_Scalar rand_host() {
-      // return {(unsigned)rand()%10};
-      return {(unsigned)rand()};
+      return {(unsigned)rand()%10};
+      // return {(unsigned)rand()};
     }
 };
 
@@ -117,18 +117,18 @@ class Dummy_Projective {
 
 //switch between dummy and real:
 
-typedef scalar_t test_scalar;
-typedef projective_t test_projective;
-typedef affine_t test_affine;
+// typedef scalar_t test_scalar;
+// typedef projective_t test_projective;
+// typedef affine_t test_affine;
 
-// typedef Dummy_Scalar test_scalar;
-// typedef Dummy_Projective test_projective;
-// typedef Dummy_Projective test_affine;
+typedef Dummy_Scalar test_scalar;
+typedef Dummy_Projective test_projective;
+typedef Dummy_Projective test_affine;
 
 int main()
 {
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<24;
+  unsigned msm_size = 1<<7;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
@@ -144,8 +144,8 @@ int main()
 
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
   // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
-  test_projective large_res[batch_size];
-  test_projective batched_large_res[batch_size];
+  test_projective large_res[batch_size*2];
+  // test_projective batched_large_res[batch_size];
   // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
   // fake_point batched_large_res[256];
 
@@ -160,13 +160,14 @@ int main()
   // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res, false);
   // large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, false);
-  // test_reduce_triangle(scalars);
+  // large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res+1, false, false);
+  test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  // std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
   // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
