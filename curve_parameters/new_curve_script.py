@@ -106,7 +106,6 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
         for k in range(size):
             if k == 0:
                 om = root_of_unity
-                print(om)
             else:
                 om = pow(om, 2, modulus)
             omegas.append(om)
@@ -266,8 +265,10 @@ with open(f'./icicle/curves/curve_template/supported_operations.cu', 'r') as sup
         f.write(supp_ops_content)
 
 
-with open('./icicle/curves/index.cu', 'a') as f:
-    f.write(f'\n#include "{curve_name_lower}/supported_operations.cu"')
+with open('./icicle/curves/index.cu', 'r+') as f:
+    index_text = f.read()
+    if index_text.find(curve_name_lower) == -1:
+        f.write(f'\n#include "{curve_name_lower}/supported_operations.cu"')
     
 
 
