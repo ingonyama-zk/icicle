@@ -54,9 +54,10 @@ int commit_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scalars, BN
 {
     try
     {
+        cudaStreamCreate(&stream);
         large_msm(d_scalars, d_points, count, d_out, true, stream);
         cudaStreamSynchronize(stream);
-        return 0;
+        return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
     {
@@ -82,7 +83,7 @@ int commit_batch_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scala
         cudaStreamCreate(&stream);
         batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true, stream);
         cudaStreamSynchronize(stream);
-        return 0;
+        return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
     {
@@ -92,6 +93,41 @@ int commit_batch_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scala
 }
 
 #if defined(G2_DEFINED)
+extern "C"
+int msm_g2_cuda_bn254(BN254::g2_projective_t *out, BN254::g2_affine_t points[],
+              BN254::scalar_t scalars[], size_t count, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {   
+        cudaStreamCreate(&stream);
+        large_msm<BN254::scalar_t, BN254::g2_projective_t, BN254::g2_affine_t>(scalars, points, count, out, false, stream);
+        cudaStreamSynchronize(stream);
+        return CUDA_SUCCESS;
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int msm_batch_g2_cuda_bn254(BN254::g2_projective_t* out, BN254::g2_affine_t points[],
+                              BN254::scalar_t scalars[], size_t batch_size, size_t msm_size, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        batched_large_msm<BN254::scalar_t, BN254::g2_projective_t, BN254::g2_affine_t>(scalars, points, batch_size, msm_size, out, false, stream);
+        cudaStreamSynchronize(stream);
+        return CUDA_SUCCESS;
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
 /**
  * Commit to a polynomial using the MSM in G2 group.
  * Note: this function just calls the MSM, it doesn't convert between evaluation and coefficient form of scalars or points.
@@ -110,7 +146,7 @@ int commit_g2_cuda_bn254(BN254::g2_projective_t* d_out, BN254::scalar_t* d_scala
         cudaStreamCreate(&stream);
         large_msm(d_scalars, d_points, count, d_out, true, stream);
         cudaStreamSynchronize(stream);
-        return 0;
+        return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
     {
@@ -138,7 +174,7 @@ int commit_batch_g2_cuda_bn254(BN254::g2_projective_t* d_out, BN254::scalar_t* d
         cudaStreamCreate(&stream);
         batched_large_msm(d_scalars, d_points, batch_size, count, d_out, true, stream);
         cudaStreamSynchronize(stream);
-        return 0;
+        return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
     {

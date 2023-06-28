@@ -24,8 +24,10 @@ extern "C" {
 #endif
 
 typedef struct BN254_projective_t BN254_projective_t;
+typedef struct  BN254_g2_projective_t BN254_g2_projective_t;
 
-bool eq_bn254(BN254_projective_t *point1, BN254_projective_t *point2, size_t device_id);
+bool eq_bn254(BN254_projective_t *point1, BN254_projective_t *point2);
+bool eq_g2_bn254(BN254_g2_projective_t *point1, BN254_g2_projective_t *point2);
 
 #ifdef __cplusplus
 }
