@@ -15,6 +15,8 @@
 #include "../../primitives/field.cuh"
 #include "msm.cuh"
 
+#define TEMP_NUM 96
+
 // #define SIGNED_DIG
 // #define BIG_TRIANGLE
 // #define SSM_SUM  //WIP
@@ -78,7 +80,7 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned source_nof_buckets = source_nof_bms<<source_c;//2*2^8
   // if (tid ==0) printf("source_nof_buckets %u\n",source_nof_buckets);
-  if (tid ==9) printf("dims %u %u %u\n",blockIdx.x,blockDim.x,threadIdx.x);
+  // if (tid ==9) printf("dims %u %u %u\n",blockIdx.x,blockDim.x,threadIdx.x);
   const unsigned source_nof_bm_buckets = 1<<source_c;//2^8
   unsigned temp_nof_bm_buckets = source_nof_bm_buckets;//2^8
   const unsigned target_nof_bms = source_nof_bms<<1;//4
@@ -88,8 +90,8 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
   unsigned nof_threads_per_bm = source_nof_bm_buckets>>1;//2^7
   // unsigned nof_threads_per_bm = target_nof_bm_buckets>>1;
   // if (tid >= source_nof_buckets>>1) return; //total threads
-  unsigned bm_index = tid/nof_threads_per_bm;
-  unsigned bm_bucket_index = tid%nof_threads_per_bm;
+  unsigned bm_index = tid/nof_threads_per_bm; //blockidx
+  unsigned bm_bucket_index = tid%nof_threads_per_bm; //threadidx
   unsigned bucket_index = bm_index*source_nof_bm_buckets + bm_bucket_index;
 
   // if (tid ==0) printf("source_nof_buckets %u\n",source_nof_buckets);
@@ -103,18 +105,19 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 	// Vector now 2x as long as number of threads, so scale i
 	// int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
   // __syncthreads();
-  if (tid ==0){ 
-    // printf("t\n");
-    // for (int i=0;i<source_nof_bms;i++){
-    // for (int j=0;j<source_nof_bm_buckets;j++)
-    // {printf("%u ",source_buckets[i*source_nof_bm_buckets+j].x.x);}
-    // printf("\n");
-    // }
-    printf("t\n");
-    for (int i=0;i<64;i++)
-    {printf("%u ",source_buckets[i]);}
-    printf("\n");
-    }
+  // if (tid ==0){ 
+  //   // printf("t\n");
+  //   // for (int i=0;i<source_nof_bms;i++){
+  //   // for (int j=0;j<source_nof_bm_buckets;j++)
+  //   // {printf("%u ",source_buckets[i*source_nof_bm_buckets+j].x.x);}
+  //   // printf("\n");
+  //   // }
+  //   printf("t\n");
+  //   for (int i=0;i<TEMP_NUM;i++)
+  //   {printf("%u ",source_buckets[i]);}
+  //   printf("\n");
+  //   }
+  // if (tid ==0) printf("\n");
     // __syncthreads();
 	// Store first partial result instead of just the elements
 	temp_buckets[bucket_index] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_bm];
@@ -123,16 +126,16 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 	__syncthreads();
   // if (tid ==32) printf("tid %u bucket_index %u temp_buckets[tid] %u\n",tid,bucket_index,temp_buckets[tid].x.x);
 
-  if (tid ==0){ 
-    // for (int i=0;i<source_nof_bms<<1;i++){
-    // for (int j=0;j<source_nof_bm_buckets>>1;j++)
-    // {printf("%u ",temp_buckets[i*(source_nof_bm_buckets>>1)+j].x.x);}
-    // printf("\n");
-    // }
-    for (int i=0;i<64;i++)
-    {printf("%u ",temp_buckets[i]);}
-    printf("\n");
-    }
+  // if (tid ==0){ 
+  //   // for (int i=0;i<source_nof_bms<<1;i++){
+  //   // for (int j=0;j<source_nof_bm_buckets>>1;j++)
+  //   // {printf("%u ",temp_buckets[i*(source_nof_bm_buckets>>1)+j].x.x);}
+  //   // printf("\n");
+  //   // }
+  //   for (int i=0;i<TEMP_NUM;i++)
+  //   {printf("%u ",temp_buckets[i]);}
+  //   printf("\n");
+  //   }
 	// Start at 1/2 block stride and divide by two each iteration
 	// Stop early (call device function instead)
 	// for (int s = blockDim.x / 2; s > 32; s >>= 1) {
@@ -149,11 +152,11 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 			temp_buckets[bucket_index] = temp_buckets[bucket_index] + temp_buckets[bucket_index + s];
 		}
 		__syncthreads();
-    if (tid ==0){ 
-      for (int i=0;i<64;i++)
-       {printf("%u ",temp_buckets[i]);}
-       printf("\n");
-      }
+    // if (tid ==0){ 
+    //   for (int i=0;i<TEMP_NUM;i++)
+    //    {printf("%u ",temp_buckets[i]);}
+    //    printf("\n");
+    //   }
 	}
 
 
@@ -165,14 +168,15 @@ __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *ta
 	// Result is inexed by this block
 	// if (tid < source_nof_bms*target_nof_bm_buckets) { //optimize - last calculation needs to write too
 	if (threadIdx.x < target_nof_bm_buckets) { //optimize - last calculation needs to write too
-    if (tid ==9) printf("inds %u %u %u\n",bm_index*temp_nof_bm_buckets + bm_bucket_index,bucket_index);
+    // if (tid ==9) printf("inds %u %u %u\n",bm_index*temp_nof_bm_buckets + bm_bucket_index,bucket_index);
 		target_buckets[bm_index*target_nof_bm_buckets*2 + bm_bucket_index] = temp_buckets[bucket_index];
+    // if (bm_index*target_nof_bm_buckets*2 + bm_bucket_index==0) printf("tidddddd %u\n",temp_buckets[bucket_index].x.x);
 	}
-  if (tid ==0){ 
-    for (int i=0;i<64;i++)
-     {printf("%u ",target_buckets[i]);}
-     printf("\n");
-    }
+  // if (tid ==0){ 
+  //   for (int i=0;i<TEMP_NUM;i++)
+  //    {printf("%u ",target_buckets[i]);}
+  //    printf("\n");
+  //   }
 }
 
 template <typename P>
@@ -191,50 +195,54 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
   unsigned temp_nof_segment_buckets = source_nof_segment_buckets;
   unsigned target_nof_bm_buckets = 1<<target_c; //==segments per bm
   // unsigned temp_nof_bm_buckets = 1<<target_c;
+  unsigned nof_threads_per_bm = source_nof_bm_buckets>>1;//2^7
   unsigned nof_threads_per_segment = source_nof_segment_buckets>>1; //difference between kernels
-  if (tid >= source_nof_buckets>>1) return; //total threads
-  unsigned segment_index = tid/nof_threads_per_segment;
-  unsigned segment_bucket_index = tid%nof_threads_per_segment;
-  unsigned bucket_index = segment_index*source_nof_segment_buckets + segment_bucket_index;
+  // if (tid >= source_nof_buckets>>1) return; //total threads
+  unsigned bm_index = tid/nof_threads_per_bm; //blockidx
+  unsigned bm_bucket_index = tid%nof_threads_per_bm; //threadidx
+  unsigned segment_index = bm_bucket_index/nof_threads_per_segment;
+  unsigned segment_bucket_index = bm_bucket_index%nof_threads_per_segment;
+  unsigned bucket_index = bm_index*source_nof_bm_buckets + segment_index*source_nof_segment_buckets + segment_bucket_index;
 
 	// Load elements AND do first add of reduction
 	// Vector now 2x as long as number of threads, so scale i
 	// int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
 
 	// Store first partial result instead of just the elements
-  if (tid ==0){ 
-    printf("r\n");
-    for (int i=0;i<64;i++)
-    {printf("%u ",source_buckets[i]);}
-    printf("\n");
-    }
+  // if (tid ==0){ 
+  //   printf("rtar\n");
+  //   for (int i=0;i<TEMP_NUM;i++)
+  //   {printf("%u ",target_buckets[i]);}
+  //   printf("\n");
+  //   }
 	temp_buckets[bucket_index] = source_buckets[bucket_index] + source_buckets[bucket_index + nof_threads_per_segment];
 	__syncthreads();
 
-  if (tid ==0){ 
-    for (int i=0;i<64;i++)
-    {printf("%u ",temp_buckets[i]);}
-    printf("\n");
-    }
+  // if (tid ==0){ 
+  //   for (int i=0;i<TEMP_NUM;i++)
+  //   {printf("%u ",temp_buckets[i]);}
+  //   printf("\n");
+  //   }
 	// Start at 1/2 block stride and divide by two each iteration
 	// Stop early (call device function instead)
 	// for (int s = blockDim.x / 2; s > 32; s >>= 1) {
 	for (int s = nof_threads_per_segment/2; s > 0; s >>= 1) {
 		// Each thread does work unless it is further than the stride
-    temp_nof_segment_buckets = temp_nof_segment_buckets>>1;
-    nof_threads_per_segment = temp_nof_segment_buckets>>1;
-    segment_index = tid/nof_threads_per_segment;
-    segment_bucket_index = tid%nof_threads_per_segment;
-    bucket_index = segment_index*source_nof_segment_buckets + segment_bucket_index;
-		if (tid < source_nof_bms*target_nof_bm_buckets*s) { //nof segments per bm
+    // temp_nof_segment_buckets = temp_nof_segment_buckets>>1;
+    // nof_threads_per_segment = temp_nof_segment_buckets>>1;
+    // segment_index = tid/nof_threads_per_segment;
+    // segment_bucket_index = tid%nof_threads_per_segment;
+    // bucket_index = segment_index*source_nof_segment_buckets + segment_bucket_index;
+		// if (tid < source_nof_bms*target_nof_bm_buckets*s) { //nof segments per bm
+		if (segment_bucket_index < s) { //nof segments per bm
 			temp_buckets[bucket_index] = temp_buckets[bucket_index] + temp_buckets[bucket_index + s];
 		}
 		__syncthreads();
-    if (tid ==0){ 
-      for (int i=0;i<64;i++)
-       {printf("%u ",temp_buckets[i]);}
-       printf("\n");
-      }
+    // if (tid ==0){ 
+    //   for (int i=0;i<TEMP_NUM;i++)
+    //    {printf("%u ",temp_buckets[i]);}
+    //    printf("\n");
+    //   }
 	}
 
 
@@ -245,17 +253,23 @@ __global__ void reduce_rectangles_kernel(P *source_buckets,P* temp_buckets, P *t
 	// Let the thread 0 for this block write it's result to main memory
 	// Result is inexed by this block
 
-	if (tid < source_nof_bms*target_nof_bm_buckets) {
-    segment_index = tid/target_nof_bm_buckets;
-    segment_bucket_index = tid%target_nof_bm_buckets;
-    bucket_index = target_nof_bm_buckets + segment_index*target_nof_bm_buckets*2 + segment_bucket_index;
-		target_buckets[bucket_index] = temp_buckets[target_nof_bm_buckets*tid];
+	// if (tid < source_nof_bms*target_nof_bm_buckets) {
+	if (segment_bucket_index == 0) {
+    unsigned src_idx = bm_index*source_nof_bm_buckets + segment_index*source_nof_segment_buckets + segment_bucket_index;
+    unsigned dst_idx = target_nof_bm_buckets*(1+bm_index*2) + segment_index;
+    target_buckets[dst_idx] = temp_buckets[src_idx];
+    // if (dst_idx==0) printf("tirrrr %u %u\n\n\n\n\n",tid,temp_buckets[src_idx]);
+    // printf("tid %u dst_idx %u\n",tid,dst_idx);
+    // segment_index = tid/target_nof_bm_buckets;
+    // segment_bucket_index = tid%target_nof_bm_buckets;
+    // bucket_index = target_nof_bm_buckets + segment_index*target_nof_bm_buckets*2 + segment_bucket_index;
+		// target_buckets[bucket_index] = temp_buckets[target_nof_bm_buckets*tid];
 	}
-  if (tid ==0){ 
-    for (int i=0;i<64;i++)
-     {printf("%u ",target_buckets[i]);}
-     printf("\n");
-    }
+  // if (tid ==0){ 
+  //   for (int i=0;i<TEMP_NUM;i++)
+  //    {printf("%u ",target_buckets[i]);}
+  //    printf("\n");
+  //   }
 }
 
 unsigned log2_floor(const unsigned value) {
@@ -608,27 +622,27 @@ __global__ void final_accumulation_kernel(P* final_sums, P* final_results, unsig
 
 template <typename P>
 void test_reduce_triangle(P* h_buckets){
-  for (int i=0; i<64; i++) std::cout<<h_buckets[i]<<" ";
+  for (int i=0; i<TEMP_NUM; i++) std::cout<<h_buckets[i]<<" ";
   std::cout<<std::endl;
   P*buckets;
   P*temp;
   P*target;
-  unsigned count = 64;
+  unsigned count = TEMP_NUM;
   cudaMalloc(&buckets, sizeof(P) * count);
   cudaMemcpy(buckets, h_buckets, sizeof(P) * count, cudaMemcpyHostToDevice);
   cudaMalloc(&temp, sizeof(P) * count);
   cudaMalloc(&target, sizeof(P) * count);
   // reduce_triangles_kernel<<<4,8>>>(buckets,temp,target,4,4);
-  reduce_triangles_kernel<<<4,8>>>(buckets,temp,target,4,4);
+  reduce_triangles_kernel<<<5,8>>>(buckets,temp,target,4,4);
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
   
   std::vector<P> h_target;
-  h_target.reserve(64);
-  cudaMemcpy(h_target.data(), target, sizeof(P) * 64, cudaMemcpyDeviceToHost);
+  h_target.reserve(TEMP_NUM);
+  cudaMemcpy(h_target.data(), target, sizeof(P) * TEMP_NUM, cudaMemcpyDeviceToHost);
     std::cout<<cudaGetLastError()<<std::endl;
   std::cout<<"target"<<std::endl;
-  for (int i = 0; i < 64; i++)
+  for (int i = 0; i < TEMP_NUM; i++)
   {
     std::cout<<h_target[i]<<" ";
   }
@@ -648,17 +662,17 @@ void test_reduce_triangle(P* h_buckets){
 
 template <typename P>
 void test_reduce_rectangle(P* h_buckets){
-  for (int i=0; i<64; i++) std::cout<<h_buckets[i]<<" ";
+  for (int i=0; i<TEMP_NUM; i++) std::cout<<h_buckets[i]<<" ";
   std::cout<<std::endl;
   P*buckets;
   P*temp;
   P*target;
-  unsigned count = 64;
+  unsigned count = TEMP_NUM;
   cudaMalloc(&buckets, sizeof(P) * count);
   cudaMemcpy(buckets, h_buckets, sizeof(P) * count, cudaMemcpyHostToDevice);
   cudaMalloc(&temp, sizeof(P) * count);
   cudaMalloc(&target, sizeof(P) * count);
-  reduce_rectangles_kernel<<<2,32>>>(buckets,temp,target,4,4);
+  reduce_rectangles_kernel<<<5,8>>>(buckets,temp,target,4,4);
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 }
@@ -941,16 +955,16 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 //   }
 // }
 else{
-    cudaDeviceSynchronize();
-std::vector<P> h_buckets;
-  h_buckets.reserve(nof_buckets);
-    cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
-    std::cout<<"buckets accumulated"<<std::endl;
-    for (unsigned i = 0; i < nof_buckets; i++)
-    {
-      std::cout<<h_buckets[i]<<" ";
-    }
-    std::cout<<std::endl;
+//     cudaDeviceSynchronize();
+// std::vector<P> h_buckets;
+//   h_buckets.reserve(nof_buckets);
+//     cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
+//     std::cout<<"buckets accumulated"<<std::endl;
+//     for (unsigned i = 0; i < nof_buckets; i++)
+//     {
+//       std::cout<<h_buckets[i]<<" ";
+//     }
+//     std::cout<<std::endl;
   unsigned source_bits_count = c;
   unsigned source_windows_count = nof_bms;
   // unsigned source_window_buckets_count = 1 << source_bits_count;
@@ -960,8 +974,6 @@ std::vector<P> h_buckets;
   P *target_buckets;
   P *temp_buckets1;
   P *temp_buckets2;
-  cudaMalloc(&temp_buckets1, sizeof(P) * source_buckets_count/2); //32*2^8*2^7 buckets
-  cudaMalloc(&temp_buckets2, sizeof(P) * source_buckets_count/2); //32*2^8*2^7 buckets
   for (unsigned i = 0;; i++) {
     printf("round %u \n" ,i);
     const unsigned target_bits_count = (source_bits_count + 1) >> 1; //c/2=8
@@ -973,7 +985,8 @@ std::vector<P> h_buckets;
     //     get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
     // const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
     cudaMalloc(&target_buckets, sizeof(P) * target_buckets_count); //32*2^8*2^7 buckets
-   
+    cudaMalloc(&temp_buckets1, sizeof(P) * source_buckets_count/2); //32*2^8*2^7 buckets
+    cudaMalloc(&temp_buckets2, sizeof(P) * source_buckets_count/2); //32*2^8*2^7 buckets
     // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
     //input output, streams
@@ -985,11 +998,25 @@ std::vector<P> h_buckets;
     cudaStreamCreate(&streams[0]);
     cudaStreamCreate(&streams[1]);
 
-    NUM_THREADS = 256;
-    NUM_BLOCKS = ((source_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS;
+    // NUM_THREADS = 256;
+    // NUM_BLOCKS = ((source_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS;
+    NUM_THREADS = 1<<(source_bits_count-1);
+    printf("NUM_THREADS %u \n" ,NUM_THREADS);
+    NUM_BLOCKS = source_windows_count;
+    printf("NUM_BLOCKS %u \n" ,NUM_BLOCKS);
     reduce_triangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets1,target_buckets,source_bits_count,source_windows_count);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
+    // cudaDeviceSynchronize();
+    // std::vector<P> t_buckets;
+    // t_buckets.reserve(target_buckets_count);
+    //     cudaMemcpy(t_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
+    //     std::cout<<"buckets target1"<<std::endl;
+    //     for (unsigned i = 0; i < target_buckets_count; i++)
+    //     {
+    //       std::cout<<t_buckets[i]<<" ";
+    //     }
+    //     std::cout<<std::endl;
     reduce_rectangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets2,target_buckets,source_bits_count,source_windows_count);
     cudaDeviceSynchronize();
     printf("cuda error %u\n",cudaGetLastError());
@@ -998,6 +1025,17 @@ std::vector<P> h_buckets;
     cudaStreamDestroy(streams[0]);
     cudaStreamSynchronize(streams[1]);
     cudaStreamDestroy(streams[1]);
+
+    // cudaDeviceSynchronize();
+    // // std::vector<P> t_buckets;
+    // // t_buckets.reserve(target_buckets_count);
+    //     cudaMemcpy(t_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
+    //     std::cout<<"buckets target2"<<std::endl;
+    //     for (unsigned i = 0; i < target_buckets_count; i++)
+    //     {
+    //       std::cout<<t_buckets[i]<<" ";
+    //     }
+    //     std::cout<<std::endl;
 
     // unsigned NUM_STREAMS = source_windows_count + source_windows_count*target_window_buckets_count;
     // cudaStream_t streams[NUM_STREAMS];
@@ -1070,6 +1108,8 @@ std::vector<P> h_buckets;
     }
     source_buckets = target_buckets;
     target_buckets = nullptr;
+    temp_buckets1 = nullptr;
+    temp_buckets2 = nullptr;
     source_bits_count = target_bits_count;
     source_windows_count = target_windows_count;
     // source_window_buckets_count = 1 << source_bits_count;
