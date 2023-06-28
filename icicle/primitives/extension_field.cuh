@@ -48,11 +48,11 @@ template <typename CONFIG> class ExtensionField {
     }
 
     static constexpr HOST_DEVICE_INLINE ExtensionField generator_x() {
-      return ExtensionField { FF { CONFIG::generator_x_re }, FF { CONFIG::generator_x_im } };
+      return ExtensionField { FF { CONFIG::g2_gen_x_re }, FF { CONFIG::g2_gen_x_im } };
     }
 
     static constexpr HOST_DEVICE_INLINE ExtensionField generator_y() {
-      return ExtensionField { FF { CONFIG::generator_y_re }, FF { CONFIG::generator_y_im } };
+      return ExtensionField { FF { CONFIG::g2_gen_y_re }, FF { CONFIG::g2_gen_y_im } };
     }
 
     static HOST_INLINE ExtensionField rand_host() {
