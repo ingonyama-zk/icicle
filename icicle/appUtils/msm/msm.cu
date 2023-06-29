@@ -21,8 +21,8 @@
 // #define BIG_TRIANGLE
 // #define SSM_SUM  //WIP
 
-// #define SIZE 256
-// #define SHMEM_SIZE 256 * 4
+#define SIZE 32
+#define SHMEM_SIZE 32 * 4 //why this size?
 
 // For last iteration (saves useless work)
 // Use volatile to prevent caching in registers (compiler optimization)
@@ -34,42 +34,44 @@ __device__ void warpReduce(P* shmem_ptr, int t, int first, int last) {
   }
 }
 
-// __global__ void sum_reduction(int *v, int *v_r) {
-// 	// Allocate shared memory
-// 	// __shared__ int partial_sum[SHMEM_SIZE];
-// 	int partial_sum[];
+template <typename P>
+__global__ void general_sum_reduction_kernel(P *v, P *v_r, unsigned nof_partial_sums, unsigned write_stride, unsigned write_phase) {
+	// Allocate shared memory
+	__shared__ P partial_sum[SHMEM_SIZE]; //use memory allocation like coop groups
+	// int partial_sum[];
 
-// 	// Calculate thread ID
-// 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	// Calculate thread ID
+	// int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-// 	// Load elements AND do first add of reduction
-// 	// Vector now 2x as long as number of threads, so scale i
-// 	int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+	// Load elements AND do first add of reduction
+	// Vector now 2x as long as number of threads, so scale i
+	int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
 
-// 	// Store first partial result instead of just the elements
-// 	partial_sum[threadIdx.x] = v[i] + v[i + blockDim.x];
-// 	__syncthreads();
+	// Store first partial result instead of just the elements
+	partial_sum[threadIdx.x] = v[i] + v[i + blockDim.x];
+	__syncthreads();
 
-// 	// Start at 1/2 block stride and divide by two each iteration
-// 	// Stop early (call device function instead)
-// 	for (int s = blockDim.x / 2; s > 32; s >>= 1) {
-// 		// Each thread does work unless it is further than the stride
-// 		if (threadIdx.x < s) {
-// 			partial_sum[threadIdx.x] += partial_sum[threadIdx.x + s];
-// 		}
-// 		__syncthreads();
-// 	}
+	// Start at 1/2 block stride and divide by two each iteration
+	// Stop early (call device function instead)
+	for (int s = blockDim.x / 2; s > nof_partial_sums-1; s >>= 1) {
+		// Each thread does work unless it is further than the stride
+		if (threadIdx.x < s) {
+			partial_sum[threadIdx.x] = partial_sum[threadIdx.x] + partial_sum[threadIdx.x + s];
+		}
+		__syncthreads();
+	}
+  //todo - add device function
+	// if (threadIdx.x < 32) {
+	// 	warpReduce(partial_sum, threadIdx.x);
+	// }
 
-// 	if (threadIdx.x < 32) {
-// 		warpReduce(partial_sum, threadIdx.x);
-// 	}
-
-// 	// Let the thread 0 for this block write it's result to main memory
-// 	// Result is inexed by this block
-// 	if (threadIdx.x == 0) {
-// 		v_r[blockIdx.x] = partial_sum[0];
-// 	}
-// }
+	// Let the thread 0 for this block write it's result to main memory
+	// Result is inexed by this block
+	if (threadIdx.x < nof_partial_sums) {
+    unsigned write_ind = nof_partial_sums*blockIdx.x + threadIdx.x;
+		v_r[((write_ind/write_stride)*2 + write_phase)*write_stride + write_ind%write_stride] = partial_sum[threadIdx.x];
+	}
+}
 
 template <typename P> //todo-add SM and device function
 __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *target_buckets, const unsigned source_c, const unsigned source_nof_bms) {
@@ -633,7 +635,8 @@ void test_reduce_triangle(P* h_buckets){
   cudaMalloc(&temp, sizeof(P) * count);
   cudaMalloc(&target, sizeof(P) * count);
   // reduce_triangles_kernel<<<4,8>>>(buckets,temp,target,4,4);
-  reduce_triangles_kernel<<<5,8>>>(buckets,temp,target,4,4);
+  // reduce_triangles_kernel<<<5,8>>>(buckets,temp,target,4,4);
+  general_sum_reduction_kernel<<<5,8>>>(buckets,target,4,4,0);
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
   
@@ -672,9 +675,21 @@ void test_reduce_rectangle(P* h_buckets){
   cudaMemcpy(buckets, h_buckets, sizeof(P) * count, cudaMemcpyHostToDevice);
   cudaMalloc(&temp, sizeof(P) * count);
   cudaMalloc(&target, sizeof(P) * count);
-  reduce_rectangles_kernel<<<5,8>>>(buckets,temp,target,4,4);
+  // reduce_rectangles_kernel<<<5,8>>>(buckets,temp,target,4,4);
+  general_sum_reduction_kernel<<<20,2>>>(buckets,target,1,4,1);
+  
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
+  std::vector<P> h_target;
+  h_target.reserve(TEMP_NUM);
+  cudaMemcpy(h_target.data(), target, sizeof(P) * TEMP_NUM, cudaMemcpyDeviceToHost);
+    std::cout<<cudaGetLastError()<<std::endl;
+  std::cout<<"target"<<std::endl;
+  for (int i = 0; i < TEMP_NUM; i++)
+  {
+    std::cout<<h_target[i]<<" ";
+  }
+  std::cout<<std::endl;
 }
 
 
@@ -1000,11 +1015,16 @@ else{
 
     // NUM_THREADS = 256;
     // NUM_BLOCKS = ((source_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS;
+    // NUM_THREADS = 1<<(source_bits_count-1);
+    // printf("NUM_THREADS %u \n" ,NUM_THREADS);
+    // NUM_BLOCKS = source_windows_count;
+    // printf("NUM_BLOCKS %u \n" ,NUM_BLOCKS);
+    // reduce_triangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets1,target_buckets,source_bits_count,source_windows_count);
     NUM_THREADS = 1<<(source_bits_count-1);
-    printf("NUM_THREADS %u \n" ,NUM_THREADS);
+    printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
     NUM_BLOCKS = source_windows_count;
-    printf("NUM_BLOCKS %u \n" ,NUM_BLOCKS);
-    reduce_triangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets1,target_buckets,source_bits_count,source_windows_count);
+    printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
+    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,target_buckets,1<<target_bits_count,1<<target_bits_count,0);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
     // cudaDeviceSynchronize();
@@ -1017,9 +1037,14 @@ else{
     //       std::cout<<t_buckets[i]<<" ";
     //     }
     //     std::cout<<std::endl;
-    reduce_rectangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets2,target_buckets,source_bits_count,source_windows_count);
-    cudaDeviceSynchronize();
-    printf("cuda error %u\n",cudaGetLastError());
+    // reduce_rectangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(source_buckets,temp_buckets2,target_buckets,source_bits_count,source_windows_count);
+    NUM_THREADS = 1<<(target_bits_count-1);
+    printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
+    NUM_BLOCKS = source_windows_count<<target_bits_count;
+    printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
+    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(source_buckets,target_buckets,1,1<<target_bits_count,1);
+    // cudaDeviceSynchronize();
+    // printf("cuda error %u\n",cudaGetLastError());
 
     cudaStreamSynchronize(streams[0]);
     cudaStreamDestroy(streams[0]);

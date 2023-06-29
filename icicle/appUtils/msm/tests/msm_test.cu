@@ -15,8 +15,8 @@ class Dummy_Scalar {
     static constexpr unsigned NBITS = 32;
 
     unsigned x;
-    // unsigned p = 600;
-    unsigned p = 1<<30;
+    unsigned p = 10;
+    // unsigned p = 1<<30;
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
@@ -43,8 +43,8 @@ class Dummy_Scalar {
       return {scalar.p-scalar.x};
     }
     static HOST_INLINE Dummy_Scalar rand_host() {
-      // return {(unsigned)rand()%600};
-      return {(unsigned)rand()};
+      return {(unsigned)rand()%10};
+      // return {(unsigned)rand()};
     }
 };
 
