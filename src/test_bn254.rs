@@ -1,7 +1,8 @@
-use std::ffi::{c_int, c_uint};
+use std::{ffi::{c_int, c_uint}, str::FromStr};
 
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
+use std::time::{Duration, Instant};
 
 use crate::curves::bn254::*;
 
@@ -56,6 +57,20 @@ extern "C" {
 
     fn ntt_batch_cuda_bn254(
         inout: *mut ScalarField_BN254,
+        arr_size: usize,
+        n: usize,
+        inverse: bool,
+    ) -> c_int;
+
+    fn ntt_coset_cuda_bn254(
+        inout: *mut ScalarField_BN254,
+        arr_size: usize,
+        n: usize,
+        inverse: bool,
+    ) -> c_int;
+
+    fn ecntt_coset_cuda_bn254(
+        inout: *mut Point_BN254,
         arr_size: usize,
         n: usize,
         inverse: bool,
@@ -346,6 +361,41 @@ fn ntt_internal_batch_bn254(
         )
     }
 }
+
+/// Compute an in-place NTT on the input data.
+fn ntt_coset_bn254(
+    values: &mut [ScalarField_BN254],
+    device_id: usize,
+    batch_size: usize,
+    inverse: bool,
+) -> i32 {
+    unsafe {
+        ntt_coset_cuda_bn254(
+            values as *mut _ as *mut ScalarField_BN254,
+            values.len(),
+            batch_size,
+            inverse,
+        )
+    }
+}
+
+/// Compute an in-place NTT on the input data.
+fn ecntt_coset_bn254(
+    values: &mut [Point_BN254],
+    device_id: usize,
+    batch_size: usize,
+    inverse: bool,
+) -> i32 {
+    unsafe {
+        ecntt_coset_cuda_bn254(
+            values as *mut _ as *mut Point_BN254,
+            values.len(),
+            batch_size,
+            inverse,
+        )
+    }
+}
+
 
 pub fn ntt_batch_bn254(values: &mut [ScalarField_BN254], batch_size: usize, device_id: usize) {
     ntt_internal_batch_bn254(values, 0, batch_size, false);
@@ -1021,6 +1071,41 @@ pub(crate) mod tests_bn254 {
                 .collect::<Vec<G1Affine>>()
         );
     }
+
+
+    #[test]
+    fn test_coset_ntt() {
+        //NTT
+        let seed = None; //some value to fix the rng
+        let test_size = 1 << 21;
+        let coset = 1 << 10;
+
+        let scalars = generate_random_scalars_bn254(test_size, get_rng_bn254(seed));
+
+        let mut ntt_result = scalars.clone();
+
+        let mut start = Instant::now();
+        ntt_bn254(&mut ntt_result, 0);
+        let mut duration = start.elapsed();
+    
+        println!("Time elapsed in ntt_bn254() is: {:?}", duration);
+
+        let mut ntt_result_coset = scalars.clone();
+
+        start = Instant::now();
+        ntt_coset_bn254(&mut ntt_result_coset, 0, coset, false);
+        duration = start.elapsed();
+    
+        println!("Time elapsed in ntt_coset_bn254() is: {:?}", duration);
+
+        let mut intt_result_coset: Vec<Field_BN254<8>> = ntt_result_coset.clone();
+        ntt_coset_bn254(&mut intt_result_coset, 0, coset, true);
+
+        assert_eq!(ntt_result, ntt_result_coset);
+        assert_eq!(scalars, intt_result_coset);
+        
+    }
+
 
     #[test]
     fn test_ntt_batch() {

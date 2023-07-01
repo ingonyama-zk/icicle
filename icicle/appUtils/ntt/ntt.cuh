@@ -340,20 +340,16 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
  * @param n size of batch.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- template <typename E, typename S> uint32_t ntt_end2end_batch_template(E * arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream) {
+ template <typename E, typename S> uint32_t ntt_end2end_batch_template_add_on_device(E * d_arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream) {
   int batches = int(arr_size / n);
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order. 
-  size_t size_E = arr_size * sizeof(E);
   S * d_twiddles;
   if (inverse){
     d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega_inv(logn), stream);
   } else{
     d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega(logn), stream);
   }
-  E * d_arr;
-  cudaMallocAsync( & d_arr, size_E, stream);
-  cudaMemcpyAsync(d_arr, arr, size_E, cudaMemcpyHostToDevice, stream);
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
   ntt_template_kernel_rev_ord<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, logn, batches);
@@ -375,9 +371,110 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
     NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
     template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS, 0, stream>>> (d_arr, arr_size, S::inv_log_size(logn));
   }
+  cudaFreeAsync(d_twiddles, stream);
+  return 0; 
+}
+
+
+/**
+ * Cooley-Tukey (scalar) NTT.
+ * This is a bached version - meaning it assumes than the input array 
+ * consists of N arrays of size n. The function performs n-size NTT on each small array.
+ * @param arr input array of type BLS12_381::scalar_t. 
+ * @param arr_size number of total elements = n * N.  
+ * @param n size of batch.
+ * @param inverse indicate if the result array should be normalized by n^(-1). 
+ */
+ template <typename E, typename S> uint32_t ntt_end2end_batch_template(E * arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream) {
+  size_t size_E = arr_size * sizeof(E);
+  E * d_arr;
+  cudaMallocAsync( & d_arr, size_E, stream);
+  cudaMemcpyAsync(d_arr, arr, size_E, cudaMemcpyHostToDevice, stream);
+  ntt_end2end_batch_template_add_on_device<E,S>(d_arr, arr_size, n, inverse, stream);
   cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arr, stream);
-  cudaFreeAsync(d_twiddles, stream);
+  cudaStreamSynchronize(stream);
+  return 0; 
+}
+
+
+/**
+ * Cooley-Tukey NTT.
+ * NOTE! this function assumes that d_twiddles are located in the device memory.
+ * @param arr input array of type E (elements).
+ * @param n length of arr.
+ * @param logn log2(n).
+ * @param max_task max count of parallel tasks.
+ */
+ template <typename E, typename S>
+ __global__ void ntt_template_transpose(E *arr_old, E *arr, uint32_t rows, uint32_t cols, S twiddle)
+ {
+   int task = (blockIdx.x * blockDim.x) + threadIdx.x;
+   if (task < rows)
+   {
+    S omega = S::pow(twiddle,task); 
+    for(int i = 0; i < cols; i++){
+      S ij_omega = S::pow(omega,i);
+      arr[task * cols + i] = ij_omega * arr_old[task + rows * i];
+    }
+   }
+ }
+
+/**
+ * Cooley-Tukey (scalar) NTT.
+ * This is a bached version - meaning it assumes than the input array 
+ * consists of N arrays of size n. The function performs n-size NTT on each small array.
+ * @param arr input array of type BLS12_381::scalar_t. 
+ * @param coset_size number of total elements = n * N.  
+ * @param n size of batch.
+ * @param inverse indicate if the result array should be normalized by n^(-1). 
+ */
+ template <typename E, typename S> uint32_t ntt_end2end_coset_template(E * arr, uint32_t N, uint32_t coset_size, bool inverse, cudaStream_t stream) {
+  uint32_t logN = uint32_t(log(N) / log(2));
+
+  S omega;
+  if (inverse){
+    omega = S::omega_inv(logN);
+  } else{
+    omega = S::omega(logN);
+  }
+  
+  int n = (uint32_t)(N /coset_size); 
+
+  int cols = coset_size; 
+  int rows = n; 
+
+  size_t size_E = N * sizeof(E);
+  E * d_arr_tmp;
+  cudaMallocAsync( & d_arr_tmp, size_E, stream);
+  cudaMemcpyAsync(d_arr_tmp, arr, size_E, cudaMemcpyHostToDevice, stream);
+
+  E * d_arr;
+  cudaMallocAsync( & d_arr, size_E, stream);
+  
+  int NUM_THREADS = cols;
+  int NUM_BLOCKS = (rows + NUM_THREADS - 1) / NUM_THREADS;
+  ntt_template_transpose<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr_tmp,d_arr, rows, cols, S::one());
+
+  cudaDeviceSynchronize();
+
+  ntt_end2end_batch_template_add_on_device<E,S>(d_arr, N, cols, inverse, stream);
+
+  NUM_THREADS = rows;
+  NUM_BLOCKS = (cols + NUM_THREADS - 1) / NUM_THREADS;
+  ntt_template_transpose<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr,d_arr_tmp, cols, rows, omega);
+  
+  ntt_end2end_batch_template_add_on_device<E,S>(d_arr_tmp, N, rows, inverse, stream);
+
+  cudaDeviceSynchronize();
+  
+  NUM_THREADS = cols;
+  NUM_BLOCKS = (rows + NUM_THREADS - 1) / NUM_THREADS;
+  ntt_template_transpose<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr_tmp,d_arr, rows, cols, S::one());
+  cudaFreeAsync(d_arr_tmp, stream);
+
+  cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
+  cudaFreeAsync(d_arr, stream);
   cudaStreamSynchronize(stream);
   return 0; 
 }

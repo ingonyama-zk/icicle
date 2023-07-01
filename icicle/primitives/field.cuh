@@ -643,6 +643,20 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
+    static constexpr HOST_DEVICE_INLINE Field pow(const Field& xs, uint32_t exp) {
+      Field result = Field::one();
+      Field base = xs * result; 
+      while (exp != 0)
+      {
+          if ((exp & 1) == 1)
+              result = result * base;
+          exp >>= 1;
+          base = base * base;
+      }
+      return result;
+    }
+
+    template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE Field neg(const Field& xs) {
       const ff_storage modulus = get_modulus<MODULUS_MULTIPLE>();
       Field rs = {};

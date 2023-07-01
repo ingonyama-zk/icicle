@@ -53,6 +53,35 @@ extern "C" int ecntt_cuda_bls12_377(BLS12_377::projective_t *arr, uint32_t n, bo
     }
 }
 
+extern "C" int ntt_coset_cuda_bls12_377(BLS12_377::scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return ntt_end2end_coset_template<BLS12_377::scalar_t,BLS12_377::scalar_t>(arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+
+extern "C" int ecntt_coset_cuda_bls12_377(BLS12_377::projective_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return ntt_end2end_coset_template<BLS12_377::projective_t,BLS12_377::scalar_t>(arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
 extern "C" int ntt_batch_cuda_bls12_377(BLS12_377::scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try

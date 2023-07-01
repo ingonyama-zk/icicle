@@ -1,4 +1,5 @@
 use std::ffi::{c_int, c_uint};
+use std::time::{Duration, Instant};
 
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -47,6 +48,21 @@ extern "C" {
         batch_size: usize,
         device_id: usize,
     ) -> c_uint;
+
+
+    fn ntt_coset_cuda_bls12_377(
+        inout: *mut ScalarField_BLS12_377,
+        arr_size: usize,
+        n: usize,
+        inverse: bool,
+    ) -> c_int;
+
+    fn ecntt_coset_cuda_bls12_377(
+        inout: *mut Point_BLS12_377,
+        arr_size: usize,
+        n: usize,
+        inverse: bool,
+    ) -> c_int;
 
     fn build_domain_cuda_bls12_377(domain_size: usize, logn: usize, inverse: bool, device_id: usize) -> DevicePointer<ScalarField_BLS12_377>;
 
@@ -328,6 +344,40 @@ pub fn ntt_bls12_377(values: &mut [ScalarField_BLS12_377], device_id: usize) {
 
 pub fn intt_bls12_377(values: &mut [ScalarField_BLS12_377], device_id: usize) {
     ntt_internal_bls12_377(values, device_id, true);
+}
+
+/// Compute an in-place NTT on the input data.
+fn ntt_coset_bls12_377(
+    values: &mut [ScalarField_BLS12_377],
+    device_id: usize,
+    batch_size: usize,
+    inverse: bool,
+) -> i32 {
+    unsafe {
+        ntt_coset_cuda_bls12_377(
+            values as *mut _ as *mut ScalarField_BLS12_377,
+            values.len(),
+            batch_size,
+            inverse,
+        )
+    }
+}
+
+/// Compute an in-place NTT on the input data.
+fn ecntt_coset_bls12_377(
+    values: &mut [Point_BLS12_377],
+    device_id: usize,
+    batch_size: usize,
+    inverse: bool,
+) -> i32 {
+    unsafe {
+        ecntt_coset_cuda_bls12_377(
+            values as *mut _ as *mut Point_BLS12_377,
+            values.len(),
+            batch_size,
+            inverse,
+        )
+    }
 }
 
 /// Compute an in-place NTT on the input data.
@@ -954,6 +1004,39 @@ pub(crate) mod tests_bls12_377 {
         for h in h_commit_result {
             assert_ne!(h, Point_BLS12_377::zero());
         }
+    }
+
+    #[test]
+    fn test_coset_ntt() {
+        //NTT
+        let seed = None; //some value to fix the rng
+        let test_size = 1 << 21;
+        let coset = 1 << 10;
+
+        let scalars = generate_random_scalars_bls12_377(test_size, get_rng_bls12_377(seed));
+
+        let mut ntt_result = scalars.clone();
+
+        let mut start = Instant::now();
+        ntt_bls12_377(&mut ntt_result, 0);
+        let mut duration = start.elapsed();
+    
+        println!("Time elapsed in ntt is: {:?}", duration);
+
+        let mut ntt_result_coset = scalars.clone();
+
+        start = Instant::now();
+        ntt_coset_bls12_377(&mut ntt_result_coset, 0, coset, false);
+        duration = start.elapsed();
+    
+        println!("Time elapsed in ntt_coset is: {:?}", duration);
+
+        let mut intt_result_coset: Vec<Field_BLS12_377<8>> = ntt_result_coset.clone();
+        ntt_coset_bls12_377(&mut intt_result_coset, 0, coset, true);
+
+        // assert_eq!(ntt_result, ntt_result_coset);
+        // assert_eq!(scalars, intt_result_coset);
+        
     }
 
     #[test]
