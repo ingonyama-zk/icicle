@@ -12,7 +12,7 @@ int msm_cuda_bn254(BN254::projective_t *out, BN254::affine_t points[],
 {
     try
     {
-        large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, stream);
+        large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, false, stream);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
@@ -52,7 +52,7 @@ extern "C" int msm_batch_cuda_bn254(BN254::projective_t* out, BN254::affine_t po
  {
      try
      {
-         large_msm(d_scalars, d_points, count, d_out, true, stream);
+         large_msm(d_scalars, d_points, count, d_out, true, false, stream);
          cudaStreamSynchronize(stream);
          return 0;
      }

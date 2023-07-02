@@ -1371,7 +1371,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_size * nof_bms + msm_size + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, 
-                                                    msm_log_size, nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
+                                                    msm_log_size, nof_bms, bm_bitsize, c,0); //+size - leaving the first bm free for the out of place sort later
 
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sorted_bucket_indices;
@@ -1422,7 +1422,7 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices,
-                                                        d_points, nof_buckets, total_nof_buckets_to_compute, c+bm_bitsize);
+                                                        d_points, nof_buckets, total_nof_buckets_to_compute, c+bm_bitsize,c);
 
   // #ifdef SSM_SUM
   //   //sum each bucket
@@ -1567,7 +1567,7 @@ unsigned get_optimal_c(const unsigned size) {
 
 //this function is used to compute msms of size larger than 256
 template <typename S, typename P, typename A>
-void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, bool big_triangle){
+void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, bool big_triangle, cudaStream_t stream){
   // unsigned c = get_optimal_c(size);
   unsigned c = 16;
   // unsigned bitsize = 32;
