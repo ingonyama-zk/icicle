@@ -2,8 +2,7 @@ extern crate criterion;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use icicle_utils::test_bls12_381::{interpolate_scalars_batch_bls12_381, interpolate_points_batch_bls12_381, set_up_scalars_bls12_381, set_up_points_bls12_381, evaluate_scalars_batch_bls12_381, evaluate_points_batch_bls12_381};
-
+use icicle_utils::test_bls12_381::*;
 
 const LOG_NTT_SIZES: [usize; 3] = [20, 9, 10];
 const BATCH_SIZES: [usize; 3] = [1, 512, 1024];
@@ -18,33 +17,63 @@ fn bench_ntt(c: &mut Criterion) {
                 continue;
             }
 
+            let scalar_samples = 20;
+
             let (_, mut d_evals, mut d_domain) = set_up_scalars_bls12_381(ntt_size * batch_size, log_ntt_size, true);
 
-            group.sample_size(1000).bench_function(
+            group.sample_size(scalar_samples).bench_function(
                 &format!("Scalar NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
                 |b| b.iter(|| evaluate_scalars_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size))
             );
             
-            group.sample_size(1000).bench_function(
+            group.sample_size(scalar_samples).bench_function(
                 &format!("Scalar iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
                 |b| b.iter(|| interpolate_scalars_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size))
             );
+
+            group.sample_size(scalar_samples).bench_function(
+                &format!("Scalar inplace NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
+                |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, ntt_size, batch_size, false, 0))
+            );
+            
+            group.sample_size(scalar_samples).bench_function(
+                &format!("Scalar inplace iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
+                |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, ntt_size, batch_size, true, 0))
+            );
+
+            drop(d_evals);
+            drop(d_domain);
 
             if ntt_size * batch_size > 1 << 18{
                 continue;
             }
 
-            let (_, mut d_points_evals, _) = set_up_points_bls12_381(ntt_size * batch_size, log_ntt_size, true);
+            let point_samples = 10;
+
+            let (_, mut d_points_evals, mut d_domain) = set_up_points_bls12_381(ntt_size * batch_size, log_ntt_size, true);
             
-            group.sample_size(10).bench_function(
+            group.sample_size(point_samples).bench_function(
                 &format!("EC NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
                 |b| b.iter(|| interpolate_points_batch_bls12_381(&mut d_points_evals, &mut d_domain, batch_size))
             );
 
-            group.sample_size(10).bench_function(
+            group.sample_size(point_samples).bench_function(
                 &format!("EC iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
                 |b| b.iter(|| evaluate_points_batch_bls12_381(&mut d_points_evals, &mut d_domain, batch_size))
             );
+
+            group.sample_size(point_samples).bench_function(
+                &format!("inplace EC NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
+                |b| b.iter(|| ecntt_inplace_batch_bls12_381(&mut d_points_evals, &mut d_domain, ntt_size, batch_size, false, 0))
+            );
+            
+            group.sample_size(point_samples).bench_function(
+                &format!("inplace EC iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
+                |b| b.iter(|| ecntt_inplace_batch_bls12_381(&mut d_points_evals, &mut d_domain, ntt_size, batch_size, true, 0))
+            );
+
+            drop(d_points_evals);
+            drop(d_domain);
         }
     }
 }

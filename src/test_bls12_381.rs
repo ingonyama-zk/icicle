@@ -72,6 +72,24 @@ extern "C" {
 
     fn ecntt_batch_cuda_bls12_381(inout: *mut Point_BLS12_381, arr_size: usize, n: usize, inverse: bool) -> c_int;
 
+   fn ntt_inplace_batch_cuda_bls12_381(
+        d_inout: DevicePointer<ScalarField_BLS12_381>,
+        d_twiddles: DevicePointer<ScalarField_BLS12_381>,
+        n: usize,
+        batch_size: usize,
+        inverse: bool,
+        device_id: usize
+    ) -> c_int;
+
+    fn ecntt_inplace_batch_cuda_bls12_381(
+        d_inout: DevicePointer<Point_BLS12_381>,
+        d_twiddles: DevicePointer<ScalarField_BLS12_381>,
+        n: usize,
+        batch_size: usize,
+        inverse: bool,
+        device_id: usize
+    ) -> c_int;
+
     fn interpolate_scalars_cuda_bls12_381(
         d_out: DevicePointer<ScalarField_BLS12_381>,
         d_evaluations: DevicePointer<ScalarField_BLS12_381>,
@@ -712,6 +730,46 @@ pub fn evaluate_points_on_coset_batch_bls12_381(
         );
     }
     return res;
+}
+
+pub fn ntt_inplace_batch_bls12_381(
+    d_inout: &mut DeviceBuffer<ScalarField_BLS12_381>,
+    d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
+    n: usize,
+    batch_size: usize,
+    inverse: bool,
+    device_id: usize
+) -> i32 {
+    unsafe {
+        ntt_inplace_batch_cuda_bls12_381(
+            d_inout.as_device_ptr(),
+            d_twiddles.as_device_ptr(),
+            n,
+            batch_size,
+            inverse,
+            device_id
+        )
+    }
+}
+
+pub fn ecntt_inplace_batch_bls12_381(
+    d_inout: &mut DeviceBuffer<Point_BLS12_381>,
+    d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
+    n: usize,
+    batch_size: usize,
+    inverse: bool,
+    device_id: usize
+) -> i32 {
+    unsafe {
+        ecntt_inplace_batch_cuda_bls12_381(
+            d_inout.as_device_ptr(),
+            d_twiddles.as_device_ptr(),
+            n,
+            batch_size,
+            inverse,
+            device_id
+        )
+    }
 }
 
 pub fn multp_vec_bls12_381(a: &mut [Point_BLS12_381], b: &[ScalarField_BLS12_381], device_id: usize) {

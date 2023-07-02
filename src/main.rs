@@ -16,10 +16,8 @@ use icicle_utils::{
 };
 use rustacuda::prelude::DeviceBuffer;
 
-const LOG_NTT_SIZES: [usize; 3] = [20, 10, 9]; //, 23, 9, 10, 11, 12, 18];
-const BATCH_SIZES: [usize; 3] = [1, 1 << 9, 1 << 10]; //, 4, 8, 16, 256, 512, 1024, 1 << 14];
-                                              // const LOG_NTT_SIZES: [usize; 4] = [10, 12, 23, 24]; //, 23, 9, 10, 11, 12, 18];
-                                              // const BATCH_SIZES: [usize; 6] = [1, 2, 4, 16, 256, 1<<16]; //, 4, 8, 16, 256, 512, 1024, 1 << 14];
+const LOG_NTT_SIZES: [usize; 3] = [20, 10, 9];
+const BATCH_SIZES: [usize; 3] = [1, 1 << 9, 1 << 10]; 
 
 const MAX_POINTS_LOG2: usize = 18;
 const MAX_SCALARS_LOG2: usize = 26;

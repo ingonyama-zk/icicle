@@ -40,40 +40,6 @@ const uint32_t MAX_SHARED_MEM = 32 * 1024; //TODO: occupancy calculator, hardcod
   return d_twiddles;
 }
 
-/**
- * Returns the bit reversed order of a number. 
- * for example: on inputs num = 6 (110 in binary) and logn = 3
- * the function should return 3 (011 in binary.)
- * @param num some number with bit representation of size logn.
- * @param logn length of bit representation of `num`.
- * @return bit reveresed order or `num`.
- */
-__device__ __host__ uint32_t reverseBits(uint32_t num, uint32_t logn) {
-  unsigned int reverse_num = 0;
-  for (uint32_t i = 0; i < logn; i++) {
-    if ((num & (1 << i))) reverse_num |= 1 << ((logn - 1) - i);
-  }
-  return reverse_num;
-}
-
-/**
- * Returns the bit reversal ordering of the input array.
- * for example: on input ([a[0],a[1],a[2],a[3]], 4, 2) it returns
- * [a[0],a[3],a[2],a[1]] (elements in indices 3,1 swhich places).
- * @param arr array of some object of type T of size which is a power of 2. 
- * @param n length of `arr`.
- * @param logn log(n).
- * @return A new array which is the bit reversed version of input array. 
- */
-template < typename T > T * template_reverse_order(T * arr, uint32_t n, uint32_t logn) {
-  T * arrReversed = new T[n];
-  for (uint32_t i = 0; i < n; i++) {
-    uint32_t reversed = reverseBits(i, logn);
-    arrReversed[i] = arr[reversed];
-  }
-  return arrReversed;
-}
-
 template < typename T > __global__ void reverse_order_kernel(T* arr, T* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size) {
   int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (threadId < n * batch_size) {
@@ -129,25 +95,6 @@ template < typename E, typename S > __global__ void template_normalize_kernel(E 
   }
 }
 
-/**
- * Returens the bit reversal ordering of the input array according to the batches *in place*. 
- * The assumption is that arr is divided into N tasks of size n. 
- * Tasks indicates the index of the task (out of N). 
- * @param arr input array of type T.   
- * @param n length of arr.
- * @param logn log(n).
- * @param task log(n).
- */
-template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uint32_t n, uint32_t logn, uint32_t task) {
-  for (uint32_t i = 0; i < n; i++) {
-    uint32_t reversed = reverseBits(i, logn);
-    if (reversed > i) {
-      T tmp = arr[task * n + i];
-      arr[task * n + i] = arr[task * n + reversed];
-      arr[task * n + reversed] = tmp;
-    }
-  }
-}
 
 /**
  * Cooley-Tuckey NTT.
@@ -336,25 +283,29 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
  * @param n Length of `d_twiddles` array
  * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
  */
-template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S * d_twiddles, unsigned n, unsigned batch_size, bool inverse, cudaStream_t stream) {
+template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S * d_twiddles, unsigned n, unsigned batch_size, bool inverse, cudaStream_t stream, bool is_sync_needed) {
   const int logn = int(log(n) / log(2));
   const int max_shmem_elems_count = int(MAX_SHARED_MEM / sizeof(E));
   const int log2_shmem_elems = int(log(max_shmem_elems_count) / log(2));
-  const int num_threads = min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1));
+  int num_threads = min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1));
   const int chunks = max(int((n / 2) / num_threads), 1);
   const int total_tasks = batch_size * chunks;
-  const int num_blocks = total_tasks;
+  int num_blocks = total_tasks;
   const int shared_mem = 2 * num_threads * sizeof(E); // TODO: calculator, as shared mem size may be more efficient less then max to allow more concurrent blocks on SM
   const int logn_shmem = int(log(2 * num_threads) / log(2));
 
-  if(inverse) 
+  if (inverse) 
   {
     ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
 
     for (uint32_t s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
     { 
       ntt_template_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
-    } 
+    }
+
+    num_threads = min(n / 2, MAX_NUM_THREADS);
+    num_blocks = (n * batch_size + num_threads - 1) / num_threads;
+    template_normalize_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>> (d_inout, n * batch_size, S::inv_log_size(logn)); 
   }
   else 
   {
@@ -364,27 +315,10 @@ template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S
     }
     ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
   }
-  //cudaStreamSynchronize(stream);
-}
+  
+  if(!is_sync_needed) return;
 
-
-/**
- * Cooley-Tukey NTT.
- * NOTE! this function assumes that d_twiddles are located in the device memory.
- * @param arr input array of type E (elements).
- * @param n length of arr.
- * @param logn log2(n).
- * @param max_task max count of parallel tasks.
- */
-template <typename E, typename S>
-__global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, uint32_t max_task)
-{
-  int task = (blockIdx.x * blockDim.x) + threadIdx.x;
-
-  if (task < max_task)
-  {
-    reverseOrder_batch<E>(arr, n, logn, task);
-  }
+  cudaStreamSynchronize(stream);
 }
 
 /**
@@ -412,9 +346,8 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   cudaMemcpyAsync(d_arr, arr, size_E, cudaMemcpyHostToDevice, stream);
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
-  //ntt_template_kernel_rev_ord<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, logn, batches);
 
-  ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, stream);
+  ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, stream, false);
 
   if (inverse == true)
   {

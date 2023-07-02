@@ -15,16 +15,8 @@
  * @param batch_size The size of the batch; the length of `d_evaluations` is `n` * `batch_size`.
  */
 template <typename E, typename S> int interpolate_batch(E * d_out, E * d_evaluations, S * d_domain, unsigned n, unsigned batch_size, cudaStream_t stream) {
-  uint32_t logn = uint32_t(log(n) / log(2));
   cudaMemcpyAsync(d_out, d_evaluations, sizeof(E) * n * batch_size, cudaMemcpyDeviceToDevice, stream);
-  
-  ntt_inplace_batch_template(d_out, d_domain, n, batch_size, true, stream);
-
-
-  unsigned num_threads = min(n / 2, MAX_NUM_THREADS);
-  unsigned num_blocks = (n * batch_size + num_threads - 1) / num_threads;
-  template_normalize_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>> (d_out, n * batch_size, S::inv_log_size(logn));
-  cudaStreamSynchronize(stream);
+  ntt_inplace_batch_template(d_out, d_domain, n, batch_size, true, stream, true);
   return 0;
 }
 
@@ -82,8 +74,7 @@ int evaluate_batch(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_
   if (coset)
     batch_vector_mult(coset_powers, d_out, domain_size, batch_size, stream);
 
-  ntt_inplace_batch_template(d_out, d_domain, domain_size, batch_size, false, stream);
-  cudaStreamSynchronize(stream);
+  ntt_inplace_batch_template(d_out, d_domain, domain_size, batch_size, false, stream, true);
   return 0;
 }
 
