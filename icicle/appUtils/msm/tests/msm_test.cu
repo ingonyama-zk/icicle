@@ -5,18 +5,19 @@
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
-#include "../../curves/bls12_377/curve_config.cuh"
-// #include "../../curves/bn254/curve_config.cuh"
+// #include "../../curves/bls12_377/curve_config.cuh"
+#include "../../curves/bn254/curve_config.cuh"
 
-using namespace BLS12_377;
+// using namespace BLS12_377;
+using namespace BN254;
 
 class Dummy_Scalar {
   public:
     static constexpr unsigned NBITS = 32;
 
     unsigned x;
-    unsigned p = 10;
-    // unsigned p = 1<<30;
+    // unsigned p = 10;
+    unsigned p = 1<<30;
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
@@ -43,8 +44,8 @@ class Dummy_Scalar {
       return {scalar.p-scalar.x};
     }
     static HOST_INLINE Dummy_Scalar rand_host() {
-      return {(unsigned)rand()%10};
-      // return {(unsigned)rand()};
+      // return {(unsigned)rand()%10};
+      return {(unsigned)rand()};
     }
 };
 
@@ -128,7 +129,7 @@ typedef affine_t test_affine;
 int main()
 {
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<7;
+  unsigned msm_size = 1<<24;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
@@ -158,18 +159,19 @@ int main()
   // }
   auto begin = std::chrono::high_resolution_clock::now();
   // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res, false);
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true);
+  // large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res+1, false, false);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
+  // test_reduce_single(scalars);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
-  std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
-  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;

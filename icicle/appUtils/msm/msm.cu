@@ -16,13 +16,14 @@
 #include "msm.cuh"
 
 #define TEMP_NUM 96
+#define MAX_TH 256
 
 // #define SIGNED_DIG
 // #define BIG_TRIANGLE
 // #define SSM_SUM  //WIP
 
 #define SIZE 32
-#define SHMEM_SIZE 32 * 4 //why this size?
+#define SHMEM_SIZE 64 * 4 //why this size?
 
 // For last iteration (saves useless work)
 // Use volatile to prevent caching in registers (compiler optimization)
@@ -72,6 +73,26 @@ __global__ void general_sum_reduction_kernel(P *v, P *v_r, unsigned nof_partial_
 		v_r[((write_ind/write_stride)*2 + write_phase)*write_stride + write_ind%write_stride] = partial_sum[threadIdx.x];
 	}
 }
+
+template <typename P>
+__global__ void single_stage_multi_reduction_kernel(P *v, P *v_r, unsigned block_size, unsigned write_stride, unsigned write_phase) {
+	// Allocate shared memory
+	// __shared__ P partial_sum[SHMEM_SIZE]; //use memory allocation like coop groups
+	// int partial_sum[];
+
+	// Calculate thread ID
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int jump =block_size/2;
+  int block_id = tid/jump;
+  int block_tid = tid%jump;
+
+  if (block_tid < jump){
+  unsigned read_ind = block_size*block_id + block_tid;
+  unsigned write_ind = jump*block_id + block_tid;
+	v_r[write_stride? ((write_ind/write_stride)*2 + write_phase)*write_stride + write_ind%write_stride : write_ind] = v[read_ind] + v[read_ind + jump];
+  }
+}
+
 
 template <typename P> //todo-add SM and device function
 __global__ void reduce_triangles_kernel(P *source_buckets,P* temp_buckets, P *target_buckets, const unsigned source_c, const unsigned source_nof_bms) {
@@ -664,6 +685,36 @@ void test_reduce_triangle(P* h_buckets){
 }
 
 template <typename P>
+void test_reduce_single(P* h_buckets){
+  for (int i=0; i<TEMP_NUM; i++) std::cout<<h_buckets[i]<<" ";
+  std::cout<<std::endl;
+  P*buckets;
+  P*temp;
+  P*target;
+  unsigned count = TEMP_NUM;
+  cudaMalloc(&buckets, sizeof(P) * count);
+  cudaMemcpy(buckets, h_buckets, sizeof(P) * count, cudaMemcpyHostToDevice);
+  cudaMalloc(&temp, sizeof(P) * count);
+  cudaMalloc(&target, sizeof(P) * count);
+  // reduce_rectangles_kernel<<<5,8>>>(buckets,temp,target,4,4);
+  // single_stage_multi_reduction_kernel<<<1,64>>>(buckets,target,16,8,0);
+  single_stage_multi_reduction_kernel<<<2,32>>>(buckets,target,2,0,0);
+  
+  cudaDeviceSynchronize();
+  printf("cuda error %u\n",cudaGetLastError());
+  std::vector<P> h_target;
+  h_target.reserve(TEMP_NUM);
+  cudaMemcpy(h_target.data(), target, sizeof(P) * TEMP_NUM, cudaMemcpyDeviceToHost);
+    std::cout<<cudaGetLastError()<<std::endl;
+  std::cout<<"target"<<std::endl;
+  for (int i = 0; i < TEMP_NUM; i++)
+  {
+    std::cout<<h_target[i]<<" ";
+  }
+  std::cout<<std::endl;
+}
+
+template <typename P>
 void test_reduce_rectangle(P* h_buckets){
   for (int i=0; i<TEMP_NUM; i++) std::cout<<h_buckets[i]<<" ";
   std::cout<<std::endl;
@@ -1013,6 +1064,85 @@ else{
     cudaStreamCreate(&streams[0]);
     cudaStreamCreate(&streams[1]);
 
+    // if (source_bits_count>8){
+    if (source_bits_count>0){
+      for(unsigned j=0;j<target_bits_count;j++){
+        // cudaDeviceSynchronize();
+        // std::vector<P> t1_buckets;
+        // std::vector<P> t2_buckets;
+        // t1_buckets.reserve(source_buckets_count/2);
+        // t2_buckets.reserve(source_buckets_count/2);
+        //     cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count/2, cudaMemcpyDeviceToHost);
+        //     cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count/2, cudaMemcpyDeviceToHost);
+        //     std::cout<<"0 buckets temp1"<<std::endl;
+        //     for (unsigned i = 0; i < source_buckets_count/2; i++)
+        //     {
+        //       std::cout<<t1_buckets[i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        //     std::cout<<"0 buckets temp2"<<std::endl;
+        //     for (unsigned i = 0; i < source_buckets_count/2; i++)
+        //     {
+        //       std::cout<<t2_buckets[i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+
+        NUM_THREADS = min(MAX_TH,(source_buckets_count>>(1+j)));
+        printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
+        NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
+        printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
+        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(j==0?source_buckets:temp_buckets1,j==target_bits_count-1? target_buckets: temp_buckets1,1<<(source_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,0);
+        cudaDeviceSynchronize();
+        printf("cuda error %u\n",cudaGetLastError());
+
+        // std::vector<P> t1_buckets;
+        // std::vector<P> t2_buckets;
+        // t1_buckets.reserve(source_buckets_count/2);
+        // t2_buckets.reserve(source_buckets_count/2);
+            // cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count/2, cudaMemcpyDeviceToHost);
+            // cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count/2, cudaMemcpyDeviceToHost);
+            // std::cout<<"1 buckets temp1"<<std::endl;
+            // for (unsigned i = 0; i < source_buckets_count/2; i++)
+            // {
+            //   std::cout<<t1_buckets[i]<<" ";
+            // }
+            // std::cout<<std::endl;
+            // std::cout<<"1 buckets temp2"<<std::endl;
+            // for (unsigned i = 0; i < source_buckets_count/2; i++)
+            // {
+            //   std::cout<<t2_buckets[i]<<" ";
+            // }
+            // std::cout<<std::endl;
+
+        NUM_THREADS = min(MAX_TH,(source_buckets_count>>(1+j)));
+        printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
+        NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
+        printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
+        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1);
+        cudaDeviceSynchronize();
+        printf("cuda error %u\n",cudaGetLastError());
+
+        // std::vector<P> t1_buckets;
+        // std::vector<P> t2_buckets;
+        // t1_buckets.reserve(source_buckets_count/2);
+        // t2_buckets.reserve(source_buckets_count/2);
+            // cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count/2, cudaMemcpyDeviceToHost);
+            // cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count/2, cudaMemcpyDeviceToHost);
+            // std::cout<<"2 buckets temp1"<<std::endl;
+            // for (unsigned i = 0; i < source_buckets_count/2; i++)
+            // {
+            //   std::cout<<t1_buckets[i]<<" ";
+            // }
+            // std::cout<<std::endl;
+            // std::cout<<"2 buckets temp2"<<std::endl;
+            // for (unsigned i = 0; i < source_buckets_count/2; i++)
+            // {
+            //   std::cout<<t2_buckets[i]<<" ";
+            // }
+            // std::cout<<std::endl;
+      }
+    }
+    else{
     // NUM_THREADS = 256;
     // NUM_BLOCKS = ((source_buckets_count>>1) + NUM_THREADS - 1) / NUM_THREADS;
     // NUM_THREADS = 1<<(source_bits_count-1);
@@ -1020,6 +1150,7 @@ else{
     // NUM_BLOCKS = source_windows_count;
     // printf("NUM_BLOCKS %u \n" ,NUM_BLOCKS);
     // reduce_triangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets1,target_buckets,source_bits_count,source_windows_count);
+    // for(unsigned j=0;;j++){
     NUM_THREADS = 1<<(source_bits_count-1);
     printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
     NUM_BLOCKS = source_windows_count;
@@ -1045,7 +1176,8 @@ else{
     general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(source_buckets,target_buckets,1,1<<target_bits_count,1);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
-
+    // }
+    }
     cudaStreamSynchronize(streams[0]);
     cudaStreamDestroy(streams[0]);
     cudaStreamSynchronize(streams[1]);
@@ -1140,6 +1272,8 @@ else{
     // source_window_buckets_count = 1 << source_bits_count;
     source_buckets_count = target_buckets_count;
   }
+  cudaFree(source_buckets);
+  cudaFree(target_buckets);
 }
 
   // cudaDeviceSynchronize();
@@ -1184,6 +1318,8 @@ else{
   cudaFree(sorted_bucket_offsets);
   cudaFree(sorted_single_bucket_indices);
   cudaFree(final_results);
+
+
 }
 
 //this function computes msm using the bucket method
@@ -1423,7 +1559,7 @@ unsigned get_optimal_c(const unsigned size) {
 template <typename S, typename P, typename A>
 void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, bool big_triangle){
   // unsigned c = get_optimal_c(size);
-  unsigned c = 8;
+  unsigned c = 16;
   // unsigned bitsize = 32;
   unsigned bitsize = 256; //get from field
   bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle);
