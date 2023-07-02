@@ -5,6 +5,9 @@
 #include "../utils/host_math.cuh"
 #include <random>
 #include <iostream>
+#include <iomanip>
+#include <string>
+#include <sstream>
 
 #define HOST_INLINE __host__ __forceinline__
 #define DEVICE_INLINE __device__ __forceinline__
@@ -13,7 +16,7 @@
 template <class CONFIG> class Field {
   public:
     static constexpr unsigned TLC = CONFIG::limbs_count;
-    static constexpr unsigned NBITS = CONFIG::modulus_bits_count;
+    static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
 
     static constexpr HOST_DEVICE_INLINE Field zero() {
       return Field { CONFIG::zero };
@@ -23,235 +26,73 @@ template <class CONFIG> class Field {
       return Field { CONFIG::one };
     }
 
-    static constexpr HOST_INLINE Field omega(uint32_t log_size) {
-      // Quick fix to linking issue, permanent fix will follow
-      switch (log_size) {
-        case 0:
-          return Field { CONFIG::one };
-        case 1:
-          return Field { CONFIG::omega1 };
-        case 2:
-          return Field { CONFIG::omega2 };
-        case 3:
-          return Field { CONFIG::omega3 };
-        case 4:
-          return Field { CONFIG::omega4 };
-        case 5:
-          return Field { CONFIG::omega5 };
-        case 6:
-          return Field { CONFIG::omega6 };
-        case 7:
-          return Field { CONFIG::omega7 };
-        case 8:
-          return Field { CONFIG::omega8 };
-        case 9:
-          return Field { CONFIG::omega9 };
-        case 10:
-          return Field { CONFIG::omega10 };
-        case 11:
-          return Field { CONFIG::omega11 };
-        case 12:
-          return Field { CONFIG::omega12 };
-        case 13:
-          return Field { CONFIG::omega13 };
-        case 14:
-          return Field { CONFIG::omega14 };
-        case 15:
-          return Field { CONFIG::omega15 };
-        case 16:
-          return Field { CONFIG::omega16 };
-        case 17:
-          return Field { CONFIG::omega17 };
-        case 18:
-          return Field { CONFIG::omega18 };
-        case 19:
-          return Field { CONFIG::omega19 };
-        case 20:
-          return Field { CONFIG::omega20 };
-        case 21:
-          return Field { CONFIG::omega21 };
-        case 22:
-          return Field { CONFIG::omega22 };
-        case 23:
-          return Field { CONFIG::omega23 };
-        case 24:
-          return Field { CONFIG::omega24 };
-        case 25:
-          return Field { CONFIG::omega25 };
-        case 26:
-          return Field { CONFIG::omega26 };
-        case 27:
-          return Field { CONFIG::omega27 };
-        case 28:
-          return Field { CONFIG::omega28 };
-        case 29:
-          return Field { CONFIG::omega29 };
-        case 30:
-          return Field { CONFIG::omega30 };
-        case 31:
-          return Field { CONFIG::omega31 };
-        case 32:
-          return Field { CONFIG::omega32 };        
+    static constexpr HOST_DEVICE_INLINE Field from(uint32_t value) {
+      storage<TLC> scalar;
+      scalar.limbs[0] = value;
+      for (int i = 1; i < TLC; i++) {
+        scalar.limbs[i] = 0;
       }
-      // return Field { CONFIG::omega[log_size-1] };
+      return Field { scalar };
     }
 
-    static constexpr HOST_INLINE Field omega_inv(uint32_t log_size) {
-      // Quick fix to linking issue, permanent fix will follow
-      switch (log_size) {
-        case 0:
-          return Field { CONFIG::one };
-        case 1:
-          return Field { CONFIG::omega_inv1 };
-        case 2:
-          return Field { CONFIG::omega_inv2 };
-        case 3:
-          return Field { CONFIG::omega_inv3 };
-        case 4:
-          return Field { CONFIG::omega_inv4 };
-        case 5:
-          return Field { CONFIG::omega_inv5 };
-        case 6:
-          return Field { CONFIG::omega_inv6 };
-        case 7:
-          return Field { CONFIG::omega_inv7 };
-        case 8:
-          return Field { CONFIG::omega_inv8 };
-        case 9:
-          return Field { CONFIG::omega_inv9 };
-        case 10:
-          return Field { CONFIG::omega_inv10 };
-        case 11:
-          return Field { CONFIG::omega_inv11 };
-        case 12:
-          return Field { CONFIG::omega_inv12 };
-        case 13:
-          return Field { CONFIG::omega_inv13 };
-        case 14:
-          return Field { CONFIG::omega_inv14 };
-        case 15:
-          return Field { CONFIG::omega_inv15 };
-        case 16:
-          return Field { CONFIG::omega_inv16 };
-        case 17:
-          return Field { CONFIG::omega_inv17 };
-        case 18:
-          return Field { CONFIG::omega_inv18 };
-        case 19:
-          return Field { CONFIG::omega_inv19 };
-        case 20:
-          return Field { CONFIG::omega_inv20 };
-        case 21:
-          return Field { CONFIG::omega_inv21 };
-        case 22:
-          return Field { CONFIG::omega_inv22 };
-        case 23:
-          return Field { CONFIG::omega_inv23 };
-        case 24:
-          return Field { CONFIG::omega_inv24 };
-        case 25:
-          return Field { CONFIG::omega_inv25 };
-        case 26:
-          return Field { CONFIG::omega_inv26 };
-        case 27:
-          return Field { CONFIG::omega_inv27 };
-        case 28:
-          return Field { CONFIG::omega_inv28 };
-        case 29:
-          return Field { CONFIG::omega_inv29 };
-        case 30:
-          return Field { CONFIG::omega_inv30 };
-        case 31:
-          return Field { CONFIG::omega_inv31 };
-        case 32:
-          return Field { CONFIG::omega_inv32 };        
-      }
-      // return Field { CONFIG::omega_inv[log_size-1] };
+    static constexpr HOST_DEVICE_INLINE Field generator_x() {
+      return Field { CONFIG::g1_gen_x };
     }
 
-    static constexpr HOST_INLINE Field inv_log_size(uint32_t log_size) {
-      // Quick fix to linking issue, permanent fix will follow
-      switch (log_size) {
-        case 1:
-          return Field { CONFIG::inv1 };
-        case 2:
-          return Field { CONFIG::inv2 };
-        case 3:
-          return Field { CONFIG::inv3 };
-        case 4:
-          return Field { CONFIG::inv4 };
-        case 5:
-          return Field { CONFIG::inv5 };
-        case 6:
-          return Field { CONFIG::inv6 };
-        case 7:
-          return Field { CONFIG::inv7 };
-        case 8:
-          return Field { CONFIG::inv8 };
-        case 9:
-          return Field { CONFIG::inv9 };
-        case 10:
-          return Field { CONFIG::inv10 };
-        case 11:
-          return Field { CONFIG::inv11 };
-        case 12:
-          return Field { CONFIG::inv12 };
-        case 13:
-          return Field { CONFIG::inv13 };
-        case 14:
-          return Field { CONFIG::inv14 };
-        case 15:
-          return Field { CONFIG::inv15 };
-        case 16:
-          return Field { CONFIG::inv16 };
-        case 17:
-          return Field { CONFIG::inv17 };
-        case 18:
-          return Field { CONFIG::inv18 };
-        case 19:
-          return Field { CONFIG::inv19 };
-        case 20:
-          return Field { CONFIG::inv20 };
-        case 21:
-          return Field { CONFIG::inv21 };
-        case 22:
-          return Field { CONFIG::inv22 };
-        case 23:
-          return Field { CONFIG::inv23 };
-        case 24:
-          return Field { CONFIG::inv24 };
-        case 25:
-          return Field { CONFIG::inv25 };
-        case 26:
-          return Field { CONFIG::inv26 };
-        case 27:
-          return Field { CONFIG::inv27 };
-        case 28:
-          return Field { CONFIG::inv28 };
-        case 29:
-          return Field { CONFIG::inv29 };
-        case 30:
-          return Field { CONFIG::inv30 };
-        case 31:
-          return Field { CONFIG::inv31 };
-        case 32:
-          return Field { CONFIG::inv32 };        
-      }
-      // return Field { CONFIG::inv[log_size-1] };
+    static constexpr HOST_DEVICE_INLINE Field generator_y() {
+      return Field { CONFIG::g1_gen_y };
+    }
+
+    static HOST_INLINE Field omega(uint32_t logn) {
+        if (logn == 0) {
+            return Field { CONFIG::one };
+        }
+
+        if (logn > CONFIG::omegas_count) {
+            throw std::invalid_argument( "Field: Invalid omega index" );
+        }
+
+        storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
+        return Field { omega.storages[logn-1] };
+    }      
+
+    static HOST_INLINE Field omega_inv(uint32_t logn) {
+        if (logn == 0) {
+            return Field { CONFIG::one };
+        }
+
+        if (logn > CONFIG::omegas_count) {
+            throw std::invalid_argument( "Field: Invalid omega_inv index" );
+        }
+
+        storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
+        return Field { omega_inv.storages[logn-1] };
+    }
+
+    static HOST_INLINE Field inv_log_size(uint32_t logn) {
+        if (logn == 0) {
+            return Field { CONFIG::one };
+        }
+
+        if (logn > CONFIG::omegas_count) {
+            throw std::invalid_argument( "Field: Invalid inv index" );
+        }
+
+        storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
+        return Field { inv.storages[logn-1] };
     }
 
     static constexpr HOST_DEVICE_INLINE Field modulus() {
       return Field { CONFIG::modulus };
     }
 
-
-  private:
+  // private:
     typedef storage<TLC> ff_storage;
     typedef storage<2*TLC> ff_wide_storage;
 
     static constexpr unsigned slack_bits = 32 * TLC - NBITS;
 
-    struct wide {
+    struct Wide {
       ff_wide_storage limbs_storage;
       
       Field HOST_DEVICE_INLINE get_lower() {
@@ -280,15 +121,15 @@ template <class CONFIG> class Field {
       }
     };
 
-    friend HOST_DEVICE_INLINE wide operator+(wide xs, const wide& ys) {   
-      wide rs = {};
+    friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys) {   
+      Wide rs = {};
       add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return rs;
     }
 
     // an incomplete impl that assumes that xs > ys
-    friend HOST_DEVICE_INLINE wide operator-(wide xs, const wide& ys) {   
-      wide rs = {};
+    friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys) {   
+      Wide rs = {};
       sub_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return rs;
     }
@@ -337,7 +178,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? TLC : TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -353,7 +196,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? 2 * TLC : 2 * TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -414,7 +259,7 @@ template <class CONFIG> class Field {
     static DEVICE_INLINE void cmad_n(uint32_t *acc, const uint32_t *a, uint32_t bi, size_t n = TLC) {
       acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
       acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
-  #pragma unroll
+    #pragma unroll
       for (size_t i = 2; i < n; i += 2) {
         acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
         acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
@@ -481,8 +326,6 @@ template <class CONFIG> class Field {
       const uint32_t limb_lsb_idx = (digit_num*digit_width) / 32;
       const uint32_t shift_bits = (digit_num*digit_width) % 32;
       unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
-      // printf("get_scalar_func digit %u rv %u\n",digit_num,rv);
-      // if (shift_bits + digit_width > 32) {
       if ((shift_bits + digit_width > 32) && (limb_lsb_idx+1 < TLC)) {
         rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
       }
@@ -511,20 +354,24 @@ template <class CONFIG> class Field {
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Field& xs) {
-      os << "{";
-      for (int i = 0; i < TLC; i++)
-        os << xs.limbs_storage.limbs[i] << ", ";
-      os << "}";
+      std::stringstream hex_string;
+      hex_string << std::hex << std::setfill('0');
+
+      for (int i = 0; i < TLC; i++) {
+          hex_string << std::setw(8) << xs.limbs_storage.limbs[i];
+      }
+
+      os << "0x" << hex_string.str();
       return os;
     }
 
-    friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys) {   
+    friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys) {
       Field rs = {};
       add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return reduce<1>(rs);
     }
 
-    friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys) {   
+    friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys) {
       Field rs = {};
       uint32_t carry = sub_limbs<true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       if (carry == 0)
@@ -535,22 +382,22 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE wide mul_wide(const Field& xs, const Field& ys) {
-      wide rs = {};
+    static constexpr HOST_DEVICE_INLINE Wide mul_wide(const Field& xs, const Field& ys) {
+      Wide rs = {};
       multiply_raw(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return rs;
     }
 
     friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys) {
-      wide xy = mul_wide(xs, ys);
+      Wide xy = mul_wide(xs, ys);
       Field xy_hi = xy.get_higher_with_slack();
-      wide l = {};
+      Wide l = {};
       multiply_raw(xy_hi.limbs_storage, get_m(), l.limbs_storage);
       Field l_hi = l.get_higher_with_slack();
-      wide lp = {};
+      Wide lp = {};
       multiply_raw(l_hi.limbs_storage, get_modulus(), lp.limbs_storage);
-      wide r_wide = xy - lp;
-      wide r_wide_reduced = {};
+      Wide r_wide = xy - lp;
+      Wide r_wide_reduced = {};
       uint32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
       r_wide = reduced ? r_wide : r_wide_reduced;
       Field r = r_wide.get_lower();
@@ -578,22 +425,24 @@ template <class CONFIG> class Field {
       return !(xs == ys);
     }
 
-    template <unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE Field mul(const unsigned scalar, const Field &xs) {
-      Field rs = {};
-      Field temp = xs;
-      unsigned l = scalar;
+    template <const Field& multiplier, class T> static constexpr HOST_DEVICE_INLINE T mul_const(const T &xs) {
+      return mul_unsigned<multiplier.limbs_storage.limbs[0], T>(xs);
+    }
+
+    template <uint32_t mutliplier, class T, unsigned REDUCTION_SIZE = 1>
+    static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T &xs) {
+      T rs = {};
+      T temp = xs;
       bool is_zero = true;
   #ifdef __CUDA_ARCH__
   #pragma unroll
   #endif
       for (unsigned i = 0; i < 32; i++) {
-        if (l & 1) {
+        if (mutliplier & (1 << i)) {
           rs = is_zero ? temp : (rs + temp);
           is_zero = false;
         }
-        l >>= 1;
-        if (l == 0)
+        if (mutliplier & ((1 << (31 - i) - 1) << (i + 1)))
           break;
         temp = temp + temp;
       }
@@ -601,7 +450,7 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE wide sqr_wide(const Field& xs) {
+    static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const Field& xs) {
       // TODO: change to a more efficient squaring
       return mul_wide<MODULUS_MULTIPLE>(xs, xs);
     }

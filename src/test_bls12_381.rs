@@ -14,6 +14,15 @@ use rustacuda_core::DevicePointer;
 use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
 
 extern "C" {
+    fn poseidon_multi_cuda_bls12_381(
+        input: *const ScalarField_BLS12_381,
+        out: *mut ScalarField_BLS12_381,
+        number_of_blocks: usize,
+        arity: c_uint,
+        device_id: usize,
+        stream: usize // TODO: provide a real stream
+    ) -> c_uint;
+
     fn msm_cuda_bls12_381(
         out: *mut Point_BLS12_381,
         points: *const PointAffineNoInfinity_BLS12_381,
@@ -224,6 +233,28 @@ extern "C" {
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
+}
+
+pub fn poseidon_multi_bls12_381(input: &[ScalarField_BLS12_381], arity: usize, device_id: usize) -> Result<Vec<ScalarField_BLS12_381>, std::io::Error> {
+    let number_of_blocks = input.len() / arity;
+    let mut out = vec![ScalarField_BLS12_381::zero(); number_of_blocks];
+    unsafe {
+        let res = poseidon_multi_cuda_bls12_381(
+            input as *const _ as *const ScalarField_BLS12_381,
+            out.as_mut_slice() as *mut _ as *mut ScalarField_BLS12_381,
+            number_of_blocks,
+            arity as c_uint,
+            device_id,
+            0
+        );
+        
+        // TO-DO: go for better expression of error types
+        if res != 0 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Error executing poseidon_multi"));
+        }
+    }
+
+    Ok(out)
 }
 
 pub fn msm_bls12_381(points: &[PointAffineNoInfinity_BLS12_381], scalars: &[ScalarField_BLS12_381], device_id: usize) -> Point_BLS12_381 {
@@ -732,7 +763,7 @@ pub fn clone_buffer_bls12_381<T: DeviceCopy>(buf: &mut DeviceBuffer<T>) -> Devic
     return buf_cpy;
 }
 
-pub fn get_rng_bls12_381(seed: Option<u64>) -> Box<dyn RngCore> {
+pub fn get_rng_bls12_381(seed: Option<u64>) -> Box<dyn RngCore> { //TODO: not curve specific
     let rng: Box<dyn RngCore> = match seed {
         Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
         None => Box::new(rand::thread_rng()),
@@ -796,7 +827,9 @@ pub fn set_up_scalars_bls12_381(test_size: usize, log_domain_size: usize, invers
 
 #[cfg(test)]
 pub(crate) mod tests_bls12_381 {
+    use std::fs::{File, self};
     use std::ops::Add;
+    use std::path::PathBuf;
     use ark_bls12_381::{Fr, G1Affine, G1Projective};
     use ark_ec::{msm::VariableBaseMSM, AffineCurve, ProjectiveCurve};
     use ark_ff::{FftField, Field, Zero};
@@ -889,6 +922,24 @@ pub(crate) mod tests_bls12_381 {
                 msm_result.to_ark_affine(),
                 Point_BLS12_381::from_ark(msm_result_ark).to_ark_affine()
             );
+        }
+    }
+
+    #[test]
+    fn test_poseidon() {
+        let arities = [2, 4, 8, 11];
+        let number_of_blocks = 1024;
+
+        for arity in arities {
+            // Generate scalars sequence [0, 1, ... arity * number_of_blocks]
+            let scalars: Vec<ScalarField_BLS12_381> = (0..arity * number_of_blocks).map(|i| ScalarField_BLS12_381::from_ark(Fr_BLS12_381::from(i as i32).into_repr())).collect();
+            let out = poseidon_multi_bls12_381(&scalars, arity, 0).unwrap();
+
+            let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            path.push(format!("test_vectors/poseidon_1024_{}", arity));
+
+            let test_vector: Vec<ScalarField_BLS12_381> = serde_cbor::from_slice(&fs::read(path).unwrap()).unwrap();
+            assert!(out.iter().zip(test_vector.iter()).all(|(l, r)| l.eq(r)));
         }
     }
 
@@ -1461,24 +1512,16 @@ pub(crate) mod tests_bls12_381 {
     fn test_vec_point_mul() {
         let dummy_one = Point_BLS12_381 {
             x: BaseField_BLS12_381::one(),
-            y: BaseField_BLS12_381::zero(),
+            y: BaseField_BLS12_381::one(),
             z: BaseField_BLS12_381::one(),
         };
 
         let mut inout = [dummy_one, dummy_one, Point_BLS12_381::zero()];
         let scalars = [ScalarField_BLS12_381::one(), ScalarField_BLS12_381::zero(), ScalarField_BLS12_381::zero()];
         let expected = [
+            dummy_one,
             Point_BLS12_381::zero(),
-            Point_BLS12_381 {
-                x: BaseField_BLS12_381::zero(),
-                y: BaseField_BLS12_381::one(),
-                z: BaseField_BLS12_381::zero(),
-            },
-            Point_BLS12_381 {
-                x: BaseField_BLS12_381::zero(),
-                y: BaseField_BLS12_381::one(),
-                z: BaseField_BLS12_381::zero(),
-            },
+            Point_BLS12_381::zero(),
         ];
         multp_vec_bls12_381(&mut inout, &scalars, 0);
         assert_eq!(inout, expected);

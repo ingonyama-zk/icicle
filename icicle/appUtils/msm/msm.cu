@@ -746,7 +746,7 @@ void test_reduce_rectangle(P* h_buckets){
 
 //this function computes msm using the bucket method
 template <typename S, typename P, typename A>
-void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned size, P* final_result, bool on_device, bool big_triangle) {
+void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned size, P* final_result, bool on_device, bool big_triangle, cudaStream_t stream) {
   
   // std::cout<<"points"<<std::endl;
   // for (int i = 0; i < size; i++)
@@ -765,10 +765,10 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   A *d_points;
   if (!on_device) {
     //copy scalars and point to gpu
-    cudaMalloc(&d_scalars, sizeof(S) * size);
-    cudaMalloc(&d_points, sizeof(A) * size);
-    cudaMemcpy(d_scalars, scalars, sizeof(S) * size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_points, points, sizeof(A) * size, cudaMemcpyHostToDevice);
+    cudaMallocAsync(&d_scalars, sizeof(S) * size, stream);
+    cudaMallocAsync(&d_points, sizeof(A) * size, stream);
+    cudaMemcpyAsync(d_scalars, scalars, sizeof(S) * size, cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_points, points, sizeof(A) * size, cudaMemcpyHostToDevice, stream);
   }
   else {
     d_scalars = scalars;
@@ -791,24 +791,24 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   #else
   unsigned nof_buckets = nof_bms<<c;
   #endif
-  cudaMalloc(&buckets, sizeof(P) * nof_buckets);
+  cudaMallocAsync(&buckets, sizeof(P) * nof_buckets, stream);
 
   // launch the bucket initialization kernel with maximum threads
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, nof_buckets);
+  initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, nof_buckets);
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 
   unsigned *bucket_indices;
   unsigned *point_indices;
-  cudaMalloc(&bucket_indices, sizeof(unsigned) * size * (nof_bms+1));
-  cudaMalloc(&point_indices, sizeof(unsigned) * size * (nof_bms+1));
+  cudaMallocAsync(&bucket_indices, sizeof(unsigned) * size * (nof_bms+1), stream);
+  cudaMallocAsync(&point_indices, sizeof(unsigned) * size * (nof_bms+1), stream);
 
   //split scalars into digits
   NUM_THREADS = 1 << 10;
   NUM_BLOCKS = (size * (nof_bms+1) + NUM_THREADS - 1) / NUM_THREADS;
-  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
+  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
                                                     nof_bms, bm_bitsize, c, top_bm_nof_missing_bits); //+size - leaving the first bm free for the out of place sort later
                                                     cudaDeviceSynchronize();
                                                     printf("cuda error %u\n",cudaGetLastError());
@@ -852,43 +852,46 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sort_indices_temp_storage{};
   size_t sort_indices_temp_storage_bytes;
+  // The second to last parameter is the default value supplied explicitly to allow passing the stream
+  // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + size, bucket_indices,
-                                 point_indices + size, point_indices, size);
-
-  cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
+                                 point_indices + size, point_indices, size, 0, sizeof(unsigned) * 8, stream);
+  cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream);
   for (unsigned i = 0; i < nof_bms; i++) {
     unsigned offset_out = i * size;
     unsigned offset_in = offset_out + size;
-    cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
-                                  bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, size);
+    // The second to last parameter is the default value supplied explicitly to allow passing the stream
+    // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
+    cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in, bucket_indices + offset_out,
+                                 point_indices + offset_in, point_indices + offset_out, size, 0, sizeof(unsigned) * 8, stream);
   }
-  cudaFree(sort_indices_temp_storage);
+  cudaFreeAsync(sort_indices_temp_storage, stream);
 
   //find bucket_sizes
   unsigned *single_bucket_indices;
   unsigned *bucket_sizes;
   unsigned *nof_buckets_to_compute;
-  cudaMalloc(&single_bucket_indices, sizeof(unsigned)*nof_buckets);
-  cudaMalloc(&bucket_sizes, sizeof(unsigned)*nof_buckets);
-  cudaMalloc(&nof_buckets_to_compute, sizeof(unsigned));
+  cudaMallocAsync(&single_bucket_indices, sizeof(unsigned)*nof_buckets, stream);
+  cudaMallocAsync(&bucket_sizes, sizeof(unsigned)*nof_buckets, stream);
+  cudaMallocAsync(&nof_buckets_to_compute, sizeof(unsigned), stream);
   unsigned *encode_temp_storage{};
   size_t encode_temp_storage_bytes = 0;
   cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
-                                        nof_buckets_to_compute, nof_bms*size);
-  cudaMalloc(&encode_temp_storage, encode_temp_storage_bytes);
+                                        nof_buckets_to_compute, nof_bms*size, stream);
+  cudaMallocAsync(&encode_temp_storage, encode_temp_storage_bytes, stream);
   cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
-                                        nof_buckets_to_compute, nof_bms*size);
-  cudaFree(encode_temp_storage);
+                                        nof_buckets_to_compute, nof_bms*size, stream);
+  cudaFreeAsync(encode_temp_storage, stream);
 
   //get offsets - where does each new bucket begin
   unsigned* bucket_offsets;
-  cudaMalloc(&bucket_offsets, sizeof(unsigned)*nof_buckets);
+  cudaMallocAsync(&bucket_offsets, sizeof(unsigned)*nof_buckets, stream);
   unsigned* offsets_temp_storage{};
   size_t offsets_temp_storage_bytes = 0;
-  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, nof_buckets);
-  cudaMalloc(&offsets_temp_storage, offsets_temp_storage_bytes);
-  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, nof_buckets);
-  cudaFree(offsets_temp_storage);
+  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, nof_buckets, stream);
+  cudaMallocAsync(&offsets_temp_storage, offsets_temp_storage_bytes, stream);
+  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, nof_buckets, stream);
+  cudaFreeAsync(offsets_temp_storage, stream);
 
   //sort by bucket sizes
   unsigned* sorted_bucket_sizes;
@@ -921,38 +924,37 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, 
                                                         //  d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize);                                              
-  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
-                                                         d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize, c);                   
-  // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
-  //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
-                                                         cudaDeviceSynchronize();
-                                                         printf("cuda error %u\n",cudaGetLastError());
-
+accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
+                                                          d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize, c);                   
+   // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
+   //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
+                                                          cudaDeviceSynchronize();
+                                                          printf("cuda error %u\n",cudaGetLastError());
 
   #ifdef SSM_SUM
     //sum each bucket
     NUM_THREADS = 1 << 10;
     NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-    ssm_buckets_kernel<fake_point, fake_scalar><<<NUM_BLOCKS, NUM_THREADS>>>(buckets, single_bucket_indices, nof_buckets, c);
+    ssm_buckets_kernel<fake_point, fake_scalar><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, single_bucket_indices, nof_buckets, c);
    
     //sum each bucket module
     P* final_results;
-    cudaMalloc(&final_results, sizeof(P) * nof_bms);
+    cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
     NUM_THREADS = 1<<c;
     NUM_BLOCKS = nof_bms;
-    sum_reduction_kernel<<<NUM_BLOCKS,NUM_THREADS>>>(buckets, final_results);
+    sum_reduction_kernel<<<NUM_BLOCKS,NUM_THREADS, 0, stream>>>(buckets, final_results);
   #endif
 
   P* final_results;
   if (big_triangle){
-    cudaMalloc(&final_results, sizeof(P) * nof_bms);
+    cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
     //launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = nof_bms;
     NUM_BLOCKS = 1;
     #ifdef SIGNED_DIG
-    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c-1); //sighed digits
+    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms, c-1); //sighed digits
     #else
-    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, final_results, nof_bms, c); 
+    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms, c); 
     #endif
     cudaDeviceSynchronize();
     printf("cuda error %u\n",cudaGetLastError());
@@ -1290,51 +1292,53 @@ else{
 
   P* d_final_result;
   if (!on_device)
-    cudaMalloc(&d_final_result, sizeof(P));
+    cudaMallocAsync(&d_final_result, sizeof(P), stream);
 
   //launch the double and add kernel, a single thread
-  final_accumulation_kernel<P, S><<<1,1>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
+  final_accumulation_kernel<P, S><<<1,1,0,stream>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
   //copy final result to host
-  cudaDeviceSynchronize();
+  cudaStreamSynchronize(stream);
   if (!on_device)
-    cudaMemcpy(final_result, d_final_result, sizeof(P), cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(final_result, d_final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
 
   //free memory
   if (!on_device) {
-    cudaFree(d_points);
-    cudaFree(d_scalars);
-    cudaFree(d_final_result);
+    cudaFreeAsync(d_points, stream);
+    cudaFreeAsync(d_scalars, stream);
+    cudaFreeAsync(d_final_result, stream);
   }
-  cudaFree(buckets);
-  cudaFree(bucket_indices);
-  cudaFree(point_indices);
-  cudaFree(single_bucket_indices);
-  cudaFree(bucket_sizes);
-  cudaFree(nof_buckets_to_compute);
-  cudaFree(bucket_offsets);
-  cudaFree(sorted_bucket_sizes);
-  cudaFree(sorted_bucket_offsets);
-  cudaFree(sorted_single_bucket_indices);
-  cudaFree(final_results);
+  cudaFreeAsync(buckets, stream);
+  cudaFreeAsync(bucket_indices, stream);
+  cudaFreeAsync(point_indices, stream);
+  cudaFreeAsync(single_bucket_indices, stream);
+  cudaFreeAsync(bucket_sizes, stream);
+  cudaFreeAsync(nof_buckets_to_compute, stream);
+  cudaFreeAsync(bucket_offsets, stream);
+  cudaFreeAsync(sorted_bucket_sizes,stream);
+  cudaFreeAsync(sorted_bucket_offsets,stream);
+  cudaFreeAsync(sorted_single_bucket_indices,stream);
+  cudaFreeAsync(final_results, stream);
+
+  cudaStreamSynchronize(stream);
 
 
 }
 
 //this function computes msm using the bucket method
 template <typename S, typename P, typename A>
-void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned batch_size, unsigned msm_size, P* final_results, bool on_device){
+void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsigned batch_size, unsigned msm_size, P* final_results, bool on_device, cudaStream_t stream){
 
   unsigned total_size = batch_size * msm_size;
   S *d_scalars;
   A *d_points;
   if (!on_device) {
     //copy scalars and point to gpu
-    cudaMalloc(&d_scalars, sizeof(S) * total_size);
-    cudaMalloc(&d_points, sizeof(A) * total_size);
-    cudaMemcpy(d_scalars, scalars, sizeof(S) * total_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_points, points, sizeof(A) * total_size, cudaMemcpyHostToDevice);
+    cudaMallocAsync(&d_scalars, sizeof(S) * total_size, stream);
+    cudaMallocAsync(&d_points, sizeof(A) * total_size, stream);
+    cudaMemcpyAsync(d_scalars, scalars, sizeof(S) * total_size, cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_points, points, sizeof(A) * total_size, cudaMemcpyHostToDevice, stream);
   }
   else {
     d_scalars = scalars;
@@ -1351,69 +1355,73 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
   unsigned bm_bitsize = ceil(log2(nof_bms));
   unsigned nof_buckets = (nof_bms<<c);
   unsigned total_nof_buckets = nof_buckets*batch_size;
-  cudaMalloc(&buckets, sizeof(P) * total_nof_buckets); 
+  cudaMallocAsync(&buckets, sizeof(P) * total_nof_buckets, stream); 
 
   //lanch the bucket initialization kernel with maximum threads
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, total_nof_buckets); 
+  initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets); 
 
   unsigned *bucket_indices;
   unsigned *point_indices;
-  cudaMalloc(&bucket_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size));
-  cudaMalloc(&point_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size));
+  cudaMallocAsync(&bucket_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size), stream);
+  cudaMallocAsync(&point_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size), stream);
 
   //split scalars into digits
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_size * nof_bms + msm_size + NUM_THREADS - 1) / NUM_THREADS;
-  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, 
+  split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, 
                                                     msm_log_size, nof_bms, bm_bitsize, c); //+size - leaving the first bm free for the out of place sort later
 
   //sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to each bucket
   unsigned *sorted_bucket_indices;
   unsigned *sorted_point_indices;
-  cudaMalloc(&sorted_bucket_indices, sizeof(unsigned) * (total_size * nof_bms));
-  cudaMalloc(&sorted_point_indices, sizeof(unsigned) * (total_size * nof_bms));
+  cudaMallocAsync(&sorted_bucket_indices, sizeof(unsigned) * (total_size * nof_bms), stream);
+  cudaMallocAsync(&sorted_point_indices, sizeof(unsigned) * (total_size * nof_bms), stream);
 
   unsigned *sort_indices_temp_storage{};
   size_t sort_indices_temp_storage_bytes;
+  // The second to last parameter is the default value supplied explicitly to allow passing the stream
+  // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
-                                 point_indices + msm_size, sorted_point_indices, total_size * nof_bms);
-  cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
+                                 point_indices + msm_size, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned)*8, stream);
+  cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream);
+  // The second to last parameter is the default value supplied explicitly to allow passing the stream
+  // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for more info
   cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
-                                 point_indices + msm_size, sorted_point_indices, total_size * nof_bms);
-  cudaFree(sort_indices_temp_storage);
+                                 point_indices + msm_size, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned)*8, stream);
+  cudaFreeAsync(sort_indices_temp_storage, stream);
 
   //find bucket_sizes
   unsigned *single_bucket_indices;
   unsigned *bucket_sizes;
   unsigned *total_nof_buckets_to_compute;
-  cudaMalloc(&single_bucket_indices, sizeof(unsigned)*total_nof_buckets);
-  cudaMalloc(&bucket_sizes, sizeof(unsigned)*total_nof_buckets);
-  cudaMalloc(&total_nof_buckets_to_compute, sizeof(unsigned));
+  cudaMallocAsync(&single_bucket_indices, sizeof(unsigned)*total_nof_buckets, stream);
+  cudaMallocAsync(&bucket_sizes, sizeof(unsigned)*total_nof_buckets, stream);
+  cudaMallocAsync(&total_nof_buckets_to_compute, sizeof(unsigned), stream);
   unsigned *encode_temp_storage{};
   size_t encode_temp_storage_bytes = 0;
   cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
-                                        total_nof_buckets_to_compute, nof_bms*total_size);
-  cudaMalloc(&encode_temp_storage, encode_temp_storage_bytes);
+                                        total_nof_buckets_to_compute, nof_bms*total_size, stream);  
+  cudaMallocAsync(&encode_temp_storage, encode_temp_storage_bytes, stream);
   cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
-                                        total_nof_buckets_to_compute, nof_bms*total_size);
-  cudaFree(encode_temp_storage);
+                                        total_nof_buckets_to_compute, nof_bms*total_size, stream);
+  cudaFreeAsync(encode_temp_storage, stream);
 
   //get offsets - where does each new bucket begin
   unsigned* bucket_offsets;
-  cudaMalloc(&bucket_offsets, sizeof(unsigned)*total_nof_buckets);
+  cudaMallocAsync(&bucket_offsets, sizeof(unsigned)*total_nof_buckets, stream);
   unsigned* offsets_temp_storage{};
   size_t offsets_temp_storage_bytes = 0;
-  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets);
-  cudaMalloc(&offsets_temp_storage, offsets_temp_storage_bytes);
-  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets);
-  cudaFree(offsets_temp_storage);
+  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets, stream);
+  cudaMallocAsync(&offsets_temp_storage, offsets_temp_storage_bytes, stream);
+  cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets, stream);
+  cudaFreeAsync(offsets_temp_storage, stream);
 
   //launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices,
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices,
                                                         d_points, nof_buckets, total_nof_buckets_to_compute, c+bm_bitsize);
 
   // #ifdef SSM_SUM
@@ -1432,44 +1440,46 @@ void batched_bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *poin
 
   // #ifdef BIG_TRIANGLE
     P* bm_sums;
-    cudaMalloc(&bm_sums, sizeof(P) * nof_bms * batch_size);
+    cudaMallocAsync(&bm_sums, sizeof(P) * nof_bms * batch_size, stream);
     //launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = 1<<8;
     NUM_BLOCKS = (nof_bms*batch_size + NUM_THREADS - 1) / NUM_THREADS;
-    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bm_sums, nof_bms*batch_size, c);
+    big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bm_sums, nof_bms*batch_size, c);
   // #endif
 
   P* d_final_results;
   if (!on_device)
-    cudaMalloc(&d_final_results, sizeof(P)*batch_size);
+    cudaMallocAsync(&d_final_results, sizeof(P)*batch_size, stream);
 
   //launch the double and add kernel, a single thread for each msm
   NUM_THREADS = 1<<8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
+  final_accumulation_kernel<P, S><<<NUM_BLOCKS,NUM_THREADS, 0, stream>>>(bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
+  
   final_accumulation_kernel<P, S><<<NUM_BLOCKS,NUM_THREADS>>>(bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
 
   //copy final result to host
-  cudaDeviceSynchronize();
   if (!on_device)
-    cudaMemcpy(final_results, d_final_results, sizeof(P)*batch_size, cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(final_results, d_final_results, sizeof(P)*batch_size, cudaMemcpyDeviceToHost, stream);
 
   //free memory
   if (!on_device) {
-    cudaFree(d_points);
-    cudaFree(d_scalars);
-    cudaFree(d_final_results);
+    cudaFreeAsync(d_points, stream);
+    cudaFreeAsync(d_scalars, stream);
+    cudaFreeAsync(d_final_results, stream);
   }
-  cudaFree(buckets);
-  cudaFree(bucket_indices);
-  cudaFree(point_indices);
-  cudaFree(sorted_bucket_indices);
-  cudaFree(sorted_point_indices);
-  cudaFree(single_bucket_indices);
-  cudaFree(bucket_sizes);
-  cudaFree(total_nof_buckets_to_compute);
-  cudaFree(bucket_offsets);
-  cudaFree(bm_sums);
+  cudaFreeAsync(buckets, stream);
+  cudaFreeAsync(bucket_indices, stream);
+  cudaFreeAsync(point_indices, stream);
+  cudaFreeAsync(sorted_bucket_indices, stream);
+  cudaFreeAsync(sorted_point_indices, stream);
+  cudaFreeAsync(single_bucket_indices, stream);
+  cudaFreeAsync(bucket_sizes, stream);
+  cudaFreeAsync(total_nof_buckets_to_compute, stream);
+  cudaFreeAsync(bucket_offsets, stream);
+  cudaFreeAsync(bm_sums, stream);
 
+  cudaStreamSynchronize(stream);
 }
 
 
@@ -1484,44 +1494,44 @@ __global__ void to_proj_kernel(A* affine_points, P* proj_points, unsigned N){
 
 //the function computes msm using ssm
 template <typename S, typename P, typename A>
-void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result){ //works up to 2^8
+void short_msm(S *h_scalars, A *h_points, unsigned size, P* h_final_result, cudaStream_t stream){ //works up to 2^8
   S *scalars;
   A *a_points;
   P *p_points;
   P *results;
 
-  cudaMalloc(&scalars, sizeof(S) * size);
-  cudaMalloc(&a_points, sizeof(A) * size);
-  cudaMalloc(&p_points, sizeof(P) * size);
-  cudaMalloc(&results, sizeof(P) * size);
+  cudaMallocAsync(&scalars, sizeof(S) * size, stream);
+  cudaMallocAsync(&a_points, sizeof(A) * size, stream);
+  cudaMallocAsync(&p_points, sizeof(P) * size, stream);
+  cudaMallocAsync(&results, sizeof(P) * size, stream);
 
   //copy inputs to device
-  cudaMemcpy(scalars, h_scalars, sizeof(S) * size, cudaMemcpyHostToDevice);
-  cudaMemcpy(a_points, h_points, sizeof(A) * size, cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(scalars, h_scalars, sizeof(S) * size, cudaMemcpyHostToDevice, stream);
+  cudaMemcpyAsync(a_points, h_points, sizeof(A) * size, cudaMemcpyHostToDevice, stream);
 
   //convert to projective representation and multiply each point by its scalar using single scalar multiplication
   unsigned NUM_THREADS = size;
-  to_proj_kernel<<<1,NUM_THREADS>>>(a_points, p_points, size);
-  ssm_kernel<<<1,NUM_THREADS>>>(scalars, p_points, results, size);
+  to_proj_kernel<<<1,NUM_THREADS, 0, stream>>>(a_points, p_points, size);
+  ssm_kernel<<<1,NUM_THREADS, 0, stream>>>(scalars, p_points, results, size);
 
   P *final_result;
-  cudaMalloc(&final_result, sizeof(P));
+  cudaMallocAsync(&final_result, sizeof(P), stream);
 
   //assuming msm size is a power of 2
   //sum all the ssm results
   NUM_THREADS = size;
-  sum_reduction_kernel<<<1,NUM_THREADS>>>(results, final_result);
+  sum_reduction_kernel<<<1,NUM_THREADS, 0, stream>>>(results, final_result);
 
   //copy result to host
-  cudaDeviceSynchronize();
-  cudaMemcpy(h_final_result, final_result, sizeof(P), cudaMemcpyDeviceToHost);
+  cudaStreamSynchronize(stream);
+  cudaMemcpyAsync(h_final_result, final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
 
   //free memory
-  cudaFree(scalars);
-  cudaFree(a_points);
-  cudaFree(p_points);
-  cudaFree(results);
-  cudaFree(final_result);
+  cudaFreeAsync(scalars, stream);
+  cudaFreeAsync(a_points, stream);
+  cudaFreeAsync(p_points, stream);
+  cudaFreeAsync(results, stream);
+  cudaFreeAsync(final_result, stream);
 
 }
 
@@ -1562,16 +1572,16 @@ void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, 
   unsigned c = 16;
   // unsigned bitsize = 32;
   unsigned bitsize = 256; //get from field
-  bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle);
+  bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle, stream);
 }
 
 // this function is used to compute a batches of msms of size larger than 256
 template <typename S, typename P, typename A>
-void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result, bool on_device){
+void batched_large_msm(S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result, bool on_device, cudaStream_t stream){
   unsigned c = get_optimal_c(msm_size);
   // unsigned c = 6;
   // unsigned bitsize = 32;
-  unsigned bitsize = 253;
-  batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device);
+  unsigned bitsize = 255;
+  batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device, stream);
 }
 #endif
