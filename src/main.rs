@@ -111,14 +111,13 @@ fn bench_ntt_template<E, S>(
     println!("{}", bench_id);
 
     let (input, mut d_evals, mut d_domain) = set_data(ntt_size * batch_size, log_ntt_size, inverse);
-    //range_push!("{}", bench_id);
+
     let first = bench_fn(&mut d_evals, &mut d_domain, batch_size);
-    //start_timer!(bench_id);
+
     let start = Instant::now();
     for i in 0..samples {
         bench_fn(&mut d_evals, &mut d_domain, batch_size);
     }
-    //end_timer!(bench_id);
     let elapsed = start.elapsed();
     println!(
         "{} {:0?} us x {} = {:?}",
@@ -127,31 +126,10 @@ fn bench_ntt_template<E, S>(
         samples,
         elapsed
     );
-    //range_pop!();
 
     Some((input, first))
 }
 
-fn arith_run() {
-    use std::str::FromStr;
-
-    let bench_npow = std::env::var("ARITH_BENCH_NPOW").unwrap_or("3".to_string());
-    let lg_domain_size = i32::from_str(&bench_npow).unwrap() as u32;
-
-    let blocks = 2048;
-    let threads = 128;
-    let domain_size = 10usize.pow(lg_domain_size);
-    let name = format!("FR ADD 10**{}", lg_domain_size);
-    println!("{}", name);
-
-    //bench_add_fr(domain_size, blocks, threads);
-
-    let name = format!("FR MUL 10**{}", lg_domain_size);
-    println!("{}", name);
-    //bench_mul_fr(domain_size, blocks, threads);
-}
-
 fn main() {
-    //arith_run();
     bench_lde();
 }
