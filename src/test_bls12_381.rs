@@ -509,6 +509,7 @@ pub fn interpolate_scalars_batch_bls12_381(
     d_domain: &mut DeviceBuffer<ScalarField_BLS12_381>,
     batch_size: usize,
 ) -> DeviceBuffer<ScalarField_BLS12_381> {
+
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe { interpolate_scalars_batch_cuda_bls12_381(
         res.as_device_ptr(),
@@ -1196,7 +1197,7 @@ pub(crate) mod tests_bls12_381 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars_bls12_381(test_size, log_test_size, true);
 
-        reverse_order_scalars_bls12_381(&mut d_evals);
+        //reverse_order_scalars_bls12_381(&mut d_evals);
         let mut d_coeffs = interpolate_scalars_bls12_381(&mut d_evals, &mut d_domain);
         intt_bls12_381(&mut evals_mut, 0);
         let mut h_coeffs: Vec<ScalarField_BLS12_381> = (0..test_size).map(|_| ScalarField_BLS12_381::zero()).collect();
@@ -1212,7 +1213,7 @@ pub(crate) mod tests_bls12_381 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars_bls12_381(test_size * batch_size, log_test_size, true);
 
-        reverse_order_scalars_batch_bls12_381(&mut d_evals, batch_size);
+        //reverse_order_scalars_batch_bls12_381(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_scalars_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size);
         intt_batch_bls12_381(&mut evals_mut, test_size, 0);
         let mut h_coeffs: Vec<ScalarField_BLS12_381> = (0..test_size * batch_size).map(|_| ScalarField_BLS12_381::zero()).collect();
@@ -1227,7 +1228,7 @@ pub(crate) mod tests_bls12_381 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points_bls12_381(test_size, log_test_size, true);
 
-        reverse_order_points_bls12_381(&mut d_evals);
+        //reverse_order_points_bls12_381(&mut d_evals);
         let mut d_coeffs = interpolate_points_bls12_381(&mut d_evals, &mut d_domain);
         iecntt_bls12_381(&mut evals_mut[..], 0);
         let mut h_coeffs: Vec<Point_BLS12_381> = (0..test_size).map(|_| Point_BLS12_381::zero()).collect();
@@ -1246,7 +1247,7 @@ pub(crate) mod tests_bls12_381 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points_bls12_381(test_size * batch_size, log_test_size, true);
 
-        reverse_order_points_batch_bls12_381(&mut d_evals, batch_size);
+        //reverse_order_points_batch_bls12_381(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_points_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size);
         iecntt_batch_bls12_381(&mut evals_mut[..], test_size, 0);
         let mut h_coeffs: Vec<Point_BLS12_381> = (0..test_size * batch_size).map(|_| Point_BLS12_381::zero()).collect();
@@ -1278,10 +1279,10 @@ pub(crate) mod tests_bls12_381 {
 
     #[test]
     fn test_scalar_batch_evaluation() {
-        let batch_size = 6;
-        let log_test_domain_size = 8;
+        let batch_size = 1;
+        let log_test_domain_size = 20;
         let domain_size = 1 << log_test_domain_size;
-        let coeff_size = 1 << 6;
+        let coeff_size = 1 << 20;
         let (h_coeffs, mut d_coeffs, mut d_domain) = set_up_scalars_bls12_381(coeff_size * batch_size, log_test_domain_size, false);
         let (_, _, mut d_domain_inv) = set_up_scalars_bls12_381(0, log_test_domain_size, true);
 

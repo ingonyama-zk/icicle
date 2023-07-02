@@ -2,8 +2,11 @@
 #define NTT
 #pragma once
 
+#include "../../utils/sharedmem.cuh"
+
 const uint32_t MAX_NUM_THREADS = 1024;
-const uint32_t MAX_THREADS_BATCH = 256;
+const uint32_t MAX_THREADS_BATCH = 512;    //TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
+const uint32_t MAX_SHARED_MEM = 32 * 1024; //TODO: occupancy calculator, hardcoded for sm_86..sm_89
 
 /**
  * Computes the twiddle factors.  
@@ -112,27 +115,6 @@ template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn, cu
   reverse_order_batch(arr, n, logn, 1, stream);
 }
 
-/**
- * Cooley-Tukey butterfly kernel. 
- * @param arr array of objects of type E (elements). 
- * @param twiddles array of twiddle factors of type S (scalars). 
- * @param n size of arr. 
- * @param n_twiddles size of omegas.
- * @param m "pair distance" - indicate distance of butterflies inputs.
- * @param i Cooley-Tukey FFT stage number.
- * @param max_thread_num maximal number of threads in stage. 
- */
-template < typename E, typename S > __global__ void template_butterfly_kernel(E * arr, S * twiddles, uint32_t n, uint32_t n_twiddles, uint32_t m, uint32_t i, uint32_t max_thread_num) {
-  int j = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (j < max_thread_num) {
-    uint32_t g = j * (n / m);
-    uint32_t k = i + j + (m >> 1);
-    E u = arr[i + j];
-    E v = twiddles[g * n_twiddles / n] * arr[k];
-    arr[i + j] = u + v;
-    arr[k] = u - v;
-  }
-}
 
 /**
  * Multiply the elements of an input array by a scalar in-place.
@@ -146,83 +128,6 @@ template < typename E, typename S > __global__ void template_normalize_kernel(E 
     arr[tid] = scalar * arr[tid];
   }
 }
-
-/**
- * Cooley-Tukey NTT.
- * NOTE! this function assumes that d_arr and d_twiddles are located in the device memory.
- * @param d_arr input array of type E (elements) allocated on the device memory.
- * @param n length of d_arr.
- * @param logn log(n).
- * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
- * @param n_twiddles length of d_twiddles.
- */
-template < typename E, typename S > void template_ntt_on_device_memory(E * d_arr, uint32_t n, uint32_t logn, S * d_twiddles, uint32_t n_twiddles, cudaStream_t stream) {
-  uint32_t m = 2;
-  // TODO: optimize with separate streams for each iteration
-  for (uint32_t s = 0; s < logn; s++) {
-    for (uint32_t i = 0; i < n; i += m) {
-        uint32_t shifted_m = m >> 1;
-        uint32_t number_of_threads = MAX_NUM_THREADS ^ ((shifted_m ^ MAX_NUM_THREADS) & -(shifted_m < MAX_NUM_THREADS));
-        uint32_t number_of_blocks = shifted_m / MAX_NUM_THREADS + 1;
-        template_butterfly_kernel < E, S > <<< number_of_threads, number_of_blocks, 0, stream >>> (d_arr, d_twiddles, n, n_twiddles, m, i, m >> 1);
-    }
-    m <<= 1;
-  }
-}
-
-/**
- * Cooley-Tukey NTT. 
- * NOTE! this function assumes that d_twiddles are located in the device memory.
- * @param arr input array of type E (elements). 
- * @param n length of d_arr.
- * @param d_twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2). 
- * @param n_twiddles length of d_twiddles. 
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
-template < typename E, typename S > E * ntt_template(E * arr, uint32_t n, S * d_twiddles, uint32_t n_twiddles, bool inverse, cudaStream_t stream) {
-  uint32_t logn = uint32_t(log(n) / log(2));
-  size_t size_E = n * sizeof(E);
-  E * arrReversed = template_reverse_order < E > (arr, n, logn);
-  E * d_arrReversed;
-  cudaMallocAsync( & d_arrReversed, size_E, stream);
-  cudaMemcpyAsync(d_arrReversed, arrReversed, size_E, cudaMemcpyHostToDevice, stream);
-  template_ntt_on_device_memory < E, S > (d_arrReversed, n, logn, d_twiddles, n_twiddles, stream);
-  if (inverse) {
-    int NUM_THREADS = MAX_NUM_THREADS;
-    int NUM_BLOCKS = (n + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS, 0, stream >>> (d_arrReversed, n, S::inv_log_size(logn));
-  }
-  cudaMemcpyAsync(arrReversed, d_arrReversed, size_E, cudaMemcpyDeviceToHost, stream);
-  cudaFreeAsync(d_arrReversed, stream);
-  cudaStreamSynchronize(stream);
-  return arrReversed;
-}
-
-/**
- * Cooley-Tukey (scalar) NTT. 
- * @param arr input array of type E (element). 
- * @param n length of d_arr.
- * @param inverse indicate if the result array should be normalized by n^(-1). 
- */
- template<typename E,typename S> uint32_t ntt_end2end_template(E * arr, uint32_t n, bool inverse, cudaStream_t stream) {
-  uint32_t logn = uint32_t(log(n) / log(2));
-  uint32_t n_twiddles = n; 
-  S * twiddles = new S[n_twiddles];
-  S * d_twiddles;
-  if (inverse){
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega_inv(logn), stream);
-  } else{
-    d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega(logn), stream);
-  }
-  E * result = ntt_template < E, S > (arr, n, d_twiddles, n_twiddles, inverse, stream);
-  for(int i = 0; i < n; i++){
-    arr[i] = result[i]; 
-  }
-  cudaFreeAsync(d_twiddles, stream);
-  cudaStreamSynchronize(stream);
-  return 0; // TODO add
-}
-
 
 /**
  * Returens the bit reversal ordering of the input array according to the batches *in place*. 
@@ -244,24 +149,136 @@ template < typename T > __device__ __host__ void reverseOrder_batch(T * arr, uin
   }
 }
 
+/**
+ * Cooley-Tuckey NTT.
+ * NOTE! this function assumes that d_twiddles are located in the device memory.
+ * @param arr input array of type E (elements).
+ * @param n length of d_arr.
+ * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
+ * @param n_twiddles length of twiddles.
+ * @param max_task max count of parallel tasks.
+ * @param s log2(n) loop index.
+ */
+template <typename E, typename S>
+__global__ void ntt_template_kernel_shared_rev(E *__restrict__ arr_g, uint32_t n, const S *__restrict__ r_twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t ss, uint32_t logn)
+{
+  SharedMemory<E> smem;
+  E *arr = smem.getPointer();
+
+  uint32_t task = blockIdx.x;
+  uint32_t loop_limit = blockDim.x;
+  uint32_t chunks = n / (loop_limit * 2);
+  uint32_t offset = (task / chunks) * n;
+  if (task < max_task)
+  {
+    // flattened loop allows parallel processing
+    uint32_t l = threadIdx.x;
+
+    if (l < loop_limit)
+    {
+#pragma unroll
+      for (; ss < logn; ss++)
+      {
+        int s = logn - ss - 1;
+        bool is_beginning = ss == 0;
+        bool is_end = ss == (logn - 1);
+
+        uint32_t ntw_i = task % chunks;
+
+        uint32_t n_twiddles_div = n_twiddles >> (s + 1);
+
+        uint32_t shift_s = 1 << s;
+        uint32_t shift2_s = 1 << (s + 1);
+
+        l = ntw_i * loop_limit + l; // to l from chunks to full
+
+        uint32_t j = l & (shift_s - 1);               // Equivalent to: l % (1 << s)
+        uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
+        uint32_t oij = i + j;
+        uint32_t k = oij + shift_s;
+
+        S tw = r_twiddles[j * n_twiddles_div];
+
+        E u = is_beginning ? arr_g[offset + oij] : arr[oij];
+        E v = is_beginning ? arr_g[offset + k] : arr[k];
+        if (is_end)
+        {
+          arr_g[offset + oij] = u + v;
+          arr_g[offset + k] = tw * (u - v);
+        }
+        else
+        {
+          arr[oij] = u + v;
+          arr[k] = tw *(u - v);
+        }
+
+        __syncthreads();
+      }
+    }
+  }
+}
 
 /**
- * Cooley-Tukey butterfly kernel. 
- * @param arr array of objects of type E (elements). 
- * @param twiddles array of twiddle factors of type S (scalars). 
- * @param n size of arr. 
- * @param n_twiddles size of omegas.
- * @param m "pair distance" - indicate distance of butterflies inputs.
- * @param i Cooley-TUckey FFT stage number.
- * @param offset offset corr. to the specific taks (in batch).  
+ * Cooley-Tuckey NTT.
+ * NOTE! this function assumes that d_twiddles are located in the device memory.
+ * @param arr input array of type E (elements).
+ * @param n length of d_arr.
+ * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
+ * @param n_twiddles length of twiddles.
+ * @param max_task max count of parallel tasks.
+ * @param s log2(n) loop index.
  */
-template < typename E, typename S > __device__ __host__ void butterfly(E * arrReversed, S * omegas, uint32_t n, uint32_t n_omegas, uint32_t m, uint32_t i, uint32_t j, uint32_t offset) {
-  uint32_t g = j * (n / m);
-  uint32_t k = i + j + (m >> 1);
-  E u = arrReversed[offset + i + j];
-  E v = omegas[g * n_omegas / n] * arrReversed[offset + k];
-  arrReversed[offset + i + j] = u + v;
-  arrReversed[offset + k] = u - v;
+template <typename E, typename S>
+__global__ void ntt_template_kernel_shared(E *__restrict__ arr_g, uint32_t n, const S *__restrict__ r_twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, uint32_t logn)
+{
+  SharedMemory<E> smem;
+  E *arr = smem.getPointer();
+
+  uint32_t task = blockIdx.x;
+  uint32_t loop_limit = blockDim.x;
+  uint32_t chunks = n / (loop_limit * 2);
+  uint32_t offset = (task / chunks) * n;
+  if (task < max_task)
+  {
+    // flattened loop allows parallel processing
+    uint32_t l = threadIdx.x;
+
+    if (l < loop_limit)
+    {
+#pragma unroll
+      for (; s < logn; s++) // TODO: this loop also can be unrolled
+      {
+        uint32_t ntw_i = task % chunks;
+
+        uint32_t n_twiddles_div = n_twiddles >> (s + 1);
+
+        uint32_t shift_s = 1 << s;
+        uint32_t shift2_s = 1 << (s + 1);
+
+        l = ntw_i * loop_limit + l; // to l from chunks to full
+
+        uint32_t j = l & (shift_s - 1);               // Equivalent to: l % (1 << s)
+        uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
+        uint32_t oij = i + j;
+        uint32_t k = oij + shift_s;
+
+        E u = s == 0 ? arr_g[offset + oij] : arr[oij];
+        E v = r_twiddles[j * n_twiddles_div] * (s == 0 ? arr_g[offset + k] : arr[k]);
+        if (s == (logn - 1))
+        {
+          arr_g[offset + oij] = u + v;
+          arr_g[offset + k] = u - v;
+        }
+        else
+        {
+          arr[oij] = u + v;
+          arr[k] = u - v;
+        }
+
+        __syncthreads();
+      }
+    }
+  }
 }
 
 /**
@@ -296,8 +313,8 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
 
       l = ntw_i * blockDim.x + l; //to l from chunks to full
 
-      uint32_t j = l & (shift_s - 1); // Equivalent to: l % (1 << s)
-      uint32_t i = ((l / shift_s) * shift2_s) % n;
+      uint32_t j = l & (shift_s - 1);               // Equivalent to: l % (1 << s)
+      uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
       uint32_t k = i + j + shift_s;
 
       uint32_t offset = (task / chunks) * n;
@@ -309,6 +326,45 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
         arr[offset + k] = twiddles[j * n_twiddles_div] * arr[offset + k];
     }
   }
+}
+
+/**
+ * NTT/INTT inplace batch
+ * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
+ * @param d_inout Array for inplace processing
+ * @param d_twiddles 
+ * @param n Length of `d_twiddles` array
+ * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
+ */
+template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S * d_twiddles, unsigned n, unsigned batch_size, bool inverse, cudaStream_t stream) {
+  const int logn = int(log(n) / log(2));
+  const int max_shmem_elems_count = int(MAX_SHARED_MEM / sizeof(E));
+  const int log2_shmem_elems = int(log(max_shmem_elems_count) / log(2));
+  const int num_threads = min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1));
+  const int chunks = max(int((n / 2) / num_threads), 1);
+  const int total_tasks = batch_size * chunks;
+  const int num_blocks = total_tasks;
+  const int shared_mem = 2 * num_threads * sizeof(E); // TODO: calculator, as shared mem size may be more efficient less then max to allow more concurrent blocks on SM
+  const int logn_shmem = int(log(2 * num_threads) / log(2));
+
+  if(inverse) 
+  {
+    ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+
+    for (uint32_t s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
+    { 
+      ntt_template_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
+    } 
+  }
+  else 
+  {
+    for (uint32_t s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
+    {
+      ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, true);
+    }
+    ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+  }
+  //cudaStreamSynchronize(stream);
 }
 
 
@@ -356,19 +412,10 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   cudaMemcpyAsync(d_arr, arr, size_E, cudaMemcpyHostToDevice, stream);
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
-  ntt_template_kernel_rev_ord<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, logn, batches);
+  //ntt_template_kernel_rev_ord<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, logn, batches);
 
-  NUM_THREADS = min(n / 2, MAX_THREADS_BATCH);
-  int chunks = max(int((n / 2) / NUM_THREADS), 1);
-  int total_tasks = batches * chunks;
-  NUM_BLOCKS = total_tasks;
+  ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, stream);
 
-  //TODO: this loop also can be unrolled
-  for (uint32_t s = 0; s < logn; s++)
-  {
-    ntt_template_kernel<E, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_arr, n, d_twiddles, n_twiddles, total_tasks, s, false);
-    cudaStreamSynchronize(stream);
-  }
   if (inverse == true)
   {
     NUM_THREADS = MAX_NUM_THREADS;
@@ -380,6 +427,16 @@ __global__ void ntt_template_kernel_rev_ord(E *arr, uint32_t n, uint32_t logn, u
   cudaFreeAsync(d_twiddles, stream);
   cudaStreamSynchronize(stream);
   return 0; 
+}
+
+/**
+ * Cooley-Tukey (scalar) NTT. 
+ * @param arr input array of type E (element). 
+ * @param n length of d_arr.
+ * @param inverse indicate if the result array should be normalized by n^(-1). 
+ */
+ template<typename E,typename S> uint32_t ntt_end2end_template(E * arr, uint32_t n, bool inverse, cudaStream_t stream) {
+  return ntt_end2end_batch_template <E, S> (arr, n, n, inverse, stream);
 }
 
 #endif
