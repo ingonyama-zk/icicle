@@ -268,6 +268,7 @@ extern "C" int reverse_order_scalars_cuda_bn254(BN254::scalar_t* arr, int n, siz
         uint32_t logn = uint32_t(log(n) / log(2));
         cudaStreamCreate(&stream);
         reverse_order(arr, n, logn, stream);
+        cudaStreamSynchronize(stream);
         return 0;
     }
     catch (const std::runtime_error &ex)

@@ -21,8 +21,12 @@ package bn254
 // #include "ntt.h"
 import "C"
 import (
+	"errors"
+	"fmt"
 	"time"
 	"unsafe"
+
+	"github.com/ingonyama-zk/icicle/goicicle"
 )
 
 const (
@@ -78,3 +82,88 @@ func EcNttBatchBN254(values *[]PointBN254, isInverse bool, batchSize, deviceId i
 
 	return uint64(ret)
 }
+
+func GenerateTwiddles(d_size int, log_d_size float64, inverse bool) (up unsafe.Pointer, err error) {
+	domain_size := C.uint32_t(d_size)
+	logn := C.uint32_t(log_d_size)
+	is_inverse := C.bool(inverse)
+
+	dp := C.build_domain_cuda_bn254(domain_size, logn, is_inverse, 0, 0)
+	
+	if dp == nil {
+		err = errors.New("nullptr returned from generating twiddles")
+		return unsafe.Pointer(nil), err
+	}
+
+	return unsafe.Pointer(dp), nil
+}
+
+// Reverses d_scalars in-place
+func ReverseScalars(d_scalars unsafe.Pointer, len int) (int, error) {
+	scalarsC := (*C.BN254_scalar_t)(d_scalars)
+	lenC := C.int(len)
+	if success := C.reverse_order_scalars_cuda_bn254(scalarsC, lenC, 0, 0); success != 0 {
+		return -1, errors.New("reversing failed")
+	}
+	return 0, nil
+}
+
+
+func Interpolate(scalars unsafe.Pointer, isCoset bool, twiddles unsafe.Pointer, size int) unsafe.Pointer {
+	if isCoset {
+		return nil
+	}
+
+	// create d_out memory
+	size_d := size * 32
+	dp, err := goicicle.CudaMalloc(size_d)
+
+	if err != nil {
+		return nil
+	}
+
+	d_out := (*C.BN254_scalar_t)(dp)
+	
+	// cast ScalarField to unsafe.Pointer
+	scalarsC := (*C.BN254_scalar_t)(scalars)
+	twiddlesC := (*C.BN254_scalar_t)(twiddles)
+	sizeC := C.uint(size)
+	// figure out how decimation fits into our interpolate and evaluate functions
+
+	ret := C.interpolate_scalars_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
+	if ret != 0{
+		fmt.Print("error interpolating")
+	}
+
+	return unsafe.Pointer(d_out)
+}
+
+func Evaluate(scalars, twiddles, coset_powers unsafe.Pointer, scalars_size, twiddles_size int, isCoset bool) unsafe.Pointer {
+	if !isCoset {
+		return nil
+	}
+
+	scalarsC := (*C.BN254_scalar_t)(scalars)
+	twiddlesC := (*C.BN254_scalar_t)(twiddles)
+	coset_powersC := (*C.BN254_scalar_t)(coset_powers)
+	sizeC := C.uint(scalars_size)
+	twiddlesC_size := C.uint(twiddles_size)
+
+	size_d := scalars_size * 32
+	dp, err := goicicle.CudaMalloc(size_d)
+
+	if err != nil {
+		return nil
+	}
+
+	d_out := (*C.BN254_scalar_t)(dp)
+	
+	ret := C.evaluate_scalars_on_coset_cuda_bn254(d_out, scalarsC, twiddlesC, twiddlesC_size, sizeC, coset_powersC, 0, 0)
+	if ret != 0{
+		fmt.Print("error interpolating")
+	}
+
+	return unsafe.Pointer(d_out)
+}
+
+

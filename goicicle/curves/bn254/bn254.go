@@ -220,7 +220,7 @@ func (p *PointBN254) eq(pCompare *PointBN254) bool {
 	// Call the C function
 	// The C function doesn't keep any references to the data,
 	// so it's fine if the Go garbage collector moves or deletes the data later.
-	return bool(C.eq_bn254(pC, pCompareC, 0))
+	return bool(C.eq_bn254(pC, pCompareC))
 }
 
 func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {

@@ -1,6 +1,6 @@
 CUDA_ROOT_DIR = /usr/local/cuda
 NVCC = $(CUDA_ROOT_DIR)/bin/nvcc
-CFLAGS = -Xcompiler -fPIC
+CFLAGS = -Xcompiler -fPIC -std=c++17
 LDFLAGS = -shared
 FEATURES = -DG2_DEFINED
 
