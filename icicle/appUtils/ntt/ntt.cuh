@@ -349,12 +349,6 @@ template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S
 
   ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, stream, false);
 
-  if (inverse == true)
-  {
-    NUM_THREADS = MAX_NUM_THREADS;
-    NUM_BLOCKS = (arr_size + NUM_THREADS - 1) / NUM_THREADS;
-    template_normalize_kernel < E, S > <<< NUM_THREADS, NUM_BLOCKS, 0, stream>>> (d_arr, arr_size, S::inv_log_size(logn));
-  }
   cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arr, stream);
   cudaFreeAsync(d_twiddles, stream);
