@@ -19,7 +19,6 @@ package bn254
 import (
 	"errors"
 	"fmt"
-	"time"
 	"unsafe"
 )
 
@@ -29,7 +28,6 @@ import (
 import "C"
 
 func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
-	defer TimeTrack(time.Now(), "MSM G1")
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -86,4 +84,35 @@ func MsmBatchBN254(points *[]PointAffineNoInfinityBN254, scalars *[]ScalarField,
 	}
 
 	return out, nil
+}
+
+func MsmOnDevice(d_out, d_scalars, d_points unsafe.Pointer, count int) int {
+	d_outC := (*C.BN254_projective_t)(d_out)
+	scalarsC := (*C.BN254_scalar_t)(d_scalars)
+	pointsC := (*C.BN254_affine_t)(d_points)
+	countC := (C.size_t)(count)
+
+	ret := C.commit_cuda_bn254(d_outC, scalarsC, pointsC, countC, 0)
+
+	if ret != 0 {
+		return -1
+	}
+
+	return 0
+}
+
+func MsmBatchOnDevice(d_out, d_scalars, d_points unsafe.Pointer, count, batch_size int) int {
+	d_outC := (*C.BN254_projective_t)(d_out)
+	scalarsC := (*C.BN254_scalar_t)(d_scalars)
+	pointsC := (*C.BN254_affine_t)(d_points)
+	countC := (C.size_t)(count)
+	batch_sizeC := (C.size_t)(batch_size)
+
+	ret := C.commit_batch_cuda_bn254(d_outC, scalarsC, pointsC, countC, batch_sizeC, 0)
+
+	if ret != 0 {
+		return -1
+	}
+
+	return 0
 }
