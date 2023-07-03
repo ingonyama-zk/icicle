@@ -208,9 +208,12 @@ __global__ void ntt_template_kernel_shared(E *__restrict__ arr_g, uint32_t n, co
         uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
         uint32_t oij = i + j;
         uint32_t k = oij + shift_s;
+        S tw = r_twiddles[j * n_twiddles_div];
+
 
         E u = s == 0 ? arr_g[offset + oij] : arr[oij];
-        E v = r_twiddles[j * n_twiddles_div] * (s == 0 ? arr_g[offset + k] : arr[k]);
+        E v = s == 0 ? arr_g[offset + k] : arr[k];
+        v = tw * v;
         if (s == (logn - 1))
         {
           arr_g[offset + oij] = u + v;
