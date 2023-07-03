@@ -5,19 +5,18 @@ use std::time::{Duration, Instant};
 use ark_std::{end_timer, start_timer};
 
 use icicle_utils::{
-    curves::bls12_381::ScalarField_BLS12_381,
+    curves::bls12_381::{Point_BLS12_381, ScalarField_BLS12_381},
     test_bls12_381::{
-        evaluate_points_batch_bls12_381,
-        evaluate_scalars_batch_bls12_381,
-        generate_random_scalars_bls12_381, get_rng_bls12_381, interpolate_points_batch_bls12_381,
-        interpolate_scalars_batch_bls12_381, intt_batch_bls12_381, ntt_batch_bls12_381,
-        set_up_points_bls12_381, set_up_scalars_bls12_381,
+        ecntt_inplace_batch_bls12_381, evaluate_points_batch_bls12_381,
+        evaluate_scalars_batch_bls12_381, interpolate_points_batch_bls12_381,
+        interpolate_scalars_batch_bls12_381, ntt_inplace_batch_bls12_381, set_up_points_bls12_381,
+        set_up_scalars_bls12_381,
     },
 };
 use rustacuda::prelude::DeviceBuffer;
 
 const LOG_NTT_SIZES: [usize; 3] = [20, 10, 9];
-const BATCH_SIZES: [usize; 3] = [1, 1 << 9, 1 << 10]; 
+const BATCH_SIZES: [usize; 3] = [1, 1 << 9, 1 << 10];
 
 const MAX_POINTS_LOG2: usize = 18;
 const MAX_SCALARS_LOG2: usize = 26;
@@ -27,6 +26,71 @@ fn bench_lde() {
         for batch_size in BATCH_SIZES {
             let ntt_size = 1 << log_ntt_size;
 
+            fn ntt_scalars_batch_bls12_381(
+                d_inout: &mut DeviceBuffer<ScalarField_BLS12_381>,
+                d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
+                batch_size: usize,
+            ) -> i32 {
+                ntt_inplace_batch_bls12_381(
+                    d_inout,
+                    d_twiddles,
+                    d_inout.len() / batch_size,
+                    batch_size,
+                    false,
+                    0,
+                );
+                0
+            }
+
+            fn intt_scalars_batch_bls12_381(
+                d_inout: &mut DeviceBuffer<ScalarField_BLS12_381>,
+                d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
+                batch_size: usize,
+            ) -> i32 {
+                ntt_inplace_batch_bls12_381(
+                    d_inout,
+                    d_twiddles,
+                    d_inout.len() / batch_size,
+                    batch_size,
+                    true,
+                    0,
+                );
+                0
+            }
+
+            fn ecntt_scalars_batch_bls12_381(
+                d_inout: &mut DeviceBuffer<Point_BLS12_381>,
+                d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
+                batch_size: usize,
+            ) -> i32 {
+                ecntt_inplace_batch_bls12_381(
+                    d_inout,
+                    d_twiddles,
+                    d_inout.len() / batch_size,
+                    batch_size,
+                    false,
+                    0,
+                );
+                0
+            }
+
+            fn iecntt_scalars_batch_bls12_381(
+                d_inout: &mut DeviceBuffer<Point_BLS12_381>,
+                d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
+                batch_size: usize,
+            ) -> i32 {
+                ecntt_inplace_batch_bls12_381(
+                    d_inout,
+                    d_twiddles,
+                    d_inout.len() / batch_size,
+                    batch_size,
+                    true,
+                    0,
+                );
+                0
+            }
+
+            // copy
             bench_ntt_template(
                 MAX_SCALARS_LOG2,
                 ntt_size,
@@ -36,7 +100,7 @@ fn bench_lde() {
                 evaluate_scalars_batch_bls12_381,
                 "NTT",
                 false,
-                1000,
+                100,
             );
 
             bench_ntt_template(
@@ -48,7 +112,7 @@ fn bench_lde() {
                 interpolate_scalars_batch_bls12_381,
                 "iNTT",
                 true,
-                1000,
+                100,
             );
 
             bench_ntt_template(
@@ -74,11 +138,60 @@ fn bench_lde() {
                 true,
                 20,
             );
+
+            // inplace
+            bench_ntt_template(
+                MAX_SCALARS_LOG2,
+                ntt_size,
+                batch_size,
+                log_ntt_size,
+                set_up_scalars_bls12_381,
+                ntt_scalars_batch_bls12_381,
+                "NTT inplace",
+                false,
+                100,
+            );
+
+            bench_ntt_template(
+                MAX_SCALARS_LOG2,
+                ntt_size,
+                batch_size,
+                log_ntt_size,
+                set_up_scalars_bls12_381,
+                intt_scalars_batch_bls12_381,
+                "iNTT inplace",
+                true,
+                100,
+            );
+
+            bench_ntt_template(
+                MAX_POINTS_LOG2,
+                ntt_size,
+                batch_size,
+                log_ntt_size,
+                set_up_points_bls12_381,
+                ecntt_scalars_batch_bls12_381,
+                "EC NTT inplace",
+                false,
+                20,
+            );
+
+            bench_ntt_template(
+                MAX_POINTS_LOG2,
+                ntt_size,
+                batch_size,
+                log_ntt_size,
+                set_up_points_bls12_381,
+                iecntt_scalars_batch_bls12_381,
+                "EC iNTT inplace",
+                true,
+                20,
+            );
         }
     }
 }
 
-fn bench_ntt_template<E, S>(
+fn bench_ntt_template<E, S, R>(
     log_max_size: usize,
     ntt_size: usize,
     batch_size: usize,
@@ -92,11 +205,11 @@ fn bench_ntt_template<E, S>(
         d_evaluations: &mut DeviceBuffer<E>,
         d_domain: &mut DeviceBuffer<S>,
         batch_size: usize,
-    ) -> DeviceBuffer<E>,
+    ) -> R,
     id: &str,
     inverse: bool,
     samples: usize,
-) -> Option<(Vec<E>, DeviceBuffer<E>)> {
+) -> Option<(Vec<E>, R)> {
     let count = ntt_size * batch_size;
 
     let bench_id = format!("{} of size 2^{} in batch {}", id, log_ntt_size, batch_size);
