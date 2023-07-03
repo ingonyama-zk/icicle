@@ -267,13 +267,15 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
       uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
       uint32_t k = i + j + shift_s;
 
+      S tw = twiddles[j * n_twiddles_div];
+
       uint32_t offset = (task / chunks) * n;
       E u = arr[offset + i + j];
-      E v = rev ? arr[offset + k] : twiddles[j * n_twiddles_div] * arr[offset + k];
+      E v = arr[offset + k];
+      if(!rev) v = tw * v;
       arr[offset + i + j] = u + v;
-      arr[offset + k] = u - v;
-      if (rev)
-        arr[offset + k] = twiddles[j * n_twiddles_div] * arr[offset + k];
+      v = u - v;
+      arr[offset + k] = rev ? tw * v : v;
     }
   }
 }
