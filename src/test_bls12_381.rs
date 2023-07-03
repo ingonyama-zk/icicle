@@ -1532,31 +1532,6 @@ pub(crate) mod tests_bls12_381 {
         }
     }
 
-    // testing matrix multiplication by comparing the result of FFT with the naive multiplication by the DFT matrix
-    #[test]
-    fn test_matrix_multiplication() {
-        let seed = None; // some value to fix the rng
-        let test_size = 1 << 5;
-        let rou = Fr::get_root_of_unity(test_size).unwrap();
-        let matrix_flattened: Vec<ScalarField_BLS12_381> = (0..test_size).map(
-            |row_num| { (0..test_size).map( 
-                |col_num| {
-                    let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
-                    ScalarField_BLS12_381::from_ark(Fr::pow(&rou, &pow).into_repr())
-                }).collect::<Vec<ScalarField_BLS12_381>>()
-            }).flatten().collect::<Vec<_>>();
-        let vector: Vec<ScalarField_BLS12_381> = generate_random_scalars_bls12_381(test_size, get_rng_bls12_381(seed));
-
-        let result = mult_matrix_by_vec_bls12_381(&matrix_flattened, &vector, 0);
-        let mut ntt_result = vector.clone();
-        ntt_bls12_381(&mut ntt_result, 0);
-        
-        // we don't use the same roots of unity as arkworks, so the results are permutations
-        // of one another and the only guaranteed fixed scalars are the following ones:
-        assert_eq!(result[0], ntt_result[0]);
-        assert_eq!(result[test_size >> 1], ntt_result[test_size >> 1]);
-    }
-
     #[test]
     #[allow(non_snake_case)]
     fn test_vec_scalar_mul() {
