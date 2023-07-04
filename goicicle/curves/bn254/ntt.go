@@ -102,11 +102,7 @@ func ReverseScalars(d_scalars unsafe.Pointer, len int) (int, error) {
 }
 
 
-func Interpolate(scalars unsafe.Pointer, isCoset bool, twiddles unsafe.Pointer, size int) unsafe.Pointer {
-	if isCoset {
-		return nil
-	}
-
+func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCoset bool) unsafe.Pointer {
 	size_d := size * 32
 	dp, err := goicicle.CudaMalloc(size_d)
 
@@ -117,9 +113,15 @@ func Interpolate(scalars unsafe.Pointer, isCoset bool, twiddles unsafe.Pointer, 
 	d_out := (*C.BN254_scalar_t)(dp)
 	scalarsC := (*C.BN254_scalar_t)(scalars)
 	twiddlesC := (*C.BN254_scalar_t)(twiddles)
+	cosetPowersC := (*C.BN254_scalar_t)(cosetPowers)
 	sizeC := C.uint(size)
 
-	ret := C.interpolate_scalars_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
+	var ret C.int
+	if isCoset {
+		ret = C.interpolate_scalars_on_coset_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, cosetPowersC, 0, 0);
+	} else {
+		ret = C.interpolate_scalars_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
+	}
 	if ret != 0{
 		fmt.Print("error interpolating")
 	}

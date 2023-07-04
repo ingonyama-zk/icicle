@@ -42,6 +42,8 @@ int interpolate_scalars_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t *d_eval
 int interpolate_scalars_batch_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_evaluations, BN254_scalar_t* d_domain, unsigned n, unsigned batch_size, size_t device_id, int stream);
 int interpolate_points_cuda_bn254(BN254_projective_t* d_out, BN254_projective_t *d_evaluations, BN254_scalar_t *d_domain, unsigned n, size_t device_id, int stream);
 int interpolate_points_batch_cuda_bn254(BN254_projective_t* d_out, BN254_projective_t* d_evaluations, BN254_scalar_t* d_domain,unsigned n, unsigned batch_size, size_t device_id, int stream);
+int interpolate_scalars_on_coset_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_evaluations, BN254_scalar_t* d_domain, unsigned n, BN254_scalar_t* coset_powers, size_t device_id, int stream);
+int interpolate_scalars_batch_on_coset_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_evaluations, BN254_scalar_t* d_domain, unsigned n, unsigned batch_size, BN254_scalar_t* coset_powers, size_t device_id, int stream);
 int evaluate_scalars_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t *d_coefficients, BN254_scalar_t *d_domain, unsigned domain_size, unsigned n, unsigned device_id, int stream);
 int evaluate_scalars_batch_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_coefficients, BN254_scalar_t* d_domain, unsigned domain_size,unsigned n, unsigned batch_size, size_t device_id, int stream);
 int evaluate_points_cuda_bn254(BN254_projective_t* d_out, BN254_projective_t *d_coefficients, BN254_scalar_t *d_domain, unsigned domain_size, unsigned n, size_t device_id, int stream);

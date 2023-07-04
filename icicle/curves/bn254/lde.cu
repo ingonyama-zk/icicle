@@ -111,6 +111,34 @@ extern "C" int interpolate_scalars_batch_cuda_bn254(BN254::scalar_t* d_out, BN25
     }
 }
 
+extern "C" int interpolate_scalars_on_coset_cuda_bn254(BN254::scalar_t* d_out, BN254::scalar_t *d_evaluations, BN254::scalar_t *d_domain, unsigned n, BN254::scalar_t *coset_powers, unsigned device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        return interpolate(d_out, d_evaluations, d_domain, n, true, coset_powers, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int interpolate_scalars_batch_on_coset_cuda_bn254(BN254::scalar_t* d_out, BN254::scalar_t* d_evaluations, BN254::scalar_t* d_domain, unsigned n,
+                                              unsigned batch_size, BN254::scalar_t* coset_powers, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, true, coset_powers, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
 extern "C" int interpolate_points_cuda_bn254(BN254::projective_t* d_out, BN254::projective_t *d_evaluations, BN254::scalar_t *d_domain, unsigned n, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
