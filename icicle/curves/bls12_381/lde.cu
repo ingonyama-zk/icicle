@@ -130,7 +130,6 @@ extern "C" int interpolate_points_batch_cuda_bls12_381(BLS12_381::projective_t* 
 {
     try
     {
-        BLS12_381::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
         auto result_code = interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
         cudaStreamDestroy(stream);
