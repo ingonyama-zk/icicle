@@ -86,7 +86,7 @@ func MsmBatchBN254(points *[]PointAffineNoInfinityBN254, scalars *[]ScalarField,
 	return out, nil
 }
 
-func MsmOnDevice(d_out, d_scalars, d_points unsafe.Pointer, count int) int {
+func Commit(d_out, d_scalars, d_points unsafe.Pointer, count int) int {
 	d_outC := (*C.BN254_projective_t)(d_out)
 	scalarsC := (*C.BN254_scalar_t)(d_scalars)
 	pointsC := (*C.BN254_affine_t)(d_points)
@@ -101,7 +101,7 @@ func MsmOnDevice(d_out, d_scalars, d_points unsafe.Pointer, count int) int {
 	return 0
 }
 
-func MsmBatchOnDevice(d_out, d_scalars, d_points unsafe.Pointer, count, batch_size int) int {
+func CommitBatch(d_out, d_scalars, d_points unsafe.Pointer, count, batch_size int) int {
 	d_outC := (*C.BN254_projective_t)(d_out)
 	scalarsC := (*C.BN254_scalar_t)(d_scalars)
 	pointsC := (*C.BN254_affine_t)(d_points)
