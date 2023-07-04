@@ -6,7 +6,8 @@
 
 const uint32_t MAX_NUM_THREADS = 1024;
 const uint32_t MAX_THREADS_BATCH = 512;    //TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
-const uint32_t MAX_SHARED_MEM = 32 * 1024; //TODO: occupancy calculator, hardcoded for sm_86..sm_89
+const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; //TODO: occupancy calculator, hardcoded for sm_86..sm_89
+const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * 1024; 
 
 /**
  * Computes the twiddle factors.  
@@ -272,7 +273,7 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
       uint32_t offset = (task / chunks) * n;
       E u = arr[offset + i + j];
       E v = arr[offset + k];
-      if(!rev) v = tw * v;
+      if (!rev) v = tw * v;
       arr[offset + i + j] = u + v;
       v = u - v;
       arr[offset + k] = rev ? tw * v : v;
@@ -290,20 +291,20 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
  */
 template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S * d_twiddles, unsigned n, unsigned batch_size, bool inverse, cudaStream_t stream, bool is_sync_needed) {
   const int logn = int(log(n) / log(2));
-  const int max_shmem_elems_count = int(MAX_SHARED_MEM / sizeof(E));
-  const int log2_shmem_elems = int(log(max_shmem_elems_count) / log(2));
+  bool is_shared_mem_enabled = sizeof(E) <= MAX_SHARED_MEM_ELEMENT_SIZE;
+  const int log2_shmem_elems = is_shared_mem_enabled ? int(log(int(MAX_SHARED_MEM / sizeof(E))) / log(2)) : logn;
   int num_threads = min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1));
   const int chunks = max(int((n / 2) / num_threads), 1);
   const int total_tasks = batch_size * chunks;
   int num_blocks = total_tasks;
   const int shared_mem = 2 * num_threads * sizeof(E); // TODO: calculator, as shared mem size may be more efficient less then max to allow more concurrent blocks on SM
-  const int logn_shmem = int(log(2 * num_threads) / log(2));
+  const int logn_shmem = is_shared_mem_enabled ? int(log(2 * num_threads) / log(2)) : 0; //TODO: shared memory support only for types <= 32 bytes
 
   if (inverse) 
   {
-    ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+    if (is_shared_mem_enabled) ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
 
-    for (uint32_t s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
+    for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
     { 
       ntt_template_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
     }
@@ -314,14 +315,15 @@ template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S
   }
   else 
   {
-    for (uint32_t s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
+    for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
     {
       ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, true);
     }
-    ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+    
+    if (is_shared_mem_enabled) ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
   }
   
-  if(!is_sync_needed) return;
+  if (!is_sync_needed) return;
 
   cudaStreamSynchronize(stream);
 }

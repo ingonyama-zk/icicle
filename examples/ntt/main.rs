@@ -1,17 +1,8 @@
-// #![allow(warnings, unused)]
-
-use std::time::{Duration, Instant};
-
-use ark_std::{end_timer, start_timer};
+use std::time::Instant;
 
 use icicle_utils::{
     curves::bls12_381::{Point_BLS12_381, ScalarField_BLS12_381},
-    test_bls12_381::{
-        ecntt_inplace_batch_bls12_381, evaluate_points_batch_bls12_381,
-        evaluate_scalars_batch_bls12_381, interpolate_points_batch_bls12_381,
-        interpolate_scalars_batch_bls12_381, ntt_inplace_batch_bls12_381, set_up_points_bls12_381,
-        set_up_scalars_bls12_381,
-    },
+    test_bls12_381::*,
 };
 use rustacuda::prelude::DeviceBuffer;
 
@@ -34,7 +25,6 @@ fn bench_lde() {
                 ntt_inplace_batch_bls12_381(
                     d_inout,
                     d_twiddles,
-                    d_inout.len() / batch_size,
                     batch_size,
                     false,
                     0,
@@ -50,39 +40,6 @@ fn bench_lde() {
                 ntt_inplace_batch_bls12_381(
                     d_inout,
                     d_twiddles,
-                    d_inout.len() / batch_size,
-                    batch_size,
-                    true,
-                    0,
-                );
-                0
-            }
-
-            fn ecntt_scalars_batch_bls12_381(
-                d_inout: &mut DeviceBuffer<Point_BLS12_381>,
-                d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
-                batch_size: usize,
-            ) -> i32 {
-                ecntt_inplace_batch_bls12_381(
-                    d_inout,
-                    d_twiddles,
-                    d_inout.len() / batch_size,
-                    batch_size,
-                    false,
-                    0,
-                );
-                0
-            }
-
-            fn iecntt_scalars_batch_bls12_381(
-                d_inout: &mut DeviceBuffer<Point_BLS12_381>,
-                d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
-                batch_size: usize,
-            ) -> i32 {
-                ecntt_inplace_batch_bls12_381(
-                    d_inout,
-                    d_twiddles,
-                    d_inout.len() / batch_size,
                     batch_size,
                     true,
                     0,
@@ -162,30 +119,6 @@ fn bench_lde() {
                 "iNTT inplace",
                 true,
                 100,
-            );
-
-            bench_ntt_template(
-                MAX_POINTS_LOG2,
-                ntt_size,
-                batch_size,
-                log_ntt_size,
-                set_up_points_bls12_381,
-                ecntt_scalars_batch_bls12_381,
-                "EC NTT inplace",
-                false,
-                20,
-            );
-
-            bench_ntt_template(
-                MAX_POINTS_LOG2,
-                ntt_size,
-                batch_size,
-                log_ntt_size,
-                set_up_points_bls12_381,
-                iecntt_scalars_batch_bls12_381,
-                "EC iNTT inplace",
-                true,
-                20,
             );
         }
     }

@@ -33,12 +33,12 @@ fn bench_ntt(c: &mut Criterion) {
 
             group.sample_size(scalar_samples).bench_function(
                 &format!("Scalar inplace NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
-                |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, ntt_size, batch_size, false, 0))
+                |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size, false, 0))
             );
             
             group.sample_size(scalar_samples).bench_function(
                 &format!("Scalar inplace iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
-                |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, ntt_size, batch_size, true, 0))
+                |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size, true, 0))
             );
 
             drop(d_evals);
@@ -60,16 +60,6 @@ fn bench_ntt(c: &mut Criterion) {
             group.sample_size(point_samples).bench_function(
                 &format!("EC iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
                 |b| b.iter(|| evaluate_points_batch_bls12_381(&mut d_points_evals, &mut d_domain, batch_size))
-            );
-
-            group.sample_size(point_samples).bench_function(
-                &format!("inplace EC NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
-                |b| b.iter(|| ecntt_inplace_batch_bls12_381(&mut d_points_evals, &mut d_domain, ntt_size, batch_size, false, 0))
-            );
-            
-            group.sample_size(point_samples).bench_function(
-                &format!("inplace EC iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
-                |b| b.iter(|| ecntt_inplace_batch_bls12_381(&mut d_points_evals, &mut d_domain, ntt_size, batch_size, true, 0))
             );
 
             drop(d_points_evals);
