@@ -265,6 +265,23 @@ extern "C" int evaluate_points_on_coset_batch_cuda_bls12_377(BLS12_377::projecti
     }
 }
 
+extern "C" int ntt_inplace_batch_cuda_bls12_377(BLS12_377::scalar_t* d_inout, BLS12_377::scalar_t* d_twiddles,
+                                           unsigned n, unsigned batch_size, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        BLS12_377::scalar_t* _null = nullptr;
+        ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, false, _null, stream, true);
+        return CUDA_SUCCESS; //TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
 extern "C" int reverse_order_scalars_cuda_bls12_377(BLS12_377::scalar_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try

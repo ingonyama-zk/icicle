@@ -5,7 +5,6 @@
 #include "lde.cuh"
 #include "../vector_manipulation/ve_mod_mult.cuh"
 
-
 /**
  * Interpolate a batch of polynomials from their evaluations on the same subgroup.
  * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
@@ -15,24 +14,10 @@
  * @param n Length of `d_domain` array, also equal to the number of evaluations of each polynomial.
  * @param batch_size The size of the batch; the length of `d_evaluations` is `n` * `batch_size`.
  */
-template <typename E, typename S>
-int interpolate_batch(E * d_out, E * d_evaluations, S * d_domain, unsigned n, unsigned batch_size, bool coset, S * coset_powers, cudaStream_t stream) {
-  uint32_t logn = uint32_t(log(n) / log(2));
+template <typename E, typename S> int interpolate_batch(E * d_out, E * d_evaluations, S * d_domain, unsigned n, unsigned batch_size, bool coset, S * coset_powers, cudaStream_t stream) {
   cudaMemcpyAsync(d_out, d_evaluations, sizeof(E) * n * batch_size, cudaMemcpyDeviceToDevice, stream);
-  
-  int NUM_THREADS = min(n / 2, MAX_THREADS_BATCH);
-  int NUM_BLOCKS = batch_size * max(int((n / 2) / NUM_THREADS), 1);
-  for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
-  {
-    ntt_template_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_out, n, d_domain, n, NUM_BLOCKS, s, false);
-  }
-
-  if (coset)
-    batch_vector_mult(coset_powers, d_out, n, batch_size, stream);
-
-  NUM_BLOCKS = (n * batch_size + NUM_THREADS - 1) / NUM_THREADS;
-  template_normalize_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS, 0, stream>>> (d_out, n * batch_size, S::inv_log_size(logn));
-  cudaStreamSynchronize(stream);
+  S* _null = nullptr;
+  ntt_inplace_batch_template(d_out, d_domain, n, batch_size, true, coset, coset_powers, stream, true);
   return 0;
 }
 
@@ -89,15 +74,9 @@ int evaluate_batch(E * d_out, E * d_coefficients, S * d_domain, unsigned domain_
 
   if (coset)
     batch_vector_mult(coset_powers, d_out, domain_size, batch_size, stream);
-
-  int NUM_THREADS = min(domain_size / 2, MAX_THREADS_BATCH);
-  int chunks = max(int((domain_size / 2) / NUM_THREADS), 1);
-  int NUM_BLOCKS = batch_size * chunks;
-  for (uint32_t s = 0; s < logn; s++) //TODO: this loop also can be unrolled
-  {
-    ntt_template_kernel <E, S> <<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_out, domain_size, d_domain, domain_size, batch_size * chunks, logn - s - 1, true);
-  }
-  cudaStreamSynchronize(stream);
+  
+  S* _null = nullptr;
+  ntt_inplace_batch_template(d_out, d_domain, domain_size, batch_size, false, false, _null, stream, true);
   return 0;
 }
 
