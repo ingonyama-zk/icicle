@@ -797,7 +797,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, nof_buckets);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 
   unsigned *bucket_indices;
@@ -810,7 +810,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   NUM_BLOCKS = (size * (nof_bms+1) + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
                                                     nof_bms, bm_bitsize, c, top_bm_nof_missing_bits); //+size - leaving the first bm free for the out of place sort later
-                                                    cudaDeviceSynchronize();
+                                                    // cudaDeviceSynchronize();
                                                     printf("cuda error %u\n",cudaGetLastError());
 
 
@@ -930,7 +930,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 //                                                           d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize, c);                   
    // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
    //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
-                                                          cudaDeviceSynchronize();
+                                                          // cudaDeviceSynchronize();
                                                           printf("cuda error %u\n",cudaGetLastError());
 
   #ifdef SSM_SUM
@@ -958,7 +958,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     #else
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms, c); 
     #endif
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     printf("cuda error %u\n",cudaGetLastError());
   }
 //   else{
@@ -1097,7 +1097,7 @@ else{
         NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
         printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets1,j==target_bits_count-1? target_buckets: temp_buckets1,1<<(source_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,0);
-        cudaDeviceSynchronize();
+        // cudaDeviceSynchronize();
         printf("cuda error %u\n",cudaGetLastError());
 
         // std::vector<P> t1_buckets;
@@ -1124,7 +1124,7 @@ else{
         NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
         printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream2>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1);
-        cudaDeviceSynchronize();
+        // cudaDeviceSynchronize();
         printf("cuda error %u\n",cudaGetLastError());
 
         // std::vector<P> t1_buckets;
@@ -1304,7 +1304,7 @@ else{
 
   //launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S><<<1,1,0,stream>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
   //copy final result to host
   cudaStreamSynchronize(stream);
