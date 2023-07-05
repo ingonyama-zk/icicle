@@ -327,6 +327,34 @@ extern "C" int ntt_inplace_coset_batch_cuda_bn254(BN254::scalar_t* d_inout, BN25
     }
 }
 
+extern "C" int sub_scalars_cuda_bn254(BN254::scalar_t* d_out, BN254::scalar_t* d_in1, BN254::scalar_t* d_in2, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return sub_polys(d_out, d_in1, d_in2, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int add_scalars_cuda_bn254(BN254::scalar_t* d_out, BN254::scalar_t* d_in1, BN254::scalar_t* d_in2, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return add_polys(d_out, d_in1, d_in2, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
 extern "C" int reverse_order_scalars_cuda_bn254(BN254::scalar_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
