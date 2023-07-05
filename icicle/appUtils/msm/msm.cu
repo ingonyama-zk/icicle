@@ -1064,10 +1064,10 @@ else{
     // for (unsigned j = 0; j < target_windows_count-1; j++) //another loop
     // reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,0>>>(target_buckets, target_buckets, source_windows_count>>(j+2));
 
-    cudaStream_t stream2;
+    // cudaStream_t stream2;
     // cudaStreamCreate(&streams[0]);
     // cudaStreamCreate(&streams[1]);
-    cudaStreamCreate(&stream2);
+    // cudaStreamCreate(&stream2);
 
     // if (source_bits_count>8){
     if (source_bits_count>0){
@@ -1123,7 +1123,7 @@ else{
         printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
         NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
         printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
-        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream2>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1);
+        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1);
         // cudaDeviceSynchronize();
         printf("cuda error %u\n",cudaGetLastError());
 
@@ -1178,15 +1178,15 @@ else{
     printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
     NUM_BLOCKS = source_windows_count<<target_bits_count;
     printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
-    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream2>>>(source_buckets,target_buckets,1,1<<target_bits_count,1);
+    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(source_buckets,target_buckets,1,1<<target_bits_count,1);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
     // }
     }
-    cudaStreamSynchronize(stream);
+    // cudaStreamSynchronize(stream);
     // cudaStreamDestroy(streams[0]);
-    cudaStreamSynchronize(stream2);
-    cudaStreamDestroy(stream2);
+    // cudaStreamSynchronize(stream2);
+    // cudaStreamDestroy(stream2);
 
     // cudaDeviceSynchronize();
     // // std::vector<P> t_buckets;
