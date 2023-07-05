@@ -107,13 +107,13 @@ int point_vec_to_affine(const proj *x, affine *result, const unsigned count) {
 }
 
 
-__global__ void mp_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+__global__ void mp_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::Wide *result) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   scalar_field::multiply_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
 }
 
 
-int mp_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result)
+int mp_mult(const scalar_field *x, scalar_field *y, scalar_field::Wide *result)
 {
   mp_mult_kernel<<<1, 32>>>(x, y, result);
   int error = cudaGetLastError();
@@ -122,26 +122,26 @@ int mp_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result)
 
 
 
-__global__ void mp_lsb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+__global__ void mp_lsb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::Wide *result) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   scalar_field::multiply_lsb_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
 }
 
 
-int mp_lsb_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result)
+int mp_lsb_mult(const scalar_field *x, scalar_field *y, scalar_field::Wide *result)
 {
   mp_lsb_mult_kernel<<<1, 32>>>(x, y, result);
   int error = cudaGetLastError();
   return error ? error :  cudaDeviceSynchronize();
 }
 
-__global__ void mp_msb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+__global__ void mp_msb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::Wide *result) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   scalar_field::multiply_msb_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
 }
 
 
-int mp_msb_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result)
+int mp_msb_mult(const scalar_field *x, scalar_field *y, scalar_field::Wide *result)
 {
   mp_msb_mult_kernel<<<1, 1>>>(x, y, result);
   int error = cudaGetLastError();
@@ -149,13 +149,13 @@ int mp_msb_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *resu
 }
 
 
-__global__ void ingo_mp_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+__global__ void ingo_mp_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::Wide *result) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   scalar_field::ingo_multiply_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
 }
 
 
-int ingo_mp_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result)
+int ingo_mp_mult(const scalar_field *x, scalar_field *y, scalar_field::Wide *result)
 {
   ingo_mp_mult_kernel<<<1, 32>>>(x, y, result);
   int error = cudaGetLastError();
@@ -163,13 +163,13 @@ int ingo_mp_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *res
 }
 
 
-__global__ void ingo_mp_msb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::wide *result) {
+__global__ void ingo_mp_msb_mult_kernel(const scalar_field *x, const scalar_field *y, scalar_field::Wide *result) {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   scalar_field::ingo_msb_multiply_raw_device(x[gid].limbs_storage, y[gid].limbs_storage, result[gid].limbs_storage);
 }
 
 
-int ingo_mp_msb_mult(const scalar_field *x, scalar_field *y, scalar_field::wide *result, const unsigned n)
+int ingo_mp_msb_mult(const scalar_field *x, scalar_field *y, scalar_field::Wide *result, const unsigned n)
 {
   ingo_mp_msb_mult_kernel<<<1, n>>>(x, y, result);
   int error = cudaGetLastError();

@@ -63,15 +63,15 @@ class Projective {
       const FF t21 = t01 + t20;                                // t21 ← t01 + t20   < 2
       const FF t22 = t01 - t20;                                // t22 ← t01 − t20   < 2
       const FF t23 = FF::mul(3 * B_VALUE, t17);                // t23 ← b3 · t17    < 2
-      const FF t24 = t12 * t23;                                // t24 ← t12 · t23   < 2
-      const FF t25 = t07 * t22;                                // t25 ← t07 · t22   < 2
-      const FF X3 = t25 - t24;                                 // X3 ← t25 − t24    < 2
-      const FF t27 = t23 * t19;                                // t27 ← t23 · t19   < 2
-      const FF t28 = t22 * t21;                                // t28 ← t22 · t21   < 2
-      const FF Y3 = t28 + t27;                                 // Y3 ← t28 + t27    < 2
-      const FF t30 = t19 * t07;                                // t30 ← t19 · t07   < 2
-      const FF t31 = t21 * t12;                                // t31 ← t21 · t12   < 2
-      const FF Z3 = t31 + t30;                                 // Z3 ← t31 + t30    < 2
+      const auto t24 = FF::mul_wide(t12, t23);                 // t24 ← t12 · t23   < 2
+      const auto t25 = FF::mul_wide(t07, t22);                 // t25 ← t07 · t22   < 2
+      const FF X3 = FF::reduce(t25 - t24);                     // X3 ← t25 − t24    < 2
+      const auto t27 = FF::mul_wide(t23, t19);                 // t27 ← t23 · t19   < 2
+      const auto t28 = FF::mul_wide(t22, t21);                 // t28 ← t22 · t21   < 2
+      const FF Y3 = FF::reduce(t28 + t27);                     // Y3 ← t28 + t27    < 2
+      const auto t30 = FF::mul_wide(t19, t07);                 // t30 ← t19 · t07   < 2
+      const auto t31 = FF::mul_wide(t21, t12);                 // t31 ← t21 · t12   < 2
+      const FF Z3 = FF::reduce(t31 + t30);                     // Z3 ← t31 + t30    < 2
       return {X3, Y3, Z3};
     }
 

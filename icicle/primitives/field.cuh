@@ -251,45 +251,56 @@ template <class CONFIG> class Field {
 
     static constexpr unsigned slack_bits = 32 * TLC - NBITS;
 
-    struct wide {
+    struct Wide {
       ff_wide_storage limbs_storage;
       
-      Field HOST_DEVICE_INLINE get_lower() {
+      static constexpr Field HOST_DEVICE_INLINE get_lower(const Wide &xs) {
         Field out{};
       #ifdef __CUDA_ARCH__
       #pragma unroll
       #endif
         for (unsigned i = 0; i < TLC; i++)
-          out.limbs_storage.limbs[i] = limbs_storage.limbs[i];
+          out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
         return out;
       }
 
-      Field HOST_DEVICE_INLINE get_higher_with_slack() {
+      static constexpr Field HOST_DEVICE_INLINE get_higher_with_slack(const Wide &xs) {
         Field out{};
       #ifdef __CUDA_ARCH__
       #pragma unroll
       #endif
         for (unsigned i = 0; i < TLC; i++) {
         #ifdef __CUDA_ARCH__
-          out.limbs_storage.limbs[i] = __funnelshift_lc(limbs_storage.limbs[i + TLC - 1], limbs_storage.limbs[i + TLC], slack_bits);
+          out.limbs_storage.limbs[i] = __funnelshift_lc(xs.limbs_storage.limbs[i + TLC - 1], xs.limbs_storage.limbs[i + TLC], slack_bits);
         #else
-          out.limbs_storage.limbs[i] = (limbs_storage.limbs[i + TLC] << slack_bits) + (limbs_storage.limbs[i + TLC - 1] >> (32 - slack_bits));
+          out.limbs_storage.limbs[i] = (xs.limbs_storage.limbs[i + TLC] << slack_bits) + (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - slack_bits));
         #endif
         }
         return out;
       }
     };
 
-    friend HOST_DEVICE_INLINE wide operator+(wide xs, const wide& ys) {   
-      wide rs = {};
-      add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      return rs;
+    template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE Wide sub_modulus_squared(const Wide &xs) {
+      if (REDUCTION_SIZE == 0)
+        return xs;
+      const ff_wide_storage modulus = get_modulus_squared<REDUCTION_SIZE>();
+      Wide rs = {};
+      return sub_limbs<true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
     }
 
-    // an incomplete impl that assumes that xs > ys
-    friend HOST_DEVICE_INLINE wide operator-(wide xs, const wide& ys) {   
-      wide rs = {};
-      sub_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+    friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys) {   
+      Wide rs = {};
+      add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+      return sub_modulus_squared<1>(rs);
+    }
+
+    friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys) {   
+      Wide rs = {};
+      uint32_t carry = sub_limbs<true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+      if (carry == 0)
+        return rs;
+      const ff_wide_storage modulus = get_modulus_squared<1>();
+      add_limbs<false>(rs.limbs_storage, modulus, rs.limbs_storage);
       return rs;
     }
 
@@ -597,7 +608,6 @@ template <class CONFIG> class Field {
       even[i + 1] = ptx::addc(even[i + 1], 0);
     }
 
-
     static DEVICE_INLINE void ingo_msb_multiply_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
       const uint32_t *a = as.limbs;
       const uint32_t *b = bs.limbs;
@@ -709,10 +719,6 @@ template <class CONFIG> class Field {
       even[i + 1] = ptx::addc(even[i + 1], 0);
     }
 
-
-
-      
-
     static DEVICE_INLINE void multiply_lsb_raw_device(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
       // r = a * b is correcrt for the first TLC + 1 digits. (not computing from TLC + 1 to 2*TLC - 2).
       const uint32_t *a = as.limbs;
@@ -764,10 +770,6 @@ template <class CONFIG> class Field {
       even[i + 1] = ptx::addc(even[i + 1], 0);
     }
 
-
-
-
-
     static HOST_INLINE void multiply_raw_host(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
       const uint32_t *a = as.limbs;
       const uint32_t *b = bs.limbs;
@@ -789,20 +791,20 @@ template <class CONFIG> class Field {
     }
 
     static HOST_DEVICE_INLINE void multiply_raw_lsb(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
-      #ifdef __CUDA_ARCH__
-        return multiply_lsb_raw_device(as, bs, rs);
-      #else
-        return multiply_raw_host(as, bs, rs);
-      #endif
-      }
+    #ifdef __CUDA_ARCH__
+      return multiply_lsb_raw_device(as, bs, rs);
+    #else
+      return multiply_raw_host(as, bs, rs);
+    #endif
+    }
 
-      static HOST_DEVICE_INLINE void multiply_raw_msb(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
-        #ifdef __CUDA_ARCH__
-          return multiply_raw_device(as, bs, rs);
-        #else
-          return multiply_raw_host(as, bs, rs);
-        #endif
-        }
+    static HOST_DEVICE_INLINE void multiply_raw_msb(const ff_storage &as, const ff_storage &bs, ff_wide_storage &rs) {
+    #ifdef __CUDA_ARCH__
+      return multiply_raw_device(as, bs, rs);
+    #else
+      return multiply_raw_host(as, bs, rs);
+    #endif
+    }
 
   public:
     ff_storage limbs_storage;
@@ -836,7 +838,7 @@ template <class CONFIG> class Field {
       return value;
     }
 
-    template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE Field reduce(const Field &xs) {
+    template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE Field sub_modulus(const Field &xs) {
       if (REDUCTION_SIZE == 0)
         return xs;
       const ff_storage modulus = get_modulus<REDUCTION_SIZE>();
@@ -852,13 +854,13 @@ template <class CONFIG> class Field {
       return os;
     }
 
-    friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys) {   
+    friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys) {
       Field rs = {};
       add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      return reduce<1>(rs);
+      return sub_modulus<1>(rs);
     }
 
-    friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys) {   
+    friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys) {
       Field rs = {};
       uint32_t carry = sub_limbs<true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       if (carry == 0)
@@ -869,8 +871,8 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE wide mul_wide(const Field& xs, const Field& ys) {
-      wide rs = {};
+    static constexpr HOST_DEVICE_INLINE Wide mul_wide(const Field& xs, const Field& ys) {
+      Wide rs = {};
       multiply_raw(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
       return rs;
     }
@@ -891,31 +893,33 @@ template <class CONFIG> class Field {
     #endif
     }
 
-    friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys) {
-      //printf("operator* called \n");
-      wide xy = mul_wide(xs, ys); // full mult
-      Field xy_hi = xy.get_higher_with_slack(); // xy << slack_bits
-      wide l = {};
-      multiply_raw_msb(xy_hi.limbs_storage, get_m(), l.limbs_storage);      // MSB mult
-      Field l_hi = l.get_higher_with_slack();
-      wide lp = {};
+    template <unsigned MODULUS_MULTIPLE = 1>
+    static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs) {
+      Field xs_hi = Wide::get_higher_with_slack(xs); // xy << slack_bits
+      Wide l = {};
+      multiply_raw_msb(xs_hi.limbs_storage, get_m(), l.limbs_storage);      // MSB mult
+      Field l_hi = Wide::get_higher_with_slack(l);
+      Wide lp = {};
       multiply_raw_lsb(l_hi.limbs_storage, get_modulus(), lp.limbs_storage); // LSB mult
-      wide r_wide = xy - lp; 
-      wide r_wide_reduced = {};
-      // uint32_t reduced = sub_limbs<true>(r_wide.limbs_storage, modulus_wide(), r_wide_reduced.limbs_storage);
-      // r_wide = reduced ? r_wide : r_wide_reduced;
+      Wide r_wide = xs - lp; 
+      Wide r_wide_reduced = {};
       for (unsigned i = 0; i < TLC + 1; i++)
       {
         uint32_t carry = sub_limbs_partial(r_wide.limbs_storage.limbs, modulus_wide().limbs, r_wide_reduced.limbs_storage.limbs, TLC + 1);
         if (carry == 0) // continue to reduce
           r_wide = r_wide_reduced;
         else // done
-            break;
+          break;
       }
       
       // number of wrap around is bounded by TLC +  1 times.
-      Field r = r_wide.get_lower();
-      return (r);
+      Field r = Wide::get_lower(r_wide);
+      return r;
+    }
+
+    friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys) {
+      Wide xy = mul_wide(xs, ys); // full mult
+      return reduce(xy);
     }
 
     friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys) {
@@ -962,7 +966,7 @@ template <class CONFIG> class Field {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE wide sqr_wide(const Field& xs) {
+    static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const Field& xs) {
       // TODO: change to a more efficient squaring
       return mul_wide<MODULUS_MULTIPLE>(xs, xs);
     }
@@ -997,7 +1001,7 @@ template <class CONFIG> class Field {
     #endif
       }
       r[TLC - 1] = x[TLC - 1] >> 1;
-      return reduce<MODULUS_MULTIPLE>(rs);
+      return sub_modulus<MODULUS_MULTIPLE>(rs);
     }
 
     static constexpr HOST_DEVICE_INLINE bool lt(const Field &xs, const Field &ys) {

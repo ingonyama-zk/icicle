@@ -47,8 +47,8 @@ protected:
   proj *res_points2{};
   scalar_field *res_scalars1{};
   scalar_field *res_scalars2{};
-  scalar_field::wide *res_scalars_wide{};
-  scalar_field::wide *res_scalars_wide_full{};
+  scalar_field::Wide *res_scalars_wide{};
+  scalar_field::Wide *res_scalars_wide_full{};
 
   PrimitivesTest() {
     assert(!cudaDeviceReset());
@@ -64,8 +64,8 @@ protected:
     assert(!cudaMallocManaged(&res_points2, n * sizeof(proj)));
     assert(!cudaMallocManaged(&res_scalars1, n * sizeof(scalar_field)));
     assert(!cudaMallocManaged(&res_scalars2, n * sizeof(scalar_field)));
-    assert(!cudaMallocManaged(&res_scalars_wide, n * sizeof(scalar_field::wide)));
-    assert(!cudaMallocManaged(&res_scalars_wide_full, n * sizeof(scalar_field::wide)));
+    assert(!cudaMallocManaged(&res_scalars_wide, n * sizeof(scalar_field::Wide)));
+    assert(!cudaMallocManaged(&res_scalars_wide_full, n * sizeof(scalar_field::Wide)));
 
   }
 
@@ -103,8 +103,8 @@ protected:
     ASSERT_EQ(cudaMemset(res_scalars1, 0, n * sizeof(scalar_field)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_scalars2, 0, n * sizeof(scalar_field)), cudaSuccess);
     
-    ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_field::wide)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars_wide_full, 0, n * sizeof(scalar_field::wide)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_field::Wide)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars_wide_full, 0, n * sizeof(scalar_field::Wide)), cudaSuccess);
   }
 };
 
