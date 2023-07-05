@@ -85,7 +85,8 @@ extern "C" int interpolate_scalars_cuda_bn254(BN254::scalar_t* d_out, BN254::sca
 {
     try
     {
-        return interpolate(d_out, d_evaluations, d_domain, n, stream);
+        BN254::scalar_t* _null = nullptr;
+        return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -99,8 +100,9 @@ extern "C" int interpolate_scalars_batch_cuda_bn254(BN254::scalar_t* d_out, BN25
 {
     try
     {
+        BN254::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -113,7 +115,8 @@ extern "C" int interpolate_points_cuda_bn254(BN254::projective_t* d_out, BN254::
 {
     try
     {
-        return interpolate(d_out, d_evaluations, d_domain, n, stream);
+        BN254::scalar_t* _null = nullptr;
+        return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -127,8 +130,9 @@ extern "C" int interpolate_points_batch_cuda_bn254(BN254::projective_t* d_out, B
 {
     try
     {
+        BN254::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
