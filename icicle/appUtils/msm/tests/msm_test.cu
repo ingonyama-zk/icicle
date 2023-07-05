@@ -5,15 +5,19 @@
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
-#include "../../curves/bls12_381/curve_config.cuh"
+// #include "../../curves/bls12_377/curve_config.cuh"
+#include "../../curves/bn254/curve_config.cuh"
 
-using namespace BLS12_381;
+// using namespace BLS12_377;
+using namespace BN254;
 
 class Dummy_Scalar {
   public:
     static constexpr unsigned NBITS = 32;
 
     unsigned x;
+    // unsigned p = 10;
+    unsigned p = 1<<30;
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
@@ -25,7 +29,7 @@ class Dummy_Scalar {
     }
 
     friend HOST_DEVICE_INLINE Dummy_Scalar operator+(Dummy_Scalar p1, const Dummy_Scalar& p2) {   
-      return {p1.x+p2.x};
+      return {(p1.x+p2.x)%p1.p};
     }
 
     friend HOST_DEVICE_INLINE bool operator==(const Dummy_Scalar& p1, const Dummy_Scalar& p2) {
@@ -36,10 +40,11 @@ class Dummy_Scalar {
       return (p1.x == p2);
     }
 
-    // static HOST_DEVICE_INLINE Dummy_Scalar neg(const Dummy_Scalar &scalar) { 
-    //   return {Dummy_Scalar::neg(point.x)};
-    // }
+    static HOST_DEVICE_INLINE Dummy_Scalar neg(const Dummy_Scalar &scalar) { 
+      return {scalar.p-scalar.x};
+    }
     static HOST_INLINE Dummy_Scalar rand_host() {
+      // return {(unsigned)rand()%10};
       return {(unsigned)rand()};
     }
 };
@@ -53,6 +58,10 @@ class Dummy_Projective {
       return {0};
     }
 
+    static HOST_DEVICE_INLINE Dummy_Projective one() {
+      return {1};
+    }
+
     static HOST_DEVICE_INLINE Dummy_Projective to_affine(const Dummy_Projective &point) {
       return {point.x};
     }
@@ -61,9 +70,9 @@ class Dummy_Projective {
       return {point.x};
     }
 
-    // static HOST_DEVICE_INLINE Dummy_Projective neg(const Dummy_Projective &point) { 
-    //   return {Dummy_Scalar::neg(point.x)};
-    // }
+    static HOST_DEVICE_INLINE Dummy_Projective neg(const Dummy_Projective &point) { 
+      return {Dummy_Scalar::neg(point.x)};
+    }
 
     friend HOST_DEVICE_INLINE Dummy_Projective operator+(Dummy_Projective p1, const Dummy_Projective& p2) {   
       return {p1.x+p2.x};
@@ -119,62 +128,68 @@ typedef affine_t test_affine;
 
 int main()
 {
-  unsigned batch_size = 4;
-  unsigned msm_size = 1<<15;
+  unsigned batch_size = 1;
+  unsigned msm_size = 1<<6;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
   test_affine *points = new test_affine[N];
   
   for (unsigned i=0;i<N;i++){
-    scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
+    // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
-    // scalars[i] = test_scalar::rand_host();
+    scalars[i] = test_scalar::rand_host();
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
 
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
   // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
-  test_projective large_res[batch_size];
-  test_projective batched_large_res[batch_size];
+  test_projective large_res[batch_size*2];
+  // test_projective batched_large_res[batch_size];
   // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
   // fake_point batched_large_res[256];
 
 
   // short_msm<scalar_t, projective_t, affine_t>(scalars, points, N, short_res);
-  for (unsigned i=0;i<batch_size;i++){
-    large_msm<test_scalar, test_projective, test_affine>(scalars+msm_size*i, points+msm_size*i, msm_size, large_res+i, false);
+  // for (unsigned i=0;i<batch_size;i++){
+    // large_msm<test_scalar, test_projective, test_affine>(scalars+msm_size*i, points+msm_size*i, msm_size, large_res+i, false);
     // std::cout<<"final result large"<<std::endl;
     // std::cout<<test_projective::to_affine(*large_res)<<std::endl;
-  }
+  // }
   auto begin = std::chrono::high_resolution_clock::now();
-  batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res, false);
-  // large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false);
+  // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res, false);
+  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,0);
+  // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res+1, false, false,0);
+  // test_reduce_triangle(scalars);
+  // test_reduce_rectangle(scalars);
+  // test_reduce_single(scalars);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
   std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
-  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
-  std::cout<<"final results batched large"<<std::endl;
-  bool success = true;
-  for (unsigned i = 0; i < batch_size; i++)
-  {
-    std::cout<<test_projective::to_affine(batched_large_res[i])<<std::endl;
-    if (test_projective::to_affine(large_res[i])==test_projective::to_affine(batched_large_res[i])){
-      std::cout<<"good"<<std::endl;
-    }
-    else{
-      std::cout<<"miss"<<std::endl;
-      std::cout<<test_projective::to_affine(large_res[i])<<std::endl;
-      success = false;
-    }
-  }
-  if (success){
-    std::cout<<"success!"<<std::endl;
-  }
+  // std::cout<<"final results batched large"<<std::endl;
+  // bool success = true;
+  // for (unsigned i = 0; i < batch_size; i++)
+  // {
+  //   std::cout<<test_projective::to_affine(batched_large_res[i])<<std::endl;
+  //   if (test_projective::to_affine(large_res[i])==test_projective::to_affine(batched_large_res[i])){
+  //     std::cout<<"good"<<std::endl;
+  //   }
+  //   else{
+  //     std::cout<<"miss"<<std::endl;
+  //     std::cout<<test_projective::to_affine(large_res[i])<<std::endl;
+  //     success = false;
+  //   }
+  // }
+  // if (success){
+  //   std::cout<<"success!"<<std::endl;
+  // }
   
   // std::cout<<batched_large_res[0]<<std::endl;
   // std::cout<<batched_large_res[1]<<std::endl;

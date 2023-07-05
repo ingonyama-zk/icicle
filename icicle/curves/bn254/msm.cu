@@ -13,7 +13,7 @@ int msm_cuda_bn254(BN254::projective_t *out, BN254::affine_t points[],
     try
     {   
         cudaStreamCreate(&stream);
-        large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, stream);
+        large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, false, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
@@ -55,7 +55,7 @@ int commit_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scalars, BN
     try
     {
         cudaStreamCreate(&stream);
-        large_msm(d_scalars, d_points, count, d_out, true, stream);
+        large_msm(d_scalars, d_points, count, d_out, true, false, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
@@ -100,7 +100,7 @@ int msm_g2_cuda_bn254(BN254::g2_projective_t *out, BN254::g2_affine_t points[],
     try
     {   
         cudaStreamCreate(&stream);
-        large_msm<BN254::scalar_t, BN254::g2_projective_t, BN254::g2_affine_t>(scalars, points, count, out, false, stream);
+        large_msm<BN254::scalar_t, BN254::g2_projective_t, BN254::g2_affine_t>(scalars, points, count, out, false, false, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
@@ -144,7 +144,7 @@ int commit_g2_cuda_bn254(BN254::g2_projective_t* d_out, BN254::scalar_t* d_scala
     try
     {
         cudaStreamCreate(&stream);
-        large_msm(d_scalars, d_points, count, d_out, true, stream);
+        large_msm(d_scalars, d_points, count, d_out, true, false, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }

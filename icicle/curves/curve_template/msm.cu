@@ -11,7 +11,7 @@ int msm_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::projective_t *out, ${CURVE_NAME_U}
 {
     try
     {
-        large_msm<${CURVE_NAME_U}::scalar_t, ${CURVE_NAME_U}::projective_t, ${CURVE_NAME_U}::affine_t>(scalars, points, count, out, false, stream);
+        large_msm<${CURVE_NAME_U}::scalar_t, ${CURVE_NAME_U}::projective_t, ${CURVE_NAME_U}::affine_t>(scalars, points, count, out, false, false, stream);
         return CUDA_SUCCESS;
     }
     catch (const std::runtime_error &ex)
@@ -52,7 +52,7 @@ extern "C" int msm_batch_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::projective_t* out
  {
      try
      {
-         large_msm(d_scalars, d_points, count, d_out, true, stream);
+         large_msm(d_scalars, d_points, count, d_out, true, false, stream);
          cudaStreamSynchronize(stream);
          return 0;
      }
