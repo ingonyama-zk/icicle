@@ -897,25 +897,25 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned* sorted_bucket_sizes;
   unsigned* sorted_bucket_offsets;
   unsigned* sorted_single_bucket_indices;
-  cudaMalloc(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets);
-  cudaMalloc(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets);
-  cudaMalloc(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets);
+  cudaMallocAsync(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets, stream);
+  cudaMallocAsync(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets, stream);
+  cudaMallocAsync(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets, stream);
   unsigned* sort_offsets_temp_storage{};
   size_t sort_offsets_temp_storage_bytes = 0;
   unsigned* sort_single_temp_storage{};
   size_t sort_single_temp_storage_bytes = 0;
   cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
   cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
-  cudaMalloc(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes);
-  cudaMalloc(&sort_single_temp_storage, sort_single_temp_storage_bytes);
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  cudaMallocAsync(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, stream);
+  cudaMallocAsync(&sort_single_temp_storage, sort_single_temp_storage_bytes, stream);
   cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
   cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
-  cudaFree(sort_offsets_temp_storage);
-  cudaFree(sort_single_temp_storage);
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  cudaFreeAsync(sort_offsets_temp_storage, stream);
+  cudaFreeAsync(sort_single_temp_storage, stream);
   
 
   //launch the accumulation kernel with maximum threads
@@ -973,12 +973,12 @@ accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorte
 //     const unsigned log_data_split =
 //         get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
 //     const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
-//     cudaMalloc(&target_buckets, sizeof(P) * total_buckets_count); //32*2^8*2^7 buckets
+//     cudaMallocAsync(&target_buckets, sizeof(P) * total_buckets_count, stream); //32*2^8*2^7 buckets
 //     NUM_THREADS = 32;
 //     NUM_BLOCKS = (total_buckets_count + NUM_THREADS - 1) / NUM_THREADS;
 //     // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
 //     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
-//     split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
+//     split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
 //     cudaFree(source_buckets);
 
 //     for (unsigned j = 0; j < log_data_split; j++){
@@ -1007,12 +1007,12 @@ accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorte
 //       //   HANDLE_CUDA_ERROR(free(results, stream));
 //       // HANDLE_CUDA_ERROR(free(target_buckets, stream));
 //       nof_bms = bitsize;
-//       cudaMalloc(&final_results, sizeof(P) * nof_bms);
+//       cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
 //       NUM_THREADS = 32;
 //       NUM_BLOCKS = (result_windows_count + NUM_THREADS - 1) / NUM_THREADS;
 //       // const dim3 block_dim = result_windows_count < 32 ? count : 32;
 //       // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
-//       last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(c, target_buckets, final_results, result_windows_count);
+//       last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(c, target_buckets, final_results, result_windows_count);
 //       c = 1;
 //       break;
 //     }
