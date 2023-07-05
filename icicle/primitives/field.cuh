@@ -294,31 +294,39 @@ template <class CONFIG> class Field {
         }
         return out;
       }
-    };
 
-    template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE Wide sub_modulus_squared(const Wide &xs) {
-      if (REDUCTION_SIZE == 0)
-        return xs;
-      const ff_wide_storage modulus = get_modulus_squared<REDUCTION_SIZE>();
-      Wide rs = {};
-      return sub_limbs<true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
-    }
+      template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE Wide sub_modulus_squared(const Wide &xs) {
+        if (REDUCTION_SIZE == 0)
+          return xs;
+        const ff_wide_storage modulus = get_modulus_squared<REDUCTION_SIZE>();
+        Wide rs = {};
+        return sub_limbs<true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
+      }
 
-    friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys) {   
-      Wide rs = {};
-      add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      return sub_modulus_squared<1>(rs);
-    }
-
-    friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys) {   
-      Wide rs = {};
-      uint32_t carry = sub_limbs<true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      if (carry == 0)
+      template <unsigned MODULUS_MULTIPLE = 1>
+      static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs) {
+        const ff_wide_storage modulus = get_modulus_squared<MODULUS_MULTIPLE>();
+        Wide rs = {};
+        sub_limbs<false>(modulus, xs.limbs_storage, rs.limbs_storage);
         return rs;
-      const ff_wide_storage modulus = get_modulus_squared<1>();
-      add_limbs<false>(rs.limbs_storage, modulus, rs.limbs_storage);
-      return rs;
-    }
+      }
+  
+      friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys) {   
+        Wide rs = {};
+        add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+        return sub_modulus_squared<1>(rs);
+      }
+  
+      friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys) {   
+        Wide rs = {};
+        uint32_t carry = sub_limbs<true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+        if (carry == 0)
+          return rs;
+        const ff_wide_storage modulus = get_modulus_squared<1>();
+        add_limbs<false>(rs.limbs_storage, modulus, rs.limbs_storage);
+        return rs;
+      }
+    };
 
     // return modulus
     template <unsigned MULTIPLIER = 1> static constexpr HOST_DEVICE_INLINE ff_storage get_modulus() {

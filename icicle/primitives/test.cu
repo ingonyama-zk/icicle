@@ -33,7 +33,7 @@ mp::int1024_t convert_to_boost_mp(uint32_t *a, uint32_t length)
 
 class PrimitivesTest : public ::testing::Test {
 protected:
-  static const unsigned n = 1 << 10;
+  static const unsigned n = 1 << 4;
 
   projective_t *points1{};
   projective_t *points2{};

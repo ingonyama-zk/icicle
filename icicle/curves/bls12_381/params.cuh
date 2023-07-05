@@ -21,6 +21,9 @@ namespace PARAMS_BLS12_381{
     // 2*modulus^2
     static constexpr storage<2*limbs_count> modulus_squared_2 = {0x00000002, 0xfffffffc, 0xfff96ffd, 0x4efd200f, 0x39b7600b, 0xd315c004, 0xa867ef70, 0x915482bc, 
                                                                 0x95538cc2, 0x84c23ede, 0xb326943b, 0x1d2b27f2, 0xde59841e, 0xa41827b7, 0xe9784ef0, 0x68fec1e7};
+    // note: doesn't actually fit into 384 bits, and shouldn't be used! is added for compilation
+    static constexpr storage<2*limbs_count> modulus_squared_4 = {0x00000002, 0xfffffffc, 0xfff96ffd, 0x4efd200f, 0x39b7600b, 0xd315c004, 0xa867ef70, 0x915482bc, 
+                                                                0x95538cc2, 0x84c23ede, 0xb326943b, 0x1d2b27f2, 0xde59841e, 0xa41827b7, 0xe9784ef0, 0x68fec1e7};
     static constexpr unsigned modulus_bit_count = 255;
     // m = floor(2^(2*modulus_bit_count) / modulus)
     static constexpr storage<limbs_count> m = {0x830358e4, 0x509cde80, 0x2f92eb5c, 0xd9410fad, 0xc1f823b4, 0xe2d772d, 0x7fb78ddf, 0x8d54253b};
