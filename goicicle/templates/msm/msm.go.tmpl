@@ -1,0 +1,71 @@
+import (
+	"errors"
+	"fmt"
+	"unsafe"
+)
+
+// #cgo CFLAGS: -I../../../icicle/curves/{{toLower .CurveName}}/
+// #cgo LDFLAGS: -L${SRCDIR}/../../ {{.SharedLib}}
+// #include "msm.h"
+import "C"
+
+func Msm{{.CurveName}}(points []PointAffineNoInfinity{{.CurveName}}, scalars []ScalarField, device_id int) (*Point{{.CurveName}}, error) {
+	if len(points) != len(scalars) {
+		return nil, errors.New("error on: len(points) != len(scalars)")
+	}
+
+	out := new(Point{{.CurveName}})
+
+	pointsC := (*C.{{.CurveName}}_affine_t)(unsafe.Pointer(&points[0]))
+	scalarsC := (*C.{{.CurveName}}_scalar_t)(unsafe.Pointer(&scalars[0]))
+	outC := (*C.{{.CurveName}}_projective_t)(unsafe.Pointer(out))
+
+	ret := C.msm_cuda_{{.Prefix}}(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
+
+	if ret != 0 {
+		return nil, fmt.Errorf("msm_cuda_{{.Prefix}} returned error code: %d", ret)
+	}
+
+	return out, nil
+}
+
+func MsmBatch{{.CurveName}}(points *[]PointAffineNoInfinity{{.CurveName}}, scalars *[]ScalarField, batchSize, deviceId int) ([]*Point{{.CurveName}}, error) {
+	// Check for nil pointers
+	if points == nil || scalars == nil {
+		return nil, errors.New("points or scalars is nil")
+	}
+
+	if len(*points) != len(*scalars) {
+		return nil, errors.New("error on: len(points) != len(scalars)")
+	}
+
+	// Check for empty slices
+	if len(*points) == 0 || len(*scalars) == 0 {
+		return nil, errors.New("points or scalars is empty")
+	}
+
+	// Check for zero batchSize
+	if batchSize <= 0 {
+		return nil, errors.New("error on: batchSize must be greater than zero")
+	}
+
+	out := make([]*Point{{.CurveName}}, batchSize)
+
+	for i := 0; i < len(out); i++ {
+		out[i] = NewPoint{{.CurveName}}Zero()
+	}
+
+	outC := (*C.{{.CurveName}}_projective_t)(unsafe.Pointer(&out[0]))
+	pointsC := (*C.{{.CurveName}}_affine_t)(unsafe.Pointer(&(*points)[0]))
+	scalarsC := (*C.{{.CurveName}}_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
+	msmSizeC := C.size_t(len(*points) / batchSize)
+	deviceIdC := C.size_t(deviceId)
+	batchSizeC := C.size_t(batchSize)
+
+	ret := C.msm_batch_cuda_{{.Prefix}}(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
+	if ret != 0 {
+		return nil, fmt.Errorf("msm_batch_cuda_{{.Prefix}} returned error code: %d", ret)
+	}
+
+	return out, nil
+}

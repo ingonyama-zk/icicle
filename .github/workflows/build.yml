@@ -1,13 +1,27 @@
 name: Build
 
-on: 
+on:
   pull_request:
-    branches: [ "main" ]
+    types: 
+      - ready_for_review
+      - opened
+    branches:
+      - main
+      - dev
     paths:
-      - "icicle/**"
-      - "src/**"
-      - "Cargo.toml"
-      - "build.rs"
+      - icicle/**
+      - src/**
+      - Cargo.toml
+      - build.rs
+  push:
+    branches-ignore:
+      - main
+      - dev
+    paths:
+      - icicle/**
+      - src/**
+      - Cargo.toml
+      - build.rs
 
 env:
   CARGO_TERM_COLOR: always

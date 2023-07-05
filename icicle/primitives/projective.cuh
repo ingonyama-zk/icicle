@@ -2,7 +2,7 @@
 
 #include "affine.cuh"
 
-template <class FF, class SCALAR_FF, class GEN, unsigned B_VALUE>
+template <typename FF, class SCALAR_FF, const FF& B_VALUE>
 class Projective {
   friend Affine<FF>;
 
@@ -10,10 +10,6 @@ class Projective {
     FF x;
     FF y;
     FF z;
-
-    static HOST_DEVICE_INLINE Projective generator() {
-      return { FF { GEN::generator_x }, FF { GEN::generator_y }, FF::one()};
-    }
 
     static HOST_DEVICE_INLINE Projective zero() {
       return {FF::zero(), FF::one(), FF::zero()};
@@ -26,6 +22,10 @@ class Projective {
 
     static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF> &point) {
       return {point.x, point.y, FF::one()};
+    }
+
+    static HOST_DEVICE_INLINE Projective generator() {
+      return {FF::generator_x(), FF::generator_y(), FF::one()};
     }
 
     static HOST_DEVICE_INLINE Projective neg(const Projective &point) { 
@@ -59,10 +59,12 @@ class Projective {
       const FF t17 = t15 - t16;                                // t17 ← t15 − t16   < 2
       const FF t18 = t00 + t00;                                // t18 ← t00 + t00   < 2
       const FF t19 = t18 + t00;                                // t19 ← t18 + t00   < 2
-      const FF t20 = FF::mul(3 * B_VALUE, t02);                // t20 ← b3 · t02    < 2
+      const FF t20 = FF::template mul_unsigned<3>(
+        FF::template mul_const<B_VALUE>(t02));                 // t20 ← b3 · t02    < 2
       const FF t21 = t01 + t20;                                // t21 ← t01 + t20   < 2
       const FF t22 = t01 - t20;                                // t22 ← t01 − t20   < 2
-      const FF t23 = FF::mul(3 * B_VALUE, t17);                // t23 ← b3 · t17    < 2
+      const FF t23 = FF::template mul_unsigned<3>(
+        FF::template mul_const<B_VALUE>(t17));                 // t23 ← b3 · t17    < 2
       const auto t24 = FF::mul_wide(t12, t23);                 // t24 ← t12 · t23   < 2
       const auto t25 = FF::mul_wide(t07, t22);                 // t25 ← t07 · t22   < 2
       const FF X3 = FF::reduce(t25 - t24);                     // X3 ← t25 − t24    < 2
@@ -85,7 +87,7 @@ class Projective {
     }
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Projective& point) {
-      os << "x: " << point.x << "; y: " << point.y << "; z: " << point.z;
+      os << "Point { x: " << point.x << "; y: " << point.y << "; z: " << point.z << " }";
       return os;
     }
 
@@ -95,7 +97,7 @@ class Projective {
 
     friend HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar, const Projective& point) {   
       Projective res = zero();
-  #ifdef CUDA_ARCH
+  #ifdef __CUDA_ARCH__
   #pragma unroll
   #endif
       for (int i = 0; i < SCALAR_FF::NBITS; i++) {
@@ -120,7 +122,7 @@ class Projective {
     static HOST_DEVICE_INLINE bool is_on_curve(const Projective &point) {
       if (is_zero(point))
         return true;
-      bool eq_holds = (FF::mul(B_VALUE, FF::sqr(point.z) * point.z) + FF::sqr(point.x) * point.x == point.z * FF::sqr(point.y));
+      bool eq_holds = (FF::template mul_const<B_VALUE>(FF::sqr(point.z) * point.z) + FF::sqr(point.x) * point.x == point.z * FF::sqr(point.y));
       return point.z != FF::zero() && eq_holds;
     }
 

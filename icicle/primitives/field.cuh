@@ -5,6 +5,9 @@
 #include "../utils/host_math.cuh"
 #include <random>
 #include <iostream>
+#include <iomanip>
+#include <string>
+#include <sstream>
 
 #define HOST_INLINE __host__ __forceinline__
 #define DEVICE_INLINE __device__ __forceinline__
@@ -13,7 +16,7 @@
 template <class CONFIG> class Field {
   public:
     static constexpr unsigned TLC = CONFIG::limbs_count;
-    static constexpr unsigned NBITS = CONFIG::modulus_bits_count;
+    static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
 
     static constexpr HOST_DEVICE_INLINE Field zero() {
       return Field { CONFIG::zero };
@@ -21,6 +24,23 @@ template <class CONFIG> class Field {
 
     static constexpr HOST_DEVICE_INLINE Field one() {
       return Field { CONFIG::one };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field from(uint32_t value) {
+      storage<TLC> scalar;
+      scalar.limbs[0] = value;
+      for (int i = 1; i < TLC; i++) {
+        scalar.limbs[i] = 0;
+      }
+      return Field { scalar };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field generator_x() {
+      return Field { CONFIG::g1_gen_x };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field generator_y() {
+      return Field { CONFIG::g1_gen_y };
     }
 
     static constexpr HOST_INLINE Field omega(uint32_t log_size) {
@@ -93,7 +113,6 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::omega32 };        
       }
-      // return Field { CONFIG::omega[log_size-1] };
     }
 
     static constexpr HOST_INLINE Field omega_inv(uint32_t log_size) {
@@ -166,7 +185,6 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::omega_inv32 };        
       }
-      // return Field { CONFIG::omega_inv[log_size-1] };
     }
 
     static constexpr HOST_INLINE Field inv_log_size(uint32_t log_size) {
@@ -237,13 +255,11 @@ template <class CONFIG> class Field {
         case 32:
           return Field { CONFIG::inv32 };        
       }
-      // return Field { CONFIG::inv[log_size-1] };
     }
 
     static constexpr HOST_DEVICE_INLINE Field modulus() {
       return Field { CONFIG::modulus };
     }
-
 
   // private:
     typedef storage<TLC> ff_storage;
@@ -348,7 +364,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? TLC : TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -364,7 +382,9 @@ template <class CONFIG> class Field {
       const uint32_t *y = ys.limbs;
       uint32_t *r = rs.limbs;
       r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    #ifdef __CUDA_ARCH__
     #pragma unroll
+    #endif
       for (unsigned i = 1; i < (CARRY_OUT ? 2 * TLC : 2 * TLC - 1); i++)
         r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
       if (!CARRY_OUT) {
@@ -443,7 +463,7 @@ template <class CONFIG> class Field {
       // acc = acc + bi*A[::2]
       acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
       acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
-  #pragma unroll
+    #pragma unroll
       for (size_t i = 2; i < n; i += 2) {
         acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
         acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
@@ -817,8 +837,6 @@ template <class CONFIG> class Field {
       const uint32_t limb_lsb_idx = (digit_num*digit_width) / 32;
       const uint32_t shift_bits = (digit_num*digit_width) % 32;
       unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
-      // printf("get_scalar_func digit %u rv %u\n",digit_num,rv);
-      // if (shift_bits + digit_width > 32) {
       if ((shift_bits + digit_width > 32) && (limb_lsb_idx+1 < TLC)) {
         rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
       }
@@ -847,10 +865,14 @@ template <class CONFIG> class Field {
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Field& xs) {
-      os << "{";
-      for (int i = 0; i < TLC; i++)
-        os << xs.limbs_storage.limbs[i] << ", ";
-      os << "}";
+      std::stringstream hex_string;
+      hex_string << std::hex << std::setfill('0');
+
+      for (int i = 0; i < TLC; i++) {
+          hex_string << std::setw(8) << xs.limbs_storage.limbs[i];
+      }
+
+      os << "0x" << hex_string.str();
       return os;
     }
 
@@ -943,22 +965,35 @@ template <class CONFIG> class Field {
       return !(xs == ys);
     }
 
-    template <unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE Field mul(const unsigned scalar, const Field &xs) {
-      Field rs = {};
-      Field temp = xs;
-      unsigned l = scalar;
+    template <const Field& multiplier>
+    static HOST_DEVICE_INLINE Field mul_const(const Field& xs) {
+      Field mul = multiplier;
+      static bool is_u32 = true;
+    #ifdef __CUDA_ARCH__
+    #pragma unroll
+    #endif
+      for (unsigned i = 1; i < TLC; i++)
+        is_u32 &= (mul.limbs_storage.limbs[i] == 0);
+
+      if (is_u32)
+        return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
+      return mul * xs;
+    }
+
+    template <uint32_t mutliplier, class T, unsigned REDUCTION_SIZE = 1>
+    static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T &xs) {
+      T rs = {};
+      T temp = xs;
       bool is_zero = true;
   #ifdef __CUDA_ARCH__
   #pragma unroll
   #endif
       for (unsigned i = 0; i < 32; i++) {
-        if (l & 1) {
+        if (mutliplier & (1 << i)) {
           rs = is_zero ? temp : (rs + temp);
           is_zero = false;
         }
-        l >>= 1;
-        if (l == 0)
+        if (mutliplier & ((1 << (31 - i) - 1) << (i + 1)))
           break;
         temp = temp + temp;
       }

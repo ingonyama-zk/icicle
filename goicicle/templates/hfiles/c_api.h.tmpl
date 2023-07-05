@@ -1,0 +1,15 @@
+#include <stdbool.h>
+#include <cuda.h>
+// c_api.h
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {{.CurveName}}_projective_t {{.CurveName}}_projective_t;
+
+bool eq_{{.Prefix}}({{.CurveName}}_projective_t *point1, {{.CurveName}}_projective_t *point2, size_t device_id);
+
+#ifdef __cplusplus
+}
+#endif
