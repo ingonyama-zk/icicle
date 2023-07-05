@@ -148,21 +148,7 @@ __global__ void get_hash_results(S * states, size_t number_of_states, S * out, i
 }
 
 template <typename S>
-__host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, HashType hash_type, cudaStream_t stream) {
-    S * states;
-
-    // allocate memory for {blocks} states of {t} scalars each
-    if (cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream) != cudaSuccess) {
-        throw std::runtime_error("Failed memory allocation on the device");
-    }
-
-    // This is where the input matrix of size Arity x NumberOfBlocks is
-    // padded and coppied to device in a T x NumberOfBlocks matrix
-    cudaMemcpy2DAsync(states, this->t * sizeof(S),  // Device pointer and device pitch
-                 inp, (this->t - 1) * sizeof(S),    // Host pointer and pitch
-                 (this->t - 1) * sizeof(S), blocks, // Size of the source matrix (Arity x NumberOfBlocks)
-                 cudaMemcpyHostToDevice, stream);
-
+__host__ void Poseidon<S>::poseidon_hash(S * states, size_t blocks, S * out, HashType hash_type, cudaStream_t stream) {
     size_t rc_offset = 0;
 
     // The logic behind this is that 1 thread only works on 1 element
@@ -189,7 +175,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
             domain_tag = this->tree_domain_tag;
     }
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
     auto start_time = std::chrono::high_resolution_clock::now();
     #endif
 
@@ -197,7 +183,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     prepare_poseidon_states <<< number_of_blocks, number_of_threads, 0, stream >>> (states, blocks, domain_tag, this->config);
     rc_offset += this->t;
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
     cudaStreamSynchronize(stream);
     std::cout << "Domain separation: " << rc_offset << std::endl;
     //print_buffer_from_cuda<S>(states, blocks * this->t);
@@ -212,7 +198,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     full_rounds <<< number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t, stream >>> (states, blocks, rc_offset, true, this->config);
     rc_offset += this->t * this->config.full_rounds_half;
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
     cudaStreamSynchronize(stream);
     std::cout << "Full rounds 1. RCOFFSET: " << rc_offset << std::endl;
     // print_buffer_from_cuda<S>(states, blocks * this->t);
@@ -227,7 +213,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     partial_rounds <<< number_of_singlehash_blocks, singlehash_block_size, 0, stream >>> (states, blocks, rc_offset, this->config);
     rc_offset += this->config.partial_rounds;
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
     cudaStreamSynchronize(stream);
     std::cout << "Partial rounds. RCOFFSET: " << rc_offset << std::endl;
     //print_buffer_from_cuda<S>(states, blocks * this->t);
@@ -241,7 +227,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     // execute half full rounds
     full_rounds <<< number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t, stream >>> (states, blocks, rc_offset, false, this->config);
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
     cudaStreamSynchronize(stream);
     std::cout << "Full rounds 2. RCOFFSET: " << rc_offset << std::endl;
     //print_buffer_from_cuda<S>(states, blocks * this->t);
@@ -252,22 +238,42 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
     #endif
 
     // get output
-    S * out_device;
-    cudaMalloc(&out_device, blocks * sizeof(S));
-    get_hash_results <<< number_of_singlehash_blocks, singlehash_block_size, 0, stream >>> (states, blocks, out_device, this->config.t);
+    get_hash_results <<< number_of_singlehash_blocks, singlehash_block_size, 0, stream >>> (states, blocks, out, this->config.t);
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
     cudaStreamSynchronize(stream);
     std::cout << "Get hash results" << std::endl;
     end_time = std::chrono::high_resolution_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "Elapsed time: " << elapsed_time.count() << " ms" << std::endl;
     #endif
+}
+
+template <typename S>
+__host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, HashType hash_type, cudaStream_t stream) {
+    S * states, * out_device;
+    // allocate memory for {blocks} states of {t} scalars each
+    if (cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream) != cudaSuccess) {
+        throw std::runtime_error("Failed memory allocation on the device");
+    }
+    if (cudaMallocAsync(&out_device, blocks * sizeof(S), stream) != cudaSuccess) {
+        throw std::runtime_error("Failed memory allocation on the device");
+    }
+
+    // This is where the input matrix of size Arity x NumberOfBlocks is
+    // padded and coppied to device in a T x NumberOfBlocks matrix
+    cudaMemcpy2DAsync(states, this->t * sizeof(S),  // Device pointer and device pitch
+                 inp, (this->t - 1) * sizeof(S),    // Host pointer and pitch
+                 (this->t - 1) * sizeof(S), blocks, // Size of the source matrix (Arity x NumberOfBlocks)
+                 cudaMemcpyHostToDevice, stream);
+
+    this.poseidon_hash(states, blocks, out_device, hash_type, stream);
+
+    cudaFreeAsync(states, stream);
     cudaMemcpyAsync(out, out_device, blocks * sizeof(S), cudaMemcpyDeviceToHost, stream);
     cudaFreeAsync(out_device, stream);
-    cudaFreeAsync(states, stream);
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
     cudaDeviceReset();
     #endif
 }
