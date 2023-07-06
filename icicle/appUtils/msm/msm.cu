@@ -875,7 +875,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, nof_buckets);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 
   unsigned *bucket_indices;
@@ -888,7 +888,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   NUM_BLOCKS = (size * (nof_bms+1) + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
                                                     nof_bms, bm_bitsize, c, top_bm_nof_missing_bits); //+size - leaving the first bm free for the out of place sort later
-                                                    cudaDeviceSynchronize();
+                                                    // cudaDeviceSynchronize();
                                                     printf("cuda error %u\n",cudaGetLastError());
 
 
@@ -972,41 +972,43 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   cudaFreeAsync(offsets_temp_storage, stream);
 
   //sort by bucket sizes
-  unsigned* sorted_bucket_sizes;
-  unsigned* sorted_bucket_offsets;
-  unsigned* sorted_single_bucket_indices;
-  cudaMalloc(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets);
-  cudaMalloc(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets);
-  cudaMalloc(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets);
-  unsigned* sort_offsets_temp_storage{};
-  size_t sort_offsets_temp_storage_bytes = 0;
-  unsigned* sort_single_temp_storage{};
-  size_t sort_single_temp_storage_bytes = 0;
-  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
-  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
-  cudaMalloc(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes);
-  cudaMalloc(&sort_single_temp_storage, sort_single_temp_storage_bytes);
-  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
-  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
-  cudaFree(sort_offsets_temp_storage);
-  cudaFree(sort_single_temp_storage);
+  // unsigned* sorted_bucket_sizes;
+  // cudaMallocAsync(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets, stream);
+  // unsigned* sorted_bucket_offsets;
+  // cudaMallocAsync(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets, stream);
+  // unsigned* sort_offsets_temp_storage{};
+  // size_t sort_offsets_temp_storage_bytes = 0;
+  // cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+  //   sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  // cudaMallocAsync(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, stream);
+  // cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+  //   sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  // cudaFreeAsync(sort_offsets_temp_storage, stream);
+      
+      
+  // unsigned* sorted_single_bucket_indices;
+  // cudaMallocAsync(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets, stream);
+  // unsigned* sort_single_temp_storage{};
+  // size_t sort_single_temp_storage_bytes = 0;
+  // cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+  //   sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  // cudaMallocAsync(&sort_single_temp_storage, sort_single_temp_storage_bytes, stream);
+  // cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+  //   sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  // cudaFreeAsync(sort_single_temp_storage, stream);
   
 
   //launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
   // NUM_THREADS = 1 << 5;
   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, 
-                                                        //  d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize);                                              
-accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
-                                                          d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize, c);                   
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, 
+                                                         d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize, c);                                              
+// accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
+//                                                           d_points, nof_buckets, nof_buckets_to_compute, c+bm_bitsize, c);                   
    // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
    //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
-                                                          cudaDeviceSynchronize();
+                                                          // cudaDeviceSynchronize();
                                                           printf("cuda error %u\n",cudaGetLastError());
 
   #ifdef SSM_SUM
@@ -1034,7 +1036,7 @@ accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorte
     #else
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms, c); 
     #endif
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     printf("cuda error %u\n",cudaGetLastError());
   }
 //   else{
@@ -1051,12 +1053,12 @@ accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorte
 //     const unsigned log_data_split =
 //         get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
 //     const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
-//     cudaMalloc(&target_buckets, sizeof(P) * total_buckets_count); //32*2^8*2^7 buckets
+//     cudaMallocAsync(&target_buckets, sizeof(P) * total_buckets_count, stream); //32*2^8*2^7 buckets
 //     NUM_THREADS = 32;
 //     NUM_BLOCKS = (total_buckets_count + NUM_THREADS - 1) / NUM_THREADS;
 //     // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
 //     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
-//     split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
+//     split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
 //     cudaFree(source_buckets);
 
 //     for (unsigned j = 0; j < log_data_split; j++){
@@ -1085,12 +1087,12 @@ accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, sorte
 //       //   HANDLE_CUDA_ERROR(free(results, stream));
 //       // HANDLE_CUDA_ERROR(free(target_buckets, stream));
 //       nof_bms = bitsize;
-//       cudaMalloc(&final_results, sizeof(P) * nof_bms);
+//       cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
 //       NUM_THREADS = 32;
 //       NUM_BLOCKS = (result_windows_count + NUM_THREADS - 1) / NUM_THREADS;
 //       // const dim3 block_dim = result_windows_count < 32 ? count : 32;
 //       // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
-//       last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(c, target_buckets, final_results, result_windows_count);
+//       last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(c, target_buckets, final_results, result_windows_count);
 //       c = 1;
 //       break;
 //     }
@@ -1150,9 +1152,9 @@ std::vector<P> h_buckets;
     // const unsigned log_data_split =
     //     get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
     // const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
-    cudaMalloc(&target_buckets, sizeof(P) * target_buckets_count); //32*2^8*2^7 buckets
-    cudaMalloc(&temp_buckets1, sizeof(P) * source_buckets_count); //32*2^8*2^7 buckets
-    cudaMalloc(&temp_buckets2, sizeof(P) * source_buckets_count); //32*2^8*2^7 buckets
+    cudaMallocAsync(&target_buckets, sizeof(P) * target_buckets_count,stream); //32*2^8*2^7 buckets
+    cudaMallocAsync(&temp_buckets1, sizeof(P) * source_buckets_count/2,stream); //32*2^8*2^7 buckets
+    cudaMallocAsync(&temp_buckets2, sizeof(P) * source_buckets_count/2,stream); //32*2^8*2^7 buckets
     // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
     //input output, streams
@@ -1160,9 +1162,10 @@ std::vector<P> h_buckets;
     // for (unsigned j = 0; j < target_windows_count-1; j++) //another loop
     // reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,0>>>(target_buckets, target_buckets, source_windows_count>>(j+2));
 
-    cudaStream_t streams[2];
-    cudaStreamCreate(&streams[0]);
-    cudaStreamCreate(&streams[1]);
+    // cudaStream_t stream2;
+    // cudaStreamCreate(&streams[0]);
+    // cudaStreamCreate(&streams[1]);
+    // cudaStreamCreate(&stream2);
 
     // if (source_bits_count>8){
     if (source_bits_count>0){
@@ -1193,8 +1196,8 @@ std::vector<P> h_buckets;
         printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
         NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
         printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
-        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(j==0?source_buckets:temp_buckets1,j==last_j? target_buckets: temp_buckets1,1<<(source_bits_count-j),j==last_j? 1<<target_bits_count: 0,0,0);
-        cudaDeviceSynchronize();
+        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets1,j==target_bits_count-1? target_buckets: temp_buckets1,1<<(source_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,0);
+        // cudaDeviceSynchronize();
         printf("cuda error %u\n",cudaGetLastError());
         }
         // std::vector<P> t1_buckets;
@@ -1228,8 +1231,8 @@ std::vector<P> h_buckets;
         printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
         NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
         printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
-        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1,(odd_source_c&&j==target_bits_count-1)? 1<<(target_bits_count-1):0);
-        cudaDeviceSynchronize();
+        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1);
+        // cudaDeviceSynchronize();
         printf("cuda error %u\n",cudaGetLastError());
 
         // std::vector<P> t1_buckets;
@@ -1278,7 +1281,7 @@ std::vector<P> h_buckets;
     printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
     NUM_BLOCKS = source_windows_count;
     printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
-    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,target_buckets,1<<target_bits_count,1<<target_bits_count,0);
+    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(source_buckets,target_buckets,1<<target_bits_count,1<<target_bits_count,0);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
     // cudaDeviceSynchronize();
@@ -1296,15 +1299,15 @@ std::vector<P> h_buckets;
     printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
     NUM_BLOCKS = source_windows_count<<target_bits_count;
     printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
-    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(source_buckets,target_buckets,1,1<<target_bits_count,1);
+    general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(source_buckets,target_buckets,1,1<<target_bits_count,1);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
     // }
     }
-    cudaStreamSynchronize(streams[0]);
-    cudaStreamDestroy(streams[0]);
-    cudaStreamSynchronize(streams[1]);
-    cudaStreamDestroy(streams[1]);
+    // cudaStreamSynchronize(stream);
+    // cudaStreamDestroy(streams[0]);
+    // cudaStreamSynchronize(stream2);
+    // cudaStreamDestroy(stream2);
 
     // cudaDeviceSynchronize();
     // // std::vector<P> t_buckets;
@@ -1354,7 +1357,7 @@ std::vector<P> h_buckets;
     //     cudaStreamDestroy(streams[k]);
     // }
 
-    cudaFree(source_buckets);
+    // cudaFreeAsync(source_buckets, stream);
     if (target_bits_count == 1) {
       // P results;
       // // const unsigned result_windows_count = min(fd_q::MBC, windows_count_pass_one * bits_count_pass_one);
@@ -1373,7 +1376,7 @@ std::vector<P> h_buckets;
       //   HANDLE_CUDA_ERROR(free(results, stream));
       // HANDLE_CUDA_ERROR(free(target_buckets, stream));
       nof_bms = bitsize;
-      cudaMalloc(&final_results, sizeof(P) * nof_bms);
+      cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
       NUM_THREADS = 32;
       NUM_BLOCKS = (nof_bms + NUM_THREADS - 1) / NUM_THREADS;
       last_pass_kernel<<<NUM_BLOCKS,NUM_THREADS>>>(target_buckets,final_results,nof_bms);
@@ -1384,8 +1387,15 @@ std::vector<P> h_buckets;
       // }
       // final_results = target_buckets;
       c = 1;
+      cudaFreeAsync(source_buckets,stream);
+      cudaFreeAsync(target_buckets,stream);
+      cudaFreeAsync(temp_buckets1,stream);
+      cudaFreeAsync(temp_buckets2,stream);
       break;
     }
+    cudaFreeAsync(source_buckets,stream);
+    cudaFreeAsync(temp_buckets1,stream);
+    cudaFreeAsync(temp_buckets2,stream);
     source_buckets = target_buckets;
     target_buckets = nullptr;
     temp_buckets1 = nullptr;
@@ -1396,8 +1406,6 @@ std::vector<P> h_buckets;
     // source_window_buckets_count = 1 << source_bits_count;
     source_buckets_count = target_buckets_count;
   }
-  cudaFree(source_buckets);
-  cudaFree(target_buckets);
 }
 
   // cudaDeviceSynchronize();
@@ -1418,7 +1426,7 @@ std::vector<P> h_buckets;
 
   //launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S><<<1,1,0,stream>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
   //copy final result to host
   cudaStreamSynchronize(stream);
@@ -1438,9 +1446,9 @@ std::vector<P> h_buckets;
   cudaFreeAsync(bucket_sizes, stream);
   cudaFreeAsync(nof_buckets_to_compute, stream);
   cudaFreeAsync(bucket_offsets, stream);
-  cudaFreeAsync(sorted_bucket_sizes,stream);
-  cudaFreeAsync(sorted_bucket_offsets,stream);
-  cudaFreeAsync(sorted_single_bucket_indices,stream);
+  // cudaFreeAsync(sorted_bucket_sizes,stream);
+  // cudaFreeAsync(sorted_bucket_offsets,stream);
+  // cudaFreeAsync(sorted_single_bucket_indices,stream);
   cudaFreeAsync(final_results, stream);
 
   cudaStreamSynchronize(stream);

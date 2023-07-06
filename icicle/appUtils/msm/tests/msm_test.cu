@@ -129,7 +129,7 @@ typedef Dummy_Projective test_affine;
 int main()
 {
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<6;
+  unsigned msm_size = 1<<24;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
@@ -172,7 +172,7 @@ int main()
   std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
-  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;
