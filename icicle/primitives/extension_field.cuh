@@ -21,14 +21,6 @@ template <typename CONFIG> class ExtensionField {
       friend HOST_DEVICE_INLINE ExtensionWide operator-(ExtensionWide xs, const ExtensionWide& ys) {   
         return ExtensionWide { xs.real - ys.real, xs.imaginary - ys.imaginary };
       }
-
-      // ExtensionField HOST_DEVICE_INLINE get_lower() {
-      //   return ExtensionField { Fwide::get_lower(real), Fwide::get_lower(imaginary) };
-      // }
-
-      // ExtensionField HOST_DEVICE_INLINE get_higher_with_slack() {
-      //   return ExtensionField { Fwide::get_higher_with_slack(real), Fwide::get_higher_with_slack(imaginary) };
-      // }
     };
 
   public:
