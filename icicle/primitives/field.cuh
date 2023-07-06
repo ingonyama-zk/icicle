@@ -69,7 +69,7 @@ template <class CONFIG> class Field {
       return Field { omega_inv.storages[logn-1] };
     }
     
-    static constexpr HOST_INLINE Field inv_log_size(uint32_t logn) {
+    static HOST_INLINE Field inv_log_size(uint32_t logn) {
       if (logn == 0) {
         return Field { CONFIG::one };
       }
