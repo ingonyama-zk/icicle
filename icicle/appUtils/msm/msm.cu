@@ -894,30 +894,30 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   cudaFree(offsets_temp_storage);
 
   //sort by bucket sizes
-  // unsigned* sorted_bucket_sizes;
-  // cudaMalloc(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets);
-  // unsigned* sorted_bucket_offsets;
-  // cudaMalloc(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets);
-  // unsigned* sort_offsets_temp_storage{};
-  // size_t sort_offsets_temp_storage_bytes = 0;
-  // cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
-  // cudaMalloc(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes);
-  // cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
-  // cudaFree(sort_offsets_temp_storage);
+  unsigned* sorted_bucket_sizes;
+  cudaMalloc(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets);
+  unsigned* sorted_bucket_offsets;
+  cudaMalloc(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets);
+  unsigned* sort_offsets_temp_storage{};
+  size_t sort_offsets_temp_storage_bytes = 0;
+  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
+  cudaMalloc(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes);
+  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets);
+  cudaFree(sort_offsets_temp_storage);
       
       
-  // unsigned* sorted_single_bucket_indices;
-  // cudaMalloc(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets);
-  // unsigned* sort_single_temp_storage{};
-  // size_t sort_single_temp_storage_bytes = 0;
-  // cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
-  // cudaMalloc(&sort_single_temp_storage, sort_single_temp_storage_bytes);
-  // cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
-  // cudaFree(sort_single_temp_storage);
+  unsigned* sorted_single_bucket_indices;
+  cudaMalloc(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets);
+  unsigned* sort_single_temp_storage{};
+  size_t sort_single_temp_storage_bytes = 0;
+  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
+  cudaMalloc(&sort_single_temp_storage, sort_single_temp_storage_bytes);
+  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets);
+  cudaFree(sort_single_temp_storage);
   
 
   //launch the accumulation kernel with maximum threads
