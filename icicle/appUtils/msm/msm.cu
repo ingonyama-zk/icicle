@@ -972,30 +972,30 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   cudaFreeAsync(offsets_temp_storage, stream);
 
   //sort by bucket sizes
-  // unsigned* sorted_bucket_sizes;
-  // cudaMallocAsync(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets, stream);
-  // unsigned* sorted_bucket_offsets;
-  // cudaMallocAsync(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets, stream);
-  // unsigned* sort_offsets_temp_storage{};
-  // size_t sort_offsets_temp_storage_bytes = 0;
-  // cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
-  // cudaMallocAsync(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, stream);
-  // cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
-  // cudaFreeAsync(sort_offsets_temp_storage, stream);
+  unsigned* sorted_bucket_sizes;
+  cudaMallocAsync(&sorted_bucket_sizes, sizeof(unsigned)*nof_buckets, stream);
+  unsigned* sorted_bucket_offsets;
+  cudaMallocAsync(&sorted_bucket_offsets, sizeof(unsigned)*nof_buckets, stream);
+  unsigned* sort_offsets_temp_storage{};
+  size_t sort_offsets_temp_storage_bytes = 0;
+  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  cudaMallocAsync(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, stream);
+  cub::DeviceRadixSort::SortPairsDescending(sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, bucket_offsets, sorted_bucket_offsets, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  cudaFreeAsync(sort_offsets_temp_storage, stream);
       
       
-  // unsigned* sorted_single_bucket_indices;
-  // cudaMallocAsync(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets, stream);
-  // unsigned* sort_single_temp_storage{};
-  // size_t sort_single_temp_storage_bytes = 0;
-  // cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
-  // cudaMallocAsync(&sort_single_temp_storage, sort_single_temp_storage_bytes, stream);
-  // cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
-  //   sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
-  // cudaFreeAsync(sort_single_temp_storage, stream);
+  unsigned* sorted_single_bucket_indices;
+  cudaMallocAsync(&sorted_single_bucket_indices, sizeof(unsigned)*nof_buckets, stream);
+  unsigned* sort_single_temp_storage{};
+  size_t sort_single_temp_storage_bytes = 0;
+  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  cudaMallocAsync(&sort_single_temp_storage, sort_single_temp_storage_bytes, stream);
+  cub::DeviceRadixSort::SortPairsDescending(sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes,
+    sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, nof_buckets, 0, sizeof(unsigned) * 8, stream);
+  cudaFreeAsync(sort_single_temp_storage, stream);
   
 
   //launch the accumulation kernel with maximum threads
@@ -1103,16 +1103,16 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 //   }
 // }
 else{
-    cudaDeviceSynchronize();
-std::vector<P> h_buckets;
-  h_buckets.reserve(nof_buckets);
-    cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
-    std::cout<<"buckets accumulated"<<std::endl;
-    for (unsigned i = 0; i < nof_buckets; i++)
-    {
-      std::cout<<h_buckets[i]<<" ";
-    }
-    std::cout<<std::endl;
+//     cudaDeviceSynchronize();
+// std::vector<P> h_buckets;
+//   h_buckets.reserve(nof_buckets);
+//     cudaMemcpy(h_buckets.data(), buckets, sizeof(P) * nof_buckets, cudaMemcpyDeviceToHost);
+//     std::cout<<"buckets accumulated"<<std::endl;
+//     for (unsigned i = 0; i < nof_buckets; i++)
+//     {
+//       std::cout<<h_buckets[i]<<" ";
+//     }
+//     std::cout<<std::endl;
   unsigned source_bits_count = c;
   bool odd_source_c = source_bits_count%2;
   unsigned source_windows_count = nof_bms;
@@ -1170,68 +1170,69 @@ std::vector<P> h_buckets;
     // if (source_bits_count>8){
     if (source_bits_count>0){
       for(unsigned j=0;j<target_bits_count;j++){
-        cudaDeviceSynchronize();
-        std::vector<P> t1_buckets;
-        std::vector<P> t2_buckets;
-        t1_buckets.reserve(source_buckets_count);
-        t2_buckets.reserve(source_buckets_count);
-            cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
-            cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
-            std::cout<<"0 buckets temp1"<<std::endl;
-            for (unsigned i = 0; i < source_buckets_count; i++)
-            {
-              std::cout<<t1_buckets[i]<<" ";
-            }
-            std::cout<<std::endl;
-            std::cout<<"0 buckets temp2"<<std::endl;
-            for (unsigned i = 0; i < source_buckets_count; i++)
-            {
-              std::cout<<t2_buckets[i]<<" ";
-            }
-            std::cout<<std::endl;
-        if (!odd_source_c || j!=target_bits_count-1){
-        unsigned last_j = odd_source_c? target_bits_count-2 : target_bits_count-1;
-        // unsigned last_j = target_bits_count-1;
+        // cudaDeviceSynchronize();
+        // std::vector<P> t1_buckets;
+        // std::vector<P> t2_buckets;
+        // t1_buckets.reserve(source_buckets_count);
+        // t2_buckets.reserve(source_buckets_count);
+        //     cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
+        //     cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
+        //     std::cout<<"0 buckets temp1"<<std::endl;
+        //     for (unsigned i = 0; i < source_buckets_count; i++)
+        //     {
+        //       std::cout<<t1_buckets[i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        //     std::cout<<"0 buckets temp2"<<std::endl;
+        //     for (unsigned i = 0; i < source_buckets_count; i++)
+        //     {
+        //       std::cout<<t2_buckets[i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        // if (!odd_source_c || j!=target_bits_count-1){
+        // unsigned last_j = odd_source_c? target_bits_count-2 : target_bits_count-1;
+        unsigned last_j = target_bits_count-1;
         NUM_THREADS = min(MAX_TH,(source_buckets_count>>(1+j)));
         printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
         NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
         printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
-        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets1,j==target_bits_count-1? target_buckets: temp_buckets1,1<<(source_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,0);
+        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets1,j==target_bits_count-1? target_buckets: temp_buckets1,1<<(source_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,0,0);
         // cudaDeviceSynchronize();
         printf("cuda error %u\n",cudaGetLastError());
-        }
+        // }
         // std::vector<P> t1_buckets;
         // std::vector<P> t2_buckets;
         // t1_buckets.reserve(source_buckets_count/2);
         // t2_buckets.reserve(source_buckets_count/2);
-            cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
-            cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
-            std::cout<<"1 buckets temp1"<<std::endl;
-            for (unsigned i = 0; i < source_buckets_count; i++)
-            {
-              std::cout<<t1_buckets[i]<<" ";
-            }
-            std::cout<<std::endl;
-            std::cout<<"1 buckets temp2"<<std::endl;
-            for (unsigned i = 0; i < source_buckets_count; i++)
-            {
-              std::cout<<t2_buckets[i]<<" ";
-            }
-            std::cout<<std::endl;
-            cudaMemcpy(t1_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
-        std::cout<<"1 buckets target"<<std::endl;
-        for (unsigned i = 0; i < target_buckets_count; i++)
-        {
-          std::cout<<t1_buckets[i]<<" ";
-        }
-        std::cout<<std::endl;
+        //     cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
+        //     cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
+        //     std::cout<<"1 buckets temp1"<<std::endl;
+        //     for (unsigned i = 0; i < source_buckets_count; i++)
+        //     {
+        //       std::cout<<t1_buckets[i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        //     std::cout<<"1 buckets temp2"<<std::endl;
+        //     for (unsigned i = 0; i < source_buckets_count; i++)
+        //     {
+        //       std::cout<<t2_buckets[i]<<" ";
+        //     }
+        //     std::cout<<std::endl;
+        //     cudaMemcpy(t1_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
+        // std::cout<<"1 buckets target"<<std::endl;
+        // for (unsigned i = 0; i < target_buckets_count; i++)
+        // {
+        //   std::cout<<t1_buckets[i]<<" ";
+        // }
+        // std::cout<<std::endl;
   
-        unsigned nof_threads = (source_buckets_count>>(1+j))*((odd_source_c&&j==target_bits_count-1)? 2 :1);
+        // unsigned nof_threads = (source_buckets_count>>(1+j))*((odd_source_c&&j==target_bits_count-1)? 2 :1);
+        unsigned nof_threads = (source_buckets_count>>(1+j));
         NUM_THREADS = min(MAX_TH,nof_threads);
         printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
         NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
         printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
-        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1);
+        single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1,0);
         // cudaDeviceSynchronize();
         printf("cuda error %u\n",cudaGetLastError());
 
@@ -1239,32 +1240,32 @@ std::vector<P> h_buckets;
         // std::vector<P> t2_buckets;
         // t1_buckets.reserve(source_buckets_count/2);
         // t2_buckets.reserve(source_buckets_count/2);
-            cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
-            cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
-            std::cout<<"2 buckets temp1"<<std::endl;
-            for (unsigned i = 0; i < source_buckets_count; i++)
-            {
-              std::cout<<t1_buckets[i]<<" ";
-            }
-            std::cout<<std::endl;
-            std::cout<<"2 buckets temp2"<<std::endl;
-            for (unsigned i = 0; i < source_buckets_count; i++)
-            {
-              std::cout<<t2_buckets[i]<<" ";
-            }
-            std::cout<<std::endl;
+            // cudaMemcpy(t1_buckets.data(), temp_buckets1, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
+            // cudaMemcpy(t2_buckets.data(), temp_buckets2, sizeof(P) * source_buckets_count, cudaMemcpyDeviceToHost);
+            // std::cout<<"2 buckets temp1"<<std::endl;
+            // for (unsigned i = 0; i < source_buckets_count; i++)
+            // {
+            //   std::cout<<t1_buckets[i]<<" ";
+            // }
+            // std::cout<<std::endl;
+            // std::cout<<"2 buckets temp2"<<std::endl;
+            // for (unsigned i = 0; i < source_buckets_count; i++)
+            // {
+            //   std::cout<<t2_buckets[i]<<" ";
+            // }
+            // std::cout<<std::endl;
         
         //         std::vector<P> t1_buckets;
         // std::vector<P> t2_buckets;
         // t1_buckets.reserve(source_buckets_count/2);
         // t2_buckets.reserve(source_buckets_count/2);
-        cudaMemcpy(t1_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
-        std::cout<<"2 buckets target"<<std::endl;
-        for (unsigned i = 0; i < target_buckets_count; i++)
-        {
-          std::cout<<t1_buckets[i]<<" ";
-        }
-        std::cout<<std::endl;
+        // cudaMemcpy(t1_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
+        // std::cout<<"2 buckets target"<<std::endl;
+        // for (unsigned i = 0; i < target_buckets_count; i++)
+        // {
+        //   std::cout<<t1_buckets[i]<<" ";
+        // }
+        // std::cout<<std::endl;
 
       }
     }
@@ -1699,9 +1700,9 @@ unsigned get_optimal_c(const unsigned size) {
 template <typename S, typename P, typename A>
 void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, bool big_triangle, cudaStream_t stream){
   // unsigned c = get_optimal_c(size);
-  unsigned c = 3;
+  unsigned c = 16;
   // unsigned bitsize = 32;
-  unsigned bitsize = 6; //get from field
+  unsigned bitsize = 256; //get from field
   bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle, stream);
 }
 
