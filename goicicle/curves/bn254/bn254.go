@@ -393,11 +393,87 @@ func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) [
 	return newElements
 }
 
+func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.Element, routines int) []T {
+	var newElements []T
+
+	if routines > 1 {
+		channels := make([]chan []T, routines)
+		for i := 0; i < routines; i ++ {
+			channels[i] = make(chan []T, 1)
+		} 
+
+		convert := func(elements []fr.Element, chanIndex int) {
+			var convertedElements []T
+			for _, e := range elements {
+				converted := NewFieldFromFrGnark[T](e)
+				convertedElements = append(convertedElements, *converted)
+			}
+
+			channels[chanIndex] <- convertedElements
+		}
+
+		batchLen := len(elements)/routines
+		for i := 0; i < routines; i ++ {
+			elemsToConv := elements[batchLen*i:batchLen*(i+1)]
+			go convert(elemsToConv, i)
+		}
+
+		for i := 0; i < routines; i ++ {
+			newElements = append(newElements, <-channels[i]...)
+		}
+	} else {
+		for _, e := range elements {
+			converted := NewFieldFromFrGnark[T](e)
+			newElements = append(newElements, *converted)
+		}
+	}
+
+	return newElements
+}
+
 func BatchConvertToFrGnark[T Field](elements []T) []fr.Element {
 	var newElements []fr.Element
 	for _, e := range elements {
 		converted := e.toGnarkFr()
 		newElements = append(newElements, *converted)
+	}
+
+	return newElements
+}
+
+func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Element {
+	var newElements []fr.Element
+
+	if routines > 1 {
+		channels := make([]chan []fr.Element, routines)
+		for i := 0; i < routines; i ++ {
+			channels[i] = make(chan []fr.Element, 1)
+		} 
+
+		convert := func(elements []T, chanIndex int) {
+			var convertedElements []fr.Element
+			for _, e := range elements {
+				converted := e.toGnarkFr()
+				convertedElements = append(convertedElements, *converted)
+			}
+
+			channels[chanIndex] <- convertedElements
+		}
+
+		batchLen := len(elements)/routines
+		for i := 0; i < routines; i ++ {
+			elemsToConv := elements[batchLen*i:batchLen*(i+1)]
+			go convert(elemsToConv, i)
+		}
+
+		for i := 0; i < routines; i ++ {
+			newElements = append(newElements, <-channels[i]...)
+		}
+	} else {
+		for _, e := range elements {
+			converted := e.toGnarkFr()
+			newElements = append(newElements, *converted)
+		}
 	}
 
 	return newElements

@@ -3,6 +3,7 @@ package bn254
 import (
 	"fmt"
 	"math/big"
+	"math"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -36,7 +37,7 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 	var pointsAffine []bn254.G1Affine
 
 	// populate the slice
-	for i := 0; i < count; i++ {
+	for i := 0; i < 10; i++ {
 		gnarkP, _ := randG1Jac()
 		var pointAffine bn254.G1Affine
 		pointAffine.FromJacobian(&gnarkP)
@@ -46,8 +47,17 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 		pointsAffine = append(pointsAffine, pointAffine)
 		points = append(points, *p)
 	}
+	
+	log2_10 := math.Log2(10)
+	log2Count := math.Log2(float64(count))
+	log2Size := int(math.Ceil(log2Count-log2_10))
 
-	return points, pointsAffine
+	for i := 0; i < log2Size; i++ {
+		pointsAffine = append(pointsAffine, pointsAffine...)
+		points = append(points, points...)
+	}
+
+	return points[:count], pointsAffine[:count]
 }
 
 func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
@@ -73,32 +83,45 @@ func GenerateScalars(count int) ([]ScalarField, []fr.Element) {
 	var scalars_fr []fr.Element
 
 	var rand fr.Element
-	for i := 0; i < count; i++ {
+	for i := 0; i < 10; i++ {
 		rand.SetRandom()
 		s := NewFieldFromFrGnark[ScalarField](rand)
 
 		scalars_fr = append(scalars_fr, rand)
 		scalars = append(scalars, *s)
 	}
+	
+	log2_10 := math.Log2(10)
+	log2Count := math.Log2(float64(count))
+	log2Size := int(math.Ceil(log2Count-log2_10))
 
-	return scalars, scalars_fr
+	for i := 0; i < log2Size; i++ {
+		scalars_fr = append(scalars_fr, scalars_fr...)
+		scalars = append(scalars, scalars...)
+	}
+
+	return scalars[:count], scalars_fr[:count]
 }
 
 func TestMSM(t *testing.T) {
-	for _, v := range []int{6, 9} {
+	for _, v := range []int{24} {
 		count := 1 << v
 
 		points, gnarkPoints := GeneratePoints(count)
+		fmt.Print("Finished generating points\n")
 		scalars, gnarkScalars := GenerateScalars(count)
+		fmt.Print("Finished generating scalars\n")
 
 		out := new(PointBN254)
 		_, e := MsmBN254(out, points, scalars, 0) // non mont
 
 		assert.Equal(t, e, nil, "error should be nil")
+		fmt.Print("Finished icicle MSM\n")
 
 		var bn254AffineLib bn254.G1Affine
 
 		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
+		fmt.Print("Finished Gnark MSM\n")
 
 		assert.Equal(t, out.toGnarkAffine(), gResult)
 	}
@@ -132,9 +155,9 @@ func BenchmarkMSM(b *testing.B) {
 
 	for _, logMsmSize := range LOG_MSM_SIZES {
 		msmSize := 1 << logMsmSize
+		points, _ := GeneratePoints(msmSize)
+		scalars, _ := GenerateScalars(msmSize)
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
-			points, _ := GeneratePoints(msmSize)
-			scalars, _ := GenerateScalars(msmSize)
 			for n := 0; n < b.N; n++ {
 				out := new(PointBN254)
 				_, e := MsmBN254(out, points, scalars, 0)
