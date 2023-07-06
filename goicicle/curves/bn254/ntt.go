@@ -122,7 +122,7 @@ func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCose
 	} else {
 		ret = C.interpolate_scalars_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
 	}
-	if ret != 0{
+	if ret != 0 {
 		fmt.Print("error interpolating")
 	}
 
@@ -144,8 +144,38 @@ func Evaluate(scalars_out, scalars, twiddles, coset_powers unsafe.Pointer, scala
 		ret = C.evaluate_scalars_cuda_bn254(scalars_outC, scalarsC, twiddlesC, twiddlesC_size, sizeC, 0, 0)
 	}
 
-	if ret != 0{
+	if ret != 0 {
 		fmt.Print("error interpolating")
+		return -1
+	}
+
+	return 0
+}
+
+func VecScalarAdd(in1_d, in2_d unsafe.Pointer, size int) int {
+	in1_dC := (*C.BN254_scalar_t)(in1_d)
+	in2_dC := (*C.BN254_scalar_t)(in2_d)
+	sizeC := C.uint(size)
+
+	ret := C.add_scalars_cuda_bn254(in1_dC, in1_dC, in2_dC, sizeC, 0)
+
+	if ret != 0 {
+		fmt.Print("error adding scalar vectors")
+		return -1
+	}
+
+	return 0
+}
+
+func VecScalarSub(in1_d, in2_d unsafe.Pointer, size int) int {
+	in1_dC := (*C.BN254_scalar_t)(in1_d)
+	in2_dC := (*C.BN254_scalar_t)(in2_d)
+	sizeC := C.uint(size)
+
+	ret := C.sub_scalars_cuda_bn254(in1_dC, in1_dC, in2_dC, sizeC, 0)
+
+	if ret != 0 {
+		fmt.Print("error subtracting scalar vectors")
 		return -1
 	}
 
