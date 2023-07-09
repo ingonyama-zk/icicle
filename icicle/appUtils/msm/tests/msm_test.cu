@@ -163,7 +163,7 @@ int main()
       cudaStream_t stream2;
     cudaStreamCreate(&stream1);
     cudaStreamCreate(&stream2);
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,stream1);
+  // large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,stream1);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res+1, false, false,stream2);
   // test_reduce_triangle(scalars);
@@ -178,7 +178,7 @@ int main()
     cudaStreamDestroy(stream1);
     cudaStreamDestroy(stream2);
 
-  std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
   // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
