@@ -29,7 +29,7 @@ extern "C" int ntt_cuda_bls12_381(BLS12_381::scalar_t *arr, uint32_t n, bool inv
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BLS12_381::scalar_t,BLS12_381::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
+        return ntt_end2end_template<BLS12_381::scalar_t,BLS12_381::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -44,7 +44,7 @@ extern "C" int ecntt_cuda_bls12_381(BLS12_381::projective_t *arr, uint32_t n, bo
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BLS12_381::projective_t,BLS12_381::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
+        return ntt_end2end_template<BLS12_381::projective_t,BLS12_381::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {

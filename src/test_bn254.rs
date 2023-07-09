@@ -819,6 +819,22 @@ pub fn generate_random_points_bn254(
         .collect()
 }
 
+pub fn generate_random_points100_bn254(
+    count: usize,
+    mut rng: Box<dyn RngCore>,
+) -> Vec<PointAffineNoInfinity_BN254> {
+    let mut res =  Vec::new();
+    for i in 0..count{
+        if (i<100) {
+            res.push(Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)).to_xy_strip_z());
+        }
+        else {
+            res.push(res[i-100]);
+        }
+    }
+    return res;
+}
+
 pub fn generate_random_points_proj_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point_BN254> {
     (0..count)
         .map(|_| Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)))
@@ -931,12 +947,13 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [6, 9];
+        let test_sizes = [24];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
             let seed = None; // set Some to provide seed
-            let points = generate_random_points_bn254(count, get_rng_bn254(seed));
+            // let points = generate_random_points_bn254(count, get_rng_bn254(seed));
+            let points = generate_random_points100_bn254(count, get_rng_bn254(seed));
             let scalars = generate_random_scalars_bn254(count, get_rng_bn254(seed));
 
             let msm_result = msm_bn254(&points, &scalars, 0);

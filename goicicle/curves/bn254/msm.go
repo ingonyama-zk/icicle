@@ -35,7 +35,6 @@ func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []Sc
 	pointsC := (*C.BN254_affine_t)(unsafe.Pointer(&points[0]))
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&scalars[0]))
 	outC := (*C.BN254_projective_t)(unsafe.Pointer(out))
-
 	ret := C.msm_cuda_bn254(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
 
 	if ret != 0 {

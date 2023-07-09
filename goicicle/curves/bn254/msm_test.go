@@ -2,14 +2,16 @@ package bn254
 
 import (
 	"fmt"
-	"math/big"
 	"math"
+	"math/big"
 	"testing"
+	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/stretchr/testify/assert"
+	"github.com/ingonyama-zk/icicle/goicicle"
 )
 
 func randG1Jac() (bn254.G1Jac, error) {
@@ -113,7 +115,9 @@ func TestMSM(t *testing.T) {
 		fmt.Print("Finished generating scalars\n")
 
 		out := new(PointBN254)
+		startTime := time.Now()
 		_, e := MsmBN254(out, points, scalars, 0) // non mont
+		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
 		assert.Equal(t, e, nil, "error should be nil")
 		fmt.Print("Finished icicle MSM\n")
@@ -124,6 +128,45 @@ func TestMSM(t *testing.T) {
 		fmt.Print("Finished Gnark MSM\n")
 
 		assert.Equal(t, out.toGnarkAffine(), gResult)
+	}
+}
+
+func TestCommitMSM(t *testing.T) {
+	for _, _ = range []int{24} {
+		count := 12_180_757
+		// count := 1 << v - 1
+
+		points, gnarkPoints := GeneratePoints(count)
+		fmt.Print("Finished generating points\n")
+		scalars, gnarkScalars := GenerateScalars(count)
+		fmt.Print("Finished generating scalars\n")
+
+		out_d, _ := goicicle.CudaMalloc(96)
+
+		pointsBytes := count*64
+		points_d, _ := goicicle.CudaMalloc(pointsBytes)
+		goicicle.CudaMemCpyHtoD[PointAffineNoInfinityBN254](points_d, points, pointsBytes)
+
+		scalarBytes := count*32
+		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
+		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
+
+		startTime := time.Now()
+		e := Commit(out_d, scalars_d, points_d, count)
+		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
+
+		outHost := make([]PointBN254, 1)
+		goicicle.CudaMemCpyDtoH[PointBN254](outHost, out_d, 96)
+
+		assert.Equal(t, e, 0, "error should be 0")
+		fmt.Print("Finished icicle MSM\n")
+
+		var bn254AffineLib bn254.G1Affine
+
+		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
+		fmt.Print("Finished Gnark MSM\n")
+
+		assert.Equal(t, outHost[0].toGnarkAffine(), gResult)
 	}
 }
 

@@ -16,8 +16,8 @@ class Dummy_Scalar {
     static constexpr unsigned NBITS = 32;
 
     unsigned x;
-    // unsigned p = 10;
-    unsigned p = 1<<30;
+    unsigned p = 10;
+    // unsigned p = 1<<30;
 
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
@@ -44,8 +44,8 @@ class Dummy_Scalar {
       return {scalar.p-scalar.x};
     }
     static HOST_INLINE Dummy_Scalar rand_host() {
-      // return {(unsigned)rand()%10};
-      return {(unsigned)rand()};
+      return {(unsigned)rand()%10};
+      // return {(unsigned)rand()};
     }
 };
 
@@ -129,7 +129,8 @@ typedef affine_t test_affine;
 int main()
 {
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<24;
+//   unsigned msm_size = 1<<24;
+  unsigned msm_size = 12180757;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
@@ -157,18 +158,47 @@ int main()
     // std::cout<<"final result large"<<std::endl;
     // std::cout<<test_projective::to_affine(*large_res)<<std::endl;
   // }
-  auto begin = std::chrono::high_resolution_clock::now();
+
+  test_scalar *scalars_d;
+  test_affine *points_d;
+  test_projective *large_res_d;
+
+  cudaMalloc(&scalars_d, sizeof(test_scalar) * msm_size);
+  cudaMalloc(&points_d, sizeof(test_affine) * msm_size);
+  cudaMalloc(&large_res_d, sizeof(test_projective));
+  cudaMemcpy(scalars_d, scalars, sizeof(test_scalar) * msm_size, cudaMemcpyHostToDevice);
+  cudaMemcpy(points_d, points, sizeof(test_affine) * msm_size, cudaMemcpyHostToDevice);
+  
+  std::cout<<"finished copying"<<std::endl;
+
   // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size, batched_large_res, false);
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,0);
+  cudaStream_t stream1;
+  cudaStream_t stream2;
+  cudaStreamCreate(&stream1);
+  cudaStreamCreate(&stream2);
+  auto begin1 = std::chrono::high_resolution_clock::now();
+  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,stream1);
+  auto end1 = std::chrono::high_resolution_clock::now();
+  auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
+  printf("Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res+1, false, false,0);
+  auto begin = std::chrono::high_resolution_clock::now();
+  large_msm<test_scalar, test_projective, test_affine>(scalars_d, points_d, msm_size, large_res_d, true, false,stream2);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   // test_reduce_single(scalars);
+  // test_reduce_var(scalars);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
-  printf("Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
+  printf("On Device No Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
+    cudaStreamSynchronize(stream1);
+    cudaStreamSynchronize(stream2);
+    cudaStreamDestroy(stream1);
+    cudaStreamDestroy(stream2);
+
   std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+
+  cudaMemcpy(&large_res[1], large_res_d, sizeof(test_projective), cudaMemcpyDeviceToHost);
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
   // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
