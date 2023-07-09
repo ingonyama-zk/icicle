@@ -20,6 +20,7 @@
 
 // #define SIGNED_DIG
 // #define BIG_TRIANGLE
+#define ZPRIZE
 // #define SSM_SUM  //WIP
 
 #define SIZE 32
@@ -1039,69 +1040,71 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     // cudaDeviceSynchronize();
     printf("cuda error %u\n",cudaGetLastError());
   }
-//   else{
+  #ifdef ZPRIZE
+  else{
 
-//   unsigned source_bits_count = c;
-//   unsigned source_windows_count = nof_bms;
-//   P *source_buckets = buckets;
-//   buckets = nullptr;
-//   P *target_buckets;
-//   for (unsigned i = 0;; i++) {
-//     const unsigned target_bits_count = (source_bits_count + 1) >> 1; //c/2=8
-//     const unsigned target_windows_count = source_windows_count << 1; //nof bms*2 = 32
-//     const unsigned target_buckets_count = target_windows_count << target_bits_count; // bms*2^c = 32*2^8
-//     const unsigned log_data_split =
-//         get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
-//     const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
-//     cudaMallocAsync(&target_buckets, sizeof(P) * total_buckets_count, stream); //32*2^8*2^7 buckets
-//     NUM_THREADS = 32;
-//     NUM_BLOCKS = (total_buckets_count + NUM_THREADS - 1) / NUM_THREADS;
-//     // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
-//     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
-//     split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
-//     cudaFree(source_buckets);
+  unsigned source_bits_count = c;
+  unsigned source_windows_count = nof_bms;
+  P *source_buckets = buckets;
+  buckets = nullptr;
+  P *target_buckets;
+  for (unsigned i = 0;; i++) {
+    const unsigned target_bits_count = (source_bits_count + 1) >> 1; //c/2=8
+    const unsigned target_windows_count = source_windows_count << 1; //nof bms*2 = 32
+    const unsigned target_buckets_count = target_windows_count << target_bits_count; // bms*2^c = 32*2^8
+    const unsigned log_data_split =
+        get_optimal_log_data_split(84, source_bits_count, target_bits_count, target_windows_count); //todo - get num of multiprossecors
+    const unsigned total_buckets_count = target_buckets_count << log_data_split; //32*2^8*2^7
+    cudaMallocAsync(&target_buckets, sizeof(P) * total_buckets_count, stream); //32*2^8*2^7 buckets
+    NUM_THREADS = 32;
+    NUM_BLOCKS = (total_buckets_count + NUM_THREADS - 1) / NUM_THREADS;
+    // const unsigned block_dim = total_buckets_count < 32 ? total_buckets_count : 32;
+    // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
+    split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
+    cudaFree(source_buckets);
 
-//     for (unsigned j = 0; j < log_data_split; j++){
-//     const unsigned count = total_buckets_count >> (j + 1);
-//     // const unsigned block_dim = count < 32 ? count : 32;
-//     // const unsigned grid_dim = (count - 1) / block_dim.x + 1;
-//     NUM_THREADS = 32;
-//     NUM_BLOCKS = (count + NUM_THREADS - 1) / NUM_THREADS;
-//     reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(target_buckets, count);
-//     }
-//     if (target_bits_count == 1) {
-//       // P results;
-//       // // const unsigned result_windows_count = min(fd_q::MBC, windows_count_pass_one * bits_count_pass_one);
-//       const unsigned result_windows_count = bitsize;
-//       // if (copy_results)
-//       //   HANDLE_CUDA_ERROR(allocate(results, result_windows_count, pool, stream));
-//       // HANDLE_CUDA_ERROR(last_pass_gather(bits_count_pass_one, target_buckets, copy_results ? results : ec.results, result_windows_count, stream));
-//       // if (copy_results) {
-//       //   HANDLE_CUDA_ERROR(cudaMemcpyAsync(ec.results, results, sizeof(point_jacobian) * result_windows_count, cudaMemcpyDeviceToHost, stream));
-//       //   if (ec.d2h_copy_finished)
-//       //     HANDLE_CUDA_ERROR(cudaEventRecord(ec.d2h_copy_finished, stream));
-//       //   if (ec.d2h_copy_finished_callback)
-//       //     HANDLE_CUDA_ERROR(cudaLaunchHostFunc(stream, ec.d2h_copy_finished_callback, ec.d2h_copy_finished_callback_data));
-//       // }
-//       // if (copy_results)
-//       //   HANDLE_CUDA_ERROR(free(results, stream));
-//       // HANDLE_CUDA_ERROR(free(target_buckets, stream));
-//       nof_bms = bitsize;
-//       cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
-//       NUM_THREADS = 32;
-//       NUM_BLOCKS = (result_windows_count + NUM_THREADS - 1) / NUM_THREADS;
-//       // const dim3 block_dim = result_windows_count < 32 ? count : 32;
-//       // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
-//       last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(c, target_buckets, final_results, result_windows_count);
-//       c = 1;
-//       break;
-//     }
-//     source_buckets = target_buckets;
-//     target_buckets = nullptr;
-//     source_bits_count = target_bits_count;
-//     source_windows_count = target_windows_count;
-//   }
-// }
+    for (unsigned j = 0; j < log_data_split; j++){
+    const unsigned count = total_buckets_count >> (j + 1);
+    // const unsigned block_dim = count < 32 ? count : 32;
+    // const unsigned grid_dim = (count - 1) / block_dim.x + 1;
+    NUM_THREADS = 32;
+    NUM_BLOCKS = (count + NUM_THREADS - 1) / NUM_THREADS;
+    reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(target_buckets, count);
+    }
+    if (target_bits_count == 1) {
+      // P results;
+      // // const unsigned result_windows_count = min(fd_q::MBC, windows_count_pass_one * bits_count_pass_one);
+      const unsigned result_windows_count = bitsize;
+      // if (copy_results)
+      //   HANDLE_CUDA_ERROR(allocate(results, result_windows_count, pool, stream));
+      // HANDLE_CUDA_ERROR(last_pass_gather(bits_count_pass_one, target_buckets, copy_results ? results : ec.results, result_windows_count, stream));
+      // if (copy_results) {
+      //   HANDLE_CUDA_ERROR(cudaMemcpyAsync(ec.results, results, sizeof(point_jacobian) * result_windows_count, cudaMemcpyDeviceToHost, stream));
+      //   if (ec.d2h_copy_finished)
+      //     HANDLE_CUDA_ERROR(cudaEventRecord(ec.d2h_copy_finished, stream));
+      //   if (ec.d2h_copy_finished_callback)
+      //     HANDLE_CUDA_ERROR(cudaLaunchHostFunc(stream, ec.d2h_copy_finished_callback, ec.d2h_copy_finished_callback_data));
+      // }
+      // if (copy_results)
+      //   HANDLE_CUDA_ERROR(free(results, stream));
+      // HANDLE_CUDA_ERROR(free(target_buckets, stream));
+      nof_bms = bitsize;
+      cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
+      NUM_THREADS = 32;
+      NUM_BLOCKS = (result_windows_count + NUM_THREADS - 1) / NUM_THREADS;
+      // const dim3 block_dim = result_windows_count < 32 ? count : 32;
+      // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
+      last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(c, target_buckets, final_results, result_windows_count);
+      c = 1;
+      break;
+    }
+    source_buckets = target_buckets;
+    target_buckets = nullptr;
+    source_bits_count = target_bits_count;
+    source_windows_count = target_windows_count;
+  }
+}
+#else
 else{
 //     cudaDeviceSynchronize();
 // std::vector<P> h_buckets;
@@ -1408,7 +1411,7 @@ else{
     source_buckets_count = target_buckets_count;
   }
 }
-
+#endif
   // cudaDeviceSynchronize();
   //   std::vector<P> h_final_results;
   //   h_final_results.reserve(nof_bms);
