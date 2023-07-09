@@ -14,23 +14,14 @@ template <typename CONFIG> class ExtensionField {
       FWide real;
       FWide imaginary;
       
-      ExtensionField HOST_DEVICE_INLINE get_lower() {
-        return ExtensionField { real.get_lower(), imaginary.get_lower() };
+      friend HOST_DEVICE_INLINE ExtensionWide operator+(ExtensionWide xs, const ExtensionWide& ys) {   
+        return ExtensionWide { xs.real + ys.real, xs.imaginary + ys.imaginary };
       }
-
-      ExtensionField HOST_DEVICE_INLINE get_higher_with_slack() {
-        return ExtensionField { real.get_higher_with_slack(), imaginary.get_higher_with_slack() };
+  
+      friend HOST_DEVICE_INLINE ExtensionWide operator-(ExtensionWide xs, const ExtensionWide& ys) {   
+        return ExtensionWide { xs.real - ys.real, xs.imaginary - ys.imaginary };
       }
     };
-
-    friend HOST_DEVICE_INLINE ExtensionWide operator+(ExtensionWide xs, const ExtensionWide& ys) {   
-      return ExtensionField { xs.real + ys.real, xs.imaginary + ys.imaginary };
-    }
-
-    // an incomplete impl that assumes that xs > ys
-    friend HOST_DEVICE_INLINE ExtensionWide operator-(ExtensionWide xs, const ExtensionWide& ys) {   
-      return ExtensionField { xs.real - ys.real, xs.imaginary - ys.imaginary };
-    }
 
   public:
     typedef Field<CONFIG> FF;
@@ -59,8 +50,8 @@ template <typename CONFIG> class ExtensionField {
       return ExtensionField { FF::rand_host(), FF::rand_host() };
     }
 
-    template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE ExtensionField reduce(const ExtensionField &xs) {
-      return ExtensionField { FF::reduce<REDUCTION_SIZE>(&xs.real), FF::reduce<REDUCTION_SIZE>(&xs.imaginary) };
+    template <unsigned REDUCTION_SIZE = 1> static constexpr HOST_DEVICE_INLINE ExtensionField sub_modulus(const ExtensionField &xs) {
+      return ExtensionField { FF::sub_modulus<REDUCTION_SIZE>(&xs.real), FF::sub_modulus<REDUCTION_SIZE>(&xs.imaginary) };
     }
 
     friend std::ostream& operator<<(std::ostream& os, const ExtensionField& xs) {
@@ -78,21 +69,22 @@ template <typename CONFIG> class ExtensionField {
 
     template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ExtensionField& xs, const ExtensionField& ys) {
-      FWide real_prod = FF::mul_wide(xs.real * ys.real);
-      FWide imaginary_prod = FF::mul_wide(xs.imaginary * ys.imaginary);
+      FWide real_prod = FF::mul_wide(xs.real, ys.real);
+      FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
       FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
-      FWide i_sq_times_im = FF::mul_unsigned<CONFIG::i_squared>(imaginary_prod);
-      i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
-      return ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
+      FWide i_sq_times_im = FF::template mul_unsigned<CONFIG::i_squared>(imaginary_prod);
+      i_sq_times_im = CONFIG::i_squared_is_negative ? FWide::neg(i_sq_times_im) : i_sq_times_im;
+      return ExtensionWide { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
+    }
+
+    template <unsigned MODULUS_MULTIPLE = 1>
+    static constexpr HOST_DEVICE_INLINE ExtensionField reduce(const ExtensionWide& xs) {
+      return ExtensionField { FF::template reduce<MODULUS_MULTIPLE>(xs.real), FF::template reduce<MODULUS_MULTIPLE>(xs.imaginary) };
     }
 
     friend HOST_DEVICE_INLINE ExtensionField operator*(const ExtensionField& xs, const ExtensionField& ys) {
-      FF real_prod = xs.real * ys.real;
-      FF imaginary_prod = xs.imaginary * ys.imaginary;
-      FF prod_of_sums = (xs.real + xs.imaginary) * (ys.real + ys.imaginary);
-      FF i_sq_times_im = FF::template mul_unsigned<CONFIG::i_squared>(imaginary_prod);
-      i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
-      return ExtensionField { real_prod + i_sq_times_im, prod_of_sums - real_prod - imaginary_prod };
+      ExtensionWide xy = mul_wide(xs, ys);
+      return reduce(xy);
     }
 
     friend HOST_DEVICE_INLINE bool operator==(const ExtensionField& xs, const ExtensionField& ys) {
