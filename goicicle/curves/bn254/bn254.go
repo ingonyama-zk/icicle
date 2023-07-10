@@ -25,7 +25,6 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
-
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 )
 
@@ -220,7 +219,7 @@ func (p *PointBN254) eq(pCompare *PointBN254) bool {
 	// Call the C function
 	// The C function doesn't keep any references to the data,
 	// so it's fine if the Go garbage collector moves or deletes the data later.
-	return bool(C.eq_bn254(pC, pCompareC, 0))
+	return bool(C.eq_bn254(pC, pCompareC))
 }
 
 func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {
@@ -410,4 +409,33 @@ func BatchConvertFromG1Affine(elements []bn254.G1Affine) []PointAffineNoInfinity
 		newElements = append(newElements, *newElement)
 	}
 	return newElements
+}
+
+
+// G2 extension field
+
+type G2Element [4]uint64
+
+type ExtentionField struct {
+	A0, A1 G2Element
+}
+
+type G2Affine struct {
+	x, y ExtentionField
+}
+
+type G2Point struct {
+	x, y, z ExtentionField
+}
+
+func (g *G2Affine) G2FromG2JacGnark(gnark *bn254.G2Jac) *G2Affine {
+	var pointAffine bn254.G2Affine
+	pointAffine.FromJacobian(gnark)
+
+	g.x.A0 = pointAffine.X.A0.Bits()
+	g.x.A1 = pointAffine.X.A1.Bits()
+	g.y.A0 = pointAffine.Y.A0.Bits()
+	g.y.A1 = pointAffine.Y.A1.Bits()
+
+	return g
 }
