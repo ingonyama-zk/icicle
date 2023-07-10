@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"unsafe"
+	"time"
 )
 
 // #cgo CFLAGS: -I../../../icicle/curves/bn254/
