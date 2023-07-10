@@ -10,8 +10,8 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/stretchr/testify/assert"
 	"github.com/ingonyama-zk/icicle/goicicle"
+	"github.com/stretchr/testify/assert"
 )
 
 func randG1Jac() (bn254.G1Jac, error) {
@@ -49,10 +49,10 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 		pointsAffine = append(pointsAffine, pointAffine)
 		points = append(points, *p)
 	}
-	
+
 	log2_10 := math.Log2(10)
 	log2Count := math.Log2(float64(count))
-	log2Size := int(math.Ceil(log2Count-log2_10))
+	log2Size := int(math.Ceil(log2Count - log2_10))
 
 	for i := 0; i < log2Size; i++ {
 		pointsAffine = append(pointsAffine, pointsAffine...)
@@ -92,10 +92,10 @@ func GenerateScalars(count int) ([]ScalarField, []fr.Element) {
 		scalars_fr = append(scalars_fr, rand)
 		scalars = append(scalars, *s)
 	}
-	
+
 	log2_10 := math.Log2(10)
 	log2Count := math.Log2(float64(count))
-	log2Size := int(math.Ceil(log2Count-log2_10))
+	log2Size := int(math.Ceil(log2Count - log2_10))
 
 	for i := 0; i < log2Size; i++ {
 		scalars_fr = append(scalars_fr, scalars_fr...)
@@ -143,11 +143,11 @@ func TestCommitMSM(t *testing.T) {
 
 		out_d, _ := goicicle.CudaMalloc(96)
 
-		pointsBytes := count*64
+		pointsBytes := count * 64
 		points_d, _ := goicicle.CudaMalloc(pointsBytes)
 		goicicle.CudaMemCpyHtoD[PointAffineNoInfinityBN254](points_d, points, pointsBytes)
 
-		scalarBytes := count*32
+		scalarBytes := count * 32
 		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
 		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
 

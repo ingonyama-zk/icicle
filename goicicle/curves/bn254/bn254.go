@@ -496,7 +496,7 @@ type ExtentionField struct {
 	A0, A1 G2Element
 }
 
-type G2Affine struct {
+type G2PointAffine struct {
 	x, y ExtentionField
 }
 
@@ -504,7 +504,41 @@ type G2Point struct {
 	x, y, z ExtentionField
 }
 
-func (g *G2Affine) G2FromG2JacGnark(gnark *bn254.G2Jac) *G2Affine {
+func (p *G2Point) eqg2(pCompare *G2Point) bool {
+	// Cast *PointBN254 to *C.BN254_projective_t
+	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
+	// between different pointer types.
+	// It's your responsibility to ensure that the types are compatible.
+	pC := (*C.BN254_g2_projective_t)(unsafe.Pointer(p))
+	pCompareC := (*C.BN254_g2_projective_t)(unsafe.Pointer(pCompare))
+
+	// Call the C function
+	// The C function doesn't keep any references to the data,
+	// so it's fine if the Go garbage collector moves or deletes the data later.
+	return bool(C.eq_g2_bn254(pC, pCompareC))
+}
+
+func (p *G2PointAffine) ToProjective() G2Point {
+	return G2Point{
+		x: p.x,
+		y: p.y,
+		z: ExtentionField{
+			A0: G2Element{1, 0, 0, 0},
+			A1: G2Element{0, 0, 0, 0},
+		},
+	}
+}
+
+func (g *G2PointAffine) FromGnarkAffine(gnark *bn254.G2Affine) *G2PointAffine {
+	g.x.A0 = gnark.X.A0.Bits()
+	g.x.A1 = gnark.X.A1.Bits()
+	g.y.A0 = gnark.Y.A0.Bits()
+	g.y.A1 = gnark.Y.A1.Bits()
+
+	return g
+}
+
+func (g *G2PointAffine) FromGnarkJac(gnark *bn254.G2Jac) *G2PointAffine {
 	var pointAffine bn254.G2Affine
 	pointAffine.FromJacobian(gnark)
 
