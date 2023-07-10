@@ -22,6 +22,7 @@
 // #define BIG_TRIANGLE
 // #define ZPRIZE
 // #define SSM_SUM  //WIP
+// #define PHASE1_TEST
 
 #define SIZE 32
 #define SHMEM_SIZE 64 * 4 //why this size?
@@ -449,6 +450,8 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
   unsigned borrow = 0;
   if (tid < total_size){
     S scalar = scalars[tid];
+    // A point = points[tid];
+    if (scalar == S::zero()) return;
     // if (tid == 0) printf("scalar %u", scalar);
 
     for (unsigned bm = 0; bm < nof_bms; bm++)
@@ -467,11 +470,11 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
       }
       #endif
       // if (tid == 0) printf("new index %u", bucket_index);
-      if (bm==nof_bms-1) {
-        bucket_index2 = bucket_index + ((tid&((1<<top_bm_nof_missing_bits)-1))<<(c-top_bm_nof_missing_bits));
-        if (tid<10) printf("tid %u bi1 %u bi2 %u\n",tid, bucket_index, bucket_index2);
-        bucket_index = bucket_index2;
-      }
+      // if (bm==nof_bms-1) {
+      //   bucket_index2 = bucket_index + ((tid&((1<<top_bm_nof_missing_bits)-1))<<(c-top_bm_nof_missing_bits));
+      //   if (tid<10) printf("tid %u bi1 %u bi2 %u\n",tid, bucket_index, bucket_index2);
+      //   bucket_index = bucket_index2;
+      // }
       current_index = bm * total_size + tid;
       #ifdef SIGNED_DIG
       // buckets_indices[current_index] = (msm_index<<(c-1+bm_bitsize)) | (bm<<(c-1)) | bucket_index;  //the bucket module number and the msm number are appended at the msbs
@@ -496,6 +499,11 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigne
   if (tid>=*nof_buckets_to_compute){ 
     return;
   }
+  if ((single_bucket_indices[tid]&((1<<c)-1))==0)
+  {
+    // printf("cond %u %u\n",tid,single_bucket_indices[tid]);
+    return; //skip zero buckets
+  } 
   #ifdef SIGNED_DIG //todo - fix
   const unsigned msm_index = single_bucket_indices[tid]>>msm_idx_shift;
   const unsigned bm_index = (single_bucket_indices[tid]&((1<<msm_idx_shift)-1))>>c;
@@ -506,9 +514,10 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigne
   #endif
   const unsigned bucket_offset = bucket_offsets[tid];
   const unsigned bucket_size = bucket_sizes[tid];
-  if (bucket_size == 0) {printf("watt"); return;}
+  // if (bucket_size == 0) {printf("watt"); return;}
+  // if (bucket_size > 10) {printf(">10: %u %u %u\n",tid,single_bucket_indices[tid],single_bucket_indices[tid]&((1<<c)-1));}
   // if (tid<10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
-  if (tid>=*nof_buckets_to_compute-10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
+  // if (tid>=*nof_buckets_to_compute-10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
   // if (tid==0) return;
   // if ((bucket_index>>20)==13) return;
   // if (bucket_sizes[tid]==16777216) printf("tid %u size %u bucket %u offset %u\n", tid, bucket_sizes[tid], bucket_index, bucket_offset);
@@ -542,6 +551,25 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, const unsigne
   }
   // buckets[tid] = bucket;
   buckets[bucket_index] = bucket;
+}
+
+template <typename P, typename A, typename S>
+__global__ void accumulate_buckets_kernel2(P *buckets, A *points, S *scalars, const unsigned c,const unsigned nof_bms, const unsigned size){
+  
+  unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (tid>=size) return;
+  
+  S scalar = scalars[tid];
+  A point = points[tid];
+  unsigned bucket_index;
+
+  for (unsigned bm = 0; bm < nof_bms; bm++)
+  {
+    // bucket_index = scalar.get_scalar_digit(bm, c) + (bm==nof_bms-1? ((tid&top_bm_nof_missing_bits)<<(c-top_bm_nof_missing_bits)) : 0);
+    bucket_index = scalar.get_scalar_digit(bm, c);
+    buckets[bucket_index] = buckets[bucket_index] + point;
+  }
+
 }
 
 //this kernel sums the entire bucket module
@@ -883,6 +911,8 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 
+  #ifndef PHASE1_TEST
+
   unsigned *bucket_indices;
   unsigned *point_indices;
   cudaMallocAsync(&bucket_indices, sizeof(unsigned) * size * (nof_bms+1), stream);
@@ -1015,7 +1045,14 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
    //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
                                                           cudaDeviceSynchronize();
                                                           printf("cuda error %u\n",cudaGetLastError());
-
+#else
+NUM_THREADS = 1 << 8;
+// NUM_THREADS = 1 << 5;
+NUM_BLOCKS = (size + NUM_THREADS - 1) / NUM_THREADS;
+accumulate_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, points, scalars, c, nof_bms, size); 
+cudaDeviceSynchronize();
+printf("cuda error 111%u\n",cudaGetLastError());
+#endif
 //reduce top bm
 // NUM_THREADS = min(MAX_TH,(source_buckets_count>>(1+j)));
 //   printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
@@ -1465,12 +1502,14 @@ else{
     cudaFreeAsync(d_final_result, stream);
   }
   cudaFreeAsync(buckets, stream);
+  #ifndef PHASE1_TEST
   cudaFreeAsync(bucket_indices, stream);
   cudaFreeAsync(point_indices, stream);
   cudaFreeAsync(single_bucket_indices, stream);
   cudaFreeAsync(bucket_sizes, stream);
   cudaFreeAsync(nof_buckets_to_compute, stream);
   cudaFreeAsync(bucket_offsets, stream);
+  #endif
   // cudaFreeAsync(sorted_bucket_sizes,stream);
   // cudaFreeAsync(sorted_bucket_offsets,stream);
   // cudaFreeAsync(sorted_single_bucket_indices,stream);
