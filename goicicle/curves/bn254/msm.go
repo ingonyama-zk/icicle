@@ -47,7 +47,6 @@ func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []Sc
 }
 
 func MsmG2BN254(out *G2Point, points []G2PointAffine, scalars []ScalarField, device_id int) (*G2Point, error) {
-	defer TimeTrack(time.Now(), "MSM G1")
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
