@@ -164,6 +164,15 @@ func NewScalarFieldOne() *ScalarField {
 	return &ScalarField{s}
 }
 
+func (a *ScalarField) Equals(b *ScalarField) bool {
+	for i, v := range a.s {
+		if b.s[i] != v {
+			return false
+		}
+	}
+	return true
+}
+
 /*
  * ScalarField methods
  */
@@ -412,7 +421,7 @@ func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) [
 func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.Element, routines int) []T {
 	var newElements []T
 
-	if routines > 1 {
+	if routines > 1 && routines <= len(elements) {
 		channels := make([]chan []T, routines)
 		for i := 0; i < routines; i ++ {
 			channels[i] = make(chan []T, 1)
@@ -430,7 +439,12 @@ func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.El
 
 		batchLen := len(elements)/routines
 		for i := 0; i < routines; i ++ {
-			elemsToConv := elements[batchLen*i:batchLen*(i+1)]
+			start := batchLen*i
+			end := batchLen*(i+1)
+			elemsToConv := elements[start:end]
+			if i == routines-1 {
+				elemsToConv = elements[start:]
+			}
 			go convert(elemsToConv, i)
 		}
 
