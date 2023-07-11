@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"unsafe"
-	"time"
 )
 
 // #cgo CFLAGS: -I../../../icicle/curves/bn254/
@@ -45,8 +44,7 @@ func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []Sc
 	return out, nil
 }
 
-func MsmG2BN254(out *G2Point, points []G2Affine, scalars []ScalarField, device_id int) (*G2Point, error) {
-	defer TimeTrack(time.Now(), "MSM G1")
+func MsmG2BN254(out *G2Point, points []G2PointAffine, scalars []ScalarField, device_id int) (*G2Point, error) {
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -64,7 +62,7 @@ func MsmG2BN254(out *G2Point, points []G2Affine, scalars []ScalarField, device_i
 	return out, nil
 } 
 
-func MsmG2BatchBN254(points *[]G2Affine, scalars *[]ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
+func MsmG2BatchBN254(points *[]G2PointAffine, scalars *[]ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")
