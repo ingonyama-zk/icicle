@@ -19,6 +19,14 @@ class Dummy_Scalar {
     unsigned p = 10;
     // unsigned p = 1<<30;
 
+    static HOST_DEVICE_INLINE Dummy_Scalar zero() {
+      return {0};
+    }
+
+    static HOST_DEVICE_INLINE Dummy_Scalar one() {
+      return {1};
+    }
+
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
       return os;
@@ -112,7 +120,8 @@ class Dummy_Projective {
     }
 
     static HOST_INLINE Dummy_Projective rand_host() {
-      return {(unsigned)rand()};
+      return {(unsigned)rand()%10};
+      // return {(unsigned)rand()};
     }
 };
 
@@ -129,7 +138,7 @@ typedef affine_t test_affine;
 int main()
 {
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<24;
+  unsigned msm_size = 1<<12;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
@@ -138,8 +147,8 @@ int main()
   for (unsigned i=0;i<N;i++){
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
-    // scalars[i] = test_scalar::rand_host();
-    scalars[i] = i < N/2? test_scalar::rand_host() : test_scalar::zero();
+    scalars[i] = test_scalar::rand_host();
+    // scalars[i] = i < N/2? test_scalar::rand_host() : test_scalar::one();
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
@@ -164,7 +173,7 @@ int main()
       cudaStream_t stream2;
     cudaStreamCreate(&stream1);
     cudaStreamCreate(&stream2);
-  // large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,stream1);
+  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,stream1);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res+1, false, false,stream2);
   // test_reduce_triangle(scalars);
@@ -179,10 +188,10 @@ int main()
     cudaStreamDestroy(stream1);
     cudaStreamDestroy(stream2);
 
-  // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
-  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;
