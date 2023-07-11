@@ -82,7 +82,7 @@ func GenerateTwiddles(d_size int, log_d_size int, inverse bool) (up unsafe.Point
 	is_inverse := C.bool(inverse)
 
 	dp := C.build_domain_cuda_bn254(domain_size, logn, is_inverse, 0, 0)
-	
+
 	if dp == nil {
 		err = errors.New("nullptr returned from generating twiddles")
 		return unsafe.Pointer(nil), err
@@ -101,7 +101,6 @@ func ReverseScalars(d_scalars unsafe.Pointer, len int) (int, error) {
 	return 0, nil
 }
 
-
 func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCoset bool) unsafe.Pointer {
 	size_d := size * 32
 	dp, err := goicicle.CudaMalloc(size_d)
@@ -118,7 +117,7 @@ func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCose
 
 	var ret C.int
 	if isCoset {
-		ret = C.interpolate_scalars_on_coset_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, cosetPowersC, 0, 0);
+		ret = C.interpolate_scalars_on_coset_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, cosetPowersC, 0, 0)
 	} else {
 		ret = C.interpolate_scalars_cuda_bn254(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
 	}
@@ -181,5 +180,3 @@ func VecScalarSub(in1_d, in2_d unsafe.Pointer, size int) int {
 
 	return 0
 }
-
-

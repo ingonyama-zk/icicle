@@ -32,7 +32,7 @@ func VecScalarMulMod(scalarVec1, scalarVec2 unsafe.Pointer, size int) int {
 
 	ret := C.vec_mod_mult_device_scalar_bn254(scalarVec1C, scalarVec2C, sizeC, 0)
 
-	if ret != 0{
+	if ret != 0 {
 		fmt.Print("error multiplying scalar vectors")
 		return -1
 	}

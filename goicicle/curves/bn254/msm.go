@@ -60,7 +60,7 @@ func MsmG2BN254(out *G2Point, points []G2PointAffine, scalars []ScalarField, dev
 	}
 
 	return out, nil
-} 
+}
 
 func MsmG2BatchBN254(points *[]G2PointAffine, scalars *[]ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
 	// Check for nil pointers
