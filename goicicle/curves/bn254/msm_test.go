@@ -85,21 +85,12 @@ func GenerateScalars(count int) ([]ScalarField, []fr.Element) {
 	var scalars_fr []fr.Element
 
 	var rand fr.Element
-	for i := 0; i < 10; i++ {
+	for i := 0; i < count; i++ {
 		rand.SetRandom()
 		s := NewFieldFromFrGnark[ScalarField](rand)
 
 		scalars_fr = append(scalars_fr, rand)
 		scalars = append(scalars, *s)
-	}
-
-	log2_10 := math.Log2(10)
-	log2Count := math.Log2(float64(count))
-	log2Size := int(math.Ceil(log2Count - log2_10))
-
-	for i := 0; i < log2Size; i++ {
-		scalars_fr = append(scalars_fr, scalars_fr...)
-		scalars = append(scalars, scalars...)
 	}
 
 	return scalars[:count], scalars_fr[:count]
@@ -167,6 +158,36 @@ func TestCommitMSM(t *testing.T) {
 		fmt.Print("Finished Gnark MSM\n")
 
 		assert.Equal(t, outHost[0].toGnarkAffine(), gResult)
+	}
+}
+
+func BenchmarkCommit(b *testing.B) {
+	LOG_MSM_SIZES := []int{20, 21, 22, 23, 24, 25, 26}
+
+	for _, logMsmSize := range LOG_MSM_SIZES {
+		msmSize := 1 << logMsmSize
+		points, _ := GeneratePoints(msmSize)
+		scalars, _ := GenerateScalars(msmSize)
+
+		out_d, _ := goicicle.CudaMalloc(96)
+
+		pointsBytes := msmSize * 64
+		points_d, _ := goicicle.CudaMalloc(pointsBytes)
+		goicicle.CudaMemCpyHtoD[PointAffineNoInfinityBN254](points_d, points, pointsBytes)
+
+		scalarBytes := msmSize * 32
+		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
+		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
+
+		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				e := Commit(out_d, scalars_d, points_d, msmSize)
+
+				if e != 0 {
+					panic("Error occured")
+				}
+			}
+		})
 	}
 }
 
