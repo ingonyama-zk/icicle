@@ -19,7 +19,6 @@ package bn254
 import (
 	"errors"
 	"fmt"
-	"time"
 	"unsafe"
 	"time"
 )
