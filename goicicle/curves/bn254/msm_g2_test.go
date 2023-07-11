@@ -77,6 +77,26 @@ func TestMsmG2BN254(t *testing.T) {
 	}
 }
 
+func BenchmarkMsmG2BN254(b *testing.B) {
+	LOG_MSM_SIZES := []int{20, 21, 22, 23, 24, 25, 26}
+
+	for _, logMsmSize := range LOG_MSM_SIZES {
+		msmSize := 1 << logMsmSize
+		points, _ := GenerateG2Points(msmSize)
+		scalars, _ := GenerateScalars(msmSize)
+		b.Run(fmt.Sprintf("MSM G2 %d", logMsmSize), func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				out := new(G2Point)
+				_, e := MsmG2BN254(out, points, scalars, 0)
+
+				if e != nil {
+					panic("Error occured")
+				}
+			}
+		})
+	}
+}
+
 func TestCommitG2MSM(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
