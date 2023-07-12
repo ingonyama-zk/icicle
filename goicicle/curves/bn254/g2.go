@@ -17,9 +17,12 @@
 package bn254
 
 import (
+	"encoding/binary"
+	"fmt"
 	"unsafe"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bn254/
@@ -38,6 +41,52 @@ func BatchConvertFromG2Affine(elements []bn254.G2Affine) []G2PointAffine {
 	}
 	return newElements
 }
+
+func BatchConvertFromG2AffineThreads(elements []bn254.G2Affine, routines int) []G2PointAffine {
+	var newElements []G2PointAffine
+
+	if routines > 1 && routines <= len(elements) {
+		channels := make([]chan []G2PointAffine, routines)
+		for i := 0; i < routines; i++ {
+			channels[i] = make(chan []G2PointAffine, 1)
+		}
+
+		convert := func(elements []bn254.G2Affine, chanIndex int) {
+			var convertedElements []G2PointAffine
+			for _, e := range elements {
+				var converted G2PointAffine
+				converted.FromGnarkAffine(&e)
+				convertedElements = append(convertedElements, converted)
+			}
+
+			channels[chanIndex] <- convertedElements
+		}
+
+		batchLen := len(elements) / routines
+		for i := 0; i < routines; i++ {
+			start := batchLen * i
+			end := batchLen * (i + 1)
+			elemsToConv := elements[start:end]
+			if i == routines-1 {
+				elemsToConv = elements[start:]
+			}
+			go convert(elemsToConv, i)
+		}
+
+		for i := 0; i < routines; i++ {
+			newElements = append(newElements, <-channels[i]...)
+		}
+	} else {
+		for _, e := range elements {
+			var converted G2PointAffine
+			converted.FromGnarkAffine(&e)
+			newElements = append(newElements, converted)
+		}
+	}
+
+	return newElements
+}
+
 
 // G2 extension field
 
@@ -67,6 +116,49 @@ func (p *G2Point) eqg2(pCompare *G2Point) bool {
 	// The C function doesn't keep any references to the data,
 	// so it's fine if the Go garbage collector moves or deletes the data later.
 	return bool(C.eq_g2_bn254(pC, pCompareC))
+}
+
+
+func (f *G2Element) toBytesLe() []byte {
+	var bytes []byte
+	for _, val := range f {
+		buf := make([]byte, 8) // 8 bytes because uint64 is 64-bit
+		binary.LittleEndian.PutUint64(buf, val)
+		bytes = append(bytes, buf...)
+	}
+	return bytes
+}
+
+func (f *G2Element) toGnarkFp() *fp.Element {
+	fb := f.toBytesLe()
+	var b32 [32]byte
+	copy(b32[:], fb[:32])
+
+	v, e := fp.LittleEndian.Element(&b32)
+
+	if e != nil {
+		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
+	}
+
+	return &v
+}
+
+func (f *ExtentionField) toGnarkE2() bn254.E2 {
+	return bn254.E2{
+		A0: *f.A0.toGnarkFp(),
+		A1: *f.A1.toGnarkFp(),
+	}
+}
+
+func (p *G2Point) ToGnarkJac() *bn254.G2Jac {
+	zSquared := p.z.toGnarkE2()
+	zSquared.Mul(&zSquared, &zSquared)
+	
+	return &bn254.G2Jac{
+		X: p.x.toGnarkE2(),
+		Y: p.y.toGnarkE2(),
+		Z: zSquared,
+	}
 }
 
 func (p *G2PointAffine) ToProjective() G2Point {
