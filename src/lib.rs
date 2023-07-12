@@ -50,6 +50,22 @@ extern "C" {
         device_id: usize,
     ) -> c_int;
 
+    fn batch_vector_mult_proj_cuda(
+        inout: *mut Point,
+        scalars: *const ScalarField,
+        n_scalars: usize,
+        batch_size: usize,
+        device_id: usize,
+    ) -> c_int;
+
+    fn batch_vector_mult_scalar_cuda(
+        inout: *mut ScalarField,
+        scalars: *const ScalarField,
+        n_mult: usize,
+        batch_size: usize,
+        device_id: usize,
+    ) -> c_int;
+
     fn matrix_vec_mod_mult(
         matrix_flattened: *const ScalarField,
         input: *const ScalarField,
@@ -218,6 +234,32 @@ pub fn mult_sc_vec(a: &mut [Scalar], b: &[Scalar], device_id: usize) {
             a as *mut _ as *mut ScalarField,
             b as *const _ as *const ScalarField,
             a.len(),
+            device_id,
+        );
+    }
+}
+
+pub fn mult_p_batch_vec(a: &mut [Point], b: &[Scalar], device_id: usize) {
+    assert_eq!(a.len() % b.len(), 0);
+    unsafe {
+        batch_vector_mult_proj_cuda(
+            a as *mut _ as *mut Point,
+            b as *const _ as *const ScalarField,
+            b.len(),
+            a.len() / b.len(),
+            device_id,
+        );
+    }
+}
+
+pub fn mult_sc_batch_vec(a: &mut [Scalar], b: &[Scalar], device_id: usize) {
+    assert_eq!(a.len() % b.len(), 0);
+    unsafe {
+        batch_vector_mult_scalar_cuda(
+            a as *mut _ as *mut ScalarField,
+            b as *const _ as *const ScalarField,
+            b.len(),
+            a.len() / b.len(),
             device_id,
         );
     }
