@@ -5,6 +5,9 @@
 #include "../../appUtils/ntt/ntt.cuh"
 #include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
 #include "curve_config.cuh"
+#include "../../utils/mont.cuh"
+
+
 
 extern "C" BN254::scalar_t* build_domain_cuda_bn254(uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
@@ -354,6 +357,148 @@ extern "C" int add_scalars_cuda_bn254(BN254::scalar_t* d_out, BN254::scalar_t* d
         return -1;
     }
 }
+
+extern "C" int to_montgomery_scalars_cuda_bn254(BN254::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery(d_inout, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_scalars_cuda_bn254(BN254::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery(d_inout, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int to_montgomery_proj_points_cuda_bn254(BN254::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BN254::point_field_t*)d_inout, 3 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_proj_points_cuda_bn254(BN254::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BN254::point_field_t*)d_inout, 3 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int to_montgomery_aff_points_cuda_bn254(BN254::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BN254::point_field_t*)d_inout, 2 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_aff_points_cuda_bn254(BN254::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BN254::point_field_t*)d_inout, 2 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+#if defined(G2_DEFINED)
+extern "C" int to_montgomery_proj_points_g2_cuda_bn254(BN254::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BN254::point_field_t*)d_inout, 6 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_proj_points_g2_cuda_bn254(BN254::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BN254::point_field_t*)d_inout, 6 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int to_montgomery_aff_points_g2_cuda_bn254(BN254::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BN254::point_field_t*)d_inout, 4 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_aff_points_g2_cuda_bn254(BN254::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BN254::point_field_t*)d_inout, 4 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+#endif
 
 extern "C" int reverse_order_scalars_cuda_bn254(BN254::scalar_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
 {
