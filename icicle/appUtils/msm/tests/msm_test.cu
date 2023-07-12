@@ -19,6 +19,14 @@ class Dummy_Scalar {
     unsigned p = 10;
     // unsigned p = 1<<30;
 
+    static HOST_DEVICE_INLINE Dummy_Scalar zero() {
+      return {0};
+    }
+
+    static HOST_DEVICE_INLINE Dummy_Scalar one() {
+      return {1};
+    }
+
     friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar) {
       os << scalar.x;
       return os;
@@ -112,7 +120,8 @@ class Dummy_Projective {
     }
 
     static HOST_INLINE Dummy_Projective rand_host() {
-      return {(unsigned)rand()};
+      return {(unsigned)rand()%10};
+      // return {(unsigned)rand()};
     }
 };
 
@@ -129,7 +138,7 @@ typedef affine_t test_affine;
 int main()
 {
   unsigned batch_size = 1;
-//   unsigned msm_size = 1<<24;
+//   unsigned msm_size = 1<<21;
   unsigned msm_size = 12180757;
   unsigned N = batch_size*msm_size;
 
@@ -140,6 +149,7 @@ int main()
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
     scalars[i] = test_scalar::rand_host();
+    // scalars[i] = i < N/2? test_scalar::rand_host() : test_scalar::one();
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
@@ -201,7 +211,7 @@ int main()
   cudaMemcpy(&large_res[1], large_res_d, sizeof(test_projective), cudaMemcpyDeviceToHost);
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
-  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+//   reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;

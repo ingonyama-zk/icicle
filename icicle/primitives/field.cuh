@@ -85,6 +85,14 @@ template <class CONFIG> class Field {
       return Field { CONFIG::modulus };
     }
 
+    static constexpr HOST_DEVICE_INLINE Field montgomery_r() {
+      return Field { CONFIG::montgomery_r };
+    }
+
+    static constexpr HOST_DEVICE_INLINE Field montgomery_r_inv() {
+      return Field { CONFIG::montgomery_r_inv };
+    }
+
   // private:
     typedef storage<TLC> ff_storage;
     typedef storage<2*TLC> ff_wide_storage;
