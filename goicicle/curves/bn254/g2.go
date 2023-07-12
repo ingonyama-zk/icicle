@@ -88,7 +88,6 @@ func BatchConvertFromG2AffineThreads(elements []bn254.G2Affine, routines int) []
 	return newElements
 }
 
-
 // G2 extension field
 
 type G2Element [4]uint64
@@ -119,7 +118,6 @@ func (p *G2Point) eqg2(pCompare *G2Point) bool {
 	return bool(C.eq_g2_bn254(pC, pCompareC))
 }
 
-
 func (f *G2Element) toBytesLe() []byte {
 	var bytes []byte
 	for _, val := range f {
@@ -131,8 +129,8 @@ func (f *G2Element) toBytesLe() []byte {
 }
 
 /*
-	TODO: the following functions are due to a bug in the cuda code, 
-	these fucntions should be deleted once cuda MsmG2 returns non montgomery format
+TODO: the following functions are due to a bug in the cuda code,
+these fucntions should be deleted once cuda MsmG2 returns non montgomery format
 */
 const (
 	q0 uint64 = 4332616871279656263
@@ -194,14 +192,14 @@ func (p *G2Point) ToGnarkJac() *bn254.G2Jac {
 
 	var Y bn254.E2
 	Y.Mul(&y, &zSquared)
-	
+
 	after := bn254.G2Jac{
 		X: X,
 		Y: Y,
 		Z: z,
 	}
 
-	return &after 
+	return &after
 }
 
 func (p *G2PointAffine) ToProjective() G2Point {
