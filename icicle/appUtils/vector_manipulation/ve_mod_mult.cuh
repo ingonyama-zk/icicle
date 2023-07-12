@@ -7,6 +7,19 @@
 
 #define MAX_THREADS_PER_BLOCK 256
 
+/**
+ * Multiply the elements of an input array by a scalar in-place.
+ * @param arr input array.
+ * @param n size of arr.
+ * @param n_inv scalar of type S (scalar).
+ */
+ template < typename E, typename S > __global__ void template_normalize_kernel(E * arr, uint32_t n, S scalar) {
+    int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (tid < n) {
+      arr[tid] = scalar * arr[tid];
+    }
+  }
+
 // TODO: headers for prototypes and .c .cpp .cu files for implementations
 template <typename E, typename S>
 __global__ void vectorModMult(S *scalar_vec, E *element_vec, E *result, size_t n_elments)

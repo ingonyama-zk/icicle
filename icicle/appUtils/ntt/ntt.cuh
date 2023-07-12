@@ -84,20 +84,6 @@ template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn, cu
 }
 
 
-/**
- * Multiply the elements of an input array by a scalar in-place.
- * @param arr input array.
- * @param n size of arr.
- * @param n_inv scalar of type S (scalar).
- */
-template < typename E, typename S > __global__ void template_normalize_kernel(E * arr, uint32_t n, S scalar) {
-  int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid < n) {
-    arr[tid] = scalar * arr[tid];
-  }
-}
-
-
 enum Decimation {
   NONE = 0,
   DIF = 1,

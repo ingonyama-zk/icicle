@@ -58,6 +58,8 @@ int reverse_order_points_cuda_bn254(BN254_projective_t* arr, int n, size_t devic
 int reverse_order_points_batch_cuda_bn254(BN254_projective_t* arr, int n, int batch_size, size_t device_id, size_t stream);
 int add_scalars_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_in1, BN254_scalar_t* d_in2, unsigned n, size_t stream);
 int sub_scalars_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_in1, BN254_scalar_t* d_in2, unsigned n, size_t stream);
+int to_montgomery_scalars_cuda_bn254(BN254_scalar_t* d_inout, unsigned n, size_t stream);
+int from_montgomery_scalars_cuda_bn254(BN254_scalar_t* d_inout, unsigned n, size_t stream);
 
 #ifdef __cplusplus
 }

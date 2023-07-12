@@ -180,3 +180,23 @@ func VecScalarSub(in1_d, in2_d unsafe.Pointer, size int) int {
 
 	return 0
 }
+
+func ToMontgomery(d_scalars unsafe.Pointer, len int) (int, error) {
+	scalarsC := (*C.BN254_scalar_t)(d_scalars)
+	lenC := C.uint(len)
+	if success := C.to_montgomery_scalars_cuda_bn254(scalarsC, lenC, 0); success != 0 {
+		return -1, errors.New("reversing failed")
+	}
+	return 0, nil
+}
+
+func FromMontgomery(d_scalars unsafe.Pointer, len int) (int, error) {
+	scalarsC := (*C.BN254_scalar_t)(d_scalars)
+	lenC := C.uint(len)
+	if success := C.from_montgomery_scalars_cuda_bn254(scalarsC, lenC, 0); success != 0 {
+		return -1, errors.New("reversing failed")
+	}
+	return 0, nil
+}
+
+
