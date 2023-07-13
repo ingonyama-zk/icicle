@@ -494,7 +494,10 @@ template <typename P, typename A, typename S>
 __global__ void add_ones_kernel(A *points, S* scalars, P* results, const unsigned msm_size, const unsigned run_length){
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   const unsigned nof_threads = (msm_size + run_length - 1)/run_length;
-  if (tid>=nof_threads) return;
+  if (tid>=nof_threads) {
+    results[tid] = P::zero();
+    return;
+  }
   const unsigned start_index = tid*run_length;
   P sum = P::zero();
   for (int i=start_index;i<min(start_index+run_length,msm_size);i++){
@@ -927,18 +930,18 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, nof_buckets);
   // cudaDeviceSynchronize();
-  printf("cuda error %u\n",cudaGetLastError());
+//   printf("cuda error %u\n",cudaGetLastError());
 
   //accumulate ones
   P *ones_results; //fix whole division, in last run in kernel too
-  const unsigned nof_runs = 1<<(msm_log_size-6);
+  const unsigned nof_runs = max(1<<(msm_log_size-6), 16);
   const unsigned run_length = (size + nof_runs -1)/nof_runs;
   cudaMallocAsync(&ones_results, sizeof(P) * nof_runs, stream);
   NUM_THREADS = min(1 << 8,nof_runs);
   NUM_BLOCKS = (nof_runs + NUM_THREADS - 1) / NUM_THREADS;
   add_ones_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_points, d_scalars, ones_results, size, run_length);
   // cudaDeviceSynchronize();
-  printf("cuda error ones  %u\n",cudaGetLastError());
+//   printf("cuda error ones  %u\n",cudaGetLastError());
 
   // cudaDeviceSynchronize();
   // std::vector<P> h_ones_results;
@@ -979,7 +982,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, 
                                                     nof_bms, bm_bitsize, c, top_bm_nof_missing_bits); //+size - leaving the first bm free for the out of place sort later
                                                     // cudaDeviceSynchronize();
-                                                    printf("cuda error %u\n",cudaGetLastError());
+                                                    // printf("cuda error %u\n",cudaGetLastError());
 
 
   // cudaDeviceSynchronize();
@@ -1099,14 +1102,14 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
    // accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets, sorted_bucket_offsets, sorted_bucket_sizes, sorted_single_bucket_indices, point_indices, 
    //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
                                                           // cudaDeviceSynchronize();
-                                                          printf("cuda error acc %u\n",cudaGetLastError());
+                                                        //   printf("cuda error acc %u\n",cudaGetLastError());
 #else
 NUM_THREADS = 1 << 8;
 // NUM_THREADS = 1 << 5;
 NUM_BLOCKS = (size + NUM_THREADS - 1) / NUM_THREADS;
 accumulate_buckets_kernel2<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, points, scalars, c, nof_bms, size); 
 // cudaDeviceSynchronize();
-printf("cuda error 111%u\n",cudaGetLastError());
+// printf("cuda error 111%u\n",cudaGetLastError());
 #endif
 //reduce top bm
 // NUM_THREADS = min(MAX_TH,(source_buckets_count>>(1+j)));
@@ -1143,7 +1146,7 @@ printf("cuda error 111%u\n",cudaGetLastError());
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms, c); 
     #endif
     // cudaDeviceSynchronize();
-    printf("cuda error %u\n",cudaGetLastError());
+    // printf("cuda error %u\n",cudaGetLastError());
   }
   #ifdef ZPRIZE
   else{
@@ -1167,7 +1170,7 @@ printf("cuda error 111%u\n",cudaGetLastError());
     // const unsigned grid_dim = (total_buckets_count - 1) / block_dim.x + 1;
     split_windows_kernel_inner<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(source_bits_count, source_windows_count, source_buckets, target_buckets, total_buckets_count);
     // cudaDeviceSynchronize();
-    printf("cuda error %u\n",cudaGetLastError());
+    // printf("cuda error %u\n",cudaGetLastError());
     cudaFreeAsync(source_buckets, stream);
 
     for (unsigned j = 0; j < log_data_split; j++){
@@ -1178,7 +1181,7 @@ printf("cuda error 111%u\n",cudaGetLastError());
     NUM_BLOCKS = (count + NUM_THREADS - 1) / NUM_THREADS;
     reduce_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(target_buckets, count);
     // cudaDeviceSynchronize();
-    printf("cuda error %u\n",cudaGetLastError());
+    // printf("cuda error %u\n",cudaGetLastError());
     }
     if (target_bits_count == 1) {
       // P results;
@@ -1205,7 +1208,7 @@ printf("cuda error 111%u\n",cudaGetLastError());
       // const dim3 grid_dim = (result_windows_count - 1) / block_dim.x + 1;
       last_pass_gather_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(c, target_buckets, final_results, result_windows_count);
       // cudaDeviceSynchronize();
-      printf("cuda error %u\n",cudaGetLastError());
+    //   printf("cuda error %u\n",cudaGetLastError());
       c = 1;
       break;
     }
@@ -1218,7 +1221,7 @@ printf("cuda error 111%u\n",cudaGetLastError());
 #else
 else{
   // cudaDeviceSynchronize();
-  printf("cuda erddsdfsdfsror %u\n",cudaGetLastError());
+//   printf("cuda erddsdfsdfsror %u\n",cudaGetLastError());
 //     cudaDeviceSynchronize();
 // std::vector<P> h_buckets;
 //   h_buckets.reserve(nof_buckets);
@@ -1259,9 +1262,9 @@ else{
     // source_buckets=source_buckets_padded;
     // source_bits_count = source_bits_count+1;
     // }
-    printf("round %u \n" ,i);
+    // printf("round %u \n" ,i);
     const unsigned target_bits_count = (source_bits_count + 1) >> 1; //c/2=8
-    printf("target_bits_count %u \n" ,target_bits_count);
+    // printf("target_bits_count %u \n" ,target_bits_count);
     const unsigned target_windows_count = source_windows_count << 1; //nof bms*2 = 32
     // const unsigned target_window_buckets_count = 1 << target_bits_count; // 2^8
     const unsigned target_buckets_count = target_windows_count << target_bits_count; // bms*2^c = 32*2^8
@@ -1309,12 +1312,12 @@ else{
         // unsigned last_j = odd_source_c? target_bits_count-2 : target_bits_count-1;
         unsigned last_j = target_bits_count-1;
         NUM_THREADS = min(MAX_TH,(source_buckets_count>>(1+j)));
-        printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
+        // printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
         NUM_BLOCKS = ((source_buckets_count>>(1+j)) + NUM_THREADS - 1) / NUM_THREADS;
-        printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
+        // printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets1,j==target_bits_count-1? target_buckets: temp_buckets1,1<<(source_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,0,0);
         // cudaDeviceSynchronize();
-        printf("cuda error %u\n",cudaGetLastError());
+        // printf("cuda error %u\n",cudaGetLastError());
         // }
         // std::vector<P> t1_buckets;
         // std::vector<P> t2_buckets;
@@ -1345,12 +1348,12 @@ else{
         // unsigned nof_threads = (source_buckets_count>>(1+j))*((odd_source_c&&j==target_bits_count-1)? 2 :1);
         unsigned nof_threads = (source_buckets_count>>(1+j));
         NUM_THREADS = min(MAX_TH,nof_threads);
-        printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
+        // printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
         NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
-        printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
+        // printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
         single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(j==0?source_buckets:temp_buckets2,j==target_bits_count-1? target_buckets: temp_buckets2,1<<(target_bits_count-j),j==target_bits_count-1? 1<<target_bits_count: 0,1,0);
         // cudaDeviceSynchronize();
-        printf("cuda error %u\n",cudaGetLastError());
+        // printf("cuda error %u\n",cudaGetLastError());
 
         // std::vector<P> t1_buckets;
         // std::vector<P> t2_buckets;
@@ -1395,9 +1398,9 @@ else{
     // reduce_triangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[0]>>>(source_buckets,temp_buckets1,target_buckets,source_bits_count,source_windows_count);
     // for(unsigned j=0;;j++){
     NUM_THREADS = 1<<(source_bits_count-1);
-    printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
+    // printf("NUM_THREADS 1 %u \n" ,NUM_THREADS);
     NUM_BLOCKS = source_windows_count;
-    printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
+    // printf("NUM_BLOCKS 1 %u \n" ,NUM_BLOCKS);
     general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(source_buckets,target_buckets,1<<target_bits_count,1<<target_bits_count,0);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
@@ -1413,9 +1416,9 @@ else{
     //     std::cout<<std::endl;
     // reduce_rectangles_kernel<<<NUM_BLOCKS, NUM_THREADS,0,streams[1]>>>(source_buckets,temp_buckets2,target_buckets,source_bits_count,source_windows_count);
     NUM_THREADS = 1<<(target_bits_count-1);
-    printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
+    // printf("NUM_THREADS 2 %u \n" ,NUM_THREADS);
     NUM_BLOCKS = source_windows_count<<target_bits_count;
-    printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
+    // printf("NUM_BLOCKS 2 %u \n" ,NUM_BLOCKS);
     general_sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(source_buckets,target_buckets,1,1<<target_bits_count,1);
     // cudaDeviceSynchronize();
     // printf("cuda error %u\n",cudaGetLastError());
@@ -1544,7 +1547,7 @@ else{
   //launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S><<<1,1,0,stream>>>(final_results, ones_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
   // cudaDeviceSynchronize();
-  printf("cuda error %u\n",cudaGetLastError());
+//   printf("cuda error %u\n",cudaGetLastError());
   //copy final result to host
   cudaStreamSynchronize(stream);
   if (!on_device)
