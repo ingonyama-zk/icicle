@@ -1,12 +1,12 @@
 CUDA_ROOT_DIR = /usr/local/cuda
 NVCC = $(CUDA_ROOT_DIR)/bin/nvcc
-CFLAGS = -Xcompiler -fPIC -std=c++17
+CFLAGS = -Xcompiler -fPIC
 LDFLAGS = -shared
 FEATURES = -DG2_DEFINED
 
-TARGET_BN254 = bn254
-TARGET_BLS12_381 = bls12381
-TARGET_BLS12_377 = bls12377
+TARGET_BN254 = libbn254.so
+TARGET_BLS12_381 = libbls12_381.so
+TARGET_BLS12_377 = libbls12_377.so
 
 VPATH = ../icicle/curves/bn254:../icicle/curves/bls12_377:../icicle/curves/bls12_381
 
