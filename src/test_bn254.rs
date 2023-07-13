@@ -886,8 +886,9 @@ pub(crate) mod tests_bn254 {
     fn test_msm() {
         let test_sizes = [6075005, 6699232, 12180757];
 
-        for pow2 in test_sizes {
-            let count = 1 << pow2;
+        for count in test_sizes {
+        // for pow2 in test_sizes {
+            // let count = 1 << pow2;
             let seed = None; // set Some to provide seed
             // let points = generate_random_points_bn254(count, get_rng_bn254(seed));
             let points = generate_random_points100_bn254(count, get_rng_bn254(seed));
