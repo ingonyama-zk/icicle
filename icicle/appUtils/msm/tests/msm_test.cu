@@ -140,10 +140,10 @@ int main()
   bool on_device = false;
 
   unsigned batch_size = 1;
-  // unsigned msm_size = 1<<6;
+  unsigned msm_size = 1<<24;
   // unsigned msm_size = (1<<10) - 456;
   // unsigned msm_size = 20;
-  unsigned msm_size = 6075005;
+  // unsigned msm_size = 6075005;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
@@ -152,8 +152,8 @@ int main()
   for (unsigned i=0;i<N;i++){
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
-    scalars[i] = test_scalar::rand_host();
-    // scalars[i] = i < N/2? test_scalar::rand_host() : test_scalar::one();
+    // scalars[i] = test_scalar::rand_host();
+    scalars[i] = i >00000? test_scalar::rand_host() : (test_scalar::one() + test_scalar::one());
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
@@ -189,7 +189,7 @@ int main()
       cudaStream_t stream2;
     cudaStreamCreate(&stream1);
     cudaStreamCreate(&stream2);
-  large_msm<test_scalar, test_projective, test_affine>(on_device? d_scalars : scalars, on_device? d_points : points, msm_size, on_device? d_large_res : large_res, on_device, true,stream1);
+  // large_msm<test_scalar, test_projective, test_affine>(on_device? d_scalars : scalars, on_device? d_points : points, msm_size, on_device? d_large_res : large_res, on_device, true,stream1);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   large_msm<test_scalar, test_projective, test_affine>(on_device? d_scalars : scalars, on_device? d_points : points, msm_size, on_device? d_large_res+1 : large_res+1, on_device, false,stream2);
   // test_reduce_triangle(scalars);
@@ -207,10 +207,10 @@ int main()
   if (on_device)
     cudaMemcpy(large_res, d_large_res, sizeof(test_projective) * batch_size*2, cudaMemcpyDeviceToHost);
 
-  std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
-  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;
