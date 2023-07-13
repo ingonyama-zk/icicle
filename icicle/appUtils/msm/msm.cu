@@ -493,8 +493,11 @@ __global__ void split_scalars_kernel(unsigned *buckets_indices, unsigned *point_
 template <typename P, typename A, typename S>
 __global__ void add_ones_kernel(A *points, S* scalars, P* results, const unsigned msm_size, const unsigned run_length){
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  const unsigned nof_threads = (msm_size + run_length - 1)/run_length;
-  if (tid>=nof_threads) return;
+  const unsigned nof_threads = (msm_size + run_length - 1)/run_length; //129256
+  if (tid>=nof_threads) {
+    results[tid] = P::zero();
+    return;
+  }
   const unsigned start_index = tid*run_length;
   P sum = P::zero();
   for (int i=start_index;i<min(start_index+run_length,msm_size);i++){
@@ -931,14 +934,14 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 
   //accumulate ones
   P *ones_results; //fix whole division, in last run in kernel too
-  const unsigned nof_runs = 1<<(msm_log_size-6);
+  const unsigned nof_runs = max(1<<(msm_log_size-6),16);
   const unsigned run_length = (size + nof_runs -1)/nof_runs;
   cudaMallocAsync(&ones_results, sizeof(P) * nof_runs, stream);
   NUM_THREADS = min(1 << 8,nof_runs);
   NUM_BLOCKS = (nof_runs + NUM_THREADS - 1) / NUM_THREADS;
   add_ones_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_points, d_scalars, ones_results, size, run_length);
   // cudaDeviceSynchronize();
-  printf("cuda error ones  %u\n",cudaGetLastError());
+  // printf("cuda error ones  %u\n",cudaGetLastError());
 
   // cudaDeviceSynchronize();
   // std::vector<P> h_ones_results;

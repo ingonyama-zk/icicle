@@ -884,7 +884,7 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [24];
+        let test_sizes = [6075005, 6699232, 12180757];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -937,10 +937,11 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_commit() {
-        let test_size = 1 << 8;
+        let test_size = 1 << 24;
         let seed = Some(0);
         let (mut scalars, mut d_scalars, _) = set_up_scalars_bn254(test_size, 0, false);
-        let mut points = generate_random_points_bn254(test_size, get_rng_bn254(seed));
+        // let mut points = generate_random_points_bn254(test_size, get_rng_bn254(seed));
+        let mut points = generate_random_points100_bn254(test_size, get_rng_bn254(seed));
         let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
 
         let msm_result = msm_bn254(&points, &scalars, 0);

@@ -137,8 +137,13 @@ typedef affine_t test_affine;
 
 int main()
 {
+  bool on_device = false;
+
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<12;
+  // unsigned msm_size = 1<<6;
+  // unsigned msm_size = (1<<10) - 456;
+  // unsigned msm_size = 20;
+  unsigned msm_size = 6075005;
   unsigned N = batch_size*msm_size;
 
   test_scalar *scalars = new test_scalar[N];
@@ -153,9 +158,20 @@ int main()
   }
   std::cout<<"finished generating"<<std::endl;
 
+  test_scalar *d_scalars;
+  test_affine *d_points;
+  if (on_device) {
+    //copy scalars and point to gpu
+    cudaMalloc(&d_scalars, sizeof(test_scalar) * N);
+    cudaMalloc(&d_points, sizeof(test_affine) * N);
+    cudaMemcpy(d_scalars, scalars, sizeof(test_scalar) * N, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_points, points, sizeof(test_affine) * N, cudaMemcpyHostToDevice);
+  }
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
   // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
   test_projective large_res[batch_size*2];
+  test_projective *d_large_res;
+  cudaMalloc(&d_large_res, sizeof(test_projective) * batch_size*2);
   // test_projective batched_large_res[batch_size];
   // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
   // fake_point batched_large_res[256];
@@ -173,9 +189,9 @@ int main()
       cudaStream_t stream2;
     cudaStreamCreate(&stream1);
     cudaStreamCreate(&stream2);
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true,stream1);
+  large_msm<test_scalar, test_projective, test_affine>(on_device? d_scalars : scalars, on_device? d_points : points, msm_size, on_device? d_large_res : large_res, on_device, true,stream1);
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res+1, false, false,stream2);
+  large_msm<test_scalar, test_projective, test_affine>(on_device? d_scalars : scalars, on_device? d_points : points, msm_size, on_device? d_large_res+1 : large_res+1, on_device, false,stream2);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   // test_reduce_single(scalars);
@@ -187,6 +203,9 @@ int main()
     cudaStreamSynchronize(stream2);
     cudaStreamDestroy(stream1);
     cudaStreamDestroy(stream2);
+
+  if (on_device)
+    cudaMemcpy(large_res, d_large_res, sizeof(test_projective) * batch_size*2, cudaMemcpyDeviceToHost);
 
   std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
