@@ -329,13 +329,14 @@ func TestCommitG2MSM(t *testing.T) {
 		scalars, gnarkScalars := GenerateScalars(count)
 		fmt.Print("Finished generating scalars\n")
 
-		out_d, _ := goicicle.CudaMalloc(128)
-
 		var sizeCheckG2PointAffine G2PointAffine
-		pointsBytes := count * int(unsafe.Sizeof(sizeCheckG2PointAffine))
+		inputPointsBytes := count * int(unsafe.Sizeof(sizeCheckG2PointAffine))
 
-		points_d, _ := goicicle.CudaMalloc(pointsBytes)
-		goicicle.CudaMemCpyHtoD[G2PointAffine](points_d, points, pointsBytes)
+		var sizeCheckG2Point G2Point
+		out_d, _ := goicicle.CudaMalloc(int(unsafe.Sizeof(sizeCheckG2Point)))
+
+		points_d, _ := goicicle.CudaMalloc(inputPointsBytes)
+		goicicle.CudaMemCpyHtoD[G2PointAffine](points_d, points, inputPointsBytes)
 
 		scalarBytes := count * 32
 		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
@@ -345,8 +346,8 @@ func TestCommitG2MSM(t *testing.T) {
 		e := CommitG2(out_d, scalars_d, points_d, count)
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
-		outHost := make([]G2PointAffine, 1)
-		goicicle.CudaMemCpyDtoH[G2PointAffine](outHost, out_d, 128)
+		outHost := make([]G2Point, 1)
+		goicicle.CudaMemCpyDtoH[G2Point](outHost, out_d, int(unsafe.Sizeof(sizeCheckG2Point)))
 
 		assert.Equal(t, e, 0, "error should be 0")
 		fmt.Print("Finished icicle MSM\n")
@@ -355,10 +356,14 @@ func TestCommitG2MSM(t *testing.T) {
 
 		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
 		fmt.Print("Finished Gnark MSM\n")
-		var result G2PointAffine
-		result.FromGnarkAffine(gResult)
+		var resultGnark G2PointAffine
+		resultGnark.FromGnarkAffine(gResult)
 
-		assert.Equal(t, outHost[0], result)
+		resultGnarkProjective := resultGnark.ToProjective()
+		assert.Equal(t, len(outHost), 1)
+		result := outHost[0]
+
+		assert.True(t, result.eqg2(&resultGnarkProjective))
 	}
 }
 
