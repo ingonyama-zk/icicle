@@ -99,8 +99,11 @@ extern "C" int interpolate_scalars_batch_cuda_bls12_381(BLS12_381::scalar_t* d_o
 {
     try
     {
-        cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        cudaStreamCreate(&stream); //TODO: we should avoid creating stream if default (cudaStream_t stream = 0) is passed.
+                                   //      but default is not working as expected as valgrind still reports errors
+        auto result_code = interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        cudaStreamDestroy(stream); //TODO: hotfix for not freeing memory 
+        return result_code;
     }
     catch (const std::runtime_error &ex)
     {
@@ -128,7 +131,9 @@ extern "C" int interpolate_points_batch_cuda_bls12_381(BLS12_381::projective_t* 
     try
     {
         cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        auto result_code = interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        cudaStreamDestroy(stream);
+        return result_code; 
     }
     catch (const std::runtime_error &ex)
     {
@@ -160,7 +165,9 @@ extern "C" int evaluate_scalars_batch_cuda_bls12_381(BLS12_381::scalar_t* d_out,
     {
         BLS12_381::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
+        auto result_code = evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, 0);
+        cudaStreamDestroy(stream);
+        return result_code;
     }
     catch (const std::runtime_error &ex)
     {
@@ -192,7 +199,9 @@ extern "C" int evaluate_points_batch_cuda_bls12_381(BLS12_381::projective_t* d_o
     {
         BLS12_381::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
+        auto result_code = evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
+        cudaStreamDestroy(stream);
+        return result_code;
     }
     catch (const std::runtime_error &ex)
     {
@@ -236,7 +245,7 @@ extern "C" int evaluate_points_on_coset_cuda_bls12_381(BLS12_381::projective_t* 
 {
     try
     {
-        cudaStreamCreate(&stream);
+        cudaStreamCreate(&stream); //TODO: don't create if default was passed, destroy what was created, same applies to all calls
         return evaluate(d_out, d_coefficients, d_domain, domain_size, n, true, coset_powers, stream);
     }
     catch (const std::runtime_error &ex)
@@ -253,6 +262,22 @@ extern "C" int evaluate_points_on_coset_batch_cuda_bls12_381(BLS12_381::projecti
     {
         cudaStreamCreate(&stream);
         return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int ntt_inplace_batch_cuda_bls12_381(BLS12_381::scalar_t* d_inout, BLS12_381::scalar_t* d_twiddles,
+                                           unsigned n, unsigned batch_size, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, stream, true);
+        return CUDA_SUCCESS; //TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
     }
     catch (const std::runtime_error &ex)
     {
