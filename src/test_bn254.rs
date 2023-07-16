@@ -1546,7 +1546,7 @@ pub(crate) mod tests_bn254 {
         }
     }
 
-    //#[test]
+    #[test]
     #[allow(non_snake_case)]
     fn test_vec_scalar_mul() {
         let mut intoo = [ScalarField_BN254::one(), ScalarField_BN254::one(), ScalarField_BN254::zero()];

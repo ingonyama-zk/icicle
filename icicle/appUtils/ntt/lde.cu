@@ -43,7 +43,6 @@ template < typename E, bool SUB > __global__ void add_sub_array(E* res, E* in1, 
  */
 template <typename E, typename S> int interpolate_batch(E * d_out, E * d_evaluations, S * d_domain, unsigned n, unsigned batch_size, bool coset, S * coset_powers, cudaStream_t stream) {
   cudaMemcpyAsync(d_out, d_evaluations, sizeof(E) * n * batch_size, cudaMemcpyDeviceToDevice, stream);
-  S* _null = nullptr;
   ntt_inplace_batch_template(d_out, d_domain, n, batch_size, true, coset, coset_powers, stream, true);
   return 0;
 }

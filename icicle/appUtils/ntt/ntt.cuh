@@ -327,13 +327,6 @@ template <typename E, typename S> void ntt_inplace_batch_template(
     
     if (is_shared_mem_enabled) ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
   }
-
-  // if (is_coset) 
-  // {
-  //   num_threads = MAX_THREADS_PER_BLOCK; //TODO: integrate inside ntt kernels?
-  //   num_blocks = (n * batch_size + num_threads - 1) / num_threads;
-  //   batchVectorMult<<<num_blocks, num_threads, 0, stream>>>(coset, d_inout, n, batch_size);
-  // }
   
   if (!is_sync_needed) return;
 
