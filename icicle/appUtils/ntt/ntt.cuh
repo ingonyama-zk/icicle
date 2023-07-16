@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../../utils/sharedmem.cuh"
+#include "../vector_manipulation/ve_mod_mult.cuh"
 
 const uint32_t MAX_NUM_THREADS = 1024;
 const uint32_t MAX_THREADS_BATCH = 512;    //TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
@@ -83,19 +84,11 @@ template < typename T > void reverse_order(T* arr, uint32_t n, uint32_t logn, cu
 }
 
 
-/**
- * Multiply the elements of an input array by a scalar in-place.
- * @param arr input array.
- * @param n size of arr.
- * @param n_inv scalar of type S (scalar).
- */
-template < typename E, typename S > __global__ void template_normalize_kernel(E * arr, uint32_t n, S scalar) {
-  int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid < n) {
-    arr[tid] = scalar * arr[tid];
-  }
-}
-
+enum Decimation {
+  NONE = 0,
+  DIF = 1,
+  DIT = 2,
+};
 
 /**
  * Cooley-Tuckey NTT.
@@ -288,8 +281,16 @@ __global__ void ntt_template_kernel(E *arr, uint32_t n, S *twiddles, uint32_t n_
  * @param d_twiddles 
  * @param n Length of `d_twiddles` array
  * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
+ * @param inverse true for iNTT
+ * @param is_coset true for multiplication by coset
+ * @param coset should be array of lenght n - or in case of lesser than n, right-padded with zeroes
+ * @param stream CUDA stream   
+ * @param is_sync_needed do perform sync of the supplied CUDA stream at the end of processing
  */
-template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S * d_twiddles, unsigned n, unsigned batch_size, bool inverse, cudaStream_t stream, bool is_sync_needed) {
+template <typename E, typename S> void ntt_inplace_batch_template(
+  E * d_inout, S * d_twiddles, unsigned n, unsigned batch_size, bool inverse, 
+  bool is_coset, S * coset, cudaStream_t stream, bool is_sync_needed) 
+{
   const int logn = int(log(n) / log(2));
   bool is_shared_mem_enabled = sizeof(E) <= MAX_SHARED_MEM_ELEMENT_SIZE;
   const int log2_shmem_elems = is_shared_mem_enabled ? int(log(int(MAX_SHARED_MEM / sizeof(E))) / log(2)) : logn;
@@ -309,12 +310,16 @@ template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S
       ntt_template_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
     }
 
+    if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
+
     num_threads = min(n / 2, MAX_NUM_THREADS);
     num_blocks = (n * batch_size + num_threads - 1) / num_threads;
     template_normalize_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>> (d_inout, n * batch_size, S::inv_log_size(logn)); 
   }
   else 
   {
+    if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
+
     for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
     {
       ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, true);
@@ -353,8 +358,9 @@ template <typename E, typename S> void ntt_inplace_batch_template(E * d_inout, S
   cudaMemcpyAsync(d_arr, arr, size_E, cudaMemcpyHostToDevice, stream);
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
-
-  ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, stream, false);
+   
+  S* _null = nullptr;
+  ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, false, _null, stream, false);
 
   cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arr, stream);

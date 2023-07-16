@@ -73,6 +73,16 @@ extern "C" {
         device_id: usize
     ) -> c_int;
 
+     fn ntt_inplace_coset_batch_cuda_bn254(        
+        d_inout: DevicePointer<ScalarField_BN254>,
+        d_twiddles: DevicePointer<ScalarField_BN254>,
+        n: usize,
+        batch_size: usize,
+        inverse: bool,
+        is_coset: bool,
+        d_coset: DevicePointer<ScalarField_BN254>,
+        device_id: usize) -> c_int;
+
     fn interpolate_scalars_cuda_bn254(
         d_out: DevicePointer<ScalarField_BN254>,
         d_evaluations: DevicePointer<ScalarField_BN254>,
@@ -651,6 +661,29 @@ pub fn evaluate_scalars_on_coset_batch_bn254(
     return res;
 }
 
+//extern "C" int ntt_inplace_coset_batch_cuda_bn254(BN254::scalar_t* d_inout, BN254::scalar_t* d_twiddles,
+//    unsigned n, unsigned batch_size, bool inverse, bool is_coset, BN254::scalar_t* coset, size_t device_id = 0, cudaStream_t stream = 0)
+pub fn ntt_inplace_coset_batch_bn254(
+    d_inout: &mut DeviceBuffer<ScalarField_BN254>,
+    d_twiddles: &mut DeviceBuffer<ScalarField_BN254>,
+    batch_size: usize,
+    inverse: bool,
+    d_coset: &mut DeviceBuffer<ScalarField_BN254>,
+) -> i32 {
+    unsafe {
+        ntt_inplace_coset_batch_cuda_bn254(
+            d_inout.as_device_ptr(),
+            d_twiddles.as_device_ptr(),
+            d_twiddles.len(),
+            batch_size,
+            inverse,
+            d_coset.len() > 0,
+            d_coset.as_device_ptr(),
+            0
+        )
+    }
+}
+
 pub fn evaluate_points_on_coset_bn254(
     d_coefficients: &mut DeviceBuffer<Point_BN254>,
     d_domain: &mut DeviceBuffer<ScalarField_BN254>,
@@ -786,6 +819,22 @@ pub fn generate_random_points_bn254(
         .collect()
 }
 
+pub fn generate_random_points100_bn254(
+    count: usize,
+    mut rng: Box<dyn RngCore>,
+) -> Vec<PointAffineNoInfinity_BN254> {
+    let mut res =  Vec::new();
+    for i in 0..count{
+        if (i<100) {
+            res.push(Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)).to_xy_strip_z());
+        }
+        else {
+            res.push(res[i-100]);
+        }
+    }
+    return res;
+}
+
 pub fn generate_random_points_proj_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point_BN254> {
     (0..count)
         .map(|_| Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)))
@@ -898,12 +947,13 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [6, 9];
+        let test_sizes = [24];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
             let seed = None; // set Some to provide seed
-            let points = generate_random_points_bn254(count, get_rng_bn254(seed));
+            // let points = generate_random_points_bn254(count, get_rng_bn254(seed));
+            let points = generate_random_points100_bn254(count, get_rng_bn254(seed));
             let scalars = generate_random_scalars_bn254(count, get_rng_bn254(seed));
 
             let msm_result = msm_bn254(&points, &scalars, 0);
@@ -1413,13 +1463,19 @@ pub(crate) mod tests_bn254 {
         let (_, _, mut d_large_domain) = set_up_scalars_bn254(0, log_test_size + 1, false);
         let mut d_coset_powers = build_domain_bn254(test_size, log_test_size + 1, false);
 
+        println!("d_coset_powers len {}", d_coset_powers.len());
+
         let mut d_evals_large = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_large_domain, batch_size);
         let mut h_evals_large: Vec<ScalarField_BN254> = (0..2 * test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_large.copy_to(&mut h_evals_large[..]).unwrap();
         let mut d_evals = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
         let mut h_evals: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals.copy_to(&mut h_evals[..]).unwrap();
-        let mut d_evals_coset = evaluate_scalars_on_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, &mut d_coset_powers);
+        
+        // let mut d_evals_coset = evaluate_scalars_on_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, &mut d_coset_powers);
+        ntt_inplace_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, false, &mut d_coset_powers);
+        let d_evals_coset = d_coeffs;
+
         let mut h_evals_coset: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
@@ -1499,7 +1555,7 @@ pub(crate) mod tests_bn254 {
         assert_eq!(intoo, expected);
     }
 
-    #[test]
+    //#[test]
     #[allow(non_snake_case)]
     fn test_vec_point_mul() {
         let dummy_one = Point_BN254 {

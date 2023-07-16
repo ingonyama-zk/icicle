@@ -24,12 +24,12 @@ extern "C" ${CURVE_NAME_U}::scalar_t* build_domain_cuda_${CURVE_NAME_L}(uint32_t
     }
 }
 
-extern "C" int ntt_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_t *arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ntt_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_t *arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<${CURVE_NAME_U}::scalar_t,${CURVE_NAME_U}::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
+        return ntt_end2end_template<${CURVE_NAME_U}::scalar_t,${CURVE_NAME_U}::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -39,12 +39,12 @@ extern "C" int ntt_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_t *arr, uint32_t
     }
 }
 
-extern "C" int ecntt_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::projective_t *arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ecntt_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::projective_t *arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<${CURVE_NAME_U}::projective_t,${CURVE_NAME_U}::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
+        return ntt_end2end_template<${CURVE_NAME_U}::projective_t,${CURVE_NAME_U}::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -85,7 +85,8 @@ extern "C" int interpolate_scalars_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_
 {
     try
     {
-        return interpolate(d_out, d_evaluations, d_domain, n, stream);
+        ${CURVE_NAME_U}::scalar_t* _null = nullptr;
+        return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -99,8 +100,37 @@ extern "C" int interpolate_scalars_batch_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::s
 {
     try
     {
+        ${CURVE_NAME_U}::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int interpolate_scalars_on_coset_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_t* d_out, ${CURVE_NAME_U}::scalar_t *d_evaluations, ${CURVE_NAME_U}::scalar_t *d_domain, unsigned n, ${CURVE_NAME_U}::scalar_t *coset_powers, unsigned device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        return interpolate(d_out, d_evaluations, d_domain, n, true, coset_powers, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int interpolate_scalars_batch_on_coset_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_t* d_out, ${CURVE_NAME_U}::scalar_t* d_evaluations, ${CURVE_NAME_U}::scalar_t* d_domain, unsigned n,
+                                              unsigned batch_size, ${CURVE_NAME_U}::scalar_t* coset_powers, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, true, coset_powers, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -113,7 +143,8 @@ extern "C" int interpolate_points_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::projecti
 {
     try
     {
-        return interpolate(d_out, d_evaluations, d_domain, n, stream);
+        ${CURVE_NAME_U}::scalar_t* _null = nullptr;
+        return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -127,8 +158,9 @@ extern "C" int interpolate_points_batch_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::pr
 {
     try
     {
+        ${CURVE_NAME_U}::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -268,6 +300,7 @@ extern "C" int reverse_order_scalars_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::scala
         uint32_t logn = uint32_t(log(n) / log(2));
         cudaStreamCreate(&stream);
         reverse_order(arr, n, logn, stream);
+        cudaStreamSynchronize(stream);
         return 0;
     }
     catch (const std::runtime_error &ex)

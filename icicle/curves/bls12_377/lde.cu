@@ -24,7 +24,7 @@ extern "C" BLS12_377::scalar_t* build_domain_cuda_bls12_377(uint32_t domain_size
     }
 }
 
-extern "C" int ntt_cuda_bls12_377(BLS12_377::scalar_t *arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ntt_cuda_bls12_377(BLS12_377::scalar_t *arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
@@ -39,7 +39,7 @@ extern "C" int ntt_cuda_bls12_377(BLS12_377::scalar_t *arr, uint32_t n, bool inv
     }
 }
 
-extern "C" int ecntt_cuda_bls12_377(BLS12_377::projective_t *arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ecntt_cuda_bls12_377(BLS12_377::projective_t *arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
@@ -85,7 +85,8 @@ extern "C" int interpolate_scalars_cuda_bls12_377(BLS12_377::scalar_t* d_out, BL
 {
     try
     {
-        return interpolate(d_out, d_evaluations, d_domain, n, stream);
+        BLS12_377::scalar_t* _null = nullptr;
+        return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -99,8 +100,9 @@ extern "C" int interpolate_scalars_batch_cuda_bls12_377(BLS12_377::scalar_t* d_o
 {
     try
     {
+        BLS12_377::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -113,7 +115,8 @@ extern "C" int interpolate_points_cuda_bls12_377(BLS12_377::projective_t* d_out,
 {
     try
     {
-        return interpolate(d_out, d_evaluations, d_domain, n, stream);
+        BLS12_377::scalar_t* _null = nullptr;
+        return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -127,8 +130,9 @@ extern "C" int interpolate_points_batch_cuda_bls12_377(BLS12_377::projective_t* 
 {
     try
     {
+        BLS12_377::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, stream);
+        return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -267,7 +271,8 @@ extern "C" int ntt_inplace_batch_cuda_bls12_377(BLS12_377::scalar_t* d_inout, BL
     try
     {
         cudaStreamCreate(&stream);
-        ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, stream, true);
+        BLS12_377::scalar_t* _null = nullptr;
+        ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, false, _null, stream, true);
         return CUDA_SUCCESS; //TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
     }
     catch (const std::runtime_error &ex)

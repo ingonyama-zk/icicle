@@ -153,7 +153,7 @@ namespace PARAMS_BLS12_377{
     static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     // i^2, the square of the imaginary unit for the extension field
-    static constexpr uint32_t i_squared = 1;
+    static constexpr uint32_t i_squared = 5;
     // true if i^2 is negative
     static constexpr bool i_squared_is_negative = true;
     // G1 and G2 generators 

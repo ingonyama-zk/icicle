@@ -1,0 +1,35 @@
+#include <stdbool.h>
+#include <cuda.h>
+// msm.h
+
+#ifndef _{{.CurveName}}_MSM_H
+#define _{{.CurveName}}_MSM_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Incomplete declaration of {{.CurveName}} projective and affine structs
+typedef struct {{.CurveName}}_projective_t {{.CurveName}}_projective_t;
+typedef struct {{.CurveName}}_affine_t {{.CurveName}}_affine_t;
+typedef struct {{.CurveName}}_scalar_t {{.CurveName}}_scalar_t;
+
+int msm_cuda_{{.Prefix}}({{.CurveName}}_projective_t* out, {{.CurveName}}_affine_t* points,
+                   {{.CurveName}}_scalar_t* scalars, size_t count, size_t device_id);
+
+int msm_batch_cuda_{{.Prefix}}({{.CurveName}}_projective_t* out, {{.CurveName}}_affine_t* points,
+                         {{.CurveName}}_scalar_t* scalars, size_t batch_size,
+                         size_t msm_size, size_t device_id);
+
+int commit_cuda_{{.Prefix}}({{.CurveName}}_projective_t* d_out, {{.CurveName}}_scalar_t* d_scalars,
+                      {{.CurveName}}_affine_t* d_points, size_t count, size_t device_id);
+
+int commit_batch_cuda_{{.Prefix}}({{.CurveName}}_projective_t* d_out, {{.CurveName}}_scalar_t* d_scalars,
+                            {{.CurveName}}_affine_t* d_points, size_t count,
+                            size_t batch_size, size_t device_id);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _{{.CurveName}}_MSM_H */
