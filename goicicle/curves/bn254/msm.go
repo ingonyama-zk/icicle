@@ -19,7 +19,6 @@ package bn254
 import (
 	"errors"
 	"fmt"
-	"time"
 	"unsafe"
 )
 
@@ -29,7 +28,6 @@ import (
 import "C"
 
 func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
-	defer TimeTrack(time.Now(), "MSM G1")
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -37,7 +35,6 @@ func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []Sc
 	pointsC := (*C.BN254_affine_t)(unsafe.Pointer(&points[0]))
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&scalars[0]))
 	outC := (*C.BN254_projective_t)(unsafe.Pointer(out))
-
 	ret := C.msm_cuda_bn254(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
 
 	if ret != 0 {
@@ -47,26 +44,7 @@ func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []Sc
 	return out, nil
 }
 
-func MsmG2BN254(out *G2Point, points []G2Affine, scalars []ScalarField, device_id int) (*G2Point, error) {
-	defer TimeTrack(time.Now(), "MSM G1")
-	if len(points) != len(scalars) {
-		return nil, errors.New("error on: len(points) != len(scalars)")
-	}
-
-	pointsC := (*C.BN254_g2_affine_t)(unsafe.Pointer(&points[0]))
-	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&scalars[0]))
-	outC := (*C.BN254_g2_projective_t)(unsafe.Pointer(out))
-
-	ret := C.msm_g2_cuda_bn254(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
-
-	if ret != 0 {
-		return nil, fmt.Errorf("msm_g2_cuda_bn254 returned error code: %d", ret)
-	}
-
-	return out, nil
-} 
-
-func MsmG2BatchBN254(points *[]G2Affine, scalars *[]ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
+func MsmG2BatchBN254(points *[]G2PointAffine, scalars *[]ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")
@@ -98,6 +76,24 @@ func MsmG2BatchBN254(points *[]G2Affine, scalars *[]ScalarField, batchSize, devi
 	ret := C.msm_batch_g2_cuda_bn254(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
 	if ret != 0 {
 		return nil, fmt.Errorf("msm_batch_cuda_bn254 returned error code: %d", ret)
+	}
+
+	return out, nil
+}
+
+func MsmG2BN254(out *G2Point, points []G2PointAffine, scalars []ScalarField, device_id int) (*G2Point, error) {
+	if len(points) != len(scalars) {
+		return nil, errors.New("error on: len(points) != len(scalars)")
+	}
+
+	pointsC := (*C.BN254_g2_affine_t)(unsafe.Pointer(&points[0]))
+	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&scalars[0]))
+	outC := (*C.BN254_g2_projective_t)(unsafe.Pointer(out))
+
+	ret := C.msm_g2_cuda_bn254(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
+
+	if ret != 0 {
+		return nil, fmt.Errorf("msm_g2_cuda_bn254 returned error code: %d", ret)
 	}
 
 	return out, nil
@@ -157,4 +153,35 @@ func MsmBatchBN254(points *[]PointAffineNoInfinityBN254, scalars *[]ScalarField,
 	}
 
 	return out, nil
+}
+
+func Commit(d_out, d_scalars, d_points unsafe.Pointer, count int) int {
+	d_outC := (*C.BN254_projective_t)(d_out)
+	scalarsC := (*C.BN254_scalar_t)(d_scalars)
+	pointsC := (*C.BN254_affine_t)(d_points)
+	countC := (C.size_t)(count)
+
+	ret := C.commit_cuda_bn254(d_outC, scalarsC, pointsC, countC, 0)
+
+	if ret != 0 {
+		return -1
+	}
+
+	return 0
+}
+
+func CommitBatch(d_out, d_scalars, d_points unsafe.Pointer, count, batch_size int) int {
+	d_outC := (*C.BN254_projective_t)(d_out)
+	scalarsC := (*C.BN254_scalar_t)(d_scalars)
+	pointsC := (*C.BN254_affine_t)(d_points)
+	countC := (C.size_t)(count)
+	batch_sizeC := (C.size_t)(batch_size)
+
+	ret := C.commit_batch_cuda_bn254(d_outC, scalarsC, pointsC, countC, batch_sizeC, 0)
+
+	if ret != 0 {
+		return -1
+	}
+
+	return 0
 }

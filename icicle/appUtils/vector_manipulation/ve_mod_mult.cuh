@@ -7,6 +7,19 @@
 
 #define MAX_THREADS_PER_BLOCK 256
 
+/**
+ * Multiply the elements of an input array by a scalar in-place.
+ * @param arr input array.
+ * @param n size of arr.
+ * @param n_inv scalar of type S (scalar).
+ */
+ template < typename E, typename S > __global__ void template_normalize_kernel(E * arr, uint32_t n, S scalar) {
+    int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (tid < n) {
+      arr[tid] = scalar * arr[tid];
+    }
+  }
+
 // TODO: headers for prototypes and .c .cpp .cu files for implementations
 template <typename E, typename S>
 __global__ void vectorModMult(S *scalar_vec, E *element_vec, E *result, size_t n_elments)
@@ -46,6 +59,18 @@ int vector_mod_mult(S *vec_a, E *vec_b, E *result, size_t n_elments, cudaStream_
     cudaFreeAsync(d_result, stream);
 
     cudaStreamSynchronize(stream);
+    return 0;
+}
+
+template <typename E, typename S>
+int vector_mod_mult_device(S *d_vec_a, E *d_vec_b, E *d_result, size_t n_elments) // TODO: in place so no need for third result vector
+{
+    // Set the grid and block dimensions
+    int num_blocks = (int)ceil((float)n_elments / MAX_THREADS_PER_BLOCK);
+    int threads_per_block = MAX_THREADS_PER_BLOCK;
+
+    // Call the kernel to perform element-wise modular multiplication
+    vectorModMult<<<num_blocks, threads_per_block>>>(d_vec_a, d_vec_b, d_result, n_elments);
     return 0;
 }
 

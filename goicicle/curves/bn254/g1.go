@@ -25,6 +25,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 )
 
@@ -145,6 +146,15 @@ func NewScalarFieldOne() *ScalarField {
 	s[0] = 1
 
 	return &ScalarField{s}
+}
+
+func (a *ScalarField) Equals(b *ScalarField) bool {
+	for i, v := range a.s {
+		if b.s[i] != v {
+			return false
+		}
+	}
+	return true
 }
 
 /*
@@ -392,11 +402,92 @@ func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) [
 	return newElements
 }
 
+func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.Element, routines int) []T {
+	var newElements []T
+
+	if routines > 1 && routines <= len(elements) {
+		channels := make([]chan []T, routines)
+		for i := 0; i < routines; i++ {
+			channels[i] = make(chan []T, 1)
+		}
+
+		convert := func(elements []fr.Element, chanIndex int) {
+			var convertedElements []T
+			for _, e := range elements {
+				converted := NewFieldFromFrGnark[T](e)
+				convertedElements = append(convertedElements, *converted)
+			}
+
+			channels[chanIndex] <- convertedElements
+		}
+
+		batchLen := len(elements) / routines
+		for i := 0; i < routines; i++ {
+			start := batchLen * i
+			end := batchLen * (i + 1)
+			elemsToConv := elements[start:end]
+			if i == routines-1 {
+				elemsToConv = elements[start:]
+			}
+			go convert(elemsToConv, i)
+		}
+
+		for i := 0; i < routines; i++ {
+			newElements = append(newElements, <-channels[i]...)
+		}
+	} else {
+		for _, e := range elements {
+			converted := NewFieldFromFrGnark[T](e)
+			newElements = append(newElements, *converted)
+		}
+	}
+
+	return newElements
+}
+
 func BatchConvertToFrGnark[T Field](elements []T) []fr.Element {
 	var newElements []fr.Element
 	for _, e := range elements {
 		converted := e.toGnarkFr()
 		newElements = append(newElements, *converted)
+	}
+
+	return newElements
+}
+
+func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Element {
+	var newElements []fr.Element
+
+	if routines > 1 {
+		channels := make([]chan []fr.Element, routines)
+		for i := 0; i < routines; i++ {
+			channels[i] = make(chan []fr.Element, 1)
+		}
+
+		convert := func(elements []T, chanIndex int) {
+			var convertedElements []fr.Element
+			for _, e := range elements {
+				converted := e.toGnarkFr()
+				convertedElements = append(convertedElements, *converted)
+			}
+
+			channels[chanIndex] <- convertedElements
+		}
+
+		batchLen := len(elements) / routines
+		for i := 0; i < routines; i++ {
+			elemsToConv := elements[batchLen*i : batchLen*(i+1)]
+			go convert(elemsToConv, i)
+		}
+
+		for i := 0; i < routines; i++ {
+			newElements = append(newElements, <-channels[i]...)
+		}
+	} else {
+		for _, e := range elements {
+			converted := e.toGnarkFr()
+			newElements = append(newElements, *converted)
+		}
 	}
 
 	return newElements
@@ -409,33 +500,4 @@ func BatchConvertFromG1Affine(elements []bn254.G1Affine) []PointAffineNoInfinity
 		newElements = append(newElements, *newElement)
 	}
 	return newElements
-}
-
-
-// G2 extension field
-
-type G2Element [4]uint64
-
-type ExtentionField struct {
-	A0, A1 G2Element
-}
-
-type G2Affine struct {
-	x, y ExtentionField
-}
-
-type G2Point struct {
-	x, y, z ExtentionField
-}
-
-func (g *G2Affine) G2FromG2JacGnark(gnark *bn254.G2Jac) *G2Affine {
-	var pointAffine bn254.G2Affine
-	pointAffine.FromJacobian(gnark)
-
-	g.x.A0 = pointAffine.X.A0.Bits()
-	g.x.A1 = pointAffine.X.A1.Bits()
-	g.y.A0 = pointAffine.Y.A0.Bits()
-	g.y.A1 = pointAffine.Y.A1.Bits()
-
-	return g
 }

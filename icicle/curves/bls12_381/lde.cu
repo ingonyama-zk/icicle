@@ -29,7 +29,7 @@ extern "C" int ntt_cuda_bls12_381(BLS12_381::scalar_t *arr, uint32_t n, bool inv
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BLS12_381::scalar_t,BLS12_381::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
+        return ntt_end2end_template<BLS12_381::scalar_t,BLS12_381::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -44,7 +44,7 @@ extern "C" int ecntt_cuda_bls12_381(BLS12_381::projective_t *arr, uint32_t n, bo
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BLS12_381::projective_t,BLS12_381::scalar_t>(arr, n, inverse, decimation, stream); // TODO: pass device_id
+        return ntt_end2end_template<BLS12_381::projective_t,BLS12_381::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -164,7 +164,9 @@ extern "C" int evaluate_scalars_batch_cuda_bls12_381(BLS12_381::scalar_t* d_out,
     {
         BLS12_381::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
+        auto result_code = evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, 0);
+        cudaStreamDestroy(stream);
+        return result_code;
     }
     catch (const std::runtime_error &ex)
     {
@@ -196,7 +198,9 @@ extern "C" int evaluate_points_batch_cuda_bls12_381(BLS12_381::projective_t* d_o
     {
         BLS12_381::scalar_t* _null = nullptr;
         cudaStreamCreate(&stream);
-        return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
+        auto result_code = evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
+        cudaStreamDestroy(stream);
+        return result_code;
     }
     catch (const std::runtime_error &ex)
     {
@@ -240,7 +244,7 @@ extern "C" int evaluate_points_on_coset_cuda_bls12_381(BLS12_381::projective_t* 
 {
     try
     {
-        cudaStreamCreate(&stream);
+        cudaStreamCreate(&stream); //TODO: don't create if default was passed, destroy what was created, same applies to all calls
         return evaluate(d_out, d_coefficients, d_domain, domain_size, n, true, coset_powers, stream);
     }
     catch (const std::runtime_error &ex)
@@ -257,6 +261,23 @@ extern "C" int evaluate_points_on_coset_batch_cuda_bls12_381(BLS12_381::projecti
     {
         cudaStreamCreate(&stream);
         return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int ntt_inplace_batch_cuda_bls12_381(BLS12_381::scalar_t* d_inout, BLS12_381::scalar_t* d_twiddles,
+                                           unsigned n, unsigned batch_size, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        BLS12_381::scalar_t* _null = nullptr;
+        ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, false, _null, stream, true);
+        return CUDA_SUCCESS; //TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
     }
     catch (const std::runtime_error &ex)
     {

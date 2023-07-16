@@ -2,6 +2,7 @@ package bn254
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254"
@@ -31,6 +32,29 @@ func TestFieldBN254FromGnark(t *testing.T) {
 	f := NewFieldFromFrGnark[ScalarField](rand)
 
 	assert.Equal(t, f.s, ConvertUint64ArrToUint32Arr(rand.Bits()))
+}
+
+func BenchmarkBatchConvertFromFrGnarkThreaded(b *testing.B) {
+	// ROUTINES := []int{4,5,6,7,8}
+
+	// for _, routineAmount := range ROUTINES {
+	routineAmount := 7
+	_, scalars_fr := GenerateScalars(1 << 24)
+	b.Run(fmt.Sprintf("Convert %d", routineAmount), func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			_ = BatchConvertFromFrGnarkThreaded[ScalarField](scalars_fr, routineAmount)
+		}
+	})
+	// }
+}
+
+func BenchmarkBatchConvertFromFrGnark(b *testing.B) {
+	_, scalars_fr := GenerateScalars(1 << 24)
+	b.Run("BatchConvert 2^24", func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			_ = BatchConvertFromFrGnark[ScalarField](scalars_fr)
+		}
+	})
 }
 
 func TestFieldBN254ToBytesLe(t *testing.T) {

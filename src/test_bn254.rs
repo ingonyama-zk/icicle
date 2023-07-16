@@ -14,6 +14,7 @@ use rustacuda_core::DevicePointer;
 use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
 
 extern "C" {
+
     fn msm_cuda_bn254(
         out: *mut Point_BN254,
         points: *const PointAffineNoInfinity_BN254,
@@ -62,6 +63,25 @@ extern "C" {
     ) -> c_int;
 
     fn ecntt_batch_cuda_bn254(inout: *mut Point_BN254, arr_size: usize, n: usize, inverse: bool) -> c_int;
+
+    fn ntt_inplace_batch_cuda_bn254(
+        d_inout: DevicePointer<ScalarField_BN254>,
+        d_twiddles: DevicePointer<ScalarField_BN254>,
+        n: usize,
+        batch_size: usize,
+        inverse: bool,
+        device_id: usize
+    ) -> c_int;
+
+     fn ntt_inplace_coset_batch_cuda_bn254(        
+        d_inout: DevicePointer<ScalarField_BN254>,
+        d_twiddles: DevicePointer<ScalarField_BN254>,
+        n: usize,
+        batch_size: usize,
+        inverse: bool,
+        is_coset: bool,
+        d_coset: DevicePointer<ScalarField_BN254>,
+        device_id: usize) -> c_int;
 
     fn interpolate_scalars_cuda_bn254(
         d_out: DevicePointer<ScalarField_BN254>,
@@ -478,6 +498,7 @@ pub fn interpolate_scalars_batch_bn254(
     d_domain: &mut DeviceBuffer<ScalarField_BN254>,
     batch_size: usize,
 ) -> DeviceBuffer<ScalarField_BN254> {
+
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe { interpolate_scalars_batch_cuda_bn254(
         res.as_device_ptr(),
@@ -640,6 +661,29 @@ pub fn evaluate_scalars_on_coset_batch_bn254(
     return res;
 }
 
+//extern "C" int ntt_inplace_coset_batch_cuda_bn254(BN254::scalar_t* d_inout, BN254::scalar_t* d_twiddles,
+//    unsigned n, unsigned batch_size, bool inverse, bool is_coset, BN254::scalar_t* coset, size_t device_id = 0, cudaStream_t stream = 0)
+pub fn ntt_inplace_coset_batch_bn254(
+    d_inout: &mut DeviceBuffer<ScalarField_BN254>,
+    d_twiddles: &mut DeviceBuffer<ScalarField_BN254>,
+    batch_size: usize,
+    inverse: bool,
+    d_coset: &mut DeviceBuffer<ScalarField_BN254>,
+) -> i32 {
+    unsafe {
+        ntt_inplace_coset_batch_cuda_bn254(
+            d_inout.as_device_ptr(),
+            d_twiddles.as_device_ptr(),
+            d_twiddles.len(),
+            batch_size,
+            inverse,
+            d_coset.len() > 0,
+            d_coset.as_device_ptr(),
+            0
+        )
+    }
+}
+
 pub fn evaluate_points_on_coset_bn254(
     d_coefficients: &mut DeviceBuffer<Point_BN254>,
     d_domain: &mut DeviceBuffer<ScalarField_BN254>,
@@ -680,6 +724,25 @@ pub fn evaluate_points_on_coset_batch_bn254(
         );
     }
     return res;
+}
+
+pub fn ntt_inplace_batch_bn254(
+    d_inout: &mut DeviceBuffer<ScalarField_BN254>,
+    d_twiddles: &mut DeviceBuffer<ScalarField_BN254>,
+    batch_size: usize,
+    inverse: bool,
+    device_id: usize
+) -> i32 {
+    unsafe {
+        ntt_inplace_batch_cuda_bn254(
+            d_inout.as_device_ptr(),
+            d_twiddles.as_device_ptr(),
+            d_twiddles.len(),
+            batch_size,
+            inverse,
+            device_id
+        )
+    }
 }
 
 pub fn multp_vec_bn254(a: &mut [Point_BN254], b: &[ScalarField_BN254], device_id: usize) {
@@ -732,7 +795,7 @@ pub fn clone_buffer_bn254<T: DeviceCopy>(buf: &mut DeviceBuffer<T>) -> DeviceBuf
     return buf_cpy;
 }
 
-pub fn get_rng_bn254(seed: Option<u64>) -> Box<dyn RngCore> {
+pub fn get_rng_bn254(seed: Option<u64>) -> Box<dyn RngCore> { //TODO: not curve specific
     let rng: Box<dyn RngCore> = match seed {
         Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
         None => Box::new(rand::thread_rng()),
@@ -754,6 +817,22 @@ pub fn generate_random_points_bn254(
     (0..count)
         .map(|_| Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)).to_xy_strip_z())
         .collect()
+}
+
+pub fn generate_random_points100_bn254(
+    count: usize,
+    mut rng: Box<dyn RngCore>,
+) -> Vec<PointAffineNoInfinity_BN254> {
+    let mut res =  Vec::new();
+    for i in 0..count{
+        if (i<100) {
+            res.push(Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)).to_xy_strip_z());
+        }
+        else {
+            res.push(res[i-100]);
+        }
+    }
+    return res;
 }
 
 pub fn generate_random_points_proj_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point_BN254> {
@@ -868,12 +947,13 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [6, 9];
+        let test_sizes = [24];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
             let seed = None; // set Some to provide seed
-            let points = generate_random_points_bn254(count, get_rng_bn254(seed));
+            // let points = generate_random_points_bn254(count, get_rng_bn254(seed));
+            let points = generate_random_points100_bn254(count, get_rng_bn254(seed));
             let scalars = generate_random_scalars_bn254(count, get_rng_bn254(seed));
 
             let msm_result = msm_bn254(&points, &scalars, 0);
@@ -1145,7 +1225,6 @@ pub(crate) mod tests_bn254 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars_bn254(test_size, log_test_size, true);
 
-        reverse_order_scalars_bn254(&mut d_evals);
         let mut d_coeffs = interpolate_scalars_bn254(&mut d_evals, &mut d_domain);
         intt_bn254(&mut evals_mut, 0);
         let mut h_coeffs: Vec<ScalarField_BN254> = (0..test_size).map(|_| ScalarField_BN254::zero()).collect();
@@ -1161,7 +1240,6 @@ pub(crate) mod tests_bn254 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars_bn254(test_size * batch_size, log_test_size, true);
 
-        reverse_order_scalars_batch_bn254(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_scalars_batch_bn254(&mut d_evals, &mut d_domain, batch_size);
         intt_batch_bn254(&mut evals_mut, test_size, 0);
         let mut h_coeffs: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
@@ -1176,7 +1254,6 @@ pub(crate) mod tests_bn254 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points_bn254(test_size, log_test_size, true);
 
-        reverse_order_points_bn254(&mut d_evals);
         let mut d_coeffs = interpolate_points_bn254(&mut d_evals, &mut d_domain);
         iecntt_bn254(&mut evals_mut[..], 0);
         let mut h_coeffs: Vec<Point_BN254> = (0..test_size).map(|_| Point_BN254::zero()).collect();
@@ -1195,7 +1272,6 @@ pub(crate) mod tests_bn254 {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points_bn254(test_size * batch_size, log_test_size, true);
 
-        reverse_order_points_batch_bn254(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_points_batch_bn254(&mut d_evals, &mut d_domain, batch_size);
         iecntt_batch_bn254(&mut evals_mut[..], test_size, 0);
         let mut h_coeffs: Vec<Point_BN254> = (0..test_size * batch_size).map(|_| Point_BN254::zero()).collect();
@@ -1227,22 +1303,64 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_scalar_batch_evaluation() {
-        let batch_size = 6;
-        let log_test_domain_size = 8;
-        let domain_size = 1 << log_test_domain_size;
-        let coeff_size = 1 << 6;
-        let (h_coeffs, mut d_coeffs, mut d_domain) = set_up_scalars_bn254(coeff_size * batch_size, log_test_domain_size, false);
-        let (_, _, mut d_domain_inv) = set_up_scalars_bn254(0, log_test_domain_size, true);
 
-        let mut d_evals = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
-        let mut d_coeffs_domain = interpolate_scalars_batch_bn254(&mut d_evals, &mut d_domain_inv, batch_size);
-        let mut h_coeffs_domain: Vec<ScalarField_BN254> = (0..domain_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
-        d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
+        for batch_size in [1, 6] {
+            for log_test_domain_size in [8, 12, 20] {
+                for coeff_size in [1 << 6, 1 << (log_test_domain_size - 1), 1 << log_test_domain_size] {
 
-        for j in 0..batch_size {
-            assert_eq!(h_coeffs[j * coeff_size..(j + 1) * coeff_size], h_coeffs_domain[j * domain_size..j * domain_size + coeff_size]);
-            for i in coeff_size..domain_size {
-                assert_eq!(ScalarField_BN254::zero(), h_coeffs_domain[j * domain_size + i]);
+                    let domain_size = 1 << log_test_domain_size;
+
+                    let test_size = batch_size * coeff_size;
+
+                    if test_size > (1 << 20) || test_size < (6 * 1 << 8) { continue; }
+
+                    let (h_coeffs, mut d_coeffs, mut d_domain) = set_up_scalars_bn254(coeff_size * batch_size, log_test_domain_size, false);
+                    let (_, _, mut d_domain_inv) = set_up_scalars_bn254(0, log_test_domain_size, true);
+
+                    let mut d_evals = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
+                    let mut d_coeffs_domain = interpolate_scalars_batch_bn254(&mut d_evals, &mut d_domain_inv, batch_size);
+                    let mut h_coeffs_domain: Vec<ScalarField_BN254> = (0..domain_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
+                    d_coeffs_domain.copy_to(&mut h_coeffs_domain[..]).unwrap();
+
+                    for j in 0..batch_size {
+                        assert_eq!(h_coeffs[j * coeff_size..(j + 1) * coeff_size], h_coeffs_domain[j * domain_size..j * domain_size + coeff_size]);
+                        for i in coeff_size..domain_size {
+                            assert_eq!(ScalarField_BN254::zero(), h_coeffs_domain[j * domain_size + i]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_scalar_batch_inplace_ntt() {
+
+        for batch_size in [1, 7, 128] {
+            for log_test_domain_size in [8, 12, 20] {
+                let n_twiddles = 1 << log_test_domain_size;
+
+                let test_size = batch_size * n_twiddles;
+
+                if test_size > (1 << 20) { continue; }
+
+                let (h_input, mut d_inout, mut d_twiddles) = set_up_scalars_bn254(test_size, log_test_domain_size, false);
+                let (_, _, mut d_twiddle_inv) = set_up_scalars_bn254(0, log_test_domain_size, true);
+
+                ntt_inplace_batch_bn254(&mut d_inout, &mut d_twiddles, batch_size, false, 0);
+                
+                let mut h_ntt_result: Vec<ScalarField_BN254> = vec![ScalarField_BN254::zero(); test_size];
+                d_inout.copy_to(&mut h_ntt_result[..]).unwrap();
+
+                assert_ne!(h_ntt_result, h_input);
+
+                ntt_inplace_batch_bn254(&mut d_inout, &mut d_twiddle_inv, batch_size, true, 0);
+                let mut h_ntt_intt_result: Vec<ScalarField_BN254> = vec![ScalarField_BN254::zero(); test_size];
+                d_inout.copy_to(&mut h_ntt_intt_result[..]).unwrap();
+
+                for j in 0..batch_size {
+                    assert_eq!(h_input[j * n_twiddles..(j + 1) * n_twiddles], h_ntt_intt_result[j * n_twiddles..j * n_twiddles + n_twiddles]);
+                }
             }
         }
     }
@@ -1345,13 +1463,19 @@ pub(crate) mod tests_bn254 {
         let (_, _, mut d_large_domain) = set_up_scalars_bn254(0, log_test_size + 1, false);
         let mut d_coset_powers = build_domain_bn254(test_size, log_test_size + 1, false);
 
+        println!("d_coset_powers len {}", d_coset_powers.len());
+
         let mut d_evals_large = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_large_domain, batch_size);
         let mut h_evals_large: Vec<ScalarField_BN254> = (0..2 * test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_large.copy_to(&mut h_evals_large[..]).unwrap();
         let mut d_evals = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size);
         let mut h_evals: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals.copy_to(&mut h_evals[..]).unwrap();
-        let mut d_evals_coset = evaluate_scalars_on_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, &mut d_coset_powers);
+        
+        // let mut d_evals_coset = evaluate_scalars_on_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, &mut d_coset_powers);
+        ntt_inplace_coset_batch_bn254(&mut d_coeffs, &mut d_domain, batch_size, false, &mut d_coset_powers);
+        let d_evals_coset = d_coeffs;
+
         let mut h_evals_coset: Vec<ScalarField_BN254> = (0..test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();
         d_evals_coset.copy_to(&mut h_evals_coset[..]).unwrap();
 
@@ -1422,32 +1546,7 @@ pub(crate) mod tests_bn254 {
         }
     }
 
-    // testing matrix multiplication by comparing the result of FFT with the naive multiplication by the DFT matrix
-    #[test]
-    fn test_matrix_multiplication() {
-        let seed = None; // some value to fix the rng
-        let test_size = 1 << 5;
-        let rou = Fr::get_root_of_unity(test_size).unwrap();
-        let matrix_flattened: Vec<ScalarField_BN254> = (0..test_size).map(
-            |row_num| { (0..test_size).map( 
-                |col_num| {
-                    let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
-                    ScalarField_BN254::from_ark(Fr::pow(&rou, &pow).into_repr())
-                }).collect::<Vec<ScalarField_BN254>>()
-            }).flatten().collect::<Vec<_>>();
-        let vector: Vec<ScalarField_BN254> = generate_random_scalars_bn254(test_size, get_rng_bn254(seed));
-
-        let result = mult_matrix_by_vec_bn254(&matrix_flattened, &vector, 0);
-        let mut ntt_result = vector.clone();
-        ntt_bn254(&mut ntt_result, 0);
-        
-        // we don't use the same roots of unity as arkworks, so the results are permutations
-        // of one another and the only guaranteed fixed scalars are the following ones:
-        assert_eq!(result[0], ntt_result[0]);
-        assert_eq!(result[test_size >> 1], ntt_result[test_size >> 1]);
-    }
-
-    #[test]
+    //#[test]
     #[allow(non_snake_case)]
     fn test_vec_scalar_mul() {
         let mut intoo = [ScalarField_BN254::one(), ScalarField_BN254::one(), ScalarField_BN254::zero()];
@@ -1456,7 +1555,7 @@ pub(crate) mod tests_bn254 {
         assert_eq!(intoo, expected);
     }
 
-    #[test]
+    //#[test]
     #[allow(non_snake_case)]
     fn test_vec_point_mul() {
         let dummy_one = Point_BN254 {

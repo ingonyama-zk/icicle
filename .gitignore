@@ -6,6 +6,8 @@
 *.bin
 *.fatbin
 *.so
+*.nsys-rep
+*.ncu-rep
 **/target
 **/.vscode
 **/.*lock*csv#
