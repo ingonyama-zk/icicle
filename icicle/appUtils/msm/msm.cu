@@ -518,8 +518,9 @@ __global__ void find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, 
     return;
   }
   const unsigned start_index = tid*run_length;
-  for (int i=start_index;i<min(start_index+run_length-1,size);i++){
-    if (v[i] > cutoff && v[i+1] < cutoff) result[0] = i+1;
+  result[0] = 0;
+  for (int i=start_index;i<min(start_index+run_length,size-1);i++){
+    if (v[i] > cutoff && v[i+1] <= cutoff) result[0] = i+1;
   }
 }
 
@@ -1270,6 +1271,8 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   unsigned TOTAL_THREADS = 129000; //fix - device dependant
   unsigned cutoff_run_length = max(2,h_nof_buckets_to_compute/TOTAL_THREADS);
   unsigned cutoff_nof_runs = (h_nof_buckets_to_compute + cutoff_run_length -1)/cutoff_run_length;
+  printf("cutoff_run_length %u\n", cutoff_run_length);
+  printf("cutoff_nof_runs %u\n", cutoff_nof_runs);
   NUM_THREADS = min(1 << 5,cutoff_nof_runs);
   NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
   find_cutoff_kernel<<<NUM_BLOCKS,NUM_THREADS,0,stream>>>(sorted_bucket_sizes,h_nof_buckets_to_compute,bucket_th,cutoff_run_length,nof_large_buckets);

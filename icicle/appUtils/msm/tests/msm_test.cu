@@ -141,7 +141,8 @@ int main()
   bool on_device = false;
 
   unsigned batch_size = 1;
-  unsigned msm_size = 1<<24;
+  // unsigned msm_size = 1<<24;
+  unsigned msm_size = 9215384;
   // unsigned msm_size = (1<<10) - 456;
   // unsigned msm_size = 20;
   // unsigned msm_size = 6075005;
@@ -154,7 +155,7 @@ int main()
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
     // scalars[i] = test_scalar::rand_host();
-    scalars[i] = i >400000? test_scalar::rand_host() :  (test_scalar::one() + test_scalar::one());
+    scalars[i] = i >462560? test_scalar::rand_host() :  (test_scalar::one() + test_scalar::one());
     // scalars[i] = i >100? test_scalar::rand_host() : i>50? (test_scalar::one() + test_scalar::one()) : (test_scalar::one() + test_scalar::one()+ test_scalar::one());
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
