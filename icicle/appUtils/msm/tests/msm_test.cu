@@ -16,8 +16,8 @@ class Dummy_Scalar {
     static constexpr unsigned NBITS = 32;
 
     unsigned x;
-    unsigned p = 10;
-    // unsigned p = 1<<30;
+    // unsigned p = 10;
+    unsigned p = 1<<30;
 
     static HOST_DEVICE_INLINE Dummy_Scalar zero() {
       return {0};
@@ -52,7 +52,8 @@ class Dummy_Scalar {
       return {scalar.p-scalar.x};
     }
     static HOST_INLINE Dummy_Scalar rand_host() {
-      return {(unsigned)rand()%10};
+      return {(unsigned)rand()%(1<<30)};
+      // return {(unsigned)rand()%10};
       // return {(unsigned)rand()};
     }
 };
@@ -120,8 +121,8 @@ class Dummy_Projective {
     }
 
     static HOST_INLINE Dummy_Projective rand_host() {
-      return {(unsigned)rand()%10};
-      // return {(unsigned)rand()};
+      // return {(unsigned)rand()%10};
+      return {(unsigned)rand()};
     }
 };
 
@@ -153,8 +154,8 @@ int main()
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
     // scalars[i] = test_scalar::rand_host();
-    // scalars[i] = i >400000? test_scalar::rand_host() :  (test_scalar::one() + test_scalar::one());
-    scalars[i] = i >400000? test_scalar::rand_host() : i>200000? (test_scalar::one() + test_scalar::one()) : (test_scalar::one() + test_scalar::one()+ test_scalar::one());
+    scalars[i] = i >400000? test_scalar::rand_host() :  (test_scalar::one() + test_scalar::one());
+    // scalars[i] = i >100? test_scalar::rand_host() : i>50? (test_scalar::one() + test_scalar::one()) : (test_scalar::one() + test_scalar::one()+ test_scalar::one());
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
