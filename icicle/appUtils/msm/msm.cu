@@ -518,9 +518,17 @@ __global__ void find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, 
     return;
   }
   const unsigned start_index = tid*run_length;
-  result[0] = 0;
   for (int i=start_index;i<min(start_index+run_length,size-1);i++){
-    if (v[i] > cutoff && v[i+1] <= cutoff) result[0] = i+1;
+    if (tid<5) printf("index %u size %u\n",i,v[i]);
+    if (v[i] > cutoff && v[i+1] <= cutoff) {
+      result[0] = i+1;
+      printf("result found %u\n",result[0]);
+      return;
+    }
+    if (i == size - 1) {
+      result[0] = 0;
+      printf("result not found %u\n",result[0]);
+    }
   }
 }
 
@@ -571,7 +579,7 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__r
   // else single_bucket_indices[tid] = 0;
   // if (bucket_size == 0) {printf("watt"); return;}
   // if (bucket_size > 10) {printf(">10: %u %u %u\n",tid,single_bucket_indices[tid],single_bucket_indices[tid]&((1<<c)-1));}
-  // if (tid<50) printf("tid %u single_bucket_indices[tid] %u size %u\n", tid, single_bucket_indices[tid],bucket_size);
+  if (tid<50) printf("tid %u single_bucket_indices[tid] %u size %u\n", tid, single_bucket_indices[tid],bucket_size);
   // if (tid>=nof_buckets_to_compute-10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
   // if (tid==0) return;
   // if ((bucket_index>>20)==13) return;
