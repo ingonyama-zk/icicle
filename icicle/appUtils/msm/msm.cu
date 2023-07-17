@@ -1297,7 +1297,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 
   unsigned large_buckets_to_compute = h_nof_large_buckets>h_nof_zero_large_buckets? h_nof_large_buckets-h_nof_zero_large_buckets : 0;
 
-  if (large_buckets_to_compute){
+  if (large_buckets_to_compute>0 && bucket_th>0){
   // thrust::device_ptr<unsigned> thrust_ptr(sorted_bucket_sizes);
 
 
@@ -1401,6 +1401,9 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 //sync stream
 
 
+}
+else{
+  h_nof_large_buckets = 0;
 }
 
   //launch the accumulation kernel with maximum threads
