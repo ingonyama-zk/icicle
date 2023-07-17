@@ -260,7 +260,7 @@ func GenerateG2Points(count int) ([]G2PointAffine, []bn254.G2Affine) {
 	var pointsAffine []bn254.G2Affine
 
 	// populate the slice
-	for i := 0; i < count; i++ {
+	for i := 0; i < 10; i++ {
 		gnarkP, _ := randG2Jac()
 
 		var p G2PointAffine
@@ -272,7 +272,16 @@ func GenerateG2Points(count int) ([]G2PointAffine, []bn254.G2Affine) {
 		points = append(points, p)
 	}
 
-	return points, pointsAffine
+	log2_10 := math.Log2(10)
+	log2Count := math.Log2(float64(count))
+	log2Size := int(math.Ceil(log2Count - log2_10))
+
+	for i := 0; i < log2Size; i++ {
+		pointsAffine = append(pointsAffine, pointsAffine...)
+		points = append(points, points...)
+	}
+
+	return points[:count], pointsAffine[:count]
 }
 
 func TestMsmG2BN254(t *testing.T) {
