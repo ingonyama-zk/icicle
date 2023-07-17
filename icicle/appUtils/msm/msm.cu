@@ -10,6 +10,10 @@
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
+#include <thrust/device_ptr.h>
+// #include <thrust/algorithm.h>
+#include <thrust/binary_search.h>
+#include <thrust/device_vector.h>
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
@@ -507,6 +511,18 @@ __global__ void add_ones_kernel(A *points, S* scalars, P* results, const unsigne
   results[tid] = sum;
 }
 
+__global__ void find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, unsigned run_length, unsigned *result){
+  unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+  const unsigned nof_threads = (size + run_length - 1)/run_length;
+  if (tid>=nof_threads) {
+    return;
+  }
+  const unsigned start_index = tid*run_length;
+  for (int i=start_index;i<min(start_index+run_length-1,size);i++){
+    if (v[i] > cutoff && v[i+1] < cutoff) result[0] = i;
+  }
+}
+
 //this kernel adds up the points in each bucket
 // __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__restrict__ bucket_offsets,
   //  unsigned *__restrict__ bucket_sizes, unsigned *__restrict__ single_bucket_indices, unsigned *__restrict__ point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
@@ -523,7 +539,7 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__r
   }
   if ((single_bucket_indices[tid]&((1<<c)-1))==0)
   {
-    // printf("cond %u %u\n",tid,single_bucket_indices[tid]);
+    printf("cond %u %u\n",tid,single_bucket_indices[tid]);
     return; //skip zero buckets
   } 
   #ifdef SIGNED_DIG //todo - fix
@@ -543,7 +559,7 @@ __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__r
   // else single_bucket_indices[tid] = 0;
   // if (bucket_size == 0) {printf("watt"); return;}
   // if (bucket_size > 10) {printf(">10: %u %u %u\n",tid,single_bucket_indices[tid],single_bucket_indices[tid]&((1<<c)-1));}
-  if (tid<10) printf("tid %u single_bucket_indices[tid] %u size %u\n", tid, single_bucket_indices[tid],bucket_size);
+  if (tid<50) printf("tid %u single_bucket_indices[tid] %u size %u\n", tid, single_bucket_indices[tid],bucket_size);
   // if (tid>=*nof_buckets_to_compute-10) printf("tid %u size %u\n", tid, bucket_sizes[tid]);
   // if (tid==0) return;
   // if ((bucket_index>>20)==13) return;
@@ -1134,7 +1150,51 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
     sorted_bucket_sizes, single_bucket_indices, sorted_single_bucket_indices, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, stream);
   cudaFreeAsync(sort_single_temp_storage, stream);
 
- 
+  //find large buckets
+  unsigned avarage_size = size/(1<<c);
+  printf("avarage_size %u\n", avarage_size);
+  unsigned large_bucket_factor = 10;
+  unsigned bucket_th = large_bucket_factor*avarage_size;
+  printf("bucket_th %u\n", bucket_th);
+
+  unsigned *cutoff_ind;
+  cudaMallocAsync(&cutoff_ind, sizeof(unsigned), stream);
+
+  unsigned TOTAL_THREADS = 129000;
+  unsigned cutoff_run_length = max(2,h_nof_buckets_to_compute/TOTAL_THREADS);
+  unsigned cutoff_nof_runs = (h_nof_buckets_to_compute + cutoff_run_length -1)/cutoff_run_length;
+  NUM_THREADS = min(1 << 5,cutoff_nof_runs);
+  NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
+  find_cutoff_kernel<<<NUM_BLOCKS,NUM_THREADS,0,stream>>>(sorted_bucket_sizes,h_nof_buckets_to_compute,bucket_th,cutoff_run_length,cutoff_ind);
+
+  unsigned h_cutoff_ind;
+  cudaMemcpyAsync(&h_cutoff_ind, cutoff_ind, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
+  printf("h_cutoff_ind %u\n", h_cutoff_ind);
+
+
+  // thrust::device_ptr<unsigned> thrust_ptr(sorted_bucket_sizes);
+
+
+  // printf("sorted_bucket_sizes %u\n", sorted_bucket_sizes);
+  // printf("thrust_ptr %u\n", *thrust_ptr);
+  // // printf("thrust_ptr %u\n", *thrust_ptr[0]);
+  // printf("thrust_ptr %u\n", thrust_ptr[0]);
+  // printf("thrust_ptr %u\n", thrust_ptr[1]);
+  // printf("thrust_ptr %u\n", thrust_ptr[h_nof_buckets_to_compute-1]);
+
+  // // Perform lower_bound on the device pointer
+  // thrust::device_ptr<unsigned> iter = thrust::upper_bound(thrust::seq, thrust_ptr, thrust_ptr + h_nof_buckets_to_compute, bucket_th);
+  // thrust::device_ptr<unsigned> iter2 = thrust::lower_bound(thrust::seq, thrust_ptr, thrust_ptr + h_nof_buckets_to_compute, bucket_th);
+
+  // Compute the index
+  // unsigned cutoff_index = iter - thrust_ptr;
+  // unsigned cutoff_index2 = iter2 - thrust_ptr;
+
+  // printf("cutoff_index %u\n", cutoff_index);
+  // printf("cutoff_index2 %u\n", cutoff_index2);
+  // printf("cutoff_index %u\n", *cutoff_index);
+  // printf("cutoff_index %u\n", iter);
+  // printf("cutoff_index %u\n", *iter);
 
   // for (int i=0;;i++){
   // for (int i=0;i<3;i++){

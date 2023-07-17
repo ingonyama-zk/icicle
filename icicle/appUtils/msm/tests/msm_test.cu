@@ -153,7 +153,8 @@ int main()
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
     // scalars[i] = test_scalar::rand_host();
-    scalars[i] = i >00000? test_scalar::rand_host() : (test_scalar::one() + test_scalar::one());
+    // scalars[i] = i >400000? test_scalar::rand_host() :  (test_scalar::one() + test_scalar::one());
+    scalars[i] = i >400000? test_scalar::rand_host() : i>200000? (test_scalar::one() + test_scalar::one()) : (test_scalar::one() + test_scalar::one()+ test_scalar::one());
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
