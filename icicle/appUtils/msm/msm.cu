@@ -1297,6 +1297,10 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 
   unsigned large_buckets_to_compute = h_nof_large_buckets>h_nof_zero_large_buckets? h_nof_large_buckets-h_nof_zero_large_buckets : 0;
 
+  cudaStream_t stream2;
+  cudaStreamCreate(&stream2);
+  P* large_buckets;
+
   if (large_buckets_to_compute>0 && bucket_th>0){
   // thrust::device_ptr<unsigned> thrust_ptr(sorted_bucket_sizes);
 
@@ -1330,13 +1334,15 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   printf("threads_per_bucket %u\n", threads_per_bucket);
   printf("max_bucket_size_run_length %u\n", max_bucket_size_run_length);
 
-  P* large_buckets;
+
+
+
   unsigned total_large_buckets_size = large_buckets_to_compute*threads_per_bucket;
   cudaMallocAsync(&large_buckets, sizeof(P)*total_large_buckets_size, stream);
   NUM_THREADS = min(1 << 8,total_large_buckets_size);
   // NUM_THREADS = 1 << 5;
   NUM_BLOCKS = (total_large_buckets_size + NUM_THREADS - 1) / NUM_THREADS;
-  accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(large_buckets, sorted_bucket_offsets+h_nof_zero_large_buckets, sorted_bucket_sizes+h_nof_zero_large_buckets, sorted_single_bucket_indices+h_nof_zero_large_buckets, point_indices, 
+  accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(large_buckets, sorted_bucket_offsets+h_nof_zero_large_buckets, sorted_bucket_sizes+h_nof_zero_large_buckets, sorted_single_bucket_indices+h_nof_zero_large_buckets, point_indices, 
   d_points, nof_buckets, large_buckets_to_compute, c+bm_bitsize, c, threads_per_bucket, max_bucket_size_run_length);                   
   // cudaDeviceSynchronize();
   printf("cuda error acc %u\n",cudaGetLastError());
@@ -1355,7 +1361,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   for (int s=total_large_buckets_size>>1;s>large_buckets_to_compute-1;s>>=1){
     NUM_THREADS = min(MAX_TH,s);
     NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
-    single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(large_buckets,large_buckets,s*2,0,0,0);
+    single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream2>>>(large_buckets,large_buckets,s*2,0,0,0);
     // cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
     // cudaDeviceSynchronize();
@@ -1383,7 +1389,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 //distribute
   NUM_THREADS = min(MAX_TH,large_buckets_to_compute);
   NUM_BLOCKS = (large_buckets_to_compute + NUM_THREADS - 1) / NUM_THREADS;
-  distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream>>>(large_buckets,buckets,sorted_single_bucket_indices+h_nof_zero_large_buckets,large_buckets_to_compute);
+  distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS,0,stream2>>>(large_buckets,buckets,sorted_single_bucket_indices+h_nof_zero_large_buckets,large_buckets_to_compute);
   // cudaDeviceSynchronize();
   printf("cuda error %u\n",cudaGetLastError());
 
@@ -1418,6 +1424,8 @@ else{
    //                                                        d_points, nof_buckets, nof_buckets_to_compute, c-1+bm_bitsize);                                              
                                                           // cudaDeviceSynchronize();
                                                           printf("cuda error acc %u\n",cudaGetLastError());
+cudaStreamSynchronize(stream2);
+cudaStreamDestroy(stream2);
 // cudaDeviceSynchronize();
 // std::vector<P> h_buckets2;
 // h_buckets2.reserve(nof_buckets);
@@ -1997,9 +2005,12 @@ else{
   cudaFreeAsync(nof_buckets_to_compute, stream);
   cudaFreeAsync(bucket_offsets, stream);
   #endif
-  // cudaFreeAsync(sorted_bucket_sizes,stream);
-  // cudaFreeAsync(sorted_bucket_offsets,stream);
-  // cudaFreeAsync(sorted_single_bucket_indices,stream);
+  cudaFreeAsync(sorted_bucket_sizes,stream);
+  cudaFreeAsync(sorted_bucket_offsets,stream);
+  cudaFreeAsync(sorted_single_bucket_indices,stream);
+  cudaFreeAsync(nof_large_buckets,stream);
+  cudaFreeAsync(max_res,stream);
+  if (large_buckets_to_compute>0 && bucket_th>0) cudaFreeAsync(large_buckets,stream);
   cudaFreeAsync(final_results, stream);
   cudaFreeAsync(ones_results, stream);
 
