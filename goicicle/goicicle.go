@@ -15,15 +15,6 @@ import (
 	"unsafe"
 )
 
-// Version returns the version of the CUDA driver
-// func Version() int {
-// 	var v C.int
-// 	if err := C.cuDriverGetVersion(&v); err != 0 {
-// 		return -1
-// 	}
-// 	return int(v)
-// }
-
 func CudaMalloc(size int) (dp unsafe.Pointer, err error) {
 	var p C.void
 	dp = unsafe.Pointer(&p)
