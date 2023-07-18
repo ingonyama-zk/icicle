@@ -12,7 +12,7 @@ import (
 
 func TestNttBN254BBB(t *testing.T) {
 	count := 1 << 20
-	scalars, frScalars := GenerateScalars(count)
+	scalars, frScalars := GenerateScalars(count, false)
 
 	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
@@ -37,7 +37,7 @@ func TestNttBN254BBB(t *testing.T) {
 
 func TestNttBN254CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 2
-	scalars, frScalars := GenerateScalars(count)
+	scalars, frScalars := GenerateScalars(count, false)
 
 	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
@@ -62,7 +62,7 @@ func TestNttBN254CompareToGnarkDIF(t *testing.T) {
 
 func TestNttBN254CompareToGnarkDIT(t *testing.T) {
 	count := 1 << 2
-	scalars, frScalars := GenerateScalars(count)
+	scalars, frScalars := GenerateScalars(count, false)
 
 	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
@@ -87,7 +87,7 @@ func TestNttBN254CompareToGnarkDIT(t *testing.T) {
 
 func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 	count := 1 << 3
-	scalars, frScalars := GenerateScalars(count)
+	scalars, frScalars := GenerateScalars(count, false)
 
 	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
@@ -115,7 +115,7 @@ func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 
 func TestINttBN254CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 3
-	scalars, frScalars := GenerateScalars(count)
+	scalars, frScalars := GenerateScalars(count, false)
 
 	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
@@ -139,7 +139,7 @@ func TestINttBN254CompareToGnarkDIF(t *testing.T) {
 func TestNttBN254(t *testing.T) {
 	count := 1 << 3
 
-	scalars, _ := GenerateScalars(count)
+	scalars, _ := GenerateScalars(count, false)
 
 	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
@@ -160,7 +160,7 @@ func TestNttBatchBN254(t *testing.T) {
 	count := 1 << 5
 	batches := 4
 
-	scalars, _ := GenerateScalars(count * batches)
+	scalars, _ := GenerateScalars(count * batches, false)
 
 	var scalarVecOfVec [][]ScalarField = make([][]ScalarField, 0)
 
@@ -207,7 +207,7 @@ func BenchmarkNTT(b *testing.B) {
 	for _, logNTTSize := range LOG_NTT_SIZES {
 		nttSize := 1 << logNTTSize
 		b.Run(fmt.Sprintf("NTT %d", logNTTSize), func(b *testing.B) {
-			scalars, _ := GenerateScalars(nttSize)
+			scalars, _ := GenerateScalars(nttSize, false)
 
 			nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)

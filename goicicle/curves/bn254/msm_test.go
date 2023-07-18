@@ -1,9 +1,12 @@
 package bn254
 
 import (
+	"bufio"
 	"fmt"
 	"math"
 	"math/big"
+	"os"
+	"strings"
 	"testing"
 	"time"
 	"unsafe"
@@ -63,6 +66,21 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 	return points[:count], pointsAffine[:count]
 }
 
+func ReadGnarkPointsFromFile(filePath string, size int) (points []PointAffineNoInfinityBN254, gnarkPoints []bn254.G1Affine) {
+	points = make([]PointAffineNoInfinityBN254, size)
+	gnarkPoints = make([]bn254.G1Affine, size)
+	file, _ := os.Open(filePath)
+	scanner := bufio.NewScanner(file)
+	
+	for i := 0; scanner.Scan(); i++ {
+		gnarkPoints[i].X.SetString(scanner.Text())
+		scanner.Scan()
+		gnarkPoints[i].Y.SetString(scanner.Text())
+		points[i] = *PointBN254FromG1AffineGnark(&gnarkPoints[i]).strip_z()
+	}
+	return
+}
+
 func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
 	// Declare a slice of integers
 	var points []PointBN254
@@ -80,21 +98,69 @@ func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
 	return points, pointsAffine
 }
 
-func GenerateScalars(count int) ([]ScalarField, []fr.Element) {
+func GenerateScalars(count int, skewed bool) ([]ScalarField, []fr.Element) {
 	// Declare a slice of integers
 	var scalars []ScalarField
 	var scalars_fr []fr.Element
 
 	var rand fr.Element
-	for i := 0; i < count; i++ {
-		rand.SetRandom()
-		s := NewFieldFromFrGnark[ScalarField](rand)
+	var zero fr.Element
+	zero.SetZero()
+	var one fr.Element
+	one.SetOne()
+	var randLarge fr.Element
+	randLarge.SetRandom()
 
-		scalars_fr = append(scalars_fr, rand)
-		scalars = append(scalars, *s)
+	if skewed && count > 1_200_000 {
+		for i := 0; i < count - 1_200_000; i++ {
+			rand.SetRandom()
+			s := NewFieldFromFrGnark[ScalarField](rand)
+
+			scalars_fr = append(scalars_fr, rand)
+			scalars = append(scalars, *s)
+		}
+		
+		for i := 0; i < 600_000; i++ {
+			s := NewFieldFromFrGnark[ScalarField](randLarge)
+
+			scalars_fr = append(scalars_fr, randLarge)
+			scalars = append(scalars, *s)
+		}
+		for i := 0; i < 400_000; i++ {
+			s := NewFieldFromFrGnark[ScalarField](zero)
+
+			scalars_fr = append(scalars_fr, zero)
+			scalars = append(scalars, *s)
+		}
+		for i := 0; i < 200_000; i++ {
+			s := NewFieldFromFrGnark[ScalarField](one)
+
+			scalars_fr = append(scalars_fr, one)
+			scalars = append(scalars, *s)
+		}
+	} else {
+		for i := 0; i < count; i++ {
+			rand.SetRandom()
+			s := NewFieldFromFrGnark[ScalarField](rand)
+
+			scalars_fr = append(scalars_fr, rand)
+			scalars = append(scalars, *s)
+		}
 	}
 
 	return scalars[:count], scalars_fr[:count]
+}
+
+func ReadGnarkScalarsFromFile(filePath string, size int) (scalars []ScalarField, gnarkScalars []fr.Element) {
+	scalars = make([]ScalarField, size)
+	gnarkScalars = make([]fr.Element, size)
+	file, _ := os.Open(filePath)
+	scanner := bufio.NewScanner(file)
+	for i := 0; scanner.Scan(); i++ {
+		gnarkScalars[i].SetString(scanner.Text())
+		scalars[i] = *NewFieldFromFrGnark[ScalarField](gnarkScalars[i])
+	}
+	return
 }
 
 func TestMSM(t *testing.T) {
@@ -103,7 +169,7 @@ func TestMSM(t *testing.T) {
 
 		points, gnarkPoints := GeneratePoints(count)
 		fmt.Print("Finished generating points\n")
-		scalars, gnarkScalars := GenerateScalars(count)
+		scalars, gnarkScalars := GenerateScalars(count, true)
 		fmt.Print("Finished generating scalars\n")
 
 		out := new(PointBN254)
@@ -119,18 +185,18 @@ func TestMSM(t *testing.T) {
 		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
 		fmt.Print("Finished Gnark MSM\n")
 
-		assert.Equal(t, out.toGnarkAffine(), gResult)
+		assert.True(t, gResult.Equal(out.toGnarkAffine()))
 	}
 }
 
 func TestCommitMSM(t *testing.T) {
-	for _, _ = range []int{24} {
-		count := 12_180_757
-		// count := 1 << v - 1
+	for _, v := range []int{24} {
+		count := 1 << v - 1
+		// count := 12_180_757
 
 		points, gnarkPoints := GeneratePoints(count)
 		fmt.Print("Finished generating points\n")
-		scalars, gnarkScalars := GenerateScalars(count)
+		scalars, gnarkScalars := GenerateScalars(count, false)
 		fmt.Print("Finished generating scalars\n")
 
 		out_d, _ := goicicle.CudaMalloc(96)
@@ -153,12 +219,14 @@ func TestCommitMSM(t *testing.T) {
 		assert.Equal(t, e, 0, "error should be 0")
 		fmt.Print("Finished icicle MSM\n")
 
+		fmt.Println("Res on curve: ", outHost[0].ToGnarkJac().IsOnCurve())
+
 		var bn254AffineLib bn254.G1Affine
 
 		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
 		fmt.Print("Finished Gnark MSM\n")
 
-		assert.Equal(t, outHost[0].toGnarkAffine(), gResult)
+		assert.True(t, gResult.Equal(outHost[0].toGnarkAffine()))
 	}
 }
 
@@ -168,7 +236,7 @@ func BenchmarkCommit(b *testing.B) {
 	for _, logMsmSize := range LOG_MSM_SIZES {
 		msmSize := 1 << logMsmSize
 		points, _ := GeneratePoints(msmSize)
-		scalars, _ := GenerateScalars(msmSize)
+		scalars, _ := GenerateScalars(msmSize, false)
 
 		out_d, _ := goicicle.CudaMalloc(96)
 
@@ -200,7 +268,7 @@ func TestBenchMSM(t *testing.T) {
 			count := msmSize * batchSize
 
 			points, _ := GeneratePoints(count)
-			scalars, _ := GenerateScalars(count)
+			scalars, _ := GenerateScalars(count, false)
 
 			a, e := MsmBatchBN254(&points, &scalars, batchSize, 0)
 
@@ -221,7 +289,7 @@ func BenchmarkMSM(b *testing.B) {
 	for _, logMsmSize := range LOG_MSM_SIZES {
 		msmSize := 1 << logMsmSize
 		points, _ := GeneratePoints(msmSize)
-		scalars, _ := GenerateScalars(msmSize)
+		scalars, _ := GenerateScalars(msmSize, false)
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(PointBN254)
@@ -284,12 +352,38 @@ func GenerateG2Points(count int) ([]G2PointAffine, []bn254.G2Affine) {
 	return points[:count], pointsAffine[:count]
 }
 
+func ReadGnarkG2PointsFromFile(filePath string, size int) (points []G2PointAffine, gnarkPoints []bn254.G2Affine) {
+	points = make([]G2PointAffine, size)
+	gnarkPoints = make([]bn254.G2Affine, size)
+	file, _ := os.Open(filePath)
+	scanner := bufio.NewScanner(file)
+	for i := 0; scanner.Scan(); i++ {
+		x := scanner.Text()
+		xSplits := strings.Split(x, "+")
+		xA0 := xSplits[0]
+		xA1Splits := strings.Split(xSplits[1], "*")
+		xA1 := xA1Splits[0]
+		gnarkPoints[i].X.SetString(xA0, xA1)
+		
+		scanner.Scan()
+		y := scanner.Text()
+		ySplits := strings.Split(y, "+")
+		yA0 := ySplits[0]
+		yA1Splits := strings.Split(ySplits[1], "*")
+		yA1 := yA1Splits[0]
+		gnarkPoints[i].Y.SetString(yA0, yA1)
+
+		points[i].FromGnarkAffine(&gnarkPoints[i])
+	}
+	return
+}
+
 func TestMsmG2BN254(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
 		points, gnarkPoints := GenerateG2Points(count)
 		fmt.Print("Finished generating points\n")
-		scalars, gnarkScalars := GenerateScalars(count)
+		scalars, gnarkScalars := GenerateScalars(count, false)
 		fmt.Print("Finished generating scalars\n")
 
 		out := new(G2Point)
@@ -305,7 +399,6 @@ func TestMsmG2BN254(t *testing.T) {
 
 		pp := result.ToProjective()
 		assert.True(t, out.eqg2(&pp))
-		//assert.Equal(t, out, result.ToProjective())
 	}
 }
 
@@ -315,7 +408,7 @@ func BenchmarkMsmG2BN254(b *testing.B) {
 	for _, logMsmSize := range LOG_MSM_SIZES {
 		msmSize := 1 << logMsmSize
 		points, _ := GenerateG2Points(msmSize)
-		scalars, _ := GenerateScalars(msmSize)
+		scalars, _ := GenerateScalars(msmSize, false)
 		b.Run(fmt.Sprintf("MSM G2 %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(G2Point)
@@ -335,7 +428,7 @@ func TestCommitG2MSM(t *testing.T) {
 
 		points, gnarkPoints := GenerateG2Points(count)
 		fmt.Print("Finished generating points\n")
-		scalars, gnarkScalars := GenerateScalars(count)
+		scalars, gnarkScalars := GenerateScalars(count, true)
 		fmt.Print("Finished generating scalars\n")
 
 		var sizeCheckG2PointAffine G2PointAffine
@@ -384,7 +477,7 @@ func TestBatchG2MSM(t *testing.T) {
 			count := msmSize * batchSize
 
 			points, _ := GenerateG2Points(count)
-			scalars, _ := GenerateScalars(count)
+			scalars, _ := GenerateScalars(count, false)
 
 			a, e := MsmG2BatchBN254(&points, &scalars, batchSize, 0)
 

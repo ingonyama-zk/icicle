@@ -39,7 +39,7 @@ func BenchmarkBatchConvertFromFrGnarkThreaded(b *testing.B) {
 
 	// for _, routineAmount := range ROUTINES {
 	routineAmount := 7
-	_, scalars_fr := GenerateScalars(1 << 24)
+	_, scalars_fr := GenerateScalars(1 << 24, false)
 	b.Run(fmt.Sprintf("Convert %d", routineAmount), func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			_ = BatchConvertFromFrGnarkThreaded[ScalarField](scalars_fr, routineAmount)
@@ -49,7 +49,7 @@ func BenchmarkBatchConvertFromFrGnarkThreaded(b *testing.B) {
 }
 
 func BenchmarkBatchConvertFromFrGnark(b *testing.B) {
-	_, scalars_fr := GenerateScalars(1 << 24)
+	_, scalars_fr := GenerateScalars(1 << 24, false)
 	b.Run("BatchConvert 2^24", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			_ = BatchConvertFromFrGnark[ScalarField](scalars_fr)
