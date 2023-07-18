@@ -5,4 +5,4 @@ updateicicle: copy_folder
 
 copy_folder:
 	mkdir -p goicicle/icicle/
-	cp -r icicle/ goicicle/icicle/
+	cp -r icicle/. goicicle/icicle/
