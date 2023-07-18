@@ -199,4 +199,23 @@ func FromMontgomery(d_scalars unsafe.Pointer, len int) (int, error) {
 	return 0, nil
 }
 
+func AffinePointFromMontgomery(d_points unsafe.Pointer, len int) (int, error) {
+	pointsC := (*C.BN254_affine_t)(d_points)
+	lenC := C.uint(len)
+
+	if success := C.from_montgomery_aff_points_cuda_bn254(pointsC, lenC, 0); success != 0 {
+		return -1, errors.New("reversing failed")
+	}
+	return 0, nil
+}
+
+func G2AffinePointFromMontgomery(d_points unsafe.Pointer, len int) (int, error) {
+	pointsC := (*C.BN254_g2_affine_t)(d_points)
+	lenC := C.uint(len)
+
+	if success := C.from_montgomery_aff_points_g2_cuda_bn254(pointsC, lenC, 0); success != 0 {
+		return -1, errors.New("reversing failed")
+	}
+	return 0, nil
+}
 

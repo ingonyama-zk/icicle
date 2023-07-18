@@ -30,6 +30,9 @@ typedef struct BN254_projective_t BN254_projective_t;
 typedef struct BN254_affine_t BN254_affine_t;
 typedef struct BN254_scalar_t BN254_scalar_t;
 
+typedef struct BN254_g2_projective_t BN254_g2_projective_t;
+typedef struct BN254_g2_affine_t BN254_g2_affine_t;
+
 int ntt_cuda_bn254(BN254_scalar_t *arr, uint32_t n, bool inverse, size_t decimation, size_t device_id);
 int ntt_batch_cuda_bn254(BN254_scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
 
@@ -60,6 +63,18 @@ int add_scalars_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_in1, BN254_s
 int sub_scalars_cuda_bn254(BN254_scalar_t* d_out, BN254_scalar_t* d_in1, BN254_scalar_t* d_in2, unsigned n, size_t stream);
 int to_montgomery_scalars_cuda_bn254(BN254_scalar_t* d_inout, unsigned n, size_t stream);
 int from_montgomery_scalars_cuda_bn254(BN254_scalar_t* d_inout, unsigned n, size_t stream);
+
+// points g1
+int to_montgomery_proj_points_cuda_bn254(BN254_projective_t* d_inout, unsigned n, size_t stream);
+int from_montgomery_proj_points_cuda_bn254(BN254_projective_t* d_inout, unsigned n, size_t stream);
+int to_montgomery_aff_points_cuda_bn254(BN254_affine_t* d_inout, unsigned n, size_t stream);
+int from_montgomery_aff_points_cuda_bn254(BN254_affine_t* d_inout, unsigned n, size_t stream);
+
+// points g2
+int to_montgomery_proj_points_g2_cuda_bn254(BN254_g2_projective_t* d_inout, unsigned n, size_t stream);
+int from_montgomery_proj_points_g2_cuda_bn254(BN254_g2_projective_t* d_inout, unsigned n, size_t stream);
+int to_montgomery_aff_points_g2_cuda_bn254(BN254_g2_affine_t* d_inout, unsigned n, size_t stream);
+int from_montgomery_aff_points_g2_cuda_bn254(BN254_g2_affine_t* d_inout, unsigned n, size_t stream);
 
 #ifdef __cplusplus
 }
