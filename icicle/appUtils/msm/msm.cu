@@ -2281,8 +2281,8 @@ unsigned get_optimal_c(const unsigned size) {
 template <typename S, typename P, typename A>
 void large_msm(S* scalars, A* points, unsigned size, P* result, bool on_device, bool big_triangle, cudaStream_t stream){
   // unsigned c = get_optimal_c(size);
-  // unsigned c = 16;
-  unsigned c = 8;
+  unsigned c = 16;
+  // unsigned c = 8;
   unsigned bitsize = S::NBITS;
   // unsigned bitsize = 254; //get from field
   bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle, stream);
