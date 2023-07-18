@@ -121,8 +121,8 @@ class Dummy_Projective {
     }
 
     static HOST_INLINE Dummy_Projective rand_host() {
-      // return {(unsigned)rand()%10};
-      return {(unsigned)rand()};
+      return {(unsigned)rand()%10};
+      // return {(unsigned)rand()};
     }
 };
 
@@ -141,8 +141,8 @@ int main()
   bool on_device = false;
 
   unsigned batch_size = 1;
-  // unsigned msm_size = 1<<24;
-  unsigned msm_size = 9215384;
+  unsigned msm_size = (1<<9) -1;
+  // unsigned msm_size = 9215384;
   // unsigned msm_size = (1<<10) - 456;
   // unsigned msm_size = 20;
   // unsigned msm_size = 6075005;
@@ -155,8 +155,8 @@ int main()
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
     points[i] = (i%msm_size < 10)? test_projective::to_affine(test_projective::rand_host()): points[i-10];
     // scalars[i] = test_scalar::rand_host();
-    scalars[i] = i >462560? test_scalar::rand_host() :  (test_scalar::one() + test_scalar::one());
-    // scalars[i] = i >100? test_scalar::rand_host() : i>50? (test_scalar::one() + test_scalar::one()) : (test_scalar::one() + test_scalar::one()+ test_scalar::one());
+    // scalars[i] = i >462560? test_scalar::rand_host() :  (test_scalar::one() + test_scalar::one());
+    scalars[i] = i >20? test_scalar::rand_host() : i>50? (test_scalar::one() + test_scalar::one()) : (test_scalar::one() + test_scalar::one()+ test_scalar::one());
     // points[i] = test_projective::to_affine(test_projective::rand_host());
   }
   std::cout<<"finished generating"<<std::endl;
@@ -213,7 +213,7 @@ int main()
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   std::cout<<test_projective::to_affine(large_res[1])<<std::endl;
 
-  // reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
+  reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
   // bool success = true;

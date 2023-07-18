@@ -772,10 +772,37 @@ pub fn generate_random_points100_bn254(
     return res;
 }
 
+
+
 pub fn generate_random_points_proj_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point_BN254> {
     (0..count)
         .map(|_| Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)))
         .collect()
+}
+
+use rand::Rng;
+
+pub fn generate_random_scalars_skewed_bn254(
+    count: usize,
+    mut rng: Box<dyn RngCore>,
+) -> Vec<ScalarField_BN254> {
+    let mut res =  Vec::new();
+    let mut nof_repeating_scalars;
+    let mut rng2 = rand::thread_rng();
+    nof_repeating_scalars = rng2.gen_range(5..50);
+    println!("{} nof_repeating_scalars", nof_repeating_scalars);
+    for i in 0..count{
+        if (i<nof_repeating_scalars) {
+            res.push(ScalarField_BN254::from_ark(Fr_BN254::rand(&mut rng).into_repr()));
+        }
+        else if i < 200000 {
+            res.push(res[i-nof_repeating_scalars]);
+        }
+        else {
+            res.push(ScalarField_BN254::from_ark(Fr_BN254::rand(&mut rng).into_repr()));
+        }
+    }
+    return res;
 }
 
 pub fn generate_random_scalars_bn254(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField_BN254> {
@@ -884,7 +911,7 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [6075005, 6699232, 12180757];
+        let test_sizes = [131071,9215384, 6075005, 6699232, 12180757];
 
         for count in test_sizes {
         // for pow2 in test_sizes {
@@ -892,7 +919,8 @@ pub(crate) mod tests_bn254 {
             let seed = None; // set Some to provide seed
             // let points = generate_random_points_bn254(count, get_rng_bn254(seed));
             let points = generate_random_points100_bn254(count, get_rng_bn254(seed));
-            let scalars = generate_random_scalars_bn254(count, get_rng_bn254(seed));
+            // let scalars = generate_random_scalars_bn254(count, get_rng_bn254(seed));
+            let scalars = generate_random_scalars_skewed_bn254(count, get_rng_bn254(seed));
 
             let msm_result = msm_bn254(&points, &scalars, 0);
 
