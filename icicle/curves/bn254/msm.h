@@ -44,7 +44,7 @@ int msm_batch_cuda_bn254(BN254_projective_t* out, BN254_affine_t* points,
                          size_t msm_size, size_t device_id);
 
 int commit_cuda_bn254(BN254_projective_t* d_out, BN254_scalar_t* d_scalars,
-                      BN254_affine_t* d_points, size_t count, size_t device_id);
+                      BN254_affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id);
 
 int commit_batch_cuda_bn254(BN254_projective_t* d_out, BN254_scalar_t* d_scalars,
                             BN254_affine_t* d_points, size_t count,
@@ -52,7 +52,7 @@ int commit_batch_cuda_bn254(BN254_projective_t* d_out, BN254_scalar_t* d_scalars
 
 int msm_g2_cuda_bn254(BN254_g2_projective_t *out, BN254_g2_affine_t* points, BN254_scalar_t* scalars, size_t count, size_t device_id);
 int msm_batch_g2_cuda_bn254(BN254_g2_projective_t* out, BN254_g2_affine_t* points, BN254_scalar_t* scalars, size_t batch_size, size_t msm_size, size_t device_id);
-int commit_g2_cuda_bn254(BN254_g2_projective_t* d_out, BN254_scalar_t* d_scalars, BN254_g2_affine_t* d_points, size_t count, size_t device_id);
+int commit_g2_cuda_bn254(BN254_g2_projective_t* d_out, BN254_scalar_t* d_scalars, BN254_g2_affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id);
 int commit_batch_g2_cuda_bn254(BN254_g2_projective_t* d_out, BN254_scalar_t* d_scalars, BN254_g2_affine_t* d_points, size_t count, size_t batch_size, size_t device_id, cudaStream_t stream);
 
 #ifdef __cplusplus

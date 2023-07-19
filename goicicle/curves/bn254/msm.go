@@ -99,13 +99,14 @@ func MsmG2BN254(out *G2Point, points []G2PointAffine, scalars []ScalarField, dev
 	return out, nil
 }
 
-func CommitG2(d_out, d_scalars, d_points unsafe.Pointer, count int) int {
+func CommitG2(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int) int {
 	d_outC := (*C.BN254_g2_projective_t)(d_out)
 	scalarsC := (*C.BN254_scalar_t)(d_scalars)
 	pointsC := (*C.BN254_g2_affine_t)(d_points)
 	countC := (C.size_t)(count)
+	largeBucketFactorC := C.uint(bucketFactor)
 
-	ret := C.commit_g2_cuda_bn254(d_outC, scalarsC, pointsC, countC, 0)
+	ret := C.commit_g2_cuda_bn254(d_outC, scalarsC, pointsC, countC, largeBucketFactorC, 0)
 
 	if ret != 0 {
 		return -1
@@ -155,13 +156,14 @@ func MsmBatchBN254(points *[]PointAffineNoInfinityBN254, scalars *[]ScalarField,
 	return out, nil
 }
 
-func Commit(d_out, d_scalars, d_points unsafe.Pointer, count int) int {
+func Commit(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int) int {
 	d_outC := (*C.BN254_projective_t)(d_out)
 	scalarsC := (*C.BN254_scalar_t)(d_scalars)
 	pointsC := (*C.BN254_affine_t)(d_points)
 	countC := (C.size_t)(count)
+	largeBucketFactorC := C.uint(bucketFactor)
 
-	ret := C.commit_cuda_bn254(d_outC, scalarsC, pointsC, countC, 0)
+	ret := C.commit_cuda_bn254(d_outC, scalarsC, pointsC, countC, largeBucketFactorC,  0)
 
 	if ret != 0 {
 		return -1
