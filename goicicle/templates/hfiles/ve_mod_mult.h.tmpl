@@ -12,9 +12,10 @@ extern "C" {
 typedef struct {{.CurveName}}_projective_t {{.CurveName}}_projective_t;
 typedef struct {{.CurveName}}_scalar_t {{.CurveName}}_scalar_t;
 
-int32_t vec_mod_mult_point_{{.Prefix}}({{.CurveName}}_projective_t *inout, {{.CurveName}}_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
-int32_t vec_mod_mult_scalar_{{.Prefix}}({{.CurveName}}_scalar_t *inout, {{.CurveName}}_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
-int32_t matrix_vec_mod_mult_{{.Prefix}}({{.CurveName}}_scalar_t *matrix_flattened, {{.CurveName}}_scalar_t *input, {{.CurveName}}_scalar_t *output, size_t n_elments, size_t device_id);
+int32_t vec_mod_mult_point_{{.PackageName}}({{.CurveName}}_projective_t *inout, {{.CurveName}}_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
+int32_t vec_mod_mult_scalar_{{.PackageName}}({{.CurveName}}_scalar_t *inout, {{.CurveName}}_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
+int32_t vec_mod_mult_device_scalar_{{.PackageName}}({{.CurveName}}_scalar_t *inout, {{.CurveName}}_scalar_t *scalar_vec, size_t n_elements, size_t device_id);
+int32_t matrix_vec_mod_mult_{{.PackageName}}({{.CurveName}}_scalar_t *matrix_flattened, {{.CurveName}}_scalar_t *input, {{.CurveName}}_scalar_t *output, size_t n_elments, size_t device_id);
 
 
 #ifdef __cplusplus

@@ -23,29 +23,97 @@ import (
 	"unsafe"
 )
 
-// #cgo CFLAGS: -I../../../icicle/curves/bls12_381/
+// #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn12_381
 // #include "msm.h"
 import "C"
 
-func MsmBLS12381(points []PointAffineNoInfinityBLS12381, scalars []ScalarField, device_id int) (*PointBLS12381, error) {
+func MsmBLS12381(out *PointBLS12381, points []PointAffineNoInfinityBLS12381, scalars []ScalarField, device_id int) (*PointBLS12381, error) {
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
 
-	out := new(PointBLS12381)
-
 	pointsC := (*C.BLS12381_affine_t)(unsafe.Pointer(&points[0]))
 	scalarsC := (*C.BLS12381_scalar_t)(unsafe.Pointer(&scalars[0]))
 	outC := (*C.BLS12381_projective_t)(unsafe.Pointer(out))
-
-	ret := C.msm_cuda_bls12_381(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
+	ret := C.msm_cuda_bls12381(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
 
 	if ret != 0 {
-		return nil, fmt.Errorf("msm_cuda_bls12_381 returned error code: %d", ret)
+		return nil, fmt.Errorf("msm_cuda_bls12381 returned error code: %d", ret)
 	}
 
 	return out, nil
+}
+
+func MsmG2BatchBLS12381(points *[]G2PointAffine, scalars *[]ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
+	// Check for nil pointers
+	if points == nil || scalars == nil {
+		return nil, errors.New("points or scalars is nil")
+	}
+
+	if len(*points) != len(*scalars) {
+		return nil, errors.New("error on: len(points) != len(scalars)")
+	}
+
+	// Check for empty slices
+	if len(*points) == 0 || len(*scalars) == 0 {
+		return nil, errors.New("points or scalars is empty")
+	}
+
+	// Check for zero batchSize
+	if batchSize <= 0 {
+		return nil, errors.New("error on: batchSize must be greater than zero")
+	}
+
+	out := make([]*G2Point, batchSize)
+
+	outC := (*C.BLS12381_g2_projective_t)(unsafe.Pointer(&out[0]))
+	pointsC := (*C.BLS12381_g2_affine_t)(unsafe.Pointer(&(*points)[0]))
+	scalarsC := (*C.BLS12381_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
+	msmSizeC := C.size_t(len(*points) / batchSize)
+	deviceIdC := C.size_t(deviceId)
+	batchSizeC := C.size_t(batchSize)
+
+	ret := C.msm_batch_g2_cuda_bls12381(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
+	if ret != 0 {
+		return nil, fmt.Errorf("msm_batch_cuda_bls12381 returned error code: %d", ret)
+	}
+
+	return out, nil
+}
+
+func MsmG2BLS12381(out *G2Point, points []G2PointAffine, scalars []ScalarField, device_id int) (*G2Point, error) {
+	if len(points) != len(scalars) {
+		return nil, errors.New("error on: len(points) != len(scalars)")
+	}
+
+	pointsC := (*C.BLS12381_g2_affine_t)(unsafe.Pointer(&points[0]))
+	scalarsC := (*C.BLS12381_scalar_t)(unsafe.Pointer(&scalars[0]))
+	outC := (*C.BLS12381_g2_projective_t)(unsafe.Pointer(out))
+
+	ret := C.msm_g2_cuda_bls12381(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
+
+	if ret != 0 {
+		return nil, fmt.Errorf("msm_g2_cuda_bls12381 returned error code: %d", ret)
+	}
+
+	return out, nil
+}
+
+func CommitG2(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int) int {
+	d_outC := (*C.BLS12381_g2_projective_t)(d_out)
+	scalarsC := (*C.BLS12381_scalar_t)(d_scalars)
+	pointsC := (*C.BLS12381_g2_affine_t)(d_points)
+	countC := (C.size_t)(count)
+	largeBucketFactorC := C.uint(bucketFactor)
+
+	ret := C.commit_g2_cuda_bls12381(d_outC, scalarsC, pointsC, countC, largeBucketFactorC, 0)
+
+	if ret != 0 {
+		return -1
+	}
+
+	return 0
 }
 
 func MsmBatchBLS12381(points *[]PointAffineNoInfinityBLS12381, scalars *[]ScalarField, batchSize, deviceId int) ([]*PointBLS12381, error) {
@@ -81,10 +149,42 @@ func MsmBatchBLS12381(points *[]PointAffineNoInfinityBLS12381, scalars *[]Scalar
 	deviceIdC := C.size_t(deviceId)
 	batchSizeC := C.size_t(batchSize)
 
-	ret := C.msm_batch_cuda_bls12_381(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
+	ret := C.msm_batch_cuda_bls12381(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
 	if ret != 0 {
-		return nil, fmt.Errorf("msm_batch_cuda_bls12_381 returned error code: %d", ret)
+		return nil, fmt.Errorf("msm_batch_cuda_bls12381 returned error code: %d", ret)
 	}
 
 	return out, nil
+}
+
+func Commit(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int) int {
+	d_outC := (*C.BLS12381_projective_t)(d_out)
+	scalarsC := (*C.BLS12381_scalar_t)(d_scalars)
+	pointsC := (*C.BLS12381_affine_t)(d_points)
+	countC := (C.size_t)(count)
+	largeBucketFactorC := C.uint(bucketFactor)
+
+	ret := C.commit_cuda_bls12381(d_outC, scalarsC, pointsC, countC, largeBucketFactorC,  0)
+
+	if ret != 0 {
+		return -1
+	}
+
+	return 0
+}
+
+func CommitBatch(d_out, d_scalars, d_points unsafe.Pointer, count, batch_size int) int {
+	d_outC := (*C.BLS12381_projective_t)(d_out)
+	scalarsC := (*C.BLS12381_scalar_t)(d_scalars)
+	pointsC := (*C.BLS12381_affine_t)(d_points)
+	countC := (C.size_t)(count)
+	batch_sizeC := (C.size_t)(batch_size)
+
+	ret := C.commit_batch_cuda_bls12381(d_outC, scalarsC, pointsC, countC, batch_sizeC, 0)
+
+	if ret != 0 {
+		return -1
+	}
+
+	return 0
 }

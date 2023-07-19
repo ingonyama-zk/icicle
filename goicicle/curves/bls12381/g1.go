@@ -45,14 +45,14 @@ import (
 
 )
 
-// #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bls12381/
+// #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn12_381
 // #include "c_api.h"
 // #include "ve_mod_mult.h"
 import "C"
 
 const SCALAR_SIZE = 8
-const BASE_SIZE = 12
+const BASE_SIZE = 8
 
 type ScalarField struct {
 	s [SCALAR_SIZE]uint32
@@ -162,6 +162,15 @@ func NewScalarFieldOne() *ScalarField {
 	s[0] = 1
 
 	return &ScalarField{s}
+}
+
+func (a *ScalarField) Equals(b *ScalarField) bool {
+	for i, v := range a.s {
+		if b.s[i] != v {
+			return false
+		}
+	}
+	return true
 }
 
 /*
@@ -412,11 +421,11 @@ func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) [
 func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.Element, routines int) []T {
 	var newElements []T
 
-	if routines > 1 {
+	if routines > 1 && routines <= len(elements) {
 		channels := make([]chan []T, routines)
-		for i := 0; i < routines; i ++ {
+		for i := 0; i < routines; i++ {
 			channels[i] = make(chan []T, 1)
-		} 
+		}
 
 		convert := func(elements []fr.Element, chanIndex int) {
 			var convertedElements []T
@@ -428,13 +437,18 @@ func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.El
 			channels[chanIndex] <- convertedElements
 		}
 
-		batchLen := len(elements)/routines
-		for i := 0; i < routines; i ++ {
-			elemsToConv := elements[batchLen*i:batchLen*(i+1)]
+		batchLen := len(elements) / routines
+		for i := 0; i < routines; i++ {
+			start := batchLen * i
+			end := batchLen * (i + 1)
+			elemsToConv := elements[start:end]
+			if i == routines-1 {
+				elemsToConv = elements[start:]
+			}
 			go convert(elemsToConv, i)
 		}
 
-		for i := 0; i < routines; i ++ {
+		for i := 0; i < routines; i++ {
 			newElements = append(newElements, <-channels[i]...)
 		}
 	} else {
@@ -462,9 +476,9 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 
 	if routines > 1 {
 		channels := make([]chan []fr.Element, routines)
-		for i := 0; i < routines; i ++ {
+		for i := 0; i < routines; i++ {
 			channels[i] = make(chan []fr.Element, 1)
-		} 
+		}
 
 		convert := func(elements []T, chanIndex int) {
 			var convertedElements []fr.Element
@@ -476,13 +490,13 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 			channels[chanIndex] <- convertedElements
 		}
 
-		batchLen := len(elements)/routines
-		for i := 0; i < routines; i ++ {
-			elemsToConv := elements[batchLen*i:batchLen*(i+1)]
+		batchLen := len(elements) / routines
+		for i := 0; i < routines; i++ {
+			elemsToConv := elements[batchLen*i : batchLen*(i+1)]
 			go convert(elemsToConv, i)
 		}
 
-		for i := 0; i < routines; i ++ {
+		for i := 0; i < routines; i++ {
 			newElements = append(newElements, <-channels[i]...)
 		}
 	} else {
