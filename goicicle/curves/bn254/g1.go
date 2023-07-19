@@ -29,7 +29,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 )
 
-// #cgo CFLAGS: -I${SRCDIR}/icicle/curves/bn254/
+// #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "c_api.h"
 // #include "ve_mod_mult.h"

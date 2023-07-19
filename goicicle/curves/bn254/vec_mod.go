@@ -16,7 +16,7 @@
 
 package bn254
 
-// #cgo CFLAGS: -I../../../icicle/curves/bn254/
+// #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "ve_mod_mult.h"
 import "C"

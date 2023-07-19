@@ -22,7 +22,7 @@ import (
 	"unsafe"
 )
 
-// #cgo CFLAGS: -I../../../icicle/curves/bn254/
+// #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "msm.h"
 import "C"
