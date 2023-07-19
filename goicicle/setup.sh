@@ -6,9 +6,9 @@ TARGET_BLS12_377="libbls12_377.so"
 
 make $1
 
-TARGET_BN254_PATH=$(find `pwd` -name $TARGET_BN254)
-TARGET_BLS12_381_PATH=$(find `pwd` -name $TARGET_BLS12_381)
-TARGET_BLS12_377_PATH=$(find `pwd` -name $TARGET_BLS12_377)
+TARGET_BN254_PATH=$(dirname "$(find `pwd` -name $TARGET_BN254 -print -quit)")/
+TARGET_BLS12_381_PATH=$(dirname "$(find `pwd` -name $TARGET_BLS12_381 -print -quit)")/
+TARGET_BLS12_377_PATH=$(dirname "$(find `pwd` -name $TARGET_BLS12_377 -print -quit)")/
 
 
 if [[ "$TARGET_BLS12_377_PATH" != "" ]]; then
