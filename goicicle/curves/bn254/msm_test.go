@@ -196,7 +196,7 @@ func TestCommitMSM(t *testing.T) {
 
 		points, gnarkPoints := GeneratePoints(count)
 		fmt.Print("Finished generating points\n")
-		scalars, gnarkScalars := GenerateScalars(count, false)
+		scalars, gnarkScalars := GenerateScalars(count, true)
 		fmt.Print("Finished generating scalars\n")
 
 		out_d, _ := goicicle.CudaMalloc(96)
@@ -210,7 +210,7 @@ func TestCommitMSM(t *testing.T) {
 		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
 
 		startTime := time.Now()
-		e := Commit(out_d, scalars_d, points_d, count)
+		e := Commit(out_d, scalars_d, points_d, count, 10)
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
 		outHost := make([]PointBN254, 1)
@@ -250,7 +250,7 @@ func BenchmarkCommit(b *testing.B) {
 
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				e := Commit(out_d, scalars_d, points_d, msmSize)
+				e := Commit(out_d, scalars_d, points_d, msmSize, 10)
 
 				if e != 0 {
 					panic("Error occured")
@@ -445,7 +445,7 @@ func TestCommitG2MSM(t *testing.T) {
 		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
 
 		startTime := time.Now()
-		e := CommitG2(out_d, scalars_d, points_d, count)
+		e := CommitG2(out_d, scalars_d, points_d, count, 10)
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
 		outHost := make([]G2Point, 1)

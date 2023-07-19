@@ -8,12 +8,12 @@
 
 extern "C"
 int msm_cuda_bn254(BN254::projective_t *out, BN254::affine_t points[],
-              BN254::scalar_t scalars[], size_t count, size_t device_id = 0, cudaStream_t stream = 0)
+              BN254::scalar_t scalars[], size_t count, unsigned large_bucket_factor, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {   
         cudaStreamCreate(&stream);
-        large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, false, stream);
+        large_msm<BN254::scalar_t, BN254::projective_t, BN254::affine_t>(scalars, points, count, out, false, false, large_bucket_factor, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
@@ -50,12 +50,12 @@ extern "C" int msm_batch_cuda_bn254(BN254::projective_t* out, BN254::affine_t po
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
 extern "C"
-int commit_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scalars, BN254::affine_t* d_points, size_t count, size_t device_id = 0, cudaStream_t stream = 0)
+int commit_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scalars, BN254::affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
         cudaStreamCreate(&stream);
-        large_msm(d_scalars, d_points, count, d_out, true, false, stream);
+        large_msm(d_scalars, d_points, count, d_out, true, false, large_bucket_factor, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
@@ -95,12 +95,12 @@ int commit_batch_cuda_bn254(BN254::projective_t* d_out, BN254::scalar_t* d_scala
 #if defined(G2_DEFINED)
 extern "C"
 int msm_g2_cuda_bn254(BN254::g2_projective_t *out, BN254::g2_affine_t points[],
-              BN254::scalar_t scalars[], size_t count, size_t device_id = 0, cudaStream_t stream = 0)
+              BN254::scalar_t scalars[], size_t count, unsigned large_bucket_factor, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {   
         cudaStreamCreate(&stream);
-        large_msm<BN254::scalar_t, BN254::g2_projective_t, BN254::g2_affine_t>(scalars, points, count, out, false, false, stream);
+        large_msm<BN254::scalar_t, BN254::g2_projective_t, BN254::g2_affine_t>(scalars, points, count, out, false, false, large_bucket_factor, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
@@ -137,14 +137,14 @@ extern "C" int msm_batch_g2_cuda_bn254(BN254::g2_projective_t* out, BN254::g2_af
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
 extern "C"
-int commit_g2_cuda_bn254(BN254::g2_projective_t* d_out, BN254::scalar_t* d_scalars, BN254::g2_affine_t* d_points, size_t count, size_t device_id = 0, cudaStream_t stream = 0)
+int commit_g2_cuda_bn254(BN254::g2_projective_t* d_out, BN254::scalar_t* d_scalars, BN254::g2_affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id = 0, cudaStream_t stream = 0)
 {
     // TODO: use device_id when working with multiple devices
     (void)device_id;
     try
     {
         cudaStreamCreate(&stream);
-        large_msm(d_scalars, d_points, count, d_out, true, false, stream);
+        large_msm(d_scalars, d_points, count, d_out, true, false, large_bucket_factor, stream);
         cudaStreamSynchronize(stream);
         return CUDA_SUCCESS;
     }
