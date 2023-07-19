@@ -4,7 +4,7 @@ TARGET_BN254="libbn254.so"
 TARGET_BLS12_381="libbls12_381.so"
 TARGET_BLS12_377="libbls12_377.so"
 
-make $1
+sudo make $1
 
 TARGET_BN254_PATH=$(dirname "$(find `pwd` -name $TARGET_BN254 -print -quit)")/
 TARGET_BLS12_381_PATH=$(dirname "$(find `pwd` -name $TARGET_BLS12_381 -print -quit)")/
