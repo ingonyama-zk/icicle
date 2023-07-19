@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/goicicle"
+	"github.com/ingonyama-zk/icicle/goicicle/goicicle"
 )
 
 const (
