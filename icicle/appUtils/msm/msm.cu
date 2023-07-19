@@ -1276,8 +1276,8 @@ cudaMemcpy(h_sizes.data(), sorted_bucket_sizes, sizeof(unsigned) * h_nof_buckets
   //find large buckets
   unsigned avarage_size = size/(1<<c);
   printf("avarage_size %u\n", avarage_size);
-  unsigned large_bucket_factor = 10; //global param
-  unsigned bucket_th = large_bucket_factor*avarage_size;
+  float large_bucket_factor = 10; //global param
+  unsigned bucket_th = ceil(large_bucket_factor*avarage_size);
   // unsigned bucket_th = 95;
   printf("bucket_th %u\n", bucket_th);
 

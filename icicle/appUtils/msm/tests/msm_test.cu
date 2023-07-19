@@ -1,7 +1,9 @@
+#define G2_DEFINED
+
 #include <iostream>
 #include <chrono>
 #include <vector>
-#include "msm.cu"
+#include "msm_clean.cu"
 #include "../../utils/cuda_utils.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../primitives/field.cuh"
@@ -131,6 +133,10 @@ class Dummy_Projective {
 typedef scalar_t test_scalar;
 typedef projective_t test_projective;
 typedef affine_t test_affine;
+
+// typedef scalar_t test_scalar;
+// typedef g2_projective_t test_projective;
+// typedef g2_affine_t test_affine;
 
 // typedef Dummy_Scalar test_scalar;
 // typedef Dummy_Projective test_projective;
