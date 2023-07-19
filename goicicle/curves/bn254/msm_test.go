@@ -71,7 +71,7 @@ func ReadGnarkPointsFromFile(filePath string, size int) (points []PointAffineNoI
 	gnarkPoints = make([]bn254.G1Affine, size)
 	file, _ := os.Open(filePath)
 	scanner := bufio.NewScanner(file)
-	
+
 	for i := 0; scanner.Scan(); i++ {
 		gnarkPoints[i].X.SetString(scanner.Text())
 		scanner.Scan()
@@ -112,14 +112,14 @@ func GenerateScalars(count int, skewed bool) ([]ScalarField, []fr.Element) {
 	randLarge.SetRandom()
 
 	if skewed && count > 1_200_000 {
-		for i := 0; i < count - 1_200_000; i++ {
+		for i := 0; i < count-1_200_000; i++ {
 			rand.SetRandom()
 			s := NewFieldFromFrGnark[ScalarField](rand)
 
 			scalars_fr = append(scalars_fr, rand)
 			scalars = append(scalars, *s)
 		}
-		
+
 		for i := 0; i < 600_000; i++ {
 			s := NewFieldFromFrGnark[ScalarField](randLarge)
 
@@ -191,7 +191,7 @@ func TestMSM(t *testing.T) {
 
 func TestCommitMSM(t *testing.T) {
 	for _, v := range []int{24} {
-		count := 1 << v - 1
+		count := 1<<v - 1
 		// count := 12_180_757
 
 		points, gnarkPoints := GeneratePoints(count)
@@ -364,7 +364,7 @@ func ReadGnarkG2PointsFromFile(filePath string, size int) (points []G2PointAffin
 		xA1Splits := strings.Split(xSplits[1], "*")
 		xA1 := xA1Splits[0]
 		gnarkPoints[i].X.SetString(xA0, xA1)
-		
+
 		scanner.Scan()
 		y := scanner.Text()
 		ySplits := strings.Split(y, "+")
