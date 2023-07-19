@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/consensys/bavard"
-	config "github.com/ingonyama-zk/icicle/goicicle/goicicle/templates/curves"
+	config "github.com/ingonyama-zk/icicle/goicicle/templates/curves"
 )
 
 const (

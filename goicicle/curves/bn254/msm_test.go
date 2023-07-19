@@ -14,7 +14,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/ingonyama-zk/icicle/goicicle/goicicle"
+	"github.com/ingonyama-zk/icicle/goicicle"
 	"github.com/stretchr/testify/assert"
 )
 
