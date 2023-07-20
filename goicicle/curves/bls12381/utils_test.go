@@ -50,29 +50,29 @@ func TestConvertUint32ArrToUint64Arr(t *testing.T) {
 func TestConvertUint64ArrToUint32Arr(t *testing.T) {
 	testCases := []struct {
 		name     string
-		input    [4]uint64
-		expected [8]uint32
+		input    [6]uint64
+		expected [12]uint32
 	}{
 		{
 			name:     "test one",
-			input:    [4]uint64{1, 2, 3, 4},
-			expected: [8]uint32{1, 0, 2, 0, 3, 0, 4, 0},
+			input:    [6]uint64{1, 2, 3, 4, 5, 6},
+			expected: [12]uint32{1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0},
 		},
 		{
 			name:     "test two",
-			input:    [4]uint64{100, 200, 300, 400},
-			expected: [8]uint32{100, 0, 200, 0, 300, 0, 400, 0},
+			input:    [6]uint64{100, 200, 300, 400, 500, 600},
+			expected: [12]uint32{100, 0, 200, 0, 300, 0, 400, 0, 500, 0, 600, 0},
 		},
 		{
 			name:     "test three",
-			input:    [4]uint64{1000, 2000, 3000, 4000},
-			expected: [8]uint32{1000, 0, 2000, 0, 3000, 0, 4000, 0},
+			input:    [6]uint64{1000, 2000, 3000, 4000, 5000, 6000},
+			expected: [12]uint32{1000, 0, 2000, 0, 3000, 0, 4000, 0, 5000, 0, 6000, 0},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ConvertUint64ArrToUint32Arr(tc.input)
+			got := ConvertUint64ArrToUint32Arr6(tc.input)
 			if got != tc.expected {
 				t.Errorf("got %v, want %v", got, tc.expected)
 			}

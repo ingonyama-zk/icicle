@@ -23,26 +23,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	
-
-
 	"github.com/consensys/gnark-crypto/ecc/bls12-381"
-
-
-
-	
-
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fp"
-
-
-
-	
-
-
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-
-
-
 )
 
 // #cgo CFLAGS: -I./include/
@@ -76,14 +59,14 @@ func NewFieldZero[T BaseField | ScalarField]() *T {
 	return &field
 }
 
-func NewFieldFromFrGnark[T BaseField | ScalarField](element fr.Element) *T {
-	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
+func NewFieldFromFrGnark[T ScalarField](element fr.Element) *T {
+	s := ConvertUint64ArrToUint32Arr4(element.Bits()) // get non-montgomry
 
 	return &T{s}
 }
 
-func NewFieldFromFpGnark[T BaseField | ScalarField](element fp.Element) *T {
-	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
+func NewFieldFromFpGnark[T BaseField](element fp.Element) *T {
+	s := ConvertUint64ArrToUint32Arr6(element.Bits()) // get non-montgomry
 
 	return &T{s}
 }
@@ -140,8 +123,8 @@ func (f *BaseField) toGnarkFr() *fr.Element {
 
 func (f *BaseField) toGnarkFp() *fp.Element {
 	fb := f.toBytesLe()
-	var b32 [32]byte
-	copy(b32[:], fb[:32])
+	var b32 [48]byte
+	copy(b32[:], fb[:48])
 
 	v, e := fp.LittleEndian.Element(&b32)
 
@@ -205,9 +188,10 @@ func (f ScalarField) toGnarkFr() *fr.Element {
 }
 
 func (f *ScalarField) toGnarkFp() *fp.Element {
+	// hmmm i think this is wrong
 	fb := f.toBytesLe()
-	var b32 [32]byte
-	copy(b32[:], fb[:32])
+	var b32 [48]byte
+	copy(b32[:], fb[:48])
 
 	v, e := fp.LittleEndian.Element(&b32)
 
@@ -408,7 +392,7 @@ func getFixedLimbs(slice *[]uint32) [BASE_SIZE]uint32 {
 	panic("slice has too many elements")
 }
 
-func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) []T {
+func BatchConvertFromFrGnark[T ScalarField](elements []fr.Element) []T {
 	var newElements []T
 	for _, e := range elements {
 		converted := NewFieldFromFrGnark[T](e)
@@ -418,7 +402,7 @@ func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) [
 	return newElements
 }
 
-func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.Element, routines int) []T {
+func BatchConvertFromFrGnarkThreaded[T ScalarField](elements []fr.Element, routines int) []T {
 	var newElements []T
 
 	if routines > 1 && routines <= len(elements) {

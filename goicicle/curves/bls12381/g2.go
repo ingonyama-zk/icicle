@@ -102,7 +102,7 @@ func BatchConvertFromG2AffineThreads(elements []bls12381.G2Affine, routines int)
 
 // G2 extension field
 
-type G2Element [4]uint64
+type G2Element [6]uint64
 
 type ExtentionField struct {
 	A0, A1 G2Element
