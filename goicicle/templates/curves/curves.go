@@ -28,10 +28,10 @@ var BLS_12_377 = Curve{
 }
 
 var BLS_12_381 = Curve{
-	CurveName:   "BLS12381",
-	PackageName: "bls12381",
-	SharedLib:   "-lbn12_381",
-	Prefix:      "bls12_381",
-	ScalarSize:  8,
-	BaseSize:    12,
+	CurveName:        "BLS12381",
+	PackageName:      "bls12381",
+	SharedLib:        "-lbn12_381",
+	Prefix:           "bls12_381",
+	ScalarSize:       8,
+	BaseSize:         12,
 }

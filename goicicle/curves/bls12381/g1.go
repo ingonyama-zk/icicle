@@ -52,7 +52,7 @@ import (
 import "C"
 
 const SCALAR_SIZE = 8
-const BASE_SIZE = 8
+const BASE_SIZE = 12
 
 type ScalarField struct {
 	s [SCALAR_SIZE]uint32

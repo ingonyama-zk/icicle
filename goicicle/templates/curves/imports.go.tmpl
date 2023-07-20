@@ -32,3 +32,27 @@
 {{end}}
 
 {{end}}
+
+{{ define "import_abs_ecc" }}
+
+{{ if eq .CurveName "BN254"}}
+	"github.com/consensys/gnark-crypto/ecc"
+{{ else if eq .CurveName "BLS12377"}}
+	"github.com/consensys/gnark-crypto/ecc"
+{{ else if eq .CurveName "BLS12381"}}
+	"github.com/consensys/gnark-crypto/ecc"
+{{end}}
+
+{{end}}
+
+{{ define "import_fr_fft" }}
+
+{{ if eq .CurveName "BN254"}}
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
+{{ else if eq .CurveName "BLS12377"}}
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
+{{ else if eq .CurveName "BLS12381"}}
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
+{{end}}
+
+{{end}}

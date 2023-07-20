@@ -18,7 +18,7 @@ const (
 
 var bgen = bavard.NewBatchGenerator(copyrightHolder, copyrightYear, generatedBy)
 
-func main() {
+func genMainFiles() {
 	bn254_entries := []bavard.Entry{
 		{File: filepath.Join(baseDir, "bn254", "g1.go"), Templates: []string{"g1.go.tmpl", "imports.go.tmpl"}},
 	}
@@ -145,6 +145,47 @@ func main() {
 	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./hfiles/", c_api_bls12377...))
 	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./hfiles/", c_api_bn254...))
 	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./hfiles/", c_api_bls12381...))
+}
+
+func genTestFiles() {
+	// G1 TESTS
+	bn254_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "g1_test.go"), Templates: []string{"g1_test.go.tmpl", "imports.go.tmpl"}},
+	}
+
+	bls12377_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "g1_test.go"), Templates: []string{"g1_test.go.tmpl", "imports.go.tmpl"}},
+	}
+
+	bls12381_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "g1_test.go"), Templates: []string{"g1_test.go.tmpl", "imports.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./curves/", bls12377_entries...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./curves/", bn254_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./curves/", bls12381_entries...))
+
+	// G2 TESTS
+	bn254_entries_g2_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "g2_test.go"), Templates: []string{"g2_test.go.tmpl", "imports.go.tmpl"}},
+	}
+
+	bls12377_entries_g2_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "g2_test.go"), Templates: []string{"g2_test.go.tmpl", "imports.go.tmpl"}},
+	}
+
+	bls12381_entries_g2_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "g2_test.go"), Templates: []string{"g2_test.go.tmpl", "imports.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./curves/", bls12377_entries_g2_test...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./curves/", bn254_entries_g2_test...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./curves/", bls12381_entries_g2_test...))
+}
+
+func main() {
+	//genMainFiles()
+	genTestFiles()
 }
 
 func assertNoError(err error) {
