@@ -184,37 +184,37 @@ func genTestFiles() {
 
 	// MSM TEST
 	bn254_entries_msm_test := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bn254", "msm_test.go"), Templates: []string{"msm_test.go.impl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bn254", "msm_test.go"), Templates: []string{"msm_test.go.tmpl", "../curves/imports.go.tmpl"}},
 	}
 
 	bls12377_entries_msm_test := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12377", "msm_test.go"), Templates: []string{"msm_test.go.impl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12377", "msm_test.go"), Templates: []string{"msm_test.go.tmpl", "../curves/imports.go.tmpl"}},
 	}
 
 	bls12381_entries_msm_test := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12381", "msm_test.go"), Templates: []string{"msm_test.go.impl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12381", "msm_test.go"), Templates: []string{"msm_test.go.tmpl", "../curves/imports.go.tmpl"}},
 	}
 
-	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./curves/", bls12377_entries_msm_test...))
-	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./curves/", bn254_entries_msm_test...))
-	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./curves/", bls12381_entries_msm_test...))
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./msm/", bls12377_entries_msm_test...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./msm/", bn254_entries_msm_test...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./msm/", bls12381_entries_msm_test...))
 
 	// FFT TEST
 	bn254_entries_fft_test := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bn254", "ntt_test.go"), Templates: []string{"ntt_test.go.impl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bn254", "ntt_test.go"), Templates: []string{"ntt_test.go.tmpl", "../curves/imports.go.tmpl"}},
 	}
 
 	bls12377_entries_fft_test := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12377", "ntt_test.go"), Templates: []string{"ntt_test.go.impl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12377", "ntt_test.go"), Templates: []string{"ntt_test.go.tmpl", "../curves/imports.go.tmpl"}},
 	}
 
 	bls12381_entries_fft_test := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12381", "ntt_test.go"), Templates: []string{"ntt_test.go.impl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12381", "ntt_test.go"), Templates: []string{"ntt_test.go.tmpl", "../curves/imports.go.tmpl"}},
 	}
 
-	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./curves/", bls12377_entries_fft_test...))
-	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./curves/", bn254_entries_fft_test...))
-	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./curves/", bls12381_entries_fft_test...))
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./ntt/", bls12377_entries_fft_test...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./ntt/", bn254_entries_fft_test...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./ntt/", bls12381_entries_fft_test...))
 }
 
 func main() {

@@ -65,7 +65,7 @@ func TestFieldBLS12377FromGnark(t *testing.T) {
 
 	f := NewFieldFromFrGnark[ScalarField](rand)
 
-	assert.Equal(t, f.s, ConvertUint64ArrToUint32Arr(rand.Bits()))
+	assert.Equal(t, f.s, ConvertUint64ArrToUint32Arr4(rand.Bits()))
 }
 
 func BenchmarkBatchConvertFromFrGnarkThreaded(b *testing.B) {
