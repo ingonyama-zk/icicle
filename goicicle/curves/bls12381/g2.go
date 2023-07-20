@@ -39,7 +39,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../ -lbls12381
+// #cgo LDFLAGS: -L${SRCDIR}/../../ -lbls12_381
 // #include "c_api.h"
 // #include "ve_mod_mult.h"
 import "C"

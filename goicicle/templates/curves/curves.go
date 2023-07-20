@@ -21,17 +21,17 @@ var BN_254 = Curve{
 var BLS_12_377 = Curve{
 	CurveName:   "BLS12377",
 	PackageName: "bls12377",
-	SharedLib:   "-lbn12_377",
+	SharedLib:   "-lbls12_377",
 	Prefix:      "bls12_377",
 	ScalarSize:  8,
 	BaseSize:    12,
 }
 
 var BLS_12_381 = Curve{
-	CurveName:        "BLS12381",
-	PackageName:      "bls12381",
-	SharedLib:        "-lbn12_381",
-	Prefix:           "bls12_381",
-	ScalarSize:       8,
-	BaseSize:         12,
+	CurveName:   "BLS12381",
+	PackageName: "bls12381",
+	SharedLib:   "-lbls12_381",
+	Prefix:      "bls12_381",
+	ScalarSize:  8,
+	BaseSize:    12,
 }
