@@ -7,7 +7,7 @@
 
 extern "C"
 int msm_cuda_${CURVE_NAME_L}(${CURVE_NAME_U}::projective_t *out, ${CURVE_NAME_U}::affine_t points[],
-              ${CURVE_NAME_U}::scalar_t scalars[], size_t count, size_t device_id = 0, cudaStream_t stream = 0)
+              ${CURVE_NAME_U}::scalar_t scalars[], size_t count, unsigned large_bucket_factor, size_t device_id = 0, cudaStream_t stream = 0)
 {
     try
     {
