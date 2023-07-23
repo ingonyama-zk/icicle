@@ -17,6 +17,8 @@ namespace PARAMS_BLS12_377{
     static constexpr storage<limbs_count> m = {0x151e79ea, 0xf5204c21, 0x8d69e258, 0xfd0a180b, 0xfaa80548, 0xe4e51e49, 0xc40b2c9e, 0x36d9491e};
     static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+    static constexpr storage<limbs_count> montgomery_r =  {};
+    static constexpr storage<limbs_count> montgomery_r_inv = {};
 
     static constexpr storage<limbs_count> omega1= {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> omega2= {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};

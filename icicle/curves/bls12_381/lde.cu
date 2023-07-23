@@ -5,6 +5,7 @@
 #include "../../appUtils/ntt/ntt.cuh"
 #include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
 #include "curve_config.cuh"
+#include "../../utils/mont.cuh"
 
 extern "C" BLS12_381::scalar_t* build_domain_cuda_bls12_381(uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
@@ -502,6 +503,7 @@ extern "C" int from_montgomery_aff_points_g2_cuda_bls12_381(BLS12_381::g2_affine
         return -1;
     }
 }
+#endif
 
 extern "C" int reverse_order_points_batch_cuda_bls12_381(BLS12_381::projective_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
 {
