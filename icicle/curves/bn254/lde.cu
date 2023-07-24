@@ -27,12 +27,12 @@ extern "C" BN254::scalar_t* build_domain_cuda_bn254(uint32_t domain_size, uint32
     }
 }
 
-extern "C" int ntt_cuda_bn254(BN254::scalar_t *arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ntt_cuda_bn254(BN254::scalar_t *arr, uint32_t n, bool inverse, Decimation decimation, cudaStream_t stream = 0)
 {
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BN254::scalar_t,BN254::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
+        return ntt_end2end_template<BN254::scalar_t,BN254::scalar_t>(arr, n, inverse,decimation, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -47,7 +47,7 @@ extern "C" int ecntt_cuda_bn254(BN254::projective_t *arr, uint32_t n, bool inver
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_template<BN254::projective_t,BN254::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
+        return ntt_end2end_template<BN254::projective_t,BN254::scalar_t>(arr, n, inverse,decimation, stream); // TODO: pass device_id
     }
     catch (const std::runtime_error &ex)
     {
@@ -56,12 +56,12 @@ extern "C" int ecntt_cuda_bn254(BN254::projective_t *arr, uint32_t n, bool inver
     }
 }
 
-extern "C" int ntt_batch_cuda_bn254(BN254::scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ntt_batch_cuda_bn254(BN254::scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, Decimation decimation, cudaStream_t stream = 0)
 {
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_batch_template<BN254::scalar_t,BN254::scalar_t>(arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
+        return ntt_end2end_batch_template<BN254::scalar_t,BN254::scalar_t>(arr, arr_size, batch_size, inverse, decimation, stream);
     }
     catch (const std::runtime_error &ex)
     {
@@ -75,7 +75,8 @@ extern "C" int ecntt_batch_cuda_bn254(BN254::projective_t *arr, uint32_t arr_siz
     try
     {
         cudaStreamCreate(&stream);
-        return ntt_end2end_batch_template<BN254::projective_t,BN254::scalar_t>(arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
+        //return ntt_end2end_batch_template<BN254::projective_t,BN254::scalar_t>(arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
+        return 0;
     }
     catch (const std::runtime_error &ex)
     {

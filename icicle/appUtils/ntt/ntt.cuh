@@ -342,7 +342,7 @@ template <typename E, typename S> void ntt_inplace_batch_template(
  * @param n size of batch.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- template <typename E, typename S> uint32_t ntt_end2end_batch_template(E * arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream) {
+ template <typename E, typename S> uint32_t ntt_end2end_batch_template(E * arr, uint32_t arr_size, uint32_t n, bool inverse, Decimation decimation, cudaStream_t stream) {
   int batches = int(arr_size / n);
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order. 
@@ -351,16 +351,27 @@ template <typename E, typename S> void ntt_inplace_batch_template(
   if (inverse){
     d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega_inv(logn), stream);
   } else{
+    std::cout << S::omega(logn) << std::endl;
     d_twiddles = fill_twiddle_factors_array(n_twiddles, S::omega(logn), stream);
   }
+
   E * d_arr;
   cudaMallocAsync( & d_arr, size_E, stream);
   cudaMemcpyAsync(d_arr, arr, size_E, cudaMemcpyHostToDevice, stream);
+
+  if (!inverse && decimation == Decimation::DIT) {
+    reverse_order<E>(d_arr, n, logn, stream);
+  }
+
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
    
   S* _null = nullptr;
   ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, false, _null, stream, false);
+
+  if (!inverse && decimation == Decimation::DIT) {
+    reverse_order<E>(d_arr, n, logn, stream);
+  }
 
   cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arr, stream);
@@ -375,8 +386,8 @@ template <typename E, typename S> void ntt_inplace_batch_template(
  * @param n length of d_arr.
  * @param inverse indicate if the result array should be normalized by n^(-1). 
  */
- template<typename E,typename S> uint32_t ntt_end2end_template(E * arr, uint32_t n, bool inverse, cudaStream_t stream) {
-  return ntt_end2end_batch_template <E, S> (arr, n, n, inverse, stream);
+ template<typename E,typename S> uint32_t ntt_end2end_template(E * arr, uint32_t n, bool inverse, Decimation decimation, cudaStream_t stream) {
+  return ntt_end2end_batch_template <E, S> (arr, n, n, inverse, decimation, stream);
 }
 
 #endif

@@ -192,7 +192,6 @@ func TestMSM(t *testing.T) {
 func TestCommitMSM(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1<<v - 1
-		// count := 12_180_757
 
 		points, gnarkPoints := GeneratePoints(count)
 		fmt.Print("Finished generating points\n")
