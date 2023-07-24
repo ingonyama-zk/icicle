@@ -1,0 +1,38 @@
+Language: Cpp
+AlignAfterOpenBracket: AlwaysBreak
+AlignConsecutiveMacros: true
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: true
+BinPackArguments: true
+BinPackParameters: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterFunction: true
+BreakBeforeBinaryOperators: false
+BreakBeforeTernaryOperators: true
+ColumnLimit: 120
+ContinuationIndentWidth: 2
+Cpp11BracedListStyle: true
+DisableFormat: false
+IndentFunctionDeclarationAfterType: false
+IndentWidth: 2
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: All
+PointerAlignment: Right
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+Standard: c++17
+UseTab: Never
