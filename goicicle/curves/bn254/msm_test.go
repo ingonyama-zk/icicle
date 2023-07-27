@@ -116,9 +116,9 @@ func ReadGnarkPointsFromFile(filePath string, size int) (points []G1PointAffine,
 	return
 }
 
-func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
+func GeneratePointsProj(count int) ([]G1ProjectivePoint, []bn254.G1Jac) {
 	// Declare a slice of integers
-	var points []PointBN254
+	var points []G1ProjectivePoint
 	var pointsAffine []bn254.G1Jac
 
 	// Use a loop to populate the slice
@@ -207,7 +207,7 @@ func TestMSM(t *testing.T) {
 		scalars, gnarkScalars := GenerateScalars(count, true)
 		fmt.Print("Finished generating scalars\n")
 
-		out := new(PointBN254)
+		out := new(G1ProjectivePoint)
 		startTime := time.Now()
 		_, e := MsmBN254(out, points, scalars, 0) // non mont
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
@@ -248,8 +248,8 @@ func TestCommitMSM(t *testing.T) {
 		e := Commit(out_d, scalars_d, points_d, count, 10)
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
-		outHost := make([]PointBN254, 1)
-		goicicle.CudaMemCpyDtoH[PointBN254](outHost, out_d, 96)
+		outHost := make([]G1ProjectivePoint, 1)
+		goicicle.CudaMemCpyDtoH[G1ProjectivePoint](outHost, out_d, 96)
 
 		assert.Equal(t, e, 0, "error should be 0")
 		fmt.Print("Finished icicle MSM\n")
@@ -327,7 +327,7 @@ func BenchmarkMSM(b *testing.B) {
 		scalars, _ := GenerateScalars(msmSize, false)
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				out := new(PointBN254)
+				out := new(G1ProjectivePoint)
 				_, e := MsmBN254(out, points, scalars, 0)
 
 				if e != nil {

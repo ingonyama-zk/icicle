@@ -54,7 +54,7 @@ func NttBatchBN254(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId
 	return uint64(ret)
 }
 
-func EcNttBN254(values *[]PointBN254, isInverse bool, deviceId int) uint64 {
+func EcNttBN254(values *[]G1ProjectivePoint, isInverse bool, deviceId int) uint64 {
 	valuesC := (*C.BN254_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
@@ -65,7 +65,7 @@ func EcNttBN254(values *[]PointBN254, isInverse bool, deviceId int) uint64 {
 	return uint64(ret)
 }
 
-func EcNttBatchBN254(values *[]PointBN254, isInverse bool, batchSize, deviceId int) uint64 {
+func EcNttBatchBN254(values *[]G1ProjectivePoint, isInverse bool, batchSize, deviceId int) uint64 {
 	valuesC := (*C.BN254_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)

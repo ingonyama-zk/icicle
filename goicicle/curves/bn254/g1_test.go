@@ -109,13 +109,13 @@ func TestFieldBN254ToBytesLe(t *testing.T) {
 }
 
 func TestNewPointBN254Zero(t *testing.T) {
-	var pointZero PointBN254
+	var pointZero G1ProjectivePoint
 	pointZero.SetZero()
 
 	var baseOne G1BaseField
 	baseOne.SetOne()
 
-	a := new(PointBN254)
+	a := new(G1ProjectivePoint)
 	a.ToGnarkJac()
 
 	assert.Equal(t, pointZero.x, *NewFieldZero[G1BaseField]())
@@ -124,8 +124,8 @@ func TestNewPointBN254Zero(t *testing.T) {
 }
 
 func TestBN254Eq(t *testing.T) {
-	var p1 PointBN254
-	var p2 PointBN254
+	var p1 G1ProjectivePoint
+	var p2 G1ProjectivePoint
 
 	p1.SetZero()
 	p2.SetZero()
@@ -133,7 +133,7 @@ func TestBN254Eq(t *testing.T) {
 	var baseFieldOne G1BaseField
 	baseFieldOne.SetOne()
 
-	p3 := &PointBN254{
+	p3 := &G1ProjectivePoint{
 		x: baseFieldOne,
 		y: baseFieldOne,
 		z: baseFieldOne,
@@ -144,7 +144,7 @@ func TestBN254Eq(t *testing.T) {
 }
 
 func TestBN254StripZ(t *testing.T) {
-	var p1 PointBN254
+	var p1 G1ProjectivePoint
 	p2ZLess := p1.StripZ()
 
 	assert.IsType(t, G1PointAffine{}, *p2ZLess)
@@ -157,7 +157,7 @@ func TestPointBN254FromGnark(t *testing.T) {
 
 	var f G1BaseField
 	f.SetOne()
-	var p PointBN254
+	var p G1ProjectivePoint
 	p.FromJacGnark(&gnarkP)
 
 	z_inv := new(fp.Element)
@@ -180,7 +180,7 @@ func TestPointBN254FromGnark(t *testing.T) {
 
 func TestPointBN254fromLimbs(t *testing.T) {
 	gnarkP, _ := randG1Jac()
-	var p PointBN254
+	var p G1ProjectivePoint
 	p.FromJacGnark(&gnarkP)
 
 	x := p.x.Limbs()
@@ -191,7 +191,7 @@ func TestPointBN254fromLimbs(t *testing.T) {
 	ySlice := y[:]
 	zSlice := z[:]
 
-	var pFromLimbs PointBN254
+	var pFromLimbs G1ProjectivePoint
 	pFromLimbs.FromLimbs(&xSlice, &ySlice, &zSlice)
 
 	assert.Equal(t, pFromLimbs, p)
@@ -208,7 +208,7 @@ func TestNewPointAffineNoInfinityBN254Zero(t *testing.T) {
 func TestPointAffineNoInfinityBN254ToProjective(t *testing.T) {
 	gnarkP, _ := randG1Jac()
 	var f G1BaseField
-	var p PointBN254
+	var p G1ProjectivePoint
 	
 	f.SetOne()
 	affine := p.FromJacGnark(&gnarkP).StripZ()
@@ -247,7 +247,7 @@ func TestPointAffineNoInfinityBN254FromLimbs(t *testing.T) {
 
 func TestToGnarkAffine(t *testing.T) {
 	gJac, _ := randG1Jac()
-	var proj PointBN254
+	var proj G1ProjectivePoint
 	proj.FromJacGnark(&gJac)
 
 	var gAffine bn254.G1Affine

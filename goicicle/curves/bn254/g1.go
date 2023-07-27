@@ -204,11 +204,11 @@ func (f *G1ScalarField) toGnarkFp() *fp.Element {
  * PointBN254
  */
 
-type PointBN254 struct {
+type G1ProjectivePoint struct {
 	x, y, z G1BaseField
 }
 
-func (f *PointBN254) SetZero() *PointBN254 {
+func (f *G1ProjectivePoint) SetZero() *G1ProjectivePoint {
 	var yZero G1BaseField
 	yZero.SetOne()
 
@@ -219,7 +219,7 @@ func (f *PointBN254) SetZero() *PointBN254 {
 	return f
 }
 
-func (p *PointBN254) Eq(pCompare *PointBN254) bool {
+func (p *G1ProjectivePoint) Eq(pCompare *G1ProjectivePoint) bool {
 	// Cast *PointBN254 to *C.BN254_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.
@@ -233,14 +233,14 @@ func (p *PointBN254) Eq(pCompare *PointBN254) bool {
 	return bool(C.eq_bn254(pC, pCompareC))
 }
 
-func (p *PointBN254) StripZ() *G1PointAffine {
+func (p *G1ProjectivePoint) StripZ() *G1PointAffine {
 	return &G1PointAffine{
 		x: p.x,
 		y: p.y,
 	}
 }
 
-func (p *PointBN254) ToGnarkAffine() *bn254.G1Affine {
+func (p *G1ProjectivePoint) ToGnarkAffine() *bn254.G1Affine {
 	px := p.x.toGnarkFp()
 	py := p.y.toGnarkFp()
 	pz := p.z.toGnarkFp()
@@ -257,14 +257,14 @@ func (p *PointBN254) ToGnarkAffine() *bn254.G1Affine {
 	return &bn254.G1Affine{X: *x, Y: *y}
 }
 
-func (p *PointBN254) ToGnarkJac() *bn254.G1Jac {
+func (p *G1ProjectivePoint) ToGnarkJac() *bn254.G1Jac {
 	var p1 bn254.G1Jac
 	p1.FromAffine(p.ToGnarkAffine())
 
 	return &p1
 }
 
-func (p *PointBN254) FromG1AffineGnark(gnark *bn254.G1Affine) *PointBN254 {
+func (p *G1ProjectivePoint) FromG1AffineGnark(gnark *bn254.G1Affine) *G1ProjectivePoint {
 	var z G1BaseField
 	z.SetOne()
 
@@ -276,7 +276,7 @@ func (p *PointBN254) FromG1AffineGnark(gnark *bn254.G1Affine) *PointBN254 {
 }
 
 // converts jac fromat to projective
-func (p *PointBN254) FromJacGnark(gnark *bn254.G1Jac) *PointBN254 {
+func (p *G1ProjectivePoint) FromJacGnark(gnark *bn254.G1Jac) *G1ProjectivePoint {
 	var pointAffine bn254.G1Affine
 	pointAffine.FromJacobian(gnark)
 
@@ -290,7 +290,7 @@ func (p *PointBN254) FromJacGnark(gnark *bn254.G1Jac) *PointBN254 {
 	return p
 }
 
-func (p *PointBN254) FromLimbs(x, y, z *[]uint32) *PointBN254 {
+func (p *G1ProjectivePoint) FromLimbs(x, y, z *[]uint32) *G1ProjectivePoint {
 	var _x G1BaseField
 	var _y G1BaseField
 	var _z G1BaseField
@@ -321,11 +321,11 @@ func (p *G1PointAffine) SetZero() *G1PointAffine {
 	return p
 }
 
-func (p *G1PointAffine) ToProjective() *PointBN254 {
+func (p *G1PointAffine) ToProjective() *G1ProjectivePoint {
 	var z G1BaseField
 	z.SetOne()
 
-	return &PointBN254{
+	return &G1ProjectivePoint{
 		x: p.x,
 		y: p.y,
 		z: z,
@@ -350,7 +350,7 @@ func (p *G1PointAffine) FromLimbs(x, y *[]uint32) *G1PointAffine {
  * Multiplication
  */
 
-func MultiplyVec(a []PointBN254, b []G1ScalarField, deviceID int) {
+func MultiplyVec(a []G1ProjectivePoint, b []G1ScalarField, deviceID int) {
 	if len(a) != len(b) {
 		panic("a and b have different lengths")
 	}
@@ -513,7 +513,7 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 func BatchConvertFromG1Affine(elements []bn254.G1Affine) []G1PointAffine {
 	var newElements []G1PointAffine
 	for _, e := range elements {
-		var newElement PointBN254
+		var newElement G1ProjectivePoint
 		newElement.FromG1AffineGnark(&e)
 
 		newElements = append(newElements, *newElement.StripZ())

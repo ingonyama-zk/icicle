@@ -28,7 +28,7 @@ import (
 // #include "msm.h"
 import "C"
 
-func MsmBN254(out *PointBN254, points []G1PointAffine, scalars []G1ScalarField, device_id int) (*PointBN254, error) {
+func MsmBN254(out *G1ProjectivePoint, points []G1PointAffine, scalars []G1ScalarField, device_id int) (*G1ProjectivePoint, error) {
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -116,7 +116,7 @@ func CommitG2(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int
 	return 0
 }
 
-func MsmBatchBN254(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]*PointBN254, error) {
+func MsmBatchBN254(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]*G1ProjectivePoint, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")
@@ -136,7 +136,7 @@ func MsmBatchBN254(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize,
 		return nil, errors.New("error on: batchSize must be greater than zero")
 	}
 
-	out := make([]*PointBN254, batchSize)
+	out := make([]*G1ProjectivePoint, batchSize)
 
 	for i := 0; i < len(out); i++ {
 		out[i] = NewPointBN254Zero()
