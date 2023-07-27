@@ -116,7 +116,7 @@ type G2Point struct {
 	x, y, z ExtentionField
 }
 
-func (p *G2Point) eqg2(pCompare *G2Point) bool {
+func (p *G2Point) Eqg2(pCompare *G2Point) bool {
 	// Cast *PointBN254 to *C.BN254_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.
@@ -130,7 +130,7 @@ func (p *G2Point) eqg2(pCompare *G2Point) bool {
 	return bool(C.eq_g2_bn254(pC, pCompareC))
 }
 
-func (f *G2Element) toBytesLe() []byte {
+func (f *G2Element) ToBytesLe() []byte {
 	var bytes []byte
 	for _, val := range f {
 		buf := make([]byte, 8) // 8 bytes because uint64 is 64-bit
@@ -169,8 +169,8 @@ func ElementWithOutConvertingToMontgomery(b *[32]byte) (fp.Element, error) {
 	return z, nil
 }
 
-func (f *G2Element) toGnarkFp() *fp.Element {
-	fb := f.toBytesLe()
+func (f *G2Element) ToGnarkFp() *fp.Element {
+	fb := f.ToBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
 
@@ -184,18 +184,17 @@ func (f *G2Element) toGnarkFp() *fp.Element {
 	return &v
 }
 
-func (f *ExtentionField) toGnarkE2() bn254.E2 {
+func (f *ExtentionField) ToGnarkE2() bn254.E2 {
 	return bn254.E2{
-		A0: *f.A0.toGnarkFp(),
-		A1: *f.A1.toGnarkFp(),
+		A0: *f.A0.ToGnarkFp(),
+		A1: *f.A1.ToGnarkFp(),
 	}
 }
 
 func (p *G2Point) ToGnarkJac() *bn254.G2Jac {
-	x := p.x.toGnarkE2()
-	y := p.y.toGnarkE2()
-	z := p.z.toGnarkE2()
-
+	x := p.x.ToGnarkE2()
+	y := p.y.ToGnarkE2()
+	z := p.z.ToGnarkE2()
 	var zSquared bn254.E2
 	zSquared.Mul(&z, &z)
 

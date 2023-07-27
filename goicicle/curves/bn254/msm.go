@@ -28,7 +28,7 @@ import (
 // #include "msm.h"
 import "C"
 
-func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []ScalarField, device_id int) (*PointBN254, error) {
+func MsmBN254(out *PointBN254, points []G1PointAffine, scalars []G1ScalarField, device_id int) (*PointBN254, error) {
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -45,7 +45,7 @@ func MsmBN254(out *PointBN254, points []PointAffineNoInfinityBN254, scalars []Sc
 	return out, nil
 }
 
-func MsmG2BatchBN254(points *[]G2PointAffine, scalars *[]ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
+func MsmG2BatchBN254(points *[]G2PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")
@@ -82,7 +82,7 @@ func MsmG2BatchBN254(points *[]G2PointAffine, scalars *[]ScalarField, batchSize,
 	return out, nil
 }
 
-func MsmG2BN254(out *G2Point, points []G2PointAffine, scalars []ScalarField, device_id int) (*G2Point, error) {
+func MsmG2BN254(out *G2Point, points []G2PointAffine, scalars []G1ScalarField, device_id int) (*G2Point, error) {
 	if len(points) != len(scalars) {
 		return nil, errors.New("error on: len(points) != len(scalars)")
 	}
@@ -116,7 +116,7 @@ func CommitG2(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int
 	return 0
 }
 
-func MsmBatchBN254(points *[]PointAffineNoInfinityBN254, scalars *[]ScalarField, batchSize, deviceId int) ([]*PointBN254, error) {
+func MsmBatchBN254(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]*PointBN254, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")

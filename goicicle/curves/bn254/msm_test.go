@@ -72,9 +72,9 @@ func randG1Jac() (bn254.G1Jac, error) {
 	return point, nil
 }
 
-func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) {
+func GeneratePoints(count int) ([]G1PointAffine, []bn254.G1Affine) {
 	// Declare a slice of integers
-	var points []PointAffineNoInfinityBN254
+	var points []G1PointAffine
 	var pointsAffine []bn254.G1Affine
 
 	// populate the slice
@@ -101,8 +101,8 @@ func GeneratePoints(count int) ([]PointAffineNoInfinityBN254, []bn254.G1Affine) 
 	return points[:count], pointsAffine[:count]
 }
 
-func ReadGnarkPointsFromFile(filePath string, size int) (points []PointAffineNoInfinityBN254, gnarkPoints []bn254.G1Affine) {
-	points = make([]PointAffineNoInfinityBN254, size)
+func ReadGnarkPointsFromFile(filePath string, size int) (points []G1PointAffine, gnarkPoints []bn254.G1Affine) {
+	points = make([]G1PointAffine, size)
 	gnarkPoints = make([]bn254.G1Affine, size)
 	file, _ := os.Open(filePath)
 	scanner := bufio.NewScanner(file)
@@ -133,9 +133,9 @@ func GeneratePointsProj(count int) ([]PointBN254, []bn254.G1Jac) {
 	return points, pointsAffine
 }
 
-func GenerateScalars(count int, skewed bool) ([]ScalarField, []fr.Element) {
+func GenerateScalars(count int, skewed bool) ([]G1ScalarField, []fr.Element) {
 	// Declare a slice of integers
-	var scalars []ScalarField
+	var scalars []G1ScalarField
 	var scalars_fr []fr.Element
 
 	var rand fr.Element
@@ -149,26 +149,26 @@ func GenerateScalars(count int, skewed bool) ([]ScalarField, []fr.Element) {
 	if skewed && count > 1_200_000 {
 		for i := 0; i < count-1_200_000; i++ {
 			rand.SetRandom()
-			s := NewFieldFromFrGnark[ScalarField](rand)
+			s := NewFieldFromFrGnark[G1ScalarField](rand)
 
 			scalars_fr = append(scalars_fr, rand)
 			scalars = append(scalars, *s)
 		}
 
 		for i := 0; i < 600_000; i++ {
-			s := NewFieldFromFrGnark[ScalarField](randLarge)
+			s := NewFieldFromFrGnark[G1ScalarField](randLarge)
 
 			scalars_fr = append(scalars_fr, randLarge)
 			scalars = append(scalars, *s)
 		}
 		for i := 0; i < 400_000; i++ {
-			s := NewFieldFromFrGnark[ScalarField](zero)
+			s := NewFieldFromFrGnark[G1ScalarField](zero)
 
 			scalars_fr = append(scalars_fr, zero)
 			scalars = append(scalars, *s)
 		}
 		for i := 0; i < 200_000; i++ {
-			s := NewFieldFromFrGnark[ScalarField](one)
+			s := NewFieldFromFrGnark[G1ScalarField](one)
 
 			scalars_fr = append(scalars_fr, one)
 			scalars = append(scalars, *s)
@@ -176,7 +176,7 @@ func GenerateScalars(count int, skewed bool) ([]ScalarField, []fr.Element) {
 	} else {
 		for i := 0; i < count; i++ {
 			rand.SetRandom()
-			s := NewFieldFromFrGnark[ScalarField](rand)
+			s := NewFieldFromFrGnark[G1ScalarField](rand)
 
 			scalars_fr = append(scalars_fr, rand)
 			scalars = append(scalars, *s)
@@ -186,14 +186,14 @@ func GenerateScalars(count int, skewed bool) ([]ScalarField, []fr.Element) {
 	return scalars[:count], scalars_fr[:count]
 }
 
-func ReadGnarkScalarsFromFile(filePath string, size int) (scalars []ScalarField, gnarkScalars []fr.Element) {
-	scalars = make([]ScalarField, size)
+func ReadGnarkScalarsFromFile(filePath string, size int) (scalars []G1ScalarField, gnarkScalars []fr.Element) {
+	scalars = make([]G1ScalarField, size)
 	gnarkScalars = make([]fr.Element, size)
 	file, _ := os.Open(filePath)
 	scanner := bufio.NewScanner(file)
 	for i := 0; scanner.Scan(); i++ {
 		gnarkScalars[i].SetString(scanner.Text())
-		scalars[i] = *NewFieldFromFrGnark[ScalarField](gnarkScalars[i])
+		scalars[i] = *NewFieldFromFrGnark[G1ScalarField](gnarkScalars[i])
 	}
 	return
 }
@@ -238,11 +238,11 @@ func TestCommitMSM(t *testing.T) {
 
 		pointsBytes := count * 64
 		points_d, _ := goicicle.CudaMalloc(pointsBytes)
-		goicicle.CudaMemCpyHtoD[PointAffineNoInfinityBN254](points_d, points, pointsBytes)
+		goicicle.CudaMemCpyHtoD[G1PointAffine](points_d, points, pointsBytes)
 
 		scalarBytes := count * 32
 		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
-		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
+		goicicle.CudaMemCpyHtoD[G1ScalarField](scalars_d, scalars, scalarBytes)
 
 		startTime := time.Now()
 		e := Commit(out_d, scalars_d, points_d, count, 10)
@@ -277,11 +277,11 @@ func BenchmarkCommit(b *testing.B) {
 
 		pointsBytes := msmSize * 64
 		points_d, _ := goicicle.CudaMalloc(pointsBytes)
-		goicicle.CudaMemCpyHtoD[PointAffineNoInfinityBN254](points_d, points, pointsBytes)
+		goicicle.CudaMemCpyHtoD[G1PointAffine](points_d, points, pointsBytes)
 
 		scalarBytes := msmSize * 32
 		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
-		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
+		goicicle.CudaMemCpyHtoD[G1ScalarField](scalars_d, scalars, scalarBytes)
 
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
@@ -477,7 +477,7 @@ func TestCommitG2MSM(t *testing.T) {
 
 		scalarBytes := count * 32
 		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
-		goicicle.CudaMemCpyHtoD[ScalarField](scalars_d, scalars, scalarBytes)
+		goicicle.CudaMemCpyHtoD[G1ScalarField](scalars_d, scalars, scalarBytes)
 
 		startTime := time.Now()
 		e := CommitG2(out_d, scalars_d, points_d, count, 10)

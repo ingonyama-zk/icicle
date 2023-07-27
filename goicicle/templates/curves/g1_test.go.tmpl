@@ -66,8 +66,8 @@ func TestField{{.CurveName}}ToBytesLe(t *testing.T) {
 		binary.LittleEndian.PutUint32(expected[i*4:], v)
 	}
 
-	assert.Equal(t, f.toBytesLe(), expected)
-	assert.Equal(t, len(f.toBytesLe()), 32)
+	assert.Equal(t, f.ToBytesLe(), expected)
+	assert.Equal(t, len(f.ToBytesLe()), 32)
 }
 
 func TestNewPoint{{.CurveName}}Zero(t *testing.T) {

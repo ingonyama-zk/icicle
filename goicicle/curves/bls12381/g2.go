@@ -130,7 +130,7 @@ func (p *G2Point) eqg2(pCompare *G2Point) bool {
 	return bool(C.eq_g2_bls12381(pC, pCompareC))
 }
 
-func (f *G2Element) toBytesLe() []byte {
+func (f *G2Element) ToBytesLe() []byte {
 	var bytes []byte
 	for _, val := range f {
 		buf := make([]byte, 8) // 8 bytes because uint64 is 64-bit
@@ -170,7 +170,7 @@ func ElementWithOutConvertingToMontgomery(b *[32]byte) (fp.Element, error) {
 }
 
 func (f *G2Element) toGnarkFp() *fp.Element {
-	fb := f.toBytesLe()
+	fb := f.ToBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
 

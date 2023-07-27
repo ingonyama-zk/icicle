@@ -27,7 +27,7 @@ func TestNtt{{.CurveName}}BBB(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -52,7 +52,7 @@ func TestNtt{{.CurveName}}CompareToGnarkDIF(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -77,7 +77,7 @@ func TestNtt{{.CurveName}}CompareToGnarkDIT(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -105,7 +105,7 @@ func TestINtt{{.CurveName}}CompareToGnarkDIT(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frResScalars)
@@ -128,7 +128,7 @@ func TestINtt{{.CurveName}}CompareToGnarkDIF(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)

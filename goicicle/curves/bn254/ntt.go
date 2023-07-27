@@ -35,7 +35,7 @@ const (
 	DIT  = 2
 )
 
-func NttBN254(scalars *[]ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
+func NttBN254(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
 	ret := C.ntt_cuda_bn254(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
@@ -43,7 +43,7 @@ func NttBN254(scalars *[]ScalarField, isInverse bool, decimation int, deviceId i
 	return uint64(ret)
 }
 
-func NttBatchBN254(scalars *[]ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
+func NttBatchBN254(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 	isInverseC := C.bool(isInverse)
 	batchSizeC := C.uint32_t(batchSize)

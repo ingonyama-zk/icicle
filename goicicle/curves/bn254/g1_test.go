@@ -46,14 +46,16 @@ import (
 )
 
 func TestNewFieldBN254One(t *testing.T) {
-	oneField := NewBaseFieldOne()
+	var oneField G1BaseField
+	oneField.SetOne()
+
 	rawOneField := [8]uint32([8]uint32{0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
 
 	assert.Equal(t, oneField.s, rawOneField)
 }
 
 func TestNewFieldBN254Zero(t *testing.T) {
-	zeroField := NewFieldZero[BaseField]()
+	zeroField := NewFieldZero[G1BaseField]()
 	rawZeroField := [8]uint32([8]uint32{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
 
 	assert.Equal(t, zeroField.s, rawZeroField)
@@ -63,7 +65,7 @@ func TestFieldBN254FromGnark(t *testing.T) {
 	var rand fr.Element
 	rand.SetRandom()
 
-	f := NewFieldFromFrGnark[ScalarField](rand)
+	f := NewFieldFromFrGnark[G1ScalarField](rand)
 
 	assert.Equal(t, f.s, ConvertUint64ArrToUint32Arr(rand.Bits()))
 }
@@ -76,7 +78,7 @@ func BenchmarkBatchConvertFromFrGnarkThreaded(b *testing.B) {
 	_, scalars_fr := GenerateScalars(1 << 24, false)
 	b.Run(fmt.Sprintf("Convert %d", routineAmount), func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			_ = BatchConvertFromFrGnarkThreaded[ScalarField](scalars_fr, routineAmount)
+			_ = BatchConvertFromFrGnarkThreaded[G1ScalarField](scalars_fr, routineAmount)
 		}
 	})
 	// }
@@ -86,7 +88,7 @@ func BenchmarkBatchConvertFromFrGnark(b *testing.B) {
 	_, scalars_fr := GenerateScalars(1 << 24, false)
 	b.Run("BatchConvert 2^24", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			_ = BatchConvertFromFrGnark[ScalarField](scalars_fr)
+			_ = BatchConvertFromFrGnark[G1ScalarField](scalars_fr)
 		}
 	})
 }
@@ -95,45 +97,57 @@ func TestFieldBN254ToBytesLe(t *testing.T) {
 	var rand fr.Element
 	rand.SetRandom()
 
-	f := NewFieldFromFrGnark[ScalarField](rand)
+	f := NewFieldFromFrGnark[G1ScalarField](rand)
 
 	expected := make([]byte, len(f.s)*4) // each uint32 takes 4 bytes
 	for i, v := range f.s {
 		binary.LittleEndian.PutUint32(expected[i*4:], v)
 	}
 
-	assert.Equal(t, f.toBytesLe(), expected)
-	assert.Equal(t, len(f.toBytesLe()), 32)
+	assert.Equal(t, f.ToBytesLe(), expected)
+	assert.Equal(t, len(f.ToBytesLe()), 32)
 }
 
 func TestNewPointBN254Zero(t *testing.T) {
-	point := NewPointBN254Zero()
+	var pointZero PointBN254
+	pointZero.SetZero()
+
+	var baseOne G1BaseField
+	baseOne.SetOne()
+
 	a := new(PointBN254)
 	a.ToGnarkJac()
 
-	assert.Equal(t, point.x, *NewFieldZero[BaseField]())
-	assert.Equal(t, point.y, *NewBaseFieldOne())
-	assert.Equal(t, point.z, *NewFieldZero[BaseField]())
+	assert.Equal(t, pointZero.x, *NewFieldZero[G1BaseField]())
+	assert.Equal(t, pointZero.y, baseOne)
+	assert.Equal(t, pointZero.z, *NewFieldZero[G1BaseField]())
 }
 
 func TestBN254Eq(t *testing.T) {
-	p1 := NewPointBN254Zero()
-	p2 := NewPointBN254Zero()
+	var p1 PointBN254
+	var p2 PointBN254
+
+	p1.SetZero()
+	p2.SetZero()
+	
+	var baseFieldOne G1BaseField
+	baseFieldOne.SetOne()
+
 	p3 := &PointBN254{
-		x: *NewBaseFieldOne(),
-		y: *NewBaseFieldOne(),
-		z: *NewBaseFieldOne(),
+		x: baseFieldOne,
+		y: baseFieldOne,
+		z: baseFieldOne,
 	}
 
-	assert.Equal(t, p1.eq(p2), true)
-	assert.Equal(t, p1.eq(p3), false)
+	assert.Equal(t, p1.Eq(&p2), true)
+	assert.Equal(t, p1.Eq(p3), false)
 }
 
 func TestBN254StripZ(t *testing.T) {
-	p1 := NewPointBN254Zero()
-	p2ZLess := p1.strip_z()
+	var p1 PointBN254
+	p2ZLess := p1.StripZ()
 
-	assert.IsType(t, PointAffineNoInfinityBN254{}, *p2ZLess)
+	assert.IsType(t, G1PointAffine{}, *p2ZLess)
 	assert.Equal(t, p1.x, p2ZLess.x)
 	assert.Equal(t, p1.y, p2ZLess.y)
 }
@@ -141,7 +155,10 @@ func TestBN254StripZ(t *testing.T) {
 func TestPointBN254FromGnark(t *testing.T) {
 	gnarkP, _ := randG1Jac()
 
-	p := PointBN254FromJacGnark(&gnarkP)
+	var f G1BaseField
+	f.SetOne()
+	var p PointBN254
+	p.FromJacGnark(&gnarkP)
 
 	z_inv := new(fp.Element)
 	z_invsq := new(fp.Element)
@@ -156,57 +173,72 @@ func TestPointBN254FromGnark(t *testing.T) {
 	x.Mul(&gnarkP.X, z_invsq)
 	y.Mul(&gnarkP.Y, z_invq3)
 
-	assert.Equal(t, p.x, *NewFieldFromFpGnark[BaseField](*x))
-	assert.Equal(t, p.y, *NewFieldFromFpGnark[BaseField](*y))
-	assert.Equal(t, p.z, *NewBaseFieldOne())
+	assert.Equal(t, p.x, *NewFieldFromFpGnark[G1BaseField](*x))
+	assert.Equal(t, p.y, *NewFieldFromFpGnark[G1BaseField](*y))
+	assert.Equal(t, p.z, f)
 }
 
 func TestPointBN254fromLimbs(t *testing.T) {
 	gnarkP, _ := randG1Jac()
-	p := PointBN254FromJacGnark(&gnarkP)
+	var p PointBN254
+	p.FromJacGnark(&gnarkP)
 
-	x := p.x.limbs()
-	y := p.y.limbs()
-	z := p.z.limbs()
+	x := p.x.Limbs()
+	y := p.y.Limbs()
+	z := p.z.Limbs()
 
 	xSlice := x[:]
 	ySlice := y[:]
 	zSlice := z[:]
 
-	pFromLimbs := PointBN254fromLimbs(&xSlice, &ySlice, &zSlice)
+	var pFromLimbs PointBN254
+	pFromLimbs.FromLimbs(&xSlice, &ySlice, &zSlice)
 
 	assert.Equal(t, pFromLimbs, p)
 }
 
 func TestNewPointAffineNoInfinityBN254Zero(t *testing.T) {
-	zeroP := NewPointAffineNoInfinityBN254Zero()
+	var zeroP G1PointAffine
+	zeroP.SetZero()
 
-	assert.Equal(t, zeroP.x, *NewFieldZero[BaseField]())
-	assert.Equal(t, zeroP.y, *NewFieldZero[BaseField]())
+	assert.Equal(t, zeroP.x, *NewFieldZero[G1BaseField]())
+	assert.Equal(t, zeroP.y, *NewFieldZero[G1BaseField]())
 }
 
 func TestPointAffineNoInfinityBN254ToProjective(t *testing.T) {
 	gnarkP, _ := randG1Jac()
-	affine := PointBN254FromJacGnark(&gnarkP).strip_z()
-	proj := affine.toProjective()
+	var f G1BaseField
+	var p PointBN254
+	
+	f.SetOne()
+	affine := p.FromJacGnark(&gnarkP).StripZ()
+	proj := affine.ToProjective()
 
 	assert.Equal(t, proj.x, affine.x)
 	assert.Equal(t, proj.x, affine.x)
-	assert.Equal(t, proj.z, *NewBaseFieldOne())
+	assert.Equal(t, proj.z, f)
 }
 
 func TestPointAffineNoInfinityBN254FromLimbs(t *testing.T) {
 	// Initialize your test values
-	x := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-	y := []uint32{9, 10, 11, 12, 13, 14, 15, 16}
+	x := [8]uint32{1, 2, 3, 4, 5, 6, 7, 8}
+	y := [8]uint32{9, 10, 11, 12, 13, 14, 15, 16}
+	xSlice := x[:]
+	ySlice := y[:]
 
 	// Execute your function
-	result := PointAffineNoInfinityBN254FromLimbs(&x, &y)
+	var result G1PointAffine
+	result.FromLimbs(&xSlice, &ySlice)
+
+	var xBase G1BaseField
+	var yBase G1BaseField
+	xBase.FromLimbs(x)
+	yBase.FromLimbs(y)
 
 	// Define your expected result
-	expected := &PointAffineNoInfinityBN254{
-		x: *BaseFieldFromLimbs(getFixedLimbs(&x)),
-		y: *BaseFieldFromLimbs(getFixedLimbs(&y)),
+	expected := &G1PointAffine{
+		x: xBase,
+		y: yBase,
 	}
 
 	// Test if result is as expected
@@ -215,12 +247,13 @@ func TestPointAffineNoInfinityBN254FromLimbs(t *testing.T) {
 
 func TestToGnarkAffine(t *testing.T) {
 	gJac, _ := randG1Jac()
-	proj := PointBN254FromJacGnark(&gJac)
+	var proj PointBN254
+	proj.FromJacGnark(&gJac)
 
 	var gAffine bn254.G1Affine
 	gAffine.FromJacobian(&gJac)
 
-	affine := *proj.toGnarkAffine()
+	affine := *proj.ToGnarkAffine()
 	assert.Equal(t, affine, gAffine)
 }
 

@@ -58,7 +58,7 @@ func TestNttBLS12381BBB(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -83,7 +83,7 @@ func TestNttBLS12381CompareToGnarkDIF(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -108,7 +108,7 @@ func TestNttBLS12381CompareToGnarkDIT(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -136,7 +136,7 @@ func TestINttBLS12381CompareToGnarkDIT(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frResScalars)
@@ -159,7 +159,7 @@ func TestINttBLS12381CompareToGnarkDIF(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)

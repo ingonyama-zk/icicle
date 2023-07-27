@@ -102,8 +102,8 @@ func TestFieldBLS12377ToBytesLe(t *testing.T) {
 		binary.LittleEndian.PutUint32(expected[i*4:], v)
 	}
 
-	assert.Equal(t, f.toBytesLe(), expected)
-	assert.Equal(t, len(f.toBytesLe()), 32)
+	assert.Equal(t, f.ToBytesLe(), expected)
+	assert.Equal(t, len(f.ToBytesLe()), 32)
 }
 
 func TestNewPointBLS12377Zero(t *testing.T) {

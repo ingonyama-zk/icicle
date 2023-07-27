@@ -36,35 +36,35 @@ import "C"
 const SCALAR_SIZE = 8
 const BASE_SIZE = 8
 
-type ScalarField struct {
+type G1ScalarField struct {
 	s [SCALAR_SIZE]uint32
 }
 
-type BaseField struct {
+type G1BaseField struct {
 	s [BASE_SIZE]uint32
 }
 
 type Field interface {
-	toGnarkFr() *fr.Element
+	ToGnarkFr() *fr.Element
 }
 
 /*
  * Common Constrctors
  */
 
-func NewFieldZero[T BaseField | ScalarField]() *T {
+func NewFieldZero[T G1BaseField | G1ScalarField]() *T {
 	var field T
 
 	return &field
 }
 
-func NewFieldFromFrGnark[T BaseField | ScalarField](element fr.Element) *T {
+func NewFieldFromFrGnark[T G1BaseField | G1ScalarField](element fr.Element) *T {
 	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
 
 	return &T{s}
 }
 
-func NewFieldFromFpGnark[T BaseField | ScalarField](element fp.Element) *T {
+func NewFieldFromFpGnark[T G1BaseField | G1ScalarField](element fp.Element) *T {
 	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
 
 	return &T{s}
@@ -74,30 +74,30 @@ func NewFieldFromFpGnark[T BaseField | ScalarField](element fp.Element) *T {
  * BaseField Constrctors
  */
 
-func NewBaseFieldOne() *BaseField {
+func (f *G1BaseField) SetOne() *G1BaseField {
 	var s [BASE_SIZE]uint32
 
 	s[0] = 1
 
-	return &BaseField{s}
+	f.s = s
+	return f
 }
 
-func BaseFieldFromLimbs(limbs [BASE_SIZE]uint32) *BaseField {
-	bf := NewFieldZero[BaseField]()
-	copy(bf.s[:], limbs[:])
+func (f *G1BaseField) FromLimbs(limbs [BASE_SIZE]uint32) *G1BaseField {
+	copy(f.s[:], limbs[:])
 
-	return bf
+	return f
 }
 
 /*
  * BaseField methods
  */
 
-func (f *BaseField) limbs() [BASE_SIZE]uint32 {
+func (f *G1BaseField) Limbs() [BASE_SIZE]uint32 {
 	return f.s
 }
 
-func (f *BaseField) toBytesLe() []byte {
+func (f *G1BaseField) ToBytesLe() []byte {
 	bytes := make([]byte, len(f.s)*4)
 	for i, v := range f.s {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)
@@ -106,8 +106,8 @@ func (f *BaseField) toBytesLe() []byte {
 	return bytes
 }
 
-func (f *BaseField) toGnarkFr() *fr.Element {
-	fb := f.toBytesLe()
+func (f *G1BaseField) ToGnarkFr() *fr.Element {
+	fb := f.ToBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
 
@@ -120,8 +120,8 @@ func (f *BaseField) toGnarkFr() *fr.Element {
 	return &v
 }
 
-func (f *BaseField) toGnarkFp() *fp.Element {
-	fb := f.toBytesLe()
+func (f *G1BaseField) toGnarkFp() *fp.Element {
+	fb := f.ToBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
 
@@ -138,15 +138,15 @@ func (f *BaseField) toGnarkFp() *fp.Element {
  * ScalarField methods
  */
 
-func NewScalarFieldOne() *ScalarField {
+func (f *G1ScalarField) SetOne() *G1ScalarField {
 	var s [SCALAR_SIZE]uint32
-
 	s[0] = 1
+	f.s = s
 
-	return &ScalarField{s}
+	return f
 }
 
-func (a *ScalarField) Equals(b *ScalarField) bool {
+func (a *G1ScalarField) Equals(b *G1ScalarField) bool {
 	for i, v := range a.s {
 		if b.s[i] != v {
 			return false
@@ -159,11 +159,11 @@ func (a *ScalarField) Equals(b *ScalarField) bool {
  * ScalarField methods
  */
 
-func (f *ScalarField) limbs() [SCALAR_SIZE]uint32 {
+func (f *G1ScalarField) Limbs() [SCALAR_SIZE]uint32 {
 	return f.s
 }
 
-func (f *ScalarField) toBytesLe() []byte {
+func (f *G1ScalarField) ToBytesLe() []byte {
 	bytes := make([]byte, len(f.s)*4)
 	for i, v := range f.s {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)
@@ -172,8 +172,8 @@ func (f *ScalarField) toBytesLe() []byte {
 	return bytes
 }
 
-func (f ScalarField) toGnarkFr() *fr.Element {
-	fb := f.toBytesLe()
+func (f *G1ScalarField) ToGnarkFr() *fr.Element {
+	fb := f.ToBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
 
@@ -186,8 +186,8 @@ func (f ScalarField) toGnarkFr() *fr.Element {
 	return &v
 }
 
-func (f *ScalarField) toGnarkFp() *fp.Element {
-	fb := f.toBytesLe()
+func (f *G1ScalarField) toGnarkFp() *fp.Element {
+	fb := f.ToBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
 
@@ -205,18 +205,21 @@ func (f *ScalarField) toGnarkFp() *fp.Element {
  */
 
 type PointBN254 struct {
-	x, y, z BaseField
+	x, y, z G1BaseField
 }
 
-func NewPointBN254Zero() *PointBN254 {
-	return &PointBN254{
-		x: *NewFieldZero[BaseField](),
-		y: *NewBaseFieldOne(),
-		z: *NewFieldZero[BaseField](),
-	}
+func (f *PointBN254) SetZero() *PointBN254 {
+	var yZero G1BaseField
+	yZero.SetOne()
+
+	f.x = *NewFieldZero[G1BaseField]()
+	f.y = yZero
+	f.z = *NewFieldZero[G1BaseField]()
+
+	return f
 }
 
-func (p *PointBN254) eq(pCompare *PointBN254) bool {
+func (p *PointBN254) Eq(pCompare *PointBN254) bool {
 	// Cast *PointBN254 to *C.BN254_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.
@@ -230,14 +233,14 @@ func (p *PointBN254) eq(pCompare *PointBN254) bool {
 	return bool(C.eq_bn254(pC, pCompareC))
 }
 
-func (p *PointBN254) strip_z() *PointAffineNoInfinityBN254 {
-	return &PointAffineNoInfinityBN254{
+func (p *PointBN254) StripZ() *G1PointAffine {
+	return &G1PointAffine{
 		x: p.x,
 		y: p.y,
 	}
 }
 
-func (p *PointBN254) toGnarkAffine() *bn254.G1Affine {
+func (p *PointBN254) ToGnarkAffine() *bn254.G1Affine {
 	px := p.x.toGnarkFp()
 	py := p.y.toGnarkFp()
 	pz := p.z.toGnarkFp()
@@ -256,82 +259,98 @@ func (p *PointBN254) toGnarkAffine() *bn254.G1Affine {
 
 func (p *PointBN254) ToGnarkJac() *bn254.G1Jac {
 	var p1 bn254.G1Jac
-	p1.FromAffine(p.toGnarkAffine())
+	p1.FromAffine(p.ToGnarkAffine())
 
 	return &p1
 }
 
-func PointBN254FromG1AffineGnark(gnark *bn254.G1Affine) *PointBN254 {
-	point := PointBN254{
-		x: *NewFieldFromFpGnark[BaseField](gnark.X),
-		y: *NewFieldFromFpGnark[BaseField](gnark.Y),
-		z: *NewBaseFieldOne(),
-	}
+func (p *PointBN254) FromG1AffineGnark(gnark *bn254.G1Affine) *PointBN254 {
+	var z G1BaseField
+	z.SetOne()
 
-	return &point
+	p.x = *NewFieldFromFpGnark[G1BaseField](gnark.X)
+	p.y = *NewFieldFromFpGnark[G1BaseField](gnark.Y)
+	p.z = z
+
+	return p
 }
 
 // converts jac fromat to projective
-func PointBN254FromJacGnark(gnark *bn254.G1Jac) *PointBN254 {
+func (p *PointBN254) FromJacGnark(gnark *bn254.G1Jac) *PointBN254 {
 	var pointAffine bn254.G1Affine
 	pointAffine.FromJacobian(gnark)
 
-	point := PointBN254{
-		x: *NewFieldFromFpGnark[BaseField](pointAffine.X),
-		y: *NewFieldFromFpGnark[BaseField](pointAffine.Y),
-		z: *NewBaseFieldOne(),
-	}
+	var z G1BaseField
+	z.SetOne()
 
-	return &point
+	p.x = *NewFieldFromFpGnark[G1BaseField](pointAffine.X)
+	p.y = *NewFieldFromFpGnark[G1BaseField](pointAffine.Y)
+	p.z = z
+
+	return p
 }
 
-func PointBN254fromLimbs(x, y, z *[]uint32) *PointBN254 {
-	return &PointBN254{
-		x: *BaseFieldFromLimbs(getFixedLimbs(x)),
-		y: *BaseFieldFromLimbs(getFixedLimbs(y)),
-		z: *BaseFieldFromLimbs(getFixedLimbs(z)),
-	}
+func (p *PointBN254) FromLimbs(x, y, z *[]uint32) *PointBN254 {
+	var _x G1BaseField
+	var _y G1BaseField
+	var _z G1BaseField
+	
+	_x.FromLimbs(getFixedLimbs(x))
+	_y.FromLimbs(getFixedLimbs(y))
+	_z.FromLimbs(getFixedLimbs(z))
+
+	p.x = _x
+	p.y = _y
+	p.z = _z
+
+	return p
 }
 
 /*
  * PointAffineNoInfinityBN254
  */
 
-type PointAffineNoInfinityBN254 struct {
-	x, y BaseField
+type G1PointAffine struct {
+	x, y G1BaseField
 }
 
-func NewPointAffineNoInfinityBN254Zero() *PointAffineNoInfinityBN254 {
-	return &PointAffineNoInfinityBN254{
-		x: *NewFieldZero[BaseField](),
-		y: *NewFieldZero[BaseField](),
-	}
+func (p *G1PointAffine) SetZero() *G1PointAffine {
+	p.x = *NewFieldZero[G1BaseField]()
+	p.y = *NewFieldZero[G1BaseField]()
+
+	return p
 }
 
-func (p *PointAffineNoInfinityBN254) toProjective() *PointBN254 {
+func (p *G1PointAffine) ToProjective() *PointBN254 {
+	var z G1BaseField
+	z.SetOne()
+
 	return &PointBN254{
 		x: p.x,
 		y: p.y,
-		z: *NewBaseFieldOne(),
+		z: z,
 	}
 }
 
-func (p *PointAffineNoInfinityBN254) toGnarkAffine() *bn254.G1Affine {
-	return p.toProjective().toGnarkAffine()
+func (p *G1PointAffine) ToGnarkAffine() *bn254.G1Affine {
+	return p.ToProjective().ToGnarkAffine()
 }
 
-func PointAffineNoInfinityBN254FromLimbs(x, y *[]uint32) *PointAffineNoInfinityBN254 {
-	return &PointAffineNoInfinityBN254{
-		x: *BaseFieldFromLimbs(getFixedLimbs(x)),
-		y: *BaseFieldFromLimbs(getFixedLimbs(y)),
-	}
+func (p *G1PointAffine) FromLimbs(x, y *[]uint32) *G1PointAffine {
+	var _x G1BaseField
+	var _y G1BaseField
+
+	_x.FromLimbs(getFixedLimbs(x))
+	_y.FromLimbs(getFixedLimbs(y))
+
+	return p
 }
 
 /*
  * Multiplication
  */
 
-func MultiplyVec(a []PointBN254, b []ScalarField, deviceID int) {
+func MultiplyVec(a []PointBN254, b []G1ScalarField, deviceID int) {
 	if len(a) != len(b) {
 		panic("a and b have different lengths")
 	}
@@ -344,7 +363,7 @@ func MultiplyVec(a []PointBN254, b []ScalarField, deviceID int) {
 	C.vec_mod_mult_point_bn254(pointsC, scalarsC, nElementsC, deviceIdC)
 }
 
-func MultiplyScalar(a []ScalarField, b []ScalarField, deviceID int) {
+func MultiplyScalar(a []G1ScalarField, b []G1ScalarField, deviceID int) {
 	if len(a) != len(b) {
 		panic("a and b have different lengths")
 	}
@@ -361,10 +380,10 @@ func MultiplyScalar(a []ScalarField, b []ScalarField, deviceID int) {
 //
 //	`a` - flattenned matrix;
 //	`b` - vector to multiply `a` by;
-func MultiplyMatrix(a []ScalarField, b []ScalarField, deviceID int) {
-	c := make([]ScalarField, len(b))
+func MultiplyMatrix(a []G1ScalarField, b []G1ScalarField, deviceID int) {
+	c := make([]G1ScalarField, len(b))
 	for i := range c {
-		c[i] = *NewFieldZero[ScalarField]()
+		c[i] = *NewFieldZero[G1ScalarField]()
 	}
 
 	aC := (*C.BN254_scalar_t)(unsafe.Pointer(&a[0]))
@@ -390,7 +409,7 @@ func getFixedLimbs(slice *[]uint32) [BASE_SIZE]uint32 {
 	panic("slice has too many elements")
 }
 
-func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) []T {
+func BatchConvertFromFrGnark[T G1BaseField | G1ScalarField](elements []fr.Element) []T {
 	var newElements []T
 	for _, e := range elements {
 		converted := NewFieldFromFrGnark[T](e)
@@ -400,7 +419,7 @@ func BatchConvertFromFrGnark[T BaseField | ScalarField](elements []fr.Element) [
 	return newElements
 }
 
-func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.Element, routines int) []T {
+func BatchConvertFromFrGnarkThreaded[T G1BaseField | G1ScalarField](elements []fr.Element, routines int) []T {
 	var newElements []T
 
 	if routines > 1 && routines <= len(elements) {
@@ -446,7 +465,7 @@ func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.El
 func BatchConvertToFrGnark[T Field](elements []T) []fr.Element {
 	var newElements []fr.Element
 	for _, e := range elements {
-		converted := e.toGnarkFr()
+		converted := e.ToGnarkFr()
 		newElements = append(newElements, *converted)
 	}
 
@@ -465,7 +484,7 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 		convert := func(elements []T, chanIndex int) {
 			var convertedElements []fr.Element
 			for _, e := range elements {
-				converted := e.toGnarkFr()
+				converted := e.ToGnarkFr()
 				convertedElements = append(convertedElements, *converted)
 			}
 
@@ -483,7 +502,7 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 		}
 	} else {
 		for _, e := range elements {
-			converted := e.toGnarkFr()
+			converted := e.ToGnarkFr()
 			newElements = append(newElements, *converted)
 		}
 	}
@@ -491,11 +510,13 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 	return newElements
 }
 
-func BatchConvertFromG1Affine(elements []bn254.G1Affine) []PointAffineNoInfinityBN254 {
-	var newElements []PointAffineNoInfinityBN254
+func BatchConvertFromG1Affine(elements []bn254.G1Affine) []G1PointAffine {
+	var newElements []G1PointAffine
 	for _, e := range elements {
-		newElement := PointBN254FromG1AffineGnark(&e).strip_z()
-		newElements = append(newElements, *newElement)
+		var newElement PointBN254
+		newElement.FromG1AffineGnark(&e)
+
+		newElements = append(newElements, *newElement.StripZ())
 	}
 	return newElements
 }
