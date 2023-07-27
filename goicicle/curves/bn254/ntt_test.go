@@ -7,30 +7,29 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
+	icicle "github.com/ingonyama-zk/icicle/goicicle/curves/bn254"
 	"github.com/stretchr/testify/assert"
 )
 
 // fix
 func TestNttBN254Batch(t *testing.T) {
 	count := 1 << 2
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars, frScalars := icicle.GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]icicle.ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBatchBN254(&nttResult, false, count, 0)
+	icicle.NttBatchBN254(&nttResult, false, count, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	domain := fft.NewDomain(uint64(len(scalars)))
-	// DIT WITH NO INVERSE
-	// DIF WITH INVERSE
 	domain.FFT(frScalars, fft.DIT) //DIF
 
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -38,13 +37,13 @@ func TestNttBN254Batch(t *testing.T) {
 
 func TestNttBN254CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 2
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars, frScalars := icicle.GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]icicle.ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBN254(&nttResult, false, DIF)
+	icicle.NttBN254(&nttResult, false, icicle.DIF)
 	assert.NotEqual(t, nttResult, scalars)
 
 	domain := fft.NewDomain(uint64(len(scalars)))
@@ -55,7 +54,7 @@ func TestNttBN254CompareToGnarkDIF(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -63,14 +62,14 @@ func TestNttBN254CompareToGnarkDIF(t *testing.T) {
 
 func TestNttBN254CompareToGnarkDIT(t *testing.T) {
 	count := 1 << 2
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars, frScalars := icicle.GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]icicle.ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
 	// not inverse
-	NttBN254(&nttResult, false, DIT)
+	icicle.NttBN254(&nttResult, false, icicle.DIT)
 	assert.NotEqual(t, nttResult, scalars)
 
 	domain := fft.NewDomain(uint64(len(scalars)))
@@ -79,7 +78,7 @@ func TestNttBN254CompareToGnarkDIT(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -87,13 +86,13 @@ func TestNttBN254CompareToGnarkDIT(t *testing.T) {
 
 func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 	count := 1 << 3
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars, frScalars := icicle.GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]icicle.ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBN254(&nttResult, true, DIT)
+	icicle.NttBN254(&nttResult, true, icicle.DIT)
 	assert.NotEqual(t, nttResult, scalars)
 
 	frResScalars := make([]fr.Element, len(frScalars)) // Make a new slice with the same length
@@ -107,7 +106,7 @@ func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frResScalars)
@@ -116,13 +115,13 @@ func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 // fix
 func TestINttBN254CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 3
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars, frScalars := icicle.GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]icicle.ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBN254(&nttResult, true, DIF)
+	icicle.NttBN254(&nttResult, true, icicle.DIF)
 	assert.NotEqual(t, nttResult, scalars)
 
 	domain := fft.NewDomain(uint64(len(scalars)))
@@ -131,7 +130,7 @@ func TestINttBN254CompareToGnarkDIF(t *testing.T) {
 	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
 
 	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.toGnarkFr()
+		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
 	}
 
 	assert.Equal(t, nttResultTransformedToGnark, frScalars)
@@ -140,20 +139,20 @@ func TestINttBN254CompareToGnarkDIF(t *testing.T) {
 func TestNttBN254(t *testing.T) {
 	count := 1 << 3
 
-	scalars, _ := GenerateScalars(count, false)
+	scalars, _ := icicle.GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]icicle.ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBN254(&nttResult, false, NONE)
+	icicle.NttBN254(&nttResult, false, icicle.NONE)
 	assert.NotEqual(t, nttResult, scalars)
 
-	inttResult := make([]ScalarField, len(nttResult))
+	inttResult := make([]icicle.ScalarField, len(nttResult))
 	copy(inttResult, nttResult)
 
 	assert.Equal(t, inttResult, nttResult)
-	NttBN254(&inttResult, true, NONE)
+	icicle.NttBN254(&inttResult, true, icicle.NONE)
 	assert.Equal(t, inttResult, scalars)
 }
 
@@ -161,35 +160,35 @@ func TestNttBatchBN254(t *testing.T) {
 	count := 1 << 5
 	batches := 4
 
-	scalars, _ := GenerateScalars(count*batches, false)
+	scalars, _ := icicle.GenerateScalars(count*batches, false)
 
-	var scalarVecOfVec [][]ScalarField = make([][]ScalarField, 0)
+	var scalarVecOfVec [][]icicle.ScalarField = make([][]icicle.ScalarField, 0)
 
 	for i := 0; i < batches; i++ {
 		start := i * count
 		end := (i + 1) * count
-		batch := make([]ScalarField, len(scalars[start:end]))
+		batch := make([]icicle.ScalarField, len(scalars[start:end]))
 		copy(batch, scalars[start:end])
 		scalarVecOfVec = append(scalarVecOfVec, batch)
 	}
 
-	nttBatchResult := make([]ScalarField, len(scalars))
+	nttBatchResult := make([]icicle.ScalarField, len(scalars))
 	copy(nttBatchResult, scalars)
 
-	NttBatchBN254(&nttBatchResult, false, count, 0)
+	icicle.NttBatchBN254(&nttBatchResult, false, count, 0)
 
-	var nttResultVecOfVec [][]ScalarField
+	var nttResultVecOfVec [][]icicle.ScalarField
 
 	for i := 0; i < batches; i++ {
 		// Clone the slice
-		clone := make([]ScalarField, len(scalarVecOfVec[i]))
+		clone := make([]icicle.ScalarField, len(scalarVecOfVec[i]))
 		copy(clone, scalarVecOfVec[i])
 
 		// Add it to the result vector of vectors
 		nttResultVecOfVec = append(nttResultVecOfVec, clone)
 
 		// Call the ntt_bn254 function
-		NttBN254(&nttResultVecOfVec[i], false, NONE)
+		icicle.NttBN254(&nttResultVecOfVec[i], false, icicle.NONE)
 	}
 
 	assert.NotEqual(t, nttBatchResult, scalars)
@@ -208,12 +207,12 @@ func BenchmarkNTT(b *testing.B) {
 	for _, logNTTSize := range LOG_NTT_SIZES {
 		nttSize := 1 << logNTTSize
 		b.Run(fmt.Sprintf("NTT %d", logNTTSize), func(b *testing.B) {
-			scalars, _ := GenerateScalars(nttSize, false)
+			scalars, _ := icicle.GenerateScalars(nttSize, false)
 
-			nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+			nttResult := make([]icicle.ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)
 			for n := 0; n < b.N; n++ {
-				NttBN254(&nttResult, false, NONE)
+				icicle.NttBN254(&nttResult, false, icicle.NONE)
 			}
 		})
 	}

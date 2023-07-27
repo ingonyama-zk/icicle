@@ -47,7 +47,7 @@ type BaseField struct {
 }
 
 type Field interface {
-	toGnarkFr() *fr.Element
+	ToGnarkFr() *fr.Element
 }
 
 /*
@@ -108,7 +108,7 @@ func (f *BaseField) toBytesLe() []byte {
 	return bytes
 }
 
-func (f *BaseField) toGnarkFr() *fr.Element {
+func (f *BaseField) ToGnarkFr() *fr.Element {
 	fb := f.toBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
@@ -174,7 +174,7 @@ func (f *ScalarField) toBytesLe() []byte {
 	return bytes
 }
 
-func (f ScalarField) toGnarkFr() *fr.Element {
+func (f ScalarField) ToGnarkFr() *fr.Element {
 	fb := f.toBytesLe()
 	var b32 [32]byte
 	copy(b32[:], fb[:32])
@@ -448,7 +448,7 @@ func BatchConvertFromFrGnarkThreaded[T BaseField | ScalarField](elements []fr.El
 func BatchConvertToFrGnark[T Field](elements []T) []fr.Element {
 	var newElements []fr.Element
 	for _, e := range elements {
-		converted := e.toGnarkFr()
+		converted := e.ToGnarkFr()
 		newElements = append(newElements, *converted)
 	}
 
@@ -467,7 +467,7 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 		convert := func(elements []T, chanIndex int) {
 			var convertedElements []fr.Element
 			for _, e := range elements {
-				converted := e.toGnarkFr()
+				converted := e.ToGnarkFr()
 				convertedElements = append(convertedElements, *converted)
 			}
 
@@ -485,7 +485,7 @@ func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Ele
 		}
 	} else {
 		for _, e := range elements {
-			converted := e.toGnarkFr()
+			converted := e.ToGnarkFr()
 			newElements = append(newElements, *converted)
 		}
 	}
