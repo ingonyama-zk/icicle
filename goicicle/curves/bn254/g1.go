@@ -20,11 +20,6 @@ import (
 	"unsafe"
 
 	"encoding/binary"
-	"fmt"
-
-	"github.com/consensys/gnark-crypto/ecc/bn254"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 )
 
 // #cgo CFLAGS: -I./include/
@@ -181,7 +176,7 @@ func (p *G1ProjectivePoint) FromLimbs(X, Y, z *[]uint32) *G1ProjectivePoint {
 
 	p.X = _x
 	p.Y = _y
-	p.z = _z
+	p.Z = _z
 
 	return p
 }
@@ -202,13 +197,13 @@ func (p *G1PointAffine) SetZero() *G1PointAffine {
 }
 
 func (p *G1PointAffine) ToProjective() *G1ProjectivePoint {
-	var z G1BaseField
-	z.SetOne()
+	var Z G1BaseField
+	Z.SetOne()
 
 	return &G1ProjectivePoint{
 		X: p.X,
 		Y: p.Y,
-		z: z,
+		Z: Z,
 	}
 }
 
