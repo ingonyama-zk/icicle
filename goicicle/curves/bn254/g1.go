@@ -37,16 +37,13 @@ const SCALAR_SIZE = 8
 const BASE_SIZE = 8
 
 type G1ScalarField struct {
-	s [SCALAR_SIZE]uint32
+	S [SCALAR_SIZE]uint32
 }
 
 type G1BaseField struct {
-	s [BASE_SIZE]uint32
+	S [BASE_SIZE]uint32
 }
 
-type Field interface {
-	ToGnarkFr() *fr.Element
-}
 
 /*
  * Common Constrctors
@@ -58,33 +55,21 @@ func NewFieldZero[T G1BaseField | G1ScalarField]() *T {
 	return &field
 }
 
-func NewFieldFromFrGnark[T G1BaseField | G1ScalarField](element fr.Element) *T {
-	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
-
-	return &T{s}
-}
-
-func NewFieldFromFpGnark[T G1BaseField | G1ScalarField](element fp.Element) *T {
-	s := ConvertUint64ArrToUint32Arr(element.Bits()) // get non-montgomry
-
-	return &T{s}
-}
-
 /*
  * BaseField Constrctors
  */
 
 func (f *G1BaseField) SetOne() *G1BaseField {
-	var s [BASE_SIZE]uint32
+	var S [BASE_SIZE]uint32
 
-	s[0] = 1
+	S[0] = 1
 
-	f.s = s
+	f.S = S
 	return f
 }
 
 func (f *G1BaseField) FromLimbs(limbs [BASE_SIZE]uint32) *G1BaseField {
-	copy(f.s[:], limbs[:])
+	copy(f.S[:], limbs[:])
 
 	return f
 }
@@ -94,61 +79,34 @@ func (f *G1BaseField) FromLimbs(limbs [BASE_SIZE]uint32) *G1BaseField {
  */
 
 func (f *G1BaseField) Limbs() [BASE_SIZE]uint32 {
-	return f.s
+	return f.S
 }
 
 func (f *G1BaseField) ToBytesLe() []byte {
-	bytes := make([]byte, len(f.s)*4)
-	for i, v := range f.s {
+	bytes := make([]byte, len(f.S)*4)
+	for i, v := range f.S {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)
 	}
 
 	return bytes
 }
 
-func (f *G1BaseField) ToGnarkFr() *fr.Element {
-	fb := f.ToBytesLe()
-	var b32 [32]byte
-	copy(b32[:], fb[:32])
-
-	v, e := fr.LittleEndian.Element(&b32)
-
-	if e != nil {
-		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
-	}
-
-	return &v
-}
-
-func (f *G1BaseField) toGnarkFp() *fp.Element {
-	fb := f.ToBytesLe()
-	var b32 [32]byte
-	copy(b32[:], fb[:32])
-
-	v, e := fp.LittleEndian.Element(&b32)
-
-	if e != nil {
-		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
-	}
-
-	return &v
-}
 
 /*
  * ScalarField methods
  */
 
 func (f *G1ScalarField) SetOne() *G1ScalarField {
-	var s [SCALAR_SIZE]uint32
-	s[0] = 1
-	f.s = s
+	var S [SCALAR_SIZE]uint32
+	S[0] = 1
+	f.S = S
 
 	return f
 }
 
 func (a *G1ScalarField) Equals(b *G1ScalarField) bool {
-	for i, v := range a.s {
-		if b.s[i] != v {
+	for i, v := range a.S {
+		if b.S[i] != v {
 			return false
 		}
 	}
@@ -160,44 +118,16 @@ func (a *G1ScalarField) Equals(b *G1ScalarField) bool {
  */
 
 func (f *G1ScalarField) Limbs() [SCALAR_SIZE]uint32 {
-	return f.s
+	return f.S
 }
 
 func (f *G1ScalarField) ToBytesLe() []byte {
-	bytes := make([]byte, len(f.s)*4)
-	for i, v := range f.s {
+	bytes := make([]byte, len(f.S)*4)
+	for i, v := range f.S {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)
 	}
 
 	return bytes
-}
-
-func (f *G1ScalarField) ToGnarkFr() *fr.Element {
-	fb := f.ToBytesLe()
-	var b32 [32]byte
-	copy(b32[:], fb[:32])
-
-	v, e := fr.LittleEndian.Element(&b32)
-
-	if e != nil {
-		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
-	}
-
-	return &v
-}
-
-func (f *G1ScalarField) toGnarkFp() *fp.Element {
-	fb := f.ToBytesLe()
-	var b32 [32]byte
-	copy(b32[:], fb[:32])
-
-	v, e := fp.LittleEndian.Element(&b32)
-
-	if e != nil {
-		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
-	}
-
-	return &v
 }
 
 /*
@@ -205,16 +135,16 @@ func (f *G1ScalarField) toGnarkFp() *fp.Element {
  */
 
 type G1ProjectivePoint struct {
-	x, y, z G1BaseField
+	X, Y, Z G1BaseField
 }
 
 func (f *G1ProjectivePoint) SetZero() *G1ProjectivePoint {
 	var yZero G1BaseField
 	yZero.SetOne()
 
-	f.x = *NewFieldZero[G1BaseField]()
-	f.y = yZero
-	f.z = *NewFieldZero[G1BaseField]()
+	f.X = *NewFieldZero[G1BaseField]()
+	f.Y = yZero
+	f.Z = *NewFieldZero[G1BaseField]()
 
 	return f
 }
@@ -223,84 +153,34 @@ func (p *G1ProjectivePoint) Eq(pCompare *G1ProjectivePoint) bool {
 	// Cast *PointBN254 to *C.BN254_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.
-	// It's your responsibility to ensure that the types are compatible.
+	// It'S your responsibility to ensure that the types are compatible.
 	pC := (*C.BN254_projective_t)(unsafe.Pointer(p))
 	pCompareC := (*C.BN254_projective_t)(unsafe.Pointer(pCompare))
 
 	// Call the C function
 	// The C function doesn't keep any references to the data,
-	// so it's fine if the Go garbage collector moves or deletes the data later.
+	// so it'S fine if the Go garbage collector moves or deletes the data later.
 	return bool(C.eq_bn254(pC, pCompareC))
 }
 
 func (p *G1ProjectivePoint) StripZ() *G1PointAffine {
 	return &G1PointAffine{
-		x: p.x,
-		y: p.y,
+		X: p.X,
+		Y: p.Y,
 	}
 }
 
-func (p *G1ProjectivePoint) ToGnarkAffine() *bn254.G1Affine {
-	px := p.x.toGnarkFp()
-	py := p.y.toGnarkFp()
-	pz := p.z.toGnarkFp()
-
-	zInv := new(fp.Element)
-	x := new(fp.Element)
-	y := new(fp.Element)
-
-	zInv.Inverse(pz)
-
-	x.Mul(px, zInv)
-	y.Mul(py, zInv)
-
-	return &bn254.G1Affine{X: *x, Y: *y}
-}
-
-func (p *G1ProjectivePoint) ToGnarkJac() *bn254.G1Jac {
-	var p1 bn254.G1Jac
-	p1.FromAffine(p.ToGnarkAffine())
-
-	return &p1
-}
-
-func (p *G1ProjectivePoint) FromG1AffineGnark(gnark *bn254.G1Affine) *G1ProjectivePoint {
-	var z G1BaseField
-	z.SetOne()
-
-	p.x = *NewFieldFromFpGnark[G1BaseField](gnark.X)
-	p.y = *NewFieldFromFpGnark[G1BaseField](gnark.Y)
-	p.z = z
-
-	return p
-}
-
-// converts jac fromat to projective
-func (p *G1ProjectivePoint) FromJacGnark(gnark *bn254.G1Jac) *G1ProjectivePoint {
-	var pointAffine bn254.G1Affine
-	pointAffine.FromJacobian(gnark)
-
-	var z G1BaseField
-	z.SetOne()
-
-	p.x = *NewFieldFromFpGnark[G1BaseField](pointAffine.X)
-	p.y = *NewFieldFromFpGnark[G1BaseField](pointAffine.Y)
-	p.z = z
-
-	return p
-}
-
-func (p *G1ProjectivePoint) FromLimbs(x, y, z *[]uint32) *G1ProjectivePoint {
+func (p *G1ProjectivePoint) FromLimbs(X, Y, z *[]uint32) *G1ProjectivePoint {
 	var _x G1BaseField
 	var _y G1BaseField
 	var _z G1BaseField
 	
-	_x.FromLimbs(getFixedLimbs(x))
-	_y.FromLimbs(getFixedLimbs(y))
+	_x.FromLimbs(getFixedLimbs(X))
+	_y.FromLimbs(getFixedLimbs(Y))
 	_z.FromLimbs(getFixedLimbs(z))
 
-	p.x = _x
-	p.y = _y
+	p.X = _x
+	p.Y = _y
 	p.z = _z
 
 	return p
@@ -311,12 +191,12 @@ func (p *G1ProjectivePoint) FromLimbs(x, y, z *[]uint32) *G1ProjectivePoint {
  */
 
 type G1PointAffine struct {
-	x, y G1BaseField
+	X, Y G1BaseField
 }
 
 func (p *G1PointAffine) SetZero() *G1PointAffine {
-	p.x = *NewFieldZero[G1BaseField]()
-	p.y = *NewFieldZero[G1BaseField]()
+	p.X = *NewFieldZero[G1BaseField]()
+	p.Y = *NewFieldZero[G1BaseField]()
 
 	return p
 }
@@ -326,22 +206,18 @@ func (p *G1PointAffine) ToProjective() *G1ProjectivePoint {
 	z.SetOne()
 
 	return &G1ProjectivePoint{
-		x: p.x,
-		y: p.y,
+		X: p.X,
+		Y: p.Y,
 		z: z,
 	}
 }
 
-func (p *G1PointAffine) ToGnarkAffine() *bn254.G1Affine {
-	return p.ToProjective().ToGnarkAffine()
-}
-
-func (p *G1PointAffine) FromLimbs(x, y *[]uint32) *G1PointAffine {
+func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 	var _x G1BaseField
 	var _y G1BaseField
 
-	_x.FromLimbs(getFixedLimbs(x))
-	_y.FromLimbs(getFixedLimbs(y))
+	_x.FromLimbs(getFixedLimbs(X))
+	_y.FromLimbs(getFixedLimbs(Y))
 
 	return p
 }
@@ -407,116 +283,4 @@ func getFixedLimbs(slice *[]uint32) [BASE_SIZE]uint32 {
 	}
 
 	panic("slice has too many elements")
-}
-
-func BatchConvertFromFrGnark[T G1BaseField | G1ScalarField](elements []fr.Element) []T {
-	var newElements []T
-	for _, e := range elements {
-		converted := NewFieldFromFrGnark[T](e)
-		newElements = append(newElements, *converted)
-	}
-
-	return newElements
-}
-
-func BatchConvertFromFrGnarkThreaded[T G1BaseField | G1ScalarField](elements []fr.Element, routines int) []T {
-	var newElements []T
-
-	if routines > 1 && routines <= len(elements) {
-		channels := make([]chan []T, routines)
-		for i := 0; i < routines; i++ {
-			channels[i] = make(chan []T, 1)
-		}
-
-		convert := func(elements []fr.Element, chanIndex int) {
-			var convertedElements []T
-			for _, e := range elements {
-				converted := NewFieldFromFrGnark[T](e)
-				convertedElements = append(convertedElements, *converted)
-			}
-
-			channels[chanIndex] <- convertedElements
-		}
-
-		batchLen := len(elements) / routines
-		for i := 0; i < routines; i++ {
-			start := batchLen * i
-			end := batchLen * (i + 1)
-			elemsToConv := elements[start:end]
-			if i == routines-1 {
-				elemsToConv = elements[start:]
-			}
-			go convert(elemsToConv, i)
-		}
-
-		for i := 0; i < routines; i++ {
-			newElements = append(newElements, <-channels[i]...)
-		}
-	} else {
-		for _, e := range elements {
-			converted := NewFieldFromFrGnark[T](e)
-			newElements = append(newElements, *converted)
-		}
-	}
-
-	return newElements
-}
-
-func BatchConvertToFrGnark[T Field](elements []T) []fr.Element {
-	var newElements []fr.Element
-	for _, e := range elements {
-		converted := e.ToGnarkFr()
-		newElements = append(newElements, *converted)
-	}
-
-	return newElements
-}
-
-func BatchConvertToFrGnarkThreaded[T Field](elements []T, routines int) []fr.Element {
-	var newElements []fr.Element
-
-	if routines > 1 {
-		channels := make([]chan []fr.Element, routines)
-		for i := 0; i < routines; i++ {
-			channels[i] = make(chan []fr.Element, 1)
-		}
-
-		convert := func(elements []T, chanIndex int) {
-			var convertedElements []fr.Element
-			for _, e := range elements {
-				converted := e.ToGnarkFr()
-				convertedElements = append(convertedElements, *converted)
-			}
-
-			channels[chanIndex] <- convertedElements
-		}
-
-		batchLen := len(elements) / routines
-		for i := 0; i < routines; i++ {
-			elemsToConv := elements[batchLen*i : batchLen*(i+1)]
-			go convert(elemsToConv, i)
-		}
-
-		for i := 0; i < routines; i++ {
-			newElements = append(newElements, <-channels[i]...)
-		}
-	} else {
-		for _, e := range elements {
-			converted := e.ToGnarkFr()
-			newElements = append(newElements, *converted)
-		}
-	}
-
-	return newElements
-}
-
-func BatchConvertFromG1Affine(elements []bn254.G1Affine) []G1PointAffine {
-	var newElements []G1PointAffine
-	for _, e := range elements {
-		var newElement G1ProjectivePoint
-		newElement.FromG1AffineGnark(&e)
-
-		newElements = append(newElements, *newElement.StripZ())
-	}
-	return newElements
 }
