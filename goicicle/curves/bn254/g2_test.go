@@ -19,4 +19,38 @@ package bn254
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func getTestG2Point() G2Point {
+	X := ExtentionField{
+		A0: G2Element{1711502786208920473, 5941565889840883158, 15859578660105899124, 1229805922517122182},
+		A1: G2Element{10984636435462164707, 5939392901255610275, 10298664378042754327, 758465483432602147},
+	}
+
+	Y := ExtentionField{
+		A0: G2Element{3309236472706872748, 14362314890724879214, 6596502751917089311, 2332499053820321889},
+		A1: G2Element{1770641893306589, 6180878494648700755, 11860762012203539461, 343216848966576800},
+	}
+
+	Z := ExtentionField{
+		A0: G2Element{1, 0, 0, 0},
+		A1: G2Element{0, 0, 0, 0},
+	}
+
+	point := G2Point{
+		X: X,
+		Y: Y,
+		Z: Z,
+	}
+
+	return point
+}
+
+func TestG2Eqg2(t *testing.T) {
+	point := getTestG2Point()
+	point2 := getTestG2Point()
+	
+	assert.True(t, point.Eqg2(&point2))
+}
