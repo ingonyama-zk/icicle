@@ -170,9 +170,9 @@ func (p *G1ProjectivePoint) FromLimbs(X, Y, z *[]uint32) *G1ProjectivePoint {
 	var _y G1BaseField
 	var _z G1BaseField
 	
-	_x.FromLimbs(getFixedLimbs(X))
-	_y.FromLimbs(getFixedLimbs(Y))
-	_z.FromLimbs(getFixedLimbs(z))
+	_x.FromLimbs(GetFixedLimbs(X))
+	_y.FromLimbs(GetFixedLimbs(Y))
+	_z.FromLimbs(GetFixedLimbs(z))
 
 	p.X = _x
 	p.Y = _y
@@ -211,8 +211,8 @@ func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 	var _x G1BaseField
 	var _y G1BaseField
 
-	_x.FromLimbs(getFixedLimbs(X))
-	_y.FromLimbs(getFixedLimbs(Y))
+	_x.FromLimbs(GetFixedLimbs(X))
+	_y.FromLimbs(GetFixedLimbs(Y))
 
 	return p
 }
@@ -270,7 +270,7 @@ func MultiplyMatrix(a []G1ScalarField, b []G1ScalarField, deviceID int) {
  * Utils
  */
 
-func getFixedLimbs(slice *[]uint32) [BASE_SIZE]uint32 {
+func GetFixedLimbs(slice *[]uint32) [BASE_SIZE]uint32 {
 	if len(*slice) <= BASE_SIZE {
 		limbs := [BASE_SIZE]uint32{}
 		copy(limbs[:len(*slice)], *slice)

@@ -139,7 +139,10 @@ func MsmBatchBN254(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize,
 	out := make([]*G1ProjectivePoint, batchSize)
 
 	for i := 0; i < len(out); i++ {
-		out[i] = NewPointBN254Zero()
+		var p G1ProjectivePoint
+		p.SetZero()
+
+		out[i] = &p
 	}
 
 	outC := (*C.BN254_projective_t)(unsafe.Pointer(&out[0]))
