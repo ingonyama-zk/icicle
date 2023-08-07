@@ -64,21 +64,21 @@ func getTestG2Point() G2Point {
 func TestG2Eqg2(t *testing.T) {
 	point := getTestG2Point()
 	point2 := getTestG2Point()
-	
+
 	assert.True(t, point.Eqg2(&point2))
 }
 
 func TestG2Eqg2NotEqual(t *testing.T) {
 	point := getTestG2Point()
 	pointAffine := getTestAffineG2Point()
-	
+
 	p := pointAffine.ToProjective()
 	assert.False(t, point.Eqg2(&p))
 }
 
 func TestG2ShouldConvertToProjective(t *testing.T) {
 	pointAffine := getTestAffineG2Point()
-	
+
 	proj := pointAffine.ToProjective()
 	assert.Equal(t, proj.X, ExtentionField{
 		A0: G2Element{0x6546098ea84b6298, 0x4a384533d1f68aca, 0xaa0666972d771336, 0x1569e4a34321993},

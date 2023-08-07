@@ -18,8 +18,8 @@ package bn254
 
 import (
 	"encoding/binary"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewFieldBN254One(t *testing.T) {
@@ -37,7 +37,6 @@ func TestNewFieldBN254Zero(t *testing.T) {
 
 	assert.Equal(t, zeroField.S, rawZeroField)
 }
-
 
 func TestFieldBN254ToBytesLe(t *testing.T) {
 	var f G1ScalarField
@@ -70,7 +69,7 @@ func TestBN254Eq(t *testing.T) {
 
 	p1.SetZero()
 	p2.SetZero()
-	
+
 	var baseFieldOne G1BaseField
 	baseFieldOne.SetOne()
 

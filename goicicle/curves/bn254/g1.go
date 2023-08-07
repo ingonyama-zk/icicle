@@ -39,7 +39,6 @@ type G1BaseField struct {
 	S [BASE_SIZE]uint32
 }
 
-
 /*
  * Common Constrctors
  */
@@ -85,7 +84,6 @@ func (f *G1BaseField) ToBytesLe() []byte {
 
 	return bytes
 }
-
 
 /*
  * ScalarField methods
@@ -169,7 +167,7 @@ func (p *G1ProjectivePoint) FromLimbs(X, Y, z *[]uint32) *G1ProjectivePoint {
 	var _x G1BaseField
 	var _y G1BaseField
 	var _z G1BaseField
-	
+
 	_x.FromLimbs(GetFixedLimbs(X))
 	_y.FromLimbs(GetFixedLimbs(Y))
 	_z.FromLimbs(GetFixedLimbs(z))
