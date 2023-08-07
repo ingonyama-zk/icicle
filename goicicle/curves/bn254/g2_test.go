@@ -17,11 +17,24 @@
 package bn254
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func getTestAffineG2Point() G2PointAffine {
+	X := ExtentionField{
+		A0: G2Element{7297530754513986200, 5348100646370708170, 12251592635796886326, 96438483575511443},
+		A1: G2Element{5752544997981373842, 15185189458680378852, 7592993604177523808, 890608617831504605},
+	}
+
+	Y := ExtentionField{
+		A0: G2Element{6949743733589276667, 15399582359543936933, 14435016324409950083, 2436138619058681097},
+		A1: G2Element{14805900116067057434, 18304901725770370625, 6887082961513450404, 771648056546169666},
+	}
+
+	return G2PointAffine{X: X, Y: Y}
+}
 
 func getTestG2Point() G2Point {
 	X := ExtentionField{
@@ -53,4 +66,37 @@ func TestG2Eqg2(t *testing.T) {
 	point2 := getTestG2Point()
 	
 	assert.True(t, point.Eqg2(&point2))
+}
+
+func TestG2Eqg2NotEqual(t *testing.T) {
+	point := getTestG2Point()
+	pointAffine := getTestAffineG2Point()
+	
+	p := pointAffine.ToProjective()
+	assert.False(t, point.Eqg2(&p))
+}
+
+func TestG2ShouldConvertToProjective(t *testing.T) {
+	pointAffine := getTestAffineG2Point()
+	
+	proj := pointAffine.ToProjective()
+	assert.Equal(t, proj.X, ExtentionField{
+		A0: G2Element{0x6546098ea84b6298, 0x4a384533d1f68aca, 0xaa0666972d771336, 0x1569e4a34321993},
+		A1: G2Element{0x4fd5253287214592, 0xd2bca15baba675e4, 0x695fbb741ed07460, 0xc5c13d1bbbf9add},
+	})
+	assert.Equal(t, proj.Y, ExtentionField{
+		A0: G2Element{0x6072731ab895f7fb, 0xd5b64e90c5fcf7a5, 0xc8537addf76b7f83, 0x21cee72ab49a7509},
+		A1: G2Element{0xcd791fb5e6177f1a, 0xfe081322d4fa4e41, 0x5f93d576d3a78ba4, 0xab571d1ae0e1342},
+	})
+	assert.Equal(t, proj.Z, ExtentionField{
+		A0: G2Element{1, 0, 0, 0},
+		A1: G2Element{0, 0, 0, 0},
+	})
+}
+
+func TestG2ToBytes(t *testing.T) {
+	element := G2Element{0x6546098ea84b6298, 0x4a384533d1f68aca, 0xaa0666972d771336, 0x1569e4a34321993}
+	bytes := element.ToBytesLe()
+
+	assert.Equal(t, bytes, []byte{0x98, 0x62, 0x4b, 0xa8, 0x8e, 0x9, 0x46, 0x65, 0xca, 0x8a, 0xf6, 0xd1, 0x33, 0x45, 0x38, 0x4a, 0x36, 0x13, 0x77, 0x2d, 0x97, 0x66, 0x6, 0xaa, 0x93, 0x19, 0x32, 0x34, 0x4a, 0x9e, 0x56, 0x1})
 }
