@@ -24,6 +24,16 @@ extern "C" {
 
 typedef struct BN254_projective_t BN254_projective_t;
 typedef struct  BN254_g2_projective_t BN254_g2_projective_t;
+typedef struct BN254_affine_t BN254_affine_t;
+typedef struct BN254_scalar_t BN254_scalar_t;
+
+bool projective_is_on_curve_bn254(BN254_projective_t *point1);
+
+BN254_scalar_t* random_scalar_bn254();
+BN254_projective_t* random_projective_bn254();
+BN254_projective_t* projective_zero_bn254();
+BN254_affine_t* projective_to_affine_bn254(BN254_projective_t *point1);
+BN254_projective_t* projective_from_affine_bn254(BN254_affine_t *point1);
 
 bool eq_bn254(BN254_projective_t *point1, BN254_projective_t *point2);
 bool eq_g2_bn254(BN254_g2_projective_t *point1, BN254_g2_projective_t *point2);

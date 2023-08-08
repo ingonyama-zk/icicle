@@ -18,8 +18,9 @@ package bn254
 
 import (
 	"encoding/binary"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewFieldBN254One(t *testing.T) {
@@ -39,16 +40,16 @@ func TestNewFieldBN254Zero(t *testing.T) {
 }
 
 func TestFieldBN254ToBytesLe(t *testing.T) {
-	var f G1ScalarField
-	f.SetOne()
+	var p G1ProjectivePoint
+	p.Random()
 
-	expected := make([]byte, len(f.S)*4) // each uint32 takes 4 bytes
-	for i, v := range f.S {
+	expected := make([]byte, len(p.X.S)*4) // each uint32 takes 4 bytes
+	for i, v := range p.X.S {
 		binary.LittleEndian.PutUint32(expected[i*4:], v)
 	}
 
-	assert.Equal(t, f.ToBytesLe(), expected)
-	assert.Equal(t, len(f.ToBytesLe()), 32)
+	assert.Equal(t, p.X.ToBytesLe(), expected)
+	assert.Equal(t, len(p.X.ToBytesLe()), 32)
 }
 
 func TestNewPointBN254Zero(t *testing.T) {
@@ -65,26 +66,18 @@ func TestNewPointBN254Zero(t *testing.T) {
 
 func TestBN254Eq(t *testing.T) {
 	var p1 G1ProjectivePoint
+	p1.Random()
 	var p2 G1ProjectivePoint
+	p2.Random()
 
-	p1.SetZero()
-	p2.SetZero()
-
-	var baseFieldOne G1BaseField
-	baseFieldOne.SetOne()
-
-	p3 := &G1ProjectivePoint{
-		X: baseFieldOne,
-		Y: baseFieldOne,
-		Z: baseFieldOne,
-	}
-
-	assert.Equal(t, p1.Eq(&p2), true)
-	assert.Equal(t, p1.Eq(p3), false)
+	assert.Equal(t, p1.Eq(&p1), true)
+	assert.Equal(t, p1.Eq(&p2), false)
 }
 
 func TestBN254StripZ(t *testing.T) {
 	var p1 G1ProjectivePoint
+	p1.Random()
+
 	p2ZLess := p1.StripZ()
 
 	assert.IsType(t, G1PointAffine{}, *p2ZLess)
@@ -94,7 +87,7 @@ func TestBN254StripZ(t *testing.T) {
 
 func TestPointBN254fromLimbs(t *testing.T) {
 	var p G1ProjectivePoint
-	p.SetZero()
+	p.Random()
 
 	x := p.X.Limbs()
 	y := p.Y.Limbs()

@@ -89,6 +89,22 @@ func (f *G1BaseField) ToBytesLe() []byte {
  * ScalarField methods
  */
 
+
+func (p *G1ScalarField) Random() *G1ScalarField {
+	rand := C.random_scalar_bn254()
+	
+	*p = *(*G1ScalarField)(unsafe.Pointer(rand))
+
+	return p
+}
+
+func (f *G1ScalarField) SetZero() *G1ScalarField {
+	var S [SCALAR_SIZE]uint32
+	f.S = S
+
+	return f
+}
+
 func (f *G1ScalarField) SetOne() *G1ScalarField {
 	var S [SCALAR_SIZE]uint32
 	S[0] = 1
@@ -156,6 +172,23 @@ func (p *G1ProjectivePoint) Eq(pCompare *G1ProjectivePoint) bool {
 	return bool(C.eq_bn254(pC, pCompareC))
 }
 
+func (p *G1ProjectivePoint) Is_on_curve() bool {
+	// Directly copy memory from the C struct to the Go struct
+	point := (*C.BN254_projective_t)(unsafe.Pointer(p))
+	res := C.projective_is_on_curve_bn254(point)
+
+	return bool(res)
+}
+
+func (p *G1ProjectivePoint) Random() *G1ProjectivePoint {
+	rand := C.random_projective_bn254()
+	
+	// Directly copy memory from the C struct to the Go struct
+	*p = *(*G1ProjectivePoint)(unsafe.Pointer(rand))
+
+	return p
+}
+
 func (p *G1ProjectivePoint) StripZ() *G1PointAffine {
 	return &G1PointAffine{
 		X: p.X,
@@ -190,6 +223,17 @@ type G1PointAffine struct {
 func (p *G1PointAffine) SetZero() *G1PointAffine {
 	p.X = *NewFieldZero[G1BaseField]()
 	p.Y = *NewFieldZero[G1BaseField]()
+
+	return p
+}
+
+func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAffine {
+	in := (*C.BN254_projective_t)(unsafe.Pointer(projective))
+
+	out := C.projective_to_affine_bn254(in)
+	
+	// Directly copy memory from the C struct to the Go struct
+	*p = *(*G1PointAffine)(unsafe.Pointer(out))
 
 	return p
 }
