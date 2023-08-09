@@ -35,6 +35,11 @@ BN254_projective_t* projective_zero_bn254();
 BN254_affine_t* projective_to_affine_bn254(BN254_projective_t *point1);
 BN254_projective_t* projective_from_affine_bn254(BN254_affine_t *point1);
 
+BN254_g2_projective_t* random_g2_projective_bn254();
+BN254_affine_t* g2_projective_to_affine_bn254(BN254_g2_projective_t *point1);
+BN254_g2_projective_t* g2_projective_from_affine_bn254(BN254_affine_t *point1);
+bool g2_projective_is_on_curve_bn254(BN254_g2_projective_t *point1);
+
 bool eq_bn254(BN254_projective_t *point1, BN254_projective_t *point2);
 bool eq_g2_bn254(BN254_g2_projective_t *point1, BN254_g2_projective_t *point2);
 

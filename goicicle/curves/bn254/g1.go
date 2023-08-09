@@ -172,8 +172,7 @@ func (p *G1ProjectivePoint) Eq(pCompare *G1ProjectivePoint) bool {
 	return bool(C.eq_bn254(pC, pCompareC))
 }
 
-func (p *G1ProjectivePoint) Is_on_curve() bool {
-	// Directly copy memory from the C struct to the Go struct
+func (p *G1ProjectivePoint) IsOnCurve() bool {
 	point := (*C.BN254_projective_t)(unsafe.Pointer(p))
 	res := C.projective_is_on_curve_bn254(point)
 

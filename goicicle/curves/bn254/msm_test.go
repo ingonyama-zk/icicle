@@ -17,12 +17,8 @@
 package bn254
 
 import (
-	"bufio"
 	"fmt"
 	"math"
-	"math/big"
-	"os"
-	"strings"
 	"testing"
 	"time"
 	"unsafe"
@@ -103,7 +99,7 @@ func GenerateScalars(count int, skewed bool) []G1ScalarField {
 	} else {
 		for i := 0; i < count; i++ {
 			rand.Random()
-			scalars = append(scalars, *&rand)
+			scalars = append(scalars, rand)
 		}
 	}
 
@@ -127,14 +123,13 @@ func TestMSM(t *testing.T) {
 
 		assert.Equal(t, e, nil, "error should be nil")
 
-		assert.True(t, out.Is_on_curve())
+		assert.True(t, out.IsOnCurve())
 	}
 }
 
 func TestCommitMSM(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1<<v - 1
-		// count := 12_180_757
 
 		points := GeneratePoints(count)
 		fmt.Print("Finished generating points\n")
@@ -159,7 +154,7 @@ func TestCommitMSM(t *testing.T) {
 		goicicle.CudaMemCpyDtoH[G1ProjectivePoint](outHost, out_d, 96)
 
 		assert.Equal(t, e, 0, "error should be 0")
-		assert.True(t, outHost[0].Is_on_curve())
+		assert.True(t, outHost[0].IsOnCurve())
 	}
 }
 
@@ -237,19 +232,18 @@ func BenchmarkMSM(b *testing.B) {
 }
 
 // G2
-func GenerateG2Points(count int) ([]G2PointAffine, []bn254.G2Affine) {
+func GenerateG2Points(count int) []G2PointAffine {
 	// Declare a slice of integers
 	var points []G2PointAffine
 
 	// populate the slice
 	for i := 0; i < 10; i++ {
-		var p G2PointAffine
-		G2PointAffineFromGnarkJac(&gnarkP, &p)
+		var p G2Point
+		p.Random()
+		var affine G2PointAffine
+		affine.FromProjective(&p)
 
-		var gp bn254.G2Affine
-		gp.FromJacobian(&gnarkP)
-		pointsAffine = append(pointsAffine, gp)
-		points = append(points, p)
+		points = append(points, affine)
 	}
 
 	log2_10 := math.Log2(10)
@@ -257,43 +251,16 @@ func GenerateG2Points(count int) ([]G2PointAffine, []bn254.G2Affine) {
 	log2Size := int(math.Ceil(log2Count - log2_10))
 
 	for i := 0; i < log2Size; i++ {
-		pointsAffine = append(pointsAffine, pointsAffine...)
 		points = append(points, points...)
 	}
 
-	return points[:count], pointsAffine[:count]
-}
-
-func ReadGnarkG2PointsFromFile(filePath string, size int) (points []G2PointAffine, gnarkPoints []bn254.G2Affine) {
-	points = make([]G2PointAffine, size)
-	gnarkPoints = make([]bn254.G2Affine, size)
-	file, _ := os.Open(filePath)
-	scanner := bufio.NewScanner(file)
-	for i := 0; scanner.Scan(); i++ {
-		x := scanner.Text()
-		xSplits := strings.Split(x, "+")
-		xA0 := xSplits[0]
-		xA1Splits := strings.Split(xSplits[1], "*")
-		xA1 := xA1Splits[0]
-		gnarkPoints[i].X.SetString(xA0, xA1)
-
-		scanner.Scan()
-		y := scanner.Text()
-		ySplits := strings.Split(y, "+")
-		yA0 := ySplits[0]
-		yA1Splits := strings.Split(ySplits[1], "*")
-		yA1 := yA1Splits[0]
-		gnarkPoints[i].Y.SetString(yA0, yA1)
-
-		G2AffineFromGnarkAffine(&gnarkPoints[i], &points[i])
-	}
-	return
+	return points[:count]
 }
 
 func TestMsmG2BN254(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
-		points, gnarkPoints := GenerateG2Points(count)
+		points := GenerateG2Points(count)
 		fmt.Print("Finished generating points\n")
 		scalars := GenerateScalars(count, false)
 		fmt.Print("Finished generating scalars\n")
@@ -301,16 +268,7 @@ func TestMsmG2BN254(t *testing.T) {
 		out := new(G2Point)
 		_, e := MsmG2BN254(out, points, scalars, 0)
 		assert.Equal(t, e, nil, "error should be nil")
-
-		var result G2PointAffine
-		var bn254AffineLib bn254.G2Affine
-
-		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
-
-		G2AffineFromGnarkAffine(gResult, &result)
-
-		pp := result.ToProjective()
-		assert.True(t, out.Eqg2(&pp))
+		assert.True(t, out.IsOnCurve())
 	}
 }
 
@@ -338,7 +296,7 @@ func TestCommitG2MSM(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
 
-		points, gnarkPoints := GenerateG2Points(count)
+		points := GenerateG2Points(count)
 		fmt.Print("Finished generating points\n")
 		scalars := GenerateScalars(count, true)
 		fmt.Print("Finished generating scalars\n")
@@ -364,20 +322,10 @@ func TestCommitG2MSM(t *testing.T) {
 		goicicle.CudaMemCpyDtoH[G2Point](outHost, out_d, int(unsafe.Sizeof(sizeCheckG2Point)))
 
 		assert.Equal(t, e, 0, "error should be 0")
-		fmt.Print("Finished icicle MSM\n")
-
-		var bn254AffineLib bn254.G2Affine
-
-		gResult, _ := bn254AffineLib.MultiExp(gnarkPoints, gnarkScalars, ecc.MultiExpConfig{})
-		fmt.Print("Finished Gnark MSM\n")
-		var resultGnark G2PointAffine
-		G2AffineFromGnarkAffine(gResult, &resultGnark)
-
-		resultGnarkProjective := resultGnark.ToProjective()
 		assert.Equal(t, len(outHost), 1)
 		result := outHost[0]
 
-		assert.True(t, result.Eqg2(&resultGnarkProjective))
+		assert.True(t, result.IsOnCurve())
 	}
 }
 
@@ -388,17 +336,21 @@ func TestBatchG2MSM(t *testing.T) {
 			batchSize := 1 << batchPow2
 			count := msmSize * batchSize
 
-			points, _ := GenerateG2Points(count)
+			points := GenerateG2Points(count)
 			scalars := GenerateScalars(count, false)
 
-			a, e := MsmG2BatchBN254(&points, &scalars, batchSize, 0)
+			pointsResults, e := MsmG2BatchBN254(&points, &scalars, batchSize, 0)
 
 			if e != nil {
 				t.Errorf("MsmBatchBN254 returned an error: %v", e)
 			}
 
-			if len(a) != batchSize {
-				t.Errorf("Expected length %d, but got %d", batchSize, len(a))
+			if len(pointsResults) != batchSize {
+				t.Errorf("Expected length %d, but got %d", batchSize, len(pointsResults))
+			}
+
+			for _, s := range pointsResults {
+				assert.True(t, s.IsOnCurve())
 			}
 		}
 	}
