@@ -5,6 +5,7 @@
 #include "../../appUtils/ntt/ntt.cuh"
 #include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
 #include "curve_config.cuh"
+#include "../../utils/mont.cuh"
 
 extern "C" BLS12_377::scalar_t* build_domain_cuda_bls12_377(uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
@@ -514,4 +515,7 @@ extern "C" int reverse_order_points_batch_cuda_bls12_377(BLS12_377::projective_t
         return -1;
     }
 }
+
 #endif
+
+#endif // _BLS12_377_LDE
