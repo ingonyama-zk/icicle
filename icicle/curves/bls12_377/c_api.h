@@ -24,9 +24,9 @@
 extern "C" {
 #endif
 
-typedef struct BLS12377_projective_t BLS12377_projective_t;
+typedef struct BLS12_377_projective_t BLS12_377_projective_t;
 
-bool eq_bls12_377(BLS12377_projective_t *point1, BLS12377_projective_t *point2, size_t device_id);
+bool eq_bls12_377(BLS12_377_projective_t *point1, BLS12_377_projective_t *point2, size_t device_id);
 
 #ifdef __cplusplus
 }

@@ -35,44 +35,44 @@ const (
 	DIT  = 2
 )
 
-func NttBLS12377(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
-	scalarsC := (*C.BLS12377_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
+func NttBLS12_377(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
+	scalarsC := (*C.BLS12_377_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
-	ret := C.ntt_cuda_bls12377(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
+	ret := C.ntt_cuda_bls12_377(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
 
 	return uint64(ret)
 }
 
-func NttBatchBLS12377(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
-	scalarsC := (*C.BLS12377_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
+func NttBatchBLS12_377(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
+	scalarsC := (*C.BLS12_377_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 	isInverseC := C.bool(isInverse)
 	batchSizeC := C.uint32_t(batchSize)
 	deviceIdC := C.size_t(deviceId)
 
-	ret := C.ntt_batch_cuda_bls12377(scalarsC, C.uint32_t(len(*scalars)), batchSizeC, isInverseC, deviceIdC)
+	ret := C.ntt_batch_cuda_bls12_377(scalarsC, C.uint32_t(len(*scalars)), batchSizeC, isInverseC, deviceIdC)
 
 	return uint64(ret)
 }
 
-func EcNttBLS12377(values *[]G1ProjectivePoint, isInverse bool, deviceId int) uint64 {
-	valuesC := (*C.BLS12377_projective_t)(unsafe.Pointer(&(*values)[0]))
+func EcNttBLS12_377(values *[]G1ProjectivePoint, isInverse bool, deviceId int) uint64 {
+	valuesC := (*C.BLS12_377_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
 	n := C.uint32_t(len(*values))
 
-	ret := C.ecntt_cuda_bls12377(valuesC, n, isInverseC, deviceIdC)
+	ret := C.ecntt_cuda_bls12_377(valuesC, n, isInverseC, deviceIdC)
 
 	return uint64(ret)
 }
 
-func EcNttBatchBLS12377(values *[]G1ProjectivePoint, isInverse bool, batchSize, deviceId int) uint64 {
-	valuesC := (*C.BLS12377_projective_t)(unsafe.Pointer(&(*values)[0]))
+func EcNttBatchBLS12_377(values *[]G1ProjectivePoint, isInverse bool, batchSize, deviceId int) uint64 {
+	valuesC := (*C.BLS12_377_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
 	n := C.uint32_t(len(*values))
 	batchSizeC := C.uint32_t(batchSize)
 
-	ret := C.ecntt_batch_cuda_bls12377(valuesC, n, batchSizeC, isInverseC, deviceIdC)
+	ret := C.ecntt_batch_cuda_bls12_377(valuesC, n, batchSizeC, isInverseC, deviceIdC)
 
 	return uint64(ret)
 }
@@ -82,7 +82,7 @@ func GenerateTwiddles(d_size int, log_d_size int, inverse bool) (up unsafe.Point
 	logn := C.uint32_t(log_d_size)
 	is_inverse := C.bool(inverse)
 
-	dp := C.build_domain_cuda_bls12377(domain_size, logn, is_inverse, 0, 0)
+	dp := C.build_domain_cuda_bls12_377(domain_size, logn, is_inverse, 0, 0)
 
 	if dp == nil {
 		err = errors.New("nullptr returned from generating twiddles")
@@ -94,9 +94,9 @@ func GenerateTwiddles(d_size int, log_d_size int, inverse bool) (up unsafe.Point
 
 // Reverses d_scalars in-place
 func ReverseScalars(d_scalars unsafe.Pointer, len int) (int, error) {
-	scalarsC := (*C.BLS12377_scalar_t)(d_scalars)
+	scalarsC := (*C.BLS12_377_scalar_t)(d_scalars)
 	lenC := C.int(len)
-	if success := C.reverse_order_scalars_cuda_bls12377(scalarsC, lenC, 0, 0); success != 0 {
+	if success := C.reverse_order_scalars_cuda_bls12_377(scalarsC, lenC, 0, 0); success != 0 {
 		return -1, errors.New("reversing failed")
 	}
 	return 0, nil
@@ -110,17 +110,17 @@ func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCose
 		return nil
 	}
 
-	d_out := (*C.BLS12377_scalar_t)(dp)
-	scalarsC := (*C.BLS12377_scalar_t)(scalars)
-	twiddlesC := (*C.BLS12377_scalar_t)(twiddles)
-	cosetPowersC := (*C.BLS12377_scalar_t)(cosetPowers)
+	d_out := (*C.BLS12_377_scalar_t)(dp)
+	scalarsC := (*C.BLS12_377_scalar_t)(scalars)
+	twiddlesC := (*C.BLS12_377_scalar_t)(twiddles)
+	cosetPowersC := (*C.BLS12_377_scalar_t)(cosetPowers)
 	sizeC := C.uint(size)
 
 	var ret C.int
 	if isCoset {
-		ret = C.interpolate_scalars_on_coset_cuda_bls12377(d_out, scalarsC, twiddlesC, sizeC, cosetPowersC, 0, 0)
+		ret = C.interpolate_scalars_on_coset_cuda_bls12_377(d_out, scalarsC, twiddlesC, sizeC, cosetPowersC, 0, 0)
 	} else {
-		ret = C.interpolate_scalars_cuda_bls12377(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
+		ret = C.interpolate_scalars_cuda_bls12_377(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
 	}
 	if ret != 0 {
 		fmt.Print("error interpolating")
@@ -130,18 +130,18 @@ func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCose
 }
 
 func Evaluate(scalars_out, scalars, twiddles, coset_powers unsafe.Pointer, scalars_size, twiddles_size int, isCoset bool) int {
-	scalars_outC := (*C.BLS12377_scalar_t)(scalars_out)
-	scalarsC := (*C.BLS12377_scalar_t)(scalars)
-	twiddlesC := (*C.BLS12377_scalar_t)(twiddles)
-	coset_powersC := (*C.BLS12377_scalar_t)(coset_powers)
+	scalars_outC := (*C.BLS12_377_scalar_t)(scalars_out)
+	scalarsC := (*C.BLS12_377_scalar_t)(scalars)
+	twiddlesC := (*C.BLS12_377_scalar_t)(twiddles)
+	coset_powersC := (*C.BLS12_377_scalar_t)(coset_powers)
 	sizeC := C.uint(scalars_size)
 	twiddlesC_size := C.uint(twiddles_size)
 
 	var ret C.int
 	if isCoset {
-		ret = C.evaluate_scalars_on_coset_cuda_bls12377(scalars_outC, scalarsC, twiddlesC, twiddlesC_size, sizeC, coset_powersC, 0, 0)
+		ret = C.evaluate_scalars_on_coset_cuda_bls12_377(scalars_outC, scalarsC, twiddlesC, twiddlesC_size, sizeC, coset_powersC, 0, 0)
 	} else {
-		ret = C.evaluate_scalars_cuda_bls12377(scalars_outC, scalarsC, twiddlesC, twiddlesC_size, sizeC, 0, 0)
+		ret = C.evaluate_scalars_cuda_bls12_377(scalars_outC, scalarsC, twiddlesC, twiddlesC_size, sizeC, 0, 0)
 	}
 
 	if ret != 0 {
@@ -153,11 +153,11 @@ func Evaluate(scalars_out, scalars, twiddles, coset_powers unsafe.Pointer, scala
 }
 
 func VecScalarAdd(in1_d, in2_d unsafe.Pointer, size int) int {
-	in1_dC := (*C.BLS12377_scalar_t)(in1_d)
-	in2_dC := (*C.BLS12377_scalar_t)(in2_d)
+	in1_dC := (*C.BLS12_377_scalar_t)(in1_d)
+	in2_dC := (*C.BLS12_377_scalar_t)(in2_d)
 	sizeC := C.uint(size)
 
-	ret := C.add_scalars_cuda_bls12377(in1_dC, in1_dC, in2_dC, sizeC, 0)
+	ret := C.add_scalars_cuda_bls12_377(in1_dC, in1_dC, in2_dC, sizeC, 0)
 
 	if ret != 0 {
 		fmt.Print("error adding scalar vectors")
@@ -168,11 +168,11 @@ func VecScalarAdd(in1_d, in2_d unsafe.Pointer, size int) int {
 }
 
 func VecScalarSub(in1_d, in2_d unsafe.Pointer, size int) int {
-	in1_dC := (*C.BLS12377_scalar_t)(in1_d)
-	in2_dC := (*C.BLS12377_scalar_t)(in2_d)
+	in1_dC := (*C.BLS12_377_scalar_t)(in1_d)
+	in2_dC := (*C.BLS12_377_scalar_t)(in2_d)
 	sizeC := C.uint(size)
 
-	ret := C.sub_scalars_cuda_bls12377(in1_dC, in1_dC, in2_dC, sizeC, 0)
+	ret := C.sub_scalars_cuda_bls12_377(in1_dC, in1_dC, in2_dC, sizeC, 0)
 
 	if ret != 0 {
 		fmt.Print("error subtracting scalar vectors")
@@ -183,38 +183,38 @@ func VecScalarSub(in1_d, in2_d unsafe.Pointer, size int) int {
 }
 
 func ToMontgomery(d_scalars unsafe.Pointer, len int) (int, error) {
-	scalarsC := (*C.BLS12377_scalar_t)(d_scalars)
+	scalarsC := (*C.BLS12_377_scalar_t)(d_scalars)
 	lenC := C.uint(len)
-	if success := C.to_montgomery_scalars_cuda_bls12377(scalarsC, lenC, 0); success != 0 {
+	if success := C.to_montgomery_scalars_cuda_bls12_377(scalarsC, lenC, 0); success != 0 {
 		return -1, errors.New("reversing failed")
 	}
 	return 0, nil
 }
 
 func FromMontgomery(d_scalars unsafe.Pointer, len int) (int, error) {
-	scalarsC := (*C.BLS12377_scalar_t)(d_scalars)
+	scalarsC := (*C.BLS12_377_scalar_t)(d_scalars)
 	lenC := C.uint(len)
-	if success := C.from_montgomery_scalars_cuda_bls12377(scalarsC, lenC, 0); success != 0 {
+	if success := C.from_montgomery_scalars_cuda_bls12_377(scalarsC, lenC, 0); success != 0 {
 		return -1, errors.New("reversing failed")
 	}
 	return 0, nil
 }
 
 func AffinePointFromMontgomery(d_points unsafe.Pointer, len int) (int, error) {
-	pointsC := (*C.BLS12377_affine_t)(d_points)
+	pointsC := (*C.BLS12_377_affine_t)(d_points)
 	lenC := C.uint(len)
 
-	if success := C.from_montgomery_aff_points_cuda_bls12377(pointsC, lenC, 0); success != 0 {
+	if success := C.from_montgomery_aff_points_cuda_bls12_377(pointsC, lenC, 0); success != 0 {
 		return -1, errors.New("reversing failed")
 	}
 	return 0, nil
 }
 
 func G2AffinePointFromMontgomery(d_points unsafe.Pointer, len int) (int, error) {
-	pointsC := (*C.BLS12377_g2_affine_t)(d_points)
+	pointsC := (*C.BLS12_377_g2_affine_t)(d_points)
 	lenC := C.uint(len)
 
-	if success := C.from_montgomery_aff_points_g2_cuda_bls12377(pointsC, lenC, 0); success != 0 {
+	if success := C.from_montgomery_aff_points_g2_cuda_bls12_377(pointsC, lenC, 0); success != 0 {
 		return -1, errors.New("reversing failed")
 	}
 	return 0, nil

@@ -20,34 +20,34 @@
 #include <cuda.h>
 // msm.h
 
-#ifndef _BLS12377_MSM_H
-#define _BLS12377_MSM_H
+#ifndef _BLS12_377_MSM_H
+#define _BLS12_377_MSM_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Incomplete declaration of BLS12377 projective and affine structs
-typedef struct BLS12377_projective_t BLS12377_projective_t;
-typedef struct BLS12377_affine_t BLS12377_affine_t;
-typedef struct BLS12377_scalar_t BLS12377_scalar_t;
+// Incomplete declaration of BLS12_377 projective and affine structs
+typedef struct BLS12_377_projective_t BLS12_377_projective_t;
+typedef struct BLS12_377_affine_t BLS12_377_affine_t;
+typedef struct BLS12_377_scalar_t BLS12_377_scalar_t;
 
-int msm_cuda_bls12_377(BLS12377_projective_t* out, BLS12377_affine_t* points,
-                   BLS12377_scalar_t* scalars, size_t count, size_t device_id);
+int msm_cuda_bls12_377(BLS12_377_projective_t* out, BLS12_377_affine_t* points,
+                   BLS12_377_scalar_t* scalars, size_t count, size_t device_id);
 
-int msm_batch_cuda_bls12_377(BLS12377_projective_t* out, BLS12377_affine_t* points,
-                         BLS12377_scalar_t* scalars, size_t batch_size,
+int msm_batch_cuda_bls12_377(BLS12_377_projective_t* out, BLS12_377_affine_t* points,
+                         BLS12_377_scalar_t* scalars, size_t batch_size,
                          size_t msm_size, size_t device_id);
 
-int commit_cuda_bls12_377(BLS12377_projective_t* d_out, BLS12377_scalar_t* d_scalars,
-                      BLS12377_affine_t* d_points, size_t count, size_t device_id);
+int commit_cuda_bls12_377(BLS12_377_projective_t* d_out, BLS12_377_scalar_t* d_scalars,
+                      BLS12_377_affine_t* d_points, size_t count, size_t device_id);
 
-int commit_batch_cuda_bls12_377(BLS12377_projective_t* d_out, BLS12377_scalar_t* d_scalars,
-                            BLS12377_affine_t* d_points, size_t count,
+int commit_batch_cuda_bls12_377(BLS12_377_projective_t* d_out, BLS12_377_scalar_t* d_scalars,
+                            BLS12_377_affine_t* d_points, size_t count,
                             size_t batch_size, size_t device_id);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _BLS12377_MSM_H */
+#endif /* _BLS12_377_MSM_H */

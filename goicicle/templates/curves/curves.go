@@ -18,7 +18,7 @@ var BN_254 = Curve{
 }
 
 var BLS_12_377 = Curve{
-	CurveNameUpperCase: "BLS12377",
+	CurveNameUpperCase: "BLS12_377",
 	CurveNameLowerCase: "bls12377",
 	SharedLib:          "-lbls12_377",
 	ScalarSize:         8,

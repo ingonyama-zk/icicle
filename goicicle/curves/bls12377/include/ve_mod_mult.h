@@ -19,24 +19,24 @@
 #include <cuda.h>
 // ve_mod_mult.h
 
-#ifndef _BLS12377_VEC_MULT_H
-#define _BLS12377_VEC_MULT_H
+#ifndef _BLS12_377_VEC_MULT_H
+#define _BLS12_377_VEC_MULT_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct BLS12377_projective_t BLS12377_projective_t;
-typedef struct BLS12377_scalar_t BLS12377_scalar_t;
+typedef struct BLS12_377_projective_t BLS12_377_projective_t;
+typedef struct BLS12_377_scalar_t BLS12_377_scalar_t;
 
-int32_t vec_mod_mult_point_bls12377(BLS12377_projective_t *inout, BLS12377_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
-int32_t vec_mod_mult_scalar_bls12377(BLS12377_scalar_t *inout, BLS12377_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
-int32_t vec_mod_mult_device_scalar_bls12377(BLS12377_scalar_t *inout, BLS12377_scalar_t *scalar_vec, size_t n_elements, size_t device_id);
-int32_t matrix_vec_mod_mult_bls12377(BLS12377_scalar_t *matrix_flattened, BLS12377_scalar_t *input, BLS12377_scalar_t *output, size_t n_elments, size_t device_id);
+int32_t vec_mod_mult_point_bls12_377(BLS12_377_projective_t *inout, BLS12_377_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
+int32_t vec_mod_mult_scalar_bls12_377(BLS12_377_scalar_t *inout, BLS12_377_scalar_t *scalar_vec, size_t n_elments, size_t device_id);
+int32_t vec_mod_mult_device_scalar_bls12_377(BLS12_377_scalar_t *inout, BLS12_377_scalar_t *scalar_vec, size_t n_elements, size_t device_id);
+int32_t matrix_vec_mod_mult_bls12_377(BLS12_377_scalar_t *matrix_flattened, BLS12_377_scalar_t *input, BLS12_377_scalar_t *output, size_t n_elments, size_t device_id);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _BLS12377_VEC_MULT_H */
+#endif /* _BLS12_377_VEC_MULT_H */

@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewFieldBLS12377One(t *testing.T) {
+func TestNewFieldBLS12_377One(t *testing.T) {
 	var oneField G1BaseField
 	oneField.SetOne()
 
@@ -33,14 +33,14 @@ func TestNewFieldBLS12377One(t *testing.T) {
 	assert.Equal(t, oneField.S, rawOneField)
 }
 
-func TestNewFieldBLS12377Zero(t *testing.T) {
+func TestNewFieldBLS12_377Zero(t *testing.T) {
 	zeroField := NewFieldZero[G1BaseField]()
 	rawZeroField := [8]uint32([8]uint32{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
 
 	assert.Equal(t, zeroField.S, rawZeroField)
 }
 
-func TestFieldBLS12377ToBytesLe(t *testing.T) {
+func TestFieldBLS12_377ToBytesLe(t *testing.T) {
 	var p G1ProjectivePoint
 	p.Random()
 
@@ -53,7 +53,7 @@ func TestFieldBLS12377ToBytesLe(t *testing.T) {
 	assert.Equal(t, len(p.X.ToBytesLe()), 32)
 }
 
-func TestNewPointBLS12377Zero(t *testing.T) {
+func TestNewPointBLS12_377Zero(t *testing.T) {
 	var pointZero G1ProjectivePoint
 	pointZero.SetZero()
 
@@ -65,7 +65,7 @@ func TestNewPointBLS12377Zero(t *testing.T) {
 	assert.Equal(t, pointZero.Z, *NewFieldZero[G1BaseField]())
 }
 
-func TestBLS12377Eq(t *testing.T) {
+func TestBLS12_377Eq(t *testing.T) {
 	var p1 G1ProjectivePoint
 	p1.Random()
 	var p2 G1ProjectivePoint
@@ -75,7 +75,7 @@ func TestBLS12377Eq(t *testing.T) {
 	assert.Equal(t, p1.Eq(&p2), false)
 }
 
-func TestBLS12377StripZ(t *testing.T) {
+func TestBLS12_377StripZ(t *testing.T) {
 	var p1 G1ProjectivePoint
 	p1.Random()
 
@@ -86,7 +86,7 @@ func TestBLS12377StripZ(t *testing.T) {
 	assert.Equal(t, p1.Y, p2ZLess.Y)
 }
 
-func TestPointBLS12377fromLimbs(t *testing.T) {
+func TestPointBLS12_377fromLimbs(t *testing.T) {
 	var p G1ProjectivePoint
 	p.Random()
 
@@ -104,7 +104,7 @@ func TestPointBLS12377fromLimbs(t *testing.T) {
 	assert.Equal(t, pFromLimbs, p)
 }
 
-func TestNewPointAffineNoInfinityBLS12377Zero(t *testing.T) {
+func TestNewPointAffineNoInfinityBLS12_377Zero(t *testing.T) {
 	var zeroP G1PointAffine
 	zeroP.SetZero()
 
@@ -112,7 +112,7 @@ func TestNewPointAffineNoInfinityBLS12377Zero(t *testing.T) {
 	assert.Equal(t, zeroP.Y, *NewFieldZero[G1BaseField]())
 }
 
-func TestPointAffineNoInfinityBLS12377FromLimbs(t *testing.T) {
+func TestPointAffineNoInfinityBLS12_377FromLimbs(t *testing.T) {
 	// Initialize your test values
 	x := [12]uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 	y := [12]uint32{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}

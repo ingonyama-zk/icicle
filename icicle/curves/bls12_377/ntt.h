@@ -19,26 +19,26 @@
 #include <cuda.h>
 // ntt.h
 
-#ifndef _BLS12377_NTT_H
-#define _BLS12377_NTT_H
+#ifndef _BLS12_377_NTT_H
+#define _BLS12_377_NTT_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Incomplete declaration of BLS12377 projective and affine structs
-typedef struct BLS12377_projective_t BLS12377_projective_t;
-typedef struct BLS12377_affine_t BLS12377_affine_t;
-typedef struct BLS12377_scalar_t BLS12377_scalar_t;
+// Incomplete declaration of BLS12_377 projective and affine structs
+typedef struct BLS12_377_projective_t BLS12_377_projective_t;
+typedef struct BLS12_377_affine_t BLS12_377_affine_t;
+typedef struct BLS12_377_scalar_t BLS12_377_scalar_t;
 
-int ntt_cuda_bls12_377(BLS12377_scalar_t *arr, uint32_t n, bool inverse, size_t decimation, size_t device_id);
-int ntt_batch_cuda_bls12_377(BLS12377_scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
+int ntt_cuda_bls12_377(BLS12_377_scalar_t *arr, uint32_t n, bool inverse, size_t decimation, size_t device_id);
+int ntt_batch_cuda_bls12_377(BLS12_377_scalar_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
 
-int ecntt_cuda_bls12_377(BLS12377_projective_t *arr, uint32_t n, bool inverse, size_t device_id);
-int ecntt_batch_cuda_bls12_377(BLS12377_projective_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
+int ecntt_cuda_bls12_377(BLS12_377_projective_t *arr, uint32_t n, bool inverse, size_t device_id);
+int ecntt_batch_cuda_bls12_377(BLS12_377_projective_t *arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _BLS12377_NTT_H */
+#endif /* _BLS12_377_NTT_H */

@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNttBLS12377BBB(t *testing.T) {
+func TestNttBLS12_377BBB(t *testing.T) {
 	count := 1 << 20
 	scalars := GenerateScalars(count, false)
 
@@ -32,13 +32,13 @@ func TestNttBLS12377BBB(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBatchBLS12377(&nttResult, false, count, 0)
+	NttBatchBLS12_377(&nttResult, false, count, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
 }
 
-func TestNttBLS12377CompareToGnarkDIF(t *testing.T) {
+func TestNttBLS12_377CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 2
 	scalars := GenerateScalars(count, false)
 
@@ -46,13 +46,13 @@ func TestNttBLS12377CompareToGnarkDIF(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBLS12377(&nttResult, false, DIF, 0)
+	NttBLS12_377(&nttResult, false, DIF, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
 }
 
-func TestINttBLS12377CompareToGnarkDIT(t *testing.T) {
+func TestINttBLS12_377CompareToGnarkDIT(t *testing.T) {
 	count := 1 << 3
 	scalars := GenerateScalars(count, false)
 
@@ -60,13 +60,13 @@ func TestINttBLS12377CompareToGnarkDIT(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBLS12377(&nttResult, true, DIT, 0)
+	NttBLS12_377(&nttResult, true, DIT, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
 }
 
-func TestNttBLS12377(t *testing.T) {
+func TestNttBLS12_377(t *testing.T) {
 	count := 1 << 3
 
 	scalars := GenerateScalars(count, false)
@@ -75,18 +75,18 @@ func TestNttBLS12377(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBLS12377(&nttResult, false, NONE, 0)
+	NttBLS12_377(&nttResult, false, NONE, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	inttResult := make([]G1ScalarField, len(nttResult))
 	copy(inttResult, nttResult)
 
 	assert.Equal(t, inttResult, nttResult)
-	NttBLS12377(&inttResult, true, NONE, 0)
+	NttBLS12_377(&inttResult, true, NONE, 0)
 	assert.Equal(t, inttResult, scalars)
 }
 
-func TestNttBatchBLS12377(t *testing.T) {
+func TestNttBatchBLS12_377(t *testing.T) {
 	count := 1 << 5
 	batches := 4
 
@@ -105,7 +105,7 @@ func TestNttBatchBLS12377(t *testing.T) {
 	nttBatchResult := make([]G1ScalarField, len(scalars))
 	copy(nttBatchResult, scalars)
 
-	NttBatchBLS12377(&nttBatchResult, false, count, 0)
+	NttBatchBLS12_377(&nttBatchResult, false, count, 0)
 
 	var nttResultVecOfVec [][]G1ScalarField
 
@@ -118,7 +118,7 @@ func TestNttBatchBLS12377(t *testing.T) {
 		nttResultVecOfVec = append(nttResultVecOfVec, clone)
 
 		// Call the ntt_bls12377 function
-		NttBLS12377(&nttResultVecOfVec[i], false, NONE, 0)
+		NttBLS12_377(&nttResultVecOfVec[i], false, NONE, 0)
 	}
 
 	assert.NotEqual(t, nttBatchResult, scalars)
@@ -142,7 +142,7 @@ func BenchmarkNTT(b *testing.B) {
 			nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)
 			for n := 0; n < b.N; n++ {
-				NttBLS12377(&nttResult, false, NONE, 0)
+				NttBLS12_377(&nttResult, false, NONE, 0)
 			}
 		})
 	}

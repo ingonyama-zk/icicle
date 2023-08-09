@@ -45,7 +45,7 @@ type G2Point struct {
 }
 
 func (p *G2Point) Random() *G2Point {
-	rand := C.random_projective_bls12377()
+	rand := C.random_projective_bls12_377()
 	
 	*p = *(*G2Point)(unsafe.Pointer(rand))
 
@@ -53,17 +53,17 @@ func (p *G2Point) Random() *G2Point {
 }
 
 func (p *G2Point) Eqg2(pCompare *G2Point) bool {
-	// Cast *PointBLS12377 to *C.BLS12377_projective_t
+	// Cast *PointBLS12_377 to *C.BLS12_377_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.
 	// It's your responsibility to ensure that the types are compatible.
-	pC := (*C.BLS12377_g2_projective_t)(unsafe.Pointer(p))
-	pCompareC := (*C.BLS12377_g2_projective_t)(unsafe.Pointer(pCompare))
+	pC := (*C.BLS12_377_g2_projective_t)(unsafe.Pointer(p))
+	pCompareC := (*C.BLS12_377_g2_projective_t)(unsafe.Pointer(pCompare))
 
 	// Call the C function
 	// The C function doesn't keep any references to the data,
 	// so it's fine if the Go garbage collector moves or deletes the data later.
-	return bool(C.eq_g2_bls12377(pC, pCompareC))
+	return bool(C.eq_g2_bls12_377(pC, pCompareC))
 }
 
 func (f *G2Element) ToBytesLe() []byte {
@@ -88,9 +88,9 @@ func (p *G2PointAffine) ToProjective() G2Point {
 }
 
 func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
-	in := (*C.BLS12377_g2_projective_t)(unsafe.Pointer(projective))
+	in := (*C.BLS12_377_g2_projective_t)(unsafe.Pointer(projective))
 
-	out := C.g2_projective_to_affine_bls12377(in)
+	out := C.g2_projective_to_affine_bls12_377(in)
 	
 	// Directly copy memory from the C struct to the Go struct
 	*p = *(*G2PointAffine)(unsafe.Pointer(out))
@@ -100,8 +100,8 @@ func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
 
 func (p *G2Point) IsOnCurve() bool {
 	// Directly copy memory from the C struct to the Go struct
-	point := (*C.BLS12377_g2_projective_t)(unsafe.Pointer(p))
-	res := C.g2_projective_is_on_curve_bls12377(point)
+	point := (*C.BLS12_377_g2_projective_t)(unsafe.Pointer(p))
+	res := C.g2_projective_is_on_curve_bls12_377(point)
 
 	return bool(res)
 }

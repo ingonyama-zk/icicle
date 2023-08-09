@@ -32,15 +32,17 @@ import (
 func GeneratePoints(count int) []G1PointAffine {
 	// Declare a slice of integers
 	var points []G1PointAffine
-
 	// populate the slice
 	for i := 0; i < 10; i++ {
 		var pointProjective G1ProjectivePoint
 		pointProjective.Random()
+		fmt.Printf("%+v\n", pointProjective)
+		fmt.Printf("asdas\n")
+		fmt.Printf("asdas\n")
+		fmt.Printf("asdas\n")
 
 		var pointAffine G1PointAffine
 		pointAffine.FromProjective(&pointProjective)
-
 		points = append(points, pointAffine)
 	}
 
@@ -113,13 +115,11 @@ func TestMSM(t *testing.T) {
 		count := 1 << v
 
 		points := GeneratePoints(count)
-		fmt.Print("Finished generating points\n")
 		scalars := GenerateScalars(count, true)
-		fmt.Print("Finished generating scalars\n")
 
 		out := new(G1ProjectivePoint)
 		startTime := time.Now()
-		_, e := MsmBLS12377(out, points, scalars, 0) // non mont
+		_, e := MsmBLS12_377(out, points, scalars, 0) // non mont
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
 		assert.Equal(t, e, nil, "error should be nil")
@@ -199,10 +199,10 @@ func TestBenchMSM(t *testing.T) {
 			points := GeneratePoints(count)
 			scalars := GenerateScalars(count, false)
 
-			a, e := MsmBatchBLS12377(&points, &scalars, batchSize, 0)
+			a, e := MsmBatchBLS12_377(&points, &scalars, batchSize, 0)
 
 			if e != nil {
-				t.Errorf("MsmBatchBLS12377 returned an error: %v", e)
+				t.Errorf("MsmBatchBLS12_377 returned an error: %v", e)
 			}
 
 			if len(a) != batchSize {
@@ -222,7 +222,7 @@ func BenchmarkMSM(b *testing.B) {
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(G1ProjectivePoint)
-				_, e := MsmBLS12377(out, points, scalars, 0)
+				_, e := MsmBLS12_377(out, points, scalars, 0)
 
 				if e != nil {
 					panic("Error occured")
@@ -258,7 +258,7 @@ func GenerateG2Points(count int) []G2PointAffine {
 	return points[:count]
 }
 
-func TestMsmG2BLS12377(t *testing.T) {
+func TestMsmG2BLS12_377(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
 		points := GenerateG2Points(count)
@@ -267,13 +267,13 @@ func TestMsmG2BLS12377(t *testing.T) {
 		fmt.Print("Finished generating scalars\n")
 
 		out := new(G2Point)
-		_, e := MsmG2BLS12377(out, points, scalars, 0)
+		_, e := MsmG2BLS12_377(out, points, scalars, 0)
 		assert.Equal(t, e, nil, "error should be nil")
 		assert.True(t, out.IsOnCurve())
 	}
 }
 
-func BenchmarkMsmG2BLS12377(b *testing.B) {
+func BenchmarkMsmG2BLS12_377(b *testing.B) {
 	LOG_MSM_SIZES := []int{20, 21, 22, 23, 24, 25, 26}
 
 	for _, logMsmSize := range LOG_MSM_SIZES {
@@ -283,7 +283,7 @@ func BenchmarkMsmG2BLS12377(b *testing.B) {
 		b.Run(fmt.Sprintf("MSM G2 %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(G2Point)
-				_, e := MsmG2BLS12377(out, points, scalars, 0)
+				_, e := MsmG2BLS12_377(out, points, scalars, 0)
 
 				if e != nil {
 					panic("Error occured")
@@ -340,10 +340,10 @@ func TestBatchG2MSM(t *testing.T) {
 			points := GenerateG2Points(count)
 			scalars := GenerateScalars(count, false)
 
-			pointsResults, e := MsmG2BatchBLS12377(&points, &scalars, batchSize, 0)
+			pointsResults, e := MsmG2BatchBLS12_377(&points, &scalars, batchSize, 0)
 
 			if e != nil {
-				t.Errorf("MsmBatchBLS12377 returned an error: %v", e)
+				t.Errorf("MsmBatchBLS12_377 returned an error: %v", e)
 			}
 
 			if len(pointsResults) != batchSize {

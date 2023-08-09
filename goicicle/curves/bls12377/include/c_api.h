@@ -23,26 +23,26 @@
 extern "C" {
 #endif
 
-typedef struct BLS12377_projective_t BLS12377_projective_t;
-typedef struct  BLS12377_g2_projective_t BLS12377_g2_projective_t;
-typedef struct BLS12377_affine_t BLS12377_affine_t;
-typedef struct BLS12377_scalar_t BLS12377_scalar_t;
+typedef struct BLS12_377_projective_t BLS12_377_projective_t;
+typedef struct  BLS12_377_g2_projective_t BLS12_377_g2_projective_t;
+typedef struct BLS12_377_affine_t BLS12_377_affine_t;
+typedef struct BLS12_377_scalar_t BLS12_377_scalar_t;
 
-bool projective_is_on_curve_bls12377(BLS12377_projective_t *point1);
+bool projective_is_on_curve_bls12_377(BLS12_377_projective_t *point1);
 
-BLS12377_scalar_t* random_scalar_bls12377();
-BLS12377_projective_t* random_projective_bls12377();
-BLS12377_projective_t* projective_zero_bls12377();
-BLS12377_affine_t* projective_to_affine_bls12377(BLS12377_projective_t *point1);
-BLS12377_projective_t* projective_from_affine_bls12377(BLS12377_affine_t *point1);
+BLS12_377_scalar_t* random_scalar_bls12_377();
+BLS12_377_projective_t* random_projective_bls12_377();
+BLS12_377_projective_t* projective_zero_bls12_377();
+BLS12_377_affine_t* projective_to_affine_bls12_377(BLS12_377_projective_t *point1);
+BLS12_377_projective_t* projective_from_affine_bls12_377(BLS12_377_affine_t *point1);
 
-BLS12377_g2_projective_t* random_g2_projective_bls12377();
-BLS12377_affine_t* g2_projective_to_affine_bls12377(BLS12377_g2_projective_t *point1);
-BLS12377_g2_projective_t* g2_projective_from_affine_bls12377(BLS12377_affine_t *point1);
-bool g2_projective_is_on_curve_bls12377(BLS12377_g2_projective_t *point1);
+BLS12_377_g2_projective_t* random_g2_projective_bls12_377();
+BLS12_377_affine_t* g2_projective_to_affine_bls12_377(BLS12_377_g2_projective_t *point1);
+BLS12_377_g2_projective_t* g2_projective_from_affine_bls12_377(BLS12_377_affine_t *point1);
+bool g2_projective_is_on_curve_bls12_377(BLS12_377_g2_projective_t *point1);
 
-bool eq_bls12377(BLS12377_projective_t *point1, BLS12377_projective_t *point2);
-bool eq_g2_bls12377(BLS12377_g2_projective_t *point1, BLS12377_g2_projective_t *point2);
+bool eq_bls12_377(BLS12_377_projective_t *point1, BLS12_377_projective_t *point2);
+bool eq_g2_bls12_377(BLS12_377_g2_projective_t *point1, BLS12_377_g2_projective_t *point2);
 
 #ifdef __cplusplus
 }
