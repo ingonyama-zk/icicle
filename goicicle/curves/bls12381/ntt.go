@@ -35,7 +35,7 @@ const (
 	DIT  = 2
 )
 
-func NttBLS12381(scalars *[]ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
+func NttBLS12381(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
 	scalarsC := (*C.BLS12381_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
 	ret := C.ntt_cuda_bls12381(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
@@ -43,7 +43,7 @@ func NttBLS12381(scalars *[]ScalarField, isInverse bool, decimation int, deviceI
 	return uint64(ret)
 }
 
-func NttBatchBLS12381(scalars *[]ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
+func NttBatchBLS12381(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
 	scalarsC := (*C.BLS12381_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 	isInverseC := C.bool(isInverse)
 	batchSizeC := C.uint32_t(batchSize)
@@ -54,7 +54,7 @@ func NttBatchBLS12381(scalars *[]ScalarField, isInverse bool, batchSize, deviceI
 	return uint64(ret)
 }
 
-func EcNttBLS12381(values *[]PointBLS12381, isInverse bool, deviceId int) uint64 {
+func EcNttBLS12381(values *[]G1ProjectivePoint, isInverse bool, deviceId int) uint64 {
 	valuesC := (*C.BLS12381_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
@@ -65,7 +65,7 @@ func EcNttBLS12381(values *[]PointBLS12381, isInverse bool, deviceId int) uint64
 	return uint64(ret)
 }
 
-func EcNttBatchBLS12381(values *[]PointBLS12381, isInverse bool, batchSize, deviceId int) uint64 {
+func EcNttBatchBLS12381(values *[]G1ProjectivePoint, isInverse bool, batchSize, deviceId int) uint64 {
 	valuesC := (*C.BLS12381_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)

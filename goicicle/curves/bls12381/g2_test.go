@@ -19,17 +19,43 @@ package bls12381
 
 import (
 	"testing"
-
 	"github.com/stretchr/testify/assert"
 )
 
-func TestToGnarkJacG2(t *testing.T) {
-	gnark, _ := randG2Jac()
+func TestG2Eqg2(t *testing.T) {
+	var point G2Point
 
+	point.Random()
+
+	assert.True(t, point.Eqg2(&point))
+}
+
+func TestG2Eqg2NotEqual(t *testing.T) {
+	var point G2Point
+	point.Random()
+
+	var point2 G2Point
+	point2.Random()
+
+	assert.False(t, point.Eqg2(&point2))
+}
+
+func TestG2ToBytes(t *testing.T) {
+	element := G2Element{0x6546098ea84b6298, 0x4a384533d1f68aca, 0xaa0666972d771336, 0x1569e4a34321993}
+	bytes := element.ToBytesLe()
+
+	assert.Equal(t, bytes, []byte{0x98, 0x62, 0x4b, 0xa8, 0x8e, 0x9, 0x46, 0x65, 0xca, 0x8a, 0xf6, 0xd1, 0x33, 0x45, 0x38, 0x4a, 0x36, 0x13, 0x77, 0x2d, 0x97, 0x66, 0x6, 0xaa, 0x93, 0x19, 0x32, 0x34, 0x4a, 0x9e, 0x56, 0x1})
+}
+
+func TestG2ShouldConvertToProjective(t *testing.T) {
+	var pointProjective G2Point
 	var pointAffine G2PointAffine
-	pointAffine.FromGnarkJac(&gnark)
-	pointProjective := pointAffine.ToProjective()
-	backToGnark := pointProjective.ToGnarkJac()
 
-	assert.True(t, gnark.Equal(backToGnark))
+	pointProjective.Random()
+	pointAffine.FromProjective(&pointProjective)
+
+	proj := pointAffine.ToProjective()
+
+	assert.True(t, proj.IsOnCurve())
+	assert.True(t, pointProjective.Eqg2(&proj))
 }

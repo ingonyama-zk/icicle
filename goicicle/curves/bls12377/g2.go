@@ -19,23 +19,7 @@ package bls12377
 
 import (
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"unsafe"
-
-	
-
-
-	"github.com/consensys/gnark-crypto/ecc/bls12-377"
-
-
-
-	
-
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fp"
-
-
-
 )
 
 // #cgo CFLAGS: -I./include/
@@ -44,79 +28,31 @@ import (
 // #include "ve_mod_mult.h"
 import "C"
 
-func BatchConvertFromG2Affine(elements []bls12377.G2Affine) []G2PointAffine {
-	var newElements []G2PointAffine
-	for _, gg2Affine := range elements {
-		var newElement G2PointAffine
-		newElement.FromGnarkAffine(&gg2Affine)
-
-		newElements = append(newElements, newElement)
-	}
-	return newElements
-}
-
-func BatchConvertFromG2AffineThreads(elements []bls12377.G2Affine, routines int) []G2PointAffine {
-	var newElements []G2PointAffine
-
-	if routines > 1 && routines <= len(elements) {
-		channels := make([]chan []G2PointAffine, routines)
-		for i := 0; i < routines; i++ {
-			channels[i] = make(chan []G2PointAffine, 1)
-		}
-
-		convert := func(elements []bls12377.G2Affine, chanIndex int) {
-			var convertedElements []G2PointAffine
-			for _, e := range elements {
-				var converted G2PointAffine
-				converted.FromGnarkAffine(&e)
-				convertedElements = append(convertedElements, converted)
-			}
-
-			channels[chanIndex] <- convertedElements
-		}
-
-		batchLen := len(elements) / routines
-		for i := 0; i < routines; i++ {
-			start := batchLen * i
-			end := batchLen * (i + 1)
-			elemsToConv := elements[start:end]
-			if i == routines-1 {
-				elemsToConv = elements[start:]
-			}
-			go convert(elemsToConv, i)
-		}
-
-		for i := 0; i < routines; i++ {
-			newElements = append(newElements, <-channels[i]...)
-		}
-	} else {
-		for _, e := range elements {
-			var converted G2PointAffine
-			converted.FromGnarkAffine(&e)
-			newElements = append(newElements, converted)
-		}
-	}
-
-	return newElements
-}
-
 // G2 extension field
 
-type G2Element [6]uint64
+type G2Element [4]uint64
 
 type ExtentionField struct {
 	A0, A1 G2Element
 }
 
 type G2PointAffine struct {
-	x, y ExtentionField
+	X, Y ExtentionField
 }
 
 type G2Point struct {
-	x, y, z ExtentionField
+	X, Y, Z ExtentionField
 }
 
-func (p *G2Point) eqg2(pCompare *G2Point) bool {
+func (p *G2Point) Random() *G2Point {
+	rand := C.random_projective_bls12377()
+	
+	*p = *(*G2Point)(unsafe.Pointer(rand))
+
+	return p
+}
+
+func (p *G2Point) Eqg2(pCompare *G2Point) bool {
 	// Cast *PointBLS12377 to *C.BLS12377_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.
@@ -140,108 +76,32 @@ func (f *G2Element) ToBytesLe() []byte {
 	return bytes
 }
 
-/*
-TODO: the following functions are due to a bug in the cuda code,
-these fucntions should be deleted once cuda MsmG2 returns non montgomery format
-*/
-const (
-	q0 uint64 = 4332616871279656263
-	q1 uint64 = 10917124144477883021
-	q2 uint64 = 13281191951274694749
-	q3 uint64 = 3486998266802970665
-)
-
-func smallerThanModulus(z fp.Element) bool {
-	return (z[3] < q3 || (z[3] == q3 && (z[2] < q2 || (z[2] == q2 && (z[1] < q1 || (z[1] == q1 && (z[0] < q0)))))))
-}
-
-func ElementWithOutConvertingToMontgomery(b *[32]byte) (fp.Element, error) {
-	var z fp.Element
-	z[0] = binary.LittleEndian.Uint64((*b)[0:8])
-	z[1] = binary.LittleEndian.Uint64((*b)[8:16])
-	z[2] = binary.LittleEndian.Uint64((*b)[16:24])
-	z[3] = binary.LittleEndian.Uint64((*b)[24:32])
-
-	if !smallerThanModulus(z) {
-		return fp.Element{}, errors.New("invalid fp.Element encoding")
-	}
-
-	return z, nil
-}
-
-func (f *G2Element) toGnarkFp() *fp.Element {
-	fb := f.ToBytesLe()
-	var b32 [32]byte
-	copy(b32[:], fb[:32])
-
-	v, e := ElementWithOutConvertingToMontgomery(&b32) // cuda returns montgomery format
-	//v2, e := fp.LittleEndian.Element(&b32) // TODO: revert back to this once cuda code is fixed.
-
-	if e != nil {
-		panic(fmt.Sprintf("unable to create convert point %v got error %v", f, e))
-	}
-
-	return &v
-}
-
-func (f *ExtentionField) toGnarkE2() bls12377.E2 {
-	return bls12377.E2{
-		A0: *f.A0.toGnarkFp(),
-		A1: *f.A1.toGnarkFp(),
-	}
-}
-
-func (p *G2Point) ToGnarkJac() *bls12377.G2Jac {
-	x := p.x.toGnarkE2()
-	y := p.y.toGnarkE2()
-	z := p.z.toGnarkE2()
-
-	var zSquared bls12377.E2
-	zSquared.Mul(&z, &z)
-
-	var X bls12377.E2
-	X.Mul(&x, &z)
-
-	var Y bls12377.E2
-	Y.Mul(&y, &zSquared)
-
-	after := bls12377.G2Jac{
-		X: X,
-		Y: Y,
-		Z: z,
-	}
-
-	return &after
-}
-
 func (p *G2PointAffine) ToProjective() G2Point {
 	return G2Point{
-		x: p.x,
-		y: p.y,
-		z: ExtentionField{
+		X: p.X,
+		Y: p.Y,
+		Z: ExtentionField{
 			A0: G2Element{1, 0, 0, 0},
 			A1: G2Element{0, 0, 0, 0},
 		},
 	}
 }
 
-func (g *G2PointAffine) FromGnarkAffine(gnark *bls12377.G2Affine) *G2PointAffine {
-	g.x.A0 = gnark.X.A0.Bits()
-	g.x.A1 = gnark.X.A1.Bits()
-	g.y.A0 = gnark.Y.A0.Bits()
-	g.y.A1 = gnark.Y.A1.Bits()
+func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
+	in := (*C.BLS12377_g2_projective_t)(unsafe.Pointer(projective))
 
-	return g
+	out := C.g2_projective_to_affine_bls12377(in)
+	
+	// Directly copy memory from the C struct to the Go struct
+	*p = *(*G2PointAffine)(unsafe.Pointer(out))
+
+	return p
 }
 
-func (g *G2PointAffine) FromGnarkJac(gnark *bls12377.G2Jac) *G2PointAffine {
-	var pointAffine bls12377.G2Affine
-	pointAffine.FromJacobian(gnark)
+func (p *G2Point) IsOnCurve() bool {
+	// Directly copy memory from the C struct to the Go struct
+	point := (*C.BLS12377_g2_projective_t)(unsafe.Pointer(p))
+	res := C.g2_projective_is_on_curve_bls12377(point)
 
-	g.x.A0 = pointAffine.X.A0.Bits()
-	g.x.A1 = pointAffine.X.A1.Bits()
-	g.y.A0 = pointAffine.Y.A0.Bits()
-	g.y.A1 = pointAffine.Y.A1.Bits()
-
-	return g
+	return bool(res)
 }

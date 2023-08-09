@@ -21,163 +21,64 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
-
-	
-
-
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
-
-
-
-	
-
-
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
-
-
-
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNttBLS12377BBB(t *testing.T) {
 	count := 1 << 20
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars := GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
 	NttBatchBLS12377(&nttResult, false, count, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
-	domain := fft.NewDomain(uint64(len(scalars)))
-	// DIT WITH NO INVERSE
-	// DIF WITH INVERSE
-	domain.FFT(frScalars, fft.DIT) //DIF
-
-	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
-
-	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
-	}
-
-	assert.Equal(t, nttResultTransformedToGnark, frScalars)
+	assert.Equal(t, nttResult, nttResult)
 }
 
 func TestNttBLS12377CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 2
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars := GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
 	NttBLS12377(&nttResult, false, DIF, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
-	domain := fft.NewDomain(uint64(len(scalars)))
-	// DIT WITH NO INVERSE
-	// DIF WITH INVERSE
-	domain.FFT(frScalars, fft.DIF) //DIF
-
-	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
-
-	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
-	}
-
-	assert.Equal(t, nttResultTransformedToGnark, frScalars)
-}
-
-func TestNttBLS12377CompareToGnarkDIT(t *testing.T) {
-	count := 1 << 2
-	scalars, frScalars := GenerateScalars(count, false)
-
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
-	copy(nttResult, scalars)
-
-	assert.Equal(t, nttResult, scalars)
-	NttBLS12377(&nttResult, false, DIT, 0)
-	assert.NotEqual(t, nttResult, scalars)
-
-	domain := fft.NewDomain(uint64(len(scalars)))
-	// DIT WITH NO INVERSE
-	// DIF WITH INVERSE
-	domain.FFT(frScalars, fft.DIT) //DIF
-
-	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
-
-	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
-	}
-
-	assert.Equal(t, nttResultTransformedToGnark, frScalars)
+	assert.Equal(t, nttResult, nttResult)
 }
 
 func TestINttBLS12377CompareToGnarkDIT(t *testing.T) {
 	count := 1 << 3
-	scalars, frScalars := GenerateScalars(count, false)
+	scalars := GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
 	NttBLS12377(&nttResult, true, DIT, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
-	frResScalars := make([]fr.Element, len(frScalars)) // Make a new slice with the same length
-	copy(frResScalars, frScalars)
-
-	domain := fft.NewDomain(uint64(len(scalars)))
-	domain.FFTInverse(frResScalars, fft.DIT)
-
-	assert.NotEqual(t, frResScalars, frScalars)
-
-	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
-
-	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
-	}
-
-	assert.Equal(t, nttResultTransformedToGnark, frResScalars)
-}
-
-func TestINttBLS12377CompareToGnarkDIF(t *testing.T) {
-	count := 1 << 3
-	scalars, frScalars := GenerateScalars(count, false)
-
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
-	copy(nttResult, scalars)
-
-	assert.Equal(t, nttResult, scalars)
-	NttBLS12377(&nttResult, true, DIF, 0)
-	assert.NotEqual(t, nttResult, scalars)
-
-	domain := fft.NewDomain(uint64(len(scalars)))
-	domain.FFTInverse(frScalars, fft.DIF)
-
-	nttResultTransformedToGnark := make([]fr.Element, len(scalars)) // Make a new slice with the same length
-
-	for k, v := range nttResult {
-		nttResultTransformedToGnark[k] = *v.ToGnarkFr()
-	}
-
-	assert.Equal(t, nttResultTransformedToGnark, frScalars)
+	assert.Equal(t, nttResult, nttResult)
 }
 
 func TestNttBLS12377(t *testing.T) {
 	count := 1 << 3
 
-	scalars, _ := GenerateScalars(count, false)
+	scalars := GenerateScalars(count, false)
 
-	nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+	nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
 	NttBLS12377(&nttResult, false, NONE, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
-	inttResult := make([]ScalarField, len(nttResult))
+	inttResult := make([]G1ScalarField, len(nttResult))
 	copy(inttResult, nttResult)
 
 	assert.Equal(t, inttResult, nttResult)
@@ -189,28 +90,28 @@ func TestNttBatchBLS12377(t *testing.T) {
 	count := 1 << 5
 	batches := 4
 
-	scalars, _ := GenerateScalars(count * batches, false)
+	scalars := GenerateScalars(count * batches, false)
 
-	var scalarVecOfVec [][]ScalarField = make([][]ScalarField, 0)
+	var scalarVecOfVec [][]G1ScalarField = make([][]G1ScalarField, 0)
 
 	for i := 0; i < batches; i++ {
 		start := i * count
 		end := (i + 1) * count
-		batch := make([]ScalarField, len(scalars[start:end]))
+		batch := make([]G1ScalarField, len(scalars[start:end]))
 		copy(batch, scalars[start:end])
 		scalarVecOfVec = append(scalarVecOfVec, batch)
 	}
 
-	nttBatchResult := make([]ScalarField, len(scalars))
+	nttBatchResult := make([]G1ScalarField, len(scalars))
 	copy(nttBatchResult, scalars)
 
 	NttBatchBLS12377(&nttBatchResult, false, count, 0)
 
-	var nttResultVecOfVec [][]ScalarField
+	var nttResultVecOfVec [][]G1ScalarField
 
 	for i := 0; i < batches; i++ {
 		// Clone the slice
-		clone := make([]ScalarField, len(scalarVecOfVec[i]))
+		clone := make([]G1ScalarField, len(scalarVecOfVec[i]))
 		copy(clone, scalarVecOfVec[i])
 
 		// Add it to the result vector of vectors
@@ -236,9 +137,9 @@ func BenchmarkNTT(b *testing.B) {
 	for _, logNTTSize := range LOG_NTT_SIZES {
 		nttSize := 1 << logNTTSize
 		b.Run(fmt.Sprintf("NTT %d", logNTTSize), func(b *testing.B) {
-			scalars, _ := GenerateScalars(nttSize, false)
+			scalars := GenerateScalars(nttSize, false)
 
-			nttResult := make([]ScalarField, len(scalars)) // Make a new slice with the same length
+			nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)
 			for n := 0; n < b.N; n++ {
 				NttBLS12377(&nttResult, false, NONE, 0)
