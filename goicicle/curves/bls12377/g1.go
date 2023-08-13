@@ -90,10 +90,9 @@ func (f *G1BaseField) ToBytesLe() []byte {
  * ScalarField methods
  */
 
-
 func (p *G1ScalarField) Random() *G1ScalarField {
 	rand := C.random_scalar_bls12_377()
-	
+
 	*p = *(*G1ScalarField)(unsafe.Pointer(rand))
 
 	return p
@@ -182,7 +181,7 @@ func (p *G1ProjectivePoint) IsOnCurve() bool {
 
 func (p *G1ProjectivePoint) Random() *G1ProjectivePoint {
 	rand := C.random_projective_bls12_377()
-	
+
 	// Directly copy memory from the C struct to the Go struct
 	*p = *(*G1ProjectivePoint)(unsafe.Pointer(rand))
 
