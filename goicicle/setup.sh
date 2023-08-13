@@ -16,7 +16,7 @@ MAKE_FAIL=0
 $SUDO make $1 || MAKE_FAIL=1
 
 if [ $MAKE_FAIL -ne 0 ]; then
-    echo "make failed, install dependencies and re-run setup script with root priviledges"
+    echo "make failed, install dependencies and re-run setup script with root privileges"
     exit
 fi
 
