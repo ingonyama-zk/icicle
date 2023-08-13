@@ -1,10 +1,24 @@
 #!/bin/bash
 
+SUDO=''
+if [ "$EUID" -ne 0 ]; then 
+  echo "Icicle setup script should be run with root priviledges, please run this as root"
+  SUDO='sudo'
+fi
+
+
 TARGET_BN254="libbn254.so"
 TARGET_BLS12_381="libbls12_381.so"
 TARGET_BLS12_377="libbls12_377.so"
 
-sudo make $1
+MAKE_FAIL=0
+
+$SUDO make $1 || MAKE_FAIL=1
+
+if [ $MAKE_FAIL -ne 0 ]; then
+    echo "make failed, install dependencies and re-run setup script with root priviledges"
+    exit
+fi
 
 TARGET_BN254_PATH=$(dirname "$(find `pwd` -name $TARGET_BN254 -print -quit)")/
 TARGET_BLS12_381_PATH=$(dirname "$(find `pwd` -name $TARGET_BLS12_381 -print -quit)")/
