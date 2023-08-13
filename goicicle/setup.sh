@@ -2,7 +2,7 @@
 
 SUDO=''
 if [ "$EUID" -ne 0 ]; then 
-  echo "Icicle setup script should be run with root priviledges, please run this as root"
+  echo "Icicle setup script should be run with root privileges, please run this as root"
   SUDO='sudo'
 fi
 
