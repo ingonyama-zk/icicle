@@ -130,21 +130,21 @@ func genMainFiles() {
 	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./hfiles/", ve_mod_mult_h_bn254...))
 	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./hfiles/", ve_mod_mult_ht_bls12381...))
 
-	c_api_bn254 := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bn254", "include", "c_api.h"), Templates: []string{"c_api.h.tmpl"}},
+	projective_bn254 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "include", "projective.h"), Templates: []string{"projective.h.tmpl"}},
 	}
 
-	c_api_bls12377 := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12377", "include", "c_api.h"), Templates: []string{"c_api.h.tmpl"}},
+	projective_bls12377 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "include", "projective.h"), Templates: []string{"projective.h.tmpl"}},
 	}
 
-	c_api_bls12381 := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12381", "include", "c_api.h"), Templates: []string{"c_api.h.tmpl"}},
+	projective_bls12381 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "include", "projective.h"), Templates: []string{"projective.h.tmpl"}},
 	}
 
-	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./hfiles/", c_api_bls12377...))
-	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./hfiles/", c_api_bn254...))
-	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./hfiles/", c_api_bls12381...))
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./hfiles/", projective_bls12377...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./hfiles/", projective_bn254...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./hfiles/", projective_bls12381...))
 }
 
 func genTestFiles() {

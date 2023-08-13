@@ -23,7 +23,7 @@ import (
 
 // #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
-// #include "c_api.h"
+// #include "projective.h"
 // #include "ve_mod_mult.h"
 import "C"
 

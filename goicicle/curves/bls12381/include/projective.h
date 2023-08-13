@@ -17,7 +17,7 @@
 
 #include <stdbool.h>
 #include <cuda.h>
-// c_api.h
+// projective.h
 
 #ifdef __cplusplus
 extern "C" {
