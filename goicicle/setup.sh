@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SUDO=''
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" != 0 ]; then 
   echo "Icicle setup script should be run with root privileges, please run this as root"
   SUDO='sudo'
 fi
@@ -15,7 +15,7 @@ MAKE_FAIL=0
 
 $SUDO make $1 || MAKE_FAIL=1
 
-if [ $MAKE_FAIL -ne 0 ]; then
+if [ $MAKE_FAIL != 0 ]; then
     echo "make failed, install dependencies and re-run setup script with root privileges"
     exit
 fi
@@ -36,6 +36,6 @@ if [[ "$TARGET_BN254_PATH" != "" ]]; then
 fi
 
 if [[ "$TARGET_BLS12_381_PATH" != "" ]]; then
-    echo "BN254_PATH found @ $TARGET_BLS12_381_PATH"
+    echo "BLS12_381_PATH found @ $TARGET_BLS12_381_PATH"
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$TARGET_BLS12_381_PATH
 fi
