@@ -490,6 +490,7 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
 
   // all the large buckets need to be accumulated before the final summation
   cudaStreamSynchronize(stream2);
+  cudaStreamDestroy(stream2);
 
   #ifdef SSM_SUM
     //sum each bucket
