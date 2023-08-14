@@ -1,8 +1,8 @@
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNtt{{.CurveNameUpperCase}}BBB(t *testing.T) {
@@ -13,7 +13,7 @@ func TestNtt{{.CurveNameUpperCase}}BBB(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBatch{{.CurveNameUpperCase}}(&nttResult, false, count, 0)
+	NttBatch(&nttResult, false, count, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
@@ -27,7 +27,7 @@ func TestNtt{{.CurveNameUpperCase}}CompareToGnarkDIF(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	Ntt{{.CurveNameUpperCase}}(&nttResult, false, DIF, 0)
+	Ntt(&nttResult, false, DIF, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
@@ -41,7 +41,7 @@ func TestINtt{{.CurveNameUpperCase}}CompareToGnarkDIT(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	Ntt{{.CurveNameUpperCase}}(&nttResult, true, DIT, 0)
+	Ntt(&nttResult, true, DIT, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
@@ -56,14 +56,14 @@ func TestNtt{{.CurveNameUpperCase}}(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	Ntt{{.CurveNameUpperCase}}(&nttResult, false, NONE, 0)
+	Ntt(&nttResult, false, NONE, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	inttResult := make([]G1ScalarField, len(nttResult))
 	copy(inttResult, nttResult)
 
 	assert.Equal(t, inttResult, nttResult)
-	Ntt{{.CurveNameUpperCase}}(&inttResult, true, NONE, 0)
+	Ntt(&inttResult, true, NONE, 0)
 	assert.Equal(t, inttResult, scalars)
 }
 
@@ -71,7 +71,7 @@ func TestNttBatch{{.CurveNameUpperCase}}(t *testing.T) {
 	count := 1 << 5
 	batches := 4
 
-	scalars := GenerateScalars(count * batches, false)
+	scalars := GenerateScalars(count*batches, false)
 
 	var scalarVecOfVec [][]G1ScalarField = make([][]G1ScalarField, 0)
 
@@ -86,7 +86,7 @@ func TestNttBatch{{.CurveNameUpperCase}}(t *testing.T) {
 	nttBatchResult := make([]G1ScalarField, len(scalars))
 	copy(nttBatchResult, scalars)
 
-	NttBatch{{.CurveNameUpperCase}}(&nttBatchResult, false, count, 0)
+	NttBatch(&nttBatchResult, false, count, 0)
 
 	var nttResultVecOfVec [][]G1ScalarField
 
@@ -99,7 +99,7 @@ func TestNttBatch{{.CurveNameUpperCase}}(t *testing.T) {
 		nttResultVecOfVec = append(nttResultVecOfVec, clone)
 
 		// Call the ntt_{{.CurveNameLowerCase}} function
-		Ntt{{.CurveNameUpperCase}}(&nttResultVecOfVec[i], false, NONE, 0)
+		Ntt(&nttResultVecOfVec[i], false, NONE, 0)
 	}
 
 	assert.NotEqual(t, nttBatchResult, scalars)
@@ -123,7 +123,7 @@ func BenchmarkNTT(b *testing.B) {
 			nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)
 			for n := 0; n < b.N; n++ {
-				Ntt{{.CurveNameUpperCase}}(&nttResult, false, NONE, 0)
+				Ntt(&nttResult, false, NONE, 0)
 			}
 		})
 	}

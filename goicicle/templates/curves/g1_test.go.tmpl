@@ -15,7 +15,9 @@ func TestNewField{{.CurveNameUpperCase}}One(t *testing.T) {
 }
 
 func TestNewField{{.CurveNameUpperCase}}Zero(t *testing.T) {
-	zeroField := NewFieldZero[G1BaseField]()
+	var zeroField G1BaseField
+	zeroField.SetZero()
+
 	rawZeroField := [8]uint32([8]uint32{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
 
 	assert.Equal(t, zeroField.S, rawZeroField)
@@ -41,9 +43,12 @@ func TestNewPoint{{.CurveNameUpperCase}}Zero(t *testing.T) {
 	var baseOne G1BaseField
 	baseOne.SetOne()
 
-	assert.Equal(t, pointZero.X, *NewFieldZero[G1BaseField]())
+	var zeroSanity G1BaseField
+	zeroSanity.SetZero()
+
+	assert.Equal(t, pointZero.X, zeroSanity)
 	assert.Equal(t, pointZero.Y, baseOne)
-	assert.Equal(t, pointZero.Z, *NewFieldZero[G1BaseField]())
+	assert.Equal(t, pointZero.Z, zeroSanity)
 }
 
 func Test{{.CurveNameUpperCase}}Eq(t *testing.T) {
@@ -89,8 +94,11 @@ func TestNewPointAffineNoInfinity{{.CurveNameUpperCase}}Zero(t *testing.T) {
 	var zeroP G1PointAffine
 	zeroP.SetZero()
 
-	assert.Equal(t, zeroP.X, *NewFieldZero[G1BaseField]())
-	assert.Equal(t, zeroP.Y, *NewFieldZero[G1BaseField]())
+	var zeroSanity G1BaseField
+	zeroSanity.SetZero()
+
+	assert.Equal(t, zeroP.X, zeroSanity)
+	assert.Equal(t, zeroP.Y, zeroSanity)
 }
 
 func TestPointAffineNoInfinity{{.CurveNameUpperCase}}FromLimbs(t *testing.T) {

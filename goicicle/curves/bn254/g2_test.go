@@ -26,7 +26,7 @@ func TestG2Eqg2(t *testing.T) {
 
 	point.Random()
 
-	assert.True(t, point.Eqg2(&point))
+	assert.True(t, point.Eq(&point))
 }
 
 func TestG2Eqg2NotEqual(t *testing.T) {
@@ -36,7 +36,7 @@ func TestG2Eqg2NotEqual(t *testing.T) {
 	var point2 G2Point
 	point2.Random()
 
-	assert.False(t, point.Eqg2(&point2))
+	assert.False(t, point.Eq(&point2))
 }
 
 func TestG2ToBytes(t *testing.T) {
@@ -56,5 +56,5 @@ func TestG2ShouldConvertToProjective(t *testing.T) {
 	proj := pointAffine.ToProjective()
 
 	assert.True(t, proj.IsOnCurve())
-	assert.True(t, pointProjective.Eqg2(&proj))
+	assert.True(t, pointProjective.Eq(&proj))
 }

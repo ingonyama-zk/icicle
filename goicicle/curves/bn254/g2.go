@@ -51,7 +51,7 @@ func (p *G2Point) Random() *G2Point {
 	return p
 }
 
-func (p *G2Point) Eqg2(pCompare *G2Point) bool {
+func (p *G2Point) Eq(pCompare *G2Point) bool {
 	// Cast *PointBN254 to *C.BN254_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.

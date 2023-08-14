@@ -105,7 +105,7 @@ func GenerateScalars(count int, skewed bool) []G1ScalarField {
 	return scalars[:count]
 }
 
-func TestMSM(t *testing.T) {
+func TestMSMBN254(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
 
@@ -116,7 +116,7 @@ func TestMSM(t *testing.T) {
 
 		out := new(G1ProjectivePoint)
 		startTime := time.Now()
-		_, e := MsmBN254(out, points, scalars, 0) // non mont
+		_, e := Msm(out, points, scalars, 0) // non mont
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
 		assert.Equal(t, e, nil, "error should be nil")
@@ -125,7 +125,7 @@ func TestMSM(t *testing.T) {
 	}
 }
 
-func TestCommitMSM(t *testing.T) {
+func TestCommitMSMBN254(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1<<v - 1
 
@@ -156,7 +156,7 @@ func TestCommitMSM(t *testing.T) {
 	}
 }
 
-func BenchmarkCommit(b *testing.B) {
+func BenchmarkCommitBN254(b *testing.B) {
 	LOG_MSM_SIZES := []int{20, 21, 22, 23, 24, 25, 26}
 
 	for _, logMsmSize := range LOG_MSM_SIZES {
@@ -186,7 +186,7 @@ func BenchmarkCommit(b *testing.B) {
 	}
 }
 
-func TestBenchMSM(t *testing.T) {
+func TestBenchMSMBN254(t *testing.T) {
 	for _, batchPow2 := range []int{2, 4} {
 		for _, pow2 := range []int{4, 6} {
 			msmSize := 1 << pow2
@@ -196,7 +196,7 @@ func TestBenchMSM(t *testing.T) {
 			points := GeneratePoints(count)
 			scalars := GenerateScalars(count, false)
 
-			a, e := MsmBatchBN254(&points, &scalars, batchSize, 0)
+			a, e := MsmBatch(&points, &scalars, batchSize, 0)
 
 			if e != nil {
 				t.Errorf("MsmBatchBN254 returned an error: %v", e)
@@ -219,7 +219,7 @@ func BenchmarkMSM(b *testing.B) {
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(G1ProjectivePoint)
-				_, e := MsmBN254(out, points, scalars, 0)
+				_, e := Msm(out, points, scalars, 0)
 
 				if e != nil {
 					panic("Error occured")
@@ -264,7 +264,7 @@ func TestMsmG2BN254(t *testing.T) {
 		fmt.Print("Finished generating scalars\n")
 
 		out := new(G2Point)
-		_, e := MsmG2BN254(out, points, scalars, 0)
+		_, e := MsmG2(out, points, scalars, 0)
 		assert.Equal(t, e, nil, "error should be nil")
 		assert.True(t, out.IsOnCurve())
 	}
@@ -280,7 +280,7 @@ func BenchmarkMsmG2BN254(b *testing.B) {
 		b.Run(fmt.Sprintf("MSM G2 %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(G2Point)
-				_, e := MsmG2BN254(out, points, scalars, 0)
+				_, e := MsmG2(out, points, scalars, 0)
 
 				if e != nil {
 					panic("Error occured")
@@ -290,7 +290,7 @@ func BenchmarkMsmG2BN254(b *testing.B) {
 	}
 }
 
-func TestCommitG2MSM(t *testing.T) {
+func TestCommitG2MSMBN254(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
 
@@ -327,7 +327,7 @@ func TestCommitG2MSM(t *testing.T) {
 	}
 }
 
-func TestBatchG2MSM(t *testing.T) {
+func TestBatchG2MSMBSN254(t *testing.T) {
 	for _, batchPow2 := range []int{2, 4} {
 		for _, pow2 := range []int{4, 6} {
 			msmSize := 1 << pow2
@@ -337,7 +337,7 @@ func TestBatchG2MSM(t *testing.T) {
 			points := GenerateG2Points(count)
 			scalars := GenerateScalars(count, false)
 
-			pointsResults, e := MsmG2BatchBN254(&points, &scalars, batchSize, 0)
+			pointsResults, e := MsmG2Batch(&points, &scalars, batchSize, 0)
 
 			if e != nil {
 				t.Errorf("MsmBatchBN254 returned an error: %v", e)

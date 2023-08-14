@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func GeneratePoints(count int) []G1PointAffine {
 	// Declare a slice of integers
 	var points []G1PointAffine
@@ -88,7 +87,6 @@ func GenerateScalars(count int, skewed bool) []G1ScalarField {
 	return scalars[:count]
 }
 
-
 func TestMSM(t *testing.T) {
 	for _, v := range []int{24} {
 		count := 1 << v
@@ -100,7 +98,7 @@ func TestMSM(t *testing.T) {
 
 		out := new(G1ProjectivePoint)
 		startTime := time.Now()
-		_, e := Msm{{.CurveNameUpperCase}}(out, points, scalars, 0) // non mont
+		_, e := Msm(out, points, scalars, 0) // non mont
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
 		assert.Equal(t, e, nil, "error should be nil")
@@ -180,7 +178,7 @@ func TestBenchMSM(t *testing.T) {
 			points := GeneratePoints(count)
 			scalars := GenerateScalars(count, false)
 
-			a, e := MsmBatch{{.CurveNameUpperCase}}(&points, &scalars, batchSize, 0)
+			a, e := MsmBatch(&points, &scalars, batchSize, 0)
 
 			if e != nil {
 				t.Errorf("MsmBatch{{.CurveNameUpperCase}} returned an error: %v", e)
@@ -203,7 +201,7 @@ func BenchmarkMSM(b *testing.B) {
 		b.Run(fmt.Sprintf("MSM %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(G1ProjectivePoint)
-				_, e := Msm{{.CurveNameUpperCase}}(out, points, scalars, 0)
+				_, e := Msm(out, points, scalars, 0)
 
 				if e != nil {
 					panic("Error occured")
@@ -248,7 +246,7 @@ func TestMsmG2{{.CurveNameUpperCase}}(t *testing.T) {
 		fmt.Print("Finished generating scalars\n")
 
 		out := new(G2Point)
-		_, e := MsmG2{{.CurveNameUpperCase}}(out, points, scalars, 0)
+		_, e := MsmG2(out, points, scalars, 0)
 		assert.Equal(t, e, nil, "error should be nil")
 		assert.True(t, out.IsOnCurve())
 	}
@@ -264,7 +262,7 @@ func BenchmarkMsmG2{{.CurveNameUpperCase}}(b *testing.B) {
 		b.Run(fmt.Sprintf("MSM G2 %d", logMsmSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				out := new(G2Point)
-				_, e := MsmG2{{.CurveNameUpperCase}}(out, points, scalars, 0)
+				_, e := MsmG2(out, points, scalars, 0)
 
 				if e != nil {
 					panic("Error occured")
@@ -321,7 +319,7 @@ func TestBatchG2MSM(t *testing.T) {
 			points := GenerateG2Points(count)
 			scalars := GenerateScalars(count, false)
 
-			pointsResults, e := MsmG2Batch{{.CurveNameUpperCase}}(&points, &scalars, batchSize, 0)
+			pointsResults, e := MsmG2Batch(&points, &scalars, batchSize, 0)
 
 			if e != nil {
 				t.Errorf("MsmBatch{{.CurveNameUpperCase}} returned an error: %v", e)

@@ -17,7 +17,6 @@
 package bls12377
 
 import (
-	"fmt"
 	"unsafe"
 
 	"encoding/binary"

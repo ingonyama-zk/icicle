@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestNttBN254BBB(t *testing.T) {
+func TestNttBN254Batch(t *testing.T) {
 	count := 1 << 20
 	scalars := GenerateScalars(count, false)
 
@@ -31,7 +31,7 @@ func TestNttBN254BBB(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBatchBN254(&nttResult, false, count, 0)
+	NttBatch(&nttResult, false, count, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
@@ -45,7 +45,7 @@ func TestNttBN254CompareToGnarkDIF(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBN254(&nttResult, false, DIF, 0)
+	Ntt(&nttResult, false, DIF, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
@@ -59,7 +59,7 @@ func TestINttBN254CompareToGnarkDIT(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBN254(&nttResult, true, DIT, 0)
+	Ntt(&nttResult, true, DIT, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
@@ -74,14 +74,14 @@ func TestNttBN254(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	NttBN254(&nttResult, false, NONE, 0)
+	Ntt(&nttResult, false, NONE, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	inttResult := make([]G1ScalarField, len(nttResult))
 	copy(inttResult, nttResult)
 
 	assert.Equal(t, inttResult, nttResult)
-	NttBN254(&inttResult, true, NONE, 0)
+	Ntt(&inttResult, true, NONE, 0)
 	assert.Equal(t, inttResult, scalars)
 }
 
@@ -104,7 +104,7 @@ func TestNttBatchBN254(t *testing.T) {
 	nttBatchResult := make([]G1ScalarField, len(scalars))
 	copy(nttBatchResult, scalars)
 
-	NttBatchBN254(&nttBatchResult, false, count, 0)
+	NttBatch(&nttBatchResult, false, count, 0)
 
 	var nttResultVecOfVec [][]G1ScalarField
 
@@ -117,7 +117,7 @@ func TestNttBatchBN254(t *testing.T) {
 		nttResultVecOfVec = append(nttResultVecOfVec, clone)
 
 		// Call the ntt_bn254 function
-		NttBN254(&nttResultVecOfVec[i], false, NONE, 0)
+		Ntt(&nttResultVecOfVec[i], false, NONE, 0)
 	}
 
 	assert.NotEqual(t, nttBatchResult, scalars)
@@ -130,7 +130,7 @@ func TestNttBatchBN254(t *testing.T) {
 	}
 }
 
-func BenchmarkNTT(b *testing.B) {
+func BenchmarkNTTBN254(b *testing.B) {
 	LOG_NTT_SIZES := []int{12, 15, 20, 21, 22, 23, 24, 25, 26}
 
 	for _, logNTTSize := range LOG_NTT_SIZES {
@@ -141,7 +141,7 @@ func BenchmarkNTT(b *testing.B) {
 			nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)
 			for n := 0; n < b.N; n++ {
-				NttBN254(&nttResult, false, NONE, 0)
+				Ntt(&nttResult, false, NONE, 0)
 			}
 		})
 	}
