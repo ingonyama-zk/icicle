@@ -130,13 +130,13 @@ __global__ void find_cutoff_kernel(unsigned *v, unsigned size, unsigned cutoff, 
     return;
   }
   const unsigned start_index = tid*run_length;
-  for (int i=start_index;i<min(start_index+run_length,size-1);i++) {
+  for (int i=start_index;i<min(start_index+run_length,size - 1);i++) {
     if (v[i] > cutoff && v[i+1] <= cutoff) {
       result[0] = i+1;
       return;
     }
   }
-  if (v[size - 1] > cutoff) {
+  if (tid == 0 && v[size - 1] > cutoff) {
     result[0] = size;
   }
 }
