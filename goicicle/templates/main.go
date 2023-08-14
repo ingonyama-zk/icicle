@@ -14,143 +14,212 @@ const (
 	generatedBy     = "Ingonyama"
 	copyrightYear   = 2023
 	baseDir         = "../curves/"
-	hBaseDir        = "../../icicle/curves/"
 )
 
 var bgen = bavard.NewBatchGenerator(copyrightHolder, copyrightYear, generatedBy)
 
-func main() {
+func genMainFiles() {
 	bn254_entries := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bn254", "g1.go"), Templates: []string{"g1.go.tmpl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bn254", "g1.go"), Templates: []string{"g1.go.tmpl"}},
 	}
 
 	bls12377_entries := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12377", "g1.go"), Templates: []string{"g1.go.tmpl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12377", "g1.go"), Templates: []string{"g1.go.tmpl"}},
 	}
 
 	bls12381_entries := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12381", "g1.go"), Templates: []string{"g1.go.tmpl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12381", "g1.go"), Templates: []string{"g1.go.tmpl"}},
 	}
 
-	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./curves/", bls12377_entries...))
-	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./curves/", bn254_entries...))
-	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./curves/", bls12381_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./curves/", bls12377_entries...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./curves/", bn254_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./curves/", bls12381_entries...))
 
 	bn254_g2_entries := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bn254", "g2.go"), Templates: []string{"g2.go.tmpl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bn254", "g2.go"), Templates: []string{"g2.go.tmpl"}},
 	}
 
 	bls12377_g2_entries := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12377", "g2.go"), Templates: []string{"g2.go.tmpl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12377", "g2.go"), Templates: []string{"g2.go.tmpl"}},
 	}
 
 	bls12381_g2_entries := []bavard.Entry{
-		{File: filepath.Join(baseDir, "bls12381", "g2.go"), Templates: []string{"g2.go.tmpl", "imports.go.tmpl"}},
+		{File: filepath.Join(baseDir, "bls12381", "g2.go"), Templates: []string{"g2.go.tmpl"}},
 	}
 
-	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./curves/", bls12377_g2_entries...))
-	assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./curves/", bn254_g2_entries...))
-	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./curves/", bls12381_g2_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./curves/", bls12377_g2_entries...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./curves/", bn254_g2_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./curves/", bls12381_g2_entries...))
+	bn254_msm_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "msm.go"), Templates: []string{"msm.go.tmpl"}},
+	}
 
-	//bn254_msm_entries := []bavard.Entry{
-	//	{File: filepath.Join(baseDir, "bn254", "msm.go"), Templates: []string{"msm.go.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//bls12377_msm_entries := []bavard.Entry{
-	//	{File: filepath.Join(baseDir, "bls12377", "msm.go"), Templates: []string{"msm.go.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//bls12381_msm_entries := []bavard.Entry{
-	//	{File: filepath.Join(baseDir, "bls12381", "msm.go"), Templates: []string{"msm.go.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./msm/", bls12377_msm_entries...))
-	//assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./msm/", bn254_msm_entries...))
-	//assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./msm/", bls12381_msm_entries...))
-	//
-	//bn254_ntt_entries := []bavard.Entry{
-	//	{File: filepath.Join(baseDir, "bn254", "ntt.go"), Templates: []string{"ntt.go.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//bls12377_ntt_entries := []bavard.Entry{
-	//	{File: filepath.Join(baseDir, "bls12377", "ntt.go"), Templates: []string{"ntt.go.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//bls12381_ntt_entries := []bavard.Entry{
-	//	{File: filepath.Join(baseDir, "bls12381", "ntt.go"), Templates: []string{"ntt.go.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./ntt/", bls12377_ntt_entries...))
-	//assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./ntt/", bn254_ntt_entries...))
-	//assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./ntt/", bls12381_ntt_entries...))
+	bls12377_msm_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "msm.go"), Templates: []string{"msm.go.tmpl"}},
+	}
 
-	/*
-		h_files
-	*/
+	bls12381_msm_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "msm.go"), Templates: []string{"msm.go.tmpl"}},
+	}
 
-	//h_msm_bn254 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bn254", "msm.h"), Templates: []string{"msm.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//h_msm_bls12_377 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_377", "msm.h"), Templates: []string{"msm.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//h_msm_bls12_381 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_381", "msm.h"), Templates: []string{"msm.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./hfiles/", h_msm_bls12_377...))
-	//assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./hfiles/", h_msm_bn254...))
-	//assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./hfiles/", h_msm_bls12_381...))
-	//
-	//h_ntt_bn254 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bn254", "ntt.h"), Templates: []string{"ntt.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//h_ntt_bls12_377 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_377", "ntt.h"), Templates: []string{"ntt.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//h_ntt_bls12_381 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_381", "ntt.h"), Templates: []string{"ntt.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./hfiles/", h_ntt_bls12_377...))
-	//assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./hfiles/", h_ntt_bn254...))
-	//assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./hfiles/", h_ntt_bls12_381...))
-	//
-	//ve_mod_mult_h_bn254 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bn254", "ve_mod_mult.h"), Templates: []string{"ve_mod_mult.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//ve_mod_mult_h_bls12_377 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_377", "ve_mod_mult.h"), Templates: []string{"ve_mod_mult.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//ve_mod_mult_ht_bls12_381 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_381", "ve_mod_mult.h"), Templates: []string{"ve_mod_mult.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./hfiles/", ve_mod_mult_h_bls12_377...))
-	//assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./hfiles/", ve_mod_mult_h_bn254...))
-	//assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./hfiles/", ve_mod_mult_ht_bls12_381...))
-	//
-	//c_api_bn254 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bn254", "c_api.h"), Templates: []string{"c_api.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//c_api_bls12_377 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_377", "c_api.h"), Templates: []string{"c_api.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//c_api_bls12_381 := []bavard.Entry{
-	//	{File: filepath.Join(hBaseDir, "bls12_381", "c_api.h"), Templates: []string{"c_api.h.tmpl", "../curves/imports.go.tmpl"}},
-	//}
-	//
-	//assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.PackageName, "./hfiles/", c_api_bls12_377...))
-	//assertNoError(bgen.Generate(config.BN_254, config.BN_254.PackageName, "./hfiles/", c_api_bn254...))
-	//assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.PackageName, "./hfiles/", c_api_bls12_381...))
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./msm/", bls12377_msm_entries...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./msm/", bn254_msm_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./msm/", bls12381_msm_entries...))
+
+	bn254_ntt_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "ntt.go"), Templates: []string{"ntt.go.tmpl"}},
+	}
+
+	bls12377_ntt_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "ntt.go"), Templates: []string{"ntt.go.tmpl"}},
+	}
+
+	bls12381_ntt_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "ntt.go"), Templates: []string{"ntt.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./ntt/", bls12377_ntt_entries...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./ntt/", bn254_ntt_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./ntt/", bls12381_ntt_entries...))
+
+	h_msm_bn254 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "include", "msm.h"), Templates: []string{"msm.h.tmpl"}},
+	}
+
+	h_msm_bls12377 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "include", "msm.h"), Templates: []string{"msm.h.tmpl"}},
+	}
+
+	h_msm_bls12381 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "include", "msm.h"), Templates: []string{"msm.h.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./hfiles/", h_msm_bls12377...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./hfiles/", h_msm_bn254...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./hfiles/", h_msm_bls12381...))
+
+	h_ntt_bn254 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "include", "ntt.h"), Templates: []string{"ntt.h.tmpl"}},
+	}
+
+	h_ntt_bls12377 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "include", "ntt.h"), Templates: []string{"ntt.h.tmpl"}},
+	}
+
+	h_ntt_bls12381 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "include", "ntt.h"), Templates: []string{"ntt.h.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./hfiles/", h_ntt_bls12377...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./hfiles/", h_ntt_bn254...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./hfiles/", h_ntt_bls12381...))
+
+	ve_mod_mult_h_bn254 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "include", "ve_mod_mult.h"), Templates: []string{"ve_mod_mult.h.tmpl"}},
+	}
+
+	ve_mod_mult_h_bls12377 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "include", "ve_mod_mult.h"), Templates: []string{"ve_mod_mult.h.tmpl"}},
+	}
+
+	ve_mod_mult_ht_bls12381 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "include", "ve_mod_mult.h"), Templates: []string{"ve_mod_mult.h.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./hfiles/", ve_mod_mult_h_bls12377...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./hfiles/", ve_mod_mult_h_bn254...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./hfiles/", ve_mod_mult_ht_bls12381...))
+
+	projective_bn254 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "include", "projective.h"), Templates: []string{"projective.h.tmpl"}},
+	}
+
+	projective_bls12377 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "include", "projective.h"), Templates: []string{"projective.h.tmpl"}},
+	}
+
+	projective_bls12381 := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "include", "projective.h"), Templates: []string{"projective.h.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./hfiles/", projective_bls12377...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./hfiles/", projective_bn254...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./hfiles/", projective_bls12381...))
+}
+
+func genTestFiles() {
+	// G1 TESTS
+	bn254_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "g1_test.go"), Templates: []string{"g1_test.go.tmpl"}},
+	}
+
+	bls12377_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "g1_test.go"), Templates: []string{"g1_test.go.tmpl"}},
+	}
+
+	bls12381_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "g1_test.go"), Templates: []string{"g1_test.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./curves/", bls12377_entries...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./curves/", bn254_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./curves/", bls12381_entries...))
+
+	// G2 TESTS
+	bn254_entries_g2_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "g2_test.go"), Templates: []string{"g2_test.go.tmpl"}},
+	}
+
+	bls12377_entries_g2_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "g2_test.go"), Templates: []string{"g2_test.go.tmpl"}},
+	}
+
+	bls12381_entries_g2_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "g2_test.go"), Templates: []string{"g2_test.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./curves/", bls12377_entries_g2_test...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./curves/", bn254_entries_g2_test...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./curves/", bls12381_entries_g2_test...))
+
+	// MSM TEST
+	bn254_entries_msm_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "msm_test.go"), Templates: []string{"msm_test.go.tmpl"}},
+	}
+
+	bls12377_entries_msm_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "msm_test.go"), Templates: []string{"msm_test.go.tmpl"}},
+	}
+
+	bls12381_entries_msm_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "msm_test.go"), Templates: []string{"msm_test.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./msm/", bls12377_entries_msm_test...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./msm/", bn254_entries_msm_test...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./msm/", bls12381_entries_msm_test...))
+
+	// FFT TEST
+	bn254_entries_fft_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "ntt_test.go"), Templates: []string{"ntt_test.go.tmpl"}},
+	}
+
+	bls12377_entries_fft_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "ntt_test.go"), Templates: []string{"ntt_test.go.tmpl"}},
+	}
+
+	bls12381_entries_fft_test := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "ntt_test.go"), Templates: []string{"ntt_test.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./ntt/", bls12377_entries_fft_test...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./ntt/", bn254_entries_fft_test...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./ntt/", bls12381_entries_fft_test...))
+}
+
+func main() {
+	genMainFiles()
+	genTestFiles()
 }
 
 func assertNoError(err error) {

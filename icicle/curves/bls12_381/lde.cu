@@ -5,6 +5,7 @@
 #include "../../appUtils/ntt/ntt.cuh"
 #include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
 #include "curve_config.cuh"
+#include "../../utils/mont.cuh"
 
 extern "C" BLS12_381::scalar_t* build_domain_cuda_bls12_381(uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
@@ -333,6 +334,176 @@ extern "C" int reverse_order_points_cuda_bls12_381(BLS12_381::projective_t* arr,
         return -1;
     }
 }
+
+extern "C" int sub_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_out, BLS12_381::scalar_t* d_in1, BLS12_381::scalar_t* d_in2, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return sub_polys(d_out, d_in1, d_in2, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int add_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_out, BLS12_381::scalar_t* d_in1, BLS12_381::scalar_t* d_in2, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return add_polys(d_out, d_in1, d_in2, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int to_montgomery_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery(d_inout, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery(d_inout, n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int to_montgomery_proj_points_cuda_bls12_381(BLS12_381::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BLS12_381::point_field_t*)d_inout, 3 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_proj_points_cuda_bls12_381(BLS12_381::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BLS12_381::point_field_t*)d_inout, 3 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int to_montgomery_aff_points_cuda_bls12_381(BLS12_381::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BLS12_381::point_field_t*)d_inout, 2 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_aff_points_cuda_bls12_381(BLS12_381::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BLS12_381::point_field_t*)d_inout, 2 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+#if defined(G2_DEFINED)
+extern "C" int to_montgomery_proj_points_g2_cuda_bls12_381(BLS12_381::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BLS12_381::point_field_t*)d_inout, 6 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_proj_points_g2_cuda_bls12_381(BLS12_381::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BLS12_381::point_field_t*)d_inout, 6 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int to_montgomery_aff_points_g2_cuda_bls12_381(BLS12_381::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return to_montgomery((BLS12_381::point_field_t*)d_inout, 4 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+
+extern "C" int from_montgomery_aff_points_g2_cuda_bls12_381(BLS12_381::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+    try
+    {
+        cudaStreamCreate(&stream);
+        return from_montgomery((BLS12_381::point_field_t*)d_inout, 4 * n, stream);
+    }
+    catch (const std::runtime_error &ex)
+    {
+        printf("error %s", ex.what());
+        return -1;
+    }
+}
+#endif
 
 extern "C" int reverse_order_points_batch_cuda_bls12_381(BLS12_381::projective_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
 {

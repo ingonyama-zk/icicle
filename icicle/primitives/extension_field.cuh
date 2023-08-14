@@ -13,7 +13,7 @@ template <typename CONFIG> class ExtensionField {
     struct ExtensionWide {
       FWide real;
       FWide imaginary;
-      
+  
       friend HOST_DEVICE_INLINE ExtensionWide operator+(ExtensionWide xs, const ExtensionWide& ys) {   
         return ExtensionWide { xs.real + ys.real, xs.imaginary + ys.imaginary };
       }

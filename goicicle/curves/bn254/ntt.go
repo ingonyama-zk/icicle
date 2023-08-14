@@ -16,9 +16,6 @@
 
 package bn254
 
-// #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
-// #include "ntt.h"
 import "C"
 import (
 	"errors"
@@ -34,7 +31,7 @@ const (
 	DIT  = 2
 )
 
-func NttBN254(scalars *[]ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
+func Ntt(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
 	ret := C.ntt_cuda_bn254(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
@@ -42,7 +39,7 @@ func NttBN254(scalars *[]ScalarField, isInverse bool, decimation int, deviceId i
 	return uint64(ret)
 }
 
-func NttBatchBN254(scalars *[]ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
+func NttBatch(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
 	scalarsC := (*C.BN254_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 	isInverseC := C.bool(isInverse)
 	batchSizeC := C.uint32_t(batchSize)
@@ -53,7 +50,7 @@ func NttBatchBN254(scalars *[]ScalarField, isInverse bool, batchSize, deviceId i
 	return uint64(ret)
 }
 
-func EcNttBN254(values *[]PointBN254, isInverse bool, deviceId int) uint64 {
+func EcNtt(values *[]G1ProjectivePoint, isInverse bool, deviceId int) uint64 {
 	valuesC := (*C.BN254_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
@@ -64,7 +61,7 @@ func EcNttBN254(values *[]PointBN254, isInverse bool, deviceId int) uint64 {
 	return uint64(ret)
 }
 
-func EcNttBatchBN254(values *[]PointBN254, isInverse bool, batchSize, deviceId int) uint64 {
+func EcNttBatch(values *[]G1ProjectivePoint, isInverse bool, batchSize, deviceId int) uint64 {
 	valuesC := (*C.BN254_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
@@ -218,4 +215,3 @@ func G2AffinePointFromMontgomery(d_points unsafe.Pointer, len int) (int, error) 
 	}
 	return 0, nil
 }
-
