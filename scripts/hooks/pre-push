@@ -1,0 +1,29 @@
+#!/bin/bash
+
+status=0
+#  Apply clang-format CUDA, C, and CPP files
+if [[ $(find ./ -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -style=file) ]];
+then
+    echo "🚨 There are files in Icicle Core that need formatting."
+    echo "Please format all .c, .cpp, .h, .cu, .cuh files using the following command:"
+    echo "find ./ -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format -i -style=file"
+    status=1 
+fi
+
+# Run go fmt across all packages under goicicle
+if [[ $(go list ./... | xargs go fmt) ]];
+then
+    echo "🚨 There are Golang files that need formatting."
+    echo "Please commit the formatted files"
+    status=1
+fi
+
+# Run rust fmt
+if [[ $(cargo fmt --check) ]];
+then
+    echo "🚨 There are Rust files that need formatting."
+    echo "Please format the Rust files using 'cargo fmt'"
+    status=1
+fi
+
+exit $status
