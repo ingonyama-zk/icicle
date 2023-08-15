@@ -24,7 +24,7 @@ import (
 
 // #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
-// #include "c_api.h"
+// #include "projective.h"
 // #include "ve_mod_mult.h"
 import "C"
 
@@ -46,13 +46,12 @@ type G2Point struct {
 
 func (p *G2Point) Random() *G2Point {
 	rand := C.random_projective_bn254()
-	
 	*p = *(*G2Point)(unsafe.Pointer(rand))
 
 	return p
 }
 
-func (p *G2Point) Eqg2(pCompare *G2Point) bool {
+func (p *G2Point) Eq(pCompare *G2Point) bool {
 	// Cast *PointBN254 to *C.BN254_projective_t
 	// The unsafe.Pointer cast is necessary because Go doesn't allow direct casts
 	// between different pointer types.
@@ -91,7 +90,6 @@ func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
 	in := (*C.BN254_g2_projective_t)(unsafe.Pointer(projective))
 
 	out := C.g2_projective_to_affine_bn254(in)
-	
 	// Directly copy memory from the C struct to the Go struct
 	*p = *(*G2PointAffine)(unsafe.Pointer(out))
 

@@ -25,7 +25,7 @@ import (
 
 // #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
-// #include "c_api.h"
+// #include "projective.h"
 // #include "ve_mod_mult.h"
 import "C"
 
@@ -41,18 +41,15 @@ type G1BaseField struct {
 }
 
 /*
- * Common Constrctors
- */
-
-func NewFieldZero[T G1BaseField | G1ScalarField]() *T {
-	var field T
-
-	return &field
-}
-
-/*
  * BaseField Constrctors
  */
+
+func (f *G1BaseField) SetZero() *G1BaseField {
+	var S [BASE_SIZE]uint32
+	f.S = S
+
+	return f
+}
 
 func (f *G1BaseField) SetOne() *G1BaseField {
 	var S [BASE_SIZE]uint32
@@ -90,10 +87,9 @@ func (f *G1BaseField) ToBytesLe() []byte {
  * ScalarField methods
  */
 
-
 func (p *G1ScalarField) Random() *G1ScalarField {
 	rand := C.random_scalar_bn254()
-	
+
 	*p = *(*G1ScalarField)(unsafe.Pointer(rand))
 
 	return p
@@ -114,7 +110,7 @@ func (f *G1ScalarField) SetOne() *G1ScalarField {
 	return f
 }
 
-func (a *G1ScalarField) Equals(b *G1ScalarField) bool {
+func (a *G1ScalarField) Eq(b *G1ScalarField) bool {
 	for i, v := range a.S {
 		if b.S[i] != v {
 			return false
@@ -149,12 +145,18 @@ type G1ProjectivePoint struct {
 }
 
 func (f *G1ProjectivePoint) SetZero() *G1ProjectivePoint {
-	var yZero G1BaseField
-	yZero.SetOne()
+	var yOne G1BaseField
+	yOne.SetOne()
 
-	f.X = *NewFieldZero[G1BaseField]()
-	f.Y = yZero
-	f.Z = *NewFieldZero[G1BaseField]()
+	var xZero G1BaseField
+	xZero.SetZero()
+
+	var zZero G1BaseField
+	zZero.SetZero()
+
+	f.X = xZero
+	f.Y = yOne
+	f.Z = zZero
 
 	return f
 }
@@ -182,7 +184,6 @@ func (p *G1ProjectivePoint) IsOnCurve() bool {
 
 func (p *G1ProjectivePoint) Random() *G1ProjectivePoint {
 	rand := C.random_projective_bn254()
-	
 	// Directly copy memory from the C struct to the Go struct
 	*p = *(*G1ProjectivePoint)(unsafe.Pointer(rand))
 
@@ -196,13 +197,13 @@ func (p *G1ProjectivePoint) StripZ() *G1PointAffine {
 	}
 }
 
-func (p *G1ProjectivePoint) FromLimbs(X, Y, z *[]uint32) *G1ProjectivePoint {
+func (p *G1ProjectivePoint) FromLimbs(x, y, z *[]uint32) *G1ProjectivePoint {
 	var _x G1BaseField
 	var _y G1BaseField
 	var _z G1BaseField
 
-	_x.FromLimbs(GetFixedLimbs(X))
-	_y.FromLimbs(GetFixedLimbs(Y))
+	_x.FromLimbs(GetFixedLimbs(x))
+	_y.FromLimbs(GetFixedLimbs(y))
 	_z.FromLimbs(GetFixedLimbs(z))
 
 	p.X = _x
@@ -221,8 +222,14 @@ type G1PointAffine struct {
 }
 
 func (p *G1PointAffine) SetZero() *G1PointAffine {
-	p.X = *NewFieldZero[G1BaseField]()
-	p.Y = *NewFieldZero[G1BaseField]()
+	var x G1BaseField
+	var y G1BaseField
+
+	x.SetZero()
+	y.SetZero()
+
+	p.X = x
+	p.Y = y
 
 	return p
 }
@@ -231,7 +238,6 @@ func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAf
 	in := (*C.BN254_projective_t)(unsafe.Pointer(projective))
 
 	out := C.projective_to_affine_bn254(in)
-	
 	// Directly copy memory from the C struct to the Go struct
 	*p = *(*G1PointAffine)(unsafe.Pointer(out))
 
@@ -296,7 +302,10 @@ func MultiplyScalar(a []G1ScalarField, b []G1ScalarField, deviceID int) {
 func MultiplyMatrix(a []G1ScalarField, b []G1ScalarField, deviceID int) {
 	c := make([]G1ScalarField, len(b))
 	for i := range c {
-		c[i] = *NewFieldZero[G1ScalarField]()
+		var p G1ScalarField
+		p.SetZero()
+
+		c[i] = p
 	}
 
 	aC := (*C.BN254_scalar_t)(unsafe.Pointer(&a[0]))

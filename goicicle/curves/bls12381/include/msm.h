@@ -20,42 +20,42 @@
 #include <cuda_runtime.h>
 // msm.h
 
-#ifndef _BLS12381_MSM_H
-#define _BLS12381_MSM_H
+#ifndef _BLS12_381_MSM_H
+#define _BLS12_381_MSM_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Incomplete declaration of BLS12381 projective and affine structs
-typedef struct BLS12381_projective_t BLS12381_projective_t;
-typedef struct BLS12381_g2_projective_t BLS12381_g2_projective_t;
-typedef struct BLS12381_affine_t BLS12381_affine_t;
-typedef struct BLS12381_g2_affine_t BLS12381_g2_affine_t;
-typedef struct BLS12381_scalar_t BLS12381_scalar_t;
+// Incomplete declaration of BLS12_381 projective and affine structs
+typedef struct BLS12_381_projective_t BLS12_381_projective_t;
+typedef struct BLS12_381_g2_projective_t BLS12_381_g2_projective_t;
+typedef struct BLS12_381_affine_t BLS12_381_affine_t;
+typedef struct BLS12_381_g2_affine_t BLS12_381_g2_affine_t;
+typedef struct BLS12_381_scalar_t BLS12_381_scalar_t;
 typedef cudaStream_t CudaStream_t;
 
-int msm_cuda_bls12381(BLS12381_projective_t* out, BLS12381_affine_t* points,
-                   BLS12381_scalar_t* scalars, size_t count, size_t device_id);
+int msm_cuda_bls12_381(BLS12_381_projective_t* out, BLS12_381_affine_t* points,
+                   BLS12_381_scalar_t* scalars, size_t count, size_t device_id);
 
-int msm_batch_cuda_bls12381(BLS12381_projective_t* out, BLS12381_affine_t* points,
-                         BLS12381_scalar_t* scalars, size_t batch_size,
+int msm_batch_cuda_bls12_381(BLS12_381_projective_t* out, BLS12_381_affine_t* points,
+                         BLS12_381_scalar_t* scalars, size_t batch_size,
                          size_t msm_size, size_t device_id);
 
-int commit_cuda_bls12381(BLS12381_projective_t* d_out, BLS12381_scalar_t* d_scalars,
-                      BLS12381_affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id);
+int commit_cuda_bls12_381(BLS12_381_projective_t* d_out, BLS12_381_scalar_t* d_scalars,
+                      BLS12_381_affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id);
 
-int commit_batch_cuda_bls12381(BLS12381_projective_t* d_out, BLS12381_scalar_t* d_scalars,
-                            BLS12381_affine_t* d_points, size_t count,
+int commit_batch_cuda_bls12_381(BLS12_381_projective_t* d_out, BLS12_381_scalar_t* d_scalars,
+                            BLS12_381_affine_t* d_points, size_t count,
                             size_t batch_size, size_t device_id);
 
-int msm_g2_cuda_bls12381(BLS12381_g2_projective_t *out, BLS12381_g2_affine_t* points, BLS12381_scalar_t* scalars, size_t count, size_t device_id);
-int msm_batch_g2_cuda_bls12381(BLS12381_g2_projective_t* out, BLS12381_g2_affine_t* points, BLS12381_scalar_t* scalars, size_t batch_size, size_t msm_size, size_t device_id);
-int commit_g2_cuda_bls12381(BLS12381_g2_projective_t* d_out, BLS12381_scalar_t* d_scalars, BLS12381_g2_affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id);
-int commit_batch_g2_cuda_bls12381(BLS12381_g2_projective_t* d_out, BLS12381_scalar_t* d_scalars, BLS12381_g2_affine_t* d_points, size_t count, size_t batch_size, size_t device_id, cudaStream_t stream);
+int msm_g2_cuda_bls12_381(BLS12_381_g2_projective_t *out, BLS12_381_g2_affine_t* points, BLS12_381_scalar_t* scalars, size_t count, size_t device_id);
+int msm_batch_g2_cuda_bls12_381(BLS12_381_g2_projective_t* out, BLS12_381_g2_affine_t* points, BLS12_381_scalar_t* scalars, size_t batch_size, size_t msm_size, size_t device_id);
+int commit_g2_cuda_bls12_381(BLS12_381_g2_projective_t* d_out, BLS12_381_scalar_t* d_scalars, BLS12_381_g2_affine_t* d_points, size_t count, unsigned large_bucket_factor, size_t device_id);
+int commit_batch_g2_cuda_bls12_381(BLS12_381_g2_projective_t* d_out, BLS12_381_scalar_t* d_scalars, BLS12_381_g2_affine_t* d_points, size_t count, size_t batch_size, size_t device_id, cudaStream_t stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _BLS12381_MSM_H */
+#endif /* _BLS12_381_MSM_H */

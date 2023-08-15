@@ -1,6 +1,3 @@
-// #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../ {{.SharedLib}}
-// #include "ntt.h"
 import "C"
 import (
 	"errors"
@@ -16,7 +13,7 @@ const (
 	DIT  = 2
 )
 
-func Ntt{{.CurveNameUpperCase}}(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
+func Ntt(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
 	scalarsC := (*C.{{.CurveNameUpperCase}}_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
 	ret := C.ntt_cuda_{{.CurveNameLowerCase}}(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
@@ -24,7 +21,7 @@ func Ntt{{.CurveNameUpperCase}}(scalars *[]G1ScalarField, isInverse bool, decima
 	return uint64(ret)
 }
 
-func NttBatch{{.CurveNameUpperCase}}(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
+func NttBatch(scalars *[]G1ScalarField, isInverse bool, batchSize, deviceId int) uint64 {
 	scalarsC := (*C.{{.CurveNameUpperCase}}_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 	isInverseC := C.bool(isInverse)
 	batchSizeC := C.uint32_t(batchSize)
@@ -35,7 +32,7 @@ func NttBatch{{.CurveNameUpperCase}}(scalars *[]G1ScalarField, isInverse bool, b
 	return uint64(ret)
 }
 
-func EcNtt{{.CurveNameUpperCase}}(values *[]G1ProjectivePoint, isInverse bool, deviceId int) uint64 {
+func EcNtt(values *[]G1ProjectivePoint, isInverse bool, deviceId int) uint64 {
 	valuesC := (*C.{{.CurveNameUpperCase}}_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
@@ -46,7 +43,7 @@ func EcNtt{{.CurveNameUpperCase}}(values *[]G1ProjectivePoint, isInverse bool, d
 	return uint64(ret)
 }
 
-func EcNttBatch{{.CurveNameUpperCase}}(values *[]G1ProjectivePoint, isInverse bool, batchSize, deviceId int) uint64 {
+func EcNttBatch(values *[]G1ProjectivePoint, isInverse bool, batchSize, deviceId int) uint64 {
 	valuesC := (*C.{{.CurveNameUpperCase}}_projective_t)(unsafe.Pointer(&(*values)[0]))
 	deviceIdC := C.size_t(deviceId)
 	isInverseC := C.bool(isInverse)
