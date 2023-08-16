@@ -82,6 +82,22 @@ func genMainFiles() {
 	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./ntt/", bn254_ntt_entries...))
 	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./ntt/", bls12381_ntt_entries...))
 
+	bn254_vec_mod_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bn254", "vec_mod.go"), Templates: []string{"vec_mod.go.tmpl"}},
+	}
+
+	bls12377_vec_mod_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12377", "vec_mod.go"), Templates: []string{"vec_mod.go.tmpl"}},
+	}
+
+	bls12381_vec_mod_entries := []bavard.Entry{
+		{File: filepath.Join(baseDir, "bls12381", "vec_mod.go"), Templates: []string{"vec_mod.go.tmpl"}},
+	}
+
+	assertNoError(bgen.Generate(config.BLS_12_377, config.BLS_12_377.CurveNameLowerCase, "./ops/", bn254_vec_mod_entries...))
+	assertNoError(bgen.Generate(config.BN_254, config.BN_254.CurveNameLowerCase, "./ops/", bls12377_vec_mod_entries...))
+	assertNoError(bgen.Generate(config.BLS_12_381, config.BLS_12_381.CurveNameLowerCase, "./ops/", bls12381_vec_mod_entries...))
+
 	h_msm_bn254 := []bavard.Entry{
 		{File: filepath.Join(baseDir, "bn254", "include", "msm.h"), Templates: []string{"msm.h.tmpl"}},
 	}

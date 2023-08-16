@@ -92,7 +92,6 @@ func TestPoint{{.CurveNameUpperCase}}fromLimbs(t *testing.T) {
 
 func TestNewPointAffineNoInfinity{{.CurveNameUpperCase}}Zero(t *testing.T) {
 	var zeroP G1PointAffine
-	zeroP.SetZero()
 
 	var zeroSanity G1BaseField
 	zeroSanity.SetZero()

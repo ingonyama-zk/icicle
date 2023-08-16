@@ -256,6 +256,16 @@ func (p *G1PointAffine) ToProjective() *G1ProjectivePoint {
 	}
 }
 
+func (p *G1ProjectivePoint) FromAffine(affine *G1PointAffine) *G1ProjectivePoint {
+	in := (*C.BN254_affine_t)(unsafe.Pointer(affine))
+
+	out := C.projective_from_affine_bn254(in)
+	
+	*p = *(*G1ProjectivePoint)(unsafe.Pointer(out))
+
+	return p
+}
+
 func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 	var _x G1BaseField
 	var _y G1BaseField

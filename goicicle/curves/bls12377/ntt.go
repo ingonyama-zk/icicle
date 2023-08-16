@@ -16,6 +16,9 @@
 
 package bls12377
 
+// #cgo CFLAGS: -I./include/
+// #cgo LDFLAGS: -L${SRCDIR}/../../ -lbls12_377
+// #include "ntt.h"
 import "C"
 import (
 	"errors"
