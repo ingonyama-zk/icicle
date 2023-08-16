@@ -397,6 +397,19 @@ void bucket_method_msm(unsigned bitsize, unsigned c, S *scalars, A *points, unsi
   //sort by bucket sizes
   unsigned h_nof_buckets_to_compute;
   cudaMemcpyAsync(&h_nof_buckets_to_compute, nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
+  
+  // if all points are 0 just return point 0
+  if (h_nof_buckets_to_compute == 0) {
+    if (!on_device)
+      final_result[0] = P::zero();
+    else {
+      P* h_final_result = (P*)malloc(sizeof(P));
+      h_final_result[0] = P::zero();
+      cudaMemcpyAsync(final_result, h_final_result, sizeof(P), cudaMemcpyHostToDevice, stream);
+    }
+
+    return;
+  }
 
   unsigned* sorted_bucket_sizes;
   cudaMallocAsync(&sorted_bucket_sizes, sizeof(unsigned)*h_nof_buckets_to_compute, stream);
