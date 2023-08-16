@@ -1,0 +1,40 @@
+name: Build Dev
+
+on:
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - icicle/**
+      - src/**
+      - Cargo.toml
+      - build.rs
+
+env:
+  CARGO_TERM_COLOR: always
+  ARCH_TYPE: sm_70
+
+jobs:
+  build-linux:
+    runs-on: [self-hosted, Linux, X64, icicle]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --release --verbose
+      
+  
+  build-windows:
+    runs-on: windows-2022
+    steps:     
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Download and Install Cuda
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: '12.0.0'
+        method: 'network'
+        # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
+        sub-packages: '["cudart", "nvcc", "thrust"]'
+    - name: Build
+      run: cargo build --release --verbose

@@ -825,7 +825,7 @@ pub fn generate_random_points100_bn254(
 ) -> Vec<PointAffineNoInfinity_BN254> {
     let mut res =  Vec::new();
     for i in 0..count{
-        if (i<100) {
+        if (i<1024) {
             res.push(Point_BN254::from_ark(G1Projective_BN254::rand(&mut rng)).to_xy_strip_z());
         }
         else {
@@ -945,6 +945,14 @@ pub(crate) mod tests_bn254 {
         assert!(check_eq(&result2, &points));
     }
 
+    fn decode_hex(s: &str) -> Vec<u32> {
+        (0..s.len())
+            .step_by(8)
+            .map(|i| u32::from_str_radix(&(s[i..i + 8].chars().rev().collect::<String>()), 16)
+            .expect(&format!("{:?}", s[i..i + 8].as_bytes())))
+            .collect()
+    }
+
     #[test]
     fn test_msm() {
         let test_sizes = [24];
@@ -956,7 +964,7 @@ pub(crate) mod tests_bn254 {
             let points = generate_random_points100_bn254(count, get_rng_bn254(seed));
             let scalars = generate_random_scalars_bn254(count, get_rng_bn254(seed));
 
-            let msm_result = msm_bn254(&points, &scalars, 0);
+            let msm_result = msm_bn254(&points, &scalars, 10);
 
             let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
             let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
@@ -969,6 +977,41 @@ pub(crate) mod tests_bn254 {
                 msm_result.to_ark_affine(),
                 Point_BN254::from_ark(msm_result_ark).to_ark_affine()
             );
+        }
+    }
+
+    #[test]
+    fn test_custom_msm_distributions() {
+        let mut i = 0;
+        // loop over all the saved distributions: scalars0.txt, scalars1.txt, ...
+        while let Ok(scalars_file) = std::fs::read_to_string(format!("src/scalars{}.txt", i)) {
+            let scalars_file = decode_hex(&scalars_file);
+            let scalars = (0..scalars_file.len()).step_by(8)
+                                                .map(|i| ScalarField_BN254::from_limbs(&scalars_file[i..i+8]))
+                                                .collect::<Vec<_>>();
+
+            let points = if let Ok(points_file) = std::fs::read_to_string(format!("src/points{}.txt", i)) {
+                let points_file = decode_hex(&points_file);
+                (0..points_file.len()).step_by(16)
+                    .map(|i| PointAffineNoInfinity_BN254::from_limbs(&points_file[i..i+8], &points_file[i+8..i+16]))
+                    .collect::<Vec<_>>()
+            } else {
+                // it doesn't really matter if there are no points.txt file as points shouldn't affect the performance or correctness
+                let seed = Some(0);
+                generate_random_points100_bn254(scalars.len(), get_rng_bn254(seed))
+            };
+            assert!(points[0].to_ark_repr().is_on_curve());
+
+            assert_eq!(scalars.len(), points.len());
+            let msm_result = msm_bn254(&points, &scalars, 10);
+
+            let point_r_ark: Vec<_> = points.iter().map(|x| x.to_ark_repr()).collect();
+            let scalars_r_ark: Vec<_> = scalars.iter().map(|x| x.to_ark()).collect();
+
+            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
+
+            assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
+            i += 1;
         }
     }
 
@@ -1462,8 +1505,6 @@ pub(crate) mod tests_bn254 {
         let (_, mut d_coeffs, mut d_domain) = set_up_scalars_bn254(test_size * batch_size, log_test_size, false);
         let (_, _, mut d_large_domain) = set_up_scalars_bn254(0, log_test_size + 1, false);
         let mut d_coset_powers = build_domain_bn254(test_size, log_test_size + 1, false);
-
-        println!("d_coset_powers len {}", d_coset_powers.len());
 
         let mut d_evals_large = evaluate_scalars_batch_bn254(&mut d_coeffs, &mut d_large_domain, batch_size);
         let mut h_evals_large: Vec<ScalarField_BN254> = (0..2 * test_size * batch_size).map(|_| ScalarField_BN254::zero()).collect();

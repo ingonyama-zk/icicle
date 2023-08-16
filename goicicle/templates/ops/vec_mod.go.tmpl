@@ -1,0 +1,23 @@
+// #cgo CFLAGS: -I./include/
+// #cgo LDFLAGS: -L${SRCDIR}/../../ {{.SharedLib}}
+// #include "ve_mod_mult.h"
+import "C"
+import (
+	"fmt"
+	"unsafe"
+)
+
+func VecScalarMulMod(scalarVec1, scalarVec2 unsafe.Pointer, size int) int {
+	scalarVec1C := (*C.{{.CurveNameUpperCase}}_scalar_t)(scalarVec1)
+	scalarVec2C := (*C.{{.CurveNameUpperCase}}_scalar_t)(scalarVec2)
+	sizeC := C.size_t(size)
+
+	ret := C.vec_mod_mult_device_scalar_{{.CurveNameLowerCase}}(scalarVec1C, scalarVec2C, sizeC, 0)
+
+	if ret != 0 {
+		fmt.Print("error multiplying scalar vectors")
+		return -1
+	}
+
+	return 0
+}
