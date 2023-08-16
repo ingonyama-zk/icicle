@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewFieldBLS12381One(t *testing.T) {
+func TestNewFieldBLS12_381One(t *testing.T) {
 	var oneField G1BaseField
 	oneField.SetOne()
 
@@ -32,7 +32,7 @@ func TestNewFieldBLS12381One(t *testing.T) {
 	assert.Equal(t, oneField.S, rawOneField)
 }
 
-func TestNewFieldBLS12381Zero(t *testing.T) {
+func TestNewFieldBLS12_381Zero(t *testing.T) {
 	var zeroField G1BaseField
 	zeroField.SetZero()
 
@@ -41,7 +41,7 @@ func TestNewFieldBLS12381Zero(t *testing.T) {
 	assert.Equal(t, zeroField.S, rawZeroField)
 }
 
-func TestFieldBLS12381ToBytesLe(t *testing.T) {
+func TestFieldBLS12_381ToBytesLe(t *testing.T) {
 	var p G1ProjectivePoint
 	p.Random()
 
@@ -54,7 +54,7 @@ func TestFieldBLS12381ToBytesLe(t *testing.T) {
 	assert.Equal(t, len(p.X.ToBytesLe()), 32)
 }
 
-func TestNewPointBLS12381Zero(t *testing.T) {
+func TestNewPointBLS12_381Zero(t *testing.T) {
 	var pointZero G1ProjectivePoint
 	pointZero.SetZero()
 
@@ -69,7 +69,7 @@ func TestNewPointBLS12381Zero(t *testing.T) {
 	assert.Equal(t, pointZero.Z, zeroSanity)
 }
 
-func TestBLS12381Eq(t *testing.T) {
+func TestBLS12_381Eq(t *testing.T) {
 	var p1 G1ProjectivePoint
 	p1.Random()
 	var p2 G1ProjectivePoint
@@ -79,7 +79,7 @@ func TestBLS12381Eq(t *testing.T) {
 	assert.Equal(t, p1.Eq(&p2), false)
 }
 
-func TestBLS12381StripZ(t *testing.T) {
+func TestBLS12_381StripZ(t *testing.T) {
 	var p1 G1ProjectivePoint
 	p1.Random()
 
@@ -90,7 +90,7 @@ func TestBLS12381StripZ(t *testing.T) {
 	assert.Equal(t, p1.Y, p2ZLess.Y)
 }
 
-func TestPointBLS12381fromLimbs(t *testing.T) {
+func TestPointBLS12_381fromLimbs(t *testing.T) {
 	var p G1ProjectivePoint
 	p.Random()
 
@@ -108,9 +108,8 @@ func TestPointBLS12381fromLimbs(t *testing.T) {
 	assert.Equal(t, pFromLimbs, p)
 }
 
-func TestNewPointAffineNoInfinityBLS12381Zero(t *testing.T) {
+func TestNewPointAffineNoInfinityBLS12_381Zero(t *testing.T) {
 	var zeroP G1PointAffine
-	zeroP.SetZero()
 
 	var zeroSanity G1BaseField
 	zeroSanity.SetZero()
@@ -119,7 +118,7 @@ func TestNewPointAffineNoInfinityBLS12381Zero(t *testing.T) {
 	assert.Equal(t, zeroP.Y, zeroSanity)
 }
 
-func TestPointAffineNoInfinityBLS12381FromLimbs(t *testing.T) {
+func TestPointAffineNoInfinityBLS12_381FromLimbs(t *testing.T) {
 	// Initialize your test values
 	x := [12]uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 	y := [12]uint32{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}

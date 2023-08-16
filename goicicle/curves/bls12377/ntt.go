@@ -16,7 +16,6 @@
 
 package bls12377
 
-import "C"
 import (
 	"errors"
 	"fmt"
@@ -24,6 +23,11 @@ import (
 
 	"github.com/ingonyama-zk/icicle/goicicle"
 )
+
+// #cgo CFLAGS: -I./include/
+// #cgo LDFLAGS: -L${SRCDIR}/../../ -lbls12_377
+// #include "ntt.h"
+import "C"
 
 const (
 	NONE = 0
