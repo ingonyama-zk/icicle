@@ -8,6 +8,7 @@ type Curve struct {
 	SharedLib          string
 	ScalarSize         int
 	BaseSize           int
+	G2ElementSize      int
 }
 
 var BN_254 = Curve{
@@ -17,6 +18,7 @@ var BN_254 = Curve{
 	SharedLib:          "-lbn254",
 	ScalarSize:         8,
 	BaseSize:           8,
+	G2ElementSize:      4,
 }
 
 var BLS_12_377 = Curve{
@@ -26,6 +28,7 @@ var BLS_12_377 = Curve{
 	SharedLib:          "-lbls12_377",
 	ScalarSize:         8,
 	BaseSize:           12,
+	G2ElementSize:      6,
 }
 
 var BLS_12_381 = Curve{
@@ -35,4 +38,5 @@ var BLS_12_381 = Curve{
 	SharedLib:          "-lbls12_381",
 	ScalarSize:         8,
 	BaseSize:           12,
+	G2ElementSize:      6,
 }
