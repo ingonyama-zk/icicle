@@ -1,12 +1,9 @@
-name: Build
+name: Build Dev
 
 on:
   pull_request:
-    types: 
-      - ready_for_review
-      - opened
     branches:
-      - main
+      - dev
     paths:
       - icicle/**
       - src/**
