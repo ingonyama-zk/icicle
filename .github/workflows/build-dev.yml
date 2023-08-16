@@ -1,9 +1,9 @@
-name: Build
+name: Build Dev
 
 on:
   pull_request:
     branches:
-      - main
+      - dev
     paths:
       - icicle/**
       - src/**
@@ -18,8 +18,8 @@ jobs:
   build-linux:
     runs-on: [self-hosted, Linux, X64, icicle]
     steps:
-    - uses: actions/checkout@v3
-      name: Checkout Repo
+    - name: Checkout Repo
+      uses: actions/checkout@v3
     - name: Build
       run: cargo build --release --verbose
       
@@ -27,10 +27,10 @@ jobs:
   build-windows:
     runs-on: windows-2022
     steps:     
-    - uses: actions/checkout@v3
-      name: Checkout Repo
-    - uses: Jimver/cuda-toolkit@v0.2.11
-      name: Download and Install Cuda
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Download and Install Cuda
+      uses: Jimver/cuda-toolkit@v0.2.11
       with:
         cuda: '12.0.0'
         method: 'network'
