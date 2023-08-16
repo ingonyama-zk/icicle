@@ -59,6 +59,16 @@ func (f *G1BaseField) SetOne() *G1BaseField {
 	return f
 }
 
+func (p *G1ProjectivePoint) FromAffine(affine *G1PointAffine) *G1ProjectivePoint {
+	in := (*C.BLS12_377_affine_t)(unsafe.Pointer(affine))
+
+	out := C.projective_from_affine_bls12_377(in)
+
+	*p = *(*G1ProjectivePoint)(unsafe.Pointer(out))
+
+	return p
+}
+
 func (f *G1BaseField) FromLimbs(limbs [BASE_SIZE]uint32) *G1BaseField {
 	copy(f.S[:], limbs[:])
 
@@ -190,16 +200,6 @@ func (p *G1ProjectivePoint) Random() *G1ProjectivePoint {
 	return p
 }
 
-func (p *G1ProjectivePoint) FromAffine(affine *G1PointAffine) *G1ProjectivePoint {
-	in := (*C.BLS12_377_affine_t)(unsafe.Pointer(affine))
-
-	out := C.projective_from_affine_bls12_377(in)
-	
-	*p = *(*G1ProjectivePoint)(unsafe.Pointer(out))
-
-	return p
-}
-
 func (p *G1ProjectivePoint) StripZ() *G1PointAffine {
 	return &G1PointAffine{
 		X: p.X,
@@ -231,20 +231,6 @@ type G1PointAffine struct {
 	X, Y G1BaseField
 }
 
-// todo: remove
-func (p *G1PointAffine) SetZero() *G1PointAffine {
-	var x G1BaseField
-	var y G1BaseField
-
-	x.SetZero()
-	y.SetZero()
-
-	p.X = x
-	p.Y = y
-
-	return p
-}
-
 func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAffine {
 	in := (*C.BLS12_377_projective_t)(unsafe.Pointer(projective))
 
@@ -256,6 +242,16 @@ func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAf
 	return p
 }
 
+func (p *G1PointAffine) ToProjective() *G1ProjectivePoint {
+	var Z G1BaseField
+	Z.SetOne()
+
+	return &G1ProjectivePoint{
+		X: p.X,
+		Y: p.Y,
+		Z: Z,
+	}
+}
 
 func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 	var _x G1BaseField

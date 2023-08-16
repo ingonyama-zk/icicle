@@ -110,7 +110,6 @@ func TestPointBN254fromLimbs(t *testing.T) {
 
 func TestNewPointAffineNoInfinityBN254Zero(t *testing.T) {
 	var zeroP G1PointAffine
-	zeroP.SetZero()
 
 	var zeroSanity G1BaseField
 	zeroSanity.SetZero()
