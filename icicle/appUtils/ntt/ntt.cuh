@@ -301,23 +301,23 @@ template <typename E, typename S> void ntt_inplace_batch_template(
   const int shared_mem = 2 * num_threads * sizeof(E); // TODO: calculator, as shared mem size may be more efficient less then max to allow more concurrent blocks on SM
   const int logn_shmem = is_shared_mem_enabled ? int(log(2 * num_threads) / log(2)) : 0; //TODO: shared memory support only for types <= 32 bytes
 
-  if (inverse) 
-  {
-    if (is_shared_mem_enabled) ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+  // if (inverse) 
+  // {
+  //   if (is_shared_mem_enabled) ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
 
-    for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
-    { 
-      ntt_template_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
-    }
+  //   for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
+  //   { 
+  //     ntt_template_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
+  //   }
 
-    if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
+  //   if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
-    num_threads = min(n / 2, MAX_NUM_THREADS);
-    num_blocks = (n * batch_size + num_threads - 1) / num_threads;
-    template_normalize_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>> (d_inout, n * batch_size, S::inv_log_size(logn)); 
-  }
-  else 
-  {
+  //   num_threads = min(n / 2, MAX_NUM_THREADS);
+  //   num_blocks = (n * batch_size + num_threads - 1) / num_threads;
+  //   // template_normalize_kernel <E, S> <<<num_blocks, num_threads, 0, stream>>> (d_inout, n * batch_size, S::inv_log_size(logn)); 
+  // }
+  // else 
+  // {
     if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
     for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
@@ -326,7 +326,7 @@ template <typename E, typename S> void ntt_inplace_batch_template(
     }
     
     if (is_shared_mem_enabled) ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
-  }
+  // }
   
   if (!is_sync_needed) return;
 
@@ -345,7 +345,7 @@ template <typename E, typename S> void ntt_inplace_batch_template(
  template <typename E, typename S> uint32_t ntt_end2end_batch_template(E * arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream) {
   int batches = int(arr_size / n);
   uint32_t logn = uint32_t(log(n) / log(2));
-  uint32_t n_twiddles = n; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order. 
+  uint32_t n_twiddles = n/2; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order. 
   size_t size_E = arr_size * sizeof(E);
   S * d_twiddles;
   if (inverse){

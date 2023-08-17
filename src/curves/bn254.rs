@@ -4,9 +4,10 @@ use ark_bn254::{Fq as Fq_BN254, Fr as Fr_BN254, G1Affine as G1Affine_BN254, G1Pr
 
 use ark_ec::AffineCurve;
 use ark_ff::{BigInteger256, PrimeField};
+use ark_std::UniformRand;
 use std::mem::transmute;
 use ark_ff::Field;
-use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}};
+use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
@@ -185,6 +186,28 @@ impl PointAffineNoInfinity_BN254 {
         }
     }
 
+    pub fn from_be_bytes(ix: &[u8], iy: &[u8]) -> Self {
+        let mut tx64 = [0u64;4];
+        for i in 0..4{
+            tx64[i] = u64::from_le_bytes([ix[8*i],ix[8*i+1],ix[8*i+2],ix[8*i+3],ix[8*i+4],ix[8*i+5],ix[8*i+6],ix[8*i+7]]);
+        }
+        let px = BigInteger256::new(tx64);
+        let mut ty64 = [0u64;4];
+        for i in 0..4{
+            ty64[i] = u64::from_le_bytes([iy[8*i],iy[8*i+1],iy[8*i+2],iy[8*i+3],iy[8*i+4],iy[8*i+5],iy[8*i+6],iy[8*i+7]]);
+        }
+        let py = BigInteger256::new(ty64);        
+
+
+        let t1 = G1Affine_BN254::new(
+            Fq_BN254::from_repr(px).unwrap(),
+            Fq_BN254::from_repr(py).unwrap(),
+            false,
+        ).mul_by_cofactor_to_projective();
+        let mut t = Point_BN254::from_ark(t1).to_xy_strip_z();
+        return t;
+    }
+    
     pub fn limbs(&self) -> Vec<u32> {
         [self.x.limbs(), self.y.limbs()].concat()
     }
