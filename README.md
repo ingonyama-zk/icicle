@@ -163,6 +163,16 @@ Testing the new curve could be done by running the tests in ``tests_curve_name``
 
 Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
 
+### Development Contributions
+
+If you are changing code, please make sure to change your [git hooks path][HOOKS_DOCS] to the repo's [hooks directory][HOOKS_PATH] by running the following command:
+
+```sh
+git config core.hooksPath ./scripts/hooks
+```
+
+This will ensure our custom hooks are run and will make it easier to follow our coding guidelines.
+
 ### Hall of Fame
 
 - [Robik](https://github.com/robik75), for his on-going support and mentorship 
@@ -185,5 +195,7 @@ See [LICENSE-MIT][LMIT] for details.
 [LMIT]: ./LICENSE
 [DISCORD]: https://discord.gg/Y4SkbDf2Ff
 [googletest]: https://github.com/google/googletest/
+[HOOKS_DOCS]: https://git-scm.com/docs/githooks
+[HOOKS_PATH]: ./scripts/hooks/
 
 <!-- End Links -->
