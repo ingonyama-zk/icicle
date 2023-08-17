@@ -24,12 +24,24 @@ jobs:
       run: cargo build --release --verbose
   
   test-linux:
+    needs: build-linux
     runs-on: [self-hosted, Linux, X64, icicle]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v3
     - name: Build
       run: cargo test --release --verbose
+  
+  formatting:
+    name: Check Code Formatting
+    runs-on: [self-hosted, Linux, X64, icicle]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Check rustfmt
+      run: cargo fmt --check
+    # - name: Check clippy
+    #   run: cargo clippy --no-deps --all-features --all-targets
   
   build-windows:
     runs-on: windows-2022
