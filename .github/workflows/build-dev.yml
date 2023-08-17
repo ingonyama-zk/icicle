@@ -22,7 +22,14 @@ jobs:
       uses: actions/checkout@v3
     - name: Build
       run: cargo build --release --verbose
-      
+  
+  test-linux:
+    runs-on: [self-hosted, Linux, X64, icicle]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Build
+      run: cargo test --release --verbose
   
   build-windows:
     runs-on: windows-2022
