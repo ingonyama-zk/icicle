@@ -1,0 +1,10 @@
+# https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
+
+# Stable Configs
+chain_width = 0
+max_width = 120
+merge_derives = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+# Unstable Configs

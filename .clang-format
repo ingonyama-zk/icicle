@@ -4,7 +4,7 @@ AlignConsecutiveMacros: true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: true
-AllowShortCaseLabelsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: true
 AlwaysBreakTemplateDeclarations: true
@@ -23,9 +23,9 @@ DisableFormat: false
 IndentFunctionDeclarationAfterType: false
 IndentWidth: 2
 KeepEmptyLinesAtTheStartOfBlocks: false
-MaxEmptyLinesToKeep: 2
+MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
-PointerAlignment: Right
+PointerAlignment: Left
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
