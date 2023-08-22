@@ -361,7 +361,7 @@ template <typename E, typename S> void ntt_inplace_batch_template(
    
   S* _null = nullptr;
   ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, false, _null, stream, false);
-
+  reverse_order_batch(d_arr, n, logn, batches, stream);
   cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arr, stream);
   cudaFreeAsync(d_twiddles, stream);
