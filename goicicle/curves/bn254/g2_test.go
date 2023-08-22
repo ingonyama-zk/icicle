@@ -29,6 +29,22 @@ func TestG2Eqg2(t *testing.T) {
 	assert.True(t, point.Eq(&point))
 }
 
+func TestG2FromProjectiveToAffine(t *testing.T) {
+	var projective G2Point
+	var affine G2PointAffine
+
+	projective.Random()
+
+	affine.FromProjective(&projective)
+	var projective2 G2Point
+	projective2.FromAffine(&affine)
+
+	
+	assert.True(t, projective.IsOnCurve())
+	assert.True(t, projective2.IsOnCurve())
+	assert.True(t, projective.Eq(&projective2))
+}
+
 func TestG2Eqg2NotEqual(t *testing.T) {
 	var point G2Point
 	point.Random()
