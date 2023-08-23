@@ -28,7 +28,13 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ## Build and usage
 
-> NOTE: [NVCC] is a prerequisite for building.
+
+### Prerequisites
+
+- [NVCC]
+- cmake 3.24.0 and above (though 3.22.1 has been tested and works as well)
+
+### Steps
 
 1. Define or select a curve for your application; we've provided a [template][CRV_TEMPLATE] for defining a curve
 2. Include the curve in [`curve_config.cuh`][CRV_CONFIG]
