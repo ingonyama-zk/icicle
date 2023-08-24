@@ -32,7 +32,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 ### Prerequisites
 
 - [NVCC]
-- cmake 3.24.0 and above (though 3.22.1 has been tested and works as well)
+- cmake 3.18 and above
 
 ### Steps
 
