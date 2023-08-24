@@ -69,6 +69,21 @@ func TestNewPointBLS12_377Zero(t *testing.T) {
 	assert.Equal(t, pointZero.Z, zeroSanity)
 }
 
+func TestFromProjectiveToAffine(t *testing.T) {
+	var projective G1ProjectivePoint
+	var affine G1PointAffine
+
+	projective.Random()
+
+	affine.FromProjective(&projective)
+	var projective2 G1ProjectivePoint
+	projective2.FromAffine(&affine)
+
+	assert.True(t, projective.IsOnCurve())
+	assert.True(t, projective2.IsOnCurve())
+	assert.True(t, projective.Eq(&projective2))
+}
+
 func TestBLS12_377Eq(t *testing.T) {
 	var p1 G1ProjectivePoint
 	p1.Random()
@@ -120,8 +135,8 @@ func TestNewPointAffineNoInfinityBLS12_377Zero(t *testing.T) {
 
 func TestPointAffineNoInfinityBLS12_377FromLimbs(t *testing.T) {
 	// Initialize your test values
-	x := [12]uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
-	y := [12]uint32{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
+	x := [8]uint32{1, 2, 3, 4, 5, 6, 7, 8}
+	y := [8]uint32{9, 10, 11, 12, 13, 14, 15, 16}
 	xSlice := x[:]
 	ySlice := y[:]
 
