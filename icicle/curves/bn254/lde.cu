@@ -24,7 +24,7 @@ extern "C" BN254::scalar_t* build_domain_cuda_bn254(
 }
 
 extern "C" int ntt_cuda_bn254(
-  BN254::scalar_t* arr, uint32_t n, bool inverse, Decimation decimation, size_t device_id = 0, cudaStream_t stream = 0)
+  BN254::scalar_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -40,7 +40,6 @@ extern "C" int ecntt_cuda_bn254(
   BN254::projective_t* arr,
   uint32_t n,
   bool inverse,
-  Decimation decimation,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {

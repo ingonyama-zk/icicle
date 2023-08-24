@@ -35,10 +35,10 @@ const (
 	DIT  = 2
 )
 
-func Ntt(scalars *[]G1ScalarField, isInverse bool, decimation int, deviceId int) uint64 {
+func Ntt(scalars *[]G1ScalarField, isInverse bool, deviceId int) uint64 {
 	scalarsC := (*C.BLS12_381_scalar_t)(unsafe.Pointer(&(*scalars)[0]))
 
-	ret := C.ntt_cuda_bls12_381(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(decimation), C.size_t(deviceId))
+	ret := C.ntt_cuda_bls12_381(scalarsC, C.uint32_t(len(*scalars)), C.bool(isInverse), C.size_t(deviceId))
 
 	return uint64(ret)
 }
