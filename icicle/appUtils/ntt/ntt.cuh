@@ -93,12 +93,6 @@ void reverse_order(T* arr, uint32_t n, uint32_t logn, cudaStream_t stream)
   reverse_order_batch(arr, n, logn, 1, stream);
 }
 
-enum Decimation {
-  NONE = 0,
-  DIF = 1,
-  DIT = 2,
-};
-
 /**
  * Cooley-Tuckey NTT.
  * NOTE! this function assumes that d_twiddles are located in the device memory.

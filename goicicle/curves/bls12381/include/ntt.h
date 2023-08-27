@@ -34,7 +34,7 @@ typedef struct BLS12_381_scalar_t BLS12_381_scalar_t;
 typedef struct BLS12_381_g2_projective_t BLS12_381_g2_projective_t;
 typedef struct BLS12_381_g2_affine_t BLS12_381_g2_affine_t;
 
-int ntt_cuda_bls12_381(BLS12_381_scalar_t* arr, uint32_t n, bool inverse, size_t decimation, size_t device_id);
+int ntt_cuda_bls12_381(BLS12_381_scalar_t* arr, uint32_t n, bool inverse, size_t device_id);
 int ntt_batch_cuda_bls12_381(
   BLS12_381_scalar_t* arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
 
