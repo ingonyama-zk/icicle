@@ -1,13 +1,10 @@
 use std::ffi::c_uint;
-
 use ark_CURVE_NAME_L::{Fq as Fq_CURVE_NAME_U, Fr as Fr_CURVE_NAME_U, G1Affine as G1Affine_CURVE_NAME_U, G1Projective as G1Projective_CURVE_NAME_U};
-
 use ark_ec::AffineCurve;
 use ark_ff::{BigInteger_limbs_p, PrimeField};
 use std::mem::transmute;
 use ark_ff::Field;
 use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}};
-
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
 

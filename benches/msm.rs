@@ -34,16 +34,20 @@ fn bench_msm(c: &mut Criterion) {
             #[cfg(feature = "g2")]
             let mut d_g2_points = DeviceBuffer::from_slice(&g2_batch_points[..]).unwrap();
 
-            group.sample_size(30).bench_function(
-                &format!("MSM of size 2^{} in batch {}", log_msm_size, batch_size),
-                |b| b.iter(|| commit_batch_bls12_381(&mut d_points, &mut d_scalars, batch_size)),
-            );
+            group
+                .sample_size(30)
+                .bench_function(
+                    &format!("MSM of size 2^{} in batch {}", log_msm_size, batch_size),
+                    |b| b.iter(|| commit_batch_bls12_381(&mut d_points, &mut d_scalars, batch_size)),
+                );
 
             #[cfg(feature = "g2")]
-            group.sample_size(10).bench_function(
-                &format!("G2 MSM of size 2^{} in batch {}", log_msm_size, batch_size),
-                |b| b.iter(|| commit_batch_g2(&mut d_g2_points, &mut d_scalars, batch_size))
-            );
+            group
+                .sample_size(10)
+                .bench_function(
+                    &format!("G2 MSM of size 2^{} in batch {}", log_msm_size, batch_size),
+                    |b| b.iter(|| commit_batch_g2(&mut d_g2_points, &mut d_scalars, batch_size)),
+                );
         }
     }
 }

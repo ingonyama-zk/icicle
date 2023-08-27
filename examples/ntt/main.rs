@@ -1,9 +1,6 @@
 use std::time::Instant;
 
-use icicle_utils::{
-    curves::bls12_381::{Point_BLS12_381, ScalarField_BLS12_381},
-    test_bls12_381::*,
-};
+use icicle_utils::{curves::bls12_381::ScalarField_BLS12_381, test_bls12_381::*};
 use rustacuda::prelude::DeviceBuffer;
 
 const LOG_NTT_SIZES: [usize; 3] = [20, 10, 9];
@@ -22,13 +19,7 @@ fn bench_lde() {
                 d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
                 batch_size: usize,
             ) -> i32 {
-                ntt_inplace_batch_bls12_381(
-                    d_inout,
-                    d_twiddles,
-                    batch_size,
-                    false,
-                    0,
-                );
+                ntt_inplace_batch_bls12_381(d_inout, d_twiddles, batch_size, false, 0);
                 0
             }
 
@@ -37,13 +28,7 @@ fn bench_lde() {
                 d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
                 batch_size: usize,
             ) -> i32 {
-                ntt_inplace_batch_bls12_381(
-                    d_inout,
-                    d_twiddles,
-                    batch_size,
-                    true,
-                    0,
-                );
+                ntt_inplace_batch_bls12_381(d_inout, d_twiddles, batch_size, true, 0);
                 0
             }
 
@@ -129,16 +114,8 @@ fn bench_ntt_template<E, S, R>(
     ntt_size: usize,
     batch_size: usize,
     log_ntt_size: usize,
-    set_data: fn(
-        test_size: usize,
-        log_domain_size: usize,
-        inverse: bool,
-    ) -> (Vec<E>, DeviceBuffer<E>, DeviceBuffer<S>),
-    bench_fn: fn(
-        d_evaluations: &mut DeviceBuffer<E>,
-        d_domain: &mut DeviceBuffer<S>,
-        batch_size: usize,
-    ) -> R,
+    set_data: fn(test_size: usize, log_domain_size: usize, inverse: bool) -> (Vec<E>, DeviceBuffer<E>, DeviceBuffer<S>),
+    bench_fn: fn(d_evaluations: &mut DeviceBuffer<E>, d_domain: &mut DeviceBuffer<S>, batch_size: usize) -> R,
     id: &str,
     inverse: bool,
     samples: usize,
@@ -159,7 +136,7 @@ fn bench_ntt_template<E, S, R>(
     let first = bench_fn(&mut d_evals, &mut d_domain, batch_size);
 
     let start = Instant::now();
-    for i in 0..samples {
+    for _ in 0..samples {
         bench_fn(&mut d_evals, &mut d_domain, batch_size);
     }
     let elapsed = start.elapsed();

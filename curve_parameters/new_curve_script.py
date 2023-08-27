@@ -204,14 +204,14 @@ newpath = f'./icicle/curves/{curve_name_lower}'
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 
-with open("./icicle/curves/curve_template/params.cuh", "r") as params_file:
+with open("./icicle/curves/curve_template/params.cuh.tmpl", "r") as params_file:
     params_file_template = Template(params_file.read())
     params = get_params(config)
     params_content = params_file_template.safe_substitute(params)
     with open(f'./icicle/curves/{curve_name_lower}/params.cuh', 'w') as f:
         f.write(params_content)
 
-with open("./icicle/curves/curve_template/lde.cu", "r") as lde_file:
+with open("./icicle/curves/curve_template/lde.cu.tmpl", "r") as lde_file:
     template_content = Template(lde_file.read())
     lde_content = template_content.safe_substitute(
         CURVE_NAME_U=curve_name_upper, 
@@ -220,7 +220,7 @@ with open("./icicle/curves/curve_template/lde.cu", "r") as lde_file:
     with open(f'./icicle/curves/{curve_name_lower}/lde.cu', 'w') as f:
         f.write(lde_content)
     
-with open("./icicle/curves/curve_template/msm.cu", "r") as msm_file:
+with open("./icicle/curves/curve_template/msm.cu.tmpl", "r") as msm_file:
     template_content = Template(msm_file.read())
     msm_content = template_content.safe_substitute(
         CURVE_NAME_U=curve_name_upper, 
@@ -229,7 +229,7 @@ with open("./icicle/curves/curve_template/msm.cu", "r") as msm_file:
     with open(f'./icicle/curves/{curve_name_lower}/msm.cu', 'w') as f:
         f.write(msm_content)
 
-with open("./icicle/curves/curve_template/ve_mod_mult.cu", "r") as ve_mod_mult_file:
+with open("./icicle/curves/curve_template/ve_mod_mult.cu.tmpl", "r") as ve_mod_mult_file:
     template_content = Template(ve_mod_mult_file.read())
     ve_mod_mult_content = template_content.safe_substitute(
         CURVE_NAME_U=curve_name_upper, 
@@ -239,7 +239,7 @@ with open("./icicle/curves/curve_template/ve_mod_mult.cu", "r") as ve_mod_mult_f
         f.write(ve_mod_mult_content)
     
 
-with open(f'./icicle/curves/curve_template/curve_config.cuh', 'r') as cc:
+with open(f'./icicle/curves/curve_template/curve_config.cuh.tmpl', 'r') as cc:
     template_content = Template(cc.read())
     cc_content = template_content.safe_substitute(
         CURVE_NAME_U=curve_name_upper,
@@ -248,7 +248,7 @@ with open(f'./icicle/curves/curve_template/curve_config.cuh', 'r') as cc:
         f.write(cc_content)
     
 
-with open(f'./icicle/curves/curve_template/projective.cu', 'r') as proj:
+with open(f'./icicle/curves/curve_template/projective.cu.tmpl', 'r') as proj:
     template_content = Template(proj.read())
     proj_content = template_content.safe_substitute(
         CURVE_NAME_U=curve_name_upper, 
@@ -258,7 +258,7 @@ with open(f'./icicle/curves/curve_template/projective.cu', 'r') as proj:
         f.write(proj_content)
 
 
-with open(f'./icicle/curves/curve_template/supported_operations.cu', 'r') as supp_ops:
+with open(f'./icicle/curves/curve_template/supported_operations.cu.tmpl', 'r') as supp_ops:
     template_content = Template(supp_ops.read())
     supp_ops_content = template_content.safe_substitute()
     with open(f'./icicle/curves/{curve_name_lower}/supported_operations.cu', 'w') as f:

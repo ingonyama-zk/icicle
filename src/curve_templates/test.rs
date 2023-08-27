@@ -1,14 +1,9 @@
 use std::ffi::{c_int, c_uint};
-
 use rand::{rngs::StdRng, RngCore, SeedableRng};
-
-
 use crate::curves::CURVE_NAME_L::*;
-
 use ark_CURVE_NAME_L::{Fr as Fr_CURVE_NAME_U, G1Projective as G1Projective_CURVE_NAME_U};
 use ark_ff::PrimeField;
 use ark_std::UniformRand;
-
 use rustacuda::prelude::*;
 use rustacuda_core::DevicePointer;
 use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
