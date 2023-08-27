@@ -43,7 +43,6 @@ type G2Point struct {
 	X, Y, Z ExtentionField
 }
 
-
 func (p *G2Point) Random() *G2Point {
 	outC := (*C.BN254_g2_projective_t)(unsafe.Pointer(p))
 	C.random_g2_projective_bn254(outC)

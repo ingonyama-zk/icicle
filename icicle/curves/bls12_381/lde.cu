@@ -23,12 +23,8 @@ extern "C" BLS12_381::scalar_t* build_domain_cuda_bls12_381(
   }
 }
 
-extern "C" int ntt_cuda_bls12_381(
-  BLS12_381::scalar_t* arr,
-  uint32_t n,
-  bool inverse,
-  size_t device_id = 0,
-  cudaStream_t stream = 0)
+extern "C" int
+ntt_cuda_bls12_381(BLS12_381::scalar_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -42,11 +38,7 @@ extern "C" int ntt_cuda_bls12_381(
 }
 
 extern "C" int ecntt_cuda_bls12_381(
-  BLS12_381::projective_t* arr,
-  uint32_t n,
-  bool inverse,
-  size_t device_id = 0,
-  cudaStream_t stream = 0)
+  BLS12_381::projective_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);

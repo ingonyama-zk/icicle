@@ -39,7 +39,6 @@ func TestG2FromProjectiveToAffine(t *testing.T) {
 	var projective2 G2Point
 	projective2.FromAffine(&affine)
 
-	
 	assert.True(t, projective.IsOnCurve())
 	assert.True(t, projective2.IsOnCurve())
 	assert.True(t, projective.Eq(&projective2))

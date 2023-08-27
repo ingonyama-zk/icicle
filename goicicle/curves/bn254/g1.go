@@ -231,7 +231,7 @@ func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAf
 	in := (*C.BN254_projective_t)(unsafe.Pointer(projective))
 	out := (*C.BN254_affine_t)(unsafe.Pointer(p))
 
-	C.projective_to_affine_bn254(out,in)
+	C.projective_to_affine_bn254(out, in)
 
 	return p
 }
