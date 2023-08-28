@@ -161,8 +161,8 @@ See [LICENSE-MIT][LMIT] for details.
 <!-- Begin Links -->
 [BLS12-381]: ./icicle/curves/bls12_381.cuh
 [NVCC]: https://docs.nvidia.com/cuda/#installation-guides
-[CRV_TEMPLATE]: ./icicle/curves/curve_template.cuh
-[CRV_CONFIG]: ./icicle/curves/curve_config.cuh
+[CRV_TEMPLATE]: ./icicle/curves/curve_template/
+[CRV_CONFIG]: ./icicle/curves/index.cu
 [B_SCRIPT]: ./build.rs
 [FDI]: https://github.com/ingonyama-zk/fast-danksharding
 [LMIT]: ./LICENSE
