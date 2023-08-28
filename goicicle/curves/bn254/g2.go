@@ -43,10 +43,19 @@ type G2Point struct {
 	X, Y, Z ExtentionField
 }
 
-func (p *G2Point) Random() *G2Point {
-	rand := C.random_projective_bn254()
 
-	*p = *(*G2Point)(unsafe.Pointer(rand))
+func (p *G2Point) Random() *G2Point {
+	outC := (*C.BN254_g2_projective_t)(unsafe.Pointer(p))
+	C.random_g2_projective_bn254(outC)
+
+	return p
+}
+
+func (p *G2Point) FromAffine(affine *G2PointAffine) *G2Point {
+	out := (*C.BN254_g2_projective_t)(unsafe.Pointer(p))
+	in := (*C.BN254_g2_affine_t)(unsafe.Pointer(affine))
+
+	C.g2_projective_from_affine_bn254(out, in)
 
 	return p
 }
@@ -87,12 +96,10 @@ func (p *G2PointAffine) ToProjective() G2Point {
 }
 
 func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
+	out := (*C.BN254_g2_affine_t)(unsafe.Pointer(p))
 	in := (*C.BN254_g2_projective_t)(unsafe.Pointer(projective))
 
-	out := C.g2_projective_to_affine_bn254(in)
-
-	// Directly copy memory from the C struct to the Go struct
-	*p = *(*G2PointAffine)(unsafe.Pointer(out))
+	C.g2_projective_to_affine_bn254(out, in)
 
 	return p
 }

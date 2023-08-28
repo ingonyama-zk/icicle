@@ -26,8 +26,6 @@ fn main() {
     nvcc.debug(false);
     nvcc.flag(&arch);
     nvcc.flag(&stream);
-    nvcc.files([
-        "./icicle/curves/index.cu",
-    ]);
+    nvcc.files(["./icicle/curves/index.cu"]);
     nvcc.compile("ingo_icicle"); //TODO: extension??
 }
