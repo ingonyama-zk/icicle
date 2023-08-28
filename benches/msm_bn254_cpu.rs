@@ -12,8 +12,8 @@ use halo2_proofs::{arithmetic::best_multiexp,
 use icicle_utils::utils::get_rng;
 
 fn criterion_benchmark(c: &mut Criterion) {
-    const MIN_K: u32 = 20;
-    const MAX_K: u32 = 23;
+    const MIN_K: u32 = 22;
+    const MAX_K: u32 = 24;
 
     let seed = None;
 

@@ -22,13 +22,13 @@ name = "msm_bn254_gpu"
 path = "benches/msm_bn254_gpu.rs"
 harness = false
 
-#[[bench]]
-#name = "msm_bn254_cpu"
-#path = "benches/msm_bn254_cpu.rs"
-#harness = false
+[[bench]]
+name = "msm_bn254_cpu"
+path = "benches/msm_bn254_cpu.rs"
+harness = false
 
 [dependencies]
-halo2_proofs = {path = "../../icicle/halo2-axiom/halo2_proofs"}
+halo2_proofs = {git = "https://github.com/Orbiter-Finance/halo2-axiom.git",branch = "axiom/dev"}
 hex = "*"
 ark-std = "0.3.0"
 ark-ff = "0.3.0"
