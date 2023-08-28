@@ -2,8 +2,8 @@ extern crate criterion;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use icicle_utils::test_bls12_381::{
-    commit_batch_bls12_381, generate_random_points_bls12_381, set_up_scalars_bls12_381,
+use icicle_utils::test_bn254_pse::{
+    commit_batch_bn254,generate_random_points_bn254, set_up_scalars_bn254,
 };
 use icicle_utils::utils::*;
 #[cfg(feature = "g2")]
@@ -12,33 +12,33 @@ use icicle_utils::{commit_batch_g2, field::ExtensionField};
 use rustacuda::prelude::*;
 
 const LOG_MSM_SIZES: [usize; 1] = [15];
-const BATCH_SIZES: [usize; 2] = [128, 256];
+const BATCH_SIZES: [usize; 3] = [128,256,512];
 
 fn bench_msm(c: &mut Criterion) {
     let mut group = c.benchmark_group("MSM");
     for log_msm_size in LOG_MSM_SIZES {
         for batch_size in BATCH_SIZES {
             let msm_size = 1 << log_msm_size;
-            let (scalars, _, _) = set_up_scalars_bls12_381(msm_size, 0, false);
+            let (scalars, _, _) = set_up_scalars_bn254(msm_size, 0, false);
             let batch_scalars = vec![scalars; batch_size].concat();
             let mut d_scalars = DeviceBuffer::from_slice(&batch_scalars[..]).unwrap();
 
-            let points = generate_random_points_bls12_381(msm_size, get_rng(None));
+            let points = generate_random_points_bn254(msm_size, get_rng(None));
             let batch_points = vec![points; batch_size].concat();
             let mut d_points = DeviceBuffer::from_slice(&batch_points[..]).unwrap();
 
             #[cfg(feature = "g2")]
-            let g2_points = generate_random_points::<ExtensionField>(msm_size, get_rng(None));
+                let g2_points = generate_random_points::<ExtensionField>(msm_size, get_rng(None));
             #[cfg(feature = "g2")]
-            let g2_batch_points = vec![g2_points; batch_size].concat();
+                let g2_batch_points = vec![g2_points; batch_size].concat();
             #[cfg(feature = "g2")]
-            let mut d_g2_points = DeviceBuffer::from_slice(&g2_batch_points[..]).unwrap();
+                let mut d_g2_points = DeviceBuffer::from_slice(&g2_batch_points[..]).unwrap();
 
             group
-                .sample_size(30)
+                .sample_size(100)
                 .bench_function(
-                    &format!("MSM of size 2^{} in batch {}", log_msm_size, batch_size),
-                    |b| b.iter(|| commit_batch_bls12_381(&mut d_points, &mut d_scalars, batch_size)),
+                    &format!("GPU: MSM of size 2^{} in batch {}", log_msm_size, batch_size),
+                    |b| b.iter(|| commit_batch_bn254(&mut d_points, &mut d_scalars, batch_size)),
                 );
 
             #[cfg(feature = "g2")]
