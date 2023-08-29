@@ -22,6 +22,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "projective.h"
 // #include "ve_mod_mult.h"

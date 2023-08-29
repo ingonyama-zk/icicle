@@ -23,6 +23,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbls12_381
 // #include "msm.h"
 import "C"

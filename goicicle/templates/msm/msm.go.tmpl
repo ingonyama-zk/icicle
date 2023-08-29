@@ -5,6 +5,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ {{.SharedLib}}
 // #include "msm.h"
 import "C"

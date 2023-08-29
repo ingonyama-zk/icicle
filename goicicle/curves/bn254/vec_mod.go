@@ -17,6 +17,7 @@
 package bn254
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "ve_mod_mult.h"
 import "C"

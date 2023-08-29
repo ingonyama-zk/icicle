@@ -64,7 +64,9 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v3
     - name: Build CUDA libs
-      run: cd goicicle && ./setup.sh all
+      run: |
+        cd goicicle && make all
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)
     - name: Run Golang Tests
       run: go test ./goicicle/curves/bn254 -count=1
       # TODO: Fix tests for bls12377
