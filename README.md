@@ -37,7 +37,13 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ## Build and usage
 
-> NOTE: [NVCC] is a prerequisite for building.
+
+### Prerequisites
+
+- [NVCC]
+- cmake 3.18 and above
+
+### Steps
 
 1. Define or select a curve for your application; we've provided a [template][CRV_TEMPLATE] for defining a curve
 2. Include the curve in [`curve_config.cuh`][CRV_CONFIG]
@@ -58,6 +64,8 @@ cmake -S . -B build
 cmake --build build
 cd build && ctest
 ```
+
+NOTE: If you are using cmake versions < 3.24 add `-DCUDA_ARCH=<target_cumpute_arch>` to the command `cmake -S . -B build`
 
 ### Rust Bindings
 
@@ -188,8 +196,8 @@ See [LICENSE-MIT][LMIT] for details.
 [BLS12-377]: ./icicle/curves/bls12_377/supported_operations.cu
 [BN254]: ./icicle/curves/bn254/supported_operations.cu
 [NVCC]: https://docs.nvidia.com/cuda/#installation-guides
-[CRV_TEMPLATE]: ./icicle/curves/curve_template.cuh
-[CRV_CONFIG]: ./icicle/curves/curve_config.cuh
+[CRV_TEMPLATE]: ./icicle/curves/curve_template/
+[CRV_CONFIG]: ./icicle/curves/index.cu
 [B_SCRIPT]: ./build.rs
 [FDI]: https://github.com/ingonyama-zk/fast-danksharding
 [LMIT]: ./LICENSE
