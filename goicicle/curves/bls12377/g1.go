@@ -254,6 +254,9 @@ func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 	_x.FromLimbs(GetFixedLimbs(X))
 	_y.FromLimbs(GetFixedLimbs(Y))
 
+	p.X = _x
+	p.Y = _y
+
 	return p
 }
 

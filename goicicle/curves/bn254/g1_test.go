@@ -150,13 +150,13 @@ func TestPointAffineNoInfinityBN254FromLimbs(t *testing.T) {
 	yBase.FromLimbs(y)
 
 	// Define your expected result
-	expected := &G1PointAffine{
+	expected := G1PointAffine{
 		X: xBase,
 		Y: yBase,
 	}
 
 	// Test if result is as expected
-	assert.Equal(t, result, expected)
+	assert.Equal(t, expected, result)
 }
 
 func TestGetFixedLimbs(t *testing.T) {
