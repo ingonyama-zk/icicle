@@ -1,14 +1,13 @@
-name: Build Dev
+name: Build
 
 on:
   pull_request:
     branches:
-      - dev
+      - main
 
 env:
   CARGO_TERM_COLOR: always
   ARCH_TYPE: sm_70
-  LD_LIBRARY_PATH: $GITHUB_WORKSPACE/goicicle
 
 jobs:
   build-rust-linux:
@@ -19,27 +18,6 @@ jobs:
       uses: actions/checkout@v3
     - name: Build Rust
       run: cargo build --release --verbose
-
-  test-rust-linux:
-    name: Test Rust on Linux
-    needs: build-rust-linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
-    - name: Run Rust Tests
-      run: cargo test --release --verbose -- --test-threads=1
-
-  formatting-rust:
-    name: Check Rust Code Formatting
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Check rustfmt
-      run: if [[ $(cargo fmt --check) ]]; then echo "Please run cargo fmt"; exit 1; fi
-    # - name: Check clippy
-    #   run: cargo clippy --no-deps --all-features --all-targets
 
   build-rust-windows:
     name: Build Rust on Windows
@@ -57,31 +35,15 @@ jobs:
     - name: Build Rust Targets
       run: cargo build --release --verbose
 
-  test-golang-linux:
-    name: Test Golang on Linux
+  build-golang-linux:
+    name: Build Golang on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v3
     - name: Build CUDA libs
-      run: make libbn254.so
+      run: make all
       working-directory: ./goicicle
-    - name: Run Golang Tests
-      run: |
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/goicicle
-        go test ./goicicle/curves/bn254 -count=1
-      # TODO: Fix tests for bls12377
-      # TODO: Fix tests for bls12381
-      # run: go test ./goicicle/curves/bn254 ./goicicle/curves/bls12377 ./goicicle/curves/bls12381 -count=1
-
-  formatting-golang:
-    name: Check Golang Code Formatting
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Check gofmt
-      run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
 
   # TODO: Add once Golang make file supports building for Windows
   # build-golang-windows:
@@ -98,4 +60,5 @@ jobs:
   #       # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
   #       sub-packages: '["cudart", "nvcc", "thrust"]'
   #   - name: Build cpp libs
-  #     run: cd goicicle && make all
+  #     run: make all
+  #     working-directory: ./goicicle

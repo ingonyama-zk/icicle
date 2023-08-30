@@ -1,9 +1,9 @@
-name: Build
+name: Dev PR
 
 on:
   pull_request:
     branches:
-      - main
+      - dev
 
 env:
   CARGO_TERM_COLOR: always
