@@ -323,7 +323,10 @@ impl ScalarField_BN254 {
 
 #[cfg(test)]
 mod tests {
-
+    use std::ops::AddAssign;
+    use ark_bn254::G1Projective;
+    use ark_ec::ProjectiveCurve;
+    use ark_ff::Zero;
     use crate::curves::bn254::{Point_BN254, ScalarField_BN254};
 
     #[test]
@@ -349,5 +352,14 @@ mod tests {
         assert_eq!(left, right);
         let right = Point_BN254::from_limbs(&[2, 0, 0, 0, 0, 0, 0, 0], &[0; 8], &[1, 0, 0, 0, 0, 0, 0, 0]);
         assert!(left != right);
+    }
+
+    #[test]
+    fn test_add_g1(){
+        let mut one_g1 = G1Projective::zero();
+        let two_g1 = G1Projective::zero();
+        one_g1.double_in_place();
+        two_g1.double();
+        println!("==:{:?}",one_g1.eq(&two_g1));
     }
 }

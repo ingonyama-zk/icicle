@@ -5,4 +5,5 @@ pub mod test_bn254_pse;
 
 pub mod curves;
 pub mod utils;
-// pub mod helper;
+pub mod arithmetic;
+mod multicore;

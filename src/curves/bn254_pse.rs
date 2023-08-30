@@ -1,13 +1,18 @@
 use std::ffi::c_uint;
+use std::fmt::Debug;
+use std::marker;
 use std::mem::transmute;
 
-use ark_ff::BigInteger256;
-use halo2_proofs::halo2curves::{
+
+use halo2curves::{
     bn256::{Fq as Fq_BN254_PSE, Fq, G1, G1Affine as G1Affine_BN254_PSE},
     CurveAffine,
     group::{ff::{Field, PrimeField}, Group, prime::PrimeCurveAffine},
     serde::SerdeObject
 };
+use halo2curves::bn256::G1Compressed;
+use halo2curves::group::{Curve, GroupEncoding};
+use halo2curves::pairing::Engine;
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
 
@@ -76,13 +81,12 @@ impl ScalarField_BN254_PSE {
         self.s
     }
 
-    pub fn to_pse(&self) -> [u8;32] {
-        let u64s = u32_vec_to_u64_vec(&self.limbs());
-        let u64_array: [u64; 4] = [u64s[0], u64s[1], u64s[2], u64s[3]];
-        Fq::from_raw(u64_array).to_bytes()
+    /// Result is little-end sort
+    pub fn to_pse(&self) -> [u8; 32] {
+        Fq::from_raw(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap()).to_bytes()
     }
 
-    pub fn from_pse(fq_bytes: [u8;32])->Self  {
+    pub fn from_pse(fq_bytes: [u8; 32])->Self  {
         let mut u64_array: [u64; 4] = [0; 4];
         for i in 0..4 {
             for j in 0..8 {
@@ -92,11 +96,11 @@ impl ScalarField_BN254_PSE {
         Self::from_limbs(&u64_vec_to_u32_vec(&u64_array))
     }
 
-    pub fn to_ark_transmute(&self) -> BigInteger256 {
+    pub fn to_pse_transmute(&self) -> [u8;32] {
         unsafe { transmute(*self) }
     }
 
-    pub fn from_ark_transmute(v: BigInteger256) -> ScalarField_BN254_PSE {
+    pub fn from_pse_transmute(v: [u8;32]) -> ScalarField_BN254_PSE {
         unsafe { transmute(v) }
     }
 }
@@ -283,6 +287,35 @@ impl ScalarField_BN254_PSE {
     }
 }
 
+// #[derive(Clone, Default, Debug)]
+// pub struct MSMENTRY<E: Engine> {
+//     pub(crate) scalars: Vec<ScalarField_BN254_PSE>,
+//     pub(crate) bases: Vec<PointAffineNoInfinity_BN254_PSE>,
+//     _marker:marker::PhantomData<E>
+// }
+//
+// impl<E: Engine + Debug> MSMENTRY<E>{
+//     pub fn new(bases: Vec<E::G1Affine>,scalars: Vec<E::Scalar>)->Self{
+//         let bases:Vec<_> = bases.iter().map(|x|{
+//             PointAffineNoInfinity_BN254_PSE::from_pse(x as &G1Affine_BN254_PSE)
+//         }).collect();
+//         let scalars:Vec<_> = scalars.iter().map(|x|{
+//             ScalarField_BN254_PSE::from_pse(x.to_repr() as [u8;32])
+//         }).collect();
+//         MSMENTRY{
+//             scalars,
+//             bases,
+//             _marker: Default::default(),
+//         }
+//     }
+//     // pub fn msm_bn254(&self)-> E::G1{
+//     //
+//     //
+//     // }
+// }
+
+
+
 
 // #[cfg(test)]
 // mod tests {
@@ -323,9 +356,11 @@ impl ScalarField_BN254_PSE {
 #[test]
 fn test_g1_projective_point(){
     let seed = None;
-
     let projective_point = G1::random(get_rng(seed));
-    Point_BN254_PSE::from_pse(projective_point);
+    let affine_point = projective_point.to_affine().to_bytes();
+    let projective_point_rec = G1::from_bytes(&affine_point).unwrap();
+
+    assert_eq!(projective_point,projective_point_rec);
 }
 
 #[test]

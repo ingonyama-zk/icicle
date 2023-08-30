@@ -2,13 +2,12 @@
 extern crate criterion;
 
 use criterion::{BenchmarkId, Criterion};
-use halo2_proofs::{arithmetic::best_multiexp,
-                   halo2curves::{bn256::{Bn256, Fr},
-                                 group::{{Curve, Group},
-                                         ff::Field},
-                                 pairing::Engine}
-};
+use halo2curves::{bn256::{Bn256, Fr},
+                  group::{{Curve, Group},
+                          ff::Field},
+                  pairing::Engine};
 
+use icicle_utils::arithmetic::best_multiexp;
 use icicle_utils::utils::get_rng;
 
 fn criterion_benchmark(c: &mut Criterion) {

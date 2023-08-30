@@ -1,3 +1,4 @@
+use std::time::Instant;
 use rand::rngs::StdRng;
 use rand::RngCore;
 use rand::SeedableRng;
@@ -96,4 +97,19 @@ mod tests {
             u64_vec_to_u32_vec(&arr_u64)
         );
     }
+}
+
+
+/// Temp
+pub fn get_time() -> Instant {
+    Instant::now()
+}
+
+/// Temp
+pub fn get_duration(start: Instant) -> usize {
+    let final_time = Instant::now() - start;
+    let secs = final_time.as_secs() as usize;
+    let millis = final_time.subsec_millis() as usize;
+    let micros = (final_time.subsec_micros() % 1000) as usize;
+    secs * 1000000 + millis * 1000 + micros
 }

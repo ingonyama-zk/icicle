@@ -28,7 +28,7 @@ path = "benches/msm_bn254_cpu.rs"
 harness = false
 
 [dependencies]
-halo2_proofs = {git = "https://github.com/Orbiter-Finance/halo2-axiom.git",branch = "axiom/dev"}
+halo2curves = {git = "https://github.com/Orbiter-Finance/halo2curves.git",branch = "feat/gpu"}
 hex = "*"
 ark-std = "0.3.0"
 ark-ff = "0.3.0"
@@ -47,6 +47,8 @@ rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
 
 rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
+
+rayon = "1.5.1"
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }

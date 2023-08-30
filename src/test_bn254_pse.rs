@@ -1,10 +1,12 @@
 use std::ffi::{c_int, c_uint};
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use std::fmt::Debug;
+use rand::{ RngCore, SeedableRng};
 use crate::curves::bn254_pse::*;
-use halo2_proofs::halo2curves::{bn256::{Fr as Fr_BN254_PSE, G1},
+use halo2curves::{bn256::{Fr as Fr_BN254_PSE, G1},
                                 group::{ff::{Field, PrimeField},Group},
 };
 use ark_std::UniformRand;
+use halo2curves::pairing::Engine;
 use rustacuda::prelude::*;
 use rustacuda_core::DevicePointer;
 use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
@@ -817,9 +819,11 @@ pub fn set_up_scalars_bn254(test_size: usize, log_domain_size: usize, inverse: b
 pub(crate) mod tests_bn254_pse {
     use std::ops::Add;
     use ark_std::UniformRand;
-    use halo2_proofs::halo2curves::bn256::Fr;
-    use halo2_proofs::halo2curves::FieldExt;
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use arithmetic::{best_multiexp};
+    use halo2curves::bn256::Fr;
+    use halo2curves::FieldExt;
+    use halo2curves::group::GroupEncoding;
+    use halo2curves::serde::SerdeObject;
     use crate::test_bn254_pse::*;
     use crate::{curves::bn254_pse::*, *};
 
@@ -897,16 +901,17 @@ pub(crate) mod tests_bn254_pse {
             let msm_result = msm_bn254(&points, &scalars, 0);
 
             let point_r_pse: Vec<_> = points.iter().map(|x| x.to_pse_repr()).collect();
-            let scalars_r_pse: Vec<_> = scalars.iter().map(|x| x.to_pse()).collect();
+            let scalars_r_pse: Vec<_> = scalars.iter().map(|x|
+                Fr::from_bytes(&x.to_pse()).unwrap()
+            ).collect();
 
-            // let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
-            //
-            // assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
-            // assert_eq!(msm_result.to_ark(), msm_result_ark);
-            // assert_eq!(
-            //     msm_result.to_ark_affine(),
-            //     Point_BN254_PSE::from_ark(msm_result_ark).to_ark_affine()
-            // );
+            let result = best_multiexp(&scalars_r_pse, &point_r_pse);
+            assert_eq!(msm_result.to_pse_affine(), result.into());
+            assert_eq!(msm_result.to_pse(), result);
+            assert_eq!(
+                msm_result.to_pse_affine(),
+                Point_BN254_PSE::from_pse(result).to_pse_affine()
+            );
         }
     }
 
@@ -921,17 +926,17 @@ pub(crate) mod tests_bn254_pse {
                 let scalars_batch = generate_random_scalars_bn254(msm_size * batch_size, get_rng(seed));
 
                 let point_r_pse: Vec<_> = points_batch.iter().map(|x| x.to_pse_repr()).collect();
-                let scalars_r_pse: Vec<_> = scalars_batch.iter().map(|x| x.to_pse()).collect();
+                let scalars_r_pse: Vec<_> = scalars_batch.iter().map(|x| Fr::from_bytes(&x.to_pse()).unwrap()).collect();
 
-                // let expected: Vec<_> = point_r_ark
-                //     .chunks(msm_size)
-                //     .zip(scalars_r_ark.chunks(msm_size))
-                //     .map(|p| Point_BN254_PSE::from_ark(VariableBaseMSM::multi_scalar_mul(p.0, p.1)))
-                //     .collect();
-                //
-                // let result = msm_batch_bn254(&points_batch, &scalars_batch, batch_size, 0);
-                //
-                // assert_eq!(result, expected);
+                let expected: Vec<_> = point_r_pse
+                    .chunks(msm_size)
+                    .zip(scalars_r_pse.chunks(msm_size))
+                    .map(|p| Point_BN254_PSE::from_pse(best_multiexp(p.1, p.0)))
+                    .collect();
+
+                let result = msm_batch_bn254(&points_batch, &scalars_batch, batch_size, 0);
+
+                assert_eq!(result, expected);
             }
         }
     }

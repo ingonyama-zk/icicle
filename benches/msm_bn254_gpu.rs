@@ -11,7 +11,7 @@ use icicle_utils::{commit_batch_g2, field::ExtensionField};
 
 use rustacuda::prelude::*;
 
-const LOG_MSM_SIZES: [usize; 1] = [15];
+const LOG_MSM_SIZES: [usize; 1] = [16];
 const BATCH_SIZES: [usize; 3] = [128,256,512];
 
 fn bench_msm(c: &mut Criterion) {
