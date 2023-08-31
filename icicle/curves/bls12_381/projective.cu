@@ -2,7 +2,8 @@
 #include "curve_config.cuh"
 #include <cuda.h>
 
-extern "C" int random_projective_bls12_381(BLS12_381::projective_t* out) { 
+extern "C" int random_projective_bls12_381(BLS12_381::projective_t* out)
+{
   try {
     out[0] = BLS12_381::projective_t::rand_host();
     return CUDA_SUCCESS;
@@ -41,7 +42,8 @@ extern "C" int projective_from_affine_bls12_381(BLS12_381::projective_t* out, BL
   }
 }
 
-extern "C" int random_scalar_bls12_381(BLS12_381::scalar_field_t* out) { 
+extern "C" int random_scalar_bls12_381(BLS12_381::scalar_field_t* out)
+{
   try {
     out[0] = BLS12_381::scalar_field_t::rand_host();
     return CUDA_SUCCESS;
@@ -70,8 +72,8 @@ extern "C" bool eq_g2_bls12_381(BLS12_381::g2_projective_t* point1, BLS12_381::g
            (point2->z == BLS12_381::g2_point_field_t::zero()));
 }
 
-extern "C" int random_g2_projective_bls12_381(BLS12_381::g2_projective_t* out) 
-{ 
+extern "C" int random_g2_projective_bls12_381(BLS12_381::g2_projective_t* out)
+{
   try {
     out[0] = BLS12_381::g2_projective_t::rand_host();
     return CUDA_SUCCESS;

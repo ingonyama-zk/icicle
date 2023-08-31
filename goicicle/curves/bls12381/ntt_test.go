@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestNttBLS12381BBB(t *testing.T) {
+func TestNttBLS12_381Batch(t *testing.T) {
 	count := 1 << 20
 	scalars := GenerateScalars(count, false)
 
@@ -37,7 +37,7 @@ func TestNttBLS12381BBB(t *testing.T) {
 	assert.Equal(t, nttResult, nttResult)
 }
 
-func TestNttBLS12381CompareToGnarkDIF(t *testing.T) {
+func TestNttBLS12_381CompareToGnarkDIF(t *testing.T) {
 	count := 1 << 2
 	scalars := GenerateScalars(count, false)
 
@@ -45,13 +45,13 @@ func TestNttBLS12381CompareToGnarkDIF(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	Ntt(&nttResult, false, DIF, 0)
+	Ntt(&nttResult, false, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
 }
 
-func TestINttBLS12381CompareToGnarkDIT(t *testing.T) {
+func TestINttBLS12_381CompareToGnarkDIT(t *testing.T) {
 	count := 1 << 3
 	scalars := GenerateScalars(count, false)
 
@@ -59,13 +59,13 @@ func TestINttBLS12381CompareToGnarkDIT(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	Ntt(&nttResult, true, DIT, 0)
+	Ntt(&nttResult, true, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	assert.Equal(t, nttResult, nttResult)
 }
 
-func TestNttBLS12381(t *testing.T) {
+func TestNttBLS12_381(t *testing.T) {
 	count := 1 << 3
 
 	scalars := GenerateScalars(count, false)
@@ -74,18 +74,18 @@ func TestNttBLS12381(t *testing.T) {
 	copy(nttResult, scalars)
 
 	assert.Equal(t, nttResult, scalars)
-	Ntt(&nttResult, false, NONE, 0)
+	Ntt(&nttResult, false, 0)
 	assert.NotEqual(t, nttResult, scalars)
 
 	inttResult := make([]G1ScalarField, len(nttResult))
 	copy(inttResult, nttResult)
 
 	assert.Equal(t, inttResult, nttResult)
-	Ntt(&inttResult, true, NONE, 0)
+	Ntt(&inttResult, true, 0)
 	assert.Equal(t, inttResult, scalars)
 }
 
-func TestNttBatchBLS12381(t *testing.T) {
+func TestNttBatchBLS12_381(t *testing.T) {
 	count := 1 << 5
 	batches := 4
 
@@ -117,7 +117,7 @@ func TestNttBatchBLS12381(t *testing.T) {
 		nttResultVecOfVec = append(nttResultVecOfVec, clone)
 
 		// Call the ntt_bls12_381 function
-		Ntt(&nttResultVecOfVec[i], false, NONE, 0)
+		Ntt(&nttResultVecOfVec[i], false, 0)
 	}
 
 	assert.NotEqual(t, nttBatchResult, scalars)
@@ -141,7 +141,7 @@ func BenchmarkNTT(b *testing.B) {
 			nttResult := make([]G1ScalarField, len(scalars)) // Make a new slice with the same length
 			copy(nttResult, scalars)
 			for n := 0; n < b.N; n++ {
-				Ntt(&nttResult, false, NONE, 0)
+				Ntt(&nttResult, false, 0)
 			}
 		})
 	}

@@ -31,7 +31,7 @@ typedef struct BN254_scalar_t BN254_scalar_t;
 
 bool projective_is_on_curve_bn254(BN254_projective_t* point1);
 
-int random_scalar_bn254(BN254_scalar_t* out); 
+int random_scalar_bn254(BN254_scalar_t* out);
 int random_projective_bn254(BN254_projective_t* out);
 BN254_projective_t* projective_zero_bn254();
 int projective_to_affine_bn254(BN254_affine_t* out, BN254_projective_t* point1);

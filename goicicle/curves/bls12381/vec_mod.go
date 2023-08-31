@@ -17,6 +17,7 @@
 package bls12381
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbls12_381
 // #include "ve_mod_mult.h"
 import "C"

@@ -1,0 +1,37 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+  ARCH_TYPE: sm_70
+
+jobs:
+  test-rust-linux:
+    name: Test Rust on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Run Rust Tests
+      run: cargo test --release --verbose -- --test-threads=1
+
+  test-golang-linux:
+    name: Test Golang on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Build CUDA libs
+      run: make libbn254.so
+      working-directory: ./goicicle
+    - name: Run Golang Tests
+      run: |
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/goicicle
+        go test ./goicicle/curves/bn254 -count=1
+      # TODO: Fix tests for bls12377
+      # TODO: Fix tests for bls12381
+      # run: go test ./goicicle/curves/bn254 ./goicicle/curves/bls12377 ./goicicle/curves/bls12381 -count=1

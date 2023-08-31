@@ -23,6 +23,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "projective.h"
 // #include "ve_mod_mult.h"
@@ -231,7 +232,7 @@ func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAf
 	in := (*C.BN254_projective_t)(unsafe.Pointer(projective))
 	out := (*C.BN254_affine_t)(unsafe.Pointer(p))
 
-	C.projective_to_affine_bn254(out,in)
+	C.projective_to_affine_bn254(out, in)
 
 	return p
 }
@@ -253,6 +254,9 @@ func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 
 	_x.FromLimbs(GetFixedLimbs(X))
 	_y.FromLimbs(GetFixedLimbs(Y))
+
+	p.X = _x
+	p.Y = _y
 
 	return p
 }

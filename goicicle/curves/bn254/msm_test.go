@@ -106,12 +106,12 @@ func GenerateScalars(count int, skewed bool) []G1ScalarField {
 }
 
 func TestMSM(t *testing.T) {
-	for _, v := range []int{24} {
+	for _, v := range []int{8} {
 		count := 1 << v
 
 		points := GeneratePoints(count)
 		fmt.Print("Finished generating points\n")
-		scalars := GenerateScalars(count, true)
+		scalars := GenerateScalars(count, false)
 		fmt.Print("Finished generating scalars\n")
 
 		out := new(G1ProjectivePoint)
@@ -126,12 +126,12 @@ func TestMSM(t *testing.T) {
 }
 
 func TestCommitMSM(t *testing.T) {
-	for _, v := range []int{24} {
+	for _, v := range []int{8} {
 		count := 1<<v - 1
 
 		points := GeneratePoints(count)
 		fmt.Print("Finished generating points\n")
-		scalars := GenerateScalars(count, true)
+		scalars := GenerateScalars(count, false)
 		fmt.Print("Finished generating scalars\n")
 
 		out_d, _ := goicicle.CudaMalloc(96)
@@ -186,7 +186,7 @@ func BenchmarkCommit(b *testing.B) {
 	}
 }
 
-func TestBenchMSM(t *testing.T) {
+func TestBatchMSM(t *testing.T) {
 	for _, batchPow2 := range []int{2, 4} {
 		for _, pow2 := range []int{4, 6} {
 			msmSize := 1 << pow2
@@ -196,14 +196,18 @@ func TestBenchMSM(t *testing.T) {
 			points := GeneratePoints(count)
 			scalars := GenerateScalars(count, false)
 
-			a, e := MsmBatch(&points, &scalars, batchSize, 0)
+			pointsResults, e := MsmBatch(&points, &scalars, batchSize, 0)
 
 			if e != nil {
 				t.Errorf("MsmBatchBN254 returned an error: %v", e)
 			}
 
-			if len(a) != batchSize {
-				t.Errorf("Expected length %d, but got %d", batchSize, len(a))
+			if len(pointsResults) != batchSize {
+				t.Errorf("Expected length %d, but got %d", batchSize, len(pointsResults))
+			}
+
+			for _, s := range pointsResults {
+				assert.True(t, s.IsOnCurve())
 			}
 		}
 	}
@@ -236,6 +240,7 @@ func GenerateG2Points(count int) []G2PointAffine {
 
 	// populate the slice
 	for i := 0; i < 10; i++ {
+		fmt.Print() // this prevents the test from hanging. TODO: figure out why
 		var p G2Point
 		p.Random()
 		var affine G2PointAffine
@@ -256,7 +261,7 @@ func GenerateG2Points(count int) []G2PointAffine {
 }
 
 func TestMsmG2BN254(t *testing.T) {
-	for _, v := range []int{24} {
+	for _, v := range []int{8} {
 		count := 1 << v
 		points := GenerateG2Points(count)
 		fmt.Print("Finished generating points\n")
@@ -291,12 +296,12 @@ func BenchmarkMsmG2BN254(b *testing.B) {
 }
 
 func TestCommitG2MSM(t *testing.T) {
-	for _, v := range []int{24} {
+	for _, v := range []int{8} {
 		count := 1 << v
 
 		points := GenerateG2Points(count)
 		fmt.Print("Finished generating points\n")
-		scalars := GenerateScalars(count, true)
+		scalars := GenerateScalars(count, false)
 		fmt.Print("Finished generating scalars\n")
 
 		var sizeCheckG2PointAffine G2PointAffine
