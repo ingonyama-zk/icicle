@@ -1,6 +1,7 @@
 use std::ffi::c_uint;
 use std::fmt::Debug;
 use std::marker;
+use std::marker::PhantomData;
 use std::mem::transmute;
 
 
@@ -11,13 +12,13 @@ use halo2curves::{
     serde::SerdeObject
 };
 use halo2curves::bn256::G1Compressed;
-use halo2curves::group::{Curve, GroupEncoding};
+use halo2curves::group::{Curve, GroupEncoding, UncompressedEncoding};
 use halo2curves::pairing::Engine;
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
 
 use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}};
-use crate::test_bn254_pse::{generate_random_points_bn254};
+use crate::test_bn254_pse::{generate_random_points_bn254, msm_bn254};
 use crate::utils::get_rng;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -287,34 +288,40 @@ impl ScalarField_BN254_PSE {
     }
 }
 
-// #[derive(Clone, Default, Debug)]
-// pub struct MSMENTRY<E: Engine> {
-//     pub(crate) scalars: Vec<ScalarField_BN254_PSE>,
-//     pub(crate) bases: Vec<PointAffineNoInfinity_BN254_PSE>,
-//     _marker:marker::PhantomData<E>
-// }
-//
-// impl<E: Engine + Debug> MSMENTRY<E>{
-//     pub fn new(bases: Vec<E::G1Affine>,scalars: Vec<E::Scalar>)->Self{
-//         let bases:Vec<_> = bases.iter().map(|x|{
-//             PointAffineNoInfinity_BN254_PSE::from_pse(x as &G1Affine_BN254_PSE)
-//         }).collect();
-//         let scalars:Vec<_> = scalars.iter().map(|x|{
-//             ScalarField_BN254_PSE::from_pse(x.to_repr() as [u8;32])
-//         }).collect();
-//         MSMENTRY{
-//             scalars,
-//             bases,
-//             _marker: Default::default(),
-//         }
-//     }
-//     // pub fn msm_bn254(&self)-> E::G1{
-//     //
-//     //
-//     // }
-// }
+#[derive(Clone, Default, Debug)]
+pub struct MSMENTRY<E: Engine> {
+    pub(crate) scalars: Vec<ScalarField_BN254_PSE>,
+    pub(crate) bases: Vec<PointAffineNoInfinity_BN254_PSE>,
+    _marker:PhantomData<E>
+}
 
+impl<E: Engine + Debug> MSMENTRY<E>{
+    pub fn new(bases: &Vec<E::G1Affine>,scalars: &Vec<E::Scalar>)->Self{
+        let bases:Vec<_> = bases.iter().map(|x|{
+            let mut encoding = <G1Affine_BN254_PSE as GroupEncoding>::Repr::default();
+            encoding.as_mut().copy_from_slice(x.to_bytes().as_ref());
+            let affine_point = G1Affine_BN254_PSE::from_bytes(&encoding).unwrap();
+            PointAffineNoInfinity_BN254_PSE::from_pse(&affine_point)
+        }).collect();
+        let scalars:Vec<_> = scalars.iter().map(|x|{
+            let scalar_ref:[u8;32] = x.to_repr().as_ref().try_into().unwrap();
+            ScalarField_BN254_PSE::from_pse(scalar_ref)
+        }).collect();
+        MSMENTRY{
+            scalars,
+            bases,
+            _marker: PhantomData,
+        }
+    }
 
+    pub fn msm_bn254(&self)-> E::G1{
+    let projective_point = msm_bn254(&self.bases,&self.scalars,0).to_pse().to_bytes();
+        let projective_point_ref = projective_point.as_ref();
+        let mut encoding = <E::G1 as GroupEncoding>::Repr::default();
+        encoding.as_mut().copy_from_slice(projective_point_ref);
+        E::G1::from_bytes(&encoding).unwrap()
+    }
+}
 
 
 // #[cfg(test)]
