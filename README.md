@@ -151,7 +151,7 @@ Join our [Discord Server](https://discord.gg/Y4SkbDf2Ff) and find us on the icic
 ### Hall of Fame
 
 - [Robik](https://github.com/robik75), for his on-going support and mentorship
-- [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher 
+- [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
 
 ## License
 
