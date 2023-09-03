@@ -1,5 +1,5 @@
 # ICICLE
- <div align="center">Icicle is a library for ZK acceleration using CUDA-enabled GPUs.</div>
+ **<div align="center">Icicle is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
 
                   
 ![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
@@ -151,6 +151,11 @@ Join our [Discord Server](https://discord.gg/Y4SkbDf2Ff) and find us on the icic
 ### Hall of Fame
 
 - [Robik](https://github.com/robik75), for his on-going support and mentorship 
+
+## Help & Support
+
+For help and support talk to our devs in our discord channel ["ICICLE"](https://discord.gg/EVVXTdt6DF) 
+
 
 ## License
 
