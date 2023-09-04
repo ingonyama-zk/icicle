@@ -1,14 +1,12 @@
-For convenience, we also provide rust bindings to the ICICLE library for the following primitives:
+# ICICLE CUDA to Rust Binding Guide
 
-- MSM
-- NTT
-    - Forward NTT
-    - Inverse NTT
-- ECNTT
-    - Forward ECNTT
-    - Inverse NTT
-- Scalar Vector Multiplication
-- Point Vector Multiplication
+This guide provides instructions on how to use the Rust ICICLE bindings.
+
+## Prerequisites
+
+- Follow the main prerequisites instructions [here][MAIN_DOCS].
+- Rust
+- Make
 
 A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environnement variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
 
@@ -30,3 +28,12 @@ cargo test -- --test-threads=1
 ```
 
 The flag `--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.
+
+## Supporting Additional Curves
+For adding support for additional curves, follow the instructions [here][ADDITIONAL_CURVES].
+
+
+<!-- Begin Links -->
+[B_SCRIPT]: ./build.rs
+[ADDITIONAL_CURVES]: ./README.md
+<!-- End Links -->

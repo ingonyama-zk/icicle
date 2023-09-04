@@ -169,7 +169,6 @@ See [LICENSE-MIT][LMIT] for details.
 [NVCC]: https://docs.nvidia.com/cuda/#installation-guides
 [CRV_TEMPLATE]: ./icicle/curves/curve_template.cuh
 [CRV_CONFIG]: ./icicle/curves/curve_config.cuh
-[B_SCRIPT]: ./build.rs
 [FDI]: https://github.com/ingonyama-zk/fast-danksharding
 [GNARKI]: https://github.com/ingonyama-zk/gnark
 [LMIT]: ./LICENSE
