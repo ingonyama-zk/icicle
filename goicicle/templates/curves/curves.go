@@ -1,6 +1,5 @@
 package config
 
-// {{.SharedLib}}
 type Curve struct {
 	PackageName        string
 	CurveNameUpperCase string
