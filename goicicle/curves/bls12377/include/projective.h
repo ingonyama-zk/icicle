@@ -26,19 +26,20 @@ extern "C" {
 typedef struct BLS12_377_projective_t BLS12_377_projective_t;
 typedef struct BLS12_377_g2_projective_t BLS12_377_g2_projective_t;
 typedef struct BLS12_377_affine_t BLS12_377_affine_t;
+typedef struct BLS12_377_g2_affine_t BLS12_377_g2_affine_t;
 typedef struct BLS12_377_scalar_t BLS12_377_scalar_t;
 
 bool projective_is_on_curve_bls12_377(BLS12_377_projective_t* point1);
 
-BLS12_377_scalar_t* random_scalar_bls12_377();
-BLS12_377_projective_t* random_projective_bls12_377();
+int random_scalar_bls12_377(BLS12_377_scalar_t* out);
+int random_projective_bls12_377(BLS12_377_projective_t* out);
 BLS12_377_projective_t* projective_zero_bls12_377();
-BLS12_377_affine_t* projective_to_affine_bls12_377(BLS12_377_projective_t* point1);
-BLS12_377_projective_t* projective_from_affine_bls12_377(BLS12_377_affine_t* point1);
+int projective_to_affine_bls12_377(BLS12_377_affine_t* out, BLS12_377_projective_t* point1);
+int projective_from_affine_bls12_377(BLS12_377_projective_t* out, BLS12_377_affine_t* point1);
 
-BLS12_377_g2_projective_t* random_g2_projective_bls12_377();
-BLS12_377_affine_t* g2_projective_to_affine_bls12_377(BLS12_377_g2_projective_t* point1);
-BLS12_377_g2_projective_t* g2_projective_from_affine_bls12_377(BLS12_377_affine_t* point1);
+int random_g2_projective_bls12_377(BLS12_377_g2_projective_t* out);
+int g2_projective_to_affine_bls12_377(BLS12_377_g2_affine_t* out, BLS12_377_g2_projective_t* point1);
+int g2_projective_from_affine_bls12_377(BLS12_377_g2_projective_t* out, BLS12_377_g2_affine_t* point1);
 bool g2_projective_is_on_curve_bls12_377(BLS12_377_g2_projective_t* point1);
 
 bool eq_bls12_377(BLS12_377_projective_t* point1, BLS12_377_projective_t* point2);

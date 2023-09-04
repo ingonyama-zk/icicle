@@ -1,0 +1,27 @@
+name: Format
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  formatting-rust:
+    name: Check Rust Code Formatting
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Check rustfmt
+      run: if [[ $(cargo fmt --check) ]]; then echo "Please run cargo fmt"; exit 1; fi
+    # - name: Check clippy
+    #   run: cargo clippy --no-deps --all-features --all-targets
+
+  formatting-golang:
+    name: Check Golang Code Formatting
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Check gofmt
+      run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi

@@ -17,7 +17,7 @@ typedef struct {{.CurveNameUpperCase}}_scalar_t {{.CurveNameUpperCase}}_scalar_t
 typedef struct {{.CurveNameUpperCase}}_g2_projective_t {{.CurveNameUpperCase}}_g2_projective_t;
 typedef struct {{.CurveNameUpperCase}}_g2_affine_t {{.CurveNameUpperCase}}_g2_affine_t;
 
-int ntt_cuda_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_scalar_t* arr, uint32_t n, bool inverse, size_t decimation, size_t device_id);
+int ntt_cuda_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_scalar_t* arr, uint32_t n, bool inverse, size_t device_id);
 int ntt_batch_cuda_{{.CurveNameLowerCase}}(
   {{.CurveNameUpperCase}}_scalar_t* arr, uint32_t arr_size, uint32_t batch_size, bool inverse, size_t device_id);
 

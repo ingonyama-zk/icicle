@@ -85,8 +85,7 @@ __global__ void split_scalars_kernel(
   unsigned msm_log_size,
   unsigned nof_bms,
   unsigned bm_bitsize,
-  unsigned c,
-  unsigned top_bm_nof_missing_bits)
+  unsigned c)
 {
   constexpr unsigned sign_mask = 0x80000000;
   // constexpr unsigned trash_bucket = 0x80000000;
@@ -188,7 +187,7 @@ __global__ void accumulate_buckets_kernel(
 {
   constexpr unsigned sign_mask = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid >= nof_buckets_to_compute) { return; }
+  if (tid >= nof_buckets_to_compute) return;
   if ((single_bucket_indices[tid] & ((1 << c) - 1)) == 0) {
     return; // skip zero buckets
   }
@@ -314,7 +313,7 @@ __global__ void last_pass_kernel(P* final_buckets, P* final_sums, unsigned num_s
 // it is done by a single thread
 template <typename P, typename S>
 __global__ void final_accumulation_kernel(
-  P* final_sums, P* ones_result, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c)
+  P* final_sums, P* ones_result, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c, bool add_ones)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid > nof_msms) return;
@@ -326,7 +325,10 @@ __global__ void final_accumulation_kernel(
       final_result = final_result + final_result;
     }
   }
-  final_results[tid] = final_result + final_sums[tid * nof_bms] + ones_result[0];
+  if (add_ones)
+    final_results[tid] = final_result + final_sums[tid * nof_bms] + ones_result[0];
+  else
+    final_results[tid] = final_result + final_sums[tid * nof_bms];
 }
 
 // this function computes msm using the bucket method
@@ -358,11 +360,9 @@ void bucket_method_msm(
 
   P* buckets;
   // compute number of bucket modules and number of buckets in each module
-  unsigned nof_bms = bitsize / c;
+  unsigned nof_bms = (bitsize + c - 1) / c;
   unsigned msm_log_size = ceil(log2(size));
   unsigned bm_bitsize = ceil(log2(nof_bms));
-  if (bitsize % c) { nof_bms++; }
-  unsigned top_bm_nof_missing_bits = c * nof_bms - bitsize;
 #ifdef SIGNED_DIG
   unsigned nof_buckets = nof_bms * ((1 << (c - 1)) + 1); // signed digits
 #else
@@ -400,8 +400,8 @@ void bucket_method_msm(
   NUM_THREADS = 1 << 10;
   NUM_BLOCKS = (size * (nof_bms + 1) + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-    bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, nof_bms, bm_bitsize, c,
-    top_bm_nof_missing_bits); //+size - leaving the first bm free for the out of place sort later
+    bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, nof_bms, bm_bitsize, c);
+  //+size - leaving the first bm free for the out of place sort later
 
   // sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to
   // each bucket
@@ -674,7 +674,7 @@ void bucket_method_msm(
 
   // launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S>
-    <<<1, 1, 0, stream>>>(final_results, ones_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
+    <<<1, 1, 0, stream>>>(final_results, ones_results, on_device ? final_result : d_final_result, 1, nof_bms, c, true);
   cudaFreeAsync(final_results, stream);
   cudaStreamSynchronize(stream);
 
@@ -706,7 +706,7 @@ void bucket_method_msm(
   cudaStreamSynchronize(stream);
 }
 
-// this function computes multiple msms using the bucket method - currently isn't working on this branch
+// this function computes multiple msms using the bucket method
 template <typename S, typename P, typename A>
 void batched_bucket_method_msm(
   unsigned bitsize,
@@ -735,8 +735,7 @@ void batched_bucket_method_msm(
 
   P* buckets;
   // compute number of bucket modules and number of buckets in each module
-  unsigned nof_bms = bitsize / c;
-  if (bitsize % c) { nof_bms++; }
+  unsigned nof_bms = (bitsize + c - 1) / c;
   unsigned msm_log_size = ceil(log2(msm_size));
   unsigned bm_bitsize = ceil(log2(nof_bms));
   unsigned nof_buckets = (nof_bms << c);
@@ -754,11 +753,11 @@ void batched_bucket_method_msm(
   cudaMallocAsync(&point_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size), stream);
 
   // split scalars into digits
-  NUM_THREADS = 1 << 8;
+  NUM_THREADS = 1 << 10;
   NUM_BLOCKS = (total_size * nof_bms + msm_size + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-    bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, msm_log_size, nof_bms, bm_bitsize, c,
-    0); //+size - leaving the first bm free for the out of place sort later
+    bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, msm_log_size, nof_bms, bm_bitsize, c);
+  //+msm_size - leaving the first bm free for the out of place sort later
 
   // sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to
   // each bucket
@@ -814,13 +813,16 @@ void batched_bucket_method_msm(
     offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets, stream);
   cudaFreeAsync(offsets_temp_storage, stream);
 
+  unsigned h_nof_buckets_to_compute;
+  cudaMemcpyAsync(
+    &h_nof_buckets_to_compute, total_nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
+
   // launch the accumulation kernel with maximum threads
-  //  NUM_THREADS = 1 << 8;
-  //  NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  //  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bucket_offsets, bucket_sizes,
-  //  single_bucket_indices, sorted_point_indices,
-  //                                                        d_points, nof_buckets, total_nof_buckets_to_compute,
-  //                                                        c+bm_bitsize,c);
+  NUM_THREADS = 1 << 8;
+  NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+    buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices, d_points, nof_buckets,
+    h_nof_buckets_to_compute, c + bm_bitsize, c);
 
   // #ifdef SSM_SUM
   //   //sum each bucket
@@ -852,10 +854,7 @@ void batched_bucket_method_msm(
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-    bm_sums, bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
-
-  final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS>>>(
-    bm_sums, bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
+    bm_sums, bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c, false);
 
   // copy final result to host
   if (!on_device)

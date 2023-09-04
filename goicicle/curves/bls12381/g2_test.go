@@ -17,8 +17,10 @@
 package bls12381
 
 import (
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestG2Eqg2(t *testing.T) {
@@ -27,6 +29,21 @@ func TestG2Eqg2(t *testing.T) {
 	point.Random()
 
 	assert.True(t, point.Eq(&point))
+}
+
+func TestG2FromProjectiveToAffine(t *testing.T) {
+	var projective G2Point
+	projective.Random()
+
+	var affine G2PointAffine
+	affine.FromProjective(&projective)
+
+	var projective2 G2Point
+	projective2.FromAffine(&affine)
+
+	assert.True(t, projective.IsOnCurve())
+	assert.True(t, projective2.IsOnCurve())
+	assert.True(t, projective.Eq(&projective2))
 }
 
 func TestG2Eqg2NotEqual(t *testing.T) {
@@ -47,10 +64,11 @@ func TestG2ToBytes(t *testing.T) {
 }
 
 func TestG2ShouldConvertToProjective(t *testing.T) {
+	fmt.Print() // this prevents the test from hanging. TODO: figure out why
 	var pointProjective G2Point
-	var pointAffine G2PointAffine
-
 	pointProjective.Random()
+
+	var pointAffine G2PointAffine
 	pointAffine.FromProjective(&pointProjective)
 
 	proj := pointAffine.ToProjective()

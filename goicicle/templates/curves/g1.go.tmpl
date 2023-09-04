@@ -5,6 +5,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ {{.SharedLib}}
 // #include "projective.h"
 // #include "ve_mod_mult.h"
@@ -42,11 +43,10 @@ func (f *G1BaseField) SetOne() *G1BaseField {
 }
 
 func (p *G1ProjectivePoint) FromAffine(affine *G1PointAffine) *G1ProjectivePoint {
+	out := (*C.{{.CurveNameUpperCase}}_projective_t)(unsafe.Pointer(p))
 	in := (*C.{{.CurveNameUpperCase}}_affine_t)(unsafe.Pointer(affine))
 
-	out := C.projective_from_affine_{{.CurveNameLowerCase}}(in)
-	
-	*p = *(*G1ProjectivePoint)(unsafe.Pointer(out))
+	C.projective_from_affine_{{.CurveNameLowerCase}}(out, in)
 
 	return p
 }
@@ -79,9 +79,8 @@ func (f *G1BaseField) ToBytesLe() []byte {
  */
 
 func (p *G1ScalarField) Random() *G1ScalarField {
-	rand := C.random_scalar_{{.CurveNameLowerCase}}()
-
-	*p = *(*G1ScalarField)(unsafe.Pointer(rand))
+	outC := (*C.{{.CurveNameUpperCase}}_scalar_t)(unsafe.Pointer(p))
+	C.random_scalar_{{.CurveNameLowerCase}}(outC)
 
 	return p
 }
@@ -174,10 +173,8 @@ func (p *G1ProjectivePoint) IsOnCurve() bool {
 }
 
 func (p *G1ProjectivePoint) Random() *G1ProjectivePoint {
-	rand := C.random_projective_{{.CurveNameLowerCase}}()
-
-	// Directly copy memory from the C struct to the Go struct
-	*p = *(*G1ProjectivePoint)(unsafe.Pointer(rand))
+	outC := (*C.{{.CurveNameUpperCase}}_projective_t)(unsafe.Pointer(p))
+	C.random_projective_{{.CurveNameLowerCase}}(outC)
 
 	return p
 }
@@ -215,11 +212,9 @@ type G1PointAffine struct {
 
 func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAffine {
 	in := (*C.{{.CurveNameUpperCase}}_projective_t)(unsafe.Pointer(projective))
+	out := (*C.{{.CurveNameUpperCase}}_affine_t)(unsafe.Pointer(p))
 
-	out := C.projective_to_affine_{{.CurveNameLowerCase}}(in)
-
-	// Directly copy memory from the C struct to the Go struct
-	*p = *(*G1PointAffine)(unsafe.Pointer(out))
+	C.projective_to_affine_{{.CurveNameLowerCase}}(out, in)
 
 	return p
 }
@@ -241,6 +236,9 @@ func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 
 	_x.FromLimbs(GetFixedLimbs(X))
 	_y.FromLimbs(GetFixedLimbs(Y))
+
+	p.X = _x
+	p.Y = _y
 
 	return p
 }

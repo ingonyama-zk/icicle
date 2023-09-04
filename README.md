@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/build.yml/badge.svg)
+![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg)
 ![Discord server](https://img.shields.io/discord/1063033227788423299?label=Discord&logo=Discord&logoColor=%23&style=plastic)
 ![Follow us on twitter](https://img.shields.io/twitter/follow/Ingo_zk?style=social)
 

@@ -4,6 +4,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ {{.SharedLib}}
 // #include "projective.h"
 // #include "ve_mod_mult.h"
@@ -26,9 +27,17 @@ type G2Point struct {
 }
 
 func (p *G2Point) Random() *G2Point {
-	rand := C.random_projective_{{.CurveNameLowerCase}}()
+	outC := (*C.{{.CurveNameUpperCase}}_g2_projective_t)(unsafe.Pointer(p))
+	C.random_g2_projective_{{.CurveNameLowerCase}}(outC)
 
-	*p = *(*G2Point)(unsafe.Pointer(rand))
+	return p
+}
+
+func (p *G2Point) FromAffine(affine *G2PointAffine) *G2Point {
+	out := (*C.{{.CurveNameUpperCase}}_g2_projective_t)(unsafe.Pointer(p))
+	in := (*C.{{.CurveNameUpperCase}}_g2_affine_t)(unsafe.Pointer(affine))
+
+	C.g2_projective_from_affine_{{.CurveNameLowerCase}}(out, in)
 
 	return p
 }
@@ -69,12 +78,10 @@ func (p *G2PointAffine) ToProjective() G2Point {
 }
 
 func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
+	out := (*C.{{.CurveNameUpperCase}}_g2_affine_t)(unsafe.Pointer(p))
 	in := (*C.{{.CurveNameUpperCase}}_g2_projective_t)(unsafe.Pointer(projective))
 
-	out := C.g2_projective_to_affine_{{.CurveNameLowerCase}}(in)
-
-	// Directly copy memory from the C struct to the Go struct
-	*p = *(*G2PointAffine)(unsafe.Pointer(out))
+	C.g2_projective_to_affine_{{.CurveNameLowerCase}}(out, in)
 
 	return p
 }

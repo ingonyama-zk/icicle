@@ -23,6 +23,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbls12_377
 // #include "projective.h"
 // #include "ve_mod_mult.h"
@@ -60,11 +61,10 @@ func (f *G1BaseField) SetOne() *G1BaseField {
 }
 
 func (p *G1ProjectivePoint) FromAffine(affine *G1PointAffine) *G1ProjectivePoint {
+	out := (*C.BLS12_377_projective_t)(unsafe.Pointer(p))
 	in := (*C.BLS12_377_affine_t)(unsafe.Pointer(affine))
 
-	out := C.projective_from_affine_bls12_377(in)
-
-	*p = *(*G1ProjectivePoint)(unsafe.Pointer(out))
+	C.projective_from_affine_bls12_377(out, in)
 
 	return p
 }
@@ -97,9 +97,8 @@ func (f *G1BaseField) ToBytesLe() []byte {
  */
 
 func (p *G1ScalarField) Random() *G1ScalarField {
-	rand := C.random_scalar_bls12_377()
-
-	*p = *(*G1ScalarField)(unsafe.Pointer(rand))
+	outC := (*C.BLS12_377_scalar_t)(unsafe.Pointer(p))
+	C.random_scalar_bls12_377(outC)
 
 	return p
 }
@@ -192,10 +191,8 @@ func (p *G1ProjectivePoint) IsOnCurve() bool {
 }
 
 func (p *G1ProjectivePoint) Random() *G1ProjectivePoint {
-	rand := C.random_projective_bls12_377()
-
-	// Directly copy memory from the C struct to the Go struct
-	*p = *(*G1ProjectivePoint)(unsafe.Pointer(rand))
+	outC := (*C.BLS12_377_projective_t)(unsafe.Pointer(p))
+	C.random_projective_bls12_377(outC)
 
 	return p
 }
@@ -233,11 +230,9 @@ type G1PointAffine struct {
 
 func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAffine {
 	in := (*C.BLS12_377_projective_t)(unsafe.Pointer(projective))
+	out := (*C.BLS12_377_affine_t)(unsafe.Pointer(p))
 
-	out := C.projective_to_affine_bls12_377(in)
-
-	// Directly copy memory from the C struct to the Go struct
-	*p = *(*G1PointAffine)(unsafe.Pointer(out))
+	C.projective_to_affine_bls12_377(out, in)
 
 	return p
 }
@@ -259,6 +254,9 @@ func (p *G1PointAffine) FromLimbs(X, Y *[]uint32) *G1PointAffine {
 
 	_x.FromLimbs(GetFixedLimbs(X))
 	_y.FromLimbs(GetFixedLimbs(Y))
+
+	p.X = _x
+	p.Y = _y
 
 	return p
 }

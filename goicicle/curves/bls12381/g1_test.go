@@ -69,6 +69,21 @@ func TestNewPointBLS12_381Zero(t *testing.T) {
 	assert.Equal(t, pointZero.Z, zeroSanity)
 }
 
+func TestFromProjectiveToAffine(t *testing.T) {
+	var projective G1ProjectivePoint
+	var affine G1PointAffine
+
+	projective.Random()
+
+	affine.FromProjective(&projective)
+	var projective2 G1ProjectivePoint
+	projective2.FromAffine(&affine)
+
+	assert.True(t, projective.IsOnCurve())
+	assert.True(t, projective2.IsOnCurve())
+	assert.True(t, projective.Eq(&projective2))
+}
+
 func TestBLS12_381Eq(t *testing.T) {
 	var p1 G1ProjectivePoint
 	p1.Random()
@@ -135,13 +150,13 @@ func TestPointAffineNoInfinityBLS12_381FromLimbs(t *testing.T) {
 	yBase.FromLimbs(y)
 
 	// Define your expected result
-	expected := &G1PointAffine{
+	expected := G1PointAffine{
 		X: xBase,
 		Y: yBase,
 	}
 
 	// Test if result is as expected
-	assert.Equal(t, result, expected)
+	assert.Equal(t, expected, result)
 }
 
 func TestGetFixedLimbs(t *testing.T) {

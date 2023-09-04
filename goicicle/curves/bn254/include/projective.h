@@ -26,19 +26,20 @@ extern "C" {
 typedef struct BN254_projective_t BN254_projective_t;
 typedef struct BN254_g2_projective_t BN254_g2_projective_t;
 typedef struct BN254_affine_t BN254_affine_t;
+typedef struct BN254_g2_affine_t BN254_g2_affine_t;
 typedef struct BN254_scalar_t BN254_scalar_t;
 
 bool projective_is_on_curve_bn254(BN254_projective_t* point1);
 
-BN254_scalar_t* random_scalar_bn254();
-BN254_projective_t* random_projective_bn254();
+int random_scalar_bn254(BN254_scalar_t* out);
+int random_projective_bn254(BN254_projective_t* out);
 BN254_projective_t* projective_zero_bn254();
-BN254_affine_t* projective_to_affine_bn254(BN254_projective_t* point1);
-BN254_projective_t* projective_from_affine_bn254(BN254_affine_t* point1);
+int projective_to_affine_bn254(BN254_affine_t* out, BN254_projective_t* point1);
+int projective_from_affine_bn254(BN254_projective_t* out, BN254_affine_t* point1);
 
-BN254_g2_projective_t* random_g2_projective_bn254();
-BN254_affine_t* g2_projective_to_affine_bn254(BN254_g2_projective_t* point1);
-BN254_g2_projective_t* g2_projective_from_affine_bn254(BN254_affine_t* point1);
+int random_g2_projective_bn254(BN254_g2_projective_t* out);
+int g2_projective_to_affine_bn254(BN254_g2_affine_t* out, BN254_g2_projective_t* point1);
+int g2_projective_from_affine_bn254(BN254_g2_projective_t* out, BN254_g2_affine_t* point1);
 bool g2_projective_is_on_curve_bn254(BN254_g2_projective_t* point1);
 
 bool eq_bn254(BN254_projective_t* point1, BN254_projective_t* point2);
