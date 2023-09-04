@@ -85,6 +85,8 @@ type Curve struct {
 3. Edit this [file][GOICICLE_CURVE_FILE_TO_EDIT] accordingly.
 4. navigate to `goicicle/templates` and then run `go run main.go`.
 
+*** Make sure to compile your new shared libraries :)
+
 ## Publishing your curve
 
 We suggest you open a PR with your new curve so we can add official support for it.
