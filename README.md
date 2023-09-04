@@ -66,6 +66,8 @@ cmake --build build
 cd build && ctest
 ```
 
+NOTE: If you are using cmake versions < 3.24 add `-DCUDA_ARCH=<target_cumpute_arch>` to the command `cmake -S . -B build`
+
 ### Bindings
 We support Golang and Rust bindings.
 
