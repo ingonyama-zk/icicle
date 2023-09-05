@@ -39,7 +39,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ## Prerequisite dependencies
 - A compatible Nvidia GPU and corresponding driver installed on your machine.
-- CMake at least version 3.16.
+- CMake at least version 3.18.
 - CUDA Toolkit version 12.0 or newer.
 - GCC, version 9 or newer recommended.
 - Optional: Golang or Rust should also be installed depending on the bindings you plan to use.
