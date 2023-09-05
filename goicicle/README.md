@@ -90,7 +90,7 @@ type Curve struct {
 ## Publishing your curve
 
 We suggest you open a PR with your new curve so we can add official support for it.
-In the meantime if you wish to use this curve simple push it to your forked ICICLE repository, then install it with the following command: `go get <github_com_path_to_github_repo>@<branch>`.
+In the meantime, if you wish to use this curve, simply push it to your forked ICICLE repository, then install it with the following command: `go get <github_com_path_to_github_repo>@<branch>`.
 
 
 <!-- Begin Links -->
