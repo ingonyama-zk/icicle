@@ -24,6 +24,10 @@ FetchContent_Declare(
   URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
+
+# boosting lib
+include_directories("/home/miner/include/boost_1_80_0")
+
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
