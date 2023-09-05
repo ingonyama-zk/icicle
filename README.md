@@ -46,7 +46,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ## Building 
 
-1. Check here [CRV_PARAMS] if we support the curve required by your application (we currently don't support Pasta or Goldilocks).
+1. Check our [supported curves][CRV_PARAMS] to see if the curve required by your application is supported (we currently don't support Pasta or Goldilocks).
 2. If your curve isn't included in our [CRV_PARAMS], follow the instructions [here](#-Supporting-Additional-Curves).
 3. Now you can build the ICICLE library using NVCC.
 
