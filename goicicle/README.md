@@ -94,7 +94,7 @@ In the meantime if you wish to use this curve simple push it to your forked ICIC
 
 
 <!-- Begin Links -->
-[MAIN_DOCS]: ./README.md
+[MAIN_DOCS]: ../README.md
 [GOICICLE_CURVE_TEMP]: ./templates/curves/curves.go
 [GOICICLE_CURVE_FILE_TO_EDIT]: ./templates/main.go
 [GNARKI]: https://github.com/ingonyama-zk/gnark
