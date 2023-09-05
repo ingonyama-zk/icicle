@@ -29,7 +29,7 @@ We assume you have compiled the shared libraries (process described above) and h
 
 1. Install the GOICICLE [package](https://pkg.go.dev/github.com/ingonyama-zk/icicle/goicicle). Using this command `go get github.com/ingonyama-zk/icicle/goicicle`.
 2. Make sure you called `export LD_LIBRARY_PATH=<path_to_so_files_directory>/` to make your shared libraries available.
-3. Import GOICILE into your project and enjoy :)
+3. Import GOICICLE into your project and enjoy :)
 
 For reference have a look at our ICICLE <> Gnark [implementation][GNARKI].
 
