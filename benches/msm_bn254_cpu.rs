@@ -11,8 +11,8 @@ use icicle_utils::arithmetic::best_multiexp;
 use icicle_utils::utils::get_rng;
 
 fn criterion_benchmark(c: &mut Criterion) {
-    const MIN_K: u32 = 22;
-    const MAX_K: u32 = 24;
+    const MIN_K: u32 = 23;
+    const MAX_K: u32 = 25;
 
     let seed = None;
 

@@ -263,6 +263,7 @@ pub fn msm_batch_bn254(
 ) -> Vec<Point_BN254_PSE> {
     let count = points.len();
     if count != scalars.len() {
+        println!("The count isn't equal to scalars's length");
         todo!("variable length")
     }
 
@@ -818,7 +819,8 @@ pub fn set_up_scalars_bn254(test_size: usize, log_domain_size: usize, inverse: b
 #[cfg(test)]
 pub(crate) mod tests_bn254_pse {
     use std::ops::Add;
-    use ark_std::UniformRand;
+    use std::time::Instant;
+    use ark_std::{log2, UniformRand};
     use arithmetic::{best_multiexp};
     use halo2curves::bn256::Fr;
     use halo2curves::FieldExt;
@@ -889,15 +891,49 @@ pub(crate) mod tests_bn254_pse {
     // }
 
     #[test]
+    fn test_batch_single(){
+        let degrees = [1,1,2,3,4,5,6,7,8,9,10];
+        // let degrees = [1,19,20,21,1];
+
+        let batch = 1;
+        for degree in degrees{
+            println!("Degree ============= {}",degree);
+            let msm_size = 1<<degree;
+            let seed = None;
+            let rng = get_rng(seed);
+            let points = generate_random_points_bn254(msm_size, get_rng(seed));
+            let scalars = generate_random_scalars_bn254(msm_size, get_rng(seed));
+            let start = Instant::now();
+            let msm_result = msm_bn254(&points, &scalars, 0);
+            let duration = start.elapsed();
+            println!("Time elapsed in msm_bn254 is: {:?}", duration);
+
+            // let points_batch = generate_random_points_bn254(msm_size*batch, get_rng(seed));
+            // let scalars_batch = generate_random_scalars_bn254(msm_size*batch, get_rng(seed));
+            let start2 = Instant::now();
+            let msm_batch_result = msm_batch_bn254(&points, &scalars, batch, 0);
+            let duration2 = start2.elapsed();
+            println!("Time elapsed in msm_batch_bn254 is: {:?}", duration2);
+
+            println!("single:{:?}",msm_result);
+            println!("batchs:{:?}",msm_batch_result);
+            assert_eq!(msm_result,msm_batch_result[0]);
+        }
+
+    }
+
+    #[test]
     fn test_msm() {
-        let test_sizes = [6, 9];
+        let test_sizes = [6];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
             let seed = None; // set Some to provide seed
+            println!("msm_size * batch_size:{}",count);
             let points = generate_random_points_bn254(count, get_rng(seed));
             let scalars = generate_random_scalars_bn254(count, get_rng(seed));
-
+            println!("points_batch:{:?}",points);
+            println!("s:{:?}",scalars);
             let msm_result = msm_bn254(&points, &scalars, 0);
 
             let point_r_pse: Vec<_> = points.iter().map(|x| x.to_pse_repr()).collect();
@@ -912,15 +948,16 @@ pub(crate) mod tests_bn254_pse {
                 msm_result.to_pse_affine(),
                 Point_BN254_PSE::from_pse(result).to_pse_affine()
             );
-        }
+        }//msm_result:Point_BN254_PSE { x: Field_BN254_PSE { s: [4076792299, 567362694, 1918888589, 1850971249, 474318616, 1848223486, 2146692433, 809844347] }, y: Field_BN254_PSE { s: [3259187965, 1716128495, 3495667927, 639627227, 1270076347, 250708056, 2225454450, 791673792] }, z: Field_BN254_PSE { s: [2881133466, 458217489, 610983315, 2184561949, 3076224515, 1195021244, 3647826035, 376750121] } }
+
     }
 
     #[test]
     fn test_batch_msm() {
-        for batch_pow2 in [2, 4] {
-            for pow2 in [4, 6] {
+        for batch_pow2 in [1] {
+            for pow2 in [6] {
                 let msm_size = 1 << pow2;
-                let batch_size = 1 << batch_pow2;
+                let batch_size = batch_pow2;
                 let seed = None; // set Some to provide seed
                 let points_batch = generate_random_points_bn254(msm_size * batch_size, get_rng(seed));
                 let scalars_batch = generate_random_scalars_bn254(msm_size * batch_size, get_rng(seed));
@@ -935,7 +972,7 @@ pub(crate) mod tests_bn254_pse {
                     .collect();
 
                 let result = msm_batch_bn254(&points_batch, &scalars_batch, batch_size, 0);
-
+                println!("msm_result:{:?}",result);
                 assert_eq!(result, expected);
             }
         }

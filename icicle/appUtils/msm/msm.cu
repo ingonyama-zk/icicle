@@ -814,13 +814,15 @@ void batched_bucket_method_msm(
     cudaFreeAsync(offsets_temp_storage, stream);
 
     unsigned h_nof_buckets_to_compute;
-    cudaMemcpyAsync(&h_nof_buckets_to_compute, total_nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
+    cudaMemcpyAsync(
+            &h_nof_buckets_to_compute, total_nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
 
     // launch the accumulation kernel with maximum threads
     NUM_THREADS = 1 << 8;
     NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-    accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bucket_offsets, bucket_sizes,
-                                                                      single_bucket_indices, sorted_point_indices, d_points, nof_buckets, h_nof_buckets_to_compute, c+bm_bitsize,c);
+    accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+            buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices, d_points, nof_buckets,
+            h_nof_buckets_to_compute, c + bm_bitsize, c);
 
     // #ifdef SSM_SUM
     //   //sum each bucket

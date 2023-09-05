@@ -3,22 +3,24 @@ use std::fmt::Debug;
 use std::marker;
 use std::marker::PhantomData;
 use std::mem::transmute;
+use std::ops::Add;
 
 
 use halo2curves::{
     bn256::{Fq as Fq_BN254_PSE, Fq, G1, G1Affine as G1Affine_BN254_PSE},
     CurveAffine,
     group::{ff::{Field, PrimeField}, Group, prime::PrimeCurveAffine},
-    serde::SerdeObject
+    serde::SerdeObject,
 };
 use halo2curves::bn256::G1Compressed;
 use halo2curves::group::{Curve, GroupEncoding, UncompressedEncoding};
 use halo2curves::pairing::Engine;
+use rustacuda::memory::{CopyDestination, DeviceBuffer};
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
 
 use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}};
-use crate::test_bn254_pse::{generate_random_points_bn254, msm_bn254};
+use crate::test_bn254_pse::{commit_batch_bn254, generate_random_points_bn254, msm_batch_bn254, msm_bn254};
 use crate::utils::get_rng;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -87,7 +89,7 @@ impl ScalarField_BN254_PSE {
         Fq::from_raw(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap()).to_bytes()
     }
 
-    pub fn from_pse(fq_bytes: [u8; 32])->Self  {
+    pub fn from_pse(fq_bytes: [u8; 32]) -> Self {
         let mut u64_array: [u64; 4] = [0; 4];
         for i in 0..4 {
             for j in 0..8 {
@@ -97,11 +99,11 @@ impl ScalarField_BN254_PSE {
         Self::from_limbs(&u64_vec_to_u32_vec(&u64_array))
     }
 
-    pub fn to_pse_transmute(&self) -> [u8;32] {
+    pub fn to_pse_transmute(&self) -> [u8; 32] {
         unsafe { transmute(*self) }
     }
 
-    pub fn from_pse_transmute(v: [u8;32]) -> ScalarField_BN254_PSE {
+    pub fn from_pse_transmute(v: [u8; 32]) -> ScalarField_BN254_PSE {
         unsafe { transmute(v) }
     }
 }
@@ -145,12 +147,12 @@ impl Point_BN254_PSE {
         let inverse_z = proj_z_field.invert().unwrap();
         let aff_x = proj_x_field.mul(&inverse_z);
         let aff_y = proj_y_field.mul(&inverse_z);
-        G1Affine_BN254_PSE::from_xy(aff_x,aff_y).unwrap()
+        G1Affine_BN254_PSE::from_xy(aff_x, aff_y).unwrap()
     }
 
     pub fn from_pse(projective_point: G1) -> Point_BN254_PSE {
         let z_inv = projective_point.z.invert().unwrap();
-        let z_invsq = z_inv* z_inv;
+        let z_invsq = z_inv * z_inv;
         let z_invq3 = z_invsq * z_inv;
 
         Point_BN254_PSE {
@@ -292,30 +294,61 @@ impl ScalarField_BN254_PSE {
 pub struct MSMENTRY<E: Engine> {
     pub(crate) scalars: Vec<ScalarField_BN254_PSE>,
     pub(crate) bases: Vec<PointAffineNoInfinity_BN254_PSE>,
-    _marker:PhantomData<E>
+    _marker: PhantomData<E>,
 }
 
-impl<E: Engine + Debug> MSMENTRY<E>{
-    pub fn new(bases: &Vec<E::G1Affine>,scalars: &Vec<E::Scalar>)->Self{
-        let bases:Vec<_> = bases.iter().map(|x|{
+impl<E: Engine + Debug> MSMENTRY<E> {
+    pub fn new(bases: &Vec<E::G1Affine>, scalars: &Vec<E::Scalar>) -> Self {
+        assert_eq!(&bases.len(),&scalars.len());
+
+        let bases: Vec<_> = bases.iter().map(|x| {
             let mut encoding = <G1Affine_BN254_PSE as GroupEncoding>::Repr::default();
             encoding.as_mut().copy_from_slice(x.to_bytes().as_ref());
             let affine_point = G1Affine_BN254_PSE::from_bytes(&encoding).unwrap();
             PointAffineNoInfinity_BN254_PSE::from_pse(&affine_point)
         }).collect();
-        let scalars:Vec<_> = scalars.iter().map(|x|{
-            let scalar_ref:[u8;32] = x.to_repr().as_ref().try_into().unwrap();
+        let scalars: Vec<_> = scalars.iter().map(|x| {
+            let scalar_ref: [u8; 32] = x.to_repr().as_ref().try_into().unwrap();
             ScalarField_BN254_PSE::from_pse(scalar_ref)
         }).collect();
-        MSMENTRY{
+        MSMENTRY {
             scalars,
             bases,
             _marker: PhantomData,
         }
     }
 
-    pub fn msm_bn254(&self)-> E::G1{
-    let projective_point = msm_bn254(&self.bases,&self.scalars,0).to_pse().to_bytes();
+    pub fn msm_bn254(&self) -> E::G1 {
+        let projective_point = msm_bn254(&self.bases, &self.scalars, 0).to_pse().to_bytes();
+        let projective_point_ref = projective_point.as_ref();
+        let mut encoding = <E::G1 as GroupEncoding>::Repr::default();
+        encoding.as_mut().copy_from_slice(projective_point_ref);
+        E::G1::from_bytes(&encoding).unwrap()
+    }
+
+    pub fn msm_batch_bn254(&self) -> E::G1 {
+        // let limit:usize = 4096;
+        // let msm_size = &self.bases.len();
+        // if msm_size> &limit{
+        //
+        // }
+        let pre = msm_bn254(&self.bases, &self.scalars, 0);
+        let result = msm_batch_bn254(&self.bases, &self.scalars, 1, 0);
+        println!("pre:{:?}",pre);
+        println!("result:{:?}",result);
+        // assert_eq!(pre,result[0]);
+        // println!("==============true");
+
+        // calculate
+        let mut aggregation_projective_point = G1::zero();
+
+        for p in result.iter() {
+            aggregation_projective_point = aggregation_projective_point + p.to_pse();
+        }
+        // println!("aggregation_projective_point:{:?}",aggregation_projective_point);
+        // assert_eq!(pre.to_pse(),aggregation_projective_point);
+
+        let projective_point = aggregation_projective_point.to_bytes();
         let projective_point_ref = projective_point.as_ref();
         let mut encoding = <E::G1 as GroupEncoding>::Repr::default();
         encoding.as_mut().copy_from_slice(projective_point_ref);
@@ -361,18 +394,18 @@ impl<E: Engine + Debug> MSMENTRY<E>{
 // }
 
 #[test]
-fn test_g1_projective_point(){
+fn test_g1_projective_point() {
     let seed = None;
     let projective_point = G1::random(get_rng(seed));
     let affine_point = projective_point.to_affine().to_bytes();
     let projective_point_rec = G1::from_bytes(&affine_point).unwrap();
 
-    assert_eq!(projective_point,projective_point_rec);
+    assert_eq!(projective_point, projective_point_rec);
 }
 
 #[test]
-fn test_big(){
-    let test = Fq::from_raw([1,0,0,0]);
+fn test_big() {
+    let test = Fq::from_raw([1, 0, 0, 0]);
     let u8_array = &test.to_bytes();
     let mut u64_array: [u64; 4] = [0; 4];
     for i in 0..4 {
@@ -381,11 +414,11 @@ fn test_big(){
         }
     }
     let res = u64_vec_to_u32_vec(&u64_array);
-    assert_eq!(res,vec![1, 0, 0, 0, 0, 0, 0, 0])
+    assert_eq!(res, vec![1, 0, 0, 0, 0, 0, 0, 0])
 }
 
 #[test]
-fn test_singel(){
+fn test_singel() {
     let seed = None;
     let points = generate_random_points_bn254(1, get_rng(seed));
 }

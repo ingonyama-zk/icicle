@@ -22,10 +22,10 @@ name = "msm_bn254_gpu"
 path = "benches/msm_bn254_gpu.rs"
 harness = false
 
-[[bench]]
-name = "msm_bn254_cpu"
-path = "benches/msm_bn254_cpu.rs"
-harness = false
+#[[bench]]
+#name = "msm_bn254_cpu"
+#path = "benches/msm_bn254_cpu.rs"
+#harness = false
 
 [dependencies]
 halo2curves = {git = "https://github.com/Orbiter-Finance/halo2curves.git",branch = "feat/gpu"}

@@ -7,7 +7,9 @@ set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # add the target cuda architectures
 # each additional architecture increases the compilation time and output file size
-if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+if (${CMAKE_VERSION} VERSION_LESS "3.24.0")
+    set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
+else()
     set(CMAKE_CUDA_ARCHITECTURES native) # on 3.24+, on earlier it is ignored, and the target is not passed
 endif ()
 project(icicle LANGUAGES CUDA CXX)
@@ -18,8 +20,8 @@ set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 
 include(FetchContent)
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 
@@ -32,12 +34,12 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(
-  primitives_test
-  primitives/test.cu
+        primitives_test
+        primitives/test.cu
 )
 target_link_libraries(
-  primitives_test
-  GTest::gtest_main
+        primitives_test
+        GTest::gtest_main
 )
 
 include(GoogleTest)
