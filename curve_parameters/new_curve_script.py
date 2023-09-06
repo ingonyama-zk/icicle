@@ -211,106 +211,107 @@ with open("./icicle/curves/curve_template/params.cuh.tmpl", "r") as params_file:
     with open(f'./icicle/curves/{curve_name_lower}/params.cuh', 'w') as f:
         f.write(params_content)
 
-with open("./icicle/curves/curve_template/lde.cu.tmpl", "r") as lde_file:
-    template_content = Template(lde_file.read())
-    lde_content = template_content.safe_substitute(
-        CURVE_NAME_U=curve_name_upper, 
-        CURVE_NAME_L=curve_name_lower
-    )
-    with open(f'./icicle/curves/{curve_name_lower}/lde.cu', 'w') as f:
-        f.write(lde_content)
-    
-with open("./icicle/curves/curve_template/msm.cu.tmpl", "r") as msm_file:
-    template_content = Template(msm_file.read())
-    msm_content = template_content.safe_substitute(
-        CURVE_NAME_U=curve_name_upper, 
-        CURVE_NAME_L=curve_name_lower
-    )
-    with open(f'./icicle/curves/{curve_name_lower}/msm.cu', 'w') as f:
-        f.write(msm_content)
+if sys.argv[2] != "-update":
+    with open("./icicle/curves/curve_template/lde.cu.tmpl", "r") as lde_file:
+        template_content = Template(lde_file.read())
+        lde_content = template_content.safe_substitute(
+            CURVE_NAME_U=curve_name_upper, 
+            CURVE_NAME_L=curve_name_lower
+        )
+        with open(f'./icicle/curves/{curve_name_lower}/lde.cu', 'w') as f:
+            f.write(lde_content)
+        
+    with open("./icicle/curves/curve_template/msm.cu.tmpl", "r") as msm_file:
+        template_content = Template(msm_file.read())
+        msm_content = template_content.safe_substitute(
+            CURVE_NAME_U=curve_name_upper, 
+            CURVE_NAME_L=curve_name_lower
+        )
+        with open(f'./icicle/curves/{curve_name_lower}/msm.cu', 'w') as f:
+            f.write(msm_content)
 
-with open("./icicle/curves/curve_template/ve_mod_mult.cu.tmpl", "r") as ve_mod_mult_file:
-    template_content = Template(ve_mod_mult_file.read())
-    ve_mod_mult_content = template_content.safe_substitute(
-        CURVE_NAME_U=curve_name_upper, 
-        CURVE_NAME_L=curve_name_lower
-    )
-    with open(f'./icicle/curves/{curve_name_lower}/ve_mod_mult.cu', 'w') as f:
-        f.write(ve_mod_mult_content)
-    
+    with open("./icicle/curves/curve_template/ve_mod_mult.cu.tmpl", "r") as ve_mod_mult_file:
+        template_content = Template(ve_mod_mult_file.read())
+        ve_mod_mult_content = template_content.safe_substitute(
+            CURVE_NAME_U=curve_name_upper, 
+            CURVE_NAME_L=curve_name_lower
+        )
+        with open(f'./icicle/curves/{curve_name_lower}/ve_mod_mult.cu', 'w') as f:
+            f.write(ve_mod_mult_content)
+        
 
-with open(f'./icicle/curves/curve_template/curve_config.cuh.tmpl', 'r') as cc:
-    template_content = Template(cc.read())
-    cc_content = template_content.safe_substitute(
-        CURVE_NAME_U=curve_name_upper,
-    )
-    with open(f'./icicle/curves/{curve_name_lower}/curve_config.cuh', 'w') as f:
-        f.write(cc_content)
-    
+    with open(f'./icicle/curves/curve_template/curve_config.cuh.tmpl', 'r') as cc:
+        template_content = Template(cc.read())
+        cc_content = template_content.safe_substitute(
+            CURVE_NAME_U=curve_name_upper,
+        )
+        with open(f'./icicle/curves/{curve_name_lower}/curve_config.cuh', 'w') as f:
+            f.write(cc_content)
+        
 
-with open(f'./icicle/curves/curve_template/projective.cu.tmpl', 'r') as proj:
-    template_content = Template(proj.read())
-    proj_content = template_content.safe_substitute(
-        CURVE_NAME_U=curve_name_upper, 
-        CURVE_NAME_L=curve_name_lower
-    )
-    with open(f'./icicle/curves/{curve_name_lower}/projective.cu', 'w') as f:
-        f.write(proj_content)
-
-
-with open(f'./icicle/curves/curve_template/supported_operations.cu.tmpl', 'r') as supp_ops:
-    template_content = Template(supp_ops.read())
-    supp_ops_content = template_content.safe_substitute()
-    with open(f'./icicle/curves/{curve_name_lower}/supported_operations.cu', 'w') as f:
-        f.write(supp_ops_content)
+    with open(f'./icicle/curves/curve_template/projective.cu.tmpl', 'r') as proj:
+        template_content = Template(proj.read())
+        proj_content = template_content.safe_substitute(
+            CURVE_NAME_U=curve_name_upper, 
+            CURVE_NAME_L=curve_name_lower
+        )
+        with open(f'./icicle/curves/{curve_name_lower}/projective.cu', 'w') as f:
+            f.write(proj_content)
 
 
-with open('./icicle/curves/index.cu', 'r+') as f:
-    index_text = f.read()
-    if index_text.find(curve_name_lower) == -1:
-        f.write(f'\n#include "{curve_name_lower}/supported_operations.cu"')
-    
+    with open(f'./icicle/curves/curve_template/supported_operations.cu.tmpl', 'r') as supp_ops:
+        template_content = Template(supp_ops.read())
+        supp_ops_content = template_content.safe_substitute()
+        with open(f'./icicle/curves/{curve_name_lower}/supported_operations.cu', 'w') as f:
+            f.write(supp_ops_content)
 
 
-# Create Rust interface and tests
+    with open('./icicle/curves/index.cu', 'r+') as f:
+        index_text = f.read()
+        if index_text.find(curve_name_lower) == -1:
+            f.write(f'\n#include "{curve_name_lower}/supported_operations.cu"')
+        
 
-if limb_p == limb_q: 
-    with open("./src/curve_templates/curve_same_limbs.rs", "r") as curve_file:
-        content = curve_file.read()
+
+    # Create Rust interface and tests
+
+    if limb_p == limb_q: 
+        with open("./src/curve_templates/curve_same_limbs.rs", "r") as curve_file:
+            content = curve_file.read()
+            content = content.replace("CURVE_NAME_U",curve_name_upper)
+            content = content.replace("CURVE_NAME_L",curve_name_lower)
+            content = content.replace("_limbs_p",str(limb_p * 8 * 4))
+            content = content.replace("limbs_p",str(limb_p))
+            text_file = open("./src/curves/"+curve_name_lower+".rs", "w")
+            n = text_file.write(content)
+            text_file.close()
+    else:
+        with open("./src/curve_templates/curve_different_limbs.rs", "r") as curve_file:
+            content = curve_file.read()
+            content = content.replace("CURVE_NAME_U",curve_name_upper)
+            content = content.replace("CURVE_NAME_L",curve_name_lower)
+            content = content.replace("_limbs_p",str(limb_p * 8 * 4))
+            content = content.replace("limbs_p",str(limb_p))
+            content = content.replace("_limbs_q",str(limb_q * 8 * 4))
+            content = content.replace("limbs_q",str(limb_q))
+            text_file = open("./src/curves/"+curve_name_lower+".rs", "w")
+            n = text_file.write(content)
+            text_file.close()
+
+    with open("./src/curve_templates/test.rs", "r") as test_file:
+        content = test_file.read()
         content = content.replace("CURVE_NAME_U",curve_name_upper)
         content = content.replace("CURVE_NAME_L",curve_name_lower)
-        content = content.replace("_limbs_p",str(limb_p * 8 * 4))
-        content = content.replace("limbs_p",str(limb_p))
-        text_file = open("./src/curves/"+curve_name_lower+".rs", "w")
+        text_file = open("./src/test_"+curve_name_lower+".rs", "w")
         n = text_file.write(content)
         text_file.close()
-else:
-    with open("./src/curve_templates/curve_different_limbs.rs", "r") as curve_file:
-        content = curve_file.read()
-        content = content.replace("CURVE_NAME_U",curve_name_upper)
-        content = content.replace("CURVE_NAME_L",curve_name_lower)
-        content = content.replace("_limbs_p",str(limb_p * 8 * 4))
-        content = content.replace("limbs_p",str(limb_p))
-        content = content.replace("_limbs_q",str(limb_q * 8 * 4))
-        content = content.replace("limbs_q",str(limb_q))
-        text_file = open("./src/curves/"+curve_name_lower+".rs", "w")
-        n = text_file.write(content)
-        text_file.close()
+        
+    with open('./src/curves/mod.rs', 'r+') as f:
+        mod_text = f.read()
+        if mod_text.find(curve_name_lower) == -1:
+            f.write('\npub mod ' + curve_name_lower + ';')
 
-with open("./src/curve_templates/test.rs", "r") as test_file:
-    content = test_file.read()
-    content = content.replace("CURVE_NAME_U",curve_name_upper)
-    content = content.replace("CURVE_NAME_L",curve_name_lower)
-    text_file = open("./src/test_"+curve_name_lower+".rs", "w")
-    n = text_file.write(content)
-    text_file.close()
-    
-with open('./src/curves/mod.rs', 'r+') as f:
-    mod_text = f.read()
-    if mod_text.find(curve_name_lower) == -1:
-        f.write('\npub mod ' + curve_name_lower + ';')
-
-with open('./src/lib.rs', 'r+') as f:
-    lib_text = f.read()
-    if lib_text.find(curve_name_lower) == -1:
-        f.write('\npub mod ' + curve_name_lower + ';')
+    with open('./src/lib.rs', 'r+') as f:
+        lib_text = f.read()
+        if lib_text.find(curve_name_lower) == -1:
+            f.write('\npub mod ' + curve_name_lower + ';')
