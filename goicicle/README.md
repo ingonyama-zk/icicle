@@ -14,6 +14,8 @@ The Makefile is designed to compile CUDA files for three curves: BN254, BLS12_38
 
 ## Compiling CUDA Code
 
+> Currently BN254 is production ready, BLS curves are still experimental and are activly being tested by the ICICLE team.
+
 1. Navigate to the directory containing the Makefile in your terminal.
 2. To compile all curve libraries, use the `make all` command. This will create three shared libraries: `libbn254.so`, `libbls12_381.so`, and `libbls12_377.so`.
 3. If you want to compile a specific curve, you can do so by specifying the target. For example, to compile only the BN254 curve, use `make libbn254.so`. Replace `libbn254.so` with `libbls12_381.so` or `libbls12_377.so` to compile those curves instead.
@@ -60,9 +62,7 @@ Replace `/path/to/shared/libs` with the actual path where the shared libraries a
 
 Running ``go test ./...`` in the root directory should execute all tests.
 
-If you want to run a specific test for a specific curve, navigate to `.goicicle/curves/<curve_name>`. Then run `go test -run=<test_name>`
-
-I suggest adding `-v` to see more verbose logs when running a test.
+If you want to run a specific test for a specific curve, navigate to `.goicicle/curves/<curve_name>`. Then run `go test -run=<test_name>`.
 
 # Supporting Additional Curves
 

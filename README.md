@@ -71,7 +71,7 @@ NOTE: If you are using cmake versions < 3.24 add `-DCUDA_ARCH=<target_cumpute_ar
 ### Bindings
 We support Golang and Rust bindings.
 
-We offer extensive documentation on them, [Golang bindings][GOLANG_DOCS] and [Rust bindings][RUST_DOCS].
+We support Golang and Rust bindings; their documentation on how to build and use them can be found [here][GOLANG_DOCS] and [here][RUST_DOCS] respectively.
 
 ### Example Usage
 

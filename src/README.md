@@ -29,11 +29,13 @@ cargo test -- --test-threads=1
 
 The flag `--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.
 
+> NOTE: `cargo test --release` is currently failing
+
 ## Supporting Additional Curves
 For adding support for additional curves, follow the instructions [here][ADDITIONAL_CURVES].
 
 
 <!-- Begin Links -->
 [B_SCRIPT]: ./build.rs
-[ADDITIONAL_CURVES]: ./README.md
+[ADDITIONAL_CURVES]: ../README.md
 <!-- End Links -->
