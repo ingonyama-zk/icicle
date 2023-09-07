@@ -4,24 +4,38 @@ This guide provides instructions on how to compile CUDA code using the provided 
 
 ## Prerequisites
 
-To compile the CUDA files, you will need:
+- Follow the main prerequisites instructions [here][MAIN_DOCS].
+- Golang
+- Make
 
-- CUDA toolkit installed. The Makefile assumes CUDA is installed in `/usr/local/cuda`. If CUDA is installed in a different location, please adjust the `CUDA_ROOT_DIR` variable accordingly.
-- A compatible GPU and corresponding driver installed on your machine.
-
-## Structure of the Makefile
+# Compiling and using bindings with Golang
 
 The Makefile is designed to compile CUDA files for three curves: BN254, BLS12_381, and BLS12_377. The source files are located in the `icicle/curves/` directory.
 
 ## Compiling CUDA Code
 
+> Currently BN254 is production ready, BLS curves are still experimental and are activly being tested by the ICICLE team.
+
 1. Navigate to the directory containing the Makefile in your terminal.
 2. To compile all curve libraries, use the `make all` command. This will create three shared libraries: `libbn254.so`, `libbls12_381.so`, and `libbls12_377.so`.
 3. If you want to compile a specific curve, you can do so by specifying the target. For example, to compile only the BN254 curve, use `make libbn254.so`. Replace `libbn254.so` with `libbls12_381.so` or `libbls12_377.so` to compile those curves instead.
+4. run `export LD_LIBRARY_PATH=<path_to_so_files_directory>/`, this will make the shared libraries available. 
 
 The resulting `.so` files are the compiled shared libraries for each curve.
 
-## Golang Binding
+If you want to remove the compiled files, you can use the `make clean` command. This will remove the `libbn254.so`, `libbls12_381.so`, and `libbls12_377.so` files.
+
+## Using GOCICLE
+
+We assume you have compiled the shared libraries (process described above) and have them on your machine.
+
+1. Install the GOICICLE [package](https://pkg.go.dev/github.com/ingonyama-zk/icicle/goicicle). Using this command `go get github.com/ingonyama-zk/icicle/goicicle`.
+2. Make sure you called `export LD_LIBRARY_PATH=<path_to_so_files_directory>/` to make your shared libraries available.
+3. Import GOICICLE into your project and enjoy :)
+
+For reference have a look at our ICICLE <> Gnark [implementation][GNARKI].
+
+## Using the bindings without GOICICLE
 
 The shared libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
 
@@ -44,6 +58,44 @@ func main() {
 
 Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
 
-## Cleaning up
+## Running tests
 
-If you want to remove the compiled files, you can use the `make clean` command. This will remove the `libbn254.so`, `libbls12_381.so`, and `libbls12_377.so` files.
+Running ``go test ./...`` in the root directory should execute all tests.
+
+If you want to run a specific test for a specific curve, navigate to `.goicicle/curves/<curve_name>`. Then run `go test -run=<test_name>`.
+
+# Supporting Additional Curves
+
+Before adding support for a curve in the golang bindings you must add it to the CUDA code.
+
+1. Add your new curve to CUDA ICICLE, by following the instructions [here][MAIN_DOCS].
+2. Add the correct template for your curve [here][GOICICLE_CURVE_TEMP]. It should look like this:
+
+```
+type Curve struct {
+	PackageName        string
+	CurveNameUpperCase string
+	CurveNameLowerCase string
+	SharedLib          string
+	ScalarSize         int
+	BaseSize           int
+	G2ElementSize      int
+}
+```
+3. Edit this [file][GOICICLE_CURVE_FILE_TO_EDIT] accordingly.
+4. navigate to `goicicle/templates` and then run `go run main.go`.
+
+*** Make sure to compile your new shared libraries :)
+
+## Publishing your curve
+
+We suggest you open a PR with your new curve so we can add official support for it.
+In the meantime, if you wish to use this curve, simply push it to your forked ICICLE repository, then install it with the following command: `go get <github_com_path_to_github_repo>@<branch>`.
+
+
+<!-- Begin Links -->
+[MAIN_DOCS]: ../README.md
+[GOICICLE_CURVE_TEMP]: ./templates/curves/curves.go
+[GOICICLE_CURVE_FILE_TO_EDIT]: ./templates/main.go
+[GNARKI]: https://github.com/ingonyama-zk/gnark
+<!-- End Links -->

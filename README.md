@@ -17,7 +17,7 @@
 
 Zero Knowledge Proofs (ZKPs) are considered one of the greatest achievements of modern cryptography. Accordingly, ZKPs are expected to disrupt a number of industries and will usher in an era of trustless and privacy preserving services and infrastructure.
 
-If we want ZK hardware today we have FPGAs or GPUs which are relatively inexpensive. However, the biggest selling point of GPUs is the software; we talk in particular about CUDA, which makes it easy to write code running on Nvidia GPUs, taking advantage of their highly parallel architecture. Together with the widespread availability of these devices, if we can get GPUs to work on ZK workloads, then we have made a giant step towards accessible and efficient ZK provers.
+If we want ZK hardware today we have FPGAs or GPUs which are relatively inexpensive. However, the biggest selling point of GPUs is the software; we are referring to CUDA, which simplifies writing code for Nvidia GPUs and takes advantage of their highly parallel architecture. Together with the widespread availability of these devices, if we can get GPUs to work on ZK workloads, then we will have made a giant step towards accessible and efficient ZK provers.
 
 ## Zero Knowledge on GPU
 
@@ -37,17 +37,18 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ## Build and usage
 
+## Prerequisite dependencies
+- A compatible Nvidia GPU and corresponding driver installed on your machine.
+- CMake at least version 3.18.
+- CUDA Toolkit version 12.0 or newer.
+- GCC, version 9 or newer recommended.
+- Optional: Golang or Rust should also be installed depending on the bindings you plan to use.
 
-### Prerequisites
+## Building 
 
-- [NVCC]
-- cmake 3.18 and above
-
-### Steps
-
-1. Define or select a curve for your application; we've provided a [template][CRV_TEMPLATE] for defining a curve
-2. Include the curve in [`curve_config.cuh`][CRV_CONFIG]
-3. Now you can build the ICICLE library using nvcc
+1. Check our [supported curves][CRV_PARAMS] to see if the curve required by your application is supported (we currently don't support Pasta or Goldilocks).
+2. If your curve isn't included in our [supported curves][CRV_PARAMS], follow the instructions [here](#Supporting-Additional-Curves) to add your own curve.
+3. Now you can build the ICICLE library using NVCC.
 
 ```sh
 mkdir -p build
@@ -67,46 +68,17 @@ cd build && ctest
 
 NOTE: If you are using cmake versions < 3.24 add `-DCUDA_ARCH=<target_cumpute_arch>` to the command `cmake -S . -B build`
 
-### Rust Bindings
+### Bindings
+We support Golang and Rust bindings.
 
-For convenience, we also provide rust bindings to the ICICLE library for the following primitives:
-
-- MSM
-- NTT
-    - Forward NTT
-    - Inverse NTT
-- ECNTT
-    - Forward ECNTT
-    - Inverse NTT
-- Scalar Vector Multiplication
-- Point Vector Multiplication
-
-A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environement variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
-
-> NOTE: A GPU must be detectable and therefore installed if the `ARCH_TYPE` is not set.
-
-Once you have your parameters set, run:
-
-```sh
-cargo build --release
-```
-
-You'll find a release ready library at `target/release/libicicle_utils.rlib`.
-
-To benchmark and test the functionality available in RUST, run:
-
-```
-cargo bench
-cargo test -- --test-threads=1
-```
-
-The flag `--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.
+We support Golang and Rust bindings; their documentation on how to build and use them can be found [here][GOLANG_DOCS] and [here][RUST_DOCS] respectively.
 
 ### Example Usage
 
-An example of using the Rust bindings library can be found in our [fast-danksharding implementation][FDI]
+Rust bindings - [fast-danksharding implementation][FDI] \
+Golang bindings - [Gnark implementation][GNARKI]
 
-### Supporting Additional Curves
+# Supporting Additional Curves
 
 Supporting additional curves can be done as follows:
 
@@ -119,9 +91,9 @@ Create a JSON file with the curve parameters. The curve is defined by the follow
 - ``modulus_q`` - base field modulus (in decimal).
 - ``bit_count_q`` - number of bits needed to represent `` modulus_q`` .
 - ``limb_q`` number of bytes needed to represent `` modulus_p``  (rounded).
-- ``weierstrass_b`` - Weierstrauss constant of the curve. 
-- ``weierstrass_b_g2_re`` - Weierstrauss real constant of the g2 curve. 
-- ``weierstrass_b_g2_im`` - Weierstrauss imaginary constant of the g2 curve. 
+- ``weierstrass_b`` - Weierstrass constant of the curve. 
+- ``weierstrass_b_g2_re`` - Weierstrass real constant of the g2 curve. 
+- ``weierstrass_b_g2_im`` - Weierstrass imaginary constant of the g2 curve. 
 - ``gen_x`` - x-value of a generator element for the curve. 
 - ``gen_y`` - y-value of a generator element for the curve.
 - ``gen_x_re`` - real x-value of a generator element for the g2 curve. 
@@ -152,7 +124,7 @@ Here's an example for BLS12-381.
 }
 ```
 
-Save the parameters JSON file under the ``curve_parameters`` directory.
+Save the parameters JSON file under the [``curve_parameters``][CRV_PARAMS] directory.
 
 Then run the Python script ``new_curve_script.py `` from the root folder:
 
@@ -161,12 +133,12 @@ python3 ./curve_parameters/new_curve_script.py ./curve_parameters/bls12_381.json
 ```
 
 The script does the following:
-- Creates a folder in ``icicle/curves`` with the curve name, which contains all of the files needed for the supported operations in cuda.
+- Creates a folder in ``icicle/curves`` with the curve name, which contains all of the files needed for the supported operations in CUDA.
 - Adds the curve's exported operations to ``icicle/curves/index.cu``. 
 - Creates a file with the curve name in ``src/curves`` with the relevant objects for the curve. 
 - Creates a test file with the curve name in ``src``. 
+- You can now use our bindings with your new curves (please look at the bindings readme to make sure there are no binding specific extra steps).
 
-Testing the new curve could be done by running the tests in ``tests_curve_name`` (e.g. ``tests_bls12_381``).
 ## Contributions
 
 Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
@@ -192,18 +164,21 @@ ICICLE is distributed under the terms of the MIT License.
 See [LICENSE-MIT][LMIT] for details.
 
 <!-- Begin Links -->
+[CRV_PARAMS]: ./curve_parameters/
 [BLS12-381]: ./icicle/curves/bls12_381/supported_operations.cu
 [BLS12-377]: ./icicle/curves/bls12_377/supported_operations.cu
 [BN254]: ./icicle/curves/bn254/supported_operations.cu
 [NVCC]: https://docs.nvidia.com/cuda/#installation-guides
-[CRV_TEMPLATE]: ./icicle/curves/curve_template/
-[CRV_CONFIG]: ./icicle/curves/index.cu
-[B_SCRIPT]: ./build.rs
+[CRV_TEMPLATE]: ./icicle/curves/curve_template.cuh
+[CRV_CONFIG]: ./icicle/curves/curve_config.cuh
 [FDI]: https://github.com/ingonyama-zk/fast-danksharding
+[GNARKI]: https://github.com/ingonyama-zk/gnark
 [LMIT]: ./LICENSE
 [DISCORD]: https://discord.gg/Y4SkbDf2Ff
 [googletest]: https://github.com/google/googletest/
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
+[RUST_DOCS]: ./src/READMEN.md
+[GOLANG_DOCS]: ./goicicle/README.md
 
 <!-- End Links -->
