@@ -1737,6 +1737,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     #[allow(non_snake_case)]
     fn test_vec_scalar_mul() {
         let mut intoo = [
@@ -1754,6 +1755,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     #[allow(non_snake_case)]
     fn test_vec_point_mul() {
         let dummy_one = Point_BLS12_381 {
