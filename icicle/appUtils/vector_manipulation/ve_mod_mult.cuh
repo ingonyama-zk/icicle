@@ -132,4 +132,44 @@ int matrix_mod_mult(E* matrix_elements, E* vector_elements, E* result, size_t di
   cudaStreamSynchronize(stream);
   return 0;
 }
+
+template <typename E, typename S>
+__global__ void batch_vector_mult_kernel(E *element_vec, S *mult_vec,  unsigned n_mult, unsigned batch_size)
+{
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid < n_mult * batch_size)
+    {
+        int mult_id = tid % n_mult;
+        element_vec[tid] = mult_vec[mult_id] * element_vec[tid];
+    }
+}
+
+template <typename E, typename S>
+int batch_vector_mult_template(E *element_vec, S *mult_vec, unsigned n_mult, unsigned batch_size)
+{
+    // Set the grid and block dimensions
+    int NUM_THREADS = MAX_THREADS_PER_BLOCK;
+    int NUM_BLOCKS = (n_mult * batch_size + NUM_THREADS - 1) / NUM_THREADS;
+
+    // Allocate memory on the device for the input vectors, the output vector, and the modulus
+    S *d_mult_vec;
+    E *d_element_vec;
+    size_t n_mult_size = n_mult * sizeof(S);
+    size_t full_size = n_mult * batch_size * sizeof(E);
+    cudaMalloc(&d_mult_vec, n_mult_size);
+    cudaMalloc(&d_element_vec, full_size);
+
+    // Copy the input vectors and the modulus from the host to the device
+    cudaMemcpy(d_mult_vec, mult_vec, n_mult_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_element_vec, element_vec, full_size, cudaMemcpyHostToDevice);
+
+    batch_vector_mult_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(d_element_vec, d_mult_vec, n_mult, batch_size);
+
+    cudaMemcpy(element_vec, d_element_vec, full_size, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_mult_vec);
+    cudaFree(d_element_vec);
+    return 0;
+}
+
 #endif

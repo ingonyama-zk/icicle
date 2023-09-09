@@ -99,6 +99,16 @@ impl BaseField_BLS12_381 {
         }
     }
 
+    pub fn from_limbs_le(value: &[u32]) -> Self {
+        Self::from_limbs(value)
+    }
+
+    pub fn from_limbs_be(value: &[u32]) -> Self {
+        let mut value = value.to_owned();
+        value.reverse();
+        Self::from_limbs_le(&value)
+    }
+
     pub fn to_ark(&self) -> BigInteger384 {
         BigInteger384::new(
             u32_vec_to_u64_vec(&self.limbs())
@@ -135,6 +145,16 @@ impl ScalarField_BLS12_381 {
 
     pub fn from_ark_transmute(v: BigInteger256) -> ScalarField_BLS12_381 {
         unsafe { transmute(v) }
+    }
+
+    pub fn from_limbs_le(value: &[u32]) -> Self {
+        Self::from_limbs(value)
+    }
+
+    pub fn from_limbs_be(value: &[u32]) -> Self {
+        let mut value = value.to_owned();
+        value.reverse();
+        Self::from_limbs_le(&value)
     }
 }
 

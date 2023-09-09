@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use icicle_utils::{curves::bls12_381::ScalarField_BLS12_381, test_bls12_381::*};
+use icicle::{curves::bls12_381::ScalarField_BLS12_381, test_bls12_381::*};
 use rustacuda::prelude::DeviceBuffer;
 
 const LOG_NTT_SIZES: [usize; 3] = [20, 10, 9];

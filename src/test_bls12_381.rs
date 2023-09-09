@@ -233,6 +233,22 @@ extern "C" {
         n_elements: usize,
         device_id: usize,
     ) -> c_int;
+
+    fn mult_sc_batch_vec_cuda_bls12_381(
+        inout: *mut ScalarField_BLS12_381,
+        scalars: *const ScalarField_BLS12_381,
+        n_mult: usize,
+        batch_size: usize,
+        device_id: usize,
+    ) -> c_int;
+
+    fn mult_proj_batch_vec_cuda_bls12_381(
+        inout: *mut Point_BLS12_381,
+        scalars: *const ScalarField_BLS12_381,
+        n_scalars: usize,
+        batch_size: usize,
+        device_id: usize,
+    ) -> c_int;
 }
 
 pub fn poseidon_multi_bls12_381(
@@ -747,6 +763,32 @@ pub fn mult_sc_vec_bls12_381(a: &mut [ScalarField_BLS12_381], b: &[ScalarField_B
             a as *mut _ as *mut ScalarField_BLS12_381,
             b as *const _ as *const ScalarField_BLS12_381,
             a.len(),
+            device_id,
+        );
+    }
+}
+
+pub fn mult_sc_batch_vec_bls12_381(a: &mut [ScalarField_BLS12_381], b: &[ScalarField_BLS12_381], device_id: usize) {
+    assert_eq!(a.len() % b.len(), 0);
+    unsafe {
+        mult_sc_batch_vec_cuda_bls12_381(
+            a as *mut _ as *mut ScalarField_BLS12_381,
+            b as *const _ as *const ScalarField_BLS12_381,
+            b.len(),
+            a.len() / b.len(),
+            device_id,
+        );
+    }
+}
+
+pub fn mult_proj_batch_vec_bls12_381(a: &mut [Point_BLS12_381], b: &[ScalarField_BLS12_381], device_id: usize) {
+    assert_eq!(a.len() % b.len(), 0);
+    unsafe {
+        mult_proj_batch_vec_cuda_bls12_381(
+            a as *mut _ as *mut Point_BLS12_381,
+            b as *const _ as *const ScalarField_BLS12_381,
+            b.len(),
+            a.len() / b.len(),
             device_id,
         );
     }
