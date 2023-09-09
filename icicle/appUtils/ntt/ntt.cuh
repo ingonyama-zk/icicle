@@ -297,9 +297,10 @@ void ntt_inplace_batch_template(
   S* d_twiddles,
   unsigned n,
   unsigned batch_size,
-  bool inverse,
+  bool is_inverse,
   bool is_coset,
   S* coset,
+  bool is_increasing, //TODO: rename? is_rev or is_ct
   cudaStream_t stream,
   bool is_sync_needed)
 {
@@ -315,7 +316,7 @@ void ntt_inplace_batch_template(
   const int logn_shmem = is_shared_mem_enabled ? int(log(2 * num_threads) / log(2))
                                                : 0; // TODO: shared memory support only for types <= 32 bytes
 
-  if (inverse) {
+  if (is_increasing) {
     if (is_shared_mem_enabled)
       ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
         d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
@@ -328,10 +329,10 @@ void ntt_inplace_batch_template(
 
     if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
-    num_threads = min(n / 2, MAX_NUM_THREADS);
-    num_blocks = (n * batch_size + num_threads - 1) / num_threads;
-    template_normalize_kernel<E, S>
-      <<<num_blocks, num_threads, 0, stream>>>(d_inout, n * batch_size, S::inv_log_size(logn));
+    // num_threads = min(n / 2, MAX_NUM_THREADS);
+    // num_blocks = (n * batch_size + num_threads - 1) / num_threads;
+    // template_normalize_kernel<E, S>
+    //   <<<num_blocks, num_threads, 0, stream>>>(d_inout, n * batch_size, S::inv_log_size(logn));
   } else {
     if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
@@ -343,6 +344,13 @@ void ntt_inplace_batch_template(
     if (is_shared_mem_enabled)
       ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
         d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+  }
+
+  if (is_inverse) {
+    num_threads = min(n / 2, MAX_NUM_THREADS);
+    num_blocks = (n * batch_size + num_threads - 1) / num_threads;
+    template_normalize_kernel<E, S>
+      <<<num_blocks, num_threads, 0, stream>>>(d_inout, n * batch_size, S::inv_log_size(logn));
   }
 
   if (!is_sync_needed) return;
@@ -360,7 +368,8 @@ void ntt_inplace_batch_template(
  * @param inverse indicate if the result array should be normalized by n^(-1).
  */
 template <typename E, typename S>
-uint32_t ntt_end2end_batch_template(E* arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream)
+uint32_t
+ntt_end2end_batch_template(E* arr, uint32_t arr_size, uint32_t n, bool inverse, bool is_rbo_in, bool is_increasing, cudaStream_t stream)
 {
   int batches = int(arr_size / n);
   uint32_t logn = uint32_t(log(n) / log(2));
@@ -378,8 +387,10 @@ uint32_t ntt_end2end_batch_template(E* arr, uint32_t arr_size, uint32_t n, bool 
   int NUM_THREADS = MAX_THREADS_BATCH;
   int NUM_BLOCKS = (batches + NUM_THREADS - 1) / NUM_THREADS;
 
+  if (is_rbo_in) reverse_order_batch(d_arr, n, logn, batches, stream);
+
   S* _null = nullptr;
-  ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, false, _null, stream, false);
+  ntt_inplace_batch_template(d_arr, d_twiddles, n, batches, inverse, false, _null, is_increasing, stream, false);
 
   cudaMemcpyAsync(arr, d_arr, size_E, cudaMemcpyDeviceToHost, stream);
   cudaFreeAsync(d_arr, stream);
@@ -395,9 +406,9 @@ uint32_t ntt_end2end_batch_template(E* arr, uint32_t arr_size, uint32_t n, bool 
  * @param inverse indicate if the result array should be normalized by n^(-1).
  */
 template <typename E, typename S>
-uint32_t ntt_end2end_template(E* arr, uint32_t n, bool inverse, cudaStream_t stream)
+uint32_t ntt_end2end_template(E* arr, uint32_t n, bool inverse, bool is_rbo_in, bool is_increasing, cudaStream_t stream)
 {
-  return ntt_end2end_batch_template<E, S>(arr, n, n, inverse, stream);
+  return ntt_end2end_batch_template<E, S>(arr, n, n, inverse, is_rbo_in, is_increasing, stream);
 }
 
 #endif

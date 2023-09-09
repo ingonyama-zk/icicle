@@ -24,12 +24,12 @@ extern "C" BLS12_381::scalar_t* build_domain_cuda_bls12_381(
 }
 
 extern "C" int
-ntt_cuda_bls12_381(BLS12_381::scalar_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+ntt_cuda_bls12_381(BLS12_381::scalar_t* arr, uint32_t n, bool inverse, bool is_rbo_in, bool is_increasing, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
     return ntt_end2end_template<BLS12_381::scalar_t, BLS12_381::scalar_t>(
-      arr, n, inverse, stream); // TODO: pass device_id
+      arr, n, inverse, is_rbo_in, is_increasing, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
 
@@ -38,12 +38,12 @@ ntt_cuda_bls12_381(BLS12_381::scalar_t* arr, uint32_t n, bool inverse, size_t de
 }
 
 extern "C" int ecntt_cuda_bls12_381(
-  BLS12_381::projective_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+  BLS12_381::projective_t* arr, uint32_t n, bool inverse, bool is_rbo_in, bool is_increasing, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
     return ntt_end2end_template<BLS12_381::projective_t, BLS12_381::scalar_t>(
-      arr, n, inverse, stream); // TODO: pass device_id
+      arr, n, inverse, is_rbo_in, is_increasing, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -55,13 +55,15 @@ extern "C" int ntt_batch_cuda_bls12_381(
   uint32_t arr_size,
   uint32_t batch_size,
   bool inverse,
+  bool is_rbo_in,
+  bool is_increasing,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
     return ntt_end2end_batch_template<BLS12_381::scalar_t, BLS12_381::scalar_t>(
-      arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
+      arr, arr_size, batch_size, inverse, is_rbo_in, is_increasing, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -73,13 +75,15 @@ extern "C" int ecntt_batch_cuda_bls12_381(
   uint32_t arr_size,
   uint32_t batch_size,
   bool inverse,
+  bool is_rbo_in,
+  bool is_increasing,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
     return ntt_end2end_batch_template<BLS12_381::projective_t, BLS12_381::scalar_t>(
-      arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
+      arr, arr_size, batch_size, inverse, is_rbo_in, is_increasing, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -326,13 +330,14 @@ extern "C" int ntt_inplace_batch_cuda_bls12_381(
   unsigned n,
   unsigned batch_size,
   bool inverse,
+  bool is_increasing,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
     BLS12_381::scalar_t* _null = nullptr;
-    ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, false, _null, stream, true);
+    ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, false, _null, is_increasing, stream, true);
     return CUDA_SUCCESS; // TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());

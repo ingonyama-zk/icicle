@@ -56,7 +56,7 @@ int interpolate_batch(
   cudaStream_t stream)
 {
   cudaMemcpyAsync(d_out, d_evaluations, sizeof(E) * n * batch_size, cudaMemcpyDeviceToDevice, stream);
-  ntt_inplace_batch_template(d_out, d_domain, n, batch_size, true, coset, coset_powers, stream, true);
+  ntt_inplace_batch_template(d_out, d_domain, n, batch_size, true, coset, coset_powers, true, stream, true);
   return 0;
 }
 
@@ -130,7 +130,7 @@ int evaluate_batch(
   if (coset) batch_vector_mult(coset_powers, d_out, domain_size, batch_size, stream);
 
   S* _null = nullptr;
-  ntt_inplace_batch_template(d_out, d_domain, domain_size, batch_size, false, false, _null, stream, true);
+  ntt_inplace_batch_template(d_out, d_domain, domain_size, batch_size, false, false, _null, false, stream, true);
   return 0;
 }
 

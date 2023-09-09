@@ -59,13 +59,14 @@ extern "C" {
         device_id: usize,
     ) -> DevicePointer<ScalarField_BLS12_381>;
 
-    fn ntt_cuda_bls12_381(inout: *mut ScalarField_BLS12_381, n: usize, inverse: bool, device_id: usize) -> c_int;
+    fn ntt_cuda_bls12_381(inout: *mut ScalarField_BLS12_381, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool, device_id: usize) -> c_int;
 
-    fn ecntt_cuda_bls12_381(inout: *mut Point_BLS12_381, n: usize, inverse: bool, device_id: usize) -> c_int;
+    fn ecntt_cuda_bls12_381(inout: *mut Point_BLS12_381, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool, device_id: usize) -> c_int;
 
-    fn ntt_batch_cuda_bls12_381(inout: *mut ScalarField_BLS12_381, arr_size: usize, n: usize, inverse: bool) -> c_int;
+    fn ntt_batch_cuda_bls12_381(inout: *mut ScalarField_BLS12_381, arr_size: usize, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool) -> c_int;
 
-    fn ecntt_batch_cuda_bls12_381(inout: *mut Point_BLS12_381, arr_size: usize, n: usize, inverse: bool) -> c_int;
+    fn ecntt_batch_cuda_bls12_381(inout: *mut Point_BLS12_381, 
+        arr_size: usize, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool) -> c_int;
 
     fn ntt_inplace_batch_cuda_bls12_381(
         d_inout: DevicePointer<ScalarField_BLS12_381>,
@@ -73,6 +74,8 @@ extern "C" {
         n: usize,
         batch_size: usize,
         inverse: bool,
+        is_rbo_in: bool,
+        is_increasing: bool,
         device_id: usize,
     ) -> c_int;
 
@@ -368,12 +371,15 @@ pub fn commit_batch_bls12_381(
 }
 
 /// Compute an in-place NTT on the input data.
-fn ntt_internal_bls12_381(values: &mut [ScalarField_BLS12_381], device_id: usize, inverse: bool) -> i32 {
+fn ntt_internal_bls12_381(values: &mut [ScalarField_BLS12_381], device_id: usize, 
+    inverse: bool, is_rbo_in: bool, is_increasing: bool) -> i32 {
     let ret_code = unsafe {
         ntt_cuda_bls12_381(
             values as *mut _ as *mut ScalarField_BLS12_381,
             values.len(),
             inverse,
+            is_rbo_in,
+            is_increasing,
             device_id,
         )
     };
@@ -381,11 +387,11 @@ fn ntt_internal_bls12_381(values: &mut [ScalarField_BLS12_381], device_id: usize
 }
 
 pub fn ntt_bls12_381(values: &mut [ScalarField_BLS12_381], device_id: usize) {
-    ntt_internal_bls12_381(values, device_id, false);
+    ntt_internal_bls12_381(values, device_id, false, true, true);
 }
 
 pub fn intt_bls12_381(values: &mut [ScalarField_BLS12_381], device_id: usize) {
-    ntt_internal_bls12_381(values, device_id, true);
+    ntt_internal_bls12_381(values, device_id, true, true, true);
 }
 
 /// Compute an in-place NTT on the input data.
@@ -394,6 +400,8 @@ fn ntt_internal_batch_bls12_381(
     _device_id: usize,
     batch_size: usize,
     inverse: bool,
+    is_increasing: bool,
+    is_rbo_in: bool,
 ) -> i32 {
     unsafe {
         ntt_batch_cuda_bls12_381(
@@ -401,37 +409,41 @@ fn ntt_internal_batch_bls12_381(
             values.len(),
             batch_size,
             inverse,
+            is_increasing,
+            is_rbo_in
         )
     }
 }
 
 pub fn ntt_batch_bls12_381(values: &mut [ScalarField_BLS12_381], batch_size: usize, _device_id: usize) {
-    ntt_internal_batch_bls12_381(values, 0, batch_size, false);
+    ntt_internal_batch_bls12_381(values, 0, batch_size, false, true, true);
 }
 
 pub fn intt_batch_bls12_381(values: &mut [ScalarField_BLS12_381], batch_size: usize, _device_id: usize) {
-    ntt_internal_batch_bls12_381(values, 0, batch_size, true);
+    ntt_internal_batch_bls12_381(values, 0, batch_size, true, true, true);
 }
 
 /// Compute an in-place ECNTT on the input data.
-fn ecntt_internal_bls12_381(values: &mut [Point_BLS12_381], inverse: bool, device_id: usize) -> i32 {
+fn ecntt_internal_bls12_381(values: &mut [Point_BLS12_381], inverse: bool, is_rbo_in: bool, is_increasing: bool, device_id: usize) -> i32 {
     unsafe {
         ecntt_cuda_bls12_381(
             values as *mut _ as *mut Point_BLS12_381,
             values.len(),
             inverse,
+            is_rbo_in,
+            is_increasing,
             device_id,
         )
     }
 }
 
 pub fn ecntt_bls12_381(values: &mut [Point_BLS12_381], device_id: usize) {
-    ecntt_internal_bls12_381(values, false, device_id);
+    ecntt_internal_bls12_381(values, false, true, true, device_id);
 }
 
 /// Compute an in-place iECNTT on the input data.
 pub fn iecntt_bls12_381(values: &mut [Point_BLS12_381], device_id: usize) {
-    ecntt_internal_bls12_381(values, true, device_id);
+    ecntt_internal_bls12_381(values, true, true, true, device_id);
 }
 
 /// Compute an in-place ECNTT on the input data.
@@ -440,6 +452,8 @@ fn ecntt_internal_batch_bls12_381(
     _device_id: usize,
     batch_size: usize,
     inverse: bool,
+    is_rbo_in: bool,
+    is_increasing: bool,
 ) -> i32 {
     unsafe {
         ecntt_batch_cuda_bls12_381(
@@ -447,17 +461,19 @@ fn ecntt_internal_batch_bls12_381(
             values.len(),
             batch_size,
             inverse,
+            is_rbo_in,
+            is_increasing
         )
     }
 }
 
 pub fn ecntt_batch_bls12_381(values: &mut [Point_BLS12_381], batch_size: usize, _device_id: usize) {
-    ecntt_internal_batch_bls12_381(values, 0, batch_size, false);
+    ecntt_internal_batch_bls12_381(values, 0, batch_size, false, true, true);
 }
 
 /// Compute an in-place iECNTT on the input data.
 pub fn iecntt_batch_bls12_381(values: &mut [Point_BLS12_381], batch_size: usize, _device_id: usize) {
-    ecntt_internal_batch_bls12_381(values, 0, batch_size, true);
+    ecntt_internal_batch_bls12_381(values, 0, batch_size, true, true, true);
 }
 
 pub fn build_domain_bls12_381(domain_size: usize, logn: usize, inverse: bool) -> DeviceBuffer<ScalarField_BLS12_381> {
@@ -730,6 +746,8 @@ pub fn ntt_inplace_batch_bls12_381(
     d_twiddles: &mut DeviceBuffer<ScalarField_BLS12_381>,
     batch_size: usize,
     inverse: bool,
+    is_rbo_in: bool,
+    is_increasing: bool,
     device_id: usize,
 ) -> i32 {
     unsafe {
@@ -739,6 +757,8 @@ pub fn ntt_inplace_batch_bls12_381(
             d_twiddles.len(),
             batch_size,
             inverse,
+            is_rbo_in,
+            is_increasing,
             device_id,
         )
     }
