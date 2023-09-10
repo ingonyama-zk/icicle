@@ -400,8 +400,8 @@ fn ntt_internal_batch_bls12_381(
     _device_id: usize,
     batch_size: usize,
     inverse: bool,
-    is_increasing: bool,
     is_rbo_in: bool,
+    is_increasing: bool,
 ) -> i32 {
     unsafe {
         ntt_batch_cuda_bls12_381(
@@ -409,8 +409,8 @@ fn ntt_internal_batch_bls12_381(
             values.len(),
             batch_size,
             inverse,
+            is_rbo_in,
             is_increasing,
-            is_rbo_in
         )
     }
 }
