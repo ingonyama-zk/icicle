@@ -1,8 +1,8 @@
 #include "poseidon.cuh"
 
 template <typename S>
-__global__ void prepare_poseidon_states(S * states, size_t number_of_states, S domain_tag, const PoseidonConfiguration<S> config) {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+__global__ void prepare_poseidon_states(S * states, size_t number_of_states, S domain_tag, const PoseidonConfiguration<S> config, bool aligned) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int state_number = idx / config.t;
     if (state_number >= number_of_states) {
         return;
@@ -15,7 +15,15 @@ __global__ void prepare_poseidon_states(S * states, size_t number_of_states, S d
     if (element_number == 0) {
         prepared_element = domain_tag;
     } else {
-        prepared_element = states[state_number * config.t + element_number - 1];
+        if (aligned) {
+            prepared_element = states[state_number * config.t + element_number - 1];
+        } else {
+            prepared_element = states[idx];
+        }
+    }
+
+    if (aligned) {
+        __syncthreads();
     }
 
     // Add pre-round constant
@@ -148,7 +156,38 @@ __global__ void get_hash_results(S * states, size_t number_of_states, S * out, i
 }
 
 template <typename S>
-__host__ void Poseidon<S>::poseidon_hash(S * states, size_t blocks, S * out, HashType hash_type, cudaStream_t stream) {
+__global__ void copy_recursive(S * state, size_t number_of_states, S * out, int t) {
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= number_of_states) {
+        return;
+    }
+
+    state[(idx / (t - 1) * t) + (idx % (t - 1)) + 1] = out[idx];
+}
+
+// Compute the poseidon hash over a sequence of preimages
+///
+///=====================================================
+/// # Arguments
+/// * `states`  - a device pointer to the states memory. Expected to be of size `blocks * t` elements. States should contain the leaves values
+/// * `blocks`  - number of preimages blocks. Each block is of size t
+/// * `out` - a device pointer to the digests memory. Expected to be of size `sum(arity ^ (i)) for i in [0..height-1]`
+/// * `hash_type`  - this will determine the domain_tag value
+/// * `stream` - a cuda stream to run the kernels
+/// * `aligned` - if set to `true`, the algorithm expects the states to contain leaves in an aligned form
+/// Aligned form (for arity = 2):
+/// [X1, X2, 0, X3, X4, 0, ...]
+///
+/// Not aligned form (for arity = 2):
+/// [X1, X2, X3, X4, ..., 0, 0, ...]
+///
+/// # Algorithm
+/// The function will split large trees into many subtrees of size that will fit `STREAM_CHUNK_SIZE`.
+/// The subtrees will be constructed in streams pool. Each stream will handle a subtree
+/// After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
+///======================================================
+template <typename S>
+__host__ void Poseidon<S>::poseidon_hash(S * states, size_t blocks, S * out, HashType hash_type, cudaStream_t stream, bool aligned, bool loop_results) {
     size_t rc_offset = 0;
 
     // The logic behind this is that 1 thread only works on 1 element
@@ -180,7 +219,7 @@ __host__ void Poseidon<S>::poseidon_hash(S * states, size_t blocks, S * out, Has
     #endif
 
     // Domain separation and adding pre-round constants
-    prepare_poseidon_states <<< number_of_blocks, number_of_threads, 0, stream >>> (states, blocks, domain_tag, this->config);
+    prepare_poseidon_states <<< number_of_blocks, number_of_threads, 0, stream >>> (states, blocks, domain_tag, this->config, aligned);
     rc_offset += this->t;
 
     #if !defined(__CUDA_ARCH__) && defined(POSEIDON_DEBUG)
@@ -247,6 +286,10 @@ __host__ void Poseidon<S>::poseidon_hash(S * states, size_t blocks, S * out, Has
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "Elapsed time: " << elapsed_time.count() << " ms" << std::endl;
     #endif
+
+    if (loop_results) {
+        copy_recursive <<< number_of_singlehash_blocks, singlehash_block_size, 0, stream >>> (states, blocks, out, this->config.t);
+    }
 }
 
 template <typename S>
@@ -267,7 +310,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
                  (this->t - 1) * sizeof(S), blocks, // Size of the source matrix (Arity x NumberOfBlocks)
                  cudaMemcpyHostToDevice, stream);
 
-    this.poseidon_hash(states, blocks, out_device, hash_type, stream);
+    this->poseidon_hash(states, blocks, out_device, hash_type, stream, true, false);
 
     cudaFreeAsync(states, stream);
     cudaMemcpyAsync(out, out_device, blocks * sizeof(S), cudaMemcpyDeviceToHost, stream);

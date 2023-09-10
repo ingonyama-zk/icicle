@@ -1,6 +1,6 @@
-#pragma once
 #include "../poseidon/poseidon.cuh"
 #include <math.h>
+#include <iostream>
 
 static constexpr size_t GIGA = 1024 * 1024 * 1024;
 
@@ -12,7 +12,7 @@ static constexpr size_t STREAM_CHUNK_SIZE = 1024 * 1024 * 1024;
 size_t get_digests_len(uint32_t height, uint32_t arity) {
     size_t digests_len = 0;
     size_t row_length = 1;
-    for (int i = 0; i < height; i++) {
+    for (int i = 1; i < height; i++) {
         digests_len += row_length;
         row_length *= arity;
     }
@@ -20,26 +20,92 @@ size_t get_digests_len(uint32_t height, uint32_t arity) {
     return digests_len;
 }
 
-/// Construct merkle tree without parallelization
+/// Construct merkle subtree without parallelization
 template <typename S>
-void __build_merkle_tree_internal(S * leaves, S * state, S * digests, size_t leaves_size, Poseidon<S> &poseidon, cudaStream_t stream) {
+void __build_merkle_subtree(S * state, S * digests, size_t subtree_idx,
+                            size_t leaves_size,
+                            S * big_tree_digests, size_t start_segment_size,
+                            Poseidon<S> &poseidon, cudaStream_t &stream) {
+    // We would need to align the digests of a big tree correctly
+    // The digests are aligned sequentially per row
+    // Example:
+    //
+    // Big tree:
+    //
+    //        1
+    //       / \
+    //      2   3
+    //     / \ / \
+    //    4  5 6  7
+    //
+    // Subtree 1    Subtree 2
+    //    2            3
+    //   / \          / \
+    //  4   5        6   7
+    //
+    // Digests array for subtree 1:
+    // [4 5 . . 2 .]
+    // |   |    |
+    // -----    V
+    //   |    Segment (offset = 4, subtree_idx = 0)
+    //   v
+    // Segment (offset = 0, subtree_idx = 0)
+    //
+    // Digests array for subtree 2:
+    // [. . 6 7 . 3]
+    //     |   |
+    //     -----
+    //       |
+    //       v
+    //    Segment (offset = 0, subtree_idx = 1)
+    //
+    // Total digests array:
+    // [4 5 6 7 2 3]
+
     uint32_t number_of_blocks = leaves_size / poseidon.arity;
+    size_t segment_size = start_segment_size;
+    size_t segment_offset = 0;
+    
     bool first_iteration = true;
     while (number_of_blocks > 0) {
-        poseidon.poseidon_hash(state, number_of_blocks, out_ptr,
-                               Poseidon<S>::HashType::MerkleTree, stream);
-        
-        // TO-DO: Deal with pointers
+        // std::cout << "Calculating Hash for input: " << std::endl;
+        // size_t size = number_of_blocks * poseidon.t;
+        // S * input_buffer = static_cast< S * >(malloc(size * sizeof(S)));
+        // cudaMemcpy(input_buffer, state, size * sizeof(S), cudaMemcpyDeviceToHost);
+        // for (int i = 0; i < size; i++ ) {
+        //     std::cout << input_buffer[i] << std::endl;
+        // }
+
+        poseidon.poseidon_hash(state, number_of_blocks, digests,
+                            Poseidon<S>::HashType::MerkleTree, stream, first_iteration, true);
+
+        // std::cout << "Result:" << std::endl;
+        // size = number_of_blocks;
+        // S * digest_buffer = static_cast< S * >(malloc(size * sizeof(S)));
+        // cudaMemcpy(digest_buffer, digests, size * sizeof(S), cudaMemcpyDeviceToHost);
+        // for (int i = 0; i < size; i++ ) {
+        //     std::cout << digest_buffer[i] << std::endl;
+        // }
+
+        S * digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_blocks;
+        cudaMemcpyAsync(digests_with_offset, digests,
+                        number_of_blocks * sizeof(S), cudaMemcpyDeviceToHost,
+                        stream);
+
         number_of_blocks /= poseidon.arity;
+        segment_offset += segment_size;
+        segment_size /= poseidon.arity;
+        first_iteration = false;
     }
+
 }
 
 /// Constructs the merkle tree
 ///
 ///=====================================================
 /// # Arguments
-/// * `leaves`  - a pointer to the leaves array. Expected to have arity ^ (height - 1) elements
-/// * `digests` - a pointer to write digests to. Expected to have `sum(arity ^ (i)) for i in [0..height-1]` elements
+/// * `leaves`  - a host pointer to the leaves array. Expected to have arity ^ (height - 1) elements
+/// * `digests` - a host pointer to write digests to. Expected to have `sum(arity ^ (i)) for i in [0..height-1]` elements
 /// * `height`  - the height of a tree 
 /// * `poseidon` - an instance of the poseidon hasher
 /// * `stream` - a cuda stream for top-level operations
@@ -51,17 +117,7 @@ void __build_merkle_tree_internal(S * leaves, S * state, S * digests, size_t lea
 ///======================================================
 template <typename S>
 void build_merkle_tree(const S * leaves, S* digests, uint32_t height, Poseidon<S> &poseidon, cudaStream_t stream) {
-    size_t available_memory, _total_memory;
-    cudaMemGetInfo(&available_memory, &_total_memory);
-    available_memory -= GIGA / 8; // Leave 128 MB
-
-    // We can effectively parallelize memory copy with streams
-    // as long as they don't operate on more than `STREAM_CHUNK_SIZE` bytes
-    const size_t number_of_streams = available_memory / STREAM_CHUNK_SIZE;
-    cudaStream_t* streams = static_cast<cudaStream_t*>(malloc(sizeof(cudaStream_t) * number_of_streams));
-    for (size_t i = 0; i < number_of_streams; i++) {
-        cudaStreamCreate(&streams[i]);
-    }
+    uint32_t number_of_leaves = pow(poseidon.arity, (height - 1));
 
     // This will determine how much splitting do we need to do
     // `number_of_streams` subtrees should fit in the device
@@ -70,40 +126,59 @@ void build_merkle_tree(const S * leaves, S* digests, uint32_t height, Poseidon<S
     uint32_t subtree_height = height;
     uint32_t subtree_leaves_size = pow(poseidon.arity, height - 1);
     uint32_t subtree_state_size = subtree_leaves_size / poseidon.arity * poseidon.t;
-    uint32_t subtree_digests_size = get_digests_len(subtree_height, poseidon.arity);
+    uint32_t subtree_digests_size = subtree_state_size / poseidon.arity;
     size_t subtree_memory_required = sizeof(S) * (subtree_state_size + subtree_digests_size);
     while (subtree_memory_required > STREAM_CHUNK_SIZE) {
         number_of_subtrees *= poseidon.arity;
         subtree_height--;
-        subtree_leaves_size = pow(poseidon.arity, subtree_height - 1);
+        subtree_leaves_size /= poseidon.arity;
         subtree_state_size = subtree_leaves_size / poseidon.arity * poseidon.t;
-        subtree_digests_size = get_digests_len(subtree_height, poseidon.arity);
+        subtree_digests_size = subtree_state_size / poseidon.arity;
         subtree_memory_required = sizeof(S) * (subtree_state_size + subtree_digests_size);
     }
-    std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;
-    std::cout << "Number of streams = " << number_of_streams << std::endl;
     std::cout << "Number of subtrees = " << number_of_subtrees << std::endl;
-    std::cout << "Size of 1 subtree = " << subtree_leaves_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
+    std::cout << "Height of a subtree = " << subtree_height << std::endl;
+    std::cout << "Cutoff height = " << height - subtree_height + 1 << std::endl;
+    std::cout << "Number of leaves in a subtree = " << subtree_leaves_size << std::endl;
+    std::cout << "State of a subtree = " << subtree_state_size << std::endl;
+    std::cout << "Digest elements for a subtree = " << get_digests_len(subtree_height, poseidon.arity) << std::endl;
+    std::cout << "Size of 1 subtree states = " << subtree_state_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Size of 1 subtree digests = " << subtree_digests_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
+
+    size_t available_memory, _total_memory;
+    cudaMemGetInfo(&available_memory, &_total_memory);
+    available_memory -= GIGA / 8; // Leave 128 MB
+    std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;
+
+    // We can effectively parallelize memory copy with streams
+    // as long as they don't operate on more than `STREAM_CHUNK_SIZE` bytes
+    const size_t number_of_streams = std::min((uint32_t)(available_memory / STREAM_CHUNK_SIZE), number_of_subtrees);
+    std::cout << "Number of streams = " << number_of_streams << std::endl;
+    cudaStream_t* streams = static_cast<cudaStream_t*>(malloc(sizeof(cudaStream_t) * number_of_streams));
+    for (size_t i = 0; i < number_of_streams; i++) {
+        cudaStreamCreate(&streams[i]);
+    }
 
     // Allocate memory for the leaves and digests
     // These are shared by streams in a pool
     S * states_ptr, * digests_ptr;
     if (cudaMallocAsync(&states_ptr, subtree_state_size * number_of_streams * sizeof(S), stream) != cudaSuccess) {
-        throw std::runtime_error("Failed memory allocation on the device");
+        throw std::runtime_error("Failed memory allocation of states on the device");
     }
     if (cudaMallocAsync(&digests_ptr, subtree_digests_size * number_of_streams * sizeof(S), stream) != cudaSuccess) {
-        throw std::runtime_error("Failed memory allocation on the device");
+        throw std::runtime_error("Failed memory allocation of digests on the device");
     }
     // We should wait for these allocations to finish in order to proceed
     cudaStreamSynchronize(stream);
 
     for (size_t subtree_idx = 0; subtree_idx < number_of_subtrees; subtree_idx++) {
-        cudaStream_t * subtree_stream = streams[subtree_idx % number_of_streams];
+        std::cout << "Processing subtree #" << subtree_idx << std::endl;
+        size_t stream_idx = subtree_idx % number_of_streams;
+        cudaStream_t subtree_stream = streams[stream_idx];
 
-        S * subtree_leaves = leaves + subtree_idx * subtree_leaves_size;
-        S * subtree_state = states_ptr + subtree_idx * subtree_state_size;
-        S * subtree_digests = leaves_ptr + subtree_idx * subtree_digests_size;
+        const S * subtree_leaves = leaves + subtree_idx * subtree_leaves_size;
+        S * subtree_state = states_ptr + stream_idx * subtree_state_size;
+        S * subtree_digests = digests_ptr + stream_idx * subtree_digests_size;
 
         // We need to copy the first level from RAM to device
         // The pitch property of cudaMemcpy2D will allow us to deal with shape differences
@@ -113,13 +188,14 @@ void build_merkle_tree(const S * leaves, S* digests, uint32_t height, Poseidon<S
                           subtree_leaves_size / poseidon.arity,       // Size of the source matrix (Number of blocks)
                           cudaMemcpyHostToDevice, subtree_stream);    // Direction and stream
 
-        __build_merkle_tree_internal<S>(subtree_leaves, subtree_state, subtree_digests,
-                                      subtree_leaves_size, poseidon, subtree_stream);
-        // TO-DO: cudaMemcpyAsync here to copy back
+        __build_merkle_subtree<S>(subtree_state, subtree_digests,
+                                  subtree_idx, subtree_leaves_size,
+                                  digests, number_of_leaves / poseidon.arity,
+                                  poseidon, subtree_stream);
     }
 
+    cudaFreeAsync(states_ptr, stream);
     cudaFreeAsync(digests_ptr, stream);
-    cudaFreeAsync(leaves_ptr, stream);
     for (size_t i = 0; i < number_of_streams; i++) {
         cudaStreamDestroy(streams[i]);
     }

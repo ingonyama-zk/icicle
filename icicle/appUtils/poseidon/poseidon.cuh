@@ -160,7 +160,7 @@ class Poseidon {
     /// This function will copy input from host and copy the result from device
     void hash_blocks(const S * inp, size_t blocks, S * out, HashType hash_type, cudaStream_t stream);
     /// This function is called by `hash_blocks`. It will interpret all the pointers as device memory
-    void poseidon_hash(S * states, size_t blocks, S * out, HashType hash_type, cudaStream_t stream) {
+    void poseidon_hash(S * states, size_t blocks, S * out, HashType hash_type, cudaStream_t stream, bool aligned, bool loop_results);
 
   private:
     S tree_domain_tag, const_input_no_pad_domain_tag;
