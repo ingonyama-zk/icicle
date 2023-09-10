@@ -300,7 +300,7 @@ void ntt_inplace_batch_template(
   bool is_inverse,
   bool is_coset,
   S* coset,
-  bool is_increasing, //TODO: rename? is_rev or is_ct
+  bool is_increasing, // TODO: rename? is_rev or is_ct
   cudaStream_t stream,
   bool is_sync_needed)
 {
@@ -368,8 +368,8 @@ void ntt_inplace_batch_template(
  * @param inverse indicate if the result array should be normalized by n^(-1).
  */
 template <typename E, typename S>
-uint32_t
-ntt_end2end_batch_template(E* arr, uint32_t arr_size, uint32_t n, bool inverse, bool is_rbo_in, bool is_increasing, cudaStream_t stream)
+uint32_t ntt_end2end_batch_template(
+  E* arr, uint32_t arr_size, uint32_t n, bool inverse, bool is_rbo_in, bool is_increasing, cudaStream_t stream)
 {
   int batches = int(arr_size / n);
   uint32_t logn = uint32_t(log(n) / log(2));
