@@ -59,14 +59,41 @@ extern "C" {
         device_id: usize,
     ) -> DevicePointer<ScalarField_BLS12_381>;
 
-    fn ntt_cuda_bls12_381(inout: *mut ScalarField_BLS12_381, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool, device_id: usize) -> c_int;
+    fn ntt_cuda_bls12_381(
+        inout: *mut ScalarField_BLS12_381,
+        n: usize,
+        inverse: bool,
+        is_rbo_in: bool,
+        is_increasing: bool,
+        device_id: usize,
+    ) -> c_int;
 
-    fn ecntt_cuda_bls12_381(inout: *mut Point_BLS12_381, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool, device_id: usize) -> c_int;
+    fn ecntt_cuda_bls12_381(
+        inout: *mut Point_BLS12_381,
+        n: usize,
+        inverse: bool,
+        is_rbo_in: bool,
+        is_increasing: bool,
+        device_id: usize,
+    ) -> c_int;
 
-    fn ntt_batch_cuda_bls12_381(inout: *mut ScalarField_BLS12_381, arr_size: usize, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool) -> c_int;
+    fn ntt_batch_cuda_bls12_381(
+        inout: *mut ScalarField_BLS12_381,
+        arr_size: usize,
+        n: usize,
+        inverse: bool,
+        is_rbo_in: bool,
+        is_increasing: bool,
+    ) -> c_int;
 
-    fn ecntt_batch_cuda_bls12_381(inout: *mut Point_BLS12_381, 
-        arr_size: usize, n: usize, inverse: bool, is_rbo_in: bool, is_increasing: bool) -> c_int;
+    fn ecntt_batch_cuda_bls12_381(
+        inout: *mut Point_BLS12_381,
+        arr_size: usize,
+        n: usize,
+        inverse: bool,
+        is_rbo_in: bool,
+        is_increasing: bool,
+    ) -> c_int;
 
     fn ntt_inplace_batch_cuda_bls12_381(
         d_inout: DevicePointer<ScalarField_BLS12_381>,
@@ -371,8 +398,13 @@ pub fn commit_batch_bls12_381(
 }
 
 /// Compute an in-place NTT on the input data.
-fn ntt_internal_bls12_381(values: &mut [ScalarField_BLS12_381], device_id: usize, 
-    inverse: bool, is_rbo_in: bool, is_increasing: bool) -> i32 {
+fn ntt_internal_bls12_381(
+    values: &mut [ScalarField_BLS12_381],
+    device_id: usize,
+    inverse: bool,
+    is_rbo_in: bool,
+    is_increasing: bool,
+) -> i32 {
     let ret_code = unsafe {
         ntt_cuda_bls12_381(
             values as *mut _ as *mut ScalarField_BLS12_381,
@@ -424,7 +456,13 @@ pub fn intt_batch_bls12_381(values: &mut [ScalarField_BLS12_381], batch_size: us
 }
 
 /// Compute an in-place ECNTT on the input data.
-fn ecntt_internal_bls12_381(values: &mut [Point_BLS12_381], inverse: bool, is_rbo_in: bool, is_increasing: bool, device_id: usize) -> i32 {
+fn ecntt_internal_bls12_381(
+    values: &mut [Point_BLS12_381],
+    inverse: bool,
+    is_rbo_in: bool,
+    is_increasing: bool,
+    device_id: usize,
+) -> i32 {
     unsafe {
         ecntt_cuda_bls12_381(
             values as *mut _ as *mut Point_BLS12_381,
@@ -462,7 +500,7 @@ fn ecntt_internal_batch_bls12_381(
             batch_size,
             inverse,
             is_rbo_in,
-            is_increasing
+            is_increasing,
         )
     }
 }
