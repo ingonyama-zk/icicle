@@ -47,12 +47,13 @@ __device__ S vecs_mul_matrix(S element, S* matrix, int element_number, int vec_n
   shared_states[threadIdx.x] = element;
   __syncthreads();
 
-  element = S::zero();
-  for (int i = 0; i < size; i++) {
-    element = element + (shared_states[vec_number * size + i] * matrix[i * size + element_number]);
+  typename S::Wide element_wide = S::mul_wide(shared_states[vec_number * size], matrix[element_number]);
+  for (int i = 1; i < size; i++) {
+    element_wide = element_wide + S::mul_wide(shared_states[vec_number * size + i], matrix[i * size + element_number]);
   }
   __syncthreads();
-  return element;
+
+  return S::reduce(element_wide);
 }
 
 template <typename S>
@@ -106,10 +107,11 @@ __device__ S partial_round(S* state, size_t rc_offset, int round_number, const P
 
   S* sparse_matrix = &config.sparse_matrices[(config.t * 2 - 1) * round_number];
 
-  state[0] = element * sparse_matrix[0];
+  typename S::Wide state_0_wide = S::mul_wide(element, sparse_matrix[0]);
   for (int i = 1; i < config.t; i++) {
-    state[0] = state[0] + (state[i] * sparse_matrix[i]);
+    state_0_wide = state_0_wide + S::mul_wide(state[i], sparse_matrix[i]);
   }
+  state[0] = S::reduce(state_0_wide);
 
   for (int i = 1; i < config.t; i++) {
     state[i] = state[i] + (element * sparse_matrix[config.t + i - 1]);
