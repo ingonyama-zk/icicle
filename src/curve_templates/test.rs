@@ -1,19 +1,15 @@
 use std::ffi::{c_int, c_uint};
-
 use rand::{rngs::StdRng, RngCore, SeedableRng};
-
-
 use crate::curves::CURVE_NAME_L::*;
-
 use ark_CURVE_NAME_L::{Fr as Fr_CURVE_NAME_U, G1Projective as G1Projective_CURVE_NAME_U};
 use ark_ff::PrimeField;
 use ark_std::UniformRand;
-
 use rustacuda::prelude::*;
 use rustacuda_core::DevicePointer;
 use rustacuda::memory::{DeviceBox, CopyDestination, DeviceCopy};
 
 extern "C" {
+
     fn msm_cuda_CURVE_NAME_L(
         out: *mut Point_CURVE_NAME_U,
         points: *const PointAffineNoInfinity_CURVE_NAME_U,
@@ -62,6 +58,15 @@ extern "C" {
     ) -> c_int;
 
     fn ecntt_batch_cuda_CURVE_NAME_L(inout: *mut Point_CURVE_NAME_U, arr_size: usize, n: usize, inverse: bool) -> c_int;
+
+    fn ntt_inplace_batch_cuda_CURVE_NAME_L(
+        d_inout: DevicePointer<ScalarField_CURVE_NAME_U>,
+        d_twiddles: DevicePointer<ScalarField_CURVE_NAME_U>,
+        n: usize,
+        batch_size: usize,
+        inverse: bool,
+        device_id: usize
+    ) -> c_int;
 
     fn interpolate_scalars_cuda_CURVE_NAME_L(
         d_out: DevicePointer<ScalarField_CURVE_NAME_U>,
@@ -478,6 +483,7 @@ pub fn interpolate_scalars_batch_CURVE_NAME_L(
     d_domain: &mut DeviceBuffer<ScalarField_CURVE_NAME_U>,
     batch_size: usize,
 ) -> DeviceBuffer<ScalarField_CURVE_NAME_U> {
+
     let mut res = unsafe { DeviceBuffer::uninitialized(d_domain.len() * batch_size).unwrap() };
     unsafe { interpolate_scalars_batch_cuda_CURVE_NAME_L(
         res.as_device_ptr(),
@@ -682,6 +688,25 @@ pub fn evaluate_points_on_coset_batch_CURVE_NAME_L(
     return res;
 }
 
+pub fn ntt_inplace_batch_CURVE_NAME_L(
+    d_inout: &mut DeviceBuffer<ScalarField_CURVE_NAME_U>,
+    d_twiddles: &mut DeviceBuffer<ScalarField_CURVE_NAME_U>,
+    batch_size: usize,
+    inverse: bool,
+    device_id: usize
+) -> i32 {
+    unsafe {
+        ntt_inplace_batch_cuda_CURVE_NAME_L(
+            d_inout.as_device_ptr(),
+            d_twiddles.as_device_ptr(),
+            d_twiddles.len(),
+            batch_size,
+            inverse,
+            device_id
+        )
+    }
+}
+
 pub fn multp_vec_CURVE_NAME_L(a: &mut [Point_CURVE_NAME_U], b: &[ScalarField_CURVE_NAME_U], device_id: usize) {
     assert_eq!(a.len(), b.len());
     unsafe {
@@ -732,7 +757,7 @@ pub fn clone_buffer_CURVE_NAME_L<T: DeviceCopy>(buf: &mut DeviceBuffer<T>) -> De
     return buf_cpy;
 }
 
-pub fn get_rng_CURVE_NAME_L(seed: Option<u64>) -> Box<dyn RngCore> {
+pub fn get_rng_CURVE_NAME_L(seed: Option<u64>) -> Box<dyn RngCore> { //TODO: not curve specific
     let rng: Box<dyn RngCore> = match seed {
         Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
         None => Box::new(rand::thread_rng()),
@@ -1145,7 +1170,6 @@ pub(crate) mod tests_CURVE_NAME_L {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars_CURVE_NAME_L(test_size, log_test_size, true);
 
-        reverse_order_scalars_CURVE_NAME_L(&mut d_evals);
         let mut d_coeffs = interpolate_scalars_CURVE_NAME_L(&mut d_evals, &mut d_domain);
         intt_CURVE_NAME_L(&mut evals_mut, 0);
         let mut h_coeffs: Vec<ScalarField_CURVE_NAME_U> = (0..test_size).map(|_| ScalarField_CURVE_NAME_U::zero()).collect();
@@ -1161,7 +1185,6 @@ pub(crate) mod tests_CURVE_NAME_L {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_scalars_CURVE_NAME_L(test_size * batch_size, log_test_size, true);
 
-        reverse_order_scalars_batch_CURVE_NAME_L(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_scalars_batch_CURVE_NAME_L(&mut d_evals, &mut d_domain, batch_size);
         intt_batch_CURVE_NAME_L(&mut evals_mut, test_size, 0);
         let mut h_coeffs: Vec<ScalarField_CURVE_NAME_U> = (0..test_size * batch_size).map(|_| ScalarField_CURVE_NAME_U::zero()).collect();
@@ -1176,7 +1199,6 @@ pub(crate) mod tests_CURVE_NAME_L {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points_CURVE_NAME_L(test_size, log_test_size, true);
 
-        reverse_order_points_CURVE_NAME_L(&mut d_evals);
         let mut d_coeffs = interpolate_points_CURVE_NAME_L(&mut d_evals, &mut d_domain);
         iecntt_CURVE_NAME_L(&mut evals_mut[..], 0);
         let mut h_coeffs: Vec<Point_CURVE_NAME_U> = (0..test_size).map(|_| Point_CURVE_NAME_U::zero()).collect();
@@ -1195,7 +1217,6 @@ pub(crate) mod tests_CURVE_NAME_L {
         let test_size = 1 << log_test_size;
         let (mut evals_mut, mut d_evals, mut d_domain) = set_up_points_CURVE_NAME_L(test_size * batch_size, log_test_size, true);
 
-        reverse_order_points_batch_CURVE_NAME_L(&mut d_evals, batch_size);
         let mut d_coeffs = interpolate_points_batch_CURVE_NAME_L(&mut d_evals, &mut d_domain, batch_size);
         iecntt_batch_CURVE_NAME_L(&mut evals_mut[..], test_size, 0);
         let mut h_coeffs: Vec<Point_CURVE_NAME_U> = (0..test_size * batch_size).map(|_| Point_CURVE_NAME_U::zero()).collect();
@@ -1420,31 +1441,6 @@ pub(crate) mod tests_CURVE_NAME_L {
             assert_ne!(h_evals_large[2 * i], Point_CURVE_NAME_U::zero());
             assert_ne!(h_evals_large[2 * i + 1], Point_CURVE_NAME_U::zero());
         }
-    }
-
-    // testing matrix multiplication by comparing the result of FFT with the naive multiplication by the DFT matrix
-    #[test]
-    fn test_matrix_multiplication() {
-        let seed = None; // some value to fix the rng
-        let test_size = 1 << 5;
-        let rou = Fr::get_root_of_unity(test_size).unwrap();
-        let matrix_flattened: Vec<ScalarField_CURVE_NAME_U> = (0..test_size).map(
-            |row_num| { (0..test_size).map( 
-                |col_num| {
-                    let pow: [u64; 1] = [(row_num * col_num).try_into().unwrap()];
-                    ScalarField_CURVE_NAME_U::from_ark(Fr::pow(&rou, &pow).into_repr())
-                }).collect::<Vec<ScalarField_CURVE_NAME_U>>()
-            }).flatten().collect::<Vec<_>>();
-        let vector: Vec<ScalarField_CURVE_NAME_U> = generate_random_scalars_CURVE_NAME_L(test_size, get_rng_CURVE_NAME_L(seed));
-
-        let result = mult_matrix_by_vec_CURVE_NAME_L(&matrix_flattened, &vector, 0);
-        let mut ntt_result = vector.clone();
-        ntt_CURVE_NAME_L(&mut ntt_result, 0);
-        
-        // we don't use the same roots of unity as arkworks, so the results are permutations
-        // of one another and the only guaranteed fixed scalars are the following ones:
-        assert_eq!(result[0], ntt_result[0]);
-        assert_eq!(result[test_size >> 1], ntt_result[test_size >> 1]);
     }
 
     #[test]

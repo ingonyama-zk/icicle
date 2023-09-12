@@ -7,7 +7,9 @@ set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # add the target cuda architectures
 # each additional architecture increases the compilation time and output file size
-if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+if (${CMAKE_VERSION} VERSION_LESS "3.24.0")
+    set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
+else()
     set(CMAKE_CUDA_ARCHITECTURES native) # on 3.24+, on earlier it is ignored, and the target is not passed
 endif ()
 project(icicle LANGUAGES CUDA CXX)
@@ -22,6 +24,10 @@ FetchContent_Declare(
   URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
+
+# boosting lib
+include_directories("/home/miner/include/boost_1_80_0")
+
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 

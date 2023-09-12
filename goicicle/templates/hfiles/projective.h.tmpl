@@ -1,0 +1,33 @@
+#include <cuda.h>
+#include <stdbool.h>
+// projective.h
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {{.CurveNameUpperCase}}_projective_t {{.CurveNameUpperCase}}_projective_t;
+typedef struct {{.CurveNameUpperCase}}_g2_projective_t {{.CurveNameUpperCase}}_g2_projective_t;
+typedef struct {{.CurveNameUpperCase}}_affine_t {{.CurveNameUpperCase}}_affine_t;
+typedef struct {{.CurveNameUpperCase}}_g2_affine_t {{.CurveNameUpperCase}}_g2_affine_t;
+typedef struct {{.CurveNameUpperCase}}_scalar_t {{.CurveNameUpperCase}}_scalar_t;
+
+bool projective_is_on_curve_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_projective_t* point1);
+
+int random_scalar_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_scalar_t* out); 
+int random_projective_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_projective_t* out);
+{{.CurveNameUpperCase}}_projective_t* projective_zero_{{.CurveNameLowerCase}}();
+int projective_to_affine_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_affine_t* out, {{.CurveNameUpperCase}}_projective_t* point1);
+int projective_from_affine_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_projective_t* out, {{.CurveNameUpperCase}}_affine_t* point1);
+
+int random_g2_projective_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_g2_projective_t* out);
+int g2_projective_to_affine_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_g2_affine_t* out, {{.CurveNameUpperCase}}_g2_projective_t* point1);
+int g2_projective_from_affine_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_g2_projective_t* out, {{.CurveNameUpperCase}}_g2_affine_t* point1);
+bool g2_projective_is_on_curve_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_g2_projective_t* point1);
+
+bool eq_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_projective_t* point1, {{.CurveNameUpperCase}}_projective_t* point2);
+bool eq_g2_{{.CurveNameLowerCase}}({{.CurveNameUpperCase}}_g2_projective_t* point1, {{.CurveNameUpperCase}}_g2_projective_t* point2);
+
+#ifdef __cplusplus
+}
+#endif

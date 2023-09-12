@@ -9,15 +9,6 @@
 #include <fstream>
 #include <math.h>
 
-void dump(BLS12_381::scalar_t * buf, size_t size, std::string filepath) {
-  std::ofstream outfile(filepath, std::ios::binary);
-  for (int i = 0; i < size; i++) {
-    BLS12_381::scalar_t el = buf[i];
-    outfile.write((char *)&el, sizeof(BLS12_381::scalar_t));
-  }
-  outfile.close();
-}
-
 int main(int argc, char* argv[]) {
   using FpMilliseconds = 
     std::chrono::duration<float, std::chrono::milliseconds::period>;
