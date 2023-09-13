@@ -887,100 +887,137 @@ __global__ void to_proj_kernel(A* affine_points, P* proj_points, unsigned N)
   if (tid < N) proj_points[tid] = P::from_affine(affine_points[tid]);
 }
 
-// the function computes msm using ssm
+// // the function computes msm using ssm
+// template <typename S, typename P, typename A>
+// void short_msm(S* h_scalars, A* h_points, unsigned size, P* h_final_result, cudaStream_t stream)
+// { // works up to 2^8
+//   S* scalars;
+//   A* a_points;
+//   P* p_points;
+//   P* results;
+
+//   cudaMallocAsync(&scalars, sizeof(S) * size, stream);
+//   cudaMallocAsync(&a_points, sizeof(A) * size, stream);
+//   cudaMallocAsync(&p_points, sizeof(P) * size, stream);
+//   cudaMallocAsync(&results, sizeof(P) * size, stream);
+
+//   // copy inputs to device
+//   cudaMemcpyAsync(scalars, h_scalars, sizeof(S) * size, cudaMemcpyHostToDevice, stream);
+//   cudaMemcpyAsync(a_points, h_points, sizeof(A) * size, cudaMemcpyHostToDevice, stream);
+
+//   // convert to projective representation and multiply each point by its scalar using single scalar multiplication
+//   unsigned NUM_THREADS = size;
+//   to_proj_kernel<<<1, NUM_THREADS, 0, stream>>>(a_points, p_points, size);
+//   ssm_kernel<<<1, NUM_THREADS, 0, stream>>>(scalars, p_points, results, size);
+
+//   P* final_result;
+//   cudaMallocAsync(&final_result, sizeof(P), stream);
+
+//   // assuming msm size is a power of 2
+//   // sum all the ssm results
+//   NUM_THREADS = size;
+//   sum_reduction_kernel<<<1, NUM_THREADS, 0, stream>>>(results, final_result);
+
+//   // copy result to host
+//   cudaStreamSynchronize(stream);
+//   cudaMemcpyAsync(h_final_result, final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
+
+//   // free memory
+//   cudaFreeAsync(scalars, stream);
+//   cudaFreeAsync(a_points, stream);
+//   cudaFreeAsync(p_points, stream);
+//   cudaFreeAsync(results, stream);
+//   cudaFreeAsync(final_result, stream);
+// }
+
+// // the function computes msm on the host using the naive method
+// template <typename A, typename S, typename P>
+// void reference_msm(S* scalars, A* a_points, unsigned size)
+// {
+//   P* points = new P[size];
+//   // P points[size];
+//   for (unsigned i = 0; i < size; i++) {
+//     points[i] = P::from_affine(a_points[i]);
+//   }
+
+//   P res = P::zero();
+
+//   for (unsigned i = 0; i < size; i++) {
+//     res = res + scalars[i] * points[i];
+//   }
+
+//   std::cout << "reference results" << std::endl;
+//   std::cout << P::to_affine(res) << std::endl;
+// }
+
+// unsigned get_optimal_c(const unsigned size)
+// {
+//   if (size < 17) return 1;
+//   // return 17;
+//   return ceil(log2(size)) - 4;
+// }
+
+// // this function is used to compute msms of size larger than 256
+// template <typename S, typename P, typename A>
+// void large_msm(
+//   S* scalars,
+//   A* points,
+//   unsigned size,
+//   P* result,
+//   bool on_device,
+//   bool big_triangle,
+//   unsigned large_bucket_factor,
+//   cudaStream_t stream)
+// {
+//   unsigned c = 16;
+//   unsigned bitsize = S::NBITS;
+//   bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle, large_bucket_factor, stream);
+// }
+
+// // this function is used to compute a batches of msms of size larger than 256 - currently isn't working on this branch
+// template <typename S, typename P, typename A>
+// void batched_large_msm(
+//   S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result, bool on_device, cudaStream_t stream)
+// {
+//   unsigned c = get_optimal_c(msm_size);
+//   unsigned bitsize = 255;
+//   batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device, stream);
+// }
+
 template <typename S, typename P, typename A>
-void short_msm(S* h_scalars, A* h_points, unsigned size, P* h_final_result, cudaStream_t stream)
-{ // works up to 2^8
-  S* scalars;
-  A* a_points;
-  P* p_points;
-  P* results;
-
-  cudaMallocAsync(&scalars, sizeof(S) * size, stream);
-  cudaMallocAsync(&a_points, sizeof(A) * size, stream);
-  cudaMallocAsync(&p_points, sizeof(P) * size, stream);
-  cudaMallocAsync(&results, sizeof(P) * size, stream);
-
-  // copy inputs to device
-  cudaMemcpyAsync(scalars, h_scalars, sizeof(S) * size, cudaMemcpyHostToDevice, stream);
-  cudaMemcpyAsync(a_points, h_points, sizeof(A) * size, cudaMemcpyHostToDevice, stream);
-
-  // convert to projective representation and multiply each point by its scalar using single scalar multiplication
-  unsigned NUM_THREADS = size;
-  to_proj_kernel<<<1, NUM_THREADS, 0, stream>>>(a_points, p_points, size);
-  ssm_kernel<<<1, NUM_THREADS, 0, stream>>>(scalars, p_points, results, size);
-
-  P* final_result;
-  cudaMallocAsync(&final_result, sizeof(P), stream);
-
-  // assuming msm size is a power of 2
-  // sum all the ssm results
-  NUM_THREADS = size;
-  sum_reduction_kernel<<<1, NUM_THREADS, 0, stream>>>(results, final_result);
-
-  // copy result to host
-  cudaStreamSynchronize(stream);
-  cudaMemcpyAsync(h_final_result, final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
-
-  // free memory
-  cudaFreeAsync(scalars, stream);
-  cudaFreeAsync(a_points, stream);
-  cudaFreeAsync(p_points, stream);
-  cudaFreeAsync(results, stream);
-  cudaFreeAsync(final_result, stream);
-}
-
-// the function computes msm on the host using the naive method
-template <typename A, typename S, typename P>
-void reference_msm(S* scalars, A* a_points, unsigned size)
-{
-  P* points = new P[size];
-  // P points[size];
-  for (unsigned i = 0; i < size; i++) {
-    points[i] = P::from_affine(a_points[i]);
-  }
-
-  P res = P::zero();
-
-  for (unsigned i = 0; i < size; i++) {
-    res = res + scalars[i] * points[i];
-  }
-
-  std::cout << "reference results" << std::endl;
-  std::cout << P::to_affine(res) << std::endl;
-}
-
-unsigned get_optimal_c(const unsigned size)
-{
-  if (size < 17) return 1;
-  // return 17;
-  return ceil(log2(size)) - 4;
-}
-
-// this function is used to compute msms of size larger than 256
-template <typename S, typename P, typename A>
-void large_msm(
+void msm_internal(
   S* scalars,
+  unsigned msm_size,
+  bool scalars_on_device,
   A* points,
-  unsigned size,
-  P* result,
-  bool on_device,
+  unsigned points_size,
+  unsigned precompute_factor,
+  bool points_montgomery_form,
+  bool points_on_device,
+  P* results,
+  unsigned batch_size,
+  bool results_on_device,
+  unsigned c,
+  unsigned bitsize,
   bool big_triangle,
   unsigned large_bucket_factor,
+  unsigned device_id,
   cudaStream_t stream)
+{
+  // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
+  // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
+  if (batch_size == 1)
+    bucket_method_msm(bitsize, c, scalars, points, msm_size, results, scalars_on_device, big_triangle, large_bucket_factor, stream);
+  else
+    batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, results, scalars_on_device, stream);
+}
+
+template <typename S, typename P, typename A>
+void msm(S* scalars, A* points, unsigned size, P* results, unsigned device_id, cudaStream_t stream)
 {
   unsigned c = 16;
   unsigned bitsize = S::NBITS;
-  bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle, large_bucket_factor, stream);
+  msm_internal(scalars, size, true, points, size, 1, false, true, results, 1, true, c, bitsize, false, 10, device_id, stream);
 }
 
-// this function is used to compute a batches of msms of size larger than 256 - currently isn't working on this branch
-template <typename S, typename P, typename A>
-void batched_large_msm(
-  S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result, bool on_device, cudaStream_t stream)
-{
-  unsigned c = get_optimal_c(msm_size);
-  unsigned bitsize = 255;
-  batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device, stream);
-}
 #endif
