@@ -1,5 +1,5 @@
 # ICICLE
- <div align="center">Icicle is a library for ZK acceleration using CUDA-enabled GPUs.</div>
+ **<div align="center">Icicle is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
 
                   
 ![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/build.yml/badge.svg)
+![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg)
 ![Discord server](https://img.shields.io/discord/1063033227788423299?label=Discord&logo=Discord&logoColor=%23&style=plastic)
 ![Follow us on twitter](https://img.shields.io/twitter/follow/Ingo_zk?style=social)
 
@@ -183,7 +183,13 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 
 ### Hall of Fame
 
-- [Robik](https://github.com/robik75), for his on-going support and mentorship 
+- [Robik](https://github.com/robik75), for his on-going support and mentorship
+- [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
+
+## Help & Support
+
+For help and support talk to our devs in our discord channel ["ICICLE"](https://discord.gg/EVVXTdt6DF) 
+
 
 ## License
 

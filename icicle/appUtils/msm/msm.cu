@@ -401,7 +401,7 @@ void bucket_method_msm(
   NUM_BLOCKS = (size * (nof_bms + 1) + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, nof_bms, bm_bitsize, c);
-    //+size - leaving the first bm free for the out of place sort later
+  //+size - leaving the first bm free for the out of place sort later
 
   // sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to
   // each bucket
@@ -757,7 +757,7 @@ void batched_bucket_method_msm(
   NUM_BLOCKS = (total_size * nof_bms + msm_size + NUM_THREADS - 1) / NUM_THREADS;
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, msm_log_size, nof_bms, bm_bitsize, c);
-    //+msm_size - leaving the first bm free for the out of place sort later
+  //+msm_size - leaving the first bm free for the out of place sort later
 
   // sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to
   // each bucket
@@ -814,13 +814,15 @@ void batched_bucket_method_msm(
   cudaFreeAsync(offsets_temp_storage, stream);
 
   unsigned h_nof_buckets_to_compute;
-  cudaMemcpyAsync(&h_nof_buckets_to_compute, total_nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
+  cudaMemcpyAsync(
+    &h_nof_buckets_to_compute, total_nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
 
   // launch the accumulation kernel with maximum threads
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bucket_offsets, bucket_sizes,
-    single_bucket_indices, sorted_point_indices, d_points, nof_buckets, h_nof_buckets_to_compute, c+bm_bitsize,c);
+  accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+    buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices, d_points, nof_buckets,
+    h_nof_buckets_to_compute, c + bm_bitsize, c);
 
   // #ifdef SSM_SUM
   //   //sum each bucket

@@ -5,6 +5,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ {{.SharedLib}}
 // #include "msm.h"
 import "C"
@@ -44,7 +45,7 @@ func MsmG2(out *G2Point, points []G2PointAffine, scalars []G1ScalarField, device
 	return out, nil
 }
 
-func MsmBatch(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]*G1ProjectivePoint, error) {
+func MsmBatch(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]G1ProjectivePoint, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")
@@ -64,13 +65,13 @@ func MsmBatch(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, devi
 		return nil, errors.New("error on: batchSize must be greater than zero")
 	}
 
-	out := make([]*G1ProjectivePoint, batchSize)
+	out := make([]G1ProjectivePoint, batchSize)
 
 	for i := 0; i < len(out); i++ {
 		var p G1ProjectivePoint
 		p.SetZero()
 
-		out[i] = &p
+		out[i] = p
 	}
 
 	outC := (*C.{{.CurveNameUpperCase}}_projective_t)(unsafe.Pointer(&out[0]))
@@ -88,7 +89,7 @@ func MsmBatch(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, devi
 	return out, nil
 }
 
-func MsmG2Batch(points *[]G2PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]*G2Point, error) {
+func MsmG2Batch(points *[]G2PointAffine, scalars *[]G1ScalarField, batchSize, deviceId int) ([]G2Point, error) {
 	// Check for nil pointers
 	if points == nil || scalars == nil {
 		return nil, errors.New("points or scalars is nil")
@@ -108,7 +109,7 @@ func MsmG2Batch(points *[]G2PointAffine, scalars *[]G1ScalarField, batchSize, de
 		return nil, errors.New("error on: batchSize must be greater than zero")
 	}
 
-	out := make([]*G2Point, batchSize)
+	out := make([]G2Point, batchSize)
 
 	outC := (*C.{{.CurveNameUpperCase}}_g2_projective_t)(unsafe.Pointer(&out[0]))
 	pointsC := (*C.{{.CurveNameUpperCase}}_g2_affine_t)(unsafe.Pointer(&(*points)[0]))

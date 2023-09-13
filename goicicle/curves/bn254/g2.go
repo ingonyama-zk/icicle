@@ -22,6 +22,7 @@ import (
 )
 
 // #cgo CFLAGS: -I./include/
+// #cgo CFLAGS: -I/usr/local/cuda/include
 // #cgo LDFLAGS: -L${SRCDIR}/../../ -lbn254
 // #include "projective.h"
 // #include "ve_mod_mult.h"
@@ -42,7 +43,6 @@ type G2PointAffine struct {
 type G2Point struct {
 	X, Y, Z ExtentionField
 }
-
 
 func (p *G2Point) Random() *G2Point {
 	outC := (*C.BN254_g2_projective_t)(unsafe.Pointer(p))
