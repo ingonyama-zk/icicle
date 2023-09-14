@@ -11,20 +11,20 @@ prepare_poseidon_states(S* states, size_t number_of_states, S domain_tag, const 
 
   S prepared_element;
 
-    // Domain separation
-    if (element_number == 0) {
-      prepared_element = domain_tag;
-    } else {
-      if (aligned) {
-          prepared_element = states[state_number * config.t + element_number - 1];
-      } else {
-          prepared_element = states[idx];
-      }
-    }
-
+  // Domain separation
+  if (element_number == 0) {
+    prepared_element = domain_tag;
+  } else {
     if (aligned) {
-      __syncthreads();
+        prepared_element = states[idx];
+    } else {
+        prepared_element = states[state_number * config.t + element_number - 1];
     }
+  }
+
+  if (!aligned) {
+    __syncthreads();
+  }
 
   // Add pre-round constant
   prepared_element = prepared_element + config.round_constants[element_number];
@@ -164,11 +164,16 @@ __global__ void copy_recursive(S * state, size_t number_of_states, S * out, int 
 /// * `hash_type`  - this will determine the domain_tag value
 /// * `stream` - a cuda stream to run the kernels
 /// * `aligned` - if set to `true`, the algorithm expects the states to contain leaves in an aligned form
-/// Aligned form (for arity = 2):
-/// [X1, X2, 0, X3, X4, 0, ...]
+/// * `loop_results` - if set to `true`, the resulting hash will be also copied into the states memory in aligned form.
 ///
-/// Not aligned form (for arity = 2):
-/// [X1, X2, X3, X4, ..., 0, 0, ...]
+/// Aligned form (for arity = 2):
+/// [0, X1, X2, 0, X3, X4, ...]
+///
+/// Not aligned form (for arity = 2) (you will get this format
+///                                   after copying leaves with cudaMemcpy2D):
+/// [X1, X2, 0, X3, X4, 0]
+/// Note: elements denoted by 0 doesn't need to be set to 0, the algorithm
+/// will replace them with domain tags.
 ///
 /// # Algorithm
 /// The function will split large trees into many subtrees of size that will fit `STREAM_CHUNK_SIZE`.
@@ -302,7 +307,7 @@ __host__ void Poseidon<S>::hash_blocks(const S * inp, size_t blocks, S * out, Ha
                 (this->t - 1) * sizeof(S), blocks, // Size of the source matrix (Arity x NumberOfBlocks)
                 cudaMemcpyHostToDevice, stream);
 
-  this->poseidon_hash(states, blocks, out_device, hash_type, stream, true, false);
+  this->poseidon_hash(states, blocks, out_device, hash_type, stream, false, false);
 
   cudaFreeAsync(states, stream);
   cudaMemcpyAsync(out, out_device, blocks * sizeof(S), cudaMemcpyDeviceToHost, stream);

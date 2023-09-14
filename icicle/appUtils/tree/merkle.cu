@@ -68,24 +68,8 @@ void __build_merkle_subtree(S * state, S * digests, size_t subtree_idx,
     
     bool first_iteration = true;
     while (number_of_blocks > 0) {
-        // std::cout << "Calculating Hash for input: " << std::endl;
-        // size_t size = number_of_blocks * poseidon.t;
-        // S * input_buffer = static_cast< S * >(malloc(size * sizeof(S)));
-        // cudaMemcpy(input_buffer, state, size * sizeof(S), cudaMemcpyDeviceToHost);
-        // for (int i = 0; i < size; i++ ) {
-        //     std::cout << input_buffer[i] << std::endl;
-        // }
-
         poseidon.poseidon_hash(state, number_of_blocks, digests,
-                            Poseidon<S>::HashType::MerkleTree, stream, first_iteration, true);
-
-        // std::cout << "Result:" << std::endl;
-        // size = number_of_blocks;
-        // S * digest_buffer = static_cast< S * >(malloc(size * sizeof(S)));
-        // cudaMemcpy(digest_buffer, digests, size * sizeof(S), cudaMemcpyDeviceToHost);
-        // for (int i = 0; i < size; i++ ) {
-        //     std::cout << digest_buffer[i] << std::endl;
-        // }
+                            Poseidon<S>::HashType::MerkleTree, stream, !first_iteration, true);
 
         S * digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_blocks;
         cudaMemcpyAsync(digests_with_offset, digests,
@@ -136,6 +120,22 @@ void build_merkle_tree(const S * leaves, S* digests, uint32_t height, Poseidon<S
         subtree_digests_size = subtree_state_size / poseidon.arity;
         subtree_memory_required = sizeof(S) * (subtree_state_size + subtree_digests_size);
     }
+
+    size_t available_memory, _total_memory;
+    cudaMemGetInfo(&available_memory, &_total_memory);
+    available_memory -= GIGA / 8; // Leave 128 MB
+
+    // We can effectively parallelize memory copy with streams
+    // as long as they don't operate on more than `STREAM_CHUNK_SIZE` bytes
+    const size_t number_of_streams = std::min((uint32_t)(available_memory / STREAM_CHUNK_SIZE), number_of_subtrees);
+    cudaStream_t* streams = static_cast<cudaStream_t*>(malloc(sizeof(cudaStream_t) * number_of_streams));
+    for (size_t i = 0; i < number_of_streams; i++) {
+        cudaStreamCreate(&streams[i]);
+    }
+
+#if !defined(__CUDA_ARCH__) && defined(MERKLE_DEBUG)
+    std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;
+    std::cout << "Number of streams = " << number_of_streams << std::endl;
     std::cout << "Number of subtrees = " << number_of_subtrees << std::endl;
     std::cout << "Height of a subtree = " << subtree_height << std::endl;
     std::cout << "Cutoff height = " << height - subtree_height + 1 << std::endl;
@@ -144,20 +144,7 @@ void build_merkle_tree(const S * leaves, S* digests, uint32_t height, Poseidon<S
     std::cout << "Digest elements for a subtree = " << get_digests_len(subtree_height, poseidon.arity) << std::endl;
     std::cout << "Size of 1 subtree states = " << subtree_state_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Size of 1 subtree digests = " << subtree_digests_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
-
-    size_t available_memory, _total_memory;
-    cudaMemGetInfo(&available_memory, &_total_memory);
-    available_memory -= GIGA / 8; // Leave 128 MB
-    std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;
-
-    // We can effectively parallelize memory copy with streams
-    // as long as they don't operate on more than `STREAM_CHUNK_SIZE` bytes
-    const size_t number_of_streams = std::min((uint32_t)(available_memory / STREAM_CHUNK_SIZE), number_of_subtrees);
-    std::cout << "Number of streams = " << number_of_streams << std::endl;
-    cudaStream_t* streams = static_cast<cudaStream_t*>(malloc(sizeof(cudaStream_t) * number_of_streams));
-    for (size_t i = 0; i < number_of_streams; i++) {
-        cudaStreamCreate(&streams[i]);
-    }
+#endif
 
     // Allocate memory for the leaves and digests
     // These are shared by streams in a pool
@@ -172,7 +159,9 @@ void build_merkle_tree(const S * leaves, S* digests, uint32_t height, Poseidon<S
     cudaStreamSynchronize(stream);
 
     for (size_t subtree_idx = 0; subtree_idx < number_of_subtrees; subtree_idx++) {
+#if !defined(__CUDA_ARCH__) && defined(MERKLE_DEBUG)
         std::cout << "Processing subtree #" << subtree_idx << std::endl;
+#endif
         size_t stream_idx = subtree_idx % number_of_streams;
         cudaStream_t subtree_stream = streams[stream_idx];
 
