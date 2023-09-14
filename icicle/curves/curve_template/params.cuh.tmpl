@@ -18,6 +18,9 @@ namespace PARAMS_${curve_name_U} {
     static constexpr storage<limbs_count> m = {${fp_m}};
     static constexpr storage<limbs_count> one = {${fp_one}};
     static constexpr storage<limbs_count> zero = {${fp_zero}};
+    static constexpr storage<limbs_count> montgomery_r = {${fp_montgomery_r}};
+    static constexpr storage<limbs_count> montgomery_r_inv = {${fp_montgomery_r_inv}};
+  
 
     static constexpr storage_array<omegas_count, limbs_count> omega = { {
         ${omega}
@@ -47,6 +50,8 @@ namespace PARAMS_${curve_name_U} {
     static constexpr storage<limbs_count> m = {${fq_m}};
     static constexpr storage<limbs_count> one = {${fq_one}};
     static constexpr storage<limbs_count> zero = {${fq_zero}};
+    static constexpr storage<limbs_count> montgomery_r = {${fq_montgomery_r}};
+    static constexpr storage<limbs_count> montgomery_r_inv = {${fq_montgomery_r_inv}};
     // i^2, the square of the imaginary unit for the extension field
     static constexpr uint32_t i_squared = 1;
     // true if i^2 is negative
