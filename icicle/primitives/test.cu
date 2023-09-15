@@ -41,22 +41,22 @@ protected:
   projective_t* points2{};
   g2_projective_t* g2_points1{};
   g2_projective_t* g2_points2{};
-  scalar_field_t* scalars1{};
-  scalar_field_t* scalars2{};
+  scalar_t* scalars1{};
+  scalar_t* scalars2{};
   projective_t* zero_points{};
   g2_projective_t* g2_zero_points{};
-  scalar_field_t* zero_scalars{};
-  scalar_field_t* one_scalars{};
+  scalar_t* zero_scalars{};
+  scalar_t* one_scalars{};
   affine_t* aff_points{};
   g2_affine_t* g2_aff_points{};
   projective_t* res_points1{};
   projective_t* res_points2{};
   g2_projective_t* g2_res_points1{};
   g2_projective_t* g2_res_points2{};
-  scalar_field_t* res_scalars1{};
-  scalar_field_t* res_scalars2{};
-  scalar_field_t::Wide* res_scalars_wide{};
-  scalar_field_t::Wide* res_scalars_wide_full{};
+  scalar_t* res_scalars1{};
+  scalar_t* res_scalars2{};
+  scalar_t::Wide* res_scalars_wide{};
+  scalar_t::Wide* res_scalars_wide_full{};
 
   PrimitivesTest()
   {
@@ -65,22 +65,22 @@ protected:
     assert(!cudaMallocManaged(&points2, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&g2_points1, n * sizeof(g2_projective_t)));
     assert(!cudaMallocManaged(&g2_points2, n * sizeof(g2_projective_t)));
-    assert(!cudaMallocManaged(&scalars1, n * sizeof(scalar_field_t)));
-    assert(!cudaMallocManaged(&scalars2, n * sizeof(scalar_field_t)));
+    assert(!cudaMallocManaged(&scalars1, n * sizeof(scalar_t)));
+    assert(!cudaMallocManaged(&scalars2, n * sizeof(scalar_t)));
     assert(!cudaMallocManaged(&zero_points, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&g2_zero_points, n * sizeof(g2_projective_t)));
-    assert(!cudaMallocManaged(&zero_scalars, n * sizeof(scalar_field_t)));
-    assert(!cudaMallocManaged(&one_scalars, n * sizeof(scalar_field_t)));
+    assert(!cudaMallocManaged(&zero_scalars, n * sizeof(scalar_t)));
+    assert(!cudaMallocManaged(&one_scalars, n * sizeof(scalar_t)));
     assert(!cudaMallocManaged(&aff_points, n * sizeof(affine_t)));
     assert(!cudaMallocManaged(&g2_aff_points, n * sizeof(g2_affine_t)));
     assert(!cudaMallocManaged(&res_points1, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&res_points2, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&g2_res_points1, n * sizeof(g2_projective_t)));
     assert(!cudaMallocManaged(&g2_res_points2, n * sizeof(g2_projective_t)));
-    assert(!cudaMallocManaged(&res_scalars1, n * sizeof(scalar_field_t)));
-    assert(!cudaMallocManaged(&res_scalars2, n * sizeof(scalar_field_t)));
-    assert(!cudaMallocManaged(&res_scalars_wide, n * sizeof(scalar_field_t::Wide)));
-    assert(!cudaMallocManaged(&res_scalars_wide_full, n * sizeof(scalar_field_t::Wide)));
+    assert(!cudaMallocManaged(&res_scalars1, n * sizeof(scalar_t)));
+    assert(!cudaMallocManaged(&res_scalars2, n * sizeof(scalar_t)));
+    assert(!cudaMallocManaged(&res_scalars_wide, n * sizeof(scalar_t::Wide)));
+    assert(!cudaMallocManaged(&res_scalars_wide_full, n * sizeof(scalar_t::Wide)));
   }
 
   ~PrimitivesTest() override
@@ -116,22 +116,22 @@ protected:
     ASSERT_EQ(device_populate_random<projective_t>(points2, n), cudaSuccess);
     ASSERT_EQ(device_populate_random<g2_projective_t>(g2_points1, n), cudaSuccess);
     ASSERT_EQ(device_populate_random<g2_projective_t>(g2_points2, n), cudaSuccess);
-    ASSERT_EQ(device_populate_random<scalar_field_t>(scalars1, n), cudaSuccess);
-    ASSERT_EQ(device_populate_random<scalar_field_t>(scalars2, n), cudaSuccess);
+    ASSERT_EQ(device_populate_random<scalar_t>(scalars1, n), cudaSuccess);
+    ASSERT_EQ(device_populate_random<scalar_t>(scalars2, n), cudaSuccess);
     ASSERT_EQ(device_set<projective_t>(zero_points, projective_t::zero(), n), cudaSuccess);
     ASSERT_EQ(device_set<g2_projective_t>(g2_zero_points, g2_projective_t::zero(), n), cudaSuccess);
-    ASSERT_EQ(device_set<scalar_field_t>(zero_scalars, scalar_field_t::zero(), n), cudaSuccess);
-    ASSERT_EQ(device_set<scalar_field_t>(one_scalars, scalar_field_t::one(), n), cudaSuccess);
+    ASSERT_EQ(device_set<scalar_t>(zero_scalars, scalar_t::zero(), n), cudaSuccess);
+    ASSERT_EQ(device_set<scalar_t>(one_scalars, scalar_t::one(), n), cudaSuccess);
     ASSERT_EQ(cudaMemset(aff_points, 0, n * sizeof(affine_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(g2_aff_points, 0, n * sizeof(g2_affine_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_points1, 0, n * sizeof(projective_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_points2, 0, n * sizeof(projective_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(g2_res_points1, 0, n * sizeof(g2_projective_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(g2_res_points2, 0, n * sizeof(g2_projective_t)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars1, 0, n * sizeof(scalar_field_t)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars2, 0, n * sizeof(scalar_field_t)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_field_t::Wide)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars_wide_full, 0, n * sizeof(scalar_field_t::Wide)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars1, 0, n * sizeof(scalar_t)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars2, 0, n * sizeof(scalar_t)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_t::Wide)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars_wide_full, 0, n * sizeof(scalar_t::Wide)), cudaSuccess);
   }
 };
 
@@ -335,19 +335,19 @@ TEST_F(PrimitivesTest, MP_LSB_MULT)
   // LSB multiply, check correctness of first TLC + 1 digits result.
   ASSERT_EQ(mp_lsb_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
   std::cout << "first GPU lsb mult output  = 0x";
-  for (int i = 0; i < 2 * scalar_field_t::TLC; i++) {
+  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
     std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i];
   }
   std::cout << std::endl;
 
   ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
   std::cout << "first GPU full mult output = 0x";
-  for (int i = 0; i < 2 * scalar_field_t::TLC; i++) {
+  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
     std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i];
   }
   std::cout << std::endl;
   for (int j = 0; j < n; j++) {
-    for (int i = 0; i < scalar_field_t::TLC + 1; i++) {
+    for (int i = 0; i < scalar_t::TLC + 1; i++) {
       ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
     }
   }
@@ -358,20 +358,20 @@ TEST_F(PrimitivesTest, MP_MSB_MULT)
   // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
   ASSERT_EQ(mp_msb_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
   std::cout << "first GPU msb mult output  = 0x";
-  for (int i = 2 * scalar_field_t::TLC - 1; i >= 0; i--) {
+  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
     std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
   }
   std::cout << std::endl;
 
   ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
   std::cout << "first GPU full mult output = 0x";
-  for (int i = 2 * scalar_field_t::TLC - 1; i >= 0; i--) {
+  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
     std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
   }
 
   std::cout << std::endl;
 
-  for (int i = 0; i < 2 * scalar_field_t::TLC - 1; i++) {
+  for (int i = 0; i < 2 * scalar_t::TLC - 1; i++) {
     if (res_scalars_wide_full[0].limbs_storage.limbs[i] == res_scalars_wide[0].limbs_storage.limbs[i])
       std::cout << "matched word idx = " << i << std::endl;
   }
@@ -382,25 +382,25 @@ TEST_F(PrimitivesTest, INGO_MP_MULT)
   // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
   ASSERT_EQ(ingo_mp_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
   std::cout << "INGO   = 0x";
-  for (int i = 0; i < 2 * scalar_field_t::TLC; i++) {
+  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
     std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
   }
   std::cout << std::endl;
 
   ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
   std::cout << "ZKSYNC = 0x";
-  for (int i = 0; i < 2 * scalar_field_t::TLC; i++) {
+  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
     std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
   }
 
   std::cout << std::endl;
 
-  for (int i = 0; i < 2 * scalar_field_t::TLC - 1; i++) {
+  for (int i = 0; i < 2 * scalar_t::TLC - 1; i++) {
     if (res_scalars_wide_full[0].limbs_storage.limbs[i] == res_scalars_wide[0].limbs_storage.limbs[i])
       std::cout << "matched word idx = " << i << std::endl;
   }
   for (int j = 0; j < n; j++) {
-    for (int i = 0; i < 2 * scalar_field_t::TLC - 1; i++) {
+    for (int i = 0; i < 2 * scalar_t::TLC - 1; i++) {
       ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
     }
   }
@@ -411,26 +411,26 @@ TEST_F(PrimitivesTest, INGO_MP_MSB_MULT)
   // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
   ASSERT_EQ(ingo_mp_msb_mult(scalars1, scalars2, res_scalars_wide, n), cudaSuccess);
   std::cout << "INGO MSB   = 0x";
-  for (int i = 2 * scalar_field_t::TLC - 1; i >= 0; i--) {
+  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
     std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
   }
   std::cout << std::endl;
 
   ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
   std::cout << "ZKSYNC = 0x";
-  for (int i = 2 * scalar_field_t::TLC - 1; i >= 0; i--) {
+  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
     std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
   }
 
   std::cout << std::endl;
 
-  // for (int i=scalar_field::TLC; i < 2*scalar_field::TLC - 1; i++)
+  // for (int i=scalar_t::TLC; i < 2*scalar_t::TLC - 1; i++)
   // {
   //   ASSERT_EQ(in_bound, true);
   // }
   // for (int j=0; j<n; j++)
   // {
-  //   for (int i=0; i < 2*scalar_field::TLC - 1; i++)
+  //   for (int i=0; i < 2*scalar_t::TLC - 1; i++)
   //   {
   //     ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
   //   }
@@ -440,7 +440,7 @@ TEST_F(PrimitivesTest, INGO_MP_MSB_MULT)
   mp::int1024_t scalar_2_mp = 0;
   mp::int1024_t res_mp = 0;
   mp::int1024_t res_gpu = 0;
-  uint32_t num_limbs = scalar_field_t::TLC;
+  uint32_t num_limbs = scalar_t::TLC;
 
   for (int j = 0; j < n; j++) {
     uint32_t* scalar1_limbs = scalars1[j].limbs_storage.limbs;
@@ -464,7 +464,7 @@ TEST_F(PrimitivesTest, INGO_MP_MSB_MULT)
 TEST_F(PrimitivesTest, INGO_MP_MOD_MULT)
 {
   std::cout << " taking num limbs " << std::endl;
-  uint32_t num_limbs = scalar_field_t::TLC;
+  uint32_t num_limbs = scalar_t::TLC;
   std::cout << " calling gpu... = " << std::endl;
   ASSERT_EQ(ingo_mp_mod_mult(scalars1, scalars2, res_scalars1, n), cudaSuccess);
   std::cout << " gpu call done " << std::endl;
@@ -473,7 +473,7 @@ TEST_F(PrimitivesTest, INGO_MP_MOD_MULT)
   mp::int1024_t scalar_2_mp = 0;
   mp::int1024_t res_mp = 0;
   mp::int1024_t res_gpu = 0;
-  mp::int1024_t p = convert_to_boost_mp(scalar_field_t::get_modulus().limbs, num_limbs);
+  mp::int1024_t p = convert_to_boost_mp(scalar_t::get_modulus().limbs, num_limbs);
   std::cout << " p = " << p << std::endl;
 
   for (int j = 0; j < n; j++) {

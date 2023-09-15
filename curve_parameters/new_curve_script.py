@@ -5,6 +5,9 @@ from string import Template
 import sys
 
 
+argv_list = ['thisfile', 'curve_json', 'command']
+new_curve_args = dict(zip(argv_list, sys.argv[:len(argv_list)] + [""]*(len(argv_list) - len(sys.argv))))
+
 def to_hex(val: int, length):
     x = hex(val)[2:]
     if len(x) % 8 != 0:
@@ -14,7 +17,7 @@ def to_hex(val: int, length):
     n = 8
     chunks = [x[i:i+n] for i in range(0, len(x), n)][::-1]
     s = ""
-    for c in chunks:
+    for c in chunks[:length // n]:
         s += f'0x{c}, '
         
     return s[:-2]
@@ -22,17 +25,20 @@ def to_hex(val: int, length):
 
 def compute_values(modulus, modulus_bit_count, limbs):
     limb_size = 8*limbs
+    bit_size = 4*limb_size
     modulus_ = to_hex(modulus,limb_size)
     modulus_2 = to_hex(modulus*2,limb_size)
     modulus_4 = to_hex(modulus*4,limb_size)
     modulus_wide = to_hex(modulus,limb_size*2)
-    modulus_squared = to_hex(modulus*modulus,limb_size)
-    modulus_squared_2 = to_hex(modulus*modulus*2,limb_size)
-    modulus_squared_4 = to_hex(modulus*modulus*4,limb_size)
+    modulus_squared = to_hex(modulus*modulus,limb_size*2)
+    modulus_squared_2 = to_hex(modulus*modulus*2,limb_size*2)
+    modulus_squared_4 = to_hex(modulus*modulus*4,limb_size*2)
     m_raw = int(math.floor(int(pow(2,2*modulus_bit_count) // modulus)))
     m = to_hex(m_raw,limb_size)
     one = to_hex(1,limb_size)
     zero = to_hex(0,limb_size)
+    montgomery_r = to_hex(pow(2,bit_size,modulus),limb_size)
+    montgomery_r_inv = to_hex(pow(2,-bit_size,modulus),limb_size)
 
     return (
         modulus_,
@@ -44,11 +50,13 @@ def compute_values(modulus, modulus_bit_count, limbs):
         modulus_squared_4,
         m,
         one,
-        zero
+        zero,
+        montgomery_r,
+        montgomery_r_inv
     )
 
 
-def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_x_re, g2_gen_x_im, g2_gen_y_re, g2_gen_y_im):
+def get_fq_params(modulus, modulus_bit_count, limbs, nonresidue):
     (
         modulus,
         modulus_2,
@@ -59,10 +67,14 @@ def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_
         modulus_squared_4,
         m,
         one,
-        zero
+        zero,
+        montgomery_r,
+        montgomery_r_inv
     ) = compute_values(modulus, modulus_bit_count, limbs)
 
     limb_size = 8*limbs
+    nonresidue_is_negative = str(nonresidue < 0).lower()
+    nonresidue = abs(nonresidue)
     return {
         'fq_modulus': modulus,
         'fq_modulus_2': modulus_2,
@@ -74,12 +86,10 @@ def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_
         'fq_m': m,
         'fq_one': one,
         'fq_zero': zero,
-        'fq_gen_x': to_hex(g1_gen_x, limb_size),
-        'fq_gen_y': to_hex(g1_gen_y, limb_size),
-        'fq_gen_x_re': to_hex(g2_gen_x_re, limb_size),
-        'fq_gen_x_im': to_hex(g2_gen_x_im, limb_size),
-        'fq_gen_y_re': to_hex(g2_gen_y_re, limb_size),
-        'fq_gen_y_im': to_hex(g2_gen_y_im, limb_size)
+        'fq_montgomery_r': montgomery_r,
+        'fq_montgomery_r_inv': montgomery_r_inv,
+        'nonresidue': nonresidue,
+        'nonresidue_is_negative': nonresidue_is_negative
     }
 
 
@@ -94,7 +104,9 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
         modulus_squared_4,
         m,
         one,
-        zero
+        zero,
+        montgomery_r,
+        montgomery_r_inv
     ) = compute_values(modulus, modulus_bit_count, limbs)
     limb_size = 8*limbs
     if size > 0:
@@ -129,9 +141,23 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
         'fp_m': m,
         'fp_one': one,
         'fp_zero': zero,
+        'fp_montgomery_r': montgomery_r,
+        'fp_montgomery_r_inv': montgomery_r_inv,
         'omega': omega[:-1],
         'omega_inv': omega_inv[:-1],
         'inv': inv[:-1],
+    }
+
+
+def get_generators(g1_gen_x, g1_gen_y, g2_gen_x_re, g2_gen_x_im, g2_gen_y_re, g2_gen_y_im, size):
+
+    return {
+        'fq_gen_x': to_hex(g1_gen_x, size),
+        'fq_gen_y': to_hex(g1_gen_y, size),
+        'fq_gen_x_re': to_hex(g2_gen_x_re, size),
+        'fq_gen_x_im': to_hex(g2_gen_x_im, size),
+        'fq_gen_y_re': to_hex(g2_gen_y_re, size),
+        'fq_gen_y_im': to_hex(g2_gen_y_im, size)
     }
 
 
@@ -155,6 +181,7 @@ def get_params(config):
     bit_count_q = config["bit_count_q"] 
     limb_q = config["limb_q"]
     root_of_unity = config["root_of_unity"]
+    nonresidue = config["nonresidue"]
     if root_of_unity == modulus_p:
         sys.exit("Invalid root_of_unity value; please update in curve parameters")
 
@@ -178,19 +205,21 @@ def get_params(config):
     }
     
     fp_params = get_fp_params(modulus_p, bit_count_p, limb_p, root_of_unity, ntt_size)
-    fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, g1_gen_x, g1_gen_y, g2_generator_x_re, g2_generator_x_im, g2_generator_y_re, g2_generator_y_im)
+    fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, nonresidue)
+    generators = get_generators(g1_gen_x, g1_gen_y, g2_generator_x_re, g2_generator_x_im, g2_generator_y_re, g2_generator_y_im, 8*limb_q)
     weier_params = get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, 8*limb_q)
 
     return {
         **params,
         **fp_params,
         **fq_params,
+        **generators,
         **weier_params
     }
 
 
 config = None
-with open(sys.argv[1]) as json_file:
+with open(new_curve_args['curve_json']) as json_file:
     config = json.load(json_file)
 
 curve_name_lower = config["curve_name"].lower()
@@ -211,7 +240,7 @@ with open("./icicle/curves/curve_template/params.cuh.tmpl", "r") as params_file:
     with open(f'./icicle/curves/{curve_name_lower}/params.cuh', 'w') as f:
         f.write(params_content)
 
-if sys.argv[2] != "-update":
+if new_curve_args['command'] != '-update':
     with open("./icicle/curves/curve_template/lde.cu.tmpl", "r") as lde_file:
         template_content = Template(lde_file.read())
         lde_content = template_content.safe_substitute(

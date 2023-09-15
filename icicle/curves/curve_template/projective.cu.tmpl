@@ -41,9 +41,9 @@ extern "C" int projective_from_affine_${CURVE_NAME_L}(${CURVE_NAME_U}::projectiv
   }
 }
 
-extern "C" int random_scalar_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_field_t* out) { 
+extern "C" int random_scalar_${CURVE_NAME_L}(${CURVE_NAME_U}::scalar_t* out) { 
   try {
-    out[0] = ${CURVE_NAME_U}::scalar_field_t::rand_host();
+    out[0] = ${CURVE_NAME_U}::scalar_t::rand_host();
     return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());

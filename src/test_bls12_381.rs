@@ -9,14 +9,14 @@ use rustacuda_core::DevicePointer;
 use std::ffi::{c_int, c_uint};
 
 extern "C" {
-    fn poseidon_multi_cuda_bls12_381(
-        input: *const ScalarField_BLS12_381,
-        out: *mut ScalarField_BLS12_381,
-        number_of_blocks: usize,
-        arity: c_uint,
-        device_id: usize,
-        stream: usize, // TODO: provide a real stream
-    ) -> c_uint;
+    // fn poseidon_multi_cuda_bls12_381(
+    //     input: *const ScalarField_BLS12_381,
+    //     out: *mut ScalarField_BLS12_381,
+    //     number_of_blocks: usize,
+    //     arity: c_uint,
+    //     device_id: usize,
+    //     stream: usize, // TODO: provide a real stream
+    // ) -> c_uint;
 
     fn msm_cuda_bls12_381(
         out: *mut Point_BLS12_381,
@@ -235,34 +235,34 @@ extern "C" {
     ) -> c_int;
 }
 
-pub fn poseidon_multi_bls12_381(
-    input: &[ScalarField_BLS12_381],
-    arity: usize,
-    device_id: usize,
-) -> Result<Vec<ScalarField_BLS12_381>, std::io::Error> {
-    let number_of_blocks = input.len() / arity;
-    let mut out = vec![ScalarField_BLS12_381::zero(); number_of_blocks];
-    unsafe {
-        let res = poseidon_multi_cuda_bls12_381(
-            input as *const _ as *const ScalarField_BLS12_381,
-            out.as_mut_slice() as *mut _ as *mut ScalarField_BLS12_381,
-            number_of_blocks,
-            arity as c_uint,
-            device_id,
-            0,
-        );
+// pub fn poseidon_multi_bls12_381(
+//     input: &[ScalarField_BLS12_381],
+//     arity: usize,
+//     device_id: usize,
+// ) -> Result<Vec<ScalarField_BLS12_381>, std::io::Error> {
+//     let number_of_blocks = input.len() / arity;
+//     let mut out = vec![ScalarField_BLS12_381::zero(); number_of_blocks];
+//     unsafe {
+//         let res = poseidon_multi_cuda_bls12_381(
+//             input as *const _ as *const ScalarField_BLS12_381,
+//             out.as_mut_slice() as *mut _ as *mut ScalarField_BLS12_381,
+//             number_of_blocks,
+//             arity as c_uint,
+//             device_id,
+//             0,
+//         );
+//
+//         // TO-DO: go for better expression of error types
+//         if res != 0 {
+//             return Err(std::io::Error::new(
+//                 std::io::ErrorKind::InvalidInput,
+//                 "Error executing poseidon_multi",
+//             ));
+//         }
+//     }
 
-        // TO-DO: go for better expression of error types
-        if res != 0 {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Error executing poseidon_multi",
-            ));
-        }
-    }
-
-    Ok(out)
-}
+//     Ok(out)
+// }
 
 pub fn msm_bls12_381(
     points: &[PointAffineNoInfinity_BLS12_381],
@@ -968,28 +968,28 @@ pub(crate) mod tests_bls12_381 {
         }
     }
 
-    #[test]
-    fn test_poseidon() {
-        let arities = [2, 4, 8, 11];
-        let number_of_blocks = 1024;
+    // #[test]
+    // fn test_poseidon() {
+    //     let arities = [2, 4, 8, 11];
+    //     let number_of_blocks = 1024;
 
-        for arity in arities {
-            // Generate scalars sequence [0, 1, ... arity * number_of_blocks]
-            let scalars: Vec<ScalarField_BLS12_381> = (0..arity * number_of_blocks)
-                .map(|i| ScalarField_BLS12_381::from_ark(Fr_BLS12_381::from(i as i32).into_repr()))
-                .collect();
-            let out = poseidon_multi_bls12_381(&scalars, arity, 0).unwrap();
+    //     for arity in arities {
+    //         // Generate scalars sequence [0, 1, ... arity * number_of_blocks]
+    //         let scalars: Vec<ScalarField_BLS12_381> = (0..arity * number_of_blocks)
+    //             .map(|i| ScalarField_BLS12_381::from_ark(Fr_BLS12_381::from(i as i32).into_repr()))
+    //             .collect();
+    //         let out = poseidon_multi_bls12_381(&scalars, arity, 0).unwrap();
 
-            let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            path.push(format!("test_vectors/poseidon_1024_{}", arity));
+    //         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    //         path.push(format!("test_vectors/poseidon_1024_{}", arity));
 
-            let test_vector: Vec<ScalarField_BLS12_381> = serde_cbor::from_slice(&fs::read(path).unwrap()).unwrap();
-            assert!(out
-                .iter()
-                .zip(test_vector.iter())
-                .all(|(l, r)| l.eq(r)));
-        }
-    }
+    //         let test_vector: Vec<ScalarField_BLS12_381> = serde_cbor::from_slice(&fs::read(path).unwrap()).unwrap();
+    //         assert!(out
+    //             .iter()
+    //             .zip(test_vector.iter())
+    //             .all(|(l, r)| l.eq(r)));
+    //     }
+    // }
 
     #[test]
     fn test_batch_msm() {

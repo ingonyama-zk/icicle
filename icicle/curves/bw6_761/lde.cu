@@ -1,5 +1,5 @@
-#ifndef _BLS12_381_LDE
-#define _BLS12_381_LDE
+#ifndef _BW6_761_LDE
+#define _BW6_761_LDE
 #include "../../appUtils/ntt/lde.cu"
 #include "../../appUtils/ntt/ntt.cuh"
 #include "../../appUtils/vector_manipulation/ve_mod_mult.cuh"
@@ -7,15 +7,15 @@
 #include "curve_config.cuh"
 #include <cuda.h>
 
-extern "C" BLS12_381::scalar_t* build_domain_cuda_bls12_381(
+extern "C" BW6_761::scalar_t* build_domain_cuda_bw6_761(
   uint32_t domain_size, uint32_t logn, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
     if (inverse) {
-      return fill_twiddle_factors_array(domain_size, BLS12_381::scalar_t::omega_inv(logn), stream);
+      return fill_twiddle_factors_array(domain_size, BW6_761::scalar_t::omega_inv(logn), stream);
     } else {
-      return fill_twiddle_factors_array(domain_size, BLS12_381::scalar_t::omega(logn), stream);
+      return fill_twiddle_factors_array(domain_size, BW6_761::scalar_t::omega(logn), stream);
     }
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
@@ -23,13 +23,12 @@ extern "C" BLS12_381::scalar_t* build_domain_cuda_bls12_381(
   }
 }
 
-extern "C" int
-ntt_cuda_bls12_381(BLS12_381::scalar_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ntt_cuda_bw6_761(
+  BW6_761::scalar_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return ntt_end2end_template<BLS12_381::scalar_t, BLS12_381::scalar_t>(
-      arr, n, inverse, stream); // TODO: pass device_id
+    return ntt_end2end_template<BW6_761::scalar_t, BW6_761::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
 
@@ -37,21 +36,24 @@ ntt_cuda_bls12_381(BLS12_381::scalar_t* arr, uint32_t n, bool inverse, size_t de
   }
 }
 
-extern "C" int ecntt_cuda_bls12_381(
-  BLS12_381::projective_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ecntt_cuda_bw6_761(
+  BW6_761::projective_t* arr,
+  uint32_t n,
+  bool inverse,
+  size_t device_id = 0,
+  cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return ntt_end2end_template<BLS12_381::projective_t, BLS12_381::scalar_t>(
-      arr, n, inverse, stream); // TODO: pass device_id
+    return ntt_end2end_template<BW6_761::projective_t, BW6_761::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
   }
 }
 
-extern "C" int ntt_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* arr,
+extern "C" int ntt_batch_cuda_bw6_761(
+  BW6_761::scalar_t* arr,
   uint32_t arr_size,
   uint32_t batch_size,
   bool inverse,
@@ -60,7 +62,7 @@ extern "C" int ntt_batch_cuda_bls12_381(
 {
   try {
     cudaStreamCreate(&stream);
-    return ntt_end2end_batch_template<BLS12_381::scalar_t, BLS12_381::scalar_t>(
+    return ntt_end2end_batch_template<BW6_761::scalar_t, BW6_761::scalar_t>(
       arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
@@ -68,8 +70,8 @@ extern "C" int ntt_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int ecntt_batch_cuda_bls12_381(
-  BLS12_381::projective_t* arr,
+extern "C" int ecntt_batch_cuda_bw6_761(
+  BW6_761::projective_t* arr,
   uint32_t arr_size,
   uint32_t batch_size,
   bool inverse,
@@ -78,7 +80,7 @@ extern "C" int ecntt_batch_cuda_bls12_381(
 {
   try {
     cudaStreamCreate(&stream);
-    return ntt_end2end_batch_template<BLS12_381::projective_t, BLS12_381::scalar_t>(
+    return ntt_end2end_batch_template<BW6_761::projective_t, BW6_761::scalar_t>(
       arr, arr_size, batch_size, inverse, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
@@ -86,16 +88,16 @@ extern "C" int ecntt_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int interpolate_scalars_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_evaluations,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int interpolate_scalars_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_evaluations,
+  BW6_761::scalar_t* d_domain,
   unsigned n,
   unsigned device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
@@ -103,17 +105,17 @@ extern "C" int interpolate_scalars_cuda_bls12_381(
   }
 }
 
-extern "C" int interpolate_scalars_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_evaluations,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int interpolate_scalars_batch_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_evaluations,
+  BW6_761::scalar_t* d_domain,
   unsigned n,
   unsigned batch_size,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
     return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
   } catch (const std::runtime_error& ex) {
@@ -122,12 +124,12 @@ extern "C" int interpolate_scalars_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int interpolate_scalars_on_coset_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_evaluations,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int interpolate_scalars_on_coset_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_evaluations,
+  BW6_761::scalar_t* d_domain,
   unsigned n,
-  BLS12_381::scalar_t* coset_powers,
+  BW6_761::scalar_t* coset_powers,
   unsigned device_id = 0,
   cudaStream_t stream = 0)
 {
@@ -139,13 +141,13 @@ extern "C" int interpolate_scalars_on_coset_cuda_bls12_381(
   }
 }
 
-extern "C" int interpolate_scalars_batch_on_coset_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_evaluations,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int interpolate_scalars_batch_on_coset_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_evaluations,
+  BW6_761::scalar_t* d_domain,
   unsigned n,
   unsigned batch_size,
-  BLS12_381::scalar_t* coset_powers,
+  BW6_761::scalar_t* coset_powers,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
@@ -158,16 +160,16 @@ extern "C" int interpolate_scalars_batch_on_coset_cuda_bls12_381(
   }
 }
 
-extern "C" int interpolate_points_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::projective_t* d_evaluations,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int interpolate_points_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::projective_t* d_evaluations,
+  BW6_761::scalar_t* d_domain,
   unsigned n,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     return interpolate(d_out, d_evaluations, d_domain, n, false, _null, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
@@ -175,17 +177,17 @@ extern "C" int interpolate_points_cuda_bls12_381(
   }
 }
 
-extern "C" int interpolate_points_batch_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::projective_t* d_evaluations,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int interpolate_points_batch_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::projective_t* d_evaluations,
+  BW6_761::scalar_t* d_domain,
   unsigned n,
   unsigned batch_size,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
     return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, false, _null, stream);
   } catch (const std::runtime_error& ex) {
@@ -194,17 +196,17 @@ extern "C" int interpolate_points_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_scalars_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_scalars_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
   unsigned device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
     return evaluate(d_out, d_coefficients, d_domain, domain_size, n, false, _null, stream);
   } catch (const std::runtime_error& ex) {
@@ -213,10 +215,10 @@ extern "C" int evaluate_scalars_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_scalars_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_scalars_batch_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
   unsigned batch_size,
@@ -224,7 +226,7 @@ extern "C" int evaluate_scalars_batch_cuda_bls12_381(
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
     return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
   } catch (const std::runtime_error& ex) {
@@ -233,17 +235,17 @@ extern "C" int evaluate_scalars_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_points_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::projective_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_points_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::projective_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
     return evaluate(d_out, d_coefficients, d_domain, domain_size, n, false, _null, stream);
   } catch (const std::runtime_error& ex) {
@@ -252,10 +254,10 @@ extern "C" int evaluate_points_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_points_batch_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::projective_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_points_batch_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::projective_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
   unsigned batch_size,
@@ -263,7 +265,7 @@ extern "C" int evaluate_points_batch_cuda_bls12_381(
   cudaStream_t stream = 0)
 {
   try {
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
     return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
   } catch (const std::runtime_error& ex) {
@@ -272,13 +274,13 @@ extern "C" int evaluate_points_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_scalars_on_coset_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_scalars_on_coset_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
-  BLS12_381::scalar_t* coset_powers,
+  BW6_761::scalar_t* coset_powers,
   unsigned device_id = 0,
   cudaStream_t stream = 0)
 {
@@ -291,14 +293,14 @@ extern "C" int evaluate_scalars_on_coset_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_scalars_on_coset_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_scalars_on_coset_batch_cuda_bw6_761(
+  BW6_761::scalar_t* d_out,
+  BW6_761::scalar_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
   unsigned batch_size,
-  BLS12_381::scalar_t* coset_powers,
+  BW6_761::scalar_t* coset_powers,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
@@ -311,13 +313,13 @@ extern "C" int evaluate_scalars_on_coset_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_points_on_coset_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::projective_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_points_on_coset_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::projective_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
-  BLS12_381::scalar_t* coset_powers,
+  BW6_761::scalar_t* coset_powers,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
@@ -330,14 +332,14 @@ extern "C" int evaluate_points_on_coset_cuda_bls12_381(
   }
 }
 
-extern "C" int evaluate_points_on_coset_batch_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::projective_t* d_coefficients,
-  BLS12_381::scalar_t* d_domain,
+extern "C" int evaluate_points_on_coset_batch_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::projective_t* d_coefficients,
+  BW6_761::scalar_t* d_domain,
   unsigned domain_size,
   unsigned n,
   unsigned batch_size,
-  BLS12_381::scalar_t* coset_powers,
+  BW6_761::scalar_t* coset_powers,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
@@ -350,9 +352,9 @@ extern "C" int evaluate_points_on_coset_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int ntt_inplace_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* d_inout,
-  BLS12_381::scalar_t* d_twiddles,
+extern "C" int ntt_inplace_batch_cuda_bw6_761(
+  BW6_761::scalar_t* d_inout,
+  BW6_761::scalar_t* d_twiddles,
   unsigned n,
   unsigned batch_size,
   bool inverse,
@@ -361,7 +363,7 @@ extern "C" int ntt_inplace_batch_cuda_bls12_381(
 {
   try {
     cudaStreamCreate(&stream);
-    BLS12_381::scalar_t* _null = nullptr;
+    BW6_761::scalar_t* _null = nullptr;
     ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, false, _null, stream, true);
     return CUDA_SUCCESS; // TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
   } catch (const std::runtime_error& ex) {
@@ -370,14 +372,14 @@ extern "C" int ntt_inplace_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int ntt_inplace_coset_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* d_inout,
-  BLS12_381::scalar_t* d_twiddles,
+extern "C" int ntt_inplace_coset_batch_cuda_bw6_761(
+  BW6_761::scalar_t* d_inout,
+  BW6_761::scalar_t* d_twiddles,
   unsigned n,
   unsigned batch_size,
   bool inverse,
   bool is_coset,
-  BLS12_381::scalar_t* coset,
+  BW6_761::scalar_t* coset,
   size_t device_id = 0,
   cudaStream_t stream = 0)
 {
@@ -391,12 +393,8 @@ extern "C" int ntt_inplace_coset_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int sub_scalars_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_in1,
-  BLS12_381::scalar_t* d_in2,
-  unsigned n,
-  cudaStream_t stream = 0)
+extern "C" int sub_scalars_cuda_bw6_761(
+  BW6_761::scalar_t* d_out, BW6_761::scalar_t* d_in1, BW6_761::scalar_t* d_in2, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -407,12 +405,8 @@ extern "C" int sub_scalars_cuda_bls12_381(
   }
 }
 
-extern "C" int add_scalars_cuda_bls12_381(
-  BLS12_381::scalar_t* d_out,
-  BLS12_381::scalar_t* d_in1,
-  BLS12_381::scalar_t* d_in2,
-  unsigned n,
-  cudaStream_t stream = 0)
+extern "C" int add_scalars_cuda_bw6_761(
+  BW6_761::scalar_t* d_out, BW6_761::scalar_t* d_in1, BW6_761::scalar_t* d_in2, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -423,7 +417,7 @@ extern "C" int add_scalars_cuda_bls12_381(
   }
 }
 
-extern "C" int to_montgomery_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int to_montgomery_scalars_cuda_bw6_761(BW6_761::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -434,7 +428,7 @@ extern "C" int to_montgomery_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_inout
   }
 }
 
-extern "C" int from_montgomery_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int from_montgomery_scalars_cuda_bw6_761(BW6_761::scalar_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -445,48 +439,44 @@ extern "C" int from_montgomery_scalars_cuda_bls12_381(BLS12_381::scalar_t* d_ino
   }
 }
 
-extern "C" int
-to_montgomery_proj_points_cuda_bls12_381(BLS12_381::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int to_montgomery_proj_points_cuda_bw6_761(BW6_761::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return to_montgomery((BLS12_381::point_field_t*)d_inout, 3 * n, stream);
+    return to_montgomery((BW6_761::point_field_t*)d_inout, 3 * n, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
   }
 }
 
-extern "C" int
-from_montgomery_proj_points_cuda_bls12_381(BLS12_381::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int from_montgomery_proj_points_cuda_bw6_761(BW6_761::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return from_montgomery((BLS12_381::point_field_t*)d_inout, 3 * n, stream);
+    return from_montgomery((BW6_761::point_field_t*)d_inout, 3 * n, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
   }
 }
 
-extern "C" int
-to_montgomery_aff_points_cuda_bls12_381(BLS12_381::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int to_montgomery_aff_points_cuda_bw6_761(BW6_761::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return to_montgomery((BLS12_381::point_field_t*)d_inout, 2 * n, stream);
+    return to_montgomery((BW6_761::point_field_t*)d_inout, 2 * n, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
   }
 }
 
-extern "C" int
-from_montgomery_aff_points_cuda_bls12_381(BLS12_381::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int from_montgomery_aff_points_cuda_bw6_761(BW6_761::affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return from_montgomery((BLS12_381::point_field_t*)d_inout, 2 * n, stream);
+    return from_montgomery((BW6_761::point_field_t*)d_inout, 2 * n, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -495,11 +485,11 @@ from_montgomery_aff_points_cuda_bls12_381(BLS12_381::affine_t* d_inout, unsigned
 
 #if defined(G2_DEFINED)
 extern "C" int
-to_montgomery_proj_points_g2_cuda_bls12_381(BLS12_381::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+to_montgomery_proj_points_g2_cuda_bw6_761(BW6_761::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return to_montgomery((BLS12_381::point_field_t*)d_inout, 6 * n, stream);
+    return to_montgomery((BW6_761::point_field_t*)d_inout, 6 * n, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -507,11 +497,22 @@ to_montgomery_proj_points_g2_cuda_bls12_381(BLS12_381::g2_projective_t* d_inout,
 }
 
 extern "C" int
-from_montgomery_proj_points_g2_cuda_bls12_381(BLS12_381::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+from_montgomery_proj_points_g2_cuda_bw6_761(BW6_761::g2_projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return from_montgomery((BLS12_381::point_field_t*)d_inout, 6 * n, stream);
+    return from_montgomery((BW6_761::point_field_t*)d_inout, 6 * n, stream);
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+extern "C" int to_montgomery_aff_points_g2_cuda_bw6_761(BW6_761::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+{
+  try {
+    cudaStreamCreate(&stream);
+    return to_montgomery((BW6_761::point_field_t*)d_inout, 4 * n, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -519,23 +520,11 @@ from_montgomery_proj_points_g2_cuda_bls12_381(BLS12_381::g2_projective_t* d_inou
 }
 
 extern "C" int
-to_montgomery_aff_points_g2_cuda_bls12_381(BLS12_381::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+from_montgomery_aff_points_g2_cuda_bw6_761(BW6_761::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return to_montgomery((BLS12_381::point_field_t*)d_inout, 4 * n, stream);
-  } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what());
-    return -1;
-  }
-}
-
-extern "C" int
-from_montgomery_aff_points_g2_cuda_bls12_381(BLS12_381::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
-{
-  try {
-    cudaStreamCreate(&stream);
-    return from_montgomery((BLS12_381::point_field_t*)d_inout, 4 * n, stream);
+    return from_montgomery((BW6_761::point_field_t*)d_inout, 4 * n, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -544,7 +533,7 @@ from_montgomery_aff_points_g2_cuda_bls12_381(BLS12_381::g2_affine_t* d_inout, un
 #endif
 
 extern "C" int
-reverse_order_scalars_cuda_bls12_381(BLS12_381::scalar_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
+reverse_order_scalars_cuda_bw6_761(BW6_761::scalar_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     uint32_t logn = uint32_t(log(n) / log(2));
@@ -558,8 +547,8 @@ reverse_order_scalars_cuda_bls12_381(BLS12_381::scalar_t* arr, int n, size_t dev
   }
 }
 
-extern "C" int reverse_order_scalars_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int reverse_order_scalars_batch_cuda_bw6_761(
+  BW6_761::scalar_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     uint32_t logn = uint32_t(log(n) / log(2));
@@ -573,7 +562,7 @@ extern "C" int reverse_order_scalars_batch_cuda_bls12_381(
 }
 
 extern "C" int
-reverse_order_points_cuda_bls12_381(BLS12_381::projective_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
+reverse_order_points_cuda_bw6_761(BW6_761::projective_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     uint32_t logn = uint32_t(log(n) / log(2));
@@ -586,8 +575,8 @@ reverse_order_points_cuda_bls12_381(BLS12_381::projective_t* arr, int n, size_t 
   }
 }
 
-extern "C" int reverse_order_points_batch_cuda_bls12_381(
-  BLS12_381::projective_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int reverse_order_points_batch_cuda_bw6_761(
+  BW6_761::projective_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     uint32_t logn = uint32_t(log(n) / log(2));
