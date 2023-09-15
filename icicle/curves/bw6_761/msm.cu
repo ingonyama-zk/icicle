@@ -1,14 +1,14 @@
-#ifndef _BLS12_381_MSM
-#define _BLS12_381_MSM
+#ifndef _BW6_761_MSM
+#define _BW6_761_MSM
 #include "../../appUtils/msm/msm.cu"
 #include "curve_config.cuh"
 #include <cuda.h>
 #include <stdexcept>
 
-extern "C" int msm_cuda_bls12_381(
-  BLS12_381::projective_t* out,
-  BLS12_381::affine_t points[],
-  BLS12_381::scalar_t scalars[],
+extern "C" int msm_cuda_bw6_761(
+  BW6_761::projective_t* out,
+  BW6_761::affine_t points[],
+  BW6_761::scalar_t scalars[],
   size_t count,
   unsigned large_bucket_factor,
   size_t device_id = 0,
@@ -16,7 +16,7 @@ extern "C" int msm_cuda_bls12_381(
 {
   try {
     cudaStreamCreate(&stream);
-    large_msm<BLS12_381::scalar_t, BLS12_381::projective_t, BLS12_381::affine_t>(
+    large_msm<BW6_761::scalar_t, BW6_761::projective_t, BW6_761::affine_t>(
       scalars, points, count, out, false, false, large_bucket_factor, stream);
     cudaStreamSynchronize(stream);
     return CUDA_SUCCESS;
@@ -26,10 +26,10 @@ extern "C" int msm_cuda_bls12_381(
   }
 }
 
-extern "C" int msm_batch_cuda_bls12_381(
-  BLS12_381::projective_t* out,
-  BLS12_381::affine_t points[],
-  BLS12_381::scalar_t scalars[],
+extern "C" int msm_batch_cuda_bw6_761(
+  BW6_761::projective_t* out,
+  BW6_761::affine_t points[],
+  BW6_761::scalar_t scalars[],
   size_t batch_size,
   size_t msm_size,
   size_t device_id = 0,
@@ -37,7 +37,7 @@ extern "C" int msm_batch_cuda_bls12_381(
 {
   try {
     cudaStreamCreate(&stream);
-    batched_large_msm<BLS12_381::scalar_t, BLS12_381::projective_t, BLS12_381::affine_t>(
+    batched_large_msm<BW6_761::scalar_t, BW6_761::projective_t, BW6_761::affine_t>(
       scalars, points, batch_size, msm_size, out, false, stream);
     cudaStreamSynchronize(stream);
     return CUDA_SUCCESS;
@@ -56,10 +56,10 @@ extern "C" int msm_batch_cuda_bls12_381(
  * @param d_points Points for the MSM. Must be on device.
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
-extern "C" int commit_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::scalar_t* d_scalars,
-  BLS12_381::affine_t* d_points,
+extern "C" int commit_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::scalar_t* d_scalars,
+  BW6_761::affine_t* d_points,
   size_t count,
   unsigned large_bucket_factor,
   size_t device_id = 0,
@@ -86,10 +86,10 @@ extern "C" int commit_cuda_bls12_381(
  * @param count Length of `d_points` array, `d_scalar` has length `count` * `batch_size`.
  * @param batch_size Size of the batch.
  */
-extern "C" int commit_batch_cuda_bls12_381(
-  BLS12_381::projective_t* d_out,
-  BLS12_381::scalar_t* d_scalars,
-  BLS12_381::affine_t* d_points,
+extern "C" int commit_batch_cuda_bw6_761(
+  BW6_761::projective_t* d_out,
+  BW6_761::scalar_t* d_scalars,
+  BW6_761::affine_t* d_points,
   size_t count,
   size_t batch_size,
   size_t device_id = 0,
@@ -107,10 +107,10 @@ extern "C" int commit_batch_cuda_bls12_381(
 }
 
 #if defined(G2_DEFINED)
-extern "C" int msm_g2_cuda_bls12_381(
-  BLS12_381::g2_projective_t* out,
-  BLS12_381::g2_affine_t points[],
-  BLS12_381::scalar_t scalars[],
+extern "C" int msm_g2_cuda_bw6_761(
+  BW6_761::g2_projective_t* out,
+  BW6_761::g2_affine_t points[],
+  BW6_761::scalar_t scalars[],
   size_t count,
   unsigned large_bucket_factor,
   size_t device_id = 0,
@@ -118,7 +118,7 @@ extern "C" int msm_g2_cuda_bls12_381(
 {
   try {
     cudaStreamCreate(&stream);
-    large_msm<BLS12_381::scalar_t, BLS12_381::g2_projective_t, BLS12_381::g2_affine_t>(
+    large_msm<BW6_761::scalar_t, BW6_761::g2_projective_t, BW6_761::g2_affine_t>(
       scalars, points, count, out, false, false, large_bucket_factor, stream);
     cudaStreamSynchronize(stream);
     return CUDA_SUCCESS;
@@ -128,10 +128,10 @@ extern "C" int msm_g2_cuda_bls12_381(
   }
 }
 
-extern "C" int msm_batch_g2_cuda_bls12_381(
-  BLS12_381::g2_projective_t* out,
-  BLS12_381::g2_affine_t points[],
-  BLS12_381::scalar_t scalars[],
+extern "C" int msm_batch_g2_cuda_bw6_761(
+  BW6_761::g2_projective_t* out,
+  BW6_761::g2_affine_t points[],
+  BW6_761::scalar_t scalars[],
   size_t batch_size,
   size_t msm_size,
   size_t device_id = 0,
@@ -139,7 +139,7 @@ extern "C" int msm_batch_g2_cuda_bls12_381(
 {
   try {
     cudaStreamCreate(&stream);
-    batched_large_msm<BLS12_381::scalar_t, BLS12_381::g2_projective_t, BLS12_381::g2_affine_t>(
+    batched_large_msm<BW6_761::scalar_t, BW6_761::g2_projective_t, BW6_761::g2_affine_t>(
       scalars, points, batch_size, msm_size, out, false, stream);
     cudaStreamSynchronize(stream);
     return CUDA_SUCCESS;
@@ -158,10 +158,10 @@ extern "C" int msm_batch_g2_cuda_bls12_381(
  * @param d_points G2 affine points for the MSM. Must be on device.
  * @param count Length of `d_scalars` and `d_points` arrays (they should have equal length).
  */
-extern "C" int commit_g2_cuda_bls12_381(
-  BLS12_381::g2_projective_t* d_out,
-  BLS12_381::scalar_t* d_scalars,
-  BLS12_381::g2_affine_t* d_points,
+extern "C" int commit_g2_cuda_bw6_761(
+  BW6_761::g2_projective_t* d_out,
+  BW6_761::scalar_t* d_scalars,
+  BW6_761::g2_affine_t* d_points,
   size_t count,
   unsigned large_bucket_factor,
   size_t device_id = 0,
@@ -191,10 +191,10 @@ extern "C" int commit_g2_cuda_bls12_381(
  * @param count Length of `d_points` array, `d_scalar` has length `count` * `batch_size`.
  * @param batch_size Size of the batch.
  */
-extern "C" int commit_batch_g2_cuda_bls12_381(
-  BLS12_381::g2_projective_t* d_out,
-  BLS12_381::scalar_t* d_scalars,
-  BLS12_381::g2_affine_t* d_points,
+extern "C" int commit_batch_g2_cuda_bw6_761(
+  BW6_761::g2_projective_t* d_out,
+  BW6_761::scalar_t* d_scalars,
+  BW6_761::g2_affine_t* d_points,
   size_t count,
   size_t batch_size,
   size_t device_id = 0,

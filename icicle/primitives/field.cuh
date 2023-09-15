@@ -34,10 +34,6 @@ public:
     return Field{scalar};
   }
 
-  static constexpr HOST_DEVICE_INLINE Field generator_x() { return Field{CONFIG::g1_gen_x}; }
-
-  static constexpr HOST_DEVICE_INLINE Field generator_y() { return Field{CONFIG::g1_gen_y}; }
-
   static HOST_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }

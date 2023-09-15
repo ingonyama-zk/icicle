@@ -2,10 +2,10 @@ extern crate criterion;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use icicle_utils::test_bls12_381::{
+use icicle::test_bls12_381::{
     commit_batch_bls12_381, generate_random_points_bls12_381, set_up_scalars_bls12_381,
 };
-use icicle_utils::utils::*;
+use icicle::utils::*;
 #[cfg(feature = "g2")]
 use icicle_utils::{commit_batch_g2, field::ExtensionField};
 
