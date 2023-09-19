@@ -61,6 +61,7 @@
 #include "../curves/bls12_377/curve_config.cuh"
 #include "../curves/bls12_381/curve_config.cuh"
 #include "../curves/bn254/curve_config.cuh"
+#include "../curves/f251/curve_config.cuh"
 
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
  *
@@ -267,6 +268,15 @@ struct SharedMemory<BN254::projective_t> {
   {
     extern __shared__ BN254::projective_t s_projective_t_bn254[];
     return s_projective_t_bn254;
+  }
+};
+
+template <>
+struct SharedMemory<F251::scalar_t> {
+  __device__ F251::scalar_t* getPointer()
+  {
+    extern __shared__ F251::scalar_t s_scalar_t_f251[];
+    return s_scalar_t_f251;
   }
 };
 #endif //_SHAREDMEM_H_
