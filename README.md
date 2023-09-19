@@ -176,6 +176,7 @@ We offer a simple Docker container so you can simply run ICICLE without settig e
 docker build -t <name_of_your_choice> .
 docker run --gpus all -it <name_of_your_choice> /bin/bash
 ```
+
 ## Contributions
 
 Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
