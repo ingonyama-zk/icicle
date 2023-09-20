@@ -32,6 +32,3 @@ jobs:
       run: |
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/goicicle
         go test ./goicicle/curves/bn254 -count=1
-      # TODO: Fix tests for bls12377
-      # TODO: Fix tests for bls12381
-      # run: go test ./goicicle/curves/bn254 ./goicicle/curves/bls12377 ./goicicle/curves/bls12381 -count=1

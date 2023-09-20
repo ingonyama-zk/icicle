@@ -45,7 +45,6 @@ jobs:
       run: make all
       working-directory: ./goicicle
 
-  # TODO: Add once Golang make file supports building for Windows
   # build-golang-windows:
   #   name: Build Golang on Windows
   #   runs-on: windows-2022
