@@ -16,8 +16,6 @@ extern "C" int poseidon_multi_cuda_bls12_381(
   cudaStream_t stream = 0)
 {
   try {
-    // TODO: once we get bindings to pass a stream, we should make {stream} a required parameter and use it instead of
-    // creating a new stream
     if (stream == 0) { cudaStreamCreate(&stream); }
 
     cudaEvent_t start_event, end_event;

@@ -28,8 +28,7 @@ __global__ void vectorModMult(S* scalar_vec, E* element_vec, E* result, size_t n
 }
 
 template <typename E, typename S>
-int vector_mod_mult(S* vec_a, E* vec_b, E* result, size_t n_elments, cudaStream_t stream) // TODO: in place so no need
-                                                                                          // for third result vector
+int vector_mod_mult(S* vec_a, E* vec_b, E* result, size_t n_elments, cudaStream_t stream)
 {
   // Set the grid and block dimensions
   int num_blocks = (int)ceil((float)n_elments / MAX_THREADS_PER_BLOCK);

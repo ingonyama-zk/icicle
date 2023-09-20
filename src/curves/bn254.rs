@@ -121,13 +121,11 @@ impl Point_BN254 {
     }
 
     pub fn to_ark(&self) -> G1Projective_BN254 {
-        //TODO: generic conversion
         self.to_ark_affine()
             .into_projective()
     }
 
     pub fn to_ark_affine(&self) -> G1Affine_BN254 {
-        //TODO: generic conversion
         use std::ops::Mul;
         let proj_x_field = Fq_BN254::from_le_bytes_mod_order(
             &self
@@ -194,7 +192,6 @@ impl Default for PointAffineNoInfinity_BN254 {
 }
 
 impl PointAffineNoInfinity_BN254 {
-    // TODO: generics
     ///From u32 limbs x,y
     pub fn from_limbs(x: &[u32], y: &[u32]) -> Self {
         PointAffineNoInfinity_BN254 {
@@ -260,8 +257,6 @@ impl PointAffineNoInfinity_BN254 {
 }
 
 impl Point_BN254 {
-    // TODO: generics
-
     pub fn from_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
         Point_BN254 {
             x: BaseField_BN254 { s: get_fixed_limbs(x) },

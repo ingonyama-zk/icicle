@@ -128,14 +128,12 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const ExtensionField& xs)
   {
-    // TODO: change to a more efficient squaring
     return mul_wide<MODULUS_MULTIPLE>(xs, xs);
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField sqr(const ExtensionField& xs)
   {
-    // TODO: change to a more efficient squaring
     return xs * xs;
   }
 

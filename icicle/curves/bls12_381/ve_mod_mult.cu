@@ -20,7 +20,7 @@ extern "C" int32_t vec_mod_mult_point_bls12_381(
     vector_mod_mult<BLS12_381::projective_t, BLS12_381::scalar_t>(scalar_vec, inout, inout, n_elments, stream);
     return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what()); // TODO: error code and message
+    printf("error %s", ex.what());
     return -1;
   }
 }
@@ -37,7 +37,7 @@ extern "C" int32_t vec_mod_mult_scalar_bls12_381(
     vector_mod_mult<BLS12_381::scalar_t, BLS12_381::scalar_t>(scalar_vec, inout, inout, n_elments, stream);
     return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what()); // TODO: error code and message
+    printf("error %s", ex.what());
     return -1;
   }
 }
@@ -55,7 +55,7 @@ extern "C" int32_t matrix_vec_mod_mult_bls12_381(
     matrix_mod_mult<BLS12_381::scalar_t>(matrix_flattened, input, output, n_elments, stream);
     return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what()); // TODO: error code and message
+    printf("error %s", ex.what());
     return -1;
   }
 }

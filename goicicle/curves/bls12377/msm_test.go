@@ -240,7 +240,7 @@ func GenerateG2Points(count int) []G2PointAffine {
 
 	// populate the slice
 	for i := 0; i < 10; i++ {
-		fmt.Print() // this prevents the test from hanging. TODO: figure out why
+		fmt.Print()
 		var p G2Point
 		p.Random()
 		var affine G2PointAffine

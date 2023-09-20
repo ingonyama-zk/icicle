@@ -15,7 +15,7 @@ extern "C" {
         number_of_blocks: usize,
         arity: c_uint,
         device_id: usize,
-        stream: usize, // TODO: provide a real stream
+        stream: usize,
     ) -> c_uint;
 
     fn msm_cuda_bls12_381(

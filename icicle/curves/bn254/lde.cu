@@ -361,7 +361,7 @@ extern "C" int ntt_inplace_batch_cuda_bn254(
     cudaStreamCreate(&stream);
     BN254::scalar_t* _null = nullptr;
     ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, false, _null, stream, true);
-    return CUDA_SUCCESS; // TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
+    return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -382,7 +382,7 @@ extern "C" int ntt_inplace_coset_batch_cuda_bn254(
   try {
     cudaStreamCreate(&stream);
     ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, is_coset, coset, stream, true);
-    return CUDA_SUCCESS; // TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
+    return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;

@@ -134,12 +134,10 @@ impl Point_CURVE_NAME_U {
     }
 
     pub fn to_ark(&self) -> G1Projective_CURVE_NAME_U {
-        //TODO: generic conversion
         self.to_ark_affine().into_projective()
     }
 
     pub fn to_ark_affine(&self) -> G1Affine_CURVE_NAME_U {
-        //TODO: generic conversion
         use std::ops::Mul;
         let proj_x_field = Fq_CURVE_NAME_U::from_le_bytes_mod_order(&self.x.to_bytes_le());
         let proj_y_field = Fq_CURVE_NAME_U::from_le_bytes_mod_order(&self.y.to_bytes_le());
@@ -189,7 +187,6 @@ impl Default for PointAffineNoInfinity_CURVE_NAME_U {
 }
 
 impl PointAffineNoInfinity_CURVE_NAME_U {
-    // TODO: generics
     ///From u32 limbs x,y
     pub fn from_limbs(x: &[u32], y: &[u32]) -> Self {
         PointAffineNoInfinity_CURVE_NAME_U {
@@ -235,8 +232,6 @@ impl PointAffineNoInfinity_CURVE_NAME_U {
 }
 
 impl Point_CURVE_NAME_U {
-    // TODO: generics
-
     pub fn from_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
         Point_CURVE_NAME_U {
             x: BaseField_CURVE_NAME_U {

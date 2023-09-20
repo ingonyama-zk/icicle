@@ -64,7 +64,7 @@ func TestG2ToBytes(t *testing.T) {
 }
 
 func TestG2ShouldConvertToProjective(t *testing.T) {
-	fmt.Print() // this prevents the test from hanging. TODO: figure out why
+	fmt.Print()
 	var pointProjective G2Point
 	pointProjective.Random()
 

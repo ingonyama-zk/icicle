@@ -166,13 +166,11 @@ impl Point_BLS12_381 {
     }
 
     pub fn to_ark(&self) -> G1Projective_BLS12_381 {
-        //TODO: generic conversion
         self.to_ark_affine()
             .into_projective()
     }
 
     pub fn to_ark_affine(&self) -> G1Affine_BLS12_381 {
-        //TODO: generic conversion
         use std::ops::Mul;
         let proj_x_field = Fq_BLS12_381::from_le_bytes_mod_order(
             &self
@@ -239,7 +237,6 @@ impl Default for PointAffineNoInfinity_BLS12_381 {
 }
 
 impl PointAffineNoInfinity_BLS12_381 {
-    // TODO: generics
     ///From u32 limbs x,y
     pub fn from_limbs(x: &[u32], y: &[u32]) -> Self {
         PointAffineNoInfinity_BLS12_381 {
@@ -305,8 +302,6 @@ impl PointAffineNoInfinity_BLS12_381 {
 }
 
 impl Point_BLS12_381 {
-    // TODO: generics
-
     pub fn from_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
         Point_BLS12_381 {
             x: BaseField_BLS12_381 { s: get_fixed_limbs(x) },

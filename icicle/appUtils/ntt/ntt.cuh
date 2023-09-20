@@ -6,8 +6,8 @@
 #include "../vector_manipulation/ve_mod_mult.cuh"
 
 const uint32_t MAX_NUM_THREADS = 1024;
-const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
-const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
+const uint32_t MAX_THREADS_BATCH = 512;
+const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32;
 const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * 1024;
 
 /**
@@ -196,7 +196,7 @@ __global__ void ntt_template_kernel_shared(
 
     if (l < loop_limit) {
 #pragma unroll
-      for (; s < logn; s++) // TODO: this loop also can be unrolled
+      for (; s < logn; s++)
       {
         uint32_t ntw_i = task % chunks;
 
@@ -320,7 +320,7 @@ void ntt_inplace_batch_template(
       ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
         d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
 
-    for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
+    for (int s = logn_shmem; s < logn; s++)
     {
       ntt_template_kernel<E, S>
         <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
@@ -335,7 +335,7 @@ void ntt_inplace_batch_template(
   } else {
     if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
-    for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
+    for (int s = logn - 1; s >= logn_shmem; s--)
     {
       ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, true);
     }
