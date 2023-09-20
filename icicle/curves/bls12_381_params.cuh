@@ -1,7 +1,10 @@
 #pragma once
-#include "../../utils/storage.cuh"
+#ifndef BLS12_381_PARAMS_H
+#define BLS12_381_PARAMS_H
 
-namespace PARAMS_BLS12_381 {
+#include "../utils/storage.cuh"
+
+namespace bls12_381 {
   struct fp_config {
     // field structure size = 8 * 32 bit
     static constexpr unsigned limbs_count = 8;
@@ -408,4 +411,6 @@ namespace PARAMS_BLS12_381 {
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {
     0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-} // namespace PARAMS_BLS12_381
+} // namespace bls12_381
+
+#endif

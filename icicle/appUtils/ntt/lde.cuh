@@ -1,6 +1,6 @@
+#pragma once
 #ifndef LDE_H
 #define LDE_H
-#pragma once
 
 template <typename S>
 int interpolate_scalars(S* d_out, S* d_evaluations, S* d_domain, unsigned n, cudaStream_t stream);

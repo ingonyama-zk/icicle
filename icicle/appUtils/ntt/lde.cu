@@ -1,5 +1,3 @@
-#ifndef LDE
-#define LDE
 #include "../vector_manipulation/ve_mod_mult.cuh"
 #include "lde.cuh"
 #include "ntt.cuh"
@@ -276,4 +274,3 @@ int evaluate_points_on_coset_batch(
 {
   return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, true, coset_powers, stream);
 }
-#endif

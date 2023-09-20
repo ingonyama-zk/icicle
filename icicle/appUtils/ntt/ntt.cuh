@@ -1,6 +1,6 @@
-#ifndef NTT
-#define NTT
 #pragma once
+#ifndef NTT_H
+#define NTT_H
 
 #include "../../utils/sharedmem.cuh"
 #include "../vector_manipulation/ve_mod_mult.cuh"

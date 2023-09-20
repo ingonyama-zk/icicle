@@ -1,10 +1,8 @@
-#ifndef MSM
-#define MSM
-#pragma once
 #include "../../primitives/affine.cuh"
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
+#include "../../curves/curve_config.cuh"
 #include "msm.cuh"
 #include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
@@ -14,6 +12,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+
+namespace msm {
+
+namespace {
 
 #define MAX_TH 256
 
@@ -880,146 +882,137 @@ void batched_bucket_method_msm(
   cudaStreamSynchronize(stream);
 }
 
-// this kernel converts affine points to projective points
-// each thread deals with a single point
-template <typename P, typename A>
-__global__ void to_proj_kernel(A* affine_points, P* proj_points, unsigned N)
-{
-  unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (tid < N) proj_points[tid] = P::from_affine(affine_points[tid]);
-}
+} // namespace
 
-// // the function computes msm using ssm
-// template <typename S, typename P, typename A>
-// void short_msm(S* h_scalars, A* h_points, unsigned size, P* h_final_result, cudaStream_t stream)
-// { // works up to 2^8
-//   S* scalars;
-//   A* a_points;
-//   P* p_points;
-//   P* results;
-
-//   cudaMallocAsync(&scalars, sizeof(S) * size, stream);
-//   cudaMallocAsync(&a_points, sizeof(A) * size, stream);
-//   cudaMallocAsync(&p_points, sizeof(P) * size, stream);
-//   cudaMallocAsync(&results, sizeof(P) * size, stream);
-
-//   // copy inputs to device
-//   cudaMemcpyAsync(scalars, h_scalars, sizeof(S) * size, cudaMemcpyHostToDevice, stream);
-//   cudaMemcpyAsync(a_points, h_points, sizeof(A) * size, cudaMemcpyHostToDevice, stream);
-
-//   // convert to projective representation and multiply each point by its scalar using single scalar multiplication
-//   unsigned NUM_THREADS = size;
-//   to_proj_kernel<<<1, NUM_THREADS, 0, stream>>>(a_points, p_points, size);
-//   ssm_kernel<<<1, NUM_THREADS, 0, stream>>>(scalars, p_points, results, size);
-
-//   P* final_result;
-//   cudaMallocAsync(&final_result, sizeof(P), stream);
-
-//   // assuming msm size is a power of 2
-//   // sum all the ssm results
-//   NUM_THREADS = size;
-//   sum_reduction_kernel<<<1, NUM_THREADS, 0, stream>>>(results, final_result);
-
-//   // copy result to host
-//   cudaStreamSynchronize(stream);
-//   cudaMemcpyAsync(h_final_result, final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
-
-//   // free memory
-//   cudaFreeAsync(scalars, stream);
-//   cudaFreeAsync(a_points, stream);
-//   cudaFreeAsync(p_points, stream);
-//   cudaFreeAsync(results, stream);
-//   cudaFreeAsync(final_result, stream);
-// }
-
-// // the function computes msm on the host using the naive method
-// template <typename A, typename S, typename P>
-// void reference_msm(S* scalars, A* a_points, unsigned size)
-// {
-//   P* points = new P[size];
-//   // P points[size];
-//   for (unsigned i = 0; i < size; i++) {
-//     points[i] = P::from_affine(a_points[i]);
-//   }
-
-//   P res = P::zero();
-
-//   for (unsigned i = 0; i < size; i++) {
-//     res = res + scalars[i] * points[i];
-//   }
-
-//   std::cout << "reference results" << std::endl;
-//   std::cout << P::to_affine(res) << std::endl;
-// }
-
-// unsigned get_optimal_c(const unsigned size)
-// {
-//   if (size < 17) return 1;
-//   // return 17;
-//   return ceil(log2(size)) - 4;
-// }
-
-// // this function is used to compute msms of size larger than 256
-// template <typename S, typename P, typename A>
-// void large_msm(
-//   S* scalars,
-//   A* points,
-//   unsigned size,
-//   P* result,
-//   bool on_device,
-//   bool big_triangle,
-//   unsigned large_bucket_factor,
-//   cudaStream_t stream)
-// {
-//   unsigned c = 16;
-//   unsigned bitsize = S::NBITS;
-//   bucket_method_msm(bitsize, c, scalars, points, size, result, on_device, big_triangle, large_bucket_factor, stream);
-// }
-
-// // this function is used to compute a batches of msms of size larger than 256 - currently isn't working on this branch
-// template <typename S, typename P, typename A>
-// void batched_large_msm(
-//   S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result, bool on_device, cudaStream_t stream)
-// {
-//   unsigned c = get_optimal_c(msm_size);
-//   unsigned bitsize = 255;
-//   batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device, stream);
-// }
-
-template <typename S, typename P, typename A>
-void msm_internal(
-  S* scalars,
-  unsigned msm_size,
-  bool scalars_on_device,
-  A* points,
-  unsigned points_size,
-  unsigned precompute_factor,
-  bool points_montgomery_form,
-  bool points_on_device,
-  P* results,
-  unsigned batch_size,
-  bool results_on_device,
-  unsigned c,
-  unsigned bitsize,
-  bool big_triangle,
-  unsigned large_bucket_factor,
-  unsigned device_id,
-  cudaStream_t stream)
+template <typename S, typename A, typename P>
+void msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
 {
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
-  if (batch_size == 1)
-    bucket_method_msm(bitsize, c, scalars, points, msm_size, results, scalars_on_device, big_triangle, large_bucket_factor, stream);
+  if (config.batch_size == 1)
+    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.scalars_on_device, config.big_triangle, config.large_bucket_factor, config.stream);
   else
-    batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, results, scalars_on_device, stream);
+    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.scalars_on_device, config.stream);
 }
 
-template <typename S, typename P, typename A>
-void msm(S* scalars, A* points, unsigned size, P* results, unsigned device_id, cudaStream_t stream)
+template <typename S, typename A, typename P>
+void msm(S* scalars, A* points, unsigned size, P* result)
 {
-  unsigned c = 16;
-  unsigned bitsize = S::NBITS;
-  msm_internal(scalars, size, true, points, size, 1, false, true, results, 1, true, c, bitsize, false, 10, device_id, stream);
+  MSMConfig config = {
+    false,     // scalars_on_device
+    true,      // scalars_montgomery_form
+    size,      // points_size
+    1,         // precompute_factor
+    false,     // points_on_device
+    true,      // points_montgomery_form
+    1,         // batch_size
+    false,     // result_on_device
+    16,        // c
+    S::NBITS,  // bitsize
+    false,     // big_triangle
+    10,        // large_bucket_factor
+    0,         // device_id
+    0          // stream
+  };
+  msm_internal(scalars, points, size, config, result);
+}
+
+/**
+ * Extern version of [msm_internal](@ref msm_internal) function with the following values of template parameters 
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+ *  - `A` is the [affine representation](@ref affine_t) of curve points;
+ *  - `P` is the [projective representation](@ref projective_t) of curve points.
+ * @returns 0 if no error occured and -1 otherwise.
+ */
+extern "C" int msm_internal_cuda(
+  curve_config::scalar_t scalars[],
+  curve_config::affine_t points[],
+  size_t msm_size,
+  MSMConfig config,
+  curve_config::projective_t* out)
+{
+  try {
+    msm_internal<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
+    return CUDA_SUCCESS;
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+/**
+ * Extern version of [msm](@ref msm) function with the following values of template parameters 
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+ *  - `A` is the [affine representation](@ref affine_t) of curve points;
+ *  - `P` is the [projective representation](@ref projective_t) of curve points.
+ * @returns 0 if no error occured and -1 otherwise.
+ */
+extern "C" int msm_cuda(
+  curve_config::scalar_t scalars[],
+  curve_config::affine_t points[],
+  size_t size,
+  curve_config::projective_t* out)
+{
+  try {
+    msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, size, out);
+    return CUDA_SUCCESS;
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+#if defined(G2_DEFINED)
+
+/**
+ * Extern version of [msm_internal](@ref msm_internal) function with the following values of template parameters 
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+ *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
+ *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
+ * @returns 0 if no error occured and -1 otherwise.
+ */
+extern "C" int msm_internal_cuda(
+  curve_config::scalar_t scalars[],
+  curve_config::g2_affine_t points[],
+  size_t msm_size,
+  MSMConfig config,
+  curve_config::g2_projective_t* out)
+{
+  try {
+    msm_internal<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
+    return CUDA_SUCCESS;
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+/**
+ * Extern version of [msm](@ref msm) function with the following values of template parameters 
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+ *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
+ *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
+ * @returns 0 if no error occured and -1 otherwise.
+ */
+extern "C" int g2_msm_cuda(
+  curve_config::scalar_t scalars[],
+  curve_config::g2_affine_t points[],
+  size_t size,
+  curve_config::g2_projective_t* out)
+{
+  try {
+    msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, size, out);
+    return CUDA_SUCCESS;
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
 }
 
 #endif
+
+} // namespace msm
