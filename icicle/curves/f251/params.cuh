@@ -18,10 +18,8 @@ namespace PARAMS_F251 {
     static constexpr storage<limbs_count> m = {0x8c81fffb, 0x00000002, 0xfeccf000, 0xffffffff, 0x0000907f, 0x00000000, 0xffffffbc, 0x1fffffff};
     static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr storage<limbs_count> montgomery_r = {0x4ffffffb, 0xac96341c, 0x9f60cd29, 0x36fc7695,
-                                                          0x7879462e, 0x666ea36f, 0x9a07df2f, 0xe0a77c1};
-    static constexpr storage<limbs_count> montgomery_r_inv = {0x6db1194e, 0xdc5ba005, 0xe111ec87, 0x90ef5a9,
-                                                              0xaeb85d5d, 0xc8260de4, 0x82c5551c, 0x15ebf951};
+    static constexpr storage<limbs_count> montgomery_r = {0xffffffe1, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffdf0, 0x07ffffff};
+    static constexpr storage<limbs_count> montgomery_r_inv = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000121, 0x10000000, 0x00000001, 0x00400000};
 
     static constexpr storage_array<omegas_count, limbs_count> omega = { {
               {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000011, 0x08000000},
