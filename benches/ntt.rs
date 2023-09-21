@@ -2,7 +2,7 @@ extern crate criterion;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use icicle_utils::test_bls12_381::*;
+use icicle::test_bls12_381::*;
 
 const LOG_NTT_SIZES: [usize; 3] = [20, 9, 10];
 const BATCH_SIZES: [usize; 3] = [1, 512, 1024];
