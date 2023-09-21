@@ -1,10 +1,10 @@
-use std::ffi::c_uint;
-use ark_ff::{BigInteger256, PrimeField};
-use std::mem::transmute;
+use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
 use ark_ff::Field;
-use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}};
+use ark_ff::{BigInteger256, PrimeField};
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
+use std::ffi::c_uint;
+use std::mem::transmute;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -22,9 +22,7 @@ impl<const NUM_LIMBS: usize> Default for Field_F251<NUM_LIMBS> {
 
 impl<const NUM_LIMBS: usize> Field_F251<NUM_LIMBS> {
     pub fn zero() -> Self {
-        Field_F251 {
-            s: [0u32; NUM_LIMBS],
-        }
+        Field_F251 { s: [0u32; NUM_LIMBS] }
     }
 
     pub fn one() -> Self {
@@ -36,7 +34,10 @@ impl<const NUM_LIMBS: usize> Field_F251<NUM_LIMBS> {
     fn to_bytes_le(&self) -> Vec<u8> {
         self.s
             .iter()
-            .map(|s| s.to_le_bytes().to_vec())
+            .map(|s| {
+                s.to_le_bytes()
+                    .to_vec()
+            })
             .flatten()
             .collect::<Vec<_>>()
     }
@@ -55,7 +56,9 @@ fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
             padded[..val.len()].copy_from_slice(&val);
             padded
         }
-        n if n == NUM_LIMBS => val.try_into().unwrap(),
+        n if n == NUM_LIMBS => val
+            .try_into()
+            .unwrap(),
         _ => panic!("slice has too many elements"),
     }
 }
@@ -66,7 +69,11 @@ impl ScalarField_F251 {
     }
 
     pub fn to_ark(&self) -> BigInteger256 {
-        BigInteger256::new(u32_vec_to_u64_vec(&self.limbs()).try_into().unwrap())
+        BigInteger256::new(
+            u32_vec_to_u64_vec(&self.limbs())
+                .try_into()
+                .unwrap(),
+        )
     }
 
     pub fn from_ark(ark: BigInteger256) -> Self {
@@ -90,10 +97,12 @@ impl ScalarField_F251 {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::{utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec}, curves::f251::ScalarField_F251};
+    use crate::{
+        curves::f251::ScalarField_F251,
+        utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec},
+    };
 
     #[test]
     fn test_ark_scalar_convert() {
