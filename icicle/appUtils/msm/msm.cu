@@ -890,23 +890,23 @@ void msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P*
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
   if (config.batch_size == 1)
-    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.scalars_on_device, config.big_triangle, config.large_bucket_factor, config.stream);
+    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.are_scalars_on_device, config.big_triangle, config.large_bucket_factor, config.stream);
   else
-    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.scalars_on_device, config.stream);
+    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.are_scalars_on_device, config.stream);
 }
 
 template <typename S, typename A, typename P>
 void msm(S* scalars, A* points, unsigned size, P* result)
 {
   MSMConfig config = {
-    false,     // scalars_on_device
-    true,      // scalars_montgomery_form
+    false,     // are_scalars_on_device
+    true,      // are_scalars_montgomery_form
     size,      // points_size
     1,         // precompute_factor
-    false,     // points_on_device
-    true,      // points_montgomery_form
+    false,     // are_points_on_device
+    true,      // are_points_montgomery_form
     1,         // batch_size
-    false,     // result_on_device
+    false,     // are_result_on_device
     16,        // c
     S::NBITS,  // bitsize
     false,     // big_triangle

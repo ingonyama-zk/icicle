@@ -19,13 +19,15 @@ set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 
 
-# when adding a new curve, add the respective item here
-# curves need to be addressed by numbers cos string comparison of preprocessor insturctions is unavailable
-set(SUPPORTED_CURVES 254;12381;12377)
+# when adding a new curve, append its name to the end of this list
+set(SUPPORTED_CURVES bn254;bls12_381;bls12_377)
 
 set(IS_CURVE_SUPPORTED FALSE)
+set(I 0)
 foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
+  math(EXPR I "${I} + 1")
   if (CURVE STREQUAL SUPPORTED_CURVE)
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DCURVE_ID=${I}")
     set(IS_CURVE_SUPPORTED TRUE)
   endif ()
 endforeach()
@@ -33,8 +35,6 @@ endforeach()
 if (NOT IS_CURVE_SUPPORTED)
   message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported curves: ${SUPPORTED_CURVES}" )
 endif ()
-
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DCURVE=${CURVE}")
 
 option(BUILD_TESTS "Build tests" OFF)
 
@@ -49,12 +49,12 @@ if (NOT BUILD_TESTS)
   add_custom_command(
     TARGET icicle
     POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym msm_cuda=${CURVE_NAME}_msm_cuda --redefine-sym msm_internal_cuda=${CURVE_NAME}_msm_internal_cuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym msm_cuda=${CURVE}_msm_cuda --redefine-sym msm_internal_cuda=${CURVE}_msm_internal_cuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
   )
   add_custom_command(
     TARGET icicle
     POST_BUILD
-    COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE_NAME}.a ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
+    COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
   )
   file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o)
 
