@@ -12,7 +12,7 @@ env:
 jobs:
   check-changed-files:
     name: Check Changed Files
-    runs-on: [self-hosted, Linux, X64, icicle]
+    runs-on: ubuntu-22.04
     outputs:
       golang: ${{ steps.changed_files.outputs.golang }}
       rust: ${{ steps.changed_files.outputs.rust }}
