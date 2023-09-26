@@ -11,6 +11,16 @@ type Curve struct {
 	G2ElementSize      int
 }
 
+var BW6_761 = Curve{
+	PackageName:        "bw6761",
+	CurveNameUpperCase: "BW6761",
+	CurveNameLowerCase: "bw6761",
+	SharedLib:          "-lbw6761",
+	ScalarSize:         12, 
+	BaseSize:           24,
+	G2ElementSize:      12,
+}
+
 var BN_254 = Curve{
 	PackageName:        "bn254",
 	CurveNameUpperCase: "BN254",
