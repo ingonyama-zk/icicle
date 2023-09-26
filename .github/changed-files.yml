@@ -1,0 +1,14 @@
+golang:
+  - goicicle/**/*.go'
+  - go.mod
+rust:
+  - src/**/*.rs
+  - build.rs
+  - Cargo.toml
+cpp:
+  - icicle/**/*.cu
+  - icicle/**/*.cuh
+  - icicle/**/*.cpp
+  - icicle/**/*.hpp
+  - icicle/**/*.c
+  - icicle/**/*.h

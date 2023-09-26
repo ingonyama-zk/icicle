@@ -25,3 +25,14 @@ jobs:
       uses: actions/checkout@v3
     - name: Check gofmt
       run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
+
+  formatting-cpp-cuda:
+    name: Check C++/CUDA Code Formatting
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Check clang-format
+      run: |
+        if [[ $(find ./ -path ./icicle/build -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]]; then echo "Please run clang-format"; exit 1; fi
+
