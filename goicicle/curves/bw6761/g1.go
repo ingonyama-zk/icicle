@@ -65,7 +65,7 @@ func (p *G1ProjectivePoint) FromAffine(affine *G1PointAffine) *G1ProjectivePoint
 	out := (*C.BW6761_projective_t)(unsafe.Pointer(p))
 	in := (*C.BW6761_affine_t)(unsafe.Pointer(affine))
 
-	C.projective_from_affine_bw6761(out, in)
+	C.projective_from_affine_bw6_761(out, in)
 
 	return p
 }
@@ -99,7 +99,7 @@ func (f *G1BaseField) ToBytesLe() []byte {
 
 func (p *G1ScalarField) Random() *G1ScalarField {
 	outC := (*C.BW6761_scalar_t)(unsafe.Pointer(p))
-	C.random_scalar_bw6761(outC)
+	C.random_scalar_bw6_761(outC)
 
 	return p
 }
@@ -181,19 +181,19 @@ func (p *G1ProjectivePoint) Eq(pCompare *G1ProjectivePoint) bool {
 	// Call the C function
 	// The C function doesn't keep any references to the data,
 	// so it'S fine if the Go garbage collector moves or deletes the data later.
-	return bool(C.eq_bw6761(pC, pCompareC))
+	return bool(C.eq_bw6_761(pC, pCompareC))
 }
 
 func (p *G1ProjectivePoint) IsOnCurve() bool {
 	point := (*C.BW6761_projective_t)(unsafe.Pointer(p))
-	res := C.projective_is_on_curve_bw6761(point)
+	res := C.projective_is_on_curve_bw6_761(point)
 
 	return bool(res)
 }
 
 func (p *G1ProjectivePoint) Random() *G1ProjectivePoint {
 	outC := (*C.BW6761_projective_t)(unsafe.Pointer(p))
-	C.random_projective_bw6761(outC)
+	C.random_projective_bw6_761(outC)
 
 	return p
 }
@@ -233,7 +233,7 @@ func (p *G1PointAffine) FromProjective(projective *G1ProjectivePoint) *G1PointAf
 	in := (*C.BW6761_projective_t)(unsafe.Pointer(projective))
 	out := (*C.BW6761_affine_t)(unsafe.Pointer(p))
 
-	C.projective_to_affine_bw6761(out, in)
+	C.projective_to_affine_bw6_761(out, in)
 
 	return p
 }
@@ -276,7 +276,7 @@ func MultiplyVec(a []G1ProjectivePoint, b []G1ScalarField, deviceID int) {
 	deviceIdC := C.size_t(deviceID)
 	nElementsC := C.size_t(len(a))
 
-	C.vec_mod_mult_point_bw6761(pointsC, scalarsC, nElementsC, deviceIdC)
+	C.vec_mod_mult_point_bw6_761(pointsC, scalarsC, nElementsC, deviceIdC)
 }
 
 func MultiplyScalar(a []G1ScalarField, b []G1ScalarField, deviceID int) {
@@ -289,7 +289,7 @@ func MultiplyScalar(a []G1ScalarField, b []G1ScalarField, deviceID int) {
 	deviceIdC := C.size_t(deviceID)
 	nElementsC := C.size_t(len(a))
 
-	C.vec_mod_mult_scalar_bw6761(aC, bC, nElementsC, deviceIdC)
+	C.vec_mod_mult_scalar_bw6_761(aC, bC, nElementsC, deviceIdC)
 }
 
 // Multiply a matrix by a scalar:
@@ -311,7 +311,7 @@ func MultiplyMatrix(a []G1ScalarField, b []G1ScalarField, deviceID int) {
 	deviceIdC := C.size_t(deviceID)
 	nElementsC := C.size_t(len(a))
 
-	C.matrix_vec_mod_mult_bw6761(aC, bC, cC, nElementsC, deviceIdC)
+	C.matrix_vec_mod_mult_bw6_761(aC, bC, cC, nElementsC, deviceIdC)
 }
 
 /*

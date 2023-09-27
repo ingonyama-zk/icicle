@@ -3,6 +3,9 @@
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
 #if defined(G2_DEFINED)
+#include "../../primitives/extension_field.cuh"
+#endif
+#if defined(G2_DEFINED)
 #undef G2_DEFINED
 #include "../bls12_377/params.cuh"
 #define G2_DEFINED
@@ -21,6 +24,7 @@ namespace BW6_761 {
   typedef Projective<point_field_t, scalar_t, b, gen_x, gen_y> projective_t;
   typedef Affine<point_field_t> affine_t;
 #if defined(G2_DEFINED)
+  typedef ExtensionField<PARAMS_BW6_761::fq_config> g2_point_field_t;
   static constexpr point_field_t g2_gen_x = point_field_t{PARAMS_BW6_761::g2_gen_x};
   static constexpr point_field_t g2_gen_y = point_field_t{PARAMS_BW6_761::g2_gen_y};
   static constexpr point_field_t g2_b = point_field_t{PARAMS_BW6_761::g2_weierstrass_b};

@@ -37,10 +37,10 @@ func Msm(out *G1ProjectivePoint, points []G1PointAffine, scalars []G1ScalarField
 	pointsC := (*C.BW6761_affine_t)(unsafe.Pointer(&points[0]))
 	scalarsC := (*C.BW6761_scalar_t)(unsafe.Pointer(&scalars[0]))
 	outC := (*C.BW6761_projective_t)(unsafe.Pointer(out))
-	ret := C.msm_cuda_bw6761(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
+	ret := C.msm_cuda_bw6_761(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
 
 	if ret != 0 {
-		return nil, fmt.Errorf("msm_cuda_bw6761 returned error code: %d", ret)
+		return nil, fmt.Errorf("msm_cuda_bw6_761 returned error code: %d", ret)
 	}
 
 	return out, nil
@@ -55,10 +55,10 @@ func MsmG2(out *G2Point, points []G2PointAffine, scalars []G1ScalarField, device
 	scalarsC := (*C.BW6761_scalar_t)(unsafe.Pointer(&scalars[0]))
 	outC := (*C.BW6761_g2_projective_t)(unsafe.Pointer(out))
 
-	ret := C.msm_g2_cuda_bw6761(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
+	ret := C.msm_g2_cuda_bw6_761(outC, pointsC, scalarsC, C.size_t(len(points)), C.size_t(device_id))
 
 	if ret != 0 {
-		return nil, fmt.Errorf("msm_g2_cuda_bw6761 returned error code: %d", ret)
+		return nil, fmt.Errorf("msm_g2_cuda_bw6_761 returned error code: %d", ret)
 	}
 
 	return out, nil
@@ -100,9 +100,9 @@ func MsmBatch(points *[]G1PointAffine, scalars *[]G1ScalarField, batchSize, devi
 	deviceIdC := C.size_t(deviceId)
 	batchSizeC := C.size_t(batchSize)
 
-	ret := C.msm_batch_cuda_bw6761(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
+	ret := C.msm_batch_cuda_bw6_761(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
 	if ret != 0 {
-		return nil, fmt.Errorf("msm_batch_cuda_bw6761 returned error code: %d", ret)
+		return nil, fmt.Errorf("msm_batch_cuda_bw6_761 returned error code: %d", ret)
 	}
 
 	return out, nil
@@ -137,9 +137,9 @@ func MsmG2Batch(points *[]G2PointAffine, scalars *[]G1ScalarField, batchSize, de
 	deviceIdC := C.size_t(deviceId)
 	batchSizeC := C.size_t(batchSize)
 
-	ret := C.msm_batch_g2_cuda_bw6761(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
+	ret := C.msm_batch_g2_cuda_bw6_761(outC, pointsC, scalarsC, batchSizeC, msmSizeC, deviceIdC)
 	if ret != 0 {
-		return nil, fmt.Errorf("msm_batch_cuda_bw6761 returned error code: %d", ret)
+		return nil, fmt.Errorf("msm_batch_cuda_bw6_761 returned error code: %d", ret)
 	}
 
 	return out, nil
@@ -152,7 +152,7 @@ func Commit(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int) 
 	countC := (C.size_t)(count)
 	largeBucketFactorC := C.uint(bucketFactor)
 
-	ret := C.commit_cuda_bw6761(d_outC, scalarsC, pointsC, countC, largeBucketFactorC, 0)
+	ret := C.commit_cuda_bw6_761(d_outC, scalarsC, pointsC, countC, largeBucketFactorC, 0)
 
 	if ret != 0 {
 		return -1
@@ -168,7 +168,7 @@ func CommitG2(d_out, d_scalars, d_points unsafe.Pointer, count, bucketFactor int
 	countC := (C.size_t)(count)
 	largeBucketFactorC := C.uint(bucketFactor)
 
-	ret := C.commit_g2_cuda_bw6761(d_outC, scalarsC, pointsC, countC, largeBucketFactorC, 0)
+	ret := C.commit_g2_cuda_bw6_761(d_outC, scalarsC, pointsC, countC, largeBucketFactorC, 0)
 
 	if ret != 0 {
 		return -1
@@ -184,7 +184,7 @@ func CommitBatch(d_out, d_scalars, d_points unsafe.Pointer, count, batch_size in
 	countC := (C.size_t)(count)
 	batch_sizeC := (C.size_t)(batch_size)
 
-	ret := C.commit_batch_cuda_bw6761(d_outC, scalarsC, pointsC, countC, batch_sizeC, 0)
+	ret := C.commit_batch_cuda_bw6_761(d_outC, scalarsC, pointsC, countC, batch_sizeC, 0)
 
 	if ret != 0 {
 		return -1
@@ -200,7 +200,7 @@ func CommitG2Batch(d_out, d_scalars, d_points unsafe.Pointer, count, batch_size 
 	countC := (C.size_t)(count)
 	batch_sizeC := (C.size_t)(batch_size)
 
-	ret := C.msm_batch_g2_cuda_bw6761(d_outC, pointsC, scalarsC, countC, batch_sizeC, 0)
+	ret := C.msm_batch_g2_cuda_bw6_761(d_outC, pointsC, scalarsC, countC, batch_sizeC, 0)
 
 	if ret != 0 {
 		return -1

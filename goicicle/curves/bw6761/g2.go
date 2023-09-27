@@ -47,7 +47,7 @@ type G2Point struct {
 
 func (p *G2Point) Random() *G2Point {
 	outC := (*C.BW6761_g2_projective_t)(unsafe.Pointer(p))
-	C.random_g2_projective_bw6761(outC)
+	C.random_g2_projective_bw6_761(outC)
 
 	return p
 }
@@ -56,7 +56,7 @@ func (p *G2Point) FromAffine(affine *G2PointAffine) *G2Point {
 	out := (*C.BW6761_g2_projective_t)(unsafe.Pointer(p))
 	in := (*C.BW6761_g2_affine_t)(unsafe.Pointer(affine))
 
-	C.g2_projective_from_affine_bw6761(out, in)
+	C.g2_projective_from_affine_bw6_761(out, in)
 
 	return p
 }
@@ -72,7 +72,7 @@ func (p *G2Point) Eq(pCompare *G2Point) bool {
 	// Call the C function
 	// The C function doesn't keep any references to the data,
 	// so it's fine if the Go garbage collector moves or deletes the data later.
-	return bool(C.eq_g2_bw6761(pC, pCompareC))
+	return bool(C.eq_g2_bw6_761(pC, pCompareC))
 }
 
 func (f *G2Element) ToBytesLe() []byte {
@@ -100,7 +100,7 @@ func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
 	out := (*C.BW6761_g2_affine_t)(unsafe.Pointer(p))
 	in := (*C.BW6761_g2_projective_t)(unsafe.Pointer(projective))
 
-	C.g2_projective_to_affine_bw6761(out, in)
+	C.g2_projective_to_affine_bw6_761(out, in)
 
 	return p
 }
@@ -108,7 +108,7 @@ func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
 func (p *G2Point) IsOnCurve() bool {
 	// Directly copy memory from the C struct to the Go struct
 	point := (*C.BW6761_g2_projective_t)(unsafe.Pointer(p))
-	res := C.g2_projective_is_on_curve_bw6761(point)
+	res := C.g2_projective_is_on_curve_bw6_761(point)
 
 	return bool(res)
 }

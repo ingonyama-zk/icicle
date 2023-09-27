@@ -117,7 +117,7 @@ func TestNttBatchBW6761(t *testing.T) {
 		// Add it to the result vector of vectors
 		nttResultVecOfVec = append(nttResultVecOfVec, clone)
 
-		// Call the ntt_bw6761 function
+		// Call the ntt_bw6_761 function
 		Ntt(&nttResultVecOfVec[i], false, 0)
 	}
 
