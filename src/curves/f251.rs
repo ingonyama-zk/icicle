@@ -1,9 +1,6 @@
 use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
-use ark_ff::Field;
-use ark_ff::{BigInteger256, PrimeField};
+use ark_ff::BigInteger256;
 use rustacuda_core::DeviceCopy;
-use rustacuda_derive::DeviceCopy;
-use std::ffi::c_uint;
 use std::mem::transmute;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -43,10 +40,7 @@ impl<const NUM_LIMBS: usize> Field_F251<NUM_LIMBS> {
     }
 }
 
-pub const BASE_LIMBS_F251: usize = 8;
 pub const SCALAR_LIMBS_F251: usize = 8;
-
-pub type BaseField_F251 = Field_F251<BASE_LIMBS_F251>;
 pub type ScalarField_F251 = Field_F251<SCALAR_LIMBS_F251>;
 
 fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
@@ -99,10 +93,7 @@ impl ScalarField_F251 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        curves::f251::ScalarField_F251,
-        utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec},
-    };
+    use crate::curves::f251::ScalarField_F251;
 
     #[test]
     fn test_ark_scalar_convert() {
