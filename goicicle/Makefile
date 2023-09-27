@@ -7,14 +7,16 @@ FEATURES = -DG2_DEFINED
 TARGET_BN254 = libbn254.so
 TARGET_BLS12_381 = libbls12_381.so
 TARGET_BLS12_377 = libbls12_377.so
+TARGET_F251 = libf251.so
 
-VPATH = ../icicle/curves/bn254:../icicle/curves/bls12_377:../icicle/curves/bls12_381
+VPATH = ../icicle/curves/bn254:../icicle/curves/bls12_377:../icicle/curves/bls12_381:../icicle/curves/f251
 
 SRCS_BN254 = lde.cu msm.cu projective.cu ve_mod_mult.cu
 SRCS_BLS12_381 = lde.cu msm.cu projective.cu ve_mod_mult.cu poseidon.cu
 SRCS_BLS12_377 = lde.cu msm.cu projective.cu ve_mod_mult.cu
+SRCS_F251 = lde.cu ve_mod_mult.cu
 
-all: $(TARGET_BN254) $(TARGET_BLS12_381) $(TARGET_BLS12_377)
+all: $(TARGET_BN254) $(TARGET_BLS12_381) $(TARGET_BLS12_377) $(TARGET_F251)
 
 $(TARGET_BN254): 
 	$(NVCC) $(FEATURES) $(CFLAGS) $(LDFLAGS) $(addprefix ../icicle/curves/bn254/, $(SRCS_BN254)) -o $@
@@ -25,5 +27,8 @@ $(TARGET_BLS12_381):
 $(TARGET_BLS12_377):
 	$(NVCC) $(FEATURES) $(CFLAGS) $(LDFLAGS) $(addprefix ../icicle/curves/bls12_377/, $(SRCS_BLS12_377)) -o $@
 
+$(TARGET_F251):
+	$(NVCC) $(FEATURES) $(CFLAGS) $(LDFLAGS) $(addprefix ../icicle/curves/f251/, $(SRCS_F251)) -o $@
+
 clean:
-	rm -f $(TARGET_BN254) $(TARGET_BLS12_381) $(TARGET_BLS12_377)
+	rm -f $(TARGET_BN254) $(TARGET_BLS12_381) $(TARGET_BLS12_377) $(TARGET_F251)
