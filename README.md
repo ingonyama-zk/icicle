@@ -40,8 +40,9 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ### Prerequisites
 
-- [NVCC]
+- [NVCC] (version 12.0 or newer)
 - cmake 3.18 and above
+- follow [these instructions](https://github.com/ingonyama-zk/icicle/tree/main/icicle#prerequisites-on-ubuntu)
 
 ### Steps
 
