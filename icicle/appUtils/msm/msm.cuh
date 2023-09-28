@@ -14,6 +14,9 @@
  *
  * To solve an MSM problem, we use an algorithm called the "bucket method". For a theoretical background on this algorithm, 
  * see [this](https://www.youtube.com/watch?v=Bl5mQA7UL2I) great talk by Gus Gutoski.
+ *
+ * This codebase is based on and evolved from Matter Labs' [Zprize submission](@ref 
+ * https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/bellman-cuda-sys/native/msm.cu).
  */
 namespace msm {
 

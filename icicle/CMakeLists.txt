@@ -43,6 +43,7 @@ if (NOT BUILD_TESTS)
   add_library(
     icicle
     appUtils/msm/msm.cu
+    appUtils/ntt/ntt.cu
   )
   target_compile_options(icicle PRIVATE -c)
 

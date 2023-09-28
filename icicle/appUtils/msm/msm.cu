@@ -926,8 +926,8 @@ void msm(S* scalars, A* points, unsigned size, P* result)
  * @returns 0 if no error occured and -1 otherwise.
  */
 extern "C" int msm_internal_cuda(
-  curve_config::scalar_t scalars[],
-  curve_config::affine_t points[],
+  curve_config::scalar_t* scalars,
+  curve_config::affine_t* points,
   size_t msm_size,
   MSMConfig config,
   curve_config::projective_t* out)
@@ -950,8 +950,8 @@ extern "C" int msm_internal_cuda(
  * @returns 0 if no error occured and -1 otherwise.
  */
 extern "C" int msm_cuda(
-  curve_config::scalar_t scalars[],
-  curve_config::affine_t points[],
+  curve_config::scalar_t* scalars,
+  curve_config::affine_t* points,
   size_t size,
   curve_config::projective_t* out)
 {
@@ -975,8 +975,8 @@ extern "C" int msm_cuda(
  * @returns 0 if no error occured and -1 otherwise.
  */
 extern "C" int msm_internal_cuda(
-  curve_config::scalar_t scalars[],
-  curve_config::g2_affine_t points[],
+  curve_config::scalar_t* scalars,
+  curve_config::g2_affine_t* points,
   size_t msm_size,
   MSMConfig config,
   curve_config::g2_projective_t* out)
@@ -999,8 +999,8 @@ extern "C" int msm_internal_cuda(
  * @returns 0 if no error occured and -1 otherwise.
  */
 extern "C" int g2_msm_cuda(
-  curve_config::scalar_t scalars[],
-  curve_config::g2_affine_t points[],
+  curve_config::scalar_t* scalars,
+  curve_config::g2_affine_t* points,
   size_t size,
   curve_config::g2_projective_t* out)
 {
