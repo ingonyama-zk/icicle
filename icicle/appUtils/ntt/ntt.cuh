@@ -2,6 +2,8 @@
 #ifndef NTT_H
 #define NTT_H
 
+#include "cuda_runtime_api.h"
+
 /**
  * @namespace ntt
  * Number Theoretic Transform, or NTT is a version of [fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) where instead of real or 
@@ -20,11 +22,13 @@ namespace ntt {
  * @param d_twiddles Input empty array on device to which twiddles are to be written.
  * @param n_twiddles Number of twiddle \f$ n \f$ factors to generate.
  * @param omega Root of unity \f$ \omega \f$.
+ * @param device_id ID of the device to use.
  * @param stream Stream to use.
  * @tparam S The type of twiddle factors \f$ \{ \omega^i \} \f$.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename S>
-void generate_twiddle_factors(S* d_twiddles, uint32_t n_twiddles, S omega, cudaStream_t stream);
+cudaError_t generate_twiddle_factors(S* d_twiddles, uint32_t n_twiddles, S omega, unsigned device_id, cudaStream_t stream);
 
 /**
  * @enum Ordering
@@ -85,21 +89,23 @@ struct NTTConfig {
 
 /**
  * A function that computes NTT or iNTT in-place.
- * @param input Input that's mutated in-place by this function. Length of this array needs to be [size](@ref size) * [config.batch_size](@ref config.batch_size).
+ * @param input Input that's mutated in-place by this function. Length of this array needs to be \f$ size \cdot config.batch_size \f$.
+ * Note that if inputs are in Montgomery form, the outputs will be as well and vice-verse: non-Montgomery inputs produce non-Montgomety outputs.
  * @param size NTT size \f$ n \f$. If a batch of NTTs (which all need to have the same size) is computed, this is the size of 1 NTT.
  * @param is_inverse If true, inverse NTT is computed, otherwise — regular forward NTT.
  * @param config [NTTConfig](@ref NTTConfig) used in this NTT.
  * @tparam E The type of inputs and outputs (i.e. coefficients \f$ \{p_i\} \f$ and values \f$ p(x) \f$). Must be a group.
- * @tparam S The type of "twiddle factors" \f$ \{ \omega^i \} \f$. Must be a field. Often (but not always) `S=E`. 
+ * @tparam S The type of "twiddle factors" \f$ \{ \omega^i \} \f$. Must be a field. Often (but not always) `S=E`.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename E, typename S>
-void ntt_internal(E* input, unsigned size, bool is_inverse, NTTConfig<S> config);
+cudaError_t ntt_internal(E* input, unsigned size, bool is_inverse, NTTConfig<S> config);
 
 /**
  * A function that computes NTT by calling [ntt_internal](@ref ntt_internal) function with default [NTTConfig](@ref NTTConfig) values.
  */
 template <typename E, typename S>
-void ntt(E* input, unsigned size, bool is_inverse);
+cudaError_t ntt(E* input, unsigned size, bool is_inverse);
 
 } // namespace ntt
 

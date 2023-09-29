@@ -885,7 +885,7 @@ void batched_bucket_method_msm(
 } // namespace
 
 template <typename S, typename A, typename P>
-void msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
+cudaError_t msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
 {
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
@@ -893,10 +893,11 @@ void msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P*
     bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.are_scalars_on_device, config.big_triangle, config.large_bucket_factor, config.stream);
   else
     batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.are_scalars_on_device, config.stream);
+  return cudaSuccess;
 }
 
 template <typename S, typename A, typename P>
-void msm(S* scalars, A* points, unsigned size, P* result)
+cudaError_t msm(S* scalars, A* points, unsigned size, P* result)
 {
   MSMConfig config = {
     false,     // are_scalars_on_device
@@ -914,7 +915,7 @@ void msm(S* scalars, A* points, unsigned size, P* result)
     0,         // device_id
     0          // stream
   };
-  msm_internal(scalars, points, size, config, result);
+  return msm_internal(scalars, points, size, config, result);
 }
 
 /**
@@ -923,22 +924,16 @@ void msm(S* scalars, A* points, unsigned size, P* result)
  *  - `S` is the [scalar field](@ref scalar_t) of the curve;
  *  - `A` is the [affine representation](@ref affine_t) of curve points;
  *  - `P` is the [projective representation](@ref projective_t) of curve points.
- * @returns 0 if no error occured and -1 otherwise.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" int msm_internal_cuda(
+extern "C" cudaError_t msm_internal_cuda(
   curve_config::scalar_t* scalars,
   curve_config::affine_t* points,
   size_t msm_size,
   MSMConfig config,
   curve_config::projective_t* out)
 {
-  try {
-    msm_internal<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
-    return CUDA_SUCCESS;
-  } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what());
-    return -1;
-  }
+  return msm_internal<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 /**
@@ -947,21 +942,15 @@ extern "C" int msm_internal_cuda(
  *  - `S` is the [scalar field](@ref scalar_t) of the curve;
  *  - `A` is the [affine representation](@ref affine_t) of curve points;
  *  - `P` is the [projective representation](@ref projective_t) of curve points.
- * @returns 0 if no error occured and -1 otherwise.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" int msm_cuda(
+extern "C" cudaError_t msm_cuda(
   curve_config::scalar_t* scalars,
   curve_config::affine_t* points,
   size_t size,
   curve_config::projective_t* out)
 {
-  try {
-    msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, size, out);
-    return CUDA_SUCCESS;
-  } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what());
-    return -1;
-  }
+  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, size, out);
 }
 
 #if defined(G2_DEFINED)
@@ -972,22 +961,16 @@ extern "C" int msm_cuda(
  *  - `S` is the [scalar field](@ref scalar_t) of the curve;
  *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
  *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
- * @returns 0 if no error occured and -1 otherwise.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" int msm_internal_cuda(
+extern "C" cudaError_t g2_msm_internal_cuda(
   curve_config::scalar_t* scalars,
   curve_config::g2_affine_t* points,
   size_t msm_size,
   MSMConfig config,
   curve_config::g2_projective_t* out)
 {
-  try {
-    msm_internal<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
-    return CUDA_SUCCESS;
-  } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what());
-    return -1;
-  }
+  return msm_internal<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
 }
 
 /**
@@ -996,21 +979,15 @@ extern "C" int msm_internal_cuda(
  *  - `S` is the [scalar field](@ref scalar_t) of the curve;
  *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
  *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
- * @returns 0 if no error occured and -1 otherwise.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" int g2_msm_cuda(
+extern "C" cudaError_t g2_msm_cuda(
   curve_config::scalar_t* scalars,
   curve_config::g2_affine_t* points,
   size_t size,
   curve_config::g2_projective_t* out)
 {
-  try {
-    msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, size, out);
-    return CUDA_SUCCESS;
-  } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what());
-    return -1;
-  }
+  return msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, size, out);
 }
 
 #endif

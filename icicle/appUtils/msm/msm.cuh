@@ -2,6 +2,8 @@
 #ifndef MSM_H
 #define MSM_H
 
+#include "cuda_runtime_api.h"
+
 /**
  * @namespace msm
  * Multi-scalar-multiplication, or MSM, is the sum of products of the form:
@@ -15,8 +17,8 @@
  * To solve an MSM problem, we use an algorithm called the "bucket method". For a theoretical background on this algorithm, 
  * see [this](https://www.youtube.com/watch?v=Bl5mQA7UL2I) great talk by Gus Gutoski.
  *
- * This codebase is based on and evolved from Matter Labs' [Zprize submission](@ref 
- * https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/bellman-cuda-sys/native/msm.cu).
+ * This codebase is based on and evolved from Matter Labs' 
+ * [Zprize submission](https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/bellman-cuda-sys/native/msm.cu).
  */
 namespace msm {
 
@@ -55,22 +57,24 @@ struct MSMConfig {
 /**
  * A function that computes MSM: \f$ MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i \f$.
  * @param scalars Scalars \f$ s_i \f$. In case of batch MSM, the scalars from all MSMs are concatenated.
- * @param points Points \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated. So, if for example all MSMs share the same base points, they can be repeated only once.
+ * @param points Points \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated. 
+ * So, if for example all MSMs share the same base points, they can be repeated only once.
  * @param msm_size MSM size \f$ N \f$. If a batch of MSMs (which all need to have the same size) is computed, this is the size of 1 MSM.
  * @param results Result (or results in the case of batch MSM).
  * @param config [MSMConfig](@ref MSMConfig) used in this MSM.
  * @tparam S Scalar field type.
  * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
  * @tparam P Output type, which is typically a [projective Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) point in our codebase.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename S, typename A, typename P>
-void msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results);
+cudaError_t msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results);
 
 /**
  * A function that computes MSM by calling [msm_internal](@ref msm_internal) function with default [MSMConfig](@ref MSMConfig) values.
  */
 template <typename S, typename A, typename P>
-void msm(S* scalars, A* points, unsigned size, P* result);
+cudaError_t msm(S* scalars, A* points, unsigned size, P* result);
 
 } // namespace msm
 
