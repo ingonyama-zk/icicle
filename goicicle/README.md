@@ -47,3 +47,21 @@ Replace `/path/to/shared/libs` with the actual path where the shared libraries a
 ## Cleaning up
 
 If you want to remove the compiled files, you can use the `make clean` command. This will remove the `libbn254.so`, `libbls12_381.so`, and `libbls12_377.so` files.
+
+## Common issues
+
+### Cannot find shared library
+
+In some cases you may encounter the following error, despite exporting the correct `LD_LIBRARY_PATH`.
+
+```
+/usr/local/go/pkg/tool/linux_amd64/link: running gcc failed: exit status 1
+/usr/bin/ld: cannot find -lbn254: No such file or directory
+/usr/bin/ld: cannot find -lbn254: No such file or directory
+/usr/bin/ld: cannot find -lbn254: No such file or directory
+/usr/bin/ld: cannot find -lbn254: No such file or directory
+/usr/bin/ld: cannot find -lbn254: No such file or directory
+collect2: error: ld returned 1 exit status
+```
+
+This is normally fixed by exporting the path to the shared library location in the following way: `export CGO_LDFLAGS="-L/<path_to_shared_lib>/"`

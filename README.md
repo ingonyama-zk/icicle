@@ -40,8 +40,9 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ### Prerequisites
 
-- [NVCC]
+- [NVCC] (version 12.0 or newer)
 - cmake 3.18 and above
+- follow [these instructions](https://github.com/ingonyama-zk/icicle/tree/main/icicle#prerequisites-on-ubuntu)
 
 ### Steps
 
@@ -167,6 +168,16 @@ The script does the following:
 - Creates a test file with the curve name in ``src``. 
 
 Testing the new curve could be done by running the tests in ``tests_curve_name`` (e.g. ``tests_bls12_381``).
+
+## Docker
+
+We offer a simple Docker container so you can simply run ICICLE without settig everything up locally.
+
+```
+docker build -t <name_of_your_choice> .
+docker run --gpus all -it <name_of_your_choice> /bin/bash
+```
+
 ## Contributions
 
 Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.

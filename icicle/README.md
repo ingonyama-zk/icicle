@@ -1,4 +1,6 @@
-# Tests
+# ICICLE CUDA
+
+## Running tests
 
 ```sh
 mkdir -p build; cmake -S . -B build; cmake --build build; cd build && ctest; cd ..

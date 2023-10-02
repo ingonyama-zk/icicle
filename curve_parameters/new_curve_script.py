@@ -5,6 +5,9 @@ from string import Template
 import sys
 
 
+argv_list = ['thisfile', 'curve_json', 'command']
+new_curve_args = dict(zip(argv_list, sys.argv[:len(argv_list)] + [""]*(len(argv_list) - len(sys.argv))))
+
 def to_hex(val: int, length):
     x = hex(val)[2:]
     if len(x) % 8 != 0:
@@ -22,6 +25,7 @@ def to_hex(val: int, length):
 
 def compute_values(modulus, modulus_bit_count, limbs):
     limb_size = 8*limbs
+    bit_size = 4*limb_size
     modulus_ = to_hex(modulus,limb_size)
     modulus_2 = to_hex(modulus*2,limb_size)
     modulus_4 = to_hex(modulus*4,limb_size)
@@ -33,6 +37,8 @@ def compute_values(modulus, modulus_bit_count, limbs):
     m = to_hex(m_raw,limb_size)
     one = to_hex(1,limb_size)
     zero = to_hex(0,limb_size)
+    montgomery_r = to_hex((2 ** bit_size) % modulus, limb_size)
+    montgomery_r_inv = to_hex(((modulus+1)//2)**bit_size % modulus, limb_size)
 
     return (
         modulus_,
@@ -44,7 +50,9 @@ def compute_values(modulus, modulus_bit_count, limbs):
         modulus_squared_4,
         m,
         one,
-        zero
+        zero,
+        montgomery_r,
+        montgomery_r_inv
     )
 
 
@@ -59,7 +67,9 @@ def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_
         modulus_squared_4,
         m,
         one,
-        zero
+        zero,
+        montgomery_r,
+        montgomery_r_inv
     ) = compute_values(modulus, modulus_bit_count, limbs)
 
     limb_size = 8*limbs
@@ -74,6 +84,8 @@ def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_
         'fq_m': m,
         'fq_one': one,
         'fq_zero': zero,
+        'fq_montgomery_r': montgomery_r,
+        'fq_montgomery_r_inv': montgomery_r_inv,
         'fq_gen_x': to_hex(g1_gen_x, limb_size),
         'fq_gen_y': to_hex(g1_gen_y, limb_size),
         'fq_gen_x_re': to_hex(g2_gen_x_re, limb_size),
@@ -94,7 +106,9 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
         modulus_squared_4,
         m,
         one,
-        zero
+        zero,
+        montgomery_r,
+        montgomery_r_inv
     ) = compute_values(modulus, modulus_bit_count, limbs)
     limb_size = 8*limbs
     if size > 0:
@@ -129,6 +143,8 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
         'fp_m': m,
         'fp_one': one,
         'fp_zero': zero,
+        'fp_montgomery_r': montgomery_r,
+        'fp_montgomery_r_inv': montgomery_r_inv,
         'omega': omega[:-1],
         'omega_inv': omega_inv[:-1],
         'inv': inv[:-1],
@@ -190,7 +206,7 @@ def get_params(config):
 
 
 config = None
-with open(sys.argv[1]) as json_file:
+with open(new_curve_args['curve_json']) as json_file:
     config = json.load(json_file)
 
 curve_name_lower = config["curve_name"].lower()
@@ -211,7 +227,7 @@ with open("./icicle/curves/curve_template/params.cuh.tmpl", "r") as params_file:
     with open(f'./icicle/curves/{curve_name_lower}/params.cuh', 'w') as f:
         f.write(params_content)
 
-if sys.argv[2] != "-update":
+if new_curve_args['command'] != '-update':
     with open("./icicle/curves/curve_template/lde.cu.tmpl", "r") as lde_file:
         template_content = Template(lde_file.read())
         lde_content = template_content.safe_substitute(
