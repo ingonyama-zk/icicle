@@ -5,6 +5,7 @@
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
+#include "../../utils/error_handler.cuh"
 #include "msm.cuh"
 #include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
@@ -26,17 +27,21 @@ __global__ void single_stage_multi_reduction_kernel(
   P* v, P* v_r, unsigned block_size, unsigned write_stride, unsigned write_phase, unsigned padding)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
   int jump = block_size / 2;
+
+  if (tid >= jump) {
+    return;
+  }
+
+  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
   int block_id = tid_p / jump;
   int block_tid = tid_p % jump;
   unsigned read_ind = block_size * block_id + block_tid;
   unsigned write_ind = tid;
-  v_r
-    [write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride
-                  : write_ind] =
-      padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
-              : v[read_ind] + v[read_ind + jump];
+  unsigned v_r_key = write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
+  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero() : v[read_ind] + v[read_ind + jump];
+  
+  v_r[v_r_key] = v_r_value;
 }
 
 // this kernel performs single scalar multiplication
@@ -555,6 +560,9 @@ void bucket_method_msm(
       NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
       single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
         large_buckets, large_buckets, s * 2, 0, 0, 0);
+
+      CHECK_LAST_CUDA_ERROR();
+      CHECK_SYNC_DEVICE_ERROR();
     }
 
     // distribute
