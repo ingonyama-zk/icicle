@@ -18,7 +18,7 @@ var BW6_761 = Curve{
 	SharedLib:          "-lbw6761",
 	ScalarSize:         12,
 	BaseSize:           24,
-	G2ElementSize:      12,
+	G2ElementSize:      6,
 }
 
 var BN_254 = Curve{
