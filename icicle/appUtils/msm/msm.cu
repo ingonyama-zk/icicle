@@ -24,12 +24,16 @@
 
 template <typename P>
 __global__ void single_stage_multi_reduction_kernel(
-  P* v, P* v_r, unsigned block_size, unsigned write_stride, unsigned write_phase, unsigned padding, unsigned num_of_threads)
+  P* v,
+  P* v_r,
+  unsigned block_size,
+  unsigned write_stride,
+  unsigned write_phase,
+  unsigned padding,
+  unsigned num_of_threads)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  if (tid >= num_of_threads) {
-    return;
-  }
+  if (tid >= num_of_threads) { return; }
 
   int jump = block_size / 2;
   int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
@@ -37,9 +41,11 @@ __global__ void single_stage_multi_reduction_kernel(
   int block_tid = tid_p % jump;
   unsigned read_ind = block_size * block_id + block_tid;
   unsigned write_ind = tid;
-  unsigned v_r_key = write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
-  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero() : v[read_ind] + v[read_ind + jump];
-  
+  unsigned v_r_key =
+    write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
+  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
+                        : v[read_ind] + v[read_ind + jump];
+
   v_r[v_r_key] = v_r_value;
 }
 
