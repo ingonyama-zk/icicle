@@ -44,6 +44,7 @@ if (NOT BUILD_TESTS)
     icicle
     appUtils/msm/msm.cu
     appUtils/ntt/ntt.cu
+    primitives/projective.cu
   )
   target_compile_options(icicle PRIVATE -c)
 
@@ -55,9 +56,10 @@ if (NOT BUILD_TESTS)
   add_custom_command(
     TARGET icicle
     POST_BUILD
-    COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
+    COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
   )
   file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o)
+  file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o)
 
 else()
 

@@ -46,7 +46,7 @@ pub fn get_rng(seed: Option<u64>) -> Box<dyn RngCore> {
 mod tests {
     use ark_ff::BigInteger256;
 
-    use crate::curves::bls12_381::ScalarField_BLS12_381 as ScalarField;
+    use crate::curves::bls12_381::ScalarField;
 
     use super::*;
 

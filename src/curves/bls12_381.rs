@@ -1,37 +1,36 @@
 use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
-use ark_bls12_381::{Fq as Fq_BLS12_381, G1Affine as G1Affine_BLS12_381, G1Projective as G1Projective_BLS12_381};
+use ark_bls12_381::{Fq as Fq, G1Affine as G1Affine, G1Projective as G1Projective};
 use ark_ec::AffineCurve;
-use ark_ff::Field;
+use ark_ff::Field as ArkField;
 use ark_ff::{BigInteger256, BigInteger384, PrimeField};
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
-use serde::{Deserialize, Serialize};
 use std::ffi::c_uint;
 use std::mem::transmute;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
-pub struct Field_BLS12_381<const NUM_LIMBS: usize> {
+pub struct Field<const NUM_LIMBS: usize> {
     pub s: [u32; NUM_LIMBS],
 }
 
-unsafe impl<const NUM_LIMBS: usize> DeviceCopy for Field_BLS12_381<NUM_LIMBS> {}
+unsafe impl<const NUM_LIMBS: usize> DeviceCopy for Field<NUM_LIMBS> {}
 
-impl<const NUM_LIMBS: usize> Default for Field_BLS12_381<NUM_LIMBS> {
+impl<const NUM_LIMBS: usize> Default for Field<NUM_LIMBS> {
     fn default() -> Self {
-        Field_BLS12_381::zero()
+        Field::zero()
     }
 }
 
-impl<const NUM_LIMBS: usize> Field_BLS12_381<NUM_LIMBS> {
+impl<const NUM_LIMBS: usize> Field<NUM_LIMBS> {
     pub fn zero() -> Self {
-        Field_BLS12_381 { s: [0u32; NUM_LIMBS] }
+        Field { s: [0u32; NUM_LIMBS] }
     }
 
     pub fn one() -> Self {
         let mut s = [0u32; NUM_LIMBS];
         s[0] = 1;
-        Field_BLS12_381 { s }
+        Field { s }
     }
 
     fn to_bytes_le(&self) -> Vec<u8> {
@@ -46,33 +45,13 @@ impl<const NUM_LIMBS: usize> Field_BLS12_381<NUM_LIMBS> {
     }
 }
 
-pub const BASE_LIMBS_BLS12_381: usize = 12;
-pub const SCALAR_LIMBS_BLS12_381: usize = 8;
+pub const BASE_LIMBS: usize = 12;
+pub const SCALAR_LIMBS: usize = 8;
 
 #[allow(non_camel_case_types)]
-pub type BaseField_BLS12_381 = Field_BLS12_381<BASE_LIMBS_BLS12_381>;
+pub type BaseField = Field<BASE_LIMBS>;
 #[allow(non_camel_case_types)]
-pub type ScalarField_BLS12_381 = Field_BLS12_381<SCALAR_LIMBS_BLS12_381>;
-
-impl Serialize for ScalarField_BLS12_381 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.s
-            .serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for ScalarField_BLS12_381 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = <[u32; SCALAR_LIMBS_BLS12_381] as Deserialize<'de>>::deserialize(deserializer)?;
-        Ok(ScalarField_BLS12_381 { s })
-    }
-}
+pub type ScalarField = Field<SCALAR_LIMBS>;
 
 fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
     match val.len() {
@@ -88,8 +67,8 @@ fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
     }
 }
 
-impl BaseField_BLS12_381 {
-    pub fn limbs(&self) -> [u32; BASE_LIMBS_BLS12_381] {
+impl BaseField {
+    pub fn limbs(&self) -> [u32; BASE_LIMBS] {
         self.s
     }
 
@@ -112,8 +91,8 @@ impl BaseField_BLS12_381 {
     }
 }
 
-impl ScalarField_BLS12_381 {
-    pub fn limbs(&self) -> [u32; SCALAR_LIMBS_BLS12_381] {
+impl ScalarField {
+    pub fn limbs(&self) -> [u32; SCALAR_LIMBS] {
         self.s
     }
 
@@ -133,31 +112,31 @@ impl ScalarField_BLS12_381 {
         unsafe { transmute(*self) }
     }
 
-    pub fn from_ark_transmute(v: BigInteger256) -> ScalarField_BLS12_381 {
+    pub fn from_ark_transmute(v: BigInteger256) -> ScalarField {
         unsafe { transmute(v) }
     }
 }
 
 #[derive(Debug, Clone, Copy, DeviceCopy)]
 #[repr(C)]
-pub struct Point_BLS12_381 {
-    pub x: BaseField_BLS12_381,
-    pub y: BaseField_BLS12_381,
-    pub z: BaseField_BLS12_381,
+pub struct Point {
+    pub x: BaseField,
+    pub y: BaseField,
+    pub z: BaseField,
 }
 
-impl Default for Point_BLS12_381 {
+impl Default for Point {
     fn default() -> Self {
-        Point_BLS12_381::zero()
+        Point::zero()
     }
 }
 
-impl Point_BLS12_381 {
+impl Point {
     pub fn zero() -> Self {
-        Point_BLS12_381 {
-            x: BaseField_BLS12_381::zero(),
-            y: BaseField_BLS12_381::one(),
-            z: BaseField_BLS12_381::zero(),
+        Point {
+            x: BaseField::zero(),
+            y: BaseField::one(),
+            z: BaseField::zero(),
         }
     }
 
@@ -165,26 +144,26 @@ impl Point_BLS12_381 {
         Self::zero()
     }
 
-    pub fn to_ark(&self) -> G1Projective_BLS12_381 {
+    pub fn to_ark(&self) -> G1Projective {
         //TODO: generic conversion
         self.to_ark_affine()
             .into_projective()
     }
 
-    pub fn to_ark_affine(&self) -> G1Affine_BLS12_381 {
+    pub fn to_ark_affine(&self) -> G1Affine {
         //TODO: generic conversion
         use std::ops::Mul;
-        let proj_x_field = Fq_BLS12_381::from_le_bytes_mod_order(
+        let proj_x_field = Fq::from_le_bytes_mod_order(
             &self
                 .x
                 .to_bytes_le(),
         );
-        let proj_y_field = Fq_BLS12_381::from_le_bytes_mod_order(
+        let proj_y_field = Fq::from_le_bytes_mod_order(
             &self
                 .y
                 .to_bytes_le(),
         );
-        let proj_z_field = Fq_BLS12_381::from_le_bytes_mod_order(
+        let proj_z_field = Fq::from_le_bytes_mod_order(
             &self
                 .z
                 .to_bytes_le(),
@@ -194,57 +173,57 @@ impl Point_BLS12_381 {
             .unwrap();
         let aff_x = proj_x_field.mul(inverse_z);
         let aff_y = proj_y_field.mul(inverse_z);
-        G1Affine_BLS12_381::new(aff_x, aff_y, false)
+        G1Affine::new(aff_x, aff_y, false)
     }
 
-    pub fn from_ark(ark: G1Projective_BLS12_381) -> Point_BLS12_381 {
+    pub fn from_ark(ark: G1Projective) -> Point {
         let z_inv = ark
             .z
             .inverse()
             .unwrap();
         let z_invsq = z_inv * z_inv;
         let z_invq3 = z_invsq * z_inv;
-        Point_BLS12_381 {
-            x: BaseField_BLS12_381::from_ark((ark.x * z_invsq).into_repr()),
-            y: BaseField_BLS12_381::from_ark((ark.y * z_invq3).into_repr()),
-            z: BaseField_BLS12_381::one(),
+        Point {
+            x: BaseField::from_ark((ark.x * z_invsq).into_repr()),
+            y: BaseField::from_ark((ark.y * z_invq3).into_repr()),
+            z: BaseField::one(),
         }
     }
 }
 
 extern "C" {
-    fn eq_bls12_381(point1: *const Point_BLS12_381, point2: *const Point_BLS12_381) -> c_uint;
+    fn eq(point1: *const Point, point2: *const Point) -> c_uint;
 }
 
-impl PartialEq for Point_BLS12_381 {
+impl PartialEq for Point {
     fn eq(&self, other: &Self) -> bool {
-        unsafe { eq_bls12_381(self, other) != 0 }
+        unsafe { eq(self, other) != 0 }
     }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, DeviceCopy)]
 #[repr(C)]
-pub struct PointAffineNoInfinity_BLS12_381 {
-    pub x: BaseField_BLS12_381,
-    pub y: BaseField_BLS12_381,
+pub struct PointAffineNoInfinity {
+    pub x: BaseField,
+    pub y: BaseField,
 }
 
-impl Default for PointAffineNoInfinity_BLS12_381 {
+impl Default for PointAffineNoInfinity {
     fn default() -> Self {
-        PointAffineNoInfinity_BLS12_381 {
-            x: BaseField_BLS12_381::zero(),
-            y: BaseField_BLS12_381::zero(),
+        PointAffineNoInfinity {
+            x: BaseField::zero(),
+            y: BaseField::zero(),
         }
     }
 }
 
-impl PointAffineNoInfinity_BLS12_381 {
+impl PointAffineNoInfinity {
     // TODO: generics
     ///From u32 limbs x,y
     pub fn from_limbs(x: &[u32], y: &[u32]) -> Self {
-        PointAffineNoInfinity_BLS12_381 {
-            x: BaseField_BLS12_381 { s: get_fixed_limbs(x) },
-            y: BaseField_BLS12_381 { s: get_fixed_limbs(y) },
+        PointAffineNoInfinity {
+            x: BaseField { s: get_fixed_limbs(x) },
+            y: BaseField { s: get_fixed_limbs(y) },
         }
     }
 
@@ -258,21 +237,21 @@ impl PointAffineNoInfinity_BLS12_381 {
         .concat()
     }
 
-    pub fn to_projective(&self) -> Point_BLS12_381 {
-        Point_BLS12_381 {
+    pub fn to_projective(&self) -> Point {
+        Point {
             x: self.x,
             y: self.y,
-            z: BaseField_BLS12_381::one(),
+            z: BaseField::one(),
         }
     }
 
-    pub fn to_ark(&self) -> G1Affine_BLS12_381 {
-        G1Affine_BLS12_381::new(
-            Fq_BLS12_381::new(
+    pub fn to_ark(&self) -> G1Affine {
+        G1Affine::new(
+            Fq::new(
                 self.x
                     .to_ark(),
             ),
-            Fq_BLS12_381::new(
+            Fq::new(
                 self.y
                     .to_ark(),
             ),
@@ -280,14 +259,14 @@ impl PointAffineNoInfinity_BLS12_381 {
         )
     }
 
-    pub fn to_ark_repr(&self) -> G1Affine_BLS12_381 {
-        G1Affine_BLS12_381::new(
-            Fq_BLS12_381::from_repr(
+    pub fn to_ark_repr(&self) -> G1Affine {
+        G1Affine::new(
+            Fq::from_repr(
                 self.x
                     .to_ark(),
             )
             .unwrap(),
-            Fq_BLS12_381::from_repr(
+            Fq::from_repr(
                 self.y
                     .to_ark(),
             )
@@ -296,61 +275,61 @@ impl PointAffineNoInfinity_BLS12_381 {
         )
     }
 
-    pub fn from_ark(p: &G1Affine_BLS12_381) -> Self {
-        PointAffineNoInfinity_BLS12_381 {
-            x: BaseField_BLS12_381::from_ark(p.x.into_repr()),
-            y: BaseField_BLS12_381::from_ark(p.y.into_repr()),
+    pub fn from_ark(p: &G1Affine) -> Self {
+        PointAffineNoInfinity {
+            x: BaseField::from_ark(p.x.into_repr()),
+            y: BaseField::from_ark(p.y.into_repr()),
         }
     }
 }
 
-impl Point_BLS12_381 {
+impl Point {
     // TODO: generics
 
     pub fn from_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
-        Point_BLS12_381 {
-            x: BaseField_BLS12_381 { s: get_fixed_limbs(x) },
-            y: BaseField_BLS12_381 { s: get_fixed_limbs(y) },
-            z: BaseField_BLS12_381 { s: get_fixed_limbs(z) },
+        Point {
+            x: BaseField { s: get_fixed_limbs(x) },
+            y: BaseField { s: get_fixed_limbs(y) },
+            z: BaseField { s: get_fixed_limbs(z) },
         }
     }
 
-    pub fn from_xy_limbs(value: &[u32]) -> Point_BLS12_381 {
+    pub fn from_xy_limbs(value: &[u32]) -> Point {
         let l = value.len();
         assert_eq!(
             l,
-            3 * BASE_LIMBS_BLS12_381,
+            3 * BASE_LIMBS,
             "length must be 3 * {}",
-            BASE_LIMBS_BLS12_381
+            BASE_LIMBS
         );
-        Point_BLS12_381 {
-            x: BaseField_BLS12_381 {
-                s: value[..BASE_LIMBS_BLS12_381]
+        Point {
+            x: BaseField {
+                s: value[..BASE_LIMBS]
                     .try_into()
                     .unwrap(),
             },
-            y: BaseField_BLS12_381 {
-                s: value[BASE_LIMBS_BLS12_381..BASE_LIMBS_BLS12_381 * 2]
+            y: BaseField {
+                s: value[BASE_LIMBS..BASE_LIMBS * 2]
                     .try_into()
                     .unwrap(),
             },
-            z: BaseField_BLS12_381 {
-                s: value[BASE_LIMBS_BLS12_381 * 2..]
+            z: BaseField {
+                s: value[BASE_LIMBS * 2..]
                     .try_into()
                     .unwrap(),
             },
         }
     }
 
-    pub fn to_affine(&self) -> PointAffineNoInfinity_BLS12_381 {
+    pub fn to_affine(&self) -> PointAffineNoInfinity {
         let ark_affine = self.to_ark_affine();
-        PointAffineNoInfinity_BLS12_381 {
-            x: BaseField_BLS12_381::from_ark(
+        PointAffineNoInfinity {
+            x: BaseField::from_ark(
                 ark_affine
                     .x
                     .into_repr(),
             ),
-            y: BaseField_BLS12_381::from_ark(
+            y: BaseField::from_ark(
                 ark_affine
                     .y
                     .into_repr(),
@@ -358,14 +337,14 @@ impl Point_BLS12_381 {
         }
     }
 
-    pub fn to_xy_strip_z(&self) -> PointAffineNoInfinity_BLS12_381 {
-        PointAffineNoInfinity_BLS12_381 { x: self.x, y: self.y }
+    pub fn to_xy_strip_z(&self) -> PointAffineNoInfinity {
+        PointAffineNoInfinity { x: self.x, y: self.y }
     }
 }
 
-impl ScalarField_BLS12_381 {
-    pub fn from_limbs(value: &[u32]) -> ScalarField_BLS12_381 {
-        ScalarField_BLS12_381 {
+impl ScalarField {
+    pub fn from_limbs(value: &[u32]) -> ScalarField {
+        ScalarField {
             s: get_fixed_limbs(value),
         }
     }
@@ -373,13 +352,12 @@ impl ScalarField_BLS12_381 {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::curves::bls12_381::{Point_BLS12_381, ScalarField_BLS12_381};
+    use crate::curves::bls12_381::{Point, ScalarField};
 
     #[test]
     fn test_ark_scalar_convert() {
         let limbs = [0x0fffffff, 1, 0x2fffffff, 3, 0x4fffffff, 5, 0x6fffffff, 7];
-        let scalar = ScalarField_BLS12_381::from_limbs(&limbs);
+        let scalar = ScalarField::from_limbs(&limbs);
         assert_eq!(
             scalar.to_ark(),
             scalar.to_ark_transmute(),
@@ -392,12 +370,12 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_point_equality() {
-        let left = Point_BLS12_381::zero();
-        let right = Point_BLS12_381::zero();
+        let left = Point::zero();
+        let right = Point::zero();
         assert_eq!(left, right);
-        let right = Point_BLS12_381::from_limbs(&[0; 12], &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0; 12]);
+        let right = Point::from_limbs(&[0; 12], &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0; 12]);
         assert_eq!(left, right);
-        let right = Point_BLS12_381::from_limbs(
+        let right = Point::from_limbs(
             &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             &[0; 12],
             &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

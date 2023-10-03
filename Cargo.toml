@@ -38,7 +38,9 @@ rustacuda_derive = "0.1"
 rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
 
 [build-dependencies]
-cc = { version = "1.0", features = ["parallel"] }
+# cc = { version = "1.0", features = ["parallel"] }
+cmake = "*"
+
 
 [dev-dependencies]
 "criterion" = "0.4.0"
