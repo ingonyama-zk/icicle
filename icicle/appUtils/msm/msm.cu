@@ -567,7 +567,6 @@ void bucket_method_msm(
         large_buckets, large_buckets, s * 2, 0, 0, 0, s);
 
       CHECK_LAST_CUDA_ERROR();
-      CHECK_SYNC_DEVICE_ERROR();
     }
 
     // distribute
