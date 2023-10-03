@@ -182,7 +182,17 @@ docker run --gpus all -it <name_of_your_choice> /bin/bash
 
 ### C++ and CUDA
 1. Install clang-format: 
-`apt install clang-format`
+```
+apt install clang-format
+```
+2. Ensure your git core.hooksPath is configured correctly. This will facilitate automatic formatting checks when you push changes.
+```
+git config core.hooksPath ./scripts/hooks
+```
+3. run the script
+```
+./scripts/hooks/pre-push
+```
 
 
 ## Contributions
