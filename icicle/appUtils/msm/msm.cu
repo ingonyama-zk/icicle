@@ -3,6 +3,7 @@
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
 #include "../../curves/curve_config.cuh"
+#include "../../utils/error_handler.cuh"
 #include "msm.cuh"
 #include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
@@ -25,20 +26,29 @@ namespace {
 
 template <typename P>
 __global__ void single_stage_multi_reduction_kernel(
-  P* v, P* v_r, unsigned block_size, unsigned write_stride, unsigned write_phase, unsigned padding)
+  P* v,
+  P* v_r,
+  unsigned block_size,
+  unsigned write_stride,
+  unsigned write_phase,
+  unsigned padding,
+  unsigned num_of_threads)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
+  if (tid >= num_of_threads) { return; }
+
   int jump = block_size / 2;
+  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
   int block_id = tid_p / jump;
   int block_tid = tid_p % jump;
   unsigned read_ind = block_size * block_id + block_tid;
   unsigned write_ind = tid;
-  v_r
-    [write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride
-                  : write_ind] =
-      padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
-              : v[read_ind] + v[read_ind + jump];
+  unsigned v_r_key =
+    write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
+  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
+                        : v[read_ind] + v[read_ind + jump];
+
+  v_r[v_r_key] = v_r_value;
 }
 
 // this kernel performs single scalar multiplication
@@ -390,7 +400,7 @@ void bucket_method_msm(
     NUM_THREADS = min(MAX_TH, s);
     NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
     single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-      ones_results, ones_results, s * 2, 0, 0, 0);
+      ones_results, ones_results, s * 2, 0, 0, 0, s);
   }
 
   unsigned* bucket_indices;
@@ -556,7 +566,9 @@ void bucket_method_msm(
       NUM_THREADS = min(MAX_TH, s);
       NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
       single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
-        large_buckets, large_buckets, s * 2, 0, 0, 0);
+        large_buckets, large_buckets, s * 2, 0, 0, 0, s);
+
+      CHECK_LAST_CUDA_ERROR();
     }
 
     // distribute
@@ -633,18 +645,18 @@ void bucket_method_msm(
       if (source_bits_count > 0) {
         for (unsigned j = 0; j < target_bits_count; j++) {
           unsigned last_j = target_bits_count - 1;
-          NUM_THREADS = min(MAX_TH, (source_buckets_count >> (1 + j)));
-          NUM_BLOCKS = ((source_buckets_count >> (1 + j)) + NUM_THREADS - 1) / NUM_THREADS;
-          single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-            j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
-            1 << (source_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 0, 0);
-
           unsigned nof_threads = (source_buckets_count >> (1 + j));
           NUM_THREADS = min(MAX_TH, nof_threads);
           NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
           single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+            j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
+            1 << (source_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 0, 0, nof_threads);
+
+          NUM_THREADS = min(MAX_TH, nof_threads);
+          NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+          single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
             j == 0 ? source_buckets : temp_buckets2, j == target_bits_count - 1 ? target_buckets : temp_buckets2,
-            1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0);
+            1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0, nof_threads);
         }
       }
       if (target_bits_count == 1) {
