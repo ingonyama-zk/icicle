@@ -885,55 +885,15 @@ void batched_bucket_method_msm(
 } // namespace
 
 template <typename S, typename A, typename P>
-cudaError_t msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
+cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
 {
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
   if (config.batch_size == 1)
-    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.are_scalars_on_device, config.big_triangle, config.large_bucket_factor, config.stream);
+    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.are_scalars_on_device, config.big_triangle, config.large_bucket_factor, config.ctx.stream);
   else
-    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.are_scalars_on_device, config.stream);
+    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.are_scalars_on_device, config.ctx.stream);
   return cudaSuccess;
-}
-
-template <typename S, typename A, typename P>
-cudaError_t msm(S* scalars, A* points, unsigned size, P* result)
-{
-  MSMConfig config = {
-    false,     // are_scalars_on_device
-    true,      // are_scalars_montgomery_form
-    size,      // points_size
-    1,         // precompute_factor
-    false,     // are_points_on_device
-    true,      // are_points_montgomery_form
-    1,         // batch_size
-    false,     // are_result_on_device
-    16,        // c
-    S::NBITS,  // bitsize
-    false,     // big_triangle
-    10,        // large_bucket_factor
-    0,         // device_id
-    0          // stream
-  };
-  return msm_internal(scalars, points, size, config, result);
-}
-
-/**
- * Extern version of [msm_internal](@ref msm_internal) function with the following values of template parameters 
- * (where the curve is given by `-DCURVE` env variable during build):
- *  - `S` is the [scalar field](@ref scalar_t) of the curve;
- *  - `A` is the [affine representation](@ref affine_t) of curve points;
- *  - `P` is the [projective representation](@ref projective_t) of curve points.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-extern "C" cudaError_t msm_internal_cuda(
-  curve_config::scalar_t* scalars,
-  curve_config::affine_t* points,
-  size_t msm_size,
-  MSMConfig config,
-  curve_config::projective_t* out)
-{
-  return msm_internal<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 /**
@@ -947,31 +907,14 @@ extern "C" cudaError_t msm_internal_cuda(
 extern "C" cudaError_t msm_cuda(
   curve_config::scalar_t* scalars,
   curve_config::affine_t* points,
-  size_t size,
+  size_t msm_size,
+  MSMConfig config,
   curve_config::projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, size, out);
+  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 #if defined(G2_DEFINED)
-
-/**
- * Extern version of [msm_internal](@ref msm_internal) function with the following values of template parameters 
- * (where the curve is given by `-DCURVE` env variable during build):
- *  - `S` is the [scalar field](@ref scalar_t) of the curve;
- *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
- *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-extern "C" cudaError_t g2_msm_internal_cuda(
-  curve_config::scalar_t* scalars,
-  curve_config::g2_affine_t* points,
-  size_t msm_size,
-  MSMConfig config,
-  curve_config::g2_projective_t* out)
-{
-  return msm_internal<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
-}
 
 /**
  * Extern version of [msm](@ref msm) function with the following values of template parameters 
@@ -984,10 +927,11 @@ extern "C" cudaError_t g2_msm_internal_cuda(
 extern "C" cudaError_t g2_msm_cuda(
   curve_config::scalar_t* scalars,
   curve_config::g2_affine_t* points,
-  size_t size,
+  size_t msm_size,
+  MSMConfig config,
   curve_config::g2_projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, size, out);
+  return msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
 }
 
 #endif

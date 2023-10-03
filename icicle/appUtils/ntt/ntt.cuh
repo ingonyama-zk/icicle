@@ -3,6 +3,7 @@
 #define NTT_H
 
 #include "cuda_runtime_api.h"
+#include "../../utils/device_context.cuh"
 
 /**
  * @namespace ntt
@@ -22,13 +23,12 @@ namespace ntt {
  * @param d_twiddles Input empty array on device to which twiddles are to be written.
  * @param n_twiddles Number of twiddle \f$ n \f$ factors to generate.
  * @param omega Root of unity \f$ \omega \f$.
- * @param device_id ID of the device to use.
- * @param stream Stream to use.
+ * @param ctx Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
  * @tparam S The type of twiddle factors \f$ \{ \omega^i \} \f$.
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename S>
-cudaError_t generate_twiddle_factors(S* d_twiddles, uint32_t n_twiddles, S omega, unsigned device_id, cudaStream_t stream);
+cudaError_t generate_twiddle_factors(S* d_twiddles, uint32_t n_twiddles, S omega, device_context::DeviceContext ctx);
 
 /**
  * @enum Ordering
@@ -58,7 +58,7 @@ enum class Butterfly { kCooleyTukey, kGentlemanSande };
 
 /**
  * @struct NTTConfig
- * Struct that encodes NTT parameters to be passed into the [ntt_internal](@ref ntt_internal) function.
+ * Struct that encodes NTT parameters to be passed into the [ntt](@ref ntt) function.
  */
 template <typename S>
 struct NTTConfig {
@@ -83,8 +83,7 @@ struct NTTConfig {
                                          *   are generated online using the default generator (TODO: link to twiddle gen here) and function
                                          *   [generate_twiddle_factors](@ref generate_twiddle_factors). Default value: `null`. */
     unsigned batch_size;                /**< The number of NTTs to compute. Default value: 1. */
-    unsigned device_id;                 /**< Index of the GPU to run the NTT on. Default value: 0. */
-    cudaStream_t stream;                /**< Stream to use. Default value: 0. */
+    device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 };
 
 /**
@@ -99,13 +98,7 @@ struct NTTConfig {
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename E, typename S>
-cudaError_t ntt_internal(E* input, unsigned size, bool is_inverse, NTTConfig<S> config);
-
-/**
- * A function that computes NTT by calling [ntt_internal](@ref ntt_internal) function with default [NTTConfig](@ref NTTConfig) values.
- */
-template <typename E, typename S>
-cudaError_t ntt(E* input, unsigned size, bool is_inverse);
+cudaError_t ntt(E* input, unsigned size, bool is_inverse, NTTConfig<S> config);
 
 } // namespace ntt
 
