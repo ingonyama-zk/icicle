@@ -4,21 +4,146 @@ use self::bls12_381::*;
 
 pub mod bls12_381;
 
+/*
+/**
+ * @struct MSMConfig
+ * Struct that encodes MSM parameters to be passed into the [msm](@ref msm) function.
+ */
+struct MSMConfig {
+  bool are_scalars_on_device;         /**< True if scalars are on device and false if they're on host. Default value: false. */
+  bool are_scalars_montgomery_form;   /**< True if scalars are in Montgomery form and false otherwise. Default value: true. */
+  unsigned points_size;               /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be a number
+                                       *   of different points. So, if each MSM re-uses the same set of points, this variable is set equal
+                                       *   to the MSM size. And if every MSM uses a distinct set of points, it should be set to the product of
+                                       *   MSM size and [batch_size](@ref batch_size). Default value: 0 (meaning it's equal to the MSM size). */
+  unsigned precompute_factor;         /**< The number of extra points to pre-compute for each point. Larger values decrease the number of computations
+                                       *   to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute). */
+  bool are_points_on_device;          /**< True if points are on device and false if they're on host. Default value: false. */
+  bool are_points_montgomery_form;    /**< True if coordinates of points are in Montgomery form and false otherwise. Default value: true. */
+  unsigned batch_size;                /**< The number of MSMs to compute. Default value: 1. */
+  bool are_result_on_device;          /**< True if the results should be on device and false if they should be on host. Default value: false. */
+  unsigned c;                         /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket method"
+                                       *   that we use to solve the MSM problem. As a rule of thumb, larger value means more on-line memory
+                                       *   footprint but also more parallelism and less computational complexity (up to a certain point).
+                                       *   Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically). */
+  unsigned bitsize;                   /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a different
+                                       *   (better) upper bound is known, it should be reflected in this variable. Default value: 0 (set to the bitsize of scalar field). */
+  bool big_triangle;                  /**< Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly
+                                       *   decreases parallelism, so only suitable for large batches of MSMs. Default value: false. */
+  unsigned large_bucket_factor;       /**< Variable that controls how sensitive the algorithm is to the buckets that occur very frequently.
+                                       *   Useful for efficient treatment of non-uniform distributions of scalars and "top windows" with few bits.
+                                       *   Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10. */
+  device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
+};
+*/
+/// Struct that encodes MSM parameters to be passed into the `msm` function.
+
+#[repr(C)]
+pub struct MSMConfig {
+    /// True if scalars are on device and false if they're on host. Default value: false.
+    pub are_scalars_on_device: bool,
+
+    /// True if scalars are in Montgomery form and false otherwise. Default value: true.
+    pub are_scalars_montgomery_form: bool,
+
+    /// Number of points in the MSM. If a batch of MSMs needs to be computed, this should be a number
+    /// of different points. So, if each MSM re-uses the same set of points, this variable is set equal
+    /// to the MSM size. And if every MSM uses a distinct set of points, it should be set to the product of
+    /// MSM size and batch_size. Default value: 0 (meaning it's equal to the MSM size).
+    pub points_size: usize, // Note: `unsigned` in C++ corresponds to `u32` in Rust
+
+    /// The number of extra points to pre-compute for each point. Larger values decrease the number of computations
+    /// to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute).
+    pub precompute_factor: usize,
+
+    /// True if points are on device and false if they're on host. Default value: false.
+    pub are_points_on_device: bool,
+
+    /// True if coordinates of points are in Montgomery form and false otherwise. Default value: true.
+    pub are_points_montgomery_form: bool,
+
+    /// The number of MSMs to compute. Default value: 1.
+    pub batch_size: usize,
+
+    /// True if the results should be on device and false if they should be on host. Default value: false.
+    pub are_result_on_device: bool,
+
+    /// `c` value, or "window bitsize" which is the main parameter of the "bucket method"
+    /// that we use to solve the MSM problem. As a rule of thumb, larger value means more on-line memory
+    /// footprint but also more parallelism and less computational complexity (up to a certain point).
+    /// Default value: 0 (the optimal value of `c` is chosen automatically).
+    pub c: usize,
+
+    /// Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a different
+    /// (better) upper bound is known, it should be reflected in this variable. Default value: 0 (set to the bitsize of scalar field).
+    pub bitsize: usize,
+
+    /// Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly
+    /// decreases parallelism, so only suitable for large batches of MSMs. Default value: false.
+    pub is_big_triangle: bool,
+
+    /// Variable that controls how sensitive the algorithm is to the buckets that occur very frequently.
+    /// Useful for efficient treatment of non-uniform distributions of scalars and "top windows" with few bits.
+    /// Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10.
+    pub large_bucket_factor: usize,
+
+    /// Details related to the device such as its id and stream id.
+    pub ctx: DeviceContext,
+}
+
+/// Properties of the device used in icicle functions.
+#[repr(C)]
+pub struct DeviceContext {
+    /// Index of the currently used GPU. Default value: 0.
+    pub device_id: usize,
+
+    /// Stream to use. Default value: 0.
+    pub stream: cudaStream_t, // Assuming the type is provided by a CUDA binding crate
+
+    /// Mempool to use. Default value: 0.
+    pub mempool: cudaMemPool_t, // Assuming the type is provided by a CUDA binding crate
+}
+
+// Assuming that the CUDA types can be defined as follows.
+// The exact type might depend on the specifics of the Rust CUDA bindings, if available.
+pub type cudaStream_t = usize; // This might be a placeholder, check your binding crate for the exact type
+pub type cudaMemPool_t = usize; // This might be a placeholder, check your binding crate for the exact type
 
 extern "C" {
-    #[link_name = "bls12_381_msm_cuda"]
+    #[link_name = "bls12_381_msm_default_cuda"]
     fn msm_cuda(
         scalars: *const ScalarField,
         points: *const PointAffineNoInfinity,
         count: usize,
+        // config: MSMConfig,
         out: *mut Point,
     ) -> c_uint;
 }
 
-pub fn msm(
-    scalars: &[ScalarField],
-    points: &[PointAffineNoInfinity],
-) -> Point {
+pub fn get_default_msm_config(points_size: usize) -> MSMConfig {
+    // TODO: must be on cuda side?
+    MSMConfig {
+        are_scalars_on_device: false,
+        are_scalars_montgomery_form: false,
+        points_size,
+        precompute_factor: 1,
+        are_points_on_device: false,
+        are_points_montgomery_form: false,
+        batch_size: 1,
+        are_result_on_device: false,
+        c: 0,
+        bitsize: 0,
+        is_big_triangle: false, // TODO: rename on cuda side?
+        large_bucket_factor: 10,
+        ctx: DeviceContext {
+            device_id: 0,
+            stream: 0,
+            mempool: 0,
+        },
+    }
+}
+
+pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
     let count = points.len();
     if count != scalars.len() {
         todo!("variable length")
@@ -29,7 +154,8 @@ pub fn msm(
         msm_cuda(
             scalars as *const _ as *const ScalarField,
             points as *const _ as *const PointAffineNoInfinity,
-            scalars.len(),
+            points.len(),
+            // get_default_msm_config(points.len()),
             &mut out as *mut _ as *mut Point,
         )
     };
@@ -39,36 +165,34 @@ pub fn msm(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_ec::msm::VariableBaseMSM;
     use ark_bls12_381::{Fr, G1Projective};
+    use ark_ec::msm::VariableBaseMSM;
     use ark_ff::PrimeField;
     use ark_std::UniformRand;
     use rand::RngCore;
 
-    use crate::{curves::{bls12_381::*, msm}, utils::get_rng};
+    use crate::{
+        curves::{bls12_381::*, msm},
+        utils::get_rng,
+    };
 
-
-    pub fn generate_random_points(
-        count: usize,
-        mut rng: Box<dyn RngCore>,
-    ) -> Vec<PointAffineNoInfinity> {
+    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<PointAffineNoInfinity> {
         (0..count)
             .map(|_| Point::from_ark(G1Projective::rand(&mut rng)).to_xy_strip_z())
             .collect()
     }
-    
+
     pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
         (0..count)
             .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
             .collect()
     }
-    
+
     pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
         (0..count)
             .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
             .collect()
     }
-    
 
     #[test]
     fn test_msm() {

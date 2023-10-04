@@ -1,5 +1,5 @@
-use std::env::var;
 use cmake::Config;
+use std::{env::{var, self}, path::PathBuf};
 
 fn main() {
     //TODO: check cargo features selected
@@ -11,6 +11,34 @@ fn main() {
 
     let target_output_dir = format!("{}/target/{}", cargo_dir, profile);
 
+    // let cuda_dir = PathBuf::from(
+    //     env::var("CUDA_HOME")
+    //       .or_else(|_| env::var("CUDA_PATH"))
+    //       .unwrap_or_else(|_| "/usr/local/cuda".to_owned())
+    // );
+    // let cuda_include_dir = cuda_dir.join("include");
+    // let cuda_lib_dir = cuda_dir.join("lib64");
+    // println!("cargo:rustc-link-lib=cudart");
+    // println!("cargo:rustc-link-search=native={}", cuda_lib_dir.display());
+
+    // let bindings = bindgen::Builder::default()
+    // .clang_arg(format!("-I{}", cuda_include_dir.as_os_str().to_str().unwrap()))
+    // .clang_arg(format!("-I{}", "icicle/appUtils/msm/"))
+    // .header("icicle/appUtils/msm/msm.cuh")
+    // .header("cuda_runtime_api.h")
+    // .header("icicle/utils/device_context.cuh")
+    // // .clang_arg("-x c++")
+    // // .clang_arg("-std=c++17")
+    // .rustfmt_bindings(true)
+    // // Add any additional configuration here...
+    // .generate()
+    // .expect("Unable to generate bindings");
+
+    // let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    // bindings
+    //     .write_to_file(out_path.join("bindings.rs"))
+    //     .expect("Couldn't write bindings!");
+
     Config::new("./icicle")
                 .define("BUILD_TESTS", "OFF") //TODO: feature
                 // .define("CURVE", "12381")
@@ -19,7 +47,6 @@ fn main() {
                 .build_target("icicle")
                 .build();
 
-    
     println!("cargo:rustc-link-search={}", &target_output_dir);
 
     println!("cargo:rustc-link-lib=ingo_bls12_381");
