@@ -33,7 +33,7 @@ __global__ void sub_kernel(E* element_vec1, E* element_vec2, uint32_t n, E* resu
 } // namespace
 
 template <typename E, typename S>
-cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, bool is_montgomery, device_context::DeviceContext ctx, E* result)
+cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool is_on_device, bool is_montgomery, device_context::DeviceContext ctx, E* result)
 {
   // Set the grid and block dimensions
   int num_threads = MAX_THREADS_PER_BLOCK;
@@ -41,7 +41,7 @@ cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, bool is_montgomery
 
   S* d_vec_a;
   E *d_vec_b, *d_result;
-  if (on_device) {
+  if (!is_on_device) {
     // Allocate memory on the device for the input vectors and the output vector
     cudaMallocAsync(&d_vec_a, n * sizeof(S), ctx.stream);
     cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
@@ -53,9 +53,9 @@ cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, bool is_montgomery
   }
 
   // Call the kernel to perform element-wise modular multiplication
-  mul_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, n, on_device ? d_result : result);
+  mul_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
-  if (on_device) {
+  if (!is_on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
     cudaFreeAsync(d_vec_a, ctx.stream);
     cudaFreeAsync(d_vec_b, ctx.stream);
@@ -67,14 +67,14 @@ cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, bool is_montgomery
 }
 
 template <typename E>
-cudaError_t add(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::DeviceContext ctx, E* result)
+cudaError_t add(E* vec_a, E* vec_b, size_t n, bool is_on_device, device_context::DeviceContext ctx, E* result)
 {
   // Set the grid and block dimensions
   int num_threads = MAX_THREADS_PER_BLOCK;
   int num_blocks = (n + num_threads - 1) / num_threads;
 
   E *d_vec_a, *d_vec_b, *d_result;
-  if (on_device) {
+  if (!is_on_device) {
     // Allocate memory on the device for the input vectors and the output vector
     cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream);
     cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
@@ -86,9 +86,9 @@ cudaError_t add(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
   }
 
   // Call the kernel to perform element-wise addition
-  add_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, n, on_device ? d_result : result);
+  add_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
-  if (on_device) {
+  if (!is_on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
     cudaFreeAsync(d_vec_a, ctx.stream);
     cudaFreeAsync(d_vec_b, ctx.stream);
@@ -100,14 +100,14 @@ cudaError_t add(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
 }
 
 template <typename E>
-cudaError_t sub(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::DeviceContext ctx, E* result)
+cudaError_t sub(E* vec_a, E* vec_b, size_t n, bool is_on_device, device_context::DeviceContext ctx, E* result)
 {
   // Set the grid and block dimensions
   int num_threads = MAX_THREADS_PER_BLOCK;
   int num_blocks = (n + num_threads - 1) / num_threads;
 
   E *d_vec_a, *d_vec_b, *d_result;
-  if (on_device) {
+  if (!is_on_device) {
     // Allocate memory on the device for the input vectors and the output vector
     cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream);
     cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
@@ -119,9 +119,9 @@ cudaError_t sub(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
   }
 
   // Call the kernel to perform element-wise subtraction
-  sub_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, n, on_device ? d_result : result);
+  sub_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
-  if (on_device) {
+  if (!is_on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
     cudaFreeAsync(d_vec_a, ctx.stream);
     cudaFreeAsync(d_vec_b, ctx.stream);
@@ -141,12 +141,12 @@ extern "C" cudaError_t mul_cuda(
   curve_config::scalar_t* vec_a,
   curve_config::scalar_t* vec_b,
   uint32_t n,
-  bool on_device,
+  bool is_on_device,
   bool is_montgomery,
   device_context::DeviceContext ctx,
   curve_config::scalar_t* result
 ) {
-  return mul<curve_config::scalar_t>(vec_a, vec_b, n, on_device, is_montgomery, ctx, result);
+  return mul<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, is_montgomery, ctx, result);
 }
 
 /**
@@ -158,11 +158,11 @@ extern "C" cudaError_t add_cuda(
   curve_config::scalar_t* vec_a,
   curve_config::scalar_t* vec_b,
   uint32_t n,
-  bool on_device,
+  bool is_on_device,
   device_context::DeviceContext ctx,
   curve_config::scalar_t* result
 ) {
-  return add<curve_config::scalar_t>(vec_a, vec_b, n, on_device, ctx, result);
+  return add<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, ctx, result);
 }
 
 /**
@@ -174,11 +174,11 @@ extern "C" cudaError_t sub_cuda(
   curve_config::scalar_t* vec_a,
   curve_config::scalar_t* vec_b,
   uint32_t n,
-  bool on_device,
+  bool is_on_device,
   device_context::DeviceContext ctx,
   curve_config::scalar_t* result
 ) {
-  return sub<curve_config::scalar_t>(vec_a, vec_b, n, on_device, ctx, result);
+  return sub<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, ctx, result);
 }
 
 } // namespace lde

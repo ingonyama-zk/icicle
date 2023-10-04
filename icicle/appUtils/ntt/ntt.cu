@@ -373,7 +373,7 @@ cudaError_t ntt(E* input, unsigned size, bool is_inverse, NTTConfig<S> config)
   uint32_t logn = uint32_t(log(size) / log(2));
   uint32_t n_twiddles = size; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order.
   size_t input_size = size * config.batch_size * sizeof(E);
-  bool on_device = config.are_inputs_on_device;
+  bool is_on_device = config.are_inputs_on_device;
   bool generate_twiddles = (config.twiddles == nullptr);
   cudaStream_t stream = config.ctx.stream;
   
@@ -384,7 +384,7 @@ cudaError_t ntt(E* input, unsigned size, bool is_inverse, NTTConfig<S> config)
   }
 
   E* d_input;
-  if (on_device) {
+  if (!is_on_device) {
     cudaMallocAsync(&d_input, input_size, stream);
     cudaMemcpyAsync(d_input, input, input_size, cudaMemcpyHostToDevice, stream);
   }
@@ -411,13 +411,13 @@ cudaError_t ntt(E* input, unsigned size, bool is_inverse, NTTConfig<S> config)
   }
 
   if (reverse_input)
-    reverse_order_batch(on_device ? d_input : input, size, logn, config.batch_size, stream);
-  ntt_inplace_batch_template(on_device ? d_input : input, generate_twiddles ? d_twiddles : config.twiddles, size, 
+    reverse_order_batch(is_on_device ? input : d_input, size, logn, config.batch_size, stream);
+  ntt_inplace_batch_template(is_on_device ? input : d_input, generate_twiddles ? d_twiddles : config.twiddles, size, 
                              config.batch_size, is_inverse, config.is_coset, config.coset_gen, stream, false);
   if (reverse_output)
-    reverse_order_batch(on_device ? d_input : input, size, logn, config.batch_size, stream);
+    reverse_order_batch(is_on_device ? input : d_input, size, logn, config.batch_size, stream);
 
-  if (on_device) {
+  if (!is_on_device) {
     cudaMemcpyAsync(input, d_input, input_size, cudaMemcpyDeviceToHost, stream);
     cudaFreeAsync(d_input, stream);
   }
