@@ -3,6 +3,7 @@
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
 #include "../../curves/curve_config.cuh"
+#include "../../utils/error_handler.cuh"
 #include "msm.cuh"
 #include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
@@ -25,20 +26,29 @@ namespace {
 
 template <typename P>
 __global__ void single_stage_multi_reduction_kernel(
-  P* v, P* v_r, unsigned block_size, unsigned write_stride, unsigned write_phase, unsigned padding)
+  P* v,
+  P* v_r,
+  unsigned block_size,
+  unsigned write_stride,
+  unsigned write_phase,
+  unsigned padding,
+  unsigned num_of_threads)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
+  if (tid >= num_of_threads) { return; }
+
   int jump = block_size / 2;
+  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
   int block_id = tid_p / jump;
   int block_tid = tid_p % jump;
   unsigned read_ind = block_size * block_id + block_tid;
   unsigned write_ind = tid;
-  v_r
-    [write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride
-                  : write_ind] =
-      padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
-              : v[read_ind] + v[read_ind + jump];
+  unsigned v_r_key =
+    write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
+  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
+                        : v[read_ind] + v[read_ind + jump];
+
+  v_r[v_r_key] = v_r_value;
 }
 
 // this kernel performs single scalar multiplication
@@ -390,7 +400,7 @@ void bucket_method_msm(
     NUM_THREADS = min(MAX_TH, s);
     NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
     single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-      ones_results, ones_results, s * 2, 0, 0, 0);
+      ones_results, ones_results, s * 2, 0, 0, 0, s);
   }
 
   unsigned* bucket_indices;
@@ -556,7 +566,9 @@ void bucket_method_msm(
       NUM_THREADS = min(MAX_TH, s);
       NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
       single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
-        large_buckets, large_buckets, s * 2, 0, 0, 0);
+        large_buckets, large_buckets, s * 2, 0, 0, 0, s);
+
+      CHECK_LAST_CUDA_ERROR();
     }
 
     // distribute
@@ -633,18 +645,18 @@ void bucket_method_msm(
       if (source_bits_count > 0) {
         for (unsigned j = 0; j < target_bits_count; j++) {
           unsigned last_j = target_bits_count - 1;
-          NUM_THREADS = min(MAX_TH, (source_buckets_count >> (1 + j)));
-          NUM_BLOCKS = ((source_buckets_count >> (1 + j)) + NUM_THREADS - 1) / NUM_THREADS;
-          single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-            j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
-            1 << (source_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 0, 0);
-
           unsigned nof_threads = (source_buckets_count >> (1 + j));
           NUM_THREADS = min(MAX_TH, nof_threads);
           NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
           single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+            j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
+            1 << (source_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 0, 0, nof_threads);
+
+          NUM_THREADS = min(MAX_TH, nof_threads);
+          NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+          single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
             j == 0 ? source_buckets : temp_buckets2, j == target_bits_count - 1 ? target_buckets : temp_buckets2,
-            1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0);
+            1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0, nof_threads);
         }
       }
       if (target_bits_count == 1) {
@@ -885,55 +897,15 @@ void batched_bucket_method_msm(
 } // namespace
 
 template <typename S, typename A, typename P>
-cudaError_t msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
+cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
 {
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
   if (config.batch_size == 1)
-    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.are_scalars_on_device, config.big_triangle, config.large_bucket_factor, config.stream);
+    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.are_scalars_on_device, config.big_triangle, config.large_bucket_factor, config.ctx.stream);
   else
-    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.are_scalars_on_device, config.stream);
+    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.are_scalars_on_device, config.ctx.stream);
   return cudaSuccess;
-}
-
-template <typename S, typename A, typename P>
-cudaError_t msm(S* scalars, A* points, unsigned size, P* result)
-{
-  MSMConfig config = {
-    false,     // are_scalars_on_device
-    true,      // are_scalars_montgomery_form
-    size,      // points_size
-    1,         // precompute_factor
-    false,     // are_points_on_device
-    true,      // are_points_montgomery_form
-    1,         // batch_size
-    false,     // are_result_on_device
-    16,        // c
-    S::NBITS,  // bitsize
-    false,     // big_triangle
-    10,        // large_bucket_factor
-    0,         // device_id
-    0          // stream
-  };
-  return msm_internal(scalars, points, size, config, result);
-}
-
-/**
- * Extern version of [msm_internal](@ref msm_internal) function with the following values of template parameters 
- * (where the curve is given by `-DCURVE` env variable during build):
- *  - `S` is the [scalar field](@ref scalar_t) of the curve;
- *  - `A` is the [affine representation](@ref affine_t) of curve points;
- *  - `P` is the [projective representation](@ref projective_t) of curve points.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-extern "C" cudaError_t msm_internal_cuda(
-  curve_config::scalar_t* scalars,
-  curve_config::affine_t* points,
-  size_t msm_size,
-  MSMConfig config,
-  curve_config::projective_t* out)
-{
-  return msm_internal<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 /**
@@ -947,31 +919,14 @@ extern "C" cudaError_t msm_internal_cuda(
 extern "C" cudaError_t msm_cuda(
   curve_config::scalar_t* scalars,
   curve_config::affine_t* points,
-  size_t size,
+  size_t msm_size,
+  MSMConfig config,
   curve_config::projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, size, out);
+  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 #if defined(G2_DEFINED)
-
-/**
- * Extern version of [msm_internal](@ref msm_internal) function with the following values of template parameters 
- * (where the curve is given by `-DCURVE` env variable during build):
- *  - `S` is the [scalar field](@ref scalar_t) of the curve;
- *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
- *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-extern "C" cudaError_t g2_msm_internal_cuda(
-  curve_config::scalar_t* scalars,
-  curve_config::g2_affine_t* points,
-  size_t msm_size,
-  MSMConfig config,
-  curve_config::g2_projective_t* out)
-{
-  return msm_internal<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
-}
 
 /**
  * Extern version of [msm](@ref msm) function with the following values of template parameters 
@@ -984,10 +939,11 @@ extern "C" cudaError_t g2_msm_internal_cuda(
 extern "C" cudaError_t g2_msm_cuda(
   curve_config::scalar_t* scalars,
   curve_config::g2_affine_t* points,
-  size_t size,
+  size_t msm_size,
+  MSMConfig config,
   curve_config::g2_projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, size, out);
+  return msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
 }
 
 #endif

@@ -3,6 +3,7 @@
 #define MSM_H
 
 #include "cuda_runtime_api.h"
+#include "../../utils/device_context.cuh"
 
 /**
  * @namespace msm
@@ -24,7 +25,7 @@ namespace msm {
 
 /**
  * @struct MSMConfig
- * Struct that encodes MSM parameters to be passed into the [msm_internal](@ref msm_internal) function.
+ * Struct that encodes MSM parameters to be passed into the [msm](@ref msm) function.
  */
 struct MSMConfig {
   bool are_scalars_on_device;         /**< True if scalars are on device and false if they're on host. Default value: false. */
@@ -50,8 +51,7 @@ struct MSMConfig {
   unsigned large_bucket_factor;       /**< Variable that controls how sensitive the algorithm is to the buckets that occur very frequently. 
                                        *   Useful for efficient treatment of non-uniform distributions of scalars and "top windows" with few bits.
                                        *   Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10. */
-  unsigned device_id;                 /**< Index of the GPU to run the MSM on. Default value: 0. */
-  cudaStream_t stream;                /**< Stream to use. Default value: 0. */
+  device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 };
 
 /**
@@ -68,13 +68,7 @@ struct MSMConfig {
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename S, typename A, typename P>
-cudaError_t msm_internal(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results);
-
-/**
- * A function that computes MSM by calling [msm_internal](@ref msm_internal) function with default [MSMConfig](@ref MSMConfig) values.
- */
-template <typename S, typename A, typename P>
-cudaError_t msm(S* scalars, A* points, unsigned size, P* result);
+cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results);
 
 } // namespace msm
 

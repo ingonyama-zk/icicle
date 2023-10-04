@@ -1,5 +1,4 @@
 #include "../../utils/sharedmem.cuh"
-#include "../vector_manipulation/ve_mod_mult.cuh"
 #include "../../curves/curve_config.cuh"
 #include "ntt.cuh"
 
@@ -31,8 +30,31 @@ __global__ void twiddle_factors_kernel(S* d_twiddles, uint32_t n_twiddles, S ome
   }
 }
 
-template <typename T>
-__global__ void reverse_order_kernel(T* arr, T* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
+/**
+ * Multiply the elements of an input array by a scalar in-place. Used for normalization in iNTT.
+ * @param arr input array.
+ * @param n size of arr.
+ * @param n_inv scalar of type S (scalar).
+ */
+template <typename E, typename S>
+__global__ void template_normalize_kernel(E* arr, uint32_t n, S scalar)
+{
+  int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (tid < n) { arr[tid] = scalar * arr[tid]; }
+}
+
+template <typename E, typename S>
+__global__ void batchVectorMult(S* scalar_vec, E* element_vec, unsigned n_scalars, unsigned batch_size)
+{
+  int tid = blockDim.x * blockIdx.x + threadIdx.x;
+  if (tid < n_scalars * batch_size) {
+    int scalar_id = tid % n_scalars;
+    element_vec[tid] = scalar_vec[scalar_id] * element_vec[tid];
+  }
+}
+
+template <typename E>
+__global__ void reverse_order_kernel(E* arr, E* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
 {
   int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (threadId < n * batch_size) {
@@ -52,15 +74,15 @@ __global__ void reverse_order_kernel(T* arr, T* arr_reversed, uint32_t n, uint32
  * @param logn log(n).
  * @param batch_size the size of the batch.
  */
-template <typename T>
-void reverse_order_batch(T* arr, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream)
+template <typename E>
+void reverse_order_batch(E* arr, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream)
 {
-  T* arr_reversed;
-  cudaMallocAsync(&arr_reversed, n * batch_size * sizeof(T), stream);
+  E* arr_reversed;
+  cudaMallocAsync(&arr_reversed, n * batch_size * sizeof(E), stream);
   int number_of_threads = MAX_THREADS_BATCH;
   int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
   reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, arr_reversed, n, logn, batch_size);
-  cudaMemcpyAsync(arr, arr_reversed, n * batch_size * sizeof(T), cudaMemcpyDeviceToDevice, stream);
+  cudaMemcpyAsync(arr, arr_reversed, n * batch_size * sizeof(E), cudaMemcpyDeviceToDevice, stream);
   cudaFreeAsync(arr_reversed, stream);
 }
 
@@ -72,8 +94,8 @@ void reverse_order_batch(T* arr, uint32_t n, uint32_t logn, uint32_t batch_size,
  * @param n length of `arr`.
  * @param logn log(n).
  */
-template <typename T>
-void reverse_order(T* arr, uint32_t n, uint32_t logn, cudaStream_t stream)
+template <typename E>
+void reverse_order(E* arr, uint32_t n, uint32_t logn, cudaStream_t stream)
 {
   reverse_order_batch(arr, n, logn, 1, stream);
 }
@@ -311,14 +333,14 @@ void ntt_inplace_batch_template(
         <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
     }
 
-    if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
+    if (is_coset) batchVectorMult<E, S><<<num_blocks, num_threads, 0, stream>>>(coset, d_inout, n, batch_size);
 
     num_threads = max(min(n / 2, MAX_NUM_THREADS), 1);
     num_blocks = (n * batch_size + num_threads - 1) / num_threads;
     template_normalize_kernel<E, S>
       <<<num_blocks, num_threads, 0, stream>>>(d_inout, n * batch_size, S::inv_log_size(logn));
   } else {
-    if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
+    if (is_coset) batchVectorMult<E, S><<<num_blocks, num_threads, 0, stream>>>(coset, d_inout, n, batch_size);
 
     for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
     {
@@ -338,32 +360,33 @@ void ntt_inplace_batch_template(
 } // namespace
 
 template <typename S>
-cudaError_t generate_twiddle_factors(S* d_twiddles, uint32_t n_twiddles, S omega, unsigned device_id, cudaStream_t stream)
+cudaError_t generate_twiddle_factors(S* d_twiddles, uint32_t n_twiddles, S omega, device_context::DeviceContext ctx)
 {
-  twiddle_factors_kernel<S><<<1, 1, 0, stream>>>(d_twiddles, n_twiddles, omega);
-  cudaStreamSynchronize(stream);
+  twiddle_factors_kernel<S><<<1, 1, 0, ctx.stream>>>(d_twiddles, n_twiddles, omega);
+  cudaStreamSynchronize(ctx.stream);
   return cudaSuccess;
 }
 
 template <typename E, typename S>
-cudaError_t ntt_internal(E* input, unsigned size, bool is_inverse, NTTConfig<S> config)
+cudaError_t ntt(E* input, unsigned size, bool is_inverse, NTTConfig<S> config)
 {
   uint32_t logn = uint32_t(log(size) / log(2));
   uint32_t n_twiddles = size; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order.
   size_t input_size = size * config.batch_size * sizeof(E);
   bool on_device = config.are_inputs_on_device;
   bool generate_twiddles = (config.twiddles == nullptr);
+  cudaStream_t stream = config.ctx.stream;
   
   S* d_twiddles;
   if (generate_twiddles) {
-    cudaMallocAsync(&d_twiddles, n_twiddles * sizeof(S), config.stream);
-    generate_twiddle_factors(d_twiddles, n_twiddles, is_inverse ? S::omega_inv(logn) : S::omega(logn), config.device_id, config.stream);
+    cudaMallocAsync(&d_twiddles, n_twiddles * sizeof(S), stream);
+    generate_twiddle_factors(d_twiddles, n_twiddles, is_inverse ? S::omega_inv(logn) : S::omega(logn), config.ctx);
   }
 
   E* d_input;
   if (on_device) {
-    cudaMallocAsync(&d_input, input_size, config.stream);
-    cudaMemcpyAsync(d_input, input, input_size, cudaMemcpyHostToDevice, config.stream);
+    cudaMallocAsync(&d_input, input_size, stream);
+    cudaMemcpyAsync(d_input, input, input_size, cudaMemcpyHostToDevice, stream);
   }
 
   bool reverse_input;
@@ -388,56 +411,37 @@ cudaError_t ntt_internal(E* input, unsigned size, bool is_inverse, NTTConfig<S> 
   }
 
   if (reverse_input)
-    reverse_order_batch(on_device ? d_input : input, size, logn, config.batch_size, config.stream);
+    reverse_order_batch(on_device ? d_input : input, size, logn, config.batch_size, stream);
   ntt_inplace_batch_template(on_device ? d_input : input, generate_twiddles ? d_twiddles : config.twiddles, size, 
-                             config.batch_size, is_inverse, config.is_coset, config.coset_gen, config.stream, false);
+                             config.batch_size, is_inverse, config.is_coset, config.coset_gen, stream, false);
   if (reverse_output)
-    reverse_order_batch(on_device ? d_input : input, size, logn, config.batch_size, config.stream);
+    reverse_order_batch(on_device ? d_input : input, size, logn, config.batch_size, stream);
 
   if (on_device) {
-    cudaMemcpyAsync(input, d_input, input_size, cudaMemcpyDeviceToHost, config.stream);
-    cudaFreeAsync(d_input, config.stream);
+    cudaMemcpyAsync(input, d_input, input_size, cudaMemcpyDeviceToHost, stream);
+    cudaFreeAsync(d_input, stream);
   }
 
   if (generate_twiddles) {
-    cudaFreeAsync(d_twiddles, config.stream);
+    cudaFreeAsync(d_twiddles, stream);
   }
 
-  cudaStreamSynchronize(config.stream);
+  cudaStreamSynchronize(stream);
   return cudaSuccess;
 }
 
-template <typename E, typename S>
-cudaError_t ntt(E* input, unsigned size, bool is_inverse)
-{
-  NTTConfig<curve_config::scalar_t> config = {
-    false,                    // are_inputs_on_device
-    Ordering::kNN,            // ordering
-    Decimation::kDIF,         // decimation
-    Butterfly::kCooleyTukey,  // butterfly
-    false,                    // is_coset
-    (S *)nullptr,             // coset_gen
-    (S *)nullptr,             // twiddles
-    1,                        // batch_size
-    0,                        // device_id
-    0                         // stream
-  };
-  return ntt_internal(input, size, is_inverse, config);
-}
-
 /**
- * Extern version of [ntt_internal](@ref ntt_internal) function with the following values of template parameters 
- * (where the curve is given by `-DCURVE` env variable during build):
- *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+ * Extern version of [generate_twiddle_factors](@ref generate_twiddle_factors) function with the template parameter 
+ * `S` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" cudaError_t ntt_internal_cuda(
-  curve_config::scalar_t* input,
-  unsigned size,
-  bool is_inverse,
-  NTTConfig<curve_config::scalar_t> config)
-{
-  return ntt_internal<curve_config::scalar_t, curve_config::scalar_t>(input, size, is_inverse, config);
+extern "C" cudaError_t generate_twiddle_factors_cuda(
+  curve_config::scalar_t* d_twiddles,
+  uint32_t n_twiddles,
+  curve_config::scalar_t omega,
+  device_context::DeviceContext ctx
+) {
+  return generate_twiddle_factors<curve_config::scalar_t>(d_twiddles, n_twiddles, omega, ctx);
 }
 
 /**
@@ -449,28 +453,13 @@ extern "C" cudaError_t ntt_internal_cuda(
 extern "C" cudaError_t ntt_cuda(
   curve_config::scalar_t* input,
   unsigned size,
-  bool is_inverse)
-{
-  return ntt<curve_config::scalar_t, curve_config::scalar_t>(input, size, is_inverse);
-}
-
-#if defined(ECNTT_DEFINED)
-
-/**
- * Extern version of [ntt_internal](@ref ntt_internal) function with the following values of template parameters 
- * (where the curve is given by `-DCURVE` env variable during build):
- *  - `S` is the [projective representation](@ref projective_t) of the curve (i.e. EC NTT is computed);
- *  - `E` is the [scalar field](@ref scalar_t) of the curve;
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-extern "C" cudaError_t ecntt_internal_cuda(
-  curve_config::projective_t* input,
-  unsigned size,
   bool is_inverse,
   NTTConfig<curve_config::scalar_t> config)
 {
-  return ntt_internal<curve_config::projective_t, curve_config::scalar_t>(input, size, is_inverse, config);
+  return ntt<curve_config::scalar_t, curve_config::scalar_t>(input, size, is_inverse, config);
 }
+
+#if defined(ECNTT_DEFINED)
 
 /**
  * Extern version of [ntt](@ref ntt) function with the following values of template parameters 
@@ -482,9 +471,10 @@ extern "C" cudaError_t ecntt_internal_cuda(
 extern "C" cudaError_t ecntt_cuda(
   curve_config::projective_t* input,
   unsigned size,
-  bool is_inverse)
+  bool is_inverse,
+  NTTConfig<curve_config::scalar_t> config)
 {
-  return ntt<curve_config::projective_t, curve_config::scalar_t>(input, size, is_inverse);
+  return ntt<curve_config::projective_t, curve_config::scalar_t>(input, size, is_inverse, config);
 }
 
 #endif
