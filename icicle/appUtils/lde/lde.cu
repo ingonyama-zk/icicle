@@ -33,7 +33,7 @@ __global__ void sub_kernel(E* element_vec1, E* element_vec2, uint32_t n, E* resu
 } // namespace
 
 template <typename E, typename S>
-cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, device_context::DeviceContext ctx, E* result)
+cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, bool is_montgomery, device_context::DeviceContext ctx, E* result)
 {
   // Set the grid and block dimensions
   int num_threads = MAX_THREADS_PER_BLOCK;
@@ -57,7 +57,6 @@ cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
 
   if (on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-
     cudaFreeAsync(d_vec_a, ctx.stream);
     cudaFreeAsync(d_vec_b, ctx.stream);
     cudaFreeAsync(d_result, ctx.stream);
@@ -91,7 +90,6 @@ cudaError_t add(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
 
   if (on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-
     cudaFreeAsync(d_vec_a, ctx.stream);
     cudaFreeAsync(d_vec_b, ctx.stream);
     cudaFreeAsync(d_result, ctx.stream);
@@ -125,7 +123,6 @@ cudaError_t sub(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
 
   if (on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-
     cudaFreeAsync(d_vec_a, ctx.stream);
     cudaFreeAsync(d_vec_b, ctx.stream);
     cudaFreeAsync(d_result, ctx.stream);
@@ -145,10 +142,11 @@ extern "C" cudaError_t mul_cuda(
   curve_config::scalar_t* vec_b,
   uint32_t n,
   bool on_device,
+  bool is_montgomery,
   device_context::DeviceContext ctx,
   curve_config::scalar_t* result
 ) {
-  return mul<curve_config::scalar_t>(vec_a, vec_b, n, on_device, ctx, result);
+  return mul<curve_config::scalar_t>(vec_a, vec_b, n, on_device, is_montgomery, ctx, result);
 }
 
 /**
