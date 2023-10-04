@@ -53,7 +53,7 @@ cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
   }
 
   // Call the kernel to perform element-wise modular multiplication
-  multiply_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, on_device ? d_result : result, n);
+  mul_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, n, on_device ? d_result : result);
 
   if (on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
@@ -87,7 +87,7 @@ cudaError_t add(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
   }
 
   // Call the kernel to perform element-wise addition
-  add_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, on_device ? d_result : result, n);
+  add_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, n, on_device ? d_result : result);
 
   if (on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
@@ -121,7 +121,7 @@ cudaError_t sub(E* vec_a, E* vec_b, size_t n, bool on_device, device_context::De
   }
 
   // Call the kernel to perform element-wise subtraction
-  sub_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, on_device ? d_result : result, n);
+  sub_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(on_device ? d_vec_a : vec_a, on_device ? d_vec_b : vec_b, n, on_device ? d_result : result);
 
   if (on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
