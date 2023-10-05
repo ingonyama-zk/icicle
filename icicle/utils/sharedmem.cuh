@@ -63,10 +63,10 @@
 #include "../curves/bn254/curve_config.cuh"
 #include "../curves/bw6_761/curve_config.cuh"
 
-//__device__ void Error_UnsupportedType() 
-//{
-//    // This function does not need a body, as it's just to throw a linker error.
-//}
+__device__ void Error_UnsupportedType() 
+{
+    // This function does not need a body, as it's just to throw a linker error.
+}
 
 
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
