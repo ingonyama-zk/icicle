@@ -19,18 +19,6 @@
 namespace ntt {
 
 /**
- * Generates twiddles \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$ from root of unity \f$ \omega \f$ and stores them on device.
- * @param d_twiddles Input empty array on device to which twiddles are to be written.
- * @param n_twiddles Number of twiddle \f$ n \f$ factors to generate.
- * @param omega Root of unity \f$ \omega \f$.
- * @param ctx Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
- * @tparam S The type of twiddle factors \f$ \{ \omega^i \} \f$.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-template <typename S>
-cudaError_t generate_twiddle_factors(S* d_twiddles, uint32_t n_twiddles, S omega, device_context::DeviceContext ctx);
-
-/**
  * @enum Ordering
  * How to order inputs and outputs of the NTT:
  * - kNN: inputs and outputs are natural-order (example of natural ordering: \f$ \{a_0, a_1, a_2, a_3, a_4, a_5, a_6, a_7\} \f$).
@@ -76,13 +64,13 @@ struct NTTConfig {
                                          *   on a coset of [twiddles](@ref twiddles) given by [the coset generator](@ref coset_gen), so: 
                                          *   \f$ \{coset\_gen\cdot\omega^0, coset\_gen\cdot\omega^1, \dots, coset\_gen\cdot\omega^{n-1}\} \f$. Default value: false. */
     S* coset_gen;                       /**< The field element that generates a coset if [is_coset](@ref is_coset) is true. 
-                                         *   Otherwise should be set to null. Default value: `null`. */
+                                         *   Otherwise should be set to `nullptr`. Default value: `nullptr`. */
     S* twiddles;                        /**< "Twiddle factors", (or "domain", or "roots of unity") on which the NTT is evaluated. 
                                          *   This pointer is expected to live on device. The order is as follows:
-                                         *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `null`, twiddle factors
+                                         *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle factors
                                          *   are generated online using the default generator (TODO: link to twiddle gen here) and function
-                                         *   [generate_twiddle_factors](@ref generate_twiddle_factors). Default value: `null`. */
-    unsigned batch_size;                /**< The number of NTTs to compute. Default value: 1. */
+                                         *   [generate_twiddle_factors](@ref generate_twiddle_factors). Default value: `nullptr`. */
+    int batch_size;                     /**< The number of NTTs to compute. Default value: 1. */
     device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 };
 
@@ -98,7 +86,19 @@ struct NTTConfig {
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename E, typename S>
-cudaError_t ntt(E* input, unsigned size, bool is_inverse, NTTConfig<S> config);
+cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S> config);
+
+/**
+ * Generates twiddles \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$ from root of unity \f$ \omega \f$ and stores them on device.
+ * @param d_twiddles Input empty array on device to which twiddles are to be written.
+ * @param n_twiddles Number of twiddle \f$ n \f$ factors to generate.
+ * @param omega Root of unity \f$ \omega \f$.
+ * @param ctx Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
+ * @tparam S The type of twiddle factors \f$ \{ \omega^i \} \f$.
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ */
+template <typename S>
+cudaError_t GenerateTwiddleFactors(S* d_twiddles, int n_twiddles, S omega, device_context::DeviceContext ctx);
 
 } // namespace ntt
 

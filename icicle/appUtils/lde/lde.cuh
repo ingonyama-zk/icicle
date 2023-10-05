@@ -24,7 +24,7 @@ namespace lde {
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename E, typename S>
-cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool is_on_device, bool is_montgomery, device_context::DeviceContext ctx, E* result);
+cudaError_t Mul(S* vec_a, E* vec_b, int n, bool is_on_device, bool is_montgomery, device_context::DeviceContext ctx, E* result);
 
 /**
  * A function that adds two vectors element-wise.
@@ -38,7 +38,7 @@ cudaError_t mul(S* vec_a, E* vec_b, size_t n, bool is_on_device, bool is_montgom
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename E>
-cudaError_t add(E* vec_a, E* vec_b, size_t n, bool is_on_device, device_context::DeviceContext ctx, E* result);
+cudaError_t Add(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::DeviceContext ctx, E* result);
 
 /**
  * A function that subtracts two vectors element-wise.
@@ -52,7 +52,7 @@ cudaError_t add(E* vec_a, E* vec_b, size_t n, bool is_on_device, device_context:
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename E>
-cudaError_t sub(E* vec_a, E* vec_b, size_t n, bool is_on_device, device_context::DeviceContext ctx, E* result);
+cudaError_t Sub(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::DeviceContext ctx, E* result);
 
 } // namespace lde
 

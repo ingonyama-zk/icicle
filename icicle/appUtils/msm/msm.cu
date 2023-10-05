@@ -897,7 +897,7 @@ void batched_bucket_method_msm(
 } // namespace
 
 template <typename S, typename A, typename P>
-cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
+cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results)
 {
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
@@ -916,14 +916,14 @@ cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* r
  *  - `P` is the [projective representation](@ref projective_t) of curve points.
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" cudaError_t msm_cuda(
+extern "C" cudaError_t MSMCuda(
   curve_config::scalar_t* scalars,
   curve_config::affine_t* points,
-  size_t msm_size,
+  int msm_size,
   MSMConfig config,
   curve_config::projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
+  return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 #if defined(G2_DEFINED)
@@ -936,14 +936,14 @@ extern "C" cudaError_t msm_cuda(
  *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" cudaError_t g2_msm_cuda(
+extern "C" cudaError_t G2MSMCuda(
   curve_config::scalar_t* scalars,
   curve_config::g2_affine_t* points,
-  size_t msm_size,
+  int msm_size,
   MSMConfig config,
   curve_config::g2_projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
+  return MSM<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
 }
 
 #endif
