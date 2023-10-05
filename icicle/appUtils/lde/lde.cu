@@ -151,7 +151,7 @@ extern "C" cudaError_t MulCuda(
   device_context::DeviceContext ctx,
   curve_config::scalar_t* result
 ) {
-  return mul<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, is_montgomery, ctx, result);
+  return Mul<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, is_montgomery, ctx, result);
 }
 
 /**
@@ -167,7 +167,7 @@ extern "C" cudaError_t AddCuda(
   device_context::DeviceContext ctx,
   curve_config::scalar_t* result
 ) {
-  return add<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, ctx, result);
+  return Add<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, ctx, result);
 }
 
 /**
@@ -183,7 +183,7 @@ extern "C" cudaError_t SubCuda(
   device_context::DeviceContext ctx,
   curve_config::scalar_t* result
 ) {
-  return sub<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, ctx, result);
+  return Sub<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, ctx, result);
 }
 
 } // namespace lde

@@ -2,7 +2,8 @@
 #ifndef MSM_H
 #define MSM_H
 
-#include "cuda_runtime_api.h"
+#include <cuda_runtime.h>
+
 #include "../../utils/device_context.cuh"
 
 /**

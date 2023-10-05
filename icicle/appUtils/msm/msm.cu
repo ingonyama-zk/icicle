@@ -1,18 +1,21 @@
-#include "../../primitives/affine.cuh"
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
-#include "../../curves/curve_config.cuh"
-#include "../../utils/error_handler.cuh"
 #include "msm.cuh"
-#include <cooperative_groups.h>
+
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
 #include <cuda.h>
+#include <cooperative_groups.h>
+
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+
+#include "../../primitives/affine.cuh"
+#include "../../primitives/field.cuh"
+#include "../../primitives/projective.cuh"
+#include "../../utils/cuda_utils.cuh"
+#include "../../utils/error_handler.cuh"
+#include "../../curves/curve_config.cuh"
 
 namespace msm {
 

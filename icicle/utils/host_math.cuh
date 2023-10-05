@@ -1,4 +1,6 @@
 #pragma once
+#ifndef HOST_MATH_H
+#define HOST_MATH_H
 
 #include <cstdint>
 #include <cuda_runtime.h>
@@ -94,3 +96,5 @@ namespace host_math {
     }
   };
 } // namespace host_math
+
+#endif

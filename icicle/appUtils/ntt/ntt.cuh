@@ -2,7 +2,8 @@
 #ifndef NTT_H
 #define NTT_H
 
-#include "cuda_runtime_api.h"
+#include <cuda_runtime.h>
+
 #include "../../utils/device_context.cuh"
 
 /**
@@ -69,7 +70,7 @@ struct NTTConfig {
                                          *   This pointer is expected to live on device. The order is as follows:
                                          *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle factors
                                          *   are generated online using the default generator (TODO: link to twiddle gen here) and function
-                                         *   [generate_twiddle_factors](@ref generate_twiddle_factors). Default value: `nullptr`. */
+                                         *   [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
     int batch_size;                     /**< The number of NTTs to compute. Default value: 1. */
     device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 };
