@@ -132,7 +132,7 @@ int main()
 
   for (unsigned i = 0; i < N; i++) {
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
-    points[i] = (i % msm_size < 10) ? test_projective::to_affine(test_projective::rand_host()) : points[i - 10];
+    points[i] = (i % msm_size < 100) ? test_projective::to_affine(test_projective::rand_host()) : points[i - 100];
     scalars[i] = test_scalar::rand_host();
     // scalars[i] = i < N/2? test_scalar::rand_host() : test_scalar::one();
     // points[i] = test_projective::to_affine(test_projective::rand_host());
