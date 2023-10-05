@@ -72,7 +72,9 @@ func TestG2ShouldConvertToProjective(t *testing.T) {
 	var pointAffine G2PointAffine
 	pointAffine.FromProjective(&pointProjective)
 
-	proj := pointAffine.ToProjective()
+	// todo: remove in all areas
+	var proj G2Point
+	proj.FromAffine(&pointAffine)
 
 	assert.True(t, proj.IsOnCurve())
 	assert.True(t, pointProjective.Eq(&proj))

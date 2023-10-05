@@ -31,18 +31,14 @@ import "C"
 
 // G2 extension field
 
-type G2Element [6]uint64
-
-type ExtentionField struct {
-	A0, A1 G2Element
-}
+type G2Element [12]uint64
 
 type G2PointAffine struct {
-	X, Y ExtentionField
+	X, Y G2Element
 }
 
 type G2Point struct {
-	X, Y, Z ExtentionField
+	X, Y, Z G2Element
 }
 
 func (p *G2Point) Random() *G2Point {
@@ -83,17 +79,6 @@ func (f *G2Element) ToBytesLe() []byte {
 		bytes = append(bytes, buf...)
 	}
 	return bytes
-}
-
-func (p *G2PointAffine) ToProjective() G2Point {
-	return G2Point{
-		X: p.X,
-		Y: p.Y,
-		Z: ExtentionField{
-			A0: G2Element{1, 0, 0, 0},
-			A1: G2Element{0, 0, 0, 0},
-		},
-	}
 }
 
 func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
