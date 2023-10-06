@@ -386,6 +386,7 @@ void bucket_method_msm(
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, nof_buckets);
+  CHECK_LAST_CUDA_ERROR();
 
   // accumulate ones
   P* ones_results; // fix whole division, in last run in kernel too
@@ -395,12 +396,14 @@ void bucket_method_msm(
   NUM_THREADS = min(1 << 8, nof_runs);
   NUM_BLOCKS = (nof_runs + NUM_THREADS - 1) / NUM_THREADS;
   add_ones_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_points, d_scalars, ones_results, size, run_length);
+  CHECK_LAST_CUDA_ERROR();
 
   for (int s = nof_runs >> 1; s > 0; s >>= 1) {
     NUM_THREADS = min(MAX_TH, s);
     NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
     single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
       ones_results, ones_results, s * 2, 0, 0, 0, s);
+    CHECK_LAST_CUDA_ERROR();  
   }
 
   unsigned* bucket_indices;
@@ -414,6 +417,7 @@ void bucket_method_msm(
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, nof_bms, bm_bitsize, c);
   //+size - leaving the first bm free for the out of place sort later
+  CHECK_LAST_CUDA_ERROR();
 
   // sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to
   // each bucket
@@ -528,6 +532,7 @@ void bucket_method_msm(
   NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
   find_cutoff_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
+  CHECK_LAST_CUDA_ERROR();  
 
   unsigned h_nof_large_buckets;
   cudaMemcpyAsync(&h_nof_large_buckets, nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
@@ -535,6 +540,7 @@ void bucket_method_msm(
   unsigned* max_res;
   cudaMallocAsync(&max_res, sizeof(unsigned) * 2, stream);
   find_max_size<<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, max_res);
+  CHECK_LAST_CUDA_ERROR();
 
   unsigned h_max_res[2];
   cudaMemcpyAsync(h_max_res, max_res, sizeof(unsigned) * 2, cudaMemcpyDeviceToHost, stream);
@@ -567,6 +573,7 @@ void bucket_method_msm(
       NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
       single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
         large_buckets, large_buckets, s * 2, 0, 0, 0, s);
+      CHECK_LAST_CUDA_ERROR();  
 
       CHECK_LAST_CUDA_ERROR();
     }
@@ -576,6 +583,7 @@ void bucket_method_msm(
     NUM_BLOCKS = (large_buckets_to_compute + NUM_THREADS - 1) / NUM_THREADS;
     distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
       large_buckets, buckets, sorted_single_bucket_indices + h_nof_zero_large_buckets, large_buckets_to_compute);
+    CHECK_LAST_CUDA_ERROR();  
   } else {
     h_nof_large_buckets = 0;
   }
@@ -588,6 +596,7 @@ void bucket_method_msm(
       buckets, sorted_bucket_offsets + h_nof_large_buckets, sorted_bucket_sizes + h_nof_large_buckets,
       sorted_single_bucket_indices + h_nof_large_buckets, point_indices, d_points, nof_buckets,
       h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c);
+    CHECK_LAST_CUDA_ERROR();  
   }
 
   // all the large buckets need to be accumulated before the final summation
@@ -600,6 +609,7 @@ void bucket_method_msm(
   NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   ssm_buckets_kernel<fake_point, fake_scalar>
     <<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, single_bucket_indices, nof_buckets, c);
+  CHECK_LAST_CUDA_ERROR();  
 
   // sum each bucket module
   P* final_results;
@@ -607,6 +617,7 @@ void bucket_method_msm(
   NUM_THREADS = 1 << c;
   NUM_BLOCKS = nof_bms;
   sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results);
+  CHECK_LAST_CUDA_ERROR();
 #endif
 
   P* d_final_result;
@@ -621,8 +632,10 @@ void bucket_method_msm(
 #ifdef SIGNED_DIG
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
       buckets, final_results, nof_bms, c - 1); // sighed digits
+    CHECK_LAST_CUDA_ERROR();  
 #else
     big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms, c);
+    CHECK_LAST_CUDA_ERROR();
 #endif
   } else {
     unsigned source_bits_count = c;
@@ -657,6 +670,7 @@ void bucket_method_msm(
           single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
             j == 0 ? source_buckets : temp_buckets2, j == target_bits_count - 1 ? target_buckets : temp_buckets2,
             1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0, nof_threads);
+          CHECK_LAST_CUDA_ERROR();  
         }
       }
       if (target_bits_count == 1) {
@@ -665,6 +679,7 @@ void bucket_method_msm(
         NUM_THREADS = 32;
         NUM_BLOCKS = (nof_bms + NUM_THREADS - 1) / NUM_THREADS;
         last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms);
+        CHECK_LAST_CUDA_ERROR();
         c = 1;
         cudaFreeAsync(source_buckets, stream);
         cudaFreeAsync(target_buckets, stream);
@@ -689,6 +704,7 @@ void bucket_method_msm(
   // launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S>
     <<<1, 1, 0, stream>>>(final_results, ones_results, on_device ? final_result : d_final_result, 1, nof_bms, c, true);
+  CHECK_LAST_CUDA_ERROR();  
   cudaFreeAsync(final_results, stream);
   cudaStreamSynchronize(stream);
 
@@ -760,6 +776,7 @@ void batched_bucket_method_msm(
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets);
+  CHECK_LAST_CUDA_ERROR();
 
   unsigned* bucket_indices;
   unsigned* point_indices;
@@ -772,6 +789,7 @@ void batched_bucket_method_msm(
   split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, msm_log_size, nof_bms, bm_bitsize, c);
   //+msm_size - leaving the first bm free for the out of place sort later
+  CHECK_LAST_CUDA_ERROR();
 
   // sort indices - the indices are sorted from smallest to largest in order to group together the points that belong to
   // each bucket
@@ -837,6 +855,7 @@ void batched_bucket_method_msm(
   accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     buckets, bucket_offsets, bucket_sizes, single_bucket_indices, sorted_point_indices, d_points, nof_buckets,
     h_nof_buckets_to_compute, c + bm_bitsize, c);
+  CHECK_LAST_CUDA_ERROR();  
 
   // #ifdef SSM_SUM
   //   //sum each bucket
@@ -859,6 +878,7 @@ void batched_bucket_method_msm(
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (nof_bms * batch_size + NUM_THREADS - 1) / NUM_THREADS;
   big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, bm_sums, nof_bms * batch_size, c);
+  CHECK_LAST_CUDA_ERROR();
   // #endif
 
   P* d_final_results;
@@ -869,6 +889,7 @@ void batched_bucket_method_msm(
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     bm_sums, bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c, false);
+  CHECK_LAST_CUDA_ERROR();  
 
   // copy final result to host
   if (!on_device)
