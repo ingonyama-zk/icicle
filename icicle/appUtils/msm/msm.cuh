@@ -2,7 +2,8 @@
 #ifndef MSM_H
 #define MSM_H
 
-#include "cuda_runtime_api.h"
+#include <cuda_runtime.h>
+
 #include "../../utils/device_context.cuh"
 
 /**
@@ -30,25 +31,25 @@ namespace msm {
 struct MSMConfig {
   bool are_scalars_on_device;         /**< True if scalars are on device and false if they're on host. Default value: false. */
   bool are_scalars_montgomery_form;   /**< True if scalars are in Montgomery form and false otherwise. Default value: true. */
-  unsigned points_size;               /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be a number 
+  int points_size;                    /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be a number 
                                        *   of different points. So, if each MSM re-uses the same set of points, this variable is set equal 
                                        *   to the MSM size. And if every MSM uses a distinct set of points, it should be set to the product of 
                                        *   MSM size and [batch_size](@ref batch_size). Default value: 0 (meaning it's equal to the MSM size). */
-  unsigned precompute_factor;         /**< The number of extra points to pre-compute for each point. Larger values decrease the number of computations 
+  int precompute_factor;              /**< The number of extra points to pre-compute for each point. Larger values decrease the number of computations 
                                        *   to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute). */
   bool are_points_on_device;          /**< True if points are on device and false if they're on host. Default value: false. */
   bool are_points_montgomery_form;    /**< True if coordinates of points are in Montgomery form and false otherwise. Default value: true. */
-  unsigned batch_size;                /**< The number of MSMs to compute. Default value: 1. */
+  int batch_size;                     /**< The number of MSMs to compute. Default value: 1. */
   bool are_result_on_device;          /**< True if the results should be on device and false if they should be on host. Default value: false. */
-  unsigned c;                         /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket method"
+  int c;                              /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket method"
                                        *   that we use to solve the MSM problem. As a rule of thumb, larger value means more on-line memory
                                        *   footprint but also more parallelism and less computational complexity (up to a certain point).
                                        *   Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically). */
-  unsigned bitsize;                   /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a different 
+  int bitsize;                        /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a different 
                                        *   (better) upper bound is known, it should be reflected in this variable. Default value: 0 (set to the bitsize of scalar field). */
   bool big_triangle;                  /**< Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly 
                                        *   decreases parallelism, so only suitable for large batches of MSMs. Default value: false. */
-  unsigned large_bucket_factor;       /**< Variable that controls how sensitive the algorithm is to the buckets that occur very frequently. 
+  int large_bucket_factor;            /**< Variable that controls how sensitive the algorithm is to the buckets that occur very frequently. 
                                        *   Useful for efficient treatment of non-uniform distributions of scalars and "top windows" with few bits.
                                        *   Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10. */
   device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
@@ -68,7 +69,7 @@ struct MSMConfig {
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 template <typename S, typename A, typename P>
-cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results);
+cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results);
 
 /**
  * A function that computes MSM: \f$ MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i \f$.

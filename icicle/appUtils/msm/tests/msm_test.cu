@@ -1,15 +1,16 @@
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
+#define CURVE_ID 1
+
 #include "msm.cu"
+
 #include <chrono>
 #include <iostream>
 #include <vector>
-// #include "../../curves/bls12_377/curve_config.cuh"
-#include "../../curves/bn254/curve_config.cuh"
 
-// using namespace BLS12_377;
-using namespace BN254;
+#include "../../primitives/field.cuh"
+#include "../../primitives/projective.cuh"
+#include "../../utils/cuda_utils.cuh"
+#include "../../utils/device_context.cuh"
+#include "../../curves/curve_config.cuh"
 
 class Dummy_Scalar
 {
@@ -111,9 +112,9 @@ public:
 
 // switch between dummy and real:
 
-typedef scalar_t test_scalar;
-typedef projective_t test_projective;
-typedef affine_t test_affine;
+typedef curve_config::scalar_t test_scalar;
+typedef curve_config::projective_t test_projective;
+typedef curve_config::affine_t test_affine;
 
 // typedef Dummy_Scalar test_scalar;
 // typedef Dummy_Projective test_projective;
@@ -121,17 +122,17 @@ typedef affine_t test_affine;
 
 int main()
 {
-  unsigned batch_size = 1;
+  int batch_size = 1;
   //   unsigned msm_size = 1<<21;
-  unsigned msm_size = 12180757;
-  unsigned N = batch_size * msm_size;
+  int msm_size = 12180757;
+  int N = batch_size * msm_size;
 
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];
 
   for (unsigned i = 0; i < N; i++) {
     // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
-    points[i] = (i % msm_size < 10) ? test_projective::to_affine(test_projective::rand_host()) : points[i - 10];
+    points[i] = (i % msm_size < 100) ? test_projective::to_affine(test_projective::rand_host()) : points[i - 100];
     scalars[i] = test_scalar::rand_host();
     // scalars[i] = i < N/2? test_scalar::rand_host() : test_scalar::one();
     // points[i] = test_projective::to_affine(test_projective::rand_host());
@@ -165,19 +166,39 @@ int main()
 
   // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size,
   // batched_large_res, false);
-  cudaStream_t stream1;
-  cudaStream_t stream2;
-  cudaStreamCreate(&stream1);
-  cudaStreamCreate(&stream2);
+  cudaStream_t stream;
+  cudaStreamCreate(&stream);
+
+  device_context::DeviceContext ctx = {0,       // device_id
+                                       stream,  // stream
+                                       0,       // mempool
+  };
+  msm::MSMConfig config = {
+    false,               // scalars_on_device
+    true,                // scalars_montgomery_form
+    msm_size,            // points_size
+    1,                   // precompute_factor
+    false,               // points_on_device
+    true,                // points_montgomery_form
+    1,                   // batch_size
+    false,               // result_on_device
+    16,                  // c
+    test_scalar::NBITS,  // bitsize
+    false,               // big_triangle
+    10,                  // large_bucket_factor
+    ctx,                 // DeviceContext
+  };
+
   auto begin1 = std::chrono::high_resolution_clock::now();
-  large_msm<test_scalar, test_projective, test_affine>(scalars, points, msm_size, large_res, false, true, stream1);
+  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res);
   auto end1 = std::chrono::high_resolution_clock::now();
   auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
   printf("Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
+  config.big_triangle = true;
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
-  large_msm<test_scalar, test_projective, test_affine>(
-    scalars_d, points_d, msm_size, large_res_d, true, false, stream2);
+  msm::MSM<test_scalar, test_affine, test_projective>(
+    scalars_d, points_d, msm_size, config, large_res_d);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   // test_reduce_single(scalars);
@@ -185,10 +206,8 @@ int main()
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   printf("On Device No Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
-  cudaStreamSynchronize(stream1);
-  cudaStreamSynchronize(stream2);
-  cudaStreamDestroy(stream1);
-  cudaStreamDestroy(stream2);
+  cudaStreamSynchronize(stream);
+  cudaStreamDestroy(stream);
 
   std::cout << test_projective::to_affine(large_res[0]) << std::endl;
 

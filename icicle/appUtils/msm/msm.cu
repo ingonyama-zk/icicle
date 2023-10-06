@@ -1,18 +1,21 @@
-#include "../../primitives/affine.cuh"
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
-#include "../../curves/curve_config.cuh"
-#include "../../utils/error_handler.cuh"
 #include "msm.cuh"
-#include <cooperative_groups.h>
+
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
 #include <cuda.h>
+#include <cooperative_groups.h>
+
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+
+#include "../../primitives/affine.cuh"
+#include "../../primitives/field.cuh"
+#include "../../primitives/projective.cuh"
+#include "../../utils/cuda_utils.cuh"
+#include "../../utils/error_handler.cuh"
+#include "../../curves/curve_config.cuh"
 
 namespace msm {
 
@@ -897,7 +900,7 @@ void batched_bucket_method_msm(
 } // namespace
 
 template <typename S, typename A, typename P>
-cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* results)
+cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results)
 {
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
@@ -916,14 +919,14 @@ cudaError_t msm(S* scalars, A* points, unsigned msm_size, MSMConfig config, P* r
  *  - `P` is the [projective representation](@ref projective_t) of curve points.
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" cudaError_t msm_cuda(
+extern "C" cudaError_t MSMCuda(
   curve_config::scalar_t* scalars,
   curve_config::affine_t* points,
-  size_t msm_size,
+  int msm_size,
   MSMConfig config,
   curve_config::projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
+  return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 /**
@@ -937,7 +940,7 @@ extern "C" cudaError_t msm_cuda(
 extern "C" cudaError_t msm_default_cuda(
   curve_config::scalar_t* scalars,
   curve_config::affine_t* points,
-  size_t msm_size,
+  int msm_size,
   curve_config::projective_t* out)
 {
   cudaMemPool_t mempool;
@@ -952,7 +955,7 @@ extern "C" cudaError_t msm_default_cuda(
   MSMConfig config = {
     false,     // are_scalars_on_device
     true,      // are_scalars_montgomery_form
-    msm_size,      // points_size
+    msm_size,  // points_size
     1,         // precompute_factor
     false,     // are_points_on_device
     true,      // are_points_montgomery_form
@@ -964,7 +967,7 @@ extern "C" cudaError_t msm_default_cuda(
     10,        // large_bucket_factor
 
   };
-  return msm<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
+  return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 
 #if defined(G2_DEFINED)
@@ -977,14 +980,14 @@ extern "C" cudaError_t msm_default_cuda(
  *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
-extern "C" cudaError_t g2_msm_cuda(
+extern "C" cudaError_t G2MSMCuda(
   curve_config::scalar_t* scalars,
   curve_config::g2_affine_t* points,
-  size_t msm_size,
+  int msm_size,
   MSMConfig config,
   curve_config::g2_projective_t* out)
 {
-  return msm<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
+  return MSM<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(scalars, points, msm_size, config, out);
 }
 
 #endif
