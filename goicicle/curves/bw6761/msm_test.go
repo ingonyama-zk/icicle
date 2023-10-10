@@ -107,6 +107,7 @@ func GenerateScalars(count int, skewed bool) []G1ScalarField {
 }
 
 func TestMSM(t *testing.T) {
+	fmt.Print() // this prevents the test from hanging. TODO: figure out why
 	for _, v := range []int{8} {
 		count := 1 << v
 

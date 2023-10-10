@@ -33,6 +33,7 @@ func TestG2Eqg2(t *testing.T) {
 }
 
 func TestG2FromProjectiveToAffine(t *testing.T) {
+	fmt.Print() // this prevents the test from hanging. TODO: figure out why
 	var projective G2Point
 	projective.Random()
 
