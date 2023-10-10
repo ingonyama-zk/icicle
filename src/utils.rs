@@ -1,7 +1,3 @@
-use rand::rngs::StdRng;
-use rand::RngCore;
-use rand::SeedableRng;
-
 pub fn from_limbs<T>(limbs: Vec<u32>, chunk_size: usize, f: fn(&[u32]) -> T) -> Vec<T> {
     let points = limbs
         .chunks(chunk_size)
@@ -33,7 +29,13 @@ pub fn u64_vec_to_u32_vec(arr_u64: &[u64]) -> Vec<u32> {
     arr_u32
 }
 
+#[cfg(test)]
+use rand::RngCore;
+
+#[cfg(test)]
 pub fn get_rng(seed: Option<u64>) -> Box<dyn RngCore> {
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
     //TOOD: this func is universal
     let rng: Box<dyn RngCore> = match seed {
         Some(seed) => Box::new(StdRng::seed_from_u64(seed)),
@@ -44,9 +46,10 @@ pub fn get_rng(seed: Option<u64>) -> Box<dyn RngCore> {
 
 #[cfg(test)]
 mod tests {
+
     use ark_ff::BigInteger256;
 
-    use crate::curves::bls12_381::ScalarField;
+    use crate::curve::ScalarField;
 
     use super::*;
 

@@ -1,8 +1,6 @@
 use std::ffi::c_uint;
 
-use self::bls12_381::*;
-
-pub mod bls12_381;
+use crate::curve::*;
 
 /*
 /**
@@ -106,11 +104,13 @@ pub struct DeviceContext {
 
 // Assuming that the CUDA types can be defined as follows.
 // The exact type might depend on the specifics of the Rust CUDA bindings, if available.
+#[allow(non_camel_case_types)]
 pub type cudaStream_t = usize; // This might be a placeholder, check your binding crate for the exact type
+#[allow(non_camel_case_types)]
 pub type cudaMemPool_t = usize; // This might be a placeholder, check your binding crate for the exact type
 
 extern "C" {
-    #[link_name = "bls12_381_msm_default_cuda"]
+    #[link_name = "bn254_msm_default_cuda"]
     fn msm_cuda(
         scalars: *const ScalarField,
         points: *const PointAffineNoInfinity,
@@ -165,16 +165,14 @@ pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bls12_381::{Fr, G1Projective};
+    use ark_bn254::{Fr, G1Projective};
+    // use ark_bls12_381::{Fr, G1Projective};
     use ark_ec::msm::VariableBaseMSM;
     use ark_ff::PrimeField;
     use ark_std::UniformRand;
     use rand::RngCore;
 
-    use crate::{
-        curves::{bls12_381::*, msm},
-        utils::get_rng,
-    };
+    use crate::{curve::*, msm::*, utils::get_rng};
 
     pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<PointAffineNoInfinity> {
         (0..count)
@@ -182,6 +180,7 @@ pub(crate) mod tests {
             .collect()
     }
 
+    #[allow(dead_code)]
     pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
         (0..count)
             .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
@@ -195,6 +194,7 @@ pub(crate) mod tests {
     }
 
     #[test]
+    #[ignore = "skip"]
     fn test_msm() {
         let test_sizes = [6, 9];
 

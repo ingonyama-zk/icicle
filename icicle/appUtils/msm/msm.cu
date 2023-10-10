@@ -1,5 +1,3 @@
-#include "msm.cuh"
-
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
@@ -10,12 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "../../primitives/affine.cuh"
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
-#include "../../utils/error_handler.cuh"
-#include "../../curves/curve_config.cuh"
+#include "msm.cuh"
 
 namespace msm {
 

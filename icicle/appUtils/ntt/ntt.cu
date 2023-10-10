@@ -1,9 +1,5 @@
 #include "ntt.cuh"
 
-#include "../../utils/sharedmem.cuh"
-#include "../../utils/utils_kernels.cuh"
-#include "../../curves/curve_config.cuh"
-
 namespace ntt {
 
 namespace {
@@ -21,15 +17,18 @@ const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * 1024;
  * @param omega multiplying factor.
  */
 template <typename S>
-__global__ void twiddle_factors_kernel(S* d_twiddles, uint32_t n_twiddles, S omega)
+__global__ void twiddle_factors_kernel(S* d_twiddles, int n_twiddles, S omega)
 {
-  for (uint32_t i = 0; i < n_twiddles; i++) {
-    d_twiddles[i] = S::zero();
-  }
-  d_twiddles[0] = S::one();
-  for (uint32_t i = 0; i < n_twiddles - 1; i++) {
-    d_twiddles[i + 1] = omega * d_twiddles[i];
-  }
+  // for (int i = 0; i < n_twiddles; i++) {
+  //   d_twiddles[i] = S::zero();
+  // }
+  printf("here hhhhhhh\n");
+  //__syncthreads();
+  // d_twiddles[0] = S::one();
+  // printf("here hh\n");
+  // for (int i = 0; i < n_twiddles - 1; i++) {
+  //   d_twiddles[i + 1] = omega * d_twiddles[i];
+  // }
 }
 
 template <typename E>
@@ -61,7 +60,7 @@ void reverse_order_batch(E* arr, uint32_t n, uint32_t logn, uint32_t batch_size,
   int number_of_threads = MAX_THREADS_BATCH;
   int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
   reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, arr_reversed, n, logn, batch_size);
-  cudaMemcpyAsync(arr, arr_reversed, n * batch_size * sizeof(E), cudaMemcpyDeviceToDevice, stream);
+  cudaMemcpyAsync(arr, arr_reversed, n * batch_size * sizeof(E), cudaMemcpyDefault, stream);
   cudaFreeAsync(arr_reversed, stream);
 }
 
@@ -341,36 +340,61 @@ void ntt_inplace_batch_template(
 template <typename S>
 cudaError_t GenerateTwiddleFactors(S* d_twiddles, int n_twiddles, S omega, device_context::DeviceContext ctx)
 {
-  twiddle_factors_kernel<S><<<1, 1, 0, ctx.stream>>>(d_twiddles, n_twiddles, omega);
-  cudaStreamSynchronize(ctx.stream);
+  twiddle_factors_kernel<S><<<1, 1>>>(d_twiddles, n_twiddles, omega);
+  //cudaStreamSynchronize(ctx.stream);
+
+  CHECK_LAST_CUDA_ERROR();
   return cudaSuccess;
 }
 
 template <typename E, typename S>
-cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S> config)
+cudaError_t NTT(NTTConfig<E, S>* config)
 {
-  uint32_t logn = uint32_t(log(size) / log(2));
-  uint32_t n_twiddles = size; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order.
-  size_t input_size = size * config.batch_size * sizeof(E);
-  bool is_on_device = config.are_inputs_on_device;
-  bool generate_twiddles = (config.twiddles == nullptr);
-  cudaStream_t stream = config.ctx.stream;
-  
-  S* d_twiddles;
-  if (generate_twiddles) {
-    cudaMallocAsync(&d_twiddles, n_twiddles * sizeof(S), stream);
-    GenerateTwiddleFactors(d_twiddles, n_twiddles, is_inverse ? S::omega_inv(logn) : S::omega(logn), config.ctx);
+  cudaStream_t stream = config->ctx.stream;
+  int size = config->size;
+  int batch_size = config->batch_size;
+  bool is_inverse = config-> is_inverse;
+  int n_twiddles = size;
+  int logn = int(log(size) / log(2));
+  int input_size = size * batch_size * sizeof(E);
+  bool is_input_on_device = config->are_inputs_on_device;
+  bool is_generating_twiddles = (config->twiddles == nullptr);
+
+  if(is_generating_twiddles)
+  {
+    printf("Generating\n");
+  } else {
+    printf("Not Generating\n");
   }
 
-  E* d_input;
-  if (!is_on_device) {
-    cudaMallocAsync(&d_input, input_size, stream);
-    cudaMemcpyAsync(d_input, input, input_size, cudaMemcpyHostToDevice, stream);
+  // std::cout << "finished generating" << std::endl;
+  // std::cerr << "err finished generating" << std::endl;
+
+  
+  S* d_twiddles;
+  if (is_generating_twiddles) {
+    cudaMallocAsync(&d_twiddles, n_twiddles * sizeof(S), stream);
+    printf("Generating2\n");
+    auto kk= config->ctx;
+    printf("Generating2\n");
+    auto omega = is_inverse ? S::omega_inv(logn) : S::omega(logn);
+    printf("Generating3\n");
+    GenerateTwiddleFactors(d_twiddles, n_twiddles, omega, kk);
+  } else {
+    d_twiddles = config->twiddles;
+  }
+
+  E* d_inout;
+  if (!is_input_on_device) {
+    cudaMallocAsync(&d_inout, input_size, stream);
+    cudaMemcpyAsync(d_inout, config->inout, input_size, cudaMemcpyHostToDevice, stream);
+  } else {
+    d_inout = config->inout;
   }
 
   bool reverse_input;
   bool reverse_output;
-  switch (config.ordering) {
+  switch (config->ordering) {
     case Ordering::kNN:
       reverse_input = is_inverse;
       reverse_output = !is_inverse;
@@ -388,39 +412,48 @@ cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S> config)
       reverse_output = is_inverse;
       break;
   }
+    printf("here 1\n");
 
   if (reverse_input)
-    reverse_order_batch(is_on_device ? input : d_input, size, logn, config.batch_size, stream);
-  ntt_inplace_batch_template(is_on_device ? input : d_input, generate_twiddles ? d_twiddles : config.twiddles, size, 
-                             config.batch_size, is_inverse, config.is_coset, config.coset_gen, stream, false);
-  if (reverse_output)
-    reverse_order_batch(is_on_device ? input : d_input, size, logn, config.batch_size, stream);
+    reverse_order_batch(d_inout, size, logn, config->batch_size, stream);
 
-  if (!is_on_device) {
-    cudaMemcpyAsync(input, d_input, input_size, cudaMemcpyDeviceToHost, stream);
-    cudaFreeAsync(d_input, stream);
+    printf("here 2\n");
+
+  ntt_inplace_batch_template(d_inout, is_generating_twiddles ? d_twiddles : config->twiddles, size, 
+                             batch_size, is_inverse, config->is_coset, config->coset_gen, stream, false);
+  if (reverse_output)
+    reverse_order_batch(d_inout, size, logn, batch_size, stream);
+    printf("here 3\n");
+
+
+  if (config->is_output_on_device) {
+    printf("here 4\n");
+
+    free(config->inout); //TODO: ? or callback?+
+    config->inout = d_inout;
+  } else {
+    printf("here 5\n");
+
+    cudaMemcpyAsync(config->inout, d_inout, input_size, cudaMemcpyDeviceToHost, stream);
+    printf("here 6\n");
+
+    cudaFreeAsync(d_inout, stream);
   }
 
-  if (generate_twiddles) {
+  if (is_generating_twiddles && !config->is_preserving_tweedles) {
+    printf("here 7\n");
+
     cudaFreeAsync(d_twiddles, stream);
   }
 
-  cudaStreamSynchronize(stream);
-  return cudaSuccess;
-}
+  if (config->is_preserving_tweedles) {
+    config->twiddles = d_twiddles;
+  }
 
-/**
- * Extern version of [GenerateTwiddleFactors](@ref GenerateTwiddleFactors) function with the template parameter 
- * `S` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-extern "C" cudaError_t GenerateTwiddleFactorsCuda(
-  curve_config::scalar_t* d_twiddles,
-  int n_twiddles,
-  curve_config::scalar_t omega,
-  device_context::DeviceContext ctx
-) {
-  return GenerateTwiddleFactors<curve_config::scalar_t>(d_twiddles, n_twiddles, omega, ctx);
+  cudaStreamSynchronize(stream);
+    printf("here 9\n");
+
+  return cudaSuccess;
 }
 
 /**
@@ -430,12 +463,45 @@ extern "C" cudaError_t GenerateTwiddleFactorsCuda(
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 extern "C" cudaError_t NTTCuda(
-  curve_config::scalar_t* input,
-  int size,
-  bool is_inverse,
-  NTTConfig<curve_config::scalar_t> config)
+  NTTConfig<curve_config::scalar_t, curve_config::scalar_t>* config)
 {
-  return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, is_inverse, config);
+  return NTT<curve_config::scalar_t, curve_config::scalar_t>(config);
+}
+
+/**
+ * Extern version of [ntt](@ref ntt) function with the following values of template parameters 
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ */
+template <typename E, typename S>
+cudaError_t NTTDefaultContext(NTTConfig<E,S>* config)
+{
+  // TODO: if empty - create default
+  cudaMemPool_t mempool;
+  cudaDeviceGetDefaultMemPool(&mempool, config->ctx.device_id);
+
+  device_context::DeviceContext context = {
+     config->ctx.device_id,
+     0, //default stream
+     mempool
+  };
+
+  config->ctx = context;
+
+  return NTT<E, S>(config);
+}
+
+/**
+ * Extern version of [ntt](@ref ntt) function with the following values of template parameters 
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ */
+extern "C" cudaError_t NTTDefaultContextCuda(
+  NTTConfig<curve_config::scalar_t, curve_config::scalar_t>* config)
+{
+  return NTTDefaultContext(config);
 }
 
 #if defined(ECNTT_DEFINED)
@@ -448,12 +514,9 @@ extern "C" cudaError_t NTTCuda(
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 extern "C" cudaError_t ECNTTCuda(
-  curve_config::projective_t* input,
-  int size,
-  bool is_inverse,
-  NTTConfig<curve_config::scalar_t> config)
+  NTTConfig<curve_config::projective_t, curve_config::scalar_t> *config)
 {
-  return NTT<curve_config::projective_t, curve_config::scalar_t>(input, size, is_inverse, config);
+  return NTT<curve_config::projective_t, curve_config::scalar_t>(config);
 }
 
 #endif

@@ -19,13 +19,6 @@ harness = false
 
 [dependencies] 
 hex = "*"
-ark-std = "0.3.0"
-ark-ff = "0.3.0"
-ark-poly = "0.3.0"
-ark-ec = { version = "0.3.0", features = [ "parallel" ] }
-ark-bls12-381 = "0.3.0"
-ark-bls12-377 = "0.3.0"
-ark-bn254 = "0.3.0"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
@@ -35,18 +28,27 @@ rustacuda = "0.1"
 rustacuda_core = "0.1"
 rustacuda_derive = "0.1"
 
-rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
-libc = "*" #TODO: move libc dependencies to build 
-
 [build-dependencies]
 # cc = { version = "1.0", features = ["parallel"] }
 cmake = "*"
 bindgen = "*"
+libc = "*" #TODO: move libc dependencies to build 
 
 [dev-dependencies]
-"criterion" = "0.4.0"
+rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
+
+ark-std = "0.3.0"
+ark-ff = "0.3.0"
+ark-poly = "0.3.0"
+ark-ec = { version = "0.3.0", features = [ "parallel" ] }
+ark-bls12-381 = "0.3.0"
+ark-bls12-377 = "0.3.0"
+ark-bn254 = "0.3.0"
+
+"criterion" = "*"
 
 [features]
-default = ["bls12_381"]
-bls12_381 = ["ark-bls12-381/curve"]
+default = ["bn254"]
+bls12_381 = []
+bn254 = []
 g2 = []
