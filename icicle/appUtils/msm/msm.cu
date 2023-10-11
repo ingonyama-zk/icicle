@@ -151,7 +151,7 @@ __global__ void add_ones_kernel(A* points, S* scalars, P* results, const unsigne
   results[tid] = sum;
 }
 
-__global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
+__global__ __forceinline__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   const unsigned nof_threads = (size + run_length - 1) / run_length;
@@ -166,7 +166,7 @@ __global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, 
   if (tid == 0 && v[size - 1] > cutoff) { result[0] = size; }
 }
 
-__global__ void
+__global__ __forceinline__ void
 find_max_size(unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, unsigned* largest_bucket_size)
 {
   for (int i = 0;; i++) {
@@ -964,7 +964,7 @@ void reference_msm(S* scalars, A* a_points, unsigned size)
   std::cout << P::to_affine(res) << std::endl;
 }
 
-unsigned get_optimal_c(const unsigned size)
+unsigned inline get_optimal_c(const unsigned size)
 {
   if (size < 17) return 1;
   // return 17;
