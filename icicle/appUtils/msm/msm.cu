@@ -151,7 +151,9 @@ __global__ void add_ones_kernel(A* points, S* scalars, P* results, const unsigne
   results[tid] = sum;
 }
 
-__global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
+template <typename S>
+__global__ void
+find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, S* fake_param, unsigned* result)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   const unsigned nof_threads = (size + run_length - 1) / run_length;
@@ -166,8 +168,9 @@ __global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, 
   if (tid == 0 && v[size - 1] > cutoff) { result[0] = size; }
 }
 
-__global__ void
-find_max_size(unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, unsigned* largest_bucket_size)
+template <typename S>
+__global__ void find_max_size(
+  unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, S* fake_param, unsigned* largest_bucket_size)
 {
   for (int i = 0;; i++) {
     if (single_bucket_indices[i] & ((1 << c) - 1)) {
@@ -525,14 +528,14 @@ void bucket_method_msm(
   NUM_THREADS = min(1 << 5, cutoff_nof_runs);
   NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
   find_cutoff_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-    sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
+    sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, d_scalars, nof_large_buckets);
 
   unsigned h_nof_large_buckets;
   cudaMemcpyAsync(&h_nof_large_buckets, nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
 
   unsigned* max_res;
   cudaMallocAsync(&max_res, sizeof(unsigned) * 2, stream);
-  find_max_size<<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, max_res);
+  find_max_size<<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, d_scalars, max_res);
 
   unsigned h_max_res[2];
   cudaMemcpyAsync(h_max_res, max_res, sizeof(unsigned) * 2, cudaMemcpyDeviceToHost, stream);
