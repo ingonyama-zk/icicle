@@ -1,4 +1,6 @@
 #pragma once
+#ifndef HOST_MATH_H
+#define HOST_MATH_H
 
 #include <cstdint>
 #include <cuda_runtime.h>
@@ -56,7 +58,7 @@ namespace host_math {
   {
     uint32_t result;
     uint64_t r = static_cast<uint64_t>(x) * y + z + carry;
-    carry = r >> 32;
+    carry = (uint32_t)(r >> 32);
     result = r & 0xffffffff;
     return result;
   }
@@ -94,3 +96,5 @@ namespace host_math {
     }
   };
 } // namespace host_math
+
+#endif
