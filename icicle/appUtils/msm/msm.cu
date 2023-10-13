@@ -1,3 +1,5 @@
+#include "msm.cuh"
+
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
@@ -8,7 +10,12 @@
 #include <stdexcept>
 #include <vector>
 
-#include "msm.cuh"
+#include "../../primitives/affine.cuh"
+#include "../../primitives/field.cuh"
+#include "../../primitives/projective.cuh"
+#include "../../utils/cuda_utils.cuh"
+#include "../../utils/error_handler.cuh"
+#include "../../curves/curve_config.cuh"
 
 namespace msm {
 
@@ -95,14 +102,14 @@ __global__ void split_scalars_kernel(
   unsigned bm_bitsize,
   unsigned c)
 {
-  constexpr unsigned sign_mask = 0x80000000;
+  // constexpr unsigned sign_mask = 0x80000000;
   // constexpr unsigned trash_bucket = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   unsigned bucket_index;
-  unsigned bucket_index2;
+  // unsigned bucket_index2;
   unsigned current_index;
   unsigned msm_index = tid >> msm_log_size;
-  unsigned borrow = 0;
+  // unsigned borrow = 0;
   if (tid < total_size) {
     S scalar = scalars[tid];
     for (unsigned bm = 0; bm < nof_bms; bm++) {
@@ -193,7 +200,7 @@ __global__ void accumulate_buckets_kernel(
   const unsigned msm_idx_shift,
   const unsigned c)
 {
-  constexpr unsigned sign_mask = 0x80000000;
+  // constexpr unsigned sign_mask = 0x80000000;
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid >= nof_buckets_to_compute) return;
   if ((single_bucket_indices[tid] & ((1 << c) - 1)) == 0) {
@@ -369,8 +376,8 @@ void bucket_method_msm(
   P* buckets;
   // compute number of bucket modules and number of buckets in each module
   unsigned nof_bms = (bitsize + c - 1) / c;
-  unsigned msm_log_size = ceil(log2(size));
-  unsigned bm_bitsize = ceil(log2(nof_bms));
+  unsigned msm_log_size = (unsigned)ceil(log2(size));
+  unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms));
 #ifdef SIGNED_DIG
   unsigned nof_buckets = nof_bms * ((1 << (c - 1)) + 1); // signed digits
 #else
@@ -563,8 +570,6 @@ void bucket_method_msm(
       NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
       single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
         large_buckets, large_buckets, s * 2, 0, 0, 0, s);
-
-      CHECK_LAST_CUDA_ERROR();
     }
 
     // distribute
@@ -622,7 +627,7 @@ void bucket_method_msm(
 #endif
   } else {
     unsigned source_bits_count = c;
-    bool odd_source_c = source_bits_count % 2;
+    // bool odd_source_c = source_bits_count % 2;
     unsigned source_windows_count = nof_bms;
     unsigned source_buckets_count = nof_buckets;
     P* source_buckets = buckets;
@@ -640,7 +645,7 @@ void bucket_method_msm(
 
       if (source_bits_count > 0) {
         for (unsigned j = 0; j < target_bits_count; j++) {
-          unsigned last_j = target_bits_count - 1;
+          // unsigned last_j = target_bits_count - 1;
           unsigned nof_threads = (source_buckets_count >> (1 + j));
           NUM_THREADS = min(MAX_TH, nof_threads);
           NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
@@ -676,7 +681,7 @@ void bucket_method_msm(
       temp_buckets1 = nullptr;
       temp_buckets2 = nullptr;
       source_bits_count = target_bits_count;
-      odd_source_c = source_bits_count % 2;
+      // odd_source_c = source_bits_count % 2;
       source_windows_count = target_windows_count;
       source_buckets_count = target_buckets_count;
     }
@@ -746,8 +751,8 @@ void batched_bucket_method_msm(
   P* buckets;
   // compute number of bucket modules and number of buckets in each module
   unsigned nof_bms = (bitsize + c - 1) / c;
-  unsigned msm_log_size = ceil(log2(msm_size));
-  unsigned bm_bitsize = ceil(log2(nof_bms));
+  unsigned msm_log_size = (unsigned)ceil(log2(msm_size));
+  unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms));
   unsigned nof_buckets = (nof_bms << c);
   unsigned total_nof_buckets = nof_buckets * batch_size;
   cudaMallocAsync(&buckets, sizeof(P) * total_nof_buckets, stream);
@@ -919,47 +924,6 @@ extern "C" cudaError_t MSMCuda(
   MSMConfig config,
   curve_config::projective_t* out)
 {
-  return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
-}
-
-/**
- * Extern version of [msm](@ref msm) function with the following values of template parameters 
- * (where the curve is given by `-DCURVE` env variable during build):
- *  - `S` is the [scalar field](@ref scalar_t) of the curve;
- *  - `A` is the [affine representation](@ref affine_t) of curve points;
- *  - `P` is the [projective representation](@ref projective_t) of curve points.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-extern "C" cudaError_t msm_default_cuda(
-  curve_config::scalar_t* scalars,
-  curve_config::affine_t* points,
-  int msm_size,
-  curve_config::projective_t* out)
-{
-  cudaMemPool_t mempool;
-  cudaDeviceGetDefaultMemPool(&mempool, 0);
-
-  device_context::DeviceContext context = {
-     0,
-     0,
-     mempool
-  };
-
-  MSMConfig config = {
-    false,     // are_scalars_on_device
-    true,      // are_scalars_montgomery_form
-    msm_size,  // points_size
-    1,         // precompute_factor
-    false,     // are_points_on_device
-    true,      // are_points_montgomery_form
-    1,         // batch_size
-    false,     // are_result_on_device
-    16,        // c
-    curve_config::scalar_t::NBITS,  // bitsize
-    false,     // big_triangle
-    10,        // large_bucket_factor
-
-  };
   return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(scalars, points, msm_size, config, out);
 }
 

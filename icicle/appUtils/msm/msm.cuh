@@ -77,21 +77,6 @@ struct MSMConfig {
 template <typename S, typename A, typename P>
 cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results);
 
-/**
- * A function that computes MSM: \f$ MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i \f$.
- * @param scalars Scalars \f$ s_i \f$. In case of batch MSM, the scalars from all MSMs are concatenated.
- * @param points Points \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated. 
- * So, if for example all MSMs share the same base points, they can be repeated only once.
- * @param msm_size MSM size \f$ N \f$. If a batch of MSMs (which all need to have the same size) is computed, this is the size of 1 MSM.
- * @param results Result (or results in the case of batch MSM).
- * @tparam S Scalar field type.
- * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
- * @tparam P Output type, which is typically a [projective Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) point in our codebase.
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-template <typename S, typename A, typename P>
-cudaError_t msm_default(S* scalars, A* points, unsigned msm_size, P* results);
-
 } // namespace msm
 
 #endif

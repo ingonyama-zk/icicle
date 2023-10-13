@@ -9,6 +9,7 @@
 #include "../../utils/sharedmem.cuh"
 #include "../../utils/utils_kernels.cuh"
 #include "../../utils/error_handler.cuh"
+
 /**
  * @namespace ntt
  * Number Theoretic Transform, or NTT is a version of [fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) where instead of real or 

@@ -3,23 +3,18 @@
 #define UTILS_KERNELS_H
 
 namespace utils_internal {
-    
+
+/**
+ * Multiply the elements of an input array by a scalar in-place. Used for normalization in iNTT.
+ * @param arr input array.
+ * @param n size of arr.
+ * @param n_inv scalar of type S (scalar).
+ */
 template <typename E, typename S>
-__global__ void template_normalize_kernel(E* arr, S scalar, int n)
-{
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  if (tid < n) { arr[tid] = scalar * arr[tid]; }
-}
+__global__ void template_normalize_kernel(E* arr, S scalar, uint32_t n);
 
 template <typename E, typename S>
-__global__ void batchVectorMult(E* element_vec, S* scalar_vec, unsigned n_scalars, unsigned batch_size)
-{
-  int tid = blockDim.x * blockIdx.x + threadIdx.x;
-  if (tid < n_scalars * batch_size) {
-    int scalar_id = tid % n_scalars;
-    element_vec[tid] = scalar_vec[scalar_id] * element_vec[tid];
-  }
-}
+__global__ void batchVectorMult(E* element_vec, S* scalar_vec, unsigned n_scalars, unsigned batch_size);
 
 } // namespace utils_internal
 
