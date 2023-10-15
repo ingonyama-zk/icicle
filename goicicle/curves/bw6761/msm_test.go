@@ -130,19 +130,21 @@ func TestMSM(t *testing.T) {
 func TestCommitMSM(t *testing.T) {
 	for _, v := range []int{8} {
 		count := 1<<v - 1
-
+		fmt.Print("Started generating points and scalars\n")
 		points := GeneratePoints(count)
-		fmt.Print("Finished generating points\n")
 		scalars := GenerateScalars(count, false)
-		fmt.Print("Finished generating scalars\n")
+		fmt.Print("Finished generating points and scalars\n")
 
-		out_d, _ := goicicle.CudaMalloc(96)
+		var sizeOutD G1ProjectivePoint
+		out_d, _ := goicicle.CudaMalloc(int(unsafe.Sizeof(sizeOutD)))
 
-		pointsBytes := count * 64
+		var sizePoints G1PointAffine
+		pointsBytes := count * int(unsafe.Sizeof(sizePoints))
 		points_d, _ := goicicle.CudaMalloc(pointsBytes)
 		goicicle.CudaMemCpyHtoD[G1PointAffine](points_d, points, pointsBytes)
 
-		scalarBytes := count * 32
+		var sizeScalar G1ScalarField
+		scalarBytes := count * int(unsafe.Sizeof(sizeScalar))
 		scalars_d, _ := goicicle.CudaMalloc(scalarBytes)
 		goicicle.CudaMemCpyHtoD[G1ScalarField](scalars_d, scalars, scalarBytes)
 
@@ -151,7 +153,7 @@ func TestCommitMSM(t *testing.T) {
 		fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
 
 		outHost := make([]G1ProjectivePoint, 1)
-		goicicle.CudaMemCpyDtoH[G1ProjectivePoint](outHost, out_d, 96)
+		goicicle.CudaMemCpyDtoH[G1ProjectivePoint](outHost, out_d, int(unsafe.Sizeof(sizeOutD)))
 
 		assert.Equal(t, e, 0, "error should be 0")
 		assert.True(t, outHost[0].IsOnCurve())
@@ -180,6 +182,10 @@ func BenchmarkCommit(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				e := Commit(out_d, scalars_d, points_d, msmSize, 10)
 
+				assert.Equal(b, e, 0, "error should be 0")
+				outHost := make([]G1ProjectivePoint, 1)
+				goicicle.CudaMemCpyDtoH[G1ProjectivePoint](outHost, out_d, 288)
+				assert.True(b, outHost[0].IsOnCurve())
 				if e != 0 {
 					panic("Error occured")
 				}
