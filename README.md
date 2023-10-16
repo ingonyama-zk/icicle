@@ -167,6 +167,8 @@ The script does the following:
 - Creates a file with the curve name in ``src/curves`` with the relevant objects for the curve. 
 - Creates a test file with the curve name in ``src``. 
 
+Also files from ``./icicle/curves/<curve_name>/supported_operations.cu`` should be added individually to ``add_library`` section of [``./icicle/CMakeLists.txt``][CMAKELISTS]
+
 Testing the new curve could be done by running the tests in ``tests_curve_name`` (e.g. ``tests_bls12_381``).
 
 ## Docker
@@ -222,5 +224,5 @@ See [LICENSE-MIT][LMIT] for details.
 [googletest]: https://github.com/google/googletest/
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
-
+[CMAKELISTS]: https://github.com/ingonyama-zk/icicle/blob/f0e6b465611227b858ec4590f4de5432e892748d/icicle/CMakeLists.txt#L28
 <!-- End Links -->

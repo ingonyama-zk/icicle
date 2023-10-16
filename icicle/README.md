@@ -10,7 +10,7 @@ mkdir -p build; cmake -S . -B build; cmake --build build; cd build && ctest; cd 
 
 Before proceeding, make sure the following software installed:
 
-1. CMake at least version 3.16, which can be downloaded from [cmake.org](https://cmake.org/files/)
+1. CMake at least version 3.18, which can be downloaded from [cmake.org](https://cmake.org/files/)
    It is recommended to have the latest version installed.
 2. [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu) version 12.0 or newer.
 3. GCC - version 9 or newer recommended.
