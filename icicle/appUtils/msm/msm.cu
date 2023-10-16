@@ -151,7 +151,8 @@ __global__ void add_ones_kernel(A* points, S* scalars, P* results, const unsigne
   results[tid] = sum;
 }
 
-__global__ __forceinline__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
+__global__ __forceinline__ void
+find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   const unsigned nof_threads = (size + run_length - 1) / run_length;
