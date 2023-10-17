@@ -62,6 +62,8 @@ jobs:
         sub-packages: '["cudart", "nvcc", "thrust"]'
     - name: Build Rust Targets
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      env:
+        CUDA_HOME: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}
       run: cargo build --release --verbose
 
   build-golang-linux:
