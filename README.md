@@ -5,13 +5,15 @@
 ![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
 
 
-<div align="center">
-
-![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg)
-![Discord server](https://img.shields.io/discord/1063033227788423299?label=Discord&logo=Discord&logoColor=%23&style=plastic)
-![Follow us on twitter](https://img.shields.io/twitter/follow/Ingo_zk?style=social)
-
-</div>
+<p align="center">
+  <img src="https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg" alt="Build status">
+  <a href="https://discord.gg/EVVXTdt6DF">
+    <img src="https://img.shields.io/discord/1063033227788423299?logo=discord" alt="Chat with us on Discord">
+  </a>
+  <a href="https://twitter.com/intent/follow?screen_name=Ingo_zk">
+    <img src="https://img.shields.io/twitter/follow/Ingo_zk?style=social&logo=twitter" alt="Follow us on Twitter">
+  </a>
+</p>
 
 ## Background
 
