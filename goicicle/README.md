@@ -11,13 +11,13 @@ To compile the CUDA files, you will need:
 
 ## Structure of the Makefile
 
-The Makefile is designed to compile CUDA files for three curves: BN254, BLS12_381, and BLS12_377. The source files are located in the `icicle/curves/` directory.
+The Makefile is designed to compile CUDA files for three curves: BN254, BLS12_381, BLS12_377 and BW6_671. The source files are located in the `icicle/curves/` directory.
 
 ## Compiling CUDA Code
 
 1. Navigate to the directory containing the Makefile in your terminal.
-2. To compile all curve libraries, use the `make all` command. This will create three shared libraries: `libbn254.so`, `libbls12_381.so`, and `libbls12_377.so`.
-3. If you want to compile a specific curve, you can do so by specifying the target. For example, to compile only the BN254 curve, use `make libbn254.so`. Replace `libbn254.so` with `libbls12_381.so` or `libbls12_377.so` to compile those curves instead.
+2. To compile all curve libraries, use the `make all` command. This will create three shared libraries: `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so`.
+3. If you want to compile a specific curve, you can do so by specifying the target. For example, to compile only the BN254 curve, use `make libbn254.so`. Replace `libbn254.so` with `libbls12_381.so`, `libbls12_377.so` or `libbw6_671.so` to compile those curves instead.
 
 The resulting `.so` files are the compiled shared libraries for each curve.
 
@@ -25,13 +25,13 @@ The resulting `.so` files are the compiled shared libraries for each curve.
 
 The shared libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
 
-1. These shared libraries (`libbn254.so`, `libbls12_381.so`, `libbls12_377.so`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE. 
+1. These shared libraries (`libbn254.so`, `libbls12_381.so`, `libbls12_377.so`, `libbw6_671.so`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
 
 2. In your Go project, you can use `cgo` to link these shared libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 
 ```go
 /*
-#cgo LDFLAGS: -L/path/to/shared/libs -lbn254 -lbls12_381 -lbls12_377
+#cgo LDFLAGS: -L/path/to/shared/libs -lbn254 -lbls12_381 -lbls12_377 -lbw6_671
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"
@@ -46,7 +46,7 @@ Replace `/path/to/shared/libs` with the actual path where the shared libraries a
 
 ## Cleaning up
 
-If you want to remove the compiled files, you can use the `make clean` command. This will remove the `libbn254.so`, `libbls12_381.so`, and `libbls12_377.so` files.
+If you want to remove the compiled files, you can use the `make clean` command. This will remove the `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so` files.
 
 ## Common issues
 

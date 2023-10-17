@@ -36,6 +36,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
     - [BLS12-381]
     - [BLS12-377]
     - [BN254]
+    - [BW6-671]
 
 ## Build and usage
 
@@ -216,6 +217,7 @@ See [LICENSE-MIT][LMIT] for details.
 [BLS12-381]: ./icicle/curves/bls12_381/supported_operations.cu
 [BLS12-377]: ./icicle/curves/bls12_377/supported_operations.cu
 [BN254]: ./icicle/curves/bn254/supported_operations.cu
+[BW6-671]: ./icicle/curves/bw6_671/supported_operations.cu
 [NVCC]: https://docs.nvidia.com/cuda/#installation-guides
 [CRV_TEMPLATE]: ./icicle/curves/curve_template/
 [CRV_CONFIG]: ./icicle/curves/index.cu
