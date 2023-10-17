@@ -5,13 +5,15 @@
 ![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
 
 
-<div align="center">
-
-![Build status](https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg)
-![Discord server](https://img.shields.io/discord/1063033227788423299?label=Discord&logo=Discord&logoColor=%23&style=plastic)
-![Follow us on twitter](https://img.shields.io/twitter/follow/Ingo_zk?style=social)
-
-</div>
+<p align="center">
+  <img src="https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg" alt="Build status">
+  <a href="https://discord.gg/EVVXTdt6DF">
+    <img src="https://img.shields.io/discord/1063033227788423299?logo=discord" alt="Chat with us on Discord">
+  </a>
+  <a href="https://twitter.com/intent/follow?screen_name=Ingo_zk">
+    <img src="https://img.shields.io/twitter/follow/Ingo_zk?style=social&logo=twitter" alt="Follow us on Twitter">
+  </a>
+</p>
 
 ## Background
 
@@ -40,8 +42,9 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ### Prerequisites
 
-- [NVCC]
+- [NVCC] (version 12.0 or newer)
 - cmake 3.18 and above
+- follow [these instructions](https://github.com/ingonyama-zk/icicle/tree/main/icicle#prerequisites-on-ubuntu)
 
 ### Steps
 
@@ -169,6 +172,16 @@ The script does the following:
 - Creates a test file with the curve name in ``src``. 
 
 Testing the new curve could be done by running the tests in ``tests_curve_name`` (e.g. ``tests_bls12_381``).
+
+## Docker
+
+We offer a simple Docker container so you can simply run ICICLE without settig everything up locally.
+
+```
+docker build -t <name_of_your_choice> .
+docker run --gpus all -it <name_of_your_choice> /bin/bash
+```
+
 ## Contributions
 
 Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.

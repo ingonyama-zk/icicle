@@ -7,7 +7,7 @@ use icicle::test_bls12_381::{
 };
 use icicle::utils::*;
 #[cfg(feature = "g2")]
-use icicle_utils::{commit_batch_g2, field::ExtensionField};
+use icicle::{commit_batch_g2, field::ExtensionField};
 
 use rustacuda::prelude::*;
 

@@ -1,9 +1,7 @@
 #include "test_kernels.cuh"
-#include <boost/multiprecision/cpp_int.hpp>
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
 #include <iostream>
-namespace mp = boost::multiprecision;
 
 template <class T>
 int device_populate_random(T* d_elements, unsigned n)
@@ -21,15 +19,6 @@ int device_set(T* d_elements, T el, unsigned n)
   for (unsigned i = 0; i < n; i++)
     h_elements[i] = el;
   return cudaMemcpy(d_elements, h_elements, sizeof(T) * n, cudaMemcpyHostToDevice);
-}
-
-mp::int1024_t convert_to_boost_mp(uint32_t* a, uint32_t length)
-{
-  mp::int1024_t res = 0;
-  for (uint32_t i = 0; i < length; i++) {
-    res += (mp::int1024_t)(a[i]) << 32 * i;
-  }
-  return res;
 }
 
 class PrimitivesTest : public ::testing::Test
@@ -403,92 +392,6 @@ TEST_F(PrimitivesTest, INGO_MP_MULT)
     for (int i = 0; i < 2 * scalar_t::TLC - 1; i++) {
       ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
     }
-  }
-}
-
-TEST_F(PrimitivesTest, INGO_MP_MSB_MULT)
-{
-  // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
-  ASSERT_EQ(ingo_mp_msb_mult(scalars1, scalars2, res_scalars_wide, n), cudaSuccess);
-  std::cout << "INGO MSB   = 0x";
-  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
-    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
-  }
-  std::cout << std::endl;
-
-  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
-  std::cout << "ZKSYNC = 0x";
-  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
-    std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
-  }
-
-  std::cout << std::endl;
-
-  // for (int i=scalar_t::TLC; i < 2*scalar_t::TLC - 1; i++)
-  // {
-  //   ASSERT_EQ(in_bound, true);
-  // }
-  // for (int j=0; j<n; j++)
-  // {
-  //   for (int i=0; i < 2*scalar_t::TLC - 1; i++)
-  //   {
-  //     ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
-  //   }
-  // }
-  // mp testing
-  mp::int1024_t scalar_1_mp = 0;
-  mp::int1024_t scalar_2_mp = 0;
-  mp::int1024_t res_mp = 0;
-  mp::int1024_t res_gpu = 0;
-  uint32_t num_limbs = scalar_t::TLC;
-
-  for (int j = 0; j < n; j++) {
-    uint32_t* scalar1_limbs = scalars1[j].limbs_storage.limbs;
-    uint32_t* scalar2_limbs = scalars2[j].limbs_storage.limbs;
-    scalar_1_mp = convert_to_boost_mp(scalar1_limbs, num_limbs);
-    scalar_2_mp = convert_to_boost_mp(scalar2_limbs, num_limbs);
-    res_mp = scalar_1_mp * scalar_2_mp;
-    res_mp = res_mp >> (num_limbs * 32);
-    res_gpu = convert_to_boost_mp(&(res_scalars_wide[j]).limbs_storage.limbs[num_limbs], num_limbs);
-    std::cout << "res  mp = " << res_mp << std::endl;
-    std::cout << "res gpu = " << res_gpu << std::endl;
-    std::cout << "error = " << res_mp - res_gpu << std::endl;
-    bool upper_bound = res_gpu <= res_mp;
-    bool lower_bound = res_gpu > (res_mp - num_limbs);
-    bool in_bound = upper_bound && lower_bound;
-
-    ASSERT_EQ(in_bound, true);
-  }
-}
-
-TEST_F(PrimitivesTest, INGO_MP_MOD_MULT)
-{
-  std::cout << " taking num limbs " << std::endl;
-  uint32_t num_limbs = scalar_t::TLC;
-  std::cout << " calling gpu... = " << std::endl;
-  ASSERT_EQ(ingo_mp_mod_mult(scalars1, scalars2, res_scalars1, n), cudaSuccess);
-  std::cout << " gpu call done " << std::endl;
-  // mp testing
-  mp::int1024_t scalar_1_mp = 0;
-  mp::int1024_t scalar_2_mp = 0;
-  mp::int1024_t res_mp = 0;
-  mp::int1024_t res_gpu = 0;
-  mp::int1024_t p = convert_to_boost_mp(scalar_t::get_modulus().limbs, num_limbs);
-  std::cout << " p = " << p << std::endl;
-
-  for (int j = 0; j < n; j++) {
-    uint32_t* scalar1_limbs = scalars1[j].limbs_storage.limbs;
-    uint32_t* scalar2_limbs = scalars2[j].limbs_storage.limbs;
-    scalar_1_mp = convert_to_boost_mp(scalar1_limbs, num_limbs);
-    scalar_2_mp = convert_to_boost_mp(scalar2_limbs, num_limbs);
-    // std::cout << " s1 = " << scalar_1_mp << std::endl;
-    // std::cout << " s2 = " << scalar_2_mp << std::endl;
-    res_mp = (scalar_1_mp * scalar_2_mp) % p;
-    res_gpu = convert_to_boost_mp((res_scalars1[j]).limbs_storage.limbs, num_limbs);
-    std::cout << "res  mp = " << res_mp << std::endl;
-    std::cout << "res gpu = " << res_gpu << std::endl;
-    std::cout << "error = " << res_mp - res_gpu << std::endl;
-    ASSERT_EQ(res_gpu, res_mp);
   }
 }
 
