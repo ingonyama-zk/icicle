@@ -105,7 +105,7 @@ func ReverseScalars(d_scalars unsafe.Pointer, len int) (int, error) {
 }
 
 func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCoset bool) unsafe.Pointer {
-	size_d := size * 32
+	size_d := size * 48
 	dp, err := goicicle.CudaMalloc(size_d)
 
 	if err != nil {

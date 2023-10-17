@@ -63,11 +63,6 @@
 #include "../curves/bn254/curve_config.cuh"
 #include "../curves/bw6_761/curve_config.cuh"
 
-__device__ void Error_UnsupportedType() 
-{
-    // This function does not need a body, as it's just to throw a linker error.
-}
-
 
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
  *
@@ -276,6 +271,25 @@ struct SharedMemory<BN254::projective_t> {
     return s_projective_t_bn254;
   }
 };
+
+template <>
+struct SharedMemory<BW6_761::scalar_t> {
+  __device__ BW6_761::scalar_t* getPointer()
+  {
+    extern __shared__ BW6_761::scalar_t s_scalar_t_bw6_761[];
+    return s_scalar_t_bw6_761;
+  }
+};
+
+template <>
+struct SharedMemory<BW6_761::projective_t> {
+  __device__ BW6_761::projective_t* getPointer()
+  {
+    extern __shared__ BW6_761::projective_t s_projective_t_bw6_761[];
+    return s_projective_t_bw6_761;
+  }
+};
+
 #endif //_SHAREDMEM_H_
 
 // Leave this at the end of the file

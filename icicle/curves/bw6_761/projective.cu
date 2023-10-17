@@ -64,10 +64,10 @@ extern "C" bool eq_bw6_761(BW6_761::projective_t* point1, BW6_761::projective_t*
 extern "C" bool eq_g2_bw6_761(BW6_761::g2_projective_t* point1, BW6_761::g2_projective_t* point2)
 {
   return (*point1 == *point2) &&
-         !((point1->x == BW6_761::g2_point_field_t::zero()) && (point1->y == BW6_761::g2_point_field_t::zero()) &&
-           (point1->z == BW6_761::g2_point_field_t::zero())) &&
-         !((point2->x == BW6_761::g2_point_field_t::zero()) && (point2->y == BW6_761::g2_point_field_t::zero()) &&
-           (point2->z == BW6_761::g2_point_field_t::zero()));
+         !((point1->x == BW6_761::point_field_t::zero()) && (point1->y == BW6_761::point_field_t::zero()) &&
+           (point1->z == BW6_761::point_field_t::zero())) &&
+         !((point2->x == BW6_761::point_field_t::zero()) && (point2->y == BW6_761::point_field_t::zero()) &&
+           (point2->z == BW6_761::point_field_t::zero()));
 }
 
 extern "C" int random_g2_projective_bw6_761(BW6_761::g2_projective_t* out) 

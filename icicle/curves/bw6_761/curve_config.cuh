@@ -21,11 +21,10 @@ namespace BW6_761 {
   typedef Projective<point_field_t, scalar_t, b, gen_x, gen_y> projective_t;
   typedef Affine<point_field_t> affine_t;
 #if defined(G2_DEFINED)
-  typedef Field<PARAMS_BW6_761::fq_config> g2_point_field_t;
-  static constexpr point_field_t g2_gen_x = g2_point_field_t{PARAMS_BW6_761::g2_gen_x};
-  static constexpr point_field_t g2_gen_y = g2_point_field_t{PARAMS_BW6_761::g2_gen_y};
-  static constexpr point_field_t g2_b = g2_point_field_t{PARAMS_BW6_761::g2_weierstrass_b};
-  typedef Projective<g2_point_field_t, scalar_t, g2_b, g2_gen_x, g2_gen_y> g2_projective_t;
-  typedef Affine<g2_point_field_t> g2_affine_t;
+  static constexpr point_field_t g2_gen_x = point_field_t{PARAMS_BW6_761::g2_gen_x};
+  static constexpr point_field_t g2_gen_y = point_field_t{PARAMS_BW6_761::g2_gen_y};
+  static constexpr point_field_t g2_b = point_field_t{PARAMS_BW6_761::g2_weierstrass_b};
+  typedef Projective<point_field_t, scalar_t, g2_b, g2_gen_x, g2_gen_y> g2_projective_t;
+  typedef Affine<point_field_t> g2_affine_t;
 #endif
 } // namespace BW6_761
