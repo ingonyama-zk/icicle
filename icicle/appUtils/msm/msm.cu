@@ -5,6 +5,7 @@
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
+#include "../../utils/error_handler.cuh"
 #include "msm.cuh"
 #include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
@@ -23,20 +24,29 @@
 
 template <typename P>
 __global__ void single_stage_multi_reduction_kernel(
-  P* v, P* v_r, unsigned block_size, unsigned write_stride, unsigned write_phase, unsigned padding)
+  P* v,
+  P* v_r,
+  unsigned block_size,
+  unsigned write_stride,
+  unsigned write_phase,
+  unsigned padding,
+  unsigned num_of_threads)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
+  if (tid >= num_of_threads) { return; }
+
   int jump = block_size / 2;
+  int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
   int block_id = tid_p / jump;
   int block_tid = tid_p % jump;
   unsigned read_ind = block_size * block_id + block_tid;
   unsigned write_ind = tid;
-  v_r
-    [write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride
-                  : write_ind] =
-      padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
-              : v[read_ind] + v[read_ind + jump];
+  unsigned v_r_key =
+    write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride : write_ind;
+  P v_r_value = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
+                        : v[read_ind] + v[read_ind + jump];
+
+  v_r[v_r_key] = v_r_value;
 }
 
 // this kernel performs single scalar multiplication
@@ -141,7 +151,9 @@ __global__ void add_ones_kernel(A* points, S* scalars, P* results, const unsigne
   results[tid] = sum;
 }
 
-__global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
+template <typename S>
+__global__ void
+find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, S* fake_param, unsigned* result)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   const unsigned nof_threads = (size + run_length - 1) / run_length;
@@ -156,8 +168,9 @@ __global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, 
   if (tid == 0 && v[size - 1] > cutoff) { result[0] = size; }
 }
 
-__global__ void
-find_max_size(unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, unsigned* largest_bucket_size)
+template <typename S>
+__global__ void find_max_size(
+  unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, S* fake_param, unsigned* largest_bucket_size)
 {
   for (int i = 0;; i++) {
     if (single_bucket_indices[i] & ((1 << c) - 1)) {
@@ -388,7 +401,7 @@ void bucket_method_msm(
     NUM_THREADS = min(MAX_TH, s);
     NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
     single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-      ones_results, ones_results, s * 2, 0, 0, 0);
+      ones_results, ones_results, s * 2, 0, 0, 0, s);
   }
 
   unsigned* bucket_indices;
@@ -515,14 +528,14 @@ void bucket_method_msm(
   NUM_THREADS = min(1 << 5, cutoff_nof_runs);
   NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
   find_cutoff_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-    sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
+    sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, d_scalars, nof_large_buckets);
 
   unsigned h_nof_large_buckets;
   cudaMemcpyAsync(&h_nof_large_buckets, nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, stream);
 
   unsigned* max_res;
   cudaMallocAsync(&max_res, sizeof(unsigned) * 2, stream);
-  find_max_size<<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, max_res);
+  find_max_size<<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, d_scalars, max_res);
 
   unsigned h_max_res[2];
   cudaMemcpyAsync(h_max_res, max_res, sizeof(unsigned) * 2, cudaMemcpyDeviceToHost, stream);
@@ -554,7 +567,9 @@ void bucket_method_msm(
       NUM_THREADS = min(MAX_TH, s);
       NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
       single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
-        large_buckets, large_buckets, s * 2, 0, 0, 0);
+        large_buckets, large_buckets, s * 2, 0, 0, 0, s);
+
+      CHECK_LAST_CUDA_ERROR();
     }
 
     // distribute
@@ -631,18 +646,18 @@ void bucket_method_msm(
       if (source_bits_count > 0) {
         for (unsigned j = 0; j < target_bits_count; j++) {
           unsigned last_j = target_bits_count - 1;
-          NUM_THREADS = min(MAX_TH, (source_buckets_count >> (1 + j)));
-          NUM_BLOCKS = ((source_buckets_count >> (1 + j)) + NUM_THREADS - 1) / NUM_THREADS;
-          single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-            j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
-            1 << (source_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 0, 0);
-
           unsigned nof_threads = (source_buckets_count >> (1 + j));
           NUM_THREADS = min(MAX_TH, nof_threads);
           NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
           single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+            j == 0 ? source_buckets : temp_buckets1, j == target_bits_count - 1 ? target_buckets : temp_buckets1,
+            1 << (source_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 0, 0, nof_threads);
+
+          NUM_THREADS = min(MAX_TH, nof_threads);
+          NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+          single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
             j == 0 ? source_buckets : temp_buckets2, j == target_bits_count - 1 ? target_buckets : temp_buckets2,
-            1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0);
+            1 << (target_bits_count - j), j == target_bits_count - 1 ? 1 << target_bits_count : 0, 1, 0, nof_threads);
         }
       }
       if (target_bits_count == 1) {
