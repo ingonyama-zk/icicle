@@ -27,10 +27,10 @@ import (
 func generateUint32Array(length int, isZero bool) []uint32 {
 	arr := make([]uint32, length)
 	for i := 0; i < length; i++ {
-		if (isZero) {
+		if isZero {
 			arr[i] = 0x0
 		} else {
-			arr[i] = uint32(i + 1)  // You can modify this line to fill the array as needed
+			arr[i] = uint32(i + 1) // You can modify this line to fill the array as needed
 		}
 	}
 	return arr

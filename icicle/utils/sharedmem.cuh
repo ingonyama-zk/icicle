@@ -63,7 +63,6 @@
 #include "../curves/bn254/curve_config.cuh"
 #include "../curves/bw6_761/curve_config.cuh"
 
-
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
  *
  * This struct uses template specialization on the type \a T to declare

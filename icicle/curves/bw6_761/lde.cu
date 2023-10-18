@@ -23,8 +23,8 @@ extern "C" BW6_761::scalar_t* build_domain_cuda_bw6_761(
   }
 }
 
-extern "C" int ntt_cuda_bw6_761(
-  BW6_761::scalar_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int
+ntt_cuda_bw6_761(BW6_761::scalar_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -36,16 +36,13 @@ extern "C" int ntt_cuda_bw6_761(
   }
 }
 
-extern "C" int ecntt_cuda_bw6_761(
-  BW6_761::projective_t* arr,
-  uint32_t n,
-  bool inverse,
-  size_t device_id = 0,
-  cudaStream_t stream = 0)
+extern "C" int
+ecntt_cuda_bw6_761(BW6_761::projective_t* arr, uint32_t n, bool inverse, size_t device_id = 0, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
-    return ntt_end2end_template<BW6_761::projective_t, BW6_761::scalar_t>(arr, n, inverse, stream); // TODO: pass device_id
+    return ntt_end2end_template<BW6_761::projective_t, BW6_761::scalar_t>(
+      arr, n, inverse, stream); // TODO: pass device_id
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -439,7 +436,8 @@ extern "C" int from_montgomery_scalars_cuda_bw6_761(BW6_761::scalar_t* d_inout, 
   }
 }
 
-extern "C" int to_montgomery_proj_points_cuda_bw6_761(BW6_761::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int
+to_montgomery_proj_points_cuda_bw6_761(BW6_761::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -450,7 +448,8 @@ extern "C" int to_montgomery_proj_points_cuda_bw6_761(BW6_761::projective_t* d_i
   }
 }
 
-extern "C" int from_montgomery_proj_points_cuda_bw6_761(BW6_761::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int
+from_montgomery_proj_points_cuda_bw6_761(BW6_761::projective_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);
@@ -508,7 +507,8 @@ from_montgomery_proj_points_g2_cuda_bw6_761(BW6_761::g2_projective_t* d_inout, u
   }
 }
 
-extern "C" int to_montgomery_aff_points_g2_cuda_bw6_761(BW6_761::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
+extern "C" int
+to_montgomery_aff_points_g2_cuda_bw6_761(BW6_761::g2_affine_t* d_inout, unsigned n, cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);

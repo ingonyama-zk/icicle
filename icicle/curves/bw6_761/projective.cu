@@ -2,7 +2,8 @@
 #include "curve_config.cuh"
 #include <cuda.h>
 
-extern "C" int random_projective_bw6_761(BW6_761::projective_t* out) { 
+extern "C" int random_projective_bw6_761(BW6_761::projective_t* out)
+{
   try {
     out[0] = BW6_761::projective_t::rand_host();
     return CUDA_SUCCESS;
@@ -41,7 +42,8 @@ extern "C" int projective_from_affine_bw6_761(BW6_761::projective_t* out, BW6_76
   }
 }
 
-extern "C" int random_scalar_bw6_761(BW6_761::scalar_t* out) { 
+extern "C" int random_scalar_bw6_761(BW6_761::scalar_t* out)
+{
   try {
     out[0] = BW6_761::scalar_t::rand_host();
     return CUDA_SUCCESS;
@@ -70,8 +72,8 @@ extern "C" bool eq_g2_bw6_761(BW6_761::g2_projective_t* point1, BW6_761::g2_proj
            (point2->z == BW6_761::point_field_t::zero()));
 }
 
-extern "C" int random_g2_projective_bw6_761(BW6_761::g2_projective_t* out) 
-{ 
+extern "C" int random_g2_projective_bw6_761(BW6_761::g2_projective_t* out)
+{
   try {
     out[0] = BW6_761::g2_projective_t::rand_host();
     return CUDA_SUCCESS;

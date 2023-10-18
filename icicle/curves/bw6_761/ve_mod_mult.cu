@@ -9,7 +9,11 @@
 #include <stdio.h>
 
 extern "C" int32_t vec_mod_mult_point_bw6_761(
-  BW6_761::projective_t* inout, BW6_761::scalar_t* scalar_vec, size_t n_elments, size_t device_id, cudaStream_t stream = 0)
+  BW6_761::projective_t* inout,
+  BW6_761::scalar_t* scalar_vec,
+  size_t n_elments,
+  size_t device_id,
+  cudaStream_t stream = 0)
 {
   // TODO: use device_id when working with multiple devices
   (void)device_id;
