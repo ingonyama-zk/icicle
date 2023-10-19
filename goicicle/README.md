@@ -11,12 +11,12 @@ To compile the CUDA files, you will need:
 
 ## Structure of the Makefile
 
-The Makefile is designed to compile CUDA files for three curves: BN254, BLS12_381, BLS12_377 and BW6_671. The source files are located in the `icicle/curves/` directory.
+The Makefile is designed to compile CUDA files for four curves: BN254, BLS12_381, BLS12_377 and BW6_671. The source files are located in the `icicle/curves/` directory.
 
 ## Compiling CUDA Code
 
 1. Navigate to the directory containing the Makefile in your terminal.
-2. To compile all curve libraries, use the `make all` command. This will create three shared libraries: `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so`.
+2. To compile all curve libraries, use the `make all` command. This will create four shared libraries: `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so`.
 3. If you want to compile a specific curve, you can do so by specifying the target. For example, to compile only the BN254 curve, use `make libbn254.so`. Replace `libbn254.so` with `libbls12_381.so`, `libbls12_377.so` or `libbw6_671.so` to compile those curves instead.
 
 The resulting `.so` files are the compiled shared libraries for each curve.

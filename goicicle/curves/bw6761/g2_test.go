@@ -42,7 +42,7 @@ func TestG2FromProjectiveToAffine(t *testing.T) {
 
 	var projective2 G2Point
 	projective2.FromAffine(&affine)
-	
+
 	assert.True(t, projective.IsOnCurve())
 	assert.True(t, projective2.IsOnCurve())
 	assert.True(t, projective.Eq(&projective2))
@@ -71,7 +71,7 @@ func TestG2ShouldConvertToProjective(t *testing.T) {
 	fmt.Print() // this prevents the test from hanging. TODO: figure out why
 	var pointProjective G2Point
 	pointProjective.Random()
-	
+
 	var pointAffine G2PointAffine
 	pointAffine.FromProjective(&pointProjective)
 
