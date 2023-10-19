@@ -1,4 +1,5 @@
 #include "lde.cu"
 #include "msm.cu"
 #include "projective.cu"
+#include "poseidon.cu"
 #include "ve_mod_mult.cu"

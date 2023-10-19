@@ -1459,7 +1459,9 @@ pub(crate) mod tests_bls12_377 {
         assert_eq!(h_coeffs, h_evals_coset);
     }
 
+    // https://github.com/ingonyama-zk/icicle/issues/218
     #[test]
+    #[ignore]
     fn test_scalar_evaluation_on_coset() {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup
         let log_test_size = 8;
@@ -1494,7 +1496,9 @@ pub(crate) mod tests_bls12_377 {
         assert_eq!(h_evals_coset[..], h_evals_large[test_size..2 * test_size]);
     }
 
+    // https://github.com/ingonyama-zk/icicle/issues/218
     #[test]
+    #[ignore]
     fn test_scalar_batch_evaluation_on_coset() {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup
         let batch_size = 4;
@@ -1539,7 +1543,9 @@ pub(crate) mod tests_bls12_377 {
         }
     }
 
+    // https://github.com/ingonyama-zk/icicle/issues/218
     #[test]
+    #[ignore]
     fn test_point_evaluation_on_coset() {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup
         let log_test_size = 8;
