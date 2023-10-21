@@ -122,6 +122,42 @@ extern "C" int interpolate_scalars_batch_cuda_bls12_381(
   }
 }
 
+extern "C" int interpolate_scalars_on_coset_cuda_bls12_381(
+  BLS12_381::scalar_t* d_out,
+  BLS12_381::scalar_t* d_evaluations,
+  BLS12_381::scalar_t* d_domain,
+  unsigned n,
+  BLS12_381::scalar_t* coset_powers,
+  unsigned device_id = 0,
+  cudaStream_t stream = 0)
+{
+  try {
+    return interpolate(d_out, d_evaluations, d_domain, n, true, coset_powers, stream);
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+extern "C" int interpolate_scalars_batch_on_coset_cuda_bls12_381(
+  BLS12_381::scalar_t* d_out,
+  BLS12_381::scalar_t* d_evaluations,
+  BLS12_381::scalar_t* d_domain,
+  unsigned n,
+  unsigned batch_size,
+  BLS12_381::scalar_t* coset_powers,
+  size_t device_id = 0,
+  cudaStream_t stream = 0)
+{
+  try {
+    cudaStreamCreate(&stream);
+    return interpolate_batch(d_out, d_evaluations, d_domain, n, batch_size, true, coset_powers, stream);
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
 extern "C" int interpolate_points_cuda_bls12_381(
   BLS12_381::projective_t* d_out,
   BLS12_381::projective_t* d_evaluations,
@@ -190,9 +226,7 @@ extern "C" int evaluate_scalars_batch_cuda_bls12_381(
   try {
     BLS12_381::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
-    auto result_code = evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, 0);
-    cudaStreamDestroy(stream);
-    return result_code;
+    return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -231,10 +265,7 @@ extern "C" int evaluate_points_batch_cuda_bls12_381(
   try {
     BLS12_381::scalar_t* _null = nullptr;
     cudaStreamCreate(&stream);
-    auto result_code =
-      evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
-    cudaStreamDestroy(stream);
-    return result_code;
+    return evaluate_batch(d_out, d_coefficients, d_domain, domain_size, n, batch_size, false, _null, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -291,8 +322,7 @@ extern "C" int evaluate_points_on_coset_cuda_bls12_381(
   cudaStream_t stream = 0)
 {
   try {
-    cudaStreamCreate(
-      &stream); // TODO: don't create if default was passed, destroy what was created, same applies to all calls
+    cudaStreamCreate(&stream);
     return evaluate(d_out, d_coefficients, d_domain, domain_size, n, true, coset_powers, stream);
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
@@ -340,42 +370,21 @@ extern "C" int ntt_inplace_batch_cuda_bls12_381(
   }
 }
 
-extern "C" int
-reverse_order_scalars_cuda_bls12_381(BLS12_381::scalar_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
+extern "C" int ntt_inplace_coset_batch_cuda_bls12_381(
+  BLS12_381::scalar_t* d_inout,
+  BLS12_381::scalar_t* d_twiddles,
+  unsigned n,
+  unsigned batch_size,
+  bool inverse,
+  bool is_coset,
+  BLS12_381::scalar_t* coset,
+  size_t device_id = 0,
+  cudaStream_t stream = 0)
 {
   try {
-    uint32_t logn = uint32_t(log(n) / log(2));
     cudaStreamCreate(&stream);
-    reverse_order(arr, n, logn, stream);
-    return 0;
-  } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what());
-    return -1;
-  }
-}
-
-extern "C" int reverse_order_scalars_batch_cuda_bls12_381(
-  BLS12_381::scalar_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
-{
-  try {
-    uint32_t logn = uint32_t(log(n) / log(2));
-    cudaStreamCreate(&stream);
-    reverse_order_batch(arr, n, logn, batch_size, stream);
-    return 0;
-  } catch (const std::runtime_error& ex) {
-    printf("error %s", ex.what());
-    return -1;
-  }
-}
-
-extern "C" int
-reverse_order_points_cuda_bls12_381(BLS12_381::projective_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
-{
-  try {
-    uint32_t logn = uint32_t(log(n) / log(2));
-    cudaStreamCreate(&stream);
-    reverse_order(arr, n, logn, stream);
-    return 0;
+    ntt_inplace_batch_template(d_inout, d_twiddles, n, batch_size, inverse, is_coset, coset, stream, true);
+    return CUDA_SUCCESS; // TODO: we should implement this https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());
     return -1;
@@ -533,6 +542,49 @@ from_montgomery_aff_points_g2_cuda_bls12_381(BLS12_381::g2_affine_t* d_inout, un
   }
 }
 #endif
+
+extern "C" int
+reverse_order_scalars_cuda_bls12_381(BLS12_381::scalar_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
+{
+  try {
+    uint32_t logn = uint32_t(log(n) / log(2));
+    cudaStreamCreate(&stream);
+    reverse_order(arr, n, logn, stream);
+    cudaStreamSynchronize(stream);
+    return 0;
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+extern "C" int reverse_order_scalars_batch_cuda_bls12_381(
+  BLS12_381::scalar_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)
+{
+  try {
+    uint32_t logn = uint32_t(log(n) / log(2));
+    cudaStreamCreate(&stream);
+    reverse_order_batch(arr, n, logn, batch_size, stream);
+    return 0;
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
+
+extern "C" int
+reverse_order_points_cuda_bls12_381(BLS12_381::projective_t* arr, int n, size_t device_id = 0, cudaStream_t stream = 0)
+{
+  try {
+    uint32_t logn = uint32_t(log(n) / log(2));
+    cudaStreamCreate(&stream);
+    reverse_order(arr, n, logn, stream);
+    return 0;
+  } catch (const std::runtime_error& ex) {
+    printf("error %s", ex.what());
+    return -1;
+  }
+}
 
 extern "C" int reverse_order_points_batch_cuda_bls12_381(
   BLS12_381::projective_t* arr, int n, int batch_size, size_t device_id = 0, cudaStream_t stream = 0)

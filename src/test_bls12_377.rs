@@ -1580,9 +1580,7 @@ pub(crate) mod tests_bls12_377 {
         }
     }
 
-    // https://github.com/ingonyama-zk/icicle/issues/218
     #[test]
-    #[ignore]
     fn test_point_batch_evaluation_on_coset() {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup
         let batch_size = 2;

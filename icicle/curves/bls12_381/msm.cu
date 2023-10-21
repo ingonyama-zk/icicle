@@ -12,7 +12,7 @@ extern "C" int msm_cuda_bls12_381(
   size_t count,
   unsigned large_bucket_factor,
   size_t device_id = 0,
-  cudaStream_t stream = 0) // TODO: unify parameter types size_t/unsigned etc
+  cudaStream_t stream = 0)
 {
   try {
     cudaStreamCreate(&stream);

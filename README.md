@@ -36,6 +36,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
     - [BLS12-381]
     - [BLS12-377]
     - [BN254]
+    - [BW6-671]
 
 ## Build and usage
 
@@ -117,20 +118,21 @@ Create a JSON file with the curve parameters. The curve is defined by the follow
 - ``curve_name`` - e.g. ``bls12_381``.
 - ``modulus_p`` - scalar field modulus (in decimal).
 - ``bit_count_p`` - number of bits needed to represent `` modulus_p`` .
-- ``limb_p`` - number of bytes needed to represent `` modulus_p``  (rounded).
-- ``ntt_size`` - log of the maximal size subgroup of the scalar field.    
+- ``limb_p`` - number of (32-bit) limbs needed to represent `` modulus_p`` (rounded up).
+- ``ntt_size`` - log of the maximal size subgroup of the scalar field.
 - ``modulus_q`` - base field modulus (in decimal).
 - ``bit_count_q`` - number of bits needed to represent `` modulus_q`` .
-- ``limb_q`` number of bytes needed to represent `` modulus_p``  (rounded).
-- ``weierstrass_b`` - Weierstrauss constant of the curve. 
-- ``weierstrass_b_g2_re`` - Weierstrauss real constant of the g2 curve. 
-- ``weierstrass_b_g2_im`` - Weierstrauss imaginary constant of the g2 curve. 
-- ``gen_x`` - x-value of a generator element for the curve. 
-- ``gen_y`` - y-value of a generator element for the curve.
-- ``gen_x_re`` - real x-value of a generator element for the g2 curve. 
-- ``gen_x_im`` - imaginary x-value of a generator element for the g2 curve. 
-- ``gen_y_re`` - real y-value of a generator element for the g2 curve. 
-- ``gen_y_im`` - imaginary y-value of a generator element for the g2 curve. 
+- ``limb_q`` - number of (32-bit) limbs needed to represent `` modulus_q`` (rounded up).
+- ``weierstrass_b`` - `b` of the curve in Weierstrauss form.
+- ``weierstrass_b_g2_re`` - real part of the `b` value in of the g2 curve in Weierstrass form.
+- ``weierstrass_b_g2_im`` - imaginary part of the `b` value in of the g2 curve in Weierstrass form.
+- ``gen_x`` - `x` coordinate of a generator element for the curve.
+- ``gen_y`` - `y` coordinate of a generator element for the curve.
+- ``gen_x_re`` - real part of the `x` coordinate of generator element for the g2 curve.
+- ``gen_x_im`` - imaginary part of the `x` coordinate of generator element for the g2 curve.
+- ``gen_y_re`` - real part of the `y` coordinate of generator element for the g2 curve.
+- ``gen_y_im`` - imaginary part of the `y` coordinate of generator element for the g2 curve.
+- ``nonresidue`` - nonresidue, or `i^2`, or `u^2` - square of the element that generates quadratic extension field of the base field.
 
 Here's an example for BLS12-381.
 ```
@@ -144,14 +146,15 @@ Here's an example for BLS12-381.
     "bit_count_q" : 381,
     "limb_q" : 12,
     "weierstrass_b" : 4,
-    "weierstrass_b_g2_re":4,
-    "weierstrass_b_g2_im":4,
+    "weierstrass_b_g2_re" : 4,
+    "weierstrass_b_g2_im" : 4,
     "gen_x" : 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507,
     "gen_y" : 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569,
     "gen_x_re" : 352701069587466618187139116011060144890029952792775240219908644239793785735715026873347600343865175952761926303160,
     "gen_x_im" : 3059144344244213709971259814753781636986470325476647558659373206291635324768958432433509563104347017837885763365758,
     "gen_y_re" : 1985150602287291935568054521177171638300868978215655730859378665066344726373823718423869104263333984641494340347905,
-    "gen_y_im" : 927553665492332455747201965776037880757740193453592970025027978793976877002675564980949289727957565575433344219582
+    "gen_y_im" : 927553665492332455747201965776037880757740193453592970025027978793976877002675564980949289727957565575433344219582,
+    "nonresidue" : -1
 }
 ```
 
@@ -214,6 +217,7 @@ See [LICENSE-MIT][LMIT] for details.
 [BLS12-381]: ./icicle/curves/bls12_381/supported_operations.cu
 [BLS12-377]: ./icicle/curves/bls12_377/supported_operations.cu
 [BN254]: ./icicle/curves/bn254/supported_operations.cu
+[BW6-671]: ./icicle/curves/bw6_671/supported_operations.cu
 [NVCC]: https://docs.nvidia.com/cuda/#installation-guides
 [CRV_TEMPLATE]: ./icicle/curves/curve_template/
 [CRV_CONFIG]: ./icicle/curves/index.cu
