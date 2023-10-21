@@ -52,7 +52,7 @@ impl<const NUM_LIMBS: usize> Field<NUM_LIMBS> {
 
 // pub const BASE_LIMBS: usize = 12; //TODO: export from CUDA
 // pub const SCALAR_LIMBS: usize = 8;
-pub const BASE_LIMBS: usize = 8;
+pub const BASE_LIMBS: usize = 12;
 pub const SCALAR_LIMBS: usize = 8;
 
 pub type BaseField = Field<BASE_LIMBS>;
@@ -203,35 +203,58 @@ mod tests {
 
     use crate::curve::{Point, ScalarField};
     use crate::utils::*;
-    // use ark_bls12_381::{Fq, G1Affine, G1Projective};
-    use ark_bn254::{Fq, G1Affine, G1Projective};
+    use ark_bls12_381::{Fq, G1Affine, G1Projective};
+    // use ark_bn254::{Fq, G1Affine, G1Projective};
     use ark_ec::AffineCurve;
+    use ark_ff::{BigInteger256, BigInteger384};
     use ark_ff::Field as ArkField;
     use ark_ff::PrimeField;
-    use ark_ff::BigInteger256;
 
     use super::*;
 
-    type BigIntegerArk = BigInteger256;
+    type BigIntegerScalarArk = BigInteger256;
+    type BigIntegerBaseArk = BigInteger384;
 
-    impl<const NUM_LIMBS: usize> Field<NUM_LIMBS> {
-        pub fn to_ark(&self) -> BigIntegerArk {
-            BigIntegerArk::new(
+    impl Field<12> {
+        pub fn to_ark(&self) -> BigIntegerBaseArk {
+            BigIntegerBaseArk::new(
                 u32_vec_to_u64_vec(&self.limbs())
                     .try_into()
                     .unwrap(),
             )
         }
 
-        pub fn from_ark(ark: BigIntegerArk) -> Self {
+        pub fn from_ark(ark: BigIntegerBaseArk) -> Self {
             Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
         }
 
-        pub fn to_ark_transmute(&self) -> BigIntegerArk {
+        pub fn to_ark_transmute(&self) -> BigIntegerBaseArk {
             unsafe { transmute_copy(self) }
         }
 
-        pub fn from_ark_transmute(v: BigIntegerArk) -> Self {
+        pub fn from_ark_transmute(v: BigIntegerBaseArk) -> Self {
+            unsafe { transmute_copy(&v) }
+        }
+    }
+
+    impl Field<8> {
+        pub fn to_ark(&self) -> BigIntegerScalarArk {
+            BigIntegerScalarArk::new(
+                u32_vec_to_u64_vec(&self.limbs())
+                    .try_into()
+                    .unwrap(),
+            )
+        }
+
+        pub fn from_ark(ark: BigIntegerScalarArk) -> Self {
+            Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
+        }
+
+        pub fn to_ark_transmute(&self) -> BigIntegerScalarArk {
+            unsafe { transmute_copy(self) }
+        }
+
+        pub fn from_ark_transmute(v: BigIntegerScalarArk) -> Self {
             unsafe { transmute_copy(&v) }
         }
     }

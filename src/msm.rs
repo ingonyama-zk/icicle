@@ -110,7 +110,8 @@ pub type cudaStream_t = usize; // This might be a placeholder, check your bindin
 pub type cudaMemPool_t = usize; // This might be a placeholder, check your binding crate for the exact type
 
 extern "C" {
-    #[link_name = "bn254_msm_default_cuda"]
+    // #[link_name = "bn254_msm_default_cuda"]
+    #[link_name = "bls12_381_msm_default_cuda"]
     fn msm_cuda(
         scalars: *const ScalarField,
         points: *const PointAffineNoInfinity,
@@ -165,8 +166,8 @@ pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bn254::{Fr, G1Projective};
-    // use ark_bls12_381::{Fr, G1Projective};
+    // use ark_bn254::{Fr, G1Projective};
+    use ark_bls12_381::{Fr, G1Projective};
     use ark_ec::msm::VariableBaseMSM;
     use ark_ff::PrimeField;
     use ark_std::UniformRand;

@@ -15,7 +15,7 @@ use crate::{curve::*, msm::DeviceContext};
  */
 #[allow(non_camel_case_types)]
 #[repr(C)]
-enum Ordering {
+pub enum Ordering {
     kNN,
     kNR,
     kRN,
@@ -77,7 +77,7 @@ pub(crate) struct NTTConfigCuda<E, S> {
     /**< If false, NTT is computed on a subfield given by [twiddles](@ref twiddles). If true, NTT is computed
      *   on a coset of [twiddles](@ref twiddles) given by [the coset generator](@ref coset_gen), so:
      *   \f$ \{coset\_gen\cdot\omega^0, coset\_gen\cdot\omega^1, \dots, coset\_gen\cdot\omega^{n-1}\} \f$. Default value: false. */
-    coset_gen: S,
+    coset_gen: *const S,
     /**< The field element that generates a coset if [is_coset](@ref is_coset) is true.
      *   Otherwise should be set to `nullptr`. Default value: `nullptr`. */
     twiddles: *const S,
@@ -111,26 +111,31 @@ extern "C" {
 pub fn ntt(
     inout: &mut [ScalarField],
     is_inverse: bool,
-    batch_size: usize,
     is_input_on_device: bool,
+    ordering: Ordering,
     is_output_on_device: bool,
+    batch_size: usize,
 ) {
     let mut batch_size = batch_size;
     if batch_size == 0 {
         batch_size = 1;
     }
 
+    let size = (inout.len() / batch_size) as i32;
+
+    // println!("size: {}", size);
+
     let mut config = NTTConfig {
         inout: inout as *mut _ as *mut ScalarField,
         is_input_on_device,
         is_inverse,
-        ordering: Ordering::kNR,
+        ordering,
         decimation: Decimation::kDIF,
         butterfly: Butterfly::kCooleyTukey,
         is_coset: false,
-        coset_gen: ScalarField::zero(),    //TODO: ?
-        twiddles: 0 as *const ScalarField, //TODO: ?,
-        size: (inout.len() / batch_size) as i32,
+        coset_gen: &[ScalarField::zero()] as _, //TODO: ?
+        twiddles: 0 as *const ScalarField,      //TODO: ?,
+        size,
         batch_size: batch_size as i32,
         is_preserving_tweedles: true,
         is_output_on_device,
@@ -140,8 +145,9 @@ pub fn ntt(
             mempool: 0,
         },
     };
-    println!("hehe");
-    let _result_code = unsafe { ntt_cuda(&mut config) };
+    // println!("hehe");
+    let result_code = unsafe { ntt_cuda(&mut config) };
+    // println!("_result_code = {}", result_code);
 }
 
 // pub fn ntt_device(inout: &mut DeviceBuffer<ScalarField>, twiddles: &mut DeviceBuffer<ScalarField>, is_inverse: bool) {
@@ -180,9 +186,11 @@ pub fn ntt(
 pub(crate) mod tests {
     use std::vec;
 
-    use ark_bn254::{Fr, G1Projective};
-    // use ark::{Fr, G1Projective};
+    // use ark_bn254::{Fr, G1Projective};
+    use ark_bls12_381::{Fr, G1Projective};
     use ark_ff::PrimeField;
+    use ark_poly::EvaluationDomain;
+    use ark_poly::GeneralEvaluationDomain;
     use ark_std::UniformRand;
     use rand::RngCore;
     use rustacuda::prelude::CopyDestination;
@@ -209,11 +217,82 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn test_ntt() {
+        //NTT
+        let seed = None; //some value to fix the rng
+        let test_size = 1 << 8;
+        let batches = 1;
+
+        let full_test_size = test_size * batches;
+        let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size, get_rng(seed));
+
+        // let scalars_batch: Vec<ScalarField> = (0..full_test_size)
+        //     .into_iter()
+        //     .map(|x| {
+        //         if x % 2 == 0 {
+        //             ScalarField::one()
+        //         } else {
+        //             ScalarField::zero()
+        //         }
+        //     })
+        //     .collect();
+
+        let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
+
+        for i in 0..batches {
+            scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
+        }
+
+        let mut ntt_result = scalars_batch.clone();
+
+        let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
+
+        let ark_scalars_batch = scalars_batch
+            .clone()
+            .iter()
+            .map(|v| Fr::new(v.to_ark()))
+            .collect::<Vec<Fr>>();
+        let mut ark_ntt_result = ark_scalars_batch.clone();
+
+        ark_domain.fft_in_place(&mut ark_ntt_result);
+
+        assert_ne!(ark_ntt_result, ark_scalars_batch);
+
+        // do batch ntt
+        ntt(&mut ntt_result, false, false, Ordering::kNN, false, batches);
+
+        let ntt_result_as_ark = ntt_result
+            .iter()
+            .map(|p| Fr::new(p.to_ark()))
+            .collect::<Vec<Fr>>();
+
+        assert_ne!(ntt_result, scalars_batch);
+        assert_eq!(ark_ntt_result, ntt_result_as_ark);
+
+        let mut ark_intt_result = ark_ntt_result;
+
+        ark_domain.ifft_in_place(&mut ark_intt_result);
+        assert_eq!(ark_intt_result, ark_scalars_batch);
+
+        // check that ntt output is different from input
+        assert_ne!(ntt_result, scalars_batch);
+
+        // do intt
+
+        let mut intt_result = ntt_result;
+
+        ntt(&mut intt_result, true, false, Ordering::kNN, false, batches);
+
+        assert!(ark_intt_result == ark_scalars_batch);
+        assert!(intt_result == scalars_batch);
+    }
+
+    #[test]
     fn test_ntt_batch() {
         //NTT
         let seed = None; //some value to fix the rng
-        let test_size = 1 << 5;
-        let batches = 4;
+        let test_size = 1 << 8;
+        let batches = 2;
 
         let full_test_size = test_size * batches;
         let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size, get_rng(seed));
@@ -225,103 +304,50 @@ pub(crate) mod tests {
         }
 
         let mut ntt_result = scalars_batch.clone();
-        // let mut ntt_result_device = DeviceBuffer::from_slice(&scalars_batch.clone()[..]).unwrap();
 
         // do batch ntt
-        ntt(&mut ntt_result, false, batches, false, true);
+        ntt(&mut ntt_result, false, false, Ordering::kNN, false, batches);
 
-        //let mut ntt_result_vec_of_vec = Vec::new();
+        let mut ntt_result_vec_of_vec = Vec::new();
 
         // do ntt for every chunk
-        // for i in 0..batches {
-        //     ntt_result_vec_of_vec.push(scalar_vec_of_vec[i].clone());
-        //     ntt(&mut ntt_result_vec_of_vec[i], 0);
-        // }
+        for i in 0..batches {
+            ntt_result_vec_of_vec.push(scalar_vec_of_vec[i].clone());
 
-        // check that the ntt of each vec of scalars is equal to the intt of the specific batch
-        // for i in 0..batches {
-        //     assert_eq!(ntt_result_vec_of_vec[i], ntt_result[i * test_size..(i + 1) * test_size]);
-        // }
+            ntt(&mut ntt_result_vec_of_vec[i], false, false, Ordering::kNN, false, 1);
+        }
+
+        // check that the ntt of each vec of scalars is equal to the ntt of the specific batch
+        for i in 0..batches {
+            assert_eq!(ntt_result_vec_of_vec[i], ntt_result[i * test_size..(i + 1) * test_size]);
+        }
 
         // check that ntt output is different from input
         assert_ne!(ntt_result, scalars_batch);
 
-        // let mut d_intt_result = DeviceBuffer::from_slice(&ntt_result.clone()[..]).unwrap();
+        let mut intt_result = ntt_result.clone();
 
         // do batch intt
-        ntt(&mut ntt_result, true, batches, true, false);
+        // intt_batch(&mut intt_result, test_size, 0);
+        ntt(&mut intt_result, true, false, Ordering::kNN, false, batches);
 
-        // let mut intt_result_vec_of_vec = Vec::new();
+        let mut intt_result_vec_of_vec = Vec::new();
 
-        // // do intt for every chunk
-        // for i in 0..batches {
-        //     intt_result_vec_of_vec.push(ntt_result_vec_of_vec[i].clone());
-        //     intt(&mut intt_result_vec_of_vec[i], 0);
-        // }
-
-        // // check that the intt of each vec of scalars is equal to the intt of the specific batch
-        // for i in 0..batches {
-        //     assert_eq!(
-        //         intt_result_vec_of_vec[i],
-        //         intt_result[i * test_size..(i + 1) * test_size]
-        //     );
-        // }
-
-        assert_eq!(ntt_result, scalars_batch);
-
-        // //ECNTT
-        /*
-        let points_proj = generate_random_points_proj(test_size * batches, get_rng(seed));
-
-        let mut points_vec_of_vec: Vec<Vec<Point>> = Vec::new();
-
+        // do intt for every chunk
         for i in 0..batches {
-            points_vec_of_vec.push(points_proj[i * test_size..(i + 1) * test_size].to_vec());
+            intt_result_vec_of_vec.push(ntt_result_vec_of_vec[i].clone());
+            // intt(&mut intt_result_vec_of_vec[i], 0);
+            ntt(&mut intt_result_vec_of_vec[i], true, false, Ordering::kNN, false, 1);
         }
 
-        let mut ntt_result_points = points_proj.clone();
+        // check that the intt of each vec of scalars is equal to the intt of the specific batch
+        for i in 0..batches {
+            assert_eq!(
+                intt_result_vec_of_vec[i],
+                intt_result[i * test_size..(i + 1) * test_size]
+            );
+        }
 
-        // do batch ecintt
-        ecntt(&mut ntt_result_points, twiddles, false);
-
-        let mut ntt_result_points_vec_of_vec = Vec::new();
-
-        // for i in 0..batches {
-        //     ntt_result_points_vec_of_vec.push(points_vec_of_vec[i].clone());
-        //     ecntt(&mut ntt_result_points_vec_of_vec[i], 0);
-        // }
-
-        // for i in 0..batches {
-        //     assert_eq!(
-        //         ntt_result_points_vec_of_vec[i],
-        //         ntt_result_points[i * test_size..(i + 1) * test_size]
-        //     );
-        // }
-
-        assert_ne!(ntt_result_points, points_proj);
-
-        let mut intt_result_points = ntt_result_points.clone();
-
-        // do batch ecintt
-        ecntt(&mut intt_result_points, twiddles, true);
-
-        //let mut intt_result_points_vec_of_vec = Vec::new();
-
-        // // do ecintt for every chunk
-        // for i in 0..batches {
-        //     intt_result_points_vec_of_vec.push(ntt_result_points_vec_of_vec[i].clone());
-        //     iecntt(&mut intt_result_points_vec_of_vec[i], 0);
-        // }
-
-        // // check that the ecintt of each vec of scalars is equal to the intt of the specific batch
-        // for i in 0..batches {
-        //     assert_eq!(
-        //         intt_result_points_vec_of_vec[i],
-        //         intt_result_points[i * test_size..(i + 1) * test_size]
-        //     );
-        // }
-
-        assert_eq!(intt_result_points, points_proj);
-        */
+        assert_eq!(intt_result, scalars_batch);
     }
 }
