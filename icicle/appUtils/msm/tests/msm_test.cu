@@ -175,15 +175,15 @@ int main()
   };
   msm::MSMConfig config = {
     false,               // scalars_on_device
-    true,                // scalars_montgomery_form
-    msm_size,            // points_size
+    false,               // scalars_montgomery_form
+    0,                   // points_size
     1,                   // precompute_factor
     false,               // points_on_device
-    true,                // points_montgomery_form
+    false,               // points_montgomery_form
     1,                   // batch_size
     false,               // result_on_device
-    16,                  // c
-    test_scalar::NBITS,  // bitsize
+    0,                   // c
+    0,                   // bitsize
     false,               // big_triangle
     10,                  // large_bucket_factor
     ctx,                 // DeviceContext

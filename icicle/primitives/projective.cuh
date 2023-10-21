@@ -22,6 +22,15 @@ public:
 
   static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point) { return {point.x, point.y, FF::one()}; }
 
+  static HOST_DEVICE_INLINE Projective ToMontgomery(const Projective& point) 
+  {
+    return {FF::ToMontgomery(point.x), FF::ToMontgomery(point.y), FF::ToMontgomery(point.z)};
+  }
+
+  static HOST_DEVICE_INLINE Projective FromMontgomery(const Projective& point) {
+    return {FF::FromMontgomery(point.x), FF::FromMontgomery(point.y), FF::FromMontgomery(point.z)};
+  }
+
   static HOST_DEVICE_INLINE Projective generator() { return {FF::generator_x(), FF::generator_y(), FF::one()}; }
 
   static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }

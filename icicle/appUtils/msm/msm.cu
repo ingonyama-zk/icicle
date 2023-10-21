@@ -15,6 +15,7 @@
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
 #include "../../utils/error_handler.cuh"
+#include "../../utils/mont.cuh"
 #include "../../curves/curve_config.cuh"
 
 namespace msm {
@@ -26,6 +27,11 @@ namespace {
 // #define SIGNED_DIG //WIP
 // #define BIG_TRIANGLE
 // #define SSM_SUM  //WIP
+
+template <typename S>
+int get_optimal_c(int bitsize) {
+  return ceil(log2(bitsize)) - 4;
+}
 
 template <typename P>
 __global__ void single_stage_multi_reduction_kernel(
@@ -131,7 +137,7 @@ __global__ void split_scalars_kernel(
       buckets_indices[current_index] =
         (msm_index << (c + bm_bitsize)) | (bm << c) |
         bucket_index; // the bucket module number and the msm number are appended at the msbs
-      if (scalar == S::zero() || scalar == S::one() || bucket_index == 0)
+      if (scalar == S::zero() || bucket_index == 0)
         buckets_indices[current_index] = 0; // will be skipped
       point_indices[current_index] = tid;   // the point index is saved for later
 #endif
@@ -139,23 +145,7 @@ __global__ void split_scalars_kernel(
   }
 }
 
-template <typename P, typename A, typename S>
-__global__ void add_ones_kernel(A* points, S* scalars, P* results, const unsigned msm_size, const unsigned run_length)
-{
-  unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  const unsigned nof_threads = (msm_size + run_length - 1) / run_length; // 129256
-  if (tid >= nof_threads) {
-    results[tid] = P::zero();
-    return;
-  }
-  const unsigned start_index = tid * run_length;
-  P sum = P::zero();
-  for (int i = start_index; i < min(start_index + run_length, msm_size); i++) {
-    if (scalars[i] == S::one()) sum = sum + points[i];
-  }
-  results[tid] = sum;
-}
-
+template <typename S>
 __global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -171,7 +161,7 @@ __global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, 
   if (tid == 0 && v[size - 1] > cutoff) { result[0] = size; }
 }
 
-__global__ void
+template <typename S> __global__ void
 find_max_size(unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, unsigned* largest_bucket_size)
 {
   for (int i = 0;; i++) {
@@ -328,7 +318,7 @@ __global__ void last_pass_kernel(P* final_buckets, P* final_sums, unsigned num_s
 // it is done by a single thread
 template <typename P, typename S>
 __global__ void final_accumulation_kernel(
-  P* final_sums, P* ones_result, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c, bool add_ones)
+  P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid > nof_msms) return;
@@ -340,37 +330,54 @@ __global__ void final_accumulation_kernel(
       final_result = final_result + final_result;
     }
   }
-  if (add_ones)
-    final_results[tid] = final_result + final_sums[tid * nof_bms] + ones_result[0];
-  else
-    final_results[tid] = final_result + final_sums[tid * nof_bms];
+  final_results[tid] = final_result + final_sums[tid * nof_bms];
 }
 
 // this function computes msm using the bucket method
 template <typename S, typename P, typename A>
 void bucket_method_msm(
-  unsigned bitsize,
-  unsigned c,
+  int bitsize,
+  int c,
   S* scalars,
   A* points,
-  unsigned size,
+  int size,
   P* final_result,
-  bool on_device,
+  bool are_scalars_on_device,
+  bool are_scalars_montgomery_form,
+  bool are_points_on_device,
+  bool are_points_montgomery_form,
+  bool is_result_on_device,
   bool big_triangle,
-  unsigned large_bucket_factor,
+  int large_bucket_factor,
   cudaStream_t stream)
 {
   S* d_scalars;
   A* d_points;
-  if (!on_device) {
-    // copy scalars and points to gpu
+  if (!are_scalars_on_device) {
+    // copy scalars to gpu
     cudaMallocAsync(&d_scalars, sizeof(S) * size, stream);
-    cudaMallocAsync(&d_points, sizeof(A) * size, stream);
     cudaMemcpyAsync(d_scalars, scalars, sizeof(S) * size, cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_points, points, sizeof(A) * size, cudaMemcpyHostToDevice, stream);
   } else {
     d_scalars = scalars;
+  }
+  cudaStream_t stream_points;
+  if (!are_points_on_device || are_points_montgomery_form)
+    cudaStreamCreate(&stream_points);
+  if (!are_points_on_device) {
+    // copy points to gpu
+    cudaMallocAsync(&d_points, sizeof(A) * size, stream_points);
+    cudaMemcpyAsync(d_points, points, sizeof(A) * size, cudaMemcpyHostToDevice, stream_points);
+  } else {
     d_points = points;
+  }
+  if (are_points_montgomery_form)
+    mont::FromMontgomery(d_points, size, stream_points);
+  if (are_scalars_montgomery_form)
+    mont::FromMontgomery(d_scalars, size, stream);
+  cudaEvent_t event_points_uploaded;
+  if (!are_points_on_device || are_points_montgomery_form) {
+    cudaEventCreateWithFlags(&event_points_uploaded, cudaEventDisableTiming);
+    cudaEventRecord(event_points_uploaded, stream_points);
   }
 
   P* buckets;
@@ -389,22 +396,6 @@ void bucket_method_msm(
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, nof_buckets);
-
-  // accumulate ones
-  P* ones_results; // fix whole division, in last run in kernel too
-  const unsigned nof_runs = msm_log_size > 10 ? (1 << (msm_log_size - 6)) : 16;
-  const unsigned run_length = (size + nof_runs - 1) / nof_runs;
-  cudaMallocAsync(&ones_results, sizeof(P) * nof_runs, stream);
-  NUM_THREADS = min(1 << 8, nof_runs);
-  NUM_BLOCKS = (nof_runs + NUM_THREADS - 1) / NUM_THREADS;
-  add_ones_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_points, d_scalars, ones_results, size, run_length);
-
-  for (int s = nof_runs >> 1; s > 0; s >>= 1) {
-    NUM_THREADS = min(MAX_TH, s);
-    NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
-    single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-      ones_results, ones_results, s * 2, 0, 0, 0, s);
-  }
 
   unsigned* bucket_indices;
   unsigned* point_indices;
@@ -478,7 +469,7 @@ void bucket_method_msm(
 
   // if all points are 0 just return point 0
   if (h_nof_buckets_to_compute == 0) {
-    if (!on_device)
+    if (!is_result_on_device)
       final_result[0] = P::zero();
     else {
       P* h_final_result = (P*)malloc(sizeof(P));
@@ -529,7 +520,7 @@ void bucket_method_msm(
   unsigned cutoff_nof_runs = (h_nof_buckets_to_compute + cutoff_run_length - 1) / cutoff_run_length;
   NUM_THREADS = min(1 << 5, cutoff_nof_runs);
   NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
-  find_cutoff_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+  find_cutoff_kernel<S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
     sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
 
   unsigned h_nof_large_buckets;
@@ -537,7 +528,7 @@ void bucket_method_msm(
 
   unsigned* max_res;
   cudaMallocAsync(&max_res, sizeof(unsigned) * 2, stream);
-  find_max_size<<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, max_res);
+  find_max_size<S><<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, max_res);
 
   unsigned h_max_res[2];
   cudaMemcpyAsync(h_max_res, max_res, sizeof(unsigned) * 2, cudaMemcpyDeviceToHost, stream);
@@ -546,11 +537,19 @@ void bucket_method_msm(
   unsigned large_buckets_to_compute =
     h_nof_large_buckets > h_nof_zero_large_buckets ? h_nof_large_buckets - h_nof_zero_large_buckets : 0;
 
-  cudaStream_t stream2;
-  cudaStreamCreate(&stream2);
-  P* large_buckets;
+  if (!are_points_on_device || are_points_montgomery_form) {
+    // by this point, points need to be already uploaded and un-Montgomeried
+    cudaStreamWaitEvent(stream, event_points_uploaded);
+    cudaStreamDestroy(stream_points);
+  }
 
+  cudaStream_t stream_large_buckets;
+  cudaEvent_t event_large_buckets_accumulated;
+  P* large_buckets;
   if (large_buckets_to_compute > 0 && bucket_th > 0) {
+    cudaStreamCreate(&stream_large_buckets);
+    cudaEventCreateWithFlags(&event_large_buckets_accumulated, cudaEventDisableTiming);
+  
     unsigned threads_per_bucket =
       1 << (unsigned)ceil(log2((h_largest_bucket_size + bucket_th - 1) / bucket_th)); // global param
     unsigned max_bucket_size_run_length = (h_largest_bucket_size + threads_per_bucket - 1) / threads_per_bucket;
@@ -559,7 +558,7 @@ void bucket_method_msm(
 
     NUM_THREADS = min(1 << 8, total_large_buckets_size);
     NUM_BLOCKS = (total_large_buckets_size + NUM_THREADS - 1) / NUM_THREADS;
-    accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
+    accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
       large_buckets, sorted_bucket_offsets + h_nof_zero_large_buckets, sorted_bucket_sizes + h_nof_zero_large_buckets,
       sorted_single_bucket_indices + h_nof_zero_large_buckets, point_indices, d_points, nof_buckets,
       large_buckets_to_compute, c + bm_bitsize, c, threads_per_bucket, max_bucket_size_run_length);
@@ -568,15 +567,18 @@ void bucket_method_msm(
     for (int s = total_large_buckets_size >> 1; s > large_buckets_to_compute - 1; s >>= 1) {
       NUM_THREADS = min(MAX_TH, s);
       NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
-      single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
+      single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
         large_buckets, large_buckets, s * 2, 0, 0, 0, s);
     }
 
     // distribute
     NUM_THREADS = min(MAX_TH, large_buckets_to_compute);
     NUM_BLOCKS = (large_buckets_to_compute + NUM_THREADS - 1) / NUM_THREADS;
-    distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream2>>>(
+    distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
       large_buckets, buckets, sorted_single_bucket_indices + h_nof_zero_large_buckets, large_buckets_to_compute);
+
+    cudaEventRecord(event_large_buckets_accumulated, stream_large_buckets);
+    cudaStreamDestroy(stream_large_buckets);
   } else {
     h_nof_large_buckets = 0;
   }
@@ -591,9 +593,11 @@ void bucket_method_msm(
       h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c);
   }
 
-  // all the large buckets need to be accumulated before the final summation
-  cudaStreamSynchronize(stream2);
-  cudaStreamDestroy(stream2);
+  if (large_buckets_to_compute > 0 && bucket_th > 0) {
+    // all the large buckets need to be accumulated before the final summation
+    cudaStreamWaitEvent(stream, event_large_buckets_accumulated);
+    cudaStreamDestroy(stream_large_buckets);
+  }
 
 #ifdef SSM_SUM
   // sum each bucket
@@ -611,7 +615,7 @@ void bucket_method_msm(
 #endif
 
   P* d_final_result;
-  if (!on_device) cudaMallocAsync(&d_final_result, sizeof(P), stream);
+  if (!is_result_on_device) cudaMallocAsync(&d_final_result, sizeof(P), stream);
 
   P* final_results;
   if (big_triangle) {
@@ -689,18 +693,18 @@ void bucket_method_msm(
 
   // launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S>
-    <<<1, 1, 0, stream>>>(final_results, ones_results, on_device ? final_result : d_final_result, 1, nof_bms, c, true);
+    <<<1, 1, 0, stream>>>(final_results, is_result_on_device ? final_result : d_final_result, 1, nof_bms, c);
   cudaFreeAsync(final_results, stream);
-  cudaStreamSynchronize(stream);
 
-  if (!on_device) cudaMemcpyAsync(final_result, d_final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
+  if (!is_result_on_device) cudaMemcpyAsync(final_result, d_final_result, sizeof(P), cudaMemcpyDeviceToHost, stream);
 
   // free memory
-  if (!on_device) {
-    cudaFreeAsync(d_points, stream);
+  if (!are_scalars_on_device)
     cudaFreeAsync(d_scalars, stream);
+  if (!are_points_on_device)
+    cudaFreeAsync(d_points, stream);
+  if (!is_result_on_device)
     cudaFreeAsync(d_final_result, stream);
-  }
   cudaFreeAsync(buckets, stream);
 #ifndef PHASE1_TEST
   cudaFreeAsync(bucket_indices, stream);
@@ -716,9 +720,8 @@ void bucket_method_msm(
   cudaFreeAsync(nof_large_buckets, stream);
   cudaFreeAsync(max_res, stream);
   if (large_buckets_to_compute > 0 && bucket_th > 0) cudaFreeAsync(large_buckets, stream);
-  cudaFreeAsync(ones_results, stream);
 
-  cudaStreamSynchronize(stream);
+  // cudaStreamSynchronize(stream);
 }
 
 // this function computes multiple msms using the bucket method
@@ -869,7 +872,7 @@ void batched_bucket_method_msm(
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-    bm_sums, bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c, false);
+    bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
 
   // copy final result to host
   if (!on_device)
@@ -900,17 +903,20 @@ void batched_bucket_method_msm(
 template <typename S, typename A, typename P>
 cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results)
 {
+  int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
-  // TODO: DmytroTym/HadarIngonyama - parameters to be included into the implementation: on deviceness of points, scalars and results, precompute factor, points size and device id
   if (config.batch_size == 1)
-    bucket_method_msm(config.bitsize, config.c, scalars, points, msm_size, results, config.are_scalars_on_device, config.big_triangle, config.large_bucket_factor, config.ctx.stream);
+    bucket_method_msm(bitsize, 16, scalars, points, msm_size, results, config.are_scalars_on_device, 
+                      config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form, 
+                      config.are_results_on_device, config.big_triangle, config.large_bucket_factor, config.ctx.stream);
   else
-    batched_bucket_method_msm(config.bitsize, config.c, scalars, points, config.batch_size, msm_size, results, config.are_scalars_on_device, config.ctx.stream);
+    batched_bucket_method_msm(bitsize, (config.c == 0) ? get_optimal_c<S>(bitsize) : config.c, scalars, points,
+                              config.batch_size, msm_size, results, config.are_scalars_on_device, config.ctx.stream);
   return cudaSuccess;
 }
 
 /**
- * Extern version of [msm](@ref msm) function with the following values of template parameters 
+ * Extern version of [MSM](@ref MSM) function with the following values of template parameters 
  * (where the curve is given by `-DCURVE` env variable during build):
  *  - `S` is the [scalar field](@ref scalar_t) of the curve;
  *  - `A` is the [affine representation](@ref affine_t) of curve points;
@@ -930,7 +936,7 @@ extern "C" cudaError_t MSMCuda(
 #if defined(G2_DEFINED)
 
 /**
- * Extern version of [msm](@ref msm) function with the following values of template parameters 
+ * Extern version of [MSM](@ref MSM) function with the following values of template parameters 
  * (where the curve is given by `-DCURVE` env variable during build):
  *  - `S` is the [scalar field](@ref scalar_t) of the curve;
  *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;

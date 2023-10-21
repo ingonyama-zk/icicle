@@ -1,7 +1,3 @@
-#pragma once
-#ifndef ERR_H
-#define ERR_H
-
 #include <iostream>
 
 template <typename T>
@@ -30,5 +26,3 @@ void syncDevice(const char* const file, const int line)
     std::cerr << cudaGetErrorString(err) << std::endl;
   }
 }
-
-#endif

@@ -46,7 +46,7 @@ struct MSMConfig {
   bool are_points_on_device;          /**< True if points are on device and false if they're on host. Default value: false. */
   bool are_points_montgomery_form;    /**< True if coordinates of points are in Montgomery form and false otherwise. Default value: true. */
   int batch_size;                     /**< The number of MSMs to compute. Default value: 1. */
-  bool are_result_on_device;          /**< True if the results should be on device and false if they should be on host. Default value: false. */
+  bool are_results_on_device;         /**< True if the results should be on device and false if they should be on host. Default value: false. */
   int c;                              /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket method"
                                        *   that we use to solve the MSM problem. As a rule of thumb, larger value means more on-line memory
                                        *   footprint but also more parallelism and less computational complexity (up to a certain point).
@@ -73,6 +73,13 @@ struct MSMConfig {
  * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
  * @tparam P Output type, which is typically a [projective Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) point in our codebase.
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ *
+ * This function is asyncronous, and to sync it with host, you need to call `cudaDeviceSyncronize()`. To syncronize with a different stream `stream1`,
+ * call `cudaStreamSynchronize(config.stream)` and `cudaStreamSynchronize(stream1)`.
+ *
+ * **Note:** this function is still WIP and the following [MSMConfig](@ref MSMConfig) members do not yet have any effect: `points_size` 
+ * (it's always equal to the msm size currenly), `precompute_factor` (always equals 1) and `ctx.device_id` (0 device is always used).
+ * Also, it's currently better to use `batch_size=1` in most cases (expept with dealing with very many MSMs).
  */
 template <typename S, typename A, typename P>
 cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results);

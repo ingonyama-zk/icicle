@@ -14,21 +14,21 @@ namespace {
 #define MAX_THREADS_PER_BLOCK 256
 
 template <typename E, typename S>
-__global__ void mul_kernel(S* scalar_vec, E* element_vec, int n, E* result)
+__global__ void MulKernel(S* scalar_vec, E* element_vec, int n, E* result)
 {
   int tid = blockDim.x * blockIdx.x + threadIdx.x;
   if (tid < n) { result[tid] = scalar_vec[tid] * element_vec[tid]; }
 }
 
 template <typename E>
-__global__ void add_kernel(E* element_vec1, E* element_vec2, int n, E* result)
+__global__ void AddKernel(E* element_vec1, E* element_vec2, int n, E* result)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < n) { result[tid] = element_vec1[tid] + element_vec2[tid]; }
 }
 
 template <typename E>
-__global__ void sub_kernel(E* element_vec1, E* element_vec2, int n, E* result)
+__global__ void SubKernel(E* element_vec1, E* element_vec2, int n, E* result)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < n) { result[tid] = element_vec1[tid] - element_vec2[tid]; }
@@ -57,8 +57,8 @@ cudaError_t Mul(S* vec_a, E* vec_b, int n, bool is_on_device, bool is_montgomery
   }
 
   // Call the kernel to perform element-wise modular multiplication
-  mul_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
-  if (is_montgomery) mont::from_montgomery(is_on_device ? result : d_result, n, ctx.stream);
+  MulKernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
+  if (is_montgomery) mont::FromMontgomery(is_on_device ? result : d_result, n, ctx.stream);
 
   if (!is_on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
@@ -91,7 +91,7 @@ cudaError_t Add(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::De
   }
 
   // Call the kernel to perform element-wise addition
-  add_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
+  AddKernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
   if (!is_on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
@@ -124,7 +124,7 @@ cudaError_t Sub(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::De
   }
 
   // Call the kernel to perform element-wise subtraction
-  sub_kernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
+  SubKernel<<<num_blocks, num_threads, 0, ctx.stream>>>(is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
   if (!is_on_device) {
     cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);

@@ -11,10 +11,10 @@ namespace utils_internal {
  * @param n_inv scalar of type S (scalar).
  */
 template <typename E, typename S>
-__global__ void template_normalize_kernel(E* arr, S scalar, uint32_t n);
+__global__ void template_normalize_kernel(E* arr, S scalar, int n);
 
 template <typename E, typename S>
-__global__ void batchVectorMult(E* element_vec, S* scalar_vec, unsigned n_scalars, unsigned batch_size);
+__global__ void batchVectorMult(E* element_vec, S* scalar_vec, int n_scalars, int batch_size);
 
 } // namespace utils_internal
 

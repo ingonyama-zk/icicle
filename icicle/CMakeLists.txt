@@ -63,7 +63,7 @@ if (NOT BUILD_TESTS)
   add_custom_command(
     TARGET icicle
     POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym msm_default_cuda=${CURVE}_msm_default_cuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym MSMCuda=${CURVE}MSMCuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o
     COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a 
