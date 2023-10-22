@@ -4,10 +4,10 @@ namespace ntt {
 
   namespace {
 
-    const uint32_t MAX_NUM_THREADS = 1024;
+    const uint32_t MAX_NUM_THREADS = 512;
     const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
-    const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * 1024;
+    const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
     /**
      * Computes the twiddle factors.
@@ -19,10 +19,6 @@ namespace ntt {
     template <typename S>
     __global__ void twiddle_factors_kernel(S* d_twiddles, int n_twiddles, S omega)
     {
-      for (int i = 0; i < n_twiddles; i++) {
-        d_twiddles[i] = S::zero();
-      }
-      __syncthreads();
       d_twiddles[0] = S::one();
       for (int i = 0; i < n_twiddles - 1; i++) {
         d_twiddles[i + 1] = omega * d_twiddles[i];
