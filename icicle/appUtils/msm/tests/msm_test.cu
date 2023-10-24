@@ -6,11 +6,11 @@
 #include <iostream>
 #include <vector>
 
+#include "../../curves/curve_config.cuh"
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
 #include "../../utils/device_context.cuh"
-#include "../../curves/curve_config.cuh"
 
 class Dummy_Scalar
 {
@@ -169,24 +169,25 @@ int main()
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  device_context::DeviceContext ctx = {0,       // device_id
-                                       stream,  // stream
-                                       0,       // mempool
+  device_context::DeviceContext ctx = {
+    0,      // device_id
+    stream, // stream
+    0,      // mempool
   };
   msm::MSMConfig config = {
-    false,               // scalars_on_device
-    true,                // scalars_montgomery_form
-    msm_size,            // points_size
-    1,                   // precompute_factor
-    false,               // points_on_device
-    true,                // points_montgomery_form
-    1,                   // batch_size
-    false,               // result_on_device
-    16,                  // c
-    test_scalar::NBITS,  // bitsize
-    false,               // big_triangle
-    10,                  // large_bucket_factor
-    ctx,                 // DeviceContext
+    false,              // scalars_on_device
+    true,               // scalars_montgomery_form
+    msm_size,           // points_size
+    1,                  // precompute_factor
+    false,              // points_on_device
+    true,               // points_montgomery_form
+    1,                  // batch_size
+    false,              // result_on_device
+    16,                 // c
+    test_scalar::NBITS, // bitsize
+    false,              // big_triangle
+    10,                 // large_bucket_factor
+    ctx,                // DeviceContext
   };
 
   auto begin1 = std::chrono::high_resolution_clock::now();
@@ -197,8 +198,7 @@ int main()
   config.big_triangle = true;
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
-  msm::MSM<test_scalar, test_affine, test_projective>(
-    scalars_d, points_d, msm_size, config, large_res_d);
+  msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res_d);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   // test_reduce_single(scalars);

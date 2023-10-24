@@ -1,8 +1,8 @@
-#include "projective.cuh"
 #include "../curves/curve_config.cuh"
+#include "projective.cuh"
 #include <cuda.h>
 
-#define projective_t curve_config::projective_t //TODO: global to avoid lengthy texts
+#define projective_t  curve_config::projective_t // TODO: global to avoid lengthy texts
 #define point_field_t curve_config::point_field_t
 
 extern "C" bool eq(projective_t* point1, projective_t* point2)
@@ -16,7 +16,7 @@ extern "C" bool eq(projective_t* point1, projective_t* point2)
 
 #if defined(G2_DEFINED)
 
-#define projective_t curve_config::g2_projective_t
+#define projective_t  curve_config::g2_projective_t
 #define point_field_t curve_config::g2_point_field_t
 
 extern "C" bool eq_g2(g2_projective_t* point1, g2_projective_t* point2)
