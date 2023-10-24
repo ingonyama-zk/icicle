@@ -77,6 +77,11 @@ struct NTTConfig {
                                          *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle factors
                                          *   are generated online using the default generator (TODO: link to twiddle gen here) and function
                                          *   [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
+    S* inv_twiddles;                        /**< "Inverse twiddle factors", (or "domain", or "roots of unity") on which the iNTT is evaluated. 
+                                         *   This pointer is expected to live on device. The order is as follows:
+                                         *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle factors
+                                         *   are generated online using the default generator (TODO: link to twiddle gen here) and function
+                                         *   [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
     int size;                           /**< NTT size \f$ n \f$. If a batch of NTTs (which all need to have the same size) is computed, this is the size of 1 NTT. */
     int batch_size;                     /**< The number of NTTs to compute. Default value: 1. */
     bool is_preserving_twiddles;        /**< If true, twiddle factors are preserved on device for subsequent use in config and not freed after calculation. Default value: false. */

@@ -336,6 +336,7 @@ namespace ntt {
   template <typename S>
   cudaError_t GenerateTwiddleFactors(S* d_twiddles, int n_twiddles, S omega, device_context::DeviceContext ctx)
   {
+    printf("Generating twiddle factors\n");
     twiddle_factors_kernel<S><<<1, 1>>>(d_twiddles, n_twiddles, omega);
     cudaStreamSynchronize(ctx.stream);
 
@@ -357,22 +358,24 @@ namespace ntt {
     int input_size_bytes = size * batch_size * sizeof(E);
     bool is_input_on_device = config->are_inputs_on_device;
     bool is_output_on_device = config->is_output_on_device;
-    bool is_generating_twiddles = (config->twiddles == nullptr);
+    bool is_forward_twiddle_empty = config->twiddles == nullptr;
+    bool is_inverse_twiddle_empty = config->inv_twiddles == nullptr;
+    bool is_generating_twiddles = (is_forward_twiddle_empty && is_inverse_twiddle_empty) ||
+                                  (is_forward_twiddle_empty && !is_inverse) || (is_inverse_twiddle_empty && is_inverse);
 
-    // if (is_generating_twiddles) {
-    //   printf("Generating %d log2n %dx%d %d\n", logn, size, batch_size, is_inverse);
-    // } else {
-    //   printf("Not Generating\n");
-    // }
+    if (is_generating_twiddles) {
+      printf("Generating %d log2n %dx%d is_inverse:%d\n", logn, size, batch_size, is_inverse);
+    } else {
+      printf("Not Generating: is_inverse:%d\n", is_inverse);
+    }
 
     S* d_twiddles;
     if (is_generating_twiddles) {
       cudaMallocAsync(&d_twiddles, n_twiddles * sizeof(S), stream);
-      auto kk = config->ctx;
       S omega = is_inverse ? S::omega_inv(logn) : S::omega(logn);
-      GenerateTwiddleFactors(d_twiddles, n_twiddles, omega, kk);
+      GenerateTwiddleFactors(d_twiddles, n_twiddles, omega, config->ctx);
     } else {
-      d_twiddles = config->twiddles;
+      d_twiddles = is_inverse ? config->inv_twiddles : config->twiddles;
     }
 
     E* d_inout;
@@ -437,7 +440,12 @@ namespace ntt {
 
     if (is_generating_twiddles && !config->is_preserving_twiddles) { cudaFreeAsync(d_twiddles, stream); }
 
-    if (config->is_preserving_twiddles) { config->twiddles = d_twiddles; }
+    if (config->is_preserving_twiddles) {
+      if (is_inverse)
+        config->inv_twiddles = d_twiddles;
+      else
+        config->twiddles = d_twiddles;
+    }
 
     cudaStreamSynchronize(stream);
 

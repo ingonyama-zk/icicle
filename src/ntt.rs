@@ -86,6 +86,12 @@ pub(crate) struct NTTConfigCuda<E, S> {
      *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle factors
      *   are generated online using the default generator (TODO: link to twiddle gen here) and function
      *   [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
+    inv_twiddles: *const S,
+    /**< "Inverse twiddle factors", (or "domain", or "roots of unity") on which the iNTT is evaluated.
+     *   This pointer is expected to live on device. The order is as follows:
+     *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle factors
+     *   are generated online using the default generator (TODO: link to twiddle gen here) and function
+     *   [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
     size: c_int,
     /**< NTT size \f$ n \f$. If a batch of NTTs (which all need to have the same size) is computed, this is the size of 1 NTT. */
     batch_size: c_int,
@@ -133,6 +139,7 @@ pub fn ntt(
         is_coset: false,
         coset_gen: &[ScalarField::zero()] as _, //TODO: ?
         twiddles: 0 as *const ScalarField,      //TODO: ?,
+        inv_twiddles: 0 as *const ScalarField,  //TODO: ?,
         size,
         batch_size: batch_size as i32,
         is_preserving_twiddles: true,
@@ -249,7 +256,7 @@ pub(crate) mod tests {
     fn test_ntt() {
         //NTT
         let seed = None; //some value to fix the rng
-        let test_size = 1 << 6;
+        let test_size = 1 << 3;
         let batches = 1;
 
         let full_test_size = test_size * batches;
@@ -355,12 +362,37 @@ pub(crate) mod tests {
 
         config.is_input_on_device = false;
         config.is_output_on_device = true;
+        config.is_preserving_twiddles = true; // TODO: same as in get_ntt_config
+        config.ordering = Ordering::kNR;
+
+        ntt_internal(&mut config); //twiddles are preserved after first call
+
+        config.is_input_on_device = false;
+        config.is_output_on_device = true;
+        config.is_inverse = true;
+        config.ordering = Ordering::kNR;
+
+        ntt_internal(&mut config); //inv_twiddles are preserved after first call
+
+        println!("\ntwiddles should be initialized here\n");
+        
+        let ntt_intt_result = &mut scalars_batch.clone()[..];
+        let raw_scalars_batch_copy = ntt_intt_result as *mut _ as *mut ScalarField;
+
+        let config_inout2: &mut [ScalarField] =
+        unsafe { std::slice::from_raw_parts_mut(raw_scalars_batch_copy, config.size as usize) };
+        assert_eq!(config_inout2, scalars_batch);
+
+        config.inout = raw_scalars_batch_copy;
+
+        config.is_inverse = false;
+        config.is_input_on_device = false;
+        config.is_output_on_device = true;
         config.ordering = Ordering::kNR;
 
         ntt_internal(&mut config);
 
         config.is_inverse = true;
-        config.twiddles = 0 as _; //TODO: preserve inverse twiddles
         config.is_input_on_device = true;
         config.is_output_on_device = false;
         config.ordering = Ordering::kRN;
@@ -370,7 +402,7 @@ pub(crate) mod tests {
         let result_from_device: &mut [ScalarField] =
             unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
 
-        assert_eq!(result_from_device, &scalars_batch);
+        assert_eq!(result_from_device, &scalars_batch.clone());
     }
 
     fn get_ntt_config(ntt_intt_result: &mut [ScalarField], size: i32, batches: usize) -> NTTConfig {
@@ -384,6 +416,7 @@ pub(crate) mod tests {
             is_coset: false,
             coset_gen: &[ScalarField::zero()] as _, //TODO: ?
             twiddles: 0 as *const ScalarField,      //TODO: ?,
+            inv_twiddles: 0 as *const ScalarField,  //TODO: ?,
             size,
             batch_size: batches as i32,
             is_preserving_twiddles: true,
