@@ -336,7 +336,6 @@ namespace ntt {
   template <typename S>
   cudaError_t GenerateTwiddleFactors(S* d_twiddles, int n_twiddles, S omega, device_context::DeviceContext ctx)
   {
-    printf("Generating twiddle factors\n");
     twiddle_factors_kernel<S><<<1, 1>>>(d_twiddles, n_twiddles, omega);
     cudaStreamSynchronize(ctx.stream);
 
@@ -363,12 +362,6 @@ namespace ntt {
     bool is_generating_twiddles = (is_forward_twiddle_empty && is_inverse_twiddle_empty) ||
                                   (is_forward_twiddle_empty && !is_inverse) || (is_inverse_twiddle_empty && is_inverse);
 
-    if (is_generating_twiddles) {
-      printf("Generating %d log2n %dx%d is_inverse:%d\n", logn, size, batch_size, is_inverse);
-    } else {
-      printf("Not Generating: is_inverse:%d\n", is_inverse);
-    }
-
     S* d_twiddles;
     if (is_generating_twiddles) {
       cudaMallocAsync(&d_twiddles, n_twiddles * sizeof(S), stream);
@@ -381,7 +374,6 @@ namespace ntt {
     E* d_inout;
     if (is_input_on_device) {
       d_inout = config->inout;
-      printf("dev input address: %p\n", d_inout);
     } else {
       cudaMallocAsync(&d_inout, input_size_bytes, stream);
       cudaMemcpyAsync(d_inout, config->inout, input_size_bytes, cudaMemcpyHostToDevice, stream);
@@ -422,7 +414,6 @@ namespace ntt {
     if (is_output_on_device) {
       // free(config->inout); // TODO: ? or callback?+
       config->inout = d_inout;
-      printf("dev output address: %p\n", d_inout);
     } else {
       if (is_input_on_device) {
         E* h_output = (E*)malloc(input_size_bytes); // TODO: caller responsible for memory management
@@ -443,7 +434,6 @@ namespace ntt {
       if (is_inverse)
         config->inv_twiddles = d_twiddles;
       else {
-        printf("preserving Inverse %p\n", d_twiddles);
         config->twiddles = d_twiddles;
       }
     }
