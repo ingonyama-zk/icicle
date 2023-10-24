@@ -16,7 +16,7 @@ fn main() {
                 // .define("CURVE", "12381")
                 .define("CURVE", "bls12_381")
                 // .define("CURVE", "bn254")
-                .define("ECNTT_DEFINED", "")
+                // .define("ECNTT_DEFINED", "") //TODO: feature
                 .define("LIBRARY_OUTPUT_DIRECTORY", &target_output_dir)
                 .build_target("icicle")
                 .build();
