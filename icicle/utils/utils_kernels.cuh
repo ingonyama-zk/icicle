@@ -4,7 +4,7 @@
 
 namespace utils_internal {
 
-    template <typename E, typename S>
+  template <typename E, typename S>
   __global__ void template_normalize_kernel(E* arr, S scalar, unsigned n)
   {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
