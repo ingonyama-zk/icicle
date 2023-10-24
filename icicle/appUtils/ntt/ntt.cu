@@ -435,9 +435,9 @@ namespace ntt {
     }
     CHECK_LAST_CUDA_ERROR();
 
-    if (is_generating_twiddles && !config->is_preserving_tweedles) { cudaFreeAsync(d_twiddles, stream); }
+    if (is_generating_twiddles && !config->is_preserving_twiddles) { cudaFreeAsync(d_twiddles, stream); }
 
-    if (config->is_preserving_tweedles) { config->twiddles = d_twiddles; }
+    if (config->is_preserving_twiddles) { config->twiddles = d_twiddles; }
 
     cudaStreamSynchronize(stream);
 

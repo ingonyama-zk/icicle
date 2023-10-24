@@ -79,7 +79,7 @@ struct NTTConfig {
                                          *   [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
     int size;                           /**< NTT size \f$ n \f$. If a batch of NTTs (which all need to have the same size) is computed, this is the size of 1 NTT. */
     int batch_size;                     /**< The number of NTTs to compute. Default value: 1. */
-    bool is_preserving_tweedles;        /**< If true, twiddle factors are preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
+    bool is_preserving_twiddles;        /**< If true, twiddle factors are preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
     bool is_output_on_device;           /**< If true, output is preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
     device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 };

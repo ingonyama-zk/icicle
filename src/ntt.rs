@@ -90,7 +90,7 @@ pub(crate) struct NTTConfigCuda<E, S> {
     /**< NTT size \f$ n \f$. If a batch of NTTs (which all need to have the same size) is computed, this is the size of 1 NTT. */
     batch_size: c_int,
     /**< The number of NTTs to compute. Default value: 1. */
-    is_preserving_tweedles: bool,
+    is_preserving_twiddles: bool,
     /**< If true, twiddle factors are preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
     is_output_on_device: bool,
     /**< If true, output is preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
@@ -135,7 +135,7 @@ pub fn ntt(
         twiddles: 0 as *const ScalarField,      //TODO: ?,
         size,
         batch_size: batch_size as i32,
-        is_preserving_tweedles: true,
+        is_preserving_twiddles: true,
         is_output_on_device,
         ctx: DeviceContext {
             device_id: 0,
@@ -348,20 +348,7 @@ pub(crate) mod tests {
 
         assert_eq!(from_device, scalars_batch);
 
-        // config.inout = dev_ptr1;
-        // config.is_inverse = false;
-        // config.is_input_on_device = true;
-        // config.is_output_on_device = false;
-        // config.ordering = Ordering::kNR;
-
-        // println!("input on device address: {:?}", config.inout);
-        // ntt_internal(&mut config);
-        // println!("output on host address: {:?}", config.inout);
-
-        // let result_from_device: &mut [ScalarField] =
-        //     unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
-
-        // assert_eq!(result_from_device, &ntt_result);
+        // host - device - device - host
         let mut ntt_intt_result = scalars_batch.clone();
 
         let mut config = get_ntt_config(&mut ntt_intt_result, size, batches);
@@ -370,19 +357,15 @@ pub(crate) mod tests {
         config.is_output_on_device = true;
         config.ordering = Ordering::kNR;
 
-        println!("ntt input on host address: {:?}", config.inout);
         ntt_internal(&mut config);
-        println!("ntt output on device address: {:?}", config.inout);
 
         config.is_inverse = true;
-        config.twiddles = 0 as _;
+        config.twiddles = 0 as _; //TODO: preserve inverse twiddles
         config.is_input_on_device = true;
         config.is_output_on_device = false;
         config.ordering = Ordering::kRN;
 
-        println!("intt input on device address: {:?}", config.inout);
         ntt_internal(&mut config);
-        println!("intt output on host address: {:?}", config.inout);
 
         let result_from_device: &mut [ScalarField] =
             unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
@@ -390,8 +373,8 @@ pub(crate) mod tests {
         assert_eq!(result_from_device, &scalars_batch);
     }
 
-    fn get_ntt_config(mut ntt_intt_result: &mut [ScalarField], size: i32, batches: usize) -> NTTConfig {
-        let mut config = NTTConfig {
+    fn get_ntt_config(ntt_intt_result: &mut [ScalarField], size: i32, batches: usize) -> NTTConfig {
+        NTTConfig {
             inout: ntt_intt_result as *mut _ as *mut ScalarField,
             is_input_on_device: false,
             is_inverse: false,
@@ -403,15 +386,14 @@ pub(crate) mod tests {
             twiddles: 0 as *const ScalarField,      //TODO: ?,
             size,
             batch_size: batches as i32,
-            is_preserving_tweedles: true,
+            is_preserving_twiddles: true,
             is_output_on_device: true,
             ctx: DeviceContext {
                 device_id: 0,
                 stream: 0,
                 mempool: 0,
             },
-        };
-        config
+        }
     }
 
     #[test]
