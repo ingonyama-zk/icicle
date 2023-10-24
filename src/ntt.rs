@@ -377,17 +377,15 @@ pub(crate) mod tests {
         ntt_internal(&mut config); //inv_twiddles are preserved after first call
 
         println!("\ntwiddles should be initialized here\n");
-        
+
         let ntt_intt_result = &mut scalars_batch.clone()[..];
         let raw_scalars_batch_copy = ntt_intt_result as *mut _ as *mut ScalarField;
 
         let config_inout2: &mut [ScalarField] =
-        unsafe { std::slice::from_raw_parts_mut(raw_scalars_batch_copy, config.size as usize) };
+            unsafe { std::slice::from_raw_parts_mut(raw_scalars_batch_copy, config.size as usize) };
         assert_eq!(config_inout2, scalars_batch);
 
-        config.is_preserving_twiddles = true;        //TODO: same as in get_ntt_config
-        //config.twiddles = 0 as *const ScalarField;      //TODO: ?,
-        //config.inv_twiddles = 0 as *const ScalarField;  //TODO: ?,
+        config.is_preserving_twiddles = true; //TODO: same as in get_ntt_config
 
         config.inout = raw_scalars_batch_copy;
 

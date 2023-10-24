@@ -206,9 +206,9 @@ mod tests {
     use ark_bls12_381::{Fq, G1Affine, G1Projective};
     // use ark_bn254::{Fq, G1Affine, G1Projective};
     use ark_ec::AffineCurve;
-    use ark_ff::{BigInteger256, BigInteger384};
     use ark_ff::Field as ArkField;
     use ark_ff::PrimeField;
+    use ark_ff::{BigInteger256, BigInteger384};
 
     use super::*;
 
