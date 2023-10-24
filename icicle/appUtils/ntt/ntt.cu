@@ -413,8 +413,7 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      d_inout, is_generating_twiddles ? d_twiddles : config->twiddles, size, batch_size, is_inverse, config->is_coset,
-      config->coset_gen, stream, false);
+      d_inout, d_twiddles, size, batch_size, is_inverse, config->is_coset, config->coset_gen, stream, false);
     CHECK_LAST_CUDA_ERROR();
 
     if (reverse_output) reverse_order_batch(d_inout, size, logn, batch_size, stream);
@@ -443,8 +442,10 @@ namespace ntt {
     if (config->is_preserving_twiddles) {
       if (is_inverse)
         config->inv_twiddles = d_twiddles;
-      else
+      else {
+        printf("preserving Inverse %p\n", d_twiddles);
         config->twiddles = d_twiddles;
+      }
     }
 
     cudaStreamSynchronize(stream);

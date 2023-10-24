@@ -256,22 +256,23 @@ pub(crate) mod tests {
     fn test_ntt() {
         //NTT
         let seed = None; //some value to fix the rng
-        let test_size = 1 << 3;
+        let test_size = 1 << 11;
         let batches = 1;
 
         let full_test_size = test_size * batches;
         let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size, get_rng(seed));
 
-        let scalars_batch: Vec<ScalarField> = (0..full_test_size)
-            .into_iter()
-            .map(|x| {
-                if x % 2 == 0 {
-                    ScalarField::one()
-                } else {
-                    ScalarField::zero()
-                }
-            })
-            .collect();
+        // let scalars_batch: Vec<ScalarField> = (0..full_test_size)
+        //     .into_iter()
+        //     .map(|x| {
+        //         // if x % 1 == 0 {
+        //         if x % 2 == 0 {
+        //             ScalarField::one()
+        //         } else {
+        //             ScalarField::zero()
+        //         }
+        //     })
+        //     .collect();
 
         let mut ntt_result = scalars_batch.clone();
 
@@ -362,14 +363,15 @@ pub(crate) mod tests {
 
         config.is_input_on_device = false;
         config.is_output_on_device = true;
-        config.is_preserving_twiddles = true; // TODO: same as in get_ntt_config
+        // config.is_preserving_twiddles = true; // TODO: same as in get_ntt_config
         config.ordering = Ordering::kNR;
 
         ntt_internal(&mut config); //twiddles are preserved after first call
 
+        // config.is_preserving_twiddles = true;        //TODO: same as in get_ntt_config
+        config.is_inverse = true;
         config.is_input_on_device = false;
         config.is_output_on_device = true;
-        config.is_inverse = true;
         config.ordering = Ordering::kNR;
 
         ntt_internal(&mut config); //inv_twiddles are preserved after first call
@@ -382,6 +384,10 @@ pub(crate) mod tests {
         let config_inout2: &mut [ScalarField] =
         unsafe { std::slice::from_raw_parts_mut(raw_scalars_batch_copy, config.size as usize) };
         assert_eq!(config_inout2, scalars_batch);
+
+        config.is_preserving_twiddles = true;        //TODO: same as in get_ntt_config
+        //config.twiddles = 0 as *const ScalarField;      //TODO: ?,
+        //config.inv_twiddles = 0 as *const ScalarField;  //TODO: ?,
 
         config.inout = raw_scalars_batch_copy;
 
@@ -402,7 +408,7 @@ pub(crate) mod tests {
         let result_from_device: &mut [ScalarField] =
             unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
 
-        assert_eq!(result_from_device, &scalars_batch.clone());
+        assert_eq!(result_from_device, &scalars_batch);
     }
 
     fn get_ntt_config(ntt_intt_result: &mut [ScalarField], size: i32, batches: usize) -> NTTConfig {
