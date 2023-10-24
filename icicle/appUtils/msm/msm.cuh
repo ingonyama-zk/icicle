@@ -46,8 +46,8 @@ namespace msm {
                       * product of MSM size and [batch_size](@ref batch_size). Default value: 0 (meaning it's equal to
                       * the MSM size). */
     int precompute_factor;     /**< The number of extra points to pre-compute for each point. Larger values decrease the
-                                * number of computations     to make, on-line memory footprint, but increase the static memory
-                                * footprint. Default value: 1 (i.e. don't pre-compute). */
+                                * number of computations to make, on-line memory footprint, but increase the static
+                                * memory footprint. Default value: 1 (i.e. don't pre-compute). */
     bool are_points_on_device; /**< True if points are on device and false if they're on host. Default value: false. */
     bool are_points_montgomery_form; /**< True if coordinates of points are in Montgomery form and false otherwise.
                                         Default value: true. */
@@ -59,8 +59,8 @@ namespace msm {
                         *   footprint but also more parallelism and less computational complexity (up to a certain point).
                         *   Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically). */
     int bitsize;       /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a
-                        * different       (better) upper bound is known, it should be reflected in this variable. Default value: 0
-                        * (set to the bitsize of scalar field). */
+                        * different (better) upper bound is known, it should be reflected in this variable. Default
+                        * value: 0 (set to the bitsize of scalar field). */
     bool big_triangle; /**< Whether to do "bucket accumulation" serially. Decreases computational complexity, but also
                         * greatly decreases parallelism, so only suitable for large batches of MSMs. Default value:
                         * false. */
