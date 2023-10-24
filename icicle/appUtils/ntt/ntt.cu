@@ -346,14 +346,17 @@ namespace ntt {
   template <typename E, typename S>
   cudaError_t NTT(NTTConfig<E, S>* config)
   {
+    CHECK_LAST_CUDA_ERROR();
+
     cudaStream_t stream = config->ctx.stream;
     int size = config->size;
     int batch_size = config->batch_size;
     bool is_inverse = config->is_inverse;
     int n_twiddles = size;
     int logn = int(log(size) / log(2));
-    int input_size = size * batch_size * sizeof(E);
+    int input_size_bytes = size * batch_size * sizeof(E);
     bool is_input_on_device = config->are_inputs_on_device;
+    bool is_output_on_device = config->is_output_on_device;
     bool is_generating_twiddles = (config->twiddles == nullptr);
 
     // if (is_generating_twiddles) {
@@ -373,11 +376,12 @@ namespace ntt {
     }
 
     E* d_inout;
-    if (!is_input_on_device) {
-      cudaMallocAsync(&d_inout, input_size, stream);
-      cudaMemcpyAsync(d_inout, config->inout, input_size, cudaMemcpyHostToDevice, stream);
-    } else {
+    if (is_input_on_device) {
       d_inout = config->inout;
+      printf("dev input address: %p\n", d_inout);
+    } else {
+      cudaMallocAsync(&d_inout, input_size_bytes, stream);
+      cudaMemcpyAsync(d_inout, config->inout, input_size_bytes, cudaMemcpyHostToDevice, stream);
     }
 
     bool reverse_input;
@@ -400,29 +404,44 @@ namespace ntt {
       reverse_output = is_inverse;
       break;
     }
+    CHECK_LAST_CUDA_ERROR();
 
     if (reverse_input) reverse_order_batch(d_inout, size, logn, config->batch_size, stream);
+    CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
       d_inout, is_generating_twiddles ? d_twiddles : config->twiddles, size, batch_size, is_inverse, config->is_coset,
       config->coset_gen, stream, false);
+    CHECK_LAST_CUDA_ERROR();
+
     if (reverse_output) reverse_order_batch(d_inout, size, logn, batch_size, stream);
+    CHECK_LAST_CUDA_ERROR();
 
-    if (config->is_output_on_device) {
-      free(config->inout); // TODO: ? or callback?+
+    if (is_output_on_device) {
+      // free(config->inout); // TODO: ? or callback?+
       config->inout = d_inout;
+      printf("dev output address: %p\n", d_inout);
     } else {
-      cudaMemcpyAsync(config->inout, d_inout, input_size, cudaMemcpyDeviceToHost, stream);
-      cudaFreeAsync(d_inout, stream);
+      if (is_input_on_device) {
+        E* h_output = (E*)malloc(input_size_bytes); // TODO: caller responsible for memory management
+        cudaMemcpyAsync(h_output, d_inout, input_size_bytes, cudaMemcpyDeviceToHost, stream);
+        config->inout = h_output;
+        CHECK_LAST_CUDA_ERROR();
+      } else {
+        cudaMemcpyAsync(config->inout, d_inout, input_size_bytes, cudaMemcpyDeviceToHost, stream);
+        CHECK_LAST_CUDA_ERROR();
+      }
+      cudaFreeAsync(d_inout, stream); // TODO: make it optional? so can be reused
     }
+    CHECK_LAST_CUDA_ERROR();
 
-    if (is_generating_twiddles && !config->is_preserving_tweedles) {
-      cudaFreeAsync(d_twiddles, stream);
-    }
+    if (is_generating_twiddles && !config->is_preserving_tweedles) { cudaFreeAsync(d_twiddles, stream); }
 
     if (config->is_preserving_tweedles) { config->twiddles = d_twiddles; }
 
     cudaStreamSynchronize(stream);
+
+    CHECK_LAST_CUDA_ERROR();
 
     return cudaSuccess;
   }

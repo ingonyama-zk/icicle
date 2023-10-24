@@ -123,8 +123,6 @@ pub fn ntt(
 
     let size = (inout.len() / batch_size) as i32;
 
-    // println!("size: {}", size);
-
     let mut config = NTTConfig {
         inout: inout as *mut _ as *mut ScalarField,
         is_input_on_device,
@@ -145,9 +143,17 @@ pub fn ntt(
             mempool: 0,
         },
     };
-    // println!("hehe");
-    let result_code = unsafe { ntt_cuda(&mut config) };
-    // println!("_result_code = {}", result_code);
+
+    ntt_internal(&mut config);
+}
+
+pub(crate) fn ntt_internal(config: *mut NTTConfig) -> cudaError_t {
+    let result_code = unsafe { ntt_cuda(config) };
+    if result_code != 0 {
+        println!("_result_code = {}", result_code);
+    }
+
+    return result_code;
 }
 
 // pub fn ntt_device(inout: &mut DeviceBuffer<ScalarField>, twiddles: &mut DeviceBuffer<ScalarField>, is_inverse: bool) {
@@ -194,6 +200,8 @@ pub(crate) mod tests {
     use ark_std::UniformRand;
     use rand::RngCore;
     use rustacuda::prelude::CopyDestination;
+    use rustacuda::prelude::DeviceBuffer;
+    use rustacuda_core::DevicePointer;
 
     use crate::{curve::*, ntt::*, utils::get_rng};
 
@@ -216,32 +224,47 @@ pub(crate) mod tests {
             .collect()
     }
 
+    pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
+        fn is_power_of_two(n: u32) -> bool {
+            n != 0 && n & (n - 1) == 0
+        }
+        assert!(is_power_of_two(order));
+        let mask = order - 1;
+        let binary = format!("{:0width$b}", n, width = (32 - mask.leading_zeros()) as usize);
+        let reversed = binary
+            .chars()
+            .rev()
+            .collect::<String>();
+        u32::from_str_radix(&reversed, 2).unwrap()
+    }
+
+    pub fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
+        l.iter()
+            .enumerate()
+            .map(|(i, _)| l[reverse_bit_order(i as u32, l.len() as u32) as usize])
+            .collect()
+    }
+
     #[test]
     fn test_ntt() {
         //NTT
         let seed = None; //some value to fix the rng
-        let test_size = 1 << 8;
+        let test_size = 1 << 6;
         let batches = 1;
 
         let full_test_size = test_size * batches;
         let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size, get_rng(seed));
 
-        // let scalars_batch: Vec<ScalarField> = (0..full_test_size)
-        //     .into_iter()
-        //     .map(|x| {
-        //         if x % 2 == 0 {
-        //             ScalarField::one()
-        //         } else {
-        //             ScalarField::zero()
-        //         }
-        //     })
-        //     .collect();
-
-        let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
-
-        for i in 0..batches {
-            scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
-        }
+        let scalars_batch: Vec<ScalarField> = (0..full_test_size)
+            .into_iter()
+            .map(|x| {
+                if x % 2 == 0 {
+                    ScalarField::one()
+                } else {
+                    ScalarField::zero()
+                }
+            })
+            .collect();
 
         let mut ntt_result = scalars_batch.clone();
 
@@ -258,7 +281,7 @@ pub(crate) mod tests {
 
         assert_ne!(ark_ntt_result, ark_scalars_batch);
 
-        // do batch ntt
+        // do ntt
         ntt(&mut ntt_result, false, false, Ordering::kNN, false, batches);
 
         let ntt_result_as_ark = ntt_result
@@ -278,17 +301,121 @@ pub(crate) mod tests {
         assert_ne!(ntt_result, scalars_batch);
 
         // do intt
-
         let mut intt_result = ntt_result;
 
         ntt(&mut intt_result, true, false, Ordering::kNN, false, batches);
 
         assert!(ark_intt_result == ark_scalars_batch);
         assert!(intt_result == scalars_batch);
+
+        let mut ntt_intt_result = intt_result;
+        ntt(&mut ntt_intt_result, false, false, Ordering::kNR, false, batches);
+        assert!(ntt_intt_result != scalars_batch);
+        ntt(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
+        assert!(ntt_intt_result == scalars_batch);
+
+        let mut ntt_intt_result = list_to_reverse_bit_order(&ntt_intt_result);
+        ntt(&mut ntt_intt_result, false, false, Ordering::kRR, false, batches);
+        assert!(ntt_intt_result != scalars_batch);
+        ntt(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
+        assert!(ntt_intt_result == scalars_batch);
+
+        ////
+        let size = (ntt_intt_result.len() / batches) as i32;
+
+        let mut config = get_ntt_config(&mut ntt_intt_result, size, batches);
+
+        ntt_internal(&mut config);
+
+        //host
+        let mut ntt_result = scalars_batch.clone();
+        ntt(&mut ntt_result, false, false, Ordering::kNR, false, batches);
+
+        let mut buff1 = DeviceBuffer::from_slice(&scalars_batch[..]).unwrap();
+        let dev_ptr1 = buff1
+            .as_device_ptr()
+            .as_raw_mut();
+
+        let buff_len = buff1.len();
+
+        std::mem::forget(buff1);
+
+        let buff_from_dev_ptr = unsafe { DeviceBuffer::from_raw_parts(DevicePointer::wrap(dev_ptr1), buff_len) };
+        let mut from_device = vec![ScalarField::zero(); scalars_batch.len()];
+        buff_from_dev_ptr
+            .copy_to(&mut from_device)
+            .unwrap();
+
+        assert_eq!(from_device, scalars_batch);
+
+        // config.inout = dev_ptr1;
+        // config.is_inverse = false;
+        // config.is_input_on_device = true;
+        // config.is_output_on_device = false;
+        // config.ordering = Ordering::kNR;
+
+        // println!("input on device address: {:?}", config.inout);
+        // ntt_internal(&mut config);
+        // println!("output on host address: {:?}", config.inout);
+
+        // let result_from_device: &mut [ScalarField] =
+        //     unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
+
+        // assert_eq!(result_from_device, &ntt_result);
+        let mut ntt_intt_result = scalars_batch.clone();
+
+        let mut config = get_ntt_config(&mut ntt_intt_result, size, batches);
+
+        config.is_input_on_device = false;
+        config.is_output_on_device = true;
+        config.ordering = Ordering::kNR;
+
+        println!("ntt input on host address: {:?}", config.inout);
+        ntt_internal(&mut config);
+        println!("ntt output on device address: {:?}", config.inout);
+
+        config.is_inverse = true;
+        config.twiddles = 0 as _;
+        config.is_input_on_device = true;
+        config.is_output_on_device = false;
+        config.ordering = Ordering::kRN;
+
+        println!("intt input on device address: {:?}", config.inout);
+        ntt_internal(&mut config);
+        println!("intt output on host address: {:?}", config.inout);
+
+        let result_from_device: &mut [ScalarField] =
+            unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
+
+        assert_eq!(result_from_device, &scalars_batch);
+    }
+
+    fn get_ntt_config(mut ntt_intt_result: &mut [ScalarField], size: i32, batches: usize) -> NTTConfig {
+        let mut config = NTTConfig {
+            inout: ntt_intt_result as *mut _ as *mut ScalarField,
+            is_input_on_device: false,
+            is_inverse: false,
+            ordering: Ordering::kNN,
+            decimation: Decimation::kDIF,
+            butterfly: Butterfly::kCooleyTukey,
+            is_coset: false,
+            coset_gen: &[ScalarField::zero()] as _, //TODO: ?
+            twiddles: 0 as *const ScalarField,      //TODO: ?,
+            size,
+            batch_size: batches as i32,
+            is_preserving_tweedles: true,
+            is_output_on_device: true,
+            ctx: DeviceContext {
+                device_id: 0,
+                stream: 0,
+                mempool: 0,
+            },
+        };
+        config
     }
 
     #[test]
-    fn test_ntt_batch() {
+    fn test_batch_ntt() {
         //NTT
         let seed = None; //some value to fix the rng
         let test_size = 1 << 8;
