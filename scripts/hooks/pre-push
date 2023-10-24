@@ -3,11 +3,11 @@
 status=0
 # Run clang-format on CUDA, C, and CPP files
 # clang-format writes to stderr in dry-run mode. In order to capture the output to detect if there are changes needed we redirect stderr to stdin
-if [[ $(find ./ -path ./icicle/build -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]];
+if [[ $(find ./ -path ./icicle/build -prune -o -path ./target -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]];
 then
     echo "🚨 There are files in Icicle Core that need formatting."
     echo "Please format all .c, .cpp, .h, .cu, .cuh files using the following command:"
-    echo "find ./ -path ./icicle/build -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format -i -style=file"
+    echo "find ./ -path ./icicle/build -prune -o -path ./target -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format -i -style=file"
     status=1
 fi
 
