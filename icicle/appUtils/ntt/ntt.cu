@@ -1,5 +1,9 @@
 #include "ntt.cuh"
 
+#include "../../curves/curve_config.cuh"
+#include "../../utils/sharedmem.cuh"
+#include "../../utils/utils_kernels.cuh"
+
 namespace ntt {
 
   namespace {

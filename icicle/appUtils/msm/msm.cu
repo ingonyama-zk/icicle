@@ -1,3 +1,5 @@
+#include "msm.cuh"
+
 #include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
@@ -8,7 +10,12 @@
 #include <stdexcept>
 #include <vector>
 
-#include "msm.cuh"
+#include "../../curves/curve_config.cuh"
+#include "../../primitives/affine.cuh"
+#include "../../primitives/field.cuh"
+#include "../../primitives/projective.cuh"
+#include "../../utils/cuda_utils.cuh"
+#include "../../utils/error_handler.cuh"
 
 namespace msm {
 
@@ -96,14 +103,14 @@ namespace msm {
       unsigned bm_bitsize,
       unsigned c)
     {
-      constexpr unsigned sign_mask = 0x80000000;
+      // constexpr unsigned sign_mask = 0x80000000;
       // constexpr unsigned trash_bucket = 0x80000000;
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       unsigned bucket_index;
-      unsigned bucket_index2;
+      // unsigned bucket_index2;
       unsigned current_index;
       unsigned msm_index = tid >> msm_log_size;
-      unsigned borrow = 0;
+      // unsigned borrow = 0;
       if (tid < total_size) {
         S scalar = scalars[tid];
         for (unsigned bm = 0; bm < nof_bms; bm++) {
@@ -196,7 +203,7 @@ namespace msm {
       const unsigned msm_idx_shift,
       const unsigned c)
     {
-      constexpr unsigned sign_mask = 0x80000000;
+      // constexpr unsigned sign_mask = 0x80000000;
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_buckets_to_compute) return;
       if ((single_bucket_indices[tid] & ((1 << c) - 1)) == 0) {
@@ -372,8 +379,8 @@ namespace msm {
       P* buckets;
       // compute number of bucket modules and number of buckets in each module
       unsigned nof_bms = (bitsize + c - 1) / c;
-      unsigned msm_log_size = ceil(log2(size));
-      unsigned bm_bitsize = ceil(log2(nof_bms));
+      unsigned msm_log_size = (unsigned)ceil(log2(size));
+      unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms));
 #ifdef SIGNED_DIG
       unsigned nof_buckets = nof_bms * ((1 << (c - 1)) + 1); // signed digits
 #else
@@ -627,7 +634,7 @@ namespace msm {
 #endif
       } else {
         unsigned source_bits_count = c;
-        bool odd_source_c = source_bits_count % 2;
+        // bool odd_source_c = source_bits_count % 2;
         unsigned source_windows_count = nof_bms;
         unsigned source_buckets_count = nof_buckets;
         P* source_buckets = buckets;
@@ -645,7 +652,7 @@ namespace msm {
 
           if (source_bits_count > 0) {
             for (unsigned j = 0; j < target_bits_count; j++) {
-              unsigned last_j = target_bits_count - 1;
+              // unsigned last_j = target_bits_count - 1;
               unsigned nof_threads = (source_buckets_count >> (1 + j));
               NUM_THREADS = min(MAX_TH, nof_threads);
               NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
@@ -683,7 +690,7 @@ namespace msm {
           temp_buckets1 = nullptr;
           temp_buckets2 = nullptr;
           source_bits_count = target_bits_count;
-          odd_source_c = source_bits_count % 2;
+          // odd_source_c = source_bits_count % 2;
           source_windows_count = target_windows_count;
           source_buckets_count = target_buckets_count;
         }
@@ -753,8 +760,8 @@ namespace msm {
       P* buckets;
       // compute number of bucket modules and number of buckets in each module
       unsigned nof_bms = (bitsize + c - 1) / c;
-      unsigned msm_log_size = ceil(log2(msm_size));
-      unsigned bm_bitsize = ceil(log2(nof_bms));
+      unsigned msm_log_size = (unsigned)ceil(log2(msm_size));
+      unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms));
       unsigned nof_buckets = (nof_bms << c);
       unsigned total_nof_buckets = nof_buckets * batch_size;
       cudaMallocAsync(&buckets, sizeof(P) * total_nof_buckets, stream);

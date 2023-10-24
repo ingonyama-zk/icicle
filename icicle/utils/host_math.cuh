@@ -58,7 +58,7 @@ namespace host_math {
   {
     uint32_t result;
     uint64_t r = static_cast<uint64_t>(x) * y + z + carry;
-    carry = r >> 32;
+    carry = (uint32_t)(r >> 32);
     result = r & 0xffffffff;
     return result;
   }

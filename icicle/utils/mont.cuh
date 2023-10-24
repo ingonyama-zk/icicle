@@ -12,7 +12,7 @@ namespace mont {
 
     // TODO (DmytroTym): do valid conversion for point types too
     template <typename E>
-    int convert_montgomery(E* d_inout, size_t n, bool is_into, cudaStream_t stream)
+    int convert_montgomery(E* d_inout, int n, bool is_into, cudaStream_t stream)
     {
       // Set the grid and block dimensions
       int num_threads = MAX_THREADS_PER_BLOCK;
@@ -26,13 +26,13 @@ namespace mont {
   } // namespace
 
   template <typename E>
-  int to_montgomery(E* d_inout, unsigned n, cudaStream_t stream)
+  int to_montgomery(E* d_inout, int n, cudaStream_t stream)
   {
     return convert_montgomery(d_inout, n, true, stream);
   }
 
   template <typename E>
-  int from_montgomery(E* d_inout, unsigned n, cudaStream_t stream)
+  int from_montgomery(E* d_inout, int n, cudaStream_t stream)
   {
     return convert_montgomery(d_inout, n, false, stream);
   }

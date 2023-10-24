@@ -59,8 +59,8 @@ namespace msm {
                         *   footprint but also more parallelism and less computational complexity (up to a certain point).
                         *   Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically). */
     int bitsize;       /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a
-                        * different (better) upper bound is known, it should be reflected in this variable. Default
-                        * value: 0 (set to the bitsize of scalar field). */
+                        * different (better) upper bound is known, it should be reflected in this variable. Default value: 0
+                        * (set to the bitsize of scalar field). */
     bool big_triangle; /**< Whether to do "bucket accumulation" serially. Decreases computational complexity, but also
                         * greatly decreases parallelism, so only suitable for large batches of MSMs. Default value:
                         * false. */
