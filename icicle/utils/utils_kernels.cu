@@ -1,7 +1,7 @@
 #include "utils_kernels.cuh"
 
 namespace utils_internal {
-  //TODO: weird linking issue - only works in headers
+  // TODO: weird linking issue - only works in headers
   // template <typename E, typename S>
   // __global__ void template_normalize_kernel(E* arr, S scalar, unsigned n)
   // {
