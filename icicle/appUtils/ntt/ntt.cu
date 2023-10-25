@@ -340,10 +340,8 @@ namespace ntt {
   template <typename S>
   cudaError_t GenerateTwiddleFactors(S* d_twiddles, int n_twiddles, S omega, device_context::DeviceContext ctx)
   {
-    twiddle_factors_kernel<S><<<1, 1>>>(d_twiddles, n_twiddles, omega);
+    twiddle_factors_kernel<S><<<1, 1, 0, ctx.stream>>>(d_twiddles, n_twiddles, omega);
     cudaStreamSynchronize(ctx.stream);
-
-    CHECK_LAST_CUDA_ERROR();
     return cudaSuccess;
   }
 
