@@ -742,12 +742,10 @@ public:
     return rs;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) 
-  {
-    return xs * Field{CONFIG::montgomery_r};
-  }
+  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
 
-  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs) {
+  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
+  {
     return xs * Field{CONFIG::montgomery_r_inv};
   }
 
