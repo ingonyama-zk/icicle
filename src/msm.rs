@@ -1,6 +1,6 @@
 use std::ffi::c_uint;
 
-use crate::curve::*;
+use crate::{curve::*, cuda::*};
 
 /*
 /**
@@ -88,26 +88,6 @@ pub struct MSMConfig {
     /// Details related to the device such as its id and stream id.
     pub ctx: DeviceContext,
 }
-
-/// Properties of the device used in icicle functions.
-#[repr(C)]
-pub struct DeviceContext {
-    /// Index of the currently used GPU. Default value: 0.
-    pub device_id: usize,
-
-    /// Stream to use. Default value: 0.
-    pub stream: cudaStream_t, // Assuming the type is provided by a CUDA binding crate
-
-    /// Mempool to use. Default value: 0.
-    pub mempool: cudaMemPool_t, // Assuming the type is provided by a CUDA binding crate
-}
-
-// Assuming that the CUDA types can be defined as follows.
-// The exact type might depend on the specifics of the Rust CUDA bindings, if available.
-#[allow(non_camel_case_types)]
-pub type cudaStream_t = usize; // This might be a placeholder, check your binding crate for the exact type
-#[allow(non_camel_case_types)]
-pub type cudaMemPool_t = usize; // This might be a placeholder, check your binding crate for the exact type
 
 extern "C" {
     // #[link_name = "bn254_msm_default_cuda"]
