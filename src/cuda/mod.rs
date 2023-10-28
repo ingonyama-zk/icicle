@@ -21,14 +21,16 @@ pub struct DeviceContext {
     pub mempool: cudaMemPool_t, // Assuming the type is provided by a CUDA binding crate
 }
 
-pub struct DevicePointer<E> {  // Placeholder for a type representing a device pointer.
-    raw: *mut E
+pub struct DevicePointer<E> {
+    // Placeholder for a type representing a device pointer.
+    raw: *mut E,
 }
 
 #[allow(non_camel_case_types)]
 pub(crate) type cudaError_t = c_uint;
 
-fn get_device_context(device_id: usize) -> DeviceContext { //TODO: on cuda side
+fn get_device_context(device_id: usize) -> DeviceContext {
+    //TODO: on cuda side
     DeviceContext {
         device_id,
         stream: 0,
@@ -36,6 +38,6 @@ fn get_device_context(device_id: usize) -> DeviceContext { //TODO: on cuda side
     }
 }
 
-pub(crate) fn get_default_device_context() -> DeviceContext { 
+pub(crate) fn get_default_device_context() -> DeviceContext {
     get_device_context(0)
 }

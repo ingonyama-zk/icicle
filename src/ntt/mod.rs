@@ -1,11 +1,9 @@
-pub mod domain;
 mod config;
+pub mod domain;
 
-use crate::{curve::*, cuda::*};
+use crate::{cuda::*, curve::*};
 
 use self::config::*;
-
-
 
 extern "C" {
     #[link_name = "NTTDefaultContextCuda"]
@@ -35,7 +33,7 @@ pub(crate) fn ntt(
     config.is_output_on_device = is_output_on_device;
     config.ordering = ordering;
     config.batch_size = batch_size as i32;
-    
+
     ntt_internal(&mut config);
 }
 
@@ -181,9 +179,9 @@ pub(crate) mod tests {
         assert!(ntt_intt_result == scalars_batch);
 
         ////
-        let size = (ntt_intt_result.len() / batches) as i32;
+        let size = ntt_intt_result.len() / batches;
 
-        let mut config = get_ntt_config(&mut ntt_intt_result, size, batches);
+        let mut config = get_ntt_config_with_input(&mut ntt_intt_result, size, batches);
 
         ntt_internal(&mut config);
 
@@ -211,7 +209,7 @@ pub(crate) mod tests {
         // host - device - device - host
         let mut ntt_intt_result = scalars_batch.clone();
 
-        let mut config = get_ntt_config(&mut ntt_intt_result, size, batches);
+        let mut config = get_ntt_config_with_input(&mut ntt_intt_result, size, batches);
 
         config.is_input_on_device = false;
         config.is_output_on_device = true;
@@ -259,30 +257,6 @@ pub(crate) mod tests {
             unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
 
         assert_eq!(result_from_device, &scalars_batch);
-    }
-
-    fn get_ntt_config(ntt_intt_result: &mut [ScalarField], size: i32, batches: usize) -> NTTConfig {
-        NTTConfig {
-            inout: ntt_intt_result as *mut _ as *mut ScalarField,
-            is_input_on_device: false,
-            is_inverse: false,
-            ordering: Ordering::kNN,
-            decimation: Decimation::kDIF,
-            butterfly: Butterfly::kCooleyTukey,
-            is_coset: false,
-            coset_gen: &[ScalarField::zero()] as _, //TODO: ?
-            twiddles: 0 as *const ScalarField,      //TODO: ?,
-            inv_twiddles: 0 as *const ScalarField,  //TODO: ?,
-            size,
-            batch_size: batches as i32,
-            is_preserving_twiddles: true,
-            is_output_on_device: true,
-            ctx: DeviceContext {
-                device_id: 0,
-                stream: 0,
-                mempool: 0,
-            },
-        }
     }
 
     #[test]

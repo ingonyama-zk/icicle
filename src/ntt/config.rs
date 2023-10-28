@@ -107,7 +107,7 @@ pub(super) struct NTTConfigCuda<E, S> {
 pub(super) type ECNTTConfig = NTTConfigCuda<Point, ScalarField>;
 pub(super) type NTTConfig = NTTConfigCuda<ScalarField, ScalarField>;
 
-pub(super) fn get_ntt_config<E, S>(size: usize, root_of_unity: S, ctx: DeviceContext) -> NTTConfigCuda<E, S> {
+pub(super) fn get_ntt_config<E, S>(size: usize, _root_of_unity: S, ctx: DeviceContext) -> NTTConfigCuda<E, S> {
     //TODO: implement on CUDA side
 
     NTTConfigCuda::<E, S> {
@@ -135,7 +135,31 @@ pub(super) fn get_ntt_default_config<E: Default, S: Default>(size: usize) -> NTT
 
     let root_of_unity = S::default(); //TODO: implement on CUDA side
 
-    let mut config = get_ntt_config(size, root_of_unity, ctx);
+    let config = get_ntt_config(size, root_of_unity, ctx);
 
     config
+}
+
+pub(super) fn get_ntt_config_with_input(ntt_intt_result: &mut [ScalarField], size: usize, batches: usize) -> NTTConfig {
+    NTTConfig {
+        inout: ntt_intt_result as *mut _ as *mut ScalarField,
+        is_input_on_device: false,
+        is_inverse: false,
+        ordering: Ordering::kNN,
+        decimation: Decimation::kDIF,
+        butterfly: Butterfly::kCooleyTukey,
+        is_coset: false,
+        coset_gen: &[ScalarField::zero()] as _, //TODO: ?
+        twiddles: 0 as *const ScalarField,      //TODO: ?,
+        inv_twiddles: 0 as *const ScalarField,  //TODO: ?,
+        size: size as _,
+        batch_size: batches as i32,
+        is_preserving_twiddles: true,
+        is_output_on_device: true,
+        ctx: DeviceContext {
+            device_id: 0,
+            stream: 0,
+            mempool: 0,
+        },
+    }
 }

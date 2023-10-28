@@ -7,15 +7,15 @@ description = "An implementation of the Ingonyama CUDA Library"
 homepage = "https://www.ingonyama.com"
 repository = "https://github.com/ingonyama-zk/icicle"
 
-[[bench]]
-name = "ntt"
-path = "benches/ntt.rs"
-harness = false
+# [[bench]]
+# name = "ntt"
+# path = "benches/ntt.rs"
+# harness = false
 
-[[bench]]
-name = "msm"
-path = "benches/msm.rs"
-harness = false
+# [[bench]]
+# name = "msm"
+# path = "benches/msm.rs"
+# harness = false
 
 [dependencies] 
 hex = "*"

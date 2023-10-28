@@ -1,6 +1,6 @@
 use std::ffi::c_uint;
 
-use crate::{curve::*, cuda::*};
+use crate::{cuda::*, curve::*};
 
 /*
 /**
