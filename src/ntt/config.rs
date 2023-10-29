@@ -19,6 +19,11 @@ pub enum Ordering {
     kRN,
     kRR,
 }
+impl Default for Ordering {
+    fn default() -> Ordering {
+        Ordering::kNN
+    }
+}
 
 /**
  * @enum Decimation
@@ -142,7 +147,7 @@ pub(super) fn get_ntt_default_config<E: Default, S: Default>(size: usize) -> NTT
 
 pub(super) fn get_ntt_config_with_input(ntt_intt_result: &mut [ScalarField], size: usize, batches: usize) -> NTTConfig {
     NTTConfig {
-        inout: ntt_intt_result as *mut _ as *mut ScalarField,
+        inout: ntt_intt_result.as_mut_ptr(), 
         is_input_on_device: false,
         is_inverse: false,
         ordering: Ordering::kNN,
