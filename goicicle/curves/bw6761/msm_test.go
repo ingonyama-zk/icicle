@@ -186,7 +186,7 @@ func BenchmarkCommit(b *testing.B) {
 				goicicle.CudaMemCpyDtoH[G1ProjectivePoint](outHost, out_d, 288)
 				assert.True(b, outHost[0].IsOnCurve())
 				if e != 0 {
-					panic("Error occured")
+					panic("Error occurred")
 				}
 			}
 		})
@@ -233,7 +233,7 @@ func BenchmarkMSM(b *testing.B) {
 				_, e := Msm(out, points, scalars, 0)
 
 				if e != nil {
-					panic("Error occured")
+					panic("Error occurred")
 				}
 			}
 		})
@@ -295,7 +295,7 @@ func BenchmarkMsmG2BW6761(b *testing.B) {
 				_, e := MsmG2(out, points, scalars, 0)
 
 				if e != nil {
-					panic("Error occured")
+					panic("Error occurred")
 				}
 			}
 		})

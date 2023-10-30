@@ -179,7 +179,7 @@ func BenchmarkCommit(b *testing.B) {
 				e := Commit(out_d, scalars_d, points_d, msmSize, 10)
 
 				if e != 0 {
-					panic("Error occured")
+					panic("Error occurred")
 				}
 			}
 		})
@@ -226,7 +226,7 @@ func BenchmarkMSM(b *testing.B) {
 				_, e := Msm(out, points, scalars, 0)
 
 				if e != nil {
-					panic("Error occured")
+					panic("Error occurred")
 				}
 			}
 		})
@@ -288,7 +288,7 @@ func BenchmarkMsmG2BLS12_381(b *testing.B) {
 				_, e := MsmG2(out, points, scalars, 0)
 
 				if e != nil {
-					panic("Error occured")
+					panic("Error occurred")
 				}
 			}
 		})
