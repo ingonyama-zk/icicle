@@ -56,13 +56,13 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v3
-    - name: Download and Install Cuda
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      uses: Jimver/cuda-toolkit@v0.2.11
-      with:
-        cuda: '12.0.0'
-        method: 'network'
-        sub-packages: '["cudart", "nvcc", "thrust"]'
+    # - name: Download and Install Cuda
+    #   if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+    #   uses: Jimver/cuda-toolkit@v0.2.11
+    #   with:
+    #     cuda: '12.0.0'
+    #     method: 'network'
+    #     sub-packages: '["cudart", "nvcc", "thrust"]'
     - name: Setup cmake
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       uses: jwlawson/actions-setup-cmake@v1.13
