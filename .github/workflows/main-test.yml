@@ -54,8 +54,8 @@ jobs:
     runs-on: [self-hosted, Linux, X64, icicle]
     needs: check-changed-files
     env:
-      CMAKE=/usr/local/bin/cmake
-      CTEST=/usr/local/bin/ctest
+      CMAKE: /usr/local/bin/cmake
+      CTEST: /usr/local/bin/ctest
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v3
