@@ -1,6 +1,6 @@
 use std::ffi::c_uint;
 
-use crate::curve::*;
+use crate::{cuda::*, curve::*};
 
 /*
 /**
@@ -89,58 +89,22 @@ pub struct MSMConfig {
     pub ctx: DeviceContext,
 }
 
-/// Properties of the device used in icicle functions.
-#[repr(C)]
-pub struct DeviceContext {
-    /// Index of the currently used GPU. Default value: 0.
-    pub device_id: usize,
-
-    /// Stream to use. Default value: 0.
-    pub stream: cudaStream_t, // Assuming the type is provided by a CUDA binding crate
-
-    /// Mempool to use. Default value: 0.
-    pub mempool: cudaMemPool_t, // Assuming the type is provided by a CUDA binding crate
-}
-
-// Assuming that the CUDA types can be defined as follows.
-// The exact type might depend on the specifics of the Rust CUDA bindings, if available.
-#[allow(non_camel_case_types)]
-pub type cudaStream_t = usize; // This might be a placeholder, check your binding crate for the exact type
-#[allow(non_camel_case_types)]
-pub type cudaMemPool_t = usize; // This might be a placeholder, check your binding crate for the exact type
-
 extern "C" {
-    #[link_name = "bn254_msm_default_cuda"]
+    #[link_name = "bn254MSMCuda"]
     fn msm_cuda(
         scalars: *const ScalarField,
         points: *const PointAffineNoInfinity,
         count: usize,
-        // config: MSMConfig,
+        config: MSMConfig,
         out: *mut Point,
     ) -> c_uint;
+
+    // #[link_name = "GetDefaultMSMConfig"]
+    fn GetDefaultMSMConfig() -> MSMConfig;
 }
 
-pub fn get_default_msm_config(points_size: usize) -> MSMConfig {
-    // TODO: must be on cuda side?
-    MSMConfig {
-        are_scalars_on_device: false,
-        are_scalars_montgomery_form: false,
-        points_size,
-        precompute_factor: 1,
-        are_points_on_device: false,
-        are_points_montgomery_form: false,
-        batch_size: 1,
-        are_result_on_device: false,
-        c: 0,
-        bitsize: 0,
-        is_big_triangle: false, // TODO: rename on cuda side?
-        large_bucket_factor: 10,
-        ctx: DeviceContext {
-            device_id: 0,
-            stream: 0,
-            mempool: 0,
-        },
-    }
+pub fn get_default_msm_config() -> MSMConfig {
+    unsafe { GetDefaultMSMConfig() }
 }
 
 pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
@@ -155,7 +119,7 @@ pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
             scalars as *const _ as *const ScalarField,
             points as *const _ as *const PointAffineNoInfinity,
             points.len(),
-            // get_default_msm_config(points.len()),
+            get_default_msm_config(),
             &mut out as *mut _ as *mut Point,
         )
     };
@@ -165,7 +129,7 @@ pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bn254::{Fr, G1Projective};
+    use ark_bn254::{Fr, G1Projective, G1Affine};
     // use ark_bls12_381::{Fr, G1Projective};
     use ark_ec::msm::VariableBaseMSM;
     use ark_ff::PrimeField;
@@ -174,17 +138,19 @@ pub(crate) mod tests {
 
     use crate::{curve::*, msm::*, utils::get_rng};
 
+    const SLICE_LEN: usize = 100;
+
     pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<PointAffineNoInfinity> {
-        (0..count)
-            .map(|_| Point::from_ark(G1Projective::rand(&mut rng)).to_xy_strip_z())
-            .collect()
+        (0..SLICE_LEN)
+            .map(|_| PointAffineNoInfinity::from_ark(&G1Affine::from(G1Projective::rand(&mut rng))))
+            .collect::<Vec<_>>().into_iter().cycle().take(count).collect()
     }
 
     #[allow(dead_code)]
     pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
-        (0..count)
+        (0..SLICE_LEN)
             .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
-            .collect()
+            .collect::<Vec<_>>().into_iter().cycle().take(count).collect()
     }
 
     pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
@@ -194,9 +160,9 @@ pub(crate) mod tests {
     }
 
     #[test]
-    #[ignore = "skip"]
+    // #[ignore = "skip"]
     fn test_msm() {
-        let test_sizes = [6, 9];
+        let test_sizes = [24];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;

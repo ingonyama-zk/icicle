@@ -18,15 +18,16 @@
  * \f[
  *  MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i
  * \f]
- * where \f$ \{P_i\} \f$ are elements of a certain group, \f$ \{s_i\} \f$ are scalars and \f$ N \f$ is the number of terms.
- * In cryptographic applications, prime-order subgroups of elliptic curve groups are typically used, 
- * so we refer to group elements \f$ \{P_i\} \f$ as "points".
+ * where \f$ \{P_i\} \f$ are elements of a certain group, \f$ \{s_i\} \f$ are scalars and \f$ N \f$ is the number of
+ * terms. In cryptographic applications, prime-order subgroups of elliptic curve groups are typically used, so we refer
+ * to group elements \f$ \{P_i\} \f$ as "points".
  *
- * To solve an MSM problem, we use an algorithm called the "bucket method". For a theoretical background on this algorithm, 
- * see [this](https://www.youtube.com/watch?v=Bl5mQA7UL2I) great talk by Gus Gutoski.
+ * To solve an MSM problem, we use an algorithm called the "bucket method". For a theoretical background on this
+ * algorithm, see [this](https://www.youtube.com/watch?v=Bl5mQA7UL2I) great talk by Gus Gutoski.
  *
- * This codebase is based on and evolved from Matter Labs' 
- * [Zprize submission](https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/bellman-cuda-sys/native/msm.cu).
+ * This codebase is based on and evolved from Matter Labs'
+ * [Zprize
+ * submission](https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/bellman-cuda-sys/native/msm.cu).
  */
 namespace msm {
 
@@ -53,13 +54,19 @@ struct MSMConfig {
                                        *   Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically). */
   int bitsize;                        /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a different 
                                        *   (better) upper bound is known, it should be reflected in this variable. Default value: 0 (set to the bitsize of scalar field). */
-  bool big_triangle;                  /**< Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly 
+  bool is_big_triangle;               /**< Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly 
                                        *   decreases parallelism, so only suitable for large batches of MSMs. Default value: false. */
   int large_bucket_factor;            /**< Variable that controls how sensitive the algorithm is to the buckets that occur very frequently. 
                                        *   Useful for efficient treatment of non-uniform distributions of scalars and "top windows" with few bits.
                                        *   Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10. */
   device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 };
+
+/**
+ * A function that returns the default value of [MSMConfig](@ref MSMConfig) for the [MSM](@ref MSM) function.
+ * @return Default value of [MSMConfig](@ref MSMConfig).
+ */
+extern "C" MSMConfig DefaultMSMConfig();
 
 /**
  * A function that computes MSM: \f$ MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i \f$.

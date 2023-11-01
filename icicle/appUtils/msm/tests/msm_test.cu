@@ -6,11 +6,11 @@
 #include <iostream>
 #include <vector>
 
+#include "../../curves/curve_config.cuh"
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
 #include "../../utils/device_context.cuh"
-#include "../../curves/curve_config.cuh"
 
 class Dummy_Scalar
 {
@@ -169,9 +169,10 @@ int main()
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  device_context::DeviceContext ctx = {0,       // device_id
-                                       stream,  // stream
-                                       0,       // mempool
+  device_context::DeviceContext ctx = {
+    0,      // device_id
+    stream, // stream
+    0,      // mempool
   };
   msm::MSMConfig config = {
     false,               // scalars_on_device
@@ -197,8 +198,7 @@ int main()
   config.big_triangle = true;
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
-  msm::MSM<test_scalar, test_affine, test_projective>(
-    scalars_d, points_d, msm_size, config, large_res_d);
+  msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res_d);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   // test_reduce_single(scalars);

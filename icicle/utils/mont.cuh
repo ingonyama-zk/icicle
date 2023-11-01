@@ -4,7 +4,7 @@
 
 namespace mont {
 
-namespace {
+  namespace {
 
 #define MAX_THREADS_PER_BLOCK 256
 
@@ -23,10 +23,10 @@ int ConvertMontgomery(E* d_inout, int n, cudaStream_t stream)
   int num_blocks = (n + num_threads - 1) / num_threads;
   MontgomeryKernel<E, is_into><<<num_blocks, num_threads, 0, stream>>>(d_inout, n);
 
-  return 0; // TODO: void with propper error handling
-}
+      return 0; // TODO: void with propper error handling
+    }
 
-} // namespace
+  } // namespace
 
 template <typename E>
 int ToMontgomery(E* d_inout, int n, cudaStream_t stream)

@@ -347,7 +347,7 @@ void bucket_method_msm(
   bool are_points_on_device,
   bool are_points_montgomery_form,
   bool is_result_on_device,
-  bool big_triangle,
+  bool is_big_triangle,
   int large_bucket_factor,
   cudaStream_t stream)
 {
@@ -618,7 +618,7 @@ void bucket_method_msm(
   if (!is_result_on_device) cudaMallocAsync(&d_final_result, sizeof(P), stream);
 
   P* final_results;
-  if (big_triangle) {
+  if (is_big_triangle) {
     cudaMallocAsync(&final_results, sizeof(P) * nof_bms, stream);
     // launch the bucket module sum kernel - a thread for each bucket module
     NUM_THREADS = nof_bms;
@@ -721,7 +721,7 @@ void bucket_method_msm(
   cudaFreeAsync(max_res, stream);
   if (large_buckets_to_compute > 0 && bucket_th > 0) cudaFreeAsync(large_buckets, stream);
 
-  // cudaStreamSynchronize(stream);
+  cudaStreamSynchronize(stream);
 }
 
 // this function computes multiple msms using the bucket method
@@ -900,6 +900,30 @@ void batched_bucket_method_msm(
 
 } // namespace
 
+MSMConfig DefaultMSMConfig() {
+  device_context::DeviceContext ctx = {
+    0,                  // device_id
+    (cudaStream_t)0,    // stream
+    0,                  // mempool
+  };
+  MSMConfig config = {
+    false,              // scalars_on_device
+    false,              // scalars_montgomery_form
+    0,                  // points_size
+    1,                  // precompute_factor
+    false,              // points_on_device
+    false,              // points_montgomery_form
+    1,                  // batch_size
+    false,              // result_on_device
+    0,                  // c
+    0,                  // bitsize
+    false,              // is_big_triangle
+    10,                 // large_bucket_factor
+    ctx,                // DeviceContext
+  };
+  return config;
+}
+
 template <typename S, typename A, typename P>
 cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results)
 {
@@ -908,11 +932,20 @@ cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* result
   if (config.batch_size == 1)
     bucket_method_msm(bitsize, 16, scalars, points, msm_size, results, config.are_scalars_on_device, 
                       config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form, 
-                      config.are_results_on_device, config.big_triangle, config.large_bucket_factor, config.ctx.stream);
+                      config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.ctx.stream);
   else
     batched_bucket_method_msm(bitsize, (config.c == 0) ? get_optimal_c<S>(bitsize) : config.c, scalars, points,
                               config.batch_size, msm_size, results, config.are_scalars_on_device, config.ctx.stream);
   return cudaSuccess;
+}
+
+/**
+ * Extern version of [DefaultMSMConfig](@ref DefaultMSMConfig) function.
+ * @return Default value of [MSMConfig](@ref MSMConfig).
+ */
+extern "C" MSMConfig GetDefaultMSMConfig()
+{
+  return DefaultMSMConfig();
 }
 
 /**
