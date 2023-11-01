@@ -85,7 +85,7 @@ For convenience, we also provide rust bindings to the ICICLE library for the fol
 - Scalar Vector Multiplication
 - Point Vector Multiplication
 
-A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environement variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
+A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environment variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
 
 > NOTE: A GPU must be detectable and therefore installed if the `ARCH_TYPE` is not set.
 
@@ -176,7 +176,7 @@ Testing the new curve could be done by running the tests in ``tests_curve_name``
 
 ## Docker
 
-We offer a simple Docker container so you can simply run ICICLE without settig everything up locally.
+We offer a simple Docker container so you can simply run ICICLE without setting everything up locally.
 
 ```
 docker build -t <name_of_your_choice> .
@@ -199,7 +199,7 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 
 ### Hall of Fame
 
-- [Robik](https://github.com/robik75), for his on-going support and mentorship
+- [Robik](https://github.com/robik75), for his ongoing support and mentorship
 - [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
 
 ## Help & Support
