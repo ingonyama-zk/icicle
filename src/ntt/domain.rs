@@ -81,26 +81,42 @@ impl<E: Default, S: Default> Domain<E, S> {
 
 // Add implementations for other methods and structs as needed.
 
-impl<E: Default + 'static, S: Default +'static> Domain<E, S> {
+impl<E: Default + 'static, S: Default + 'static> Domain<E, S> {
     // ... previous methods ...
 
     // NTT methods
     pub fn ntt(&mut self, inout: &mut [E]) {
         let batch_size = 1;
-    
+
         let size = inout.len();
 
-        if size != self.config.size as _ { //TODO: test for this error
-            panic!("input lenght: {} does not match domain size: {}", size, self.config.size)
+        if size
+            != self
+                .config
+                .size as _
+        {
+            //TODO: test for this error
+            panic!(
+                "input lenght: {} does not match domain size: {}",
+                size,
+                self.config
+                    .size
+            )
         }
 
-        self.config.inout = inout.as_mut_ptr(); // as *mut _ as *mut E;
-        self.config.is_inverse = false;
-        self.config.is_input_on_device = false;
-        self.config.is_output_on_device = false;
-        self.config.ordering = Ordering::default(); //TODO: each call?
-        self.config.batch_size = batch_size as i32;
-    
+        self.config
+            .inout = inout.as_mut_ptr(); // as *mut _ as *mut E;
+        self.config
+            .is_inverse = false;
+        self.config
+            .is_input_on_device = false;
+        self.config
+            .is_output_on_device = false;
+        self.config
+            .ordering = Ordering::default(); //TODO: each call?
+        self.config
+            .batch_size = batch_size as i32;
+
         ntt_internal(&mut self.config);
     }
 

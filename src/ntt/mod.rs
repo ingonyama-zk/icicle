@@ -42,7 +42,7 @@ pub(crate) fn ntt_wip(
 pub(self) fn ntt_internal<TConfig: 'static>(config: *mut TConfig) -> u32 {
     let result_code;
     let typeid = TypeId::of::<TConfig>();
-    if  typeid == TypeId::of::<NTTConfig>() {
+    if typeid == TypeId::of::<NTTConfig>() {
         result_code = unsafe { ntt_cuda(config as _) };
     } else {
         result_code = 0; //TODO: unsafe { ecntt_cuda(config as _) };
