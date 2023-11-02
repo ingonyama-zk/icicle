@@ -1,6 +1,8 @@
 mod config;
 pub mod domain;
 
+use std::any::TypeId;
+
 use crate::{cuda::*, curve::*};
 
 use self::config::*;
@@ -10,7 +12,7 @@ extern "C" {
     fn ntt_cuda(config: *mut NTTConfig) -> cudaError_t;
 }
 
-pub(crate) fn ntt(
+pub(crate) fn ntt_wip(
     inout: &mut [ScalarField],
     is_inverse: bool,
     is_input_on_device: bool,
@@ -37,8 +39,24 @@ pub(crate) fn ntt(
     ntt_internal(&mut config);
 }
 
-pub(self) fn ntt_internal(config: *mut NTTConfig) -> u32 {
-    let result_code = unsafe { ntt_cuda(config) };
+pub(self) fn ntt_internal<TConfig: 'static>(config: *mut TConfig) -> u32 {
+    let result_code;
+    let typeid = TypeId::of::<TConfig>();
+    if typeid == TypeId::of::<NTTConfig>() {
+        result_code = unsafe { ntt_cuda(config as _) };
+    } else {
+        result_code = 0; //TODO: unsafe { ecntt_cuda(config as _) };
+    }
+
+    if result_code != 0 {
+        println!("_result_code = {}", result_code);
+    }
+
+    return result_code;
+}
+
+pub(self) fn ecntt_internal(config: *mut ECNTTConfig) -> u32 {
+    let result_code = 0; //TODO: unsafe { ecntt_cuda(config) };
     if result_code != 0 {
         println!("_result_code = {}", result_code);
     }
@@ -49,7 +67,7 @@ pub(self) fn ntt_internal(config: *mut NTTConfig) -> u32 {
 #[cfg(test)]
 pub(crate) mod tests {
 
-    use ark_bn254::Fr;
+    use ark_bn254::{Fr, G1Affine, G1Projective};
     // use ark_bls12_381::{Fr, G1Projective};
     use ark_ff::PrimeField;
     use ark_poly::EvaluationDomain;
@@ -60,7 +78,21 @@ pub(crate) mod tests {
     use rustacuda::prelude::DeviceBuffer;
     use rustacuda_core::DevicePointer;
 
+    use crate::ntt::domain::NTTDomain;
     use crate::{curve::*, ntt::*, utils::get_rng};
+
+    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<PointAffineNoInfinity> {
+        (0..count)
+            .map(|_| PointAffineNoInfinity::from_ark(&G1Affine::from(G1Projective::rand(&mut rng))))
+            .collect()
+    }
+
+    #[allow(dead_code)]
+    pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
+        (0..count)
+            .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
+            .collect()
+    }
 
     pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
         (0..count)
@@ -114,6 +146,7 @@ pub(crate) mod tests {
         let mut ntt_result = scalars_batch.clone();
 
         let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
+        let mut domain = NTTDomain::new_for_default_context(test_size);
 
         let ark_scalars_batch = scalars_batch
             .clone()
@@ -127,8 +160,8 @@ pub(crate) mod tests {
         assert_ne!(ark_ntt_result, ark_scalars_batch);
 
         // do ntt
-        ntt(&mut ntt_result, false, false, Ordering::kNN, false, batches);
-
+        // ntt_wip(&mut ntt_result, false, false, Ordering::kNN, false, batches);
+        domain.ntt(&mut ntt_result); //single ntt
         let ntt_result_as_ark = ntt_result
             .iter()
             .map(|p| Fr::new(p.to_ark()))
@@ -148,21 +181,21 @@ pub(crate) mod tests {
         // do intt
         let mut intt_result = ntt_result;
 
-        ntt(&mut intt_result, true, false, Ordering::kNN, false, batches);
+        ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
 
         assert!(ark_intt_result == ark_scalars_batch);
         assert!(intt_result == scalars_batch);
 
         let mut ntt_intt_result = intt_result;
-        ntt(&mut ntt_intt_result, false, false, Ordering::kNR, false, batches);
+        ntt_wip(&mut ntt_intt_result, false, false, Ordering::kNR, false, batches);
         assert!(ntt_intt_result != scalars_batch);
-        ntt(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
+        ntt_wip(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
         assert!(ntt_intt_result == scalars_batch);
 
         let mut ntt_intt_result = list_to_reverse_bit_order(&ntt_intt_result);
-        ntt(&mut ntt_intt_result, false, false, Ordering::kRR, false, batches);
+        ntt_wip(&mut ntt_intt_result, false, false, Ordering::kRR, false, batches);
         assert!(ntt_intt_result != scalars_batch);
-        ntt(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
+        ntt_wip(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
         assert!(ntt_intt_result == scalars_batch);
 
         ////
@@ -174,7 +207,7 @@ pub(crate) mod tests {
 
         //host
         let mut ntt_result = scalars_batch.clone();
-        ntt(&mut ntt_result, false, false, Ordering::kNR, false, batches);
+        ntt_wip(&mut ntt_result, false, false, Ordering::kNR, false, batches);
 
         let mut buff1 = DeviceBuffer::from_slice(&scalars_batch[..]).unwrap();
         let dev_ptr1 = buff1
@@ -265,7 +298,7 @@ pub(crate) mod tests {
         let mut ntt_result = scalars_batch.clone();
 
         // do batch ntt
-        ntt(&mut ntt_result, false, false, Ordering::kNN, false, batches);
+        ntt_wip(&mut ntt_result, false, false, Ordering::kNN, false, batches);
 
         let mut ntt_result_vec_of_vec = Vec::new();
 
@@ -273,7 +306,7 @@ pub(crate) mod tests {
         for i in 0..batches {
             ntt_result_vec_of_vec.push(scalar_vec_of_vec[i].clone());
 
-            ntt(&mut ntt_result_vec_of_vec[i], false, false, Ordering::kNN, false, 1);
+            ntt_wip(&mut ntt_result_vec_of_vec[i], false, false, Ordering::kNN, false, 1);
         }
 
         // check that the ntt of each vec of scalars is equal to the ntt of the specific batch
@@ -288,7 +321,7 @@ pub(crate) mod tests {
 
         // do batch intt
         // intt_batch(&mut intt_result, test_size, 0);
-        ntt(&mut intt_result, true, false, Ordering::kNN, false, batches);
+        ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
 
         let mut intt_result_vec_of_vec = Vec::new();
 
@@ -296,7 +329,7 @@ pub(crate) mod tests {
         for i in 0..batches {
             intt_result_vec_of_vec.push(ntt_result_vec_of_vec[i].clone());
             // intt(&mut intt_result_vec_of_vec[i], 0);
-            ntt(&mut intt_result_vec_of_vec[i], true, false, Ordering::kNN, false, 1);
+            ntt_wip(&mut intt_result_vec_of_vec[i], true, false, Ordering::kNN, false, 1);
         }
 
         // check that the intt of each vec of scalars is equal to the intt of the specific batch

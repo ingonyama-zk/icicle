@@ -20,6 +20,12 @@ pub enum Ordering {
     kRR,
 }
 
+impl Default for Ordering {
+    fn default() -> Ordering {
+        Ordering::kNN
+    }
+}
+
 /**
  * @enum Decimation
  * Decimation of the NTT algorithm:

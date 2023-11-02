@@ -129,7 +129,7 @@ pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bn254::{Fr, G1Projective, G1Affine};
+    use ark_bn254::{Fr, G1Affine, G1Projective};
     // use ark_bls12_381::{Fr, G1Projective};
     use ark_ec::msm::VariableBaseMSM;
     use ark_ff::PrimeField;
@@ -143,14 +143,22 @@ pub(crate) mod tests {
     pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<PointAffineNoInfinity> {
         (0..SLICE_LEN)
             .map(|_| PointAffineNoInfinity::from_ark(&G1Affine::from(G1Projective::rand(&mut rng))))
-            .collect::<Vec<_>>().into_iter().cycle().take(count).collect()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .cycle()
+            .take(count)
+            .collect()
     }
 
     #[allow(dead_code)]
     pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
         (0..SLICE_LEN)
             .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
-            .collect::<Vec<_>>().into_iter().cycle().take(count).collect()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .cycle()
+            .take(count)
+            .collect()
     }
 
     pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {

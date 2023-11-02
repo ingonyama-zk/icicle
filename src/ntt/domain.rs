@@ -1,13 +1,18 @@
-use crate::cuda::*;
+use std::default;
 
-use super::config::*;
+pub(super) type ECNTTDomain = Domain<Point, ScalarField>;
+pub(super) type NTTDomain = Domain<ScalarField, ScalarField>;
+
+use crate::{cuda::*, curve::*};
+
+use super::{config::*, ntt_internal};
 
 /// Represents the NTT domain
-pub struct Domain<E, S> {
+pub struct Domain<E: Default, S: Default> {
     config: NTTConfigCuda<E, S>,
 }
 
-impl<E, S> Domain<E, S> {
+impl<E: Default, S: Default> Domain<E, S> {
     pub fn new(size: usize, root_of_unity: S, ctx: DeviceContext) -> Self {
         Domain {
             config: get_ntt_config(size, root_of_unity, ctx),
@@ -65,17 +70,54 @@ impl<E, S> Domain<E, S> {
             Err("Output is on device.")
         }
     }
+
+    pub(crate) fn new_for_default_context(size: usize) -> Self {
+        let ctx = get_default_device_context();
+        let default_root_of_unity = S::default(); //TODO: implement
+        let domain = Domain::new(size, default_root_of_unity, ctx);
+        domain
+    }
 }
 
 // Add implementations for other methods and structs as needed.
 
-impl<E, S> Domain<E, S> {
+impl<E: Default + 'static, S: Default + 'static> Domain<E, S> {
     // ... previous methods ...
 
     // NTT methods
     pub fn ntt(&mut self, inout: &mut [E]) {
-        // Implementation for NTT
-        todo!()
+        let batch_size = 1;
+
+        let size = inout.len();
+
+        if size
+            != self
+                .config
+                .size as _
+        {
+            //TODO: test for this error
+            panic!(
+                "input lenght: {} does not match domain size: {}",
+                size,
+                self.config
+                    .size
+            )
+        }
+
+        self.config
+            .inout = inout.as_mut_ptr(); // as *mut _ as *mut E;
+        self.config
+            .is_inverse = false;
+        self.config
+            .is_input_on_device = false;
+        self.config
+            .is_output_on_device = false;
+        self.config
+            .ordering = Ordering::default(); //TODO: each call?
+        self.config
+            .batch_size = batch_size as i32;
+
+        ntt_internal(&mut self.config);
     }
 
     pub fn ntt_on_device(&mut self, inout: &mut DevicePointer<E>) {
