@@ -17,6 +17,7 @@ fn main() {
                 .define("CURVE", "bn254")
                 // .define("ECNTT_DEFINED", "") //TODO: feature
                 .define("LIBRARY_OUTPUT_DIRECTORY", &target_output_dir)
+                .define("CMAKE_BUILD_TYPE", "Release")
                 .build_target("icicle")
                 .build();
 
