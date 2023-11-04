@@ -1,15 +1,13 @@
 use std::ffi::c_uint;
 use std::marker::PhantomData;
 
+pub trait FieldConfig: PartialEq + Copy + Clone {}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
-pub struct Field<const NUM_LIMBS: usize, P> {
+pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
     limbs: [u32; NUM_LIMBS],
-    p: PhantomData<P>,
-}
-
-extern "C" {
-    fn RandomScalars(scalars: *mut ScalarField, size: c_uint);
+    p: PhantomData<F>,
 }
 
 pub(crate) fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
@@ -26,7 +24,7 @@ pub(crate) fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_
     }
 }
 
-impl<const NUM_LIMBS: usize, P> Field<NUM_LIMBS, P> {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
     pub fn get_limbs(&self) -> [u32; NUM_LIMBS] {
         self.limbs
     }
@@ -63,7 +61,15 @@ impl<const NUM_LIMBS: usize, P> Field<NUM_LIMBS, P> {
     }
 }
 
-pub const SCALAR_LIMBS: usize = 8;
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct ScalarCfg {}
 
-// TODO: `usize` is random junk, needs to be changed to some field-specific type in reality
-pub type ScalarField = Field<SCALAR_LIMBS, usize>;
+const NUM_LIMBS: usize = 8;
+
+impl FieldConfig for ScalarCfg {}
+
+pub type ScalarField = Field<NUM_LIMBS, ScalarCfg>;
+
+extern "C" {
+    fn RandomScalars(scalars: *mut ScalarField, size: c_uint);
+}

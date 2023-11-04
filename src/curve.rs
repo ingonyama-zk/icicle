@@ -5,43 +5,27 @@ use std::marker::PhantomData;
 
 use crate::field::*;
 
-pub const BASE_LIMBS: usize = 8;
-
-pub type BaseField = Field<BASE_LIMBS, u32>;
-
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct G1Projective {
-    pub x: BaseField,
-    pub y: BaseField,
-    pub z: BaseField,
+pub struct Projective<const NUM_LIMBS: usize, F: FieldConfig> {
+    pub x: Field<NUM_LIMBS, F>,
+    pub y: Field<NUM_LIMBS, F>,
+    pub z: Field<NUM_LIMBS, F>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(C)]
-pub struct G1Affine {
-    pub x: BaseField,
-    pub y: BaseField,
+pub struct Affine<const NUM_LIMBS: usize, F: FieldConfig> {
+    pub x: Field<NUM_LIMBS, F>,
+    pub y: Field<NUM_LIMBS, F>,
 }
 
-extern "C" {
-    fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
-    fn Zero(point: *mut G1Projective);
-    fn RandomPoints(points: *mut G1Projective, size: c_uint);
-}
-
-impl PartialEq for G1Projective {
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { Eq(self, other) != 0 }
-    }
-}
-
-impl G1Projective {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
     pub fn zero() -> Self {
-        G1Projective {
-            x: BaseField::zero(),
-            y: BaseField::one(),
-            z: BaseField::zero(),
+        Projective {
+            x: Field::<NUM_LIMBS, F>::zero(),
+            y: Field::<NUM_LIMBS, F>::one(),
+            z: Field::<NUM_LIMBS, F>::zero(),
         }
     }
 
@@ -50,13 +34,11 @@ impl G1Projective {
     }
 }
 
-impl G1Affine {
-    // TODO: generics
-    ///From u32 limbs x,y
+impl<const NUM_LIMBS: usize, F: FieldConfig> Affine<NUM_LIMBS, F> {
     pub fn set_limbs(x: &[u32], y: &[u32]) -> Self {
-        G1Affine {
-            x: BaseField::set_limbs(x),
-            y: BaseField::set_limbs(y),
+        Affine {
+            x: Field::<NUM_LIMBS, F>::set_limbs(x),
+            y: Field::<NUM_LIMBS, F>::set_limbs(y),
         }
     }
 
@@ -70,39 +52,63 @@ impl G1Affine {
         .concat()
     }
 
-    pub fn to_projective(&self) -> G1Projective {
-        G1Projective {
+    pub fn to_projective(&self) -> Projective<NUM_LIMBS, F> {
+        Projective {
             x: self.x,
             y: self.y,
-            z: BaseField::one(),
+            z: Field::<NUM_LIMBS, F>::one(),
         }
     }
 }
 
-impl G1Projective {
-    // TODO: generics
-
+impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
     pub fn set_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
-        G1Projective {
-            x: BaseField::set_limbs(x),
-            y: BaseField::set_limbs(y),
-            z: BaseField::set_limbs(z),
+        Projective {
+            x: Field::<NUM_LIMBS, F>::set_limbs(x),
+            y: Field::<NUM_LIMBS, F>::set_limbs(y),
+            z: Field::<NUM_LIMBS, F>::set_limbs(z),
         }
     }
 
-    pub fn from_xy_limbs(value: &[u32]) -> G1Projective {
+    pub fn from_xy_limbs(value: &[u32]) -> Self {
         let l = value.len();
         assert_eq!(l, 3 * BASE_LIMBS, "length must be 3 * {}", BASE_LIMBS);
-        G1Projective {
-            x: BaseField::set_limbs(&value[..BASE_LIMBS]),
-            y: BaseField::set_limbs(&value[BASE_LIMBS..BASE_LIMBS * 2]),
-            z: BaseField::set_limbs(&value[BASE_LIMBS * 2..]),
+        Projective {
+            x: Field::<NUM_LIMBS, F>::set_limbs(&value[..BASE_LIMBS]),
+            y: Field::<NUM_LIMBS, F>::set_limbs(&value[BASE_LIMBS..BASE_LIMBS * 2]),
+            z: Field::<NUM_LIMBS, F>::set_limbs(&value[BASE_LIMBS * 2..]),
         }
     }
 
     // pub fn to_affine(&self) -> G1Affine {
     //     G1Affine::default() //TODO:
     // }
+}
+
+pub const BASE_LIMBS: usize = 8;
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct BaseCfg {}
+
+const NUM_LIMBS: usize = 8;
+
+impl FieldConfig for BaseCfg {}
+
+pub type BaseField = Field<BASE_LIMBS, BaseCfg>;
+pub type G1Affine = Affine<BASE_LIMBS, BaseCfg>;
+pub type G1Projective = Projective<BASE_LIMBS, BaseCfg>;
+
+extern "C" {
+    fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
+    fn Zero(point: *mut G1Projective);
+    fn ToAffine(point: *const G1Projective) -> G1Affine;
+    fn RandomPoints(points: *mut G1Projective, size: c_uint);
+}
+
+impl PartialEq for G1Projective {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { Eq(self, other) != 0 }
+    }
 }
 
 #[cfg(test)]
@@ -145,7 +151,7 @@ mod tests {
     //     }
     // }
 
-    impl<P> Field<8, P> {
+    impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
         pub fn to_ark(&self) -> BigIntegerScalarArk {
             BigIntegerScalarArk::new(
                 u32_vec_to_u64_vec(&self.get_limbs())
