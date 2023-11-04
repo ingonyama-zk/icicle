@@ -1,21 +1,21 @@
 use std::default;
 
-pub(super) type ECNTTDomain = Domain<Point, ScalarField>;
+pub(super) type ECNTTDomain = Domain<G1Projective, ScalarField>;
 pub(super) type NTTDomain = Domain<ScalarField, ScalarField>;
 
-use crate::{cuda::*, curve::*};
+use crate::{cuda::*, curve::*, field::*};
 
 use super::{config::*, ntt_internal};
 
 /// Represents the NTT domain
-pub struct Domain<E: Default, S: Default> {
+pub struct Domain<E, S> {
     config: NTTConfigCuda<E, S>,
 }
 
-impl<E: Default, S: Default> Domain<E, S> {
-    pub fn new(size: usize, root_of_unity: S, ctx: DeviceContext) -> Self {
+impl<E, S> Domain<E, S> {
+    pub fn new(size: usize, ctx: DeviceContext) -> Self {
         Domain {
-            config: get_ntt_config(size, root_of_unity, ctx),
+            config: get_ntt_config(size, ctx),
         }
     }
 
@@ -73,15 +73,15 @@ impl<E: Default, S: Default> Domain<E, S> {
 
     pub(crate) fn new_for_default_context(size: usize) -> Self {
         let ctx = get_default_device_context();
-        let default_root_of_unity = S::default(); //TODO: implement
-        let domain = Domain::new(size, default_root_of_unity, ctx);
+        // let default_root_of_unity = S::default(); //TODO: implement
+        let domain = Domain::new(size, ctx);
         domain
     }
 }
 
 // Add implementations for other methods and structs as needed.
 
-impl<E: Default + 'static, S: Default + 'static> Domain<E, S> {
+impl<E: 'static, S: 'static> Domain<E, S> {
     // ... previous methods ...
 
     // NTT methods

@@ -1,6 +1,6 @@
 use std::os::raw::c_int;
 
-use crate::{cuda::*, curve::*};
+use crate::{cuda::*, curve::*, field::*};
 
 /**
  * @enum Ordering
@@ -110,10 +110,10 @@ pub(super) struct NTTConfigCuda<E, S> {
     pub(super) ctx: DeviceContext, /*< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 }
 
-pub(super) type ECNTTConfig = NTTConfigCuda<Point, ScalarField>;
+pub(super) type ECNTTConfig = NTTConfigCuda<G1Projective, ScalarField>;
 pub(super) type NTTConfig = NTTConfigCuda<ScalarField, ScalarField>;
 
-pub(super) fn get_ntt_config<E, S>(size: usize, _root_of_unity: S, ctx: DeviceContext) -> NTTConfigCuda<E, S> {
+pub(super) fn get_ntt_config<E, S>(size: usize, ctx: DeviceContext) -> NTTConfigCuda<E, S> {
     //TODO: implement on CUDA side
 
     NTTConfigCuda::<E, S> {
@@ -135,13 +135,13 @@ pub(super) fn get_ntt_config<E, S>(size: usize, _root_of_unity: S, ctx: DeviceCo
     }
 }
 
-pub(super) fn get_ntt_default_config<E: Default, S: Default>(size: usize) -> NTTConfigCuda<E, S> {
+pub(super) fn get_ntt_default_config<E, S>(size: usize) -> NTTConfigCuda<E, S> {
     //TODO: implement on CUDA side
     let ctx = get_default_device_context();
 
-    let root_of_unity = S::default(); //TODO: implement on CUDA side
+    // let root_of_unity = S::default(); //TODO: implement on CUDA side
 
-    let config = get_ntt_config(size, root_of_unity, ctx);
+    let config = get_ntt_config(size, ctx);
 
     config
 }

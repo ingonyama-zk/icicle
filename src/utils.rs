@@ -49,7 +49,7 @@ mod tests {
 
     use ark_ff::BigInteger256;
 
-    use crate::curve::ScalarField;
+    use crate::field::ScalarField;
 
     use super::*;
 
@@ -62,7 +62,7 @@ mod tests {
                 .try_into()
                 .unwrap(),
         ))
-        .limbs();
+        .get_limbs();
 
         assert_eq!(arr_u32.to_vec(), s);
 

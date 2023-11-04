@@ -1,94 +1,44 @@
 use rustacuda_core::DeviceCopy;
 use rustacuda_derive::DeviceCopy;
 use std::ffi::c_uint;
+use std::marker::PhantomData;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-#[repr(C)]
-pub struct Field<const NUM_LIMBS: usize> {
-    pub s: [u32; NUM_LIMBS],
-}
+use crate::field::*;
 
-unsafe impl<const NUM_LIMBS: usize> DeviceCopy for Field<NUM_LIMBS> {}
-
-impl<const NUM_LIMBS: usize> Default for Field<NUM_LIMBS> {
-    fn default() -> Self {
-        Field::zero()
-    }
-}
-
-impl<const NUM_LIMBS: usize> Field<NUM_LIMBS> {
-    pub fn limbs(&self) -> [u32; NUM_LIMBS] {
-        self.s
-    }
-
-    pub fn from_limbs(value: &[u32]) -> Self {
-        Self {
-            s: get_fixed_limbs(value),
-        }
-    }
-
-    pub fn zero() -> Self {
-        Field { s: [0u32; NUM_LIMBS] }
-    }
-
-    pub fn one() -> Self {
-        let mut s = [0u32; NUM_LIMBS];
-        s[0] = 1;
-        Field { s }
-    }
-
-    #[allow(dead_code)]
-    fn to_bytes_le(&self) -> Vec<u8> {
-        self.s
-            .iter()
-            .map(|s| {
-                s.to_le_bytes()
-                    .to_vec()
-            })
-            .flatten()
-            .collect::<Vec<_>>()
-    }
-}
-
-// pub const BASE_LIMBS: usize = 12; //TODO: export from CUDA
-// pub const SCALAR_LIMBS: usize = 8;
 pub const BASE_LIMBS: usize = 8;
-pub const SCALAR_LIMBS: usize = 8;
 
-pub type BaseField = Field<BASE_LIMBS>;
-pub type ScalarField = Field<SCALAR_LIMBS>;
+pub type BaseField = Field<BASE_LIMBS, u32>;
 
-fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
-    match val.len() {
-        n if n < NUM_LIMBS => {
-            let mut padded: [u32; NUM_LIMBS] = [0; NUM_LIMBS];
-            padded[..val.len()].copy_from_slice(&val);
-            padded
-        }
-        n if n == NUM_LIMBS => val
-            .try_into()
-            .unwrap(),
-        _ => panic!("slice has too many elements"),
-    }
-}
-
-#[derive(Debug, Clone, Copy, DeviceCopy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct Point {
+pub struct G1Projective {
     pub x: BaseField,
     pub y: BaseField,
     pub z: BaseField,
 }
 
-impl Default for Point {
-    fn default() -> Self {
-        Point::zero()
+#[derive(Debug, PartialEq, Clone, Copy)]
+#[repr(C)]
+pub struct G1Affine {
+    pub x: BaseField,
+    pub y: BaseField,
+}
+
+extern "C" {
+    fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
+    fn Zero(point: *mut G1Projective);
+    fn RandomPoints(points: *mut G1Projective, size: c_uint);
+}
+
+impl PartialEq for G1Projective {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { Eq(self, other) != 0 }
     }
 }
 
-impl Point {
+impl G1Projective {
     pub fn zero() -> Self {
-        Point {
+        G1Projective {
             x: BaseField::zero(),
             y: BaseField::one(),
             z: BaseField::zero(),
@@ -100,54 +50,28 @@ impl Point {
     }
 }
 
-extern "C" {
-    fn eq(point1: *const Point, point2: *const Point) -> c_uint;
-}
-
-impl PartialEq for Point {
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { eq(self, other) != 0 }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, DeviceCopy)]
-#[repr(C)]
-pub struct PointAffineNoInfinity {
-    pub x: BaseField,
-    pub y: BaseField,
-}
-
-impl Default for PointAffineNoInfinity {
-    fn default() -> Self {
-        PointAffineNoInfinity {
-            x: BaseField::zero(),
-            y: BaseField::zero(),
-        }
-    }
-}
-
-impl PointAffineNoInfinity {
+impl G1Affine {
     // TODO: generics
     ///From u32 limbs x,y
-    pub fn from_limbs(x: &[u32], y: &[u32]) -> Self {
-        PointAffineNoInfinity {
-            x: BaseField { s: get_fixed_limbs(x) },
-            y: BaseField { s: get_fixed_limbs(y) },
+    pub fn set_limbs(x: &[u32], y: &[u32]) -> Self {
+        G1Affine {
+            x: BaseField::set_limbs(x),
+            y: BaseField::set_limbs(y),
         }
     }
 
-    pub fn limbs(&self) -> Vec<u32> {
+    pub fn get_limbs(&self) -> Vec<u32> {
         [
             self.x
-                .limbs(),
+                .get_limbs(),
             self.y
-                .limbs(),
+                .get_limbs(),
         ]
         .concat()
     }
 
-    pub fn to_projective(&self) -> Point {
-        Point {
+    pub fn to_projective(&self) -> G1Projective {
+        G1Projective {
             x: self.x,
             y: self.y,
             z: BaseField::one(),
@@ -155,52 +79,40 @@ impl PointAffineNoInfinity {
     }
 }
 
-impl Point {
+impl G1Projective {
     // TODO: generics
 
-    pub fn from_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
-        Point {
-            x: BaseField { s: get_fixed_limbs(x) },
-            y: BaseField { s: get_fixed_limbs(y) },
-            z: BaseField { s: get_fixed_limbs(z) },
+    pub fn set_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
+        G1Projective {
+            x: BaseField::set_limbs(x),
+            y: BaseField::set_limbs(y),
+            z: BaseField::set_limbs(z),
         }
     }
 
-    pub fn from_xy_limbs(value: &[u32]) -> Point {
+    pub fn from_xy_limbs(value: &[u32]) -> G1Projective {
         let l = value.len();
         assert_eq!(l, 3 * BASE_LIMBS, "length must be 3 * {}", BASE_LIMBS);
-        Point {
-            x: BaseField {
-                s: value[..BASE_LIMBS]
-                    .try_into()
-                    .unwrap(),
-            },
-            y: BaseField {
-                s: value[BASE_LIMBS..BASE_LIMBS * 2]
-                    .try_into()
-                    .unwrap(),
-            },
-            z: BaseField {
-                s: value[BASE_LIMBS * 2..]
-                    .try_into()
-                    .unwrap(),
-            },
+        G1Projective {
+            x: BaseField::set_limbs(&value[..BASE_LIMBS]),
+            y: BaseField::set_limbs(&value[BASE_LIMBS..BASE_LIMBS * 2]),
+            z: BaseField::set_limbs(&value[BASE_LIMBS * 2..]),
         }
     }
 
-    pub fn to_affine(&self) -> PointAffineNoInfinity {
-        PointAffineNoInfinity::default() //TODO:
-    }
+    // pub fn to_affine(&self) -> G1Affine {
+    //     G1Affine::default() //TODO:
+    // }
 }
 
 #[cfg(test)]
 mod tests {
     use std::mem::transmute_copy;
 
-    use crate::curve::{Point, ScalarField};
+    use crate::curve::{G1Projective, ScalarField};
     use crate::utils::*;
     // use ark_bls12_381::{Fq, G1Affine, G1Projective};
-    use ark_bn254::{Fq, G1Affine, G1Projective};
+    use ark_bn254::{Fq, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
     use ark_ec::AffineCurve;
     use ark_ff::Field as ArkField;
     use ark_ff::PrimeField;
@@ -233,17 +145,17 @@ mod tests {
     //     }
     // }
 
-    impl Field<8> {
+    impl<P> Field<8, P> {
         pub fn to_ark(&self) -> BigIntegerScalarArk {
             BigIntegerScalarArk::new(
-                u32_vec_to_u64_vec(&self.limbs())
+                u32_vec_to_u64_vec(&self.get_limbs())
                     .try_into()
                     .unwrap(),
             )
         }
 
         pub fn from_ark(ark: BigIntegerScalarArk) -> Self {
-            Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
+            Self::set_limbs(&u64_vec_to_u32_vec(&ark.0))
         }
 
         pub fn to_ark_transmute(&self) -> BigIntegerScalarArk {
@@ -255,14 +167,14 @@ mod tests {
         }
     }
 
-    impl Point {
-        pub fn to_ark(&self) -> G1Projective {
+    impl G1Projective {
+        pub fn to_ark(&self) -> arkG1Projective {
             //TODO: generic conversion
             self.to_ark_affine()
                 .into_projective()
         }
 
-        pub fn to_ark_affine(&self) -> G1Affine {
+        pub fn to_ark_affine(&self) -> arkG1Affine {
             //TODO: generic conversion
             use std::ops::Mul;
             let proj_x_field = Fq::from_le_bytes_mod_order(
@@ -285,17 +197,17 @@ mod tests {
                 .unwrap();
             let aff_x = proj_x_field.mul(inverse_z);
             let aff_y = proj_y_field.mul(inverse_z);
-            G1Affine::new(aff_x, aff_y, false)
+            arkG1Affine::new(aff_x, aff_y, false)
         }
 
-        pub fn from_ark(ark: G1Projective) -> Point {
+        pub fn from_ark(ark: arkG1Projective) -> G1Projective {
             let z_inv = ark
                 .z
                 .inverse()
                 .unwrap();
             let z_invsq = z_inv * z_inv;
             let z_invq3 = z_invsq * z_inv;
-            Point {
+            G1Projective {
                 x: BaseField::from_ark((ark.x * z_invsq).into_repr()),
                 y: BaseField::from_ark((ark.y * z_invq3).into_repr()),
                 z: BaseField::one(),
@@ -303,9 +215,9 @@ mod tests {
         }
     }
 
-    impl PointAffineNoInfinity {
-        pub fn to_ark(&self) -> G1Affine {
-            G1Affine::new(
+    impl G1Affine {
+        pub fn to_ark(&self) -> arkG1Affine {
+            arkG1Affine::new(
                 Fq::new(
                     self.x
                         .to_ark(),
@@ -318,8 +230,8 @@ mod tests {
             )
         }
 
-        pub fn to_ark_repr(&self) -> G1Affine {
-            G1Affine::new(
+        pub fn to_ark_repr(&self) -> arkG1Affine {
+            arkG1Affine::new(
                 Fq::from_repr(
                     self.x
                         .to_ark(),
@@ -334,8 +246,8 @@ mod tests {
             )
         }
 
-        pub fn from_ark(p: &G1Affine) -> Self {
-            PointAffineNoInfinity {
+        pub fn from_ark(p: &arkG1Affine) -> Self {
+            G1Affine {
                 x: BaseField::from_ark(p.x.into_repr()),
                 y: BaseField::from_ark(p.y.into_repr()),
             }
@@ -345,7 +257,7 @@ mod tests {
     #[test]
     fn test_ark_scalar_convert() {
         let limbs = [0x0fffffff, 1, 0x2fffffff, 3, 0x4fffffff, 5, 0x6fffffff, 7];
-        let scalar = ScalarField::from_limbs(&limbs);
+        let scalar = ScalarField::set_limbs(&limbs);
         assert_eq!(
             scalar.to_ark(),
             scalar.to_ark_transmute(),
@@ -358,14 +270,14 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_point_equality() {
-        let left = Point::zero();
-        let right = Point::zero();
+        let left = G1Projective::zero();
+        let right = G1Projective::zero();
         assert_eq!(left, right);
-        let right = Point::from_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &[0; BASE_LIMBS]);
+        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &[0; BASE_LIMBS]);
         assert_eq!(left, right);
-        let right = Point::from_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::from_limbs(&[1]).s);
+        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &get_fixed_limbs::<BASE_LIMBS>(&[1]));
         assert_ne!(left, right);
-        let left = Point::from_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::from_limbs(&[1]).s);
+        let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &get_fixed_limbs::<BASE_LIMBS>(&[1]));
         assert_eq!(left, right);
     }
 }

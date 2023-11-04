@@ -3,7 +3,7 @@ pub mod domain;
 
 use std::any::TypeId;
 
-use crate::{cuda::*, curve::*};
+use crate::{cuda::*, curve::*, field::ScalarField};
 
 use self::config::*;
 
@@ -67,7 +67,7 @@ pub(self) fn ecntt_internal(config: *mut ECNTTConfig) -> u32 {
 #[cfg(test)]
 pub(crate) mod tests {
 
-    use ark_bn254::{Fr, G1Affine, G1Projective};
+    use ark_bn254::{Fr, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
     // use ark_bls12_381::{Fr, G1Projective};
     use ark_ff::PrimeField;
     use ark_poly::EvaluationDomain;
@@ -78,19 +78,21 @@ pub(crate) mod tests {
     use rustacuda::prelude::DeviceBuffer;
     use rustacuda_core::DevicePointer;
 
+    use std::slice;
+
     use crate::ntt::domain::NTTDomain;
     use crate::{curve::*, ntt::*, utils::get_rng};
 
-    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<PointAffineNoInfinity> {
+    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Affine> {
         (0..count)
-            .map(|_| PointAffineNoInfinity::from_ark(&G1Affine::from(G1Projective::rand(&mut rng))))
+            .map(|_| G1Affine::from_ark(&arkG1Affine::from(arkG1Projective::rand(&mut rng))))
             .collect()
     }
 
     #[allow(dead_code)]
-    pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
+    pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Projective> {
         (0..count)
-            .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
+            .map(|_| G1Projective::from_ark(arkG1Projective::rand(&mut rng)))
             .collect()
     }
 
@@ -209,22 +211,22 @@ pub(crate) mod tests {
         let mut ntt_result = scalars_batch.clone();
         ntt_wip(&mut ntt_result, false, false, Ordering::kNR, false, batches);
 
-        let mut buff1 = DeviceBuffer::from_slice(&scalars_batch[..]).unwrap();
-        let dev_ptr1 = buff1
-            .as_device_ptr()
-            .as_raw_mut();
+        // let mut buff1 = DeviceBuffer::from_slice(&scalars_batch[..]).unwrap();
+        // let dev_ptr1 = buff1
+        //     .as_device_ptr()
+        //     .as_raw_mut();
 
-        let buff_len = buff1.len();
+        // let buff_len = buff1.len();
 
-        std::mem::forget(buff1);
+        // std::mem::forget(buff1);
 
-        let buff_from_dev_ptr = unsafe { DeviceBuffer::from_raw_parts(DevicePointer::wrap(dev_ptr1), buff_len) };
-        let mut from_device = vec![ScalarField::zero(); scalars_batch.len()];
-        buff_from_dev_ptr
-            .copy_to(&mut from_device)
-            .unwrap();
+        // let buff_from_dev_ptr = unsafe { DeviceBuffer::from_raw_parts(DevicePointer::wrap(dev_ptr1), buff_len) };
+        // let mut from_device = vec![ScalarField::zero(); scalars_batch.len()];
+        // buff_from_dev_ptr
+        //     .copy_to(&mut from_device)
+        //     .unwrap();
 
-        assert_eq!(from_device, scalars_batch);
+        // assert_eq!(from_device, scalars_batch);
 
         // host - device - device - host
         let mut ntt_intt_result = scalars_batch.clone();
@@ -245,8 +247,6 @@ pub(crate) mod tests {
         config.ordering = Ordering::kNR;
 
         ntt_internal(&mut config); //inv_twiddles are preserved after first call
-
-        println!("\ntwiddles should be initialized here\n");
 
         let ntt_intt_result = &mut scalars_batch.clone()[..];
         let raw_scalars_batch_copy = ntt_intt_result as *mut _ as *mut ScalarField;

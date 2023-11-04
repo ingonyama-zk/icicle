@@ -1,6 +1,6 @@
 use std::ffi::c_uint;
 
-use crate::{cuda::*, curve::*};
+use crate::{cuda::*, curve::*, field::ScalarField};
 
 /*
 /**
@@ -93,10 +93,10 @@ extern "C" {
     #[link_name = "bn254MSMCuda"]
     fn msm_cuda(
         scalars: *const ScalarField,
-        points: *const PointAffineNoInfinity,
+        points: *const G1Affine,
         count: usize,
         config: MSMConfig,
-        out: *mut Point,
+        out: *mut G1Projective,
     ) -> c_uint;
 
     // #[link_name = "GetDefaultMSMConfig"]
@@ -107,29 +107,27 @@ pub fn get_default_msm_config() -> MSMConfig {
     unsafe { GetDefaultMSMConfig() }
 }
 
-pub fn msm(scalars: &[ScalarField], points: &[PointAffineNoInfinity]) -> Point {
+pub fn msm(scalars: &[ScalarField], points: &[G1Affine], cfg: MSMConfig, results: &mut [G1Projective]) {
     let count = points.len();
     if count != scalars.len() {
         todo!("variable length")
     }
 
-    let mut out = Point::zero();
+    let mut out = G1Projective::zero();
     unsafe {
         msm_cuda(
             scalars as *const _ as *const ScalarField,
-            points as *const _ as *const PointAffineNoInfinity,
+            points as *const _ as *const G1Affine,
             points.len(),
-            get_default_msm_config(),
-            &mut out as *mut _ as *mut Point,
+            cfg,
+            results as *mut _ as *mut G1Projective,
         )
     };
-
-    out
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bn254::{Fr, G1Affine, G1Projective};
+    use ark_bn254::{Fr, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
     // use ark_bls12_381::{Fr, G1Projective};
     use ark_ec::msm::VariableBaseMSM;
     use ark_ff::PrimeField;
@@ -140,9 +138,9 @@ pub(crate) mod tests {
 
     const SLICE_LEN: usize = 100;
 
-    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<PointAffineNoInfinity> {
+    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Affine> {
         (0..SLICE_LEN)
-            .map(|_| PointAffineNoInfinity::from_ark(&G1Affine::from(G1Projective::rand(&mut rng))))
+            .map(|_| G1Affine::from_ark(&arkG1Affine::from(arkG1Projective::rand(&mut rng))))
             .collect::<Vec<_>>()
             .into_iter()
             .cycle()
@@ -151,9 +149,9 @@ pub(crate) mod tests {
     }
 
     #[allow(dead_code)]
-    pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<Point> {
+    pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Projective> {
         (0..SLICE_LEN)
-            .map(|_| Point::from_ark(G1Projective::rand(&mut rng)))
+            .map(|_| G1Projective::from_ark(arkG1Projective::rand(&mut rng)))
             .collect::<Vec<_>>()
             .into_iter()
             .cycle()
@@ -168,7 +166,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    // #[ignore = "skip"]
     fn test_msm() {
         let test_sizes = [24];
 
@@ -178,7 +175,9 @@ pub(crate) mod tests {
             let points = generate_random_points(count, get_rng(seed));
             let scalars = generate_random_scalars(count, get_rng(seed));
 
-            let msm_result = msm(&scalars, &points);
+            let mut msm_results = [G1Projective::zero()];
+            msm(&scalars, &points, get_default_msm_config(), &mut msm_results);
+            let msm_result = msm_results[0];
 
             let point_r_ark: Vec<_> = points
                 .iter()
@@ -195,7 +194,7 @@ pub(crate) mod tests {
             assert_eq!(msm_result.to_ark(), msm_result_ark);
             assert_eq!(
                 msm_result.to_ark_affine(),
-                Point::from_ark(msm_result_ark).to_ark_affine()
+                G1Projective::from_ark(msm_result_ark).to_ark_affine()
             );
         }
     }
