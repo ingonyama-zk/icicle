@@ -172,4 +172,14 @@ public:
     SCALAR_FF rand_scalar = SCALAR_FF::rand_host();
     return rand_scalar * generator();
   }
+
+  static void RandHostMany(Projective* out, int size) {
+    for (int i = 0; i < size; i++)
+      out[i] = (i % size < 100) ? rand_host() : out[i - 100];
+  }
+
+  static void RandHostManyAffine(Affine<FF>* out, int size) {
+    for (int i = 0; i < size; i++)
+      out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];
+  }
 };

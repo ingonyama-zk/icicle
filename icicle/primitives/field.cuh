@@ -699,6 +699,11 @@ public:
     return value;
   }
 
+  static void RandHostMany(Field* out, int size) {
+    for (int i = 0; i < size; i++)
+      out[i] = rand_host();
+  }
+
   template <unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE Field sub_modulus(const Field& xs)
   {

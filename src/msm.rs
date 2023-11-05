@@ -134,36 +134,7 @@ pub(crate) mod tests {
     use ark_std::UniformRand;
     use rand::RngCore;
 
-    use crate::{curve::*, msm::*, utils::get_rng};
-
-    const SLICE_LEN: usize = 100;
-
-    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Affine> {
-        (0..SLICE_LEN)
-            .map(|_| G1Affine::from_ark(&arkG1Affine::from(arkG1Projective::rand(&mut rng))))
-            .collect::<Vec<_>>()
-            .into_iter()
-            .cycle()
-            .take(count)
-            .collect()
-    }
-
-    #[allow(dead_code)]
-    pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Projective> {
-        (0..SLICE_LEN)
-            .map(|_| G1Projective::from_ark(arkG1Projective::rand(&mut rng)))
-            .collect::<Vec<_>>()
-            .into_iter()
-            .cycle()
-            .take(count)
-            .collect()
-    }
-
-    pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
-        (0..count)
-            .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
-            .collect()
-    }
+    use crate::{field::*, curve::*, msm::*, utils::get_rng};
 
     #[test]
     fn test_msm() {
@@ -171,9 +142,8 @@ pub(crate) mod tests {
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
-            let seed = None; // set Some to provide seed
-            let points = generate_random_points(count, get_rng(seed));
-            let scalars = generate_random_scalars(count, get_rng(seed));
+            let points = generate_random_affine_points(count);
+            let scalars = generate_random_scalars(count);
 
             let mut msm_results = [G1Projective::zero()];
             msm(&scalars, &points, get_default_msm_config(), &mut msm_results);

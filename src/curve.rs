@@ -1,5 +1,3 @@
-use rustacuda_core::DeviceCopy;
-use rustacuda_derive::DeviceCopy;
 use std::ffi::c_uint;
 use std::marker::PhantomData;
 
@@ -20,36 +18,21 @@ pub struct Affine<const NUM_LIMBS: usize, F: FieldConfig> {
     pub y: Field<NUM_LIMBS, F>,
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Affine<NUM_LIMBS, F> {
+    // While this is not a true zero point and not even a valid point on all known curves,
+    // it's still useful both as a handy default as well as a representation of zero points in other codebases
     pub fn zero() -> Self {
-        Projective {
+        Affine {
             x: Field::<NUM_LIMBS, F>::zero(),
-            y: Field::<NUM_LIMBS, F>::one(),
-            z: Field::<NUM_LIMBS, F>::zero(),
+            y: Field::<NUM_LIMBS, F>::zero(),
         }
     }
 
-    pub fn infinity() -> Self {
-        Self::zero()
-    }
-}
-
-impl<const NUM_LIMBS: usize, F: FieldConfig> Affine<NUM_LIMBS, F> {
     pub fn set_limbs(x: &[u32], y: &[u32]) -> Self {
         Affine {
             x: Field::<NUM_LIMBS, F>::set_limbs(x),
             y: Field::<NUM_LIMBS, F>::set_limbs(y),
         }
-    }
-
-    pub fn get_limbs(&self) -> Vec<u32> {
-        [
-            self.x
-                .get_limbs(),
-            self.y
-                .get_limbs(),
-        ]
-        .concat()
     }
 
     pub fn to_projective(&self) -> Projective<NUM_LIMBS, F> {
@@ -61,7 +44,25 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Affine<NUM_LIMBS, F> {
     }
 }
 
+impl<const NUM_LIMBS: usize, F: FieldConfig> From<Affine<NUM_LIMBS, F>> for Projective<NUM_LIMBS, F> {
+    fn from(item: Affine<NUM_LIMBS, F>) -> Self {
+        Self {
+            x: item.x,
+            y: item.y,
+            z: Field::<NUM_LIMBS, F>::one(),
+        }
+    }
+}
+
 impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
+    pub fn zero() -> Self {
+        Projective {
+            x: Field::<NUM_LIMBS, F>::zero(),
+            y: Field::<NUM_LIMBS, F>::one(),
+            z: Field::<NUM_LIMBS, F>::zero(),
+        }
+    }
+
     pub fn set_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
         Projective {
             x: Field::<NUM_LIMBS, F>::set_limbs(x),
@@ -69,28 +70,12 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
             z: Field::<NUM_LIMBS, F>::set_limbs(z),
         }
     }
-
-    pub fn from_xy_limbs(value: &[u32]) -> Self {
-        let l = value.len();
-        assert_eq!(l, 3 * BASE_LIMBS, "length must be 3 * {}", BASE_LIMBS);
-        Projective {
-            x: Field::<NUM_LIMBS, F>::set_limbs(&value[..BASE_LIMBS]),
-            y: Field::<NUM_LIMBS, F>::set_limbs(&value[BASE_LIMBS..BASE_LIMBS * 2]),
-            z: Field::<NUM_LIMBS, F>::set_limbs(&value[BASE_LIMBS * 2..]),
-        }
-    }
-
-    // pub fn to_affine(&self) -> G1Affine {
-    //     G1Affine::default() //TODO:
-    // }
 }
 
 pub const BASE_LIMBS: usize = 8;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct BaseCfg {}
-
-const NUM_LIMBS: usize = 8;
 
 impl FieldConfig for BaseCfg {}
 
@@ -100,15 +85,33 @@ pub type G1Projective = Projective<BASE_LIMBS, BaseCfg>;
 
 extern "C" {
     fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
-    fn Zero(point: *mut G1Projective);
     fn ToAffine(point: *const G1Projective) -> G1Affine;
-    fn RandomPoints(points: *mut G1Projective, size: c_uint);
+    fn GenerateProjectivePoints(points: *mut G1Projective, size: usize);
+    fn GenerateAffinePoints(points: *mut G1Affine, size: usize);
 }
 
 impl PartialEq for G1Projective {
     fn eq(&self, other: &Self) -> bool {
         unsafe { Eq(self, other) != 0 }
     }
+}
+
+impl From<G1Projective> for G1Affine {
+    fn from(item: G1Projective) -> Self {
+        unsafe { ToAffine(&item) }
+    }
+}
+
+pub(crate) fn generate_random_projective_points(size: usize) -> Vec<G1Projective> {
+    let mut res = vec![G1Projective::zero(); size];
+    unsafe { GenerateProjectivePoints(&mut res[..] as *mut _ as *mut G1Projective, size) };
+    res
+}
+
+pub(crate) fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
+    let mut res = vec![G1Affine::zero(); size];
+    unsafe { GenerateAffinePoints(&mut res[..] as *mut _ as *mut G1Affine, size) };
+    res
 }
 
 #[cfg(test)]
@@ -123,6 +126,8 @@ mod tests {
     use ark_ff::Field as ArkField;
     use ark_ff::PrimeField;
     use ark_ff::{BigInteger256, BigInteger384};
+    use rustacuda_core::DeviceCopy;
+    use rustacuda_derive::DeviceCopy;
 
     use super::*;
 

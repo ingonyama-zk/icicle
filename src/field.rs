@@ -64,12 +64,18 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ScalarCfg {}
 
-const NUM_LIMBS: usize = 8;
+const SCALAR_LIMBS: usize = 8;
 
 impl FieldConfig for ScalarCfg {}
 
-pub type ScalarField = Field<NUM_LIMBS, ScalarCfg>;
+pub type ScalarField = Field<SCALAR_LIMBS, ScalarCfg>;
 
 extern "C" {
-    fn RandomScalars(scalars: *mut ScalarField, size: c_uint);
+    fn GenerateScalars(scalars: *mut ScalarField, size: usize);
+}
+
+pub(crate) fn generate_random_scalars(size: usize) -> Vec<ScalarField> {
+    let mut res = vec![ScalarField::zero(); size];
+    unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut ScalarField, size) };
+    res
 }

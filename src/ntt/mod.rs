@@ -74,33 +74,10 @@ pub(crate) mod tests {
     use ark_poly::GeneralEvaluationDomain;
     use ark_std::UniformRand;
     use rand::RngCore;
-    use rustacuda::prelude::CopyDestination;
-    use rustacuda::prelude::DeviceBuffer;
-    use rustacuda_core::DevicePointer;
-
     use std::slice;
 
     use crate::ntt::domain::NTTDomain;
-    use crate::{curve::*, ntt::*, utils::get_rng};
-
-    pub fn generate_random_points(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Affine> {
-        (0..count)
-            .map(|_| G1Affine::from_ark(&arkG1Affine::from(arkG1Projective::rand(&mut rng))))
-            .collect()
-    }
-
-    #[allow(dead_code)]
-    pub fn generate_random_points_proj(count: usize, mut rng: Box<dyn RngCore>) -> Vec<G1Projective> {
-        (0..count)
-            .map(|_| G1Projective::from_ark(arkG1Projective::rand(&mut rng)))
-            .collect()
-    }
-
-    pub fn generate_random_scalars(count: usize, mut rng: Box<dyn RngCore>) -> Vec<ScalarField> {
-        (0..count)
-            .map(|_| ScalarField::from_ark(Fr::rand(&mut rng).into_repr()))
-            .collect()
-    }
+    use crate::{field::*, curve::*, ntt::*, utils::get_rng};
 
     pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
         fn is_power_of_two(n: u32) -> bool {
@@ -126,12 +103,11 @@ pub(crate) mod tests {
     #[test]
     fn test_ntt() {
         //NTT
-        let seed = None; //some value to fix the rng
         let test_size = 1 << 11;
         let batches = 1;
 
         let full_test_size = test_size * batches;
-        let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size, get_rng(seed));
+        let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size);
 
         // let scalars_batch: Vec<ScalarField> = (0..full_test_size)
         //     .into_iter()
@@ -282,12 +258,11 @@ pub(crate) mod tests {
     #[test]
     fn test_batch_ntt() {
         //NTT
-        let seed = None; //some value to fix the rng
         let test_size = 1 << 11;
         let batches = 2;
 
         let full_test_size = test_size * batches;
-        let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size, get_rng(seed));
+        let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size);
 
         let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
 

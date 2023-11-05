@@ -130,13 +130,9 @@ int main()
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];
 
-  for (unsigned i = 0; i < N; i++) {
-    // scalars[i] = (i%msm_size < 10)? test_scalar::rand_host() : scalars[i-10];
-    points[i] = (i % msm_size < 100) ? test_projective::to_affine(test_projective::rand_host()) : points[i - 100];
-    scalars[i] = test_scalar::rand_host();
-    // scalars[i] = i < N/2? test_scalar::rand_host() : test_scalar::one();
-    // points[i] = test_projective::to_affine(test_projective::rand_host());
-  }
+  test_scalar::RandHostMany(scalars, N);
+  test_projective::RandHostManyAffine(points, N);
+
   std::cout << "finished generating" << std::endl;
 
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
@@ -194,8 +190,8 @@ int main()
   msm::MSM<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res);
   auto end1 = std::chrono::high_resolution_clock::now();
   auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
-  printf("Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
-  config.big_triangle = true;
+  printf("No Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
+  config.is_big_triangle = true;
   // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
   msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res_d);
@@ -205,7 +201,7 @@ int main()
   // test_reduce_var(scalars);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
-  printf("On Device No Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
+  printf("Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
   cudaStreamSynchronize(stream);
   cudaStreamDestroy(stream);
 

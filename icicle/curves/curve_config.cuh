@@ -25,11 +25,10 @@ using namespace bls12_377;
 
 namespace curve_config {
 
-  typedef Field<fp_config> scalar_field_t;
-  typedef scalar_field_t scalar_t;
+  typedef Field<fp_config> scalar_t;
   typedef Field<fq_config> point_field_t;
   static constexpr point_field_t b = point_field_t{weierstrass_b};
-  typedef Projective<point_field_t, scalar_field_t, b> projective_t;
+  typedef Projective<point_field_t, scalar_t, b> projective_t;
   typedef Affine<point_field_t> affine_t;
 
 #if defined(G2_DEFINED)
