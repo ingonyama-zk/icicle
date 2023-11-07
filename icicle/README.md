@@ -74,7 +74,7 @@ If the `update-alternatives` settings are broken, you can try to fix them with t
 
 If you encounter the error, check if the `$CUDA_HOME/bin/crt/link.stub` file is available.
 
-Othrewise create a symlink. For example, if the CUDA toolkit is installed with apt-get to the default path, you can create a symlink with the following command:
+Otherwise create a symlink. For example, if the CUDA toolkit is installed with apt-get to the default path, you can create a symlink with the following command:
 
 `ln -sf /usr/local/cuda-12.1/bin/crt/link.stub /usr/lib/nvidia-cuda-toolkit/bin/crt/link.stub`
 

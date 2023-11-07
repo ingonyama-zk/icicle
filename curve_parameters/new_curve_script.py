@@ -17,7 +17,7 @@ def to_hex(val: int, length):
     n = 8
     chunks = [x[i:i+n] for i in range(0, len(x), n)][::-1]
     s = ""
-    for c in chunks:
+    for c in chunks[:length // n]:
         s += f'0x{c}, '
         
     return s[:-2]
@@ -30,15 +30,15 @@ def compute_values(modulus, modulus_bit_count, limbs):
     modulus_2 = to_hex(modulus*2,limb_size)
     modulus_4 = to_hex(modulus*4,limb_size)
     modulus_wide = to_hex(modulus,limb_size*2)
-    modulus_squared = to_hex(modulus*modulus,limb_size)
-    modulus_squared_2 = to_hex(modulus*modulus*2,limb_size)
-    modulus_squared_4 = to_hex(modulus*modulus*4,limb_size)
+    modulus_squared = to_hex(modulus*modulus,limb_size*2)
+    modulus_squared_2 = to_hex(modulus*modulus*2,limb_size*2)
+    modulus_squared_4 = to_hex(modulus*modulus*4,limb_size*2)
     m_raw = int(math.floor(int(pow(2,2*modulus_bit_count) // modulus)))
     m = to_hex(m_raw,limb_size)
     one = to_hex(1,limb_size)
     zero = to_hex(0,limb_size)
-    montgomery_r = to_hex((2 ** bit_size) % modulus, limb_size)
-    montgomery_r_inv = to_hex(((modulus+1)//2)**bit_size % modulus, limb_size)
+    montgomery_r = to_hex(pow(2,bit_size,modulus),limb_size)
+    montgomery_r_inv = to_hex(pow(2,-bit_size,modulus),limb_size)
 
     return (
         modulus_,
@@ -56,7 +56,7 @@ def compute_values(modulus, modulus_bit_count, limbs):
     )
 
 
-def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_x_re, g2_gen_x_im, g2_gen_y_re, g2_gen_y_im):
+def get_fq_params(modulus, modulus_bit_count, limbs, nonresidue):
     (
         modulus,
         modulus_2,
@@ -73,6 +73,8 @@ def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_
     ) = compute_values(modulus, modulus_bit_count, limbs)
 
     limb_size = 8*limbs
+    nonresidue_is_negative = str(nonresidue < 0).lower()
+    nonresidue = abs(nonresidue)
     return {
         'fq_modulus': modulus,
         'fq_modulus_2': modulus_2,
@@ -86,12 +88,8 @@ def get_fq_params(modulus, modulus_bit_count, limbs, g1_gen_x, g1_gen_y, g2_gen_
         'fq_zero': zero,
         'fq_montgomery_r': montgomery_r,
         'fq_montgomery_r_inv': montgomery_r_inv,
-        'fq_gen_x': to_hex(g1_gen_x, limb_size),
-        'fq_gen_y': to_hex(g1_gen_y, limb_size),
-        'fq_gen_x_re': to_hex(g2_gen_x_re, limb_size),
-        'fq_gen_x_im': to_hex(g2_gen_x_im, limb_size),
-        'fq_gen_y_re': to_hex(g2_gen_y_re, limb_size),
-        'fq_gen_y_im': to_hex(g2_gen_y_im, limb_size)
+        'nonresidue': nonresidue,
+        'nonresidue_is_negative': nonresidue_is_negative
     }
 
 
@@ -151,6 +149,18 @@ def get_fp_params(modulus, modulus_bit_count, limbs, root_of_unity, size=0):
     }
 
 
+def get_generators(g1_gen_x, g1_gen_y, g2_gen_x_re, g2_gen_x_im, g2_gen_y_re, g2_gen_y_im, size):
+
+    return {
+        'fq_gen_x': to_hex(g1_gen_x, size),
+        'fq_gen_y': to_hex(g1_gen_y, size),
+        'fq_gen_x_re': to_hex(g2_gen_x_re, size),
+        'fq_gen_x_im': to_hex(g2_gen_x_im, size),
+        'fq_gen_y_re': to_hex(g2_gen_y_re, size),
+        'fq_gen_y_im': to_hex(g2_gen_y_im, size)
+    }
+
+
 def get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, size):
     
     return {
@@ -171,6 +181,7 @@ def get_params(config):
     bit_count_q = config["bit_count_q"] 
     limb_q = config["limb_q"]
     root_of_unity = config["root_of_unity"]
+    nonresidue = config["nonresidue"]
     if root_of_unity == modulus_p:
         sys.exit("Invalid root_of_unity value; please update in curve parameters")
 
@@ -194,13 +205,15 @@ def get_params(config):
     }
     
     fp_params = get_fp_params(modulus_p, bit_count_p, limb_p, root_of_unity, ntt_size)
-    fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, g1_gen_x, g1_gen_y, g2_generator_x_re, g2_generator_x_im, g2_generator_y_re, g2_generator_y_im)
+    fq_params = get_fq_params(modulus_q, bit_count_q, limb_q, nonresidue)
+    generators = get_generators(g1_gen_x, g1_gen_y, g2_generator_x_re, g2_generator_x_im, g2_generator_y_re, g2_generator_y_im, 8*limb_q)
     weier_params = get_weier_params(weierstrass_b, weierstrass_b_g2_re, weierstrass_b_g2_im, 8*limb_q)
 
     return {
         **params,
         **fp_params,
         **fq_params,
+        **generators,
         **weier_params
     }
 

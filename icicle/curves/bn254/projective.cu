@@ -42,10 +42,10 @@ extern "C" int projective_from_affine_bn254(BN254::projective_t* out, BN254::aff
   }
 }
 
-extern "C" int random_scalar_bn254(BN254::scalar_field_t* out)
+extern "C" int random_scalar_bn254(BN254::scalar_t* out)
 {
   try {
-    out[0] = BN254::scalar_field_t::rand_host();
+    out[0] = BN254::scalar_t::rand_host();
     return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());

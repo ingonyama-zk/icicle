@@ -995,7 +995,7 @@ void batched_large_msm(
   S* scalars, A* points, unsigned batch_size, unsigned msm_size, P* result, bool on_device, cudaStream_t stream)
 {
   unsigned c = get_optimal_c(msm_size);
-  unsigned bitsize = 255;
+  unsigned bitsize = S::NBITS;
   batched_bucket_method_msm(bitsize, c, scalars, points, batch_size, msm_size, result, on_device, stream);
 }
 #endif

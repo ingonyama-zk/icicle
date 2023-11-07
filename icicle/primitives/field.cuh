@@ -34,10 +34,6 @@ public:
     return Field{scalar};
   }
 
-  static constexpr HOST_DEVICE_INLINE Field generator_x() { return Field{CONFIG::g1_gen_x}; }
-
-  static constexpr HOST_DEVICE_INLINE Field generator_y() { return Field{CONFIG::g1_gen_y}; }
-
   static HOST_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
@@ -68,10 +64,6 @@ public:
   }
 
   static constexpr HOST_DEVICE_INLINE Field modulus() { return Field{CONFIG::modulus}; }
-
-  static constexpr HOST_DEVICE_INLINE Field montgomery_r() { return Field{CONFIG::montgomery_r}; }
-
-  static constexpr HOST_DEVICE_INLINE Field montgomery_r_inv() { return Field{CONFIG::montgomery_r_inv}; }
 
   // private:
   typedef storage<TLC> ff_storage;
@@ -718,7 +710,7 @@ public:
     hex_string << std::hex << std::setfill('0');
 
     for (int i = 0; i < TLC; i++) {
-      hex_string << std::setw(8) << xs.limbs_storage.limbs[i];
+      hex_string << std::setw(8) << xs.limbs_storage.limbs[TLC - i - 1];
     }
 
     os << "0x" << hex_string.str();
@@ -748,6 +740,13 @@ public:
     Wide rs = {};
     multiply_raw(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
     return rs;
+  }
+
+  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
+
+  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
+  {
+    return xs * Field{CONFIG::montgomery_r_inv};
   }
 
   static constexpr DEVICE_INLINE uint32_t

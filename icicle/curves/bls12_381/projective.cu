@@ -42,10 +42,10 @@ extern "C" int projective_from_affine_bls12_381(BLS12_381::projective_t* out, BL
   }
 }
 
-extern "C" int random_scalar_bls12_381(BLS12_381::scalar_field_t* out)
+extern "C" int random_scalar_bls12_381(BLS12_381::scalar_t* out)
 {
   try {
-    out[0] = BLS12_381::scalar_field_t::rand_host();
+    out[0] = BLS12_381::scalar_t::rand_host();
     return CUDA_SUCCESS;
   } catch (const std::runtime_error& ex) {
     printf("error %s", ex.what());

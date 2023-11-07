@@ -84,17 +84,6 @@ func (f *G2Element) ToBytesLe() []byte {
 	return bytes
 }
 
-func (p *G2PointAffine) ToProjective() G2Point {
-	return G2Point{
-		X: p.X,
-		Y: p.Y,
-		Z: ExtentionField{
-			A0: G2Element{1, 0, 0, 0},
-			A1: G2Element{0, 0, 0, 0},
-		},
-	}
-}
-
 func (p *G2PointAffine) FromProjective(projective *G2Point) *G2PointAffine {
 	out := (*C.BLS12_381_g2_affine_t)(unsafe.Pointer(p))
 	in := (*C.BLS12_381_g2_projective_t)(unsafe.Pointer(projective))
