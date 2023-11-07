@@ -3,9 +3,11 @@ pub mod domain;
 
 use std::any::TypeId;
 
-use crate::{cuda::*, curve::*, field::ScalarField};
+use crate::{curve::*, field::ScalarField};
 
 use self::config::*;
+
+use icicle_cuda_runtime::cudaError_t;
 
 extern "C" {
     #[link_name = "NTTDefaultContextCuda"]
@@ -77,7 +79,7 @@ pub(crate) mod tests {
     use std::slice;
 
     use crate::ntt::domain::NTTDomain;
-    use crate::{field::*, curve::*, ntt::*, utils::get_rng};
+    use crate::{curve::*, field::*, ntt::*, utils::get_rng};
 
     pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
         fn is_power_of_two(n: u32) -> bool {

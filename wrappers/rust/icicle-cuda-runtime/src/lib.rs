@@ -3,9 +3,9 @@ use std::ffi::c_uint;
 // Assuming that the CUDA types can be defined as follows.
 // The exact type might depend on the specifics of the Rust CUDA bindings, if available.
 #[allow(non_camel_case_types)]
-pub(crate) type cudaStream_t = usize; // This might be a placeholder, check your binding crate for the exact type
+pub type cudaStream_t = usize; // This might be a placeholder, check your binding crate for the exact type
 #[allow(non_camel_case_types)]
-pub(crate) type cudaMemPool_t = usize; // This might be a placeholder, check your binding crate for the exact type
+pub type cudaMemPool_t = usize; // This might be a placeholder, check your binding crate for the exact type
 
 /// Properties of the device used in icicle functions.
 #[repr(C)]
@@ -27,7 +27,7 @@ pub struct DevicePointer<E> {
 }
 
 #[allow(non_camel_case_types)]
-pub(crate) type cudaError_t = c_uint;
+pub type cudaError_t = c_uint;
 
 fn get_device_context(device_id: usize) -> DeviceContext {
     //TODO: on cuda side
@@ -38,6 +38,6 @@ fn get_device_context(device_id: usize) -> DeviceContext {
     }
 }
 
-pub(crate) fn get_default_device_context() -> DeviceContext {
+pub fn get_default_device_context() -> DeviceContext {
     get_device_context(0)
 }

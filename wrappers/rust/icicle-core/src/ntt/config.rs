@@ -1,6 +1,7 @@
 use std::os::raw::c_int;
+use icicle_cuda_runtime::{DevicePointer, DeviceContext, get_default_device_context};
 
-use crate::{cuda::*, curve::*, field::*};
+use crate::{curve::*, field::*};
 
 /**
  * @enum Ordering

@@ -1,5 +1,5 @@
 [package]
-name = "icicle"
+name = "icicle-core"
 version = "0.1.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
@@ -20,13 +20,11 @@ repository = "https://github.com/ingonyama-zk/icicle"
 [dependencies] 
 hex = "*"
 
+icicle-cuda-runtime = { path = "../icicle-cuda-runtime" }
+
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_cbor = "0.11.2"
-
-rustacuda = "0.1"
-rustacuda_core = "0.1"
-rustacuda_derive = "0.1"
 
 [build-dependencies]
 # cc = { version = "1.0", features = ["parallel"] }
@@ -44,7 +42,10 @@ ark-ec = { version = "0.3.0", features = [ "parallel" ] }
 ark-bls12-381 = "0.3.0"
 ark-bls12-377 = "0.3.0"
 ark-bn254 = "0.3.0"
-rustacuda = "*"
+
+rustacuda = "0.1"
+rustacuda_core = "0.1"
+rustacuda_derive = "0.1"
 
 "criterion" = "*"
 

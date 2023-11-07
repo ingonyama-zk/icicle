@@ -1,4 +1,4 @@
-pub fn from_limbs<T>(limbs: Vec<u32>, chunk_size: usize, f: fn(&[u32]) -> T) -> Vec<T> {
+pub(crate) fn from_limbs<T>(limbs: Vec<u32>, chunk_size: usize, f: fn(&[u32]) -> T) -> Vec<T> {
     let points = limbs
         .chunks(chunk_size)
         .map(|lmbs| f(lmbs))
@@ -6,7 +6,7 @@ pub fn from_limbs<T>(limbs: Vec<u32>, chunk_size: usize, f: fn(&[u32]) -> T) -> 
     points
 }
 
-pub fn u32_vec_to_u64_vec(arr_u32: &[u32]) -> Vec<u64> {
+pub(crate) fn u32_vec_to_u64_vec(arr_u32: &[u32]) -> Vec<u64> {
     let len = (arr_u32.len() / 2) as usize;
     let mut arr_u64 = vec![0u64; len];
 
@@ -17,7 +17,7 @@ pub fn u32_vec_to_u64_vec(arr_u32: &[u32]) -> Vec<u64> {
     arr_u64
 }
 
-pub fn u64_vec_to_u32_vec(arr_u64: &[u64]) -> Vec<u32> {
+pub(crate) fn u64_vec_to_u32_vec(arr_u64: &[u64]) -> Vec<u32> {
     let len = arr_u64.len() * 2;
     let mut arr_u32 = vec![0u32; len];
 

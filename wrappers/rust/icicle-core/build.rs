@@ -9,7 +9,7 @@ fn main() {
     let cargo_dir = var("CARGO_MANIFEST_DIR").unwrap();
     let profile = var("PROFILE").unwrap();
 
-    let target_output_dir = format!("{}/target/{}", cargo_dir, profile);
+    let target_output_dir = format!("{}/../target/{}", cargo_dir, profile);
 
     Config::new("./icicle")
                 .define("BUILD_TESTS", "OFF") //TODO: feature

@@ -1,4 +1,3 @@
-use std::ffi::c_uint;
 use std::marker::PhantomData;
 
 pub trait FieldConfig: PartialEq + Copy + Clone {}
@@ -64,9 +63,9 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ScalarCfg {}
 
-const SCALAR_LIMBS: usize = 8;
-
 impl FieldConfig for ScalarCfg {}
+
+const SCALAR_LIMBS: usize = 8;
 
 pub type ScalarField = Field<SCALAR_LIMBS, ScalarCfg>;
 
@@ -78,4 +77,60 @@ pub(crate) fn generate_random_scalars(size: usize) -> Vec<ScalarField> {
     let mut res = vec![ScalarField::zero(); size];
     unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut ScalarField, size) };
     res
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use crate::field::{generate_random_scalars, Field, FieldConfig, ScalarField};
+    use crate::utils::{u32_vec_to_u64_vec, u64_vec_to_u32_vec};
+    use ark_ff::BigInteger256;
+    use std::mem::transmute_copy;
+
+    type BigIntegerArk = BigInteger256;
+
+    impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
+        pub fn to_ark(&self) -> BigIntegerArk {
+            BigIntegerArk::new(
+                u32_vec_to_u64_vec(&self.get_limbs())
+                    .try_into()
+                    .unwrap(),
+            )
+        }
+
+        pub fn from_ark(ark: BigIntegerArk) -> Self {
+            Self::set_limbs(&u64_vec_to_u32_vec(&ark.0))
+        }
+
+        pub fn to_ark_transmute(&self) -> BigIntegerArk {
+            unsafe { transmute_copy(self) }
+        }
+
+        pub fn from_ark_transmute(v: BigIntegerArk) -> Self {
+            unsafe { transmute_copy(&v) }
+        }
+    }
+
+    #[test]
+    fn test_scalar_equality() {
+        let left = ScalarField::zero();
+        let right = ScalarField::one();
+        assert_ne!(left, right);
+        let left = ScalarField::set_limbs(&[1]);
+        assert_eq!(left, right);
+    }
+
+    #[test]
+    fn test_ark_scalar_convert() {
+        let size = 1 << 10;
+        let scalars = generate_random_scalars(size);
+        for scalar in scalars {
+            assert_eq!(
+                scalar.to_ark(),
+                scalar.to_ark_transmute(),
+                "{:08X?} {:08X?}",
+                scalar.to_ark(),
+                scalar.to_ark_transmute()
+            )
+        }
+    }
 }

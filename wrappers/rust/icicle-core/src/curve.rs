@@ -1,7 +1,5 @@
+use crate::field::{Field, FieldConfig};
 use std::ffi::c_uint;
-use std::marker::PhantomData;
-
-use crate::field::*;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -72,12 +70,12 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
     }
 }
 
-pub const BASE_LIMBS: usize = 8;
-
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct BaseCfg {}
 
 impl FieldConfig for BaseCfg {}
+
+pub const BASE_LIMBS: usize = 8;
 
 pub type BaseField = Field<BASE_LIMBS, BaseCfg>;
 pub type G1Affine = Affine<BASE_LIMBS, BaseCfg>;
@@ -116,67 +114,13 @@ pub(crate) fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::transmute_copy;
-
-    use crate::curve::{G1Projective, ScalarField};
-    use crate::utils::*;
-    // use ark_bls12_381::{Fq, G1Affine, G1Projective};
+    use super::{
+        generate_random_affine_points, generate_random_projective_points, BaseField, G1Affine, G1Projective, BASE_LIMBS,
+    };
+    use crate::field::get_fixed_limbs;
     use ark_bn254::{Fq, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
     use ark_ec::AffineCurve;
-    use ark_ff::Field as ArkField;
-    use ark_ff::PrimeField;
-    use ark_ff::{BigInteger256, BigInteger384};
-    use rustacuda_core::DeviceCopy;
-    use rustacuda_derive::DeviceCopy;
-
-    use super::*;
-
-    type BigIntegerScalarArk = BigInteger256;
-    type BigIntegerBaseArk = BigInteger384;
-
-    // impl Field<12> {
-    //     pub fn to_ark(&self) -> BigIntegerBaseArk {
-    //         BigIntegerBaseArk::new(
-    //             u32_vec_to_u64_vec(&self.limbs())
-    //                 .try_into()
-    //                 .unwrap(),
-    //         )
-    //     }
-
-    //     pub fn from_ark(ark: BigIntegerBaseArk) -> Self {
-    //         Self::from_limbs(&u64_vec_to_u32_vec(&ark.0))
-    //     }
-
-    //     pub fn to_ark_transmute(&self) -> BigIntegerBaseArk {
-    //         unsafe { transmute_copy(self) }
-    //     }
-
-    //     pub fn from_ark_transmute(v: BigIntegerBaseArk) -> Self {
-    //         unsafe { transmute_copy(&v) }
-    //     }
-    // }
-
-    impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
-        pub fn to_ark(&self) -> BigIntegerScalarArk {
-            BigIntegerScalarArk::new(
-                u32_vec_to_u64_vec(&self.get_limbs())
-                    .try_into()
-                    .unwrap(),
-            )
-        }
-
-        pub fn from_ark(ark: BigIntegerScalarArk) -> Self {
-            Self::set_limbs(&u64_vec_to_u32_vec(&ark.0))
-        }
-
-        pub fn to_ark_transmute(&self) -> BigIntegerScalarArk {
-            unsafe { transmute_copy(self) }
-        }
-
-        pub fn from_ark_transmute(v: BigIntegerScalarArk) -> Self {
-            unsafe { transmute_copy(&v) }
-        }
-    }
+    use ark_ff::{Field, PrimeField};
 
     impl G1Projective {
         pub fn to_ark(&self) -> arkG1Projective {
@@ -266,29 +210,44 @@ mod tests {
     }
 
     #[test]
-    fn test_ark_scalar_convert() {
-        let limbs = [0x0fffffff, 1, 0x2fffffff, 3, 0x4fffffff, 5, 0x6fffffff, 7];
-        let scalar = ScalarField::set_limbs(&limbs);
-        assert_eq!(
-            scalar.to_ark(),
-            scalar.to_ark_transmute(),
-            "{:08X?} {:08X?}",
-            scalar.to_ark(),
-            scalar.to_ark_transmute()
-        )
+    fn test_affine_projective_convert() {
+        let size = 1 << 10;
+        let affine_points = generate_random_affine_points(size);
+        let projective_points = generate_random_projective_points(size);
+        for affine_point in affine_points {
+            let projective_eqivalent: G1Projective = affine_point.into();
+            assert_eq!(affine_point, projective_eqivalent.into());
+        }
+        for projective_point in projective_points {
+            let affine_eqivalent: G1Affine = projective_point.into();
+            assert_eq!(projective_point, affine_eqivalent.into());
+        }
     }
 
     #[test]
-    #[allow(non_snake_case)]
     fn test_point_equality() {
         let left = G1Projective::zero();
         let right = G1Projective::zero();
         assert_eq!(left, right);
         let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &[0; BASE_LIMBS]);
         assert_eq!(left, right);
-        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &get_fixed_limbs::<BASE_LIMBS>(&[1]));
+        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[4; BASE_LIMBS], &get_fixed_limbs::<BASE_LIMBS>(&[2]));
         assert_ne!(left, right);
-        let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &get_fixed_limbs::<BASE_LIMBS>(&[1]));
+        let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::one().get_limbs());
         assert_eq!(left, right);
+    }
+
+    #[test]
+    fn test_ark_point_convert() {
+        let size = 1 << 10;
+        let affine_points = generate_random_affine_points(size);
+        for affine_point in affine_points {
+            let ark_projective = Into::<G1Projective>::into(affine_point).to_ark();
+            let ark_affine: arkG1Affine = ark_projective.into();
+            assert!(ark_affine.is_on_curve());
+            assert!(ark_affine.is_in_correct_subgroup_assuming_on_curve());
+            let affine_after_conversion: G1Affine = G1Projective::from_ark(ark_projective).into();
+            assert_eq!(affine_point, affine_after_conversion);
+        }
     }
 }

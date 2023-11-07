@@ -1,6 +1,8 @@
 use std::ffi::c_uint;
 
-use crate::{cuda::*, curve::*, field::ScalarField};
+use crate::{curve::*, field::ScalarField};
+
+use icicle_cuda_runtime::DeviceContext;
 
 /*
 /**
@@ -134,7 +136,7 @@ pub(crate) mod tests {
     use ark_std::UniformRand;
     use rand::RngCore;
 
-    use crate::{field::*, curve::*, msm::*, utils::get_rng};
+    use crate::{curve::*, field::*, msm::*, utils::get_rng};
 
     #[test]
     fn test_msm() {
