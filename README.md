@@ -46,6 +46,10 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 - [NVCC] (version 12.0 or newer)
 - cmake 3.18 and above
 - follow [these instructions](https://github.com/ingonyama-zk/icicle/tree/main/icicle#prerequisites-on-ubuntu)
+- Any Nvidia GPU
+
+If you don't have access to a Nvidia GPU jump too this [part](#google-colab). If you require more compute power and are looking to build or do research with ICICLE refer to our [grant program](GRANT_PROGRAM).
+
 
 ### Steps
 
@@ -183,6 +187,14 @@ docker build -t <name_of_your_choice> .
 docker run --gpus all -it <name_of_your_choice> /bin/bash
 ```
 
+## Google Colab
+
+[Colab](https://colab.google/) is a hosted Jupyter Notebook service that requires no setup to use and provides free access to computing resources including GPUS!
+
+You can easily run ICICLE in Google Colab on a free GPU instance, this is a great option for those who want to get started with ICICLE instantly without any local setup or GPU. 
+
+Follow this [guide][GOOGLE_COLAB_ICICLE] for more details.
+
 ## Contributions
 
 Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
@@ -201,6 +213,7 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 
 - [Robik](https://github.com/robik75), for his ongoing support and mentorship
 - [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
+- [gkigiermo](https://github.com/gkigiermo), for making it intuitive to use ICICLE in Google Colab.
 
 ## Help & Support
 
@@ -228,5 +241,7 @@ See [LICENSE-MIT][LMIT] for details.
 [googletest]: https://github.com/google/googletest/
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
+[GOOGLE_COLAB_ICICLE]: https://github.com/gkigiermo/rust-cuda-colab
+[GRANT_PROGRAM]: https://docs.google.com/forms/d/e/1FAIpQLSc967TnNwxZZ4akejcSi4KOUmGrEc68ZZV-FHLfo8KnP1wbpg/viewform
 
 <!-- End Links -->
