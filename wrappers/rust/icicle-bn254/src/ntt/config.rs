@@ -1,7 +1,7 @@
+use icicle_cuda_runtime::{get_default_device_context, DeviceContext, DevicePointer};
 use std::os::raw::c_int;
-use icicle_cuda_runtime::{DevicePointer, DeviceContext, get_default_device_context};
 
-use crate::{curve::*, field::*};
+use crate::curve::*;
 
 /**
  * @enum Ordering

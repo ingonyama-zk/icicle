@@ -1,6 +1,6 @@
 use std::ffi::c_uint;
 
-use crate::{curve::*, field::ScalarField};
+use crate::curve::*;
 
 use icicle_cuda_runtime::DeviceContext;
 
@@ -129,18 +129,16 @@ pub fn msm(scalars: &[ScalarField], points: &[G1Affine], cfg: MSMConfig, results
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bn254::{Fr, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
+    use ark_bn254::{Fr, G1Affine as ArkG1Affine, G1Projective as ArkG1Projective};
     // use ark_bls12_381::{Fr, G1Projective};
-    use ark_ec::msm::VariableBaseMSM;
-    use ark_ff::PrimeField;
-    use ark_std::UniformRand;
-    use rand::RngCore;
+    use ark_ec::scalar_mul::variable_base::VariableBaseMSM;
 
-    use crate::{curve::*, field::*, msm::*, utils::get_rng};
+    use crate::{curve::*, msm::*};
+    use icicle_core::traits::ArkConvertible;
 
     #[test]
     fn test_msm() {
-        let test_sizes = [24];
+        let test_sizes = [10, 12, 14];
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -153,21 +151,16 @@ pub(crate) mod tests {
 
             let point_r_ark: Vec<_> = points
                 .iter()
-                .map(|x| x.to_ark_repr())
+                .map(|x| x.to_ark())
                 .collect();
             let scalars_r_ark: Vec<_> = scalars
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
 
-            let msm_result_ark = VariableBaseMSM::multi_scalar_mul(&point_r_ark, &scalars_r_ark);
+            let msm_result_ark: ArkG1Projective = VariableBaseMSM::msm(&point_r_ark, &scalars_r_ark).unwrap();
 
-            assert_eq!(msm_result.to_ark_affine(), msm_result_ark);
             assert_eq!(msm_result.to_ark(), msm_result_ark);
-            assert_eq!(
-                msm_result.to_ark_affine(),
-                G1Projective::from_ark(msm_result_ark).to_ark_affine()
-            );
         }
     }
 }

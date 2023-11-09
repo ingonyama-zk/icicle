@@ -1,28 +1,48 @@
 use crate::field::{Field, FieldConfig};
-use std::ffi::c_uint;
+use std::marker::PhantomData;
+use std::ffi::{c_void, c_uint};
+#[cfg(feature = "arkworks")]
+use crate::traits::ArkConvertible;
+#[cfg(feature = "arkworks")]
+use ark_ec::short_weierstrass::{SWCurveConfig, Projective as ArkProjective, Affine as ArkAffine};
+#[cfg(feature = "arkworks")]
+use ark_ec::models::CurveConfig as ArkCurveConfig;
+
+
+pub trait CurveConfig: PartialEq + Copy + Clone {
+    fn eq_proj(point1: *const c_void, point2: *const c_void) -> c_uint;
+    fn to_affine(point: *const c_void, point_aff: *mut c_void);
+
+    #[cfg(feature = "arkworks")]
+    type ArkSWConfig: SWCurveConfig;
+}
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct Projective<const NUM_LIMBS: usize, F: FieldConfig> {
-    pub x: Field<NUM_LIMBS, F>,
-    pub y: Field<NUM_LIMBS, F>,
-    pub z: Field<NUM_LIMBS, F>,
+pub struct Projective<T, C: CurveConfig> {
+    pub x: T,
+    pub y: T,
+    pub z: T,
+    p: PhantomData<C>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(C)]
-pub struct Affine<const NUM_LIMBS: usize, F: FieldConfig> {
-    pub x: Field<NUM_LIMBS, F>,
-    pub y: Field<NUM_LIMBS, F>,
+pub struct Affine<T, C: CurveConfig> {
+    pub x: T,
+    pub y: T,
+    p: PhantomData<C>,
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Affine<NUM_LIMBS, F> {
-    // While this is not a true zero point and not even a valid point on all known curves,
-    // it's still useful both as a handy default as well as a representation of zero points in other codebases
+impl<const NUM_LIMBS: usize, F, C> Affine<Field<NUM_LIMBS, F>, C> 
+where F: FieldConfig, C: CurveConfig {
+    // While this is not a true zero point and not even a valid point, it's still useful 
+    // both as a handy default as well as a representation of zero points in other codebases
     pub fn zero() -> Self {
         Affine {
             x: Field::<NUM_LIMBS, F>::zero(),
             y: Field::<NUM_LIMBS, F>::zero(),
+            p: PhantomData,
         }
     }
 
@@ -30,34 +50,40 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Affine<NUM_LIMBS, F> {
         Affine {
             x: Field::<NUM_LIMBS, F>::set_limbs(x),
             y: Field::<NUM_LIMBS, F>::set_limbs(y),
+            p: PhantomData,
         }
     }
 
-    pub fn to_projective(&self) -> Projective<NUM_LIMBS, F> {
+    pub fn to_projective(&self) -> Projective<Field<NUM_LIMBS, F>, C> {
         Projective {
             x: self.x,
             y: self.y,
             z: Field::<NUM_LIMBS, F>::one(),
+            p: PhantomData,
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> From<Affine<NUM_LIMBS, F>> for Projective<NUM_LIMBS, F> {
-    fn from(item: Affine<NUM_LIMBS, F>) -> Self {
+impl<const NUM_LIMBS: usize, F, C> From<Affine<Field<NUM_LIMBS, F>, C>> for Projective<Field<NUM_LIMBS, F>, C> 
+where F: FieldConfig, C: CurveConfig {
+    fn from(item: Affine<Field<NUM_LIMBS, F>, C>) -> Self {
         Self {
             x: item.x,
             y: item.y,
             z: Field::<NUM_LIMBS, F>::one(),
+            p: PhantomData,
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
+impl<const NUM_LIMBS: usize, F, C> Projective<Field<NUM_LIMBS, F>, C>
+where F: FieldConfig, C: CurveConfig {
     pub fn zero() -> Self {
         Projective {
             x: Field::<NUM_LIMBS, F>::zero(),
             y: Field::<NUM_LIMBS, F>::one(),
             z: Field::<NUM_LIMBS, F>::zero(),
+            p: PhantomData,
         }
     }
 
@@ -66,188 +92,72 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Projective<NUM_LIMBS, F> {
             x: Field::<NUM_LIMBS, F>::set_limbs(x),
             y: Field::<NUM_LIMBS, F>::set_limbs(y),
             z: Field::<NUM_LIMBS, F>::set_limbs(z),
+            p: PhantomData,
         }
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub struct BaseCfg {}
-
-impl FieldConfig for BaseCfg {}
-
-pub const BASE_LIMBS: usize = 8;
-
-pub type BaseField = Field<BASE_LIMBS, BaseCfg>;
-pub type G1Affine = Affine<BASE_LIMBS, BaseCfg>;
-pub type G1Projective = Projective<BASE_LIMBS, BaseCfg>;
-
-extern "C" {
-    fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
-    fn ToAffine(point: *const G1Projective) -> G1Affine;
-    fn GenerateProjectivePoints(points: *mut G1Projective, size: usize);
-    fn GenerateAffinePoints(points: *mut G1Affine, size: usize);
-}
-
-impl PartialEq for G1Projective {
+impl<const NUM_LIMBS: usize, F, C> PartialEq for Projective<Field<NUM_LIMBS, F>, C>
+where F: FieldConfig, C: CurveConfig {
     fn eq(&self, other: &Self) -> bool {
-        unsafe { Eq(self, other) != 0 }
+        C::eq_proj(self as *const _ as *const c_void, other as *const _ as *const c_void) != 0
     }
 }
 
-impl From<G1Projective> for G1Affine {
-    fn from(item: G1Projective) -> Self {
-        unsafe { ToAffine(&item) }
+impl<const NUM_LIMBS: usize, F, C> From<Projective<Field<NUM_LIMBS, F>, C>> for Affine<Field<NUM_LIMBS, F>, C>
+where F: FieldConfig, C: CurveConfig {
+    fn from(item: Projective<Field<NUM_LIMBS, F>, C>) -> Self {
+        let mut aff = Self::zero();
+        C::to_affine(&item as *const _ as *const c_void, &mut aff as *mut _ as *mut c_void);
+        aff
     }
 }
 
-pub(crate) fn generate_random_projective_points(size: usize) -> Vec<G1Projective> {
-    let mut res = vec![G1Projective::zero(); size];
-    unsafe { GenerateProjectivePoints(&mut res[..] as *mut _ as *mut G1Projective, size) };
-    res
+#[cfg(feature = "arkworks")]
+impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Affine<Field<NUM_LIMBS, F>, C>
+where C: CurveConfig, F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField> {
+    type ArkEquivalent = ArkAffine<C::ArkSWConfig>;
+
+    fn to_ark(&self) -> Self::ArkEquivalent {
+        let proj_x = self.x.to_ark();
+        let proj_y = self.y.to_ark();
+        Self::ArkEquivalent::new(proj_x, proj_y)
+    }
+
+    fn from_ark(ark: Self::ArkEquivalent) -> Self {
+        Self {
+            x: Field::<NUM_LIMBS, F>::from_ark(ark.x),
+            y: Field::<NUM_LIMBS, F>::from_ark(ark.y),
+            p: PhantomData,
+        }
+    }
 }
 
-pub(crate) fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
-    let mut res = vec![G1Affine::zero(); size];
-    unsafe { GenerateAffinePoints(&mut res[..] as *mut _ as *mut G1Affine, size) };
-    res
-}
+#[cfg(feature = "arkworks")]
+impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Projective<Field<NUM_LIMBS, F>, C>
+where C: CurveConfig, F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField> {
+    type ArkEquivalent = ArkProjective<C::ArkSWConfig>;
 
-#[cfg(test)]
-mod tests {
-    use super::{
-        generate_random_affine_points, generate_random_projective_points, BaseField, G1Affine, G1Projective, BASE_LIMBS,
-    };
-    use crate::field::get_fixed_limbs;
-    use ark_bn254::{Fq, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
-    use ark_ec::AffineCurve;
-    use ark_ff::{Field, PrimeField};
+    fn to_ark(&self) -> Self::ArkEquivalent {
+        let proj_x = self.x.to_ark();
+        let proj_y = self.y.to_ark();
+        let proj_z = self.z.to_ark();
 
-    impl G1Projective {
-        pub fn to_ark(&self) -> arkG1Projective {
-            //TODO: generic conversion
-            self.to_ark_affine()
-                .into_projective()
-        }
-
-        pub fn to_ark_affine(&self) -> arkG1Affine {
-            //TODO: generic conversion
-            use std::ops::Mul;
-            let proj_x_field = Fq::from_le_bytes_mod_order(
-                &self
-                    .x
-                    .to_bytes_le(),
-            );
-            let proj_y_field = Fq::from_le_bytes_mod_order(
-                &self
-                    .y
-                    .to_bytes_le(),
-            );
-            let proj_z_field = Fq::from_le_bytes_mod_order(
-                &self
-                    .z
-                    .to_bytes_le(),
-            );
-            let inverse_z = proj_z_field
-                .inverse()
-                .unwrap();
-            let aff_x = proj_x_field.mul(inverse_z);
-            let aff_y = proj_y_field.mul(inverse_z);
-            arkG1Affine::new(aff_x, aff_y, false)
-        }
-
-        pub fn from_ark(ark: arkG1Projective) -> G1Projective {
-            let z_inv = ark
-                .z
-                .inverse()
-                .unwrap();
-            let z_invsq = z_inv * z_inv;
-            let z_invq3 = z_invsq * z_inv;
-            G1Projective {
-                x: BaseField::from_ark((ark.x * z_invsq).into_repr()),
-                y: BaseField::from_ark((ark.y * z_invq3).into_repr()),
-                z: BaseField::one(),
-            }
-        }
+        // conversion between projective used in icicle and Jacobian used in arkworks
+        let proj_x = proj_x * proj_z;
+        let proj_y = proj_y * proj_z * proj_z;
+        Self::ArkEquivalent::new(proj_x, proj_y, proj_z)
     }
 
-    impl G1Affine {
-        pub fn to_ark(&self) -> arkG1Affine {
-            arkG1Affine::new(
-                Fq::new(
-                    self.x
-                        .to_ark(),
-                ),
-                Fq::new(
-                    self.y
-                        .to_ark(),
-                ),
-                false,
-            )
-        }
-
-        pub fn to_ark_repr(&self) -> arkG1Affine {
-            arkG1Affine::new(
-                Fq::from_repr(
-                    self.x
-                        .to_ark(),
-                )
-                .unwrap(),
-                Fq::from_repr(
-                    self.y
-                        .to_ark(),
-                )
-                .unwrap(),
-                false,
-            )
-        }
-
-        pub fn from_ark(p: &arkG1Affine) -> Self {
-            G1Affine {
-                x: BaseField::from_ark(p.x.into_repr()),
-                y: BaseField::from_ark(p.y.into_repr()),
-            }
-        }
-    }
-
-    #[test]
-    fn test_affine_projective_convert() {
-        let size = 1 << 10;
-        let affine_points = generate_random_affine_points(size);
-        let projective_points = generate_random_projective_points(size);
-        for affine_point in affine_points {
-            let projective_eqivalent: G1Projective = affine_point.into();
-            assert_eq!(affine_point, projective_eqivalent.into());
-        }
-        for projective_point in projective_points {
-            let affine_eqivalent: G1Affine = projective_point.into();
-            assert_eq!(projective_point, affine_eqivalent.into());
-        }
-    }
-
-    #[test]
-    fn test_point_equality() {
-        let left = G1Projective::zero();
-        let right = G1Projective::zero();
-        assert_eq!(left, right);
-        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &[0; BASE_LIMBS]);
-        assert_eq!(left, right);
-        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[4; BASE_LIMBS], &get_fixed_limbs::<BASE_LIMBS>(&[2]));
-        assert_ne!(left, right);
-        let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::one().get_limbs());
-        assert_eq!(left, right);
-    }
-
-    #[test]
-    fn test_ark_point_convert() {
-        let size = 1 << 10;
-        let affine_points = generate_random_affine_points(size);
-        for affine_point in affine_points {
-            let ark_projective = Into::<G1Projective>::into(affine_point).to_ark();
-            let ark_affine: arkG1Affine = ark_projective.into();
-            assert!(ark_affine.is_on_curve());
-            assert!(ark_affine.is_in_correct_subgroup_assuming_on_curve());
-            let affine_after_conversion: G1Affine = G1Projective::from_ark(ark_projective).into();
-            assert_eq!(affine_point, affine_after_conversion);
+    fn from_ark(ark: Self::ArkEquivalent) -> Self {
+        // conversion between Jacobian used in arkworks and projective used in icicle
+        let proj_x = ark.x * ark.z;
+        let proj_z = ark.z * ark.z * ark.z;
+        Self {
+            x: Field::<NUM_LIMBS, F>::from_ark(proj_x),
+            y: Field::<NUM_LIMBS, F>::from_ark(ark.y),
+            z: Field::<NUM_LIMBS, F>::from_ark(proj_z),
+            p: PhantomData,
         }
     }
 }

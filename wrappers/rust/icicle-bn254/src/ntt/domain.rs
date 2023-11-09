@@ -1,10 +1,10 @@
+use icicle_cuda_runtime::{get_default_device_context, DeviceContext, DevicePointer};
 use std::default;
-use icicle_cuda_runtime::{DeviceContext, DevicePointer, get_default_device_context};
 
 pub(super) type ECNTTDomain = Domain<G1Projective, ScalarField>;
 pub(super) type NTTDomain = Domain<ScalarField, ScalarField>;
 
-use crate::{curve::*, field::*};
+use crate::curve::*;
 
 use super::{config::*, ntt_internal};
 

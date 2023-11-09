@@ -3,7 +3,7 @@ pub mod domain;
 
 use std::any::TypeId;
 
-use crate::{curve::*, field::ScalarField};
+use crate::curve::*;
 
 use self::config::*;
 
@@ -68,7 +68,6 @@ pub(self) fn ecntt_internal(config: *mut ECNTTConfig) -> u32 {
 
 #[cfg(test)]
 pub(crate) mod tests {
-
     use ark_bn254::{Fr, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
     // use ark_bls12_381::{Fr, G1Projective};
     use ark_ff::PrimeField;
@@ -79,7 +78,8 @@ pub(crate) mod tests {
     use std::slice;
 
     use crate::ntt::domain::NTTDomain;
-    use crate::{curve::*, field::*, ntt::*, utils::get_rng};
+    use crate::{curve::*, ntt::*};
+    use icicle_core::traits::ArkConvertible;
 
     pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
         fn is_power_of_two(n: u32) -> bool {
@@ -131,7 +131,7 @@ pub(crate) mod tests {
         let ark_scalars_batch = scalars_batch
             .clone()
             .iter()
-            .map(|v| Fr::new(v.to_ark()))
+            .map(|v| v.to_ark())
             .collect::<Vec<Fr>>();
         let mut ark_ntt_result = ark_scalars_batch.clone();
 
@@ -144,7 +144,7 @@ pub(crate) mod tests {
         domain.ntt(&mut ntt_result); //single ntt
         let ntt_result_as_ark = ntt_result
             .iter()
-            .map(|p| Fr::new(p.to_ark()))
+            .map(|p| p.to_ark())
             .collect::<Vec<Fr>>();
 
         assert_ne!(ntt_result, scalars_batch);

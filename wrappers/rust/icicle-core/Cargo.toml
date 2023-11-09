@@ -3,7 +3,7 @@ name = "icicle-core"
 version = "0.1.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
-description = "An implementation of the Ingonyama CUDA Library"
+description = "Library for GPU ZK Acceleration by Ingonyama"
 homepage = "https://www.ingonyama.com"
 repository = "https://github.com/ingonyama-zk/icicle"
 
@@ -26,31 +26,27 @@ serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_cbor = "0.11.2"
 
-[build-dependencies]
+ark-std = { version = "0.4.0", optional = true }
+ark-ff = { version = "0.4.0", optional = true }
+ark-poly = { version = "0.4.0", optional = true }
+ark-ec = { version = "0.4.0", optional = true, features = [ "parallel" ] }
+
+# [build-dependencies]
 # cc = { version = "1.0", features = ["parallel"] }
-cmake = "*"
-bindgen = "*"
-libc = "*" #TODO: move libc dependencies to build 
+# cmake = "*"
+# bindgen = "*"
+# libc = "*" #TODO: move libc dependencies to build 
 
-[dev-dependencies]
-rand = "*" #TODO: move rand and ark dependencies to dev once random scalar/point generation is done "natively"
+# [dev-dependencies]
+# rustacuda = "0.1"
+# rustacuda_core = "0.1"
+# rustacuda_derive = "0.1"
 
-ark-std = "0.3.0"
-ark-ff = "0.3.0"
-ark-poly = "0.3.0"
-ark-ec = { version = "0.3.0", features = [ "parallel" ] }
-ark-bls12-381 = "0.3.0"
-ark-bls12-377 = "0.3.0"
-ark-bn254 = "0.3.0"
-
-rustacuda = "0.1"
-rustacuda_core = "0.1"
-rustacuda_derive = "0.1"
-
-"criterion" = "*"
+# "criterion" = "*"
 
 [features]
-default = ["bn254"]
-bls12_381 = []
-bn254 = []
+default = []
+arkworks = ["ark-std", "ark-poly", "ark-ff", "ark-ec"]
+# bls12_381 = []
+# bn254 = []
 g2 = []
