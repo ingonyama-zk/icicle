@@ -29,10 +29,25 @@ fn main() {
     }
     cmake.build();
 
-    if let Ok(cuda_path) = var("CUDA_HOME") {
-        println!("cargo:rustc-link-search=native={}/lib64", cuda_path);
-    } else {
-        println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64");
+    if cfg!(unix) {
+        if let Ok(cuda_path) = var("CUDA_HOME") {
+            println!("cargo:rustc-link-search=native={}/lib64", cuda_path);
+        } else {
+            println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64");
+        }
+    }
+
+    if cfg!(windows) {
+        let target_profile: &str;
+        if profile == "release" {
+            target_profile = "Release";
+        } else {
+            target_profile = "Debug";
+        }
+        
+        let build_output_dir_cmake = format!("{}/{}", build_output_dir, target_profile);
+
+        println!("cargo:rustc-link-search={}", &build_output_dir_cmake);
     }
 
     println!("cargo:rustc-link-search={}", &build_output_dir);
@@ -41,5 +56,7 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=cuda");
     println!("cargo:rustc-link-lib=dylib=cudart");
 
-    println!("cargo:rustc-link-lib=dylib=stdc++");
+    if cfg!(unix) {
+        println!("cargo:rustc-link-lib=dylib=stdc++");
+    }
 }
