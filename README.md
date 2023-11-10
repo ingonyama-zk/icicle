@@ -48,7 +48,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 - follow [these instructions](https://github.com/ingonyama-zk/icicle/tree/main/icicle#prerequisites-on-ubuntu)
 - Any Nvidia GPU
 
-If you don't have access to a Nvidia GPU jump too this [part](#google-colab). If you require more compute power and are looking to build or do research with ICICLE refer to our [grant program](GRANT_PROGRAM).
+If you don't have access to a Nvidia GPU jump too this [part](#google-colab). If you require more compute power and are looking to build or do research with ICICLE refer to our [grant program][GRANT_PROGRAM].
 
 
 ### Steps
