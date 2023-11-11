@@ -2,7 +2,6 @@ use cmake::Config;
 use std::env::var;
 
 fn main() {
-    //TODO: check cargo features selected
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=../../../icicle");
 

@@ -8,7 +8,6 @@ use ark_ec::short_weierstrass::{SWCurveConfig, Projective as ArkProjective, Affi
 #[cfg(feature = "arkworks")]
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 
-
 pub trait CurveConfig: PartialEq + Copy + Clone {
     fn eq_proj(point1: *const c_void, point2: *const c_void) -> c_uint;
     fn to_affine(point: *const c_void, point_aff: *mut c_void);
@@ -121,7 +120,7 @@ where C: CurveConfig, F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig
     fn to_ark(&self) -> Self::ArkEquivalent {
         let proj_x = self.x.to_ark();
         let proj_y = self.y.to_ark();
-        Self::ArkEquivalent::new(proj_x, proj_y)
+        Self::ArkEquivalent::new_unchecked(proj_x, proj_y)
     }
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
@@ -146,7 +145,7 @@ where C: CurveConfig, F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig
         // conversion between projective used in icicle and Jacobian used in arkworks
         let proj_x = proj_x * proj_z;
         let proj_y = proj_y * proj_z * proj_z;
-        Self::ArkEquivalent::new(proj_x, proj_y, proj_z)
+        Self::ArkEquivalent::new_unchecked(proj_x, proj_y, proj_z)
     }
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {

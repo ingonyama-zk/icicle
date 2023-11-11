@@ -1,4 +1,5 @@
-use icicle_cuda_runtime::{get_default_device_context, DeviceContext, DevicePointer};
+use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
+use icicle_cuda_runtime::memory::DevicePointer;
 use std::os::raw::c_int;
 
 use crate::curve::*;
@@ -60,7 +61,7 @@ pub enum Butterfly {
  * Struct that encodes NTT parameters to be passed into the [ntt](@ref ntt) function.
  */
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub(super) struct NTTConfigCuda<E, S> {
     pub(super) inout: *mut E,
     /**< Input that's mutated in-place by this function. Length of this array needs to be \f$ size \cdot config.batch_size \f$.
@@ -163,10 +164,6 @@ pub(super) fn get_ntt_config_with_input(ntt_intt_result: &mut [ScalarField], siz
         batch_size: batches as i32,
         is_preserving_twiddles: true,
         is_output_on_device: true,
-        ctx: DeviceContext {
-            device_id: 0,
-            stream: 0,
-            mempool: 0,
-        },
+        ctx: get_default_device_context(),
     }
 }

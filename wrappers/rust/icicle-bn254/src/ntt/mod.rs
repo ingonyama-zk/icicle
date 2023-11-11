@@ -7,11 +7,11 @@ use crate::curve::*;
 
 use self::config::*;
 
-use icicle_cuda_runtime::cudaError_t;
+use icicle_cuda_runtime::error::CudaError;
 
 extern "C" {
     #[link_name = "NTTDefaultContextCuda"]
-    fn ntt_cuda(config: *mut NTTConfig) -> cudaError_t;
+    fn ntt_cuda(config: *mut NTTConfig) -> CudaError;
 }
 
 pub(crate) fn ntt_wip(
@@ -41,20 +41,20 @@ pub(crate) fn ntt_wip(
     ntt_internal(&mut config);
 }
 
-pub(self) fn ntt_internal<TConfig: 'static>(config: *mut TConfig) -> u32 {
+pub(self) fn ntt_internal<TConfig: 'static>(config: *mut TConfig) -> CudaError {
     let result_code;
     let typeid = TypeId::of::<TConfig>();
     if typeid == TypeId::of::<NTTConfig>() {
         result_code = unsafe { ntt_cuda(config as _) };
     } else {
-        result_code = 0; //TODO: unsafe { ecntt_cuda(config as _) };
+        result_code = CudaError::cudaSuccess; //TODO: unsafe { ecntt_cuda(config as _) };
     }
 
-    if result_code != 0 {
-        println!("_result_code = {}", result_code);
+    if result_code != CudaError::cudaSuccess {
+        println!("_result_code = {:?}", result_code);
     }
 
-    return result_code;
+    return CudaError::cudaSuccess;
 }
 
 pub(self) fn ecntt_internal(config: *mut ECNTTConfig) -> u32 {
@@ -74,7 +74,6 @@ pub(crate) mod tests {
     use ark_poly::EvaluationDomain;
     use ark_poly::GeneralEvaluationDomain;
     use ark_std::UniformRand;
-    use rand::RngCore;
     use std::slice;
 
     use crate::ntt::domain::NTTDomain;

@@ -3,32 +3,21 @@ name = "icicle-core"
 version = "0.1.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
-description = "Library for GPU ZK Acceleration by Ingonyama"
+description = "A library for GPU ZK acceleration by Ingonyama"
 homepage = "https://www.ingonyama.com"
 repository = "https://github.com/ingonyama-zk/icicle"
 
-# [[bench]]
-# name = "ntt"
-# path = "benches/ntt.rs"
-# harness = false
-
-# [[bench]]
-# name = "msm"
-# path = "benches/msm.rs"
-# harness = false
 
 [dependencies] 
-hex = "*"
+# hex = "*"
 
 icicle-cuda-runtime = { path = "../icicle-cuda-runtime" }
 
-serde = { version = "1.0", features = ["derive"] }
-serde_derive = "1.0"
-serde_cbor = "0.11.2"
+#serde = { version = "1.0", features = ["derive"] }
+#serde_derive = "1.0"
+#serde_cbor = "0.11.2"
 
-ark-std = { version = "0.4.0", optional = true }
 ark-ff = { version = "0.4.0", optional = true }
-ark-poly = { version = "0.4.0", optional = true }
 ark-ec = { version = "0.4.0", optional = true, features = [ "parallel" ] }
 
 # [build-dependencies]
@@ -46,7 +35,7 @@ ark-ec = { version = "0.4.0", optional = true, features = [ "parallel" ] }
 
 [features]
 default = []
-arkworks = ["ark-std", "ark-poly", "ark-ff", "ark-ec"]
-# bls12_381 = []
-# bn254 = []
+arkworks = ["ark-ff", "ark-ec"]
+# TODO: impl G2 and EC NTT
 g2 = []
+ec_ntt = []

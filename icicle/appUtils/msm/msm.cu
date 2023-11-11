@@ -349,6 +349,7 @@ void bucket_method_msm(
   bool is_result_on_device,
   bool is_big_triangle,
   int large_bucket_factor,
+  bool is_async,
   cudaStream_t stream)
 {
   S* d_scalars;
@@ -721,7 +722,8 @@ void bucket_method_msm(
   cudaFreeAsync(max_res, stream);
   if (large_buckets_to_compute > 0 && bucket_th > 0) cudaFreeAsync(large_buckets, stream);
 
-  cudaStreamSynchronize(stream);
+  if (!is_async)
+    cudaStreamSynchronize(stream);
 }
 
 // this function computes multiple msms using the bucket method
@@ -919,6 +921,7 @@ MSMConfig DefaultMSMConfig() {
     0,                  // bitsize
     false,              // is_big_triangle
     10,                 // large_bucket_factor
+    true,               // is_async
     ctx,                // DeviceContext
   };
   return config;
@@ -930,9 +933,9 @@ cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* result
   int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
   // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in one function
   if (config.batch_size == 1)
-    bucket_method_msm(bitsize, 16, scalars, points, msm_size, results, config.are_scalars_on_device, 
-                      config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form, 
-                      config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.ctx.stream);
+    bucket_method_msm(bitsize, 16, scalars, points, msm_size, results, config.are_scalars_on_device, config.are_scalars_montgomery_form,
+                      config.are_points_on_device, config.are_points_montgomery_form, config.are_results_on_device,
+                      config.is_big_triangle, config.large_bucket_factor, config.is_async, config.ctx.stream);
   else
     batched_bucket_method_msm(bitsize, (config.c == 0) ? get_optimal_c<S>(bitsize) : config.c, scalars, points,
                               config.batch_size, msm_size, results, config.are_scalars_on_device, config.ctx.stream);

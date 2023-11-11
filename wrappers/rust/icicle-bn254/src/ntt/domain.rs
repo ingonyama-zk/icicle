@@ -1,4 +1,5 @@
-use icicle_cuda_runtime::{get_default_device_context, DeviceContext, DevicePointer};
+use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
+use icicle_cuda_runtime::memory::DevicePointer;
 use std::default;
 
 pub(super) type ECNTTDomain = Domain<G1Projective, ScalarField>;

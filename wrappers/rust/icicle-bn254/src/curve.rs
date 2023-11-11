@@ -1,8 +1,8 @@
-use icicle_core::curve::{Affine, Projective, CurveConfig};
-use icicle_core::field::{Field, FieldConfig};
-use std::ffi::{c_void, c_uint};
 #[cfg(feature = "arkworks")]
-use ark_bn254::{Fr, Fq, g1::Config as ArkG1Config};
+use ark_bn254::{g1::Config as ArkG1Config, Fq, Fr};
+use icicle_core::curve::{Affine, CurveConfig, Projective};
+use icicle_core::field::{Field, FieldConfig};
+use std::ffi::{c_uint, c_void};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ScalarCfg {}
@@ -39,9 +39,15 @@ pub const BASE_LIMBS: usize = 8;
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct CurveCfg {}
 
+pub type BaseField = Field<BASE_LIMBS, BaseCfg>;
+pub type G1Affine = Affine<BaseField, CurveCfg>;
+pub type G1Projective = Projective<BaseField, CurveCfg>;
+
 extern "C" {
     fn Eq(point1: *const c_void, point2: *const c_void) -> c_uint;
-    fn ToAffine(point: *const c_void, point_out: *mut c_void) -> c_uint;
+    fn ToAffine(point: *const c_void, point_out: *mut c_void);
+    fn GenerateProjectivePoints(points: *mut G1Projective, size: usize);
+    fn GenerateAffinePoints(points: *mut G1Affine, size: usize);
 }
 
 impl CurveConfig for CurveCfg {
@@ -55,17 +61,6 @@ impl CurveConfig for CurveCfg {
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig = ArkG1Config;
-}
-
-pub type BaseField = Field<BASE_LIMBS, BaseCfg>;
-pub type G1Affine = Affine<BaseField, CurveCfg>;
-pub type G1Projective = Projective<BaseField, CurveCfg>;
-
-extern "C" {
-    // fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
-    // fn ToAffine(point: *const G1Projective) -> G1Affine;
-    fn GenerateProjectivePoints(points: *mut G1Projective, size: usize);
-    fn GenerateAffinePoints(points: *mut G1Affine, size: usize);
 }
 
 pub(crate) fn generate_random_projective_points(size: usize) -> Vec<G1Projective> {
@@ -83,12 +78,12 @@ pub(crate) fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
 #[cfg(test)]
 mod tests {
     use super::{
-        generate_random_affine_points, generate_random_projective_points, generate_random_scalars, 
-        ScalarField, BaseField, G1Affine, G1Projective, BASE_LIMBS,
+        generate_random_affine_points, generate_random_projective_points, generate_random_scalars, BaseField, G1Affine,
+        G1Projective, ScalarField, BASE_LIMBS,
     };
     use icicle_core::traits::ArkConvertible;
 
-    use ark_bn254::{G1Affine as ArkG1Affine};
+    use ark_bn254::G1Affine as ArkG1Affine;
 
     #[test]
     fn test_scalar_equality() {
@@ -130,7 +125,11 @@ mod tests {
         assert_eq!(left, right);
         let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &[0; BASE_LIMBS]);
         assert_eq!(left, right);
-        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[4; BASE_LIMBS], &BaseField::set_limbs(&[2]).get_limbs());
+        let right = G1Projective::set_limbs(
+            &[0; BASE_LIMBS],
+            &[4; BASE_LIMBS],
+            &BaseField::set_limbs(&[2]).get_limbs(),
+        );
         assert_ne!(left, right);
         let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::one().get_limbs());
         assert_eq!(left, right);
