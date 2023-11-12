@@ -38,14 +38,14 @@ fn bench_ntt(c: &mut Criterion) {
             group
                 .sample_size(scalar_samples)
                 .bench_function(
-                    &format!("Scalar inplace NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
+                    &format!("Scalar in place NTT of size 2^{} in batch {}", log_ntt_size, batch_size),
                     |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size, false, 0)),
                 );
 
             group
                 .sample_size(scalar_samples)
                 .bench_function(
-                    &format!("Scalar inplace iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
+                    &format!("Scalar in place iNTT of size 2^{} in batch {}", log_ntt_size, batch_size),
                     |b| b.iter(|| ntt_inplace_batch_bls12_381(&mut d_evals, &mut d_domain, batch_size, true, 0)),
                 );
 
