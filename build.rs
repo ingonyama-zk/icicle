@@ -3,8 +3,6 @@ use std::env::{self, var};
 use cmake::Config;
 
 fn main() {
-    //TODO: check cargo features selected
-
     let cargo_dir = var("CARGO_MANIFEST_DIR").unwrap();
     let profile = var("PROFILE").unwrap();
 
@@ -13,14 +11,10 @@ fn main() {
 
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=./icicle");
-    println!("cargo:rerun-if-changed=./target/{}", profile); // TODO: without this it ignores manual changes to build folder
+    println!("cargo:rerun-if-changed=./target/{}", profile); // without this it ignores manual changes to build folder
 
-    // let arch_type = env::var("ARCH_TYPE").unwrap_or(String::from("native")); //TODO: pass to cmake
-    // let stream_type = env::var("DEFAULT_STREAM").unwrap_or(String::from("legacy"));
     let mut cmake = Config::new("./icicle");
-    cmake.define("BUILD_TESTS", "OFF") //TODO: feature
-          //.define("LIBRARY_OUTPUT_DIRECTORY", &target_output_dir) //TODO: cmake vars don't work here
-          //.define("LIBRARY_OUTPUT_NAME", "libingo_icicle.a");
+    cmake.define("BUILD_TESTS", "OFF")
          .out_dir(&target_output_dir)
          .build_target("icicle");
 
