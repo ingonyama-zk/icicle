@@ -38,5 +38,5 @@ jobs:
       uses: actions/checkout@v3
     - name: Check clang-format
       run: |
-        if [[ $(find ./ -path ./icicle/build -prune -o -path ./target -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]]; then echo "Please run clang-format"; exit 1; fi
+        unformatted_files=$(find ./ -path ./icicle/build -prune -o -path ./target -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1); if [[ $unformatted_files ]]; then echo $unformatted_files; echo "Please run clang-format"; exit 1; fi
 
