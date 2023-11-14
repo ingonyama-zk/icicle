@@ -209,6 +209,12 @@ If you are changing code, please make sure to change your [git hooks path][HOOKS
 git config core.hooksPath ./scripts/hooks
 ```
 
+In case `clang-format` is missing on your system, you can install it  using the following command:
+
+```sh
+sudo apt install clang-format
+```
+
 This will ensure our custom hooks are run and will make it easier to follow our coding guidelines.
 
 ### Hall of Fame

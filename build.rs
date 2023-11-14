@@ -14,9 +14,10 @@ fn main() {
     println!("cargo:rerun-if-changed=./target/{}", profile); // without this it ignores manual changes to build folder
 
     let mut cmake = Config::new("./icicle");
-    cmake.define("BUILD_TESTS", "OFF")
-         .out_dir(&target_output_dir)
-         .build_target("icicle");
+    cmake
+        .define("BUILD_TESTS", "OFF")
+        .out_dir(&target_output_dir)
+        .build_target("icicle");
 
     if cfg!(feature = "g2") {
         cmake.define("G2_DEFINED", "");
@@ -38,7 +39,7 @@ fn main() {
         } else {
             target_profile = "Debug";
         }
-        
+
         let build_output_dir_cmake = format!("{}/{}", build_output_dir, target_profile);
 
         println!("cargo:rustc-link-search={}", &build_output_dir_cmake);
