@@ -19,9 +19,19 @@ fn main() {
         .out_dir(&target_output_dir)
         .build_target("icicle");
 
+    let target_profile: &str;
+    if profile == "release" {
+        target_profile = "Release";
+    } else {
+        target_profile = "Debug";
+    }
+
+    cmake.define("CMAKE_BUILD_TYPE", target_profile);
+
     if cfg!(feature = "g2") {
         cmake.define("G2_DEFINED", "");
     }
+
     cmake.build();
 
     if cfg!(unix) {
@@ -33,13 +43,6 @@ fn main() {
     }
 
     if cfg!(windows) {
-        let target_profile: &str;
-        if profile == "release" {
-            target_profile = "Release";
-        } else {
-            target_profile = "Debug";
-        }
-
         let build_output_dir_cmake = format!("{}/{}", build_output_dir, target_profile);
 
         println!("cargo:rustc-link-search={}", &build_output_dir_cmake);
