@@ -63,7 +63,7 @@ jobs:
         cuda: '12.0.0'
         method: 'network'
         # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
-        sub-packages: '["cudart", "nvcc", "thrust"]'
+        sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
     - name: Build Rust Targets
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       env:
