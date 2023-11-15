@@ -19,11 +19,7 @@ fn main() {
         .out_dir(&target_output_dir)
         .build_target("icicle");
 
-    let target_profile: &str = if profile == "release" {
-       "Release"
-    } else {
-        "Debug"
-    };
+    let target_profile: &str = if profile == "release" { "Release" } else { "Debug" };
 
     cmake.define("CMAKE_BUILD_TYPE", target_profile);
 
