@@ -40,9 +40,7 @@ fn main() {
         } else {
             println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64");
         }
-    }
-
-    if cfg!(windows) {
+    } else if cfg!(windows) {
         let build_output_dir_cmake = format!("{}/{}", build_output_dir, target_profile);
 
         println!("cargo:rustc-link-search={}", &build_output_dir_cmake);
