@@ -151,9 +151,8 @@ __global__ void add_ones_kernel(A* points, S* scalars, P* results, const unsigne
   results[tid] = sum;
 }
 
-template <typename S>
-__global__ void
-find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, S* fake_param, unsigned* result)
+__global__ __forceinline__ void
+find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   const unsigned nof_threads = (size + run_length - 1) / run_length;
@@ -168,9 +167,8 @@ find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_len
   if (tid == 0 && v[size - 1] > cutoff) { result[0] = size; }
 }
 
-template <typename S>
-__global__ void find_max_size(
-  unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, S* fake_param, unsigned* largest_bucket_size)
+__global__ __forceinline__ void
+find_max_size(unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, unsigned* largest_bucket_size)
 {
   for (int i = 0;; i++) {
     if (single_bucket_indices[i] & ((1 << c) - 1)) {
