@@ -40,7 +40,7 @@ class NTTEngine32 {
     
     #pragma unroll
     for(uint32_t i=0;i<32;i++) 
-      X[i]=Math::getNormalizedValue(data[i*32]);
+      X[i]=Math::getNormalizedValue(data[i*32]); //how is it fine to read strided from global?
   }
   
   __device__ __forceinline__ void storeGlobalData(uint64_t* data, uint32_t dataIndex) {
@@ -51,7 +51,7 @@ class NTTEngine32 {
     for(uint32_t i=0;i<8;i++) {
       #pragma unroll
       for(uint32_t j=0;j<4;j++) 
-        data[(i*4+j)*32]=make_wide(X[i+j*8].x, X[i+j*8].y);           // note transpose here
+        data[(i*4+j)*32]=make_wide(X[i+j*8].x, X[i+j*8].y);           // note transpose here (double traspose)
     }
   }
       
@@ -189,7 +189,7 @@ class NTTEngine32 {
         currentRoot = mul(currentRoot, threadRoot);                   // 8 copies of this        
       }
 
-      switch(i) {
+      switch(i) { //why?
         case 0: copy8<0, 24>(); break;
         case 1: copy8<8, 24>(); break;
         case 2: copy8<16, 24>(); break;
@@ -241,6 +241,19 @@ class NTTEngine {
     //     data[(i*4+j)*32]=make_wide(X[i+j*8].x, X[i+j*8].y);           // note transpose here
     // }
   }
+
+  __device__ __forceinline__ void storeGlobalData16(test_scalar* data, uint32_t dataIndex) {
+    // data+=1024*dataIndex + (threadIdx.x & 0x1F);
+    data += 16*dataIndex;
+      
+    // samples are 4x8 transposed in registers
+    #pragma unroll
+    for(uint32_t i=0;i<4;i++) {
+      #pragma unroll
+      for(uint32_t j=0;j<4;j++) 
+        data[(i*4+j)]= X[i+j*4];           // note transpose here
+    }
+  }
       
   // template<uint32_t to, uint32_t from>
   // __device__ __forceinline__ void copy8() {
@@ -262,9 +275,25 @@ class NTTEngine {
     }
     
   }
-  
-  // __device__ void ntt4(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3) {
   __device__ __forceinline__ void ntt4(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3) {
+    test_scalar T;
+
+    T  = X0 + X2;
+    X2 = X0 - X2;
+    X0 = X1 + X3;
+    X1 = X1 - X3;   // T has X0, X0 has X1, X2 has X2, X1 has X3
+  
+    X1 = X1 * (test_scalar::modulus() - test_scalar::omega(2));
+    // X1 = X1 * test_scalar::omega(2);
+  
+    X3 = X2 - X1;
+    X1 = X2 + X1;
+    X2 = T - X0;
+    X0 = T + X0;
+  }
+
+  //rbo vertion
+  __device__ __forceinline__ void ntt4rbo(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3) {
     test_scalar T;
 
     T = X0 - X1;
@@ -276,8 +305,8 @@ class NTTEngine {
     //   printf(T);
     // }
   
-    X3 = X3 * (test_scalar::modulus() - test_scalar::omega(2));
-    // t = X1 * test_scalar::omega(2);
+    // X3 = X3 * (test_scalar::modulus() - test_scalar::omega(2));
+    X3 = X3 * test_scalar::omega(2);
     
     X2 = X0 - X1;
     X0 = X0 + X1;
@@ -325,44 +354,29 @@ class NTTEngine {
   //   X4 = Math::sub(X4, T);    
   // }
   
-  // __device__ __forceinline__ void ntt32() {
-  //    #pragma unroll
-  //    for(uint32_t i=0;i<8;i++)
-  //      ntt4(X[i], X[i+8], X[i+16], X[i+24]);
+  __device__ __forceinline__ void ntt16() {
+     
+    #pragma unroll
+     for(uint32_t i=0;i<4;i++)
+       ntt4(X[i], X[i+4], X[i+8], X[i+12]);
     
-  //    X[9]  = Math::shiftRoot32<1>(X[9]);
-  //    X[10] = Math::shiftRoot32<2>(X[10]);
-  //    X[11] = Math::shiftRoot32<3>(X[11]);
-  //    X[12] = Math::shiftRoot8<1>(X[12]);
-  //    X[13] = Math::shiftRoot32<5>(X[13]);
-  //    X[14] = Math::shiftRoot32<6>(X[14]);
-  //    X[15] = Math::shiftRoot32<7>(X[15]);
-      
-  //    X[17] = Math::shiftRoot32<2>(X[17]);
-  //    X[18] = Math::shiftRoot8<1>(X[18]);
-  //    X[19] = Math::shiftRoot32<6>(X[19]);
-  //    X[20] = Math::shiftRoot8<2>(X[20]);
-  //    X[21] = Math::shiftRoot32<10>(X[21]);
-  //    X[22] = Math::shiftRoot8<3>(X[22]);
-  //    X[23] = Math::shiftRoot32<14>(X[23]);
-      
-  //    X[25] = Math::shiftRoot32<3>(X[25]);
-  //    X[26] = Math::shiftRoot32<6>(X[26]);
-  //    X[27] = Math::shiftRoot32<9>(X[27]);
-  //    X[28] = Math::shiftRoot8<3>(X[28]);
-  //    X[29] = Math::shiftRoot32<15>(X[29]);
-  //    X[30] = Math::shiftRoot32<18>(X[30]);
-  //    X[31] = Math::shiftRoot32<21>(X[31]);
+     X[5] = X[5] * test_scalar::omega4(1);
+     X[6] = X[6] * test_scalar::omega4(2);
+     X[7] = X[7] * test_scalar::omega4(3);
+
+     X[9] = X[9] * test_scalar::omega4(2);
+     X[10] = X[10] * test_scalar::omega4(3);
+     X[11] = X[11] * test_scalar::omega4(4);
+
+     X[13] = X[13] * test_scalar::omega4(3);
+     X[14] = X[14] * test_scalar::omega4(6);
+     X[15] = X[15] * test_scalar::omega4(9);
+    
+     #pragma unroll
+     for(uint32_t i=0;i<4;i+=4)
+       ntt4(X[i], X[i+1], X[i+2], X[i+3]);
      
-  //    #pragma unroll
-  //    for(uint32_t i=0;i<32;i+=8) 
-  //      ntt8(X[i+0], X[i+1], X[i+2], X[i+3], X[i+4], X[i+5], X[i+6], X[i+7]);
-     
-  //    // normalizing is very expensive
-  //    #pragma unroll
-  //    for(uint32_t i=0;i<32;i++)
-  //      X[i]=Math::normalize(X[i]);
-  // }
+  }
     
   // __device__ __forceinline__ void storeSharedData(uint32_t addr) {
   //   const uint32_t stride=blockDim.x+1;

@@ -44,7 +44,7 @@ __global__ void ntt1024(uint64_t* out, uint64_t* in, uint32_t* next, uint32_t co
   while(true) {
     if((threadIdx.x & 0x1F)==0)
       dataIndex=atomicAdd(next, 1);
-    dataIndex=__shfl_sync(0xFFFFFFFF, dataIndex, 0);      
+    dataIndex=__shfl_sync(0xFFFFFFFF, dataIndex, 0);  //send value to all threads in warp    
     if(dataIndex<count) {
       #if defined(COMPUTE_ONLY)
         if(first)
@@ -55,7 +55,7 @@ __global__ void ntt1024(uint64_t* out, uint64_t* in, uint32_t* next, uint32_t co
       #endif
     }
     else {
-      if(dataIndex==count + (gridDim.x*blockDim.x>>5) - 1) {
+      if(dataIndex==count + (gridDim.x*blockDim.x>>5) - 1) { //didn't understand condition
         // last one to finish, reset the counter
         atomicExch(next, 0);
       }
@@ -86,11 +86,13 @@ __global__ void thread_ntt_kernel(test_scalar* out, test_scalar* in, uint32_t* n
   
   // engine.initializeRoot();
   engine.loadGlobalData(in, dataIndex);
-  engine.ntt4_4();
+  // engine.ntt4_4();
+  engine.ntt16();
   // engine.X[0] = engine.X[0] + engine.X[1];
   // out[0] = out[0] + out[1];
   // out[0] = test_scalar::zero();
-  engine.storeGlobalData(out, dataIndex);
+  // engine.storeGlobalData(out, dataIndex);
+  engine.storeGlobalData16(out, dataIndex);
     
   // while(true) {
   //   if((threadIdx.x & 0x1F)==0)
