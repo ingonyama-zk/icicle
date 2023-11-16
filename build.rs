@@ -1,31 +1,53 @@
-use std::env;
+use std::env::{self, var};
+
+use cmake::Config;
 
 fn main() {
-    //TODO: check cargo features selected
-    //TODO: can conflict/duplicate with make ?
+    let cargo_dir = var("CARGO_MANIFEST_DIR").unwrap();
+    let profile = var("PROFILE").unwrap();
+
+    let target_output_dir = format!("{}/target/{}", cargo_dir, profile);
+    let build_output_dir = format!("{}/build", target_output_dir);
 
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=./icicle");
+    println!("cargo:rerun-if-changed=./target/{}", profile); // without this it ignores manual changes to build folder
 
-    let arch_type = env::var("ARCH_TYPE").unwrap_or(String::from("native"));
-    let stream_type = env::var("DEFAULT_STREAM").unwrap_or(String::from("legacy"));
+    let mut cmake = Config::new("./icicle");
+    cmake
+        .define("BUILD_TESTS", "OFF")
+        .out_dir(&target_output_dir)
+        .build_target("icicle");
 
-    let mut arch = String::from("-arch=");
-    arch.push_str(&arch_type);
-    let mut stream = String::from("-default-stream=");
-    stream.push_str(&stream_type);
+    let target_profile: &str = if profile == "release" { "Release" } else { "Debug" };
 
-    let mut nvcc = cc::Build::new();
-
-    println!("Compiling icicle library using arch: {}", &arch);
+    cmake.define("CMAKE_BUILD_TYPE", target_profile);
 
     if cfg!(feature = "g2") {
-        nvcc.define("G2_DEFINED", None);
+        cmake.define("G2_DEFINED", "");
     }
-    nvcc.cuda(true);
-    nvcc.debug(false);
-    nvcc.flag(&arch);
-    nvcc.flag(&stream);
-    nvcc.files(["./icicle/curves/index.cu"]);
-    nvcc.compile("ingo_icicle"); //TODO: extension??
+
+    cmake.build();
+
+    if cfg!(unix) {
+        if let Ok(cuda_path) = var("CUDA_HOME") {
+            println!("cargo:rustc-link-search=native={}/lib64", cuda_path);
+        } else {
+            println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64");
+        }
+    } else if cfg!(windows) {
+        let build_output_dir_cmake = format!("{}/{}", build_output_dir, target_profile);
+
+        println!("cargo:rustc-link-search={}", &build_output_dir_cmake);
+    }
+
+    println!("cargo:rustc-link-search={}", &build_output_dir);
+    println!("cargo:rustc-link-search={}", &target_output_dir);
+    println!("cargo:rustc-link-lib=ingo_icicle");
+    println!("cargo:rustc-link-lib=dylib=cuda");
+    println!("cargo:rustc-link-lib=dylib=cudart");
+
+    if cfg!(unix) {
+        println!("cargo:rustc-link-lib=dylib=stdc++");
+    }
 }

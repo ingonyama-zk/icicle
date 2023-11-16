@@ -176,6 +176,8 @@ The script does the following:
 - Creates a file with the curve name in ``src/curves`` with the relevant objects for the curve. 
 - Creates a test file with the curve name in ``src``. 
 
+Also files from ``./icicle/curves/<curve_name>/supported_operations.cu`` should be added individually to ``add_library`` section of [``./icicle/CMakeLists.txt``][CMAKELISTS]
+
 Testing the new curve could be done by running the tests in ``tests_curve_name`` (e.g. ``tests_bls12_381``).
 
 ## Docker
@@ -205,6 +207,12 @@ If you are changing code, please make sure to change your [git hooks path][HOOKS
 
 ```sh
 git config core.hooksPath ./scripts/hooks
+```
+
+In case `clang-format` is missing on your system, you can install it  using the following command:
+
+```sh
+sudo apt install clang-format
 ```
 
 This will ensure our custom hooks are run and will make it easier to follow our coding guidelines.
@@ -241,6 +249,7 @@ See [LICENSE-MIT][LMIT] for details.
 [googletest]: https://github.com/google/googletest/
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
+[CMAKELISTS]: https://github.com/ingonyama-zk/icicle/blob/f0e6b465611227b858ec4590f4de5432e892748d/icicle/CMakeLists.txt#L28
 [GOOGLE_COLAB_ICICLE]: https://github.com/gkigiermo/rust-cuda-colab
 [GRANT_PROGRAM]: https://docs.google.com/forms/d/e/1FAIpQLSc967TnNwxZZ4akejcSi4KOUmGrEc68ZZV-FHLfo8KnP1wbpg/viewform
 
