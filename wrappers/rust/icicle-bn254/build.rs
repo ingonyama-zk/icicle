@@ -10,15 +10,15 @@ fn main() {
 
     let target_output_dir = format!("{}/../target/{}", cargo_dir, profile);
 
-    // Config::new("./icicle")
-    //             .define("BUILD_TESTS", "OFF") //TODO: feature
-    //             // .define("CURVE", "bls12_381")
-    //             .define("CURVE", "bn254")
-    //             // .define("ECNTT_DEFINED", "") //TODO: feature
-    //             .define("LIBRARY_OUTPUT_DIRECTORY", &target_output_dir)
-    //             .define("CMAKE_BUILD_TYPE", "Release")
-    //             .build_target("icicle")
-    //             .build();
+    Config::new("./icicle")
+                .define("BUILD_TESTS", "OFF") //TODO: feature
+                // .define("CURVE", "bls12_381")
+                .define("CURVE", "bn254")
+                // .define("ECNTT_DEFINED", "") //TODO: feature
+                .define("LIBRARY_OUTPUT_DIRECTORY", &target_output_dir)
+                .define("CMAKE_BUILD_TYPE", "Release")
+                .build_target("icicle")
+                .build();
 
     println!("cargo:rustc-link-search={}", &target_output_dir);
 

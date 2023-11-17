@@ -1,30 +1,33 @@
-use std::ffi::c_uint;
-
-use crate::curve::{ScalarField, G1Affine, G1Projective};
-
+use crate::curve::{G1Affine, G1Projective, ScalarField};
 use icicle_core::msm::MSMConfig;
+use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
 
 extern "C" {
     #[link_name = "bn254MSMCuda"]
-    fn msm_cuda(
+    fn msm_cuda<'a>(
         scalars: *const ScalarField,
         points: *const G1Affine,
         count: usize,
-        config: MSMConfig,
+        config: MSMConfig<'a>,
         out: *mut G1Projective,
-    ) -> c_uint;
+    ) -> CudaError;
 
-    // #[link_name = "GetDefaultMSMConfig"]
-    fn GetDefaultMSMConfig() -> MSMConfig;
+    #[link_name = "bn254GetDefaultMSMConfig"]
+    fn GetDefaultMSMConfig() -> MSMConfig<'static>;
 }
 
-pub fn get_default_msm_config() -> MSMConfig {
+pub fn get_default_msm_config() -> MSMConfig<'static> {
     unsafe { GetDefaultMSMConfig() }
 }
 
-pub fn msm(scalars: &[ScalarField], points: &[G1Affine], cfg: MSMConfig, results: &mut [G1Projective]) {
+pub fn msm<'a>(
+    scalars: &[ScalarField],
+    points: &[G1Affine],
+    cfg: MSMConfig<'a>,
+    results: &mut [G1Projective],
+) -> CudaResult<()> {
     if points.len() != scalars.len() {
-        panic!("lengths of scalars and points are not equal")
+        return Err(CudaError::cudaErrorInvalidValue);
     }
 
     unsafe {
@@ -35,17 +38,22 @@ pub fn msm(scalars: &[ScalarField], points: &[G1Affine], cfg: MSMConfig, results
             cfg,
             results as *mut _ as *mut G1Projective,
         )
-    };
+        .wrap()
+    }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bn254::{Fr, G1Affine as ArkG1Affine, G1Projective as ArkG1Projective};
+    use ark_bn254::G1Projective as ArkG1Projective;
     use ark_ec::scalar_mul::variable_base::VariableBaseMSM;
 
-    use crate::{curve::{G1Projective, generate_random_affine_points, generate_random_scalars}, msm::{msm, get_default_msm_config}};
+    use crate::{
+        curve::{generate_random_affine_points, generate_random_scalars, G1Projective},
+        msm::{get_default_msm_config, msm},
+    };
     use icicle_core::traits::ArkConvertible;
-    use icicle_cuda_runtime::device_context::DeviceContext;
+    use icicle_cuda_runtime::memory::DeviceSlice;
+    use icicle_cuda_runtime::stream::CudaStream;
 
     #[test]
     fn test_msm() {
@@ -56,10 +64,16 @@ pub(crate) mod tests {
             let points = generate_random_affine_points(count);
             let scalars = generate_random_scalars(count);
 
-            let mut msm_results = [G1Projective::zero()];
-            msm(&scalars, &points, get_default_msm_config(), &mut msm_results);
-            let msm_result = msm_results[0];
+            let mut msm_results = DeviceSlice::cuda_malloc(1).unwrap();
+            let stream = CudaStream::create().unwrap();
+            let mut cfg = get_default_msm_config();
+            cfg.ctx
+                .stream = &stream;
+            cfg.is_async = true;
+            cfg.are_results_on_device = true;
+            msm(&scalars, &points, cfg, &mut msm_results.as_slice()).unwrap();
 
+            // this happens on CPU in parallel to the GPU MSM computations
             let point_r_ark: Vec<_> = points
                 .iter()
                 .map(|x| x.to_ark())
@@ -68,10 +82,20 @@ pub(crate) mod tests {
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
-
             let msm_result_ark: ArkG1Projective = VariableBaseMSM::msm(&point_r_ark, &scalars_r_ark).unwrap();
 
-            assert_eq!(msm_result.to_ark(), msm_result_ark);
+            let mut msm_host_result = vec![G1Projective::zero(); 1];
+            msm_results
+                .copy_to_host(&mut msm_host_result[..])
+                .unwrap();
+            stream
+                .synchronize()
+                .unwrap();
+            stream
+                .destroy()
+                .unwrap();
+
+            assert_eq!(msm_host_result[0].to_ark(), msm_result_ark);
         }
     }
 }

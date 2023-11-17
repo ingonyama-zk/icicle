@@ -909,19 +909,19 @@ MSMConfig DefaultMSMConfig() {
     0,                  // mempool
   };
   MSMConfig config = {
-    false,              // scalars_on_device
-    false,              // scalars_montgomery_form
+    false,              // are_scalars_on_device
+    false,              // are_scalars_montgomery_form
     0,                  // points_size
     1,                  // precompute_factor
-    false,              // points_on_device
-    false,              // points_montgomery_form
+    false,              // are_points_on_device
+    false,              // are_points_montgomery_form
     1,                  // batch_size
-    false,              // result_on_device
+    false,              // are_results_on_device
     0,                  // c
     0,                  // bitsize
     false,              // is_big_triangle
     10,                 // large_bucket_factor
-    true,               // is_async
+    false,              // is_async
     ctx,                // DeviceContext
   };
   return config;

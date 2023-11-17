@@ -6,8 +6,10 @@ use bitflags::bitflags;
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct CudaStream {
-    handle: cudaStream_t,
+    pub(crate) handle: cudaStream_t,
 }
+
+unsafe impl Sync for CudaStream {}
 
 bitflags! {
     pub struct CudaStreamCreateFlags: u32 {
@@ -66,4 +68,3 @@ impl From<&CudaStream> for cudaStream_t {
         stream.handle
     }
 }
-

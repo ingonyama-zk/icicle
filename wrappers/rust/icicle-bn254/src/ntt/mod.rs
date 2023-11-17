@@ -8,6 +8,7 @@ use crate::curve::*;
 use self::config::*;
 
 use icicle_cuda_runtime::error::CudaError;
+use icicle_core::ntt::{Ordering, Decimation, Butterfly};
 
 extern "C" {
     #[link_name = "NTTDefaultContextCuda"]
@@ -41,18 +42,18 @@ pub(crate) fn ntt_wip(
     ntt_internal(&mut config);
 }
 
-pub(self) fn ntt_internal<TConfig: 'static>(config: *mut TConfig) -> CudaError {
-    let result_code;
-    let typeid = TypeId::of::<TConfig>();
-    if typeid == TypeId::of::<NTTConfig>() {
-        result_code = unsafe { ntt_cuda(config as _) };
-    } else {
-        result_code = CudaError::cudaSuccess; //TODO: unsafe { ecntt_cuda(config as _) };
-    }
+pub(self) fn ntt_internal<TConfig>(config: *mut TConfig) -> CudaError {
+    let result_code = unsafe { ntt_cuda(config as _) };
+    // let typeid = TypeId::of::<TConfig>();
+    // if typeid == TypeId::of::<NTTConfig>() {
+    //     result_code = unsafe { ntt_cuda(config as _) };
+    // } else {
+    //     result_code = CudaError::cudaSuccess; //TODO: unsafe { ecntt_cuda(config as _) };
+    // }
 
-    if result_code != CudaError::cudaSuccess {
-        println!("_result_code = {:?}", result_code);
-    }
+    // if result_code != CudaError::cudaSuccess {
+    //     println!("_result_code = {:?}", result_code);
+    // }
 
     return CudaError::cudaSuccess;
 }

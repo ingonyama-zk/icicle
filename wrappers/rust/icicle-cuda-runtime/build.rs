@@ -69,6 +69,7 @@ fn main() {
         .allowlist_function("cudaMemcpyAsync")
         .allowlist_function("cudaMemset")
         .allowlist_function("cudaMemsetAsync")
+        .rustified_enum("cudaMemcpyKind")
         // Stream Ordered Memory Allocator
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html
         .allowlist_function("cudaFreeAsync")

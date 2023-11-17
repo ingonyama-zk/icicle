@@ -19,8 +19,8 @@ set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 
 
-# when adding a new curve, append its name to the end of this list
-set(SUPPORTED_CURVES bn254;bls12_381;bls12_377)
+# when adding a new curve/field, append its name to the end of this list
+set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_671)
 
 set(IS_CURVE_SUPPORTED FALSE)
 set(I 0)
@@ -50,8 +50,8 @@ if (NOT BUILD_TESTS)
     appUtils/ntt/ntt.cu
     appUtils/lde/lde.cu
   )
-  # set_target_properties(icicle PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-  # set_target_properties(icicle PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+  #set_target_properties(icicle PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  #set_target_properties(icicle PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
   # # cuda_add_library(cudanet STATIC ${cu})
   # target_link_libraries(icicle ${CUDA_LIBRARIES})
@@ -65,6 +65,7 @@ if (NOT BUILD_TESTS)
     TARGET icicle
     POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym MSMCuda=${CURVE}MSMCuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GetDefaultMSMConfig=${CURVE}GetDefaultMSMConfig ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o
     COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a 

@@ -9,8 +9,8 @@
 #include "../../primitives/projective.cuh"
 #include "../../utils/cuda_utils.cuh"
 #include "../../utils/error_handler.cuh"
-#include "../../curves/curve_config.cuh"
 #include "../../utils/device_context.cuh"
+#include "../../curves/curve_config.cuh"
 
 /**
  * @namespace msm
@@ -47,7 +47,8 @@ struct MSMConfig {
   bool are_points_on_device;          /**< True if points are on device and false if they're on host. Default value: false. */
   bool are_points_montgomery_form;    /**< True if coordinates of points are in Montgomery form and false otherwise. Default value: true. */
   int batch_size;                     /**< The number of MSMs to compute. Default value: 1. */
-  bool are_results_on_device;         /**< True if the results should be on device and false if they should be on host. Default value: false. */
+  bool are_results_on_device;         /**< True if the results should be on device and false if they should be on host. If set to false, 
+                                       *   `is_async` won't take effect because a synchronization is needed to transfer results to the host. Default value: false. */
   int c;                              /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket method"
                                        *   that we use to solve the MSM problem. As a rule of thumb, larger value means more on-line memory
                                        *   footprint but also more parallelism and less computational complexity (up to a certain point).
@@ -61,8 +62,8 @@ struct MSMConfig {
                                        *   Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10. */
   int is_async;                       /**< Whether to run the MSM asyncronously. If set to `true`, the MSM function will be non-blocking
                                        *   and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`. 
-                                       *   If set to `false`, the MSM function will block the current CPU thread. */
-  device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
+                                       *   If set to false, the MSM function will block the current CPU thread. */
+  device_context::DeviceContext ctx;  /**< Details related to the device such as its id and stream id. See [DeviceContext](@ref `device_context::DeviceContext`). */
 };
 
 /**

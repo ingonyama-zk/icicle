@@ -1,21 +1,22 @@
 use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
-use icicle_cuda_runtime::memory::DevicePointer;
+use icicle_cuda_runtime::memory::DeviceSlice;
+use icicle_core::ntt::{Ordering, Decimation, Butterfly, NTTConfigCuda};
 use std::default;
 
-pub(super) type ECNTTDomain = Domain<G1Projective, ScalarField>;
-pub(super) type NTTDomain = Domain<ScalarField, ScalarField>;
+pub(super) type ECNTTDomain<'a> = Domain<'a, G1Projective, ScalarField>;
+pub(super) type NTTDomain<'a> = Domain<'a, ScalarField, ScalarField>;
 
 use crate::curve::*;
 
 use super::{config::*, ntt_internal};
 
 /// Represents the NTT domain
-pub struct Domain<E, S> {
-    config: NTTConfigCuda<E, S>,
+pub struct Domain<'a, E, S> {
+    config: NTTConfigCuda<'a, E, S>,
 }
 
-impl<E, S> Domain<E, S> {
-    pub fn new(size: usize, ctx: DeviceContext) -> Self {
+impl<'a, E, S> Domain<'a, E, S> {
+    pub fn new(size: usize, ctx: DeviceContext<'a>) -> Self {
         Domain {
             config: get_ntt_config(size, ctx),
         }
@@ -83,7 +84,7 @@ impl<E, S> Domain<E, S> {
 
 // Add implementations for other methods and structs as needed.
 
-impl<E: 'static, S: 'static> Domain<E, S> {
+impl<'a, E: 'static, S: 'static> Domain<'a, E, S> {
     // ... previous methods ...
 
     // NTT methods
@@ -114,15 +115,15 @@ impl<E: 'static, S: 'static> Domain<E, S> {
             .is_input_on_device = false;
         self.config
             .is_output_on_device = false;
-        self.config
-            .ordering = Ordering::default(); //TODO: each call?
+        // self.config
+        //     .ordering = Ordering::default(); //TODO: each call?
         self.config
             .batch_size = batch_size as i32;
 
         ntt_internal(&mut self.config);
     }
 
-    pub fn ntt_on_device(&mut self, inout: &mut DevicePointer<E>) {
+    pub fn ntt_on_device(&mut self, inout: &mut DeviceSlice<E>) {
         // Implementation for NTT on device
     }
 
@@ -130,7 +131,7 @@ impl<E: 'static, S: 'static> Domain<E, S> {
         // Implementation for batched NTT
     }
 
-    pub fn ntt_batch_on_device(&mut self, inout: &mut DevicePointer<E>) {
+    pub fn ntt_batch_on_device(&mut self, inout: &mut DeviceSlice<E>) {
         // Implementation for batched NTT on device
     }
 
@@ -138,7 +139,7 @@ impl<E: 'static, S: 'static> Domain<E, S> {
         // Implementation for NTT with coset
     }
 
-    pub fn ntt_coset_on_device(&mut self, inout: &mut DevicePointer<E>, coset: &mut DevicePointer<E>) {
+    pub fn ntt_coset_on_device(&mut self, inout: &mut DeviceSlice<E>, coset: &mut DeviceSlice<E>) {
         // Implementation for NTT with coset on device
     }
 
@@ -146,7 +147,7 @@ impl<E: 'static, S: 'static> Domain<E, S> {
         // Implementation for batched NTT with coset
     }
 
-    pub fn ntt_coset_batch_on_device(&mut self, inout: &mut DevicePointer<E>, coset: &mut DevicePointer<E>) {
+    pub fn ntt_coset_batch_on_device(&mut self, inout: &mut DeviceSlice<E>, coset: &mut DeviceSlice<E>) {
         // Implementation for batched NTT with coset on device
     }
 
@@ -155,7 +156,7 @@ impl<E: 'static, S: 'static> Domain<E, S> {
         // Implementation for iNTT
     }
 
-    pub fn intt_on_device(&mut self, inout: &mut DevicePointer<E>) {
+    pub fn intt_on_device(&mut self, inout: &mut DeviceSlice<E>) {
         // Implementation for iNTT on device
     }
 
@@ -163,7 +164,7 @@ impl<E: 'static, S: 'static> Domain<E, S> {
         // Implementation for batched iNTT
     }
 
-    pub fn intt_batch_on_device(&mut self, inout: &mut DevicePointer<E>) {
+    pub fn intt_batch_on_device(&mut self, inout: &mut DeviceSlice<E>) {
         // Implementation for batched iNTT on device
     }
 
@@ -171,7 +172,7 @@ impl<E: 'static, S: 'static> Domain<E, S> {
         // Implementation for iNTT with coset
     }
 
-    pub fn intt_coset_on_device(&mut self, inout: &mut DevicePointer<E>, coset: &mut DevicePointer<E>) {
+    pub fn intt_coset_on_device(&mut self, inout: &mut DeviceSlice<E>, coset: &mut DeviceSlice<E>) {
         // Implementation for iNTT with coset on device
     }
 
@@ -179,7 +180,7 @@ impl<E: 'static, S: 'static> Domain<E, S> {
         // Implementation for batched iNTT with coset
     }
 
-    pub fn intt_coset_batch_on_device(&mut self, inout: &mut DevicePointer<E>, coset: &mut DevicePointer<E>) {
+    pub fn intt_coset_batch_on_device(&mut self, inout: &mut DeviceSlice<E>, coset: &mut DeviceSlice<E>) {
         // Implementation for batched iNTT with coset on device
     }
 
