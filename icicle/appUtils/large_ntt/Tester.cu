@@ -145,8 +145,8 @@ int main(int argc, const char** argv) {
     exit(1);
   }
 
-  // std::cout << test_scalar::modulus() <<std::endl;
-  // std::cout<<std::endl;
+  std::cout << test_scalar::modulus() <<std::endl;
+  std::cout<<std::endl;
   // std::cout << test_scalar::omega(0) <<std::endl;
   // std::cout << test_scalar::omega(1) <<std::endl;
   // std::cout << test_scalar::omega(2) <<std::endl;
@@ -155,9 +155,10 @@ int main(int argc, const char** argv) {
   // std::cout<<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(0) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(1) <<std::endl;
-  // std::cout << test_scalar::modulus() - test_scalar::omega(2) <<std::endl;
+  std::cout << test_scalar::modulus() - test_scalar::omega(2) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(3) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(4) <<std::endl;
+  std::cout<<std::endl;
   std::cout << test_scalar::omega4(0) <<std::endl;
   std::cout << test_scalar::omega4(1) <<std::endl;
   std::cout << test_scalar::omega4(2) <<std::endl;

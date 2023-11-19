@@ -283,7 +283,8 @@ class NTTEngine {
     X0 = X1 + X3;
     X1 = X1 - X3;   // T has X0, X0 has X1, X2 has X2, X1 has X3
   
-    X1 = X1 * (test_scalar::modulus() - test_scalar::omega(2));
+    // X1 = X1 * (test_scalar::modulus() - test_scalar::omega(2));
+    X1 = X1 * test_scalar::omega4(4);
     // X1 = X1 * test_scalar::omega(2);
   
     X3 = X2 - X1;
@@ -365,15 +366,15 @@ class NTTEngine {
      X[7] = X[7] * test_scalar::omega4(3);
 
      X[9] = X[9] * test_scalar::omega4(2);
-     X[10] = X[10] * test_scalar::omega4(3);
-     X[11] = X[11] * test_scalar::omega4(4);
+     X[10] = X[10] * test_scalar::omega4(4);
+     X[11] = X[11] * test_scalar::omega4(6);
 
      X[13] = X[13] * test_scalar::omega4(3);
      X[14] = X[14] * test_scalar::omega4(6);
      X[15] = X[15] * test_scalar::omega4(9);
     
      #pragma unroll
-     for(uint32_t i=0;i<4;i+=4)
+     for(uint32_t i=0;i<16;i+=4)
        ntt4(X[i], X[i+1], X[i+2], X[i+3]);
      
   }
