@@ -1,13 +1,11 @@
-#include "lde.cuh"
-
 #include <cuda.h>
 #include <stdexcept>
 
-#include "../../utils/device_context.cuh"
-#include "../../utils/mont.cuh"
-#include "../../curves/curve_config.cuh"
+#include "device_context.cuh"
+#include "mont.cuh"
+#include "../curves/curve_config.cuh"
 
-namespace lde {
+namespace vec_ops {
 
 namespace {
 
@@ -186,4 +184,4 @@ extern "C" cudaError_t SubCuda(
   return Sub<curve_config::scalar_t>(vec_a, vec_b, n, is_on_device, ctx, result);
 }
 
-} // namespace lde
+} // namespace vec_ops

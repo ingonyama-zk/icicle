@@ -2,14 +2,13 @@
 #ifndef LDE_H
 #define LDE_H
 
-#include "../../utils/device_context.cuh"
+#include "device_context.cuh"
 
 /**
- * @namespace lde
- * LDE (stands for low degree extension) contains [NTT](@ref ntt)-based methods for translating between coefficient and evaluation domains of polynomials.
- * It also contains methods for element-wise manipulation of vectors, which is useful for working with polynomials in evaluation domain.
+ * @namespace vec_ops
+ * This namespace contains methods for performing element-wise arithmetic operations on vectors.
  */
-namespace lde {
+namespace vec_ops {
 
 /**
  * A function that multiplies two vectors element-wise.

@@ -310,15 +310,15 @@ void ntt_inplace_batch_template(
     }
 
     if (is_coset)
-      utils_internal::batchVectorMult<E, S><<<num_blocks, num_threads, 0, stream>>>(d_inout, coset, n, batch_size);
+      utils_internal::BatchMulKernel<E, S><<<num_blocks, num_threads, 0, stream>>>(d_inout, coset, n, batch_size);
 
     num_threads = max(min(n / 2, MAX_NUM_THREADS), 1);
     num_blocks = (n * batch_size + num_threads - 1) / num_threads;
-    utils_internal::template_normalize_kernel<E, S>
+    utils_internal::NormalizeKernel<E, S>
       <<<num_blocks, num_threads, 0, stream>>>(d_inout, S::inv_log_size(logn), n * batch_size);
   } else {
     if (is_coset)
-      utils_internal::batchVectorMult<E, S><<<num_blocks, num_threads, 0, stream>>>(d_inout, coset, n, batch_size);
+      utils_internal::BatchMulKernel<E, S><<<num_blocks, num_threads, 0, stream>>>(d_inout, coset, n, batch_size);
 
     for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
     {

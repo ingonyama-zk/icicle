@@ -3,21 +3,21 @@
 namespace utils_internal {
   // TODO: weird linking issue - only works in headers
   // template <typename E, typename S>
-  // __global__ void template_normalize_kernel(E* arr, S scalar, unsigned n)
+  // __global__ void NormalizeKernel(E* arr, S scalar, unsigned n)
   // {
   //   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   //   if (tid < n) { arr[tid] = scalar * arr[tid]; }
   // }
 
 template <typename E, typename S>
-__global__ void template_normalize_kernel(E* arr, S scalar, int n)
+__global__ void NormalizeKernel(E* arr, S scalar, int n)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < n) { arr[tid] = scalar * arr[tid]; }
 }
 
 template <typename E, typename S>
-__global__ void batchVectorMult(E* element_vec, S* scalar_vec, int n_scalars, int batch_size)
+__global__ void BatchMulKernel(E* element_vec, S* scalar_vec, int n_scalars, int batch_size)
 {
   int tid = blockDim.x * blockIdx.x + threadIdx.x;
   if (tid < n_scalars * batch_size) {
