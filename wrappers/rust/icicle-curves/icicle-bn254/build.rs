@@ -3,12 +3,12 @@ use std::env::var;
 
 fn main() {
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
-    println!("cargo:rerun-if-changed=../../../icicle");
+    println!("cargo:rerun-if-changed=../../../../icicle");
 
     let cargo_dir = var("CARGO_MANIFEST_DIR").unwrap();
     let profile = var("PROFILE").unwrap();
 
-    let target_output_dir = format!("{}/../target/{}", cargo_dir, profile);
+    let target_output_dir = format!("{}/../../target/{}", cargo_dir, profile);
 
     Config::new("./icicle")
                 .define("BUILD_TESTS", "OFF") //TODO: feature

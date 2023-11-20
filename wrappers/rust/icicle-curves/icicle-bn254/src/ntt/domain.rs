@@ -1,6 +1,6 @@
+use icicle_core::ntt::{Butterfly, Decimation, NTTConfigCuda, Ordering};
 use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
 use icicle_cuda_runtime::memory::DeviceSlice;
-use icicle_core::ntt::{Ordering, Decimation, Butterfly, NTTConfigCuda};
 use std::default;
 
 pub(super) type ECNTTDomain<'a> = Domain<'a, G1Projective, ScalarField>;

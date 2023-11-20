@@ -7,8 +7,8 @@ use crate::curve::*;
 
 use self::config::*;
 
+use icicle_core::ntt::{Butterfly, Decimation, Ordering};
 use icicle_cuda_runtime::error::CudaError;
-use icicle_core::ntt::{Ordering, Decimation, Butterfly};
 
 extern "C" {
     #[link_name = "NTTDefaultContextCuda"]

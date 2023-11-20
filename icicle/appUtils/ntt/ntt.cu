@@ -14,12 +14,12 @@ const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, 
 const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
 /**
-  * Computes the twiddle factors.
-  * Outputs: d_twiddles[i] = omega^i.
-  * @param d_twiddles input empty array.
-  * @param n_twiddles number of twiddle factors.
-  * @param omega multiplying factor.
-  */
+ * Computes the twiddle factors.
+ * Outputs: d_twiddles[i] = omega^i.
+ * @param d_twiddles input empty array.
+ * @param n_twiddles number of twiddle factors.
+ * @param omega multiplying factor.
+ */
 template <typename S>
 __global__ void twiddle_factors_kernel(S* d_twiddles, int n_twiddles, S omega)
 {
@@ -42,14 +42,14 @@ __global__ void reverse_order_kernel(E* arr, E* arr_reversed, uint32_t n, uint32
 }
 
 /**
-  * Bit-reverses a batch of input arrays in-place inside GPU.
-  * for example: on input array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
-  * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
-  * @param arr batch of arrays of some object of type T. Should be on GPU.
-  * @param n length of `arr`.
-  * @param logn log(n).
-  * @param batch_size the size of the batch.
-  */
+ * Bit-reverses a batch of input arrays in-place inside GPU.
+ * for example: on input array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
+ * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
+ * @param arr batch of arrays of some object of type T. Should be on GPU.
+ * @param n length of `arr`.
+ * @param logn log(n).
+ * @param batch_size the size of the batch.
+ */
 template <typename E>
 void reverse_order_batch(E* arr, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream)
 {
@@ -63,13 +63,13 @@ void reverse_order_batch(E* arr, uint32_t n, uint32_t logn, uint32_t batch_size,
 }
 
 /**
-  * Bit-reverses an input array in-place inside GPU.
-  * for example: on array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
-  * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
-  * @param arr array of some object of type T of size which is a power of 2. Should be on GPU.
-  * @param n length of `arr`.
-  * @param logn log(n).
-  */
+ * Bit-reverses an input array in-place inside GPU.
+ * for example: on array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
+ * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
+ * @param arr array of some object of type T of size which is a power of 2. Should be on GPU.
+ * @param n length of `arr`.
+ * @param logn log(n).
+ */
 template <typename E>
 void reverse_order(E* arr, uint32_t n, uint32_t logn, cudaStream_t stream)
 {
@@ -77,15 +77,15 @@ void reverse_order(E* arr, uint32_t n, uint32_t logn, cudaStream_t stream)
 }
 
 /**
-  * Cooley-Tuckey NTT.
-  * NOTE! this function assumes that d_twiddles are located in the device memory.
-  * @param arr input array of type E (elements).
-  * @param n length of d_arr.
-  * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-  * @param n_twiddles length of twiddles.
-  * @param max_task max count of parallel tasks.
-  * @param s log2(n) loop index.
-  */
+ * Cooley-Tuckey NTT.
+ * NOTE! this function assumes that d_twiddles are located in the device memory.
+ * @param arr input array of type E (elements).
+ * @param n length of d_arr.
+ * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
+ * @param n_twiddles length of twiddles.
+ * @param max_task max count of parallel tasks.
+ * @param s log2(n) loop index.
+ */
 template <typename E, typename S>
 __global__ void ntt_template_kernel_shared_rev(
   E* __restrict__ arr_g,
@@ -147,15 +147,15 @@ __global__ void ntt_template_kernel_shared_rev(
 }
 
 /**
-  * Cooley-Tuckey NTT.
-  * NOTE! this function assumes that d_twiddles are located in the device memory.
-  * @param arr input array of type E (elements).
-  * @param n length of d_arr.
-  * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-  * @param n_twiddles length of twiddles.
-  * @param max_task max count of parallel tasks.
-  * @param s log2(n) loop index.
-  */
+ * Cooley-Tuckey NTT.
+ * NOTE! this function assumes that d_twiddles are located in the device memory.
+ * @param arr input array of type E (elements).
+ * @param n length of d_arr.
+ * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
+ * @param n_twiddles length of twiddles.
+ * @param max_task max count of parallel tasks.
+ * @param s log2(n) loop index.
+ */
 template <typename E, typename S>
 __global__ void ntt_template_kernel_shared(
   E* __restrict__ arr_g,
@@ -214,15 +214,15 @@ __global__ void ntt_template_kernel_shared(
 }
 
 /**
-  * Cooley-Tukey NTT.
-  * NOTE! this function assumes that d_twiddles are located in the device memory.
-  * @param arr input array of type E (elements).
-  * @param n length of d_arr.
-  * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-  * @param n_twiddles length of twiddles.
-  * @param max_task max count of parallel tasks.
-  * @param s log2(n) loop index.
-  */
+ * Cooley-Tukey NTT.
+ * NOTE! this function assumes that d_twiddles are located in the device memory.
+ * @param arr input array of type E (elements).
+ * @param n length of d_arr.
+ * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
+ * @param n_twiddles length of twiddles.
+ * @param max_task max count of parallel tasks.
+ * @param s log2(n) loop index.
+ */
 template <typename E, typename S>
 __global__ void
 ntt_template_kernel(E* arr, uint32_t n, S* twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, bool rev)
@@ -262,18 +262,18 @@ ntt_template_kernel(E* arr, uint32_t n, S* twiddles, uint32_t n_twiddles, uint32
 }
 
 /**
-  * NTT/INTT inplace batch
-  * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
-  * @param d_inout Array for inplace processing
-  * @param d_twiddles
-  * @param n Length of `d_twiddles` array
-  * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
-  * @param inverse true for iNTT
-  * @param is_coset true for multiplication by coset
-  * @param coset should be array of lenght n - or in case of lesser than n, right-padded with zeroes
-  * @param stream CUDA stream
-  * @param is_sync_needed do perform sync of the supplied CUDA stream at the end of processing
-  */
+ * NTT/INTT inplace batch
+ * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
+ * @param d_inout Array for inplace processing
+ * @param d_twiddles
+ * @param n Length of `d_twiddles` array
+ * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
+ * @param inverse true for iNTT
+ * @param is_coset true for multiplication by coset
+ * @param coset should be array of lenght n - or in case of lesser than n, right-padded with zeroes
+ * @param stream CUDA stream
+ * @param is_sync_needed do perform sync of the supplied CUDA stream at the end of processing
+ */
 template <typename E, typename S>
 void ntt_inplace_batch_template(
   E* d_inout,
@@ -448,22 +448,22 @@ cudaError_t NTT(NTTConfig<E, S>* config)
 }
 
 /**
-  * Extern version of [ntt](@ref ntt) function with the following values of template parameters
-  * (where the curve is given by `-DCURVE` env variable during build):
-  *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
-  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-  */
+ * Extern version of [ntt](@ref ntt) function with the following values of template parameters
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ */
 extern "C" cudaError_t NTTCuda(NTTConfig<curve_config::scalar_t, curve_config::scalar_t>* config)
 {
   return NTT<curve_config::scalar_t, curve_config::scalar_t>(config);
 }
 
 /**
-  * Extern version of [ntt](@ref ntt) function with the following values of template parameters
-  * (where the curve is given by `-DCURVE` env variable during build):
-  *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
-  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-  */
+ * Extern version of [ntt](@ref ntt) function with the following values of template parameters
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ */
 template <typename E, typename S>
 cudaError_t NTTDefaultContext(NTTConfig<E, S>* config)
 {
@@ -482,11 +482,11 @@ cudaError_t NTTDefaultContext(NTTConfig<E, S>* config)
 }
 
 /**
-  * Extern version of [ntt](@ref ntt) function with the following values of template parameters
-  * (where the curve is given by `-DCURVE` env variable during build):
-  *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
-  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-  */
+ * Extern version of [ntt](@ref ntt) function with the following values of template parameters
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ */
 extern "C" cudaError_t NTTDefaultContextCuda(NTTConfig<curve_config::scalar_t, curve_config::scalar_t>* config)
 {
   return NTTDefaultContext(config);
@@ -495,12 +495,12 @@ extern "C" cudaError_t NTTDefaultContextCuda(NTTConfig<curve_config::scalar_t, c
 #if defined(ECNTT_DEFINED)
 
 /**
-  * Extern version of [NTT](@ref NTT) function with the following values of template parameters
-  * (where the curve is given by `-DCURVE` env variable during build):
-  *  - `S` is the [projective representation](@ref projective_t) of the curve (i.e. EC NTT is computed);
-  *  - `E` is the [scalar field](@ref scalar_t) of the curve;
-  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-  */
+ * Extern version of [NTT](@ref NTT) function with the following values of template parameters
+ * (where the curve is given by `-DCURVE` env variable during build):
+ *  - `S` is the [projective representation](@ref projective_t) of the curve (i.e. EC NTT is computed);
+ *  - `E` is the [scalar field](@ref scalar_t) of the curve;
+ * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+ */
 extern "C" cudaError_t ECNTTCuda(NTTConfig<curve_config::projective_t, curve_config::scalar_t>* config)
 {
   return NTT<curve_config::projective_t, curve_config::scalar_t>(config);

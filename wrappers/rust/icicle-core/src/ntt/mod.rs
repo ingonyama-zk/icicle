@@ -102,4 +102,5 @@ pub struct NTTConfigCuda<'a, E, S> {
     /**< If true, output is preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
     pub ctx: DeviceContext<'a>, /*< Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
 }
- 
+
+

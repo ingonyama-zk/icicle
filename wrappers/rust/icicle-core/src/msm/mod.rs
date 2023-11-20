@@ -1,4 +1,3 @@
-
 use icicle_cuda_runtime::device_context::DeviceContext;
 
 /*

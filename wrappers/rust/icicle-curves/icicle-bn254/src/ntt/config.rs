@@ -1,8 +1,8 @@
 use std::os::raw::c_int;
 
-use icicle_core::ntt::{Ordering, Decimation, Butterfly, NTTConfigCuda};
-use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
 use crate::curve::*;
+use icicle_core::ntt::{Butterfly, Decimation, NTTConfigCuda, Ordering};
+use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
 
 pub(super) type ECNTTConfig<'a> = NTTConfigCuda<'a, G1Projective, ScalarField>;
 pub(super) type NTTConfig<'a> = NTTConfigCuda<'a, ScalarField, ScalarField>;

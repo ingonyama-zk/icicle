@@ -57,10 +57,10 @@ pub(crate) mod tests {
 
     #[test]
     fn test_msm() {
-        let test_sizes = [20];
+        let log_test_sizes = [20];
 
-        for pow2 in test_sizes {
-            let count = 1 << pow2;
+        for log_test_size in log_test_sizes {
+            let count = 1 << log_test_size;
             let points = generate_random_affine_points(count);
             let scalars = generate_random_scalars(count);
 
