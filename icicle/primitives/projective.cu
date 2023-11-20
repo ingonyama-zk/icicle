@@ -15,20 +15,11 @@ extern "C" bool Eq(projective_t* point1, projective_t* point2)
            (point2->z == point_field_t::zero()));
 }
 
-extern "C" void ToAffine(projective_t* point, affine_t* point_out)
-{
-  *point_out = projective_t::to_affine(*point);
-}
+extern "C" void ToAffine(projective_t* point, affine_t* point_out) { *point_out = projective_t::to_affine(*point); }
 
-extern "C" void GenerateProjectivePoints(projective_t* points, int size)
-{
-  projective_t::RandHostMany(points, size);
-}
+extern "C" void GenerateProjectivePoints(projective_t* points, int size) { projective_t::RandHostMany(points, size); }
 
-extern "C" void GenerateAffinePoints(affine_t* points, int size)
-{
-  projective_t::RandHostManyAffine(points, size);
-}
+extern "C" void GenerateAffinePoints(affine_t* points, int size) { projective_t::RandHostManyAffine(points, size); }
 
 #if defined(G2_DEFINED)
 

@@ -2,7 +2,7 @@
 #![allow(non_camel_case_types)]
 
 mod bindings;
-pub mod stream;
-pub mod memory;
-pub mod error;
 pub mod device_context;
+pub mod error;
+pub mod memory;
+pub mod stream;

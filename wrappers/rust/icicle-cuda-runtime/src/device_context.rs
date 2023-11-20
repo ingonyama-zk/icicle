@@ -16,7 +16,9 @@ pub struct DeviceContext<'a> {
 }
 
 pub fn get_default_device_context() -> DeviceContext<'static> {
-    static default_stream: CudaStream = CudaStream { handle: std::ptr::null_mut() };
+    static default_stream: CudaStream = CudaStream {
+        handle: std::ptr::null_mut(),
+    };
     DeviceContext {
         device_id: 0,
         stream: &default_stream,

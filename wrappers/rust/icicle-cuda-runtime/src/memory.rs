@@ -1,9 +1,9 @@
-use crate::bindings::{cudaMallocAsync, cudaMalloc, cudaMemcpyAsync, cudaMemcpy, cudaMemcpyKind};
+use crate::bindings::{cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
-use std::{slice, ptr};
+use std::mem::{size_of, MaybeUninit};
 use std::os::raw::c_void;
-use std::mem::{MaybeUninit, size_of};
+use std::{ptr, slice};
 
 /// Fixed-size device-side slice.
 #[derive(Debug)]
@@ -12,11 +12,13 @@ pub struct DeviceSlice<'a, T>(&'a mut [T]);
 
 impl<'a, T> DeviceSlice<'a, T> {
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.0
+            .len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.0
+            .is_empty()
     }
 
     pub fn as_slice(&mut self) -> &mut [T] {
@@ -24,36 +26,46 @@ impl<'a, T> DeviceSlice<'a, T> {
     }
 
     pub fn as_ptr(&self) -> *const T {
-        self.0.as_ptr()
+        self.0
+            .as_ptr()
     }
 
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.0.as_mut_ptr()
+        self.0
+            .as_mut_ptr()
     }
 
     pub fn cuda_malloc(count: usize) -> CudaResult<Self> {
-        let size = count.checked_mul(size_of::<T>()).unwrap_or(0);
+        let size = count
+            .checked_mul(size_of::<T>())
+            .unwrap_or(0);
         if size == 0 {
             return Err(CudaError::cudaErrorMemoryAllocation);
         }
-    
+
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
             cudaMalloc(device_ptr.as_mut_ptr(), size).wrap()?;
-            Ok(DeviceSlice { 0: slice::from_raw_parts_mut(device_ptr.assume_init() as *mut T, count) })
+            Ok(DeviceSlice {
+                0: slice::from_raw_parts_mut(device_ptr.assume_init() as *mut T, count),
+            })
         }
     }
 
     pub fn cuda_malloc_async(count: usize, stream: &mut CudaStream) -> CudaResult<Self> {
-        let size = count.checked_mul(size_of::<T>()).unwrap_or(0);
+        let size = count
+            .checked_mul(size_of::<T>())
+            .unwrap_or(0);
         if size == 0 {
             return Err(CudaError::cudaErrorMemoryAllocation);
         }
-    
+
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
             cudaMallocAsync(device_ptr.as_mut_ptr(), size, stream as *mut _ as *mut _).wrap()?;
-            Ok(DeviceSlice { 0: slice::from_raw_parts_mut(device_ptr.assume_init() as *mut T, count) })
+            Ok(DeviceSlice {
+                0: slice::from_raw_parts_mut(device_ptr.assume_init() as *mut T, count),
+            })
         }
     }
 

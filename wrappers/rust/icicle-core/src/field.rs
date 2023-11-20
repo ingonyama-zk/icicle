@@ -1,8 +1,8 @@
-use std::marker::PhantomData;
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, PrimeField};
+use std::marker::PhantomData;
 
 #[cfg(feature = "arkworks")]
 pub trait FieldConfig: PartialEq + Copy + Clone {
@@ -59,7 +59,11 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
         let limbs = bytes
             .chunks(4)
             .map(|chunk| {
-                u32::from_le_bytes(chunk.try_into().unwrap())
+                u32::from_le_bytes(
+                    chunk
+                        .try_into()
+                        .unwrap(),
+                )
             })
             .collect::<Vec<_>>();
         Self::set_limbs(&limbs)

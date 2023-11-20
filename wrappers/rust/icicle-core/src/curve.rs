@@ -1,12 +1,12 @@
 use crate::field::{Field, FieldConfig};
-use std::marker::PhantomData;
-use std::ffi::{c_void, c_uint};
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
 #[cfg(feature = "arkworks")]
-use ark_ec::short_weierstrass::{SWCurveConfig, Projective as ArkProjective, Affine as ArkAffine};
-#[cfg(feature = "arkworks")]
 use ark_ec::models::CurveConfig as ArkCurveConfig;
+#[cfg(feature = "arkworks")]
+use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
+use std::ffi::{c_uint, c_void};
+use std::marker::PhantomData;
 
 pub trait CurveConfig: PartialEq + Copy + Clone {
     fn eq_proj(point1: *const c_void, point2: *const c_void) -> c_uint;
@@ -33,9 +33,12 @@ pub struct Affine<T, C: CurveConfig> {
     p: PhantomData<C>,
 }
 
-impl<const NUM_LIMBS: usize, F, C> Affine<Field<NUM_LIMBS, F>, C> 
-where F: FieldConfig, C: CurveConfig {
-    // While this is not a true zero point and not even a valid point, it's still useful 
+impl<const NUM_LIMBS: usize, F, C> Affine<Field<NUM_LIMBS, F>, C>
+where
+    F: FieldConfig,
+    C: CurveConfig,
+{
+    // While this is not a true zero point and not even a valid point, it's still useful
     // both as a handy default as well as a representation of zero points in other codebases
     pub fn zero() -> Self {
         Affine {
@@ -63,8 +66,11 @@ where F: FieldConfig, C: CurveConfig {
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> From<Affine<Field<NUM_LIMBS, F>, C>> for Projective<Field<NUM_LIMBS, F>, C> 
-where F: FieldConfig, C: CurveConfig {
+impl<const NUM_LIMBS: usize, F, C> From<Affine<Field<NUM_LIMBS, F>, C>> for Projective<Field<NUM_LIMBS, F>, C>
+where
+    F: FieldConfig,
+    C: CurveConfig,
+{
     fn from(item: Affine<Field<NUM_LIMBS, F>, C>) -> Self {
         Self {
             x: item.x,
@@ -76,7 +82,10 @@ where F: FieldConfig, C: CurveConfig {
 }
 
 impl<const NUM_LIMBS: usize, F, C> Projective<Field<NUM_LIMBS, F>, C>
-where F: FieldConfig, C: CurveConfig {
+where
+    F: FieldConfig,
+    C: CurveConfig,
+{
     pub fn zero() -> Self {
         Projective {
             x: Field::<NUM_LIMBS, F>::zero(),
@@ -97,14 +106,20 @@ where F: FieldConfig, C: CurveConfig {
 }
 
 impl<const NUM_LIMBS: usize, F, C> PartialEq for Projective<Field<NUM_LIMBS, F>, C>
-where F: FieldConfig, C: CurveConfig {
+where
+    F: FieldConfig,
+    C: CurveConfig,
+{
     fn eq(&self, other: &Self) -> bool {
         C::eq_proj(self as *const _ as *const c_void, other as *const _ as *const c_void) != 0
     }
 }
 
 impl<const NUM_LIMBS: usize, F, C> From<Projective<Field<NUM_LIMBS, F>, C>> for Affine<Field<NUM_LIMBS, F>, C>
-where F: FieldConfig, C: CurveConfig {
+where
+    F: FieldConfig,
+    C: CurveConfig,
+{
     fn from(item: Projective<Field<NUM_LIMBS, F>, C>) -> Self {
         let mut aff = Self::zero();
         C::to_affine(&item as *const _ as *const c_void, &mut aff as *mut _ as *mut c_void);
@@ -114,12 +129,19 @@ where F: FieldConfig, C: CurveConfig {
 
 #[cfg(feature = "arkworks")]
 impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Affine<Field<NUM_LIMBS, F>, C>
-where C: CurveConfig, F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField> {
+where
+    C: CurveConfig,
+    F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
+{
     type ArkEquivalent = ArkAffine<C::ArkSWConfig>;
 
     fn to_ark(&self) -> Self::ArkEquivalent {
-        let proj_x = self.x.to_ark();
-        let proj_y = self.y.to_ark();
+        let proj_x = self
+            .x
+            .to_ark();
+        let proj_y = self
+            .y
+            .to_ark();
         Self::ArkEquivalent::new_unchecked(proj_x, proj_y)
     }
 
@@ -134,13 +156,22 @@ where C: CurveConfig, F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig
 
 #[cfg(feature = "arkworks")]
 impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Projective<Field<NUM_LIMBS, F>, C>
-where C: CurveConfig, F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField> {
+where
+    C: CurveConfig,
+    F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
+{
     type ArkEquivalent = ArkProjective<C::ArkSWConfig>;
 
     fn to_ark(&self) -> Self::ArkEquivalent {
-        let proj_x = self.x.to_ark();
-        let proj_y = self.y.to_ark();
-        let proj_z = self.z.to_ark();
+        let proj_x = self
+            .x
+            .to_ark();
+        let proj_y = self
+            .y
+            .to_ark();
+        let proj_z = self
+            .z
+            .to_ark();
 
         // conversion between projective used in icicle and Jacobian used in arkworks
         let proj_x = proj_x * proj_z;

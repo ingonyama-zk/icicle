@@ -1,7 +1,9 @@
-use crate::bindings::{cudaStream_t, cudaStreamDefault, cudaStreamNonBlocking, cudaStreamDestroy, cudaStreamCreate, cudaStreamSynchronize};
+use crate::bindings::{
+    cudaStreamCreate, cudaStreamDefault, cudaStreamDestroy, cudaStreamNonBlocking, cudaStreamSynchronize, cudaStream_t,
+};
 use crate::error::{CudaResult, CudaResultWrap};
-use std::mem::{MaybeUninit, forget};
 use bitflags::bitflags;
+use std::mem::{forget, MaybeUninit};
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -49,7 +51,9 @@ impl CudaStream {
 
 impl Default for CudaStream {
     fn default() -> Self {
-        Self { handle: std::ptr::null_mut(), }
+        Self {
+            handle: std::ptr::null_mut(),
+        }
     }
 }
 
