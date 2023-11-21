@@ -36,6 +36,9 @@ namespace PARAMS_BLS12_377 {
                                                           0x512c0fee, 0x16d81575, 0x2bbb9a9d, 0x0d4bda32};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x1beeec02, 0x4122dd1a, 0x74fee875, 0xbd1eae95,
                                                               0x27b28e2f, 0x838557e2, 0x2290c02c, 0x07b30191};
+    static constexpr storage_array<omegas_count, limbs_count> win3 = {
+      {{0x12f52cde, 0x27cd3b39, 0xf0d18129, 0xcfa389e7, 0xc80cbc86, 0x53489e15, 0xf1238ccc, 0x05ce8816},
+      {0x16fb22de, 0x225babba, 0xe97a178a, 0x08554c79, 0x33e71c55, 0x42f42e1b, 0x83c75421, 0x11398f6d}}};
 
     static constexpr storage_array<omegas_count, limbs_count> omega4 = {
       // {{0,0,0,0,0,0,0,0},

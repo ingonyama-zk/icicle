@@ -54,6 +54,16 @@ public:
     return Field{scalar};
   }
 
+  static HOST_DEVICE_INLINE Field win3(uint32_t i)
+  {
+    // if (logn == 0) { return Field{CONFIG::one}; }
+
+    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+
+    storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::win3;
+    return Field{omega.storages[i-6]};
+  }
+
   static HOST_DEVICE_INLINE Field omega4(uint32_t i)
   {
     // if (logn == 0) { return Field{CONFIG::one}; }
