@@ -169,6 +169,9 @@ int main(int argc, const char** argv) {
   std::cout << test_scalar::omega4(7) <<std::endl;
   std::cout << test_scalar::omega4(8) <<std::endl;
   std::cout << test_scalar::omega4(9) <<std::endl;
+  std::cout << std::endl;
+  std::cout << test_scalar::win3(6) <<std::endl;
+  std::cout << test_scalar::win3(7) <<std::endl;
 
 
   random_samples(cpuData, ntts*1024);

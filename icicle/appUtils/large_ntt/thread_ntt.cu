@@ -279,7 +279,8 @@ class NTTEngine {
   __device__ __forceinline__ void ntt8_2() {
     for (int i = 0; i < 2; i++)
     {
-        ntt8(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
+        // ntt8(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
+        ntt8win(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
     }
     
   }
@@ -358,6 +359,53 @@ class NTTEngine {
     X6 = X6 - X5;
     X5 = X7 - X1;
     X1 = X7 + X1;
+    X7 = X0 - X3;
+    X3 = X0 + X3;
+    X0 = X4 + T;
+    X4 = X4 - T;   
+  }
+
+  __device__ __forceinline__ void ntt8win(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3, 
+                                       test_scalar& X4, test_scalar& X5, test_scalar& X6, test_scalar& X7) {
+    test_scalar T;
+
+    // out of 56,623,104 possible mappings, we have:
+    T  = X3 - X7;
+    X7 = X3 + X7;
+    X3 = X1 - X5;
+    X5 = X1 + X5;
+    X1 = X2 + X6;
+    X2 = X2 - X6;
+    X6 = X0 + X4;
+    X0 = X0 - X4;
+  
+    //T  = T * test_scalar::omega4(4);
+    X2 = X2 * test_scalar::omega4(4);
+    
+    X4 = X6 + X1;
+    X6 = X6 - X1;
+    X1 = X3 + T;
+    X3 = X3 - T;
+    T  = X5 + X7;
+    X5 = X5 - X7;
+    X7 = X0 + X2;
+    X0 = X0 - X2;
+  
+    //X1 = X1 * test_scalar::omega4(2);
+    X1 = X1 * test_scalar::win3(6);
+    X5 = X5 * test_scalar::omega4(4) ;
+    //X3 = X3 * test_scalar::omega4(6);
+    X3 = X3 * test_scalar::win3(7);
+    
+    
+    X2 = X6 + X5;
+    X6 = X6 - X5;
+
+    X5 = X1 + X3;
+    X3 = X1 - X3;
+
+    X1 = X7 + X5;
+    X5 = X7 - X5;
     X7 = X0 - X3;
     X3 = X0 + X3;
     X0 = X4 + T;
