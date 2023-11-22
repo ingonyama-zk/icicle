@@ -87,12 +87,21 @@ __global__ void thread_ntt_kernel(test_scalar* out, test_scalar* in, uint32_t* n
   // engine.initializeRoot();
   engine.loadGlobalData(in, dataIndex);
   // engine.ntt4_4();
-  engine.ntt8_2();
+  // for (int i = 0; i < 100000; i++)
+  // {
+    // engine.ntt16win();
+    // engine.ntt16win_lowreg();
+    // engine.ntt8_2();
+    // engine.ntt8_2();
+    // engine.ntt16();
+    engine.ntt16_win8ct2();
+  // }
   // engine.ntt16();
   // engine.X[0] = engine.X[0] + engine.X[1];
   // out[0] = out[0] + out[1];
   // out[0] = test_scalar::zero();
-  engine.storeGlobalData(out, dataIndex);
+  // engine.storeGlobalData(out, dataIndex);
+  engine.storeGlobalData8_2(out, dataIndex);
   // engine.storeGlobalData16(out, dataIndex);
     
   // while(true) {

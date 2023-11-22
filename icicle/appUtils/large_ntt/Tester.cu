@@ -185,7 +185,7 @@ int main(int argc, const char** argv) {
   fprintf(stderr, "Warm up run\n");
   $CUDA(cudaMalloc((void**)&gpuData, sizeof(test_scalar)*ntts*1024));
   // ntt1024<<<60, 32, 97*1024>>>(gpuData, gpuData, nextCounter, ntts);
-  // thread_ntt_kernel<<<1, 64, 1024>>>(gpuData, gpuData, nextCounter, ntts);
+  thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
   $CUDA(cudaDeviceSynchronize());
 
   fprintf(stderr, "Copying data to GPU\n");
@@ -212,7 +212,7 @@ int main(int argc, const char** argv) {
 
   // for(int i=0;i<repeatCount;i++) 
     // ntt1024<<<60, 32, 97*1024>>>(gpuData, gpuData, nextCounter, ntts);
-  thread_ntt_kernel<<<1, 64, 1024>>>(gpuData, gpuData, nextCounter, ntts);
+  thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
   $CUDA(cudaEventRecord(stop, 0));
   $CUDA(cudaDeviceSynchronize());
   $CUDA(cudaEventElapsedTime(&time, start, stop));
