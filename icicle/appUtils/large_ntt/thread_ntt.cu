@@ -254,6 +254,19 @@ class NTTEngine {
         data[(i*4+j)]= X[i+j*4];           // note transpose here
     }
   }
+
+  __device__ __forceinline__ void storeGlobalData8_2(test_scalar* data, uint32_t dataIndex) {
+    // data+=1024*dataIndex + (threadIdx.x & 0x1F);
+    data += 16*dataIndex;
+      
+    // samples are 4x8 transposed in registers
+    #pragma unroll
+    for(uint32_t i=0;i<2;i++) {
+      #pragma unroll
+      for(uint32_t j=0;j<8;j++) 
+        data[(i*8+j)]= X[i+j*2];           // note transpose here
+    }
+  }
       
   // template<uint32_t to, uint32_t from>
   // __device__ __forceinline__ void copy8() {
@@ -283,6 +296,14 @@ class NTTEngine {
         ntt8win(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
     }
     
+  }
+
+  __device__ __forceinline__ void ntt2(test_scalar& X0, test_scalar& X1) {
+    test_scalar T;
+
+    T = X0 + X1;
+    X1 = X0 - X1;
+    X0 = T;
   }
 
   __device__ __forceinline__ void ntt4(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3) {
@@ -434,6 +455,297 @@ class NTTEngine {
      for(uint32_t i=0;i<16;i+=4)
        ntt4(X[i], X[i+1], X[i+2], X[i+3]);
      
+  }
+
+  __device__ __forceinline__ void ntt16_win8ct2() {
+     
+    #pragma unroll
+     for(uint32_t i=0;i<2;i++)
+       ntt8win(X[i], X[i+2], X[i+4], X[i+6], X[i+8], X[i+10], X[i+12], X[i+14]);
+    
+     X[3] = X[3] * test_scalar::omega4(1);
+     X[5] = X[5] * test_scalar::omega4(2);
+     X[7] = X[7] * test_scalar::omega4(3);
+     X[9] = X[9] * test_scalar::omega4(4);
+     X[11] = X[11] * test_scalar::omega4(5);
+     X[13] = X[13] * test_scalar::omega4(6);
+     X[15] = X[15] * test_scalar::omega4(7);
+     
+     #pragma unroll
+     for(uint32_t i=0;i<16;i+=2)
+       ntt2(X[i], X[i+1]);
+     
+  }
+
+  
+  __device__ __forceinline__ void ntt16win() {
+    //does not work
+     
+    test_scalar    Y[16];
+
+    Y[0] = X[0] + X[8];
+    Y[1] = X[0] - X[8];
+    Y[2] = X[4] + X[12];
+    Y[3] = X[4] - X[12];
+
+    Y[4] = X[2] + X[10];
+    Y[6] = X[2] - X[10];
+    Y[5] = X[6] + X[14];
+    Y[7] = X[6] - X[14];
+    Y[0] = Y[0] * test_scalar::win4(0);
+    Y[1] = Y[1] * test_scalar::win4(1);
+    Y[2] = Y[2] * test_scalar::win4(2);
+    Y[3] = Y[3] * test_scalar::win4(3);
+
+    Y[8] = X[1] + X[9];
+    Y[12] = X[1] - X[9];
+    Y[9] = X[3] + X[11];
+    Y[13] = X[3] - X[11];
+    Y[10] = X[5] + X[13];
+    Y[14] = X[5] - X[13];
+    Y[11] = X[7] + X[15];
+    Y[15] = X[7] - X[15];
+
+//#######################################
+
+    X[0] = Y[0] + Y[2];
+    X[2] = Y[0] - Y[2];
+    X[1] = Y[1] + Y[3];
+    X[3] = Y[1] - Y[3];
+
+    X[4] = Y[4] + Y[5];
+    X[5] = Y[4] - Y[5];
+    X[6] = Y[6] + Y[7];
+    X[7] = Y[6] - Y[7];
+    X[4] = X[4] * test_scalar::win4(4);
+    X[5] = X[5] * test_scalar::win4(5);
+    X[6] = X[6] * test_scalar::win4(6);
+    X[7] = X[7] * test_scalar::win4(7);
+
+    X[8] = Y[8] + Y[10];
+    X[10] = Y[8] - Y[10];
+    X[9] = Y[9] + Y[11];
+    X[11] = Y[9] - Y[11];
+
+    X[12] = Y[12] + Y[14];
+    X[14] = Y[12] - Y[14];
+    X[13] = Y[13] + Y[15];
+    X[15] = Y[13] - Y[15];
+
+    Y[0] = X[6] + X[7];
+    X[7] = X[6] - X[7];
+    X[6] = Y[0];
+
+    Y[0] = X[8] + X[9];
+    X[9] = X[8] - X[9];
+    X[8] = Y[0];
+
+    Y[0] = X[10] + X[11];
+    X[11] = X[10] - X[11];
+    X[10] = Y[0];
+
+    Y[0] = X[12] + X[14];
+    X[14] = X[12] - X[14];
+    X[12] = Y[0];
+
+    Y[0] = X[13] + X[15];
+    X[15] = X[13] - X[15];
+    X[15] = Y[0];
+
+    X[8] = X[8] * test_scalar::win4(8);
+    X[9] = X[9] * test_scalar::win4(9);
+    X[10] = X[10] * test_scalar::win4(10);
+    X[11] = X[11] * test_scalar::win4(11);
+
+    Y[0] = X[12] + X[13];
+    Y[0] = Y[0] * test_scalar::win4(14);
+    X[12] = X[12] * test_scalar::win4(12);
+    X[13] = X[13] * test_scalar::win4(13);
+    X[12] = X[12] + Y[0];
+    X[13] = X[13] + Y[0]; //switch!
+
+    Y[0] = X[14] + X[15];
+    Y[0] = Y[0] * test_scalar::win4(17);
+    X[14] = X[14] * test_scalar::win4(16);
+    X[15] = X[15] * test_scalar::win4(15);
+    X[14] = X[14] + Y[0];
+    X[15] = X[15] + Y[0];
+
+//#######################################
+
+    Y[0] = X[0] + X[4];
+    Y[4] = X[0] - X[4];
+    Y[1] = X[1] + X[6];
+    Y[5] = X[1] - X[6];
+    Y[2] = X[2] + X[5];
+    Y[6] = X[2] - X[5];
+    Y[3] = X[3] + X[7];
+    Y[7] = X[3] - X[7];
+
+    Y[8] = X[8];
+    Y[9] = X[9];
+    Y[10] = X[10] + X[11];
+    Y[11] = X[10] - X[11];
+
+    Y[12] = X[13] + X[15];
+    Y[14] = X[13] - X[15];
+    Y[13] = X[12] + X[14];
+    Y[15] = X[12] - X[14];
+
+    //#################################
+
+    X[0] = Y[0] + Y[8];
+    X[8] = Y[0] - Y[8];
+    X[1] = Y[1] + Y[9];
+    X[9] = Y[1] - Y[9];
+    X[2] = Y[2] + Y[12];
+    X[10] = Y[2] - Y[12];
+    X[3] = Y[3] + Y[14];
+    X[11] = Y[3] - Y[14];
+    X[4] = Y[4] + Y[10];
+    X[12] = Y[4] - Y[10];
+    X[5] = Y[5] + Y[11];
+    X[13] = Y[5] - Y[11];
+    X[6] = Y[6] + Y[13];
+    X[14] = Y[6] - Y[13];
+    X[7] = Y[7] + Y[15];
+    X[15] = Y[7] - Y[15];
+ 
+  }
+
+    __device__ __forceinline__ void ntt16win_lowreg() {
+     //complete nonsense - just for performance test
+
+    test_scalar    T;
+
+    T = X[0] + X[8];
+    X[1] = X[0] - X[8];
+    X[2] = X[4] + X[12];
+    X[3] = X[4] - X[12];
+
+    T = X[2] + X[10];
+    X[6] = X[2] - X[10];
+    X[5] = X[6] + X[14];
+    X[7] = X[6] - T;
+    X[0] = X[0] * test_scalar::win4(0);
+    X[1] = X[1] * test_scalar::win4(1);
+    X[2] = X[2] * test_scalar::win4(2);
+    X[3] = X[3] * test_scalar::win4(3);
+
+    X[8] = X[1] + T;
+    X[12] = X[1] - X[9];
+    T = X[3] + X[11];
+    X[13] = X[3] - X[11];
+    X[10] = X[5] + X[13];
+    X[14] = X[5] - X[13];
+    X[11] = X[7] + X[15];
+    X[15] = X[7] - X[15];
+
+//#######################################
+
+    X[0] = X[0] + X[2];
+    X[2] = X[0] - T;
+    T = X[1] + X[3];
+    X[3] = X[1] - X[3];
+
+    X[4] = X[4] + X[5];
+    X[5] = X[4] - X[5];
+    X[6] = X[6] + X[7];
+    X[7] = X[6] - T;
+    X[4] = X[4] * test_scalar::win4(4);
+    X[5] = X[5] * test_scalar::win4(5);
+    X[6] = X[6] * test_scalar::win4(6);
+    T = T * test_scalar::win4(7);
+
+    X[8] = X[8] + X[10];
+    X[10] = X[8] - X[10];
+    X[9] = X[9] + X[11];
+    T = T - X[11];
+
+    X[12] = X[12] + X[14];
+    X[14] = X[12] - X[14];
+    X[13] = X[13] + X[15];
+    X[15] = X[13] - X[15];
+
+    X[0] = X[6] + X[7];
+    X[7] = X[6] - X[7];
+    X[6] = X[0];
+
+    X[0] = X[8] + X[9];
+    X[9] = X[8] - X[9];
+    X[8] = X[0];
+
+    X[0] = X[10] + X[11];
+    X[11] = X[10] - X[11];
+    X[10] = X[0];
+
+    X[0] = X[12] + X[14];
+    X[14] = X[12] - X[14];
+    X[12] = X[0];
+
+    X[0] = X[13] + X[15];
+    X[15] = X[13] - X[15];
+    X[15] = X[0];
+
+    X[8] = X[8] * test_scalar::win4(8);
+    X[9] = X[9] * test_scalar::win4(9);
+    X[10] = X[10] * test_scalar::win4(10);
+    X[11] = X[11] * test_scalar::win4(11);
+
+    X[0] = X[12] + X[13];
+    X[0] = X[0] * test_scalar::win4(14);
+    X[12] = X[12] * test_scalar::win4(12);
+    X[13] = X[13] * test_scalar::win4(13);
+    X[12] = X[12] + X[0];
+    X[13] = X[13] + X[0]; //switch!
+
+    X[0] = X[14] + X[15];
+    X[0] = X[0] * test_scalar::win4(17);
+    X[14] = X[14] * test_scalar::win4(16);
+    X[15] = X[15] * test_scalar::win4(15);
+    X[14] = X[14] + X[0];
+    X[15] = X[15] + X[0];
+
+//#######################################
+
+    X[0] = X[0] + X[4];
+    X[4] = X[0] - X[4];
+    X[1] = X[1] + X[6];
+    X[5] = X[1] - X[6];
+    X[2] = X[2] + X[5];
+    X[6] = X[2] - X[5];
+    X[3] = X[3] + X[7];
+    X[7] = X[3] - X[7];
+
+    X[8] = X[8];
+    X[9] = X[9];
+    X[10] = X[10] + X[11];
+    X[11] = X[10] - X[11];
+
+    X[12] = X[13] + X[15];
+    X[14] = X[13] - X[15];
+    X[13] = X[12] + X[14];
+    X[15] = X[12] - X[14];
+
+    //#################################
+
+    X[0] = X[0] + X[8];
+    X[8] = X[0] - X[8];
+    X[1] = X[1] + X[9];
+    X[9] = X[1] - X[9];
+    X[2] = X[2] + X[12];
+    X[10] = X[2] - X[12];
+    X[3] = X[3] + X[14];
+    X[11] = X[3] - X[14];
+    X[4] = X[4] + X[10];
+    X[12] = X[4] - X[10];
+    X[5] = X[5] + X[11];
+    X[13] = X[5] - X[11];
+    X[6] = X[6] + X[13];
+    X[14] = X[6] - X[13];
+    X[7] = X[7] + X[15];
+    X[15] = X[7] - X[15];
+ 
   }
     
   // __device__ __forceinline__ void storeSharedData(uint32_t addr) {
