@@ -68,8 +68,6 @@ protected:
     assert(!cudaMallocManaged(&g2_res_points2, n * sizeof(g2_projective_t)));
     assert(!cudaMallocManaged(&res_scalars1, n * sizeof(scalar_t)));
     assert(!cudaMallocManaged(&res_scalars2, n * sizeof(scalar_t)));
-    assert(!cudaMallocManaged(&res_scalars_wide, n * sizeof(scalar_t::Wide)));
-    assert(!cudaMallocManaged(&res_scalars_wide_full, n * sizeof(scalar_t::Wide)));
   }
 
   ~PrimitivesTest() override
@@ -92,9 +90,6 @@ protected:
     cudaFree(g2_res_points2);
     cudaFree(res_scalars1);
     cudaFree(res_scalars2);
-
-    cudaFree(res_scalars_wide);
-    cudaFree(res_scalars_wide_full);
 
     cudaDeviceReset();
   }
@@ -119,8 +114,6 @@ protected:
     ASSERT_EQ(cudaMemset(g2_res_points2, 0, n * sizeof(g2_projective_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_scalars1, 0, n * sizeof(scalar_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_scalars2, 0, n * sizeof(scalar_t)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars_wide, 0, n * sizeof(scalar_t::Wide)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars_wide_full, 0, n * sizeof(scalar_t::Wide)), cudaSuccess);
   }
 };
 
@@ -317,82 +310,6 @@ TEST_F(PrimitivesTest, ECMixedAdditionOfNegatedPointEqSubtraction)
   ASSERT_EQ(vec_neg(points2, res_points2, n), cudaSuccess);
   for (unsigned i = 0; i < n; i++)
     ASSERT_EQ(res_points1[i], points1[i] + res_points2[i]);
-}
-
-TEST_F(PrimitivesTest, MP_LSB_MULT)
-{
-  // LSB multiply, check correctness of first TLC + 1 digits result.
-  ASSERT_EQ(mp_lsb_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
-  std::cout << "first GPU lsb mult output  = 0x";
-  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
-    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i];
-  }
-  std::cout << std::endl;
-
-  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
-  std::cout << "first GPU full mult output = 0x";
-  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
-    std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i];
-  }
-  std::cout << std::endl;
-  for (int j = 0; j < n; j++) {
-    for (int i = 0; i < scalar_t::TLC + 1; i++) {
-      ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
-    }
-  }
-}
-
-TEST_F(PrimitivesTest, MP_MSB_MULT)
-{
-  // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
-  ASSERT_EQ(mp_msb_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
-  std::cout << "first GPU msb mult output  = 0x";
-  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
-    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
-  }
-  std::cout << std::endl;
-
-  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
-  std::cout << "first GPU full mult output = 0x";
-  for (int i = 2 * scalar_t::TLC - 1; i >= 0; i--) {
-    std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
-  }
-
-  std::cout << std::endl;
-
-  for (int i = 0; i < 2 * scalar_t::TLC - 1; i++) {
-    if (res_scalars_wide_full[0].limbs_storage.limbs[i] == res_scalars_wide[0].limbs_storage.limbs[i])
-      std::cout << "matched word idx = " << i << std::endl;
-  }
-}
-
-TEST_F(PrimitivesTest, INGO_MP_MULT)
-{
-  // MSB multiply, take n msb bits of multiplication, assert that the error is up to 1.
-  ASSERT_EQ(ingo_mp_mult(scalars1, scalars2, res_scalars_wide), cudaSuccess);
-  std::cout << "INGO   = 0x";
-  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
-    std::cout << std::hex << res_scalars_wide[0].limbs_storage.limbs[i] << " ";
-  }
-  std::cout << std::endl;
-
-  ASSERT_EQ(mp_mult(scalars1, scalars2, res_scalars_wide_full), cudaSuccess);
-  std::cout << "ZKSYNC = 0x";
-  for (int i = 0; i < 2 * scalar_t::TLC; i++) {
-    std::cout << std::hex << res_scalars_wide_full[0].limbs_storage.limbs[i] << " ";
-  }
-
-  std::cout << std::endl;
-
-  for (int i = 0; i < 2 * scalar_t::TLC - 1; i++) {
-    if (res_scalars_wide_full[0].limbs_storage.limbs[i] == res_scalars_wide[0].limbs_storage.limbs[i])
-      std::cout << "matched word idx = " << i << std::endl;
-  }
-  for (int j = 0; j < n; j++) {
-    for (int i = 0; i < 2 * scalar_t::TLC - 1; i++) {
-      ASSERT_EQ(res_scalars_wide_full[j].limbs_storage.limbs[i], res_scalars_wide[j].limbs_storage.limbs[i]);
-    }
-  }
 }
 
 TEST_F(PrimitivesTest, G2ECRandomPointsAreOnCurve)
