@@ -15,6 +15,7 @@ extern "C" {
         points: *const PointAffineNoInfinity_BN254,
         scalars: *const ScalarField_BN254,
         count: usize,
+        large_bucket_factor: usize,
         device_id: usize,
     ) -> c_uint;
 
@@ -32,6 +33,7 @@ extern "C" {
         d_scalars: DevicePointer<ScalarField_BN254>,
         d_points: DevicePointer<PointAffineNoInfinity_BN254>,
         count: usize,
+        large_bucket_factor: usize,
         device_id: usize,
     ) -> c_uint;
 
@@ -237,6 +239,7 @@ extern "C" {
 pub fn msm_bn254(
     points: &[PointAffineNoInfinity_BN254],
     scalars: &[ScalarField_BN254],
+    large_bucket_factor: usize,
     device_id: usize,
 ) -> Point_BN254 {
     let count = points.len();
@@ -251,6 +254,7 @@ pub fn msm_bn254(
             points as *const _ as *const PointAffineNoInfinity_BN254,
             scalars as *const _ as *const ScalarField_BN254,
             scalars.len(),
+            large_bucket_factor,
             device_id,
         )
     };
@@ -288,6 +292,7 @@ pub fn msm_batch_bn254(
 pub fn commit_bn254(
     points: &mut DeviceBuffer<PointAffineNoInfinity_BN254>,
     scalars: &mut DeviceBuffer<ScalarField_BN254>,
+    large_bucket_factor: usize,
 ) -> DeviceBox<Point_BN254> {
     let mut res = DeviceBox::new(&Point_BN254::zero()).unwrap();
     unsafe {
@@ -296,6 +301,7 @@ pub fn commit_bn254(
             scalars.as_device_ptr(),
             points.as_device_ptr(),
             scalars.len(),
+            large_bucket_factor,
             0,
         );
     }
@@ -931,6 +937,7 @@ pub(crate) mod tests_bn254 {
     #[test]
     fn test_msm() {
         let test_sizes = [24];
+        let large_bucket_factor = 10;
 
         for pow2 in test_sizes {
             let count = 1 << pow2;
@@ -939,7 +946,7 @@ pub(crate) mod tests_bn254 {
             let points = generate_random_points100_bn254(count, get_rng_bn254(seed));
             let scalars = generate_random_scalars_bn254(count, get_rng_bn254(seed));
 
-            let msm_result = msm_bn254(&points, &scalars, 10);
+            let msm_result = msm_bn254(&points, &scalars, large_bucket_factor, 0);
 
             let point_r_ark: Vec<_> = points
                 .iter()
@@ -963,6 +970,7 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_custom_msm_distributions() {
+        let large_bucket_factor = 10;
         let mut i = 0;
         // loop over all the saved distributions: scalars0.txt, scalars1.txt, ...
         while let Ok(scalars_file) = std::fs::read_to_string(format!("src/scalars{}.txt", i)) {
@@ -990,7 +998,7 @@ pub(crate) mod tests_bn254 {
                 .is_on_curve());
 
             assert_eq!(scalars.len(), points.len());
-            let msm_result = msm_bn254(&points, &scalars, 10);
+            let msm_result = msm_bn254(&points, &scalars, large_bucket_factor, 0);
 
             let point_r_ark: Vec<_> = points
                 .iter()
@@ -1042,14 +1050,15 @@ pub(crate) mod tests_bn254 {
 
     #[test]
     fn test_commit() {
+        let large_bucket_factor = 10;
         let test_size = 1 << 8;
         let seed = Some(0);
         let (scalars, mut d_scalars, _) = set_up_scalars_bn254(test_size, 0, false);
         let points = generate_random_points_bn254(test_size, get_rng_bn254(seed));
         let mut d_points = DeviceBuffer::from_slice(&points[..]).unwrap();
 
-        let msm_result = msm_bn254(&points, &scalars, 0);
-        let d_commit_result = commit_bn254(&mut d_points, &mut d_scalars);
+        let msm_result = msm_bn254(&points, &scalars, large_bucket_factor, 0);
+        let d_commit_result = commit_bn254(&mut d_points, &mut d_scalars, large_bucket_factor);
         let mut h_commit_result = Point_BN254::zero();
         d_commit_result
             .copy_to(&mut h_commit_result)

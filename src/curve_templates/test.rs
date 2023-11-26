@@ -15,6 +15,7 @@ extern "C" {
         points: *const PointAffineNoInfinity_CURVE_NAME_U,
         scalars: *const ScalarField_CURVE_NAME_U,
         count: usize,
+        large_bucket_factor: usize,
         device_id: usize,
     ) -> c_uint;
 
@@ -32,6 +33,7 @@ extern "C" {
         d_scalars: DevicePointer<ScalarField_CURVE_NAME_U>,
         d_points: DevicePointer<PointAffineNoInfinity_CURVE_NAME_U>,
         count: usize,
+        large_bucket_factor: usize,
         device_id: usize,
     ) -> c_uint;
 
@@ -231,7 +233,7 @@ extern "C" {
     ) -> c_int;
 }
 
-pub fn msm_CURVE_NAME_L(points: &[PointAffineNoInfinity_CURVE_NAME_U], scalars: &[ScalarField_CURVE_NAME_U], device_id: usize) -> Point_CURVE_NAME_U {
+pub fn msm_CURVE_NAME_L(points: &[PointAffineNoInfinity_CURVE_NAME_U], scalars: &[ScalarField_CURVE_NAME_U], large_bucket_factor: usize, device_id: usize) -> Point_CURVE_NAME_U {
     let count = points.len();
     if count != scalars.len() {
         todo!("variable length")
@@ -244,6 +246,7 @@ pub fn msm_CURVE_NAME_L(points: &[PointAffineNoInfinity_CURVE_NAME_U], scalars: 
             points as *const _ as *const PointAffineNoInfinity_CURVE_NAME_U,
             scalars as *const _ as *const ScalarField_CURVE_NAME_U,
             scalars.len(),
+            large_bucket_factor,
             device_id,
         )
     };
@@ -281,6 +284,7 @@ pub fn msm_batch_CURVE_NAME_L(
 pub fn commit_CURVE_NAME_L(
     points: &mut DeviceBuffer<PointAffineNoInfinity_CURVE_NAME_U>,
     scalars: &mut DeviceBuffer<ScalarField_CURVE_NAME_U>,
+    large_bucket_factor: usize,
 ) -> DeviceBox<Point_CURVE_NAME_U> {
     let mut res = DeviceBox::new(&Point_CURVE_NAME_U::zero()).unwrap();
     unsafe {
@@ -289,6 +293,7 @@ pub fn commit_CURVE_NAME_L(
             scalars.as_device_ptr(),
             points.as_device_ptr(),
             scalars.len(),
+            large_bucket_factor,
             0,
         );
     }
