@@ -2,7 +2,7 @@
 name: ":sparkles: Feature Request"
 about: Request the inclusion of a new feature or functionality
 title: "[FEAT]: "
-labels: enhancement
+labels: type:feature
 ---
 
 ## Description
