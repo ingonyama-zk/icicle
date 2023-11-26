@@ -46,6 +46,10 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 - [NVCC] (version 12.0 or newer)
 - cmake 3.18 and above
 - follow [these instructions](https://github.com/ingonyama-zk/icicle/tree/main/icicle#prerequisites-on-ubuntu)
+- Any Nvidia GPU
+
+If you don't have access to a Nvidia GPU check out [google-colab](#google-colab). If you require more compute power and are looking to build or do research with ICICLE refer to our [grant program][GRANT_PROGRAM].
+
 
 ### Steps
 
@@ -85,7 +89,7 @@ For convenience, we also provide rust bindings to the ICICLE library for the fol
 - Scalar Vector Multiplication
 - Point Vector Multiplication
 
-A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environement variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
+A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environment variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
 
 > NOTE: A GPU must be detectable and therefore installed if the `ARCH_TYPE` is not set.
 
@@ -172,16 +176,26 @@ The script does the following:
 - Creates a file with the curve name in ``src/curves`` with the relevant objects for the curve. 
 - Creates a test file with the curve name in ``src``. 
 
+Also files from ``./icicle/curves/<curve_name>/supported_operations.cu`` should be added individually to ``add_library`` section of [``./icicle/CMakeLists.txt``][CMAKELISTS]
+
 Testing the new curve could be done by running the tests in ``tests_curve_name`` (e.g. ``tests_bls12_381``).
 
 ## Docker
 
-We offer a simple Docker container so you can simply run ICICLE without settig everything up locally.
+We offer a simple Docker container so you can simply run ICICLE without setting everything up locally.
 
 ```
 docker build -t <name_of_your_choice> .
 docker run --gpus all -it <name_of_your_choice> /bin/bash
 ```
+
+## Google Colab
+
+[Colab](https://colab.google/) is a hosted Jupyter Notebook service that requires no setup to use and provides free access to computing resources including GPUS!
+
+You can easily run ICICLE in Google Colab on a free GPU instance, this is a great option for those who want to get started with ICICLE instantly without any local setup or GPU. 
+
+Follow this [guide][GOOGLE_COLAB_ICICLE] for more details.
 
 ## Contributions
 
@@ -195,12 +209,19 @@ If you are changing code, please make sure to change your [git hooks path][HOOKS
 git config core.hooksPath ./scripts/hooks
 ```
 
+In case `clang-format` is missing on your system, you can install it  using the following command:
+
+```sh
+sudo apt install clang-format
+```
+
 This will ensure our custom hooks are run and will make it easier to follow our coding guidelines.
 
 ### Hall of Fame
 
-- [Robik](https://github.com/robik75), for his on-going support and mentorship
+- [Robik](https://github.com/robik75), for his ongoing support and mentorship
 - [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
+- [gkigiermo](https://github.com/gkigiermo), for making it intuitive to use ICICLE in Google Colab.
 
 ## Help & Support
 
@@ -228,5 +249,8 @@ See [LICENSE-MIT][LMIT] for details.
 [googletest]: https://github.com/google/googletest/
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
+[CMAKELISTS]: https://github.com/ingonyama-zk/icicle/blob/f0e6b465611227b858ec4590f4de5432e892748d/icicle/CMakeLists.txt#L28
+[GOOGLE_COLAB_ICICLE]: https://github.com/gkigiermo/rust-cuda-colab
+[GRANT_PROGRAM]: https://docs.google.com/forms/d/e/1FAIpQLSc967TnNwxZZ4akejcSi4KOUmGrEc68ZZV-FHLfo8KnP1wbpg/viewform
 
 <!-- End Links -->

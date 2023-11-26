@@ -8,7 +8,7 @@
 const uint32_t MAX_NUM_THREADS = 512;
 const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
 const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
-const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * 1024;
+const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
 /**
  * Computes the twiddle factors.
@@ -287,7 +287,7 @@ ntt_template_kernel(E* arr, uint32_t n, S* twiddles, uint32_t n_twiddles, uint32
  * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
  * @param inverse true for iNTT
  * @param is_coset true for multiplication by coset
- * @param coset should be array of lenght n - or in case of lesser than n, right-padded with zeroes
+ * @param coset should be array of length n - or in case of lesser than n, right-padded with zeroes
  * @param stream CUDA stream
  * @param is_sync_needed do perform sync of the supplied CUDA stream at the end of processing
  */
