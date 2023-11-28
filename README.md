@@ -66,6 +66,14 @@ nvcc -o build/<binary_name> ./icicle/curves/index.cu -lib -arch=native
 
 We are using [googletest] library for testing. To build and run [the test suite](./icicle/README.md) for finite field and elliptic curve arithmetic, run from the `icicle` folder:
 
+For testing, ensure the `BUILD_TESTS` option is enabled in cmake. If not, toggle it on by adding `-DBUILD_TESTS=ON` in the cmake configuration command:
+
+```sh
+cmake -S . -B build -DBUILD_TESTS=ON
+```
+
+Proceed with the following commands:
+
 ```sh
 mkdir -p build
 cmake -S . -B build
@@ -74,6 +82,7 @@ cd build && ctest
 ```
 
 NOTE: If you are using cmake versions < 3.24 add `-DCUDA_ARCH=<target_cumpute_arch>` to the command `cmake -S . -B build`
+
 
 ### Rust Bindings
 
