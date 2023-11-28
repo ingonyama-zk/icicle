@@ -6,6 +6,7 @@ namespace PARAMS_BN254 {
     static constexpr unsigned limbs_count = 8;
     static constexpr unsigned omegas_count = 28;
     static constexpr unsigned modulus_bit_count = 254;
+    static constexpr unsigned num_of_reductions = 1;
 
     static constexpr storage<limbs_count> modulus = {0xf0000001, 0x43e1f593, 0x79b97091, 0x2833e848,
                                                      0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
@@ -13,6 +14,8 @@ namespace PARAMS_BN254 {
                                                        0x0302b0ba, 0x70a08b6d, 0xc2634053, 0x60c89ce5};
     static constexpr storage<limbs_count> modulus_4 = {0xc0000004, 0x0f87d64f, 0xe6e5c245, 0xa0cfa121,
                                                        0x06056174, 0xe14116da, 0x84c680a6, 0xc19139cb};
+    static constexpr storage<limbs_count> neg_modulus = {0xfffffff, 0xbc1e0a6c, 0x86468f6e, 0xd7cc17b7,
+                                                         0x7e7ea7a2, 0x47afba49, 0x1ece5fd6, 0xcf9bb18d};
     static constexpr storage<2 * limbs_count> modulus_wide = {
       0xf0000001, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72,
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
@@ -131,12 +134,15 @@ namespace PARAMS_BN254 {
   struct fq_config {
     static constexpr unsigned limbs_count = 8;
     static constexpr unsigned modulus_bit_count = 254;
+    static constexpr unsigned num_of_reductions = 1;
     static constexpr storage<limbs_count> modulus = {0xd87cfd47, 0x3c208c16, 0x6871ca8d, 0x97816a91,
                                                      0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
     static constexpr storage<limbs_count> modulus_2 = {0xb0f9fa8e, 0x7841182d, 0xd0e3951a, 0x2f02d522,
                                                        0x0302b0bb, 0x70a08b6d, 0xc2634053, 0x60c89ce5};
     static constexpr storage<limbs_count> modulus_4 = {0x61f3f51c, 0xf082305b, 0xa1c72a34, 0x5e05aa45,
                                                        0x06056176, 0xe14116da, 0x84c680a6, 0xc19139cb};
+    static constexpr storage<limbs_count> neg_modulus = {0x278302b9, 0xc3df73e9, 0x978e3572, 0x687e956e,
+                                                         0x7e7ea7a2, 0x47afba49, 0x1ece5fd6, 0xcf9bb18d};
     static constexpr storage<2 * limbs_count> modulus_wide = {
       0xd87cfd47, 0x3c208c16, 0x6871ca8d, 0x97816a91, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72,
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
