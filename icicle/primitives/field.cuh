@@ -1,3 +1,21 @@
+/**
+ * This file contains methods for working with elements of a prime field. It is based on and evolved from Matter Labs'
+ * [Zprize
+ * submission](https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/bellman-cuda-sys/native/ff_dispatch_st.cuh).
+ *
+ * TODO: DmytroTym: current version needs refactoring (e.g. there's no reason to have different classes Field and
+ * ff_storage among other issues). But because this is an internal file and correctness and performance are unaffected,
+ * refactoring it is low in the priority list.
+ *
+ * Documentation of methods is intended to explain inner workings to developers working on icicle. In its current state
+ * it mostly explains modular mutliplication and related methods. One important quirk of modern CUDA that's affecting
+ * most methods is explained by [Niall Emmart](https://youtu.be/KAWlySN7Hm8?si=h7nzDujnvubWXeDX&t=4039). In short, when
+ * 64-bit MAD (`r = a * b + c`) instructions get compiled down to SASS (CUDA assembly) they require two-register values
+ * `r` and `c` to start from even register (e.g. `r` can live in registers 20 and 21, or 14 and 15, but not 15 and 16).
+ * This complicates implementations forcing us to segregate terms into two categories depending on their alignment. 
+ * Which is where `even` and `odd` arrays across the codebase come from.
+ */
+
 #pragma once
 
 #include "../utils/host_math.cuh"
@@ -67,8 +85,14 @@ public:
   typedef storage<TLC> ff_storage;
   typedef storage<2 * TLC> ff_wide_storage;
 
+  /**
+   * A new addition to the config file - \f$ 2^{32 \cdot num\_limbs} - p \f$.
+   */
   static constexpr HOST_DEVICE_INLINE ff_storage get_neg_modulus() { return CONFIG::neg_modulus; }
 
+  /**
+   * A new addition to the config file - the number of times to reduce in [reduce](@ref reduce) function.
+   */
   static constexpr HOST_DEVICE_INLINE unsigned num_of_reductions() { return CONFIG::num_of_reductions; }
 
   static constexpr unsigned slack_bits = 32 * TLC - NBITS;
@@ -152,7 +176,7 @@ public:
     }
   };
 
-  // return modulus
+  // return modulus multiplied by 1, 2 or 4
   template <unsigned MULTIPLIER = 1>
   static constexpr HOST_DEVICE_INLINE ff_storage get_modulus()
   {
@@ -361,7 +385,7 @@ public:
     odd[n - 1] = CARRY_OUT ? ptx::madc_hi_cc(a[n - 1], bi, di) : ptx::madc_hi(a[n - 1], bi, di);
     uint32_t cr = CARRY_OUT ? ptx::addc(0, 0) : 0;
     cmad_n(even, a, bi, n);
-    if (CARRY_OUT) { 
+    if (CARRY_OUT) {
       odd[n - 1] = ptx::addc_cc(odd[n - 1], carry_for_high);
       cr = ptx::addc(cr, 0);
     } else
@@ -383,15 +407,17 @@ public:
   static __device__ __forceinline__ void
   mad_row_lsb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
+    // bi here is constant so we can do a compile-time check for zero (which does happen once for bls12-381 scalar field
+    // modulus)
     if (bi != 0) {
-        if (n > 1) cmad_n_lsb(odd, a + 1, bi, n - 1);
-        cmad_n_lsb(even, a, bi, n);
+      if (n > 1) cmad_n_lsb(odd, a + 1, bi, n - 1);
+      cmad_n_lsb(even, a, bi, n);
     }
     return;
   }
 
   static __device__ __forceinline__ uint32_t
-  mul_n_plus_extra(uint32_t* acc, const uint32_t* a, uint32_t bi, uint32_t* extra, size_t n = (TLC >> 1))
+  mul_n_and_add(uint32_t* acc, const uint32_t* a, uint32_t bi, uint32_t* extra, size_t n = (TLC >> 1))
   {
     acc[0] = ptx::mad_lo_cc(a[0], bi, extra[0]);
 
@@ -405,16 +431,22 @@ public:
     return ptx::addc(0, 0);
   }
 
-  static DEVICE_INLINE void mult_no_carry(uint32_t a, uint32_t b, uint32_t* r)
-  {
-    r[0] = ptx::mul_lo(a, b);
-    r[1] = ptx::mul_hi(a, b);
-  }
-
+  /**
+   * A function that computes wide product \f$ rs = as \cdot bs \f$ that's correct for the higher TLC + 1 limbs with a
+   * small maximum error.
+   *
+   * The way this function saves computations (as compared to regular school-book multiplication) is by not including
+   * terms that are too small. Namely, limb product \f$ a_i \cdot b_j \f$ is excluded if \f$ i + j < TLC - 2 \f$ and
+   * only the higher half is included if \f$ i + j = TLC - 2 \f$. All other limb products are included. So, the error
+   * i.e. difference between true product and the result of this function written to `rs` is exactly the sum of all
+   * dropped limbs products, which we can bound: \f$ a_0 \cdot b_0 + 2^{32}(a_0 \cdot b_1 + a_1 \cdot b_0) + \dots +
+   * 2^{32(TLC - 3)}(a_{TLC - 3} \cdot b_0 + \dots + a_0 \cdot b_{TLC - 3}) + 2^{32(TLC - 2)}(\floor{\frac{a_{TLC - 2}
+   * \cdot b_0}{2^{32}}} + \dots + \floor{\frac{a_0 \cdot b_{TLC - 2}}{2^{32}}}) \leq 2^{64} + 2\cdot 2^{96} + \dots +
+   * (TLC - 2) \cdot 2^{32(TLC - 1)} + (TLC - 1) \cdot 2^{32(TLC - 1)} \leq 2(TLC - 1) \cdot 2^{32(TLC - 1)}\f$.
+   */
   static __device__ __forceinline__ void
   multiply_msb_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
-    // r = a * b is almost correct for the higher TLC + 1 digits
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
     uint32_t* even = rs.limbs;
@@ -438,21 +470,30 @@ public:
     even[i + 1] = ptx::addc(even[i + 1], 0);
   }
 
+  /**
+   * A function that computes the low half of the fused multiply-and-add \f$ rs = as \cdot bs + cs \f$.
+   *
+   * For efficiency, this method does not include terms that are too large. Namely, limb product \f$ a_i \cdot b_j \f$
+   * is excluded if \f$ i + j > TLC - 1 \f$ and only the lower half is included if \f$ i + j = TLC - 1 \f$. All other
+   * limb products are included.
+   */
   static __device__ __forceinline__ void
   multiply_and_add_lsb_raw_device(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
   {
-    // r = a * b + c is correct for the lower TLC digits
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
     uint32_t* even = rs.limbs;
     __align__(16) uint32_t odd[TLC - 1];
     size_t i;
+    // UINT32_MAX is \f$ 2^{32} \f$ minus the last limb of prime modulus. Because most scalar (and some base) primes
+    // are neccessarily NTT-friendly, `b[0]` often turns out to be \f$ 2^{32} - 1 \f$. This actually leads to
+    // less efficient SASS generated by nvcc, so this case needed separate handling.
     if (b[0] == UINT32_MAX) {
       add_sub_u32_device<true, false>(cs.limbs, a, even, TLC);
       for (i = 0; i < TLC - 1; i++)
         odd[i] = a[i];
     } else {
-      mul_n_plus_extra(even, a, b[0], cs.limbs, TLC);
+      mul_n_and_add(even, a, b[0], cs.limbs, TLC);
       mul_n(odd, a + 1, b[0], TLC - 1);
     }
     mad_row_lsb(&even[2], &odd[0], a, b[1], TLC - 1);
@@ -469,15 +510,21 @@ public:
     even[i + 1] = ptx::addc(even[i + 1], odd[i]);
   }
 
-  // This method multiplies `a` and `b` and adds `in1` and `in2` to the result
-  // It is used to compute the "middle" part of Karatsuba: `a0 * b1 + b0 * a1`
-  // So under the assumption that the top bits of `a` and `b` are unset, we can ignore all the carries from here
+  /**
+   * This method multiplies `a` and `b` (both assumed to have TLC / 2 limbs) and adds `in1` and `in2` (TLC limbs each)
+   * to the result which is written to `even`.
+   *
+   * It is used to compute the "middle" part of Karatsuba: \f$ a_{lo} \cdot b_{hi} + b_{lo} \cdot a_{hi} =
+   * (a_{hi} - a_{lo})(b_{lo} - b_{hi}) + a_{lo} \cdot b_{lo} + a_{hi} \cdot b_{hi} \f$. Currently this method assumes
+   * that the top bit of \f$ a_{hi} \f$ and \f$ b_{hi} \f$ are unset. This ensures correctness by allowing to keep the
+   * result inside TLC limbs and ignore the carries from the highest limb.
+   */
   static __device__ __forceinline__ void
   multiply_and_add_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even, uint32_t* in1, uint32_t* in2)
   {
     __align__(16) uint32_t odd[TLC - 2];
-    uint32_t first_row_carry = mul_n_plus_extra(even, a, b[0], in1);
-    uint32_t carry = mul_n_plus_extra(odd, a + 1, b[0], &in2[1]);
+    uint32_t first_row_carry = mul_n_and_add(even, a, b[0], in1);
+    uint32_t carry = mul_n_and_add(odd, a + 1, b[0], &in2[1]);
 
     size_t i;
 #pragma unroll
@@ -490,13 +537,17 @@ public:
     mad_row<false, true>(
       &even[TLC >> 1], &odd[(TLC >> 1) - 2], a, b[(TLC >> 1) - 1], TLC >> 1, in1[TLC - 2], in1[TLC - 1], carry,
       first_row_carry);
-    // merge |even| and |odd| plus the parts of in2 we haven't added yet
+    // merge |even| and |odd| plus the parts of `in2` we haven't added yet (first and last limbs)
     even[0] = ptx::add_cc(even[0], in2[0]);
     for (i = 0; i < (TLC - 2); i++)
       even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
     even[i + 1] = ptx::addc(even[i + 1], in2[i + 1]);
   }
 
+  /**
+   * This method multiplies `a` and `b` and writes the result into `even`. It assumes that `a` and `b` are TLC/2 limbs
+   * long. The usual schoolbook algorithm is used.
+   */
   static __device__ __forceinline__ void multiply_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even)
   {
     __align__(16) uint32_t odd[TLC - 2];
@@ -517,22 +568,39 @@ public:
     even[i + 1] = ptx::addc(even[i + 1], 0);
   }
 
+  /**
+   * This method multiplies `as` and `bs` and writes the (wide) result into `rs`.
+   *
+   * It is assumed that the highest bits of `as` and `bs` are unset which is true for all the numbers icicle had to deal
+   * with so far. This method implements [subtractive
+   * Karatsuba](https://en.wikipedia.org/wiki/Karatsuba_algorithm#Implementation).
+   */
   static DEVICE_INLINE void multiply_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
     uint32_t* r = rs.limbs;
+    // Next two lines multiply high and low halves of operands (\f$ a_{lo} \cdot b_{lo}; a_{hi} \cdot b_{hi} \$f) and
+    // write the results into `r`.
     multiply_short_raw_device(a, b, r);
     multiply_short_raw_device(&a[TLC >> 1], &b[TLC >> 1], &r[TLC]);
     __align__(16) uint32_t middle_part[TLC];
     __align__(16) uint32_t diffs[TLC];
+    // Differences of halves \f$ a_{hi} - a_{lo}; b_{lo} - b_{hi} \$f are written into `diffs`, signs written to
+    // `carry1` and `carry2`.
     uint32_t carry1 = add_sub_u32_device<true, true>(&a[TLC >> 1], a, diffs);
     uint32_t carry2 = add_sub_u32_device<true, true>(b, &b[TLC >> 1], &diffs[TLC >> 1]);
+    // Compute the "middle part" of Karatsuba: \f$ a_{lo} \cdot b_{hi} + b_{lo} \cdot a_{hi} \f$.
+    // This is where the assumption about unset high bit of `a` and `b` is relevant.
     multiply_and_add_short_raw_device(diffs, &diffs[TLC >> 1], middle_part, r, &r[TLC]);
+    // Corrections that need to be performed when differences are negative.
+    // Again, carry doesn't need to be propagated due to unset high bits of `a` and `b`.
     if (carry1) add_sub_u32_device<true, false>(&middle_part[TLC >> 1], &diffs[TLC >> 1], &middle_part[TLC >> 1]);
     if (carry2) add_sub_u32_device<true, false>(&middle_part[TLC >> 1], diffs, &middle_part[TLC >> 1]);
+    // Now that middle part is fully correct, it can be added to the result.
     add_sub_u32_device<false, true>(&r[TLC >> 1], middle_part, &r[TLC >> 1], TLC);
 
+    // Carry from adding middle part has to be propagated to the highest limb.
     for (size_t i = TLC + (TLC >> 1); i < 2 * TLC; i++)
       r[i] = ptx::addc_cc(r[i], 0);
   }
@@ -559,7 +627,8 @@ public:
 #endif
   }
 
-  static HOST_DEVICE_INLINE void multiply_and_add_lsb_raw(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
+  static HOST_DEVICE_INLINE void
+  multiply_and_add_lsb_raw(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
   {
 #ifdef __CUDA_ARCH__
     return multiply_and_add_lsb_raw_device(as, bs, cs, rs);
@@ -605,8 +674,8 @@ public:
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
       value.limbs_storage.limbs[i] = distribution(generator);
-    while (lt(Field { get_modulus() }, value))
-      value = value - Field { get_modulus() };
+    while (lt(Field{get_modulus()}, value))
+      value = value - Field{get_modulus()};
     return value;
   }
 
@@ -664,26 +733,49 @@ public:
     return xs * Field{CONFIG::montgomery_r_inv};
   }
 
+  /**
+   * This method reduces a Wide number `xs` modulo `p` and returns the result as a Field element.
+   *
+   * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
+   * numbers with thier high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
+   * factor of `modulus_squared` first.
+   *
+   * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
+   * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work with
+   * them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx \floor{\frac{xs}{p}}
+   * \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an error (it's always less
+   * or equal than the real quotient). So the modulus `p` might need to be subtracted several times before the result is
+   * in the desired range \f$ [0;p] \f$. The estimate of the error is as follows: \f[ \frac{xs}{p} - l = \frac{xs}{p} -
+   * \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
+   *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} + 2(TLC
+   * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
+   * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
+   * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
+   * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to 1
+   * will cause only 1 reduction to be performed.
+   */
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
   {
-    Field xs_hi = Wide::get_higher_with_slack(xs); // xy << slack_bits
+    // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
+    Field xs_hi = Wide::get_higher_with_slack(xs);
     Wide l = {};
-    multiply_msb_raw(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult
+    multiply_msb_raw(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
     Field l_hi = Wide::get_higher(l);
     Field r = {};
     Field xs_lo = Wide::get_lower(xs);
-    multiply_and_add_lsb_raw(l_hi.limbs_storage, get_neg_modulus(), xs_lo.limbs_storage, r.limbs_storage); // LSB mad
+    // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
+    // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
+    multiply_and_add_lsb_raw(l_hi.limbs_storage, get_neg_modulus(), xs_lo.limbs_storage, r.limbs_storage);
     ff_storage r_reduced = {};
     uint32_t carry;
+    // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
     if (num_of_reductions() == 2) {
       carry = sub_limbs<true>(r.limbs_storage, get_modulus<2>(), r_reduced);
-      if (carry == 0)
-        r = Field { r_reduced };
+      if (carry == 0) r = Field{r_reduced};
     }
     carry = sub_limbs<true>(r.limbs_storage, get_modulus<1>(), r_reduced);
-    if (carry == 0)
-      r = Field { r_reduced };
+    if (carry == 0) r = Field{r_reduced};
 
     return r;
   }
@@ -691,7 +783,7 @@ public:
   friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);
+    return reduce(xy);          // reduce mod p
   }
 
   friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys)
