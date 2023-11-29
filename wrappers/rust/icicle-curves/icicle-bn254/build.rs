@@ -10,7 +10,7 @@ fn main() {
 
     let target_output_dir = format!("{}/../../target/{}", cargo_dir, profile);
 
-    Config::new("./icicle")
+    Config::new("../../../../icicle")
                 .define("BUILD_TESTS", "OFF") //TODO: feature
                 // .define("CURVE", "bls12_381")
                 .define("CURVE", "bn254")
