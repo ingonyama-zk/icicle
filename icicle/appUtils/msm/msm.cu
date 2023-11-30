@@ -126,29 +126,11 @@ __global__ void split_scalars_kernel(
       buckets_indices[current_index] =
         (msm_index << (c + bm_bitsize)) | (bm << c) |
         bucket_index; // the bucket module number and the msm number are appended at the msbs
-      if (scalar == S::zero() || scalar == S::one() || bucket_index == 0)
-        buckets_indices[current_index] = 0; // will be skipped
-      point_indices[current_index] = tid;   // the point index is saved for later
+      if (scalar == S::zero() || bucket_index == 0) buckets_indices[current_index] = 0; // will be skipped
+      point_indices[current_index] = tid; // the point index is saved for later
 #endif
     }
   }
-}
-
-template <typename P, typename A, typename S>
-__global__ void add_ones_kernel(A* points, S* scalars, P* results, const unsigned msm_size, const unsigned run_length)
-{
-  unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-  const unsigned nof_threads = (msm_size + run_length - 1) / run_length; // 129256
-  if (tid >= nof_threads) {
-    results[tid] = P::zero();
-    return;
-  }
-  const unsigned start_index = tid * run_length;
-  P sum = P::zero();
-  for (int i = start_index; i < min(start_index + run_length, msm_size); i++) {
-    if (scalars[i] == S::one()) sum = sum + points[i];
-  }
-  results[tid] = sum;
 }
 
 __global__ __forceinline__ void
@@ -323,8 +305,8 @@ __global__ void last_pass_kernel(P* final_buckets, P* final_sums, unsigned num_s
 // this kernel computes the final result using the double and add algorithm
 // it is done by a single thread
 template <typename P, typename S>
-__global__ void final_accumulation_kernel(
-  P* final_sums, P* ones_result, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c, bool add_ones)
+__global__ void
+final_accumulation_kernel(P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid > nof_msms) return;
@@ -336,10 +318,7 @@ __global__ void final_accumulation_kernel(
       final_result = final_result + final_result;
     }
   }
-  if (add_ones)
-    final_results[tid] = final_result + final_sums[tid * nof_bms] + ones_result[0];
-  else
-    final_results[tid] = final_result + final_sums[tid * nof_bms];
+  final_results[tid] = final_result + final_sums[tid * nof_bms];
 }
 
 // this function computes msm using the bucket method
@@ -385,22 +364,6 @@ void bucket_method_msm(
   unsigned NUM_THREADS = 1 << 10;
   unsigned NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
   initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, nof_buckets);
-
-  // accumulate ones
-  P* ones_results; // fix whole division, in last run in kernel too
-  const unsigned nof_runs = msm_log_size > 10 ? (1 << (msm_log_size - 6)) : 16;
-  const unsigned run_length = (size + nof_runs - 1) / nof_runs;
-  cudaMallocAsync(&ones_results, sizeof(P) * nof_runs, stream);
-  NUM_THREADS = min(1 << 8, nof_runs);
-  NUM_BLOCKS = (nof_runs + NUM_THREADS - 1) / NUM_THREADS;
-  add_ones_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(d_points, d_scalars, ones_results, size, run_length);
-
-  for (int s = nof_runs >> 1; s > 0; s >>= 1) {
-    NUM_THREADS = min(MAX_TH, s);
-    NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
-    single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-      ones_results, ones_results, s * 2, 0, 0, 0, s);
-  }
 
   unsigned* bucket_indices;
   unsigned* point_indices;
@@ -687,7 +650,7 @@ void bucket_method_msm(
 
   // launch the double and add kernel, a single thread
   final_accumulation_kernel<P, S>
-    <<<1, 1, 0, stream>>>(final_results, ones_results, on_device ? final_result : d_final_result, 1, nof_bms, c, true);
+    <<<1, 1, 0, stream>>>(final_results, on_device ? final_result : d_final_result, 1, nof_bms, c);
   cudaFreeAsync(final_results, stream);
   cudaStreamSynchronize(stream);
 
@@ -714,7 +677,6 @@ void bucket_method_msm(
   cudaFreeAsync(nof_large_buckets, stream);
   cudaFreeAsync(max_res, stream);
   if (large_buckets_to_compute > 0 && bucket_th > 0) cudaFreeAsync(large_buckets, stream);
-  cudaFreeAsync(ones_results, stream);
 
   cudaStreamSynchronize(stream);
 }
@@ -867,7 +829,7 @@ void batched_bucket_method_msm(
   NUM_THREADS = 1 << 8;
   NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
   final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-    bm_sums, bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c, false);
+    bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
 
   // copy final result to host
   if (!on_device)

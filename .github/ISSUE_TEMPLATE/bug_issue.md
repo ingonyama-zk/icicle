@@ -2,7 +2,7 @@
 name: ":bug: Bug Report"
 about: Create a bug report to help us improve the repo
 title: "[BUG]: "
-labels: bug
+labels: type:bug
 ---
 
 ## Description
