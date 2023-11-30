@@ -64,9 +64,11 @@ jobs:
         cmake -S . -B build
         cmake --build build
     - name: Run C++ Tests
-      working-directory: ./icicle/build
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ctest
+      run: |
+        cd ./icicle/build/
+        ctest
+        cd ../../
 
   test-golang-linux:
     name: Test Golang on Linux
