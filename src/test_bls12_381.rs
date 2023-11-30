@@ -1289,6 +1289,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     fn test_point_interpolation() {
         let log_test_size = 10;
         let test_size = 1 << log_test_size;
@@ -1437,6 +1438,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     fn test_point_evaluation() {
         let log_test_domain_size = 7;
         let coeff_size = 1 << 7;

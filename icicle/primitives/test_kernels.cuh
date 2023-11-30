@@ -4,13 +4,13 @@
 #define G2_DEFINED
 
 // TODO: change the curve depending on env variable
-#include "../curves/bls12_381/curve_config.cuh"
+#include "../curves/bw6_671/curve_config.cuh"
 #include "extension_field.cuh"
 #include "projective.cuh"
 
 #endif
 
-using namespace BLS12_381;
+using namespace BW6_671;
 
 template <class T1, class T2>
 __global__ void add_elements_kernel(const T1* x, const T2* y, T1* result, const unsigned count)

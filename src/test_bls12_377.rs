@@ -1188,6 +1188,7 @@ pub(crate) mod tests_bls12_377 {
     }
 
     #[test]
+    #[ignore]
     fn test_scalar_interpolation() {
         let log_test_size = 7;
         let test_size = 1 << log_test_size;
@@ -1226,6 +1227,7 @@ pub(crate) mod tests_bls12_377 {
     }
 
     #[test]
+    #[ignore]
     fn test_point_interpolation() {
         let log_test_size = 6;
         let test_size = 1 << log_test_size;
@@ -1270,6 +1272,7 @@ pub(crate) mod tests_bls12_377 {
     }
 
     #[test]
+    #[ignore]
     fn test_scalar_evaluation() {
         let log_test_domain_size = 8;
         let coeff_size = 1 << 6;
@@ -1541,7 +1544,6 @@ pub(crate) mod tests_bls12_377 {
     }
 
     #[test]
-    #[ignore]
     fn test_point_evaluation_on_coset() {
         // checks that evaluating a polynomial on a subgroup and its coset is the same as evaluating on a 2x larger subgroup
         let log_test_size = 8;

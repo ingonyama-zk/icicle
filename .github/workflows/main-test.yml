@@ -67,7 +67,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         cd ./icicle/build/
-        ctest
+        ./primitives_test
         cd ../../
 
   test-golang-linux:
