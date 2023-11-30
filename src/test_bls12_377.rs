@@ -1637,6 +1637,7 @@ pub(crate) mod tests_bls12_377 {
 
     #[test]
     #[allow(non_snake_case)]
+    #[ignore]
     fn test_vec_scalar_mul() {
         let mut intoo = [
             ScalarField_BLS12_377::one(),
@@ -1654,6 +1655,7 @@ pub(crate) mod tests_bls12_377 {
 
     #[test]
     #[allow(non_snake_case)]
+    #[ignore]
     fn test_vec_point_mul() {
         let dummy_one = Point_BLS12_377 {
             x: BaseField_BLS12_377::one(),

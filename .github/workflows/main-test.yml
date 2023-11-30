@@ -61,14 +61,12 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build
-        cmake -S . -B build
+        cmake -DBUILD_TESTS=ON -S . -B build
         cmake --build build
     - name: Run C++ Tests
+      working-directory: ./icicle/build
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: |
-        cd ./icicle/build/
-        ./primitives_test
-        cd ../../
+      run: ctest
 
   test-golang-linux:
     name: Test Golang on Linux
