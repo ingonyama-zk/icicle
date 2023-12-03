@@ -4,7 +4,11 @@
 
 #include <cuda_runtime.h>
 
+#include "../../curves/curve_config.cuh"
 #include "../../utils/device_context.cuh"
+#include "../../utils/error_handler.cuh"
+#include "../../utils/sharedmem.cuh"
+#include "../../utils/utils_kernels.cuh"
 
 /**
  * @namespace ntt
@@ -51,10 +55,14 @@ namespace ntt {
    * @struct NTTConfig
    * Struct that encodes NTT parameters to be passed into the [ntt](@ref ntt) function.
    */
-  template <typename S>
+  template <typename E, typename S>
   struct NTTConfig {
+    E* inout; /**< Input that's mutated in-place by this function. Length of this array needs to be \f$ size \cdot
+               * config.batch_size \f$. Note that if inputs are in Montgomery form, the outputs will be as well and
+               * vice-verse: non-Montgomery inputs produce non-Montgomety outputs.*/
     bool are_inputs_on_device; /**< True if inputs/outputs are on device and false if they're on host. Default value:
                                   false. */
+    bool is_inverse;           /**< True if true . Default value: false. */
     Ordering
       ordering; /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`. */
     Decimation
@@ -64,35 +72,40 @@ namespace ntt {
                    *   If [ordering](@ref ordering) is `Ordering::kRN`, the value of this variable will be overridden to
                    *   `Decimation::kDIT` and if ordering is `Ordering::kNR` — to `Decimation::kDIF`. */
     Butterfly
-      butterfly;    /**< Butterfly used by the NTT. See [Butterfly](@ref Butterfly). Default value:
-                     * `Butterfly::kCooleyTukey`.
-                     *   __Note:__ this variable exists mainly for compatibility with codebases that use similar notation.
-                     *   If [ordering](@ref ordering) is `Ordering::kRN`, the value of this variable will be overridden to
-                     *   `Butterfly::kCooleyTukey` and if ordering is `Ordering::kNR` — to `Butterfly::kGentlemanSande`. */
-    bool is_coset;  /**< If false, NTT is computed on a subfield given by [twiddles](@ref twiddles). If true, NTT is
-                     * computed  on a coset of [twiddles](@ref twiddles) given by [the coset generator](@ref coset_gen),
-                     * so:  \f$ \{coset\_gen\cdot\omega^0, coset\_gen\cdot\omega^1, \dots, coset\_gen\cdot\omega^{n-1}\}
-                     * \f$. Default value: false. */
-    S* coset_gen;   /**< The field element that generates a coset if [is_coset](@ref is_coset) is true.
-                     *   Otherwise should be set to `nullptr`. Default value: `nullptr`. */
-    S* twiddles;    /**< "Twiddle factors", (or "domain", or "roots of unity") on which the NTT is evaluated.
-                     *   This pointer is expected to live on device. The order is as follows:
-                     *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle
-                     * factors    are generated online using the default generator (TODO: link to twiddle gen here) and
-                     * function    [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
-    int batch_size; /**< The number of NTTs to compute. Default value: 1. */
+      butterfly;     /**< Butterfly used by the NTT. See [Butterfly](@ref Butterfly). Default value:
+                      * `Butterfly::kCooleyTukey`.
+                      *   __Note:__ this variable exists mainly for compatibility with codebases that use similar notation.
+                      *   If [ordering](@ref ordering) is `Ordering::kRN`, the value of this variable will be overridden to
+                      *   `Butterfly::kCooleyTukey` and if ordering is `Ordering::kNR` — to `Butterfly::kGentlemanSande`. */
+    bool is_coset;   /**< If false, NTT is computed on a subfield given by [twiddles](@ref twiddles). If true, NTT is
+                      * computed   on a coset of [twiddles](@ref twiddles) given by [the coset generator](@ref coset_gen),
+                      * so:   \f$ \{coset\_gen\cdot\omega^0, coset\_gen\cdot\omega^1, \dots, coset\_gen\cdot\omega^{n-1}\}
+                      * \f$. Default value: false. */
+    S* coset_gen;    /**< The field element that generates a coset if [is_coset](@ref is_coset) is true.
+                      *   Otherwise should be set to `nullptr`. Default value: `nullptr`. */
+    S* twiddles;     /**< "Twiddle factors", (or "domain", or "roots of unity") on which the NTT is evaluated.
+                      *   This pointer is expected to live on device. The order is as follows:
+                      *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle
+                      * factors     are generated online using the default generator (TODO: link to twiddle gen here) and
+                      * function     [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
+    S* inv_twiddles; /**< "Inverse twiddle factors", (or "domain", or "roots of unity") on which the iNTT is evaluated.
+                      *   This pointer is expected to live on device. The order is as follows:
+                      *   \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$. If this pointer is `nullptr`, twiddle
+                      * factors are generated online using the default generator (TODO: link to twiddle gen here) and
+                      * function [GenerateTwiddleFactors](@ref GenerateTwiddleFactors). Default value: `nullptr`. */
+    int size; /**< NTT size \f$ n \f$. If a batch of NTTs (which all need to have the same size) is computed, this is
+                  the size of 1 NTT. */
+    int batch_size;              /**< The number of NTTs to compute. Default value: 1. */
+    bool is_preserving_twiddles; /**< If true, twiddle factors are preserved on device for subsequent use in config and
+                                    not freed after calculation. Default value: false. */
+    bool is_output_on_device;    /**< If true, output is preserved on device for subsequent use in config and not freed
+                                    after calculation. Default value: false. */
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. See
                                           [DeviceContext](@ref device_context::DeviceContext). */
   };
 
   /**
    * A function that computes NTT or iNTT in-place.
-   * @param input Input that's mutated in-place by this function. Length of this array needs to be \f$ size \cdot
-   * config.batch_size \f$. Note that if inputs are in Montgomery form, the outputs will be as well and vice-verse:
-   * non-Montgomery inputs produce non-Montgomety outputs.
-   * @param size NTT size \f$ n \f$. If a batch of NTTs (which all need to have the same size) is computed, this is the
-   * size of 1 NTT.
-   * @param is_inverse If true, inverse NTT is computed, otherwise — regular forward NTT.
    * @param config [NTTConfig](@ref NTTConfig) used in this NTT.
    * @tparam E The type of inputs and outputs (i.e. coefficients \f$ \{p_i\} \f$ and values \f$ p(x) \f$). Must be a
    * group.
@@ -100,7 +113,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E, typename S>
-  cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S> config);
+  cudaError_t NTT(NTTConfig<E, S>* config);
 
   /**
    * Generates twiddles \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$ from root of unity \f$ \omega \f$ and

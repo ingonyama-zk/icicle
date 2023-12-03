@@ -69,10 +69,6 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field modulus() { return Field{CONFIG::modulus}; }
 
-  static constexpr HOST_DEVICE_INLINE Field montgomery_r() { return Field{CONFIG::montgomery_r}; }
-
-  static constexpr HOST_DEVICE_INLINE Field montgomery_r_inv() { return Field{CONFIG::montgomery_r_inv}; }
-
   // private:
   typedef storage<TLC> ff_storage;
   typedef storage<2 * TLC> ff_wide_storage;
@@ -703,6 +699,12 @@ public:
     return value;
   }
 
+  static void RandHostMany(Field* out, int size)
+  {
+    for (int i = 0; i < size; i++)
+      out[i] = rand_host();
+  }
+
   template <unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE Field sub_modulus(const Field& xs)
   {
@@ -718,7 +720,7 @@ public:
     hex_string << std::hex << std::setfill('0');
 
     for (int i = 0; i < TLC; i++) {
-      hex_string << std::setw(8) << xs.limbs_storage.limbs[i];
+      hex_string << std::setw(8) << xs.limbs_storage.limbs[TLC - i - 1];
     }
 
     os << "0x" << hex_string.str();
@@ -867,6 +869,13 @@ public:
   {
     // TODO: change to a more efficient squaring
     return xs * xs;
+  }
+
+  static constexpr HOST_DEVICE_INLINE Field ToMontgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
+
+  static constexpr HOST_DEVICE_INLINE Field FromMontgomery(const Field& xs)
+  {
+    return xs * Field{CONFIG::montgomery_r_inv};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
