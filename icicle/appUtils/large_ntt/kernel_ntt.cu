@@ -85,17 +85,17 @@ __global__ void thread_ntt_kernel(test_scalar* out, test_scalar* in, uint32_t* n
   #endif
   
   // engine.initializeRoot();
-  engine.loadGlobalData(in, dataIndex);
+  // engine.loadGlobalData(in, dataIndex);
   // engine.ntt4_4();
-  // for (int i = 0; i < 100000; i++)
-  // {
+  for (int i = 0; i < 100000; i++)
+  {
     // engine.ntt16win();
     // engine.ntt16win_lowreg();
     // engine.ntt8_2();
     // engine.ntt8_2();
     // engine.ntt16();
     engine.ntt16_win8ct2();
-  // }
+  }
   // engine.ntt16();
   // engine.X[0] = engine.X[0] + engine.X[1];
   // out[0] = out[0] + out[1];
@@ -138,3 +138,91 @@ __global__ void thread_ntt_kernel(test_scalar* out, test_scalar* in, uint32_t* n
   // }
 }
 
+__launch_bounds__(128)
+__global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
+  NTTEngine engine;
+  uint32_t    dataIndex=blockIdx.x*blockDim.x+threadIdx.x;
+
+  __shared__ uint4 shmem[2048];
+
+  // #ifdef COMPUTE_ONLY
+  //   bool        first=true;
+  // #endif
+  
+  // engine.initializeRoot();
+  // engine.loadGlobalData(in, dataIndex);
+  // engine.ntt4_4();
+  // for (int i = 0; i < 100000; i++)
+  // {
+    // engine.ntt16win();
+    // engine.ntt16win_lowreg();
+    // engine.ntt8_2();
+    // engine.ntt8_2();
+    // engine.ntt16();
+  // engine.ntt16_win8ct2();
+  // }
+  // engine.ntt16();
+  // engine.X[0] = engine.X[0] + engine.X[1];
+  // out[0] = out[0] + out[1];
+  // out[0] = test_scalar::zero();
+  // engine.storeGlobalData(out, dataIndex);
+  // engine.storeGlobalData8_2(out, dataIndex);
+  // engine.storeGlobalData16(out, dataIndex);
+    
+  // while(true) {
+    // if((threadIdx.x & 0x1F)==0)
+    //   dataIndex=atomicAdd(next, 1);
+    // dataIndex=__shfl_sync(0xFFFFFFFF, dataIndex, 0);      
+    // if(dataIndex<count) {
+    //   #if defined(COMPUTE_ONLY)
+    //     if(first)
+    //       engine.loadGlobalData(in, dataIndex);
+    //     first=false;
+    //   #else
+    //     engine.loadGlobalData(in, dataIndex);
+    //   #endif
+    // }
+    // else {
+    //   if(dataIndex==count + (gridDim.x*blockDim.x>>5) - 1) {
+    //     // last one to finish, reset the counter
+    //     atomicExch(next, 0);
+    //   }
+    //   return;
+    // }
+    // if (threadIdx.x!=0) return;
+    engine.loadGlobalData(in,0,256,256*8); //todo - change function to fit global ntt
+    // engine.externalTwiddles(); //todo
+    // #pragma unroll 1
+    // for (uint32_t phase=0;phase<2;phase++) {
+    //   // ntt32 produces a lot of instructions, so we put this in a loop
+    //   // engine.ntt16_win8ct2();
+    //   // engine.ntt16();
+    //   if(phase==0) {
+    //     engine.storeSharedData(shmem, false); //low
+    //     __syncthreads();
+    //     if (blockIdx.x ==0 && threadIdx.x ==0){
+    //       for (int i = 0; i < 2048; i++)
+    //       {
+    //         if (i%16==0) printf("\n");
+    //         if (i%256==0) printf("\n");
+    //         printf("%d, ",shmem[i].w);
+    //       }
+    //     }
+    //     engine.loadSharedData(shmem, false); //low
+    //     __syncthreads(); //can avoid with switching rows and columns
+    //     // if (blockIdx.x ==0 && threadIdx.x ==1){
+    //     //   for (int i = 0; i < 16; i++)
+    //     //   {
+    //     //     printf("\n");
+    //     //     printf("%d, ",engine.X[i].limbs_storage.limbs[0]);
+    //     //   }
+    //     // }
+    //     engine.storeSharedData(shmem, true); //high
+    //     __syncthreads();
+    //     engine.loadSharedData(shmem, true); //high
+    //     // engine.twiddles256();
+    //   }
+    // }
+    engine.storeGlobalData(out,0,256,256*8); //todo - change function to fit global ntt
+  // }
+}

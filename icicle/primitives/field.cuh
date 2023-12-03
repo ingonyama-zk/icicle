@@ -34,6 +34,42 @@ public:
     return Field{scalar};
   }
 
+  HOST_DEVICE_INLINE uint4 load_half(bool high_bits){
+    uint4 res;
+
+    if (!high_bits){
+      res.w = limbs_storage.limbs[0];
+      res.x = limbs_storage.limbs[1];
+      res.y = limbs_storage.limbs[2];
+      res.z = limbs_storage.limbs[3];
+    }
+    else{
+      res.w = limbs_storage.limbs[4];
+      res.x = limbs_storage.limbs[5];
+      res.y = limbs_storage.limbs[6];
+      res.z = limbs_storage.limbs[7];
+    }
+
+    return res;
+
+  }
+
+  HOST_DEVICE_INLINE void store_half(uint4 inp, bool high_bits){
+
+    if (!high_bits){
+      limbs_storage.limbs[0] = inp.w;
+      limbs_storage.limbs[1] = inp.x;
+      limbs_storage.limbs[2] = inp.y;
+      limbs_storage.limbs[3] = inp.z;
+    }
+    else{
+      limbs_storage.limbs[4] = inp.w;
+      limbs_storage.limbs[5] = inp.x;
+      limbs_storage.limbs[6] = inp.y;
+      limbs_storage.limbs[7] = inp.z;
+    }
+  }
+
   static HOST_DEVICE_INLINE Field win3(uint32_t i)
   {
     // if (logn == 0) { return Field{CONFIG::one}; }

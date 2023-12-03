@@ -214,32 +214,33 @@ class NTTEngine {
   //   threadRoot=root1024(threadIdx.x & 0x1F);
   // }
   
-  __device__ __forceinline__ void loadGlobalData(test_scalar* data, uint32_t dataIndex) {
-    // data+=1024*dataIndex + (threadIdx.x & 0x1F);
-    data += 16*dataIndex;
+  __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
+    
+    data += block_offset + (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     
     #pragma unroll
     for(uint32_t i=0;i<16;i++) 
-      X[i] = data[i];
-      // X[i]=Math::getNormalizedValue(data[i*32]); //why load in strides??
+      X[i].store_half(data[16*i*stride], false);
+    #pragma unroll
+    for(uint32_t i=0;i<16;i++) 
+      X[i].store_half(data[16*i*stride + high_bits_offset], true);
 
   }
   
-  __device__ __forceinline__ void storeGlobalData(test_scalar* data, uint32_t dataIndex) {
-    // data+=1024*dataIndex + (threadIdx.x & 0x1F);
-    data += 16*dataIndex;
-      
+    __device__ __forceinline__ void storeGlobalData(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
+    
+    data += block_offset + (stride == 1? 256 : 1) * (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    
+    // uint4 zero{0,0,0,0};
     #pragma unroll
     for(uint32_t i=0;i<16;i++) 
-      data[i] = X[i];
+      data[16*i*stride] = X[i].load_half(false);
+      // data[16*i*stride] = zero;
+    #pragma unroll
+    for(uint32_t i=0;i<16;i++) 
+      data[16*i*stride + high_bits_offset] = X[i].load_half(true);
+      // data[16*i*stride + high_bits_offset] = zero;
 
-    // samples are 4x8 transposed in registers
-    // #pragma unroll
-    // for(uint32_t i=0;i<8;i++) {
-    //   #pragma unroll
-    //   for(uint32_t j=0;j<4;j++) 
-    //     data[(i*4+j)*32]=make_wide(X[i+j*8].x, X[i+j*8].y);           // note transpose here
-    // }
   }
 
   __device__ __forceinline__ void storeGlobalData16(test_scalar* data, uint32_t dataIndex) {
@@ -748,18 +749,51 @@ class NTTEngine {
  
   }
     
-  // __device__ __forceinline__ void storeSharedData(uint32_t addr) {
-  //   const uint32_t stride=blockDim.x+1;
+  __device__ __forceinline__ void storeSharedData(uint4 *shmem, bool high_bits) {
+    // const uint32_t stride=blockDim.x+1;
+
+    uint32_t ntt_id = threadIdx.x & 0x7;
+    uint32_t column_id = (blockIdx.x * blockDim.x + threadIdx.x) >> 3;
     
-  //   addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
     
-  //   #pragma unroll
-  //   for(int32_t i=0;i<8;i++) {
-  //     #pragma unroll
-  //     for(int32_t j=0;j<4;j++) 
-  //       store_shared_u64(addr + (i*4+j)*stride*8, make_wide(X[j*8+i].x, X[j*8+i].y));    // note transpose here!
-  //   }
-  // }
+    // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
+
+    // todo - stride to avoid bank conflicts, use ptx commands
+    
+    #pragma unroll
+    for(uint32_t i=0;i<4;i++) {
+      #pragma unroll
+      for(uint32_t j=0;j<4;j++){
+        uint32_t row_id = i*4+j;
+        shmem[ntt_id * 256 + row_id * 16 + column_id]= X[i+j*4].load_half(high_bits);           // note transpose here
+      }
+    }
+  }
+
+  __device__ __forceinline__ void loadSharedData(uint4 *shmem, bool high_bits) {
+    // const uint32_t stride=blockDim.x+1;
+
+    uint32_t ntt_id = threadIdx.x & 0x7;
+    uint32_t row_id = (blockIdx.x * blockDim.x + threadIdx.x) >> 3;
+    
+    
+    // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
+
+    // todo - stride to avoid bank conflicts, use ptx commands
+    
+    #pragma unroll
+    for(uint32_t i=0;i<16;i++) {
+        X[i].store_half(shmem[ntt_id * 256 + row_id * 16 + i] ,high_bits);   
+    }
+  }
+
+  __device__ __forceinline__ void twiddles256() {
+    // for (int i = 0; i < 16; i++)
+    // {
+    //   X[i] = X[i] * test_scalar::omega16(((blockIdx.x * blockDim.x + threadIdx.x) >> 8) * i);
+    // }
+    
+  }
 
   // __device__ __forceinline__ void loadSharedDataAndTwiddle32x32(uint32_t addr) {
   //   const uint32_t stride=blockDim.x+1;
