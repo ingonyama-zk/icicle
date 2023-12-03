@@ -122,12 +122,19 @@ void random_samples(test_scalar* res, uint32_t count) {
     res[i]=test_scalar::rand_host();
 }
 
+void incremental_values(test_scalar* res, uint32_t count) {
+  for(int i=0;i<count;i++)
+    res[i]=i? res[i-1]+test_scalar::one() : test_scalar::zero();
+}
+
 int main(int argc, const char** argv) {
   uint32_t    ntts=1024, repeatCount;
   test_scalar*   cpuData;
-  test_scalar*   gpuData;
+  // test_scalar*   gpuData;
   cudaEvent_t start, stop;
   float       time;
+
+  int NOF_VALS = 2048;
   
   if(argc!=3) {
     fprintf(stderr, "Usage:  %s <nttCount> <repeatCount>\n", argv[0]);
@@ -139,14 +146,22 @@ int main(int argc, const char** argv) {
   ntts=atoi(argv[1]);
   repeatCount=atoi(argv[2]);
 
-  cpuData=(test_scalar*)malloc(sizeof(test_scalar)*ntts*1024);
+  cpuData=(test_scalar*)malloc(sizeof(test_scalar)*ntts*NOF_VALS);
   if(cpuData==NULL) {
     fprintf(stderr, "Malloc failed\n");
     exit(1);
   }
 
-  std::cout << test_scalar::modulus() <<std::endl;
-  std::cout<<std::endl;
+  uint4* cpuDataUint4;
+  uint4* gpuDataUint4;
+  cpuDataUint4=(uint4*)malloc(sizeof(uint4)*ntts*NOF_VALS*2);
+  if(cpuDataUint4==NULL) {
+    fprintf(stderr, "Malloc failed\n");
+    exit(1);
+  }
+
+  // std::cout << test_scalar::modulus() <<std::endl;
+  // std::cout<<std::endl;
   // std::cout << test_scalar::omega(0) <<std::endl;
   // std::cout << test_scalar::omega(1) <<std::endl;
   // std::cout << test_scalar::omega(2) <<std::endl;
@@ -155,41 +170,51 @@ int main(int argc, const char** argv) {
   // std::cout<<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(0) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(1) <<std::endl;
-  std::cout << test_scalar::modulus() - test_scalar::omega(2) <<std::endl;
+  // std::cout << test_scalar::modulus() - test_scalar::omega(2) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(3) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(4) <<std::endl;
-  std::cout<<std::endl;
-  std::cout << test_scalar::omega4(0) <<std::endl;
-  std::cout << test_scalar::omega4(1) <<std::endl;
-  std::cout << test_scalar::omega4(2) <<std::endl;
-  std::cout << test_scalar::omega4(3) <<std::endl;
-  std::cout << test_scalar::omega4(4) <<std::endl;
-  std::cout << test_scalar::omega4(5) <<std::endl;
-  std::cout << test_scalar::omega4(6) <<std::endl;
-  std::cout << test_scalar::omega4(7) <<std::endl;
-  std::cout << test_scalar::omega4(8) <<std::endl;
-  std::cout << test_scalar::omega4(9) <<std::endl;
-  std::cout << std::endl;
-  std::cout << test_scalar::win3(6) <<std::endl;
-  std::cout << test_scalar::win3(7) <<std::endl;
+  // std::cout<<std::endl;
+  // std::cout << test_scalar::omega4(0) <<std::endl;
+  // std::cout << test_scalar::omega4(1) <<std::endl;
+  // std::cout << test_scalar::omega4(2) <<std::endl;
+  // std::cout << test_scalar::omega4(3) <<std::endl;
+  // std::cout << test_scalar::omega4(4) <<std::endl;
+  // std::cout << test_scalar::omega4(5) <<std::endl;
+  // std::cout << test_scalar::omega4(6) <<std::endl;
+  // std::cout << test_scalar::omega4(7) <<std::endl;
+  // std::cout << test_scalar::omega4(8) <<std::endl;
+  // std::cout << test_scalar::omega4(9) <<std::endl;
+  // std::cout << std::endl;
+  // std::cout << test_scalar::win3(6) <<std::endl;
+  // std::cout << test_scalar::win3(7) <<std::endl;
 
 
-  random_samples(cpuData, ntts*1024);
+  random_samples(cpuData, NOF_VALS);
+  // incremental_values(cpuData, NOF_VALS);
 
-  $CUDA(cudaFuncSetAttribute(ntt1024, cudaFuncAttributeMaxDynamicSharedMemorySize, 1024));
+  for (int i = 0; i < NOF_VALS; i++)
+  {
+    cpuDataUint4[i] = cpuData[i].load_half(false);
+    cpuDataUint4[NOF_VALS + i] = cpuData[i].load_half(true);
+  }
+  
 
-  for(int i=0;i<1024;i++)
-    nextCounter[i]=0;
+  // $CUDA(cudaFuncSetAttribute(ntt1024, cudaFuncAttributeMaxDynamicSharedMemorySize, NOF_VALS));
+
+  // for(int i=0;i<1024;i++)
+  //   nextCounter[i]=0;
     
   fprintf(stderr, "Running with %d ntts and %d repeatCount\n", ntts, repeatCount);
   fprintf(stderr, "Warm up run\n");
-  $CUDA(cudaMalloc((void**)&gpuData, sizeof(test_scalar)*ntts*1024));
+  // $CUDA(cudaMalloc((void**)&gpuData, sizeof(test_scalar)*ntts*NOF_VALS));
+  $CUDA(cudaMalloc((void**)&gpuDataUint4, sizeof(uint4)*ntts*NOF_VALS*2));
   // ntt1024<<<60, 32, 97*1024>>>(gpuData, gpuData, nextCounter, ntts);
-  thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
+  // thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
   $CUDA(cudaDeviceSynchronize());
 
   fprintf(stderr, "Copying data to GPU\n");
-  $CUDA(cudaMemcpy(gpuData, cpuData, sizeof(test_scalar)*ntts*1024, cudaMemcpyHostToDevice));
+  // $CUDA(cudaMemcpy(gpuData, cpuData, sizeof(test_scalar)*ntts*NOF_VALS, cudaMemcpyHostToDevice));
+  $CUDA(cudaMemcpy(gpuDataUint4, cpuDataUint4, sizeof(uint4)*ntts*NOF_VALS*2, cudaMemcpyHostToDevice));
   fprintf(stderr, "Running kernel\n");
 
   $CUDA(cudaEventCreate(&start));
@@ -205,19 +230,21 @@ int main(int argc, const char** argv) {
   // std::cout<<std::endl;
 
   printf("input\n");
-  for(int i=0;i<16;i++){
+  for(int i=0;i<NOF_VALS;i++){
     if (i%16 == 0) printf("\n");
     std::cout <<cpuData[i]<<std::endl;
   }
 
   // for(int i=0;i<repeatCount;i++) 
     // ntt1024<<<60, 32, 97*1024>>>(gpuData, gpuData, nextCounter, ntts);
-  thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
+  // thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
+  ntt_kernel_split_transpose<<<1, 128>>>(gpuDataUint4, gpuDataUint4);
+  cudaDeviceSynchronize();
+  printf("cuda err %d\n",cudaGetLastError());
+  // CUDA_CHECK_ERROR();
   $CUDA(cudaEventRecord(stop, 0));
   $CUDA(cudaDeviceSynchronize());
   $CUDA(cudaEventElapsedTime(&time, start, stop));
-  CUDA_CHECK_ERROR();
-  // printf("cuda err %d\n",cudaGetLastError());
   if(cudaGetLastError()!=0) {
     printf("cuda errrrr %d",cudaGetLastError());
     fprintf(stderr, "Error == %d\n", cudaGetLastError());
@@ -226,12 +253,19 @@ int main(int argc, const char** argv) {
   fprintf(stderr, "Runtime=%0.3f MS\n", time);
   
   fprintf(stderr, "Run complete - copying data back to CPU\n");
-  $CUDA(cudaMemcpy(cpuData, gpuData, sizeof(test_scalar)*ntts*1024, cudaMemcpyDeviceToHost));
+  // $CUDA(cudaMemcpy(cpuData, gpuData, sizeof(test_scalar)*ntts*NOF_VALS, cudaMemcpyDeviceToHost));
+  $CUDA(cudaMemcpy(cpuDataUint4, gpuDataUint4, sizeof(uint4)*ntts*NOF_VALS*2, cudaMemcpyDeviceToHost));
   
+  for (int i = 0; i < NOF_VALS; i++)
+  {
+    cpuData[i].store_half(cpuDataUint4[i], false);
+    cpuData[i].store_half(cpuDataUint4[NOF_VALS + i], true);
+  }
+
   #if !defined(COMPUTE_ONLY)
   printf("output\n");
-  for(int i=0;i<16;i++){
-    if (i%16 == 0) printf("\n");
+  for(int i=0;i<NOF_VALS;i++){
+    if (i%16 == 0) printf("%d\n", i);
     std::cout <<cpuData[i]<<std::endl;
   }
     // for(int i=0;i<ntts*1024;i+=4) 
