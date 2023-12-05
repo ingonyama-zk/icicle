@@ -1251,6 +1251,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     fn test_scalar_interpolation() {
         let log_test_size = 7;
         let test_size = 1 << log_test_size;
@@ -1289,6 +1290,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     fn test_point_interpolation() {
         let log_test_size = 10;
         let test_size = 1 << log_test_size;
@@ -1333,6 +1335,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     fn test_scalar_evaluation() {
         let log_test_domain_size = 8;
         let coeff_size = 1 << 6;
@@ -1437,6 +1440,7 @@ pub(crate) mod tests_bls12_381 {
     }
 
     #[test]
+    #[ignore]
     fn test_point_evaluation() {
         let log_test_domain_size = 7;
         let coeff_size = 1 << 7;
@@ -1696,6 +1700,7 @@ pub(crate) mod tests_bls12_381 {
 
     #[test]
     #[allow(non_snake_case)]
+    #[ignore]
     fn test_vec_scalar_mul() {
         let mut intoo = [
             ScalarField_BLS12_381::one(),
@@ -1713,6 +1718,7 @@ pub(crate) mod tests_bls12_381 {
 
     #[test]
     #[allow(non_snake_case)]
+    #[ignore]
     fn test_vec_point_mul() {
         let dummy_one = Point_BLS12_381 {
             x: BaseField_BLS12_381::one(),

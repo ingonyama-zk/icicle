@@ -126,9 +126,8 @@ __global__ void split_scalars_kernel(
       buckets_indices[current_index] =
         (msm_index << (c + bm_bitsize)) | (bm << c) |
         bucket_index; // the bucket module number and the msm number are appended at the msbs
-      if (scalar == S::zero() || bucket_index == 0)
-        buckets_indices[current_index] = 0; // will be skipped
-      point_indices[current_index] = tid;   // the point index is saved for later
+      if (scalar == S::zero() || bucket_index == 0) buckets_indices[current_index] = 0; // will be skipped
+      point_indices[current_index] = tid; // the point index is saved for later
 #endif
     }
   }
@@ -306,8 +305,8 @@ __global__ void last_pass_kernel(P* final_buckets, P* final_sums, unsigned num_s
 // this kernel computes the final result using the double and add algorithm
 // it is done by a single thread
 template <typename P, typename S>
-__global__ void final_accumulation_kernel(
-  P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c)
+__global__ void
+final_accumulation_kernel(P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned c)
 {
   unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (tid > nof_msms) return;
