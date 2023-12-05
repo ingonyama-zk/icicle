@@ -63,10 +63,11 @@ namespace ntt {
    * @param primitive_root Primitive root in field `S` of order \f$ 2^{log\_size} \f$.
    * @param log_size Binary logarithm of order of `primitive_root`. Should be the smallest value that's large enough
    * to support any NTT you might want to perform.
+   * @param ctx Details related to the device such as its id and stream id.
    * @return [Domain](@ref Domain) with appropriate twiddle factors and default coset generator (`S::one()`).
    */
   template <typename S>
-  cudaError_t Domain GenerateDomain(S primitive_root, int log_size);
+  Domain GenerateDomain(S primitive_root, int log_size, device_context::DeviceContext ctx);
 
   /**
    * @struct NTTConfig
@@ -108,20 +109,6 @@ namespace ntt {
    */
   template <typename E, typename S>
   cudaError_t NTT(E* inout, int size, bool is_inverse, Domain<S> domain, NTTConfig<S>* config);
-
-  /**
-   * Generates twiddles \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$ from root of unity \f$ \omega \f$ and
-   * stores them on device.
-   * @param d_twiddles Input empty array on device to which twiddles are to be written.
-   * @param n_twiddles Number of twiddle \f$ n \f$ factors to generate.
-   * @param omega Root of unity \f$ \omega \f$.
-   * @param ctx Details related to the device such as its id and stream id. See [DeviceContext](@ref
-   * device_context::DeviceContext).
-   * @tparam S The type of twiddle factors \f$ \{ \omega^i \} \f$.
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  template <typename S>
-  cudaError_t GenerateTwiddleFactors(S* d_twiddles, int n_twiddles, S omega, device_context::DeviceContext ctx);
 
 } // namespace ntt
 
