@@ -904,7 +904,7 @@ namespace msm {
 
   } // namespace
 
-  MSMConfig DefaultMSMConfig()
+  extern "C" MSMConfig DefaultMSMConfig()
   {
     device_context::DeviceContext ctx = {
       0,               // device_id
@@ -948,12 +948,6 @@ namespace msm {
         results, config.are_scalars_on_device, config.ctx.stream);
     return cudaSuccess;
   }
-
-  /**
-   * Extern version of [DefaultMSMConfig](@ref DefaultMSMConfig) function.
-   * @return Default value of [MSMConfig](@ref MSMConfig).
-   */
-  extern "C" MSMConfig GetDefaultMSMConfig() { return DefaultMSMConfig(); }
 
   /**
    * Extern version of [MSM](@ref MSM) function with the following values of template parameters

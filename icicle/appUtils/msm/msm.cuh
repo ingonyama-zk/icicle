@@ -33,13 +33,13 @@ namespace msm {
 
   /**
    * @struct MSMConfig
-   * Struct that encodes MSM parameters to be passed into the [msm](@ref msm) function.
+   * Struct that encodes MSM parameters to be passed into the [MSM](@ref MSM) function.
    */
   struct MSMConfig {
-    bool
-      are_scalars_on_device; /**< True if scalars are on device and false if they're on host. Default value: false. */
+    bool are_scalars_on_device; /**< True if scalars are on device and false if they're on host. Default value: 
+                                 *   false. */
     bool are_scalars_montgomery_form; /**< True if scalars are in Montgomery form and false otherwise. Default value:
-                                         true. */
+                                       *   true. */
     int points_size;           /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be
                                 *   a number of different points. So, if each MSM re-uses the same set of points, this
                                 *   variable is set equal to the MSM size. And if every MSM uses a distinct set of
@@ -70,12 +70,11 @@ namespace msm {
                                  *   very frequently. Useful for efficient treatment of non-uniform distributions of
                                  *   scalars and "top windows" with few bits. Can be set to 0 to disable separate
                                  *   treatment of large buckets altogether. Default value: 10. */
-    int is_async;               /**< Whether to run the MSM asyncronously. If set to `true`, the MSM function will be
+    bool is_async;              /**< Whether to run the MSM asyncronously. If set to true, the MSM function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */
-    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. See
-                                        *   [DeviceContext](@ref `device_context::DeviceContext`). */
+    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
   };
 
   /**

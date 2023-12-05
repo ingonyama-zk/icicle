@@ -15,21 +15,22 @@
  * Number Theoretic Transform, or NTT is a version of [fast Fourier
  * transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) where instead of real or complex numbers, inputs and
  * outputs belong to certain finite groups or fields. NTT computes the values of a polynomial \f$ p(x) = p_0 + p_1 \cdot
- * x + \dots + p_{n-1} \cdot x^{n-1} \f$ on special subfields called "roots of unity", or "twiddle factors": \f[ NTT(p)
- * = \{ p(\omega^0), p(\omega^1), \dots, p(\omega^{n-1}) \} \f] Inverse NTT, or iNTT solves the inverse problem of
- * computing coefficients of \f$ p(x) \f$ given evaluations \f$ \{ p(\omega^0), p(\omega^1), \dots, p(\omega^{n-1}) \}
- * \f$. If not specified otherwise, \f$ n \f$ is a power of 2.
+ * x + \dots + p_{n-1} \cdot x^{n-1} \f$ on special subfields called "roots of unity", or "twiddle factors" (optionally
+ * shifted by an additional element called "coset generator"): \f[ NTT(p) = \{ p(\omega^0), p(\omega^1), \dots,
+ * p(\omega^{n-1}) \} \f] Inverse NTT, or iNTT solves the inverse problem of computing coefficients of \f$ p(x) \f$
+ * given evaluations \f$ \{ p(\omega^0), p(\omega^1), \dots, p(\omega^{n-1}) \} \f$. If not specified otherwise,
+ * \f$ n \f$ is a power of 2.
  */
 namespace ntt {
 
   /**
    * @enum Ordering
-   * How to order inputs and outputs of the NTT. If needed, use this field to specify decimation: decimation in time 
-   * (DIT) corresponds to `Ordering::kRN` while decimation in frequency (DIF) to `Ordering::kNR`. Also, to specify 
-   * butterfly to be used, select `Ordering::kRN` for Cooley-Tukey and `Ordering::kNR` for Gentleman-Sande. There's 
-   * no implication that a certain decimation or butterfly will actually be used under the hood, this is just for 
-   * compatibility with codebases that use "decimation" and "butterfly" to denote ordering of inputs and outputs. 
-   * 
+   * How to order inputs and outputs of the NTT. If needed, use this field to specify decimation: decimation in time
+   * (DIT) corresponds to `Ordering::kRN` while decimation in frequency (DIF) to `Ordering::kNR`. Also, to specify
+   * butterfly to be used, select `Ordering::kRN` for Cooley-Tukey and `Ordering::kNR` for Gentleman-Sande. There's
+   * no implication that a certain decimation or butterfly will actually be used under the hood, this is just for
+   * compatibility with codebases that use "decimation" and "butterfly" to denote ordering of inputs and outputs.
+   *
    * Ordering options are:
    * - kNN: inputs and outputs are natural-order (example of natural ordering: \f$ \{a_0, a_1, a_2, a_3, a_4, a_5, a_6,
    * a_7\} \f$).
@@ -43,24 +44,45 @@ namespace ntt {
   /**
    * @struct Domain
    * Struct containing information about the domain on which (i)NTT is evaluated: twiddle factors and coset generator.
+   * Twiddle factors are private, static and can only be set using [GenerateDomain](@ref GenerateDomain) function.
+   * The internal representation of twiddles is prone to change in accordance with changing [NTT](@ref NTT) algorithm.
+   * @tparam S The type of "twiddle factors" \f$ \{ \omega^i \} \f$ and coset generator. Must be a field.
    */
+  template <typename S>
   struct Domain {
-    // TODO: @DmytroTym populate this
+    S coset_gen; /**< Scalar element that specifies a coset to be used in (i)NTT. Default value: `S::one()`. */
+  private:
+    static int max_size;
+    static int log_max_size;
+    static S* twiddles;
+    static S* inv_twiddles;
   }
 
   /**
-   * @struct NTTConfig
-   * Struct that encodes NTT parameters to be passed into the [ntt](@ref ntt) function.
+   * Generate [Domain](@ref Domain) struct that supports all NTTs of sizes under a certain threshold.
+   * @param primitive_root Primitive root in field `S` of order \f$ 2^{log\_size} \f$.
+   * @param log_size Binary logarithm of order of `primitive_root`. Should be the smallest value that's large enough
+   * to support any NTT you might want to perform.
+   * @return [Domain](@ref Domain) with appropriate twiddle factors and default coset generator (`S::one()`).
    */
-  template <typename E, typename S>
+  template <typename S>
+  cudaError_t Domain GenerateDomain(S primitive_root, int log_size);
+
+  /**
+   * @struct NTTConfig
+   * Struct that encodes NTT parameters to be passed into the [NTT](@ref NTT) function.
+   */
   struct NTTConfig {
-    Ordering ordering; /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: 
-                        *   `Ordering::kNN`. */
-    bool are_inputs_on_device; /**< True if inputs are on device and false if they're on host. Default value: false. */
-    int batch_size;    /**< The number of NTTs to compute. Default value: 1. */
+    Ordering ordering;          /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value:
+                                 *   `Ordering::kNN`. */
+    bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
+    int batch_size;             /**< The number of NTTs to compute. Default value: 1. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream. See
-                                        *   [DeviceContext](@ref device_context::DeviceContext). */
+    bool is_async;              /**< Whether to run the NTT asyncronously. If set to `true`, the NTT function will be
+                                 *   non-blocking and you'd need to synchronize it explicitly by running
+                                 *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
+                                 *   function will block the current CPU thread. */
+    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream. */
   };
 
   /**
@@ -72,11 +94,12 @@ namespace ntt {
   /**
    * A function that computes NTT or iNTT in-place.
    * @param inout Input that's mutated in-place by this function. Length of this array needs to be \f$ size \cdot
-   * config.batch_size \f$. Note that if inputs are in Montgomery form, the outputs will be as well and vice-versa:
+   * config.batch\_size \f$. Note that if inputs are in Montgomery form, the outputs will be as well and vice-versa:
    * non-Montgomery inputs produce non-Montgomety outputs.
-   * @param domain [Domain](@ref Domain) on which NTT is evaluated. Size of inout must be equal to `domain.size`
-   * if 1 NTT is evaluated and equal to the product of `domain.size` and `config.batch_size` in case of batch NTT.
-   * @param is_inverse true for inverse NTT and false for direct NTT. Default value: false.
+   * @param size NTT size. If a batch of NTTs (which all need to have the same size) is computed, this is the size
+   * of 1 NTT, so it must equal the size of `inout` divided by `config.batch_size`.
+   * @param is_inverse True for inverse NTT and false for direct NTT. Default value: false.
+   * @param domain [Domain](@ref Domain) on which NTT is evaluated.
    * @param config [NTTConfig](@ref NTTConfig) used in this NTT.
    * @tparam E The type of inputs and outputs (i.e. coefficients \f$ \{p_i\} \f$ and values \f$ p(x) \f$). Must be a
    * group.
@@ -84,7 +107,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E, typename S>
-  cudaError_t NTT(E* inout, Domain domain, bool is_inverse, NTTConfig<E, S>* config);
+  cudaError_t NTT(E* inout, int size, bool is_inverse, Domain<S> domain, NTTConfig<S>* config);
 
   /**
    * Generates twiddles \f$ \{\omega^0=1, \omega^1, \dots, \omega^{n-1}\} \f$ from root of unity \f$ \omega \f$ and
