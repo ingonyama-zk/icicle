@@ -8,6 +8,7 @@
 *.so
 *.nsys-rep
 *.ncu-rep
+**/*.out
 **/target
 **/.vscode
 **/.*lock*csv#
