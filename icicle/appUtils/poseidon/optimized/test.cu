@@ -1,7 +1,7 @@
 // #define DEBUG
+// #define POSEIDON_DEBUG
 
-#include "../../curves/bls12_381/curve_config.cuh"
-#include "../../curves/bls12_381/poseidon.cu"
+#include "../../../curves/curve_config.cuh"
 
 #ifndef __CUDA_ARCH__
 #include <chrono>
@@ -24,13 +24,13 @@ int main(int argc, char* argv[])
   cudaEventCreate(&end_event);
   cudaEventRecord(start_event, stream);
   auto start_time1 = std::chrono::high_resolution_clock::now();
-  Poseidon<BLS12_381::scalar_t> poseidon(arity, stream);
+  OptimizedPoseidon<BLS12_381::scalar_t> poseidon(arity, stream);
 
   auto end_time1 = std::chrono::high_resolution_clock::now();
   auto elapsed_time1 = std::chrono::duration_cast<std::chrono::microseconds>(end_time1 - start_time1);
   printf("Elapsed time poseidon: %.0f us\n", FpMicroseconds(elapsed_time1).count());
 
-  int number_of_blocks = 1024;
+  int number_of_blocks = 1024 * 1024 * 128;
 
   BLS12_381::scalar_t input = BLS12_381::scalar_t::zero();
   BLS12_381::scalar_t* in_ptr =
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
   auto start_time = std::chrono::high_resolution_clock::now();
 
-  poseidon.hash_blocks(in_ptr, number_of_blocks, out_ptr, Poseidon<BLS12_381::scalar_t>::HashType::MerkleTree, stream);
+  poseidon.hash_blocks(in_ptr, number_of_blocks, out_ptr, OptimizedPoseidon<BLS12_381::scalar_t>::HashType::MerkleTree, stream);
   auto end_time = std::chrono::high_resolution_clock::now();
   auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
   printf("Elapsed time hash: %.0f us\n", FpMicroseconds(elapsed_time).count());
