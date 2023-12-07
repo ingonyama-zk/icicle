@@ -56,18 +56,21 @@ namespace ntt {
     static int log_max_size;
     static S* twiddles;
     static S* inv_twiddles;
-  }
+  };
 
   /**
-   * Generate [Domain](@ref Domain) struct that supports all NTTs of sizes under a certain threshold.
-   * @param primitive_root Primitive root in field `S` of order \f$ 2^{log\_size} \f$.
-   * @param log_size Binary logarithm of order of `primitive_root`. Should be the smallest value that's large enough
-   * to support any NTT you might want to perform.
+   * Generate [Domain](@ref Domain) struct that supports all NTTs of sizes under a certain threshold. Note that the
+   * first call of this function might be expensive, so if possible it should be called before all time-critical
+   * operations. It's assumed that during program execution only the coset generator might change, but twiddles
+   * stay fixed, so they are initialized at the first call of this function and don't change afterwards.
+   * @param primitive_root Primitive root in field `S` of order \f$ 2^s \f$. This should be the smallest power-of-2
+   * order that's large enough to support any NTT you might want to perform.
    * @param ctx Details related to the device such as its id and stream id.
-   * @return [Domain](@ref Domain) with appropriate twiddle factors and default coset generator (`S::one()`).
+   * @param domain Domain with appropriate twiddle factors and default coset generator (`S::one()`) to generate.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S>
-  Domain GenerateDomain(S primitive_root, int log_size, device_context::DeviceContext ctx);
+  cudaError_t GenerateDomain(S primitive_root, device_context::DeviceContext& ctx, Domain<S>& domain);
 
   /**
    * @struct NTTConfig
@@ -77,8 +80,8 @@ namespace ntt {
     Ordering ordering;          /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value:
                                  *   `Ordering::kNN`. */
     bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    int batch_size;             /**< The number of NTTs to compute. Default value: 1. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
+    int batch_size;             /**< The number of NTTs to compute. Default value: 1. */
     bool is_async;              /**< Whether to run the NTT asyncronously. If set to `true`, the NTT function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
@@ -94,21 +97,22 @@ namespace ntt {
 
   /**
    * A function that computes NTT or iNTT in-place.
-   * @param inout Input that's mutated in-place by this function. Length of this array needs to be \f$ size \cdot
-   * config.batch\_size \f$. Note that if inputs are in Montgomery form, the outputs will be as well and vice-versa:
-   * non-Montgomery inputs produce non-Montgomety outputs.
+   * @param input Input of the NTT. Length of this array needs to be \f$ size \cdot config.batch\_size \f$. Note
+   * that if inputs are in Montgomery form, the outputs will be as well and vice-versa: non-Montgomery inputs produce
+   * non-Montgomety outputs.
    * @param size NTT size. If a batch of NTTs (which all need to have the same size) is computed, this is the size
    * of 1 NTT, so it must equal the size of `inout` divided by `config.batch_size`.
    * @param is_inverse True for inverse NTT and false for direct NTT. Default value: false.
    * @param domain [Domain](@ref Domain) on which NTT is evaluated.
    * @param config [NTTConfig](@ref NTTConfig) used in this NTT.
+   * @param output Buffer for the output of the NTT. Should be of the same size as `input`.
    * @tparam E The type of inputs and outputs (i.e. coefficients \f$ \{p_i\} \f$ and values \f$ p(x) \f$). Must be a
    * group.
    * @tparam S The type of "twiddle factors" \f$ \{ \omega^i \} \f$. Must be a field. Often (but not always) `S=E`.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E, typename S>
-  cudaError_t NTT(E* inout, int size, bool is_inverse, Domain<S> domain, NTTConfig<S>* config);
+  cudaError_t NTT(E* input, int size, bool is_inverse, Domain<S>& domain, NTTConfig& config, E* output);
 
 } // namespace ntt
 

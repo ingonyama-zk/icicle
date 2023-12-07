@@ -31,7 +31,7 @@ namespace msm {
     template <typename S>
     int get_optimal_c(int bitsize)
     {
-      return ceil(log2(bitsize)) - 4;
+      return max((int)ceil(log2(bitsize)) - 4, 1);
     }
 
     template <typename P>
@@ -950,7 +950,7 @@ namespace msm {
   }
 
   /**
-   * Extern version of [MSM](@ref MSM) function with the following values of template parameters
+   * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    *  - `A` is the [affine representation](@ref affine_t) of curve points;
@@ -971,7 +971,7 @@ namespace msm {
 #if defined(G2_DEFINED)
 
   /**
-   * Extern version of [MSM](@ref MSM) function with the following values of template parameters
+   * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;

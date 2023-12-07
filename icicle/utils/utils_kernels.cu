@@ -17,12 +17,12 @@ namespace utils_internal {
   }
 
   template <typename E, typename S>
-  __global__ void BatchMulKernel(E* element_vec, S* scalar_vec, int n_scalars, int batch_size)
+  __global__ void BatchMulKernel(E* in_vec, S* scalar_vec, int n_scalars, int batch_size, E* out_vec)
   {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid < n_scalars * batch_size) {
       int scalar_id = tid % n_scalars;
-      element_vec[tid] = scalar_vec[scalar_id] * element_vec[tid];
+      out_vec[tid] = scalar_vec[scalar_id] * in_vec[tid];
     }
   }
 

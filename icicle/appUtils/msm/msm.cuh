@@ -33,7 +33,9 @@ namespace msm {
 
   /**
    * @struct MSMConfig
-   * Struct that encodes MSM parameters to be passed into the [MSM](@ref MSM) function.
+   * Struct that encodes MSM parameters to be passed into the [MSM](@ref MSM) function. The intended use of this struct
+   * is to create it using [DefaultMSMConfig](@ref DefaultMSMConfig) function and then you'll hopefully only need to 
+   * change a small number of default values for each of your MSMs.
    */
   struct MSMConfig {
     bool are_scalars_on_device; /**< True if scalars are on device and false if they're on host. Default value: 
@@ -90,18 +92,14 @@ namespace msm {
    * So, if for example all MSMs share the same base points, they can be repeated only once.
    * @param msm_size MSM size \f$ N \f$. If a batch of MSMs (which all need to have the same size) is computed, this is
    * the size of 1 MSM.
-   * @param results Result (or results in the case of batch MSM).
    * @param config [MSMConfig](@ref MSMConfig) used in this MSM.
+   * @param results Buffer for the result (or results in the case of batch MSM).
    * @tparam S Scalar field type.
    * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine
    * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
    * @tparam P Output type, which is typically a [projective
    * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) point in our codebase.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   *
-   * This function is asyncronous, and to sync it with host, you need to call `cudaDeviceSyncronize()`. To syncronize
-   * with a different stream `stream1`, call `cudaStreamSynchronize(config.stream)` and
-   * `cudaStreamSynchronize(stream1)`.
    *
    * **Note:** this function is still WIP and the following [MSMConfig](@ref MSMConfig) members do not yet have any
    * effect: `points_size` (it's always equal to the msm size currenly), `precompute_factor` (always equals 1) and
