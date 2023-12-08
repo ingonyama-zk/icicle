@@ -1,5 +1,5 @@
 use crate::memory::CudaMemPool;
-use crate::stream::CudaStream;
+use crate::stream::{CudaStream, CudaStreamCreateFlags};
 
 /// Properties of the device used in icicle functions.
 #[repr(C)]

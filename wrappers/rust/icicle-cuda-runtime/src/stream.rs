@@ -1,5 +1,5 @@
 use crate::bindings::{
-    cudaStreamCreate, cudaStreamDefault, cudaStreamDestroy, cudaStreamNonBlocking, cudaStreamSynchronize, cudaStream_t,
+    cudaStreamCreate, cudaStreamDefault, cudaStreamDestroy, cudaStreamNonBlocking, cudaStreamSynchronize, cudaStreamCreateWithFlags, cudaStream_t,
 };
 use crate::error::{CudaResult, CudaResultWrap};
 use bitflags::bitflags;
@@ -29,6 +29,15 @@ impl CudaStream {
         let mut handle = MaybeUninit::<cudaStream_t>::uninit();
         unsafe {
             cudaStreamCreate(handle.as_mut_ptr())
+                .wrap_maybe_uninit(handle)
+                .map(CudaStream::from_handle)
+        }
+    }
+
+    pub fn create_with_flags(flags: CudaStreamCreateFlags) -> CudaResult<Self> {
+        let mut handle = MaybeUninit::<cudaStream_t>::uninit();
+        unsafe {
+            cudaStreamCreateWithFlags(handle.as_mut_ptr(), flags.bits)
                 .wrap_maybe_uninit(handle)
                 .map(CudaStream::from_handle)
         }

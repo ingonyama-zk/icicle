@@ -906,11 +906,7 @@ namespace msm {
 
   extern "C" MSMConfig DefaultMSMConfig()
   {
-    device_context::DeviceContext ctx = {
-      0,               // device_id
-      (cudaStream_t)0, // stream
-      0,               // mempool
-    };
+    device_context::DeviceContext ctx = device_context::get_default_device_context();
     MSMConfig config = {
       false, // are_scalars_on_device
       false, // are_scalars_montgomery_form
@@ -925,7 +921,7 @@ namespace msm {
       false, // is_big_triangle
       10,    // large_bucket_factor
       false, // is_async
-      ctx,   // DeviceContext
+      ctx,   // ctx
     };
     return config;
   }

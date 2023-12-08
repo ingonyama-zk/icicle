@@ -12,12 +12,12 @@ extern "C" {
         out: *mut G1Projective,
     ) -> CudaError;
 
-    #[link_name = "bn254GetDefaultMSMConfig"]
-    fn GetDefaultMSMConfig() -> MSMConfig<'static>;
+    #[link_name = "bn254DefaultMSMConfig"]
+    fn default_msm_config() -> MSMConfig<'static>;
 }
 
 pub fn get_default_msm_config() -> MSMConfig<'static> {
-    unsafe { GetDefaultMSMConfig() }
+    unsafe { default_msm_config() }
 }
 
 pub fn msm<'a>(
