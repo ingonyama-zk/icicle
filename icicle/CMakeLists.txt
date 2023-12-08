@@ -43,7 +43,6 @@ if (NOT BUILD_TESTS)
   add_library(
     icicle
     utils/error_handler.cu
-    utils/utils_kernels.cu
     utils/vec_ops.cu
     primitives/field.cu
     primitives/projective.cu
@@ -65,7 +64,10 @@ if (NOT BUILD_TESTS)
     TARGET icicle
     POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym MSMCuda=${CURVE}MSMCuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GetDefaultMSMConfig=${CURVE}GetDefaultMSMConfig ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym DefaultMSMConfig=${CURVE}DefaultMSMConfig ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym NTTCuda=${CURVE}NTTCuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GetDefaultNTTConfig=${CURVE}DefaultNTTConfig ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym InitializeDomain=${CURVE}InitializeDomain ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o
     COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a 

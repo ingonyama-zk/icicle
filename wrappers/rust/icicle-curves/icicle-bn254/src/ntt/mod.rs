@@ -86,7 +86,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ntt() {
-        let test_size = 1 << 2;
+        let test_size = 1 << 12;
 
         let ctx = get_default_device_context();
         // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
