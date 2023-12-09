@@ -1,8 +1,8 @@
 use crate::curve::ScalarField;
 
-use icicle_core::ntt::{Ordering, NTTConfig};
-use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
+use icicle_core::ntt::{NTTConfig, Ordering};
 use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
 
 extern "C" {
     #[link_name = "bn254NTTCuda"]
@@ -57,11 +57,11 @@ pub(crate) mod tests {
     use icicle_cuda_runtime::device_context::get_default_device_context;
 
     use crate::curve::generate_random_scalars;
-    use crate::ntt::{ScalarField, ntt, get_default_ntt_config, initialize_domain};
+    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField};
 
-    use ark_poly::{GeneralEvaluationDomain, EvaluationDomain};
-    use ark_ff::FftField;
     use ark_bn254::Fr;
+    use ark_ff::FftField;
+    use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 
     fn reverse_bit_order(n: u32, order: u32) -> u32 {
         fn is_power_of_two(n: u32) -> bool {
@@ -91,11 +91,14 @@ pub(crate) mod tests {
         let ctx = get_default_device_context();
         // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
         // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
-        initialize_domain(ScalarField::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()), &ctx);
+        initialize_domain(
+            ScalarField::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()),
+            &ctx,
+        );
         let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
 
         let scalars: Vec<ScalarField> = generate_random_scalars(test_size);
-    
+
         let mut config = get_default_ntt_config();
         let mut ntt_result = vec![ScalarField::zero(); test_size];
         ntt(&scalars, false, &config, &mut ntt_result);
@@ -225,66 +228,66 @@ pub(crate) mod tests {
         // assert_eq!(result_from_device, &scalars_batch);
     }
 
-//     #[test]
-//     fn test_batch_ntt() {
-//         //NTT
-//         let test_size = 1 << 11;
-//         let batches = 2;
+    //     #[test]
+    //     fn test_batch_ntt() {
+    //         //NTT
+    //         let test_size = 1 << 11;
+    //         let batches = 2;
 
-//         let full_test_size = test_size * batches;
-//         let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size);
+    //         let full_test_size = test_size * batches;
+    //         let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size);
 
-//         let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
+    //         let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
 
-//         for i in 0..batches {
-//             scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
-//         }
+    //         for i in 0..batches {
+    //             scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
+    //         }
 
-//         let mut ntt_result = scalars_batch.clone();
+    //         let mut ntt_result = scalars_batch.clone();
 
-//         // do batch ntt
-//         ntt_wip(&mut ntt_result, false, false, Ordering::kNN, false, batches);
+    //         // do batch ntt
+    //         ntt_wip(&mut ntt_result, false, false, Ordering::kNN, false, batches);
 
-//         let mut ntt_result_vec_of_vec = Vec::new();
+    //         let mut ntt_result_vec_of_vec = Vec::new();
 
-//         // do ntt for every chunk
-//         for i in 0..batches {
-//             ntt_result_vec_of_vec.push(scalar_vec_of_vec[i].clone());
+    //         // do ntt for every chunk
+    //         for i in 0..batches {
+    //             ntt_result_vec_of_vec.push(scalar_vec_of_vec[i].clone());
 
-//             ntt_wip(&mut ntt_result_vec_of_vec[i], false, false, Ordering::kNN, false, 1);
-//         }
+    //             ntt_wip(&mut ntt_result_vec_of_vec[i], false, false, Ordering::kNN, false, 1);
+    //         }
 
-//         // check that the ntt of each vec of scalars is equal to the ntt of the specific batch
-//         for i in 0..batches {
-//             assert_eq!(ntt_result_vec_of_vec[i], ntt_result[i * test_size..(i + 1) * test_size]);
-//         }
+    //         // check that the ntt of each vec of scalars is equal to the ntt of the specific batch
+    //         for i in 0..batches {
+    //             assert_eq!(ntt_result_vec_of_vec[i], ntt_result[i * test_size..(i + 1) * test_size]);
+    //         }
 
-//         // check that ntt output is different from input
-//         assert_ne!(ntt_result, scalars_batch);
+    //         // check that ntt output is different from input
+    //         assert_ne!(ntt_result, scalars_batch);
 
-//         let mut intt_result = ntt_result.clone();
+    //         let mut intt_result = ntt_result.clone();
 
-//         // do batch intt
-//         // intt_batch(&mut intt_result, test_size, 0);
-//         ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
+    //         // do batch intt
+    //         // intt_batch(&mut intt_result, test_size, 0);
+    //         ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
 
-//         let mut intt_result_vec_of_vec = Vec::new();
+    //         let mut intt_result_vec_of_vec = Vec::new();
 
-//         // do intt for every chunk
-//         for i in 0..batches {
-//             intt_result_vec_of_vec.push(ntt_result_vec_of_vec[i].clone());
-//             // intt(&mut intt_result_vec_of_vec[i], 0);
-//             ntt_wip(&mut intt_result_vec_of_vec[i], true, false, Ordering::kNN, false, 1);
-//         }
+    //         // do intt for every chunk
+    //         for i in 0..batches {
+    //             intt_result_vec_of_vec.push(ntt_result_vec_of_vec[i].clone());
+    //             // intt(&mut intt_result_vec_of_vec[i], 0);
+    //             ntt_wip(&mut intt_result_vec_of_vec[i], true, false, Ordering::kNN, false, 1);
+    //         }
 
-//         // check that the intt of each vec of scalars is equal to the intt of the specific batch
-//         for i in 0..batches {
-//             assert_eq!(
-//                 intt_result_vec_of_vec[i],
-//                 intt_result[i * test_size..(i + 1) * test_size]
-//             );
-//         }
+    //         // check that the intt of each vec of scalars is equal to the intt of the specific batch
+    //         for i in 0..batches {
+    //             assert_eq!(
+    //                 intt_result_vec_of_vec[i],
+    //                 intt_result[i * test_size..(i + 1) * test_size]
+    //             );
+    //         }
 
-//         assert_eq!(intt_result, scalars_batch);
-//     }
+    //         assert_eq!(intt_result, scalars_batch);
+    //     }
 }

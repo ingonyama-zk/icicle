@@ -1,5 +1,6 @@
 use crate::bindings::{
-    cudaStreamCreate, cudaStreamDefault, cudaStreamDestroy, cudaStreamNonBlocking, cudaStreamSynchronize, cudaStreamCreateWithFlags, cudaStream_t,
+    cudaStreamCreate, cudaStreamCreateWithFlags, cudaStreamDefault, cudaStreamDestroy, cudaStreamNonBlocking,
+    cudaStreamSynchronize, cudaStream_t,
 };
 use crate::error::{CudaResult, CudaResultWrap};
 use bitflags::bitflags;
