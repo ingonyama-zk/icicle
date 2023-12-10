@@ -1,12 +1,18 @@
 // #define DEBUG
 // #define POSEIDON_DEBUG
 
+#define CURVE_ID 2
 #include "../../../curves/curve_config.cuh"
+#include "poseidon.cu"
 
 #ifndef __CUDA_ARCH__
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <cassert>
+
+using namespace poseidon;
+using namespace curve_config;
 
 int main(int argc, char* argv[])
 {
@@ -24,29 +30,29 @@ int main(int argc, char* argv[])
   cudaEventCreate(&end_event);
   cudaEventRecord(start_event, stream);
   auto start_time1 = std::chrono::high_resolution_clock::now();
-  OptimizedPoseidon<BLS12_381::scalar_t> poseidon(arity, stream);
+  OptimizedPoseidon<scalar_t> poseidon(arity, stream);
 
   auto end_time1 = std::chrono::high_resolution_clock::now();
   auto elapsed_time1 = std::chrono::duration_cast<std::chrono::microseconds>(end_time1 - start_time1);
   printf("Elapsed time poseidon: %.0f us\n", FpMicroseconds(elapsed_time1).count());
 
-  int number_of_blocks = 1024 * 1024 * 128;
+  int number_of_blocks = 1024;
 
-  BLS12_381::scalar_t input = BLS12_381::scalar_t::zero();
-  BLS12_381::scalar_t* in_ptr =
-    static_cast<BLS12_381::scalar_t*>(malloc(number_of_blocks * arity * sizeof(BLS12_381::scalar_t)));
+  scalar_t input = scalar_t::zero();
+  scalar_t* in_ptr =
+    static_cast<scalar_t*>(malloc(number_of_blocks * arity * sizeof(scalar_t)));
   for (uint32_t i = 0; i < number_of_blocks * arity; i++) {
     in_ptr[i] = input;
-    input = input + BLS12_381::scalar_t::one();
+    input = input + scalar_t::one();
   }
   std::cout << std::endl;
 
-  BLS12_381::scalar_t* out_ptr =
-    static_cast<BLS12_381::scalar_t*>(malloc(number_of_blocks * sizeof(BLS12_381::scalar_t)));
+  scalar_t* out_ptr =
+    static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
   auto start_time = std::chrono::high_resolution_clock::now();
 
-  poseidon.hash_blocks(in_ptr, number_of_blocks, out_ptr, OptimizedPoseidon<BLS12_381::scalar_t>::HashType::MerkleTree, stream);
+  poseidon.hash_blocks(in_ptr, number_of_blocks, out_ptr, OptimizedPoseidon<scalar_t>::HashType::MerkleTree, stream);
   auto end_time = std::chrono::high_resolution_clock::now();
   auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
   printf("Elapsed time hash: %.0f us\n", FpMicroseconds(elapsed_time).count());
@@ -60,7 +66,7 @@ int main(int argc, char* argv[])
   cudaEventDestroy(start_event);
   cudaEventDestroy(end_event);
 
-  BLS12_381::scalar_t expected[1024] = {
+  scalar_t expected[1024] = {
     {2583881727, 773864502, 2634393245, 2801510707, 49275233, 1939738585, 1584833899, 962922711},
     {1482052501, 2945755510, 2790332687, 3994795689, 2690398473, 2055226187, 3927265331, 526041267},
     {908959580, 3968357170, 168369822, 4279251122, 172491869, 1810633943, 1108167336, 461319268},

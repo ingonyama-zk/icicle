@@ -1,4 +1,9 @@
+#pragma once
+#ifndef POSEIDON_OPTIMIZED_H
+#define POSEIDON_OPTIMIZED_H
+
 #include "../poseidon.cuh"
+#include "../../../curves/curve_config.cuh"
 
 namespace poseidon {
     template <typename S>
@@ -23,6 +28,12 @@ namespace poseidon {
     }
     return reinterpret_cast<S*>(constants);
     }
+
+    template <typename S> __global__ void prepare_poseidon_states(S* states, size_t number_of_states, S domain_tag, const PoseidonConfiguration<S> config, bool aligned);
+    template <typename S> __global__ void get_hash_results(S* states, size_t number_of_states, S* out, int t);
+    template <typename S> __global__ void copy_recursive(S * state, size_t number_of_states, S * out, int t);
+    template <typename S> __global__ void full_rounds(S* states, size_t number_of_states, size_t rc_offset, bool first_half, const PoseidonConfiguration<S> config);
+    template <typename S> __global__ void partial_rounds(S* states, size_t number_of_states, size_t rc_offset, const PoseidonConfiguration<S> config);
 
     template <typename S>
     class OptimizedPoseidon: public Poseidon<S>
@@ -190,3 +201,5 @@ namespace poseidon {
     cudaStream_t stream;
     };
 }
+
+#endif

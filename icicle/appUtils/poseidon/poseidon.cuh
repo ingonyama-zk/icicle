@@ -2,6 +2,9 @@
 #ifndef POSEIDON_H
 #define POSEIDON_H
 
+#include <cstdint>
+#include <stdexcept>
+
 namespace poseidon {
   #define FIRST_FULL_ROUNDS true
   #define SECOND_FULL_ROUNDS false

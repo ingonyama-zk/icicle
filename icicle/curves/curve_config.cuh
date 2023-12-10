@@ -19,6 +19,7 @@ using namespace bn254;
 #elif CURVE_ID == BLS12_381
 #include "bls12_381_params.cuh"
 #include "poseidon_constants/bls12_381_poseidon.h"
+#define POSEIDON
 using namespace bls12_381;
 #elif CURVE_ID == BLS12_377
 #include "bls12_377_params.cuh"
@@ -62,5 +63,11 @@ namespace curve_config {
 #endif
 
 } // namespace curve_config
+
+#if defined(POSEIDON)
+#include "../appUtils/poseidon/optimized/poseidon.cuh"
+template class poseidon::OptimizedPoseidon<curve_config::scalar_t>;
+#endif
+
 
 #endif
