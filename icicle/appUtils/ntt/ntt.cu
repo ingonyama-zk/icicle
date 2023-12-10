@@ -229,7 +229,7 @@ namespace ntt {
      */
     template <typename E, typename S>
     __global__ void
-    ntt_template_kernel(E* arr_in, uint32_t n, S* twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, bool rev, E* arr_out)
+    ntt_template_kernel(E* arr_in, int n, S* twiddles, int n_twiddles, int max_task, int s, bool rev, E* arr_out)
     {
       int task = blockIdx.x;
       int chunks = n / (blockDim.x * 2);
@@ -269,8 +269,9 @@ namespace ntt {
      * NTT/INTT inplace batch
      * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
      * @param d_input Input array
+     * @param n Size of `d_input`
      * @param d_twiddles Twiddles
-     * @param n Length of `d_twiddles` array
+     * @param n_twiddles Size of `d_twiddles`
      * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
      * @param inverse true for iNTT
      * @param coset should be array of lenght n or a nullptr if NTT is not computed on a coset
@@ -281,16 +282,17 @@ namespace ntt {
     template <typename E, typename S>
     void ntt_inplace_batch_template(
       E* d_input,
+      int n,
       S* d_twiddles,
-      unsigned n,
-      unsigned batch_size,
+      int n_twiddles,
+      int batch_size,
+      int logn,
       bool inverse,
       S* coset,
       cudaStream_t stream,
       bool is_async,
       E* d_output)
     {
-      const int logn = int(log(n) / log(2));
       bool is_shared_mem_enabled = sizeof(E) <= MAX_SHARED_MEM_ELEMENT_SIZE;
       const int log2_shmem_elems = is_shared_mem_enabled ? int(log(int(MAX_SHARED_MEM / sizeof(E))) / log(2)) : logn;
       int num_threads = max(min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1)), 1);
@@ -305,12 +307,12 @@ namespace ntt {
       if (inverse) {
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
-            d_input, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem, d_output);
+            d_input, 1 << logn_shmem, d_twiddles, n_twiddles, total_tasks, 0, logn_shmem, d_output);
 
         for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
         {
           ntt_template_kernel<E, S><<<num_blocks, num_threads, 0, stream>>>(
-            (s == 0) ? d_input : d_output, n, d_twiddles, n, total_tasks, s, false, d_output);
+            (s == 0) ? d_input : d_output, n, d_twiddles, n_twiddles, total_tasks, s, false, d_output);
         }
 
         if (coset)
@@ -329,13 +331,13 @@ namespace ntt {
         for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
         {
           ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(
-            coset ? d_output : d_input, n, d_twiddles, n, total_tasks, s, true, d_output);
+            coset ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, true, d_output);
         }
 
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
-            (coset || (logn > logn_shmem)) ? d_output : d_input, 1 << logn_shmem, d_twiddles, n, total_tasks, 0,
-            logn_shmem, d_output);
+            (coset || (logn > logn_shmem)) ? d_output : d_input, 1 << logn_shmem, d_twiddles,
+            n_twiddles, total_tasks, 0, logn_shmem, d_output);
       }
 
       if (is_async) return;
@@ -359,11 +361,6 @@ namespace ntt {
     static S* twiddles;
     static S* inv_twiddles;
 
-    ~Domain<S>() {
-      if (twiddles) cudaFree(twiddles);
-      if (inv_twiddles) cudaFree(inv_twiddles);
-    }
-
     public:
       template <typename U>
       friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx);
@@ -380,7 +377,7 @@ namespace ntt {
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
-    // only generate twiddles if they haven't been generated yet
+    // only generate twiddles if they haven't been generated yet (TODO: thread safety)
     if (!Domain<S>::twiddles) {
       // TODO DmytroTym: the following line is just a temporary patch to make it work, having issues creating default stream on rust side
       device_context::DeviceContext ctx = device_context::get_default_device_context();
@@ -457,8 +454,8 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, d_twiddles, size, batch_size, is_inverse, config.coset_table,
-      stream, !config.is_async, reverse_output ? d_input : d_output);
+      reverse_input ? d_output : d_input, size, d_twiddles, Domain<S>::max_size, batch_size, logn,
+      is_inverse, config.coset_table, stream, !config.is_async, reverse_output ? d_input : d_output);
     CHECK_LAST_CUDA_ERROR();
 
     // it's assumed that reverse_input and reverse_output can't both be true at the same time

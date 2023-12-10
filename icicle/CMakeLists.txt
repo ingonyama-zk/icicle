@@ -75,7 +75,6 @@ if (NOT BUILD_TESTS)
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/vec_ops.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/field.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/utils_kernels.cu.o 
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o 
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
                                                                                  

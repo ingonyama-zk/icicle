@@ -86,7 +86,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ntt() {
-        let test_size = 1 << 12;
+        let test_size = 1 << 16;
 
         let ctx = get_default_device_context();
         // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
@@ -121,173 +121,10 @@ pub(crate) mod tests {
 
         assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
-        // let mut ark_intt_result = ark_ntt_result;
+        let mut intt_result = vec![ScalarField::zero(); test_size];
+        ntt(&ntt_result, true, &config, &mut intt_result);
 
-        // ark_domain.ifft_in_place(&mut ark_intt_result);
-        // assert_eq!(ark_intt_result, ark_scalars_batch);
-
-        // // check that ntt output is different from input
-        // assert_ne!(ntt_result, scalars_batch);
-
-        // // do intt
-        // let mut intt_result = ntt_result;
-
-        // ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
-
-        // assert!(ark_intt_result == ark_scalars_batch);
-        // assert!(intt_result == scalars_batch);
-
-        // let mut ntt_intt_result = intt_result;
-        // ntt_wip(&mut ntt_intt_result, false, false, Ordering::kNR, false, batches);
-        // assert!(ntt_intt_result != scalars_batch);
-        // ntt_wip(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
-        // assert!(ntt_intt_result == scalars_batch);
-
-        // let mut ntt_intt_result = list_to_reverse_bit_order(&ntt_intt_result);
-        // ntt_wip(&mut ntt_intt_result, false, false, Ordering::kRR, false, batches);
-        // assert!(ntt_intt_result != scalars_batch);
-        // ntt_wip(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
-        // assert!(ntt_intt_result == scalars_batch);
-
-        // ////
-        // let size = ntt_intt_result.len() / batches;
-
-        // let mut config = get_ntt_config_with_input(&mut ntt_intt_result, size, batches);
-
-        // ntt_internal(&mut config);
-
-        // //host
-        // let mut ntt_result = scalars_batch.clone();
-        // ntt_wip(&mut ntt_result, false, false, Ordering::kNR, false, batches);
-
-        // // let mut buff1 = DeviceBuffer::from_slice(&scalars_batch[..]).unwrap();
-        // // let dev_ptr1 = buff1
-        // //     .as_device_ptr()
-        // //     .as_raw_mut();
-
-        // // let buff_len = buff1.len();
-
-        // // std::mem::forget(buff1);
-
-        // // let buff_from_dev_ptr = unsafe { DeviceBuffer::from_raw_parts(DevicePointer::wrap(dev_ptr1), buff_len) };
-        // // let mut from_device = vec![ScalarField::zero(); scalars_batch.len()];
-        // // buff_from_dev_ptr
-        // //     .copy_to(&mut from_device)
-        // //     .unwrap();
-
-        // // assert_eq!(from_device, scalars_batch);
-
-        // // host - device - device - host
-        // let mut ntt_intt_result = scalars_batch.clone();
-
-        // let mut config = get_ntt_config_with_input(&mut ntt_intt_result, size, batches);
-
-        // config.is_input_on_device = false;
-        // config.is_output_on_device = true;
-        // // config.is_preserving_twiddles = true; // TODO: same as in get_ntt_config
-        // config.ordering = Ordering::kNR;
-
-        // ntt_internal(&mut config); //twiddles are preserved after first call
-
-        // // config.is_preserving_twiddles = true;        //TODO: same as in get_ntt_config
-        // config.is_inverse = true;
-        // config.is_input_on_device = false;
-        // config.is_output_on_device = true;
-        // config.ordering = Ordering::kNR;
-
-        // ntt_internal(&mut config); //inv_twiddles are preserved after first call
-
-        // let ntt_intt_result = &mut scalars_batch.clone()[..];
-        // let raw_scalars_batch_copy = ntt_intt_result as *mut _ as *mut ScalarField;
-
-        // let config_inout2: &mut [ScalarField] =
-        //     unsafe { std::slice::from_raw_parts_mut(raw_scalars_batch_copy, config.size as usize) };
-        // assert_eq!(config_inout2, scalars_batch);
-
-        // config.is_preserving_twiddles = true; //TODO: same as in get_ntt_config
-
-        // config.inout = raw_scalars_batch_copy;
-
-        // config.is_inverse = false;
-        // config.is_input_on_device = false;
-        // config.is_output_on_device = true;
-        // config.ordering = Ordering::kNR;
-
-        // ntt_internal(&mut config);
-
-        // config.is_inverse = true;
-        // config.is_input_on_device = true;
-        // config.is_output_on_device = false;
-        // config.ordering = Ordering::kRN;
-
-        // ntt_internal(&mut config);
-
-        // let result_from_device: &mut [ScalarField] =
-        //     unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
-
-        // assert_eq!(result_from_device, &scalars_batch);
+        assert_eq!(ntt_result_as_ark[1], ntt_result[1].to_ark());
+        assert_eq!(intt_result, scalars);
     }
-
-    //     #[test]
-    //     fn test_batch_ntt() {
-    //         //NTT
-    //         let test_size = 1 << 11;
-    //         let batches = 2;
-
-    //         let full_test_size = test_size * batches;
-    //         let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size);
-
-    //         let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
-
-    //         for i in 0..batches {
-    //             scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
-    //         }
-
-    //         let mut ntt_result = scalars_batch.clone();
-
-    //         // do batch ntt
-    //         ntt_wip(&mut ntt_result, false, false, Ordering::kNN, false, batches);
-
-    //         let mut ntt_result_vec_of_vec = Vec::new();
-
-    //         // do ntt for every chunk
-    //         for i in 0..batches {
-    //             ntt_result_vec_of_vec.push(scalar_vec_of_vec[i].clone());
-
-    //             ntt_wip(&mut ntt_result_vec_of_vec[i], false, false, Ordering::kNN, false, 1);
-    //         }
-
-    //         // check that the ntt of each vec of scalars is equal to the ntt of the specific batch
-    //         for i in 0..batches {
-    //             assert_eq!(ntt_result_vec_of_vec[i], ntt_result[i * test_size..(i + 1) * test_size]);
-    //         }
-
-    //         // check that ntt output is different from input
-    //         assert_ne!(ntt_result, scalars_batch);
-
-    //         let mut intt_result = ntt_result.clone();
-
-    //         // do batch intt
-    //         // intt_batch(&mut intt_result, test_size, 0);
-    //         ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
-
-    //         let mut intt_result_vec_of_vec = Vec::new();
-
-    //         // do intt for every chunk
-    //         for i in 0..batches {
-    //             intt_result_vec_of_vec.push(ntt_result_vec_of_vec[i].clone());
-    //             // intt(&mut intt_result_vec_of_vec[i], 0);
-    //             ntt_wip(&mut intt_result_vec_of_vec[i], true, false, Ordering::kNN, false, 1);
-    //         }
-
-    //         // check that the intt of each vec of scalars is equal to the intt of the specific batch
-    //         for i in 0..batches {
-    //             assert_eq!(
-    //                 intt_result_vec_of_vec[i],
-    //                 intt_result[i * test_size..(i + 1) * test_size]
-    //             );
-    //         }
-
-    //         assert_eq!(intt_result, scalars_batch);
-    //     }
 }
