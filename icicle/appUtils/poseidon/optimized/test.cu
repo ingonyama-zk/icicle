@@ -6,10 +6,10 @@
 #include "poseidon.cu"
 
 #ifndef __CUDA_ARCH__
+#include <cassert>
 #include <chrono>
 #include <fstream>
 #include <iostream>
-#include <cassert>
 
 using namespace poseidon;
 using namespace curve_config;
@@ -39,16 +39,14 @@ int main(int argc, char* argv[])
   int number_of_blocks = 1024;
 
   scalar_t input = scalar_t::zero();
-  scalar_t* in_ptr =
-    static_cast<scalar_t*>(malloc(number_of_blocks * arity * sizeof(scalar_t)));
+  scalar_t* in_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * arity * sizeof(scalar_t)));
   for (uint32_t i = 0; i < number_of_blocks * arity; i++) {
     in_ptr[i] = input;
     input = input + scalar_t::one();
   }
   std::cout << std::endl;
 
-  scalar_t* out_ptr =
-    static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
+  scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
   auto start_time = std::chrono::high_resolution_clock::now();
 

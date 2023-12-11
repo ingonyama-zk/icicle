@@ -3,24 +3,23 @@
 
 #define CURVE_ID 2
 #include "../../curves/curve_config.cuh"
-#include "merkle.cu"
 #include "../poseidon/optimized/poseidon.cu"
+#include "merkle.cu"
 
 #ifndef __CUDA_ARCH__
-#include <iostream>
+#include <cassert>
 #include <chrono>
 #include <fstream>
+#include <iostream>
 #include <math.h>
-#include <cassert>
 
 using namespace poseidon;
 using namespace curve_config;
 
-int main(int argc, char* argv[]) {
-  using FpMilliseconds = 
-    std::chrono::duration<float, std::chrono::milliseconds::period>;
-  using FpMicroseconds = 
-    std::chrono::duration<float, std::chrono::microseconds::period>;
+int main(int argc, char* argv[])
+{
+  using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
+  using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 
   const int arity = 2;
   const int t = arity + 1;
@@ -49,7 +48,7 @@ int main(int argc, char* argv[]) {
 
   auto start_time2 = std::chrono::high_resolution_clock::now();
   scalar_t input = scalar_t::zero();
-  scalar_t * leaves = static_cast< scalar_t * >(malloc(number_of_leaves * sizeof(scalar_t)));
+  scalar_t* leaves = static_cast<scalar_t*>(malloc(number_of_leaves * sizeof(scalar_t)));
   for (uint32_t i = 0; i < number_of_leaves; i++) {
     leaves[i] = input;
     input = input + scalar_t::one();
@@ -60,22 +59,27 @@ int main(int argc, char* argv[]) {
   printf("Leaves allocation: %.0f us\n", FpMicroseconds(elapsed_time2).count());
 
   size_t leaves_mem = number_of_leaves * sizeof(scalar_t);
-  std::cout << "Memory for leaves = " << leaves_mem / 1024 / 1024 << " MB; " << leaves_mem / 1024 / 1024 / 1024 << " GB" << std::endl;
+  std::cout << "Memory for leaves = " << leaves_mem / 1024 / 1024 << " MB; " << leaves_mem / 1024 / 1024 / 1024 << " GB"
+            << std::endl;
   std::cout << "Number of leaves = " << number_of_leaves << std::endl;
 
   auto start_time = std::chrono::high_resolution_clock::now();
   auto digests_len = get_digests_len(tree_height, arity);
-  scalar_t * digests = static_cast< scalar_t * >(malloc(digests_len * sizeof(scalar_t)));
+  scalar_t* digests = static_cast<scalar_t*>(malloc(digests_len * sizeof(scalar_t)));
   size_t digests_mem = digests_len * sizeof(scalar_t);
-  std::cout << "Memory for digests = " << digests_mem / 1024 / 1024 << " MB; " << digests_mem / 1024 / 1024 / 1024 << " GB" << std::endl;
+  std::cout << "Memory for digests = " << digests_mem / 1024 / 1024 << " MB; " << digests_mem / 1024 / 1024 / 1024
+            << " GB" << std::endl;
   std::cout << "Number of digest elements = " << digests_len << std::endl;
 
-  std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; " << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
+  std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
+            << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
   build_merkle_tree<scalar_t>(leaves, digests, tree_height, poseidon, stream);
   auto end_time = std::chrono::high_resolution_clock::now();
   auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
   auto tree_time = FpMicroseconds(elapsed_time).count();
-  printf("Elapsed time in merkle tree building: %.0f us, %.0f ms, %.2f s\n", tree_time, tree_time / 1000, tree_time / 1000 / 1000);
+  printf(
+    "Elapsed time in merkle tree building: %.0f us, %.0f ms, %.2f s\n", tree_time, tree_time / 1000,
+    tree_time / 1000 / 1000);
   cudaEventRecord(end_event, stream);
   cudaEventSynchronize(end_event);
 

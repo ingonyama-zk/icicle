@@ -6,8 +6,8 @@
 #include <stdexcept>
 
 namespace poseidon {
-  #define FIRST_FULL_ROUNDS true
-  #define SECOND_FULL_ROUNDS false
+#define FIRST_FULL_ROUNDS  true
+#define SECOND_FULL_ROUNDS false
 
   uint32_t partial_rounds_number_from_arity(const uint32_t arity)
   {
@@ -39,10 +39,12 @@ namespace poseidon {
   class ParallelPoseidonConfiguration
   {
     uint32_t t;
+
   public:
     int number_of_threads, hashes_per_block, singlehash_block_size;
 
-    ParallelPoseidonConfiguration(const uint32_t t) {
+    ParallelPoseidonConfiguration(const uint32_t t)
+    {
       this->t = t;
       // The logic behind this is that 1 thread only works on 1 element
       // We have {t} elements in each state, and {number_of_states} states total
@@ -55,12 +57,15 @@ namespace poseidon {
       singlehash_block_size = 128;
     }
 
-    int number_of_full_blocks(size_t number_of_states) {
+    int number_of_full_blocks(size_t number_of_states)
+    {
       int total_number_of_threads = number_of_states * t;
-      return total_number_of_threads / number_of_threads + static_cast<bool>(total_number_of_threads % number_of_threads);
+      return total_number_of_threads / number_of_threads +
+             static_cast<bool>(total_number_of_threads % number_of_threads);
     }
 
-    int number_of_singlehash_blocks(size_t number_of_states) {
+    int number_of_singlehash_blocks(size_t number_of_states)
+    {
       return number_of_states / singlehash_block_size + static_cast<bool>(number_of_states % singlehash_block_size);
     }
   };
@@ -76,50 +81,56 @@ namespace poseidon {
     };
     uint32_t t, arity;
 
-    Poseidon(uint32_t arity) {
+    Poseidon(uint32_t arity)
+    {
       this->arity = arity;
       this->t = arity + 1;
     }
 
-    /// This function will apply a single Poseidon permutation to mulitple states in parallel 
-    virtual void permute_many(S * states, size_t number_of_states, cudaStream_t stream) {}
+    /// This function will apply a single Poseidon permutation to mulitple states in parallel
+    virtual void permute_many(S* states, size_t number_of_states, cudaStream_t stream) {}
 
     /// This function will copy input from host and copy the result from device
-    void hash_blocks(const S * inp, size_t number_of_states, S * out, HashType hash_type, cudaStream_t stream) {
-        S * states, * out_device;
-        // allocate memory for {number_of_states} states of {t} scalars each
-        if (cudaMallocAsync(&states, number_of_states * t * sizeof(S), stream) != cudaSuccess) {
-            throw std::runtime_error("Failed memory allocation on the device");
-        }
-        if (cudaMallocAsync(&out_device, number_of_states * sizeof(S), stream) != cudaSuccess) {
-            throw std::runtime_error("Failed memory allocation on the device");
-        }
+    void hash_blocks(const S* inp, size_t number_of_states, S* out, HashType hash_type, cudaStream_t stream)
+    {
+      S *states, *out_device;
+      // allocate memory for {number_of_states} states of {t} scalars each
+      if (cudaMallocAsync(&states, number_of_states * t * sizeof(S), stream) != cudaSuccess) {
+        throw std::runtime_error("Failed memory allocation on the device");
+      }
+      if (cudaMallocAsync(&out_device, number_of_states * sizeof(S), stream) != cudaSuccess) {
+        throw std::runtime_error("Failed memory allocation on the device");
+      }
 
-        // This is where the input matrix of size Arity x NumberOfBlocks is
-        // padded and coppied to device in a T x NumberOfBlocks matrix
-        cudaMemcpy2DAsync(states, t * sizeof(S),  // Device pointer and device pitch
-                      inp, (t - 1) * sizeof(S),    // Host pointer and pitch
-                      (t - 1) * sizeof(S), number_of_states, // Size of the source matrix (Arity x NumberOfBlocks)
-                      cudaMemcpyHostToDevice, stream);
+      // This is where the input matrix of size Arity x NumberOfBlocks is
+      // padded and coppied to device in a T x NumberOfBlocks matrix
+      cudaMemcpy2DAsync(
+        states, t * sizeof(S),                 // Device pointer and device pitch
+        inp, (t - 1) * sizeof(S),              // Host pointer and pitch
+        (t - 1) * sizeof(S), number_of_states, // Size of the source matrix (Arity x NumberOfBlocks)
+        cudaMemcpyHostToDevice, stream);
 
-        poseidon_hash(states, number_of_states, out_device, hash_type, stream, false, false);
+      poseidon_hash(states, number_of_states, out_device, hash_type, stream, false, false);
 
-        cudaFreeAsync(states, stream);
-        cudaMemcpyAsync(out, out_device, number_of_states * sizeof(S), cudaMemcpyDeviceToHost, stream);
-        cudaFreeAsync(out_device, stream);
+      cudaFreeAsync(states, stream);
+      cudaMemcpyAsync(out, out_device, number_of_states * sizeof(S), cudaMemcpyDeviceToHost, stream);
+      cudaFreeAsync(out_device, stream);
     }
 
     // Compute the poseidon hash over a sequence of preimages
     ///
     ///=====================================================
     /// # Arguments
-    /// * `states`  - a device pointer to the states memory. Expected to be of size `number_of_states * t` elements. States should contain the leaves values
+    /// * `states`  - a device pointer to the states memory. Expected to be of size `number_of_states * t` elements.
+    /// States should contain the leaves values
     /// * `number_of_states`  - number of preimages number_of_states. Each block is of size t
-    /// * `out` - a device pointer to the digests memory. Expected to be of size `sum(arity ^ (i)) for i in [0..height-1]`
+    /// * `out` - a device pointer to the digests memory. Expected to be of size `sum(arity ^ (i)) for i in
+    /// [0..height-1]`
     /// * `hash_type`  - this will determine the domain_tag value
     /// * `stream` - a cuda stream to run the kernels
     /// * `aligned` - if set to `true`, the algorithm expects the states to contain leaves in an aligned form
-    /// * `loop_results` - if set to `true`, the resulting hash will be also copied into the states memory in aligned form.
+    /// * `loop_results` - if set to `true`, the resulting hash will be also copied into the states memory in aligned
+    /// form.
     ///
     /// Aligned form (for arity = 2):
     /// [0, X1, X2, 0, X3, X4, ...]
@@ -135,7 +146,15 @@ namespace poseidon {
     /// The subtrees will be constructed in streams pool. Each stream will handle a subtree
     /// After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
     ///======================================================
-    void poseidon_hash(S * states, size_t number_of_states, S * out, Poseidon<S>::HashType hash_type, cudaStream_t stream, bool aligned, bool loop_results) {
+    void poseidon_hash(
+      S* states,
+      size_t number_of_states,
+      S* out,
+      Poseidon<S>::HashType hash_type,
+      cudaStream_t stream,
+      bool aligned,
+      bool loop_results)
+    {
       // Pick the domain_tag accordinaly
       S domain_tag;
       switch (hash_type) {
@@ -158,8 +177,8 @@ namespace poseidon {
     }
 
   private:
-    virtual void prepare_states(S * states, size_t number_of_states, S domain_tag, bool aligned) {}
-    virtual void process_results(S * states, size_t number_of_states, S * out, bool loop_results) {}
+    virtual void prepare_states(S* states, size_t number_of_states, S domain_tag, bool aligned) {}
+    virtual void process_results(S* states, size_t number_of_states, S* out, bool loop_results) {}
   };
 } // namespace poseidon
 
