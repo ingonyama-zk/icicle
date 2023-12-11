@@ -57,7 +57,7 @@ pub(crate) mod tests {
     use icicle_cuda_runtime::device_context::get_default_device_context;
 
     use crate::curve::generate_random_scalars;
-    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField};
+    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField, Ordering};
 
     use ark_bn254::Fr;
     use ark_ff::FftField;
@@ -124,7 +124,45 @@ pub(crate) mod tests {
         let mut intt_result = vec![ScalarField::zero(); test_size];
         ntt(&ntt_result, true, &config, &mut intt_result);
 
-        assert_eq!(ntt_result_as_ark[1], ntt_result[1].to_ark());
         assert_eq!(intt_result, scalars);
+        // check that ntt_result wasn't mutated by the latest `ntt` call
+        assert_eq!(ntt_result_as_ark[1], ntt_result[1].to_ark());
+    }
+
+    #[test]
+    fn test_ntt_coset() {
+        let test_size = 1 << 16;
+        let small_size = test_size >> 1;
+        let ctx = get_default_device_context();
+        // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
+        // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
+        initialize_domain(
+            ScalarField::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()),
+            &ctx,
+        );
+        let ark_domain = GeneralEvaluationDomain::<Fr>::new(small_size).unwrap();
+        let ark_big_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
+        let scalars: Vec<ScalarField> = generate_random_scalars(small_size);
+        let mut config = get_default_ntt_config();
+        config.ordering = Ordering::kRN;
+        let mut ntt_result = vec![ScalarField::zero(); test_size];
+        ntt(&scalars, true, &config, &mut ntt_result[..small_size]);
+        assert_ne!(ntt_result[..small_size], scalars);
+        // TODO DmytroTym: current design of coset is pretty unfortunate. only asking user to pass coset generator is
+        // much better from the point of view of usability and future-proofing alike. find out a way to do this
+        // config.coset =
+        // ntt(&scalars, false, &config, &mut ntt_result[small_size..]);
+        let ark_scalars = scalars
+            .iter()
+            .map(|v| v.to_ark())
+            .collect::<Vec<Fr>>();
+        let mut ark_ntt_result = list_to_reverse_bit_order(&ark_scalars);
+        ark_domain.ifft_in_place(&mut ark_ntt_result);
+        assert_ne!(ark_ntt_result, ark_scalars);
+        let ntt_result_as_ark = ntt_result[..small_size]
+            .iter()
+            .map(|p| p.to_ark())
+            .collect::<Vec<Fr>>();
+        assert_eq!(ark_ntt_result, ntt_result_as_ark);
     }
 }

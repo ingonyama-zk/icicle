@@ -1,6 +1,7 @@
 #include "ntt.cuh"
 
 #include <vector>
+#include <unordered_map>
 
 #include "../../curves/curve_config.cuh"
 #include "../../utils/sharedmem.cuh"
@@ -130,7 +131,7 @@ namespace ntt {
             uint32_t oij = i + j;
             uint32_t k = oij + shift_s;
 
-            S tw = r_twiddles[j * n_twiddles_div];
+            S tw = *(r_twiddles + j * n_twiddles_div);
 
             E u = is_beginning ? arr_in[offset + oij] : arr[oij];
             E v = is_beginning ? arr_in[offset + k] : arr[k];
@@ -198,7 +199,7 @@ namespace ntt {
             uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
             uint32_t oij = i + j;
             uint32_t k = oij + shift_s;
-            S tw = r_twiddles[j * n_twiddles_div];
+            S tw = *(r_twiddles + j * n_twiddles_div);
 
             E u = s == 0 ? arr_in[offset + oij] : arr[oij];
             E v = s == 0 ? arr_in[offset + k] : arr[k];
@@ -252,7 +253,7 @@ namespace ntt {
           uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
           uint32_t k = i + j + shift_s;
 
-          S tw = twiddles[j * n_twiddles_div];
+          S tw = *(twiddles + j * n_twiddles_div);
 
           uint32_t offset = (task / chunks) * n;
           E u = arr_in[offset + i + j];
@@ -288,6 +289,7 @@ namespace ntt {
       int batch_size,
       int logn,
       bool inverse,
+      bool ct_buttterfly,
       S* coset,
       cudaStream_t stream,
       bool is_async,
@@ -303,41 +305,44 @@ namespace ntt {
                                                           // less then max to allow more concurrent blocks on SM
       const int logn_shmem = is_shared_mem_enabled ? int(log(2 * num_threads) / log(2))
                                                    : 0; // TODO: shared memory support only for types <= 32 bytes
+      int num_threads_coset = max(min(n / 2, MAX_NUM_THREADS), 1);
+      int num_blocks_coset = (n * batch_size + num_threads_coset - 1) / num_threads_coset;
 
-      if (inverse) {
+      bool direct_coset = (!inverse && coset);
+      if (direct_coset)
+        utils_internal::BatchMulKernel<E, S>
+          <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_input, coset, n, batch_size, d_output);
+
+      if (ct_buttterfly) {
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
-            d_input, 1 << logn_shmem, d_twiddles, n_twiddles, total_tasks, 0, logn_shmem, d_output);
+            direct_coset ? d_output : d_input, 1 << logn_shmem, d_twiddles, n_twiddles, total_tasks, 0, logn_shmem, d_output);
 
         for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
         {
           ntt_template_kernel<E, S><<<num_blocks, num_threads, 0, stream>>>(
-            (s == 0) ? d_input : d_output, n, d_twiddles, n_twiddles, total_tasks, s, false, d_output);
+            (direct_coset && (s == 0)) ? d_input : d_output, n, d_twiddles, n_twiddles, total_tasks, s, false, d_output);
         }
-
-        if (coset)
-          utils_internal::BatchMulKernel<E, S>
-            <<<num_blocks, num_threads, 0, stream>>>(d_output, coset, n, batch_size, d_output);
-
-        num_threads = max(min(n / 2, MAX_NUM_THREADS), 1);
-        num_blocks = (n * batch_size + num_threads - 1) / num_threads;
-        utils_internal::NormalizeKernel<E, S>
-          <<<num_blocks, num_threads, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
       } else {
-        if (coset)
-          utils_internal::BatchMulKernel<E, S>
-            <<<num_blocks, num_threads, 0, stream>>>(d_input, coset, n, batch_size, d_output);
-
         for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
         {
           ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(
-            coset ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, true, d_output);
+            (direct_coset || (s < logn - 1)) ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, true, d_output);
         }
 
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
-            (coset || (logn > logn_shmem)) ? d_output : d_input, 1 << logn_shmem, d_twiddles,
+            (direct_coset || (logn > logn_shmem)) ? d_output : d_input, 1 << logn_shmem, d_twiddles,
             n_twiddles, total_tasks, 0, logn_shmem, d_output);
+      }
+
+      if (inverse) {
+        if (coset)
+          utils_internal::BatchMulKernel<E, S>
+            <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, coset, n, batch_size, d_output);
+
+        utils_internal::NormalizeKernel<E, S>
+          <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
       }
 
       if (is_async) return;
@@ -360,6 +365,7 @@ namespace ntt {
     static int log_max_size;
     static S* twiddles;
     static S* inv_twiddles;
+    // static std::unordered_map<S, int> coset_index;
 
     public:
       template <typename U>
@@ -373,13 +379,15 @@ namespace ntt {
   template<typename S> int Domain<S>::log_max_size = 0;
   template<typename S> S* Domain<S>::twiddles = nullptr;
   template<typename S> S* Domain<S>::inv_twiddles = nullptr;
+  // template<typename S> std::unordered_map<S, int> Domain<S>::coset_index = {};
 
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
     // only generate twiddles if they haven't been generated yet (TODO: thread safety)
     if (!Domain<S>::twiddles) {
-      // TODO DmytroTym: the following line is just a temporary patch to make it work, having issues creating default stream on rust side
+      // TODO DmytroTym: the following line is just a temporary patch to make it work, 
+      // having issues creating default stream on rust side
       device_context::DeviceContext ctx = device_context::get_default_device_context();
       S inv_primitive_root = S::inverse(primitive_root);
       std::vector<S> h_twiddles;
@@ -388,6 +396,7 @@ namespace ntt {
       h_inv_twiddles.push_back(S::one());
       int n = 1;
       do {
+        // Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
         h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
         h_inv_twiddles.push_back(h_inv_twiddles.at(n - 1) * inv_primitive_root);
       } while (h_twiddles.at(n++) != S::one());
@@ -428,24 +437,18 @@ namespace ntt {
       cudaMallocAsync(&d_output, input_size_bytes, stream);
     }
 
-    bool reverse_input;
-    bool reverse_output;
+    bool ct_butterfly = true;
+    bool reverse_input = false;
     switch (config.ordering) {
     case Ordering::kNN:
-      reverse_input = is_inverse;
-      reverse_output = !is_inverse;
+      reverse_input = true;
       break;
     case Ordering::kNR:
-      reverse_input = is_inverse;
-      reverse_output = is_inverse;
-      break;
-    case Ordering::kRN:
-      reverse_input = !is_inverse;
-      reverse_output = !is_inverse;
+      ct_butterfly = false;
       break;
     case Ordering::kRR:
-      reverse_input = !is_inverse;
-      reverse_output = is_inverse;
+      reverse_input = true;
+      ct_butterfly = false;
       break;
     }
     CHECK_LAST_CUDA_ERROR();
@@ -454,13 +457,8 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, d_twiddles, Domain<S>::max_size, batch_size, logn,
-      is_inverse, config.coset_table, stream, !config.is_async, reverse_output ? d_input : d_output);
-    CHECK_LAST_CUDA_ERROR();
-
-    // it's assumed that reverse_input and reverse_output can't both be true at the same time
-    // which should be guaranteed by Ordering
-    if (reverse_output) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
+      reverse_input ? d_output : d_input, size, d_twiddles, Domain<S>::max_size, batch_size,
+      logn, is_inverse, ct_butterfly, config.coset_table, stream, !config.is_async, d_output);
     CHECK_LAST_CUDA_ERROR();
 
     if (is_output_on_device) {
