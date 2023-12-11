@@ -164,3 +164,5 @@ namespace poseidon {
     state[(idx / (t - 1) * t) + (idx % (t - 1)) + 1] = out[idx];
     }
 }
+
+template class poseidon::OptimizedPoseidon<curve_config::scalar_t>;
