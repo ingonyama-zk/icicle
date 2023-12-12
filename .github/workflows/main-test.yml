@@ -58,7 +58,7 @@ jobs:
     needs: check-changed-files
     strategy:
       matrix:
-        curve: [bn254, bls12_381, bls12_377, bw6_671]
+        curve: [bn254, bls12_381, bls12_377, bw6_761]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v3
