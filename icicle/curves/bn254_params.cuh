@@ -9,6 +9,7 @@ namespace bn254 {
     static constexpr unsigned limbs_count = 8;
     static constexpr unsigned omegas_count = 28;
     static constexpr unsigned modulus_bit_count = 254;
+    static constexpr unsigned num_of_reductions = 1;
 
     static constexpr storage<limbs_count> modulus = {0xf0000001, 0x43e1f593, 0x79b97091, 0x2833e848,
                                                      0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
@@ -16,6 +17,8 @@ namespace bn254 {
                                                        0x0302b0ba, 0x70a08b6d, 0xc2634053, 0x60c89ce5};
     static constexpr storage<limbs_count> modulus_4 = {0xc0000004, 0x0f87d64f, 0xe6e5c245, 0xa0cfa121,
                                                        0x06056174, 0xe14116da, 0x84c680a6, 0xc19139cb};
+    static constexpr storage<limbs_count> neg_modulus = {0x0fffffff, 0xbc1e0a6c, 0x86468f6e, 0xd7cc17b7,
+                                                         0x7e7ea7a2, 0x47afba49, 0x1ece5fd6, 0xcf9bb18d};
     static constexpr storage<2 * limbs_count> modulus_wide = {
       0xf0000001, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72,
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
@@ -36,8 +39,8 @@ namespace bn254 {
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                   0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> montgomery_r = {0x4ffffffb, 0xac96341c, 0x9f60cd29, 0x36fc7695,
-                                                          0x7879462e, 0x666ea36f, 0x9a07df2f, 0xe0a77c1};
-    static constexpr storage<limbs_count> montgomery_r_inv = {0x6db1194e, 0xdc5ba005, 0xe111ec87, 0x90ef5a9,
+                                                          0x7879462e, 0x666ea36f, 0x9a07df2f, 0x0e0a77c1};
+    static constexpr storage<limbs_count> montgomery_r_inv = {0x6db1194e, 0xdc5ba005, 0xe111ec87, 0x090ef5a9,
                                                               0xaeb85d5d, 0xc8260de4, 0x82c5551c, 0x15ebf951};
 
     static constexpr storage_array<omegas_count, limbs_count> omega = {
@@ -134,12 +137,15 @@ namespace bn254 {
   struct fq_config {
     static constexpr unsigned limbs_count = 8;
     static constexpr unsigned modulus_bit_count = 254;
+    static constexpr unsigned num_of_reductions = 1;
     static constexpr storage<limbs_count> modulus = {0xd87cfd47, 0x3c208c16, 0x6871ca8d, 0x97816a91,
                                                      0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
     static constexpr storage<limbs_count> modulus_2 = {0xb0f9fa8e, 0x7841182d, 0xd0e3951a, 0x2f02d522,
                                                        0x0302b0bb, 0x70a08b6d, 0xc2634053, 0x60c89ce5};
     static constexpr storage<limbs_count> modulus_4 = {0x61f3f51c, 0xf082305b, 0xa1c72a34, 0x5e05aa45,
                                                        0x06056176, 0xe14116da, 0x84c680a6, 0xc19139cb};
+    static constexpr storage<limbs_count> neg_modulus = {0x278302b9, 0xc3df73e9, 0x978e3572, 0x687e956e,
+                                                         0x7e7ea7a2, 0x47afba49, 0x1ece5fd6, 0xcf9bb18d};
     static constexpr storage<2 * limbs_count> modulus_wide = {
       0xd87cfd47, 0x3c208c16, 0x6871ca8d, 0x97816a91, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72,
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
@@ -158,29 +164,29 @@ namespace bn254 {
                                                  0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                   0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr storage<limbs_count> montgomery_r = {0xc58f0d9d, 0xd35d438d, 0xf5c70b3d, 0xa78eb28,
-                                                          0x7879462c, 0x666ea36f, 0x9a07df2f, 0xe0a77c1};
-    static constexpr storage<limbs_count> montgomery_r_inv = {0x14afa37,  0xed84884a, 0x278edf8,  0xeb202285,
+    static constexpr storage<limbs_count> montgomery_r = {0xc58f0d9d, 0xd35d438d, 0xf5c70b3d, 0x0a78eb28,
+                                                          0x7879462c, 0x666ea36f, 0x9a07df2f, 0x0e0a77c1};
+    static constexpr storage<limbs_count> montgomery_r_inv = {0x014afa37, 0xed84884a, 0x0278edf8, 0xeb202285,
                                                               0xb74492d9, 0xcf63e9cf, 0x59e5c639, 0x2e671571};
-
     // i^2, the square of the imaginary unit for the extension field
     static constexpr uint32_t i_squared = 1;
     // true if i^2 is negative
     static constexpr bool i_squared_is_negative = true;
-    // G1 and G2 generators
-    static constexpr storage<limbs_count> g1_gen_x = {0x00000001, 0x00000000, 0x00000000, 0x00000000,
-                                                      0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr storage<limbs_count> g1_gen_y = {0x00000002, 0x00000000, 0x00000000, 0x00000000,
-                                                      0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr storage<limbs_count> g2_gen_x_re = {0xd992f6ed, 0x46debd5c, 0xf75edadd, 0x674322d4,
-                                                         0x5e5c4479, 0x426a0066, 0x121f1e76, 0x1800deef};
-    static constexpr storage<limbs_count> g2_gen_x_im = {0xaef312c2, 0x97e485b7, 0x35a9e712, 0xf1aa4933,
-                                                         0x31fb5d25, 0x7260bfb7, 0x920d483a, 0x198e9393};
-    static constexpr storage<limbs_count> g2_gen_y_re = {0x66fa7daa, 0x4ce6cc01, 0x0c43d37b, 0xe3d1e769,
-                                                         0x8dcb408f, 0x4aab7180, 0xdb8c6deb, 0x12c85ea5};
-    static constexpr storage<limbs_count> g2_gen_y_im = {0xd122975b, 0x55acdadc, 0x70b38ef3, 0xbc4b3133,
-                                                         0x690c3395, 0xec9e99ad, 0x585ff075, 0x090689d0};
   };
+
+  // G1 and G2 generators
+  static constexpr storage<fq_config::limbs_count> g1_gen_x = {0x00000001, 0x00000000, 0x00000000, 0x00000000,
+                                                               0x00000000, 0x00000000, 0x00000000, 0x00000000};
+  static constexpr storage<fq_config::limbs_count> g1_gen_y = {0x00000002, 0x00000000, 0x00000000, 0x00000000,
+                                                               0x00000000, 0x00000000, 0x00000000, 0x00000000};
+  static constexpr storage<fq_config::limbs_count> g2_gen_x_re = {0xd992f6ed, 0x46debd5c, 0xf75edadd, 0x674322d4,
+                                                                  0x5e5c4479, 0x426a0066, 0x121f1e76, 0x1800deef};
+  static constexpr storage<fq_config::limbs_count> g2_gen_x_im = {0xaef312c2, 0x97e485b7, 0x35a9e712, 0xf1aa4933,
+                                                                  0x31fb5d25, 0x7260bfb7, 0x920d483a, 0x198e9393};
+  static constexpr storage<fq_config::limbs_count> g2_gen_y_re = {0x66fa7daa, 0x4ce6cc01, 0x0c43d37b, 0xe3d1e769,
+                                                                  0x8dcb408f, 0x4aab7180, 0xdb8c6deb, 0x12c85ea5};
+  static constexpr storage<fq_config::limbs_count> g2_gen_y_im = {0xd122975b, 0x55acdadc, 0x70b38ef3, 0xbc4b3133,
+                                                                  0x690c3395, 0xec9e99ad, 0x585ff075, 0x090689d0};
 
   static constexpr storage<fq_config::limbs_count> weierstrass_b = {0x00000003, 0x00000000, 0x00000000, 0x00000000,
                                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
