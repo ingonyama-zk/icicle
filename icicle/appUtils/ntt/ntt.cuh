@@ -60,7 +60,7 @@ namespace ntt {
    */
   template <typename S>
   struct NTTConfig {
-    S coset_gen;                /**< Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` 
+    S coset_gen;                /**< Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()`
                                  *   (corresponding to no coset being used). */
     Ordering ordering;          /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value:
                                  *   `Ordering::kNN`. */

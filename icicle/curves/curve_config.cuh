@@ -49,12 +49,12 @@ namespace curve_config {
   static constexpr g2_point_field_t g2_b = g2_point_field_t{g2_weierstrass_b};
 #else
   typedef ExtensionField<fq_config> g2_point_field_t;
-  static constexpr g2_point_field_t g2_generator_x = g2_point_field_t{
-    point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}};
-  static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{
-    point_field_t{g2_gen_y_re}, point_field_t{g2_gen_y_im}};
-  static constexpr g2_point_field_t g2_b = g2_point_field_t{
-    point_field_t{weierstrass_b_g2_re}, point_field_t{weierstrass_b_g2_im}};
+  static constexpr g2_point_field_t g2_generator_x =
+    g2_point_field_t{point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}};
+  static constexpr g2_point_field_t g2_generator_y =
+    g2_point_field_t{point_field_t{g2_gen_y_re}, point_field_t{g2_gen_y_im}};
+  static constexpr g2_point_field_t g2_b =
+    g2_point_field_t{point_field_t{weierstrass_b_g2_re}, point_field_t{weierstrass_b_g2_im}};
 #endif
   typedef Projective<g2_point_field_t, scalar_t, g2_b, g2_generator_x, g2_generator_y> g2_projective_t;
   typedef Affine<g2_point_field_t> g2_affine_t;

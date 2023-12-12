@@ -18,8 +18,9 @@ namespace device_context {
   /**
    * Return default device context that corresponds to using the default stream of the first GPU
    */
-  inline DeviceContext get_default_device_context() {
-    return DeviceContext {
+  inline DeviceContext get_default_device_context()
+  {
+    return DeviceContext{
       0,               // device_id
       (cudaStream_t)0, // stream
       0,               // mempool

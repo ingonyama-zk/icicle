@@ -34,12 +34,12 @@ namespace msm {
   /**
    * @struct MSMConfig
    * Struct that encodes MSM parameters to be passed into the [MSM](@ref MSM) function. The intended use of this struct
-   * is to create it using [DefaultMSMConfig](@ref DefaultMSMConfig) function and then you'll hopefully only need to 
+   * is to create it using [DefaultMSMConfig](@ref DefaultMSMConfig) function and then you'll hopefully only need to
    * change a small number of default values for each of your MSMs.
    */
   struct MSMConfig {
-    bool are_scalars_on_device; /**< True if scalars are on device and false if they're on host. Default value: 
-                                 *   false. */
+    bool are_scalars_on_device;       /**< True if scalars are on device and false if they're on host. Default value:
+                                       *   false. */
     bool are_scalars_montgomery_form; /**< True if scalars are in Montgomery form and false otherwise. Default value:
                                        *   true. */
     int points_size;           /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be

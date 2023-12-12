@@ -53,8 +53,8 @@ pub fn ntt(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use icicle_core::traits::ArkConvertible;
     use icicle_core::ntt::Ordering;
+    use icicle_core::traits::ArkConvertible;
     use icicle_cuda_runtime::device_context::get_default_device_context;
 
     use crate::curve::generate_random_scalars;
@@ -94,7 +94,8 @@ pub(crate) mod tests {
         initialize_domain(
             ScalarField::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()),
             &ctx,
-        ).unwrap();
+        )
+        .unwrap();
         let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
 
         let scalars: Vec<ScalarField> = generate_random_scalars(test_size);
@@ -135,7 +136,10 @@ pub(crate) mod tests {
         // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
         // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
         initialize_domain(ScalarField::from_ark(test_size_rou), &ctx).unwrap();
-        let ark_small_domain = GeneralEvaluationDomain::<Fr>::new(small_size).unwrap().get_coset(test_size_rou).unwrap();
+        let ark_small_domain = GeneralEvaluationDomain::<Fr>::new(small_size)
+            .unwrap()
+            .get_coset(test_size_rou)
+            .unwrap();
         let ark_large_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
 
         let mut scalars: Vec<ScalarField> = generate_random_scalars(small_size);
@@ -164,7 +168,10 @@ pub(crate) mod tests {
             .iter()
             .map(|p| p.to_ark())
             .collect::<Vec<Fr>>();
-        assert_eq!(ark_scalars[..small_size], list_to_reverse_bit_order(&ntt_result_as_ark[small_size..]));
+        assert_eq!(
+            ark_scalars[..small_size],
+            list_to_reverse_bit_order(&ntt_result_as_ark[small_size..])
+        );
         ark_large_domain.fft_in_place(&mut ark_large_scalars);
         assert_eq!(ark_large_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
 
