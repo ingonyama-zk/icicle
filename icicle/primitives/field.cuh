@@ -679,6 +679,12 @@ public:
     return value;
   }
 
+  static void RandHostMany(Field* out, int size)
+  {
+    for (int i = 0; i < size; i++)
+      out[i] = rand_host();
+  }
+
   template <unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE Field sub_modulus(const Field& xs)
   {
@@ -854,6 +860,13 @@ public:
     return xs * xs;
   }
 
+  static constexpr HOST_DEVICE_INLINE Field ToMontgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
+
+  static constexpr HOST_DEVICE_INLINE Field FromMontgomery(const Field& xs)
+  {
+    return xs * Field{CONFIG::montgomery_r_inv};
+  }
+
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field neg(const Field& xs)
   {
@@ -923,5 +936,18 @@ public:
       }
     }
     return (u == one) ? b : c;
+  }
+};
+
+template <class CONFIG>
+struct std::hash<Field<CONFIG>> {
+  std::size_t operator()(const Field<CONFIG>& key) const
+  {
+    std::size_t hash = 0;
+    // boost hashing, see
+    // https://stackoverflow.com/questions/35985960/c-why-is-boosthash-combine-the-best-way-to-combine-hash-values/35991300#35991300
+    for (int i = 0; i < CONFIG::limbs_count; i++)
+      hash ^= std::hash<uint32_t>()(key.limbs_storage.limbs[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    return hash;
   }
 };

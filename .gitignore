@@ -15,3 +15,4 @@
 **/.DS_Store
 **/Cargo.lock
 **/icicle/build/
+**/wrappers/rust/icicle-cuda-runtime/src/bindings.rs

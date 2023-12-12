@@ -1,4 +1,7 @@
 #pragma once
+#ifndef ERR_H
+#define ERR_H
+
 #include <iostream>
 
 #define CHECK_CUDA_ERROR(val) check((val), #val, __FILE__, __LINE__)
@@ -30,3 +33,5 @@ void inline syncDevice(const char* const file, const int line)
     std::cerr << cudaGetErrorString(err) << std::endl;
   }
 }
+
+#endif

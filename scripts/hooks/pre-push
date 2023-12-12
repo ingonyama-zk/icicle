@@ -3,15 +3,15 @@
 status=0
 # Run clang-format on CUDA, C, and CPP files
 # clang-format writes to stderr in dry-run mode. In order to capture the output to detect if there are changes needed we redirect stderr to stdin
-# to print list of files 
-unformatted_files=$(find ./ -path ./icicle/build -prune -o -path ./target -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1)
-
-if [[ $unformatted_files ]];
+if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]];
 then
     echo "🚨 There are files in Icicle Core that need formatting."
-    echo $unformatted_files
+    echo ""
     echo "Please format all .c, .cpp, .h, .cu, .cuh files using the following command:"
-    echo "find ./ -path ./icicle/build -prune -o -path ./target -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format -i -style=file"
+    echo "find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format -i -style=file"
+    echo ""
+    echo "If you only want to see what formatting is required please run:"
+    echo "find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -style=file"
     status=1
 fi
 
@@ -24,10 +24,11 @@ then
 fi
 
 # Run cargo fmt on Rust files
+cd wrappers/rust
 if [[ $(cargo fmt --check) ]];
 then
     echo "🚨 There are Rust files that need formatting."
-    echo "Please format the Rust files using 'cargo fmt'"
+    echo "Please format the Rust files using 'cargo fmt' from the wrappers/rust directory"
     status=1
 fi
 
