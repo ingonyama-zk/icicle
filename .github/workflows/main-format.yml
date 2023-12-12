@@ -13,11 +13,11 @@ jobs:
   formatting-rust:
     name: Check Rust Code Formatting
     runs-on: ubuntu-22.04
-    working-directory: ./wrappers/rust
     steps:
     - name: Checkout
       uses: actions/checkout@v3
     - name: Check rustfmt
+      working-directory: ./wrappers/rust
       run: if [[ $(cargo fmt --check) ]]; then echo "Please run cargo fmt"; exit 1; fi
     # - name: Check clippy
     #   run: cargo clippy --no-deps --all-features --all-targets
