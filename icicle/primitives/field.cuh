@@ -1,3 +1,21 @@
+/**
+ * This file contains methods for working with elements of a prime field. It is based on and evolved from Matter Labs'
+ * [Zprize
+ * submission](https://github.com/matter-labs/z-prize-msm-gpu/blob/main/bellman-cuda-rust/bellman-cuda-sys/native/ff_dispatch_st.cuh).
+ *
+ * TODO: DmytroTym: current version needs refactoring (e.g. there's no reason to have different classes Field and
+ * ff_storage among other issues). But because this is an internal file and correctness and performance are unaffected,
+ * refactoring it is low in the priority list.
+ *
+ * Documentation of methods is intended to explain inner workings to developers working on icicle. In its current state
+ * it mostly explains modular mutliplication and related methods. One important quirk of modern CUDA that's affecting
+ * most methods is explained by [Niall Emmart](https://youtu.be/KAWlySN7Hm8?si=h7nzDujnvubWXeDX&t=4039). In short, when
+ * 64-bit MAD (`r = a * b + c`) instructions get compiled down to SASS (CUDA assembly) they require two-register values
+ * `r` and `c` to start from even register (e.g. `r` can live in registers 20 and 21, or 14 and 15, but not 15 and 16).
+ * This complicates implementations forcing us to segregate terms into two categories depending on their alignment.
+ * Which is where `even` and `odd` arrays across the codebase come from.
+ */
+
 #pragma once
 
 #include "../utils/host_math.cuh"
@@ -100,11 +118,12 @@ public:
     return Field{omega.storages[i]};
   }
 
-  static HOST_DEVICE_INLINE Field omega(uint32_t logn)
+
+  static HOST_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+    if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
     return Field{omega.storages[logn - 1]};
@@ -129,11 +148,19 @@ public:
     return Field{inv.storages[logn - 1]};
   }
 
-  static constexpr HOST_DEVICE_INLINE Field modulus() { return Field{CONFIG::modulus}; }
-
   // private:
   typedef storage<TLC> ff_storage;
   typedef storage<2 * TLC> ff_wide_storage;
+
+  /**
+   * A new addition to the config file - \f$ 2^{32 \cdot num\_limbs} - p \f$.
+   */
+  static constexpr HOST_DEVICE_INLINE ff_storage get_neg_modulus() { return CONFIG::neg_modulus; }
+
+  /**
+   * A new addition to the config file - the number of times to reduce in [reduce](@ref reduce) function.
+   */
+  static constexpr HOST_DEVICE_INLINE unsigned num_of_reductions() { return CONFIG::num_of_reductions; }
 
   static constexpr unsigned slack_bits = 32 * TLC - NBITS;
 
@@ -151,6 +178,17 @@ public:
       return out;
     }
 
+    static constexpr Field HOST_DEVICE_INLINE get_higher(const Wide& xs)
+    {
+      Field out{};
+#ifdef __CUDA_ARCH__
+#pragma unroll
+#endif
+      for (unsigned i = 0; i < TLC; i++)
+        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i + TLC];
+      return out;
+    }
+
     static constexpr Field HOST_DEVICE_INLINE get_higher_with_slack(const Wide& xs)
     {
       Field out{};
@@ -160,10 +198,10 @@ public:
       for (unsigned i = 0; i < TLC; i++) {
 #ifdef __CUDA_ARCH__
         out.limbs_storage.limbs[i] =
-          __funnelshift_lc(xs.limbs_storage.limbs[i + TLC - 1], xs.limbs_storage.limbs[i + TLC], slack_bits);
+          __funnelshift_lc(xs.limbs_storage.limbs[i + TLC - 1], xs.limbs_storage.limbs[i + TLC], 2 * slack_bits);
 #else
-        out.limbs_storage.limbs[i] =
-          (xs.limbs_storage.limbs[i + TLC] << slack_bits) + (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - slack_bits));
+        out.limbs_storage.limbs[i] = (xs.limbs_storage.limbs[i + TLC] << 2 * slack_bits) +
+                                     (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - 2 * slack_bits));
 #endif
       }
       return out;
@@ -205,7 +243,7 @@ public:
     }
   };
 
-  // return modulus
+  // return modulus multiplied by 1, 2 or 4
   template <unsigned MULTIPLIER = 1>
   static constexpr HOST_DEVICE_INLINE ff_storage get_modulus()
   {
@@ -246,6 +284,20 @@ public:
     }
   }
 
+  template <bool SUBTRACT, bool CARRY_OUT>
+  static constexpr __device__ __forceinline__ uint32_t
+  add_sub_u32_device(const uint32_t* x, const uint32_t* y, uint32_t* r, size_t n = (TLC >> 1))
+  {
+    r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
+    for (unsigned i = 1; i < (CARRY_OUT ? n : n - 1); i++)
+      r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
+    if (!CARRY_OUT) {
+      r[n - 1] = SUBTRACT ? ptx::subc(x[n - 1], y[n - 1]) : ptx::addc(x[n - 1], y[n - 1]);
+      return 0;
+    }
+    return SUBTRACT ? ptx::subc(0, 0) : ptx::addc(0, 0);
+  }
+
   // add or subtract limbs
   template <bool SUBTRACT, bool CARRY_OUT>
   static constexpr DEVICE_INLINE uint32_t
@@ -254,17 +306,7 @@ public:
     const uint32_t* x = xs.limbs;
     const uint32_t* y = ys.limbs;
     uint32_t* r = rs.limbs;
-    r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
-#ifdef __CUDA_ARCH__
-#pragma unroll
-#endif
-    for (unsigned i = 1; i < (CARRY_OUT ? TLC : TLC - 1); i++)
-      r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
-    if (!CARRY_OUT) {
-      r[TLC - 1] = SUBTRACT ? ptx::subc(x[TLC - 1], y[TLC - 1]) : ptx::addc(x[TLC - 1], y[TLC - 1]);
-      return 0;
-    }
-    return SUBTRACT ? ptx::subc(0, 0) : ptx::addc(0, 0);
+    return add_sub_u32_device<SUBTRACT, CARRY_OUT>(x, y, r, TLC);
   }
 
   template <bool SUBTRACT, bool CARRY_OUT>
@@ -274,17 +316,7 @@ public:
     const uint32_t* x = xs.limbs;
     const uint32_t* y = ys.limbs;
     uint32_t* r = rs.limbs;
-    r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
-#ifdef __CUDA_ARCH__
-#pragma unroll
-#endif
-    for (unsigned i = 1; i < (CARRY_OUT ? 2 * TLC : 2 * TLC - 1); i++)
-      r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
-    if (!CARRY_OUT) {
-      r[2 * TLC - 1] = SUBTRACT ? ptx::subc(x[2 * TLC - 1], y[2 * TLC - 1]) : ptx::addc(x[2 * TLC - 1], y[2 * TLC - 1]);
-      return 0;
-    }
-    return SUBTRACT ? ptx::subc(0, 0) : ptx::addc(0, 0);
+    return add_sub_u32_device<SUBTRACT, CARRY_OUT>(x, y, r, 2 * TLC);
   }
 
   template <bool SUBTRACT, bool CARRY_OUT>
@@ -312,16 +344,6 @@ public:
     for (unsigned i = 0; i < 2 * TLC; i++)
       r[i] = SUBTRACT ? chain.sub(x[i], y[i], carry) : chain.add(x[i], y[i], carry);
     return CARRY_OUT ? carry : 0;
-  }
-
-  static constexpr HOST_INLINE uint32_t
-  sub_limbs_partial_host(uint32_t* x, uint32_t* y, uint32_t* r, uint32_t num_limbs)
-  {
-    uint32_t carry = 0;
-    host_math::carry_chain<2 * TLC, false, true> chain;
-    for (unsigned i = 0; i < num_limbs; i++)
-      r[i] = chain.sub(x[i], y[i], carry);
-    return carry;
   }
 
   template <bool CARRY_OUT, typename T>
@@ -362,12 +384,14 @@ public:
     }
   }
 
-  static DEVICE_INLINE void cmad_n(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
+  template <bool CARRY_IN = false>
+  static __device__ __forceinline__ void
+  cmad_n(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC, uint32_t optional_carry = 0)
   {
-    // multiply scalar by vector
-    // acc = acc + bi*A[::2]
-    acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
+    if (CARRY_IN) ptx::add_cc(UINT32_MAX, optional_carry);
+    acc[0] = CARRY_IN ? ptx::madc_lo_cc(a[0], bi, acc[0]) : ptx::mad_lo_cc(a[0], bi, acc[0]);
     acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
+
 #pragma unroll
     for (size_t i = 2; i < n; i += 2) {
       acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
@@ -375,320 +399,277 @@ public:
     }
   }
 
-  static DEVICE_INLINE void
-  cmad_n_msb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC, size_t a_start_idx = 0)
+  template <bool EVEN_PHASE>
+  static __device__ __forceinline__ void cmad_n_msb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
-    // multiply scalar by vector
-    // acc = acc + bi*A[::2]
-    acc[a_start_idx] = ptx::mad_lo_cc(a[a_start_idx], bi, acc[a_start_idx]);
-    acc[a_start_idx + 1] = ptx::madc_hi_cc(a[a_start_idx], bi, acc[a_start_idx + 1]);
+    if (EVEN_PHASE) {
+      acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
+      acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
+    } else {
+      acc[1] = ptx::mad_hi_cc(a[0], bi, acc[1]);
+    }
+
 #pragma unroll
-    for (size_t i = a_start_idx + 2; i < n; i += 2) {
+    for (size_t i = 2; i < n; i += 2) {
       acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
       acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
     }
   }
 
-  static DEVICE_INLINE void mad_row(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
+  static __device__ __forceinline__ void cmad_n_lsb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
-    // odd = odd + bi*A
-    // even = even + bi*A
-    cmad_n(odd, a + 1, bi, n - 2);
-    odd[n - 2] = ptx::madc_lo_cc(a[n - 1], bi, 0);
-    odd[n - 1] = ptx::madc_hi(a[n - 1], bi, 0);
+    if (n > 1)
+      acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
+    else
+      acc[0] = ptx::mad_lo(a[0], bi, acc[0]);
+
+    size_t i;
+#pragma unroll
+    for (i = 1; i < n - 1; i += 2) {
+      acc[i] = ptx::madc_hi_cc(a[i - 1], bi, acc[i]);
+      if (i == n - 2)
+        acc[i + 1] = ptx::madc_lo(a[i + 1], bi, acc[i + 1]);
+      else
+        acc[i + 1] = ptx::madc_lo_cc(a[i + 1], bi, acc[i + 1]);
+    }
+    if (i == n - 1) acc[i] = ptx::madc_hi(a[i - 1], bi, acc[i]);
+  }
+
+  template <bool CARRY_OUT = false, bool CARRY_IN = false>
+  static __device__ __forceinline__ uint32_t mad_row(
+    uint32_t* odd,
+    uint32_t* even,
+    const uint32_t* a,
+    uint32_t bi,
+    size_t n = TLC,
+    uint32_t ci = 0,
+    uint32_t di = 0,
+    uint32_t carry_for_high = 0,
+    uint32_t carry_for_low = 0)
+  {
+    cmad_n<CARRY_IN>(odd, a + 1, bi, n - 2, carry_for_low);
+    odd[n - 2] = ptx::madc_lo_cc(a[n - 1], bi, ci);
+    odd[n - 1] = CARRY_OUT ? ptx::madc_hi_cc(a[n - 1], bi, di) : ptx::madc_hi(a[n - 1], bi, di);
+    uint32_t cr = CARRY_OUT ? ptx::addc(0, 0) : 0;
     cmad_n(even, a, bi, n);
-    odd[n - 1] = ptx::addc(odd[n - 1], 0);
+    if (CARRY_OUT) {
+      odd[n - 1] = ptx::addc_cc(odd[n - 1], carry_for_high);
+      cr = ptx::addc(cr, 0);
+    } else
+      odd[n - 1] = ptx::addc(odd[n - 1], carry_for_high);
+    return cr;
   }
 
-  static DEVICE_INLINE void
-  mad_row_msb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC, size_t a_start_idx = 0)
+  template <bool EVEN_PHASE>
+  static __device__ __forceinline__ void
+  mad_row_msb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
-    // odd = odd + bi*A
-    // even = even + bi*A
-    cmad_n_msb(odd, a + 1, bi, n - 2, a_start_idx - 1);
-    odd[n - 2] = ptx::madc_lo_cc(a[n - 1], bi, 0);
-    odd[n - 1] = ptx::madc_hi(a[n - 1], bi, 0);
-    cmad_n_msb(even, a, bi, n, a_start_idx);
-    odd[n - 1] = ptx::addc(odd[n - 1], 0);
+    cmad_n_msb<!EVEN_PHASE>(odd, EVEN_PHASE ? a : (a + 1), bi, n - 2);
+    odd[EVEN_PHASE ? (n - 1) : (n - 2)] = ptx::madc_lo_cc(a[n - 1], bi, 0);
+    odd[EVEN_PHASE ? n : (n - 1)] = ptx::madc_hi(a[n - 1], bi, 0);
+    cmad_n_msb<EVEN_PHASE>(even, EVEN_PHASE ? (a + 1) : a, bi, n - 1);
+    odd[EVEN_PHASE ? n : (n - 1)] = ptx::addc(odd[EVEN_PHASE ? n : (n - 1)], 0);
   }
 
+  static __device__ __forceinline__ void
+  mad_row_lsb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
+  {
+    // bi here is constant so we can do a compile-time check for zero (which does happen once for bls12-381 scalar field
+    // modulus)
+    if (bi != 0) {
+      if (n > 1) cmad_n_lsb(odd, a + 1, bi, n - 1);
+      cmad_n_lsb(even, a, bi, n);
+    }
+    return;
+  }
+
+  static __device__ __forceinline__ uint32_t
+  mul_n_and_add(uint32_t* acc, const uint32_t* a, uint32_t bi, uint32_t* extra, size_t n = (TLC >> 1))
+  {
+    acc[0] = ptx::mad_lo_cc(a[0], bi, extra[0]);
+
+#pragma unroll
+    for (size_t i = 1; i < n - 1; i += 2) {
+      acc[i] = ptx::madc_hi_cc(a[i - 1], bi, extra[i]);
+      acc[i + 1] = ptx::madc_lo_cc(a[i + 1], bi, extra[i + 1]);
+    }
+
+    acc[n - 1] = ptx::madc_hi_cc(a[n - 2], bi, extra[n - 1]);
+    return ptx::addc(0, 0);
+  }
+
+  /**
+   * A function that computes wide product \f$ rs = as \cdot bs \f$ that's correct for the higher TLC + 1 limbs with a
+   * small maximum error.
+   *
+   * The way this function saves computations (as compared to regular school-book multiplication) is by not including
+   * terms that are too small. Namely, limb product \f$ a_i \cdot b_j \f$ is excluded if \f$ i + j < TLC - 2 \f$ and
+   * only the higher half is included if \f$ i + j = TLC - 2 \f$. All other limb products are included. So, the error
+   * i.e. difference between true product and the result of this function written to `rs` is exactly the sum of all
+   * dropped limbs products, which we can bound: \f$ a_0 \cdot b_0 + 2^{32}(a_0 \cdot b_1 + a_1 \cdot b_0) + \dots +
+   * 2^{32(TLC - 3)}(a_{TLC - 3} \cdot b_0 + \dots + a_0 \cdot b_{TLC - 3}) + 2^{32(TLC - 2)}(\floor{\frac{a_{TLC - 2}
+   * \cdot b_0}{2^{32}}} + \dots + \floor{\frac{a_0 \cdot b_{TLC - 2}}{2^{32}}}) \leq 2^{64} + 2\cdot 2^{96} + \dots +
+   * (TLC - 2) \cdot 2^{32(TLC - 1)} + (TLC - 1) \cdot 2^{32(TLC - 1)} \leq 2(TLC - 1) \cdot 2^{32(TLC - 1)}\f$.
+   */
+  static __device__ __forceinline__ void
+  multiply_msb_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
+  {
+    const uint32_t* a = as.limbs;
+    const uint32_t* b = bs.limbs;
+    uint32_t* even = rs.limbs;
+    __align__(16) uint32_t odd[2 * TLC - 2];
+
+    even[TLC - 1] = ptx::mul_hi(a[TLC - 2], b[0]);
+    odd[TLC - 2] = ptx::mul_lo(a[TLC - 1], b[0]);
+    odd[TLC - 1] = ptx::mul_hi(a[TLC - 1], b[0]);
+    size_t i;
+#pragma unroll
+    for (i = 2; i < TLC - 1; i += 2) {
+      mad_row_msb<true>(&even[TLC - 2], &odd[TLC - 2], &a[TLC - i - 1], b[i - 1], i + 1);
+      mad_row_msb<false>(&odd[TLC - 2], &even[TLC - 2], &a[TLC - i - 2], b[i], i + 2);
+    }
+    mad_row(&even[TLC], &odd[TLC - 2], a, b[TLC - 1]);
+
+    // merge |even| and |odd|
+    ptx::add_cc(even[TLC - 1], odd[TLC - 2]);
+    for (i = TLC - 1; i < 2 * TLC - 2; i++)
+      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+    even[i + 1] = ptx::addc(even[i + 1], 0);
+  }
+
+  /**
+   * A function that computes the low half of the fused multiply-and-add \f$ rs = as \cdot bs + cs \f$.
+   *
+   * For efficiency, this method does not include terms that are too large. Namely, limb product \f$ a_i \cdot b_j \f$
+   * is excluded if \f$ i + j > TLC - 1 \f$ and only the lower half is included if \f$ i + j = TLC - 1 \f$. All other
+   * limb products are included.
+   */
+  static __device__ __forceinline__ void
+  multiply_and_add_lsb_raw_device(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
+  {
+    const uint32_t* a = as.limbs;
+    const uint32_t* b = bs.limbs;
+    uint32_t* even = rs.limbs;
+    __align__(16) uint32_t odd[TLC - 1];
+    size_t i;
+    // `b[0]` is \f$ 2^{32} \f$ minus the last limb of prime modulus. Because most scalar (and some base) primes
+    // are neccessarily NTT-friendly, `b[0]` often turns out to be \f$ 2^{32} - 1 \f$. This actually leads to
+    // less efficient SASS generated by nvcc, so this case needed separate handling.
+    if (b[0] == UINT32_MAX) {
+      add_sub_u32_device<true, false>(cs.limbs, a, even, TLC);
+      for (i = 0; i < TLC - 1; i++)
+        odd[i] = a[i];
+    } else {
+      mul_n_and_add(even, a, b[0], cs.limbs, TLC);
+      mul_n(odd, a + 1, b[0], TLC - 1);
+    }
+    mad_row_lsb(&even[2], &odd[0], a, b[1], TLC - 1);
+#pragma unroll
+    for (i = 2; i < TLC - 1; i += 2) {
+      mad_row_lsb(&odd[i], &even[i], a, b[i], TLC - i);
+      mad_row_lsb(&even[i + 2], &odd[i], a, b[i + 1], TLC - i - 1);
+    }
+
+    // merge |even| and |odd|
+    even[1] = ptx::add_cc(even[1], odd[0]);
+    for (i = 1; i < TLC - 2; i++)
+      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+    even[i + 1] = ptx::addc(even[i + 1], odd[i]);
+  }
+
+  /**
+   * This method multiplies `a` and `b` (both assumed to have TLC / 2 limbs) and adds `in1` and `in2` (TLC limbs each)
+   * to the result which is written to `even`.
+   *
+   * It is used to compute the "middle" part of Karatsuba: \f$ a_{lo} \cdot b_{hi} + b_{lo} \cdot a_{hi} =
+   * (a_{hi} - a_{lo})(b_{lo} - b_{hi}) + a_{lo} \cdot b_{lo} + a_{hi} \cdot b_{hi} \f$. Currently this method assumes
+   * that the top bit of \f$ a_{hi} \f$ and \f$ b_{hi} \f$ are unset. This ensures correctness by allowing to keep the
+   * result inside TLC limbs and ignore the carries from the highest limb.
+   */
+  static __device__ __forceinline__ void
+  multiply_and_add_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even, uint32_t* in1, uint32_t* in2)
+  {
+    __align__(16) uint32_t odd[TLC - 2];
+    uint32_t first_row_carry = mul_n_and_add(even, a, b[0], in1);
+    uint32_t carry = mul_n_and_add(odd, a + 1, b[0], &in2[1]);
+
+    size_t i;
+#pragma unroll
+    for (i = 2; i < ((TLC >> 1) - 1); i += 2) {
+      carry = mad_row<true, false>(
+        &even[i], &odd[i - 2], a, b[i - 1], TLC >> 1, in1[(TLC >> 1) + i - 2], in1[(TLC >> 1) + i - 1], carry);
+      carry =
+        mad_row<true, false>(&odd[i], &even[i], a, b[i], TLC >> 1, in2[(TLC >> 1) + i - 1], in2[(TLC >> 1) + i], carry);
+    }
+    mad_row<false, true>(
+      &even[TLC >> 1], &odd[(TLC >> 1) - 2], a, b[(TLC >> 1) - 1], TLC >> 1, in1[TLC - 2], in1[TLC - 1], carry,
+      first_row_carry);
+    // merge |even| and |odd| plus the parts of `in2` we haven't added yet (first and last limbs)
+    even[0] = ptx::add_cc(even[0], in2[0]);
+    for (i = 0; i < (TLC - 2); i++)
+      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+    even[i + 1] = ptx::addc(even[i + 1], in2[i + 1]);
+  }
+
+  /**
+   * This method multiplies `a` and `b` and writes the result into `even`. It assumes that `a` and `b` are TLC/2 limbs
+   * long. The usual schoolbook algorithm is used.
+   */
+  static __device__ __forceinline__ void multiply_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even)
+  {
+    __align__(16) uint32_t odd[TLC - 2];
+    mul_n(even, a, b[0], TLC >> 1);
+    mul_n(odd, a + 1, b[0], TLC >> 1);
+    mad_row(&even[2], &odd[0], a, b[1], TLC >> 1);
+
+    size_t i;
+#pragma unroll
+    for (i = 2; i < ((TLC >> 1) - 1); i += 2) {
+      mad_row(&odd[i], &even[i], a, b[i], TLC >> 1);
+      mad_row(&even[i + 2], &odd[i], a, b[i + 1], TLC >> 1);
+    }
+    // merge |even| and |odd|
+    even[1] = ptx::add_cc(even[1], odd[0]);
+    for (i = 1; i < TLC - 2; i++)
+      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+    even[i + 1] = ptx::addc(even[i + 1], 0);
+  }
+
+  /**
+   * This method multiplies `as` and `bs` and writes the (wide) result into `rs`.
+   *
+   * It is assumed that the highest bits of `as` and `bs` are unset which is true for all the numbers icicle had to deal
+   * with so far. This method implements [subtractive
+   * Karatsuba](https://en.wikipedia.org/wiki/Karatsuba_algorithm#Implementation).
+   */
   static DEVICE_INLINE void multiply_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
-    uint32_t* even = rs.limbs;
-    __align__(8) uint32_t odd[2 * TLC - 2];
-    mul_n(even, a, b[0]);
-    mul_n(odd, a + 1, b[0]);
-    mad_row(&even[2], &odd[0], a, b[1]);
-    size_t i;
-#pragma unroll
-    for (i = 2; i < TLC - 1; i += 2) {
-      mad_row(&odd[i], &even[i], a, b[i]);
-      mad_row(&even[i + 2], &odd[i], a, b[i + 1]);
-    }
-    // merge |even| and |odd|
-    even[1] = ptx::add_cc(even[1], odd[0]);
-    for (i = 1; i < 2 * TLC - 2; i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], 0);
-  }
-
-  static DEVICE_INLINE void mult_no_carry(uint32_t a, uint32_t b, uint32_t* r)
-  {
-    r[0] = ptx::mul_lo(a, b);
-    r[1] = ptx::mul_hi(a, b);
-  }
-
-  static DEVICE_INLINE void ingo_multiply_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-    const uint32_t* a = as.limbs;
-    const uint32_t* b = bs.limbs;
     uint32_t* r = rs.limbs;
-    uint32_t i, j;
-    uint32_t* even = rs.limbs;
-    __align__(8) uint32_t odd[2 * TLC];
-    for (uint32_t i = 0; i < 2 * TLC; i++) {
-      even[i] = 0;
-      odd[i] = 0;
-    }
-    // first row special case, no carry in no carry out. split to non parts, even and odd.
-    for (i = 0; i < TLC - 1; i += 2) {
-      mult_no_carry(b[0], a[i], &even[i]);
-      mult_no_carry(b[0], a[i + 1], &odd[i]);
-    }
+    // Next two lines multiply high and low halves of operands (\f$ a_{lo} \cdot b_{lo}; a_{hi} \cdot b_{hi} \$f) and
+    // write the results into `r`.
+    multiply_short_raw_device(a, b, r);
+    multiply_short_raw_device(&a[TLC >> 1], &b[TLC >> 1], &r[TLC]);
+    __align__(16) uint32_t middle_part[TLC];
+    __align__(16) uint32_t diffs[TLC];
+    // Differences of halves \f$ a_{hi} - a_{lo}; b_{lo} - b_{hi} \$f are written into `diffs`, signs written to
+    // `carry1` and `carry2`.
+    uint32_t carry1 = add_sub_u32_device<true, true>(&a[TLC >> 1], a, diffs);
+    uint32_t carry2 = add_sub_u32_device<true, true>(b, &b[TLC >> 1], &diffs[TLC >> 1]);
+    // Compute the "middle part" of Karatsuba: \f$ a_{lo} \cdot b_{hi} + b_{lo} \cdot a_{hi} \f$.
+    // This is where the assumption about unset high bit of `a` and `b` is relevant.
+    multiply_and_add_short_raw_device(diffs, &diffs[TLC >> 1], middle_part, r, &r[TLC]);
+    // Corrections that need to be performed when differences are negative.
+    // Again, carry doesn't need to be propagated due to unset high bits of `a` and `b`.
+    if (carry1) add_sub_u32_device<true, false>(&middle_part[TLC >> 1], &diffs[TLC >> 1], &middle_part[TLC >> 1]);
+    if (carry2) add_sub_u32_device<true, false>(&middle_part[TLC >> 1], diffs, &middle_part[TLC >> 1]);
+    // Now that middle part is fully correct, it can be added to the result.
+    add_sub_u32_device<false, true>(&r[TLC >> 1], middle_part, &r[TLC >> 1], TLC);
 
-    // doing two rows at one loop
-    for (i = 1; i < TLC - 1; i += 2) {
-      // odd bi's
-      // multiply accumulate even part of new row with odd part prev row (needs a carry)
-      // // j = 0, no carry in, only carry out
-      odd[i - 1] = ptx::mad_lo_cc(a[0], b[i], odd[i - 1]);
-      odd[i] = ptx::madc_hi_cc(a[0], b[i], odd[i]);
-      // for loop carry in carry out
-      for (j = 2; j < TLC; j += 2) // 2, 4, 6
-      {
-        odd[i + j - 1] = ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
-        odd[i + j] = ptx::madc_hi_cc(a[j], b[i], odd[i + j]);
-      }
-      odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
-
-      // multiply accumulate odd part of new row with even part prev row (doesnt need a carry)
-      // j = 1, no carry in, only carry out
-      even[i + 1] = ptx::mad_lo_cc(a[1], b[i], even[i + 1]);
-      even[i + 2] = ptx::madc_hi_cc(a[1], b[i], even[i + 2]);
-      // for loop carry in carry out
-      for (j = 3; j < TLC; j += 2) {
-        even[i + j] = ptx::madc_lo_cc(a[j], b[i], even[i + j]);
-        even[i + j + 1] = ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);
-      }
-
-      // even bi's
-      // multiply accumulate even part of new row with even part of prev row // needs a carry
-      // j = 0, no carry in, only carry out
-      even[i + 1] = ptx::mad_lo_cc(a[0], b[i + 1], even[i + 1]);
-      even[i + 2] = ptx::madc_hi_cc(a[0], b[i + 1], even[i + 2]);
-      // for loop, carry in, carry out.
-      for (j = 2; j < TLC; j += 2) {
-        even[i + j + 1] = ptx::madc_lo_cc(a[j], b[i + 1], even[i + j + 1]);
-        even[i + j + 2] = ptx::madc_hi_cc(a[j], b[i + 1], even[i + j + 2]);
-      }
-      even[i + j + 1] = ptx::addc(even[i + j + 1], 0); // handling last carry
-
-      // multiply accumulate odd part of new row with odd part of prev row
-      // j = 1, no carry in, only carry out
-      odd[i + 1] = ptx::mad_lo_cc(a[1], b[i + 1], odd[i + 1]);
-      odd[i + 2] = ptx::madc_hi_cc(a[1], b[i + 1], odd[i + 2]);
-      // for loop, carry in, carry out.
-      for (j = 3; j < TLC; j += 2) {
-        odd[i + j] = ptx::madc_lo_cc(a[j], b[i + 1], odd[i + j]);
-        odd[i + j + 1] = ptx::madc_hi_cc(a[j], b[i + 1], odd[i + j + 1]);
-      }
-    }
-
-    odd[i - 1] = ptx::mad_lo_cc(a[0], b[i], odd[i - 1]);
-    odd[i] = ptx::madc_hi_cc(a[0], b[i], odd[i]);
-    // for loop carry in carry out
-    for (j = 2; j < TLC; j += 2) {
-      odd[i + j - 1] = ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
-      odd[i + j] = ptx::madc_hi_cc(a[j], b[i], odd[i + j]);
-    }
-    odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
-
-    // multiply accumulate odd part of new row with even part prev row
-    // j = 1, no carry in, only carry out
-    even[i + 1] = ptx::mad_lo_cc(a[1], b[i], even[i + 1]);
-    even[i + 2] = ptx::madc_hi_cc(a[1], b[i], even[i + 2]);
-    // for loop carry in carry out
-    for (j = 3; j < TLC; j += 2) {
-      even[i + j] = ptx::madc_lo_cc(a[j], b[i], even[i + j]);
-      even[i + j + 1] = ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);
-    }
-
-    // add even and odd parts
-    even[1] = ptx::add_cc(even[1], odd[0]);
-    for (i = 1; i < 2 * TLC - 2; i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], 0);
-  }
-
-  static DEVICE_INLINE void
-  ingo_msb_multiply_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-    const uint32_t* a = as.limbs;
-    const uint32_t* b = bs.limbs;
-    uint32_t* r = rs.limbs;
-    uint32_t i, j;
-    uint32_t* even = rs.limbs;
-    __align__(8) uint32_t odd[2 * TLC];
-    for (uint32_t i = 0; i < 2 * TLC; i++) {
-      even[i] = 0;
-      odd[i] = 0;
-    }
-    // only last element from first row.
-    mult_no_carry(b[0], a[TLC - 1], &odd[TLC - 2]);
-
-// doing two rows at one loop
-#pragma unroll
-    for (i = 1; i < TLC - 1; i += 2) {
-      const uint32_t first_active_j = TLC - 1 - i;
-      const uint32_t first_active_j_odd = first_active_j + (1 - (first_active_j % 2));
-      const uint32_t first_active_j_even = first_active_j + first_active_j % 2;
-      // odd bi's
-      // multiply accumulate even part of new row with odd part prev row (needs a carry)
-      // j = 0, no carry in, only carry out
-      odd[first_active_j_even + i - 1] = ptx::mad_lo_cc(a[first_active_j_even], b[i], odd[first_active_j_even + i - 1]);
-      odd[first_active_j_even + i] = ptx::madc_hi_cc(a[first_active_j_even], b[i], odd[first_active_j_even + i]);
-// for loop carry in carry out
-#pragma unroll
-      for (j = first_active_j_even + 2; j < TLC; j += 2) {
-        odd[i + j - 1] = ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
-        odd[i + j] = ptx::madc_hi_cc(a[j], b[i], odd[i + j]);
-      }
-      odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
-
-      // multiply accumulate odd part of new row with even part prev row (doesnt need a carry)
-      // j = 1, no carry in, only carry out
-      even[i + first_active_j_odd] = ptx::mad_lo_cc(a[first_active_j_odd], b[i], even[i + first_active_j_odd]);
-      even[i + first_active_j_odd + 1] = ptx::madc_hi_cc(a[first_active_j_odd], b[i], even[i + first_active_j_odd + 1]);
-// for loop carry in carry out
-#pragma unroll
-      for (j = first_active_j_odd + 2; j < TLC; j += 2) {
-        even[i + j] = ptx::madc_lo_cc(a[j], b[i], even[i + j]);
-        even[i + j + 1] = ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);
-      }
-
-      // even bi's
-      uint32_t const first_active_j1 = TLC - 1 - (i + 1);
-      uint32_t const first_active_j_odd1 = first_active_j1 + (1 - (first_active_j1 % 2));
-      uint32_t const first_active_j_even1 = first_active_j1 + first_active_j1 % 2;
-      // multiply accumulate even part of new row with even part of prev row // needs a carry
-      // j = 0, no carry in, only carry out
-      even[first_active_j_even1 + i + 1] =
-        ptx::mad_lo_cc(a[first_active_j_even1], b[i + 1], even[first_active_j_even1 + i + 1]);
-      even[first_active_j_even1 + i + 2] =
-        ptx::madc_hi_cc(a[first_active_j_even1], b[i + 1], even[first_active_j_even1 + i + 2]);
-// for loop, carry in, carry out.
-#pragma unroll
-      for (j = first_active_j_even1 + 2; j < TLC; j += 2) {
-        even[i + j + 1] = ptx::madc_lo_cc(a[j], b[i + 1], even[i + j + 1]);
-        even[i + j + 2] = ptx::madc_hi_cc(a[j], b[i + 1], even[i + j + 2]);
-      }
-      even[i + j + 1] = ptx::addc(even[i + j + 1], 0); // handling last carry
-
-      // multiply accumulate odd part of new row with odd part of prev row
-      // j = 1, no carry in, only carry out
-      odd[first_active_j_odd1 + i] = ptx::mad_lo_cc(a[first_active_j_odd1], b[i + 1], odd[first_active_j_odd1 + i]);
-      odd[first_active_j_odd1 + i + 1] =
-        ptx::madc_hi_cc(a[first_active_j_odd1], b[i + 1], odd[first_active_j_odd1 + i + 1]);
-// for loop, carry in, carry out.
-#pragma unroll
-      for (j = first_active_j_odd1 + 2; j < TLC; j += 2) {
-        odd[i + j] = ptx::madc_lo_cc(a[j], b[i + 1], odd[i + j]);
-        odd[i + j + 1] = ptx::madc_hi_cc(a[j], b[i + 1], odd[i + j + 1]);
-      }
-    }
-
-    // last round, i = TLC - 1
-    odd[i - 1] = ptx::mad_lo_cc(a[0], b[i], odd[i - 1]);
-    odd[i] = ptx::madc_hi_cc(a[0], b[i], odd[i]);
-// for loop carry in carry out
-#pragma unroll
-    for (j = 2; j < TLC; j += 2) {
-      odd[i + j - 1] = ptx::madc_lo_cc(a[j], b[i], odd[i + j - 1]);
-      odd[i + j] = ptx::madc_hi_cc(a[j], b[i], odd[i + j]);
-    }
-    odd[i + j - 1] = ptx::addc(odd[i + j - 1], 0); // handling last carry
-
-    // multiply accumulate odd part of new row with even part prev row
-    // j = 1, no carry in, only carry out
-    even[i + 1] = ptx::mad_lo_cc(a[1], b[i], even[i + 1]);
-    even[i + 2] = ptx::madc_hi_cc(a[1], b[i], even[i + 2]);
-// for loop carry in carry out
-#pragma unroll
-    for (j = 3; j < TLC; j += 2) {
-      even[i + j] = ptx::madc_lo_cc(a[j], b[i], even[i + j]);
-      even[i + j + 1] = ptx::madc_hi_cc(a[j], b[i], even[i + j + 1]);
-    }
-
-    // add even and odd parts
-    even[1] = ptx::add_cc(even[1], odd[0]);
-#pragma unroll
-    for (i = 1; i < 2 * TLC - 2; i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], 0);
-  }
-
-  static DEVICE_INLINE void multiply_lsb_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-    // r = a * b is correcrt for the first TLC + 1 digits. (not computing from TLC + 1 to 2*TLC - 2).
-    const uint32_t* a = as.limbs;
-    const uint32_t* b = bs.limbs;
-    uint32_t* even = rs.limbs;
-    __align__(8) uint32_t odd[2 * TLC - 2];
-    mul_n(even, a, b[0]);
-    mul_n(odd, a + 1, b[0]);
-    mad_row(&even[2], &odd[0], a, b[1]);
-    size_t i;
-#pragma unroll
-    for (i = 2; i < TLC - 1; i += 2) {
-      mad_row(&odd[i], &even[i], a, b[i], TLC - i + 2);
-      mad_row(&even[i + 2], &odd[i], a, b[i + 1], TLC - i + 2);
-    }
-
-    // merge |even| and |odd|
-    even[1] = ptx::add_cc(even[1], odd[0]);
-    for (i = 1; i < TLC + 1; i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], 0);
-  }
-
-  static DEVICE_INLINE void multiply_msb_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-    const uint32_t* a = as.limbs;
-    const uint32_t* b = bs.limbs;
-    uint32_t* even = rs.limbs;
-    __align__(8) uint32_t odd[2 * TLC - 2];
-    for (int i = 0; i < 2 * TLC - 1; i++) {
-      even[i] = 0;
-      odd[i] = 0;
-    }
-    uint32_t min_indexes_sum = TLC - 1;
-    // only diagonal
-    mul_n_msb(even, a, b[0], TLC, min_indexes_sum);
-    mul_n_msb(odd, a + 1, b[0], TLC, min_indexes_sum - 1);
-    mad_row_msb(&even[2], &odd[0], a, b[1], TLC, min_indexes_sum - 1);
-    size_t i;
-#pragma unroll
-    for (i = 2; i < TLC - 1; i += 2) {
-      mad_row(&odd[i], &even[i], a, b[i]);
-      mad_row(&even[i + 2], &odd[i], a, b[i + 1]);
-    }
-    // merge |even| and |odd|
-    even[1] = ptx::add_cc(even[1], odd[0]);
-    for (i = 1; i < 2 * TLC - 2; i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], 0);
+    // Carry from adding middle part has to be propagated to the highest limb.
+    for (size_t i = TLC + (TLC >> 1); i < 2 * TLC; i++)
+      r[i] = ptx::addc_cc(r[i], 0);
   }
 
   static HOST_INLINE void multiply_raw_host(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
@@ -713,19 +694,23 @@ public:
 #endif
   }
 
-  static HOST_DEVICE_INLINE void multiply_raw_lsb(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
+  static HOST_DEVICE_INLINE void
+  multiply_and_add_lsb_raw(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
   {
 #ifdef __CUDA_ARCH__
-    return multiply_lsb_raw_device(as, bs, rs);
+    return multiply_and_add_lsb_raw_device(as, bs, cs, rs);
 #else
-    return multiply_raw_host(as, bs, rs);
+    Wide r_wide = {};
+    multiply_raw_host(as, bs, r_wide.limbs_storage);
+    Field r = Wide::get_lower(r_wide);
+    add_limbs<false>(cs, r.limbs_storage, rs);
 #endif
   }
 
-  static HOST_DEVICE_INLINE void multiply_raw_msb(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
+  static HOST_DEVICE_INLINE void multiply_msb_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
 #ifdef __CUDA_ARCH__
-    return multiply_raw_device(as, bs, rs);
+    return multiply_msb_raw_device(as, bs, rs);
 #else
     return multiply_raw_host(as, bs, rs);
 #endif
@@ -750,15 +735,14 @@ public:
 
   static HOST_INLINE Field rand_host()
   {
-    // std::random_device rd;
-    // std::mt19937_64 generator(rd());
-    std::mt19937_64 generator(rand());
+    std::random_device rd;
+    std::mt19937_64 generator(rd());
     std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
       value.limbs_storage.limbs[i] = distribution(generator);
-    while (lt(modulus(), value))
-      value = value - modulus();
+    while (lt(Field{get_modulus()}, value))
+      value = value - Field{get_modulus()};
     return value;
   }
 
@@ -816,55 +800,57 @@ public:
     return xs * Field{CONFIG::montgomery_r_inv};
   }
 
-  static constexpr DEVICE_INLINE uint32_t
-  sub_limbs_partial_device(uint32_t* x, uint32_t* y, uint32_t* r, uint32_t num_limbs)
-  {
-    r[0] = ptx::sub_cc(x[0], y[0]);
-#pragma unroll
-    for (unsigned i = 1; i < num_limbs; i++)
-      r[i] = ptx::subc_cc(x[i], y[i]);
-    return ptx::subc(0, 0);
-  }
-
-  static constexpr HOST_DEVICE_INLINE uint32_t
-  sub_limbs_partial(uint32_t* x, uint32_t* y, uint32_t* r, uint32_t num_limbs)
-  {
-#ifdef __CUDA_ARCH__
-    return sub_limbs_partial_device(x, y, r, num_limbs);
-#else
-    return sub_limbs_partial_host(x, y, r, num_limbs);
-#endif
-  }
-
+  /**
+   * This method reduces a Wide number `xs` modulo `p` and returns the result as a Field element.
+   *
+   * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
+   * numbers with thier high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
+   * factor of `modulus_squared` first.
+   *
+   * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
+   * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work with
+   * them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx \floor{\frac{xs}{p}}
+   * \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an error (it's always less
+   * or equal than the real quotient). So the modulus `p` might need to be subtracted several times before the result is
+   * in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[ \frac{xs}{p} - l = \frac{xs}{p}
+   * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
+   *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} + 2(TLC
+   * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
+   * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
+   * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
+   * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to 1
+   * will cause only 1 reduction to be performed.
+   */
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
   {
-    Field xs_hi = Wide::get_higher_with_slack(xs); // xy << slack_bits
+    // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
+    Field xs_hi = Wide::get_higher_with_slack(xs);
     Wide l = {};
-    multiply_raw_msb(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult
-    Field l_hi = Wide::get_higher_with_slack(l);
-    Wide lp = {};
-    multiply_raw_lsb(l_hi.limbs_storage, get_modulus(), lp.limbs_storage); // LSB mult
-    Wide r_wide = xs - lp;
-    Wide r_wide_reduced = {};
-    for (unsigned i = 0; i < TLC + 1; i++) {
-      uint32_t carry = sub_limbs_partial(
-        r_wide.limbs_storage.limbs, modulus_wide().limbs, r_wide_reduced.limbs_storage.limbs, TLC + 1);
-      if (carry == 0) // continue to reduce
-        r_wide = r_wide_reduced;
-      else // done
-        break;
+    multiply_msb_raw(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
+    Field l_hi = Wide::get_higher(l);
+    Field r = {};
+    Field xs_lo = Wide::get_lower(xs);
+    // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
+    // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
+    multiply_and_add_lsb_raw(l_hi.limbs_storage, get_neg_modulus(), xs_lo.limbs_storage, r.limbs_storage);
+    ff_storage r_reduced = {};
+    uint32_t carry;
+    // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
+    if (num_of_reductions() == 2) {
+      carry = sub_limbs<true>(r.limbs_storage, get_modulus<2>(), r_reduced);
+      if (carry == 0) r = Field{r_reduced};
     }
+    carry = sub_limbs<true>(r.limbs_storage, get_modulus<1>(), r_reduced);
+    if (carry == 0) r = Field{r_reduced};
 
-    // number of wrap around is bounded by TLC +  1 times.
-    Field r = Wide::get_lower(r_wide);
     return r;
   }
 
   friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);
+    return reduce(xy);          // reduce mod p
   }
 
   friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys)
