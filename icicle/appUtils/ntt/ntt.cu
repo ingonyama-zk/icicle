@@ -83,7 +83,7 @@ namespace ntt {
      * @param arr_in input array of type E (elements).
      * @param n length of d_arr.
      * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-     * @param n_twiddles length of twiddles.
+     * @param n_twiddles length of twiddles, should be negative for intt.
      * @param max_task max count of parallel tasks.
      * @param s log2(n) loop index.
      * @param arr_out buffer for the output.
@@ -91,12 +91,12 @@ namespace ntt {
     template <typename E, typename S>
     __global__ void ntt_template_kernel_shared_rev(
       E* __restrict__ arr_in,
-      uint32_t n,
+      int n,
       const S* __restrict__ r_twiddles,
-      uint32_t n_twiddles,
-      uint32_t max_task,
-      uint32_t ss,
-      uint32_t logn,
+      int n_twiddles,
+      int max_task,
+      int ss,
+      int logn,
       E* __restrict__ arr_out)
     {
       SharedMemory<E> smem;
@@ -131,7 +131,7 @@ namespace ntt {
             uint32_t oij = i + j;
             uint32_t k = oij + shift_s;
 
-            S tw = *(r_twiddles + j * n_twiddles_div);
+            S tw = *(r_twiddles + (int)(j * n_twiddles_div));
 
             E u = is_beginning ? arr_in[offset + oij] : arr[oij];
             E v = is_beginning ? arr_in[offset + k] : arr[k];
@@ -155,7 +155,7 @@ namespace ntt {
      * @param arr_in input array of type E (elements).
      * @param n length of d_arr.
      * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-     * @param n_twiddles length of twiddles.
+     * @param n_twiddles length of twiddles, should be negative for intt.
      * @param max_task max count of parallel tasks.
      * @param s log2(n) loop index.
      * @param arr_out buffer for the output.
@@ -163,12 +163,12 @@ namespace ntt {
     template <typename E, typename S>
     __global__ void ntt_template_kernel_shared(
       E* __restrict__ arr_in,
-      uint32_t n,
+      int n,
       const S* __restrict__ r_twiddles,
-      uint32_t n_twiddles,
-      uint32_t max_task,
-      uint32_t s,
-      uint32_t logn,
+      int n_twiddles,
+      int max_task,
+      int s,
+      int logn,
       E* __restrict__ arr_out)
     {
       SharedMemory<E> smem;
@@ -199,7 +199,7 @@ namespace ntt {
             uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
             uint32_t oij = i + j;
             uint32_t k = oij + shift_s;
-            S tw = *(r_twiddles + j * n_twiddles_div);
+            S tw = *(r_twiddles + (int)(j * n_twiddles_div));
 
             E u = s == 0 ? arr_in[offset + oij] : arr[oij];
             E v = s == 0 ? arr_in[offset + k] : arr[k];
@@ -224,7 +224,7 @@ namespace ntt {
      * @param arr input array of type E (elements).
      * @param n length of d_arr.
      * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-     * @param n_twiddles length of twiddles.
+     * @param n_twiddles length of twiddles, should be negative for intt.
      * @param max_task max count of parallel tasks.
      * @param s log2(n) loop index.
      */
@@ -253,7 +253,7 @@ namespace ntt {
           uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
           uint32_t k = i + j + shift_s;
 
-          S tw = *(twiddles + j * n_twiddles_div);
+          S tw = *(twiddles + (int)(j * n_twiddles_div));
 
           uint32_t offset = (task / chunks) * n;
           E u = arr_in[offset + i + j];
@@ -290,7 +290,7 @@ namespace ntt {
       int logn,
       bool inverse,
       bool ct_buttterfly,
-      S* coset,
+      int coset_gen_index,
       cudaStream_t stream,
       bool is_async,
       E* d_output)
@@ -308,10 +308,16 @@ namespace ntt {
       int num_threads_coset = max(min(n / 2, MAX_NUM_THREADS), 1);
       int num_blocks_coset = (n * batch_size + num_threads_coset - 1) / num_threads_coset;
 
-      bool direct_coset = (!inverse && coset);
+      if (inverse) {
+        d_twiddles = d_twiddles + n_twiddles;
+        n_twiddles = -n_twiddles;
+      }
+
+      bool is_on_coset = (coset_gen_index > 0);
+      bool direct_coset = (!inverse && is_on_coset);
       if (direct_coset)
         utils_internal::BatchMulKernel<E, S>
-          <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_input, coset, n, batch_size, d_output);
+          <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_input, n, batch_size, d_twiddles, coset_gen_index, n_twiddles, d_output);
 
       if (ct_buttterfly) {
         if (is_shared_mem_enabled)
@@ -337,9 +343,9 @@ namespace ntt {
       }
 
       if (inverse) {
-        if (coset)
+        if (is_on_coset)
           utils_internal::BatchMulKernel<E, S>
-            <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, coset, n, batch_size, d_output);
+            <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, n, batch_size, d_twiddles, -coset_gen_index, -n_twiddles, d_output);
 
         utils_internal::NormalizeKernel<E, S>
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
@@ -362,10 +368,8 @@ namespace ntt {
   template <typename S>
   class Domain {
     static int max_size;
-    static int log_max_size;
     static S* twiddles;
-    static S* inv_twiddles;
-    // static std::unordered_map<S, int> coset_index;
+    static std::unordered_map<S, int> coset_index;
 
     public:
       template <typename U>
@@ -376,10 +380,8 @@ namespace ntt {
   };
 
   template<typename S> int Domain<S>::max_size = 0;
-  template<typename S> int Domain<S>::log_max_size = 0;
   template<typename S> S* Domain<S>::twiddles = nullptr;
-  template<typename S> S* Domain<S>::inv_twiddles = nullptr;
-  // template<typename S> std::unordered_map<S, int> Domain<S>::coset_index = {};
+  template<typename S> std::unordered_map<S, int> Domain<S>::coset_index = {};
 
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
@@ -389,23 +391,16 @@ namespace ntt {
       // TODO DmytroTym: the following line is just a temporary patch to make it work, 
       // having issues creating default stream on rust side
       device_context::DeviceContext ctx = device_context::get_default_device_context();
-      S inv_primitive_root = S::inverse(primitive_root);
       std::vector<S> h_twiddles;
       h_twiddles.push_back(S::one());
-      std::vector<S> h_inv_twiddles;
-      h_inv_twiddles.push_back(S::one());
       int n = 1;
       do {
-        // Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
+        Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
         h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
-        h_inv_twiddles.push_back(h_inv_twiddles.at(n - 1) * inv_primitive_root);
       } while (h_twiddles.at(n++) != S::one());
       cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream);
-      cudaMallocAsync(&Domain<S>::inv_twiddles, n * sizeof(S), ctx.stream);
       cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream);
-      cudaMemcpyAsync(Domain<S>::inv_twiddles, &h_inv_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream);
-      Domain<S>::max_size = n;
-      Domain<S>::log_max_size = int(log(n) / log(2));
+      Domain<S>::max_size = n - 1;
     }
     return cudaSuccess;
   }
@@ -421,7 +416,6 @@ namespace ntt {
     int input_size_bytes = size * batch_size * sizeof(E);
     bool is_input_on_device = config.are_inputs_on_device;
     bool is_output_on_device = config.are_outputs_on_device;
-    S* d_twiddles = is_inverse ? Domain<S>::inv_twiddles : Domain<S>::twiddles;
 
     E* d_input;
     if (is_input_on_device) {
@@ -457,8 +451,8 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, d_twiddles, Domain<S>::max_size, batch_size,
-      logn, is_inverse, ct_butterfly, config.coset_table, stream, !config.is_async, d_output);
+      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+      is_inverse, ct_butterfly, Domain<S>::coset_index[config.coset_gen], stream, !config.is_async, d_output);
     CHECK_LAST_CUDA_ERROR();
 
     if (is_output_on_device) {
@@ -481,10 +475,10 @@ namespace ntt {
   NTTConfig<S> DefaultNTTConfig() {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
+      S::one(),      // coset_gen
       Ordering::kNN, // ordering
       false,         // are_inputs_on_device
       false,         // are_outputs_on_device
-      (S*)nullptr,   // coset_table
       1,             // batch_size
       false,         // is_async
       ctx,           // ctx
