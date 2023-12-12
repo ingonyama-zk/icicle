@@ -13,6 +13,7 @@ jobs:
   formatting-rust:
     name: Check Rust Code Formatting
     runs-on: ubuntu-22.04
+    working-directory: ./wrappers/rust
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -37,5 +38,4 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: Check clang-format
-      run: unformatted_files=$(find ./ -path ./icicle/build -prune -o -path ./target -prune -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file >&2); if [[ $unformatted_files ]]; then echo $unformatted_files; echo "Please run clang-format"; exit 1; fi
-        
+      run: if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]]; then echo "Please run clang-format"; exit 1; fi
