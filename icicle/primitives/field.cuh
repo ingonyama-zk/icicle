@@ -120,7 +120,8 @@ public:
     return Field{omega.storages[i]};
   }
 
-  static HOST_DEVICE_INLINE Field omega(uint32_t logn)
+
+  static HOST_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
@@ -738,9 +739,8 @@ public:
 
   static HOST_INLINE Field rand_host()
   {
-    // std::random_device rd;
-    // std::mt19937_64 generator(rd());
-    std::mt19937_64 generator(rand());
+    std::random_device rd;
+    std::mt19937_64 generator(rd());
     std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)

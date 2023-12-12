@@ -119,7 +119,7 @@ do { \
 
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
-    res[i]=test_scalar::rand_host();
+    res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
 }
 
 void incremental_values(test_scalar* res, uint32_t count) {
@@ -130,11 +130,12 @@ void incremental_values(test_scalar* res, uint32_t count) {
 int main(int argc, const char** argv) {
   uint32_t    ntts=1024, repeatCount;
   test_scalar*   cpuData;
-  // test_scalar*   gpuData;
+  test_scalar*   gpuData;
   cudaEvent_t start, stop;
   float       time;
 
-  int NOF_VALS = 2048;
+  int NOF_VALS = 2048*84*3*260;
+  // int NOF_VALS = 2048;
   
   if(argc!=3) {
     fprintf(stderr, "Usage:  %s <nttCount> <repeatCount>\n", argv[0]);
@@ -199,21 +200,27 @@ int main(int argc, const char** argv) {
   }
   
 
-  // $CUDA(cudaFuncSetAttribute(ntt1024, cudaFuncAttributeMaxDynamicSharedMemorySize, NOF_VALS));
+  // $CUDA(cudaFuncSetAttribute(ntt_kernel_split_transpose, cudaFuncAttributeMaxDynamicSharedMemorySize, 2112*3*sizeof(uint4)));
+  $CUDA(cudaFuncSetAttribute(ntt_kernel_split_transpose, cudaFuncAttributeMaxDynamicSharedMemorySize, 2048*3*sizeof(uint4)));
 
   // for(int i=0;i<1024;i++)
   //   nextCounter[i]=0;
     
   fprintf(stderr, "Running with %d ntts and %d repeatCount\n", ntts, repeatCount);
   fprintf(stderr, "Warm up run\n");
-  // $CUDA(cudaMalloc((void**)&gpuData, sizeof(test_scalar)*ntts*NOF_VALS));
+  $CUDA(cudaMalloc((void**)&gpuData, sizeof(test_scalar)*ntts*NOF_VALS));
   $CUDA(cudaMalloc((void**)&gpuDataUint4, sizeof(uint4)*ntts*NOF_VALS*2));
+  // for(int i=0;i< 4;i++)
+  //   ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(test_scalar)>>>(gpuData, gpuData);
+    // ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
+    // ntt_kernel_split_transpose<<<3*84*260, 128, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
+    // ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
   // ntt1024<<<60, 32, 97*1024>>>(gpuData, gpuData, nextCounter, ntts);
-  // thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
+  // thread_ntt_kernel<<<21840*3, 128>>>(gpuData, gpuData, nextCounter, ntts);
   $CUDA(cudaDeviceSynchronize());
 
   fprintf(stderr, "Copying data to GPU\n");
-  // $CUDA(cudaMemcpy(gpuData, cpuData, sizeof(test_scalar)*ntts*NOF_VALS, cudaMemcpyHostToDevice));
+  $CUDA(cudaMemcpy(gpuData, cpuData, sizeof(test_scalar)*ntts*NOF_VALS, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuDataUint4, cpuDataUint4, sizeof(uint4)*ntts*NOF_VALS*2, cudaMemcpyHostToDevice));
   fprintf(stderr, "Running kernel\n");
 
@@ -229,16 +236,34 @@ int main(int argc, const char** argv) {
   // std::cout <<cpuData[0]<<std::endl;
   // std::cout<<std::endl;
 
-  printf("input\n");
-  for(int i=0;i<NOF_VALS;i++){
-    if (i%16 == 0) printf("\n");
-    std::cout <<cpuData[i]<<std::endl;
-  }
+  // printf("input\n");
+  // for(int i=0;i<NOF_VALS;i++){
+  //   if (i%16 == 0) printf("\n");
+  //   std::cout <<cpuData[i]<<std::endl;
+  // }
 
   // for(int i=0;i<repeatCount;i++) 
     // ntt1024<<<60, 32, 97*1024>>>(gpuData, gpuData, nextCounter, ntts);
   // thread_ntt_kernel<<<1, 64>>>(gpuData, gpuData, nextCounter, ntts);
-  ntt_kernel_split_transpose<<<1, 128>>>(gpuDataUint4, gpuDataUint4);
+  cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0); // Assuming device 0
+
+    std::cout << "Max shared memory per block: " << prop.sharedMemPerBlock << " bytes\n";
+    std::cout << "Max shared memory per block: " << NOF_VALS*sizeof(uint4) << " bytes\n";
+    int major = prop.major;
+    int minor = prop.minor;
+
+    std::cout << "Compute Capability: " << major << "." << minor << std::endl;
+    int numSMs = prop.multiProcessorCount;
+
+    std::cout << "Number of SMs: " << numSMs << std::endl;
+  for(int i=0;i< 5;i++)
+  //   ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(test_scalar)>>>(gpuData, gpuData);
+    ntt_kernel_split_transpose<<<84*3*260*2, 128, 1024*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
+    // ntt_kernel_split_transpose<<<84*3*260, 128, 2048*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
+    // ntt_kernel_split_transpose<<<84*3*260, 128, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
+    // ntt_kernel_split_transpose<<<1, 17, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
+    // thread_ntt_kernel<<<21840*3, 128>>>(gpuData, gpuData, nextCounter, ntts);
   cudaDeviceSynchronize();
   printf("cuda err %d\n",cudaGetLastError());
   // CUDA_CHECK_ERROR();
@@ -262,13 +287,13 @@ int main(int argc, const char** argv) {
     cpuData[i].store_half(cpuDataUint4[NOF_VALS + i], true);
   }
 
-  #if !defined(COMPUTE_ONLY)
-  printf("output\n");
-  for(int i=0;i<NOF_VALS;i++){
-    if (i%16 == 0) printf("%d\n", i);
-    std::cout <<cpuData[i]<<std::endl;
-  }
+  // #if !defined(COMPUTE_ONLY)
+  // printf("output\n");
+  // for(int i=0;i<16;i++){
+  //   if (i%16 == 0) printf("%d\n", i);
+  //   std::cout <<cpuData[i]<<std::endl;
+  // }
     // for(int i=0;i<ntts*1024;i+=4) 
     //   printf("%016lX %016lX %016lX %016lX\n", cpuData[i], cpuData[i+1], cpuData[i+2], cpuData[i+3]);
-  #endif
+  // #endif
 }
