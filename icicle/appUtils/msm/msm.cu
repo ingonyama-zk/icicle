@@ -31,7 +31,7 @@ namespace msm {
     template <typename S>
     int get_optimal_c(int bitsize)
     {
-      return ceil(log2(bitsize)) - 4;
+      return max((int)ceil(log2(bitsize)) - 4, 1);
     }
 
     template <typename P>
@@ -904,13 +904,9 @@ namespace msm {
 
   } // namespace
 
-  MSMConfig DefaultMSMConfig()
+  extern "C" MSMConfig DefaultMSMConfig()
   {
-    device_context::DeviceContext ctx = {
-      0,               // device_id
-      (cudaStream_t)0, // stream
-      0,               // mempool
-    };
+    device_context::DeviceContext ctx = device_context::get_default_device_context();
     MSMConfig config = {
       false, // are_scalars_on_device
       false, // are_scalars_montgomery_form
@@ -925,7 +921,7 @@ namespace msm {
       false, // is_big_triangle
       10,    // large_bucket_factor
       false, // is_async
-      ctx,   // DeviceContext
+      ctx,   // ctx
     };
     return config;
   }
@@ -950,13 +946,7 @@ namespace msm {
   }
 
   /**
-   * Extern version of [DefaultMSMConfig](@ref DefaultMSMConfig) function.
-   * @return Default value of [MSMConfig](@ref MSMConfig).
-   */
-  extern "C" MSMConfig GetDefaultMSMConfig() { return DefaultMSMConfig(); }
-
-  /**
-   * Extern version of [MSM](@ref MSM) function with the following values of template parameters
+   * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    *  - `A` is the [affine representation](@ref affine_t) of curve points;
@@ -977,7 +967,7 @@ namespace msm {
 #if defined(G2_DEFINED)
 
   /**
-   * Extern version of [MSM](@ref MSM) function with the following values of template parameters
+   * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;

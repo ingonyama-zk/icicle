@@ -1,87 +1,70 @@
-mod config;
-pub mod domain;
+use crate::curve::ScalarField;
 
-use std::any::TypeId;
-
-use crate::curve::*;
-
-use self::config::*;
-
-use icicle_core::ntt::{Butterfly, Decimation, Ordering};
-use icicle_cuda_runtime::error::CudaError;
+use icicle_core::ntt::NTTConfig;
+use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
 
 extern "C" {
-    #[link_name = "NTTDefaultContextCuda"]
-    fn ntt_cuda(config: *mut NTTConfig) -> CudaError;
+    #[link_name = "bn254NTTCuda"]
+    fn ntt_cuda<'a>(
+        input: *const ScalarField,
+        size: usize,
+        is_inverse: bool,
+        config: &NTTConfig<'a, ScalarField>,
+        output: *mut ScalarField,
+    ) -> CudaError;
+
+    #[link_name = "bn254DefaultNTTConfig"]
+    fn default_ntt_config() -> NTTConfig<'static, ScalarField>;
+
+    #[link_name = "bn254InitializeDomain"]
+    fn initialize_ntt_domain(primitive_root: ScalarField, ctx: &DeviceContext) -> CudaError;
 }
 
-pub(crate) fn ntt_wip(
-    inout: &mut [ScalarField],
+pub fn get_default_ntt_config() -> NTTConfig<'static, ScalarField> {
+    unsafe { default_ntt_config() }
+}
+
+pub fn initialize_domain(primitive_root: ScalarField, ctx: &DeviceContext) -> CudaResult<()> {
+    unsafe { initialize_ntt_domain(primitive_root, ctx).wrap() }
+}
+
+pub fn ntt(
+    input: &[ScalarField],
     is_inverse: bool,
-    is_input_on_device: bool,
-    ordering: Ordering,
-    is_output_on_device: bool,
-    batch_size: usize,
-) {
-    let mut batch_size = batch_size;
-    if batch_size == 0 {
-        batch_size = 1;
+    cfg: &NTTConfig<ScalarField>,
+    output: &mut [ScalarField],
+) -> CudaResult<()> {
+    if input.len() != output.len() {
+        return Err(CudaError::cudaErrorInvalidValue);
     }
 
-    let size = inout.len() / batch_size;
-
-    let mut config = get_ntt_default_config::<ScalarField, ScalarField>(size);
-
-    config.inout = inout as *mut _ as *mut ScalarField;
-    config.is_inverse = is_inverse;
-    config.is_input_on_device = is_input_on_device;
-    config.is_output_on_device = is_output_on_device;
-    config.ordering = ordering;
-    config.batch_size = batch_size as i32;
-
-    ntt_internal(&mut config);
-}
-
-pub(self) fn ntt_internal<TConfig>(config: *mut TConfig) -> CudaError {
-    let result_code = unsafe { ntt_cuda(config as _) };
-    // let typeid = TypeId::of::<TConfig>();
-    // if typeid == TypeId::of::<NTTConfig>() {
-    //     result_code = unsafe { ntt_cuda(config as _) };
-    // } else {
-    //     result_code = CudaError::cudaSuccess; //TODO: unsafe { ecntt_cuda(config as _) };
-    // }
-
-    // if result_code != CudaError::cudaSuccess {
-    //     println!("_result_code = {:?}", result_code);
-    // }
-
-    return CudaError::cudaSuccess;
-}
-
-pub(self) fn ecntt_internal(config: *mut ECNTTConfig) -> u32 {
-    let result_code = 0; //TODO: unsafe { ecntt_cuda(config) };
-    if result_code != 0 {
-        println!("_result_code = {}", result_code);
+    unsafe {
+        ntt_cuda(
+            input as *const _ as *const ScalarField,
+            input.len(),
+            is_inverse,
+            cfg,
+            output as *mut _ as *mut ScalarField,
+        )
+        .wrap()
     }
-
-    return result_code;
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bn254::{Fr, G1Affine as arkG1Affine, G1Projective as arkG1Projective};
-    // use ark_bls12_381::{Fr, G1Projective};
-    use ark_ff::PrimeField;
-    use ark_poly::EvaluationDomain;
-    use ark_poly::GeneralEvaluationDomain;
-    use ark_std::UniformRand;
-    use std::slice;
-
-    use crate::ntt::domain::NTTDomain;
-    use crate::{curve::*, ntt::*};
     use icicle_core::traits::ArkConvertible;
+    use icicle_core::ntt::Ordering;
+    use icicle_cuda_runtime::device_context::get_default_device_context;
 
-    pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
+    use crate::curve::generate_random_scalars;
+    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField};
+
+    use ark_bn254::Fr;
+    use ark_ff::FftField;
+    use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
+
+    fn reverse_bit_order(n: u32, order: u32) -> u32 {
         fn is_power_of_two(n: u32) -> bool {
             n != 0 && n & (n - 1) == 0
         }
@@ -95,7 +78,7 @@ pub(crate) mod tests {
         u32::from_str_radix(&reversed, 2).unwrap()
     }
 
-    pub fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
+    fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
         l.iter()
             .enumerate()
             .map(|(i, _)| l[reverse_bit_order(i as u32, l.len() as u32) as usize])
@@ -104,219 +87,98 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ntt() {
-        //NTT
-        let test_size = 1 << 11;
-        let batches = 1;
-
-        let full_test_size = test_size * batches;
-        let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size);
-
-        // let scalars_batch: Vec<ScalarField> = (0..full_test_size)
-        //     .into_iter()
-        //     .map(|x| {
-        //         // if x % 1 == 0 {
-        //         if x % 2 == 0 {
-        //             ScalarField::one()
-        //         } else {
-        //             ScalarField::zero()
-        //         }
-        //     })
-        //     .collect();
-
-        let mut ntt_result = scalars_batch.clone();
-
+        let test_size = 1 << 16;
+        let ctx = get_default_device_context();
+        // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
+        // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
+        initialize_domain(
+            ScalarField::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()),
+            &ctx,
+        ).unwrap();
         let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
-        let mut domain = NTTDomain::new_for_default_context(test_size);
 
-        let ark_scalars_batch = scalars_batch
-            .clone()
+        let scalars: Vec<ScalarField> = generate_random_scalars(test_size);
+
+        let config = get_default_ntt_config();
+        let mut ntt_result = vec![ScalarField::zero(); test_size];
+        ntt(&scalars, false, &config, &mut ntt_result).unwrap();
+        assert_ne!(ntt_result, scalars);
+
+        let ark_scalars = scalars
             .iter()
             .map(|v| v.to_ark())
             .collect::<Vec<Fr>>();
-        let mut ark_ntt_result = ark_scalars_batch.clone();
-
+        let mut ark_ntt_result = ark_scalars.clone();
         ark_domain.fft_in_place(&mut ark_ntt_result);
+        assert_ne!(ark_ntt_result, ark_scalars);
 
-        assert_ne!(ark_ntt_result, ark_scalars_batch);
-
-        // do ntt
-        // ntt_wip(&mut ntt_result, false, false, Ordering::kNN, false, batches);
-        domain.ntt(&mut ntt_result); //single ntt
         let ntt_result_as_ark = ntt_result
             .iter()
             .map(|p| p.to_ark())
             .collect::<Vec<Fr>>();
-
-        assert_ne!(ntt_result, scalars_batch);
         assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
-        let mut ark_intt_result = ark_ntt_result;
+        let mut intt_result = vec![ScalarField::zero(); test_size];
+        ntt(&ntt_result, true, &config, &mut intt_result).unwrap();
 
-        ark_domain.ifft_in_place(&mut ark_intt_result);
-        assert_eq!(ark_intt_result, ark_scalars_batch);
-
-        // check that ntt output is different from input
-        assert_ne!(ntt_result, scalars_batch);
-
-        // do intt
-        let mut intt_result = ntt_result;
-
-        ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
-
-        assert!(ark_intt_result == ark_scalars_batch);
-        assert!(intt_result == scalars_batch);
-
-        let mut ntt_intt_result = intt_result;
-        ntt_wip(&mut ntt_intt_result, false, false, Ordering::kNR, false, batches);
-        assert!(ntt_intt_result != scalars_batch);
-        ntt_wip(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
-        assert!(ntt_intt_result == scalars_batch);
-
-        let mut ntt_intt_result = list_to_reverse_bit_order(&ntt_intt_result);
-        ntt_wip(&mut ntt_intt_result, false, false, Ordering::kRR, false, batches);
-        assert!(ntt_intt_result != scalars_batch);
-        ntt_wip(&mut ntt_intt_result, true, false, Ordering::kRN, false, batches);
-        assert!(ntt_intt_result == scalars_batch);
-
-        ////
-        let size = ntt_intt_result.len() / batches;
-
-        let mut config = get_ntt_config_with_input(&mut ntt_intt_result, size, batches);
-
-        ntt_internal(&mut config);
-
-        //host
-        let mut ntt_result = scalars_batch.clone();
-        ntt_wip(&mut ntt_result, false, false, Ordering::kNR, false, batches);
-
-        // let mut buff1 = DeviceBuffer::from_slice(&scalars_batch[..]).unwrap();
-        // let dev_ptr1 = buff1
-        //     .as_device_ptr()
-        //     .as_raw_mut();
-
-        // let buff_len = buff1.len();
-
-        // std::mem::forget(buff1);
-
-        // let buff_from_dev_ptr = unsafe { DeviceBuffer::from_raw_parts(DevicePointer::wrap(dev_ptr1), buff_len) };
-        // let mut from_device = vec![ScalarField::zero(); scalars_batch.len()];
-        // buff_from_dev_ptr
-        //     .copy_to(&mut from_device)
-        //     .unwrap();
-
-        // assert_eq!(from_device, scalars_batch);
-
-        // host - device - device - host
-        let mut ntt_intt_result = scalars_batch.clone();
-
-        let mut config = get_ntt_config_with_input(&mut ntt_intt_result, size, batches);
-
-        config.is_input_on_device = false;
-        config.is_output_on_device = true;
-        // config.is_preserving_twiddles = true; // TODO: same as in get_ntt_config
-        config.ordering = Ordering::kNR;
-
-        ntt_internal(&mut config); //twiddles are preserved after first call
-
-        // config.is_preserving_twiddles = true;        //TODO: same as in get_ntt_config
-        config.is_inverse = true;
-        config.is_input_on_device = false;
-        config.is_output_on_device = true;
-        config.ordering = Ordering::kNR;
-
-        ntt_internal(&mut config); //inv_twiddles are preserved after first call
-
-        let ntt_intt_result = &mut scalars_batch.clone()[..];
-        let raw_scalars_batch_copy = ntt_intt_result as *mut _ as *mut ScalarField;
-
-        let config_inout2: &mut [ScalarField] =
-            unsafe { std::slice::from_raw_parts_mut(raw_scalars_batch_copy, config.size as usize) };
-        assert_eq!(config_inout2, scalars_batch);
-
-        config.is_preserving_twiddles = true; //TODO: same as in get_ntt_config
-
-        config.inout = raw_scalars_batch_copy;
-
-        config.is_inverse = false;
-        config.is_input_on_device = false;
-        config.is_output_on_device = true;
-        config.ordering = Ordering::kNR;
-
-        ntt_internal(&mut config);
-
-        config.is_inverse = true;
-        config.is_input_on_device = true;
-        config.is_output_on_device = false;
-        config.ordering = Ordering::kRN;
-
-        ntt_internal(&mut config);
-
-        let result_from_device: &mut [ScalarField] =
-            unsafe { std::slice::from_raw_parts_mut(config.inout, scalars_batch.len()) };
-
-        assert_eq!(result_from_device, &scalars_batch);
+        assert_eq!(intt_result, scalars);
+        // check that ntt_result wasn't mutated by the latest `ntt` call
+        assert_eq!(ntt_result_as_ark[1], ntt_result[1].to_ark());
     }
 
     #[test]
-    fn test_batch_ntt() {
-        //NTT
-        let test_size = 1 << 11;
-        let batches = 2;
+    fn test_ntt_coset_from_subgroup() {
+        let test_size = 1 << 16;
+        let small_size = test_size >> 1;
+        let test_size_rou = Fr::get_root_of_unity(test_size as u64).unwrap();
+        let ctx = get_default_device_context();
+        // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
+        // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
+        initialize_domain(ScalarField::from_ark(test_size_rou), &ctx).unwrap();
+        let ark_small_domain = GeneralEvaluationDomain::<Fr>::new(small_size).unwrap().get_coset(test_size_rou).unwrap();
+        let ark_large_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
 
-        let full_test_size = test_size * batches;
-        let scalars_batch: Vec<ScalarField> = generate_random_scalars(full_test_size);
+        let mut scalars: Vec<ScalarField> = generate_random_scalars(small_size);
 
-        let mut scalar_vec_of_vec: Vec<Vec<ScalarField>> = Vec::new();
+        let mut config = get_default_ntt_config();
+        config.ordering = Ordering::kNR;
+        let mut ntt_result = vec![ScalarField::zero(); test_size];
+        ntt(&scalars, false, &config, &mut ntt_result[..small_size]).unwrap();
+        assert_ne!(ntt_result[..small_size], scalars);
+        config.coset_gen = ScalarField::from_ark(test_size_rou);
+        ntt(&scalars, false, &config, &mut ntt_result[small_size..]).unwrap();
+        let mut ntt_large_result = vec![ScalarField::zero(); test_size];
+        // back to non-coset NTT
+        config.coset_gen = ScalarField::one();
+        scalars.resize(test_size, ScalarField::zero());
+        ntt(&scalars, false, &config, &mut ntt_large_result).unwrap();
+        assert_eq!(ntt_result, ntt_large_result);
 
-        for i in 0..batches {
-            scalar_vec_of_vec.push(scalars_batch[i * test_size..(i + 1) * test_size].to_vec());
-        }
+        let mut ark_scalars = scalars
+            .iter()
+            .map(|v| v.to_ark())
+            .collect::<Vec<Fr>>();
+        let mut ark_large_scalars = ark_scalars.clone();
+        ark_small_domain.fft_in_place(&mut ark_scalars);
+        let ntt_result_as_ark = ntt_result
+            .iter()
+            .map(|p| p.to_ark())
+            .collect::<Vec<Fr>>();
+        assert_eq!(ark_scalars[..small_size], list_to_reverse_bit_order(&ntt_result_as_ark[small_size..]));
+        ark_large_domain.fft_in_place(&mut ark_large_scalars);
+        assert_eq!(ark_large_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
 
-        let mut ntt_result = scalars_batch.clone();
+        config.coset_gen = ScalarField::from_ark(test_size_rou);
+        config.ordering = Ordering::kRN;
+        let mut intt_result = vec![ScalarField::zero(); small_size];
+        ntt(&ntt_result[small_size..], true, &config, &mut intt_result).unwrap();
+        assert_eq!(intt_result, scalars[..small_size]);
 
-        // do batch ntt
-        ntt_wip(&mut ntt_result, false, false, Ordering::kNN, false, batches);
-
-        let mut ntt_result_vec_of_vec = Vec::new();
-
-        // do ntt for every chunk
-        for i in 0..batches {
-            ntt_result_vec_of_vec.push(scalar_vec_of_vec[i].clone());
-
-            ntt_wip(&mut ntt_result_vec_of_vec[i], false, false, Ordering::kNN, false, 1);
-        }
-
-        // check that the ntt of each vec of scalars is equal to the ntt of the specific batch
-        for i in 0..batches {
-            assert_eq!(ntt_result_vec_of_vec[i], ntt_result[i * test_size..(i + 1) * test_size]);
-        }
-
-        // check that ntt output is different from input
-        assert_ne!(ntt_result, scalars_batch);
-
-        let mut intt_result = ntt_result.clone();
-
-        // do batch intt
-        // intt_batch(&mut intt_result, test_size, 0);
-        ntt_wip(&mut intt_result, true, false, Ordering::kNN, false, batches);
-
-        let mut intt_result_vec_of_vec = Vec::new();
-
-        // do intt for every chunk
-        for i in 0..batches {
-            intt_result_vec_of_vec.push(ntt_result_vec_of_vec[i].clone());
-            // intt(&mut intt_result_vec_of_vec[i], 0);
-            ntt_wip(&mut intt_result_vec_of_vec[i], true, false, Ordering::kNN, false, 1);
-        }
-
-        // check that the intt of each vec of scalars is equal to the intt of the specific batch
-        for i in 0..batches {
-            assert_eq!(
-                intt_result_vec_of_vec[i],
-                intt_result[i * test_size..(i + 1) * test_size]
-            );
-        }
-
-        assert_eq!(intt_result, scalars_batch);
+        ark_small_domain.ifft_in_place(&mut ark_scalars);
+        let intt_result_as_ark = intt_result
+            .iter()
+            .map(|p| p.to_ark())
+            .collect::<Vec<Fr>>();
+        assert_eq!(ark_scalars[..small_size], intt_result_as_ark);
     }
 }

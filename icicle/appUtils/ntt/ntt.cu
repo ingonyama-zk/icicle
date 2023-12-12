@@ -1,5 +1,8 @@
 #include "ntt.cuh"
 
+#include <vector>
+#include <unordered_map>
+
 #include "../../curves/curve_config.cuh"
 #include "../../utils/sharedmem.cuh"
 #include "../../utils/utils_kernels.cuh"
@@ -42,59 +45,59 @@ namespace ntt {
     }
 
     /**
-     * Bit-reverses a batch of input arrays in-place inside GPU.
+     * Bit-reverses a batch of input arrays out-of-place inside GPU.
      * for example: on input array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
      * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
-     * @param arr batch of arrays of some object of type T. Should be on GPU.
+     * @param arr_in batch of arrays of some object of type T. Should be on GPU.
      * @param n length of `arr`.
      * @param logn log(n).
      * @param batch_size the size of the batch.
+     * @param arr_out buffer of the same size as `arr_in` on the GPU to write the bit-permuted array into.
      */
     template <typename E>
-    void reverse_order_batch(E* arr, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream)
+    void reverse_order_batch(E* arr_in, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream, E* arr_out)
     {
-      E* arr_reversed;
-      cudaMallocAsync(&arr_reversed, n * batch_size * sizeof(E), stream);
       int number_of_threads = MAX_THREADS_BATCH;
       int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
-      reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr, arr_reversed, n, logn, batch_size);
-      cudaMemcpyAsync(arr, arr_reversed, n * batch_size * sizeof(E), cudaMemcpyDefault, stream);
-      cudaFreeAsync(arr_reversed, stream);
+      reverse_order_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(arr_in, arr_out, n, logn, batch_size);
     }
 
     /**
-     * Bit-reverses an input array in-place inside GPU.
+     * Bit-reverses an input array out-of-place inside GPU.
      * for example: on array ([a[0],a[1],a[2],a[3]], 4, 2) it returns
      * [a[0],a[3],a[2],a[1]] (elements at indices 3 and 1 swhich places).
-     * @param arr array of some object of type T of size which is a power of 2. Should be on GPU.
+     * @param arr_in array of some object of type T of size which is a power of 2. Should be on GPU.
      * @param n length of `arr`.
      * @param logn log(n).
+     * @param arr_out buffer of the same size as `arr_in` on the GPU to write the bit-permuted array into.
      */
     template <typename E>
-    void reverse_order(E* arr, uint32_t n, uint32_t logn, cudaStream_t stream)
+    void reverse_order(E* arr_in, uint32_t n, uint32_t logn, cudaStream_t stream, E* arr_out)
     {
-      reverse_order_batch(arr, n, logn, 1, stream);
+      reverse_order_batch(arr_in, n, logn, 1, stream, arr_out);
     }
 
     /**
      * Cooley-Tuckey NTT.
      * NOTE! this function assumes that d_twiddles are located in the device memory.
-     * @param arr input array of type E (elements).
+     * @param arr_in input array of type E (elements).
      * @param n length of d_arr.
      * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-     * @param n_twiddles length of twiddles.
+     * @param n_twiddles length of twiddles, should be negative for intt.
      * @param max_task max count of parallel tasks.
      * @param s log2(n) loop index.
+     * @param arr_out buffer for the output.
      */
     template <typename E, typename S>
     __global__ void ntt_template_kernel_shared_rev(
-      E* __restrict__ arr_g,
-      uint32_t n,
+      E* __restrict__ arr_in,
+      int n,
       const S* __restrict__ r_twiddles,
-      uint32_t n_twiddles,
-      uint32_t max_task,
-      uint32_t ss,
-      uint32_t logn)
+      int n_twiddles,
+      int max_task,
+      int ss,
+      int logn,
+      E* __restrict__ arr_out)
     {
       SharedMemory<E> smem;
       E* arr = smem.getPointer();
@@ -128,13 +131,13 @@ namespace ntt {
             uint32_t oij = i + j;
             uint32_t k = oij + shift_s;
 
-            S tw = r_twiddles[j * n_twiddles_div];
+            S tw = *(r_twiddles + (int)(j * n_twiddles_div));
 
-            E u = is_beginning ? arr_g[offset + oij] : arr[oij];
-            E v = is_beginning ? arr_g[offset + k] : arr[k];
+            E u = is_beginning ? arr_in[offset + oij] : arr[oij];
+            E v = is_beginning ? arr_in[offset + k] : arr[k];
             if (is_end) {
-              arr_g[offset + oij] = u + v;
-              arr_g[offset + k] = tw * (u - v);
+              arr_out[offset + oij] = u + v;
+              arr_out[offset + k] = tw * (u - v);
             } else {
               arr[oij] = u + v;
               arr[k] = tw * (u - v);
@@ -149,22 +152,24 @@ namespace ntt {
     /**
      * Cooley-Tuckey NTT.
      * NOTE! this function assumes that d_twiddles are located in the device memory.
-     * @param arr input array of type E (elements).
+     * @param arr_in input array of type E (elements).
      * @param n length of d_arr.
      * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-     * @param n_twiddles length of twiddles.
+     * @param n_twiddles length of twiddles, should be negative for intt.
      * @param max_task max count of parallel tasks.
      * @param s log2(n) loop index.
+     * @param arr_out buffer for the output.
      */
     template <typename E, typename S>
     __global__ void ntt_template_kernel_shared(
-      E* __restrict__ arr_g,
-      uint32_t n,
+      E* __restrict__ arr_in,
+      int n,
       const S* __restrict__ r_twiddles,
-      uint32_t n_twiddles,
-      uint32_t max_task,
-      uint32_t s,
-      uint32_t logn)
+      int n_twiddles,
+      int max_task,
+      int s,
+      int logn,
+      E* __restrict__ arr_out)
     {
       SharedMemory<E> smem;
       E* arr = smem.getPointer();
@@ -194,14 +199,14 @@ namespace ntt {
             uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
             uint32_t oij = i + j;
             uint32_t k = oij + shift_s;
-            S tw = r_twiddles[j * n_twiddles_div];
+            S tw = *(r_twiddles + (int)(j * n_twiddles_div));
 
-            E u = s == 0 ? arr_g[offset + oij] : arr[oij];
-            E v = s == 0 ? arr_g[offset + k] : arr[k];
+            E u = s == 0 ? arr_in[offset + oij] : arr[oij];
+            E v = s == 0 ? arr_in[offset + k] : arr[k];
             v = tw * v;
             if (s == (logn - 1)) {
-              arr_g[offset + oij] = u + v;
-              arr_g[offset + k] = u - v;
+              arr_out[offset + oij] = u + v;
+              arr_out[offset + k] = u - v;
             } else {
               arr[oij] = u + v;
               arr[k] = u - v;
@@ -219,13 +224,13 @@ namespace ntt {
      * @param arr input array of type E (elements).
      * @param n length of d_arr.
      * @param twiddles twiddle factors of type S (scalars) array allocated on the device memory (must be a power of 2).
-     * @param n_twiddles length of twiddles.
+     * @param n_twiddles length of twiddles, should be negative for intt.
      * @param max_task max count of parallel tasks.
      * @param s log2(n) loop index.
      */
     template <typename E, typename S>
     __global__ void
-    ntt_template_kernel(E* arr, uint32_t n, S* twiddles, uint32_t n_twiddles, uint32_t max_task, uint32_t s, bool rev)
+    ntt_template_kernel(E* arr_in, int n, S* twiddles, int n_twiddles, int max_task, int s, bool rev, E* arr_out)
     {
       int task = blockIdx.x;
       int chunks = n / (blockDim.x * 2);
@@ -248,15 +253,15 @@ namespace ntt {
           uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
           uint32_t k = i + j + shift_s;
 
-          S tw = twiddles[j * n_twiddles_div];
+          S tw = *(twiddles + (int)(j * n_twiddles_div));
 
           uint32_t offset = (task / chunks) * n;
-          E u = arr[offset + i + j];
-          E v = arr[offset + k];
+          E u = arr_in[offset + i + j];
+          E v = arr_in[offset + k];
           if (!rev) v = tw * v;
-          arr[offset + i + j] = u + v;
+          arr_out[offset + i + j] = u + v;
           v = u - v;
-          arr[offset + k] = rev ? tw * v : v;
+          arr_out[offset + k] = rev ? tw * v : v;
         }
       }
     }
@@ -264,29 +269,32 @@ namespace ntt {
     /**
      * NTT/INTT inplace batch
      * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
-     * @param d_inout Array for inplace processing
-     * @param d_twiddles
-     * @param n Length of `d_twiddles` array
+     * @param d_input Input array
+     * @param n Size of `d_input`
+     * @param d_twiddles Twiddles
+     * @param n_twiddles Size of `d_twiddles`
      * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
      * @param inverse true for iNTT
-     * @param is_coset true for multiplication by coset
-     * @param coset should be array of lenght n - or in case of lesser than n, right-padded with zeroes
+     * @param coset should be array of lenght n or a nullptr if NTT is not computed on a coset
      * @param stream CUDA stream
-     * @param is_sync_needed do perform sync of the supplied CUDA stream at the end of processing
+     * @param is_async if false, perform sync of the supplied CUDA stream at the end of processing
+     * @param d_output Output array
      */
     template <typename E, typename S>
     void ntt_inplace_batch_template(
-      E* d_inout,
+      E* d_input,
+      int n,
       S* d_twiddles,
-      unsigned n,
-      unsigned batch_size,
+      int n_twiddles,
+      int batch_size,
+      int logn,
       bool inverse,
-      bool is_coset,
-      S* coset,
+      bool ct_buttterfly,
+      int coset_gen_index,
       cudaStream_t stream,
-      bool is_sync_needed)
+      bool is_async,
+      E* d_output)
     {
-      const int logn = int(log(n) / log(2));
       bool is_shared_mem_enabled = sizeof(E) <= MAX_SHARED_MEM_ELEMENT_SIZE;
       const int log2_shmem_elems = is_shared_mem_enabled ? int(log(int(MAX_SHARED_MEM / sizeof(E))) / log(2)) : logn;
       int num_threads = max(min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1)), 1);
@@ -297,213 +305,229 @@ namespace ntt {
                                                           // less then max to allow more concurrent blocks on SM
       const int logn_shmem = is_shared_mem_enabled ? int(log(2 * num_threads) / log(2))
                                                    : 0; // TODO: shared memory support only for types <= 32 bytes
+      int num_threads_coset = max(min(n / 2, MAX_NUM_THREADS), 1);
+      int num_blocks_coset = (n * batch_size + num_threads_coset - 1) / num_threads_coset;
 
       if (inverse) {
+        d_twiddles = d_twiddles + n_twiddles;
+        n_twiddles = -n_twiddles;
+      }
+
+      bool is_on_coset = (coset_gen_index > 0);
+      bool direct_coset = (!inverse && is_on_coset);
+      if (direct_coset)
+        utils_internal::BatchMulKernel<E, S>
+          <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_input, n, batch_size, d_twiddles, coset_gen_index, n_twiddles, d_output);
+
+      if (ct_buttterfly) {
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
-            d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+            direct_coset ? d_output : d_input, 1 << logn_shmem, d_twiddles, n_twiddles, total_tasks, 0, logn_shmem, d_output);
 
         for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
         {
-          ntt_template_kernel<E, S>
-            <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
+          ntt_template_kernel<E, S><<<num_blocks, num_threads, 0, stream>>>(
+            (direct_coset && (s == 0)) ? d_input : d_output, n, d_twiddles, n_twiddles, total_tasks, s, false, d_output);
         }
-
-        if (is_coset)
-          utils_internal::BatchMulKernel<E, S><<<num_blocks, num_threads, 0, stream>>>(d_inout, coset, n, batch_size);
-
-        num_threads = max(min(n / 2, MAX_NUM_THREADS), 1);
-        num_blocks = (n * batch_size + num_threads - 1) / num_threads;
-        utils_internal::NormalizeKernel<E, S>
-          <<<num_blocks, num_threads, 0, stream>>>(d_inout, S::inv_log_size(logn), n * batch_size);
       } else {
-        if (is_coset)
-          utils_internal::BatchMulKernel<E, S><<<num_blocks, num_threads, 0, stream>>>(d_inout, coset, n, batch_size);
-
         for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
         {
-          ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, true);
+          ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(
+            (direct_coset || (s < logn - 1)) ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, true, d_output);
         }
 
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
-            d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+            (direct_coset || (logn > logn_shmem)) ? d_output : d_input, 1 << logn_shmem, d_twiddles,
+            n_twiddles, total_tasks, 0, logn_shmem, d_output);
       }
 
-      if (!is_sync_needed) return;
+      if (inverse) {
+        if (is_on_coset)
+          utils_internal::BatchMulKernel<E, S>
+            <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, n, batch_size, d_twiddles, -coset_gen_index, -n_twiddles, d_output);
+
+        utils_internal::NormalizeKernel<E, S>
+          <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
+      }
+
+      if (is_async) return;
 
       cudaStreamSynchronize(stream);
     }
 
   } // namespace
 
+  /**
+   * @struct Domain
+   * Struct containing information about the domain on which (i)NTT is evaluated i.e. twiddle factors.
+   * Twiddle factors are private, static and can only be set using [InitDomain](@ref InitDomain) function.
+   * The internal representation of twiddles is prone to change in accordance with changing [NTT](@ref NTT) algorithm.
+   * @tparam S The type of twiddle factors \f$ \{ \omega^i \} \f$. Must be a field.
+   */
   template <typename S>
-  cudaError_t GenerateTwiddleFactors(S* d_twiddles, int n_twiddles, S omega, device_context::DeviceContext ctx)
+  class Domain {
+    static int max_size;
+    static S* twiddles;
+    static std::unordered_map<S, int> coset_index;
+
+    public:
+      template <typename U>
+      friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx);
+
+      template <typename U, typename E>
+      friend cudaError_t NTT<U, E>(E* input, int size, bool is_inverse, NTTConfig<U>& config, E* output);
+  };
+
+  template<typename S> int Domain<S>::max_size = 0;
+  template<typename S> S* Domain<S>::twiddles = nullptr;
+  template<typename S> std::unordered_map<S, int> Domain<S>::coset_index = {};
+
+  template <typename S>
+  cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
-    twiddle_factors_kernel<S><<<1, 1, 0, ctx.stream>>>(d_twiddles, n_twiddles, omega);
-    cudaStreamSynchronize(ctx.stream);
+    // only generate twiddles if they haven't been generated yet (TODO: thread safety)
+    if (!Domain<S>::twiddles) {
+      // TODO DmytroTym: the following line is just a temporary patch to make it work, 
+      // having issues creating default stream on rust side
+      device_context::DeviceContext ctx = device_context::get_default_device_context();
+      std::vector<S> h_twiddles;
+      h_twiddles.push_back(S::one());
+      int n = 1;
+      do {
+        Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
+        h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
+      } while (h_twiddles.at(n++) != S::one());
+      cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream);
+      cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream);
+      Domain<S>::max_size = n - 1;
+    }
     return cudaSuccess;
   }
 
-  template <typename E, typename S>
-  cudaError_t NTT(NTTConfig<E, S>* config)
+  template <typename S, typename E>
+  cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S>& config, E* output)
   {
     CHECK_LAST_CUDA_ERROR();
 
-    cudaStream_t stream = config->ctx.stream;
-    int size = config->size;
-    int batch_size = config->batch_size;
-    bool is_inverse = config->is_inverse;
-    int n_twiddles = size;
+    cudaStream_t stream = config.ctx.stream;
+    int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
-    bool is_input_on_device = config->are_inputs_on_device;
-    bool is_output_on_device = config->is_output_on_device;
-    bool is_forward_twiddle_empty = config->twiddles == nullptr;
-    bool is_inverse_twiddle_empty = config->inv_twiddles == nullptr;
-    bool is_generating_twiddles = (is_forward_twiddle_empty && is_inverse_twiddle_empty) ||
-                                  (is_forward_twiddle_empty && !is_inverse) || (is_inverse_twiddle_empty && is_inverse);
+    bool is_input_on_device = config.are_inputs_on_device;
+    bool is_output_on_device = config.are_outputs_on_device;
 
-    S* d_twiddles;
-    if (is_generating_twiddles) {
-      cudaMallocAsync(&d_twiddles, n_twiddles * sizeof(S), stream);
-      S omega = is_inverse ? S::omega_inv(logn) : S::omega(logn);
-      GenerateTwiddleFactors(d_twiddles, n_twiddles, omega, config->ctx);
-    } else {
-      d_twiddles = is_inverse ? config->inv_twiddles : config->twiddles;
-    }
-
-    E* d_inout;
+    E* d_input;
     if (is_input_on_device) {
-      d_inout = config->inout;
+      d_input = input;
     } else {
-      cudaMallocAsync(&d_inout, input_size_bytes, stream);
-      cudaMemcpyAsync(d_inout, config->inout, input_size_bytes, cudaMemcpyHostToDevice, stream);
+      cudaMallocAsync(&d_input, input_size_bytes, stream);
+      cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream);
+    }
+    E* d_output;
+    if (is_input_on_device) {
+      d_output = output;
+    } else {
+      cudaMallocAsync(&d_output, input_size_bytes, stream);
     }
 
-    bool reverse_input;
-    bool reverse_output;
-    switch (config->ordering) {
+    bool ct_butterfly = true;
+    bool reverse_input = false;
+    switch (config.ordering) {
     case Ordering::kNN:
-      reverse_input = is_inverse;
-      reverse_output = !is_inverse;
+      reverse_input = true;
       break;
     case Ordering::kNR:
-      reverse_input = is_inverse;
-      reverse_output = is_inverse;
-      break;
-    case Ordering::kRN:
-      reverse_input = !is_inverse;
-      reverse_output = !is_inverse;
+      ct_butterfly = false;
       break;
     case Ordering::kRR:
-      reverse_input = !is_inverse;
-      reverse_output = is_inverse;
+      reverse_input = true;
+      ct_butterfly = false;
       break;
     }
     CHECK_LAST_CUDA_ERROR();
 
-    if (reverse_input) reverse_order_batch(d_inout, size, logn, config->batch_size, stream);
+    if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      d_inout, d_twiddles, size, batch_size, is_inverse, config->is_coset, config->coset_gen, stream, false);
-    CHECK_LAST_CUDA_ERROR();
-
-    if (reverse_output) reverse_order_batch(d_inout, size, logn, batch_size, stream);
+      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+      is_inverse, ct_butterfly, Domain<S>::coset_index[config.coset_gen], stream, !config.is_async, d_output);
     CHECK_LAST_CUDA_ERROR();
 
     if (is_output_on_device) {
       // free(config->inout); // TODO: ? or callback?+
-      config->inout = d_inout;
+      output = d_output;
     } else {
-      if (is_input_on_device) {
-        E* h_output = (E*)malloc(input_size_bytes); // TODO: caller responsible for memory management
-        cudaMemcpyAsync(h_output, d_inout, input_size_bytes, cudaMemcpyDeviceToHost, stream);
-        config->inout = h_output;
-        CHECK_LAST_CUDA_ERROR();
-      } else {
-        cudaMemcpyAsync(config->inout, d_inout, input_size_bytes, cudaMemcpyDeviceToHost, stream);
-        CHECK_LAST_CUDA_ERROR();
-      }
-      cudaFreeAsync(d_inout, stream); // TODO: make it optional? so can be reused
+      cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream);
+      CHECK_LAST_CUDA_ERROR();
     }
     CHECK_LAST_CUDA_ERROR();
 
-    if (is_generating_twiddles && !config->is_preserving_twiddles) { cudaFreeAsync(d_twiddles, stream); }
-
-    if (config->is_preserving_twiddles) {
-      if (is_inverse)
-        config->inv_twiddles = d_twiddles;
-      else {
-        config->twiddles = d_twiddles;
-      }
-    }
-
-    cudaStreamSynchronize(stream);
+    if (!config.is_async) cudaStreamSynchronize(stream);
 
     CHECK_LAST_CUDA_ERROR();
 
     return cudaSuccess;
   }
 
-  /**
-   * Extern version of [ntt](@ref ntt) function with the following values of template parameters
-   * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t NTTCuda(NTTConfig<curve_config::scalar_t, curve_config::scalar_t>* config)
-  {
-    return NTT<curve_config::scalar_t, curve_config::scalar_t>(config);
+  template <typename S>
+  NTTConfig<S> DefaultNTTConfig() {
+    device_context::DeviceContext ctx = device_context::get_default_device_context();
+    NTTConfig<S> config = {
+      S::one(),      // coset_gen
+      Ordering::kNN, // ordering
+      false,         // are_inputs_on_device
+      false,         // are_outputs_on_device
+      1,             // batch_size
+      false,         // is_async
+      ctx,           // ctx
+    };
+    return config;
   }
 
   /**
-   * Extern version of [ntt](@ref ntt) function with the following values of template parameters
-   * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   * Extern "C" version of [DefaultNTTConfig](@ref DefaultNTTConfig) function with the following 
+   * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
+   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+   * @return Default [NTTConfig](@ref NTTConfig).
    */
-  template <typename E, typename S>
-  cudaError_t NTTDefaultContext(NTTConfig<E, S>* config)
-  {
-    // TODO: if empty - create default
-    cudaMemPool_t mempool;
-    cudaDeviceGetDefaultMemPool(&mempool, config->ctx.device_id);
-
-    device_context::DeviceContext context = {
-      config->ctx.device_id,
-      0, // default stream
-      mempool};
-
-    config->ctx = context;
-
-    return NTT<E, S>(config);
+  extern "C" NTTConfig<curve_config::scalar_t> GetDefaultNTTConfig() {
+    return DefaultNTTConfig<curve_config::scalar_t>();
   }
 
   /**
-   * Extern version of [ntt](@ref ntt) function with the following values of template parameters
+   * Extern "C" version of [InitDomain](@ref InitDomain) function with the following 
+   * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
+   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+   */
+  extern "C" cudaError_t InitializeDomain(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx) {
+    return InitDomain(primitive_root, ctx);
+  }
+
+  /**
+   * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t NTTDefaultContextCuda(NTTConfig<curve_config::scalar_t, curve_config::scalar_t>* config)
+  extern "C" cudaError_t NTTCuda(curve_config::scalar_t* input, int size, bool is_inverse, NTTConfig<curve_config::scalar_t>& config, curve_config::scalar_t* output)
   {
-    return NTTDefaultContext(config);
+    return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, is_inverse, config, output);
   }
 
 #if defined(ECNTT_DEFINED)
 
   /**
-   * Extern version of [NTT](@ref NTT) function with the following values of template parameters
+   * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [projective representation](@ref projective_t) of the curve (i.e. EC NTT is computed);
    *  - `E` is the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t ECNTTCuda(NTTConfig<curve_config::projective_t, curve_config::scalar_t>* config)
+  extern "C" cudaError_t ECNTTCuda(curve_config::projective_t* input, int size, bool is_inverse, NTTConfig<curve_config::scalar_t>& config, curve_config::projective_t* output)
   {
-    return NTT<curve_config::projective_t, curve_config::scalar_t>(config);
+    return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, is_inverse, config, output);
   }
 
 #endif

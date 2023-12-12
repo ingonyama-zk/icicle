@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   ARCH_TYPE: native
@@ -57,7 +61,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build
-        cmake -S . -B build
+        cmake -DBUILD_TESTS=ON -S . -B build
         cmake --build build
     - name: Run C++ Tests
       working-directory: ./icicle/build

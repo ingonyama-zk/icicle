@@ -10,7 +10,7 @@ mkdir -p build; cmake -S . -B build; cmake --build build; cd build && ctest; cd 
 
 Before proceeding, make sure the following software installed:
 
-1. CMake at least version 3.16, which can be downloaded from [cmake.org](https://cmake.org/files/)
+1. CMake at least version 3.18, which can be downloaded from [cmake.org](https://cmake.org/files/)
    It is recommended to have the latest version installed.
 2. [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu) version 12.0 or newer.
 3. GCC - version 9 or newer recommended.
@@ -74,7 +74,7 @@ If the `update-alternatives` settings are broken, you can try to fix them with t
 
 If you encounter the error, check if the `$CUDA_HOME/bin/crt/link.stub` file is available.
 
-Othrewise create a symlink. For example, if the CUDA toolkit is installed with apt-get to the default path, you can create a symlink with the following command:
+Otherwise create a symlink. For example, if the CUDA toolkit is installed with apt-get to the default path, you can create a symlink with the following command:
 
 `ln -sf /usr/local/cuda-12.1/bin/crt/link.stub /usr/lib/nvidia-cuda-toolkit/bin/crt/link.stub`
 

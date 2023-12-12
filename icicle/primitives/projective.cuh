@@ -2,7 +2,7 @@
 
 #include "affine.cuh"
 
-template <typename FF, class SCALAR_FF, const FF& B_VALUE>
+template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
 class Projective
 {
   friend Affine<FF>;
@@ -32,7 +32,7 @@ public:
     return {FF::FromMontgomery(point.x), FF::FromMontgomery(point.y), FF::FromMontgomery(point.z)};
   }
 
-  static HOST_DEVICE_INLINE Projective generator() { return {FF::generator_x(), FF::generator_y(), FF::one()}; }
+  static HOST_DEVICE_INLINE Projective generator() { return {GENERATOR_X, GENERATOR_Y, FF::one()}; }
 
   static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
 
