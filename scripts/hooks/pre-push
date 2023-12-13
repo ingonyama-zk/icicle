@@ -12,6 +12,7 @@ then
     echo ""
     echo "If you only want to see what formatting is required please run:"
     echo "find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -style=file"
+    echo ""
     status=1
 fi
 
@@ -20,15 +21,17 @@ if [[ $(go list ./... | xargs go fmt) ]];
 then
     echo "🚨 There are Golang files that need formatting."
     echo "Please commit the formatted files"
+    echo ""
     status=1
 fi
 
 # Run cargo fmt on Rust files
 cd wrappers/rust
-if [[ $(cargo fmt --check) ]];
+if [[ $(find . -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]];
 then
     echo "🚨 There are Rust files that need formatting."
-    echo "Please format the Rust files using 'cargo fmt' from the wrappers/rust directory"
+    echo "Please format the Rust files using the following command:"
+    echo "find . -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --"
     status=1
 fi
 

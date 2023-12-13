@@ -8,3 +8,6 @@ use_field_init_shorthand = true
 use_try_shorthand = true
 
 # Unstable Configs
+# This is required to enable checking single files without checking their imports/submodules
+# However, this also breaks running "cargo fmt" at the workspace level
+skip_children = true
