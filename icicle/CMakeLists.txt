@@ -90,7 +90,7 @@ if (NOT BUILD_TESTS)
     appUtils/msm/msm.cu
     appUtils/ntt/ntt.cu
     appUtils/poseidon/optimized/poseidon.cu
-    # appUtils/tree/merkle.cu
+    appUtils/tree/merkle.cu
   )
   #set_target_properties(icicle PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   #set_target_properties(icicle PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
