@@ -18,7 +18,12 @@ jobs:
       uses: actions/checkout@v3
     - name: Check rustfmt
       working-directory: ./wrappers/rust
-      run: if [[ $(cargo fmt --check) ]]; then echo "Please run cargo fmt"; exit 1; fi
+      # "-name tagret -prune" removes searching in any directory named "target"
+      # Formatting by single file is necessary due to generated files not being present
+      # before building the project.
+      # e.g. icicle-cuda-runtime/src/bindings.rs is generated and icicle-cuda-runtime/src/lib.rs includes that module
+      # causing rustfmt to fail.
+      run: if [[ $(find . -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
     # - name: Check clippy
     #   run: cargo clippy --no-deps --all-features --all-targets
 
