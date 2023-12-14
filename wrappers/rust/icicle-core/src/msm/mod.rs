@@ -1,4 +1,6 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
+
+use crate::curve::CurveConfig;
 
 /*
 /**
@@ -95,4 +97,117 @@ pub struct MSMConfig<'a> {
 
     /// Details related to the device such as its id and stream id.
     pub ctx: DeviceContext<'a>,
+}
+
+pub trait MSM<C: CurveConfig> {
+  fn msm<'a>(
+      scalars: &[C::ScalarField],
+      points: &[C::Affine],
+      cfg: MSMConfig<'a>,
+      results: &mut [C::Projective],
+  ) -> CudaResult<()>;
+
+  fn get_default_msm_config() -> MSMConfig<'static>;
+}
+
+#[macro_export]
+macro_rules! impl_msm {
+    (
+      $curve_prefix:literal,
+      $curve_config:ident
+    ) => {
+      extern "C" {
+          #[link_name = concat!($curve_prefix, "MSMCuda")]
+          fn msm_cuda<'a>(
+              scalars: *const ScalarField,
+              points: *const G1Affine,
+              count: usize,
+              config: MSMConfig<'a>,
+              out: *mut G1Projective,
+          ) -> CudaError;
+
+          #[link_name = concat!($curve_prefix, "DefaultMSMConfig")]
+          fn default_msm_config() -> MSMConfig<'static>;
+      }
+
+
+      impl MSM<$curve_config> for $curve_config {
+        fn msm<'a>(
+            scalars: &[<$curve_config as CurveConfig>::ScalarField],
+            points: &[<$curve_config as CurveConfig>::Affine],
+            cfg: MSMConfig<'a>,
+            results: &mut [<$curve_config as CurveConfig>::Projective],
+        ) -> CudaResult<()> {
+            if points.len() != scalars.len() {
+                return Err(CudaError::cudaErrorInvalidValue);
+            }
+
+            unsafe {
+                msm_cuda(
+                    scalars as *const _ as *const <$curve_config as CurveConfig>::ScalarField,
+                    points as *const _ as *const <$curve_config as CurveConfig>::Affine,
+                    points.len(),
+                    cfg,
+                    results as *mut _ as *mut <$curve_config as CurveConfig>::Projective,
+                )
+                .wrap()
+            }
+      }
+
+      fn get_default_msm_config() -> MSMConfig<'static> {
+          unsafe { default_msm_config() }
+      }
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! impl_msm_tests {
+    (
+      $curve_config:ident
+    ) => {
+      #[test]
+      fn test_msm() {
+          let log_test_sizes = [20];
+
+          for log_test_size in log_test_sizes {
+              let count = 1 << log_test_size;
+              let points = generate_random_affine_points(count);
+              let scalars = generate_random_scalars(count);
+
+              let mut msm_results = DeviceSlice::cuda_malloc(1).unwrap();
+              let stream = CudaStream::create().unwrap();
+              let mut cfg = <$curve_config as MSM<$curve_config>>::get_default_msm_config();
+              cfg.ctx
+                  .stream = &stream;
+              cfg.is_async = true;
+              cfg.are_results_on_device = true;
+              <$curve_config as MSM<$curve_config>>::msm(&scalars, &points, cfg, &mut msm_results.as_slice()).unwrap();
+
+              // this happens on CPU in parallel to the GPU MSM computations
+              let point_r_ark: Vec<_> = points
+                  .iter()
+                  .map(|x| x.to_ark())
+                  .collect();
+              let scalars_r_ark: Vec<_> = scalars
+                  .iter()
+                  .map(|x| x.to_ark())
+                  .collect();
+              let msm_result_ark: ArkG1Projective = VariableBaseMSM::msm(&point_r_ark, &scalars_r_ark).unwrap();
+
+              let mut msm_host_result = vec![<$curve_config as CurveConfig>::Projective::zero(); 1];
+              msm_results
+                  .copy_to_host(&mut msm_host_result[..])
+                  .unwrap();
+              stream
+                  .synchronize()
+                  .unwrap();
+              stream
+                  .destroy()
+                  .unwrap();
+
+              assert_eq!(msm_host_result[0].to_ark(), msm_result_ark);
+          }
+      }
+    };
 }
