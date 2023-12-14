@@ -324,7 +324,7 @@ macro_rules! impl_curve_tests {
             let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::one().get_limbs());
             assert_eq!(left, right);
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -338,7 +338,7 @@ macro_rules! impl_curve_ark_tests {
                 assert_eq!(scalar.to_ark(), scalar.to_ark())
             }
         }
-        
+
         #[test]
         fn test_ark_point_convert() {
             let size = 1 << 10;
