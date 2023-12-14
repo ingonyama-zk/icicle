@@ -395,9 +395,6 @@ namespace ntt {
   {
     // only generate twiddles if they haven't been generated yet (TODO: thread safety)
     if (!Domain<S>::twiddles) {
-      // TODO DmytroTym: the following line is just a temporary patch to make it work,
-      // having issues creating default stream on rust side
-      device_context::DeviceContext ctx = device_context::get_default_device_context();
       std::vector<S> h_twiddles;
       h_twiddles.push_back(S::one());
       int n = 1;
@@ -483,13 +480,13 @@ namespace ntt {
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
+      ctx,           // ctx
       S::one(),      // coset_gen
+      1,             // batch_size
       Ordering::kNN, // ordering
       false,         // are_inputs_on_device
       false,         // are_outputs_on_device
-      1,             // batch_size
       false,         // is_async
-      ctx,           // ctx
     };
     return config;
   }

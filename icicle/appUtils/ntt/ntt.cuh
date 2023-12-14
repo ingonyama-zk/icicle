@@ -60,18 +60,18 @@ namespace ntt {
    */
   template <typename S>
   struct NTTConfig {
+    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream. */
     S coset_gen;                /**< Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()`
                                  *   (corresponding to no coset being used). */
+    int batch_size;             /**< The number of NTTs to compute. Default value: 1. */
     Ordering ordering;          /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value:
                                  *   `Ordering::kNN`. */
     bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    int batch_size;             /**< The number of NTTs to compute. Default value: 1. */
     bool is_async;              /**< Whether to run the NTT asyncronously. If set to `true`, the NTT function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
                                  *   function will block the current CPU thread. */
-    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream. */
   };
 
   /**

@@ -10,7 +10,7 @@ namespace device_context {
    * Properties of the device used in icicle functions.
    */
   struct DeviceContext {
-    int device_id;         /**< Index of the currently used GPU. Default value: 0. */
+    std::size_t device_id; /**< Index of the currently used GPU. Default value: 0. */
     cudaStream_t stream;   /**< Stream to use. Default value: 0. */
     cudaMemPool_t mempool; /**< Mempool to use. Default value: 0. */
   };

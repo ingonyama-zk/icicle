@@ -34,22 +34,22 @@ pub enum Ordering {
 #[repr(C)]
 #[derive(Debug)]
 pub struct NTTConfig<'a, S> {
+    /** Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
+    pub ctx: DeviceContext<'a>,
     /** Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used). */
     pub coset_gen: S,
+    /** The number of NTTs to compute. Default value: 1. */
+    pub batch_size: c_int,
     /** Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`. */
     pub ordering: Ordering,
     /** True if inputs are on device and false if they're on host. Default value: false. */
     pub are_inputs_on_device: bool,
     /** If true, output is preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
     pub are_outputs_on_device: bool,
-    /** The number of NTTs to compute. Default value: 1. */
-    pub batch_size: c_int,
     /** Whether to run the NTT asyncronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
      *  it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
      *  function will block the current CPU thread. */
     pub is_async: bool,
-    /** Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
-    pub ctx: DeviceContext<'a>,
 }
 
 // /**

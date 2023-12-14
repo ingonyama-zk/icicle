@@ -2,7 +2,6 @@ use crate::memory::CudaMemPool;
 use crate::stream::{CudaStream, CudaStreamCreateFlags};
 
 /// Properties of the device used in icicle functions.
-#[repr(C)]
 #[derive(Debug)]
 pub struct DeviceContext<'a> {
     /// Index of the currently used GPU. Default value: 0.
