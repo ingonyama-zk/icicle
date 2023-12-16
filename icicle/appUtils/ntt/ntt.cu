@@ -290,6 +290,7 @@ namespace ntt {
       int logn,
       bool inverse,
       bool ct_buttterfly,
+      bool coset_outside_subgroup,
       int coset_gen_index,
       cudaStream_t stream,
       bool is_async,
@@ -313,11 +314,12 @@ namespace ntt {
         n_twiddles = -n_twiddles;
       }
 
-      bool is_on_coset = (coset_gen_index > 0);
+      bool is_on_coset = (coset_gen_index != 0);
       bool direct_coset = (!inverse && is_on_coset);
       if (direct_coset)
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
-          d_input, n, batch_size, d_twiddles, coset_gen_index, n_twiddles, d_output);
+          d_input, n, batch_size, coset_outside_subgroup ? d_twiddles + coset_gen_index : d_twiddles,
+          coset_outside_subgroup ? 1 : coset_gen_index, n_twiddles, d_output);
 
       if (ct_buttterfly) {
         if (is_shared_mem_enabled)
@@ -328,7 +330,7 @@ namespace ntt {
         for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
         {
           ntt_template_kernel<E, S><<<num_blocks, num_threads, 0, stream>>>(
-            (direct_coset && (s == 0)) ? d_input : d_output, n, d_twiddles, n_twiddles, total_tasks, s, false,
+            (direct_coset || (s > 0)) ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, false,
             d_output);
         }
       } else {
@@ -348,7 +350,8 @@ namespace ntt {
       if (inverse) {
         if (is_on_coset)
           utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
-            d_output, n, batch_size, d_twiddles, -coset_gen_index, -n_twiddles, d_output);
+            d_output, n, batch_size, coset_outside_subgroup ? d_twiddles + n_twiddles + coset_gen_index : d_twiddles,
+            coset_outside_subgroup ? 1 : -coset_gen_index, -n_twiddles, d_output);
 
         utils_internal::NormalizeKernel<E, S>
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
@@ -373,6 +376,7 @@ namespace ntt {
   {
     static int max_size;
     static S* twiddles;
+    static S* cached_coset;
     static std::unordered_map<S, int> coset_index;
 
   public:
@@ -421,6 +425,25 @@ namespace ntt {
     bool is_input_on_device = config.are_inputs_on_device;
     bool is_output_on_device = config.are_outputs_on_device;
 
+    S* coset = nullptr;
+    int coset_index;
+    try {
+      coset_index = Domain<S>::coset_index.at(config.coset_gen);
+    }
+    catch (...) {
+      // if coset index is not found in the subgroup, compute coset powers on CPU and move them to device
+      std::vector<S> h_coset;
+      h_coset.push_back(S::one());
+      S coset_gen = is_inverse ? S::inverse(config.coset_gen) : config.coset_gen;
+      for (int i = 1; i < size; i++) {
+        h_coset.push_back(h_coset.at(i - 1) * coset_gen);
+      }
+      cudaMallocAsync(&coset, size * sizeof(S), stream);
+      cudaMemcpyAsync(coset, &h_coset.front(), size * sizeof(S), cudaMemcpyHostToDevice, stream);
+      coset_index = coset - Domain<S>::twiddles;
+      h_coset.clear();
+    }
+
     E* d_input;
     if (is_input_on_device) {
       d_input = input;
@@ -455,12 +478,11 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn, is_inverse,
-      ct_butterfly, Domain<S>::coset_index[config.coset_gen], stream, !config.is_async, d_output);
+      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size,
+      logn, is_inverse, ct_butterfly, coset, coset_index, stream, !config.is_async, d_output);
     CHECK_LAST_CUDA_ERROR();
 
     if (is_output_on_device) {
-      // free(config->inout); // TODO: ? or callback?+
       output = d_output;
     } else {
       cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream);
@@ -468,6 +490,7 @@ namespace ntt {
     }
     CHECK_LAST_CUDA_ERROR();
 
+    if (coset) cudaFreeAsync(coset, stream);
     if (!config.is_async) cudaStreamSynchronize(stream);
 
     CHECK_LAST_CUDA_ERROR();

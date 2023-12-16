@@ -61,7 +61,8 @@ pub(crate) mod tests {
     use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField};
 
     use ark_bn254::Fr;
-    use ark_ff::FftField;
+    use ark_std::{ops::Neg, UniformRand, test_rng};
+    use ark_ff::{FftField, One};
     use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 
     fn reverse_bit_order(n: u32, order: u32) -> u32 {
@@ -187,5 +188,53 @@ pub(crate) mod tests {
             .map(|p| p.to_ark())
             .collect::<Vec<Fr>>();
         assert_eq!(ark_scalars[..small_size], intt_result_as_ark);
+    }
+
+    #[test]
+    fn test_ntt_arbitrary_coset() {
+        let test_size = 1 << 2;
+        let mut seed = test_rng();
+        let coset_generators = [Fr::rand(&mut seed), Fr::neg(Fr::one()), Fr::get_root_of_unity(test_size as u64).unwrap()];
+        let ctx = get_default_device_context();
+        // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
+        // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
+        initialize_domain(ScalarField::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()), &ctx).unwrap();
+        for coset_gen in coset_generators {
+            let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size)
+                .unwrap()
+                .get_coset(coset_gen)
+                .unwrap();
+
+            let mut scalars: Vec<ScalarField> = generate_random_scalars(test_size);
+            let mut ark_scalars = scalars
+                .iter()
+                .map(|v| v.to_ark())
+                .collect::<Vec<Fr>>();
+
+            let mut config = get_default_ntt_config();
+            config.ordering = Ordering::kNR;
+            config.coset_gen = ScalarField::from_ark(coset_gen);
+            let mut ntt_result = vec![ScalarField::zero(); test_size];
+            ntt(&scalars, false, &config, &mut ntt_result).unwrap();
+            assert_ne!(scalars, ntt_result);
+
+            let ark_scalars_copy = ark_scalars.clone();
+            ark_domain.fft_in_place(&mut ark_scalars);
+            let ntt_result_as_ark = ntt_result
+                .iter()
+                .map(|p| p.to_ark())
+                .collect::<Vec<Fr>>();
+            assert_eq!(ark_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
+            ark_domain.ifft_in_place(&mut ark_scalars);
+            assert_eq!(ark_scalars, ark_scalars_copy);
+
+            config.ordering = Ordering::kRN;
+            ntt(&ntt_result, true, &config, &mut scalars).unwrap();
+            let ntt_result_as_ark = scalars
+                .iter()
+                .map(|p| p.to_ark())
+                .collect::<Vec<Fr>>();
+            assert_eq!(ark_scalars, ntt_result_as_ark);
+        }
     }
 }
