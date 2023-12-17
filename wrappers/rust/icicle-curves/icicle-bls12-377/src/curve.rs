@@ -4,7 +4,10 @@ use icicle_core::curve::{Affine, CurveConfig, Projective};
 use icicle_core::field::{Field, FieldConfig};
 use std::ffi::{c_uint, c_void};
 
-impl_curve!(8, 12,);
+pub(crate) const SCALAR_LIMBS: usize = 8;
+pub(crate) const BASE_LIMBS: usize = 12;
+
+impl_curve!(SCALAR_LIMBS, BASE_LIMBS,);
 
 #[cfg(test)]
 mod tests {

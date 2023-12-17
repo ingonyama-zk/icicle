@@ -200,8 +200,8 @@ where
 #[macro_export]
 macro_rules! impl_curve {
     (
-        $scalar_limbs:literal,
-        $base_limbs:literal,
+        $scalar_limbs:ident,
+        $base_limbs:ident,
     ) => {
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct ScalarCfg {}
@@ -210,8 +210,6 @@ macro_rules! impl_curve {
             #[cfg(feature = "arkworks")]
             type ArkField = Fr;
         }
-
-        const SCALAR_LIMBS: usize = $scalar_limbs;
 
         pub type ScalarField = Field<SCALAR_LIMBS, ScalarCfg>;
 
@@ -233,12 +231,10 @@ macro_rules! impl_curve {
             type ArkField = Fq;
         }
 
-        pub const BASE_LIMBS: usize = $base_limbs;
-
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct CurveCfg {}
 
-        pub type BaseField = Field<BASE_LIMBS, BaseCfg>;
+        pub type BaseField = Field<$base_limbs, BaseCfg>;
         pub type G1Affine = Affine<BaseField, CurveCfg>;
         pub type G1Projective = Projective<BaseField, CurveCfg>;
 

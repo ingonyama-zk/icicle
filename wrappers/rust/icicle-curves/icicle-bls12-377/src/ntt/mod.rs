@@ -1,12 +1,11 @@
-use crate::curve::{CurveCfg, ScalarField};
+use crate::curve::{ScalarField, SCALAR_LIMBS, ScalarCfg};
 
-use icicle_core::curve::CurveConfig;
 use icicle_core::impl_ntt;
 use icicle_core::ntt::{NTTConfig, NTT};
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
 
-impl_ntt!("bls12_377", CurveCfg);
+impl_ntt!("bls12_377", SCALAR_LIMBS, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

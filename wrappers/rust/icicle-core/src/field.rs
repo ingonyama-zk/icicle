@@ -4,12 +4,10 @@ use crate::traits::ArkConvertible;
 use ark_ff::{BigInteger, PrimeField};
 use std::marker::PhantomData;
 
-#[cfg(feature = "arkworks")]
 pub trait FieldConfig: PartialEq + Copy + Clone {
+    #[cfg(feature = "arkworks")]
     type ArkField: PrimeField;
 }
-#[cfg(not(feature = "arkworks"))]
-pub trait FieldConfig: PartialEq + Copy + Clone {}
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
