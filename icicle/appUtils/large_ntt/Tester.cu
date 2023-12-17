@@ -120,6 +120,7 @@ do { \
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
     res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
+    // res[i]= i<1000? test_scalar::one() : res[i-1000];
 }
 
 void incremental_values(test_scalar* res, uint32_t count) {
@@ -163,16 +164,19 @@ int main(int argc, const char** argv) {
 
   // std::cout << test_scalar::modulus() <<std::endl;
   // std::cout<<std::endl;
-  // std::cout << test_scalar::omega(0) <<std::endl;
-  // std::cout << test_scalar::omega(1) <<std::endl;
-  // std::cout << test_scalar::omega(2) <<std::endl;
-  // std::cout << test_scalar::omega(3) <<std::endl;
-  // std::cout << test_scalar::omega(4) <<std::endl;
-  // std::cout<<std::endl;
+  std::cout << test_scalar::omega(0) <<std::endl;
+  std::cout << test_scalar::omega(1) <<std::endl;
+  std::cout << test_scalar::omega(2) <<std::endl;
+  std::cout << test_scalar::omega(3) <<std::endl;
+  std::cout << test_scalar::omega(4) <<std::endl;
+  std::cout << test_scalar::omega(5) <<std::endl;
+  std::cout << test_scalar::omega(6) <<std::endl;
+  std::cout<<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(0) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(1) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(2) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(3) <<std::endl;
+  // std::cout << test_scalar::modulus() - test_scalar::omega(4) <<std::endl;
   // std::cout << test_scalar::modulus() - test_scalar::omega(4) <<std::endl;
   // std::cout<<std::endl;
   // std::cout << test_scalar::omega4(0) <<std::endl;
@@ -210,7 +214,8 @@ int main(int argc, const char** argv) {
   fprintf(stderr, "Warm up run\n");
   $CUDA(cudaMalloc((void**)&gpuData, sizeof(test_scalar)*ntts*NOF_VALS));
   $CUDA(cudaMalloc((void**)&gpuDataUint4, sizeof(uint4)*ntts*NOF_VALS*2));
-  // for(int i=0;i< 4;i++)
+  // for(int i=0;i< 5;i++)
+  //   ntt64<<<84*3*4, 64, 512*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4, 260);
   //   ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(test_scalar)>>>(gpuData, gpuData);
     // ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
     // ntt_kernel_split_transpose<<<3*84*260, 128, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
@@ -236,11 +241,11 @@ int main(int argc, const char** argv) {
   // std::cout <<cpuData[0]<<std::endl;
   // std::cout<<std::endl;
 
-  // printf("input\n");
-  // for(int i=0;i<NOF_VALS;i++){
-  //   if (i%16 == 0) printf("\n");
-  //   std::cout <<cpuData[i]<<std::endl;
-  // }
+  printf("input\n");
+  for(int i=0;i<64;i++){
+    // if (i%16 == 0) printf("\n");
+    std::cout <<cpuData[i]<<std::endl;
+  }
 
   // for(int i=0;i<repeatCount;i++) 
     // ntt1024<<<60, 32, 97*1024>>>(gpuData, gpuData, nextCounter, ntts);
@@ -259,7 +264,7 @@ int main(int argc, const char** argv) {
     std::cout << "Number of SMs: " << numSMs << std::endl;
   for(int i=0;i< 5;i++)
   //   ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(test_scalar)>>>(gpuData, gpuData);
-    ntt_kernel_split_transpose<<<84*3*260*2, 128, 1024*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
+    ntt64<<<84*3*4, 64, 512*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4, 1);
     // ntt_kernel_split_transpose<<<84*3*260, 128, 2048*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
     // ntt_kernel_split_transpose<<<84*3*260, 128, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
     // ntt_kernel_split_transpose<<<1, 17, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
@@ -288,11 +293,11 @@ int main(int argc, const char** argv) {
   }
 
   // #if !defined(COMPUTE_ONLY)
-  // printf("output\n");
-  // for(int i=0;i<16;i++){
-  //   if (i%16 == 0) printf("%d\n", i);
-  //   std::cout <<cpuData[i]<<std::endl;
-  // }
+  printf("output\n");
+  for(int i=0;i<64;i++){
+    // if (i%16 == 0) printf("%d\n", i);
+    std::cout <<cpuData[i]<<std::endl;
+  }
     // for(int i=0;i<ntts*1024;i+=4) 
     //   printf("%016lX %016lX %016lX %016lX\n", cpuData[i], cpuData[i+1], cpuData[i+2], cpuData[i+3]);
   // #endif
