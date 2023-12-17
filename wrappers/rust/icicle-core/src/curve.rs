@@ -1,21 +1,20 @@
-use crate::field::{Field, FieldConfig};
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
+use crate::traits::FieldImpl;
 #[cfg(feature = "arkworks")]
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
-use std::ffi::{c_uint, c_void};
-use std::marker::PhantomData;
+use std::ffi::c_uint;
 
 pub trait CurveConfig: PartialEq + Copy + Clone {
-    fn eq_proj(point1: *const c_void, point2: *const c_void) -> c_uint;
-    fn to_affine(point: *const c_void, point_aff: *mut c_void);
-
-    type BaseField;
-    type ScalarField;
+    type BaseField: FieldImpl;
+    type ScalarField: FieldImpl;
     type Projective;
     type Affine;
+
+    fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> c_uint;
+    fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -23,120 +22,91 @@ pub trait CurveConfig: PartialEq + Copy + Clone {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct Projective<T, C: CurveConfig> {
-    pub x: T,
-    pub y: T,
-    pub z: T,
-    p: PhantomData<C>,
+pub struct Projective<C: CurveConfig> {
+    pub x: C::BaseField,
+    pub y: C::BaseField,
+    pub z: C::BaseField,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(C)]
-pub struct Affine<T, C: CurveConfig> {
-    pub x: T,
-    pub y: T,
-    p: PhantomData<C>,
+pub struct Affine<C: CurveConfig> {
+    pub x: C::BaseField,
+    pub y: C::BaseField,
 }
 
-impl<const NUM_LIMBS: usize, F, C> Affine<Field<NUM_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
+impl<C: CurveConfig> Affine<C> {
     // While this is not a true zero point and not even a valid point, it's still useful
     // both as a handy default as well as a representation of zero points in other codebases
     pub fn zero() -> Self {
         Affine {
-            x: Field::<NUM_LIMBS, F>::zero(),
-            y: Field::<NUM_LIMBS, F>::zero(),
-            p: PhantomData,
+            x: C::BaseField::zero(),
+            y: C::BaseField::zero(),
         }
     }
 
     pub fn set_limbs(x: &[u32], y: &[u32]) -> Self {
         Affine {
-            x: Field::<NUM_LIMBS, F>::set_limbs(x),
-            y: Field::<NUM_LIMBS, F>::set_limbs(y),
-            p: PhantomData,
+            x: C::BaseField::set_limbs(x),
+            y: C::BaseField::set_limbs(y),
         }
     }
 
-    pub fn to_projective(&self) -> Projective<Field<NUM_LIMBS, F>, C> {
+    pub fn to_projective(&self) -> Projective<C> {
         Projective {
             x: self.x,
             y: self.y,
-            z: Field::<NUM_LIMBS, F>::one(),
-            p: PhantomData,
+            z: C::BaseField::one(),
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> From<Affine<Field<NUM_LIMBS, F>, C>> for Projective<Field<NUM_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
-    fn from(item: Affine<Field<NUM_LIMBS, F>, C>) -> Self {
+impl<C: CurveConfig> From<Affine<C>> for Projective<C> {
+    fn from(item: Affine<C>) -> Self {
         Self {
             x: item.x,
             y: item.y,
-            z: Field::<NUM_LIMBS, F>::one(),
-            p: PhantomData,
+            z: C::BaseField::one(),
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> Projective<Field<NUM_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
+impl<C: CurveConfig> Projective<C> {
     pub fn zero() -> Self {
         Projective {
-            x: Field::<NUM_LIMBS, F>::zero(),
-            y: Field::<NUM_LIMBS, F>::one(),
-            z: Field::<NUM_LIMBS, F>::zero(),
-            p: PhantomData,
+            x: C::BaseField::zero(),
+            y: C::BaseField::one(),
+            z: C::BaseField::zero(),
         }
     }
 
     pub fn set_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
         Projective {
-            x: Field::<NUM_LIMBS, F>::set_limbs(x),
-            y: Field::<NUM_LIMBS, F>::set_limbs(y),
-            z: Field::<NUM_LIMBS, F>::set_limbs(z),
-            p: PhantomData,
+            x: C::BaseField::set_limbs(x),
+            y: C::BaseField::set_limbs(y),
+            z: C::BaseField::set_limbs(z),
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> PartialEq for Projective<Field<NUM_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
+impl<C: CurveConfig> PartialEq for Projective<C> {
     fn eq(&self, other: &Self) -> bool {
-        C::eq_proj(self as *const _ as *const c_void, other as *const _ as *const c_void) != 0
+        C::eq_proj(self as *const _, other as *const _) != 0
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> From<Projective<Field<NUM_LIMBS, F>, C>> for Affine<Field<NUM_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
-    fn from(item: Projective<Field<NUM_LIMBS, F>, C>) -> Self {
+impl<C: CurveConfig> From<Projective<C>> for Affine<C> {
+    fn from(item: Projective<C>) -> Self {
         let mut aff = Self::zero();
-        C::to_affine(&item as *const _ as *const c_void, &mut aff as *mut _ as *mut c_void);
+        C::to_affine(&item as *const _, &mut aff as *mut _);
         aff
     }
 }
 
 #[cfg(feature = "arkworks")]
-impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Affine<Field<NUM_LIMBS, F>, C>
+impl<C: CurveConfig> ArkConvertible for Affine<C>
 where
-    C: CurveConfig,
-    F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
+    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     type ArkEquivalent = ArkAffine<C::ArkSWConfig>;
 
@@ -152,18 +122,16 @@ where
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
         Self {
-            x: Field::<NUM_LIMBS, F>::from_ark(ark.x),
-            y: Field::<NUM_LIMBS, F>::from_ark(ark.y),
-            p: PhantomData,
+            x: C::BaseField::from_ark(ark.x),
+            y: C::BaseField::from_ark(ark.y),
         }
     }
 }
 
 #[cfg(feature = "arkworks")]
-impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Projective<Field<NUM_LIMBS, F>, C>
+impl<C: CurveConfig> ArkConvertible for Projective<C>
 where
-    C: CurveConfig,
-    F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
+    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     type ArkEquivalent = ArkProjective<C::ArkSWConfig>;
 
@@ -189,10 +157,9 @@ where
         let proj_x = ark.x * ark.z;
         let proj_z = ark.z * ark.z * ark.z;
         Self {
-            x: Field::<NUM_LIMBS, F>::from_ark(proj_x),
-            y: Field::<NUM_LIMBS, F>::from_ark(ark.y),
-            z: Field::<NUM_LIMBS, F>::from_ark(proj_z),
-            p: PhantomData,
+            x: C::BaseField::from_ark(proj_x),
+            y: C::BaseField::from_ark(ark.y),
+            z: C::BaseField::from_ark(proj_z),
         }
     }
 }
@@ -235,12 +202,12 @@ macro_rules! impl_curve {
         pub struct CurveCfg {}
 
         pub type BaseField = Field<$base_limbs, BaseCfg>;
-        pub type G1Affine = Affine<BaseField, CurveCfg>;
-        pub type G1Projective = Projective<BaseField, CurveCfg>;
+        pub type G1Affine = Affine<CurveCfg>;
+        pub type G1Projective = Projective<CurveCfg>;
 
         extern "C" {
-            fn Eq(point1: *const c_void, point2: *const c_void) -> c_uint;
-            fn ToAffine(point: *const c_void, point_out: *mut c_void);
+            fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
+            fn ToAffine(point: *const G1Projective, point_out: *mut G1Affine);
             fn GenerateProjectivePoints(points: *mut G1Projective, size: usize);
             fn GenerateAffinePoints(points: *mut G1Affine, size: usize);
         }
@@ -251,11 +218,11 @@ macro_rules! impl_curve {
             type Affine = G1Affine;
             type Projective = G1Projective;
 
-            fn eq_proj(point1: *const c_void, point2: *const c_void) -> c_uint {
+            fn eq_proj(point1: *const G1Projective, point2: *const G1Projective) -> c_uint {
                 unsafe { Eq(point1, point2) }
             }
 
-            fn to_affine(point: *const c_void, point_out: *mut c_void) {
+            fn to_affine(point: *const Projective<CurveCfg>, point_out: *mut Affine<CurveCfg>) {
                 unsafe { ToAffine(point, point_out) };
             }
 

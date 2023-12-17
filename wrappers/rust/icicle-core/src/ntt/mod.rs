@@ -1,7 +1,7 @@
 use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
 use std::os::raw::c_int;
 
-use crate::{curve::CurveConfig, field::{FieldConfig, Field}};
+use crate::traits::FieldImpl;
 
 /**
  * @enum Ordering
@@ -68,22 +68,16 @@ pub struct NTTConfig<'a, S> {
 //     pub coset_table: Option<&'a [T]>,
 // }
 
-pub trait NTT<const NUM_LIMBS: usize, F: FieldConfig> {
-    fn ntt(
-        input: &[Field<NUM_LIMBS, F>],
-        is_inverse: bool,
-        cfg: &NTTConfig<Field<NUM_LIMBS, F>>,
-        output: &mut [Field<NUM_LIMBS, F>],
-    ) -> CudaResult<()>;
-    fn initialize_domain(primitive_root: Field<NUM_LIMBS, F>, ctx: &DeviceContext) -> CudaResult<()>;
-    fn get_default_ntt_config() -> NTTConfig<'static, Field<NUM_LIMBS, F>>;
+pub trait NTT<F: FieldImpl> {
+    fn ntt(input: &[F], is_inverse: bool, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>;
+    fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>;
+    fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
 #[macro_export]
 macro_rules! impl_ntt {
     (
       $field_prefix:literal,
-      $field_limbs:ident,
       $field:ident,
       $field_config:ident
     ) => {
@@ -98,13 +92,13 @@ macro_rules! impl_ntt {
             ) -> CudaError;
 
             #[link_name = concat!($field_prefix, "DefaultNTTConfig")]
-            fn default_ntt_config() -> NTTConfig<'static, ScalarField>;
+            fn default_ntt_config() -> NTTConfig<'static, $field>;
 
             #[link_name = concat!($field_prefix, "InitializeDomain")]
-            fn initialize_ntt_domain(primitive_root: ScalarField, ctx: &DeviceContext) -> CudaError;
+            fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
         }
 
-        impl NTT<$field_limbs, $field_config> for $field_config {
+        impl NTT<$field> for $field_config {
             fn ntt(
                 input: &[$field],
                 is_inverse: bool,
@@ -127,11 +121,11 @@ macro_rules! impl_ntt {
                 }
             }
 
-            fn initialize_domain(primitive_root: ScalarField, ctx: &DeviceContext) -> CudaResult<()> {
+            fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaResult<()> {
                 unsafe { initialize_ntt_domain(primitive_root, ctx).wrap() }
             }
 
-            fn get_default_ntt_config() -> NTTConfig<'static, ScalarField> {
+            fn get_default_ntt_config() -> NTTConfig<'static, $field> {
                 unsafe { default_ntt_config() }
             }
         }
@@ -141,6 +135,7 @@ macro_rules! impl_ntt {
 #[macro_export]
 macro_rules! impl_ntt_tests {
     (
+      $field:ident,
       $field_config:ident
     ) => {
         fn reverse_bit_order(n: u32, order: u32) -> u32 {
@@ -170,18 +165,18 @@ macro_rules! impl_ntt_tests {
             let ctx = get_default_device_context();
             // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
             // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
-            <$field_config as NTT<$field_config>>::initialize_domain(
-                <$field_config as CurveConfig>::ScalarField::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()),
+            $field_config::initialize_domain(
+                $field::from_ark(Fr::get_root_of_unity(test_size as u64).unwrap()),
                 &ctx,
             )
             .unwrap();
             let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
 
-            let scalars: Vec<<$field_config as CurveConfig>::ScalarField> = generate_random_scalars(test_size);
+            let scalars: Vec<$field> = generate_random_scalars(test_size);
 
-            let config = <$field_config as NTT<$field_config>>::get_default_ntt_config();
-            let mut ntt_result = vec![<$field_config as CurveConfig>::ScalarField::zero(); test_size];
-            <$field_config as NTT<$field_config>>::ntt(&scalars, false, &config, &mut ntt_result).unwrap();
+            let config = $field_config::get_default_ntt_config();
+            let mut ntt_result = vec![$field::zero(); test_size];
+            $field_config::ntt(&scalars, false, &config, &mut ntt_result).unwrap();
             assert_ne!(ntt_result, scalars);
 
             let ark_scalars = scalars
@@ -198,8 +193,8 @@ macro_rules! impl_ntt_tests {
                 .collect::<Vec<Fr>>();
             assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
-            let mut intt_result = vec![<$field_config as CurveConfig>::ScalarField::zero(); test_size];
-            <$field_config as NTT<$field_config>>::ntt(&ntt_result, true, &config, &mut intt_result).unwrap();
+            let mut intt_result = vec![$field::zero(); test_size];
+            $field_config::ntt(&ntt_result, true, &config, &mut intt_result).unwrap();
 
             assert_eq!(intt_result, scalars);
             // check that ntt_result wasn't mutated by the latest `ntt` call
@@ -214,33 +209,27 @@ macro_rules! impl_ntt_tests {
             let ctx = get_default_device_context();
             // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
             // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
-            <$field_config as NTT<$field_config>>::initialize_domain(
-                <$field_config as CurveConfig>::ScalarField::from_ark(test_size_rou),
-                &ctx,
-            )
-            .unwrap();
+            $field_config::initialize_domain($field::from_ark(test_size_rou), &ctx).unwrap();
             let ark_small_domain = GeneralEvaluationDomain::<Fr>::new(small_size)
                 .unwrap()
                 .get_coset(test_size_rou)
                 .unwrap();
             let ark_large_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
 
-            let mut scalars: Vec<<$field_config as CurveConfig>::ScalarField> = generate_random_scalars(small_size);
+            let mut scalars: Vec<$field> = generate_random_scalars(small_size);
 
-            let mut config = <$field_config as NTT<$field_config>>::get_default_ntt_config();
+            let mut config = $field_config::get_default_ntt_config();
             config.ordering = Ordering::kNR;
-            let mut ntt_result = vec![<$field_config as CurveConfig>::ScalarField::zero(); test_size];
-            <$field_config as NTT<$field_config>>::ntt(&scalars, false, &config, &mut ntt_result[..small_size])
-                .unwrap();
+            let mut ntt_result = vec![$field::zero(); test_size];
+            $field_config::ntt(&scalars, false, &config, &mut ntt_result[..small_size]).unwrap();
             assert_ne!(ntt_result[..small_size], scalars);
-            config.coset_gen = <$field_config as CurveConfig>::ScalarField::from_ark(test_size_rou);
-            <$field_config as NTT<$field_config>>::ntt(&scalars, false, &config, &mut ntt_result[small_size..])
-                .unwrap();
-            let mut ntt_large_result = vec![<$field_config as CurveConfig>::ScalarField::zero(); test_size];
+            config.coset_gen = $field::from_ark(test_size_rou);
+            $field_config::ntt(&scalars, false, &config, &mut ntt_result[small_size..]).unwrap();
+            let mut ntt_large_result = vec![$field::zero(); test_size];
             // back to non-coset NTT
-            config.coset_gen = <$field_config as CurveConfig>::ScalarField::one();
-            scalars.resize(test_size, <$field_config as CurveConfig>::ScalarField::zero());
-            <$field_config as NTT<$field_config>>::ntt(&scalars, false, &config, &mut ntt_large_result).unwrap();
+            config.coset_gen = $field::one();
+            scalars.resize(test_size, $field::zero());
+            $field_config::ntt(&scalars, false, &config, &mut ntt_large_result).unwrap();
             assert_eq!(ntt_result, ntt_large_result);
 
             let mut ark_scalars = scalars
@@ -260,11 +249,10 @@ macro_rules! impl_ntt_tests {
             ark_large_domain.fft_in_place(&mut ark_large_scalars);
             assert_eq!(ark_large_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
 
-            config.coset_gen = <$field_config as CurveConfig>::ScalarField::from_ark(test_size_rou);
+            config.coset_gen = $field::from_ark(test_size_rou);
             config.ordering = Ordering::kRN;
-            let mut intt_result = vec![<$field_config as CurveConfig>::ScalarField::zero(); small_size];
-            <$field_config as NTT<$field_config>>::ntt(&ntt_result[small_size..], true, &config, &mut intt_result)
-                .unwrap();
+            let mut intt_result = vec![$field::zero(); small_size];
+            $field_config::ntt(&ntt_result[small_size..], true, &config, &mut intt_result).unwrap();
             assert_eq!(intt_result, scalars[..small_size]);
 
             ark_small_domain.ifft_in_place(&mut ark_scalars);
