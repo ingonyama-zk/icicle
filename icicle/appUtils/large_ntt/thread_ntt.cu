@@ -218,7 +218,7 @@ class NTTEngine {
     #pragma unroll
     for (int i = 0; i < 7; i++)
     {
-      W[i] = test_scalar::omega8(((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*i);
+      W[i] = test_scalar::omega8(((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1));
     }
   }
 

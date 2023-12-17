@@ -120,7 +120,7 @@ do { \
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
     res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    // res[i]= i<1000? test_scalar::one() : res[i-1000];
+    // res[i]= i<1000? test_scalar::omega(2) : res[i-1000];
 }
 
 void incremental_values(test_scalar* res, uint32_t count) {
@@ -135,8 +135,8 @@ int main(int argc, const char** argv) {
   cudaEvent_t start, stop;
   float       time;
 
-  int NOF_VALS = 2048*84*3*260;
-  // int NOF_VALS = 2048;
+  // int NOF_VALS = 2048*84*3*260;
+  int NOF_VALS = 2048;
   
   if(argc!=3) {
     fprintf(stderr, "Usage:  %s <nttCount> <repeatCount>\n", argv[0]);
@@ -194,14 +194,20 @@ int main(int argc, const char** argv) {
   // std::cout << test_scalar::win3(7) <<std::endl;
 
 
-  random_samples(cpuData, NOF_VALS);
-  // incremental_values(cpuData, NOF_VALS);
+  // random_samples(cpuData, NOF_VALS);
+  incremental_values(cpuData, NOF_VALS);
 
   for (int i = 0; i < NOF_VALS; i++)
   {
     cpuDataUint4[i] = cpuData[i].load_half(false);
     cpuDataUint4[NOF_VALS + i] = cpuData[i].load_half(true);
   }
+
+  // for (int i = 0; i < 2*NOF_VALS; i++)
+  // {
+  //   std::cout <<cpuDataUint4[i].w<<std::endl;
+  // }
+
   
 
   // $CUDA(cudaFuncSetAttribute(ntt_kernel_split_transpose, cudaFuncAttributeMaxDynamicSharedMemorySize, 2112*3*sizeof(uint4)));
@@ -262,9 +268,9 @@ int main(int argc, const char** argv) {
     int numSMs = prop.multiProcessorCount;
 
     std::cout << "Number of SMs: " << numSMs << std::endl;
-  for(int i=0;i< 5;i++)
+  // for(int i=0;i< 5;i++)
   //   ntt_kernel_split_transpose<<<3*84*260, 128, 2048*sizeof(test_scalar)>>>(gpuData, gpuData);
-    ntt64<<<84*3*4, 64, 512*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4, 1);
+    ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4, NOF_VALS ,1);
     // ntt_kernel_split_transpose<<<84*3*260, 128, 2048*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
     // ntt_kernel_split_transpose<<<84*3*260, 128, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
     // ntt_kernel_split_transpose<<<1, 17, 2112*sizeof(uint4)>>>(gpuDataUint4, gpuDataUint4);
@@ -291,6 +297,11 @@ int main(int argc, const char** argv) {
     cpuData[i].store_half(cpuDataUint4[i], false);
     cpuData[i].store_half(cpuDataUint4[NOF_VALS + i], true);
   }
+
+  // for (int i = 0; i < 2*NOF_VALS; i++)
+  // {
+  //   std::cout <<cpuDataUint4[i].w<<std::endl;
+  // }
 
   // #if !defined(COMPUTE_ONLY)
   printf("output\n");
