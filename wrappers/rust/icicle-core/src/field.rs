@@ -97,3 +97,50 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS,
         Self::from_bytes_le(&ark_bigint.to_bytes_le())
     }
 }
+
+#[macro_export]
+macro_rules! impl_scalar_field {
+    (
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident
+    ) => {
+        #[derive(Debug, PartialEq, Copy, Clone)]
+        pub struct $field_cfg {}
+
+        impl FieldConfig for $field_cfg {
+            #[cfg(feature = "arkworks")]
+            type ArkField = Fr;
+        }
+
+        pub type $field_name = Field<$num_limbs, $field_cfg>;
+
+        extern "C" {
+            fn GenerateScalars(scalars: *mut $field_name, size: usize);
+        }
+
+        pub(crate) fn generate_random_scalars(size: usize) -> Vec<$field_name> {
+            let mut res = vec![$field_name::zero(); size];
+            unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut $field_name, size) };
+            res
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_base_field {
+    (
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident
+    ) => {
+        #[derive(Debug, PartialEq, Copy, Clone)]
+        pub struct $field_cfg {}
+
+        impl FieldConfig for $field_cfg {
+            #[cfg(feature = "arkworks")]
+            type ArkField = Fq;
+        }
+        pub type $field_name = Field<$num_limbs, $field_cfg>;
+    };
+}

@@ -167,41 +167,12 @@ where
 #[macro_export]
 macro_rules! impl_curve {
     (
-        $scalar_limbs:ident,
-        $base_limbs:ident,
+        $scalar_field:ident,
+        $base_field:ident
     ) => {
-        #[derive(Debug, PartialEq, Copy, Clone)]
-        pub struct ScalarCfg {}
-
-        impl FieldConfig for ScalarCfg {
-            #[cfg(feature = "arkworks")]
-            type ArkField = Fr;
-        }
-
-        pub type ScalarField = Field<SCALAR_LIMBS, ScalarCfg>;
-
-        extern "C" {
-            fn GenerateScalars(scalars: *mut ScalarField, size: usize);
-        }
-
-        pub(crate) fn generate_random_scalars(size: usize) -> Vec<ScalarField> {
-            let mut res = vec![ScalarField::zero(); size];
-            unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut ScalarField, size) };
-            res
-        }
-
-        #[derive(Debug, PartialEq, Copy, Clone)]
-        pub struct BaseCfg {}
-
-        impl FieldConfig for BaseCfg {
-            #[cfg(feature = "arkworks")]
-            type ArkField = Fq;
-        }
-
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct CurveCfg {}
 
-        pub type BaseField = Field<$base_limbs, BaseCfg>;
         pub type G1Affine = Affine<CurveCfg>;
         pub type G1Projective = Projective<CurveCfg>;
 
@@ -213,8 +184,8 @@ macro_rules! impl_curve {
         }
 
         impl CurveConfig for CurveCfg {
-            type BaseField = BaseField;
-            type ScalarField = ScalarField;
+            type BaseField = $base_field;
+            type ScalarField = $scalar_field;
             type Affine = G1Affine;
             type Projective = G1Projective;
 

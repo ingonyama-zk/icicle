@@ -3,12 +3,15 @@ use crate::icicle_core::traits::FieldImpl;
 use ark_bls12_377::{g1::Config as ArkG1Config, Fq, Fr};
 use icicle_core::curve::{Affine, CurveConfig, Projective};
 use icicle_core::field::{Field, FieldConfig};
+use icicle_core::{impl_base_field, impl_scalar_field};
 use std::ffi::c_uint;
 
 pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 12;
 
-impl_curve!(SCALAR_LIMBS, BASE_LIMBS,);
+impl_scalar_field!(SCALAR_LIMBS, ScalarField, ScalarCfg);
+impl_base_field!(BASE_LIMBS, BaseField, BaseCfg);
+impl_curve!(ScalarField, BaseField);
 
 #[cfg(test)]
 mod tests {
