@@ -145,7 +145,7 @@ __global__ void thread_ntt_kernel(test_scalar* out, test_scalar* in, uint32_t* n
   // }
 }
 
-__launch_bounds__(128)
+__launch_bounds__(64)
 // __global__ void ntt_kernel_split_transpose(test_scalar* out, test_scalar* in) {
 __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
   NTTEngine engine;
@@ -204,7 +204,7 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
     // }
     // if (threadIdx.x!=0) return;
     // engine.loadGlobalDataDep(in, dataIndex);
-    engine.loadGlobalData(in,blockIdx.x*2048*2,1,256*8); //todo - change function to fit global ntt
+    engine.loadGlobalData(in,blockIdx.x*512*2,1,64*8); //todo - change function to fit global ntt
     // engine.loadGlobalData(in,blockIdx.x*512*2,1,256*8); //todo - change function to fit global ntt
     // __syncthreads();
     // if (blockIdx.x ==0 && threadIdx.x ==0) printf("load global\n");
@@ -213,17 +213,18 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
     // engine.ntt16_win8ct2();
     // engine.twiddles256();
     // engine.ntt16_win8ct2();
-    #pragma unroll 1
-    for (uint32_t i=0;i<100;i++) {
+    // #pragma unroll 1
+    // for (uint32_t i=0;i<100;i++) {
     #pragma unroll 1
     for (uint32_t phase=0;phase<2;phase++) {
       // ntt32 produces a lot of instructions, so we put this in a loop
       // engine.ntt16_win8ct2();
       // engine.plus();
       // engine.twiddles256();
-      engine.twiddles256();
+      // engine.load_twiddles(threadIdx.x&0x7);
+      // engine.twiddles64(threadIdx.x&0x7);
       // engine.ntt16_win8ct2();
-      engine.ntt8win(engine.X[0], engine.X[1], engine.X[2], engine.X[3], engine.X[4],engine.X[5],engine.X[6],engine.X[7]);
+      // engine.ntt8win();
       // engine.ntt16_win8ct2();
       // engine.twiddles256();
       // engine.ntt16_win8ct2();
@@ -284,8 +285,40 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
     //   engine.ntt16_win8ct2();
     //   // engine.ntt16win();
     // }
-    engine.storeGlobalData(out,blockIdx.x*2048*2,1,256*8); //todo - change function to fit global ntt
+    engine.storeGlobalData(out,blockIdx.x*512*2,1,64*8); //todo - change function to fit global ntt
     // engine.storeGlobalData(out,blockIdx.x*512*2,1,256*8); //todo - change function to fit global ntt
     // engine.storeGlobalDataDep(out, dataIndex); //todo - change function to fit global ntt
   // }
+}
+
+__launch_bounds__(64)
+__global__ void ntt64(uint4* out, uint4* in, int size) {
+  NTTEngine engine;
+  extern __shared__ uint4 shmem[];
+  
+  engine.initializeRoot(false);
+    
+  #pragma unroll 1
+  for (int i = 0; i < size; i++)
+  {
+    engine.loadGlobalData(in,blockIdx.x*512*2,1,64*8);
+
+    #pragma unroll 1
+    for(uint32_t phase=0;phase<2;phase++) {
+      // this code produces a lot of instructions, so we put this in a loop
+      // engine.twiddles64();
+      engine.ntt8win(); 
+      if(phase==0) {
+        engine.SharedDataColumns2(shmem, true, false); //store low
+        __syncthreads();
+        engine.SharedDataRows2(shmem, false, false); //load low
+        engine.SharedDataRows2(shmem, true, true); //store high
+        __syncthreads();
+        engine.SharedDataColumns2(shmem, false, true); //load high
+        engine.twiddles64();
+      }
+    }
+
+    engine.storeGlobalData(in,blockIdx.x*512*2,1,64*8);
+  }
 }

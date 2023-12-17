@@ -208,11 +208,20 @@ class NTTEngine {
   // typedef Math::Value Value;
   
   // uint64_t threadRoot;
-  test_scalar    X[16];
+  test_scalar    X[8];
+  test_scalar    W[7];
 
   // __device__ __forceinline__ void initializeRoot() {
   //   threadRoot=root1024(threadIdx.x & 0x1F);
   // }
+  __device__ __forceinline__ void initializeRoot(bool stride) {
+    #pragma unroll
+    for (int i = 0; i < 7; i++)
+    {
+      W[i] = test_scalar::omega8(((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*i);
+    }
+  }
+
   __device__ __forceinline__ void loadGlobalDataDep(test_scalar* data, uint32_t dataIndex) {
     // data+=1024*dataIndex + (threadIdx.x & 0x1F);
     data += 16*dataIndex;
@@ -238,7 +247,7 @@ class NTTEngine {
   __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
     
     if (stride == 1){
-      data += block_offset + (threadIdx.x & 0xf) + 256 * (threadIdx.x >> 4); //block offset, thread offset, ntt_offset
+      data += block_offset + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
       data += block_offset + (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
@@ -247,8 +256,8 @@ class NTTEngine {
     
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      X[i].store_half(data[16*i*stride], false);
-      X[i].store_half(data[16*i*stride + high_bits_offset], true);
+      X[i].store_half(data[8*i*stride], false);
+      X[i].store_half(data[8*i*stride + high_bits_offset], true);
     }
     // #pragma unroll
     // for(uint32_t i=0;i<16;i++) 
@@ -259,7 +268,7 @@ class NTTEngine {
   __device__ __forceinline__ void storeGlobalData(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
     
     if (stride == 1){
-      data += block_offset + (threadIdx.x & 0xf) + 256 * (threadIdx.x >> 4); //block offset, thread offset, ntt_offset
+      data += block_offset + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
       // printf("dfghdf %d %d\n",threadIdx.x, block_offset + (threadIdx.x & 0xf) + 256 * (threadIdx.x >> 4));
     }
     else {
@@ -272,8 +281,8 @@ class NTTEngine {
     // uint4 zero{0,0,0,0};
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      data[16*i*stride] = X[i].load_half(false);
-      data[16*i*stride + high_bits_offset] = X[i].load_half(true);
+      data[8*i*stride] = X[i].load_half(false);
+      data[8*i*stride + high_bits_offset] = X[i].load_half(true);
     }
       // data[16*i*stride] = zero;
     // #pragma unroll
@@ -330,14 +339,14 @@ class NTTEngine {
     
   }
 
-  __device__ __forceinline__ void ntt8_2() {
-    for (int i = 0; i < 2; i++)
-    {
-        // ntt8(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
-        ntt8win(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
-    }
+  // __device__ __forceinline__ void ntt8_2() {
+  //   for (int i = 0; i < 2; i++)
+  //   {
+  //       // ntt8(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
+  //       ntt8win(X[8*i], X[8*i+1], X[8*i+2], X[8*i+3], X[8*i+4], X[8*i+5], X[8*i+6], X[8*i+7]);
+  //   }
     
-  }
+  // }
 
   __device__ __forceinline__ void ntt2(test_scalar& X0, test_scalar& X1) {
     test_scalar T;
@@ -427,68 +436,58 @@ class NTTEngine {
     X4 = X4 - T;   
   }
 
-  __device__ __forceinline__ void ntt8win(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3, 
-                                       test_scalar& X4, test_scalar& X5, test_scalar& X6, test_scalar& X7) {
+  __device__ __forceinline__ void ntt8win() {
     test_scalar T;
-
-    
-    
-    
-    
-    
-    
-    
-    
 
     // out of 56,623,104 possible mappings, we have:
     // X7 = X7 * test_scalar::omega4(3);
     // X3 = X3 * test_scalar::omega4(3);
-    T  = X3 - X7;
-    X7 = X3 + X7;
+    T  = X[3] - X[7];
+    X[7] = X[3] + X[7];
     // X1 = X1 * test_scalar::omega4(3);
     // X5 = X5 * test_scalar::omega4(3);
-    X3 = X1 - X5;
-    X5 = X1 + X5;
+    X[3] = X[1] - X[5];
+    X[5] = X[1] + X[5];
     // X2 = X2 * test_scalar::omega4(3);
     // X6 = X6 * test_scalar::omega4(3);
-    X1 = X2 + X6;
-    X2 = X2 - X6;
+    X[1] = X[2] + X[6];
+    X[2] = X[2] - X[6];
     // X0 = X0 * test_scalar::omega4(3);
     // X4 = X4 * test_scalar::omega4(3);
-    X6 = X0 + X4;
-    X0 = X0 - X4;
+    X[6] = X[0] + X[4];
+    X[0] = X[0] - X[4];
   
     //T  = T * test_scalar::omega4(4);
-    X2 = X2 * test_scalar::omega4(4);
+    X[2] = X[2] * test_scalar::omega4(4);
     
-    X4 = X6 + X1;
-    X6 = X6 - X1;
-    X1 = X3 + T;
-    X3 = X3 - T;
-    T  = X5 + X7;
-    X5 = X5 - X7;
-    X7 = X0 + X2;
-    X0 = X0 - X2;
+    X[4] = X[6] + X[1];
+    X[6] = X[6] - X[1];
+    X[1] = X[3] + T;
+    X[3] = X[3] - T;
+    T  = X[5] + X[7];
+    X[5] = X[5] - X[7];
+    X[7] = X[0] + X[2];
+    X[0] = X[0] - X[2];
   
     //X1 = X1 * test_scalar::omega4(2);
-    X1 = X1 * test_scalar::win3(6);
-    X5 = X5 * test_scalar::omega4(4) ;
+    X[1] = X[1] * test_scalar::win3(6);
+    X[5] = X[5] * test_scalar::omega4(4) ;
     //X3 = X3 * test_scalar::omega4(6);
-    X3 = X3 * test_scalar::win3(7);
+    X[3] = X[3] * test_scalar::win3(7);
     
     
-    X2 = X6 + X5;
-    X6 = X6 - X5;
+    X[2] = X[6] + X[5];
+    X[6] = X[6] - X[5];
 
-    X5 = X1 + X3;
-    X3 = X1 - X3;
+    X[5] = X[1] + X[3];
+    X[3] = X[1] - X[3];
 
-    X1 = X7 + X5;
-    X5 = X7 - X5;
-    X7 = X0 - X3;
-    X3 = X0 + X3;
-    X0 = X4 + T;
-    X4 = X4 - T;   
+    X[1] = X[7] + X[5];
+    X[5] = X[7] - X[5];
+    X[7] = X[0] - X[3];
+    X[3] = X[0] + X[3];
+    X[0] = X[4] + T;
+    X[4] = X[4] - T;   
   }
   
   __device__ __forceinline__ void ntt16() {
@@ -515,32 +514,32 @@ class NTTEngine {
      
   }
 
-  __device__ __forceinline__ void ntt16_win8ct2() {
-    // #pragma unroll
-    // for (int i = 1; i < 16; i++)
-    // {
-    //   // X[i] = X[i] * test_scalar::omega16(((blockIdx.x * blockDim.x + threadIdx.x) >> 8) * i);
-    //   X[i] = X[i] * test_scalar::omega4(3);
-    //   // X[i] = X[i] * X[i];
-    // }
+  // __device__ __forceinline__ void ntt16_win8ct2() {
+  //   // #pragma unroll
+  //   // for (int i = 1; i < 16; i++)
+  //   // {
+  //   //   // X[i] = X[i] * test_scalar::omega16(((blockIdx.x * blockDim.x + threadIdx.x) >> 8) * i);
+  //   //   X[i] = X[i] * test_scalar::omega4(3);
+  //   //   // X[i] = X[i] * X[i];
+  //   // }
      
-    #pragma unroll
-     for(uint32_t i=0;i<2;i++)
-       ntt8win(X[i], X[i+2], X[i+4], X[i+6], X[i+8], X[i+10], X[i+12], X[i+14]);
+  //   #pragma unroll
+  //    for(uint32_t i=0;i<2;i++)
+  //      ntt8win(X[i], X[i+2], X[i+4], X[i+6], X[i+8], X[i+10], X[i+12], X[i+14]);
     
-     X[3] = X[3] * test_scalar::omega4(1);
-     X[5] = X[5] * test_scalar::omega4(2);
-     X[7] = X[7] * test_scalar::omega4(3);
-     X[9] = X[9] * test_scalar::omega4(4);
-     X[11] = X[11] * test_scalar::omega4(5);
-     X[13] = X[13] * test_scalar::omega4(6);
-     X[15] = X[15] * test_scalar::omega4(7);
+  //    X[3] = X[3] * test_scalar::omega4(1);
+  //    X[5] = X[5] * test_scalar::omega4(2);
+  //    X[7] = X[7] * test_scalar::omega4(3);
+  //    X[9] = X[9] * test_scalar::omega4(4);
+  //    X[11] = X[11] * test_scalar::omega4(5);
+  //    X[13] = X[13] * test_scalar::omega4(6);
+  //    X[15] = X[15] * test_scalar::omega4(7);
      
-     #pragma unroll
-     for(uint32_t i=0;i<16;i+=2)
-       ntt2(X[i], X[i+1]);
+  //    #pragma unroll
+  //    for(uint32_t i=0;i<16;i+=2)
+  //      ntt2(X[i], X[i+1]);
      
-  }
+  // }
 
   __device__ __forceinline__ void ntt16win() {
     test_scalar temp;
@@ -997,8 +996,8 @@ class NTTEngine {
   __device__ __forceinline__ void SharedDataColumns2(uint4 *shmem, bool store, bool high_bits) {
     // const uint32_t stride=blockDim.x+1;
 
-    uint32_t ntt_id = threadIdx.x >> 4;
-    uint32_t column_id = threadIdx.x & 0xf;
+    uint32_t ntt_id = threadIdx.x >> 3;
+    uint32_t column_id = threadIdx.x & 0x7;
     
     
     // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
@@ -1010,13 +1009,13 @@ class NTTEngine {
     for(uint32_t i=0;i<8;i++) {
       // if (threadIdx.x==0) printf("ntt id %d row id %d col id %d shmem add %d \n", ntt_id, row_id, column_id, ntt_id * 256 + row_id * 16 + column_id);
       if (store) {
-        shmem[ntt_id * 256 + i * 16 + column_id] = X[i].load_half(high_bits);           // note transpose here
+        shmem[ntt_id * 64 + i * 8 + column_id] = X[i].load_half(high_bits);           // note transpose here
         // shmem[ntt_id * 264 + (row_id * 33)/2 + column_id] = X[i+j*4].load_half(high_bits);           // note transpose here
         // temp.w = threadIdx.x;
         // shmem[ntt_id * 264 + (row_id * 33)/2 + column_id] = temp;           // note transpose here
       }
       else {
-        X[i].store_half(shmem[ntt_id * 256 + i * 16 + column_id], high_bits);
+        X[i].store_half(shmem[ntt_id * 64 + i * 8 + column_id], high_bits);
         // X[i+j*4].store_half(shmem[ntt_id * 264 + (row_id * 33)/2 + column_id], high_bits);
       }
     }
@@ -1025,8 +1024,8 @@ class NTTEngine {
   __device__ __forceinline__ void SharedDataRows2(uint4 *shmem, bool store, bool high_bits) {
     // const uint32_t stride=blockDim.x+1;
 
-    uint32_t ntt_id = threadIdx.x >> 4;
-    uint32_t row_id = threadIdx.x & 0xf;
+    uint32_t ntt_id = threadIdx.x >> 3;
+    uint32_t row_id = threadIdx.x & 0x7;
     
     
     // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
@@ -1037,21 +1036,33 @@ class NTTEngine {
     for(uint32_t i=0;i<8;i++) {
       if (store) {
         // shmem[ntt_id * 264 + (row_id * 33)/2 + i] = X[i].load_half(high_bits);
-        shmem[ntt_id * 256 + row_id * 16 + i] = X[i].load_half(high_bits);
+        shmem[ntt_id * 64 + row_id * 8 + i] = X[i].load_half(high_bits);
       }
       else {
         // X[i].store_half(shmem[ntt_id * 264 + (row_id * 33)/2 + i] ,high_bits);   
-        X[i].store_half(shmem[ntt_id * 256 + row_id * 16 + i] ,high_bits);   
+        X[i].store_half(shmem[ntt_id * 64 + row_id * 8 + i] ,high_bits);   
       }
     }
   }
 
-  __device__ __forceinline__ void twiddles256() {
+  // __device__ __forceinline__ void load_twiddles(uint32_t ntt8_num) {
+  //   #pragma unroll 
+  //   for (int i = 1; i < 8; i++)
+  //   {
+  //     // X[i] = X[i] * test_scalar::omega8(threadIdx.x&0x7);
+  //     W[i-1] = test_scalar::omega8(ntt8_num);
+  //     // X[i] = X[i] * test_scalar::omega4(i);
+  //     // X[i] = X[i] * X[i];
+  //   }
+  // }
+
+  __device__ __forceinline__ void twiddles64() {
     #pragma unroll 
     for (int i = 1; i < 8; i++)
     {
-      // X[i] = X[i] * test_scalar::omega16(((blockIdx.x * blockDim.x + threadIdx.x) >> 8) * i);
-      X[i%16] = X[i%16] * test_scalar::omega4(3);
+      // X[i] = X[i] * test_scalar::omega8(threadIdx.x&0x7);
+      X[i] = X[i] * W[i-1];
+      // X[i] = X[i] * test_scalar::omega8(i);
       // X[i] = X[i] * X[i];
     }
   }

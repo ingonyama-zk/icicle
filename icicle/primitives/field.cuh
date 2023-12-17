@@ -118,6 +118,16 @@ public:
     return Field{omega.storages[i]};
   }
 
+  static HOST_DEVICE_INLINE Field omega8(uint32_t i)
+  {
+    // if (logn == 0) { return Field{CONFIG::one}; }
+
+    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+
+    storage_array<64, TLC> const omega = CONFIG::omega8;
+    return Field{omega.storages[i]};
+  }
+
 
   static HOST_INLINE Field omega(uint32_t logn)
   {
@@ -736,7 +746,8 @@ public:
   static HOST_INLINE Field rand_host()
   {
     std::random_device rd;
-    std::mt19937_64 generator(rd());
+    // std::mt19937_64 generator(rd());
+    std::mt19937_64 generator(rand()); //remove when finished debugging
     std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
