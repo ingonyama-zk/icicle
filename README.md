@@ -43,87 +43,33 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ### Prerequisites
 
-- [NVCC] (version 12.0 or newer)
-- cmake 3.18 and above
-- follow [these instructions](https://github.com/ingonyama-zk/icicle/tree/main/icicle#prerequisites-on-ubuntu)
-- Any Nvidia GPU
+- [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu) version 12.0 or newer.
+- [CMake]((https://cmake.org/files/)), version 3.18 and above. Latest version is recommended.
+- [GCC](https://gcc.gnu.org/install/download.html) version 9, latest version is recommended.
+- Any Nvidia GPU (which supports CUDA Toolkit version 12.0 or above).
 
-If you don't have access to a Nvidia GPU check out [google-colab](#google-colab). If you require more compute power and are looking to build or do research with ICICLE refer to our [grant program][GRANT_PROGRAM].
+Note: It is possible to use CUDA 11 for cards which dont support CUDA 12, however we dont offically support this version and in the future there may be issues.
 
+### Accessing Hardware
 
-### Steps
+If you don't have access to a Nvidia GPU we have some options for you. 
 
-1. Define or select a curve for your application; we've provided a [template][CRV_TEMPLATE] for defining a curve
-2. Include the curve in [`curve_config.cuh`][CRV_CONFIG]
-3. Now you can build the ICICLE library using nvcc
+Checkout [Google Colab](https://colab.google/). Google Colab offers a free [T4 GPU](https://www.nvidia.com/en-us/data-center/tesla-t4/) instance and ICICLE can be used with it, refrence this guide for setting up your [Google Colab workplace][GOOGLE-COLAB-ICICLE].
 
-```sh
-mkdir -p build
-nvcc -o build/<binary_name> ./icicle/curves/index.cu -lib -arch=native
-```
-
-### Testing the CUDA code
-
-We are using [googletest] library for testing. To build and run [the test suite](./icicle/README.md) for finite field and elliptic curve arithmetic, run from the `icicle` folder:
-
-For testing, ensure the `BUILD_TESTS` option is enabled in cmake. If not, toggle it on by adding `-DBUILD_TESTS=ON` in the cmake configuration command:
-
-```sh
-cmake -S . -B build -DBUILD_TESTS=ON
-```
-
-Proceed with the following commands:
-
-```sh
-mkdir -p build
-cmake -S . -B build
-cmake --build build
-cd build && ctest
-```
-
-NOTE: If you are using cmake versions < 3.24 add `-DCUDA_ARCH=<target_cumpute_arch>` to the command `cmake -S . -B build`
+If you require more compute and have an interesting research project, we have a [bounties and grants program][GRANT_PROGRAM].
 
 
-### Rust Bindings
+### Build systems
 
-For convenience, we also provide rust bindings to the ICICLE library for the following primitives:
+ICICLE has three build systems.
 
-- MSM
-- NTT
-    - Forward NTT
-    - Inverse NTT
-- ECNTT
-    - Forward ECNTT
-    - Inverse NTT
-- Scalar Vector Multiplication
-- Point Vector Multiplication
+- [ICICLE core][ICICLE-CORE], C++ and CUDA
+- [ICICLE Rust][ICICLE-RUST] bindings
+- [ICICLE Golang][ICICLE-GO] bindings
 
-A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environment variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
+ICICLE core always needs to be build as part of the other build systems as it containse the core ICICLE primitves implemeted in Cuda. Refrence these guides for the different build systems, [ICICLE core guide][ICICLE-CORE-README], [ICICLE Rust guide][ICICLE-RUST-README] and [ICICLE Golang guide][ICICLE-GO-README].
 
-> NOTE: A GPU must be detectable and therefore installed if the `ARCH_TYPE` is not set.
-
-Once you have your parameters set, run:
-
-```sh
-cargo build --release
-```
-
-You'll find a release ready library at `target/release/libicicle_utils.rlib`.
-
-To benchmark and test the functionality available in RUST, run:
-
-```
-cargo bench
-cargo test -- --test-threads=1
-```
-
-The flag `--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.
-
-### Example Usage
-
-An example of using the Rust bindings library can be found in our [fast-danksharding implementation][FDI]
-
-### Supporting Additional Curves
+# Supporting Additional Curves
 
 Supporting additional curves can be done as follows:
 
@@ -198,14 +144,6 @@ docker build -t <name_of_your_choice> .
 docker run --gpus all -it <name_of_your_choice> /bin/bash
 ```
 
-## Google Colab
-
-[Colab](https://colab.google/) is a hosted Jupyter Notebook service that requires no setup to use and provides free access to computing resources including GPUS!
-
-You can easily run ICICLE in Google Colab on a free GPU instance, this is a great option for those who want to get started with ICICLE instantly without any local setup or GPU. 
-
-Follow this [guide][GOOGLE_COLAB_ICICLE] for more details.
-
 ## Contributions
 
 Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
@@ -259,7 +197,14 @@ See [LICENSE-MIT][LMIT] for details.
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
 [CMAKELISTS]: https://github.com/ingonyama-zk/icicle/blob/f0e6b465611227b858ec4590f4de5432e892748d/icicle/CMakeLists.txt#L28
-[GOOGLE_COLAB_ICICLE]: https://github.com/gkigiermo/rust-cuda-colab
-[GRANT_PROGRAM]: https://docs.google.com/forms/d/e/1FAIpQLSc967TnNwxZZ4akejcSi4KOUmGrEc68ZZV-FHLfo8KnP1wbpg/viewform
+[GOOGLE-COLAB-ICICLE]: https://github.com/gkigiermo/rust-cuda-colab
+[GRANT_PROGRAM]: https://medium.com/@ingonyama/icicle-for-researchers-grants-challenges-9be1f040998e
+[ICICLE-CORE]: ./icicle/
+[ICICLE-RUST]: ./wrappers/rust/
+[ICICLE-GO]: ./goicicle/
+[ICICLE-CORE-README]: ./icicle/README.md
+[ICICLE-RUST-README]: ./wrappers/rust/README.md
+[ICICLE-GO-README]: ./goicicle/README.md
+
 
 <!-- End Links -->
