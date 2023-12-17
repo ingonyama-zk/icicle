@@ -292,16 +292,16 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
 }
 
 __launch_bounds__(64)
-__global__ void ntt64(uint4* out, uint4* in, int size) {
+__global__ void ntt64(uint4* out, uint4* in, uint32_t size, uint32_t stride) {
   NTTEngine engine;
   extern __shared__ uint4 shmem[];
   
-  engine.initializeRoot(false);
+  engine.initializeRoot(stride>1);
     
   #pragma unroll 1
-  for (int i = 0; i < size; i++)
+  for (int i = 0; i < 1; i++) //todo - function of size
   {
-    engine.loadGlobalData(in,blockIdx.x*512*2,1,64*8);
+    engine.loadGlobalData(in,blockIdx.x*64*8,stride,size); //todo - parametize
 
     #pragma unroll 1
     for(uint32_t phase=0;phase<2;phase++) {
@@ -319,6 +319,6 @@ __global__ void ntt64(uint4* out, uint4* in, int size) {
       }
     }
 
-    engine.storeGlobalData(in,blockIdx.x*512*2,1,64*8);
+    engine.storeGlobalData(in,blockIdx.x*64*8,stride,size);
   }
 }
