@@ -6,14 +6,7 @@
 mkdir -p build; cmake -S . -B build; cmake --build build; cd build && ctest; cd ..
 ```
 
-## Prerequisites on Ubuntu
-
-Before proceeding, make sure the following software installed:
-
-1. CMake at least version 3.18, which can be downloaded from [cmake.org](https://cmake.org/files/)
-   It is recommended to have the latest version installed.
-2. [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu) version 12.0 or newer.
-3. GCC - version 9 or newer recommended.
+The command above will build ICICLE Core and run the ctest.
 
 ## Troubleshooting
 
@@ -81,3 +74,14 @@ Otherwise create a symlink. For example, if the CUDA toolkit is installed with a
 Alternatively, you can replace the old CUDA root with a symlink to the new CUDA installation with the following command:
 
 `ln -sf /usr/local/cuda-12.1/ /usr/lib/nvidia-cuda-toolkit/`
+
+### 8 - Error while loading shared libraries
+
+`cmake: error while loading shared libraries: libssl.so.10: cannot open shared object file: No such file or directory`
+
+Make sure `libssl` is installed.
+
+```
+sudo apt-get update
+sudo apt-get install libssl1.0.0 libssl-dev
+```

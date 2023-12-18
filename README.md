@@ -67,7 +67,7 @@ ICICLE has three build systems.
 - [ICICLE Rust][ICICLE-RUST] bindings
 - [ICICLE Golang][ICICLE-GO] bindings
 
-ICICLE core always needs to be build as part of the other build systems as it containse the core ICICLE primitves implemeted in Cuda. Refrence these guides for the different build systems, [ICICLE core guide][ICICLE-CORE-README], [ICICLE Rust guide][ICICLE-RUST-README] and [ICICLE Golang guide][ICICLE-GO-README].
+ICICLE core always needs to be built as part of the other build systems as it contains the core ICICLE primitives implemented in CUDA. Reference these guides for the different build systems, [ICICLE core guide][ICICLE-CORE-README], [ICICLE Rust guide][ICICLE-RUST-README] and [ICICLE Golang guide][ICICLE-GO-README].
 
 # Supporting Additional Curves
 
