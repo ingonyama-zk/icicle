@@ -131,7 +131,7 @@ public:
   }
 
 
-  static HOST_INLINE Field omega(uint32_t logn)
+  static HOST_DEVICE_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 

@@ -209,7 +209,8 @@ class NTTEngine {
   
   // uint64_t threadRoot;
   test_scalar    X[8];
-  test_scalar    W[7];
+  test_scalar    WI[7];
+  test_scalar    WE[8];
 
   // __device__ __forceinline__ void initializeRoot() {
   //   threadRoot=root1024(threadIdx.x & 0x1F);
@@ -218,7 +219,7 @@ class NTTEngine {
     #pragma unroll
     for (int i = 0; i < 7; i++)
     {
-      W[i] = test_scalar::omega8(((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1));
+      WI[i] = test_scalar::omega8(((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1));
     }
   }
 
@@ -258,6 +259,16 @@ class NTTEngine {
     for(uint32_t i=0;i<8;i++) {
       X[i].store_half(data[8*i*stride], false);
       X[i].store_half(data[8*i*stride + high_bits_offset], true);
+    }
+    #pragma unroll
+    for(uint32_t i=0;i<8;i++) {
+      WE[i].store_half(data[8*i*stride], false);
+      WE[i].store_half(data[8*i*stride + high_bits_offset], true);
+    }
+    #pragma unroll
+    for(uint32_t i=0;i<7;i++) {
+      WI[i].store_half(data[8*i*stride], false);
+      WI[i].store_half(data[8*i*stride + high_bits_offset], true);
     }
     // #pragma unroll
     // for(uint32_t i=0;i<16;i++) 
@@ -1061,7 +1072,18 @@ class NTTEngine {
     for (int i = 1; i < 8; i++)
     {
       // X[i] = X[i] * test_scalar::omega8(threadIdx.x&0x7);
-      X[i] = X[i] * W[i-1];
+      X[i] = X[i] * WI[i-1];
+      // X[i] = X[i] * test_scalar::omega8(i);
+      // X[i] = X[i] * X[i];
+    }
+  }
+
+  __device__ __forceinline__ void twiddlesExternal() {
+    #pragma unroll 
+    for (int i = 1; i < 8; i++)
+    {
+      // X[i] = X[i] * test_scalar::omega8(threadIdx.x&0x7);
+      X[i] = X[i] * WE[i];
       // X[i] = X[i] * test_scalar::omega8(i);
       // X[i] = X[i] * X[i];
     }
