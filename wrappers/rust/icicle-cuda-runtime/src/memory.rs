@@ -3,7 +3,7 @@ use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
 use std::mem::{size_of, MaybeUninit};
 use std::os::raw::c_void;
-use std::{ptr, slice};
+use std::slice;
 
 /// Fixed-size device-side slice.
 #[derive(Debug)]

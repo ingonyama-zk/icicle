@@ -1,5 +1,17 @@
 use icicle_cuda_runtime::device_context::DeviceContext;
-use std::os::raw::c_int;
+
+/**
+ * @enum NTTDir
+ * Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
+ * evaluations from coefficients while inverse NTT computes coefficients from evaluations.
+ */
+ #[allow(non_camel_case_types)]
+ #[repr(C)]
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+ pub enum NTTDir {
+     kForward,
+     kInverse,
+ }
 
 /**
  * @enum Ordering
@@ -39,7 +51,7 @@ pub struct NTTConfig<'a, S> {
     /** Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used). */
     pub coset_gen: S,
     /** The number of NTTs to compute. Default value: 1. */
-    pub batch_size: c_int,
+    pub batch_size: i32,
     /** Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`. */
     pub ordering: Ordering,
     /** True if inputs are on device and false if they're on host. Default value: false. */

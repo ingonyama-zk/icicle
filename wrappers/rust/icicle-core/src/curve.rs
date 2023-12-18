@@ -33,7 +33,7 @@ pub struct Affine<T, C: CurveConfig> {
     p: PhantomData<C>,
 }
 
-impl<const NUM_LIMBS: usize, F, C> Affine<Field<NUM_LIMBS, F>, C>
+impl<const BASE_LIMBS: usize, F, C> Affine<Field<BASE_LIMBS, F>, C>
 where
     F: FieldConfig,
     C: CurveConfig,
@@ -42,70 +42,70 @@ where
     // both as a handy default as well as a representation of zero points in other codebases
     pub fn zero() -> Self {
         Affine {
-            x: Field::<NUM_LIMBS, F>::zero(),
-            y: Field::<NUM_LIMBS, F>::zero(),
+            x: Field::<BASE_LIMBS, F>::zero(),
+            y: Field::<BASE_LIMBS, F>::zero(),
             p: PhantomData,
         }
     }
 
-    pub fn set_limbs(x: &[u32], y: &[u32]) -> Self {
+    pub fn from_limbs(x: [u64; BASE_LIMBS], y: [u64; BASE_LIMBS]) -> Self {
         Affine {
-            x: Field::<NUM_LIMBS, F>::set_limbs(x),
-            y: Field::<NUM_LIMBS, F>::set_limbs(y),
+            x: Field::<BASE_LIMBS, F>::from_limbs(x),
+            y: Field::<BASE_LIMBS, F>::from_limbs(y),
             p: PhantomData,
         }
     }
 
-    pub fn to_projective(&self) -> Projective<Field<NUM_LIMBS, F>, C> {
+    pub fn to_projective(&self) -> Projective<Field<BASE_LIMBS, F>, C> {
         Projective {
             x: self.x,
             y: self.y,
-            z: Field::<NUM_LIMBS, F>::one(),
+            z: Field::<BASE_LIMBS, F>::one(),
             p: PhantomData,
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> From<Affine<Field<NUM_LIMBS, F>, C>> for Projective<Field<NUM_LIMBS, F>, C>
+impl<const BASE_LIMBS: usize, F, C> From<Affine<Field<BASE_LIMBS, F>, C>> for Projective<Field<BASE_LIMBS, F>, C>
 where
     F: FieldConfig,
     C: CurveConfig,
 {
-    fn from(item: Affine<Field<NUM_LIMBS, F>, C>) -> Self {
+    fn from(item: Affine<Field<BASE_LIMBS, F>, C>) -> Self {
         Self {
             x: item.x,
             y: item.y,
-            z: Field::<NUM_LIMBS, F>::one(),
+            z: Field::<BASE_LIMBS, F>::one(),
             p: PhantomData,
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> Projective<Field<NUM_LIMBS, F>, C>
+impl<const BASE_LIMBS: usize, F, C> Projective<Field<BASE_LIMBS, F>, C>
 where
     F: FieldConfig,
     C: CurveConfig,
 {
     pub fn zero() -> Self {
         Projective {
-            x: Field::<NUM_LIMBS, F>::zero(),
-            y: Field::<NUM_LIMBS, F>::one(),
-            z: Field::<NUM_LIMBS, F>::zero(),
+            x: Field::<BASE_LIMBS, F>::zero(),
+            y: Field::<BASE_LIMBS, F>::one(),
+            z: Field::<BASE_LIMBS, F>::zero(),
             p: PhantomData,
         }
     }
 
-    pub fn set_limbs(x: &[u32], y: &[u32], z: &[u32]) -> Self {
+    pub fn from_limbs(x: [u64; BASE_LIMBS], y: [u64; BASE_LIMBS], z: [u64; BASE_LIMBS]) -> Self {
         Projective {
-            x: Field::<NUM_LIMBS, F>::set_limbs(x),
-            y: Field::<NUM_LIMBS, F>::set_limbs(y),
-            z: Field::<NUM_LIMBS, F>::set_limbs(z),
+            x: Field::<BASE_LIMBS, F>::from_limbs(x),
+            y: Field::<BASE_LIMBS, F>::from_limbs(y),
+            z: Field::<BASE_LIMBS, F>::from_limbs(z),
             p: PhantomData,
         }
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> PartialEq for Projective<Field<NUM_LIMBS, F>, C>
+impl<const BASE_LIMBS: usize, F, C> PartialEq for Projective<Field<BASE_LIMBS, F>, C>
 where
     F: FieldConfig,
     C: CurveConfig,
@@ -115,12 +115,12 @@ where
     }
 }
 
-impl<const NUM_LIMBS: usize, F, C> From<Projective<Field<NUM_LIMBS, F>, C>> for Affine<Field<NUM_LIMBS, F>, C>
+impl<const BASE_LIMBS: usize, F, C> From<Projective<Field<BASE_LIMBS, F>, C>> for Affine<Field<BASE_LIMBS, F>, C>
 where
     F: FieldConfig,
     C: CurveConfig,
 {
-    fn from(item: Projective<Field<NUM_LIMBS, F>, C>) -> Self {
+    fn from(item: Projective<Field<BASE_LIMBS, F>, C>) -> Self {
         let mut aff = Self::zero();
         C::to_affine(&item as *const _ as *const c_void, &mut aff as *mut _ as *mut c_void);
         aff
@@ -128,7 +128,7 @@ where
 }
 
 #[cfg(feature = "arkworks")]
-impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Affine<Field<NUM_LIMBS, F>, C>
+impl<const BASE_LIMBS: usize, F, C> ArkConvertible for Affine<Field<BASE_LIMBS, F>, C>
 where
     C: CurveConfig,
     F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
@@ -147,15 +147,15 @@ where
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
         Self {
-            x: Field::<NUM_LIMBS, F>::from_ark(ark.x),
-            y: Field::<NUM_LIMBS, F>::from_ark(ark.y),
+            x: Field::<BASE_LIMBS, F>::from_ark(ark.x),
+            y: Field::<BASE_LIMBS, F>::from_ark(ark.y),
             p: PhantomData,
         }
     }
 }
 
 #[cfg(feature = "arkworks")]
-impl<const NUM_LIMBS: usize, F, C> ArkConvertible for Projective<Field<NUM_LIMBS, F>, C>
+impl<const BASE_LIMBS: usize, F, C> ArkConvertible for Projective<Field<BASE_LIMBS, F>, C>
 where
     C: CurveConfig,
     F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
@@ -184,9 +184,9 @@ where
         let proj_x = ark.x * ark.z;
         let proj_z = ark.z * ark.z * ark.z;
         Self {
-            x: Field::<NUM_LIMBS, F>::from_ark(proj_x),
-            y: Field::<NUM_LIMBS, F>::from_ark(ark.y),
-            z: Field::<NUM_LIMBS, F>::from_ark(proj_z),
+            x: Field::<BASE_LIMBS, F>::from_ark(proj_x),
+            y: Field::<BASE_LIMBS, F>::from_ark(ark.y),
+            z: Field::<BASE_LIMBS, F>::from_ark(proj_z),
             p: PhantomData,
         }
     }

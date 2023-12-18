@@ -12,7 +12,7 @@ impl FieldConfig for ScalarCfg {
     type ArkField = Fr;
 }
 
-const SCALAR_LIMBS: usize = 8;
+const SCALAR_LIMBS: usize = 4;
 
 pub type ScalarField = Field<SCALAR_LIMBS, ScalarCfg>;
 
@@ -34,7 +34,7 @@ impl FieldConfig for BaseCfg {
     type ArkField = Fq;
 }
 
-pub const BASE_LIMBS: usize = 8;
+pub const BASE_LIMBS: usize = 4;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct CurveCfg {}
@@ -90,7 +90,7 @@ mod tests {
         let left = ScalarField::zero();
         let right = ScalarField::one();
         assert_ne!(left, right);
-        let left = ScalarField::set_limbs(&[1]);
+        let left = ScalarField::from_bytes_le(&[1]);
         assert_eq!(left, right);
     }
 
@@ -123,15 +123,15 @@ mod tests {
         let left = G1Projective::zero();
         let right = G1Projective::zero();
         assert_eq!(left, right);
-        let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &[0; BASE_LIMBS]);
+        let right = G1Projective::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
         assert_eq!(left, right);
-        let right = G1Projective::set_limbs(
-            &[0; BASE_LIMBS],
-            &[4; BASE_LIMBS],
-            &BaseField::set_limbs(&[2]).get_limbs(),
+        let right = G1Projective::from_limbs(
+            [0; BASE_LIMBS],
+            [4; BASE_LIMBS],
+            BaseField::from_bytes_le(&[2]).get_limbs(),
         );
         assert_ne!(left, right);
-        let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::one().get_limbs());
+        let left = G1Projective::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], BaseField::one().get_limbs());
         assert_eq!(left, right);
     }
 

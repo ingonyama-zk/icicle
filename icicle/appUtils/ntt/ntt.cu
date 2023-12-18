@@ -316,10 +316,11 @@ namespace ntt {
 
       bool is_on_coset = (coset_gen_index != 0);
       bool direct_coset = (!inverse && is_on_coset);
-      if (direct_coset)
+      if (direct_coset) {
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
           d_input, n, batch_size, coset_outside_subgroup ? d_twiddles + coset_gen_index : d_twiddles,
           coset_outside_subgroup ? 1 : coset_gen_index, n_twiddles, d_output);
+      }
 
       if (ct_buttterfly) {
         if (is_shared_mem_enabled)
@@ -376,7 +377,6 @@ namespace ntt {
   {
     static int max_size;
     static S* twiddles;
-    static S* cached_coset;
     static std::unordered_map<S, int> coset_index;
 
   public:
@@ -384,7 +384,7 @@ namespace ntt {
     friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
-    friend cudaError_t NTT<U, E>(E* input, int size, bool is_inverse, NTTConfig<U>& config, E* output);
+    friend cudaError_t NTT<U, E>(E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
 
   template <typename S>
@@ -397,7 +397,9 @@ namespace ntt {
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
-    // only generate twiddles if they haven't been generated yet (TODO: thread safety)
+    // only generate twiddles if they haven't been generated yet
+    // please note that this is not thread-safe at all,
+    // but it's a singleton that is supposed to be initialized once per program lifetime
     if (!Domain<S>::twiddles) {
       std::vector<S> h_twiddles;
       h_twiddles.push_back(S::one());
@@ -409,12 +411,13 @@ namespace ntt {
       cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream);
       cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream);
       Domain<S>::max_size = n - 1;
+      cudaStreamSynchronize(ctx.stream);
     }
     return cudaSuccess;
   }
 
   template <typename S, typename E>
-  cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S>& config, E* output)
+  cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHECK_LAST_CUDA_ERROR();
 
@@ -434,7 +437,7 @@ namespace ntt {
       // if coset index is not found in the subgroup, compute coset powers on CPU and move them to device
       std::vector<S> h_coset;
       h_coset.push_back(S::one());
-      S coset_gen = is_inverse ? S::inverse(config.coset_gen) : config.coset_gen;
+      S coset_gen = (dir == NTTDir::kInverse) ? S::inverse(config.coset_gen) : config.coset_gen;
       for (int i = 1; i < size; i++) {
         h_coset.push_back(h_coset.at(i - 1) * coset_gen);
       }
@@ -452,7 +455,7 @@ namespace ntt {
       cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream);
     }
     E* d_output;
-    if (is_input_on_device) {
+    if (is_output_on_device) {
       d_output = output;
     } else {
       cudaMallocAsync(&d_output, input_size_bytes, stream);
@@ -478,13 +481,11 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size,
-      logn, is_inverse, ct_butterfly, coset, coset_index, stream, !config.is_async, d_output);
+      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, !config.is_async, d_output);
     CHECK_LAST_CUDA_ERROR();
 
-    if (is_output_on_device) {
-      output = d_output;
-    } else {
+    if (!is_output_on_device) {
       cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream);
       CHECK_LAST_CUDA_ERROR();
     }
@@ -544,11 +545,11 @@ namespace ntt {
   extern "C" cudaError_t NTTCuda(
     curve_config::scalar_t* input,
     int size,
-    bool is_inverse,
+    NTTDir dir,
     NTTConfig<curve_config::scalar_t>& config,
     curve_config::scalar_t* output)
   {
-    return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, is_inverse, config, output);
+    return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, dir, config, output);
   }
 
 #if defined(ECNTT_DEFINED)

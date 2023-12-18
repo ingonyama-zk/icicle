@@ -37,6 +37,13 @@ namespace ntt {
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx);
 
   /**
+   * @enum NTTDir
+   * Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
+   * evaluations from coefficients while inverse NTT computes coefficients from evaluations.
+   */
+  enum class NTTDir { kForward, kInverse };
+
+  /**
    * @enum Ordering
    * How to order inputs and outputs of the NTT. If needed, use this field to specify decimation: decimation in time
    * (DIT) corresponds to `Ordering::kRN` while decimation in frequency (DIF) to `Ordering::kNR`. Also, to specify
@@ -88,7 +95,7 @@ namespace ntt {
    * non-Montgomety outputs.
    * @param size NTT size. If a batch of NTTs (which all need to have the same size) is computed, this is the size
    * of 1 NTT, so it must equal the size of `inout` divided by `config.batch_size`.
-   * @param is_inverse True for inverse NTT and false for direct NTT. Default value: false.
+   * @param dir Whether to compute forward or inverse NTT.
    * @param config [NTTConfig](@ref NTTConfig) used in this NTT.
    * @param output Buffer for the output of the NTT. Should be of the same size as `input`.
    * @tparam E The type of inputs and outputs (i.e. coefficients \f$ \{p_i\} \f$ and values \f$ p(x) \f$). Must be a
@@ -97,7 +104,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S, typename E>
-  cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S>& config, E* output);
+  cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
 
 } // namespace ntt
 

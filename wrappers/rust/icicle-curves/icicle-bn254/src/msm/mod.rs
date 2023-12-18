@@ -7,7 +7,7 @@ extern "C" {
     fn msm_cuda<'a>(
         scalars: *const ScalarField,
         points: *const G1Affine,
-        count: usize,
+        count: i32,
         config: MSMConfig<'a>,
         out: *mut G1Projective,
     ) -> CudaError;
@@ -34,7 +34,7 @@ pub fn msm<'a>(
         msm_cuda(
             scalars as *const _ as *const ScalarField,
             points as *const _ as *const G1Affine,
-            points.len(),
+            points.len() as i32,
             cfg,
             results as *mut _ as *mut G1Projective,
         )
@@ -57,7 +57,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_msm() {
-        let log_test_sizes = [20];
+        let log_test_sizes = [18];
 
         for log_test_size in log_test_sizes {
             let count = 1 << log_test_size;

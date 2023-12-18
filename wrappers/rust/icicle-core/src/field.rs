@@ -14,32 +14,18 @@ pub trait FieldConfig: PartialEq + Copy + Clone {}
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
 pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
-    limbs: [u32; NUM_LIMBS],
+    limbs: [u64; NUM_LIMBS],
     p: PhantomData<F>,
 }
 
-pub(crate) fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
-    match val.len() {
-        n if n < NUM_LIMBS => {
-            let mut padded: [u32; NUM_LIMBS] = [0; NUM_LIMBS];
-            padded[..val.len()].copy_from_slice(&val);
-            padded
-        }
-        n if n == NUM_LIMBS => val
-            .try_into()
-            .unwrap(),
-        _ => panic!("slice has too many elements"),
-    }
-}
-
 impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
-    pub fn get_limbs(&self) -> [u32; NUM_LIMBS] {
+    pub fn get_limbs(&self) -> [u64; NUM_LIMBS] {
         self.limbs
     }
 
-    pub fn set_limbs(value: &[u32]) -> Self {
+    pub fn from_limbs(limbs: [u64; NUM_LIMBS]) -> Self {
         Self {
-            limbs: get_fixed_limbs(value),
+            limbs,
             p: PhantomData,
         }
     }
@@ -55,29 +41,27 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
             .collect::<Vec<_>>()
     }
 
+    // please note that this function zero-pads if there are not enough bytes
+    // and only takes the first bytes in there are too many of them
     pub fn from_bytes_le(bytes: &[u8]) -> Self {
-        let limbs = bytes
-            .chunks(4)
-            .map(|chunk| {
-                u32::from_le_bytes(
-                    chunk
-                        .try_into()
-                        .unwrap(),
-                )
-            })
-            .collect::<Vec<_>>();
-        Self::set_limbs(&limbs)
+        let mut limbs: [u64; NUM_LIMBS] = [0; NUM_LIMBS];
+        for (i, chunk) in bytes.chunks(8).take(NUM_LIMBS).enumerate() {
+            let mut chunk_array: [u8; 8] = [0; 8];
+            chunk_array[..chunk.len()].clone_from_slice(chunk);
+            limbs[i] = u64::from_le_bytes(chunk_array);
+        }
+        Self::from_limbs(limbs)
     }
 
     pub fn zero() -> Self {
         Field {
-            limbs: [0u32; NUM_LIMBS],
+            limbs: [0u64; NUM_LIMBS],
             p: PhantomData,
         }
     }
 
     pub fn one() -> Self {
-        let mut limbs = [0u32; NUM_LIMBS];
+        let mut limbs = [0u64; NUM_LIMBS];
         limbs[0] = 1;
         Field { limbs, p: PhantomData }
     }
