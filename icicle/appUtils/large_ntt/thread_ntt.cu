@@ -1,3 +1,7 @@
+#ifndef T_NTT
+#define T_NTT
+#pragma once
+
 /*
 
 Copyright (c) 2023 Yrrid Software, Inc.
@@ -265,11 +269,11 @@ class NTTEngine {
       WE[i].store_half(data[8*i*stride], false);
       WE[i].store_half(data[8*i*stride + high_bits_offset], true);
     }
-    #pragma unroll
-    for(uint32_t i=0;i<7;i++) {
-      WI[i].store_half(data[8*i*stride], false);
-      WI[i].store_half(data[8*i*stride + high_bits_offset], true);
-    }
+    // #pragma unroll
+    // for(uint32_t i=0;i<7;i++) {
+    //   WI[i].store_half(data[8*i*stride], false);
+    //   WI[i].store_half(data[8*i*stride + high_bits_offset], true);
+    // }
     // #pragma unroll
     // for(uint32_t i=0;i<16;i++) 
     //   X[i].store_half(data[16*i*stride + high_bits_offset], true);
@@ -1128,3 +1132,5 @@ class NTTEngine {
   // }
 
 };  
+
+#endif
