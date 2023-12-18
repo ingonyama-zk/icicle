@@ -56,9 +56,12 @@ pub(crate) mod tests {
     use icicle_core::ntt::Ordering;
     use icicle_core::traits::ArkConvertible;
     use icicle_cuda_runtime::device_context::get_default_device_context;
+    use icicle_cuda_runtime::error::CudaResult;
+    use icicle_cuda_runtime::memory::DeviceSlice;
+    use icicle_cuda_runtime::stream::CudaStream;
 
     use crate::curve::generate_random_scalars;
-    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField, NTTDir, CudaResult};
+    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField, NTTDir};
 
     use ark_bn254::Fr;
     use ark_std::{ops::Neg, UniformRand, test_rng};
@@ -97,7 +100,7 @@ pub(crate) mod tests {
     #[test]
     fn test_ntt() {
         assert!(RES.is_ok());
-        let test_size = 1 << 12;
+        let test_size = 1 << 16;
         let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size).unwrap();
 
         let scalars: Vec<ScalarField> = generate_random_scalars(test_size);
@@ -132,7 +135,7 @@ pub(crate) mod tests {
     #[test]
     fn test_ntt_coset_from_subgroup() {
         assert!(RES.is_ok());
-        let test_size = 1 << 12;
+        let test_size = 1 << 16;
         let small_size = test_size >> 1;
         let test_size_rou = Fr::get_root_of_unity(test_size as u64).unwrap();
         let ark_small_domain = GeneralEvaluationDomain::<Fr>::new(small_size)
@@ -191,7 +194,7 @@ pub(crate) mod tests {
     #[test]
     fn test_ntt_arbitrary_coset() {
         assert!(RES.is_ok());
-        let test_size = 1 << 6;
+        let test_size = 1 << 16;
         let mut seed = test_rng();
         let coset_generators = [Fr::rand(&mut seed), Fr::neg(Fr::one()), Fr::get_root_of_unity(test_size as u64).unwrap()];
         for coset_gen in coset_generators {
@@ -234,7 +237,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_batch_ntt() {
+    fn test_ntt_batch() {
         assert!(RES.is_ok());
         let test_size = 1 << 12;
         let batch_sizes = [1, 1 << 4, 100];
@@ -246,17 +249,54 @@ pub(crate) mod tests {
 
             for coset_gen in coset_generators {
                 for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
-                    config.coset_gen = ScalarField::from_ark(coset_gen);
-                    config.ordering = Ordering::kNR;
-                    config.batch_size = batch_size as i32;
-                    let mut batch_ntt_result = vec![ScalarField::zero(); batch_size * test_size];
-                    ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
-                    config.batch_size = 1;
-                    for i in 0..batch_size {
-                        let mut one_ntt_result = vec![ScalarField::zero(); test_size];
-                        ntt(&scalars[i * test_size..(i + 1) * test_size], is_inverse, &config, &mut one_ntt_result).unwrap();
-                        assert_eq!(batch_ntt_result[i * test_size..(i + 1) * test_size], one_ntt_result);
+                    for ordering in [Ordering::kNN, Ordering::kNR, Ordering::kRN, Ordering::kRR] {
+                        config.coset_gen = ScalarField::from_ark(coset_gen);
+                        config.ordering = ordering;
+                        config.batch_size = batch_size as i32;
+                        let mut batch_ntt_result = vec![ScalarField::zero(); batch_size * test_size];
+                        ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
+                        config.batch_size = 1;
+                        for i in 0..batch_size {
+                            let mut one_ntt_result = vec![ScalarField::zero(); test_size];
+                            ntt(&scalars[i * test_size..(i + 1) * test_size], is_inverse, &config, &mut one_ntt_result).unwrap();
+                            assert_eq!(batch_ntt_result[i * test_size..(i + 1) * test_size], one_ntt_result);
+                        }
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_ntt_device_async() {
+        assert!(RES.is_ok());
+        let test_size = 1 << 12;
+        let batch_sizes = [1, 1 << 4, 100];
+        let mut seed = test_rng();
+        let coset_generators = [Fr::one(), Fr::rand(&mut seed), Fr::neg(Fr::one())];
+        let stream = CudaStream::create().unwrap();
+        for batch_size in batch_sizes {
+            let scalars_h: Vec<ScalarField> = generate_random_scalars(test_size * batch_size);
+            let mut scalars_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
+            scalars_d.copy_from_host(&scalars_h).unwrap();
+
+            for coset_gen in coset_generators {
+                for ordering in [Ordering::kNN, Ordering::kRR] {
+                    let mut config = get_default_ntt_config();
+                    let mut ntt_out_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
+                    config.coset_gen = ScalarField::from_ark(coset_gen);
+                    config.ordering = ordering;
+                    config.batch_size = batch_size as i32;
+                    config.are_outputs_on_device = true;
+                    config.are_inputs_on_device = true;
+                    config.ctx.stream = &stream;
+                    config.is_async = true;
+                    ntt(&scalars_d.as_slice(), NTTDir::kForward, &config, &mut ntt_out_d.as_slice()).unwrap();
+                    ntt(&ntt_out_d.as_slice(), NTTDir::kInverse, &config, &mut scalars_d.as_slice()).unwrap();
+                    let mut intt_result_h = vec![ScalarField::zero(); test_size * batch_size];
+                    stream.synchronize().unwrap();
+                    scalars_d.copy_to_host(&mut intt_result_h);
+                    assert_eq!(scalars_h, intt_result_h);
                 }
             }
         }

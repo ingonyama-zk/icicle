@@ -293,7 +293,6 @@ namespace ntt {
       bool coset_outside_subgroup,
       int coset_gen_index,
       cudaStream_t stream,
-      bool is_async,
       E* d_output)
     {
       bool is_shared_mem_enabled = sizeof(E) <= MAX_SHARED_MEM_ELEMENT_SIZE;
@@ -319,7 +318,7 @@ namespace ntt {
       if (direct_coset) {
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
           d_input, n, batch_size, coset_outside_subgroup ? d_twiddles + coset_gen_index : d_twiddles,
-          coset_outside_subgroup ? 1 : coset_gen_index, n_twiddles, d_output);
+          coset_outside_subgroup ? 1 : coset_gen_index, n_twiddles, logn, ct_buttterfly, d_output);
       }
 
       if (ct_buttterfly) {
@@ -352,15 +351,13 @@ namespace ntt {
         if (is_on_coset)
           utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
             d_output, n, batch_size, coset_outside_subgroup ? d_twiddles + n_twiddles + coset_gen_index : d_twiddles,
-            coset_outside_subgroup ? 1 : -coset_gen_index, -n_twiddles, d_output);
+            coset_outside_subgroup ? 1 : -coset_gen_index, -n_twiddles, logn, !ct_buttterfly, d_output);
 
         utils_internal::NormalizeKernel<E, S>
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
       }
 
-      if (is_async) return;
-
-      cudaStreamSynchronize(stream);
+      return;
     }
 
   } // namespace
@@ -482,7 +479,7 @@ namespace ntt {
 
     ntt_inplace_batch_template(
       reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
-      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, !config.is_async, d_output);
+      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output);
     CHECK_LAST_CUDA_ERROR();
 
     if (!is_output_on_device) {
