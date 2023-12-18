@@ -1,3 +1,7 @@
+#ifndef K_NTT
+#define K_NTT
+#pragma once
+
 /*
 
 Copyright (c) 2023 Yrrid Software, Inc.
@@ -292,17 +296,17 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
 }
 
 __launch_bounds__(64)
-__global__ void ntt64(uint4* out, uint4* in, uint32_t size, uint32_t stride) {
+__global__ void ntt64(uint4* in, uint4* out, uint32_t log_size, uint32_t stride) {
   NTTEngine engine;
   extern __shared__ uint4 shmem[];
   
-  // engine.initializeRoot(stride>1);
+  engine.initializeRoot(stride>1);
     
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
-    engine.loadGlobalData(in,blockIdx.x*64*8,stride,size); //todo - parametize
-    engine.twiddlesExternal();
+    engine.loadGlobalData(in,blockIdx.x*64*8,stride,1<<log_size); //todo - parametize
+    // engine.twiddlesExternal();
     // engine.twiddles64();
 
     #pragma unroll 1
@@ -320,7 +324,7 @@ __global__ void ntt64(uint4* out, uint4* in, uint32_t size, uint32_t stride) {
       }
     }
 
-    engine.storeGlobalData(in,blockIdx.x*64*8,stride,size);
+    engine.storeGlobalData(in,blockIdx.x*64*8,stride,1<<log_size);
   // }
 }
 
@@ -400,3 +404,13 @@ void generate_external_twiddles(uint4* twiddles, uint32_t log_size){
   generate_base_table<<<1,1>>>(18, w18_table);
   generate_twiddle_combinations<<<1024,256>>>(w6_table, w12_table, w18_table, twiddles);
 }
+
+void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size){
+  uint32_t nof_stages = 2;
+  for (int i = 0; i < nof_stages; i++)
+  {
+    ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, log_size, i? 64 : 1);
+  }
+}
+
+#endif
