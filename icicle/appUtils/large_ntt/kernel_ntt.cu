@@ -296,17 +296,18 @@ __global__ void ntt64(uint4* out, uint4* in, uint32_t size, uint32_t stride) {
   NTTEngine engine;
   extern __shared__ uint4 shmem[];
   
-  engine.initializeRoot(stride>1);
+  // engine.initializeRoot(stride>1);
     
-  #pragma unroll 1
-  for (int i = 0; i < 1; i++) //todo - function of size
-  {
+  // #pragma unroll 1
+  // for (int i = 0; i < 260; i++) //todo - function of size
+  // {
     engine.loadGlobalData(in,blockIdx.x*64*8,stride,size); //todo - parametize
+    engine.twiddlesExternal();
+    // engine.twiddles64();
 
     #pragma unroll 1
     for(uint32_t phase=0;phase<2;phase++) {
       // this code produces a lot of instructions, so we put this in a loop
-      // engine.twiddles64();
       engine.ntt8win(); 
       if(phase==0) {
         engine.SharedDataColumns2(shmem, true, false); //store low
@@ -320,5 +321,82 @@ __global__ void ntt64(uint4* out, uint4* in, uint32_t size, uint32_t stride) {
     }
 
     engine.storeGlobalData(in,blockIdx.x*64*8,stride,size);
+  // }
+}
+
+// __global__ void generate_base_tables(test_scalar* w6_table, test_scalar* w12_table, test_scalar* w18_table){
+
+// test_scalar w, t;
+
+// switch (threadIdx.x)
+// {
+// case 0:
+//   w = test_scalar::omega(6);
+//   t = test_scalar::one();
+//   for (int i = 0; i < 64; i++)
+//   {
+//     // w6_table[i] = t.load_half(false);
+//     // w6_table[i + 64] = t.load_half(true);
+//     w6_table[i] = t;
+//     t = t * w;
+//   }
+//   break;
+// case 1:
+//   w = test_scalar::omega(12);
+//   t = test_scalar::one();
+//   for (int i = 0; i < 64; i++)
+//   {
+//     w12_table[i] = t;
+//     t = t * w;
+//   }
+//   break;
+// case 2:
+//   w = test_scalar::omega(18);
+//   t = test_scalar::one();
+//   for (int i = 0; i < 64; i++)
+//   {
+//     w18_table[i] = t;
+//     t = t * w;
+//   }
+//   break;
+
+// default:
+//   break;
+// }
+
+// }
+
+__global__ void generate_base_table(int x, test_scalar* base_table){
+  
+  test_scalar w = test_scalar::omega(x);
+  test_scalar t = test_scalar::one();
+  for (int i = 0; i < 64; i++)
+  {
+    base_table[i] = t;
+    t = t * w;
   }
+}
+
+__global__ void generate_twiddle_combinations(test_scalar* w6_table, test_scalar* w12_table, test_scalar* w18_table, uint4* twiddles){
+  
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int exp = (tid & 0x3f) * (tid >> 6);
+  test_scalar t = w6_table[exp >> 12] * w12_table[(exp >> 6) & 0x3f] * w18_table[exp & 0x3f];
+  twiddles[tid] = t.load_half(false);
+  twiddles[tid + (1<<18)] = t.load_half(true);
+
+}
+
+void generate_external_twiddles(uint4* twiddles, uint32_t log_size){
+
+  test_scalar* w6_table;
+  test_scalar* w12_table;
+  test_scalar* w18_table;
+  cudaMalloc((void**)&w6_table, sizeof(test_scalar)*64);
+  cudaMalloc((void**)&w12_table, sizeof(test_scalar)*64);
+  cudaMalloc((void**)&w18_table, sizeof(test_scalar)*64);
+  generate_base_table<<<1,1>>>(6, w6_table);
+  generate_base_table<<<1,1>>>(12, w12_table);
+  generate_base_table<<<1,1>>>(18, w18_table);
+  generate_twiddle_combinations<<<1024,256>>>(w6_table, w12_table, w18_table, twiddles);
 }

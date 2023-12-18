@@ -129,11 +129,11 @@ public:
   }
 
 
-  static HOST_INLINE Field omega(uint32_t logn)
+  static HOST_DEVICE_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
     return Field{omega.storages[logn - 1]};
