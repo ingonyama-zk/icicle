@@ -6,8 +6,9 @@ use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
 use std::ffi::c_uint;
+use std::fmt::Debug;
 
-pub trait CurveConfig: PartialEq + Copy + Clone {
+pub trait CurveConfig: Debug + PartialEq + Copy + Clone {
     type BaseField: FieldImpl;
     type ScalarField: FieldImpl;
     type Projective;
@@ -15,6 +16,8 @@ pub trait CurveConfig: PartialEq + Copy + Clone {
 
     fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> c_uint;
     fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
+    fn generate_random_projective_points(size: usize) -> Vec<Projective<Self>>;
+    fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -197,73 +200,53 @@ macro_rules! impl_curve {
                 unsafe { ToAffine(point, point_out) };
             }
 
+            fn generate_random_projective_points(size: usize) -> Vec<G1Projective> {
+                let mut res = vec![G1Projective::zero(); size];
+                unsafe { GenerateProjectivePoints(&mut res[..] as *mut _ as *mut G1Projective, size) };
+                res
+            }
+
+            fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
+                let mut res = vec![G1Affine::zero(); size];
+                unsafe { GenerateAffinePoints(&mut res[..] as *mut _ as *mut G1Affine, size) };
+                res
+            }
+
             #[cfg(feature = "arkworks")]
             type ArkSWConfig = ArkG1Config;
-        }
-
-        pub(crate) fn generate_random_projective_points(size: usize) -> Vec<G1Projective> {
-            let mut res = vec![G1Projective::zero(); size];
-            unsafe { GenerateProjectivePoints(&mut res[..] as *mut _ as *mut G1Projective, size) };
-            res
-        }
-
-        pub(crate) fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
-            let mut res = vec![G1Affine::zero(); size];
-            unsafe { GenerateAffinePoints(&mut res[..] as *mut _ as *mut G1Affine, size) };
-            res
         }
     };
 }
 
 #[macro_export]
 macro_rules! impl_curve_tests {
-    () => {
+    (
+        $base_limbs:ident,
+        $curve_config:ident
+    ) => {
         #[test]
         fn test_scalar_equality() {
-            let left = ScalarField::zero();
-            let right = ScalarField::one();
-            assert_ne!(left, right);
-            let left = ScalarField::set_limbs(&[1]);
-            assert_eq!(left, right);
+            check_scalar_equality::<<$curve_config as CurveConfig>::ScalarField>()
         }
 
         #[test]
         fn test_affine_projective_convert() {
-            let size = 1 << 10;
-            let affine_points = generate_random_affine_points(size);
-            let projective_points = generate_random_projective_points(size);
-            for affine_point in affine_points {
-                let projective_eqivalent: G1Projective = affine_point.into();
-                assert_eq!(affine_point, projective_eqivalent.into());
-            }
-            for projective_point in projective_points {
-                let affine_eqivalent: G1Affine = projective_point.into();
-                assert_eq!(projective_point, affine_eqivalent.into());
-            }
+            check_affine_projective_convert::<$curve_config>()
         }
 
         #[test]
         fn test_point_equality() {
-            let left = G1Projective::zero();
-            let right = G1Projective::zero();
-            assert_eq!(left, right);
-            let right = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &[0; BASE_LIMBS]);
-            assert_eq!(left, right);
-            let right = G1Projective::set_limbs(
-                &[0; BASE_LIMBS],
-                &[4; BASE_LIMBS],
-                &BaseField::set_limbs(&[2]).get_limbs(),
-            );
-            assert_ne!(left, right);
-            let left = G1Projective::set_limbs(&[0; BASE_LIMBS], &[2; BASE_LIMBS], &BaseField::one().get_limbs());
-            assert_eq!(left, right);
+            check_point_equality::<$base_limbs, $curve_config>()
         }
     };
 }
 
 #[macro_export]
 macro_rules! impl_curve_ark_tests {
-    () => {
+    (
+        $curve_config:ident,
+        $ark_affine:ident
+    ) => {
         #[test]
         fn test_ark_scalar_convert() {
             let size = 1 << 10;
@@ -276,13 +259,13 @@ macro_rules! impl_curve_ark_tests {
         #[test]
         fn test_ark_point_convert() {
             let size = 1 << 10;
-            let affine_points = generate_random_affine_points(size);
+            let affine_points = $curve_config::generate_random_affine_points(size);
             for affine_point in affine_points {
-                let ark_projective = Into::<G1Projective>::into(affine_point).to_ark();
-                let ark_affine: ArkG1Affine = ark_projective.into();
+                let ark_projective = Into::<<$curve_config as CurveConfig>::Projective>::into(affine_point).to_ark();
+                let ark_affine: $ark_affine = ark_projective.into();
                 assert!(ark_affine.is_on_curve());
                 assert!(ark_affine.is_in_correct_subgroup_assuming_on_curve());
-                let affine_after_conversion: G1Affine = G1Projective::from_ark(ark_projective).into();
+                let affine_after_conversion = <$curve_config as CurveConfig>::Affine::from_ark(ark_affine).into();
                 assert_eq!(affine_point, affine_after_conversion);
             }
         }

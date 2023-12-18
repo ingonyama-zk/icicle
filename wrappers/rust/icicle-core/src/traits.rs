@@ -1,4 +1,6 @@
-pub trait FieldImpl: Copy {
+use std::fmt::Debug;
+
+pub trait FieldImpl: Debug + PartialEq + Copy + Clone {
     fn set_limbs(value: &[u32]) -> Self;
     fn to_bytes_le(&self) -> Vec<u8>;
     fn from_bytes_le(bytes: &[u8]) -> Self;

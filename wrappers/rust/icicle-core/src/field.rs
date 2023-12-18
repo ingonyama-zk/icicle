@@ -3,9 +3,10 @@ use crate::traits::ArkConvertible;
 use crate::traits::{FieldImpl, GetLimbs};
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, PrimeField};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
-pub trait FieldConfig: PartialEq + Copy + Clone {
+pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
     #[cfg(feature = "arkworks")]
     type ArkField: PrimeField;
 }
@@ -119,7 +120,7 @@ macro_rules! impl_scalar_field {
             fn GenerateScalars(scalars: *mut $field_name, size: usize);
         }
 
-        pub(crate) fn generate_random_scalars(size: usize) -> Vec<$field_name> {
+        pub fn generate_random_scalars(size: usize) -> Vec<$field_name> {
             let mut res = vec![$field_name::zero(); size];
             unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut $field_name, size) };
             res
