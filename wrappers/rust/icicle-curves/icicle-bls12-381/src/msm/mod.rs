@@ -1,6 +1,6 @@
 use crate::curve::{CurveCfg, G1Affine, G1Projective, ScalarField};
 use icicle_core::{
-    curve::CurveConfig,
+    curve::{Affine, CurveConfig, Projective},
     impl_msm,
     msm::{MSMConfig, MSM},
 };

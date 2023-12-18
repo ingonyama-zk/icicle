@@ -11,8 +11,6 @@ use std::fmt::Debug;
 pub trait CurveConfig: Debug + PartialEq + Copy + Clone {
     type BaseField: FieldImpl;
     type ScalarField: FieldImpl;
-    type Projective;
-    type Affine;
 
     fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> c_uint;
     fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
@@ -189,8 +187,6 @@ macro_rules! impl_curve {
         impl CurveConfig for CurveCfg {
             type BaseField = $base_field;
             type ScalarField = $scalar_field;
-            type Affine = G1Affine;
-            type Projective = G1Projective;
 
             fn eq_proj(point1: *const G1Projective, point2: *const G1Projective) -> c_uint {
                 unsafe { Eq(point1, point2) }
@@ -262,11 +258,11 @@ macro_rules! impl_curve_ark_tests {
             let size = 1 << 10;
             let affine_points = $curve_config::generate_random_affine_points(size);
             for affine_point in affine_points {
-                let ark_projective = Into::<<$curve_config as CurveConfig>::Projective>::into(affine_point).to_ark();
+                let ark_projective = Into::<Projective<$curve_config>>::into(affine_point).to_ark();
                 let ark_affine: $ark_affine = ark_projective.into();
                 assert!(ark_affine.is_on_curve());
                 assert!(ark_affine.is_in_correct_subgroup_assuming_on_curve());
-                let affine_after_conversion = <$curve_config as CurveConfig>::Affine::from_ark(ark_affine).into();
+                let affine_after_conversion = Affine::<$curve_config>::from_ark(ark_affine).into();
                 assert_eq!(affine_point, affine_after_conversion);
             }
         }

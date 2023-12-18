@@ -135,9 +135,9 @@ macro_rules! impl_msm {
         impl MSM<$curve_config> for $curve_config {
             fn msm<'a>(
                 scalars: &[<$curve_config as CurveConfig>::ScalarField],
-                points: &[<$curve_config as CurveConfig>::Affine],
+                points: &[Affine<$curve_config>],
                 cfg: MSMConfig<'a>,
-                results: &mut [<$curve_config as CurveConfig>::Projective],
+                results: &mut [Projective<$curve_config>],
             ) -> CudaResult<()> {
                 if points.len() != scalars.len() {
                     return Err(CudaError::cudaErrorInvalidValue);
@@ -146,10 +146,10 @@ macro_rules! impl_msm {
                 unsafe {
                     msm_cuda(
                         scalars as *const _ as *const <$curve_config as CurveConfig>::ScalarField,
-                        points as *const _ as *const <$curve_config as CurveConfig>::Affine,
+                        points as *const _ as *const Affine<$curve_config>,
                         points.len(),
                         cfg,
-                        results as *mut _ as *mut <$curve_config as CurveConfig>::Projective,
+                        results as *mut _ as *mut Projective<$curve_config>,
                     )
                     .wrap()
                 }

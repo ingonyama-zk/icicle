@@ -18,6 +18,7 @@ mod tests {
     use super::{CurveCfg, CurveConfig, ScalarCfg, BASE_LIMBS};
     use icicle_core::tests::{check_affine_projective_convert, check_point_equality, check_scalar_equality};
     use icicle_core::{
+        curve::{Affine, Projective},
         impl_curve_ark_tests, impl_curve_tests,
         traits::{ArkConvertible, GenerateRandom},
     };
