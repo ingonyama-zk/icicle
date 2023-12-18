@@ -1,4 +1,4 @@
-use crate::icicle_core::traits::FieldImpl;
+use crate::icicle_core::traits::{FieldImpl, GenerateRandom};
 #[cfg(feature = "arkworks")]
 use ark_bn254::{g1::Config as ArkG1Config, Fq, Fr};
 use icicle_core::curve::{Affine, CurveConfig, Projective};
@@ -15,16 +15,16 @@ impl_curve!(ScalarField, BaseField);
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        generate_random_scalars, BaseField, CurveCfg, CurveConfig, G1Affine, G1Projective, ScalarField, BASE_LIMBS,
-    };
-    use crate::icicle_core::traits::{FieldImpl, GetLimbs};
+    use super::{CurveCfg, CurveConfig, ScalarCfg, BASE_LIMBS};
     use icicle_core::tests::{check_affine_projective_convert, check_point_equality, check_scalar_equality};
-    use icicle_core::{impl_curve_ark_tests, impl_curve_tests, traits::ArkConvertible};
+    use icicle_core::{
+        impl_curve_ark_tests, impl_curve_tests,
+        traits::{ArkConvertible, GenerateRandom},
+    };
 
     use ark_bn254::G1Affine as ArkG1Affine;
 
     impl_curve_tests!(BASE_LIMBS, CurveCfg);
 
-    impl_curve_ark_tests!(CurveCfg, ArkG1Affine);
+    impl_curve_ark_tests!(CurveCfg, ArkG1Affine, ScalarCfg);
 }

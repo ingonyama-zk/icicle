@@ -245,12 +245,13 @@ macro_rules! impl_curve_tests {
 macro_rules! impl_curve_ark_tests {
     (
         $curve_config:ident,
-        $ark_affine:ident
+        $ark_affine:ident,
+        $scalar_config:ident
     ) => {
         #[test]
         fn test_ark_scalar_convert() {
             let size = 1 << 10;
-            let scalars = generate_random_scalars(size);
+            let scalars = $scalar_config::generate_random(size);
             for scalar in scalars {
                 assert_eq!(scalar.to_ark(), scalar.to_ark())
             }

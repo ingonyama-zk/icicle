@@ -1,5 +1,9 @@
 use std::fmt::Debug;
 
+pub trait GenerateRandom<F> {
+    fn generate_random(size: usize) -> Vec<F>;
+}
+
 pub trait FieldImpl: Debug + PartialEq + Copy + Clone {
     fn set_limbs(value: &[u32]) -> Self;
     fn to_bytes_le(&self) -> Vec<u8>;

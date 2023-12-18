@@ -120,10 +120,12 @@ macro_rules! impl_scalar_field {
             fn GenerateScalars(scalars: *mut $field_name, size: usize);
         }
 
-        pub fn generate_random_scalars(size: usize) -> Vec<$field_name> {
-            let mut res = vec![$field_name::zero(); size];
-            unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut $field_name, size) };
-            res
+        impl GenerateRandom<$field_name> for $field_cfg {
+            fn generate_random(size: usize) -> Vec<$field_name> {
+                let mut res = vec![$field_name::zero(); size];
+                unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut $field_name, size) };
+                res
+            }
         }
     };
 }

@@ -9,18 +9,9 @@ impl_ntt!("bw6_761", ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use icicle_core::traits::{ArkConvertible, FieldImpl};
-    use icicle_core::{
-        impl_ntt_tests,
-        ntt::{Ordering, NTT},
-    };
-    use icicle_cuda_runtime::device_context::get_default_device_context;
-
-    use crate::curve::{generate_random_scalars, ScalarCfg, ScalarField};
-
-    use ark_bw6_761::Fr;
-    use ark_ff::FftField;
-    use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
+    use crate::curve::{ScalarCfg, ScalarField};
+    use icicle_core::impl_ntt_tests;
+    use icicle_core::ntt::tests::{check_ntt, check_ntt_coset_from_subgroup};
 
     impl_ntt_tests!(ScalarField, ScalarCfg);
 }

@@ -10,14 +10,10 @@ impl_msm!("bls12_381", CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use ark_bls12_381::G1Projective as ArkG1Projective;
-    use ark_ec::scalar_mul::variable_base::VariableBaseMSM;
-    use icicle_core::{curve::CurveConfig, impl_msm_tests, msm::MSM};
+    use icicle_core::impl_msm_tests;
+    use icicle_core::msm::tests::check_msm;
 
-    use crate::curve::{generate_random_scalars, CurveCfg};
-    use icicle_core::traits::ArkConvertible;
-    use icicle_cuda_runtime::memory::DeviceSlice;
-    use icicle_cuda_runtime::stream::CudaStream;
+    use crate::curve::{CurveCfg, ScalarCfg};
 
-    impl_msm_tests!(CurveCfg);
+    impl_msm_tests!(CurveCfg, ScalarCfg);
 }
