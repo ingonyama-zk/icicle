@@ -4,7 +4,7 @@
 
 `icicle-cuda-runtime` defines `DeviceContext` which can be used to manage a specific GPU as well as wrapping common CUDA methods.
 
-`icicle-curves` implement all interfaces an macros from `icicle-core` for each curve. For example `icicle-bn254` implements curve `bn254`. Each curve has its own [build script](./icicle-curves/icicle-bn254/build.rs) which will build the CUDA libraries for that curve as part of the rust-toolchain build.
+`icicle-curves` implements all interfaces and macros from `icicle-core` for each curve. For example `icicle-bn254` implements curve `bn254`. Each curve has its own [build script](./icicle-curves/icicle-bn254/build.rs) which will build the CUDA libraries for that curve as part of the rust-toolchain build.
 
 ## Building a curve and running tests
 
