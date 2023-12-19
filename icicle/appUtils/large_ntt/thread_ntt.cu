@@ -335,8 +335,14 @@ class NTTEngine {
     // uint4 zero{0,0,0,0};
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      data[8*i*stride] = X[i].load_half(false);
-      data[8*i*stride + high_bits_offset] = X[i].load_half(true);
+      // if (stride == 1){
+      //   data[8*i*stride] = WE[i].load_half(false);
+      //   data[8*i*stride + high_bits_offset] = WE[i].load_half(true);
+      // }
+      // else{
+        data[8*i*stride] = X[i].load_half(false);
+        data[8*i*stride + high_bits_offset] = X[i].load_half(true);
+      // }
     }
       // data[16*i*stride] = zero;
     // #pragma unroll
@@ -1115,7 +1121,9 @@ class NTTEngine {
     for (int i = 1; i < 8; i++)
     {
       // X[i] = X[i] * test_scalar::omega8(threadIdx.x&0x7);
+      // if (threadIdx.x==9) printf("xbef %d wbef %d\n", X[i], WE[i]);
       X[i] = X[i] * WI[i-1];
+      // if (threadIdx.x==9) printf("xaf %d\n", X[i]);
       // X[i] = X[i] * test_scalar::omega8(i);
       // X[i] = X[i] * X[i];
     }
@@ -1123,10 +1131,12 @@ class NTTEngine {
 
   __device__ __forceinline__ void twiddlesExternal() {
     #pragma unroll 
-    for (int i = 1; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
       // X[i] = X[i] * test_scalar::omega8(threadIdx.x&0x7);
+      // if (threadIdx.x==9) printf("xbef %d wbef %d\n", X[i], WE[i]);
       X[i] = X[i] * WE[i];
+      // if (threadIdx.x==9) printf("xaf %d\n", X[i]);
       // X[i] = X[i] * test_scalar::omega8(i);
       // X[i] = X[i] * X[i];
     }
