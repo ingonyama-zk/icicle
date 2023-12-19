@@ -48,7 +48,8 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 - [GCC](https://gcc.gnu.org/install/download.html) version 9, latest version is recommended.
 - Any Nvidia GPU (which supports CUDA Toolkit version 12.0 or above).
 
-Note: It is possible to use CUDA 11 for cards which dont support CUDA 12, however we dont offically support this version and in the future there may be issues.
+> [!NOTE] 
+> It is possible to use CUDA 11 for cards which dont support CUDA 12, however we dont offically support this version and in the future there may be issues.
 
 ### Accessing Hardware
 
