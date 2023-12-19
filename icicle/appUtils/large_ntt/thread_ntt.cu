@@ -224,6 +224,7 @@ class NTTEngine {
     for (int i = 0; i < 7; i++)
     {
       WI[i] = test_scalar::omega8(((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1));
+      // if (blockIdx.x == 0 && threadIdx.x == 8) printf("%d\n",WI[i].load_half(false).w);
     }
   }
 
@@ -249,6 +250,44 @@ class NTTEngine {
     }
   }
   
+  __device__ __forceinline__ void loadInternalTwiddles(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
+    
+    if (stride == 1){
+      data += block_offset + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+    else {
+      data += block_offset + (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+
+    #pragma unroll
+    for(uint32_t i=0;i<7;i++) {
+      WI[i].store_half(data[8*i*stride], false);
+      WI[i].store_half(data[8*i*stride + high_bits_offset], true);
+    }
+  }
+
+  __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
+    
+    if (stride == 1){
+      data += block_offset + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+    else {
+      data += block_offset + (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+
+    
+    #pragma unroll
+    for(uint32_t i=0;i<8;i++) {
+      WE[i].store_half(data[8*i*stride], false);
+      WE[i].store_half(data[8*i*stride + high_bits_offset], true);
+    }
+    // #pragma unroll
+    // for(uint32_t i=0;i<7;i++) {
+    //   WI[i].store_half(data[8*i*stride], false);
+    //   WI[i].store_half(data[8*i*stride + high_bits_offset], true);
+    // }
+  }
+
   __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
     
     if (stride == 1){
@@ -264,11 +303,11 @@ class NTTEngine {
       X[i].store_half(data[8*i*stride], false);
       X[i].store_half(data[8*i*stride + high_bits_offset], true);
     }
-    #pragma unroll
-    for(uint32_t i=0;i<8;i++) {
-      WE[i].store_half(data[8*i*stride], false);
-      WE[i].store_half(data[8*i*stride + high_bits_offset], true);
-    }
+    // #pragma unroll
+    // for(uint32_t i=0;i<8;i++) {
+    //   WE[i].store_half(data[8*i*stride], false);
+    //   WE[i].store_half(data[8*i*stride + high_bits_offset], true);
+    // }
     // #pragma unroll
     // for(uint32_t i=0;i<7;i++) {
     //   WI[i].store_half(data[8*i*stride], false);
@@ -1008,11 +1047,11 @@ class NTTEngine {
     }
   }
 
-  __device__ __forceinline__ void SharedDataColumns2(uint4 *shmem, bool store, bool high_bits) {
+  __device__ __forceinline__ void SharedDataColumns2(uint4 *shmem, bool store, bool high_bits, bool stride) {
     // const uint32_t stride=blockDim.x+1;
 
-    uint32_t ntt_id = threadIdx.x >> 3;
-    uint32_t column_id = threadIdx.x & 0x7;
+    uint32_t ntt_id = stride? threadIdx.x & 0x7 : threadIdx.x >> 3;
+    uint32_t column_id = stride? threadIdx.x >> 3 : threadIdx.x & 0x7;
     
     
     // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
@@ -1036,11 +1075,11 @@ class NTTEngine {
     }
   }
 
-  __device__ __forceinline__ void SharedDataRows2(uint4 *shmem, bool store, bool high_bits) {
+  __device__ __forceinline__ void SharedDataRows2(uint4 *shmem, bool store, bool high_bits, bool stride) {
     // const uint32_t stride=blockDim.x+1;
 
-    uint32_t ntt_id = threadIdx.x >> 3;
-    uint32_t row_id = threadIdx.x & 0x7;
+    uint32_t ntt_id = stride? threadIdx.x & 0x7 : threadIdx.x >> 3;
+    uint32_t row_id = stride? threadIdx.x >> 3 : threadIdx.x & 0x7;
     
     
     // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts

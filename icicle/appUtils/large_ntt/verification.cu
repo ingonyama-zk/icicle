@@ -21,8 +21,8 @@ typedef scalar_t test_scalar;
 
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
-    res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    // res[i]= i<1000? test_scalar::omega(2) : res[i-1000];
+    // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
+    res[i]= i<1000? test_scalar::one() : res[i-1000];
 }
 
 void incremental_values(test_scalar* res, uint32_t count) {
@@ -32,8 +32,8 @@ void incremental_values(test_scalar* res, uint32_t count) {
 
 int main(){
 
-  int NTT_LOG_SIZE = 6;
-  int TT_LOG_SIZE = 18;
+  int NTT_LOG_SIZE = 12;
+  int TT_LOG_SIZE = 12;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
 
@@ -56,8 +56,8 @@ int main(){
   $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
-  random_samples(cpuIcicle, NTT_SIZE);
-  // incremental_values(cpuIcicle, NTT_SIZE);
+  // random_samples(cpuIcicle, NTT_SIZE);
+  incremental_values(cpuIcicle, NTT_SIZE);
   for (int i = 0; i < NTT_SIZE; i++)
   {
     cpuNew[i] = cpuIcicle[i].load_half(false);
@@ -66,10 +66,15 @@ int main(){
   $CUDA(cudaMemcpy(gpuIcicle, cpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew, cpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
   generate_external_twiddles(gpuTwiddles, TT_LOG_SIZE);
+  cudaDeviceSynchronize();
+  printf("cuda err %d\n",cudaGetLastError());
 
 
   //run ntts
-  ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, NTT_LOG_SIZE ,1);
+  // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
+  new_ntt(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE);
+  cudaDeviceSynchronize();
+  printf("cuda err %d\n",cudaGetLastError());
   ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, false, 0);
   reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
   
@@ -83,13 +88,14 @@ int main(){
     icicle_temp = cpuIcicle[i];
     new_temp.store_half(cpuNew[i], false);
     new_temp.store_half(cpuNew[i+NTT_SIZE], true);
+    if (i%64 == 0) printf("%d\n",i/64);
     if (icicle_temp != new_temp){
       success = false;
       std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
     }
-    // else{
-    //   std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
-    // }
+    else{
+      std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+    }
   }
   if (success){
     printf("success!\n");
