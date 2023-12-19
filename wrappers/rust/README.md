@@ -1,38 +1,46 @@
 ### Rust Bindings
 
-For convenience, we also provide rust bindings to the ICICLE library for the following primitives:
+`icicle-core` defines all interfaces, macros and common methods.
 
-- MSM
-- NTT
-    - Forward NTT
-    - Inverse NTT
-- ECNTT
-    - Forward ECNTT
-    - Inverse NTT
-- Scalar Vector Multiplication
-- Point Vector Multiplication
+`icicle-cuda-runtime` defines `DeviceContext` which can be used to manage a specific GPU as well as wrapping common CUDA methods.
 
-A custom [build script][B_SCRIPT] is used to compile and link the ICICLE library. The environment variable `ARCH_TYPE` is used to determine which GPU type the library should be compiled for and it defaults to `native` when it is not set allowing the compiler to detect the installed GPU type.
+`icicle-curves` implement all interfaces an macros from `icicle-core` for each curve. For example `icicle-bn254` implements curve `bn254`. Each curve has its own [build script](./icicle-curves/icicle-bn254/build.rs) which will build the CUDA libraries for that curve as part of the rust-toolchain build.
 
-> NOTE: A GPU must be detectable and therefore installed if the `ARCH_TYPE` is not set.
+## Building a curve and running tests
 
-Once you have your parameters set, run:
+Enter a curve implementation.
+
+```
+cd icicle-curves/icicle-bn254
+```
+
+To build 
 
 ```sh
 cargo build --release
 ```
 
-You'll find a release ready library at `target/release/libicicle_utils.rlib`.
+The build may take a while because we are also building the CUDA libraries for the selected curve.
 
-To benchmark and test the functionality available in RUST, run:
+To run benchmarks
 
 ```
 cargo bench
+```
+
+To run test
+
+```sh
 cargo test -- --test-threads=1
 ```
 
 The flag `--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.
 
+
 ### Example Usage
 
 An example of using the Rust bindings library can be found in our [fast-danksharding implementation][FDI]
+
+<!-- Begin Links -->
+[FDI]: https://github.com/ingonyama-zk/fast-danksharding
+<!-- End Links -->

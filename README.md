@@ -190,7 +190,6 @@ See [LICENSE-MIT][LMIT] for details.
 [CRV_TEMPLATE]: ./icicle/curves/curve_template/
 [CRV_CONFIG]: ./icicle/curves/index.cu
 [B_SCRIPT]: ./build.rs
-[FDI]: https://github.com/ingonyama-zk/fast-danksharding
 [LMIT]: ./LICENSE
 [DISCORD]: https://discord.gg/Y4SkbDf2Ff
 [googletest]: https://github.com/google/googletest/
