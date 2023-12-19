@@ -1,27 +1,46 @@
-# ICICLE CUDA to Golang Binding Guide
+# Golang Bindings
 
-This guide provides instructions on how to compile CUDA code using the provided Makefile, and then how to use the resulting shared libraries to bind Golang to ICICLE's CUDA code.
+To build the shared library:
 
-## Prerequisites
+To build shared libraries for all supported curves.
 
-To compile the CUDA files, you will need:
+```
+make all
+```
 
-- CUDA toolkit installed. The Makefile assumes CUDA is installed in `/usr/local/cuda`. If CUDA is installed in a different location, please adjust the `CUDA_ROOT_DIR` variable accordingly.
-- A compatible GPU and corresponding driver installed on your machine.
+If you wish to build for a specific curve, for example bn254.
 
-## Structure of the Makefile
+```
+make libbn254.so
+```
 
-The Makefile is designed to compile CUDA files for four curves: BN254, BLS12_381, BLS12_377 and BW6_671. The source files are located in the `icicle/curves/` directory.
+The current supported options are `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so`. The resulting `.so` files are the compiled shared libraries for each curve.
 
-## Compiling CUDA Code
+Finally to allow your system to find the shared libraries
 
-1. Navigate to the directory containing the Makefile in your terminal.
-2. To compile all curve libraries, use the `make all` command. This will create four shared libraries: `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so`.
-3. If you want to compile a specific curve, you can do so by specifying the target. For example, to compile only the BN254 curve, use `make libbn254.so`. Replace `libbn254.so` with `libbls12_381.so`, `libbls12_377.so` or `libbw6_671.so` to compile those curves instead.
+```
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH/<path_to_shared_libs>
+```
 
-The resulting `.so` files are the compiled shared libraries for each curve.
+## Running golang tests
 
-## Golang Binding
+To run the tests for curve bn254.
+
+```
+go test ./goicicle/curves/bn254 -count=1
+```
+
+## Cleaning up
+
+If you want to remove the compiled files
+
+```
+make clean
+```
+
+This will remove all shared libraries generated from the `make` file.
+
+# How do Golang bindings work?
 
 The shared libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
 
@@ -44,11 +63,7 @@ func main() {
 
 Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
 
-## Cleaning up
-
-If you want to remove the compiled files, you can use the `make clean` command. This will remove the `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so` files.
-
-## Common issues
+# Common issues
 
 ### Cannot find shared library
 
