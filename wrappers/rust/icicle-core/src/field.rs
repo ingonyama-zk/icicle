@@ -24,10 +24,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
     }
 
     pub fn from_limbs(limbs: [u64; NUM_LIMBS]) -> Self {
-        Self {
-            limbs,
-            p: PhantomData,
-        }
+        Self { limbs, p: PhantomData }
     }
 
     pub fn to_bytes_le(&self) -> Vec<u8> {
@@ -45,7 +42,11 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
     // and only takes the first bytes in there are too many of them
     pub fn from_bytes_le(bytes: &[u8]) -> Self {
         let mut limbs: [u64; NUM_LIMBS] = [0; NUM_LIMBS];
-        for (i, chunk) in bytes.chunks(8).take(NUM_LIMBS).enumerate() {
+        for (i, chunk) in bytes
+            .chunks(8)
+            .take(NUM_LIMBS)
+            .enumerate()
+        {
             let mut chunk_array: [u8; 8] = [0; 8];
             chunk_array[..chunk.len()].clone_from_slice(chunk);
             limbs[i] = u64::from_le_bytes(chunk_array);

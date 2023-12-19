@@ -1,6 +1,6 @@
 use crate::curve::ScalarField;
 
-use icicle_core::ntt::{NTTDir, NTTConfig};
+use icicle_core::ntt::{NTTConfig, NTTDir};
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
 
@@ -61,12 +61,12 @@ pub(crate) mod tests {
     use icicle_cuda_runtime::stream::CudaStream;
 
     use crate::curve::generate_random_scalars;
-    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, ScalarField, NTTDir};
+    use crate::ntt::{get_default_ntt_config, initialize_domain, ntt, NTTDir, ScalarField};
 
     use ark_bn254::Fr;
-    use ark_std::{ops::Neg, UniformRand, test_rng};
     use ark_ff::{FftField, One};
     use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
+    use ark_std::{ops::Neg, test_rng, UniformRand};
 
     const MAX_SIZE: u64 = 1 << 16;
     lazy_static! {
@@ -196,7 +196,11 @@ pub(crate) mod tests {
         assert!(RES.is_ok());
         let test_size = 1 << 16;
         let mut seed = test_rng();
-        let coset_generators = [Fr::rand(&mut seed), Fr::neg(Fr::one()), Fr::get_root_of_unity(test_size as u64).unwrap()];
+        let coset_generators = [
+            Fr::rand(&mut seed),
+            Fr::neg(Fr::one()),
+            Fr::get_root_of_unity(test_size as u64).unwrap(),
+        ];
         for coset_gen in coset_generators {
             let ark_domain = GeneralEvaluationDomain::<Fr>::new(test_size)
                 .unwrap()
@@ -258,7 +262,13 @@ pub(crate) mod tests {
                         config.batch_size = 1;
                         for i in 0..batch_size {
                             let mut one_ntt_result = vec![ScalarField::zero(); test_size];
-                            ntt(&scalars[i * test_size..(i + 1) * test_size], is_inverse, &config, &mut one_ntt_result).unwrap();
+                            ntt(
+                                &scalars[i * test_size..(i + 1) * test_size],
+                                is_inverse,
+                                &config,
+                                &mut one_ntt_result,
+                            )
+                            .unwrap();
                             assert_eq!(batch_ntt_result[i * test_size..(i + 1) * test_size], one_ntt_result);
                         }
                     }
@@ -275,28 +285,55 @@ pub(crate) mod tests {
         let mut seed = test_rng();
         let coset_generators = [Fr::one(), Fr::rand(&mut seed), Fr::neg(Fr::one())];
         let stream = CudaStream::create().unwrap();
+        let mut config = get_default_ntt_config();
+        config
+            .ctx
+            .stream = &stream;
         for batch_size in batch_sizes {
             let scalars_h: Vec<ScalarField> = generate_random_scalars(test_size * batch_size);
+            let sum_of_coeffs: Fr = scalars_h[..test_size]
+                .iter()
+                .map(|x| x.to_ark())
+                .sum();
             let mut scalars_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
-            scalars_d.copy_from_host(&scalars_h).unwrap();
+            scalars_d
+                .copy_from_host(&scalars_h)
+                .unwrap();
 
             for coset_gen in coset_generators {
                 for ordering in [Ordering::kNN, Ordering::kRR] {
-                    let mut config = get_default_ntt_config();
                     let mut ntt_out_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
                     config.coset_gen = ScalarField::from_ark(coset_gen);
                     config.ordering = ordering;
                     config.batch_size = batch_size as i32;
                     config.are_outputs_on_device = true;
                     config.are_inputs_on_device = true;
-                    config.ctx.stream = &stream;
                     config.is_async = true;
-                    ntt(&scalars_d.as_slice(), NTTDir::kForward, &config, &mut ntt_out_d.as_slice()).unwrap();
-                    ntt(&ntt_out_d.as_slice(), NTTDir::kInverse, &config, &mut scalars_d.as_slice()).unwrap();
+                    ntt(
+                        &scalars_d.as_slice(),
+                        NTTDir::kForward,
+                        &config,
+                        &mut ntt_out_d.as_slice(),
+                    )
+                    .unwrap();
+                    ntt(
+                        &ntt_out_d.as_slice(),
+                        NTTDir::kInverse,
+                        &config,
+                        &mut scalars_d.as_slice(),
+                    )
+                    .unwrap();
                     let mut intt_result_h = vec![ScalarField::zero(); test_size * batch_size];
-                    stream.synchronize().unwrap();
+                    stream
+                        .synchronize()
+                        .unwrap();
                     scalars_d.copy_to_host(&mut intt_result_h);
                     assert_eq!(scalars_h, intt_result_h);
+                    if (coset_gen == Fr::one()) {
+                        let mut ntt_result_h = vec![ScalarField::zero(); test_size * batch_size];
+                        ntt_out_d.copy_to_host(&mut ntt_result_h);
+                        assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
+                    }
                 }
             }
         }

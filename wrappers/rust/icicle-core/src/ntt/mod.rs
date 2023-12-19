@@ -5,13 +5,13 @@ use icicle_cuda_runtime::device_context::DeviceContext;
  * Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
  * evaluations from coefficients while inverse NTT computes coefficients from evaluations.
  */
- #[allow(non_camel_case_types)]
- #[repr(C)]
- #[derive(Clone, Copy, Debug, PartialEq, Eq)]
- pub enum NTTDir {
-     kForward,
-     kInverse,
- }
+#[allow(non_camel_case_types)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NTTDir {
+    kForward,
+    kInverse,
+}
 
 /**
  * @enum Ordering
