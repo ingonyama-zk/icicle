@@ -1,4 +1,8 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
+
+use crate::curve::{Affine, CurveConfig, Projective};
+
+pub mod tests;
 
 /*
 /**
@@ -95,4 +99,80 @@ pub struct MSMConfig<'a> {
 
     /// Details related to the device such as its id and stream id.
     pub ctx: DeviceContext<'a>,
+}
+
+pub trait MSM<C: CurveConfig> {
+    fn msm<'a>(
+        scalars: &[C::ScalarField],
+        points: &[Affine<C>],
+        cfg: MSMConfig<'a>,
+        results: &mut [Projective<C>],
+    ) -> CudaResult<()>;
+
+    fn get_default_msm_config() -> MSMConfig<'static>;
+}
+
+#[macro_export]
+macro_rules! impl_msm {
+    (
+      $curve_prefix:literal,
+      $curve_config:ident
+    ) => {
+        extern "C" {
+            #[link_name = concat!($curve_prefix, "MSMCuda")]
+            fn msm_cuda<'a>(
+                scalars: *const ScalarField,
+                points: *const G1Affine,
+                count: usize,
+                config: MSMConfig<'a>,
+                out: *mut G1Projective,
+            ) -> CudaError;
+
+            #[link_name = concat!($curve_prefix, "DefaultMSMConfig")]
+            fn default_msm_config() -> MSMConfig<'static>;
+        }
+
+        impl MSM<$curve_config> for $curve_config {
+            fn msm<'a>(
+                scalars: &[<$curve_config as CurveConfig>::ScalarField],
+                points: &[Affine<$curve_config>],
+                cfg: MSMConfig<'a>,
+                results: &mut [Projective<$curve_config>],
+            ) -> CudaResult<()> {
+                if points.len() != scalars.len() {
+                    return Err(CudaError::cudaErrorInvalidValue);
+                }
+
+                unsafe {
+                    msm_cuda(
+                        scalars as *const _ as *const <$curve_config as CurveConfig>::ScalarField,
+                        points as *const _ as *const Affine<$curve_config>,
+                        points.len(),
+                        cfg,
+                        results as *mut _ as *mut Projective<$curve_config>,
+                    )
+                    .wrap()
+                }
+            }
+
+            fn get_default_msm_config() -> MSMConfig<'static> {
+                unsafe { default_msm_config() }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_msm_tests {
+    (
+      $curve_config:ident,
+      $scalar_config:ident
+    ) => {
+        #[test]
+        fn test_msm() {
+            let log_test_sizes = [20];
+
+            check_msm::<$curve_config, $scalar_config>(&log_test_sizes)
+        }
+    };
 }

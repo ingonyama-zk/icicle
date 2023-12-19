@@ -6,7 +6,7 @@ use icicle_core::{
 };
 use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
 
-impl_msm!("bn254", CurveCfg);
+impl_msm!("bls12_381", CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

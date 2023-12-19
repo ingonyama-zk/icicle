@@ -5,7 +5,7 @@ use icicle_core::ntt::{NTTConfig, NTT};
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
 
-impl_ntt!("bn254", ScalarField, ScalarCfg);
+impl_ntt!("bw6_761", ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
