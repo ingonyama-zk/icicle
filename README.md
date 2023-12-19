@@ -57,7 +57,7 @@ If you don't have access to a Nvidia GPU we have some options for you.
 
 Checkout [Google Colab](https://colab.google/). Google Colab offers a free [T4 GPU](https://www.nvidia.com/en-us/data-center/tesla-t4/) instance and ICICLE can be used with it, refrence this guide for setting up your [Google Colab workplace][GOOGLE-COLAB-ICICLE].
 
-If you require more compute and have an interesting research project, we have a [bounties and grants program][GRANT_PROGRAM].
+If you require more compute and have an interesting research project, we have [bounty and grant programs][GRANT_PROGRAM].
 
 
 ### Build systems
