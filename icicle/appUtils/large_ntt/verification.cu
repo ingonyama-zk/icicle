@@ -39,7 +39,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 12;
+  int NTT_LOG_SIZE = 18;
   int TT_LOG_SIZE = 24;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
@@ -99,8 +99,8 @@ int main(){
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
   for (size_t i = 0; i < count; i++)
-    // new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE);
-    new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
+    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, TT_LOG_SIZE);
+    // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   $CUDA(cudaEventRecord(new_stop, 0));
   $CUDA(cudaDeviceSynchronize());
   $CUDA(cudaEventElapsedTime(&new_time, new_start, new_stop));
@@ -119,7 +119,7 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
-  new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE);
+  new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, TT_LOG_SIZE);
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, false, 0);
   reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);

@@ -208,7 +208,7 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
     // }
     // if (threadIdx.x!=0) return;
     // engine.loadGlobalDataDep(in, dataIndex);
-    engine.loadGlobalData(in,blockIdx.x*512*2,1,64*8); //todo - change function to fit global ntt
+    // engine.loadGlobalData(in,blockIdx.x*512*2,1,64*8); //todo - change function to fit global ntt
     // engine.loadGlobalData(in,blockIdx.x*512*2,1,256*8); //todo - change function to fit global ntt
     // __syncthreads();
     // if (blockIdx.x ==0 && threadIdx.x ==0) printf("load global\n");
@@ -289,7 +289,7 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
     //   engine.ntt16_win8ct2();
     //   // engine.ntt16win();
     // }
-    engine.storeGlobalData(out,blockIdx.x*512*2,1,64*8); //todo - change function to fit global ntt
+    // engine.storeGlobalData(out,blockIdx.x*512*2,1,64*8); //todo - change function to fit global ntt
     // engine.storeGlobalData(out,blockIdx.x*512*2,1,256*8); //todo - change function to fit global ntt
     // engine.storeGlobalDataDep(out, dataIndex); //todo - change function to fit global ntt
   // }
@@ -304,19 +304,26 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // if (twiddle_stride && threadIdx.x>15) return;
   
   // engine.initializeRoot(data_stride>1);
-  engine.loadInternalTwiddles(internal_twiddles, data_stride>1, tw_log_size);
+  engine.loadInternalTwiddles(internal_twiddles, data_stride>1);
     
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
-    if (twiddle_stride){
-      engine.loadGlobalData(in,blockIdx.x*64*8,data_stride,1<<log_size); //todo - parametize
-      engine.loadExternalTwiddles(twiddles,blockIdx.x*64*8,twiddle_stride,1<<tw_log_size); //todo - parametize
-      engine.twiddlesExternal();
-    }
-    else{
-      engine.loadGlobalData(in,blockIdx.x*8,data_stride,1<<log_size); //todo - parametize
-    }
+  engine.loadGlobalData(in, data_stride, twiddle_stride, log_size);
+  if (twiddle_stride) {
+    engine.loadExternalTwiddles(twiddles, data_stride, twiddle_stride, log_size, tw_log_size);
+    engine.twiddlesExternal();
+  }
+
+
+    // if (twiddle_stride){
+    //   engine.loadGlobalData(in,blockIdx.x*64*8,data_stride,1<<log_size); //todo - parametize
+    //   engine.loadExternalTwiddles(twiddles,blockIdx.x*64*8,twiddle_stride,1<<tw_log_size); //todo - parametize
+    //   engine.twiddlesExternal();
+    // }
+    // else{
+    //   engine.loadGlobalData(in,blockIdx.x*8,data_stride,1<<log_size); //todo - parametize
+    // }
     // engine.twiddles64();
 
     #pragma unroll 1
@@ -334,7 +341,7 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
       }
     }
 
-    engine.storeGlobalData(twiddle_stride? out :in,twiddle_stride? blockIdx.x*64*8 : blockIdx.x*8,data_stride,1<<log_size);
+    engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
   // }
 }
 
@@ -447,15 +454,18 @@ uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size){
   return w6_table;
 }
 
-void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size){
+void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size){
 // void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size){
   uint32_t nof_stages = 2;
   // for (int i = 0; i < nof_stages; i++)
   // {
   //   ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, log_size, i? 1 : 64, i? 1 : 0);
   // }
-  ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 64,0);
-  ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 1, 1);
+  // ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 64,0);
+  // ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 1, 1);
+  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64*64,0);
+  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64, 64*64);
+  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 1, 1);
 }
 
 #endif
