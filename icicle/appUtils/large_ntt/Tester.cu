@@ -175,7 +175,7 @@ int main(int argc, const char** argv) {
   std::cout << test_scalar::omega(6) <<std::endl;
   std::cout << test_scalar::omega(12) <<std::endl;
   std::cout << test_scalar::omega(18) <<std::endl;
-  // std::cout << test_scalar::omega(4) <<std::endl;
+  std::cout << test_scalar::omega(24) <<std::endl;
   // std::cout << test_scalar::omega(5) <<std::endl;
   // std::cout << test_scalar::omega(6) <<std::endl;
   std::cout<<std::endl;

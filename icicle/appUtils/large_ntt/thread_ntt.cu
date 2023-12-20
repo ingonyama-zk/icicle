@@ -228,6 +228,17 @@ class NTTEngine {
     }
   }
 
+  __device__ __forceinline__ void loadInternalTwiddles(uint4* data, bool stride, uint32_t tw_log_size){
+    // data += (1<<(tw_log_size-6));
+    #pragma unroll
+    for (int i = 0; i < 7; i++)
+    {
+      WI[i].store_half(data[((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1)], false);
+      WI[i].store_half(data[((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1) + 64], true);
+      // if (blockIdx.x == 0 && threadIdx.x == 8) printf("%d\n",WI[i].load_half(false).w);
+    }
+  }
+
   __device__ __forceinline__ void loadGlobalDataDep(test_scalar* data, uint32_t dataIndex) {
     // data+=1024*dataIndex + (threadIdx.x & 0x1F);
     data += 16*dataIndex;
@@ -250,30 +261,34 @@ class NTTEngine {
     }
   }
   
-  __device__ __forceinline__ void loadInternalTwiddles(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
+  // __device__ __forceinline__ void loadInternalTwiddles(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
     
-    if (stride == 1){
-      data += block_offset + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
-    }
-    else {
-      data += block_offset + (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
-    }
+  //   if (stride == 1){
+  //     data += block_offset + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+  //   }
+  //   else {
+  //     data += block_offset + (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+  //   }
 
-    #pragma unroll
-    for(uint32_t i=0;i<7;i++) {
-      WI[i].store_half(data[8*i*stride], false);
-      WI[i].store_half(data[8*i*stride + high_bits_offset], true);
-    }
-  }
+  //   #pragma unroll
+  //   for(uint32_t i=0;i<7;i++) {
+  //     WI[i].store_half(data[8*i*stride], false);
+  //     WI[i].store_half(data[8*i*stride + high_bits_offset], true);
+  //   }
+  // }
 
   __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
     
+    int tw_log_size = 24;
     if (stride == 1){
-      data += block_offset + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+      data += (1<<(tw_log_size-12)) * block_offset + (threadIdx.x & 0x7) + (1<<(tw_log_size-12)) * 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
       data += block_offset + (threadIdx.x & 0x7) + stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
+
+    // data += blockIdx.x*64*64*8 + (threadIdx.x & 0x7) + 64*64 * (threadIdx.x >> 3);
+    // stride = 1;
 
     
     #pragma unroll
@@ -336,8 +351,13 @@ class NTTEngine {
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
       // if (stride == 1){
-      //   data[8*i*stride] = WE[i].load_half(false);
-      //   data[8*i*stride + high_bits_offset] = WE[i].load_half(true);
+      //   if (i==0){
+      //     data[8*i*stride] = uint4{2,0,0,0};
+      //     data[8*i*stride + high_bits_offset] = uint4{0,0,0,0};
+      //     continue;
+      //   }
+      //   data[8*i*stride] = WI[i-1].load_half(false);
+      //   data[8*i*stride + high_bits_offset] = WI[i-1].load_half(true);
       // }
       // else{
         data[8*i*stride] = X[i].load_half(false);
