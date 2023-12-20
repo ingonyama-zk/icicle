@@ -1,16 +1,21 @@
-use crate::field::{Field, FieldConfig};
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
+use crate::traits::FieldImpl;
 #[cfg(feature = "arkworks")]
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
-use std::ffi::{c_uint, c_void};
-use std::marker::PhantomData;
+use std::ffi::c_uint;
+use std::fmt::Debug;
 
-pub trait CurveConfig: PartialEq + Copy + Clone {
-    fn eq_proj(point1: *const c_void, point2: *const c_void) -> c_uint;
-    fn to_affine(point: *const c_void, point_aff: *mut c_void);
+pub trait CurveConfig: Debug + PartialEq + Copy + Clone {
+    type BaseField: FieldImpl;
+    type ScalarField: FieldImpl;
+
+    fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> c_uint;
+    fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
+    fn generate_random_projective_points(size: usize) -> Vec<Projective<Self>>;
+    fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -18,120 +23,91 @@ pub trait CurveConfig: PartialEq + Copy + Clone {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct Projective<T, C: CurveConfig> {
-    pub x: T,
-    pub y: T,
-    pub z: T,
-    p: PhantomData<C>,
+pub struct Projective<C: CurveConfig> {
+    pub x: C::BaseField,
+    pub y: C::BaseField,
+    pub z: C::BaseField,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(C)]
-pub struct Affine<T, C: CurveConfig> {
-    pub x: T,
-    pub y: T,
-    p: PhantomData<C>,
+pub struct Affine<C: CurveConfig> {
+    pub x: C::BaseField,
+    pub y: C::BaseField,
 }
 
-impl<const BASE_LIMBS: usize, F, C> Affine<Field<BASE_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
+impl<C: CurveConfig> Affine<C> {
     // While this is not a true zero point and not even a valid point, it's still useful
     // both as a handy default as well as a representation of zero points in other codebases
     pub fn zero() -> Self {
         Affine {
-            x: Field::<BASE_LIMBS, F>::zero(),
-            y: Field::<BASE_LIMBS, F>::zero(),
-            p: PhantomData,
+            x: C::BaseField::zero(),
+            y: C::BaseField::zero(),
         }
     }
 
-    pub fn from_limbs(x: [u64; BASE_LIMBS], y: [u64; BASE_LIMBS]) -> Self {
+    pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr) -> Self {
         Affine {
-            x: Field::<BASE_LIMBS, F>::from_limbs(x),
-            y: Field::<BASE_LIMBS, F>::from_limbs(y),
-            p: PhantomData,
+            x: C::BaseField::from(x),
+            y: C::BaseField::from(y),
         }
     }
 
-    pub fn to_projective(&self) -> Projective<Field<BASE_LIMBS, F>, C> {
+    pub fn to_projective(&self) -> Projective<C> {
         Projective {
             x: self.x,
             y: self.y,
-            z: Field::<BASE_LIMBS, F>::one(),
-            p: PhantomData,
+            z: C::BaseField::one(),
         }
     }
 }
 
-impl<const BASE_LIMBS: usize, F, C> From<Affine<Field<BASE_LIMBS, F>, C>> for Projective<Field<BASE_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
-    fn from(item: Affine<Field<BASE_LIMBS, F>, C>) -> Self {
+impl<C: CurveConfig> From<Affine<C>> for Projective<C> {
+    fn from(item: Affine<C>) -> Self {
         Self {
             x: item.x,
             y: item.y,
-            z: Field::<BASE_LIMBS, F>::one(),
-            p: PhantomData,
+            z: C::BaseField::one(),
         }
     }
 }
 
-impl<const BASE_LIMBS: usize, F, C> Projective<Field<BASE_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
+impl<C: CurveConfig> Projective<C> {
     pub fn zero() -> Self {
         Projective {
-            x: Field::<BASE_LIMBS, F>::zero(),
-            y: Field::<BASE_LIMBS, F>::one(),
-            z: Field::<BASE_LIMBS, F>::zero(),
-            p: PhantomData,
+            x: C::BaseField::zero(),
+            y: C::BaseField::one(),
+            z: C::BaseField::zero(),
         }
     }
 
-    pub fn from_limbs(x: [u64; BASE_LIMBS], y: [u64; BASE_LIMBS], z: [u64; BASE_LIMBS]) -> Self {
+    pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr, z: <C::BaseField as FieldImpl>::Repr) -> Self {
         Projective {
-            x: Field::<BASE_LIMBS, F>::from_limbs(x),
-            y: Field::<BASE_LIMBS, F>::from_limbs(y),
-            z: Field::<BASE_LIMBS, F>::from_limbs(z),
-            p: PhantomData,
+            x: C::BaseField::from(x),
+            y: C::BaseField::from(y),
+            z: C::BaseField::from(z),
         }
     }
 }
 
-impl<const BASE_LIMBS: usize, F, C> PartialEq for Projective<Field<BASE_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
+impl<C: CurveConfig> PartialEq for Projective<C> {
     fn eq(&self, other: &Self) -> bool {
-        C::eq_proj(self as *const _ as *const c_void, other as *const _ as *const c_void) != 0
+        C::eq_proj(self as *const _, other as *const _) != 0
     }
 }
 
-impl<const BASE_LIMBS: usize, F, C> From<Projective<Field<BASE_LIMBS, F>, C>> for Affine<Field<BASE_LIMBS, F>, C>
-where
-    F: FieldConfig,
-    C: CurveConfig,
-{
-    fn from(item: Projective<Field<BASE_LIMBS, F>, C>) -> Self {
+impl<C: CurveConfig> From<Projective<C>> for Affine<C> {
+    fn from(proj: Projective<C>) -> Self {
         let mut aff = Self::zero();
-        C::to_affine(&item as *const _ as *const c_void, &mut aff as *mut _ as *mut c_void);
+        C::to_affine(&proj as *const _, &mut aff as *mut _);
         aff
     }
 }
 
 #[cfg(feature = "arkworks")]
-impl<const BASE_LIMBS: usize, F, C> ArkConvertible for Affine<Field<BASE_LIMBS, F>, C>
+impl<C: CurveConfig> ArkConvertible for Affine<C>
 where
-    C: CurveConfig,
-    F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
+    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     type ArkEquivalent = ArkAffine<C::ArkSWConfig>;
 
@@ -147,18 +123,16 @@ where
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
         Self {
-            x: Field::<BASE_LIMBS, F>::from_ark(ark.x),
-            y: Field::<BASE_LIMBS, F>::from_ark(ark.y),
-            p: PhantomData,
+            x: C::BaseField::from_ark(ark.x),
+            y: C::BaseField::from_ark(ark.y),
         }
     }
 }
 
 #[cfg(feature = "arkworks")]
-impl<const BASE_LIMBS: usize, F, C> ArkConvertible for Projective<Field<BASE_LIMBS, F>, C>
+impl<C: CurveConfig> ArkConvertible for Projective<C>
 where
-    C: CurveConfig,
-    F: FieldConfig<ArkField = <<C as CurveConfig>::ArkSWConfig as ArkCurveConfig>::BaseField>,
+    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     type ArkEquivalent = ArkProjective<C::ArkSWConfig>;
 
@@ -184,10 +158,114 @@ where
         let proj_x = ark.x * ark.z;
         let proj_z = ark.z * ark.z * ark.z;
         Self {
-            x: Field::<BASE_LIMBS, F>::from_ark(proj_x),
-            y: Field::<BASE_LIMBS, F>::from_ark(ark.y),
-            z: Field::<BASE_LIMBS, F>::from_ark(proj_z),
-            p: PhantomData,
+            x: C::BaseField::from_ark(proj_x),
+            y: C::BaseField::from_ark(ark.y),
+            z: C::BaseField::from_ark(proj_z),
         }
     }
+}
+
+#[macro_export]
+macro_rules! impl_curve {
+    (
+        $scalar_field:ident,
+        $base_field:ident
+    ) => {
+        #[derive(Debug, PartialEq, Copy, Clone)]
+        pub struct CurveCfg {}
+
+        pub type G1Affine = Affine<CurveCfg>;
+        pub type G1Projective = Projective<CurveCfg>;
+
+        extern "C" {
+            fn Eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
+            fn ToAffine(point: *const G1Projective, point_out: *mut G1Affine);
+            fn GenerateProjectivePoints(points: *mut G1Projective, size: usize);
+            fn GenerateAffinePoints(points: *mut G1Affine, size: usize);
+        }
+
+        impl CurveConfig for CurveCfg {
+            type BaseField = $base_field;
+            type ScalarField = $scalar_field;
+
+            fn eq_proj(point1: *const G1Projective, point2: *const G1Projective) -> c_uint {
+                unsafe { Eq(point1, point2) }
+            }
+
+            fn to_affine(point: *const Projective<CurveCfg>, point_out: *mut Affine<CurveCfg>) {
+                unsafe { ToAffine(point, point_out) };
+            }
+
+            fn generate_random_projective_points(size: usize) -> Vec<G1Projective> {
+                let mut res = vec![G1Projective::zero(); size];
+                unsafe { GenerateProjectivePoints(&mut res[..] as *mut _ as *mut G1Projective, size) };
+                res
+            }
+
+            fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
+                let mut res = vec![G1Affine::zero(); size];
+                unsafe { GenerateAffinePoints(&mut res[..] as *mut _ as *mut G1Affine, size) };
+                res
+            }
+
+            #[cfg(feature = "arkworks")]
+            type ArkSWConfig = ArkG1Config;
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_curve_tests {
+    (
+        $base_limbs:ident,
+        $field_config:ident,
+        $curve_config:ident
+    ) => {
+        #[test]
+        fn test_scalar_equality() {
+            check_scalar_equality::<<$curve_config as CurveConfig>::ScalarField>()
+        }
+
+        #[test]
+        fn test_affine_projective_convert() {
+            check_affine_projective_convert::<$curve_config>()
+        }
+
+        #[test]
+        fn test_point_equality() {
+            check_point_equality::<$base_limbs, $field_config, $curve_config>()
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_curve_ark_tests {
+    (
+        $curve_config:ident,
+        $ark_affine:ident,
+        $scalar_config:ident
+    ) => {
+        #[test]
+        fn test_ark_scalar_convert() {
+            let size = 1 << 10;
+            let scalars = $scalar_config::generate_random(size);
+            for scalar in scalars {
+                assert_eq!(scalar.to_ark(), scalar.to_ark())
+            }
+        }
+
+        #[test]
+        fn test_ark_point_convert() {
+            let size = 1 << 10;
+            let affine_points = $curve_config::generate_random_affine_points(size);
+            for affine_point in affine_points {
+                let ark_projective = Into::<Projective<$curve_config>>::into(affine_point).to_ark();
+                let ark_affine: $ark_affine = ark_projective.into();
+                assert!(ark_affine.is_on_curve());
+                assert!(ark_affine.is_in_correct_subgroup_assuming_on_curve());
+                let affine_after_conversion = Affine::<$curve_config>::from_ark(ark_affine).into();
+                assert_eq!(affine_point, affine_after_conversion);
+            }
+        }
+    };
 }

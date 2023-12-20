@@ -1,15 +1,15 @@
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
+use crate::traits::FieldImpl;
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, PrimeField};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
-#[cfg(feature = "arkworks")]
-pub trait FieldConfig: PartialEq + Copy + Clone {
+pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
+    #[cfg(feature = "arkworks")]
     type ArkField: PrimeField;
 }
-#[cfg(not(feature = "arkworks"))]
-pub trait FieldConfig: PartialEq + Copy + Clone {}
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -18,16 +18,25 @@ pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
     p: PhantomData<F>,
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
-    pub fn get_limbs(&self) -> [u64; NUM_LIMBS] {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn into(self) -> [u64; NUM_LIMBS] {
         self.limbs
     }
+}
 
-    pub fn from_limbs(limbs: [u64; NUM_LIMBS]) -> Self {
-        Self { limbs, p: PhantomData }
+impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn from(limbs: [u64; NUM_LIMBS]) -> Self {
+        Self {
+            limbs,
+            p: PhantomData,
+        }
     }
+}
 
-    pub fn to_bytes_le(&self) -> Vec<u8> {
+impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
+    type Repr = [u64; NUM_LIMBS];
+
+    fn to_bytes_le(&self) -> Vec<u8> {
         self.limbs
             .iter()
             .map(|limb| {
@@ -40,7 +49,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
 
     // please note that this function zero-pads if there are not enough bytes
     // and only takes the first bytes in there are too many of them
-    pub fn from_bytes_le(bytes: &[u8]) -> Self {
+    fn from_bytes_le(bytes: &[u8]) -> Self {
         let mut limbs: [u64; NUM_LIMBS] = [0; NUM_LIMBS];
         for (i, chunk) in bytes
             .chunks(8)
@@ -51,17 +60,17 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
             chunk_array[..chunk.len()].clone_from_slice(chunk);
             limbs[i] = u64::from_le_bytes(chunk_array);
         }
-        Self::from_limbs(limbs)
+        Self::from(limbs)
     }
 
-    pub fn zero() -> Self {
+    fn zero() -> Self {
         Field {
             limbs: [0u64; NUM_LIMBS],
             p: PhantomData,
         }
     }
 
-    pub fn one() -> Self {
+    fn one() -> Self {
         let mut limbs = [0u64; NUM_LIMBS];
         limbs[0] = 1;
         Field { limbs, p: PhantomData }
@@ -80,4 +89,53 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS,
         let ark_bigint: <Self::ArkEquivalent as PrimeField>::BigInt = ark.into();
         Self::from_bytes_le(&ark_bigint.to_bytes_le())
     }
+}
+
+#[macro_export]
+macro_rules! impl_scalar_field {
+    (
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident
+    ) => {
+        #[derive(Debug, PartialEq, Copy, Clone)]
+        pub struct $field_cfg {}
+
+        impl FieldConfig for $field_cfg {
+            #[cfg(feature = "arkworks")]
+            type ArkField = Fr;
+        }
+
+        pub type $field_name = Field<$num_limbs, $field_cfg>;
+
+        extern "C" {
+            fn GenerateScalars(scalars: *mut $field_name, size: usize);
+        }
+
+        impl GenerateRandom<$field_name> for $field_cfg {
+            fn generate_random(size: usize) -> Vec<$field_name> {
+                let mut res = vec![$field_name::zero(); size];
+                unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut $field_name, size) };
+                res
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_base_field {
+    (
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident
+    ) => {
+        #[derive(Debug, PartialEq, Copy, Clone)]
+        pub struct $field_cfg {}
+
+        impl FieldConfig for $field_cfg {
+            #[cfg(feature = "arkworks")]
+            type ArkField = Fq;
+        }
+        pub type $field_name = Field<$num_limbs, $field_cfg>;
+    };
 }

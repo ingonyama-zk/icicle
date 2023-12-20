@@ -14,6 +14,7 @@ icicle-cuda-runtime = { path = "../icicle-cuda-runtime" }
 
 ark-ff = { version = "0.4.0", optional = true }
 ark-ec = { version = "0.4.0", optional = true, features = [ "parallel" ] }
+ark-poly = { version = "0.4.0", optional = true }
 
 # [build-dependencies]
 # cc = { version = "1.0", features = ["parallel"] }
@@ -26,7 +27,7 @@ ark-ec = { version = "0.4.0", optional = true, features = [ "parallel" ] }
 
 [features]
 default = []
-arkworks = ["ark-ff", "ark-ec"]
+arkworks = ["ark-ff", "ark-ec", "ark-poly"]
 # TODO: impl G2 and EC NTT
 g2 = []
 ec_ntt = []
