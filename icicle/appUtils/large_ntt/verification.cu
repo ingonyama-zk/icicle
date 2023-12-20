@@ -13,6 +13,8 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
+// #define PERFORMANCE
+
 using namespace BLS12_377;
 typedef scalar_t test_scalar;
 #include "kernel_ntt.cu"
@@ -31,6 +33,9 @@ void incremental_values(test_scalar* res, uint32_t count) {
 }
 
 int main(){
+
+  cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
+  float       icicle_time, new_time;
 
   int NTT_LOG_SIZE = 12;
   int TT_LOG_SIZE = 12;
@@ -76,12 +81,39 @@ int main(){
   cudaDeviceSynchronize();
   printf("cuda err %d\n",cudaGetLastError());
 
+  #ifdef PERFORMANCE
+  $CUDA(cudaEventCreate(&icicle_start));
+  $CUDA(cudaEventCreate(&icicle_stop));
+  $CUDA(cudaEventCreate(&new_start));
+  $CUDA(cudaEventCreate(&new_stop));
+  
+  
 
   //run ntts
+  int count = 10000;
+  $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
-  new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
+  for (size_t i = 0; i < count; i++)
+    new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
+  $CUDA(cudaEventRecord(new_stop, 0));
+  $CUDA(cudaDeviceSynchronize());
+  $CUDA(cudaEventElapsedTime(&new_time, new_start, new_stop));
   cudaDeviceSynchronize();
   printf("cuda err %d\n",cudaGetLastError());
+  test_scalar *icicle_tw;
+  icicle_tw = fill_twiddle_factors_array(NTT_SIZE, test_scalar::omega(NTT_LOG_SIZE), 0);
+  $CUDA(cudaEventRecord(icicle_start, 0));
+  for (size_t i = 0; i < count; i++)
+    ntt_inplace_batch_template<test_scalar, test_scalar>(gpuIcicle, icicle_tw, NTT_SIZE, 1, false, false, nullptr, 0, false);
+  $CUDA(cudaEventRecord(icicle_stop, 0));
+  $CUDA(cudaDeviceSynchronize());
+  $CUDA(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
+  cudaDeviceSynchronize();
+  printf("cuda err %d\n",cudaGetLastError());
+  fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
+  fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
+  #else
+  new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, false, 0);
   reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
   
@@ -118,7 +150,7 @@ int main(){
   if (success){
     printf("success!\n");
   }
-
+  #endif
 
   return 0;
 
