@@ -1,6 +1,8 @@
 use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
 use crate::traits::FieldImpl;
 
+pub mod tests;
+
 /**
  * @enum NTTDir
  * Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
@@ -13,8 +15,6 @@ pub enum NTTDir {
     kForward,
     kInverse,
 }
-
-pub mod tests;
 
 /**
  * @enum Ordering
@@ -68,7 +68,7 @@ pub struct NTTConfig<'a, S> {
 }
 
 pub trait NTT<F: FieldImpl> {
-    fn ntt(input: &[F], is_inverse: bool, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>;
+    fn ntt(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>;
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
@@ -84,8 +84,8 @@ macro_rules! impl_ntt {
             #[link_name = concat!($field_prefix, "NTTCuda")]
             fn ntt_cuda<'a>(
                 input: *const $field,
-                size: usize,
-                is_inverse: bool,
+                size: i32,
+                dir: NTTDir,
                 config: &NTTConfig<'a, $field>,
                 output: *mut $field,
             ) -> CudaError;
@@ -100,7 +100,7 @@ macro_rules! impl_ntt {
         impl NTT<$field> for $field_config {
             fn ntt(
                 input: &[$field],
-                is_inverse: bool,
+                dir: NTTDir,
                 cfg: &NTTConfig<$field>,
                 output: &mut [$field],
             ) -> CudaResult<()> {
@@ -111,8 +111,8 @@ macro_rules! impl_ntt {
                 unsafe {
                     ntt_cuda(
                         input as *const _ as *const $field,
-                        input.len(),
-                        is_inverse,
+                        (input.len() / (cfg.batch_size as usize)) as i32,
+                        dir,
                         cfg,
                         output as *mut _ as *mut $field,
                     )
@@ -137,14 +137,37 @@ macro_rules! impl_ntt_tests {
       $field:ident,
       $field_config:ident
     ) => {
+        const MAX_SIZE: u64 = 1 << 16;
+        static RES: OnceLock<()> = OnceLock::new();
+
         #[test]
         fn test_ntt() {
+            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
             check_ntt::<$field, $field_config>()
         }
 
         #[test]
         fn test_ntt_coset_from_subgroup() {
+            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
             check_ntt_coset_from_subgroup::<$field, $field_config>()
+        }
+
+        #[test]
+        fn test_ntt_arbitrary_coset() {
+            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            check_ntt_arbitrary_coset::<$field, $field_config>()
+        }
+
+        #[test]
+        fn test_ntt_batch() {
+            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            check_ntt_batch::<$field, $field_config>()
+        }
+
+        #[test]
+        fn test_ntt_device_async() {
+            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            check_ntt_device_async::<$field, $field_config>()
         }
     };
 }

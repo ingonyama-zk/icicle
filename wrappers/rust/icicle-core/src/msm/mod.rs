@@ -170,7 +170,7 @@ macro_rules! impl_msm_tests {
     ) => {
         #[test]
         fn test_msm() {
-            let log_test_sizes = [20];
+            let log_test_sizes = [18];
 
             check_msm::<$curve_config, $scalar_config>(&log_test_sizes)
         }

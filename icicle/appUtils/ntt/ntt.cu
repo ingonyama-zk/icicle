@@ -290,7 +290,7 @@ namespace ntt {
       int logn,
       bool inverse,
       bool ct_buttterfly,
-      bool coset_outside_subgroup,
+      S* arbitrary_coset,
       int coset_gen_index,
       cudaStream_t stream,
       E* d_output)
@@ -313,12 +313,12 @@ namespace ntt {
         n_twiddles = -n_twiddles;
       }
 
-      bool is_on_coset = (coset_gen_index != 0);
+      bool is_on_coset = (coset_gen_index != 0) || arbitrary_coset;
       bool direct_coset = (!inverse && is_on_coset);
       if (direct_coset) {
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
-          d_input, n, batch_size, coset_outside_subgroup ? d_twiddles + coset_gen_index : d_twiddles,
-          coset_outside_subgroup ? 1 : coset_gen_index, n_twiddles, logn, ct_buttterfly, d_output);
+          d_input, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles,
+          arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn, ct_buttterfly, d_output);
       }
 
       if (ct_buttterfly) {
@@ -350,8 +350,8 @@ namespace ntt {
       if (inverse) {
         if (is_on_coset)
           utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
-            d_output, n, batch_size, coset_outside_subgroup ? d_twiddles + n_twiddles + coset_gen_index : d_twiddles,
-            coset_outside_subgroup ? 1 : -coset_gen_index, -n_twiddles, logn, !ct_buttterfly, d_output);
+            d_output, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles,
+            arbitrary_coset ? 1 : -coset_gen_index, -n_twiddles, logn, !ct_buttterfly, d_output);
 
         utils_internal::NormalizeKernel<E, S>
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
@@ -426,7 +426,7 @@ namespace ntt {
     bool is_output_on_device = config.are_outputs_on_device;
 
     S* coset = nullptr;
-    int coset_index;
+    int coset_index = 0;
     try {
       coset_index = Domain<S>::coset_index.at(config.coset_gen);
     }
@@ -440,7 +440,6 @@ namespace ntt {
       }
       cudaMallocAsync(&coset, size * sizeof(S), stream);
       cudaMemcpyAsync(coset, &h_coset.front(), size * sizeof(S), cudaMemcpyHostToDevice, stream);
-      coset_index = coset - Domain<S>::twiddles;
       h_coset.clear();
     }
 
@@ -478,17 +477,16 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
-      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output);
+      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size,
+      logn, dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output);
     CHECK_LAST_CUDA_ERROR();
 
-    if (!is_output_on_device) {
-      cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream);
-      CHECK_LAST_CUDA_ERROR();
-    }
+    if (!is_output_on_device) cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream);
     CHECK_LAST_CUDA_ERROR();
 
     if (coset) cudaFreeAsync(coset, stream);
+    if (!is_input_on_device) cudaFreeAsync(d_input, stream);
+    if (!is_output_on_device) cudaFreeAsync(d_output, stream);
     if (!config.is_async) cudaStreamSynchronize(stream);
 
     CHECK_LAST_CUDA_ERROR();
