@@ -6,7 +6,10 @@
 
 // TODO: ? do{..}while(0) as per https://hownot2code.wordpress.com/2016/12/05/do-while-0-in-macros/
 
-#define CHECK_CUDA_ERROR(val) do { check((val), #val, __FILE__, __LINE__); } while (0)
+#define CHECK_CUDA_ERROR(val)                                                                                          \
+  do {                                                                                                                 \
+    check((val), #val, __FILE__, __LINE__);                                                                            \
+  } while (0)
 template <typename T>
 void inline check(T err, const char* const func, const char* const file, const int line)
 {
@@ -16,7 +19,13 @@ void inline check(T err, const char* const func, const char* const file, const i
   }
 }
 
-#define CHECK_LAST_CUDA_ERROR() do { checkLast(__FILE__, __LINE__); } while (0)
+#define CHECK_LAST_CUDA_ERROR()                                                                                        \
+  / do                                                                                                                 \
+  {                                                                                                                    \
+    / checkLast(__FILE__, __LINE__);                                                                                   \
+    /                                                                                                                  \
+  }                                                                                                                    \
+  while (0)
 void inline checkLast(const char* const file, const int line)
 {
   cudaError_t err{cudaGetLastError()};
@@ -26,7 +35,13 @@ void inline checkLast(const char* const file, const int line)
   }
 }
 
-#define CHECK_SYNC_DEVICE_ERROR() do { checkSyncDevice(__FILE__, __LINE__); } while(0) // TODO: redundant ?
+#define CHECK_SYNC_DEVICE_ERROR()                                                                                      \
+  / do                                                                                                                 \
+  {                                                                                                                    \
+    / checkSyncDevice(__FILE__, __LINE__);                                                                             \
+    /                                                                                                                  \
+  }                                                                                                                    \
+  while (0) // TODO: redundant ?
 void inline checkSyncDevice(const char* const file, const int line)
 {
   cudaError_t err{cudaDeviceSynchronize()};
@@ -55,7 +70,7 @@ cudaError_t inline checkLastStickyError(const char* const file, const int line)
       // TODO: common practice in C++ is to throw here instead
     }
   }
-  
+
   return cudaSuccess; // TODO: or err? - returning cudaSuccess here shows it's non-sticky without using tuple
 }
 

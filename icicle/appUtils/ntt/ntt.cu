@@ -11,8 +11,8 @@ namespace ntt {
 
   namespace {
 
-    const uint32_t MAX_NUM_THREADS = 512;            // TODO: hotfix - should be 1024, currently limits shared memory size
-    const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
+    const uint32_t MAX_NUM_THREADS = 512;   // TODO: hotfix - should be 1024, currently limits shared memory size
+    const uint32_t MAX_THREADS_BATCH = 512; // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
@@ -406,7 +406,8 @@ namespace ntt {
         h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
       } while (h_twiddles.at(n++) != S::one());
       CHECK_CUDA_ERROR(cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream));
-      CHECK_CUDA_ERROR(cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
+      CHECK_CUDA_ERROR(
+        cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
       Domain<S>::max_size = n - 1;
     }
     return CHECK_LAST_IS_STICKY_ERROR();
@@ -421,7 +422,7 @@ namespace ntt {
     int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
-    bool is_input_on_device = config.are_inputs_on_device; //TODO: unify name to is_ 
+    bool is_input_on_device = config.are_inputs_on_device; // TODO: unify name to is_
     bool is_output_on_device = config.are_outputs_on_device;
 
     E* d_input;
