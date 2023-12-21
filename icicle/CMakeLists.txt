@@ -83,7 +83,6 @@ if (NOT BUILD_TESTS)
 
   add_library(
     icicle
-    utils/error_handler.cu
     utils/vec_ops.cu
     primitives/field.cu
     primitives/projective.cu
@@ -112,7 +111,6 @@ if (NOT BUILD_TESTS)
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o
     COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a 
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/error_handler.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/vec_ops.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/field.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
@@ -125,7 +123,6 @@ if (NOT BUILD_TESTS)
   # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o)
   # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o)
   # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/utils_kernels.cu.o)
-  # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/error_handler.cu.o)
 
 else()
 
