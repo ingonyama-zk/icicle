@@ -11,11 +11,39 @@ pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
     type ArkField: PrimeField;
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
 pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
     limbs: [u64; NUM_LIMBS],
     p: PhantomData<F>,
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> ::std::fmt::Display for Field<NUM_LIMBS, F> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "0x")?;
+        for &b in self
+            .limbs
+            .iter()
+            .rev()
+        {
+            write!(f, "{:02x}", b)?;
+        }
+        Ok(())
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> ::std::fmt::Debug for Field<NUM_LIMBS, F> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "0x")?;
+        for &b in self
+            .limbs
+            .iter()
+            .rev()
+        {
+            write!(f, "{:02x}", b)?;
+        }
+        Ok(())
+    }
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
