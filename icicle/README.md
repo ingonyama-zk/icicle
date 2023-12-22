@@ -89,3 +89,16 @@ Make sure `libssl` is installed.
 sudo apt-get update
 sudo apt-get install libssl1.0.0 libssl-dev
 ```
+
+## Running with Nix
+
+If you have Nix or NixOs installed on your machine, you can create a development shell to load all build dependencies and set the required environmental variables.
+
+From the ```/icicle/icicle```  directory run the following command. 
+
+```
+nix-shell --pure cuda-shell.nix
+```
+
+This will install everything you need to build and run ICICLE Core.
+
