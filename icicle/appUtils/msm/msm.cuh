@@ -72,7 +72,7 @@ namespace msm {
                                  *   very frequently. Useful for efficient treatment of non-uniform distributions of
                                  *   scalars and "top windows" with few bits. Can be set to 0 to disable separate
                                  *   treatment of large buckets altogether. Default value: 10. */
-    bool is_async;              /**< Whether to run the MSM asyncronously. If set to true, the MSM function will be
+    bool is_async;              /**< Whether to run the MSM asynchronously. If set to true, the MSM function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */

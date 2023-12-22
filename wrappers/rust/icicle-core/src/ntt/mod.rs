@@ -44,7 +44,7 @@ pub struct NTTConfig<'a, S> {
     pub are_outputs_on_device: bool,
     /** The number of NTTs to compute. Default value: 1. */
     pub batch_size: c_int,
-    /** Whether to run the NTT asyncronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
+    /** Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
      *  it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
      *  function will block the current CPU thread. */
     pub is_async: bool,
