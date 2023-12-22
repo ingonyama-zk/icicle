@@ -1,11 +1,11 @@
 use ark_ff::{FftField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
-use icicle_cuda_runtime::{device_context::get_default_device_context, stream::CudaStream, memory::DeviceSlice};
+use icicle_cuda_runtime::{device_context::get_default_device_context, memory::DeviceSlice, stream::CudaStream};
 
 use crate::{
     field::FieldConfig,
-    ntt::{Ordering, NTTDir},
+    ntt::{NTTDir, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
@@ -187,8 +187,7 @@ where
     }
 }
 
-pub fn check_ntt_batch<F: FieldImpl, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>()
-{
+pub fn check_ntt_batch<F: FieldImpl, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>() {
     let test_size = 1 << 12;
     let batch_sizes = [1, 1 << 4, 100];
     let coset_generators = [F::one(), Fc::generate_random(1)[0]];
@@ -272,11 +271,15 @@ where
                 stream
                     .synchronize()
                     .unwrap();
-                scalars_d.copy_to_host(&mut intt_result_h);
+                scalars_d
+                    .copy_to_host(&mut intt_result_h)
+                    .unwrap();
                 assert_eq!(scalars_h, intt_result_h);
                 if coset_gen == F::one() {
                     let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                    ntt_out_d.copy_to_host(&mut ntt_result_h);
+                    ntt_out_d
+                        .copy_to_host(&mut ntt_result_h)
+                        .unwrap();
                     assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
                 }
             }

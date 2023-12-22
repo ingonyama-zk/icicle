@@ -559,11 +559,11 @@ namespace ntt {
   extern "C" cudaError_t ECNTTCuda(
     curve_config::projective_t* input,
     int size,
-    bool is_inverse,
+    NTTDir dir,
     NTTConfig<curve_config::scalar_t>& config,
     curve_config::projective_t* output)
   {
-    return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, is_inverse, config, output);
+    return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, dir, config, output);
   }
 
 #endif

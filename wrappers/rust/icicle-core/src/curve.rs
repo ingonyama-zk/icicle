@@ -81,7 +81,11 @@ impl<C: CurveConfig> Projective<C> {
         }
     }
 
-    pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr, z: <C::BaseField as FieldImpl>::Repr) -> Self {
+    pub fn from_limbs(
+        x: <C::BaseField as FieldImpl>::Repr,
+        y: <C::BaseField as FieldImpl>::Repr,
+        z: <C::BaseField as FieldImpl>::Repr,
+    ) -> Self {
         Projective {
             x: C::BaseField::from(x),
             y: C::BaseField::from(y),

@@ -1,5 +1,5 @@
-use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
 use crate::traits::FieldImpl;
+use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
 
 pub mod tests;
 
@@ -98,12 +98,7 @@ macro_rules! impl_ntt {
         }
 
         impl NTT<$field> for $field_config {
-            fn ntt(
-                input: &[$field],
-                dir: NTTDir,
-                cfg: &NTTConfig<$field>,
-                output: &mut [$field],
-            ) -> CudaResult<()> {
+            fn ntt(input: &[$field], dir: NTTDir, cfg: &NTTConfig<$field>, output: &mut [$field]) -> CudaResult<()> {
                 if input.len() != output.len() {
                     return Err(CudaError::cudaErrorInvalidValue);
                 }

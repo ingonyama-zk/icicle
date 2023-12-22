@@ -15,7 +15,7 @@ impl_curve!(ScalarField, BaseField);
 
 #[cfg(test)]
 mod tests {
-    use super::{CurveCfg, CurveConfig, ScalarCfg, BaseCfg, BASE_LIMBS};
+    use super::{BaseCfg, CurveCfg, CurveConfig, ScalarCfg, BASE_LIMBS};
     use icicle_core::tests::{check_affine_projective_convert, check_point_equality, check_scalar_equality};
     use icicle_core::{
         curve::{Affine, Projective},

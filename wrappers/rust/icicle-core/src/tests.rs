@@ -1,7 +1,7 @@
 use crate::{
     curve::{Affine, CurveConfig, Projective},
-    traits::FieldImpl,
     field::{Field, FieldConfig},
+    traits::FieldImpl,
 };
 
 pub fn check_scalar_equality<F: FieldImpl>() {
@@ -27,7 +27,8 @@ pub fn check_affine_projective_convert<C: CurveConfig>() {
 }
 
 pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
-where C: CurveConfig<BaseField = Field<BASE_LIMBS, F>>
+where
+    C: CurveConfig<BaseField = Field<BASE_LIMBS, F>>,
 {
     let left = Projective::<C>::zero();
     let right = Projective::<C>::zero();

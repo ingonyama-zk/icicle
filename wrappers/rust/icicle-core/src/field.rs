@@ -54,10 +54,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u64; NUM_LIMBS]> for Field<NU
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
     fn from(limbs: [u64; NUM_LIMBS]) -> Self {
-        Self {
-            limbs,
-            p: PhantomData,
-        }
+        Self { limbs, p: PhantomData }
     }
 }
 
