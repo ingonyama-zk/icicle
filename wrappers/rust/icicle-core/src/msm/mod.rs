@@ -6,6 +6,7 @@ pub mod tests;
 
 /// Struct that encodes MSM parameters to be passed into the `msm` function.
 #[repr(C)]
+#[derive(Debug)]
 pub struct MSMConfig<'a> {
     /// True if scalars are on device and false if they're on host. Default value: false.
     pub are_scalars_on_device: bool,

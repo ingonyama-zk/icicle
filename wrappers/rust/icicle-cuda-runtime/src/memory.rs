@@ -52,7 +52,7 @@ impl<'a, T> DeviceSlice<'a, T> {
         }
     }
 
-    pub fn cuda_malloc_async(count: usize, stream: &mut CudaStream) -> CudaResult<Self> {
+    pub fn cuda_malloc_async(count: usize, stream: &CudaStream) -> CudaResult<Self> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
@@ -62,7 +62,7 @@ impl<'a, T> DeviceSlice<'a, T> {
 
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
-            cudaMallocAsync(device_ptr.as_mut_ptr(), size, stream as *mut _ as *mut _).wrap()?;
+            cudaMallocAsync(device_ptr.as_mut_ptr(), size, stream.handle as *mut _ as *mut _).wrap()?;
             Ok(DeviceSlice {
                 0: slice::from_raw_parts_mut(device_ptr.assume_init() as *mut T, count),
             })
@@ -109,7 +109,7 @@ impl<'a, T> DeviceSlice<'a, T> {
         Ok(())
     }
 
-    pub fn copy_from_host_async(&mut self, val: &[T], stream: &mut CudaStream) -> CudaResult<()> {
+    pub fn copy_from_host_async(&mut self, val: &[T], stream: &CudaStream) -> CudaResult<()> {
         assert!(
             self.len() == val.len(),
             "destination and source slices have different lengths"
@@ -122,7 +122,7 @@ impl<'a, T> DeviceSlice<'a, T> {
                     val.as_ptr() as *const c_void,
                     size,
                     cudaMemcpyKind::cudaMemcpyHostToDevice,
-                    stream as *mut _ as *mut _,
+                    stream.handle as *mut _ as *mut _,
                 )
                 .wrap()?
             }
@@ -130,7 +130,7 @@ impl<'a, T> DeviceSlice<'a, T> {
         Ok(())
     }
 
-    pub fn copy_to_host_async(&self, val: &mut [T], stream: &mut CudaStream) -> CudaResult<()> {
+    pub fn copy_to_host_async(&self, val: &mut [T], stream: &CudaStream) -> CudaResult<()> {
         assert!(
             self.len() == val.len(),
             "destination and source slices have different lengths"
@@ -143,7 +143,7 @@ impl<'a, T> DeviceSlice<'a, T> {
                     self.as_ptr() as *const c_void,
                     size,
                     cudaMemcpyKind::cudaMemcpyDeviceToHost,
-                    stream as *mut _ as *mut _,
+                    stream.handle as *mut _ as *mut _,
                 )
                 .wrap()?
             }

@@ -52,6 +52,7 @@ where
 
     let config = Fc::get_default_ntt_config();
     let mut ntt_result = vec![F::zero(); test_size];
+    println!("here?");
     Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
     assert_ne!(ntt_result, scalars);
 
@@ -230,29 +231,27 @@ where
     let coset_generators = [F::one(), Fc::generate_random(1)[0]];
     let stream = CudaStream::create().unwrap();
     let mut config = Fc::get_default_ntt_config();
-    config
-        .ctx
-        .stream = &stream;
     for batch_size in batch_sizes {
         let scalars_h: Vec<F> = Fc::generate_random(test_size * batch_size);
         let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
             .iter()
             .map(|x| x.to_ark())
             .sum();
-        let mut scalars_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
+        let mut scalars_d = DeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
         scalars_d
-            .copy_from_host(&scalars_h)
+            .copy_from_host_async(&scalars_h, &stream)
             .unwrap();
+        let mut ntt_out_d = DeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
 
         for coset_gen in coset_generators {
             for ordering in [Ordering::kNN, Ordering::kRR] {
-                let mut ntt_out_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
                 config.coset_gen = coset_gen;
                 config.ordering = ordering;
                 config.batch_size = batch_size as i32;
                 config.are_outputs_on_device = true;
                 config.are_inputs_on_device = true;
                 config.is_async = true;
+                config.ctx.stream = &stream;
                 Fc::ntt(
                     &scalars_d.as_slice(),
                     NTTDir::kForward,
@@ -268,11 +267,11 @@ where
                 )
                 .unwrap();
                 let mut intt_result_h = vec![F::zero(); test_size * batch_size];
+                scalars_d
+                    .copy_to_host_async(&mut intt_result_h, &stream)
+                    .unwrap();
                 stream
                     .synchronize()
-                    .unwrap();
-                scalars_d
-                    .copy_to_host(&mut intt_result_h)
                     .unwrap();
                 assert_eq!(scalars_h, intt_result_h);
                 if coset_gen == F::one() {

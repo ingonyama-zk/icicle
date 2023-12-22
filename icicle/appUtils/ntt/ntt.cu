@@ -418,7 +418,7 @@ namespace ntt {
   {
     CHECK_LAST_CUDA_ERROR();
 
-    cudaStream_t stream = config.ctx.stream;
+    cudaStream_t& stream = config.ctx.stream;
     int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
