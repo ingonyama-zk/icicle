@@ -47,11 +47,14 @@ __device__ uint32_t rev64(uint32_t num, uint32_t nof_digits){
   
 }
 
-__global__ void reorder64_kernel(uint4* arr, uint4* arr_reordered, uint32_t nof_digits){
+__launch_bounds__(64)
+__global__ void reorder64_kernel(uint4* arr, uint4* arr_reordered, uint32_t stride){
   uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
-  uint32_t re_tid = rev64(tid, nof_digits);
-  arr_reordered[re_tid] = arr[tid];
-  arr_reordered[re_tid + (1<<(nof_digits*6))] = arr[tid + (1<<(nof_digits*6))];
+  uint32_t rd = tid;
+  uint32_t wr = stride * threadIdx.x + blockIdx.x;
+  arr_reordered[wr] = arr[rd];
+  arr_reordered[wr + 64 * stride] = arr[rd + 64 * stride];
+  // if (tid == 13941) printf("%d %d\n", tid,re_tid);
 }
 
 // void reorder64(uint4* arr, uint32_t n, uint32_t logn)
@@ -372,7 +375,8 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
       }
     }
 
-    engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
+    // engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
+    engine.storeGlobalData(in, data_stride, log_size);
   // }
 }
 
@@ -492,11 +496,11 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
   // {
   //   ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, log_size, i? 1 : 64, i? 1 : 0);
   // }
-  // ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 64,0);
-  // ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 1, 1);
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64*64,0);
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64, 64*64);
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 1, 1);
+  ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 64,0);
+  ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 1, 1);
+  // ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64*64,0);
+  // ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64, 64*64);
+  // ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 1, 1);
 }
 
 #endif

@@ -39,7 +39,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 18;
+  int NTT_LOG_SIZE = 12;
   int TT_LOG_SIZE = 24;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
@@ -120,7 +120,7 @@ int main(){
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
   new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, TT_LOG_SIZE);
-  reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew2, gpuNew, NTT_LOG_SIZE/6);
+  reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_SIZE/64);
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, false, 0);
   reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
@@ -140,12 +140,13 @@ int main(){
   // printf("\n\n");
 
   bool success = true;
-  for (int i = 0; i < 128; i++)
+  for (int i = 0; i < NTT_SIZE; i++)
   {
+    if (i%(64*64) >= 64*2) continue;
     test_scalar icicle_temp, new_temp;
     icicle_temp = cpuIcicle[i];
-    new_temp.store_half(cpuNew[i], false);
-    new_temp.store_half(cpuNew[i+NTT_SIZE], true);
+    new_temp.store_half(cpuNew2[i], false);
+    new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
     if (i%64 == 0) printf("%d\n",i/64);
     if (icicle_temp != new_temp){
       success = false;
