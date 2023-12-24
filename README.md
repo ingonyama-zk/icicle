@@ -49,7 +49,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 - Any Nvidia GPU (which supports CUDA Toolkit version 12.0 or above).
 
 > [!NOTE] 
-> It is possible to use CUDA 11 for cards which dont support CUDA 12, however we dont offically support this version and in the future there may be issues.
+> It is possible to use CUDA 11 for cards which dont support CUDA 12, however we dont officially support this version and in the future there may be issues.
 
 ### Accessing Hardware
 

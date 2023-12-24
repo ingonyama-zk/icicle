@@ -268,7 +268,7 @@ namespace ntt {
 
     /**
      * NTT/INTT inplace batch
-     * Note: this function does not preform any bit-reverse permutations on its inputs or outputs.
+     * Note: this function does not perform any bit-reverse permutations on its inputs or outputs.
      * @param d_input Input array
      * @param n Size of `d_input`
      * @param d_twiddles Twiddles
