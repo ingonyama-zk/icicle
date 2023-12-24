@@ -34,6 +34,37 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 #define DATA_OFFSET 0
 
+__device__ uint32_t rev64(uint32_t num, uint32_t nof_digits){
+  uint32_t rev_num=0, temp;
+  for (int i = 0; i < nof_digits; i++)
+  {
+    temp = num & 0x3f;
+    num = num >> 6;
+    rev_num = rev_num << 6;
+    rev_num = rev_num | temp;
+  }
+  return rev_num;
+  
+}
+
+__global__ void reorder64_kernel(uint4* arr, uint4* arr_reordered, uint32_t nof_digits){
+  uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+  uint32_t re_tid = rev64(tid, nof_digits);
+  arr_reordered[re_tid] = arr[tid];
+  arr_reordered[re_tid + (1<<(nof_digits*6))] = arr[tid + (1<<(nof_digits*6))];
+}
+
+// void reorder64(uint4* arr, uint32_t n, uint32_t logn)
+// {
+//   uint4* arr_reorderd;
+//   cudaMalloc(&arr_reorderd, n * 2 * sizeof(uint4));
+//   int number_of_threads = MAX_THREADS_BATCH;
+//   int number_of_blocks = (n * 2 + number_of_threads - 1) / number_of_threads;
+//   reorder64_kernel<<<number_of_blocks, number_of_threads>>>(arr, arr_reorderd, n);
+//   cudaMemcpyAsync(arr, arr_reorderd, n * batch_size * sizeof(T), cudaMemcpyDeviceToDevice, stream);
+//   cudaFreeAsync(arr_reversed, stream);
+// }
+
 __launch_bounds__(384)
 __global__ void ntt1024(uint64_t* out, uint64_t* in, uint32_t* next, uint32_t count) {
   NTTEngine32 engine;

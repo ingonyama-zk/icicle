@@ -120,6 +120,7 @@ int main(){
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
   new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, TT_LOG_SIZE);
+  reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew2, gpuNew, NTT_LOG_SIZE/6);
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, false, 0);
   reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
@@ -143,8 +144,8 @@ int main(){
   {
     test_scalar icicle_temp, new_temp;
     icicle_temp = cpuIcicle[i];
-    new_temp.store_half(cpuNew2[i], false);
-    new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
+    new_temp.store_half(cpuNew[i], false);
+    new_temp.store_half(cpuNew[i+NTT_SIZE], true);
     if (i%64 == 0) printf("%d\n",i/64);
     if (icicle_temp != new_temp){
       success = false;
