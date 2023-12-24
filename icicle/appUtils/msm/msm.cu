@@ -908,20 +908,20 @@ namespace msm {
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     MSMConfig config = {
-      false, // are_scalars_on_device
-      false, // are_scalars_montgomery_form
+      ctx,   // ctx
       0,     // points_size
       1,     // precompute_factor
-      false, // are_points_on_device
-      false, // are_points_montgomery_form
-      1,     // batch_size
-      false, // are_results_on_device
       0,     // c
       0,     // bitsize
-      false, // is_big_triangle
       10,    // large_bucket_factor
+      1,     // batch_size
+      false, // are_scalars_on_device
+      false, // are_scalars_montgomery_form
+      false, // are_points_on_device
+      false, // are_points_montgomery_form
+      false, // are_results_on_device
+      false, // is_big_triangle
       false, // is_async
-      ctx,   // ctx
     };
     return config;
   }

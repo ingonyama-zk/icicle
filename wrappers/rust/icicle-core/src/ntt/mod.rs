@@ -1,6 +1,7 @@
 use crate::traits::FieldImpl;
 use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
 
+#[cfg(feature = "arkworks")]
 pub mod tests;
 
 /**
@@ -133,35 +134,35 @@ macro_rules! impl_ntt_tests {
       $field_config:ident
     ) => {
         const MAX_SIZE: u64 = 1 << 16;
-        static RES: OnceLock<()> = OnceLock::new();
+        static INIT: OnceLock<()> = OnceLock::new();
 
         #[test]
         fn test_ntt() {
-            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
             check_ntt::<$field, $field_config>()
         }
 
         #[test]
         fn test_ntt_coset_from_subgroup() {
-            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
             check_ntt_coset_from_subgroup::<$field, $field_config>()
         }
 
         #[test]
         fn test_ntt_arbitrary_coset() {
-            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
             check_ntt_arbitrary_coset::<$field, $field_config>()
         }
 
         #[test]
         fn test_ntt_batch() {
-            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
             check_ntt_batch::<$field, $field_config>()
         }
 
         #[test]
         fn test_ntt_device_async() {
-            RES.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
             check_ntt_device_async::<$field, $field_config>()
         }
     };
