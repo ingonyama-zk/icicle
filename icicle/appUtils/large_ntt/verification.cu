@@ -24,7 +24,7 @@ typedef scalar_t test_scalar;
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
     // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    res[i]= i==1? test_scalar::one() : test_scalar::zero();
+    res[i]= i==64? test_scalar::one() : test_scalar::zero();
 }
 
 void incremental_values(test_scalar* res, uint32_t count) {
@@ -39,7 +39,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 12;
+  int NTT_LOG_SIZE = 18;
   int TT_LOG_SIZE = 24;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
@@ -69,8 +69,8 @@ int main(){
   // $CUDA(cudaMalloc((void**)&gpuIntTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
-  // random_samples(cpuIcicle, NTT_SIZE);
-  incremental_values(cpuIcicle, NTT_SIZE);
+  random_samples(cpuIcicle, NTT_SIZE);
+  // incremental_values(cpuIcicle, NTT_SIZE);
   for (int i = 0; i < NTT_SIZE; i++)
   {
     cpuNew[i] = cpuIcicle[i].load_half(false);
@@ -145,8 +145,8 @@ int main(){
     if (i%(64*64) >= 64*2) continue;
     test_scalar icicle_temp, new_temp;
     icicle_temp = cpuIcicle[i];
-    new_temp.store_half(cpuNew2[i], false);
-    new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
+    new_temp.store_half(cpuNew[i], false);
+    new_temp.store_half(cpuNew[i+NTT_SIZE], true);
     if (i%64 == 0) printf("%d\n",i/64);
     if (icicle_temp != new_temp){
       success = false;
