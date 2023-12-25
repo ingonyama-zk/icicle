@@ -6,11 +6,10 @@
 mkdir -p build;
 cmake -DBUILD_TESTS=ON -DCURVE=<support_curve> -S . -B build;
 cmake --build build;
-cd build && ctest; 
-cd ..
+./build/runner --gtest_brief=1; 
 ```
 
-The command above will build ICICLE Core and run the ctest.
+The command above will build ICICLE Core and launch test runner.
 
 ## Troubleshooting
 
@@ -85,7 +84,7 @@ Alternatively, you can replace the old CUDA root with a symlink to the new CUDA 
 
 Make sure `libssl` is installed.
 
-```
+```sh
 sudo apt-get update
 sudo apt-get install libssl1.0.0 libssl-dev
 ```
