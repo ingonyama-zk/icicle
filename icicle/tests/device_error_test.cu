@@ -1,12 +1,16 @@
 #include "err.h" // Include your error handling header file
 #include <gtest/gtest.h>
 
-__global__ void a_kernel_with_sticky_error()
+__global__ void a_kernel_with_conditional_sticky_error(bool is_failing)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-  // Deliberately assert false
-  if (idx == 0) { assert(false); }
+  if (idx == 0) {
+    assert(cudaGetLastError() == cudaSuccess);
+    assert(cudaGetLastError() == cudaSuccess);
+    // Deliberately assert false
+    assert(!is_failing); // TODO: sticky according to https://stackoverflow.com/a/43659538
+  }
 }
 
 // Test Fixture for CUDA tests
@@ -49,13 +53,30 @@ TEST_F(CudaErrorTest, StickyErrorTest)
   EXPECT_EQ(cudaGetLastError(), cudaSuccess);
 
   // Deliberately cause a sticky CUDA error
-  a_kernel_with_sticky_error<<<1, 1>>>();
+  a_kernel_with_conditional_sticky_error<<<1, 1>>>(true);
+
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess); // no error untill  synchronization
+
+  // Launch without error
+  a_kernel_with_conditional_sticky_error<<<1, 1>>>(false);
 
   EXPECT_EQ(cudaGetLastError(), cudaSuccess);
 
-  cudaError_t sync_error = cudaDeviceSynchronize();
+  cudaError_t sync_error = cudaDeviceSynchronize(); // only cudaDeviceSynchronize() can help
+                                                     // determine sticky error reliably,
+                                                     // returning same error as failed kernel
 
   EXPECT_NE(sync_error, cudaSuccess);
+  EXPECT_EQ(sync_error, cudaErrorAssert);
+
+  EXPECT_EQ(cudaGetLastError(), cudaErrorAssert); // reports error after cudaDeviceSynchronize with sticky one
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess);     // resets error, despite it's sticky
+
+  sync_error = cudaDeviceSynchronize();
+
+  EXPECT_NE(sync_error, cudaSuccess); // still reports sticky error again
+                                      // after sync, despite call to cudaGetLastError and reset
+  EXPECT_EQ(sync_error, cudaErrorAssert);
 
   // Check if the macro correctly throws an exception for a sticky error
   EXPECT_THROW({ CHECK_LAST_IS_STICKY_ERROR(); }, IcicleError);
