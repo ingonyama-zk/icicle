@@ -81,6 +81,8 @@ option(BUILD_TESTS "Build tests" OFF)
 
 if (NOT BUILD_TESTS)
 
+  message(STATUS "Not building tests.")
+
   add_library(
     icicle
     utils/vec_ops.cu
@@ -126,6 +128,8 @@ if (NOT BUILD_TESTS)
 
 else()
 
+  message(STATUS "Building tests.")
+
   include(FetchContent)
   FetchContent_Declare(
     googletest
@@ -139,17 +143,18 @@ else()
   enable_testing()
 
   add_executable(
-    primitives_test
-    primitives/test.cu
+    runner
+    tests/runner.cu
   )
+
   target_link_libraries(
-    primitives_test
+    runner
     GTest::gtest_main
   )
 
   include(GoogleTest)
-  set_target_properties(primitives_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  set_target_properties(runner PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-  gtest_discover_tests(primitives_test)
+  gtest_discover_tests(runner)
 
 endif ()
