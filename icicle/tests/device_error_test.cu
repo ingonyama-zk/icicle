@@ -55,7 +55,7 @@ TEST_F(CudaErrorTest, StickyErrorTest)
   // Deliberately cause a sticky CUDA error
   a_kernel_with_conditional_sticky_error<<<1, 1>>>(true);
 
-  EXPECT_EQ(cudaGetLastError(), cudaSuccess); // no error untill  synchronization
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess); // no error until synchronization
 
   // Launch without error
   a_kernel_with_conditional_sticky_error<<<1, 1>>>(false);
@@ -63,13 +63,13 @@ TEST_F(CudaErrorTest, StickyErrorTest)
   EXPECT_EQ(cudaGetLastError(), cudaSuccess);
 
   cudaError_t sync_error = cudaDeviceSynchronize(); // only cudaDeviceSynchronize() can help
-                                                     // determine sticky error reliably,
-                                                     // returning same error as failed kernel
+                                                    // determine sticky error reliably,
+                                                    // returning same error as failed kernel
 
   EXPECT_NE(sync_error, cudaSuccess);
   EXPECT_EQ(sync_error, cudaErrorAssert);
 
-  EXPECT_EQ(cudaGetLastError(), cudaErrorAssert); // reports error after cudaDeviceSynchronize with sticky one
+  EXPECT_EQ(cudaGetLastError(), cudaErrorAssert); // reports error after cudaDeviceSynchronize
   EXPECT_EQ(cudaGetLastError(), cudaSuccess);     // resets error, despite it's sticky
 
   sync_error = cudaDeviceSynchronize();
