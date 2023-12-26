@@ -52,6 +52,15 @@ public:
     }
     return Field{scalar};
   }
+  
+  static constexpr HOST_DEVICE_INLINE Field from_limbs(uint32_t* limbs)
+  {
+    storage<TLC> scalar;
+    for (int i = 0; i < TLC; i++) {
+      scalar.limbs[i] = limbs[i];
+    }
+    return Field{scalar};
+  }
 
   static HOST_INLINE Field omega(uint32_t logn)
   {

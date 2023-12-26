@@ -651,6 +651,14 @@ namespace ntt {
     return InitDomain(primitive_root, ctx);
   }
 
+    
+  extern "C" cudaError_t
+  CONCAT_EXPAND(CURVE, InitializeDomainInt)(uint32_t* primitive_root_int, device_context::DeviceContext& ctx)
+  {
+    curve_config::scalar_t primitive_root = curve_config::scalar_t::from_limbs(primitive_root_int);
+    return InitDomain(primitive_root, ctx);
+  }
+
   /**
    * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
