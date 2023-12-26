@@ -28,6 +28,17 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 typedef Sampled96 Math;
 
+struct stage_metadata
+{
+  // uint32_t stage_num;
+  // uint32_t data_stride;
+  uint32_t ntt_block_id;
+  uint32_t ntt_inp_id;
+  uint32_t ntt_meta_block_size;
+  uint32_t ntt_meta_block_id;
+  uint32_t ntt_meta_inp_id;
+};
+
 class NTTEngine32 {
   public:
   typedef Math::Value Value;
@@ -204,7 +215,8 @@ class NTTEngine32 {
 
 };  
 
-
+__device__ uint32_t LOW_W_OFFSETS[4] = {0, 2<<12, (2<<12) + (2<<18), (2<<12) + (2<<18) + (2<<24)};
+__device__ uint32_t HIGH_W_OFFSETS[4] = {1<<12, (2<<12) + (1<<18), (2<<12) + (2<<18) + (1<<24), (2<<12) + (2<<18) + (2<<24) + (1<<30)};
 
 
 class NTTEngine {
@@ -278,16 +290,18 @@ class NTTEngine {
   // }
 
   // __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
-  __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t data_stride, uint32_t tw_stride, uint32_t log_size, uint32_t tw_log_size) {
+  __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t stage_num) {
     
-    uint32_t extra_tw = tw_log_size - log_size;
+    // uint32_t extra_tw = tw_log_size - log_size;
 
-    if (tw_stride == 1){
-      data += (1<<extra_tw) * 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + (1<<extra_tw) * 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    if (strided){
+      data += s_meta.ntt_meta_inp_id*blockDim.x;
+      // tw_stride = (tw_stride << extra_tw);
+      // data += 8 * (blockIdx.x & 0x7) + (threadIdx.x & 0x7) + tw_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
-      tw_stride = (tw_stride << extra_tw);
-      data += 8 * (blockIdx.x & 0x7) + (threadIdx.x & 0x7) + tw_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id;
+      // data += (1<<extra_tw) * 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + (1<<extra_tw) * 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
 
     // data += blockIdx.x*64*64*8 + (threadIdx.x & 0x7) + 64*64 * (threadIdx.x >> 3);
@@ -296,8 +310,8 @@ class NTTEngine {
     
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      WE[i].store_half(data[8*i*tw_stride], false);
-      WE[i].store_half(data[8*i*tw_stride + (1<<tw_log_size)], true);
+      WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[stage_num]], false);
+      WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[stage_num]], true);
     }
     // #pragma unroll
     // for(uint32_t i=0;i<7;i++) {
@@ -307,13 +321,15 @@ class NTTEngine {
   }
 
   // __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
-  __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t data_stride, uint32_t tw_stride, uint32_t log_size) {
+  __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
-    if (data_stride == 1){
-      data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    if (strided){
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*s_meta.ntt_meta_block_size;
+      // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
-      data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id;
+      // data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
 
     
@@ -338,13 +354,15 @@ class NTTEngine {
 
   }
   
-  __device__ __forceinline__ void storeGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size) {
+  __device__ __forceinline__ void storeGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
-    if (data_stride == 1){
-      data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    if (strided){
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*s_meta.ntt_meta_block_size;
+      // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
-      data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id;
+      // data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     // if (blockIdx.x<2){
     //   printf("block %d thread %d read address %d\n",blockIdx.x, threadIdx.x, block_offset + (threadIdx.x & 0xf) + 256 * (threadIdx.x >> 4));
