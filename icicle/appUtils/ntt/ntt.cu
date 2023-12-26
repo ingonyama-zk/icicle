@@ -356,7 +356,7 @@ namespace ntt {
 
       if (is_async) return;
 
-      CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+      CHK_OK(cudaStreamSynchronize(stream));
     }
 
   } // namespace
@@ -405,18 +405,18 @@ namespace ntt {
         Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
         h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
       } while (h_twiddles.at(n++) != S::one());
-      CHECK_CUDA_ERROR(cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream));
-      CHECK_CUDA_ERROR(
+      CHK_OK(cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream));
+      CHK_OK(
         cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
       Domain<S>::max_size = n - 1;
     }
-    return CHECK_LAST_IS_STICKY_ERROR();
+    return CHK_CUDA();
   }
 
   template <typename S, typename E>
   cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S>& config, E* output)
   {
-    CHECK_LAST_CUDA_ERROR();
+    CHK_LAST();
 
     cudaStream_t stream = config.ctx.stream;
     int batch_size = config.batch_size;
@@ -429,14 +429,14 @@ namespace ntt {
     if (is_input_on_device) {
       d_input = input;
     } else {
-      CHECK_CUDA_ERROR(cudaMallocAsync(&d_input, input_size_bytes, stream));
-      CHECK_CUDA_ERROR(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
+      CHK_OK(cudaMallocAsync(&d_input, input_size_bytes, stream));
+      CHK_OK(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
     }
     E* d_output;
     if (is_input_on_device) {
       d_output = output;
     } else {
-      CHECK_CUDA_ERROR(cudaMallocAsync(&d_output, input_size_bytes, stream));
+      CHK_OK(cudaMallocAsync(&d_output, input_size_bytes, stream));
     }
 
     bool ct_butterfly = true;
@@ -464,12 +464,12 @@ namespace ntt {
       // free(config->inout); // TODO: ? or callback?+
       output = d_output;
     } else {
-      CHECK_CUDA_ERROR(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
+      CHK_OK(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
     }
 
-    if (!config.is_async) CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+    if (!config.is_async) CHK_OK(cudaStreamSynchronize(stream));
 
-    return CHECK_LAST_IS_STICKY_ERROR();
+    return CHK_CUDA();
   }
 
   template <typename S>

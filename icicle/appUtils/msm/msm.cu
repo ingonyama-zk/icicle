@@ -929,7 +929,7 @@ namespace msm {
   template <typename S, typename A, typename P>
   cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results)
   {
-    CHECK_LAST_CUDA_ERROR();
+    CHK_LAST();
 
     int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
     // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in
@@ -945,7 +945,7 @@ namespace msm {
         bitsize, (config.c == 0) ? get_optimal_c<S>(bitsize) : config.c, scalars, points, config.batch_size, msm_size,
         results, config.are_scalars_on_device, config.ctx.stream);
 
-    return CHECK_LAST_IS_STICKY_ERROR();
+    return CHK_CUDA();
   }
 
   /**
