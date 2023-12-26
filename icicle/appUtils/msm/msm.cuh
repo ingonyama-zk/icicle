@@ -102,9 +102,8 @@ namespace msm {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    *
    * **Note:** this function is still WIP and the following [MSMConfig](@ref MSMConfig) members do not yet have any
-   * effect: `points_size` (it's always equal to the msm size currenly), `precompute_factor` (always equals 1) and
-   * `ctx.device_id` (0 device is always used). Also, it's currently better to use `batch_size=1` in most cases (expept
-   * with dealing with very many MSMs).
+   * effect: `precompute_factor` (always equals 1) and `ctx.device_id` (0 device is always used).
+   * Also, it's currently better to use `batch_size=1` in most cases (expept with dealing with very many MSMs).
    */
   template <typename S, typename A, typename P>
   cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig& config, P* results);

@@ -1,4 +1,4 @@
-use ark_ff::{FftField, One};
+use ark_ff::{FftField, One, PrimeField};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::{device_context::get_default_device_context, memory::DeviceSlice, stream::CudaStream};
@@ -53,7 +53,6 @@ where
 
         let config = Fc::get_default_ntt_config();
         let mut ntt_result = vec![F::zero(); test_size];
-        println!("here?");
         Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
         assert_ne!(ntt_result, scalars);
 
@@ -144,7 +143,7 @@ where
 
 pub fn check_ntt_arbitrary_coset<F: FieldImpl + ArkConvertible, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>()
 where
-    F::ArkEquivalent: FftField,
+    F::ArkEquivalent: FftField + PrimeField
 {
     let mut seed = test_rng();
     let test_sizes = [1 << 4, 1 << 16];
@@ -161,9 +160,10 @@ where
                 .unwrap();
 
             let mut scalars: Vec<F> = Fc::generate_random(test_size);
+            // here you can see how arkworks type can be easily created without any purpose-built conversions
             let mut ark_scalars = scalars
                 .iter()
-                .map(|v| v.to_ark())
+                .map(|v| F::ArkEquivalent::from_le_bytes_mod_order(&v.to_bytes_le()))
                 .collect::<Vec<F::ArkEquivalent>>();
 
             let mut config = Fc::get_default_ntt_config();

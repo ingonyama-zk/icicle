@@ -26,14 +26,30 @@ where
     for test_size in test_sizes {
         let points = C::generate_random_affine_points(test_size);
         let scalars = ScalarConfig::generate_random(test_size);
+        let points_ark: Vec<_> = points
+            .iter()
+            .map(|x| x.to_ark())
+            .collect();
+        let scalars_ark: Vec<_> = scalars
+            .iter()
+            .map(|x| x.to_ark())
+            .collect();
+        // if we simply transmute arkworks types, we'll get scalars or points in Montgomery format 
+        // (just beware the possible extra bit in affine point types, can't transmute ark Affine because of that)
+        let scalars_mont = unsafe { &*(&scalars_ark[..] as *const _ as *const [C::ScalarField]) };
+
+        let mut scalars_d = DeviceSlice::cuda_malloc(test_size).unwrap();
         let stream = CudaStream::create().unwrap();
+        scalars_d.copy_from_host_async(&scalars_mont, &stream).unwrap();
 
         let mut cfg = C::get_default_msm_config();
         cfg.ctx
             .stream = &stream;
         cfg.is_async = true;
         cfg.are_results_on_device = true;
-        C::msm(&scalars, &points, &cfg, &mut msm_results.as_slice()).unwrap();
+        cfg.are_scalars_on_device = true;
+        cfg.are_scalars_montgomery_form = true;
+        C::msm(&scalars_d.as_slice(), &points, &cfg, &mut msm_results.as_slice()).unwrap();
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results
@@ -46,16 +62,10 @@ where
             .destroy()
             .unwrap();
 
-        let point_r_ark: Vec<_> = points
-            .iter()
-            .map(|x| x.to_ark())
-            .collect();
-        let scalars_r_ark: Vec<_> = scalars
-            .iter()
-            .map(|x| x.to_ark())
-            .collect();
         let msm_result_ark: ark_ec::models::short_weierstrass::Projective<C::ArkSWConfig> =
-            VariableBaseMSM::msm(&point_r_ark, &scalars_r_ark).unwrap();
+            VariableBaseMSM::msm(&points_ark, &scalars_ark).unwrap();
+        let msm_res_affine: ark_ec::short_weierstrass::Affine<C::ArkSWConfig> = msm_host_result[0].to_ark().into();
+        assert!(msm_res_affine.is_on_curve());
         assert_eq!(msm_host_result[0].to_ark(), msm_result_ark);
     }
 }

@@ -11,7 +11,7 @@ impl_msm!("bn254", CurveCfg);
 #[cfg(test)]
 pub(crate) mod tests {
     use icicle_core::impl_msm_tests;
-    use icicle_core::msm::tests::{check_msm, check_msm_batch, check_msm_skewed_distributions};
+    use icicle_core::msm::tests::*;
 
     use crate::curve::{CurveCfg, ScalarCfg};
 

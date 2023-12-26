@@ -15,7 +15,7 @@ pub struct MSMConfig<'a> {
     /// of different points. So, if each MSM re-uses the same set of points, this variable is set equal
     /// to the MSM size. And if every MSM uses a distinct set of points, it should be set to the product of
     /// MSM size and batch_size. Default value: 0 (meaning it's equal to the MSM size).
-    pub points_size: i32, // Note: `unsigned` in C++ corresponds to `u32` in Rust
+    pub points_size: i32,
 
     /// The number of extra points to pre-compute for each point. Larger values decrease the number of computations
     /// to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute).
