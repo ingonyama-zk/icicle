@@ -39,14 +39,14 @@ namespace msm {
    */
   struct MSMConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    int points_size;           /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be
-                                *   a number of different points. So, if each MSM re-uses the same set of points, this
-                                *   variable is set equal to the MSM size. And if every MSM uses a distinct set of
-                                *   points, it should be set to the product of MSM size and [batch_size](@ref
-                                *   batch_size). Default value: 0 (meaning it's equal to the MSM size). */
-    int precompute_factor;     /**< The number of extra points to pre-compute for each point. Larger values decrease the
-                                *   number of computations to make, on-line memory footprint, but increase the static
-                                *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
+    int points_size;            /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be
+                                 *   a number of different points. So, if each MSM re-uses the same set of points, this
+                                 *   variable is set equal to the MSM size. And if every MSM uses a distinct set of
+                                 *   points, it should be set to the product of MSM size and [batch_size](@ref
+                                 *   batch_size). Default value: 0 (meaning it's equal to the MSM size). */
+    int precompute_factor;      /**< The number of extra points to pre-compute for each point. Larger values decrease the
+                                 *   number of computations to make, on-line memory footprint, but increase the static
+                                 *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
     int c;                      /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket
                                  *   method" that we use to solve the MSM problem. As a rule of thumb, larger value
                                  *   means more on-line memory footprint but also more parallelism and less computational
@@ -107,7 +107,7 @@ namespace msm {
    * with dealing with very many MSMs).
    */
   template <typename S, typename A, typename P>
-  cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results);
+  cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig& config, P* results);
 
 } // namespace msm
 

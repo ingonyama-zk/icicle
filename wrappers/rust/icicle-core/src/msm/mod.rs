@@ -69,7 +69,7 @@ pub trait MSM<C: CurveConfig> {
     fn msm<'a>(
         scalars: &[C::ScalarField],
         points: &[Affine<C>],
-        cfg: MSMConfig<'a>,
+        cfg: &MSMConfig<'a>,
         results: &mut [Projective<C>],
     ) -> CudaResult<()>;
 
@@ -87,8 +87,8 @@ macro_rules! impl_msm {
             fn msm_cuda<'a>(
                 scalars: *const ScalarField,
                 points: *const G1Affine,
-                count: usize,
-                config: MSMConfig<'a>,
+                count: i32,
+                config: &MSMConfig<'a>,
                 out: *mut G1Projective,
             ) -> CudaError;
 
@@ -100,10 +100,10 @@ macro_rules! impl_msm {
             fn msm<'a>(
                 scalars: &[<$curve_config as CurveConfig>::ScalarField],
                 points: &[Affine<$curve_config>],
-                cfg: MSMConfig<'a>,
+                cfg: &MSMConfig<'a>,
                 results: &mut [Projective<$curve_config>],
             ) -> CudaResult<()> {
-                if points.len() != scalars.len() {
+                if (cfg.points_size > 0) && (points.len() != cfg.points_size as usize)  {
                     return Err(CudaError::cudaErrorInvalidValue);
                 }
 
@@ -111,7 +111,7 @@ macro_rules! impl_msm {
                     msm_cuda(
                         scalars as *const _ as *const <$curve_config as CurveConfig>::ScalarField,
                         points as *const _ as *const Affine<$curve_config>,
-                        points.len(),
+                        (scalars.len() / (cfg.batch_size as usize)) as i32,
                         cfg,
                         results as *mut _ as *mut Projective<$curve_config>,
                     )
@@ -135,6 +135,16 @@ macro_rules! impl_msm_tests {
         #[test]
         fn test_msm() {
             check_msm::<$curve_config, $scalar_config>()
+        }
+
+        #[test]
+        fn test_msm_batch() {
+            check_msm_batch::<$curve_config, $scalar_config>()
+        }
+
+        #[test]
+        fn test_msm_skewed_distributions() {
+            check_msm_skewed_distributions::<$curve_config, $scalar_config>()
         }
     };
 }
