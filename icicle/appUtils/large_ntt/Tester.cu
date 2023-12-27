@@ -274,6 +274,8 @@ int main(int argc, const char** argv) {
     int minor = prop.minor;
 
     std::cout << "Compute Capability: " << major << "." << minor << std::endl;
+    std::cout << "Global Memory Size: " << prop.totalGlobalMem << " bytes" << std::endl;
+
     int numSMs = prop.multiProcessorCount;
 
     std::cout << "Number of SMs: " << numSMs << std::endl;

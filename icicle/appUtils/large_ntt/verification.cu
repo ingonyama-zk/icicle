@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include "../../curves/bls12_377/curve_config.cuh"
+// #include "../../curves/bls12_381/curve_config.cuh"
 #include "ntt.cuh"
 // #include "../../curves/bn254/curve_config.cuh"
 
@@ -13,9 +14,10 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
-// #define PERFORMANCE
+#define PERFORMANCE
 
 using namespace BLS12_377;
+// using namespace BLS12_381;
 typedef scalar_t test_scalar;
 #include "kernel_ntt.cu"
 
@@ -41,8 +43,8 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 24;
-  int TT_LOG_SIZE = 24;
+  int NTT_LOG_SIZE = 18;
+  int TT_LOG_SIZE = 18;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
 
@@ -69,7 +71,7 @@ int main(){
   $CUDA(cudaMalloc((void**)&gpuIcicle, sizeof(test_scalar)*NTT_SIZE));
   $CUDA(cudaMalloc((void**)&gpuNew, sizeof(uint4)*NTT_SIZE*2));
   $CUDA(cudaMalloc((void**)&gpuNew2, sizeof(uint4)*NTT_SIZE*2));
-  $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*TT_SIZE*2));
+  $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*(TT_SIZE+2*(TT_SIZE>>6))*2));
   // $CUDA(cudaMalloc((void**)&gpuIntTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
@@ -86,6 +88,7 @@ int main(){
   $CUDA(cudaMemcpy(gpuNew, cpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew2, cpuNew2, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
   gpuIntTwiddles = generate_external_twiddles(gpuTwiddles, TT_LOG_SIZE);
+  printf("finished generating twiddles\n");
   // generate_internal_twiddles<<<1,1>>>(gpuIntTwiddles);
   cudaDeviceSynchronize();
   printf("cuda err %d\n",cudaGetLastError());
@@ -99,7 +102,7 @@ int main(){
   
 
   //run ntts
-  int count = 100;
+  int count = 1000;
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
   for (size_t i = 0; i < count; i++)
@@ -125,9 +128,11 @@ int main(){
   #else
   new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE);
   reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, false, 0);
   reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
+  printf("finished icicle\n");
   
   //verify
   $CUDA(cudaMemcpy(cpuIcicle, gpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyDeviceToHost));
