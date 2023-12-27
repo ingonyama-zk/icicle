@@ -16,15 +16,12 @@ pub trait CurveConfig: Debug + PartialEq + Copy + Clone {
     fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
     fn generate_random_projective_points(size: usize) -> Vec<Projective<Self>>;
     fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
-<<<<<<< HEAD
-=======
     fn scalar_from_montgomery(scalars: &mut [Self::ScalarField]);
     fn scalar_to_montgomery(scalars: &mut [Self::ScalarField]);
     fn affine_from_montgomery(points: &mut [Affine<Self>]);
     fn affine_to_montgomery(points: &mut [Affine<Self>]);
     fn projective_from_montgomery(points: &mut [Projective<Self>]);
     fn projective_to_montgomery(points: &mut [Projective<Self>]);
->>>>>>> ab9b520 (add scalars montgomery conversions API)
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -191,8 +188,6 @@ macro_rules! impl_curve {
             fn ToAffine(point: *const G1Projective, point_out: *mut G1Affine);
             fn GenerateProjectivePoints(points: *mut G1Projective, size: usize);
             fn GenerateAffinePoints(points: *mut G1Affine, size: usize);
-<<<<<<< HEAD
-=======
             #[link_name = concat!($curve_prefix, "ScalarConvertMontgomery")]
             fn ScalarConvertMontgomery(points: *mut $scalar_field, size: usize, is_into: u8, ctx: *const DeviceContext);
             #[link_name = concat!($curve_prefix, "AffineConvertMontgomery")]
@@ -204,7 +199,6 @@ macro_rules! impl_curve {
                 is_into: u8,
                 ctx: *const DeviceContext,
             );
->>>>>>> ab9b520 (add scalars montgomery conversions API)
         }
 
         impl CurveConfig for CurveCfg {
