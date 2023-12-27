@@ -50,11 +50,11 @@ __device__ uint32_t rev64(uint32_t num, uint32_t nof_digits){
 }
 
 __launch_bounds__(64)
-__global__ void reorder64_kernel(uint4* arr, uint4* arr_reordered, uint32_t stride){
+__global__ void reorder64_kernel(uint4* arr, uint4* arr_reordered, uint32_t nof_digits){
   uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
   uint32_t rd = tid;
   // uint32_t wr = stride * threadIdx.x + blockIdx.x;
-  uint32_t nof_digits = 3;
+  // uint32_t nof_digits = 4; //todo - parametrize
   uint32_t wr = rev64(tid, nof_digits);
   arr_reordered[wr] = arr[rd];
   arr_reordered[wr + (1<<(nof_digits*6))] = arr[rd + (1<<(nof_digits*6))];
@@ -336,7 +336,7 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
 
 
 __launch_bounds__(64)
-__global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num) {
+__global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -557,31 +557,46 @@ uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size){
   return w6_table;
 }
 
-void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size){
+void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size){
 // void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size){
-  uint32_t nof_stages = 2;
-  // for (int i = 0; i < nof_stages; i++)
-  // {
-  //   ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, log_size, i? 1 : 64, i? 1 : 0);
+  uint32_t nof_stages = log_size/6;
+  if (nof_stages==1){
+    ntt64<<<1,8,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0);
+    return;
+  }
+  // if (nof_stages==2){
+  //   ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 0, false, 0);
+  //   ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0);
+  //   return;
   // }
-  if (log_size == 6){
-  ntt64<<<1,8,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 1, 0, false, 0);
+  for (int i = nof_stages-1; i >= 0; i--)
+  {
+    ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<(i*6), i? 1<<(i*6) : 0, i, i);
   }
-  if (log_size == 12){
-  ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 64, 0, true, 1);
-  ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 1, 1, false, 0);
-  }
-  if (log_size == 18){
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64*64, 64*64, true, 2);
-  // cudaDeviceSynchronize();
-  // printf("cuda err %d\n",cudaGetLastError());
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64, 64, true, 1);
-  // cudaDeviceSynchronize();
-  // printf("cuda err %d\n",cudaGetLastError());
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 1, 0, false, 0);
-  // cudaDeviceSynchronize();
-  // printf("cuda err %d\n",cudaGetLastError());
-  }
+  // if (log_size == 6){
+  // ntt64<<<1,8,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0);
+  // }
+  // if (log_size == 12){
+  // ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 0, true, 1);
+  // ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 1, false, 0);
+  // }
+  // if (log_size == 18){
+  // ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*64, 64*64, true, 2);
+  // // cudaDeviceSynchronize();
+  // // printf("cuda err %d\n",cudaGetLastError());
+  // ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1);
+  // // cudaDeviceSynchronize();
+  // // printf("cuda err %d\n",cudaGetLastError());
+  // ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0);
+  // // cudaDeviceSynchronize();
+  // // printf("cuda err %d\n",cudaGetLastError());
+  // }
+  // if (log_size == 24){
+  // ntt64<<<8*64*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*64*64, 64*64*64, true, 3);
+  // ntt64<<<8*64*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*64, 64*64, true, 2);
+  // ntt64<<<8*64*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1);
+  // ntt64<<<8*64*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0);
+  // }
 }
 
 #endif
