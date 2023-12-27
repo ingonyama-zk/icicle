@@ -293,9 +293,11 @@ class NTTEngine {
   __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t stage_num) {
     
     // uint32_t extra_tw = tw_log_size - log_size;
-    int max_stride = 64*64*64;
+    // tw_stride = (tw_stride << 6);
+    // int max_stride = 64*64*64;
 
-    data += max_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id%tw_stride)*(max_stride/tw_stride);
+    // data += max_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id%tw_stride)*(max_stride/tw_stride);
+    data += tw_stride*s_meta.ntt_inp_id + s_meta.ntt_block_id%tw_stride;
     // if (tw_stride == max_stride){
       // data += (s_meta.ntt_meta_inp_id*blockDim.x) % (s_meta.ntt_meta_block_size*blockDim.x*blockDim.x);
       // tw_stride = (tw_stride << extra_tw);
@@ -313,10 +315,10 @@ class NTTEngine {
     
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      WE[i].store_half(data[8*i*max_stride], false);
-      WE[i].store_half(data[8*i*max_stride + max_stride*64], true);
-      // WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[stage_num + (strided? 1 : 0)]], false);
-      // WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[stage_num + (strided? 1 : 0)]], true);
+      // WE[i].store_half(data[8*i*max_stride], false);
+      // WE[i].store_half(data[8*i*max_stride + max_stride*64], true);
+      WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[stage_num-1]], false);
+      WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[stage_num-1]], true);
     }
     // #pragma unroll
     // for(uint32_t i=0;i<7;i++) {
