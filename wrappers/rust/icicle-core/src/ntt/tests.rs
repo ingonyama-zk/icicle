@@ -50,32 +50,29 @@ where
         let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
         let scalars: Vec<F> = Fc::generate_random(test_size);
-
-        let config = Fc::get_default_ntt_config();
-        let mut ntt_result = vec![F::zero(); test_size];
-        Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
-        assert_ne!(ntt_result, scalars);
-
         let ark_scalars = scalars
             .iter()
             .map(|v| v.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();
+        // if we simply transmute arkworks types, we'll get scalars in Montgomery format 
+        let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const _) };
+
+        let config = Fc::get_default_ntt_config();
+        let mut ntt_result = vec![F::zero(); test_size];
+        Fc::ntt(&scalars_mont, NTTDir::kForward, &config, &mut ntt_result).unwrap();
+        assert_ne!(ntt_result, scalars_mont);
+
         let mut ark_ntt_result = ark_scalars.clone();
         ark_domain.fft_in_place(&mut ark_ntt_result);
         assert_ne!(ark_ntt_result, ark_scalars);
 
-        let ntt_result_as_ark = ntt_result
-            .iter()
-            .map(|p| p.to_ark())
-            .collect::<Vec<F::ArkEquivalent>>();
+        let ntt_result_as_ark = unsafe { &*(&ntt_result[..] as *const _ as *const [<F as ArkConvertible>::ArkEquivalent]) };
         assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
         let mut intt_result = vec![F::zero(); test_size];
         Fc::ntt(&ntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
 
-        assert_eq!(intt_result, scalars);
-        // check that ntt_result wasn't mutated by the latest `ntt` call
-        assert_eq!(ntt_result_as_ark[1], ntt_result[1].to_ark());
+        assert_eq!(intt_result, scalars_mont);
     }
 }
 
@@ -94,6 +91,10 @@ where
         let ark_large_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
         let mut scalars: Vec<F> = Fc::generate_random(small_size);
+        let mut ark_scalars = scalars
+            .iter()
+            .map(|v| v.to_ark())
+            .collect::<Vec<F::ArkEquivalent>>();
 
         let mut config = Fc::get_default_ntt_config();
         config.ordering = Ordering::kNR;
@@ -108,11 +109,9 @@ where
         scalars.resize(test_size, F::zero());
         Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_large_result).unwrap();
         assert_eq!(ntt_result, ntt_large_result);
+        // check that scalars weren't mutated by all the `ntt` calls
+        assert_eq!(ark_scalars[1], scalars[1].to_ark());
 
-        let mut ark_scalars = scalars
-            .iter()
-            .map(|v| v.to_ark())
-            .collect::<Vec<F::ArkEquivalent>>();
         let mut ark_large_scalars = ark_scalars.clone();
         ark_small_domain.fft_in_place(&mut ark_scalars);
         let ntt_result_as_ark = ntt_result

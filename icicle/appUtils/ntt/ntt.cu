@@ -16,22 +16,6 @@ namespace ntt {
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
-    /**
-     * Computes the twiddle factors.
-     * Outputs: d_twiddles[i] = omega^i.
-     * @param d_twiddles input empty array.
-     * @param n_twiddles number of twiddle factors.
-     * @param omega multiplying factor.
-     */
-    template <typename S>
-    __global__ void twiddle_factors_kernel(S* d_twiddles, int n_twiddles, S omega)
-    {
-      d_twiddles[0] = S::one();
-      for (int i = 0; i < n_twiddles - 1; i++) {
-        d_twiddles[i + 1] = omega * d_twiddles[i];
-      }
-    }
-
     template <typename E>
     __global__ void reverse_order_kernel(E* arr, E* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
     {
@@ -398,6 +382,14 @@ namespace ntt {
     // please note that this is not thread-safe at all,
     // but it's a singleton that is supposed to be initialized once per program lifetime
     if (!Domain<S>::twiddles) {
+      S omega = primitive_root;
+      for (int i = 0; i < S::TWO_ADICITY; i++)
+        omega = S::sqr(omega);
+      if (omega != S::one()) {
+        std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
+        throw -1;
+      }
+
       std::vector<S> h_twiddles;
       h_twiddles.push_back(S::one());
       int n = 1;
