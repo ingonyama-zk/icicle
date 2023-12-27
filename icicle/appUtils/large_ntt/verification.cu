@@ -23,8 +23,8 @@ typedef scalar_t test_scalar;
 
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
-    // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    res[i]= i==1? test_scalar::one() : test_scalar::zero();
+    res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
+    // res[i]= i==1? test_scalar::one() : test_scalar::zero();
     // res[i]= i%2? test_scalar::one() : (test_scalar::one() - test_scalar::one() - test_scalar::one());
     // res[i]= i==0? test_scalar::one() : test_scalar::omega_inv(9) * res[i-1];
 }
@@ -73,8 +73,8 @@ int main(){
   // $CUDA(cudaMalloc((void**)&gpuIntTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
-  // random_samples(cpuIcicle, NTT_SIZE);
-  incremental_values(cpuIcicle, NTT_SIZE);
+  random_samples(cpuIcicle, NTT_SIZE);
+  // incremental_values(cpuIcicle, NTT_SIZE);
   for (int i = 0; i < NTT_SIZE; i++)
   {
     cpuNew[i] = cpuIcicle[i].load_half(false);
