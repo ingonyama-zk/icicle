@@ -13,7 +13,7 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
-// #define PERFORMANCE
+#define PERFORMANCE
 
 using namespace BLS12_377;
 typedef scalar_t test_scalar;
@@ -24,7 +24,9 @@ typedef scalar_t test_scalar;
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
     // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    res[i]= i==64? test_scalar::one() : test_scalar::zero();
+    res[i]= i==1? test_scalar::one() : test_scalar::zero();
+    // res[i]= i%2? test_scalar::one() : (test_scalar::one() - test_scalar::one() - test_scalar::one());
+    // res[i]= i==0? test_scalar::one() : test_scalar::omega_inv(9) * res[i-1];
 }
 
 void incremental_values(test_scalar* res, uint32_t count) {
@@ -39,7 +41,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 12;
+  int NTT_LOG_SIZE = 18;
   int TT_LOG_SIZE = 24;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
@@ -48,9 +50,11 @@ int main(){
   test_scalar* cpuIcicle;
   uint4* cpuNew;
   uint4* cpuNew2;
+  uint4* cpuTwiddles;
   cpuIcicle=(test_scalar*)malloc(sizeof(test_scalar)*NTT_SIZE);
   cpuNew=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2);
   cpuNew2=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2);
+  cpuTwiddles=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2*64);
   if(cpuIcicle==NULL || cpuNew==NULL || cpuNew2==NULL) {
     fprintf(stderr, "Malloc failed\n");
     exit(1);
@@ -129,6 +133,7 @@ int main(){
   $CUDA(cudaMemcpy(cpuIcicle, gpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyDeviceToHost));
   $CUDA(cudaMemcpy(cpuNew, gpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
   $CUDA(cudaMemcpy(cpuNew2, gpuNew2, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
+  $CUDA(cudaMemcpy(cpuTwiddles, gpuTwiddles, sizeof(uint4)*NTT_SIZE*2*64, cudaMemcpyDeviceToHost));
   // for (int i = 0; i < NTT_SIZE; i++)
   // {
   //   test_scalar new_temp;
@@ -141,20 +146,27 @@ int main(){
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE; i++)
+  // for (int i = 0; i < 64*4; i++)
   {
-    if (i%(64*64) >= 64*2) continue;
+    
     test_scalar icicle_temp, new_temp;
     icicle_temp = cpuIcicle[i];
+    // new_temp.store_half(cpuTwiddles[2*64*64*64 + i], false);
+    // new_temp.store_half(cpuTwiddles[2*64*64*64 + i+64*NTT_SIZE], true);
     new_temp.store_half(cpuNew2[i], false);
     new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
-    if (i%64 == 0) printf("%d\n",i/64);
+    if (i%(64*64) < 64*2) if (i%64 == 0) printf("%d\n",i/64);
+    // if (icicle_temp != test_scalar::zero()){
     if (icicle_temp != new_temp){
       success = false;
-      std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      // std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
     }
     else{
-      std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+      // std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+      if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
     }
+    // }
   }
   if (success){
     printf("success!\n");

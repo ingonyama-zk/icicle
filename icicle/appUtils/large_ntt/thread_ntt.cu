@@ -293,16 +293,19 @@ class NTTEngine {
   __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t stage_num) {
     
     // uint32_t extra_tw = tw_log_size - log_size;
+    int max_stride = 64*64*64;
 
-    if (strided){
-      data += s_meta.ntt_meta_inp_id*blockDim.x;
+    data += max_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id%tw_stride)*(max_stride/tw_stride);
+    // if (tw_stride == max_stride){
+      // data += (s_meta.ntt_meta_inp_id*blockDim.x) % (s_meta.ntt_meta_block_size*blockDim.x*blockDim.x);
       // tw_stride = (tw_stride << extra_tw);
       // data += 8 * (blockIdx.x & 0x7) + (threadIdx.x & 0x7) + tw_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
-    }
-    else {
-      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id;
+    // }
+    // else {
+    //   data += s_meta.ntt_meta_inp_id*(max_stride/tw_stride) + (s_meta.ntt_block_id%64)*max_stride;
+      // data += (s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id) % (s_meta.ntt_meta_block_size*blockDim.x);
       // data += (1<<extra_tw) * 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + (1<<extra_tw) * 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
-    }
+    // }
 
     // data += blockIdx.x*64*64*8 + (threadIdx.x & 0x7) + 64*64 * (threadIdx.x >> 3);
     // stride = 1;
@@ -310,8 +313,10 @@ class NTTEngine {
     
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[stage_num]], false);
-      WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[stage_num]], true);
+      WE[i].store_half(data[8*i*max_stride], false);
+      WE[i].store_half(data[8*i*max_stride + max_stride*64], true);
+      // WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[stage_num + (strided? 1 : 0)]], false);
+      // WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[stage_num + (strided? 1 : 0)]], true);
     }
     // #pragma unroll
     // for(uint32_t i=0;i<7;i++) {
@@ -324,7 +329,7 @@ class NTTEngine {
   __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
     if (strided){
-      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*s_meta.ntt_meta_block_size;
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*blockDim.x;
       // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
@@ -357,7 +362,7 @@ class NTTEngine {
   __device__ __forceinline__ void storeGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
     if (strided){
-      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*s_meta.ntt_meta_block_size;
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*blockDim.x;
       // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
@@ -371,14 +376,14 @@ class NTTEngine {
     // uint4 zero{0,0,0,0};
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      // if (stride == 1){
-      //   if (i==0){
-      //     data[8*i*stride] = uint4{2,0,0,0};
-      //     data[8*i*stride + high_bits_offset] = uint4{0,0,0,0};
-      //     continue;
-      //   }
-      //   data[8*i*stride] = WI[i-1].load_half(false);
-      //   data[8*i*stride + high_bits_offset] = WI[i-1].load_half(true);
+      // if (data_stride == 64){
+      //   // if (i==0){
+      //   //   data[8*i*data_stride] = uint4{2,0,0,0};
+      //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
+      //   //   continue;
+      //   // }
+      //   data[8*i*data_stride] = WE[i].load_half(false);
+      //   data[8*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
       // }
       // else{
         data[8*i*data_stride] = X[i].load_half(false);

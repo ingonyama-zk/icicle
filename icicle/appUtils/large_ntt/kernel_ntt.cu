@@ -53,9 +53,12 @@ __launch_bounds__(64)
 __global__ void reorder64_kernel(uint4* arr, uint4* arr_reordered, uint32_t stride){
   uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
   uint32_t rd = tid;
-  uint32_t wr = stride * threadIdx.x + blockIdx.x;
+  // uint32_t wr = stride * threadIdx.x + blockIdx.x;
+  uint32_t nof_digits = 3;
+  uint32_t wr = rev64(tid, nof_digits);
   arr_reordered[wr] = arr[rd];
-  arr_reordered[wr + 64 * stride] = arr[rd + 64 * stride];
+  arr_reordered[wr + (1<<(nof_digits*6))] = arr[rd + (1<<(nof_digits*6))];
+  // arr_reordered[wr + 64 * stride] = arr[rd + 64 * stride];
   // if (tid == 13941) printf("%d %d\n", tid,re_tid);
 }
 
@@ -355,33 +358,33 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
   engine.loadGlobalData(in, data_stride, log_size, strided, s_meta);
-  if (twiddle_stride) {
-    // if (blockIdx.x == 8 && threadIdx.x == 8){
-    //   for (int i = 0; i < 8; i++)
-    //   {
-    //     printf("%d, ",engine.X[i]);
-    //   }
-    //   printf("\n");
-    // }
-    engine.loadExternalTwiddles(twiddles, twiddle_stride, strided, s_meta, stage_num);
-    // if (blockIdx.x == 8 && threadIdx.x == 8){
-    //   for (int i = 0; i < 8; i++)
-    //   {
-    //     printf("%d, ",engine.WE[i]);
-    //   }
-    //   printf("\n");
-    // }
-    engine.twiddlesExternal();
-    // if (blockIdx.x == 8 && threadIdx.x == 8){
-    //   for (int i = 0; i < 8; i++)
-    //   {
-    //     printf("%d, ",engine.X[i]);
-    //   }
-    //   printf("\n");
-    // }
+  // if (twiddle_stride) {
+  //   // if (blockIdx.x == 8 && threadIdx.x == 8){
+  //   //   for (int i = 0; i < 8; i++)
+  //   //   {
+  //   //     printf("%d, ",engine.X[i]);
+  //   //   }
+  //   //   printf("\n");
+  //   // }
+  //   engine.loadExternalTwiddles(twiddles, twiddle_stride, strided, s_meta, stage_num);
+  //   // if (blockIdx.x == 8 && threadIdx.x == 8){
+  //   //   for (int i = 0; i < 8; i++)
+  //   //   {
+  //   //     printf("%d, ",engine.WE[i]);
+  //   //   }
+  //   //   printf("\n");
+  //   // }
+  //   engine.twiddlesExternal();
+  //   // if (blockIdx.x == 8 && threadIdx.x == 8){
+  //   //   for (int i = 0; i < 8; i++)
+  //   //   {
+  //   //     printf("%d, ",engine.X[i]);
+  //   //   }
+  //   //   printf("\n");
+  //   // }
+  // }
     // engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
     // return;
-  }
 
 
     // if (twiddle_stride){
@@ -408,6 +411,33 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
         engine.twiddles64();
       }
     }
+    // if (twiddle_stride) engine.twiddlesExternal();
+    if (twiddle_stride) {
+    // if (blockIdx.x == 8 && threadIdx.x == 8){
+    //   for (int i = 0; i < 8; i++)
+    //   {
+    //     printf("%d, ",engine.X[i]);
+    //   }
+    //   printf("\n");
+    // }
+    engine.loadExternalTwiddles(twiddles, twiddle_stride, strided, s_meta, stage_num);
+    // if (blockIdx.x == 8 && threadIdx.x == 8){
+    //   for (int i = 0; i < 8; i++)
+    //   {
+    //     printf("%d, ",engine.WE[i]);
+    //   }
+    //   printf("\n");
+    // }
+    // if (twiddle_stride>64) engine.twiddlesExternal();
+    engine.twiddlesExternal();
+    // if (blockIdx.x == 8 && threadIdx.x == 8){
+    //   for (int i = 0; i < 8; i++)
+    //   {
+    //     printf("%d, ",engine.X[i]);
+    //   }
+    //   printf("\n");
+    // }
+  }
 
     // engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
     engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
@@ -474,6 +504,7 @@ __global__ void generate_twiddle_combinations(uint4* w6_table, uint4* w12_table,
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int pow = stage_num*6 + 6;
   int exp = ((tid & ((1<<pow)-1)) * (tid >> pow)) << (18-pow);
+  // int exp = ((tid & 0x3f) * (tid >> 6)) << (18-pow);
   test_scalar w6,w12,w18,w24;
   w6.store_half(w6_table[exp >> 18], false);
   w6.store_half(w6_table[(exp >> 18) + 64], true);
@@ -487,8 +518,10 @@ __global__ void generate_twiddle_combinations(uint4* w6_table, uint4* w12_table,
   // test_scalar t = w6_table[exp >> 12] * w12_table[(exp >> 6) & 0x3f] * w18_table[exp & 0x3f];
   // test_scalar t = w6_table[exp >> 6] * w12_table[exp & 0x3f];
   test_scalar t = w6 * w12 * w18 * w24;
-  twiddles[tid + LOW_W_OFFSETS[stage_num]] = t.load_half(false);
-  twiddles[tid + HIGH_W_OFFSETS[stage_num]] = t.load_half(true);
+  // twiddles[tid + LOW_W_OFFSETS[stage_num]] = t.load_half(false);
+  // twiddles[tid + HIGH_W_OFFSETS[stage_num]] = t.load_half(true);
+  twiddles[tid] = t.load_half(false);
+  twiddles[tid + (1<<(pow+6))] = t.load_half(true);
   // twiddles[tid + (1<<18)] = t.load_half(true);
   // twiddles[tid + (1<<12)] = t.load_half(true);
 
@@ -518,11 +551,9 @@ uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size){
   generate_base_table<<<1,1>>>(12, w12_table);
   generate_base_table<<<1,1>>>(18, w18_table);
   generate_base_table<<<1,1>>>(24, w24_table);
-  generate_twiddle_combinations<<<16,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,0);
-  generate_twiddle_combinations<<<16*64,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,1);
+  // generate_twiddle_combinations<<<16,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,0);
+  // generate_twiddle_combinations<<<16*64,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,1);
   generate_twiddle_combinations<<<1024*64,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,2);
-  // generate_twiddle_combinations<<<1024,256>>>(w6_table, w12_table, w18_table, twiddles);
-  // generate_twiddle_combinations<<<16,256>>>(w6_table, w12_table, w18_table, twiddles);
   return w6_table;
 }
 
@@ -541,9 +572,15 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
   ntt64<<<8,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size,24, 1, 1, false, 0);
   }
   if (log_size == 18){
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64*64, 0, true, 2);
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 1, 1, false, 1);
-  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64, 64, true, 0);
+  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64*64, 64*64, true, 2);
+  // cudaDeviceSynchronize();
+  // printf("cuda err %d\n",cudaGetLastError());
+  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 64, 64, true, 1);
+  // cudaDeviceSynchronize();
+  // printf("cuda err %d\n",cudaGetLastError());
+  ntt64<<<8*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, tw_log_size, 1, 0, false, 0);
+  // cudaDeviceSynchronize();
+  // printf("cuda err %d\n",cudaGetLastError());
   }
 }
 
