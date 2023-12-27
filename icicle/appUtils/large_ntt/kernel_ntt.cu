@@ -499,25 +499,27 @@ __global__ void generate_base_table(int x, uint4* base_table){
   }
 }
 
-__global__ void generate_twiddle_combinations(uint4* w6_table, uint4* w12_table, uint4* w18_table, uint4* w24_table, uint4* twiddles, uint32_t stage_num){
+__global__ void generate_twiddle_combinations(uint4* w6_table, uint4* w12_table, uint4* w18_table, uint4* w24_table, uint4* w30_table, uint4* twiddles, uint32_t stage_num){
   
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   int pow = stage_num*6;
-  int exp = ((tid & ((1<<pow)-1)) * (tid >> pow)) << (18-pow);
+  int exp = ((tid & ((1<<pow)-1)) * (tid >> pow)) << (24-pow);
   // int exp = ((tid & 0x3f) * (tid >> 6)) << (18-pow);
-  test_scalar w6,w12,w18,w24;
-  w6.store_half(w6_table[exp >> 18], false);
-  w6.store_half(w6_table[(exp >> 18) + 64], true);
-  w12.store_half(w12_table[((exp >> 12) & 0x3f)], false);
-  w12.store_half(w12_table[((exp >> 12) & 0x3f) + 64], true);
-  w18.store_half(w18_table[((exp >> 6) & 0x3f)], false);
-  w18.store_half(w18_table[((exp >> 6) & 0x3f) + 64], true);
-  w24.store_half(w24_table[(exp & 0x3f)], false);
-  w24.store_half(w24_table[(exp & 0x3f) + 64], true);
+  test_scalar w6,w12,w18,w24,w30;
+  w6.store_half(w6_table[exp >> 24], false);
+  w6.store_half(w6_table[(exp >> 24) + 64], true);
+  w12.store_half(w12_table[((exp >> 18) & 0x3f)], false);
+  w12.store_half(w12_table[((exp >> 18) & 0x3f) + 64], true);
+  w18.store_half(w18_table[((exp >> 12) & 0x3f)], false);
+  w18.store_half(w18_table[((exp >> 12) & 0x3f) + 64], true);
+  w24.store_half(w24_table[((exp >> 6) & 0x3f)], false);
+  w24.store_half(w24_table[((exp >> 6) & 0x3f) + 64], true);
+  w30.store_half(w30_table[(exp & 0x3f)], false);
+  w30.store_half(w30_table[(exp & 0x3f) + 64], true);
   // test_scalar t = w6_table[exp >> 18] * w12_table[(exp >> 12) & 0x3f] * w18_table[(exp >> 6) & 0x3f] * w24_table[exp & 0x3f];
   // test_scalar t = w6_table[exp >> 12] * w12_table[(exp >> 6) & 0x3f] * w18_table[exp & 0x3f];
   // test_scalar t = w6_table[exp >> 6] * w12_table[exp & 0x3f];
-  test_scalar t = w6 * w12 * w18 * w24;
+  test_scalar t = w6 * w12 * w18 * w24 * w30;
   twiddles[tid + LOW_W_OFFSETS[stage_num-1]] = t.load_half(false);
   twiddles[tid + HIGH_W_OFFSETS[stage_num-1]] = t.load_half(true);
   // twiddles[tid] = t.load_half(false);
@@ -543,17 +545,26 @@ uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size){
   uint4* w12_table;
   uint4* w18_table;
   uint4* w24_table;
+  uint4* w30_table;
   cudaMalloc((void**)&w6_table, sizeof(uint4)*64*2);
   cudaMalloc((void**)&w12_table, sizeof(uint4)*64*2);
   cudaMalloc((void**)&w18_table, sizeof(uint4)*64*2);
   cudaMalloc((void**)&w24_table, sizeof(uint4)*64*2);
+  cudaMalloc((void**)&w30_table, sizeof(uint4)*64*2);
   generate_base_table<<<1,1>>>(6, w6_table);
   generate_base_table<<<1,1>>>(12, w12_table);
   generate_base_table<<<1,1>>>(18, w18_table);
   generate_base_table<<<1,1>>>(24, w24_table);
-  generate_twiddle_combinations<<<16,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,1);
-  generate_twiddle_combinations<<<16*64,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,2);
-  generate_twiddle_combinations<<<1024*64,256>>>(w6_table, w12_table, w18_table, w24_table, twiddles,3);
+  generate_base_table<<<1,1>>>(30, w30_table);
+  for (int i = 1; i < log_size/6; i++)
+  {
+    generate_twiddle_combinations<<<16<<((i-1)*6),256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles,i);
+  }
+  
+  // generate_twiddle_combinations<<<16,256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles,1);
+  // generate_twiddle_combinations<<<16*64,256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles,2);
+  // generate_twiddle_combinations<<<1024*64,256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles,3);
+  // generate_twiddle_combinations<<<1024*64*64,256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles,4);
   return w6_table;
 }
 
