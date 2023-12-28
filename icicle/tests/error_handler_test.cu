@@ -37,7 +37,3 @@ TEST_F(IcicleErrorTest, IcicleErrorWithIcicleErrorCode) {
     EXPECT_NE(std::string(error.what()).find(msg), std::string::npos);
 }
 
-// Additional tests can be written for the CHK_OK and CHK_LAST macros.
-// However, testing these macros can be tricky since they involve actual CUDA runtime behavior.
-// Mocking or simulating CUDA errors may be necessary for thorough testing.
-

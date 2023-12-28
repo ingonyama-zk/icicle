@@ -929,8 +929,7 @@ namespace msm {
   template <typename S, typename A, typename P>
   cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results)
   {
-    cudaError_t err = CHK_LAST_STICKY();
-    if (err != cudaSuccess) return err; // TODO: hiding control flow is not great, unless we decide otherwise
+    CHK_INIT_IF_RETURN();
 
     int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
     // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in

@@ -54,8 +54,6 @@ public:
 
 // TODO: ? do{..}while(0) as per https://hownot2code.wordpress.com/2016/12/05/do-while-0-in-macros/
 
-#define CHK_OK(val) check((val), #val, __FILE__, __LINE__)
-
 #define CHK_ERR(err, func, file, line) check(err, func, file, line)
 #define CHK_VAL(val, file, line)       check((val), #val, file, line)
 
@@ -106,5 +104,18 @@ cudaError_t inline checkCudaErrorIsSticky(
 
   return err;
 }
+
+// most common macros to use
+#define CHK_INIT_IF_RETURN()                                                                                              \
+  {                                                                                                                    \
+    cudaError_t err_result = CHK_LAST_STICKY();                                                                        \
+    if (err_result != cudaSuccess) return err_result;                                                                  \
+  }
+
+#define CHK_IF_RETURN(val)                                                                                                \
+  {                                                                                                                    \
+    cudaError_t err_result = CHK_STICKY(val);                                                                          \
+    if (err_result != cudaSuccess) return err_result;                                                                  \
+  }
 
 #endif
