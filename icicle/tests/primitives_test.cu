@@ -1,4 +1,4 @@
-#include "test_kernels.cuh"
+#include "../primitives/test_kernels.cuh"
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
 #include <iostream>
@@ -422,10 +422,4 @@ TEST_F(PrimitivesTest, G2ECMixedAdditionOfNegatedPointEqSubtraction)
   ASSERT_EQ(vec_neg(g2_points2, g2_res_points2, n), cudaSuccess);
   for (unsigned i = 0; i < n; i++)
     ASSERT_EQ(g2_res_points1[i], g2_points1[i] + g2_res_points2[i]);
-}
-
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
 }
