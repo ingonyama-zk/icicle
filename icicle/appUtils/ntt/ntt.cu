@@ -281,7 +281,7 @@ namespace ntt {
      * @param d_output Output array
      */
     template <typename E, typename S>
-    void ntt_inplace_batch_template(
+    cudaError_t ntt_inplace_batch_template(
       E* d_input,
       int n,
       S* d_twiddles,
@@ -354,9 +354,9 @@ namespace ntt {
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
       }
 
-      if (is_async) return;
+      if (is_async) return CHK_LAST_STICKY();
 
-      CHK_OK(cudaStreamSynchronize(stream));
+      return CHK_STICKY(cudaStreamSynchronize(stream));
     }
 
   } // namespace
@@ -393,6 +393,9 @@ namespace ntt {
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
+    cudaError_t err = CHK_LAST_STICKY();
+    if (err != cudaSuccess) return err;
+
     // only generate twiddles if they haven't been generated yet (TODO: thread safety)
     if (!Domain<S>::twiddles) {
       // TODO DmytroTym: the following line is just a temporary patch to make it work,
@@ -405,18 +408,24 @@ namespace ntt {
         Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
         h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
       } while (h_twiddles.at(n++) != S::one());
-      CHK_OK(cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream));
-      CHK_OK(
+
+      err = CHK_STICKY(cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream));
+      if (err != cudaSuccess) return err;
+
+      err = CHK_STICKY(
         cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
+      if (err != cudaSuccess) return err;
+
       Domain<S>::max_size = n - 1;
     }
-    return CHK_CUDA();
+    return CHK_LAST_STICKY();
   }
 
   template <typename S, typename E>
   cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S>& config, E* output)
   {
-    CHK_LAST();
+    cudaError_t err = CHK_LAST_STICKY();
+    if (err != cudaSuccess) return err;
 
     cudaStream_t stream = config.ctx.stream;
     int batch_size = config.batch_size;
@@ -429,14 +438,17 @@ namespace ntt {
     if (is_input_on_device) {
       d_input = input;
     } else {
-      CHK_OK(cudaMallocAsync(&d_input, input_size_bytes, stream));
-      CHK_OK(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
+      err = CHK_STICKY(cudaMallocAsync(&d_input, input_size_bytes, stream));
+      if (err != cudaSuccess) return err;
+      err = CHK_STICKY(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
+      if (err != cudaSuccess) return err;
     }
     E* d_output;
     if (is_input_on_device) {
       d_output = output;
     } else {
-      CHK_OK(cudaMallocAsync(&d_output, input_size_bytes, stream));
+      err = CHK_STICKY(cudaMallocAsync(&d_output, input_size_bytes, stream));
+      if (err != cudaSuccess) return err;
     }
 
     bool ct_butterfly = true;
@@ -464,12 +476,13 @@ namespace ntt {
       // free(config->inout); // TODO: ? or callback?+
       output = d_output;
     } else {
-      CHK_OK(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
+      err = CHK_STICKY(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
+      if (err != cudaSuccess) return err;
     }
 
-    if (!config.is_async) CHK_OK(cudaStreamSynchronize(stream));
+    if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
 
-    return CHK_CUDA();
+    return CHK_LAST_STICKY();
   }
 
   template <typename S>

@@ -40,7 +40,7 @@ TEST_F(CudaErrorTest, NonStickyErrorTest)
 
   // Check if the macro correctly reports the error without throwing an exception
   EXPECT_EQ(err, cudaErrorInvalidValue);
-  EXPECT_NO_THROW({ err2 = CHK_CUDA(); });
+  EXPECT_NO_THROW({ err2 = CHK_LAST_STICKY(); });
   EXPECT_EQ(err2, err);
 
   // Optionally, clear the error if needed
@@ -72,14 +72,8 @@ TEST_F(CudaErrorTest, StickyErrorTest)
   EXPECT_EQ(cudaGetLastError(), cudaErrorAssert); // reports error after cudaDeviceSynchronize
   EXPECT_EQ(cudaGetLastError(), cudaSuccess);     // resets error, despite it's sticky
 
-  sync_error = cudaDeviceSynchronize();
-
-  EXPECT_NE(sync_error, cudaSuccess); // still reports sticky error again
-                                      // after sync, despite call to cudaGetLastError and reset
-  EXPECT_EQ(sync_error, cudaErrorAssert);
-
   // Check if the macro correctly throws an exception for a sticky error
-  EXPECT_THROW({ CHK_CUDA(); }, IcicleError);
+  EXPECT_THROW({ CHK_STICKY(cudaDeviceSynchronize()); }, IcicleError);
 }
 
 // Test Case for Sticky Error
@@ -93,6 +87,6 @@ TEST_F(CudaErrorTest, StickyErrorTestNotThrowing)
   EXPECT_EQ(cudaDeviceSynchronize(), cudaErrorAssert);
 
   // Check if the macro correctly throws an exception for a sticky error
-  cudaError_t err = CHK_CUDA_NO_THROW();
+  cudaError_t err = CHK_LAST_STICKY_NO_THROW();
   EXPECT_EQ(err, cudaErrorAssert);
 }

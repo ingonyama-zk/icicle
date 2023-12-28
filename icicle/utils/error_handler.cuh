@@ -55,40 +55,37 @@ public:
 // TODO: ? do{..}while(0) as per https://hownot2code.wordpress.com/2016/12/05/do-while-0-in-macros/
 
 #define CHK_OK(val) check((val), #val, __FILE__, __LINE__)
-template <typename T>
-cudaError_t inline check(T err, const char* const func, const char* const file, const int line)
+
+#define CHK_ERR(err, func, file, line) check(err, func, file, line)
+#define CHK_VAL(val, file, line)       check((val), #val, file, line)
+
+cudaError_t inline check(cudaError_t err, const char* const func, const char* const file, const int line)
 {
   if (err != cudaSuccess) {
-    std::cerr << "CUDA Runtime Error at: " << file << ":" << line << std::endl;
-    std::cerr << cudaGetErrorString(err) << " " << func << std::endl;
+    std::cerr << "CUDA Runtime Error by: " << func << " at: " << file << ":" << line << std::endl;
+    std::cerr << cudaGetErrorString(err) << std::endl << std::endl;
   }
 
   return err;
 }
 
 #define CHK_LAST() checkLast(__FILE__, __LINE__)
-cudaError_t inline checkLast(const char* const file, const int line)
+cudaError_t inline checkLast(const char* const file, const int line) { return CHK_VAL(cudaGetLastError(), file, line); }
+
+// TODO: one macro that optionally (by compile-time switch) doesn't throw
+#define CHK_STICKY_NO_THROW(val) checkCudaErrorIsSticky((val), #val, __FILE__, __LINE__, false)
+
+#define CHK_LAST_STICKY_NO_THROW()                                                                                     \
+  checkCudaErrorIsSticky(cudaGetLastError(), "cudaGetLastError", __FILE__, __LINE__, false)
+
+#define CHK_LAST_STICKY() checkCudaErrorIsSticky(cudaGetLastError(), "cudaGetLastError", __FILE__, __LINE__)
+
+#define CHK_STICKY(val) checkCudaErrorIsSticky((val), #val, __FILE__, __LINE__)
+
+cudaError_t inline checkCudaErrorIsSticky(
+  cudaError_t err, const char* const func, const char* const file, const int line, bool isThrowing = true)
 {
-  cudaError_t err{cudaGetLastError()};
   if (err != cudaSuccess) {
-    std::cerr << "CUDA Runtime Error at: " << file << ":" << line << std::endl;
-    std::cerr << cudaGetErrorString(err) << std::endl;
-  }
-
-  return err;
-}
-
-// TODO: one macro that optionally (by compile-time switch) doesn't throw 
-#define CHK_CUDA_NO_THROW() checkLastStickyError(__FILE__, __LINE__, false) 
-
-#define CHK_CUDA() checkLastStickyError(__FILE__, __LINE__)
-
-cudaError_t inline checkLastStickyError(const char* const file, const int line, bool isThrowing = true)
-{
-  cudaError_t err{cudaGetLastError()};
-  if (err != cudaSuccess) {
-    std::cerr << "CUDA Runtime Error at: " << file << ":" << line << std::endl;
-    std::cerr << cudaGetErrorString(err) << std::endl;
     // check for sticky (unrecoverable) error when the only option is to restart process
     cudaError_t err2 = cudaDeviceSynchronize();
     if (err2 != cudaSuccess) { // we suspect sticky error
@@ -97,13 +94,14 @@ cudaError_t inline checkLastStickyError(const char* const file, const int line, 
         // TODO: fmt::format introduced only in C++20
         std::string err2_msg = "!!!Unrecoverable!!! : " + std::string{cudaGetErrorString(err2)} +
                                " : detected at : " + std::string(file) + ":" + std::to_string(line) +
-                               "\nThe error is reported there and may be caused by prior calls.";
+                               "\nThe error is reported there and may be caused by prior calls.\n";
         std::cerr << err2_msg << std::endl; // TODO: Logging
         throw IcicleError{err2, err2_msg};
       } else {
         err = err2;
       }
     }
+    CHK_ERR(err, func, file, line);
   }
 
   return err;
