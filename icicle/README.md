@@ -3,7 +3,10 @@
 ## Running tests
 
 ```sh
-mkdir -p build; cmake -S . -B build; cmake --build build; cd build && ctest; cd ..
+mkdir -p build;
+cmake -DBUILD_TESTS=ON -DCURVE=<support_curve> -S . -B build;
+cmake --build build;
+./build/runner --gtest_brief=1; 
 ```
 
 ## Prerequisites on Ubuntu

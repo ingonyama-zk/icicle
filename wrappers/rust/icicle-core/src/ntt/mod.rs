@@ -1,7 +1,10 @@
-use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
+use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaError};
 use std::os::raw::c_int;
 
-use crate::traits::FieldImpl;
+use crate::{
+    error::IcicleResult,
+    traits::{FieldImpl, IcicleResultWrap, ResultWrap},
+};
 
 pub mod tests;
 
@@ -71,8 +74,8 @@ pub struct NTTConfig<'a, S> {
 // }
 
 pub trait NTT<F: FieldImpl> {
-    fn ntt(input: &[F], is_inverse: bool, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>;
-    fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>;
+    fn ntt(input: &[F], is_inverse: bool, cfg: &NTTConfig<F>, output: &mut [F]) -> IcicleResult<()>;
+    fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
@@ -106,10 +109,12 @@ macro_rules! impl_ntt {
                 is_inverse: bool,
                 cfg: &NTTConfig<$field>,
                 output: &mut [$field],
-            ) -> CudaResult<()> {
+            ) -> IcicleResult<()> {
                 if input.len() != output.len() {
-                    return Err(CudaError::cudaErrorInvalidValue);
+                    panic!("input and output lengths do not match")
                 }
+
+                //TODO: more validations for cfg
 
                 unsafe {
                     ntt_cuda(
@@ -123,7 +128,7 @@ macro_rules! impl_ntt {
                 }
             }
 
-            fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaResult<()> {
+            fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
                 unsafe { initialize_ntt_domain(primitive_root, ctx).wrap() }
             }
 

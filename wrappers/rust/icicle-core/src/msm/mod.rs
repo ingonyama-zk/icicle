@@ -1,6 +1,6 @@
-use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
-
 use crate::curve::{Affine, CurveConfig, Projective};
+use crate::error::IcicleResult;
+use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaError};
 
 pub mod tests;
 
@@ -107,7 +107,7 @@ pub trait MSM<C: CurveConfig> {
         points: &[Affine<C>],
         cfg: MSMConfig<'a>,
         results: &mut [Projective<C>],
-    ) -> CudaResult<()>;
+    ) -> IcicleResult<()>;
 
     fn get_default_msm_config() -> MSMConfig<'static>;
 }
@@ -138,9 +138,9 @@ macro_rules! impl_msm {
                 points: &[Affine<$curve_config>],
                 cfg: MSMConfig<'a>,
                 results: &mut [Projective<$curve_config>],
-            ) -> CudaResult<()> {
+            ) -> IcicleResult<()> {
                 if points.len() != scalars.len() {
-                    return Err(CudaError::cudaErrorInvalidValue);
+                    panic!("Number of points {} and scalars {} do not match:", points.len(), scalars.len());
                 }
 
                 unsafe {

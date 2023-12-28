@@ -1,9 +1,8 @@
 use crate::curve::{ScalarCfg, ScalarField};
 
-use icicle_core::impl_ntt;
-use icicle_core::ntt::{NTTConfig, NTT};
-use icicle_cuda_runtime::device_context::DeviceContext;
-use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
+use icicle_core::{error::*, impl_ntt, ntt::*, traits::*};
+
+use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaError};
 
 impl_ntt!("bls12_377", ScalarField, ScalarCfg);
 

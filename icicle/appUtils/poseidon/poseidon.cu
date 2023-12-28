@@ -1,3 +1,4 @@
+#include "../../utils/error_handler.cuh"
 #include "poseidon.cuh"
 
 template <typename S>
@@ -135,14 +136,12 @@ __global__ void get_hash_results(S* states, size_t number_of_states, S* out, int
 }
 
 template <typename S>
-__host__ void Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type, cudaStream_t stream)
+__host__ cudaError_t Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type, cudaStream_t stream)
 {
   S* states;
 
   // allocate memory for {blocks} states of {t} scalars each
-  if (cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream) != cudaSuccess) {
-    throw std::runtime_error("Failed memory allocation on the device");
-  }
+  CHK_IF_RETURN(cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream));
 
   // This is where the input matrix of size Arity x NumberOfBlocks is
   // padded and coppied to device in a T x NumberOfBlocks matrix
@@ -263,4 +262,5 @@ __host__ void Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, Hash
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
   cudaDeviceReset();
 #endif
+  return CHK_LAST();
 }
