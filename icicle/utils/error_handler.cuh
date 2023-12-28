@@ -9,12 +9,21 @@
 #include <string>
 
 enum class IcicleError_t {
-  UndefinedError = 0 // Assigning 0 as the value for UndefinedError
+  IcicleSuccess = 0,
+  InvalidArgument = 1,
+  MemoryAllocationError = 2,
+  UndefinedError = 999999999, // Assigning 0 as the value for UndefinedError
 };
 
 std::string inline IcicleGetErrorString(IcicleError_t error)
 {
   switch (error) {
+  case IcicleError_t::IcicleSuccess:
+    return "Success";
+  case IcicleError_t::InvalidArgument:
+    return "Invalid argument";
+  case IcicleError_t::MemoryAllocationError:
+    return "Memory allocation error";
   case IcicleError_t::UndefinedError:
     return "Undefined error occurred.";
   default:
@@ -77,7 +86,8 @@ cudaError_t inline check(cudaError_t err, const char* const func, const char* co
 
 #define CHK_STICKY(val) checkCudaErrorIsSticky((val), #val, __FILE__, __LINE__)
 
-#define THROW_ICICLE_CUDA_ERR(val, func, file, line) throwIcicleCudaErr(err, func, file, line)
+#define THROW_ICICLE_CUDA_ERR(val)                   throwIcicleCudaErr(val, __FUNCTION__, __FILE__, __LINE__)
+#define THROW_ICICLE_CUDA_ERR(val, func, file, line) throwIcicleCudaErr(val, func, file, line)
 void inline throwIcicleCudaErr(
   cudaError_t err, const char* const func, const char* const file, const int line, bool isUnrecoverable = true)
 {
@@ -90,6 +100,7 @@ void inline throwIcicleCudaErr(
 }
 
 #define THROW_ICICLE_ERR(val, reason, func, file, line) throwIcicleErr(val, reason, func, file, line)
+#define THROW_ICICLE_ERR(val, reason)                   throwIcicleErr(val, reason, __FUNCTION__, __FILE__, __LINE__)
 void inline throwIcicleErr(
   IcicleError_t err, const char* const reason, const char* const func, const char* const file, const int line)
 {
