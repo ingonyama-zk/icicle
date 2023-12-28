@@ -1,12 +1,14 @@
 #pragma once
 
+#include "../../utils/error_handler.cuh"
 #include "constants/constants_11.h"
 #include "constants/constants_2.h"
 #include "constants/constants_4.h"
 #include "constants/constants_8.h"
 #include <cassert>
 #include <map>
-#include <stdexcept>
+
+const std::string UNSUPPORTED_ARITY_MESSAGE = "Unsupported arity";
 
 uint32_t partial_rounds_number_from_arity(const uint32_t arity)
 {
@@ -20,7 +22,7 @@ uint32_t partial_rounds_number_from_arity(const uint32_t arity)
   case 11:
     return 57;
   default:
-    throw std::invalid_argument("unsupported arity");
+    THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, UNSUPPORTED_ARITY_MESSAGE);
   }
 };
 
@@ -46,7 +48,7 @@ S* load_constants(const uint32_t arity)
     constants = constants_11;
     break;
   default:
-    throw std::invalid_argument("unsupported arity");
+    THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, UNSUPPORTED_ARITY_MESSAGE);
   }
   return reinterpret_cast<S*>(constants);
 }

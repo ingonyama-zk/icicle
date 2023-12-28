@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "../utils/error_handler.cuh"
 #include "../utils/host_math.cuh"
 #include "../utils/ptx.cuh"
 #include "../utils/storage.cuh"
@@ -56,7 +57,7 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
     return Field{omega.storages[logn - 1]};
@@ -66,7 +67,7 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega_inv index"); }
+    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
     return Field{omega_inv.storages[logn - 1]};
@@ -76,7 +77,7 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid inv index"); }
+    if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
   }

@@ -149,7 +149,7 @@ public:
   }
 
   // Hash multiple preimages in parallel
-  void hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type, cudaStream_t stream);
+  cudaError_t hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type, cudaStream_t stream);
 
 private:
   S tree_domain_tag, const_input_no_pad_domain_tag;
