@@ -77,27 +77,49 @@ cudaError_t inline check(cudaError_t err, const char* const func, const char* co
 
 #define CHK_STICKY(val) checkCudaErrorIsSticky((val), #val, __FILE__, __LINE__)
 
+#define THROW_ICICLE_CUDA_ERR(val, func, file, line) throwIcicleCudaErr(err, func, file, line)
+void inline throwIcicleCudaErr(
+  cudaError_t err, const char* const func, const char* const file, const int line, bool isUnrecoverable = true)
+{
+  // TODO: fmt::format introduced only in C++20
+  std::string err_msg = (isUnrecoverable ? "!!!Unrecoverable!!! : " : "") + std::string{cudaGetErrorString(err)} +
+                        " : detected by: " + func + " at: " + file + ":" + std::to_string(line) +
+                        "\nThe error is reported there and may be caused by prior calls.\n";
+  std::cerr << err_msg << std::endl; // TODO: Logging
+  throw IcicleError{err, err_msg};
+}
+
+#define THROW_ICICLE_ERR(val, reason, func, file, line) throwIcicleErr(val, reason, func, file, line)
+void inline throwIcicleErr(
+  IcicleError_t err, const char* const reason, const char* const func, const char* const file, const int line)
+{
+  // TODO: fmt::format introduced only in C++20
+  std::string err_msg =
+    std::string{IcicleGetErrorString(err)} + " : by: " + func + " at: " + file + ":" + std::to_string(line);
+  std::cerr << err_msg << std::endl; // TODO: Logging
+  throw IcicleError{err, err_msg};
+}
+
 cudaError_t inline checkCudaErrorIsSticky(
   cudaError_t err, const char* const func, const char* const file, const int line, bool isThrowing = true)
 {
   if (err != cudaSuccess) {
     // check for sticky (unrecoverable) error when the only option is to restart process
     cudaError_t err2 = cudaDeviceSynchronize();
-    if (err != err2) CHK_ERR(err, func, file, line);
+    bool is_logged;
     if (err2 != cudaSuccess) { // we suspect sticky error
+      if (err != err2) {
+        is_logged = true;
+        CHK_ERR(err, func, file, line);
+      }
       // we are practically almost sure error is sticky
       if (isThrowing) {
-        // TODO: fmt::format introduced only in C++20
-        std::string err2_msg = "!!!Unrecoverable!!! : " + std::string{cudaGetErrorString(err2)} +
-                               " : detected by: " + func + " at: " + file + ":" + std::to_string(line) +
-                               "\nThe error is reported there and may be caused by prior calls.\n";
-        std::cerr << err2_msg << std::endl; // TODO: Logging
-        throw IcicleError{err2, err2_msg};
+        THROW_ICICLE_CUDA_ERR(err, func, file, line);
       } else {
         err = err2;
       }
     }
-    CHK_ERR(err, func, file, line);
+    if (!is_logged) CHK_ERR(err, func, file, line);
   }
 
   return err;
