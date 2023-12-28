@@ -83,12 +83,13 @@ cudaError_t inline checkCudaErrorIsSticky(
   if (err != cudaSuccess) {
     // check for sticky (unrecoverable) error when the only option is to restart process
     cudaError_t err2 = cudaDeviceSynchronize();
+    if (err != err2) CHK_ERR(err, func, file, line);
     if (err2 != cudaSuccess) { // we suspect sticky error
       // we are practically almost sure error is sticky
       if (isThrowing) {
         // TODO: fmt::format introduced only in C++20
         std::string err2_msg = "!!!Unrecoverable!!! : " + std::string{cudaGetErrorString(err2)} +
-                               " : detected at : " + std::string(file) + ":" + std::to_string(line) +
+                               " : detected by: " + func + " at: " + file + ":" + std::to_string(line) +
                                "\nThe error is reported there and may be caused by prior calls.\n";
         std::cerr << err2_msg << std::endl; // TODO: Logging
         throw IcicleError{err2, err2_msg};
@@ -103,13 +104,13 @@ cudaError_t inline checkCudaErrorIsSticky(
 }
 
 // most common macros to use
-#define CHK_INIT_IF_RETURN()                                                                                              \
+#define CHK_INIT_IF_RETURN()                                                                                           \
   {                                                                                                                    \
-    cudaError_t err_result = CHK_LAST();                                                                        \
+    cudaError_t err_result = CHK_LAST();                                                                               \
     if (err_result != cudaSuccess) return err_result;                                                                  \
   }
 
-#define CHK_IF_RETURN(val)                                                                                                \
+#define CHK_IF_RETURN(val)                                                                                             \
   {                                                                                                                    \
     cudaError_t err_result = CHK_STICKY(val);                                                                          \
     if (err_result != cudaSuccess) return err_result;                                                                  \
