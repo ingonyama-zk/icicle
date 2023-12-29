@@ -4,3 +4,4 @@ pub mod msm;
 pub mod ntt;
 pub mod tests;
 pub mod traits;
+pub mod error;

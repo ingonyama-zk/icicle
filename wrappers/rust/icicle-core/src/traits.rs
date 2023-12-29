@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, result::*, mem::MaybeUninit};
 
 pub trait GenerateRandom<F> {
     fn generate_random(size: usize) -> Vec<F>;
@@ -22,4 +22,10 @@ pub trait ArkConvertible {
 
     fn to_ark(&self) -> Self::ArkEquivalent;
     fn from_ark(ark: Self::ArkEquivalent) -> Self;
+}
+
+pub trait ResultWrap<T, TError>{
+    fn wrap_err(self) -> Result<T, TError>;
+    fn wrap_value(self, value: T) -> Result<T, TError>;
+    fn wrap_maybe_uninit(self, value: MaybeUninit<T>) -> Result<T, TError>;
 }

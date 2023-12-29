@@ -39,7 +39,7 @@ where
     let ctx = get_default_device_context();
     // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
     // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
-    Fc::initialize_domain(
+    let _ = Fc::initialize_domain(
         F::from_ark(F::ArkEquivalent::get_root_of_unity(test_size as u64).unwrap()),
         &ctx,
     )
@@ -50,7 +50,7 @@ where
 
     let config = Fc::get_default_ntt_config();
     let mut ntt_result = vec![F::zero(); test_size];
-    Fc::ntt(&scalars, false, &config, &mut ntt_result).unwrap();
+    let _ = Fc::ntt(&scalars, false, &config, &mut ntt_result).unwrap();
     assert_ne!(ntt_result, scalars);
 
     let ark_scalars = scalars
@@ -68,7 +68,7 @@ where
     assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
     let mut intt_result = vec![F::zero(); test_size];
-    Fc::ntt(&ntt_result, true, &config, &mut intt_result).unwrap();
+    let _ = Fc::ntt(&ntt_result, true, &config, &mut intt_result).unwrap();
 
     assert_eq!(intt_result, scalars);
     // check that ntt_result wasn't mutated by the latest `ntt` call
@@ -85,7 +85,7 @@ where
     let ctx = get_default_device_context();
     // two roughly analogous calls for icicle and arkworks. one difference is that icicle call creates
     // domain for all NTTs of size <= `test_size`. also for icicle domain is a hidden static object
-    Fc::initialize_domain(F::from_ark(test_size_rou), &ctx).unwrap();
+    let _ = Fc::initialize_domain(F::from_ark(test_size_rou), &ctx).unwrap();
     let ark_small_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(small_size)
         .unwrap()
         .get_coset(test_size_rou)
@@ -97,15 +97,15 @@ where
     let mut config = Fc::get_default_ntt_config();
     config.ordering = Ordering::kNR;
     let mut ntt_result = vec![F::zero(); test_size];
-    Fc::ntt(&scalars, false, &config, &mut ntt_result[..small_size]).unwrap();
+    let _ = Fc::ntt(&scalars, false, &config, &mut ntt_result[..small_size]).unwrap();
     assert_ne!(ntt_result[..small_size], scalars);
     config.coset_gen = F::from_ark(test_size_rou);
-    Fc::ntt(&scalars, false, &config, &mut ntt_result[small_size..]).unwrap();
+    let _ = Fc::ntt(&scalars, false, &config, &mut ntt_result[small_size..]).unwrap();
     let mut ntt_large_result = vec![F::zero(); test_size];
     // back to non-coset NTT
     config.coset_gen = F::one();
     scalars.resize(test_size, F::zero());
-    Fc::ntt(&scalars, false, &config, &mut ntt_large_result).unwrap();
+    let _ = Fc::ntt(&scalars, false, &config, &mut ntt_large_result).unwrap();
     assert_eq!(ntt_result, ntt_large_result);
 
     let mut ark_scalars = scalars
@@ -128,7 +128,7 @@ where
     config.coset_gen = F::from_ark(test_size_rou);
     config.ordering = Ordering::kRN;
     let mut intt_result = vec![F::zero(); small_size];
-    Fc::ntt(&ntt_result[small_size..], true, &config, &mut intt_result).unwrap();
+    let _ = Fc::ntt(&ntt_result[small_size..], true, &config, &mut intt_result).unwrap();
     assert_eq!(intt_result, scalars[..small_size]);
 
     ark_small_domain.ifft_in_place(&mut ark_scalars);
