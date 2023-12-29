@@ -75,19 +75,25 @@ pub trait NTT<F: FieldImpl> {
 }
 
 pub fn ntt<F>(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>
-where F: FieldImpl, <F as FieldImpl>::Config: NTT<F>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
 {
     <<F as FieldImpl>::Config as NTT<F>>::ntt(input, dir, cfg, output)
 }
 
 pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>
-where F: FieldImpl, <F as FieldImpl>::Config: NTT<F>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
 {
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
 
 pub fn get_default_ntt_config<F>() -> NTTConfig<'static, F>
-where F: FieldImpl, <F as FieldImpl>::Config: NTT<F>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
 {
     <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config()
 }

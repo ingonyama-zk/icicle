@@ -5,7 +5,7 @@ use icicle_cuda_runtime::{device_context::get_default_device_context, memory::De
 
 use crate::{
     field::generate_random,
-    ntt::{NTTDir, Ordering, ntt, initialize_domain, get_default_ntt_config},
+    ntt::{get_default_ntt_config, initialize_domain, ntt, NTTDir, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
@@ -13,7 +13,8 @@ use super::NTT;
 
 pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64)
 where
-    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F>
+    F::ArkEquivalent: FftField,
+    <F as FieldImpl>::Config: NTT<F>,
 {
     let ctx = get_default_device_context();
     let ark_rou = F::ArkEquivalent::get_root_of_unity(max_size).unwrap();
@@ -43,7 +44,8 @@ pub fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
 
 pub fn check_ntt<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
+    F::ArkEquivalent: FftField,
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let test_sizes = [1 << 4, 1 << 16];
     for test_size in test_sizes {
@@ -54,7 +56,7 @@ where
             .iter()
             .map(|v| v.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();
-        // if we simply transmute arkworks types, we'll get scalars in Montgomery format 
+        // if we simply transmute arkworks types, we'll get scalars in Montgomery format
         let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const _) };
 
         let config = get_default_ntt_config::<F>();
@@ -66,7 +68,8 @@ where
         ark_domain.fft_in_place(&mut ark_ntt_result);
         assert_ne!(ark_ntt_result, ark_scalars);
 
-        let ntt_result_as_ark = unsafe { &*(&ntt_result[..] as *const _ as *const [<F as ArkConvertible>::ArkEquivalent]) };
+        let ntt_result_as_ark =
+            unsafe { &*(&ntt_result[..] as *const _ as *const [<F as ArkConvertible>::ArkEquivalent]) };
         assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
         let mut intt_result = vec![F::zero(); test_size];
@@ -78,7 +81,8 @@ where
 
 pub fn check_ntt_coset_from_subgroup<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
+    F::ArkEquivalent: FftField,
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let test_sizes = [1 << 4, 1 << 16];
     for test_size in test_sizes {
@@ -142,7 +146,8 @@ where
 
 pub fn check_ntt_arbitrary_coset<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField + PrimeField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
+    F::ArkEquivalent: FftField + PrimeField,
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let mut seed = test_rng();
     let test_sizes = [1 << 4, 1 << 16];
@@ -195,7 +200,7 @@ where
 
 pub fn check_ntt_batch<F: FieldImpl>()
 where
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
@@ -234,7 +239,8 @@ where
 
 pub fn check_ntt_device_async<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
+    F::ArkEquivalent: FftField,
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
@@ -262,7 +268,9 @@ where
                     config.are_outputs_on_device = true;
                     config.are_inputs_on_device = true;
                     config.is_async = true;
-                    config.ctx.stream = &stream;
+                    config
+                        .ctx
+                        .stream = &stream;
                     ntt::<F>(
                         &scalars_d.as_slice(),
                         NTTDir::kForward,

@@ -105,7 +105,9 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
 }
 
 pub fn generate_random<F>(size: usize) -> Vec<F>
-where F: FieldImpl, F::Config: GenerateRandom<F>
+where
+    F: FieldImpl,
+    F::Config: GenerateRandom<F>,
 {
     <<F as FieldImpl>::Config as GenerateRandom<F>>::generate_random(size)
 }

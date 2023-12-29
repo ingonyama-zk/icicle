@@ -958,8 +958,8 @@ namespace msm {
         config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.is_async, stream);
     else
       batched_bucket_method_msm(
-        bitsize, (config.c == 0) ? get_optimal_c<S>(msm_size) : config.c, scalars, points, config.batch_size,
-        msm_size, (config.points_size == 0) ? msm_size : config.points_size, results, config.are_scalars_on_device,
+        bitsize, (config.c == 0) ? get_optimal_c<S>(msm_size) : config.c, scalars, points, config.batch_size, msm_size,
+        (config.points_size == 0) ? msm_size : config.points_size, results, config.are_scalars_on_device,
         config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
         config.are_results_on_device, config.is_async, stream);
     return cudaSuccess;

@@ -301,8 +301,8 @@ namespace ntt {
       bool direct_coset = (!inverse && is_on_coset);
       if (direct_coset) {
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
-          d_input, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles,
-          arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn, ct_buttterfly, d_output);
+          d_input, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles, arbitrary_coset ? 1 : coset_gen_index,
+          n_twiddles, logn, ct_buttterfly, d_output);
       }
 
       if (ct_buttterfly) {
@@ -314,8 +314,7 @@ namespace ntt {
         for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
         {
           ntt_template_kernel<E, S><<<num_blocks, num_threads, 0, stream>>>(
-            (direct_coset || (s > 0)) ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, false,
-            d_output);
+            (direct_coset || (s > 0)) ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, false, d_output);
         }
       } else {
         for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
@@ -421,8 +420,7 @@ namespace ntt {
     int coset_index = 0;
     try {
       coset_index = Domain<S>::coset_index.at(config.coset_gen);
-    }
-    catch (...) {
+    } catch (...) {
       // if coset index is not found in the subgroup, compute coset powers on CPU and move them to device
       std::vector<S> h_coset;
       h_coset.push_back(S::one());
@@ -469,8 +467,8 @@ namespace ntt {
     CHECK_LAST_CUDA_ERROR();
 
     ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size,
-      logn, dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output);
+      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output);
     CHECK_LAST_CUDA_ERROR();
 
     if (!is_output_on_device) cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream);

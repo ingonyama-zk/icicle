@@ -6,9 +6,9 @@
 template <unsigned LIMBS_COUNT>
 struct
 #ifdef __CUDA_ARCH__
-__align__(LIMBS_ALIGNMENT(LIMBS_COUNT))
+  __align__(LIMBS_ALIGNMENT(LIMBS_COUNT))
 #endif
-storage
+    storage
 {
   static constexpr unsigned LC = LIMBS_COUNT;
   uint32_t limbs[LIMBS_COUNT];
@@ -17,9 +17,9 @@ storage
 template <unsigned OMEGAS_COUNT, unsigned LIMBS_COUNT>
 struct
 #ifdef __CUDA_ARCH__
-__align__(LIMBS_ALIGNMENT(LIMBS_COUNT))
+  __align__(LIMBS_ALIGNMENT(LIMBS_COUNT))
 #endif
-storage_array
+    storage_array
 {
   storage<LIMBS_COUNT> storages[OMEGAS_COUNT];
 };

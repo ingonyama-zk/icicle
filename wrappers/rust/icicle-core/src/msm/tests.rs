@@ -1,7 +1,7 @@
 use super::MSM;
-use crate::curve::{Curve, Projective, Affine};
+use crate::curve::{Affine, Curve, Projective};
 use crate::field::FieldConfig;
-use crate::traits::{GenerateRandom, FieldImpl};
+use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::{memory::DeviceSlice, stream::CudaStream};
 
 #[cfg(feature = "arkworks")]
@@ -11,7 +11,7 @@ use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
 use ark_ec::VariableBaseMSM;
 #[cfg(feature = "arkworks")]
-use ark_std::{test_rng, rand::Rng, UniformRand};
+use ark_std::{rand::Rng, test_rng, UniformRand};
 
 pub fn check_msm<C: Curve + MSM<C>, ScalarConfig: FieldConfig>()
 where
@@ -32,13 +32,15 @@ where
             .iter()
             .map(|x| x.to_ark())
             .collect();
-        // if we simply transmute arkworks types, we'll get scalars or points in Montgomery format 
+        // if we simply transmute arkworks types, we'll get scalars or points in Montgomery format
         // (just beware the possible extra bit in affine point types, can't transmute ark Affine because of that)
         let scalars_mont = unsafe { &*(&scalars_ark[..] as *const _ as *const [C::ScalarField]) };
 
         let mut scalars_d = DeviceSlice::cuda_malloc(test_size).unwrap();
         let stream = CudaStream::create().unwrap();
-        scalars_d.copy_from_host_async(&scalars_mont, &stream).unwrap();
+        scalars_d
+            .copy_from_host_async(&scalars_mont, &stream)
+            .unwrap();
 
         let mut cfg = C::get_default_msm_config();
         cfg.ctx
@@ -62,7 +64,9 @@ where
 
         let msm_result_ark: ark_ec::models::short_weierstrass::Projective<C::ArkSWConfig> =
             VariableBaseMSM::msm(&points_ark, &scalars_ark).unwrap();
-        let msm_res_affine: ark_ec::short_weierstrass::Affine<C::ArkSWConfig> = msm_host_result[0].to_ark().into();
+        let msm_res_affine: ark_ec::short_weierstrass::Affine<C::ArkSWConfig> = msm_host_result[0]
+            .to_ark()
+            .into();
         assert!(msm_res_affine.is_on_curve());
         assert_eq!(msm_host_result[0].to_ark(), msm_result_ark);
     }
@@ -85,9 +89,14 @@ where
             let mut msm_results_2 = DeviceSlice::cuda_malloc(batch_size).unwrap();
             let mut points_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
             // a version of batched msm without using `cfg.points_size`, requires copying bases
-            let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone()).take(batch_size).flatten().collect();
+            let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
+                .take(batch_size)
+                .flatten()
+                .collect();
             let stream = CudaStream::create().unwrap();
-            points_d.copy_from_host_async(&points_cloned, &stream).unwrap();
+            points_d
+                .copy_from_host_async(&points_cloned, &stream)
+                .unwrap();
 
             let mut cfg = C::get_default_msm_config();
             cfg.ctx
@@ -123,7 +132,10 @@ where
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
-            for (i, scalars_chunk) in scalars_ark.chunks(test_size).enumerate() {
+            for (i, scalars_chunk) in scalars_ark
+                .chunks(test_size)
+                .enumerate()
+            {
                 let msm_result_ark: ark_ec::models::short_weierstrass::Projective<C::ArkSWConfig> =
                     VariableBaseMSM::msm(&points_ark, &scalars_chunk).unwrap();
                 assert_eq!(msm_host_result_1[i].to_ark(), msm_result_ark);
@@ -150,7 +162,8 @@ where
                 scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::one();
             }
             for _ in (1 << 8)..test_size {
-                scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::from_ark(<C::ScalarField as ArkConvertible>::ArkEquivalent::rand(rng));
+                scalars[rng.gen_range(0..test_size * batch_size)] =
+                    C::ScalarField::from_ark(<C::ScalarField as ArkConvertible>::ArkEquivalent::rand(rng));
             }
 
             let mut msm_results = vec![Projective::<C>::zero(); batch_size];
@@ -168,7 +181,11 @@ where
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
-            for (i, (scalars_chunk, points_chunk)) in scalars_ark.chunks(test_size).zip(points_ark.chunks(test_size)).enumerate() {
+            for (i, (scalars_chunk, points_chunk)) in scalars_ark
+                .chunks(test_size)
+                .zip(points_ark.chunks(test_size))
+                .enumerate()
+            {
                 let msm_result_ark: ark_ec::models::short_weierstrass::Projective<C::ArkSWConfig> =
                     VariableBaseMSM::msm(&points_chunk, &scalars_chunk).unwrap();
                 assert_eq!(msm_results[i].to_ark(), msm_result_ark);

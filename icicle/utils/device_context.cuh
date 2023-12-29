@@ -22,9 +22,9 @@ namespace device_context {
   {
     static cudaStream_t default_stream = (cudaStream_t)0;
     return DeviceContext{
-      (cudaStream_t&)default_stream,  // stream
-      0,                              // device_id
-      0,                              // mempool
+      (cudaStream_t&)default_stream, // stream
+      0,                             // device_id
+      0,                             // mempool
     };
   }
 
