@@ -3,6 +3,7 @@ use std::mem::MaybeUninit;
 use icicle_cuda_runtime::error::CudaError;
 
 use crate::traits::ResultWrap;
+use crate::traits::IcicleResultWrap;
 
 #[repr(u32)]
 #[must_use]
@@ -57,20 +58,20 @@ impl IcicleError {
     }
 }
 
-impl ResultWrap<CudaError, IcicleError> for CudaError {
-    fn wrap_err(self) -> IcicleResult<CudaError> {
-        self.wrap_value(self)
+impl IcicleResultWrap for CudaError {
+    fn wrap(self) -> IcicleResult<()> {
+        self.wrap_value(())
     }
 
-    fn wrap_value(self, value:  CudaError) -> IcicleResult<CudaError> {
-        if value == CudaError::cudaSuccess {
+    fn wrap_value<T>(self, value: T) -> IcicleResult<T> {
+        if self == CudaError::cudaSuccess {
             Ok(value)
         } else {
-            Err(IcicleError::from_cuda_error(value))
+            Err(IcicleError::from_cuda_error(self))
         }
     }
 
-    fn wrap_maybe_uninit(self, value: MaybeUninit<CudaError>) -> IcicleResult<CudaError> {
+    fn wrap_maybe_uninit<T>(self, value: MaybeUninit<T>) -> IcicleResult<T> {
         self.wrap_value(unsafe { value.assume_init() })
     }
 }

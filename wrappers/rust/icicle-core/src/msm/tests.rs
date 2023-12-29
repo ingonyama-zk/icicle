@@ -31,7 +31,7 @@ where
             .stream = &stream;
         cfg.is_async = true;
         cfg.are_results_on_device = true;
-        let _ = C::msm(&scalars, &points, cfg, &mut msm_results.as_slice()).unwrap();
+        C::msm(&scalars, &points, cfg, &mut msm_results.as_slice()).unwrap();
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results

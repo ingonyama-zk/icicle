@@ -107,7 +107,7 @@ pub trait MSM<C: CurveConfig> {
         points: &[Affine<C>],
         cfg: MSMConfig<'a>,
         results: &mut [Projective<C>],
-    ) -> IcicleResult<CudaError>;
+    ) -> IcicleResult<()>;
 
     fn get_default_msm_config() -> MSMConfig<'static>;
 }
@@ -138,7 +138,7 @@ macro_rules! impl_msm {
                 points: &[Affine<$curve_config>],
                 cfg: MSMConfig<'a>,
                 results: &mut [Projective<$curve_config>],
-            ) -> IcicleResult<CudaError> {
+            ) -> IcicleResult<()> {
                 if points.len() != scalars.len() {
                     panic!("Number of points {} and scalars {} do not match:", points.len(), scalars.len());
                 }
