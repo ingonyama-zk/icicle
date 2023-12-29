@@ -1,9 +1,10 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
-use icicle_cuda_runtime::error::CudaError;
+use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaError};
 use std::os::raw::c_int;
 
-use crate::error::*;
-use crate::traits::*;
+use crate::{
+    error::IcicleResult,
+    traits::{FieldImpl, IcicleResultWrap, ResultWrap},
+};
 
 pub mod tests;
 
