@@ -18,7 +18,7 @@ pub enum IcicleErrorCode {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct IcicleError {
     icicle_error_code: IcicleErrorCode,
-    cuda_error: Option< CudaError>,
+    cuda_error: Option<CudaError>,
     reason: Option< &'static str>,
 }
 
@@ -44,7 +44,7 @@ impl IcicleError {
         IcicleError {
             icicle_error_code,
             reason: Some(reason),
-            cuda_error: Some(CudaError::cudaErrorUnknown),
+            cuda_error: None,
         }
     }
     

@@ -140,7 +140,7 @@ macro_rules! impl_msm {
                 results: &mut [Projective<$curve_config>],
             ) -> IcicleResult<CudaError> {
                 if points.len() != scalars.len() {
-                    panic!("count of points {} and scalars {} do not match:", points.len(), scalars.len());
+                    panic!("Number of points {} and scalars {} do not match:", points.len(), scalars.len());
                 }
 
                 unsafe {
@@ -151,7 +151,7 @@ macro_rules! impl_msm {
                         cfg,
                         results as *mut _ as *mut Projective<$curve_config>,
                     )
-                    .wrap_err()
+                    .wrap()
                 }
             }
 
