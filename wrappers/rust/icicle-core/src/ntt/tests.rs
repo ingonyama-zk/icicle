@@ -4,20 +4,20 @@ use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::{device_context::get_default_device_context, memory::DeviceSlice, stream::CudaStream};
 
 use crate::{
-    field::FieldConfig,
-    ntt::{NTTDir, Ordering},
+    field::generate_random,
+    ntt::{NTTDir, Ordering, ntt, initialize_domain, get_default_ntt_config},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
 use super::NTT;
 
-pub fn init_domain<F: FieldImpl + ArkConvertible, Fc: FieldConfig + NTT<F>>(max_size: u64)
+pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64)
 where
-    F::ArkEquivalent: FftField,
+    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F>
 {
     let ctx = get_default_device_context();
     let ark_rou = F::ArkEquivalent::get_root_of_unity(max_size).unwrap();
-    Fc::initialize_domain(F::from_ark(ark_rou), &ctx).unwrap();
+    initialize_domain::<F>(F::from_ark(ark_rou), &ctx).unwrap();
 }
 
 pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
@@ -41,15 +41,15 @@ pub fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
         .collect()
 }
 
-pub fn check_ntt<F: FieldImpl + ArkConvertible, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>()
+pub fn check_ntt<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField,
+    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
 {
     let test_sizes = [1 << 4, 1 << 16];
     for test_size in test_sizes {
         let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
-        let scalars: Vec<F> = Fc::generate_random(test_size);
+        let scalars: Vec<F> = generate_random::<F>(test_size);
         let ark_scalars = scalars
             .iter()
             .map(|v| v.to_ark())
@@ -57,9 +57,9 @@ where
         // if we simply transmute arkworks types, we'll get scalars in Montgomery format 
         let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const _) };
 
-        let config = Fc::get_default_ntt_config();
+        let config = get_default_ntt_config::<F>();
         let mut ntt_result = vec![F::zero(); test_size];
-        Fc::ntt(&scalars_mont, NTTDir::kForward, &config, &mut ntt_result).unwrap();
+        ntt::<F>(&scalars_mont, NTTDir::kForward, &config, &mut ntt_result).unwrap();
         assert_ne!(ntt_result, scalars_mont);
 
         let mut ark_ntt_result = ark_scalars.clone();
@@ -70,15 +70,15 @@ where
         assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
         let mut intt_result = vec![F::zero(); test_size];
-        Fc::ntt(&ntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
+        ntt::<F>(&ntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
 
         assert_eq!(intt_result, scalars_mont);
     }
 }
 
-pub fn check_ntt_coset_from_subgroup<F: FieldImpl + ArkConvertible, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>()
+pub fn check_ntt_coset_from_subgroup<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField,
+    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
 {
     let test_sizes = [1 << 4, 1 << 16];
     for test_size in test_sizes {
@@ -90,24 +90,24 @@ where
             .unwrap();
         let ark_large_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
-        let mut scalars: Vec<F> = Fc::generate_random(small_size);
+        let mut scalars: Vec<F> = generate_random::<F>(small_size);
         let mut ark_scalars = scalars
             .iter()
             .map(|v| v.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();
 
-        let mut config = Fc::get_default_ntt_config();
+        let mut config = get_default_ntt_config::<F>();
         config.ordering = Ordering::kNR;
         let mut ntt_result = vec![F::zero(); test_size];
-        Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result[..small_size]).unwrap();
+        ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_result[..small_size]).unwrap();
         assert_ne!(ntt_result[..small_size], scalars);
         config.coset_gen = F::from_ark(test_size_rou);
-        Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result[small_size..]).unwrap();
+        ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_result[small_size..]).unwrap();
         let mut ntt_large_result = vec![F::zero(); test_size];
         // back to non-coset NTT
         config.coset_gen = F::one();
         scalars.resize(test_size, F::zero());
-        Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_large_result).unwrap();
+        ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_large_result).unwrap();
         assert_eq!(ntt_result, ntt_large_result);
         // check that scalars weren't mutated by all the `ntt` calls
         assert_eq!(ark_scalars[1], scalars[1].to_ark());
@@ -128,7 +128,7 @@ where
         config.coset_gen = F::from_ark(test_size_rou);
         config.ordering = Ordering::kRN;
         let mut intt_result = vec![F::zero(); small_size];
-        Fc::ntt(&ntt_result[small_size..], NTTDir::kInverse, &config, &mut intt_result).unwrap();
+        ntt::<F>(&ntt_result[small_size..], NTTDir::kInverse, &config, &mut intt_result).unwrap();
         assert_eq!(intt_result, scalars[..small_size]);
 
         ark_small_domain.ifft_in_place(&mut ark_scalars);
@@ -140,9 +140,9 @@ where
     }
 }
 
-pub fn check_ntt_arbitrary_coset<F: FieldImpl + ArkConvertible, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>()
+pub fn check_ntt_arbitrary_coset<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField + PrimeField
+    F::ArkEquivalent: FftField + PrimeField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
 {
     let mut seed = test_rng();
     let test_sizes = [1 << 4, 1 << 16];
@@ -158,18 +158,18 @@ where
                 .get_coset(coset_gen)
                 .unwrap();
 
-            let mut scalars: Vec<F> = Fc::generate_random(test_size);
+            let mut scalars: Vec<F> = generate_random::<F>(test_size);
             // here you can see how arkworks type can be easily created without any purpose-built conversions
             let mut ark_scalars = scalars
                 .iter()
                 .map(|v| F::ArkEquivalent::from_le_bytes_mod_order(&v.to_bytes_le()))
                 .collect::<Vec<F::ArkEquivalent>>();
 
-            let mut config = Fc::get_default_ntt_config();
+            let mut config = get_default_ntt_config::<F>();
             config.ordering = Ordering::kNR;
             config.coset_gen = F::from_ark(coset_gen);
             let mut ntt_result = vec![F::zero(); test_size];
-            Fc::ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
+            ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
             assert_ne!(scalars, ntt_result);
 
             let ark_scalars_copy = ark_scalars.clone();
@@ -183,7 +183,7 @@ where
             assert_eq!(ark_scalars, ark_scalars_copy);
 
             config.ordering = Ordering::kRN;
-            Fc::ntt(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
+            ntt::<F>(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
             let ntt_result_as_ark = scalars
                 .iter()
                 .map(|p| p.to_ark())
@@ -193,14 +193,17 @@ where
     }
 }
 
-pub fn check_ntt_batch<F: FieldImpl, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>() {
+pub fn check_ntt_batch<F: FieldImpl>()
+where
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
+{
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        let coset_generators = [F::one(), Fc::generate_random(1)[0]];
-        let mut config = Fc::get_default_ntt_config();
+        let coset_generators = [F::one(), generate_random::<F>(1)[0]];
+        let mut config = get_default_ntt_config::<F>();
         for batch_size in batch_sizes {
-            let scalars: Vec<F> = Fc::generate_random(test_size * batch_size);
+            let scalars: Vec<F> = generate_random::<F>(test_size * batch_size);
 
             for coset_gen in coset_generators {
                 for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
@@ -209,11 +212,11 @@ pub fn check_ntt_batch<F: FieldImpl, Fc: FieldConfig + NTT<F> + GenerateRandom<F
                         config.ordering = ordering;
                         config.batch_size = batch_size as i32;
                         let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
-                        Fc::ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
+                        ntt::<F>(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
                         config.batch_size = 1;
                         let mut one_ntt_result = vec![F::one(); test_size];
                         for i in 0..batch_size {
-                            Fc::ntt(
+                            ntt::<F>(
                                 &scalars[i * test_size..(i + 1) * test_size],
                                 is_inverse,
                                 &config,
@@ -229,18 +232,18 @@ pub fn check_ntt_batch<F: FieldImpl, Fc: FieldConfig + NTT<F> + GenerateRandom<F
     }
 }
 
-pub fn check_ntt_device_async<F: FieldImpl + ArkConvertible, Fc: FieldConfig + NTT<F> + GenerateRandom<F>>()
+pub fn check_ntt_device_async<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField,
+    F::ArkEquivalent: FftField, <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        let coset_generators = [F::one(), Fc::generate_random(1)[0]];
+        let coset_generators = [F::one(), generate_random::<F>(1)[0]];
         let stream = CudaStream::create().unwrap();
-        let mut config = Fc::get_default_ntt_config();
+        let mut config = get_default_ntt_config::<F>();
         for batch_size in batch_sizes {
-            let scalars_h: Vec<F> = Fc::generate_random(test_size * batch_size);
+            let scalars_h: Vec<F> = generate_random::<F>(test_size * batch_size);
             let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
                 .iter()
                 .map(|x| x.to_ark())
@@ -260,14 +263,14 @@ where
                     config.are_inputs_on_device = true;
                     config.is_async = true;
                     config.ctx.stream = &stream;
-                    Fc::ntt(
+                    ntt::<F>(
                         &scalars_d.as_slice(),
                         NTTDir::kForward,
                         &config,
                         &mut ntt_out_d.as_slice(),
                     )
                     .unwrap();
-                    Fc::ntt(
+                    ntt::<F>(
                         &ntt_out_d.as_slice(),
                         NTTDir::kInverse,
                         &config,

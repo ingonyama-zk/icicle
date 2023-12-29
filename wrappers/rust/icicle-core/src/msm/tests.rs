@@ -1,5 +1,5 @@
 use super::MSM;
-use crate::curve::{CurveConfig, Projective, Affine};
+use crate::curve::{Curve, Projective, Affine};
 use crate::field::FieldConfig;
 use crate::traits::{GenerateRandom, FieldImpl};
 use icicle_cuda_runtime::{memory::DeviceSlice, stream::CudaStream};
@@ -13,12 +13,10 @@ use ark_ec::VariableBaseMSM;
 #[cfg(feature = "arkworks")]
 use ark_std::{test_rng, rand::Rng, UniformRand};
 
-pub fn check_msm<C: CurveConfig + MSM<C>, ScalarConfig: FieldConfig>()
+pub fn check_msm<C: Curve + MSM<C>, ScalarConfig: FieldConfig>()
 where
     ScalarConfig: GenerateRandom<C::ScalarField>,
-    C::ScalarField: ArkConvertible,
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
-    C::BaseField: ArkConvertible,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     let test_sizes = [1000, 1 << 18];
@@ -70,12 +68,10 @@ where
     }
 }
 
-pub fn check_msm_batch<C: CurveConfig + MSM<C>, ScalarConfig: FieldConfig>()
+pub fn check_msm_batch<C: Curve + MSM<C>, ScalarConfig: FieldConfig>()
 where
     ScalarConfig: GenerateRandom<C::ScalarField>,
-    C::ScalarField: ArkConvertible,
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
-    C::BaseField: ArkConvertible,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     let test_sizes = [1000, 1 << 16];
@@ -137,12 +133,10 @@ where
     }
 }
 
-pub fn check_msm_skewed_distributions<C: CurveConfig + MSM<C>, ScalarConfig: FieldConfig>()
+pub fn check_msm_skewed_distributions<C: Curve + MSM<C>, ScalarConfig: FieldConfig>()
 where
     ScalarConfig: GenerateRandom<C::ScalarField>,
-    C::ScalarField: ArkConvertible,
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
-    C::BaseField: ArkConvertible,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     let test_sizes = [1 << 6, 1000];

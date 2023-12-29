@@ -9,10 +9,10 @@ impl_ntt!("bn254", ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::curve::{ScalarCfg, ScalarField};
+    use crate::curve::ScalarField;
     use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
     use std::sync::OnceLock;
 
-    impl_ntt_tests!(ScalarField, ScalarCfg);
+    impl_ntt_tests!(ScalarField);
 }

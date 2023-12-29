@@ -1,11 +1,12 @@
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
-use crate::traits::FieldImpl;
+use crate::traits::{FieldImpl, GenerateRandom};
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, PrimeField};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+#[doc(hidden)]
 pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
     #[cfg(feature = "arkworks")]
     type ArkField: PrimeField;
@@ -59,6 +60,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u64; NUM_LIMBS]> for Field<NU
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
+    type Config = F;
     type Repr = [u64; NUM_LIMBS];
 
     fn to_bytes_le(&self) -> Vec<u8> {
@@ -102,6 +104,12 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 }
 
+pub fn generate_random<F>(size: usize) -> Vec<F>
+where F: FieldImpl, F::Config: GenerateRandom<F>
+{
+    <<F as FieldImpl>::Config as GenerateRandom<F>>::generate_random(size)
+}
+
 #[cfg(feature = "arkworks")]
 impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS, F> {
     type ArkEquivalent = F::ArkField;
@@ -123,6 +131,7 @@ macro_rules! impl_scalar_field {
         $field_name:ident,
         $field_cfg:ident
     ) => {
+        #[doc(hidden)]
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct $field_cfg {}
 
@@ -154,6 +163,7 @@ macro_rules! impl_base_field {
         $field_name:ident,
         $field_cfg:ident
     ) => {
+        #[doc(hidden)]
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct $field_cfg {}
 

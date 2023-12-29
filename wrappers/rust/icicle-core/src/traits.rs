@@ -5,6 +5,8 @@ pub trait GenerateRandom<F> {
 }
 
 pub trait FieldImpl: Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> {
+    #[doc(hidden)]
+    type Config;
     type Repr;
 
     fn to_bytes_le(&self) -> Vec<u8>;

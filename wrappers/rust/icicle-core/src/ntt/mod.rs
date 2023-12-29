@@ -74,6 +74,24 @@ pub trait NTT<F: FieldImpl> {
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
+pub fn ntt<F>(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>
+where F: FieldImpl, <F as FieldImpl>::Config: NTT<F>
+{
+    <<F as FieldImpl>::Config as NTT<F>>::ntt(input, dir, cfg, output)
+}
+
+pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>
+where F: FieldImpl, <F as FieldImpl>::Config: NTT<F>
+{
+    <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
+}
+
+pub fn get_default_ntt_config<F>() -> NTTConfig<'static, F>
+where F: FieldImpl, <F as FieldImpl>::Config: NTT<F>
+{
+    <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config()
+}
+
 #[macro_export]
 macro_rules! impl_ntt {
     (
@@ -130,40 +148,39 @@ macro_rules! impl_ntt {
 #[macro_export]
 macro_rules! impl_ntt_tests {
     (
-      $field:ident,
-      $field_config:ident
+      $field:ident
     ) => {
         const MAX_SIZE: u64 = 1 << 16;
         static INIT: OnceLock<()> = OnceLock::new();
 
         #[test]
         fn test_ntt() {
-            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
-            check_ntt::<$field, $field_config>()
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            check_ntt::<$field>()
         }
 
         #[test]
         fn test_ntt_coset_from_subgroup() {
-            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
-            check_ntt_coset_from_subgroup::<$field, $field_config>()
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            check_ntt_coset_from_subgroup::<$field>()
         }
 
         #[test]
         fn test_ntt_arbitrary_coset() {
-            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
-            check_ntt_arbitrary_coset::<$field, $field_config>()
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            check_ntt_arbitrary_coset::<$field>()
         }
 
         #[test]
         fn test_ntt_batch() {
-            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
-            check_ntt_batch::<$field, $field_config>()
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            check_ntt_batch::<$field>()
         }
 
         #[test]
         fn test_ntt_device_async() {
-            INIT.get_or_init(move || init_domain::<$field, $field_config>(MAX_SIZE));
-            check_ntt_device_async::<$field, $field_config>()
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            check_ntt_device_async::<$field>()
         }
     };
 }

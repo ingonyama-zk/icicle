@@ -1,5 +1,5 @@
 use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
-use crate::curve::{Affine, CurveConfig, Projective};
+use crate::curve::{Affine, Curve, Projective};
 
 #[cfg(feature = "arkworks")]
 pub mod tests;
@@ -65,7 +65,7 @@ pub struct MSMConfig<'a> {
     pub is_async: bool,
 }
 
-pub trait MSM<C: CurveConfig> {
+pub trait MSM<C: Curve> {
     fn msm<'a>(
         scalars: &[C::ScalarField],
         points: &[Affine<C>],
@@ -80,7 +80,7 @@ pub trait MSM<C: CurveConfig> {
 macro_rules! impl_msm {
     (
       $curve_prefix:literal,
-      $curve_config:ident
+      $curve:ident
     ) => {
         extern "C" {
             #[link_name = concat!($curve_prefix, "MSMCuda")]
@@ -96,12 +96,12 @@ macro_rules! impl_msm {
             fn default_msm_config() -> MSMConfig<'static>;
         }
 
-        impl MSM<$curve_config> for $curve_config {
+        impl MSM<$curve> for $curve {
             fn msm<'a>(
-                scalars: &[<$curve_config as CurveConfig>::ScalarField],
-                points: &[Affine<$curve_config>],
+                scalars: &[<$curve as Curve>::ScalarField],
+                points: &[Affine<$curve>],
                 cfg: &MSMConfig<'a>,
-                results: &mut [Projective<$curve_config>],
+                results: &mut [Projective<$curve>],
             ) -> CudaResult<()> {
                 if (cfg.points_size > 0) && (points.len() != cfg.points_size as usize)  {
                     return Err(CudaError::cudaErrorInvalidValue);
@@ -109,11 +109,11 @@ macro_rules! impl_msm {
 
                 unsafe {
                     msm_cuda(
-                        scalars as *const _ as *const <$curve_config as CurveConfig>::ScalarField,
-                        points as *const _ as *const Affine<$curve_config>,
+                        scalars as *const _ as *const <$curve as Curve>::ScalarField,
+                        points as *const _ as *const Affine<$curve>,
                         (scalars.len() / (cfg.batch_size as usize)) as i32,
                         cfg,
-                        results as *mut _ as *mut Projective<$curve_config>,
+                        results as *mut _ as *mut Projective<$curve>,
                     )
                     .wrap()
                 }
@@ -129,22 +129,22 @@ macro_rules! impl_msm {
 #[macro_export]
 macro_rules! impl_msm_tests {
     (
-      $curve_config:ident,
+      $curve:ident,
       $scalar_config:ident
     ) => {
         #[test]
         fn test_msm() {
-            check_msm::<$curve_config, $scalar_config>()
+            check_msm::<$curve, $scalar_config>()
         }
 
         #[test]
         fn test_msm_batch() {
-            check_msm_batch::<$curve_config, $scalar_config>()
+            check_msm_batch::<$curve, $scalar_config>()
         }
 
         #[test]
         fn test_msm_skewed_distributions() {
-            check_msm_skewed_distributions::<$curve_config, $scalar_config>()
+            check_msm_skewed_distributions::<$curve, $scalar_config>()
         }
     };
 }
