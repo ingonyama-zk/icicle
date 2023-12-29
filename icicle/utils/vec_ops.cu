@@ -46,29 +46,28 @@ namespace vec_ops {
     E *d_vec_b, *d_result;
     if (!is_on_device) {
       // Allocate memory on the device for the input vectors and the output vector
-      cudaMallocAsync(&d_vec_a, n * sizeof(S), ctx.stream);
-      cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_a, n * sizeof(S), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream));
 
       // Copy the input vectors and the modulus from the host to the device
-      cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream);
-      cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
     }
 
     // Call the kernel to perform element-wise modular multiplication
     MulKernel<<<num_blocks, num_threads, 0, ctx.stream>>>(
       is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
-    if (is_montgomery) mont::FromMontgomery(is_on_device ? result : d_result, n, ctx.stream);
+    if (is_montgomery) CHK_IF_RETURN(mont::FromMontgomery(is_on_device ? result : d_result, n, ctx.stream));
 
     if (!is_on_device) {
-      cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-      cudaFreeAsync(d_vec_a, ctx.stream);
-      cudaFreeAsync(d_vec_b, ctx.stream);
-      cudaFreeAsync(d_result, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_a, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_b, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_result, ctx.stream));
     }
 
-    cudaStreamSynchronize(ctx.stream);
-    return cudaSuccess;
+    return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
   }
 
   template <typename E>
@@ -81,13 +80,13 @@ namespace vec_ops {
     E *d_vec_a, *d_vec_b, *d_result;
     if (!is_on_device) {
       // Allocate memory on the device for the input vectors and the output vector
-      cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream));
 
       // Copy the input vectors from the host to the device
-      cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
-      cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
     }
 
     // Call the kernel to perform element-wise addition
@@ -95,14 +94,13 @@ namespace vec_ops {
       is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
     if (!is_on_device) {
-      cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-      cudaFreeAsync(d_vec_a, ctx.stream);
-      cudaFreeAsync(d_vec_b, ctx.stream);
-      cudaFreeAsync(d_result, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_a, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_b, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_result, ctx.stream));
     }
 
-    cudaStreamSynchronize(ctx.stream);
-    return cudaSuccess;
+    return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
   }
 
   template <typename E>
@@ -115,13 +113,13 @@ namespace vec_ops {
     E *d_vec_a, *d_vec_b, *d_result;
     if (!is_on_device) {
       // Allocate memory on the device for the input vectors and the output vector
-      cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream));
 
       // Copy the input vectors from the host to the device
-      cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
-      cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
     }
 
     // Call the kernel to perform element-wise subtraction
@@ -129,14 +127,13 @@ namespace vec_ops {
       is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
     if (!is_on_device) {
-      cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-      cudaFreeAsync(d_vec_a, ctx.stream);
-      cudaFreeAsync(d_vec_b, ctx.stream);
-      cudaFreeAsync(d_result, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_a, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_b, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_result, ctx.stream));
     }
 
-    cudaStreamSynchronize(ctx.stream);
-    return cudaSuccess;
+    return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
   }
 
   /**
