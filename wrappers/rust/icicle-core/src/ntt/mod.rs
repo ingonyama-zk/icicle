@@ -2,6 +2,7 @@ use crate::traits::FieldImpl;
 use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
 
 #[cfg(feature = "arkworks")]
+#[doc(hidden)]
 pub mod tests;
 
 /**
@@ -68,6 +69,7 @@ pub struct NTTConfig<'a, S> {
     pub is_async: bool,
 }
 
+#[doc(hidden)]
 pub trait NTT<F: FieldImpl> {
     fn ntt(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>;
@@ -107,11 +109,11 @@ macro_rules! impl_ntt {
     ) => {
         extern "C" {
             #[link_name = concat!($field_prefix, "NTTCuda")]
-            fn ntt_cuda<'a>(
+            fn ntt_cuda(
                 input: *const $field,
                 size: i32,
                 dir: NTTDir,
-                config: &NTTConfig<'a, $field>,
+                config: &NTTConfig<$field>,
                 output: *mut $field,
             ) -> CudaError;
 

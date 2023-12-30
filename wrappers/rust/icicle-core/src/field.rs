@@ -1,16 +1,10 @@
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
-use crate::traits::{FieldImpl, GenerateRandom};
+use crate::traits::{FieldConfig, FieldImpl};
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, PrimeField};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
-
-#[doc(hidden)]
-pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
-    #[cfg(feature = "arkworks")]
-    type ArkField: PrimeField;
-}
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -19,7 +13,7 @@ pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
     p: PhantomData<F>,
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> ::std::fmt::Display for Field<NUM_LIMBS, F> {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "0x")?;
         for &b in self
@@ -33,7 +27,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ::std::fmt::Display for Field<NUM_L
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> ::std::fmt::Debug for Field<NUM_LIMBS, F> {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Debug for Field<NUM_LIMBS, F> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "0x")?;
         for &b in self
@@ -104,14 +98,6 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 }
 
-pub fn generate_random<F>(size: usize) -> Vec<F>
-where
-    F: FieldImpl,
-    F::Config: GenerateRandom<F>,
-{
-    <<F as FieldImpl>::Config as GenerateRandom<F>>::generate_random(size)
-}
-
 #[cfg(feature = "arkworks")]
 impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS, F> {
     type ArkEquivalent = F::ArkField;
@@ -127,11 +113,12 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS,
 }
 
 #[macro_export]
-macro_rules! impl_scalar_field {
+macro_rules! impl_field {
     (
         $num_limbs:ident,
         $field_name:ident,
-        $field_cfg:ident
+        $field_cfg:ident,
+        $ark_equiv:ident
     ) => {
         #[doc(hidden)]
         #[derive(Debug, PartialEq, Copy, Clone)]
@@ -139,40 +126,34 @@ macro_rules! impl_scalar_field {
 
         impl FieldConfig for $field_cfg {
             #[cfg(feature = "arkworks")]
-            type ArkField = Fr;
+            type ArkField = $ark_equiv;
         }
-
         pub type $field_name = Field<$num_limbs, $field_cfg>;
+    };
+}
+
+#[macro_export]
+macro_rules! impl_scalar_field {
+    (
+        $field_prefix:literal,
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident,
+        $ark_equiv:ident
+    ) => {
+        impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
 
         extern "C" {
-            fn GenerateScalars(scalars: *mut $field_name, size: usize);
+            #[link_name = concat!($field_prefix, "GenerateScalars")]
+            fn generate_scalars(scalars: *mut $field_name, size: usize);
         }
 
         impl GenerateRandom<$field_name> for $field_cfg {
             fn generate_random(size: usize) -> Vec<$field_name> {
                 let mut res = vec![$field_name::zero(); size];
-                unsafe { GenerateScalars(&mut res[..] as *mut _ as *mut $field_name, size) };
+                unsafe { generate_scalars(&mut res[..] as *mut _ as *mut $field_name, size) };
                 res
             }
         }
-    };
-}
-
-#[macro_export]
-macro_rules! impl_base_field {
-    (
-        $num_limbs:ident,
-        $field_name:ident,
-        $field_cfg:ident
-    ) => {
-        #[doc(hidden)]
-        #[derive(Debug, PartialEq, Copy, Clone)]
-        pub struct $field_cfg {}
-
-        impl FieldConfig for $field_cfg {
-            #[cfg(feature = "arkworks")]
-            type ArkField = Fq;
-        }
-        pub type $field_name = Field<$num_limbs, $field_cfg>;
     };
 }

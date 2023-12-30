@@ -16,7 +16,9 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> c_uint;
     #[doc(hidden)]
     fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
+    #[doc(hidden)]
     fn generate_random_projective_points(size: usize) -> Vec<Projective<Self>>;
+    #[doc(hidden)]
     fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
 
     #[cfg(feature = "arkworks")]
@@ -175,14 +177,15 @@ where
 macro_rules! impl_curve {
     (
         $curve_prefix:literal,
+        $curve:ident,
         $scalar_field:ident,
         $base_field:ident
     ) => {
         #[derive(Debug, PartialEq, Copy, Clone)]
-        pub struct CurveCfg {}
+        pub struct $curve {}
 
-        pub type G1Affine = Affine<CurveCfg>;
-        pub type G1Projective = Projective<CurveCfg>;
+        pub type G1Affine = Affine<$curve>;
+        pub type G1Projective = Projective<$curve>;
 
         extern "C" {
             #[link_name = concat!($curve_prefix, "Eq")]
@@ -195,7 +198,7 @@ macro_rules! impl_curve {
             fn generate_affine_points(points: *mut G1Affine, size: usize);
         }
 
-        impl Curve for CurveCfg {
+        impl Curve for $curve {
             type BaseField = $base_field;
             type ScalarField = $scalar_field;
 
@@ -203,7 +206,7 @@ macro_rules! impl_curve {
                 unsafe { eq(point1, point2) }
             }
 
-            fn to_affine(point: *const Projective<CurveCfg>, point_out: *mut Affine<CurveCfg>) {
+            fn to_affine(point: *const Projective<$curve>, point_out: *mut Affine<$curve>) {
                 unsafe { proj_to_affine(point, point_out) };
             }
 
@@ -229,7 +232,6 @@ macro_rules! impl_curve {
 macro_rules! impl_curve_tests {
     (
         $base_limbs:ident,
-        $field_config:ident,
         $curve:ident
     ) => {
         #[test]
@@ -244,39 +246,17 @@ macro_rules! impl_curve_tests {
 
         #[test]
         fn test_point_equality() {
-            check_point_equality::<$base_limbs, $field_config, $curve>()
+            check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as FieldImpl>::Config, $curve>()
         }
-    };
-}
 
-#[macro_export]
-macro_rules! impl_curve_ark_tests {
-    (
-        $curve:ident,
-        $ark_affine:ident,
-        $scalar_config:ident
-    ) => {
         #[test]
         fn test_ark_scalar_convert() {
-            let size = 1 << 10;
-            let scalars = $scalar_config::generate_random(size);
-            for scalar in scalars {
-                assert_eq!(scalar.to_ark(), scalar.to_ark())
-            }
+            check_ark_scalar_convert::<<$curve as Curve>::ScalarField>()
         }
 
         #[test]
         fn test_ark_point_convert() {
-            let size = 1 << 10;
-            let affine_points = $curve::generate_random_affine_points(size);
-            for affine_point in affine_points {
-                let ark_projective = Into::<Projective<$curve>>::into(affine_point).to_ark();
-                let ark_affine: $ark_affine = ark_projective.into();
-                assert!(ark_affine.is_on_curve());
-                assert!(ark_affine.is_in_correct_subgroup_assuming_on_curve());
-                let affine_after_conversion = Affine::<$curve>::from_ark(ark_affine).into();
-                assert_eq!(affine_point, affine_after_conversion);
-            }
+            check_ark_point_convert::<$curve>()
         }
     };
 }

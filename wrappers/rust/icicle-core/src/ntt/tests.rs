@@ -4,7 +4,6 @@ use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::{device_context::get_default_device_context, memory::DeviceSlice, stream::CudaStream};
 
 use crate::{
-    field::generate_random,
     ntt::{get_default_ntt_config, initialize_domain, ntt, NTTDir, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
@@ -51,7 +50,7 @@ where
     for test_size in test_sizes {
         let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
-        let scalars: Vec<F> = generate_random::<F>(test_size);
+        let scalars: Vec<F> = F::Config::generate_random(test_size);
         let ark_scalars = scalars
             .iter()
             .map(|v| v.to_ark())
@@ -94,7 +93,7 @@ where
             .unwrap();
         let ark_large_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
-        let mut scalars: Vec<F> = generate_random::<F>(small_size);
+        let mut scalars: Vec<F> = F::Config::generate_random(small_size);
         let mut ark_scalars = scalars
             .iter()
             .map(|v| v.to_ark())
@@ -163,7 +162,7 @@ where
                 .get_coset(coset_gen)
                 .unwrap();
 
-            let mut scalars: Vec<F> = generate_random::<F>(test_size);
+            let mut scalars: Vec<F> = F::Config::generate_random(test_size);
             // here you can see how arkworks type can be easily created without any purpose-built conversions
             let mut ark_scalars = scalars
                 .iter()
@@ -205,10 +204,10 @@ where
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        let coset_generators = [F::one(), generate_random::<F>(1)[0]];
+        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
         let mut config = get_default_ntt_config::<F>();
         for batch_size in batch_sizes {
-            let scalars: Vec<F> = generate_random::<F>(test_size * batch_size);
+            let scalars: Vec<F> = F::Config::generate_random(test_size * batch_size);
 
             for coset_gen in coset_generators {
                 for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
@@ -245,11 +244,11 @@ where
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        let coset_generators = [F::one(), generate_random::<F>(1)[0]];
+        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
         let stream = CudaStream::create().unwrap();
         let mut config = get_default_ntt_config::<F>();
         for batch_size in batch_sizes {
-            let scalars_h: Vec<F> = generate_random::<F>(test_size * batch_size);
+            let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
             let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
                 .iter()
                 .map(|x| x.to_ark())

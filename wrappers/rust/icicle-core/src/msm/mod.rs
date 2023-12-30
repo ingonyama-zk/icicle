@@ -2,6 +2,7 @@ use crate::curve::{Affine, Curve, Projective};
 use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
 
 #[cfg(feature = "arkworks")]
+#[doc(hidden)]
 pub mod tests;
 
 /// Struct that encodes MSM parameters to be passed into the `msm` function.
@@ -65,15 +66,29 @@ pub struct MSMConfig<'a> {
     pub is_async: bool,
 }
 
+#[doc(hidden)]
 pub trait MSM<C: Curve> {
-    fn msm<'a>(
+    fn msm(
         scalars: &[C::ScalarField],
         points: &[Affine<C>],
-        cfg: &MSMConfig<'a>,
+        cfg: &MSMConfig,
         results: &mut [Projective<C>],
     ) -> CudaResult<()>;
 
     fn get_default_msm_config() -> MSMConfig<'static>;
+}
+
+pub fn msm<C: Curve + MSM<C>>(
+    scalars: &[C::ScalarField],
+    points: &[Affine<C>],
+    cfg: &MSMConfig,
+    results: &mut [Projective<C>],
+) -> CudaResult<()> {
+    C::msm(scalars, points, cfg, results)
+}
+
+pub fn get_default_msm_config<C: Curve + MSM<C>>() -> MSMConfig<'static> {
+    C::get_default_msm_config()
 }
 
 #[macro_export]
@@ -84,12 +99,12 @@ macro_rules! impl_msm {
     ) => {
         extern "C" {
             #[link_name = concat!($curve_prefix, "MSMCuda")]
-            fn msm_cuda<'a>(
-                scalars: *const ScalarField,
-                points: *const G1Affine,
+            fn msm_cuda(
+                scalars: *const <$curve as Curve>::ScalarField,
+                points: *const Affine<$curve>,
                 count: i32,
-                config: &MSMConfig<'a>,
-                out: *mut G1Projective,
+                config: &MSMConfig,
+                out: *mut Projective<$curve>,
             ) -> CudaError;
 
             #[link_name = concat!($curve_prefix, "DefaultMSMConfig")]
@@ -97,10 +112,10 @@ macro_rules! impl_msm {
         }
 
         impl MSM<$curve> for $curve {
-            fn msm<'a>(
+            fn msm(
                 scalars: &[<$curve as Curve>::ScalarField],
                 points: &[Affine<$curve>],
-                cfg: &MSMConfig<'a>,
+                cfg: &MSMConfig,
                 results: &mut [Projective<$curve>],
             ) -> CudaResult<()> {
                 if (cfg.points_size > 0) && (points.len() != cfg.points_size as usize) {
@@ -129,22 +144,21 @@ macro_rules! impl_msm {
 #[macro_export]
 macro_rules! impl_msm_tests {
     (
-      $curve:ident,
-      $scalar_config:ident
+      $curve:ident
     ) => {
         #[test]
         fn test_msm() {
-            check_msm::<$curve, $scalar_config>()
+            check_msm::<$curve>()
         }
 
         #[test]
         fn test_msm_batch() {
-            check_msm_batch::<$curve, $scalar_config>()
+            check_msm_batch::<$curve>()
         }
 
         #[test]
         fn test_msm_skewed_distributions() {
-            check_msm_skewed_distributions::<$curve, $scalar_config>()
+            check_msm_skewed_distributions::<$curve>()
         }
     };
 }

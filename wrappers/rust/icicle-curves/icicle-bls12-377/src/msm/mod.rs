@@ -1,4 +1,4 @@
-use crate::curve::{CurveCfg, G1Affine, G1Projective, ScalarField};
+use crate::curve::CurveCfg;
 use icicle_core::{
     curve::{Affine, Curve, Projective},
     impl_msm,
@@ -13,7 +13,7 @@ pub(crate) mod tests {
     use icicle_core::impl_msm_tests;
     use icicle_core::msm::tests::*;
 
-    use crate::curve::{CurveCfg, ScalarCfg};
+    use crate::curve::CurveCfg;
 
-    impl_msm_tests!(CurveCfg, ScalarCfg);
+    impl_msm_tests!(CurveCfg);
 }

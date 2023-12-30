@@ -1,6 +1,5 @@
-use super::MSM;
+use super::{get_default_msm_config, msm, MSM};
 use crate::curve::{Affine, Curve, Projective};
-use crate::field::FieldConfig;
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::{memory::DeviceSlice, stream::CudaStream};
 
@@ -13,9 +12,9 @@ use ark_ec::VariableBaseMSM;
 #[cfg(feature = "arkworks")]
 use ark_std::{rand::Rng, test_rng, UniformRand};
 
-pub fn check_msm<C: Curve + MSM<C>, ScalarConfig: FieldConfig>()
+pub fn check_msm<C: Curve + MSM<C>>()
 where
-    ScalarConfig: GenerateRandom<C::ScalarField>,
+    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
@@ -23,7 +22,7 @@ where
     let mut msm_results = DeviceSlice::cuda_malloc(1).unwrap();
     for test_size in test_sizes {
         let points = C::generate_random_affine_points(test_size);
-        let scalars = ScalarConfig::generate_random(test_size);
+        let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
         let points_ark: Vec<_> = points
             .iter()
             .map(|x| x.to_ark())
@@ -42,14 +41,14 @@ where
             .copy_from_host_async(&scalars_mont, &stream)
             .unwrap();
 
-        let mut cfg = C::get_default_msm_config();
+        let mut cfg = get_default_msm_config::<C>();
         cfg.ctx
             .stream = &stream;
         cfg.is_async = true;
         cfg.are_results_on_device = true;
         cfg.are_scalars_on_device = true;
         cfg.are_scalars_montgomery_form = true;
-        C::msm(&scalars_d.as_slice(), &points, &cfg, &mut msm_results.as_slice()).unwrap();
+        msm::<C>(&scalars_d.as_slice(), &points, &cfg, &mut msm_results.as_slice()).unwrap();
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results
@@ -72,9 +71,9 @@ where
     }
 }
 
-pub fn check_msm_batch<C: Curve + MSM<C>, ScalarConfig: FieldConfig>()
+pub fn check_msm_batch<C: Curve + MSM<C>>()
 where
-    ScalarConfig: GenerateRandom<C::ScalarField>,
+    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
@@ -83,7 +82,7 @@ where
     for test_size in test_sizes {
         for batch_size in batch_sizes {
             let points = C::generate_random_affine_points(test_size);
-            let scalars = ScalarConfig::generate_random(test_size * batch_size);
+            let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
 
             let mut msm_results_1 = DeviceSlice::cuda_malloc(batch_size).unwrap();
             let mut msm_results_2 = DeviceSlice::cuda_malloc(batch_size).unwrap();
@@ -98,16 +97,16 @@ where
                 .copy_from_host_async(&points_cloned, &stream)
                 .unwrap();
 
-            let mut cfg = C::get_default_msm_config();
+            let mut cfg = get_default_msm_config::<C>();
             cfg.ctx
                 .stream = &stream;
             cfg.batch_size = batch_size as i32;
             cfg.is_async = true;
             cfg.are_results_on_device = true;
-            C::msm(&scalars, &points, &cfg, &mut msm_results_1.as_slice()).unwrap();
+            msm::<C>(&scalars, &points, &cfg, &mut msm_results_1.as_slice()).unwrap();
             cfg.points_size = (test_size * batch_size) as i32;
             cfg.are_points_on_device = true;
-            C::msm(&scalars, &points_d.as_slice(), &cfg, &mut msm_results_2.as_slice()).unwrap();
+            msm::<C>(&scalars, &points_d.as_slice(), &cfg, &mut msm_results_2.as_slice()).unwrap();
 
             let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
             let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
@@ -145,13 +144,14 @@ where
     }
 }
 
-pub fn check_msm_skewed_distributions<C: Curve + MSM<C>, ScalarConfig: FieldConfig>()
+pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()
 where
-    ScalarConfig: GenerateRandom<C::ScalarField>,
+    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     let test_sizes = [1 << 6, 1000];
+    let test_threshold = 1 << 8;
     let batch_sizes = [1, 3, 1 << 8];
     let rng = &mut test_rng();
     for test_size in test_sizes {
@@ -161,17 +161,20 @@ where
             for _ in 0..(test_size * batch_size / 2) {
                 scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::one();
             }
-            for _ in (1 << 8)..test_size {
+            for _ in test_threshold..test_size {
                 scalars[rng.gen_range(0..test_size * batch_size)] =
                     C::ScalarField::from_ark(<C::ScalarField as ArkConvertible>::ArkEquivalent::rand(rng));
             }
 
             let mut msm_results = vec![Projective::<C>::zero(); batch_size];
 
-            let mut cfg = C::get_default_msm_config();
+            let mut cfg = get_default_msm_config::<C>();
             cfg.batch_size = batch_size as i32;
             cfg.points_size = (test_size * batch_size) as i32;
-            C::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
+            if test_size < test_threshold {
+                cfg.bitsize = 1;
+            }
+            msm::<C>(&scalars, &points, &cfg, &mut msm_results).unwrap();
 
             let points_ark: Vec<_> = points
                 .iter()
