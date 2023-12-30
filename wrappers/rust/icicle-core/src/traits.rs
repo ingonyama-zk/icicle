@@ -1,7 +1,7 @@
+use crate::error::IcicleResult;
 #[cfg(feature = "arkworks")]
 use ark_ff::PrimeField;
 use std::{fmt::Debug, mem::MaybeUninit};
-use crate::error::IcicleResult;
 
 #[doc(hidden)]
 pub trait GenerateRandom<F> {

@@ -2,9 +2,9 @@ use crate::curve::CurveCfg;
 use icicle_core::{
     curve::{Affine, Curve, Projective},
     error::IcicleResult,
-    traits::IcicleResultWrap,
     impl_msm,
     msm::{MSMConfig, MSM},
+    traits::IcicleResultWrap,
 };
 use icicle_cuda_runtime::error::CudaError;
 

@@ -1,9 +1,6 @@
 use icicle_cuda_runtime::device_context::DeviceContext;
 
-use crate::{
-    error::IcicleResult,
-    traits::FieldImpl,
-};
+use crate::{error::IcicleResult, traits::FieldImpl};
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
@@ -143,7 +140,8 @@ macro_rules! impl_ntt {
                         dir,
                         cfg,
                         output as *mut _ as *mut $field,
-                    ).wrap()
+                    )
+                    .wrap()
                 }
             }
 

@@ -120,7 +120,11 @@ macro_rules! impl_msm {
                 results: &mut [Projective<$curve>],
             ) -> IcicleResult<()> {
                 if (cfg.points_size > 0) && (points.len() != cfg.points_size as usize) {
-                    panic!("Number of points {} and cfg.points_size {} do not match:", points.len(), cfg.points_size);
+                    panic!(
+                        "Number of points {} and cfg.points_size {} do not match:",
+                        points.len(),
+                        cfg.points_size
+                    );
                 }
 
                 unsafe {

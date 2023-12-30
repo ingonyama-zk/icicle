@@ -475,7 +475,8 @@ namespace ntt {
       reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
       dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
 
-    if (!is_output_on_device) CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
+    if (!is_output_on_device)
+      CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
     if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     if (!is_input_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));

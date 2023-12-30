@@ -203,7 +203,12 @@ macro_rules! impl_curve {
             #[link_name = concat!($curve_prefix, "GenerateAffinePoints")]
             fn generate_affine_points(points: *mut G1Affine, size: usize);
             #[link_name = concat!($curve_prefix, "ScalarConvertMontgomery")]
-            fn scalar_convert_montgomery(points: *mut $scalar_field, size: usize, is_into: bool, ctx: *const DeviceContext);
+            fn scalar_convert_montgomery(
+                points: *mut $scalar_field,
+                size: usize,
+                is_into: bool,
+                ctx: *const DeviceContext,
+            );
             #[link_name = concat!($curve_prefix, "AffineConvertMontgomery")]
             fn affine_convert_montgomery(points: *mut G1Affine, size: usize, is_into: bool, ctx: *const DeviceContext);
             #[link_name = concat!($curve_prefix, "ProjectiveConvertMontgomery")]

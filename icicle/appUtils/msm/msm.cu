@@ -913,7 +913,8 @@ namespace msm {
 
       // copy final result to host
       if (!are_results_on_device)
-        CHK_IF_RETURN(cudaMemcpyAsync(final_results, d_final_results, sizeof(P) * batch_size, cudaMemcpyDeviceToHost, stream));
+        CHK_IF_RETURN(
+          cudaMemcpyAsync(final_results, d_final_results, sizeof(P) * batch_size, cudaMemcpyDeviceToHost, stream));
 
       // free memory
       if (!are_scalars_on_device) CHK_IF_RETURN(cudaFreeAsync(d_scalars, stream));

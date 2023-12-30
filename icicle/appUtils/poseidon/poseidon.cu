@@ -136,7 +136,8 @@ __global__ void get_hash_results(S* states, size_t number_of_states, S* out, int
 }
 
 template <typename S>
-__host__ cudaError_t Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type, cudaStream_t stream)
+__host__ cudaError_t
+Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type, cudaStream_t stream)
 {
   S* states;
 

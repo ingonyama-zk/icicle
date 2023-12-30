@@ -68,7 +68,9 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index"); }
+    if (logn > CONFIG::omegas_count) {
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index");
+    }
 
     storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
     return Field{omega_inv.storages[logn - 1]};
