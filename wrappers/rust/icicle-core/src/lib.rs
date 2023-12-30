@@ -4,3 +4,10 @@ pub mod msm;
 pub mod ntt;
 pub mod tests;
 pub mod traits;
+
+pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
+where
+    <Self::ScalarField as traits::FieldImpl>::Config:
+        ntt::NTT<Self::ScalarField> + traits::GenerateRandom<Self::ScalarField>,
+{
+}
