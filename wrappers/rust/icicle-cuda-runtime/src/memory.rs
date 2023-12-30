@@ -1,4 +1,4 @@
-use crate::bindings::{cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind};
+use crate::bindings::{cudaFree, cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
 use std::mem::{size_of, MaybeUninit};
@@ -149,6 +149,23 @@ impl<'a, T> DeviceSlice<'a, T> {
             }
         }
         Ok(())
+    }
+}
+
+impl<'a, T> Drop for DeviceSlice<'a, T> {
+    fn drop(&mut self) {
+        if self
+            .0
+            .is_empty()
+        {
+            return;
+        }
+
+        unsafe {
+            cudaFree(self.as_mut_ptr() as *mut c_void)
+                .wrap()
+                .unwrap();
+        }
     }
 }
 

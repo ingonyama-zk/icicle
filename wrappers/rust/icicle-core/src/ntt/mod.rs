@@ -1,5 +1,9 @@
-use crate::traits::FieldImpl;
-use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
+use icicle_cuda_runtime::device_context::DeviceContext;
+
+use crate::{
+    error::IcicleResult,
+    traits::FieldImpl,
+};
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
@@ -71,12 +75,12 @@ pub struct NTTConfig<'a, S> {
 
 #[doc(hidden)]
 pub trait NTT<F: FieldImpl> {
-    fn ntt(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>;
-    fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>;
+    fn ntt(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> IcicleResult<()>;
+    fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
-pub fn ntt<F>(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> CudaResult<()>
+pub fn ntt<F>(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>,
@@ -84,7 +88,7 @@ where
     <<F as FieldImpl>::Config as NTT<F>>::ntt(input, dir, cfg, output)
 }
 
-pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> CudaResult<()>
+pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>,
@@ -125,10 +129,12 @@ macro_rules! impl_ntt {
         }
 
         impl NTT<$field> for $field_config {
-            fn ntt(input: &[$field], dir: NTTDir, cfg: &NTTConfig<$field>, output: &mut [$field]) -> CudaResult<()> {
+            fn ntt(input: &[$field], dir: NTTDir, cfg: &NTTConfig<$field>, output: &mut [$field]) -> IcicleResult<()> {
                 if input.len() != output.len() {
-                    return Err(CudaError::cudaErrorInvalidValue);
+                    panic!("input and output lengths do not match")
                 }
+
+                //TODO: more validations for cfg
 
                 unsafe {
                     ntt_cuda(
@@ -137,12 +143,11 @@ macro_rules! impl_ntt {
                         dir,
                         cfg,
                         output as *mut _ as *mut $field,
-                    )
-                    .wrap()
+                    ).wrap()
                 }
             }
 
-            fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaResult<()> {
+            fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
                 unsafe { initialize_ntt_domain(primitive_root, ctx).wrap() }
             }
 

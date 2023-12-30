@@ -1,5 +1,6 @@
 use crate::curve::{Affine, Curve, Projective};
-use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaResult};
+use crate::error::IcicleResult;
+use icicle_cuda_runtime::device_context::DeviceContext;
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
@@ -73,7 +74,7 @@ pub trait MSM<C: Curve> {
         points: &[Affine<C>],
         cfg: &MSMConfig,
         results: &mut [Projective<C>],
-    ) -> CudaResult<()>;
+    ) -> IcicleResult<()>;
 
     fn get_default_msm_config() -> MSMConfig<'static>;
 }
@@ -83,7 +84,7 @@ pub fn msm<C: Curve + MSM<C>>(
     points: &[Affine<C>],
     cfg: &MSMConfig,
     results: &mut [Projective<C>],
-) -> CudaResult<()> {
+) -> IcicleResult<()> {
     C::msm(scalars, points, cfg, results)
 }
 
@@ -117,9 +118,9 @@ macro_rules! impl_msm {
                 points: &[Affine<$curve>],
                 cfg: &MSMConfig,
                 results: &mut [Projective<$curve>],
-            ) -> CudaResult<()> {
+            ) -> IcicleResult<()> {
                 if (cfg.points_size > 0) && (points.len() != cfg.points_size as usize) {
-                    return Err(CudaError::cudaErrorInvalidValue);
+                    panic!("Number of points {} and cfg.points_size {} do not match:", points.len(), cfg.points_size);
                 }
 
                 unsafe {

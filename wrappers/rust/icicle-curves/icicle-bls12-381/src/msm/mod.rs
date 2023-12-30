@@ -1,10 +1,12 @@
 use crate::curve::CurveCfg;
 use icicle_core::{
     curve::{Affine, Curve, Projective},
+    error::IcicleResult,
+    traits::IcicleResultWrap,
     impl_msm,
     msm::{MSMConfig, MSM},
 };
-use icicle_cuda_runtime::error::{CudaError, CudaResult, CudaResultWrap};
+use icicle_cuda_runtime::error::CudaError;
 
 impl_msm!("bls12_381", CurveCfg);
 

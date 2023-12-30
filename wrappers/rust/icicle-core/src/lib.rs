@@ -6,6 +6,7 @@ pub mod ntt;
 #[doc(hidden)]
 pub mod tests;
 pub mod traits;
+pub mod error;
 
 pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
 where

@@ -81,10 +81,12 @@ option(BUILD_TESTS "Build tests" OFF)
 
 if (NOT BUILD_TESTS)
 
+  message(STATUS "Building without tests.")
+
   add_library(
     icicle
-    utils/error_handler.cu
     utils/vec_ops.cu
+    utils/mont.cu
     primitives/field.cu
     primitives/projective.cu
     appUtils/msm/msm.cu
@@ -114,10 +116,12 @@ if (NOT BUILD_TESTS)
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ToAffine=${CURVE}ToAffine ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GenerateProjectivePoints=${CURVE}GenerateProjectivePoints ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GenerateAffinePoints=${CURVE}GenerateAffinePoints ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ScalarConvertMontgomery=${CURVE}ScalarConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym AffineConvertMontgomery=${CURVE}AffineConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
+    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ProjectiveConvertMontgomery=${CURVE}ProjectiveConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o
     COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a 
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/error_handler.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/vec_ops.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/field.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
@@ -130,9 +134,10 @@ if (NOT BUILD_TESTS)
   # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o)
   # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o)
   # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/utils_kernels.cu.o)
-  # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/error_handler.cu.o)
 
 else()
+
+  message(STATUS "Building tests.")
 
   include(FetchContent)
   FetchContent_Declare(
@@ -147,17 +152,18 @@ else()
   enable_testing()
 
   add_executable(
-    primitives_test
-    primitives/test.cu
+    runner
+    tests/runner.cu
   )
+
   target_link_libraries(
-    primitives_test
+    runner
     GTest::gtest_main
   )
 
   include(GoogleTest)
-  set_target_properties(primitives_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  set_target_properties(runner PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-  gtest_discover_tests(primitives_test)
+  gtest_discover_tests(runner)
 
 endif ()

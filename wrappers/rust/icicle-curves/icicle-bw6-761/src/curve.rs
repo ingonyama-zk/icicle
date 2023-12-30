@@ -4,6 +4,7 @@ use icicle_core::curve::{Affine, Curve, Projective};
 use icicle_core::field::Field;
 use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
 use icicle_core::{impl_field, impl_scalar_field};
+use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
 use std::ffi::c_uint;
 
 pub(crate) const SCALAR_LIMBS: usize = 6;

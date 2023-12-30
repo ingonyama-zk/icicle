@@ -11,7 +11,7 @@ fn main() {
     let target_output_dir = format!("{}/../../target/{}", cargo_dir, profile);
 
     Config::new("../../../../icicle")
-                .define("BUILD_TESTS", "OFF") //TODO: feature
+                .define("BUILD_TESTS", "OFF") // TODO: feature
                 .define("CURVE", "bn254")
                 .define("LIBRARY_OUTPUT_DIRECTORY", &target_output_dir)
                 .define("CMAKE_BUILD_TYPE", "Release")
