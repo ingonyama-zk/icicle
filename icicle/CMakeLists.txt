@@ -121,7 +121,7 @@ if (NOT BUILD_TESTS)
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ProjectiveConvertMontgomery=${CURVE}ProjectiveConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
     # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o
-    COMMAND ${CMAKE_AR} ARGS -rcs ${LIBRARY_OUTPUT_DIRECTORY}/libingo_${CURVE}.a 
+    COMMAND ${CMAKE_AR} ARGS -rcs ${PROJECT_BINARY_DIR}/libingo_${CURVE}.a 
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/vec_ops.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/field.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
