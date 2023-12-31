@@ -14,7 +14,7 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
-#define PERFORMANCE
+// #define PERFORMANCE
 
 using namespace BLS12_377;
 // using namespace BLS12_381;
@@ -25,8 +25,8 @@ typedef scalar_t test_scalar;
 
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
-    res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    // res[i]= i==1? test_scalar::one() : test_scalar::zero();
+    // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
+    res[i]= i==1? test_scalar::one() : test_scalar::zero();
     // res[i]= i%2? test_scalar::one() : (test_scalar::one() - test_scalar::one() - test_scalar::one());
     // res[i]= i==0? test_scalar::one() : test_scalar::omega_inv(9) * res[i-1];
 }
@@ -43,10 +43,12 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 18;
-  int TT_LOG_SIZE = 18;
+  int NTT_LOG_SIZE = 24;
+  int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
+  int INV = true;
+  int DIT = false;
 
   //cpu allocation
   test_scalar* cpuIcicle;
@@ -87,7 +89,7 @@ int main(){
   $CUDA(cudaMemcpy(gpuIcicle, cpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew, cpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew2, cpuNew2, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
-  gpuIntTwiddles = generate_external_twiddles(gpuTwiddles, TT_LOG_SIZE);
+  gpuIntTwiddles = generate_external_twiddles(gpuTwiddles, TT_LOG_SIZE, INV);
   printf("finished generating twiddles\n");
   // generate_internal_twiddles<<<1,1>>>(gpuIntTwiddles);
   cudaDeviceSynchronize();
@@ -102,11 +104,11 @@ int main(){
   
 
   //run ntts
-  int count = 1000;
+  int count = 100;
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
   for (size_t i = 0; i < count; i++)
-    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE);
+    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV);
     // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   $CUDA(cudaEventRecord(new_stop, 0));
   $CUDA(cudaDeviceSynchronize());
@@ -117,7 +119,7 @@ int main(){
   icicle_tw = fill_twiddle_factors_array(NTT_SIZE, test_scalar::omega(NTT_LOG_SIZE), 0);
   $CUDA(cudaEventRecord(icicle_start, 0));
   for (size_t i = 0; i < count; i++)
-    ntt_inplace_batch_template<test_scalar, test_scalar>(gpuIcicle, icicle_tw, NTT_SIZE, 1, false, false, nullptr, 0, false);
+    ntt_inplace_batch_template<test_scalar, test_scalar>(gpuIcicle, icicle_tw, NTT_SIZE, 1, INV, false, nullptr, 0, false);
   $CUDA(cudaEventRecord(icicle_stop, 0));
   $CUDA(cudaDeviceSynchronize());
   $CUDA(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
@@ -126,12 +128,13 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
-  new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE);
+  new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV);
   reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
   printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
-  ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, false, 0);
-  reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
+  if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
+  ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, INV, 0);
+  if (!INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
   printf("finished icicle\n");
   
   //verify
@@ -168,7 +171,7 @@ int main(){
       // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
     }
     // else{
-      // std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+    //   std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
       // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
     // }
     // }

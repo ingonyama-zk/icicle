@@ -225,6 +225,7 @@ class NTTEngine {
   
   // uint64_t threadRoot;
   test_scalar    X[8];
+  test_scalar    WB[3];
   test_scalar    WI[7];
   test_scalar    WE[8];
 
@@ -238,6 +239,18 @@ class NTTEngine {
       WI[i] = test_scalar::omega8(((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1));
       // if (blockIdx.x == 0 && threadIdx.x == 8) printf("%d\n",WI[i].load_half(false).w);
     }
+  }
+
+__device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
+    
+    // #pragma unroll
+    // for (int i = 1; i < 4; i++)
+    // {
+      // WB[0] = inv? test_scalar::omega_inv(3) : test_scalar::omega(3);
+      WB[0] = inv? test_scalar::omega4_inv(4) : test_scalar::omega4(4);
+      WB[1] = inv? test_scalar::win3_inv(6) : test_scalar::win3(6);
+      WB[2] = inv? test_scalar::win3_inv(7) : test_scalar::win3(7);
+    // }
   }
 
   __device__ __forceinline__ void loadInternalTwiddles(uint4* data, bool stride){
@@ -518,8 +531,10 @@ class NTTEngine {
     X6 = X0 + X4;
     X0 = X0 - X4;
   
-    T  = T * test_scalar::omega4(4);
-    X2 = X2 * test_scalar::omega4(4);
+    // T  = T * test_scalar::omega4(4);
+    // X2 = X2 * test_scalar::omega4(4);
+    T  = T * WB[1];
+    X2 = X2 * WB[1];
     
     X4 = X6 + X1;
     X6 = X6 - X1;
@@ -530,9 +545,12 @@ class NTTEngine {
     X7 = X0 + X2;
     X0 = X0 - X2;
   
-    X1 = X1 * test_scalar::omega4(2);
-    X5 = X5 * test_scalar::omega4(4);
-    X3 = X3 * test_scalar::omega4(6);
+    // X1 = X1 * test_scalar::omega4(2);
+    // X5 = X5 * test_scalar::omega4(4);
+    // X3 = X3 * test_scalar::omega4(6);
+    X1 = X1 * WB[0];
+    X5 = X5 * WB[1];
+    X3 = X3 * WB[2];
     
     X2 = X6 + X5;
     X6 = X6 - X5;
@@ -566,7 +584,8 @@ class NTTEngine {
     X[0] = X[0] - X[4];
   
     //T  = T * test_scalar::omega4(4);
-    X[2] = X[2] * test_scalar::omega4(4);
+    // X[2] = X[2] * test_scalar::omega4(4);
+    X[2] = X[2] * WB[0];
     
     X[4] = X[6] + X[1];
     X[6] = X[6] - X[1];
@@ -578,10 +597,13 @@ class NTTEngine {
     X[0] = X[0] - X[2];
   
     //X1 = X1 * test_scalar::omega4(2);
-    X[1] = X[1] * test_scalar::win3(6);
-    X[5] = X[5] * test_scalar::omega4(4) ;
+    // X[1] = X[1] * test_scalar::win3(6);
+    X[1] = X[1] * WB[1];
+    // X[5] = X[5] * test_scalar::omega4(4) ;
+    X[5] = X[5] * WB[0] ;
     //X3 = X3 * test_scalar::omega4(6);
-    X[3] = X[3] * test_scalar::win3(7);
+    X[3] = X[3] * WB[2];
+    // X[3] = X[3] * test_scalar::win3(7);
     
     
     X[2] = X[6] + X[5];
