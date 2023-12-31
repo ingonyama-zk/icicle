@@ -14,7 +14,7 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
-// #define PERFORMANCE
+#define PERFORMANCE
 
 using namespace BLS12_377;
 // using namespace BLS12_381;
@@ -43,12 +43,12 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 24;
+  int NTT_LOG_SIZE = 18;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
   int INV = true;
-  int DIT = false;
+  int DIT = true;
 
   //cpu allocation
   test_scalar* cpuIcicle;
@@ -108,7 +108,7 @@ int main(){
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
   for (size_t i = 0; i < count; i++)
-    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV);
+    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
     // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   $CUDA(cudaEventRecord(new_stop, 0));
   $CUDA(cudaDeviceSynchronize());
@@ -128,8 +128,9 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
-  new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV);
-  reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
+  if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
   printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
