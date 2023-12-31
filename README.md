@@ -6,7 +6,7 @@
 
 
 <p align="center">
-  <img src="https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg" alt="Build status">
+  <img src="https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg?event=push" alt="Build status">
   <a href="https://discord.gg/EVVXTdt6DF">
     <img src="https://img.shields.io/discord/1063033227788423299?logo=discord" alt="Chat with us on Discord">
   </a>
