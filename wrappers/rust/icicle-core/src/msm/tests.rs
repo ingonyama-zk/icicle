@@ -32,7 +32,7 @@ where
             .map(|x| x.to_ark())
             .collect();
         // if we simply transmute arkworks types, we'll get scalars or points in Montgomery format
-        // (just beware the possible extra bit in affine point types, can't transmute ark Affine because of that)
+        // (just beware the possible extra flag in affine point types, can't transmute ark Affine because of that)
         let scalars_mont = unsafe { &*(&scalars_ark[..] as *const _ as *const [C::ScalarField]) };
 
         let mut scalars_d = DeviceSlice::cuda_malloc(test_size).unwrap();

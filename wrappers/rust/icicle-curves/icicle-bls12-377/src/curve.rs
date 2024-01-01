@@ -3,9 +3,8 @@ use ark_bls12_377::{g1::Config as ArkG1Config, Fq, Fr};
 use icicle_core::curve::{Affine, Curve, Projective};
 use icicle_core::field::Field;
 use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
-use icicle_core::{impl_field, impl_scalar_field};
+use icicle_core::{impl_field, impl_scalar_field, impl_curve};
 use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
-use std::ffi::c_uint;
 
 pub(crate) const SCALAR_LIMBS: usize = 4;
 pub(crate) const BASE_LIMBS: usize = 6;

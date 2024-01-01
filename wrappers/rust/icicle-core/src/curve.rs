@@ -5,7 +5,6 @@ use crate::traits::FieldImpl;
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
-use std::ffi::c_uint;
 use std::fmt::Debug;
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
@@ -13,7 +12,7 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     type ScalarField: FieldImpl;
 
     #[doc(hidden)]
-    fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> c_uint;
+    fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> bool;
     #[doc(hidden)]
     fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
     #[doc(hidden)]
@@ -106,7 +105,7 @@ impl<C: Curve> Projective<C> {
 
 impl<C: Curve> PartialEq for Projective<C> {
     fn eq(&self, other: &Self) -> bool {
-        C::eq_proj(self as *const _, other as *const _) != 0
+        C::eq_proj(self as *const _, other as *const _)
     }
 }
 
@@ -195,7 +194,7 @@ macro_rules! impl_curve {
 
         extern "C" {
             #[link_name = concat!($curve_prefix, "Eq")]
-            fn eq(point1: *const G1Projective, point2: *const G1Projective) -> c_uint;
+            fn eq(point1: *const G1Projective, point2: *const G1Projective) -> bool;
             #[link_name = concat!($curve_prefix, "ToAffine")]
             fn proj_to_affine(point: *const G1Projective, point_out: *mut G1Affine);
             #[link_name = concat!($curve_prefix, "GenerateProjectivePoints")]
@@ -224,7 +223,7 @@ macro_rules! impl_curve {
             type BaseField = $base_field;
             type ScalarField = $scalar_field;
 
-            fn eq_proj(point1: *const G1Projective, point2: *const G1Projective) -> c_uint {
+            fn eq_proj(point1: *const G1Projective, point2: *const G1Projective) -> bool {
                 unsafe { eq(point1, point2) }
             }
 
