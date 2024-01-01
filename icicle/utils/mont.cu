@@ -3,8 +3,8 @@
 #include "mont.cuh"
 
 namespace mont {
-  extern "C" int ScalarConvertMontgomery(
-    curve_config::scalar_t* d_inout, size_t n, unsigned char is_into, device_context::DeviceContext& ctx)
+  extern "C" int
+  ScalarConvertMontgomery(curve_config::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
   {
     if (is_into) {
       return ToMontgomery(d_inout, n, ctx.stream);
@@ -13,8 +13,8 @@ namespace mont {
     }
   }
 
-  extern "C" int AffineConvertMontgomery(
-    curve_config::affine_t* d_inout, size_t n, unsigned char is_into, device_context::DeviceContext& ctx)
+  extern "C" int
+  AffineConvertMontgomery(curve_config::affine_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
   {
     if (is_into) {
       return ToMontgomery(d_inout, n, ctx.stream);
@@ -24,7 +24,7 @@ namespace mont {
   }
 
   extern "C" int ProjectiveConvertMontgomery(
-    curve_config::projective_t* d_inout, size_t n, unsigned char is_into, device_context::DeviceContext& ctx)
+    curve_config::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
   {
     if (is_into) {
       return ToMontgomery(d_inout, n, ctx.stream);

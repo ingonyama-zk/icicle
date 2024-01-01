@@ -1,24 +1,17 @@
 use cmake::Config;
-use std::env::var;
 
 fn main() {
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=../../../../icicle");
 
-    let cargo_dir = var("CARGO_MANIFEST_DIR").unwrap();
-    let profile = var("PROFILE").unwrap();
-
-    let target_output_dir = format!("{}/../../target/{}", cargo_dir, profile);
-
-    Config::new("../../../../icicle")
+    let out_dir = Config::new("../../../../icicle")
                 .define("BUILD_TESTS", "OFF") //TODO: feature
                 .define("CURVE", "bls12_377")
-                .define("LIBRARY_OUTPUT_DIRECTORY", &target_output_dir)
                 .define("CMAKE_BUILD_TYPE", "Release")
                 .build_target("icicle")
                 .build();
 
-    println!("cargo:rustc-link-search={}", &target_output_dir);
+    println!("cargo:rustc-link-search={}/build", out_dir.display());
 
     println!("cargo:rustc-link-lib=ingo_bls12_377");
     println!("cargo:rustc-link-lib=stdc++");
