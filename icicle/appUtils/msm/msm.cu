@@ -105,7 +105,8 @@ namespace msm {
       unsigned* point_indices,
       S* scalars,
       unsigned total_size,
-      unsigned msm_log_size,
+      unsigned points_size,
+      unsigned msm_size,
       unsigned nof_bms,
       unsigned bm_bitsize,
       unsigned c)
@@ -116,7 +117,7 @@ namespace msm {
       unsigned bucket_index;
       // unsigned bucket_index2;
       unsigned current_index;
-      unsigned msm_index = tid >> msm_log_size;
+      unsigned msm_index = tid / msm_size;
       // unsigned borrow = 0;
       if (tid < total_size) {
         S scalar = scalars[tid];
@@ -140,7 +141,7 @@ namespace msm {
             (msm_index << (c + bm_bitsize)) | (bm << c) |
             bucket_index; // the bucket module number and the msm number are appended at the msbs
           if (scalar == S::zero() || bucket_index == 0) buckets_indices[current_index] = 0; // will be skipped
-          point_indices[current_index] = tid; // the point index is saved for later
+          point_indices[current_index] = tid % points_size; // the point index is saved for later
 #endif
         }
       }
@@ -375,8 +376,8 @@ namespace msm {
       } else {
         d_points = points;
       }
-      if (are_points_montgomery_form) CHK_IF_RETURN(mont::FromMontgomery(d_points, size, stream_points));
       if (are_scalars_montgomery_form) CHK_IF_RETURN(mont::FromMontgomery(d_scalars, size, stream));
+      if (are_points_montgomery_form) CHK_IF_RETURN(mont::FromMontgomery(d_points, size, stream_points));
       cudaEvent_t event_points_uploaded;
       if (!are_points_on_device || are_points_montgomery_form) {
         CHK_IF_RETURN(cudaEventCreateWithFlags(&event_points_uploaded, cudaEventDisableTiming));
@@ -386,7 +387,6 @@ namespace msm {
       P* buckets;
       // compute number of bucket modules and number of buckets in each module
       unsigned nof_bms = (bitsize + c - 1) / c;
-      unsigned msm_log_size = (unsigned)ceil(log2(size));
       unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms));
 #ifdef SIGNED_DIG
       unsigned nof_buckets = nof_bms * ((1 << (c - 1)) + 1); // signed digits
@@ -407,9 +407,9 @@ namespace msm {
 
       // split scalars into digits
       NUM_THREADS = 1 << 10;
-      NUM_BLOCKS = (size * (nof_bms + 1) + NUM_THREADS - 1) / NUM_THREADS;
+      NUM_BLOCKS = (size + NUM_THREADS - 1) / NUM_THREADS;
       split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        bucket_indices + size, point_indices + size, d_scalars, size, msm_log_size, nof_bms, bm_bitsize, c);
+        bucket_indices + size, point_indices + size, d_scalars, size, size, size, nof_bms, bm_bitsize, c);
       //+size - leaving the first bm free for the out of place sort later
 
       // sort indices - the indices are sorted from smallest to largest in order to group together the points that
@@ -602,11 +602,9 @@ namespace msm {
           h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c);
       }
 
-      if (large_buckets_to_compute > 0 && bucket_th > 0) {
+      if (large_buckets_to_compute > 0 && bucket_th > 0)
         // all the large buckets need to be accumulated before the final summation
         CHK_IF_RETURN(cudaStreamWaitEvent(stream, event_large_buckets_accumulated));
-        CHK_LOG(cudaStreamDestroy(stream_large_buckets)); // TODO: wrapping this in CHK_IF_RETURN affects execution
-      }
 
 #ifdef SSM_SUM
       // sum each bucket
@@ -747,8 +745,14 @@ namespace msm {
       A* points,
       unsigned batch_size,
       unsigned msm_size,
+      unsigned points_size,
       P* final_results,
-      bool on_device,
+      bool are_scalars_on_device,
+      bool are_scalars_montgomery_form,
+      bool are_points_on_device,
+      bool are_points_montgomery_form,
+      bool are_results_on_device,
+      bool is_async,
       cudaStream_t stream)
     {
       CHK_INIT_IF_RETURN();
@@ -756,21 +760,33 @@ namespace msm {
       unsigned total_size = batch_size * msm_size;
       S* d_scalars;
       A* d_points;
-      if (!on_device) {
-        // copy scalars and point to gpu
+      if (!are_scalars_on_device) {
+        // copy scalars to gpu
         CHK_IF_RETURN(cudaMallocAsync(&d_scalars, sizeof(S) * total_size, stream));
-        CHK_IF_RETURN(cudaMallocAsync(&d_points, sizeof(A) * total_size, stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_scalars, scalars, sizeof(S) * total_size, cudaMemcpyHostToDevice, stream));
-        CHK_IF_RETURN(cudaMemcpyAsync(d_points, points, sizeof(A) * total_size, cudaMemcpyHostToDevice, stream));
       } else {
         d_scalars = scalars;
+      }
+      cudaStream_t stream_points;
+      if (!are_points_on_device || are_points_montgomery_form) cudaStreamCreate(&stream_points);
+      if (!are_points_on_device) {
+        // copy points to gpu
+        cudaMallocAsync(&d_points, sizeof(A) * points_size, stream_points);
+        cudaMemcpyAsync(d_points, points, sizeof(A) * points_size, cudaMemcpyHostToDevice, stream_points);
+      } else {
         d_points = points;
+      }
+      if (are_scalars_montgomery_form) mont::FromMontgomery(d_scalars, total_size, stream);
+      if (are_points_montgomery_form) mont::FromMontgomery(d_points, points_size, stream_points);
+      cudaEvent_t event_points_uploaded;
+      if (!are_points_on_device || are_points_montgomery_form) {
+        cudaEventCreateWithFlags(&event_points_uploaded, cudaEventDisableTiming);
+        cudaEventRecord(event_points_uploaded, stream_points);
       }
 
       P* buckets;
       // compute number of bucket modules and number of buckets in each module
       unsigned nof_bms = (bitsize + c - 1) / c;
-      unsigned msm_log_size = (unsigned)ceil(log2(msm_size));
       unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms));
       unsigned nof_buckets = (nof_bms << c);
       unsigned total_nof_buckets = nof_buckets * batch_size;
@@ -783,16 +799,14 @@ namespace msm {
 
       unsigned* bucket_indices;
       unsigned* point_indices;
-      CHK_IF_RETURN(cudaMallocAsync(&bucket_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size), stream));
-      CHK_IF_RETURN(cudaMallocAsync(&point_indices, sizeof(unsigned) * (total_size * nof_bms + msm_size), stream));
+      CHK_IF_RETURN(cudaMallocAsync(&bucket_indices, sizeof(unsigned) * total_size * nof_bms, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&point_indices, sizeof(unsigned) * total_size * nof_bms, stream));
 
       // split scalars into digits
       NUM_THREADS = 1 << 10;
-      NUM_BLOCKS = (total_size * nof_bms + msm_size + NUM_THREADS - 1) / NUM_THREADS;
+      NUM_BLOCKS = (total_size + NUM_THREADS - 1) / NUM_THREADS;
       split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        bucket_indices + msm_size, point_indices + msm_size, d_scalars, total_size, msm_log_size, nof_bms, bm_bitsize,
-        c);
-      //+msm_size - leaving the first bm free for the out of place sort later
+        bucket_indices, point_indices, d_scalars, total_size, points_size, msm_size, nof_bms, bm_bitsize, c);
 
       // sort indices - the indices are sorted from smallest to largest in order to group together the points that
       // belong to each bucket
@@ -807,15 +821,15 @@ namespace msm {
       // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for
       // more info
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
-        sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
-        point_indices + msm_size, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned) * 8, stream));
+        sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices, sorted_bucket_indices,
+        point_indices, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream));
       // The second to last parameter is the default value supplied explicitly to allow passing the stream
       // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for
       // more info
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
-        sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + msm_size, sorted_bucket_indices,
-        point_indices + msm_size, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned) * 8, stream));
+        sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices, sorted_bucket_indices,
+        point_indices, sorted_point_indices, total_size * nof_bms, 0, sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaFreeAsync(sort_indices_temp_storage, stream));
 
       // find bucket_sizes
@@ -852,6 +866,12 @@ namespace msm {
       CHK_IF_RETURN(cudaMemcpyAsync(
         &h_nof_buckets_to_compute, total_nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
 
+      if (!are_points_on_device || are_points_montgomery_form) {
+        // by this point, points need to be already uploaded and un-Montgomeried
+        cudaStreamWaitEvent(stream, event_points_uploaded);
+        cudaStreamDestroy(stream_points);
+      }
+
       // launch the accumulation kernel with maximum threads
       NUM_THREADS = 1 << 8;
       NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
@@ -883,25 +903,23 @@ namespace msm {
       // #endif
 
       P* d_final_results;
-      if (!on_device) CHK_IF_RETURN(cudaMallocAsync(&d_final_results, sizeof(P) * batch_size, stream));
+      if (!are_results_on_device) CHK_IF_RETURN(cudaMallocAsync(&d_final_results, sizeof(P) * batch_size, stream));
 
       // launch the double and add kernel, a single thread for each msm
       NUM_THREADS = 1 << 8;
       NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
       final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        bm_sums, on_device ? final_results : d_final_results, batch_size, nof_bms, c);
+        bm_sums, are_results_on_device ? final_results : d_final_results, batch_size, nof_bms, c);
 
       // copy final result to host
-      if (!on_device)
+      if (!are_results_on_device)
         CHK_IF_RETURN(
           cudaMemcpyAsync(final_results, d_final_results, sizeof(P) * batch_size, cudaMemcpyDeviceToHost, stream));
 
       // free memory
-      if (!on_device) {
-        CHK_IF_RETURN(cudaFreeAsync(d_points, stream));
-        CHK_IF_RETURN(cudaFreeAsync(d_scalars, stream));
-        CHK_IF_RETURN(cudaFreeAsync(d_final_results, stream));
-      }
+      if (!are_scalars_on_device) CHK_IF_RETURN(cudaFreeAsync(d_scalars, stream));
+      if (!are_points_on_device) CHK_IF_RETURN(cudaFreeAsync(d_points, stream));
+      if (!are_results_on_device) CHK_IF_RETURN(cudaFreeAsync(d_final_results, stream));
       CHK_IF_RETURN(cudaFreeAsync(buckets, stream));
       CHK_IF_RETURN(cudaFreeAsync(bucket_indices, stream));
       CHK_IF_RETURN(cudaFreeAsync(point_indices, stream));
@@ -913,6 +931,7 @@ namespace msm {
       CHK_IF_RETURN(cudaFreeAsync(bucket_offsets, stream));
       CHK_IF_RETURN(cudaFreeAsync(bm_sums, stream));
 
+      if (is_async) return CHK_LAST();
       return CHK_STICKY(cudaStreamSynchronize(stream));
     }
 
@@ -922,40 +941,42 @@ namespace msm {
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     MSMConfig config = {
-      false, // are_scalars_on_device
-      false, // are_scalars_montgomery_form
+      ctx,   // ctx
       0,     // points_size
       1,     // precompute_factor
-      false, // are_points_on_device
-      false, // are_points_montgomery_form
-      1,     // batch_size
-      false, // are_results_on_device
       0,     // c
       0,     // bitsize
-      false, // is_big_triangle
       10,    // large_bucket_factor
+      1,     // batch_size
+      false, // are_scalars_on_device
+      false, // are_scalars_montgomery_form
+      false, // are_points_on_device
+      false, // are_points_montgomery_form
+      false, // are_results_on_device
+      false, // is_big_triangle
       false, // is_async
-      ctx,   // ctx
     };
     return config;
   }
 
   template <typename S, typename A, typename P>
-  cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig config, P* results)
+  cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig& config, P* results)
   {
     int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
+    cudaStream_t& stream = config.ctx.stream;
     // TODO: DmytroTym/HadarIngonyama - unify the implementation of the bucket method and the batched bucket method in
     // one function
     if (config.batch_size == 1)
       return CHK_STICKY(bucket_method_msm(
         bitsize, 16, scalars, points, msm_size, results, config.are_scalars_on_device,
         config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
-        config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.is_async,
-        config.ctx.stream));
+        config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.is_async, stream));
     else
       return CHK_STICKY(batched_bucket_method_msm(
-        bitsize, (config.c == 0) ? get_optimal_c<S>(bitsize) : config.c, scalars, points, config.batch_size, msm_size,
-        results, config.are_scalars_on_device, config.ctx.stream));
+        bitsize, (config.c == 0) ? get_optimal_c<S>(msm_size) : config.c, scalars, points, config.batch_size, msm_size,
+        (config.points_size == 0) ? msm_size : config.points_size, results, config.are_scalars_on_device,
+        config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
+        config.are_results_on_device, config.is_async, stream));
   }
 
   /**
@@ -970,7 +991,7 @@ namespace msm {
     curve_config::scalar_t* scalars,
     curve_config::affine_t* points,
     int msm_size,
-    MSMConfig config,
+    MSMConfig& config,
     curve_config::projective_t* out)
   {
     return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(
@@ -991,7 +1012,7 @@ namespace msm {
     curve_config::scalar_t* scalars,
     curve_config::g2_affine_t* points,
     int msm_size,
-    MSMConfig config,
+    MSMConfig& config,
     curve_config::g2_projective_t* out)
   {
     return MSM<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(

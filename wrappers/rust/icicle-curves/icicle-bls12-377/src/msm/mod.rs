@@ -1,10 +1,10 @@
-use crate::curve::{CurveCfg, G1Affine, G1Projective, ScalarField};
+use crate::curve::CurveCfg;
 use icicle_core::{
-    curve::{Affine, CurveConfig, Projective},
-    error::*,
-    traits::*,
+    curve::{Affine, Curve, Projective},
+    error::IcicleResult,
     impl_msm,
     msm::{MSMConfig, MSM},
+    traits::IcicleResultWrap,
 };
 use icicle_cuda_runtime::error::CudaError;
 
@@ -13,9 +13,9 @@ impl_msm!("bls12_377", CurveCfg);
 #[cfg(test)]
 pub(crate) mod tests {
     use icicle_core::impl_msm_tests;
-    use icicle_core::msm::tests::check_msm;
+    use icicle_core::msm::tests::*;
 
-    use crate::curve::{CurveCfg, ScalarCfg};
+    use crate::curve::CurveCfg;
 
-    impl_msm_tests!(CurveCfg, ScalarCfg);
+    impl_msm_tests!(CurveCfg);
 }

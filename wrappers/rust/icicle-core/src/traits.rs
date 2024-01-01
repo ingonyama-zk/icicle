@@ -1,20 +1,28 @@
-use std::{fmt::Debug, result::*, mem::MaybeUninit};
 use crate::error::IcicleResult;
+#[cfg(feature = "arkworks")]
+use ark_ff::PrimeField;
+use std::{fmt::Debug, mem::MaybeUninit};
 
+#[doc(hidden)]
 pub trait GenerateRandom<F> {
     fn generate_random(size: usize) -> Vec<F>;
 }
 
-pub trait FieldImpl: Debug + PartialEq + Copy + Clone {
-    fn set_limbs(value: &[u32]) -> Self;
+#[doc(hidden)]
+pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
+    #[cfg(feature = "arkworks")]
+    type ArkField: PrimeField;
+}
+
+pub trait FieldImpl: Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> {
+    #[doc(hidden)]
+    type Config: FieldConfig;
+    type Repr;
+
     fn to_bytes_le(&self) -> Vec<u8>;
     fn from_bytes_le(bytes: &[u8]) -> Self;
     fn zero() -> Self;
     fn one() -> Self;
-}
-
-pub trait GetLimbs<const NUM_LIMBS: usize> {
-    fn get_limbs(&self) -> [u32; NUM_LIMBS];
 }
 
 #[cfg(feature = "arkworks")]
@@ -25,11 +33,11 @@ pub trait ArkConvertible {
     fn from_ark(ark: Self::ArkEquivalent) -> Self;
 }
 
-pub trait ResultWrap<T, TError>{
-    fn wrap(self) -> Result<T, TError>;
-    fn wrap_value(self, value: T) -> Result<T, TError>;
-    fn wrap_maybe_uninit(self, value: MaybeUninit<T>) -> Result<T, TError>;
-}
+// pub trait ResultWrap<T, TError>{
+//     fn wrap(self) -> Result<T, TError>;
+//     fn wrap_value(self, value: T) -> Result<T, TError>;
+//     fn wrap_maybe_uninit(self, value: MaybeUninit<T>) -> Result<T, TError>;
+// }
 
 pub trait IcicleResultWrap {
     fn wrap(self) -> IcicleResult<()>;

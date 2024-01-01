@@ -2,7 +2,7 @@ use std::mem::MaybeUninit;
 
 use icicle_cuda_runtime::error::CudaError;
 
-use crate::traits::ResultWrap;
+// use crate::traits::ResultWrap;
 use crate::traits::IcicleResultWrap;
 
 #[repr(u32)]
@@ -20,12 +20,11 @@ pub enum IcicleErrorCode {
 pub struct IcicleError {
     icicle_error_code: IcicleErrorCode,
     cuda_error: Option<CudaError>,
-    reason: Option< &'static str>,
+    reason: Option<&'static str>,
 }
 
 pub type IcicleResult<T> = Result<T, IcicleError>;
 pub type OptionCudaError = Option<CudaError>;
-
 
 impl IcicleError {
     pub fn from_cuda_error(cuda_error: CudaError) -> Self {
@@ -48,7 +47,7 @@ impl IcicleError {
             cuda_error: None,
         }
     }
-    
+
     pub fn get_icicle_error_code(&self) -> IcicleErrorCode {
         self.icicle_error_code
     }
