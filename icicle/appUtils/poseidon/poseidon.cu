@@ -198,7 +198,7 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
 #endif
 
   // execute half full rounds
-  full_rounds<<<number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t, stream>>>(
+  full_rounds<<<number_of_blocks, number_of_threads, this->t * sizeof(S) * hashes_per_block, stream>>>(
     states, blocks, rc_offset, true, this->config);
   rc_offset += this->t * this->config.full_rounds_half;
 
@@ -230,7 +230,7 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
 #endif
 
   // execute half full rounds
-  full_rounds<<<number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t, stream>>>(
+  full_rounds<<<number_of_blocks, number_of_threads, this->t * sizeof(S) * hashes_per_block, stream>>>(
     states, blocks, rc_offset, false, this->config);
 
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
