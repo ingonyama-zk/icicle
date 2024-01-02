@@ -1,6 +1,6 @@
 [package]
 name = "icicle-bls12-377"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
 description = "Rust wrapper for the CUDA implementation of BLS12-377 pairing friendly elliptic curve by Ingonyama"
@@ -13,7 +13,7 @@ icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
 ark-bls12-377 = { version = "0.4.0", optional = true }
 
 [build-dependencies]
-cmake = "*"
+cmake = "0.1.50"
 
 [dev-dependencies]
 ark-bls12-377 = "0.4.0"

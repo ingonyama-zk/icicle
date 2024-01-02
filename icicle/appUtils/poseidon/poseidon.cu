@@ -139,6 +139,8 @@ template <typename S>
 __host__ cudaError_t
 Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type, cudaStream_t stream)
 {
+  CHK_INIT_IF_RETURN();
+
   S* states;
 
   // allocate memory for {blocks} states of {t} scalars each
@@ -146,11 +148,11 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
 
   // This is where the input matrix of size Arity x NumberOfBlocks is
   // padded and coppied to device in a T x NumberOfBlocks matrix
-  cudaMemcpy2DAsync(
+  CHK_IF_RETURN(cudaMemcpy2DAsync(
     states, this->t * sizeof(S),       // Device pointer and device pitch
     inp, (this->t - 1) * sizeof(S),    // Host pointer and pitch
     (this->t - 1) * sizeof(S), blocks, // Size of the source matrix (Arity x NumberOfBlocks)
-    cudaMemcpyHostToDevice, stream);
+    cudaMemcpyHostToDevice, stream));
 
   size_t rc_offset = 0;
 
@@ -187,7 +189,7 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
   rc_offset += this->t;
 
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
-  cudaStreamSynchronize(stream);
+  CHK_IF_RETURN(cudaStreamSynchronize(stream));
   std::cout << "Domain separation: " << rc_offset << std::endl;
   // print_buffer_from_cuda<S>(states, blocks * this->t);
 
@@ -198,12 +200,12 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
 #endif
 
   // execute half full rounds
-  full_rounds<<<number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t, stream>>>(
+  full_rounds<<<number_of_blocks, number_of_threads, this->t * sizeof(S) * hashes_per_block, stream>>>(
     states, blocks, rc_offset, true, this->config);
   rc_offset += this->t * this->config.full_rounds_half;
 
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
-  cudaStreamSynchronize(stream);
+  CHK_IF_RETURN(cudaStreamSynchronize(stream));
   std::cout << "Full rounds 1. RCOFFSET: " << rc_offset << std::endl;
   // print_buffer_from_cuda<S>(states, blocks * this->t);
 
@@ -219,7 +221,7 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
   rc_offset += this->config.partial_rounds;
 
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
-  cudaStreamSynchronize(stream);
+  CHK_IF_RETURN(cudaStreamSynchronize(stream));
   std::cout << "Partial rounds. RCOFFSET: " << rc_offset << std::endl;
   // print_buffer_from_cuda<S>(states, blocks * this->t);
 
@@ -230,11 +232,11 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
 #endif
 
   // execute half full rounds
-  full_rounds<<<number_of_blocks, number_of_threads, sizeof(S) * hashes_per_block * this->t, stream>>>(
+  full_rounds<<<number_of_blocks, number_of_threads, this->t * sizeof(S) * hashes_per_block, stream>>>(
     states, blocks, rc_offset, false, this->config);
 
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
-  cudaStreamSynchronize(stream);
+  CHK_IF_RETURN(cudaStreamSynchronize(stream));
   std::cout << "Full rounds 2. RCOFFSET: " << rc_offset << std::endl;
   // print_buffer_from_cuda<S>(states, blocks * this->t);
   end_time = std::chrono::high_resolution_clock::now();
@@ -245,23 +247,23 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
 
   // get output
   S* out_device;
-  cudaMalloc(&out_device, blocks * sizeof(S));
+  CHK_IF_RETURN(cudaMalloc(&out_device, blocks * sizeof(S)));
   get_hash_results<<<number_of_singlehash_blocks, singlehash_block_size, 0, stream>>>(
     states, blocks, out_device, this->config.t);
 
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
-  cudaStreamSynchronize(stream);
+  CHK_IF_RETURN(cudaStreamSynchronize(stream));
   std::cout << "Get hash results" << std::endl;
   end_time = std::chrono::high_resolution_clock::now();
   elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
   std::cout << "Elapsed time: " << elapsed_time.count() << " ms" << std::endl;
 #endif
-  cudaMemcpyAsync(out, out_device, blocks * sizeof(S), cudaMemcpyDeviceToHost, stream);
-  cudaFreeAsync(out_device, stream);
-  cudaFreeAsync(states, stream);
+  CHK_IF_RETURN(cudaMemcpyAsync(out, out_device, blocks * sizeof(S), cudaMemcpyDeviceToHost, stream));
+  CHK_IF_RETURN(cudaFreeAsync(out_device, stream));
+  CHK_IF_RETURN(cudaFreeAsync(states, stream));
 
 #if !defined(__CUDA_ARCH__) && defined(DEBUG)
-  cudaDeviceReset();
+  CHK_IF_RETURN(cudaDeviceReset());
 #endif
   return CHK_LAST();
 }

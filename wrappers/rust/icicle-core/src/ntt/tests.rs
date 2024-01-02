@@ -17,7 +17,7 @@ where
 {
     let ctx = get_default_device_context();
     let ark_rou = F::ArkEquivalent::get_root_of_unity(max_size).unwrap();
-    initialize_domain::<F>(F::from_ark(ark_rou), &ctx).unwrap();
+    initialize_domain(F::from_ark(ark_rou), &ctx).unwrap();
 }
 
 pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
@@ -58,9 +58,9 @@ where
         // if we simply transmute arkworks types, we'll get scalars in Montgomery format
         let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const _) };
 
-        let config = get_default_ntt_config::<F>();
+        let config = get_default_ntt_config();
         let mut ntt_result = vec![F::zero(); test_size];
-        ntt::<F>(&scalars_mont, NTTDir::kForward, &config, &mut ntt_result).unwrap();
+        ntt(&scalars_mont, NTTDir::kForward, &config, &mut ntt_result).unwrap();
         assert_ne!(ntt_result, scalars_mont);
 
         let mut ark_ntt_result = ark_scalars.clone();
@@ -72,7 +72,7 @@ where
         assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
         let mut intt_result = vec![F::zero(); test_size];
-        ntt::<F>(&ntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
+        ntt(&ntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
 
         assert_eq!(intt_result, scalars_mont);
     }
@@ -99,18 +99,18 @@ where
             .map(|v| v.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();
 
-        let mut config = get_default_ntt_config::<F>();
+        let mut config = get_default_ntt_config();
         config.ordering = Ordering::kNR;
         let mut ntt_result = vec![F::zero(); test_size];
-        ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_result[..small_size]).unwrap();
+        ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result[..small_size]).unwrap();
         assert_ne!(ntt_result[..small_size], scalars);
         config.coset_gen = F::from_ark(test_size_rou);
-        ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_result[small_size..]).unwrap();
+        ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result[small_size..]).unwrap();
         let mut ntt_large_result = vec![F::zero(); test_size];
         // back to non-coset NTT
         config.coset_gen = F::one();
         scalars.resize(test_size, F::zero());
-        ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_large_result).unwrap();
+        ntt(&scalars, NTTDir::kForward, &config, &mut ntt_large_result).unwrap();
         assert_eq!(ntt_result, ntt_large_result);
         // check that scalars weren't mutated by all the `ntt` calls
         assert_eq!(ark_scalars[1], scalars[1].to_ark());
@@ -131,7 +131,7 @@ where
         config.coset_gen = F::from_ark(test_size_rou);
         config.ordering = Ordering::kRN;
         let mut intt_result = vec![F::zero(); small_size];
-        ntt::<F>(&ntt_result[small_size..], NTTDir::kInverse, &config, &mut intt_result).unwrap();
+        ntt(&ntt_result[small_size..], NTTDir::kInverse, &config, &mut intt_result).unwrap();
         assert_eq!(intt_result, scalars[..small_size]);
 
         ark_small_domain.ifft_in_place(&mut ark_scalars);
@@ -169,11 +169,11 @@ where
                 .map(|v| F::ArkEquivalent::from_le_bytes_mod_order(&v.to_bytes_le()))
                 .collect::<Vec<F::ArkEquivalent>>();
 
-            let mut config = get_default_ntt_config::<F>();
+            let mut config = get_default_ntt_config();
             config.ordering = Ordering::kNR;
             config.coset_gen = F::from_ark(coset_gen);
             let mut ntt_result = vec![F::zero(); test_size];
-            ntt::<F>(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
+            ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
             assert_ne!(scalars, ntt_result);
 
             let ark_scalars_copy = ark_scalars.clone();
@@ -187,7 +187,7 @@ where
             assert_eq!(ark_scalars, ark_scalars_copy);
 
             config.ordering = Ordering::kRN;
-            ntt::<F>(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
+            ntt(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
             let ntt_result_as_ark = scalars
                 .iter()
                 .map(|p| p.to_ark())
@@ -205,7 +205,7 @@ where
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
         let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-        let mut config = get_default_ntt_config::<F>();
+        let mut config = get_default_ntt_config();
         for batch_size in batch_sizes {
             let scalars: Vec<F> = F::Config::generate_random(test_size * batch_size);
 
@@ -216,11 +216,11 @@ where
                         config.ordering = ordering;
                         config.batch_size = batch_size as i32;
                         let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
-                        ntt::<F>(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
+                        ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
                         config.batch_size = 1;
                         let mut one_ntt_result = vec![F::one(); test_size];
                         for i in 0..batch_size {
-                            ntt::<F>(
+                            ntt(
                                 &scalars[i * test_size..(i + 1) * test_size],
                                 is_inverse,
                                 &config,
@@ -246,7 +246,7 @@ where
     for test_size in test_sizes {
         let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
         let stream = CudaStream::create().unwrap();
-        let mut config = get_default_ntt_config::<F>();
+        let mut config = get_default_ntt_config();
         for batch_size in batch_sizes {
             let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
             let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
@@ -270,14 +270,14 @@ where
                     config
                         .ctx
                         .stream = &stream;
-                    ntt::<F>(
+                    ntt(
                         &scalars_d.as_slice(),
                         NTTDir::kForward,
                         &config,
                         &mut ntt_out_d.as_slice(),
                     )
                     .unwrap();
-                    ntt::<F>(
+                    ntt(
                         &ntt_out_d.as_slice(),
                         NTTDir::kInverse,
                         &config,

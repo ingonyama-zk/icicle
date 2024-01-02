@@ -18,7 +18,7 @@ where
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
-    let test_sizes = [1000, 1 << 18];
+    let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
     let mut msm_results = DeviceSlice::cuda_malloc(1).unwrap();
     for test_size in test_sizes {
         let points = C::generate_random_affine_points(test_size);
@@ -48,7 +48,7 @@ where
         cfg.are_results_on_device = true;
         cfg.are_scalars_on_device = true;
         cfg.are_scalars_montgomery_form = true;
-        msm::<C>(&scalars_d.as_slice(), &points, &cfg, &mut msm_results.as_slice()).unwrap();
+        msm(&scalars_d.as_slice(), &points, &cfg, &mut msm_results.as_slice()).unwrap();
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results
@@ -103,10 +103,10 @@ where
             cfg.batch_size = batch_size as i32;
             cfg.is_async = true;
             cfg.are_results_on_device = true;
-            msm::<C>(&scalars, &points, &cfg, &mut msm_results_1.as_slice()).unwrap();
+            msm(&scalars, &points, &cfg, &mut msm_results_1.as_slice()).unwrap();
             cfg.points_size = (test_size * batch_size) as i32;
             cfg.are_points_on_device = true;
-            msm::<C>(&scalars, &points_d.as_slice(), &cfg, &mut msm_results_2.as_slice()).unwrap();
+            msm(&scalars, &points_d.as_slice(), &cfg, &mut msm_results_2.as_slice()).unwrap();
 
             let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
             let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
@@ -174,7 +174,7 @@ where
             if test_size < test_threshold {
                 cfg.bitsize = 1;
             }
-            msm::<C>(&scalars, &points, &cfg, &mut msm_results).unwrap();
+            msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
 
             let points_ark: Vec<_> = points
                 .iter()

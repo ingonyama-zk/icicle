@@ -1,4 +1,4 @@
-#include "err.h" // Include your error handling header file
+#include "../utils/error_handler.cuh" // Include your error handling header file
 #include <gtest/gtest.h>
 
 __global__ void a_kernel_with_conditional_sticky_error(bool is_failing)
@@ -9,7 +9,7 @@ __global__ void a_kernel_with_conditional_sticky_error(bool is_failing)
     assert(cudaGetLastError() == cudaSuccess);
     assert(cudaGetLastError() == cudaSuccess);
     // Deliberately assert false
-    assert(!is_failing); // TODO: sticky according to https://stackoverflow.com/a/43659538
+    assert(!is_failing);
   }
 }
 

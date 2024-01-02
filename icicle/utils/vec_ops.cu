@@ -38,6 +38,8 @@ namespace vec_ops {
   cudaError_t
   Mul(S* vec_a, E* vec_b, int n, bool is_on_device, bool is_montgomery, device_context::DeviceContext ctx, E* result)
   {
+    CHK_INIT_IF_RETURN();
+
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
@@ -73,6 +75,8 @@ namespace vec_ops {
   template <typename E>
   cudaError_t Add(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::DeviceContext ctx, E* result)
   {
+    CHK_INIT_IF_RETURN();
+    
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
@@ -106,6 +110,8 @@ namespace vec_ops {
   template <typename E>
   cudaError_t Sub(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::DeviceContext ctx, E* result)
   {
+    CHK_INIT_IF_RETURN();
+
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;

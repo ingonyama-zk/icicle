@@ -1,5 +1,5 @@
 # ICICLE
- **<div align="center">Icicle is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
+ **<div align="center">ICICLE is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
 
                   
 ![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
@@ -39,6 +39,10 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
     - [BW6-671]
 
 ## Build and usage
+
+> [!WARNING]
+> Stable versions of icicle and its bindings are released under versioned tags.
+> We will try our best to keep latest main stable as well but it should be considered unstable and may break at any time.
 
 
 ### Prerequisites

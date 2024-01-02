@@ -2,7 +2,6 @@ use std::mem::MaybeUninit;
 
 use icicle_cuda_runtime::error::CudaError;
 
-// use crate::traits::ResultWrap;
 use crate::traits::IcicleResultWrap;
 
 #[repr(u32)]
@@ -13,7 +12,7 @@ pub enum IcicleErrorCode {
     InvalidArgument = 1,
     MemoryAllocationError = 2,
     InternalCudaError = 199999999,
-    UndefinedError = 999999999, // Assigning 0 as the value for UndefinedError
+    UndefinedError = 999999999,
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
