@@ -7,6 +7,8 @@ mkdir -p build;
 cmake -DBUILD_TESTS=ON -DCURVE=<support_curve> -S . -B build;
 cmake --build build;
 ./build/runner --gtest_brief=1; 
+cd build && ctest; 
+cd ..
 ```
 
 The command above will build ICICLE Core and run the ctest.
