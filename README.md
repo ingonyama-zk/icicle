@@ -40,6 +40,10 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 
 ## Build and usage
 
+> [!WARNING]
+> Stable versions of icicle and its bindings are released under versioned tags.
+> We will try our best to keep latest main stable as well but it should be considered unstable and may break at any time.
+
 
 ### Prerequisites
 
