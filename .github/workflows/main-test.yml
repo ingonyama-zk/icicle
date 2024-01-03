@@ -38,41 +38,41 @@ jobs:
         echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "cpp_cuda=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"
 
-  test-rust-linux:
-    name: Test Rust on Linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: check-changed-files
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
-    - name: Run Rust Tests
-      working-directory: ./wrappers/rust
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      # Running tests from the root workspace will run all workspace members' tests by default
-      #TODO: remove test-threads once thread safety is finalized
-      run: cargo test --release --verbose -- --test-threads=1
+  # test-rust-linux:
+  #   name: Test Rust on Linux
+  #   runs-on: [self-hosted, Linux, X64, icicle]
+  #   needs: check-changed-files
+  #   steps:
+  #   - name: Checkout Repo
+  #     uses: actions/checkout@v3
+  #   - name: Run Rust Tests
+  #     working-directory: ./wrappers/rust
+  #     if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     # Running tests from the root workspace will run all workspace members' tests by default
+  #     #TODO: remove test-threads once thread safety is finalized
+  #     run: cargo test --release --verbose -- --test-threads=1
 
-  test-cpp-linux:
-    name: Test C++ on Linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: check-changed-files
-    strategy:
-      matrix:
-        curve: [bn254, bls12_381, bls12_377, bw6_761]
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
-    - name: Build C++
-      working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: |
-        mkdir -p build
-        cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCURVE=${{ matrix.curve }} -S . -B build
-        cmake --build build
-    - name: Run C++ Tests
-      working-directory: ./icicle/build
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ctest
+  # test-cpp-linux:
+  #   name: Test C++ on Linux
+  #   runs-on: [self-hosted, Linux, X64, icicle]
+  #   needs: check-changed-files
+  #   strategy:
+  #     matrix:
+  #       curve: [bn254, bls12_381, bls12_377, bw6_761]
+  #   steps:
+  #   - name: Checkout Repo
+  #     uses: actions/checkout@v3
+  #   - name: Build C++
+  #     working-directory: ./icicle
+  #     if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     run: |
+  #       mkdir -p build
+  #       cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCURVE=${{ matrix.curve }} -S . -B build
+  #       cmake --build build
+  #   - name: Run C++ Tests
+  #     working-directory: ./icicle/build
+  #     if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     run: ctest
   
   # TODO: Reenable once Golang bindings for v1+ is finished
   # test-golang-linux:

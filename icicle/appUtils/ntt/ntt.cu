@@ -385,7 +385,7 @@ namespace ntt {
     // but it's a singleton that is supposed to be initialized once per program lifetime
     if (!Domain<S>::twiddles) {
       S omega = primitive_root;
-      for (int i = 0; i < S::TWO_ADICITY; i++)
+      for (int i = 0; i < S::CONFIG::omegas_count; i++)
         omega = S::sqr(omega);
       if (omega != S::one()) {
         std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
