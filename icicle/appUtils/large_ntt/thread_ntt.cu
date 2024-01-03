@@ -32,6 +32,7 @@ struct stage_metadata
 {
   // uint32_t stage_num;
   // uint32_t data_stride;
+  uint32_t th_stride;
   uint32_t ntt_block_id;
   uint32_t ntt_inp_id;
   uint32_t ntt_meta_block_size;
@@ -241,7 +242,7 @@ class NTTEngine {
     }
   }
 
-__device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
+__device__ __forceinline__ void loadBasicTwiddles(bool inv){
     
     // #pragma unroll
     // for (int i = 1; i < 4; i++)
@@ -260,6 +261,17 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
     {
       WI[i].store_half(data[((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1)], false);
       WI[i].store_half(data[((stride?(threadIdx.x>>3):(threadIdx.x))&0x7)*(i+1) + 64], true);
+      // if (blockIdx.x == 0 && threadIdx.x == 8) printf("%d\n",WI[i].load_half(false).w);
+    }
+  }
+
+  __device__ __forceinline__ void loadInternalTwiddles32(uint4* data, bool stride){
+    // data += (1<<(tw_log_size-6));
+    #pragma unroll
+    for (int i = 0; i < 7; i++)
+    {
+      WI[i].store_half(data[2*((stride?(threadIdx.x>>4):(threadIdx.x))&0x3)*(i+1)], false);
+      WI[i].store_half(data[2*((stride?(threadIdx.x>>4):(threadIdx.x))&0x3)*(i+1) + 64], true);
       // if (blockIdx.x == 0 && threadIdx.x == 8) printf("%d\n",WI[i].load_half(false).w);
     }
   }
@@ -355,8 +367,15 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
     
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      X[i].store_half(data[8*i*data_stride], false);
-      X[i].store_half(data[8*i*data_stride + (1<<log_size)], true);
+      X[i].store_half(data[s_meta.th_stride*i*data_stride], false);
+      X[i].store_half(data[s_meta.th_stride*i*data_stride + (1<<log_size)], true);
+    }
+    if (threadIdx.x == 0){
+    for(uint32_t i=0;i<8;i++) {
+      printf("%d", data[s_meta.th_stride*i*data_stride].w);
+      printf("%d", data[s_meta.th_stride*i*data_stride+ (1<<log_size)].w);
+      printf("\n");
+    }
     }
     // #pragma unroll
     // for(uint32_t i=0;i<8;i++) {
@@ -413,6 +432,72 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
 
   }
 
+   __device__ __forceinline__ void storeGlobalData32(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
+    
+    if (strided){
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*blockDim.x;
+      // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+    else {
+      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id*2;
+      // data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+    // if (blockIdx.x<2){
+    //   printf("block %d thread %d read address %d\n",blockIdx.x, threadIdx.x, block_offset + (threadIdx.x & 0xf) + 256 * (threadIdx.x >> 4));
+    // }
+    
+    // uint4 zero{0,0,0,0};
+    #pragma unroll
+    for(uint32_t j=0;j<2;j++) {
+      #pragma unroll
+      for(uint32_t i=0;i<4;i++) {
+        // if (data_stride == 64){
+        //   // if (i==0){
+        //   //   data[8*i*data_stride] = uint4{2,0,0,0};
+        //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
+        //   //   continue;
+        //   // }
+        //   data[8*i*data_stride] = WE[i].load_half(false);
+        //   data[8*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
+        // }
+        // else{
+          data[(8*i+j)*data_stride] = X[4*j+i].load_half(false);
+          data[(8*i+j)*data_stride + (1<<log_size)] = X[4*j+i].load_half(true);
+        // }
+      }
+    }
+    if (threadIdx.x == 0){
+      #pragma unroll
+    for(uint32_t j=0;j<2;j++) {
+      #pragma unroll
+      for(uint32_t i=0;i<4;i++) {
+        // if (data_stride == 64){
+        //   // if (i==0){
+        //   //   data[8*i*data_stride] = uint4{2,0,0,0};
+        //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
+        //   //   continue;
+        //   // }
+        //   data[8*i*data_stride] = WE[i].load_half(false);
+        //   data[8*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
+        // }
+        // else{
+          printf("%d",X[4*j+i].load_half(false).w);
+          printf("%d",X[4*j+i].load_half(true).w);
+          printf("\n");
+          // data[(8*i+j)*data_stride + (1<<log_size)] = X[4*j+i].load_half(true);
+        // }
+      }
+    }
+    }
+      // data[16*i*stride] = zero;
+    // #pragma unroll
+    // for(uint32_t i=0;i<16;i++) 
+    //   data[16*i*stride + high_bits_offset] = X[i].load_half(true);
+      // data[16*i*stride + high_bits_offset] = zero;
+
+  }
+
+
   __device__ __forceinline__ void storeGlobalData16(test_scalar* data, uint32_t dataIndex) {
     // data+=1024*dataIndex + (threadIdx.x & 0x1F);
     data += 16*dataIndex;
@@ -446,16 +531,11 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
   //     X[to+i]=X[from+i];
   // }
 
-  __device__ __forceinline__ void ntt4_4() {
-    for (int i = 0; i < 4; i++)
+  __device__ __forceinline__ void ntt4_2() {
+    #pragma unroll
+    for (int i = 0; i < 2; i++)
     {
-      // if (i){
-      //   X[4*i] = test_scalar::zero(); X[4*i+1]=test_scalar::zero(); X[4*i+2]=test_scalar::zero(); X[4*i+3]=test_scalar::zero();
-      // }
-      // else{
         ntt4(X[4*i], X[4*i+1], X[4*i+2], X[4*i+3]);
-        // X[0] = X[0] + X[1];
-      // }
     }
     
   }
@@ -486,8 +566,9 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
     X1 = X1 - X3;   // T has X0, X0 has X1, X2 has X2, X1 has X3
   
     // X1 = X1 * (test_scalar::modulus() - test_scalar::omega(2));
-    X1 = X1 * test_scalar::omega4(4);
-    // X1 = X1 * test_scalar::omega(2);
+    // X1 = X1 * test_scalar::omega4_inv(4);
+    X1 = X1 * WB[0];
+    // X1 = X1 * test_scalar::omega(7);
   
     X3 = X2 - X1;
     X1 = X2 + X1;
@@ -509,7 +590,8 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
     // }
   
     // X3 = X3 * (test_scalar::modulus() - test_scalar::omega(2));
-    X3 = X3 * test_scalar::omega(2);
+    // X3 = X3 * test_scalar::omega4(4);
+    X3 = X3 * WB[0];
     
     X2 = X0 - X1;
     X0 = X0 + X1;
@@ -1175,6 +1257,117 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
     }
   }
 
+  __device__ __forceinline__ void SharedData32Columns8(uint4 *shmem, bool store, bool high_bits, bool stride) {
+    // const uint32_t stride=blockDim.x+1;
+
+    uint32_t ntt_id = stride? threadIdx.x & 0xf : threadIdx.x >> 2;
+    uint32_t column_id = stride? threadIdx.x >> 4 : threadIdx.x & 0x3;
+    
+    
+    // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
+
+    // todo - stride to avoid bank conflicts, use ptx commands
+    // uint4 temp{0,0,0,0};
+    
+    #pragma unroll
+    for(uint32_t i=0;i<8;i++) {
+      // if (threadIdx.x==0) printf("ntt id %d row id %d col id %d shmem add %d \n", ntt_id, row_id, column_id, ntt_id * 256 + row_id * 16 + column_id);
+      if (store) {
+        shmem[ntt_id * 32 + i * 4 + column_id] = X[i].load_half(high_bits);           // note transpose here
+        // shmem[ntt_id * 264 + (row_id * 33)/2 + column_id] = X[i+j*4].load_half(high_bits);           // note transpose here
+        // temp.w = threadIdx.x;
+        // shmem[ntt_id * 264 + (row_id * 33)/2 + column_id] = temp;           // note transpose here
+      }
+      else {
+        X[i].store_half(shmem[ntt_id * 32 + i * 4 + column_id], high_bits);
+        // X[i+j*4].store_half(shmem[ntt_id * 264 + (row_id * 33)/2 + column_id], high_bits);
+      }
+    }
+  }
+
+  __device__ __forceinline__ void SharedData32Rows8(uint4 *shmem, bool store, bool high_bits, bool stride) {
+    // const uint32_t stride=blockDim.x+1;
+
+    uint32_t ntt_id = stride? threadIdx.x & 0xf : threadIdx.x >> 2;
+    uint32_t row_id = stride? threadIdx.x >> 4 : threadIdx.x & 0x3;
+    
+    
+    // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
+
+    // todo - stride to avoid bank conflicts, use ptx commands
+    
+    #pragma unroll
+    for(uint32_t i=0;i<8;i++) {
+      if (store) {
+        // shmem[ntt_id * 264 + (row_id * 33)/2 + i] = X[i].load_half(high_bits);
+        shmem[ntt_id * 32 + row_id * 8 + i] = X[i].load_half(high_bits);
+      }
+      else {
+        // X[i].store_half(shmem[ntt_id * 264 + (row_id * 33)/2 + i] ,high_bits);   
+        X[i].store_half(shmem[ntt_id * 32 + row_id * 8 + i] ,high_bits);   
+      }
+    }
+  }
+
+  __device__ __forceinline__ void SharedData32Columns4_2(uint4 *shmem, bool store, bool high_bits, bool stride) {
+    // const uint32_t stride=blockDim.x+1;
+
+    uint32_t ntt_id = stride? threadIdx.x & 0xf : threadIdx.x >> 2;
+    uint32_t column_id = (stride? threadIdx.x >> 4 : threadIdx.x & 0x3)*2;
+    
+    
+    // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
+
+    // todo - stride to avoid bank conflicts, use ptx commands
+    // uint4 temp{0,0,0,0};
+    
+    #pragma unroll
+    for(uint32_t j=0;j<2;j++) {
+      #pragma unroll
+      for(uint32_t i=0;i<4;i++) {
+        // if (threadIdx.x==0) printf("ntt id %d row id %d col id %d shmem add %d \n", ntt_id, row_id, column_id, ntt_id * 256 + row_id * 16 + column_id);
+        if (store) {
+          shmem[ntt_id * 32 + i * 8 + column_id + j] = X[4*j+i].load_half(high_bits);           // note transpose here
+          // shmem[ntt_id * 264 + (row_id * 33)/2 + column_id] = X[i+j*4].load_half(high_bits);           // note transpose here
+          // temp.w = threadIdx.x;
+          // shmem[ntt_id * 264 + (row_id * 33)/2 + column_id] = temp;           // note transpose here
+        }
+        else {
+          X[4*j+i].store_half(shmem[ntt_id * 32 + i * 8 + column_id + j], high_bits);
+          // X[i+j*4].store_half(shmem[ntt_id * 264 + (row_id * 33)/2 + column_id], high_bits);
+        }
+      }
+    }
+  }
+
+  __device__ __forceinline__ void SharedData32Rows4_2(uint4 *shmem, bool store, bool high_bits, bool stride) {
+    // const uint32_t stride=blockDim.x+1;
+
+    uint32_t ntt_id = stride? threadIdx.x & 0xf : threadIdx.x >> 2;
+    uint32_t row_id = (stride? threadIdx.x >> 4 : threadIdx.x & 0x3)*2;
+    
+    
+    // addr=addr + threadIdx.x*8;          // use odd stride to avoid bank conflicts
+
+    // todo - stride to avoid bank conflicts, use ptx commands
+    
+    #pragma unroll
+    for(uint32_t j=0;j<2;j++) {
+      #pragma unroll
+      for(uint32_t i=0;i<4;i++) {
+        if (store) {
+          // shmem[ntt_id * 264 + (row_id * 33)/2 + i] = X[i].load_half(high_bits);
+          shmem[ntt_id * 32 + row_id * 4 + 4*j + i] = X[4*j+i].load_half(high_bits);
+        }
+        else {
+          // X[i].store_half(shmem[ntt_id * 264 + (row_id * 33)/2 + i] ,high_bits);   
+          X[4*j+i].store_half(shmem[ntt_id * 32 + row_id * 4 + 4*j + i] ,high_bits);   
+        }
+      }
+    }
+  }
+
+
   // __device__ __forceinline__ void load_twiddles(uint32_t ntt8_num) {
   //   #pragma unroll 
   //   for (int i = 1; i < 8; i++)
@@ -1187,6 +1380,19 @@ __device__ __forceinline__ void loadBasicTwiddles(uint4* data, bool inv){
   // }
 
   __device__ __forceinline__ void twiddles64() {
+    #pragma unroll 
+    for (int i = 1; i < 8; i++)
+    {
+      // X[i] = X[i] * test_scalar::omega8(threadIdx.x&0x7);
+      // if (threadIdx.x==9) printf("xbef %d wbef %d\n", X[i], WE[i]);
+      X[i] = X[i] * WI[i-1];
+      // if (threadIdx.x==9) printf("xaf %d\n", X[i]);
+      // X[i] = X[i] * test_scalar::omega8(i);
+      // X[i] = X[i] * X[i];
+    }
+  }
+
+  __device__ __forceinline__ void twiddles32() {
     #pragma unroll 
     for (int i = 1; i < 8; i++)
     {

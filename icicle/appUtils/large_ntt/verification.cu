@@ -14,7 +14,7 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
-#define PERFORMANCE
+// #define PERFORMANCE
 
 using namespace BLS12_377;
 // using namespace BLS12_381;
@@ -43,12 +43,12 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 18;
-  int TT_LOG_SIZE = NTT_LOG_SIZE;
+  int NTT_LOG_SIZE = 5;
+  int TT_LOG_SIZE = 12;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
-  int INV = true;
-  int DIT = true;
+  int INV = false;
+  int DIT = false;
 
   //cpu allocation
   test_scalar* cpuIcicle;
@@ -83,9 +83,17 @@ int main(){
   {
     cpuNew[i] = cpuIcicle[i].load_half(false);
     cpuNew[NTT_SIZE + i] = cpuIcicle[i].load_half(true);
+    // cpuNew[NTT_SIZE + i] = cpuIcicle[i].load_half(false);
     cpuNew2[i] = uint4{0,0,0,0};
     cpuNew2[NTT_SIZE + i] = uint4{0,0,0,0};
   }
+  printf("input\n");
+  for(int i=0;i<NTT_SIZE;i++){
+    // if (i%16 == 0) printf("\n");
+    // std::cout <<cpuIcicle[i]<<std::endl;
+    std::cout <<cpuNew[i].w<<cpuNew[i+NTT_SIZE].w<<std::endl;
+  }
+
   $CUDA(cudaMemcpy(gpuIcicle, cpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew, cpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew2, cpuNew2, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
@@ -128,9 +136,9 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
-  if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  // if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
   new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
-  if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  // if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
   printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
@@ -162,19 +170,19 @@ int main(){
     icicle_temp = cpuIcicle[i];
     // new_temp.store_half(cpuTwiddles[2*64*64*64 + i], false);
     // new_temp.store_half(cpuTwiddles[2*64*64*64 + i+64*NTT_SIZE], true);
-    new_temp.store_half(cpuNew2[i], false);
-    new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
+    new_temp.store_half(cpuNew[i], false);
+    new_temp.store_half(cpuNew[i+NTT_SIZE], true);
     // if (i%(64*64) < 64*2) if (i%64 == 0) printf("%d\n",i/64);
     // if (icicle_temp != test_scalar::zero()){
     if (icicle_temp != new_temp){
       success = false;
-      // std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
       // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
     }
-    // else{
-    //   std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+    else{
+      std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
       // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
-    // }
+    }
     // }
   }
   if (success){
