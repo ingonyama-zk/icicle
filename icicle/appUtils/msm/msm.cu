@@ -868,8 +868,8 @@ namespace msm {
 
       if (!are_points_on_device || are_points_montgomery_form) {
         // by this point, points need to be already uploaded and un-Montgomeried
-        cudaStreamWaitEvent(stream, event_points_uploaded);
-        cudaStreamDestroy(stream_points);
+        CHK_IF_RETURN(cudaStreamWaitEvent(stream, event_points_uploaded));
+        CHK_IF_RETURN(cudaStreamDestroy(stream_points));
       }
 
       // launch the accumulation kernel with maximum threads

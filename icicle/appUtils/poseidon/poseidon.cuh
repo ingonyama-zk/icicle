@@ -12,7 +12,7 @@ template <typename S>
 __host__ void print_buffer_from_cuda(S* device_ptr, size_t size, size_t t)
 {
   S* buffer = static_cast<S*>(malloc(size * sizeof(S)));
-  cudaMemcpy(buffer, device_ptr, size * sizeof(S), cudaMemcpyDeviceToHost);
+  CHK_LOG(checudaMemcpy(buffer, device_ptr, size * sizeof(S), cudaMemcpyDeviceToHost));
 
   std::cout << "Start print" << std::endl;
   for (int i = 0; i < size / t; i++) {

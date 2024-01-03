@@ -2,7 +2,6 @@ use std::mem::MaybeUninit;
 
 use icicle_cuda_runtime::error::CudaError;
 
-// use crate::traits::ResultWrap;
 use crate::traits::IcicleResultWrap;
 
 #[repr(u32)]
