@@ -33,12 +33,6 @@ pub trait ArkConvertible {
     fn from_ark(ark: Self::ArkEquivalent) -> Self;
 }
 
-// pub trait ResultWrap<T, TError>{
-//     fn wrap(self) -> Result<T, TError>;
-//     fn wrap_value(self, value: T) -> Result<T, TError>;
-//     fn wrap_maybe_uninit(self, value: MaybeUninit<T>) -> Result<T, TError>;
-// }
-
 pub trait IcicleResultWrap {
     fn wrap(self) -> IcicleResult<()>;
     fn wrap_value<T>(self, value: T) -> IcicleResult<T>;

@@ -13,7 +13,7 @@ icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
 ark-bw6-761 = { version = "0.4.0", optional = true }
 
 [build-dependencies]
-cmake = "*"
+cmake = "0.1.50"
 
 [dev-dependencies]
 ark-bw6-761 = "0.4.0"

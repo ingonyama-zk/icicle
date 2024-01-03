@@ -12,7 +12,7 @@ enum class IcicleError_t {
   IcicleSuccess = 0,
   InvalidArgument = 1,
   MemoryAllocationError = 2,
-  UndefinedError = 999999999, // Assigning 0 as the value for UndefinedError
+  UndefinedError = 999999999,
 };
 
 std::string inline IcicleGetErrorString(IcicleError_t error)
@@ -25,9 +25,9 @@ std::string inline IcicleGetErrorString(IcicleError_t error)
   case IcicleError_t::MemoryAllocationError:
     return "Memory allocation error";
   case IcicleError_t::UndefinedError:
-    return "Undefined error occurred.";
+    return "Undefined error occurred";
   default:
-    return "Unknown error code.";
+    return "Unknown error code";
   }
 }
 
@@ -105,7 +105,6 @@ void inline throwIcicleCudaErr(
 void inline throwIcicleErr(
   IcicleError_t err, const char* const reason, const char* const func, const char* const file, const int line)
 {
-  // TODO: fmt::format introduced only in C++20
   std::string err_msg =
     std::string{IcicleGetErrorString(err)} + " : by: " + func + " at: " + file + ":" + std::to_string(line);
   std::cerr << err_msg << std::endl; // TODO: Logging
