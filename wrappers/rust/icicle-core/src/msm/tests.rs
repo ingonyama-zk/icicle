@@ -18,7 +18,7 @@ where
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
-    let test_sizes = [1000, 1 << 18];
+    let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
     let mut msm_results = DeviceSlice::cuda_malloc(1).unwrap();
     for test_size in test_sizes {
         let points = C::generate_random_affine_points(test_size);

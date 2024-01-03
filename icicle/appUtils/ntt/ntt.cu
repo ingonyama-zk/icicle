@@ -405,7 +405,7 @@ namespace ntt {
         cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
 
       Domain<S>::max_size = n - 1;
-      cudaStreamSynchronize(ctx.stream);
+      CHK_IF_RETURN(cudaStreamSynchronize(ctx.stream));
     }
 
     return CHK_LAST();
@@ -420,8 +420,8 @@ namespace ntt {
     int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
-    bool is_input_on_device = config.are_inputs_on_device; // TODO: unify name to is_
-    bool is_output_on_device = config.are_outputs_on_device;
+    bool are_inputs_on_device = config.are_inputs_on_device; // TODO: unify name to is_
+    bool are_outputs_on_device = config.are_outputs_on_device;
 
     S* coset = nullptr;
     int coset_index = 0;
@@ -435,20 +435,20 @@ namespace ntt {
       for (int i = 1; i < size; i++) {
         h_coset.push_back(h_coset.at(i - 1) * coset_gen);
       }
-      cudaMallocAsync(&coset, size * sizeof(S), stream);
-      cudaMemcpyAsync(coset, &h_coset.front(), size * sizeof(S), cudaMemcpyHostToDevice, stream);
+      CHK_IF_RETURN(cudaMallocAsync(&coset, size * sizeof(S), stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(coset, &h_coset.front(), size * sizeof(S), cudaMemcpyHostToDevice, stream));
       h_coset.clear();
     }
 
     E* d_input;
-    if (is_input_on_device) {
+    if (are_inputs_on_device) {
       d_input = input;
     } else {
       CHK_IF_RETURN(cudaMallocAsync(&d_input, input_size_bytes, stream));
       CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
     }
     E* d_output;
-    if (is_output_on_device) {
+    if (are_outputs_on_device) {
       d_output = output;
     } else {
       CHK_IF_RETURN(cudaMallocAsync(&d_output, input_size_bytes, stream));
@@ -475,12 +475,12 @@ namespace ntt {
       reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
       dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
 
-    if (!is_output_on_device)
+    if (!are_outputs_on_device)
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
     if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
-    if (!is_input_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));
-    if (!is_output_on_device) CHK_IF_RETURN(cudaFreeAsync(d_output, stream));
+    if (!are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));
+    if (!are_outputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_output, stream));
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
 
     return CHK_LAST();

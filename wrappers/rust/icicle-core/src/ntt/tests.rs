@@ -58,7 +58,7 @@ where
         // if we simply transmute arkworks types, we'll get scalars in Montgomery format
         let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const _) };
 
-        let config = get_default_ntt_config::<F>();
+        let config = get_default_ntt_config();
         let mut ntt_result = vec![F::zero(); test_size];
         ntt(&scalars_mont, NTTDir::kForward, &config, &mut ntt_result).unwrap();
         assert_ne!(ntt_result, scalars_mont);
@@ -99,7 +99,7 @@ where
             .map(|v| v.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();
 
-        let mut config = get_default_ntt_config::<F>();
+        let mut config = get_default_ntt_config();
         config.ordering = Ordering::kNR;
         let mut ntt_result = vec![F::zero(); test_size];
         ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result[..small_size]).unwrap();
@@ -169,7 +169,7 @@ where
                 .map(|v| F::ArkEquivalent::from_le_bytes_mod_order(&v.to_bytes_le()))
                 .collect::<Vec<F::ArkEquivalent>>();
 
-            let mut config = get_default_ntt_config::<F>();
+            let mut config = get_default_ntt_config();
             config.ordering = Ordering::kNR;
             config.coset_gen = F::from_ark(coset_gen);
             let mut ntt_result = vec![F::zero(); test_size];
@@ -205,7 +205,7 @@ where
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
         let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-        let mut config = get_default_ntt_config::<F>();
+        let mut config = get_default_ntt_config();
         for batch_size in batch_sizes {
             let scalars: Vec<F> = F::Config::generate_random(test_size * batch_size);
 
@@ -246,7 +246,7 @@ where
     for test_size in test_sizes {
         let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
         let stream = CudaStream::create().unwrap();
-        let mut config = get_default_ntt_config::<F>();
+        let mut config = get_default_ntt_config();
         for batch_size in batch_sizes {
             let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
             let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
