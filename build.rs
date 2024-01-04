@@ -21,7 +21,7 @@ fn main() {
 
     let target_profile: &str = if profile == "release" { "Release" } else { "Debug" };
 
-    cmake.define("CMAKE_BUILD_TYPE", target_profile);
+    cmake.define("CMAKE_BUILD_TYPE", "Release");
 
     if cfg!(feature = "g2") {
         cmake.define("G2_DEFINED", "");
