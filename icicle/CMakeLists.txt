@@ -6,6 +6,10 @@ set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
+if(DEFINED ENV{ICICLE_PIC} OR DEFINED ICICLE_PIC)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
 # add the target cuda architectures
 # each additional architecture increases the compilation time and output file size
 if(${CMAKE_VERSION} VERSION_LESS "3.24.0")
