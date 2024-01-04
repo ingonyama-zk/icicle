@@ -1,4 +1,5 @@
 use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
 
@@ -50,7 +51,7 @@ pub enum Ordering {
  * Struct that encodes NTT parameters to be passed into the [ntt](@ref ntt) function.
  */
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NTTConfig<'a, S> {
     /** Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
     pub ctx: DeviceContext<'a>,
@@ -61,9 +62,9 @@ pub struct NTTConfig<'a, S> {
     /** Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`. */
     pub ordering: Ordering,
     /** True if inputs are on device and false if they're on host. Default value: false. */
-    pub are_inputs_on_device: bool,
+    are_inputs_on_device: bool,
     /** If true, output is preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
-    pub are_outputs_on_device: bool,
+    are_outputs_on_device: bool,
     /** Whether to run the NTT asyncronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
      *  it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
      *  function will block the current CPU thread. */
@@ -72,17 +73,38 @@ pub struct NTTConfig<'a, S> {
 
 #[doc(hidden)]
 pub trait NTT<F: FieldImpl> {
-    fn ntt(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> IcicleResult<()>;
+    fn ntt_unchecked(
+        input: &HostOrDeviceSlice<F>,
+        dir: NTTDir,
+        cfg: &NTTConfig<F>,
+        output: &mut HostOrDeviceSlice<F>,
+    ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
-pub fn ntt<F>(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> IcicleResult<()>
+pub fn ntt<F>(
+    input: &HostOrDeviceSlice<F>,
+    dir: NTTDir,
+    cfg: &NTTConfig<F>,
+    output: &mut HostOrDeviceSlice<F>,
+) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>,
 {
-    <<F as FieldImpl>::Config as NTT<F>>::ntt(input, dir, cfg, output)
+    if input.len() != output.len() {
+        panic!(
+            "input and output lengths {}; {} do not match",
+            input.len(),
+            output.len()
+        );
+    }
+    let mut local_cfg = cfg.clone();
+    local_cfg.are_inputs_on_device = input.is_on_device();
+    local_cfg.are_outputs_on_device = output.is_on_device();
+
+    <<F as FieldImpl>::Config as NTT<F>>::ntt_unchecked(input, dir, &local_cfg, output)
 }
 
 pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
@@ -126,20 +148,19 @@ macro_rules! impl_ntt {
         }
 
         impl NTT<$field> for $field_config {
-            fn ntt(input: &[$field], dir: NTTDir, cfg: &NTTConfig<$field>, output: &mut [$field]) -> IcicleResult<()> {
-                if input.len() != output.len() {
-                    panic!("input and output lengths do not match")
-                }
-
-                //TODO: more validations for cfg
-
+            fn ntt_unchecked(
+                input: &HostOrDeviceSlice<$field>,
+                dir: NTTDir,
+                cfg: &NTTConfig<$field>,
+                output: &mut HostOrDeviceSlice<$field>,
+            ) -> IcicleResult<()> {
                 unsafe {
                     ntt_cuda(
-                        input as *const _ as *const $field,
+                        input.as_ptr(),
                         (input.len() / (cfg.batch_size as usize)) as i32,
                         dir,
                         cfg,
-                        output as *mut _ as *mut $field,
+                        output.as_mut_ptr(),
                     )
                     .wrap()
                 }

@@ -1,6 +1,7 @@
 use crate::curve::{Affine, Curve, Projective};
 use crate::error::IcicleResult;
 use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
@@ -8,7 +9,7 @@ pub mod tests;
 
 /// Struct that encodes MSM parameters to be passed into the `msm` function.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MSMConfig<'a> {
     /// Details related to the device such as its id and stream id.
     pub ctx: DeviceContext<'a>,
@@ -17,7 +18,7 @@ pub struct MSMConfig<'a> {
     /// of different points. So, if each MSM re-uses the same set of points, this variable is set equal
     /// to the MSM size. And if every MSM uses a distinct set of points, it should be set to the product of
     /// MSM size and batch_size. Default value: 0 (meaning it's equal to the MSM size).
-    pub points_size: i32,
+    points_size: i32,
 
     /// The number of extra points to pre-compute for each point. Larger values decrease the number of computations
     /// to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute).
@@ -39,23 +40,23 @@ pub struct MSMConfig<'a> {
     pub large_bucket_factor: i32,
 
     /// The number of MSMs to compute. Default value: 1.
-    pub batch_size: i32,
+    batch_size: i32,
 
     /// True if scalars are on device and false if they're on host. Default value: false.
-    pub are_scalars_on_device: bool,
+    are_scalars_on_device: bool,
 
     /// True if scalars are in Montgomery form and false otherwise. Default value: true.
     pub are_scalars_montgomery_form: bool,
 
     /// True if points are on device and false if they're on host. Default value: false.
-    pub are_points_on_device: bool,
+    are_points_on_device: bool,
 
     /// True if coordinates of points are in Montgomery form and false otherwise. Default value: true.
     pub are_points_montgomery_form: bool,
 
     /// True if the results should be on device and false if they should be on host. If set to false,
     /// `is_async` won't take effect because a synchronization is needed to transfer results to the host. Default value: false.
-    pub are_results_on_device: bool,
+    are_results_on_device: bool,
 
     /// Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly
     /// decreases parallelism, so only suitable for large batches of MSMs. Default value: false.
@@ -69,23 +70,44 @@ pub struct MSMConfig<'a> {
 
 #[doc(hidden)]
 pub trait MSM<C: Curve> {
-    fn msm(
-        scalars: &[C::ScalarField],
-        points: &[Affine<C>],
+    fn msm_unchecked(
+        scalars: &HostOrDeviceSlice<C::ScalarField>,
+        points: &HostOrDeviceSlice<Affine<C>>,
         cfg: &MSMConfig,
-        results: &mut [Projective<C>],
+        results: &mut HostOrDeviceSlice<Projective<C>>,
     ) -> IcicleResult<()>;
 
     fn get_default_msm_config() -> MSMConfig<'static>;
 }
 
 pub fn msm<C: Curve + MSM<C>>(
-    scalars: &[C::ScalarField],
-    points: &[Affine<C>],
+    scalars: &HostOrDeviceSlice<C::ScalarField>,
+    points: &HostOrDeviceSlice<Affine<C>>,
     cfg: &MSMConfig,
-    results: &mut [Projective<C>],
+    results: &mut HostOrDeviceSlice<Projective<C>>,
 ) -> IcicleResult<()> {
-    C::msm(scalars, points, cfg, results)
+    if scalars.len() % points.len() != 0 {
+        panic!(
+            "Number of points {} does not divide the number of scalars {}",
+            points.len(),
+            scalars.len()
+        );
+    }
+    if scalars.len() % results.len() != 0 {
+        panic!(
+            "Number of points {} does not divide the number of results {}",
+            points.len(),
+            results.len()
+        );
+    }
+    let mut local_cfg = cfg.clone();
+    local_cfg.points_size = points.len() as i32;
+    local_cfg.batch_size = results.len() as i32;
+    local_cfg.are_scalars_on_device = scalars.is_on_device();
+    local_cfg.are_points_on_device = points.is_on_device();
+    local_cfg.are_results_on_device = results.is_on_device();
+
+    C::msm_unchecked(scalars, points, &local_cfg, results)
 }
 
 pub fn get_default_msm_config<C: Curve + MSM<C>>() -> MSMConfig<'static> {
@@ -113,27 +135,19 @@ macro_rules! impl_msm {
         }
 
         impl MSM<$curve> for $curve {
-            fn msm(
-                scalars: &[<$curve as Curve>::ScalarField],
-                points: &[Affine<$curve>],
+            fn msm_unchecked(
+                scalars: &HostOrDeviceSlice<<$curve as Curve>::ScalarField>,
+                points: &HostOrDeviceSlice<Affine<$curve>>,
                 cfg: &MSMConfig,
-                results: &mut [Projective<$curve>],
+                results: &mut HostOrDeviceSlice<Projective<$curve>>,
             ) -> IcicleResult<()> {
-                if (cfg.points_size > 0) && (points.len() != cfg.points_size as usize) {
-                    panic!(
-                        "Number of points {} and cfg.points_size {} do not match:",
-                        points.len(),
-                        cfg.points_size
-                    );
-                }
-
                 unsafe {
                     msm_cuda(
-                        scalars as *const _ as *const <$curve as Curve>::ScalarField,
-                        points as *const _ as *const Affine<$curve>,
-                        (scalars.len() / (cfg.batch_size as usize)) as i32,
+                        scalars.as_ptr(),
+                        points.as_ptr(),
+                        (scalars.len() / results.len()) as i32,
                         cfg,
-                        results as *mut _ as *mut Projective<$curve>,
+                        results.as_mut_ptr(),
                     )
                     .wrap()
                 }
