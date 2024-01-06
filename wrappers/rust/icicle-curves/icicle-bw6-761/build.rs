@@ -15,6 +15,5 @@ fn main() {
 
     println!("cargo:rustc-link-lib=ingo_bw6_761");
     println!("cargo:rustc-link-lib=stdc++");
-    // println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64");
     println!("cargo:rustc-link-lib=cudart");
 }

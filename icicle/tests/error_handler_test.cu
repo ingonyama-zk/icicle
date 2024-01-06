@@ -9,14 +9,14 @@ protected:
 
 TEST_F(IcicleErrorTest, UndefinedErrorString)
 {
-  std::string expected = "Undefined error occurred.";
+  std::string expected = "Undefined error occurred";
   EXPECT_EQ(IcicleGetErrorString(IcicleError_t::UndefinedError), expected);
 }
 
 TEST_F(IcicleErrorTest, UnknownErrorCodeString)
 {
   // Using a made-up error code to test the default case
-  std::string expected = "Unknown error code.";
+  std::string expected = "Unknown error code";
   EXPECT_EQ(IcicleGetErrorString(static_cast<IcicleError_t>(999)), expected);
 }
 

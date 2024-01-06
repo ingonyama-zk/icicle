@@ -19,7 +19,7 @@ where
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
-    let test_sizes = [1000, 1 << 18];
+    let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
     let mut msm_results = HostOrDeviceSlice::cuda_malloc(1).unwrap();
     for test_size in test_sizes {
         let points = C::generate_random_affine_points(test_size);
@@ -47,7 +47,7 @@ where
             .stream = &stream;
         cfg.is_async = true;
         cfg.are_scalars_montgomery_form = true;
-        msm::<C>(&scalars_d, &HostOrDeviceSlice::on_host(points), &cfg, &mut msm_results).unwrap();
+        msm(&scalars_d, &HostOrDeviceSlice::on_host(points), &cfg, &mut msm_results).unwrap();
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results
@@ -102,8 +102,8 @@ where
             cfg.ctx
                 .stream = &stream;
             cfg.is_async = true;
-            msm::<C>(&scalars_h, &points_h, &cfg, &mut msm_results_1).unwrap();
-            msm::<C>(&scalars_h, &points_d, &cfg, &mut msm_results_2).unwrap();
+            msm(&scalars_h, &points_h, &cfg, &mut msm_results_1).unwrap();
+            msm(&scalars_h, &points_d, &cfg, &mut msm_results_2).unwrap();
 
             let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
             let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
@@ -179,7 +179,7 @@ where
             if test_size < test_threshold {
                 cfg.bitsize = 1;
             }
-            msm::<C>(
+            msm(
                 &HostOrDeviceSlice::on_host(scalars),
                 &HostOrDeviceSlice::on_host(points),
                 &cfg,
