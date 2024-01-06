@@ -55,7 +55,7 @@ endif()
 
 project(icicle LANGUAGES CUDA CXX)
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -lineinfo")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 
@@ -68,15 +68,15 @@ if(NOT BUILD_TESTS)
     curves/bn254/msm.cu
     curves/bn254/projective.cu
     curves/bn254/ve_mod_mult.cu
-    curves/bls12_377/lde.cu
-    curves/bls12_377/msm.cu
-    curves/bls12_377/projective.cu
-    curves/bls12_377/ve_mod_mult.cu
-    curves/bls12_381/lde.cu
-    curves/bls12_381/msm.cu
-    curves/bls12_381/projective.cu
-    curves/bls12_381/ve_mod_mult.cu
-    curves/bls12_381/poseidon.cu
+#    curves/bls12_377/lde.cu
+#    curves/bls12_377/msm.cu
+#    curves/bls12_377/projective.cu
+#    curves/bls12_377/ve_mod_mult.cu
+#    curves/bls12_381/lde.cu
+#    curves/bls12_381/msm.cu
+#    curves/bls12_381/projective.cu
+#    curves/bls12_381/ve_mod_mult.cu
+#    curves/bls12_381/poseidon.cu
   )
 
   set_target_properties(icicle PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

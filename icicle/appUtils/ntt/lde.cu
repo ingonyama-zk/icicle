@@ -124,13 +124,40 @@ int evaluate_batch(
       cudaStreamSynchronize(memcpy_streams[i]);
       cudaStreamDestroy(memcpy_streams[i]);
     }
-  } else
+  } else {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
+    cudaEventQuery(start);
     cudaMemcpyAsync(d_out, d_coefficients, sizeof(E) * domain_size * batch_size, cudaMemcpyDeviceToDevice, stream);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float elapsed_time;
+    cudaEventElapsedTime(&elapsed_time, start, stop);
+    // printf("cudaMemcpy Time = %g ms\n", elapsed_time);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+  }
 
   if (coset) batch_vector_mult(coset_powers, d_out, domain_size, batch_size, stream);
 
   S* _null = nullptr;
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start);
+  cudaEventQuery(start);
+
   ntt_inplace_batch_template(d_out, d_domain, domain_size, batch_size, false, false, _null, stream, true);
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+  float elapsed_time;
+  cudaEventElapsedTime(&elapsed_time, start, stop);
+  // printf("ntt Time = %g ms\n", elapsed_time);
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+
   return 0;
 }
 

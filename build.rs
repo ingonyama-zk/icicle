@@ -1,4 +1,4 @@
-use std::env::{self, var};
+use std::env::{var};
 
 use cmake::Config;
 

@@ -1,3 +1,4 @@
+*.sqlite
 *.i
 *.ii
 *.gpu
@@ -15,3 +16,5 @@
 **/.DS_Store
 **/Cargo.lock
 **/icicle/build/
+*.txt
+*.out

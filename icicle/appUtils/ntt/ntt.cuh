@@ -5,9 +5,11 @@
 #include "../../utils/sharedmem.cuh"
 #include "../vector_manipulation/ve_mod_mult.cuh"
 
-const uint32_t MAX_NUM_THREADS = 512;
-const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
-const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
+//const uint32_t MAX_NUM_THREADS = 512;
+const uint32_t MAX_NUM_THREADS = 1024;
+// const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
+const uint32_t MAX_THREADS_BATCH = 1024;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
+const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 63; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
 const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
 /**
@@ -184,12 +186,16 @@ __global__ void ntt_template_kernel_shared(
   uint32_t logn)
 {
   SharedMemory<E> smem;
+  SharedMemory<S> smem_s;
   E* arr = smem.getPointer();
+  S* twiddles = smem_s.getPointer();
 
   uint32_t task = blockIdx.x;
   uint32_t loop_limit = blockDim.x;
   uint32_t chunks = n / (loop_limit * 2);
   uint32_t offset = (task / chunks) * n;
+  uint32_t elements = 1 << 2; // elements in a group
+  uint32_t groups = n / elements; // group number
   if (task < max_task) {
     // flattened loop allows parallel processing
     uint32_t l = threadIdx.x;
@@ -212,13 +218,19 @@ __global__ void ntt_template_kernel_shared(
         uint32_t oij = i + j;
         uint32_t k = oij + shift_s;
         S tw = r_twiddles[j * n_twiddles_div];
-
-        E u = s == 0 ? arr_g[offset + oij] : arr[oij];
-        E v = s == 0 ? arr_g[offset + k] : arr[k];
+        // twiddles[threadIdx.x] = r_twiddles[j * n_twiddles_div];
+        
+        // arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2] = arr_g[offset + oij];
+        // arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2 + 1] = arr_g[offset + k];
+        __shared__ E u, v;
+        u = s == 0 ? arr_g[offset + oij] : arr[oij];
+        v = s == 0 ? arr_g[offset + k] : arr[k];
+        // v = s == 0 ? arr_g[offset + oij + 1] : arr[oij + 1];
         v = tw * v;
         if (s == (logn - 1)) {
           arr_g[offset + oij] = u + v;
           arr_g[offset + k] = u - v;
+          // arr_g[offset + oij + 1] = u - v;
         } else {
           arr[oij] = u + v;
           arr[k] = u - v;
@@ -226,6 +238,35 @@ __global__ void ntt_template_kernel_shared(
 
         __syncthreads();
       }
+
+      // for(; s < logn - 1; s++){
+      //   S tw = twiddles[threadIdx.x];
+        
+      //   E u = arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2];
+      //   E v = arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2 + 1];
+      //   v = tw * v;
+      //   arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2] = u + v;
+      //   arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2 + 1] = u - v;
+      //   __syncthreads();
+      // }
+      // uint32_t ntw_i = task % chunks;
+      // uint32_t shift_s = 1 << s;
+      // uint32_t shift2_s = 1 << (s + 1);
+
+      // l = ntw_i * loop_limit + l; // to l from chunks to full
+
+      // uint32_t j = l & (shift_s - 1);               // Equivalent to: l % (1 << s)
+      // uint32_t i = ((l >> s) * shift2_s) & (n - 1); // (..) % n (assuming n is power of 2)
+      // uint32_t oij = i + j;
+      // uint32_t k = oij + shift_s;
+      // S tw = twiddles[threadIdx.x];
+      
+      // E u = arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2];
+      // E v = arr[threadIdx.x % groups * elements + threadIdx.x / groups * 2 + 1];
+      // v = tw * v;
+      // arr_g[offset + oij] = u + v;
+      // arr_g[offset + k] = u - v;
+      // __syncthreads();
     }
   }
 }
@@ -314,17 +355,47 @@ void ntt_inplace_batch_template(
                                                       // then max to allow more concurrent blocks on SM
   const int logn_shmem = is_shared_mem_enabled ? int(log(2 * num_threads) / log(2))
                                                : 0; // TODO: shared memory support only for types <= 32 bytes
-
   if (inverse) {
     if (is_shared_mem_enabled)
       ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
         d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+    cudaError_t cudaError = cudaGetLastError();
+    if(cudaError != cudaSuccess) {
+      printf("\nCUDA error: %s\n", cudaGetErrorString(cudaError));       
+      exit(1);
+    }
 
-    for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
+    // E* d_inout_original = new E[n];
+    // for (int i = 0; i < n; i++) {
+    //   d_inout_original[i] = d_inout[i];
+    // }
+    for (int s = logn_shmem; s < logn - 1; s++) // TODO: this loop also can be unrolled
     {
       ntt_template_kernel<E, S>
-        <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, false);
+        <<<num_blocks / 2, num_threads / 2, 0, stream>>>(d_inout, n / 2, d_twiddles, n / 2, total_tasks / 2, s, false);
+      ntt_template_kernel<E, S>
+        <<<num_blocks / 2, num_threads / 2, 0, stream>>>(d_inout + n / 2, n / 2, d_twiddles + n / 2, n / 2, total_tasks / 2, s, false);
+      cudaError_t cudaError = cudaGetLastError();
+      if(cudaError != cudaSuccess) {
+        printf("\nCUDA error: %s\n", cudaGetErrorString(cudaError));       
+        exit(1);
+      }
     }
+    ntt_template_kernel<E, S>
+      <<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, logn - 1, false);
+
+
+    // for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
+    // {
+    //   ntt_template_kernel<E, S>
+    //     <<<num_blocks, num_threads, 0, stream>>>(d_inout_original, n, d_twiddles, n, total_tasks, s, false);
+    // }
+    // for (int i = 0; i < n; i++) {
+    //   if (d_inout_original[i] == d_inout[i]);
+    //   else printf("\nWrong Answer\n");
+    // }
+    // printf("\nCorrect!\n");
+    // delete [] d_inout_original;
 
     if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
@@ -335,14 +406,21 @@ void ntt_inplace_batch_template(
   } else {
     if (is_coset) batch_vector_mult(coset, d_inout, n, batch_size, stream);
 
-    for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
+    ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, logn - 1, true);
+    for (int s = logn - 2; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
     {
-      ntt_template_kernel<<<num_blocks, num_threads, 0, stream>>>(d_inout, n, d_twiddles, n, total_tasks, s, true);
+      ntt_template_kernel<<<num_blocks / 2, num_threads / 2, 0, stream>>>(d_inout, n / 2, d_twiddles, n / 2, total_tasks, s, true);
+      ntt_template_kernel<<<num_blocks / 2, num_threads / 2, 0, stream>>>(d_inout + n / 2, n / 2, d_twiddles + n / 2, n / 2, total_tasks, s, true);
     }
 
     if (is_shared_mem_enabled)
       ntt_template_kernel_shared_rev<<<num_blocks, num_threads, shared_mem, stream>>>(
         d_inout, 1 << logn_shmem, d_twiddles, n, total_tasks, 0, logn_shmem);
+    cudaError_t cudaError = cudaGetLastError();
+    if(cudaError != cudaSuccess) {
+      printf("\nCUDA error: %s\n", cudaGetErrorString(cudaError));       
+      exit(1);
+    }
   }
 
   if (!is_sync_needed) return;
@@ -363,6 +441,8 @@ template <typename E, typename S>
 uint32_t ntt_end2end_batch_template(E* arr, uint32_t arr_size, uint32_t n, bool inverse, cudaStream_t stream)
 {
   int batches = int(arr_size / n);
+  printf("arr_size: %u\n", arr_size);
+  printf("n: %u\n", n);
   uint32_t logn = uint32_t(log(n) / log(2));
   uint32_t n_twiddles = n; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order.
   size_t size_E = arr_size * sizeof(E);
