@@ -1,0 +1,24 @@
+{
+    "name": "Icicle Examples - Multiply",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "workspaceMount": "source=${localWorkspaceFolder}/.,target=/icicle-example,type=bind",
+    "workspaceFolder": "/icicle-example",
+    "runArgs": [
+        "--gpus",
+        "all"
+    ],
+    "postCreateCommand": [
+        "nvidia-smi"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cmake-tools",
+				"ms-azuretools.vscode-docker",
+				"ms-vscode.cpptools-extension-pack"
+			]
+		}
+	}
+}
