@@ -43,8 +43,8 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 5;
-  int TT_LOG_SIZE = 12;
+  int NTT_LOG_SIZE = 10;
+  int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
   int INV = false;
@@ -54,7 +54,7 @@ int main(){
   test_scalar* cpuIcicle;
   uint4* cpuNew;
   uint4* cpuNew2;
-  // uint4* cpuTwiddles;
+  uint4* cpuTwiddles;
   cpuIcicle=(test_scalar*)malloc(sizeof(test_scalar)*NTT_SIZE);
   cpuNew=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2);
   cpuNew2=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2);
@@ -77,8 +77,8 @@ int main(){
   // $CUDA(cudaMalloc((void**)&gpuIntTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
-  random_samples(cpuIcicle, NTT_SIZE);
-  // incremental_values(cpuIcicle, NTT_SIZE);
+  // random_samples(cpuIcicle, NTT_SIZE);
+  incremental_values(cpuIcicle, NTT_SIZE);
   for (int i = 0; i < NTT_SIZE; i++)
   {
     cpuNew[i] = cpuIcicle[i].load_half(false);
@@ -87,12 +87,12 @@ int main(){
     cpuNew2[i] = uint4{0,0,0,0};
     cpuNew2[NTT_SIZE + i] = uint4{0,0,0,0};
   }
-  printf("input\n");
-  for(int i=0;i<NTT_SIZE;i++){
-    // if (i%16 == 0) printf("\n");
-    // std::cout <<cpuIcicle[i]<<std::endl;
-    std::cout <<cpuNew[i].w<<cpuNew[i+NTT_SIZE].w<<std::endl;
-  }
+  // printf("input\n");
+  // for(int i=0;i<NTT_SIZE;i++){
+  //   // if (i%16 == 0) printf("\n");
+  //   // std::cout <<cpuIcicle[i]<<std::endl;
+  //   std::cout <<cpuNew[i].w<<cpuNew[i+NTT_SIZE].w<<std::endl;
+  // }
 
   $CUDA(cudaMemcpy(gpuIcicle, cpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew, cpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
@@ -101,7 +101,7 @@ int main(){
   printf("finished generating twiddles\n");
   // generate_internal_twiddles<<<1,1>>>(gpuIntTwiddles);
   cudaDeviceSynchronize();
-  printf("cuda err %d\n",cudaGetLastError());
+  printf("cuda err tw %d\n",cudaGetLastError());
 
   #ifdef PERFORMANCE
   $CUDA(cudaEventCreate(&icicle_start));
@@ -136,9 +136,10 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
-  // if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
   new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
   // if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/5);
   printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
@@ -150,7 +151,7 @@ int main(){
   $CUDA(cudaMemcpy(cpuIcicle, gpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyDeviceToHost));
   $CUDA(cudaMemcpy(cpuNew, gpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
   $CUDA(cudaMemcpy(cpuNew2, gpuNew2, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
-  // $CUDA(cudaMemcpy(cpuTwiddles, gpuTwiddles, sizeof(uint4)*NTT_SIZE*2*64, cudaMemcpyDeviceToHost));
+  // $CUDA(cudaMemcpy(cpuTwiddles, gpuTwiddles, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
   // for (int i = 0; i < NTT_SIZE; i++)
   // {
   //   test_scalar new_temp;
@@ -170,9 +171,12 @@ int main(){
     icicle_temp = cpuIcicle[i];
     // new_temp.store_half(cpuTwiddles[2*64*64*64 + i], false);
     // new_temp.store_half(cpuTwiddles[2*64*64*64 + i+64*NTT_SIZE], true);
-    new_temp.store_half(cpuNew[i], false);
-    new_temp.store_half(cpuNew[i+NTT_SIZE], true);
+    // new_temp.store_half(cpuTwiddles[i], false);
+    // new_temp.store_half(cpuTwiddles[i+NTT_SIZE], true);
+    new_temp.store_half(cpuNew2[i], false);
+    new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
     // if (i%(64*64) < 64*2) if (i%64 == 0) printf("%d\n",i/64);
+    if (i%32 == 0) printf("%d\n",i/32);
     // if (icicle_temp != test_scalar::zero()){
     if (icicle_temp != new_temp){
       success = false;
