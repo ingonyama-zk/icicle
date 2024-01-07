@@ -33,11 +33,12 @@ struct stage_metadata
   // uint32_t stage_num;
   // uint32_t data_stride;
   uint32_t th_stride;
+  uint32_t ntt_block_size;
   uint32_t ntt_block_id;
   uint32_t ntt_inp_id;
-  uint32_t ntt_meta_block_size;
-  uint32_t ntt_meta_block_id;
-  uint32_t ntt_meta_inp_id;
+  // uint32_t ntt_meta_block_size;
+  // uint32_t ntt_meta_block_id;
+  // uint32_t ntt_meta_inp_id;
 };
 
 class NTTEngine32 {
@@ -216,9 +217,133 @@ class NTTEngine32 {
 
 };  
 
-__device__ uint32_t LOW_W_OFFSETS[4] = {0, 2<<12, (2<<12) + (2<<18), (2<<12) + (2<<18) + (2<<24)};
-__device__ uint32_t HIGH_W_OFFSETS[4] = {1<<12, (2<<12) + (1<<18), (2<<12) + (2<<18) + (1<<24), (2<<12) + (2<<18) + (2<<24) + (1<<30)};
+uint32_t STAGE_SIZES_HOST[31][5] = {{0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {5,0,0,0,0}, //5
+                              {6,0,0,0,0}, //6
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {5,5,0,0,0}, //10
+                              {6,5,0,0,0}, //11
+                              {6,6,0,0,0}, //12
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {6,6,6,0,0}, //18
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {6,6,6,6,0}, //24
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {6,6,6,6,6}}; //30
 
+__device__ uint32_t STAGE_SIZES_DEVICE[31][5] = {{0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {5,0,0,0,0}, //5
+                              {6,0,0,0,0}, //6
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {5,5,0,0,0}, //10
+                              {6,5,0,0,0}, //11
+                              {6,6,0,0,0}, //12
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {6,6,6,0,0}, //18
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {6,6,6,6,0}, //24
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {6,6,6,6,6}}; //30
+// __device__ uint32_t LOW_W_OFFSETS[4] = {0, 2<<12, (2<<12) + (2<<18), (2<<12) + (2<<18) + (2<<24)};
+// __device__ uint32_t HIGH_W_OFFSETS[4] = {1<<12, (2<<12) + (1<<18), (2<<12) + (2<<18) + (1<<24), (2<<12) + (2<<18) + (2<<24) + (1<<30)};
+__device__ uint32_t LOW_W_OFFSETS[31][5] = {{0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0}, //5
+                              {0,0,0,0,0}, //6
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0}, //10
+                              {0,0,0,0,0}, //11
+                              {0,0,0,0,0}, //12
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,2<<12,0,0}, //18
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,2<<12,(2<<12)+(2<<18),0}, //24
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,2<<12,(2<<12)+(2<<18),(2<<12)+(2<<18)+(2<<24)}}; //30
+__device__ uint32_t HIGH_W_OFFSETS[31][5] = {{0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0}, //5
+                              {0,0,0,0,0}, //6
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,1<<10,0,0,0}, //10
+                              {0,1<<11,0,0,0}, //11
+                              {0,1<<12,0,0,0}, //12
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,1<<12,(2<<12)+(1<<18),0,0}, //18
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<24),0}, //24
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,0,0,0,0},
+                              {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<24),(2<<12)+(2<<18)+(2<<24)+(1<<30)}}; //30
 
 class NTTEngine {
   public:
@@ -315,7 +440,7 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
   // }
 
   // __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t block_offset, uint32_t stride, uint32_t high_bits_offset) {
-  __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t stage_num) {
+  __device__ __forceinline__ void loadExternalTwiddles(uint4* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t log_size, uint32_t stage_num) {
     
     // uint32_t extra_tw = tw_log_size - log_size;
     // tw_stride = (tw_stride << 6);
@@ -342,9 +467,55 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     for(uint32_t i=0;i<8;i++) {
       // WE[i].store_half(data[8*i*max_stride], false);
       // WE[i].store_half(data[8*i*max_stride + max_stride*64], true);
-      WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[stage_num-1]], false);
-      WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[stage_num-1]], true);
+      WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[log_size][stage_num]], false);
+      WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[log_size][stage_num]], true);
     }
+    // #pragma unroll
+    // for(uint32_t i=0;i<7;i++) {
+    //   WI[i].store_half(data[8*i*stride], false);
+    //   WI[i].store_half(data[8*i*stride + high_bits_offset], true);
+    // }
+  }
+
+  __device__ __forceinline__ void loadExternalTwiddles32(uint4* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t log_size, uint32_t stage_num) {
+    
+    // uint32_t extra_tw = tw_log_size - log_size;
+    // tw_stride = (tw_stride << 6);
+    // int max_stride = 64*64*64;
+
+    // data += max_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id%tw_stride)*(max_stride/tw_stride);
+    data += tw_stride*s_meta.ntt_inp_id*2 + s_meta.ntt_block_id%tw_stride;
+    // if (tw_stride == max_stride){
+      // data += (s_meta.ntt_meta_inp_id*blockDim.x) % (s_meta.ntt_meta_block_size*blockDim.x*blockDim.x);
+      // tw_stride = (tw_stride << extra_tw);
+      // data += 8 * (blockIdx.x & 0x7) + (threadIdx.x & 0x7) + tw_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    // }
+    // else {
+    //   data += s_meta.ntt_meta_inp_id*(max_stride/tw_stride) + (s_meta.ntt_block_id%64)*max_stride;
+      // data += (s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id) % (s_meta.ntt_meta_block_size*blockDim.x);
+      // data += (1<<extra_tw) * 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + (1<<extra_tw) * 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    // }
+
+    // data += blockIdx.x*64*64*8 + (threadIdx.x & 0x7) + 64*64 * (threadIdx.x >> 3);
+    // stride = 1;
+    #pragma unroll
+    for(uint32_t j=0;j<2;j++) {
+      #pragma unroll
+      for(uint32_t i=0;i<4;i++) {
+        // data[(8*i+j)*data_stride] = X[4*j+i].load_half(false);
+        // data[(8*i+j)*data_stride + (1<<log_size)] = X[4*j+i].load_half(true);
+        WE[4*j+i].store_half(data[(8*i+j)*tw_stride + LOW_W_OFFSETS[log_size][stage_num]], false);
+        WE[4*j+i].store_half(data[(8*i+j)*tw_stride + HIGH_W_OFFSETS[log_size][stage_num]], true);
+      }
+    }
+    
+    // #pragma unroll
+    // for(uint32_t i=0;i<8;i++) {
+    //   // WE[i].store_half(data[8*i*max_stride], false);
+    //   // WE[i].store_half(data[8*i*max_stride + max_stride*64], true);
+    //   WE[i].store_half(data[8*i*tw_stride + LOW_W_OFFSETS[log_size][stage_num]], false);
+    //   WE[i].store_half(data[8*i*tw_stride + HIGH_W_OFFSETS[log_size][stage_num]], true);
+    // }
     // #pragma unroll
     // for(uint32_t i=0;i<7;i++) {
     //   WI[i].store_half(data[8*i*stride], false);
@@ -356,11 +527,11 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
   __device__ __forceinline__ void loadGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
     if (strided){
-      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*blockDim.x;
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*s_meta.ntt_block_size;
       // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
-      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id;
+      data += s_meta.ntt_block_id*s_meta.ntt_block_size + s_meta.ntt_inp_id;
       // data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
 
@@ -370,13 +541,13 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
       X[i].store_half(data[s_meta.th_stride*i*data_stride], false);
       X[i].store_half(data[s_meta.th_stride*i*data_stride + (1<<log_size)], true);
     }
-    if (threadIdx.x == 0){
-    for(uint32_t i=0;i<8;i++) {
-      printf("%d", data[s_meta.th_stride*i*data_stride].w);
-      printf("%d", data[s_meta.th_stride*i*data_stride+ (1<<log_size)].w);
-      printf("\n");
-    }
-    }
+    // if (threadIdx.x == 0){
+    // for(uint32_t i=0;i<8;i++) {
+    //   printf("%d", data[s_meta.th_stride*i*data_stride].w);
+    //   printf("%d", data[s_meta.th_stride*i*data_stride+ (1<<log_size)].w);
+    //   printf("\n");
+    // }
+    // }
     // #pragma unroll
     // for(uint32_t i=0;i<8;i++) {
     //   WE[i].store_half(data[8*i*stride], false);
@@ -396,11 +567,11 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
   __device__ __forceinline__ void storeGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
     if (strided){
-      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*blockDim.x;
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*s_meta.ntt_block_size;
       // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
-      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id;
+      data += s_meta.ntt_block_id*s_meta.ntt_block_size + s_meta.ntt_inp_id;
       // data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     // if (blockIdx.x<2){
@@ -435,11 +606,11 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
    __device__ __forceinline__ void storeGlobalData32(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
     if (strided){
-      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*blockDim.x;
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id*2 + (s_meta.ntt_block_id/data_stride)*data_stride*s_meta.ntt_block_size;
       // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     else {
-      data += s_meta.ntt_block_id*blockDim.x + s_meta.ntt_inp_id*2;
+      data += s_meta.ntt_block_id*s_meta.ntt_block_size + s_meta.ntt_inp_id*2;
       // data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
     }
     // if (blockIdx.x<2){
@@ -451,14 +622,14 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     for(uint32_t j=0;j<2;j++) {
       #pragma unroll
       for(uint32_t i=0;i<4;i++) {
-        // if (data_stride == 64){
+        // if (data_stride == 32){
         //   // if (i==0){
         //   //   data[8*i*data_stride] = uint4{2,0,0,0};
         //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
         //   //   continue;
         //   // }
-        //   data[8*i*data_stride] = WE[i].load_half(false);
-        //   data[8*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
+        //   data[(8*i+j)*data_stride] = WE[4*j+i].load_half(false);
+        //   data[(8*i+j)*data_stride + (1<<log_size)] = WE[4*j+i].load_half(true);
         // }
         // else{
           data[(8*i+j)*data_stride] = X[4*j+i].load_half(false);
@@ -466,29 +637,29 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
         // }
       }
     }
-    if (threadIdx.x == 0){
-      #pragma unroll
-    for(uint32_t j=0;j<2;j++) {
-      #pragma unroll
-      for(uint32_t i=0;i<4;i++) {
-        // if (data_stride == 64){
-        //   // if (i==0){
-        //   //   data[8*i*data_stride] = uint4{2,0,0,0};
-        //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
-        //   //   continue;
-        //   // }
-        //   data[8*i*data_stride] = WE[i].load_half(false);
-        //   data[8*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
-        // }
-        // else{
-          printf("%d",X[4*j+i].load_half(false).w);
-          printf("%d",X[4*j+i].load_half(true).w);
-          printf("\n");
-          // data[(8*i+j)*data_stride + (1<<log_size)] = X[4*j+i].load_half(true);
-        // }
-      }
-    }
-    }
+    // if (threadIdx.x == 0){
+    //   #pragma unroll
+    // for(uint32_t j=0;j<2;j++) {
+    //   #pragma unroll
+    //   for(uint32_t i=0;i<4;i++) {
+    //     // if (data_stride == 64){
+    //     //   // if (i==0){
+    //     //   //   data[8*i*data_stride] = uint4{2,0,0,0};
+    //     //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
+    //     //   //   continue;
+    //     //   // }
+    //     //   data[8*i*data_stride] = WE[i].load_half(false);
+    //     //   data[8*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
+    //     // }
+    //     // else{
+    //       printf("%d",X[4*j+i].load_half(false).w);
+    //       printf("%d",X[4*j+i].load_half(true).w);
+    //       printf("\n");
+    //       // data[(8*i+j)*data_stride + (1<<log_size)] = X[4*j+i].load_half(true);
+    //     // }
+    //   }
+    // }
+    // }
       // data[16*i*stride] = zero;
     // #pragma unroll
     // for(uint32_t i=0;i<16;i++) 
@@ -1259,6 +1430,7 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
 
   __device__ __forceinline__ void SharedData32Columns8(uint4 *shmem, bool store, bool high_bits, bool stride) {
     // const uint32_t stride=blockDim.x+1;
+    // if (threadIdx.x!=16) return;
 
     uint32_t ntt_id = stride? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = stride? threadIdx.x >> 4 : threadIdx.x & 0x3;
@@ -1271,6 +1443,8 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
+      // printf("fgdf %d, ",ntt_id * 32 + i * 4 + column_id);
+      // printf("fgdf %d, ",X[i]);
       // if (threadIdx.x==0) printf("ntt id %d row id %d col id %d shmem add %d \n", ntt_id, row_id, column_id, ntt_id * 256 + row_id * 16 + column_id);
       if (store) {
         shmem[ntt_id * 32 + i * 4 + column_id] = X[i].load_half(high_bits);           // note transpose here
