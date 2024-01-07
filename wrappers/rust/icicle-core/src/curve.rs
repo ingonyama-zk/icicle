@@ -1,10 +1,12 @@
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
-use crate::traits::FieldImpl;
+use crate::traits::{FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
+use icicle_cuda_runtime::error::CudaError;
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use std::fmt::Debug;
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
@@ -19,12 +21,10 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     fn generate_random_projective_points(size: usize) -> Vec<Projective<Self>>;
     #[doc(hidden)]
     fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
-    fn scalar_from_montgomery(scalars: &mut [Self::ScalarField]);
-    fn scalar_to_montgomery(scalars: &mut [Self::ScalarField]);
-    fn affine_from_montgomery(points: &mut [Affine<Self>]);
-    fn affine_to_montgomery(points: &mut [Affine<Self>]);
-    fn projective_from_montgomery(points: &mut [Projective<Self>]);
-    fn projective_to_montgomery(points: &mut [Projective<Self>]);
+    #[doc(hidden)]
+    fn convert_affine_montgomery(points: &mut HostOrDeviceSlice<Affine<Self>>, is_into: bool) -> CudaError;
+    #[doc(hidden)]
+    fn convert_projective_montgomery(points: &mut HostOrDeviceSlice<Projective<Self>>, is_into: bool) -> CudaError;
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -117,6 +117,26 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
     }
 }
 
+impl<C: Curve> MontgomeryConvertible for Affine<C> {
+    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
+        C::convert_affine_montgomery(values, true)
+    }
+
+    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
+        C::convert_affine_montgomery(values, false)
+    }
+}
+
+impl<C: Curve> MontgomeryConvertible for Projective<C> {
+    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
+        C::convert_projective_montgomery(values, true)
+    }
+
+    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
+        C::convert_projective_montgomery(values, false)
+    }
+}
+
 #[cfg(feature = "arkworks")]
 impl<C: Curve> ArkConvertible for Affine<C>
 where
@@ -201,22 +221,20 @@ macro_rules! impl_curve {
             fn generate_projective_points(points: *mut G1Projective, size: usize);
             #[link_name = concat!($curve_prefix, "GenerateAffinePoints")]
             fn generate_affine_points(points: *mut G1Affine, size: usize);
-            #[link_name = concat!($curve_prefix, "ScalarConvertMontgomery")]
-            fn scalar_convert_montgomery(
-                points: *mut $scalar_field,
+            #[link_name = concat!($curve_prefix, "AffineConvertMontgomery")]
+            fn _convert_affine_montgomery(
+                points: *mut G1Affine,
                 size: usize,
                 is_into: bool,
                 ctx: *const DeviceContext,
-            );
-            #[link_name = concat!($curve_prefix, "AffineConvertMontgomery")]
-            fn affine_convert_montgomery(points: *mut G1Affine, size: usize, is_into: bool, ctx: *const DeviceContext);
+            ) -> CudaError;
             #[link_name = concat!($curve_prefix, "ProjectiveConvertMontgomery")]
-            fn projective_convert_montgomery(
+            fn _convert_projective_montgomery(
                 points: *mut G1Projective,
                 size: usize,
                 is_into: bool,
                 ctx: *const DeviceContext,
-            );
+            ) -> CudaError;
         }
 
         impl Curve for $curve {
@@ -243,67 +261,23 @@ macro_rules! impl_curve {
                 res
             }
 
-            fn scalar_from_montgomery(scalars: &mut [$scalar_field]) {
+            fn convert_affine_montgomery(points: &mut HostOrDeviceSlice<G1Affine>, is_into: bool) -> CudaError {
                 unsafe {
-                    scalar_convert_montgomery(
-                        scalars as *mut _ as *mut $scalar_field,
-                        scalars.len(),
-                        false,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
-                    )
-                }
-            }
-
-            fn scalar_to_montgomery(scalars: &mut [$scalar_field]) {
-                unsafe {
-                    scalar_convert_montgomery(
-                        scalars as *mut _ as *mut $scalar_field,
-                        scalars.len(),
-                        true,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
-                    )
-                }
-            }
-
-            fn affine_from_montgomery(points: &mut [G1Affine]) {
-                unsafe {
-                    affine_convert_montgomery(
-                        points as *mut _ as *mut G1Affine,
+                    _convert_affine_montgomery(
+                        points.as_mut_ptr(),
                         points.len(),
-                        false,
+                        is_into,
                         &get_default_device_context() as *const _ as *const DeviceContext,
                     )
                 }
             }
 
-            fn affine_to_montgomery(points: &mut [G1Affine]) {
+            fn convert_projective_montgomery(points: &mut HostOrDeviceSlice<G1Projective>, is_into: bool) -> CudaError {
                 unsafe {
-                    affine_convert_montgomery(
-                        points as *mut _ as *mut G1Affine,
+                    _convert_projective_montgomery(
+                        points.as_mut_ptr(),
                         points.len(),
-                        true,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
-                    )
-                }
-            }
-
-            fn projective_from_montgomery(points: &mut [G1Projective]) {
-                unsafe {
-                    projective_convert_montgomery(
-                        points as *mut _ as *mut G1Projective,
-                        points.len(),
-                        false,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
-                    )
-                }
-            }
-
-            fn projective_to_montgomery(points: &mut [G1Projective]) {
-                unsafe {
-                    projective_convert_montgomery(
-                        points as *mut _ as *mut G1Projective,
-                        points.len(),
-                        true,
+                        is_into,
                         &get_default_device_context() as *const _ as *const DeviceContext,
                     )
                 }
@@ -344,6 +318,11 @@ macro_rules! impl_curve_tests {
         #[test]
         fn test_ark_point_convert() {
             check_ark_point_convert::<$curve>()
+        }
+
+        #[test]
+        fn test_points_convert_montgomery() {
+            check_points_convert_montgomery::<$curve>()
         }
     };
 }

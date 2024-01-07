@@ -3,7 +3,7 @@
 #include "mont.cuh"
 
 namespace mont {
-  extern "C" int
+  extern "C" cudaError_t
   ScalarConvertMontgomery(curve_config::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
   {
     if (is_into) {
@@ -13,7 +13,7 @@ namespace mont {
     }
   }
 
-  extern "C" int
+  extern "C" cudaError_t
   AffineConvertMontgomery(curve_config::affine_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
   {
     if (is_into) {
@@ -23,7 +23,7 @@ namespace mont {
     }
   }
 
-  extern "C" int ProjectiveConvertMontgomery(
+  extern "C" cudaError_t ProjectiveConvertMontgomery(
     curve_config::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
   {
     if (is_into) {
