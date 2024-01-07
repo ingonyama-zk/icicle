@@ -1,0 +1,21 @@
+{
+    "name": "Icicle Examples",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "runArgs": [
+        "--gpus",
+        "all"
+    ],
+    "postCreateCommand": [
+        "nvidia-smi"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cmake-tools",
+				"ms-python.python"
+			]
+		}
+	}
+}
