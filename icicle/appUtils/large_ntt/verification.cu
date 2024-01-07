@@ -43,7 +43,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 10;
+  int NTT_LOG_SIZE = 17;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
@@ -115,8 +115,9 @@ int main(){
   int count = 100;
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < count; i++){
     new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
+  }
     // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   $CUDA(cudaEventRecord(new_stop, 0));
   $CUDA(cudaDeviceSynchronize());
@@ -136,10 +137,10 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
   #else
-  if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE);
   new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
   // if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
-  if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/5);
+  if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE);
   printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
@@ -176,15 +177,15 @@ int main(){
     new_temp.store_half(cpuNew2[i], false);
     new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
     // if (i%(64*64) < 64*2) if (i%64 == 0) printf("%d\n",i/64);
-    if (i%32 == 0) printf("%d\n",i/32);
+    // if (i%64 == 0) printf("%d\n",i/64);
     // if (icicle_temp != test_scalar::zero()){
     if (icicle_temp != new_temp){
       success = false;
-      std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      // std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
       // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
     }
     else{
-      std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+      // std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
       // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
     }
     // }
