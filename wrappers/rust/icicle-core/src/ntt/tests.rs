@@ -115,9 +115,14 @@ where
         // back to non-coset NTT
         config.coset_gen = F::one();
         scalars.resize(test_size, F::zero());
-        ntt(&HostOrDeviceSlice::on_host(scalars.clone()), NTTDir::kForward, &config, &mut ntt_large_result).unwrap();
-        assert_eq!(*ntt_result_1.as_slice(), 
-        ntt_large_result.as_slice()[..small_size]);
+        ntt(
+            &HostOrDeviceSlice::on_host(scalars.clone()),
+            NTTDir::kForward,
+            &config,
+            &mut ntt_large_result,
+        )
+        .unwrap();
+        assert_eq!(*ntt_result_1.as_slice(), ntt_large_result.as_slice()[..small_size]);
         assert_eq!(*ntt_result_2.as_slice(), ntt_large_result.as_slice()[small_size..]);
 
         let mut ark_large_scalars = ark_scalars.clone();
@@ -141,7 +146,8 @@ where
         assert_eq!(*intt_result.as_slice(), scalars[..small_size]);
 
         ark_small_domain.ifft_in_place(&mut ark_scalars);
-        let intt_result_as_ark = intt_result.as_slice()
+        let intt_result_as_ark = intt_result
+            .as_slice()
             .iter()
             .map(|p| p.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();

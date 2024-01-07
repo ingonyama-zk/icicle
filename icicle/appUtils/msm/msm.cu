@@ -178,9 +178,6 @@ namespace msm {
     }
 
     // this kernel adds up the points in each bucket
-    //  __global__ void accumulate_buckets_kernel(P *__restrict__ buckets, unsigned *__restrict__ bucket_offsets,
-    //   unsigned *__restrict__ bucket_sizes, unsigned *__restrict__ single_bucket_indices, unsigned *__restrict__
-    //   point_indices, A *__restrict__ points, unsigned nof_buckets, unsigned batch_size, unsigned msm_idx_shift){
     template <typename P, typename A>
     __global__ void accumulate_buckets_kernel(
       P* __restrict__ buckets,
@@ -376,8 +373,24 @@ namespace msm {
       } else {
         d_points = points;
       }
-      if (are_scalars_montgomery_form) CHK_IF_RETURN(mont::FromMontgomery(d_scalars, size, stream));
-      if (are_points_montgomery_form) CHK_IF_RETURN(mont::FromMontgomery(d_points, size, stream_points));
+      if (are_scalars_montgomery_form) {
+        if (are_scalars_on_device) {
+          S* d_mont_scalars;
+          CHK_IF_RETURN(cudaMallocAsync(&d_mont_scalars, sizeof(S) * size, stream));
+          CHK_IF_RETURN(mont::FromMontgomery(d_scalars, size, stream, d_mont_scalars));
+          d_scalars = d_mont_scalars;
+        } else
+          CHK_IF_RETURN(mont::FromMontgomery(d_scalars, size, stream, d_scalars));
+      }
+      if (are_points_montgomery_form) {
+        if (are_points_on_device) {
+          A* d_mont_points;
+          CHK_IF_RETURN(cudaMallocAsync(&d_mont_points, sizeof(A) * size, stream_points));
+          CHK_IF_RETURN(mont::FromMontgomery(d_points, size, stream_points, d_mont_points));
+          d_points = d_mont_points;
+        } else
+          CHK_IF_RETURN(mont::FromMontgomery(d_points, size, stream_points, d_points));
+      }
       cudaEvent_t event_points_uploaded;
       if (!are_points_on_device || are_points_montgomery_form) {
         CHK_IF_RETURN(cudaEventCreateWithFlags(&event_points_uploaded, cudaEventDisableTiming));
@@ -776,8 +789,24 @@ namespace msm {
       } else {
         d_points = points;
       }
-      if (are_scalars_montgomery_form) mont::FromMontgomery(d_scalars, total_size, stream);
-      if (are_points_montgomery_form) mont::FromMontgomery(d_points, points_size, stream_points);
+      if (are_scalars_montgomery_form) {
+        if (are_scalars_on_device) {
+          S* d_mont_scalars;
+          cudaMallocAsync(&d_mont_scalars, sizeof(S) * total_size, stream);
+          mont::FromMontgomery(d_scalars, total_size, stream, d_mont_scalars);
+          d_scalars = d_mont_scalars;
+        } else
+          mont::FromMontgomery(d_scalars, total_size, stream, d_scalars);
+      }
+      if (are_points_montgomery_form) {
+        if (are_points_on_device) {
+          A* d_mont_points;
+          cudaMallocAsync(&d_mont_points, sizeof(A) * points_size, stream_points);
+          mont::FromMontgomery(d_points, points_size, stream_points, d_mont_points);
+          d_points = d_mont_points;
+        } else
+          mont::FromMontgomery(d_points, points_size, stream_points, d_points);
+      }
       cudaEvent_t event_points_uploaded;
       if (!are_points_on_device || are_points_montgomery_form) {
         cudaEventCreateWithFlags(&event_points_uploaded, cudaEventDisableTiming);

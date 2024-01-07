@@ -48,6 +48,12 @@ where
         cfg.is_async = true;
         cfg.are_scalars_montgomery_form = true;
         msm(&scalars_d, &HostOrDeviceSlice::on_host(points), &cfg, &mut msm_results).unwrap();
+        // need to make sure that scalars_d weren't mutated by the previous call
+        let mut scalars_mont_after = vec![C::ScalarField::zero(); test_size];
+        scalars_d
+            .copy_to_host_async(&mut scalars_mont_after, &stream)
+            .unwrap();
+        assert_eq!(scalars_mont, scalars_mont_after);
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results
