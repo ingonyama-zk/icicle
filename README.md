@@ -2,11 +2,11 @@
  **<div align="center">ICICLE is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
 
                   
-![image (4)](https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png)
-
+<p align="center">
+  <img alt="ICICLE" width="300" height="300" src="https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png"/>
+</p>
 
 <p align="center">
-  <img src="https://github.com/ingonyama-zk/icicle/actions/workflows/main-build.yml/badge.svg?event=push" alt="Build status">
   <a href="https://discord.gg/EVVXTdt6DF">
     <img src="https://img.shields.io/discord/1063033227788423299?logo=discord" alt="Chat with us on Discord">
   </a>
@@ -19,31 +19,22 @@
 
 Zero Knowledge Proofs (ZKPs) are considered one of the greatest achievements of modern cryptography. Accordingly, ZKPs are expected to disrupt a number of industries and will usher in an era of trustless and privacy preserving services and infrastructure.
 
-If we want ZK hardware today we have FPGAs or GPUs which are relatively inexpensive. However, the biggest selling point of GPUs is the software; we talk in particular about CUDA, which makes it easy to write code running on Nvidia GPUs, taking advantage of their highly parallel architecture. Together with the widespread availability of these devices, if we can get GPUs to work on ZK workloads, then we have made a giant step towards accessible and efficient ZK provers.
+We believe GPUs are as important for ZK as for AI.
 
-## Zero Knowledge on GPU
+- GPUs are a perfect match for ZK compute - around 97% of ZK protocol runtime is parallel by nature.
+- GPUs are simple for developers to use and scale compared to other hardware platforms.
+- GPUs are extremely competitive in terms of power / performance and price (3x cheaper).
+- GPUs are popular and readily available.
 
-ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE currently provides support for MSM, NTT, and ECNTT, with plans to support Hash functions soon.
+## Getting Started
 
-### Supported primitives
+ICICLE is a CUDA implementation of general functions widely used in ZKP.
 
-- Fields
-    - Scalars
-    - Points
-        - Projective: {x, y, z}
-        - Affine: {x, y}
-- Curves
-    - [BLS12-381]
-    - [BLS12-377]
-    - [BN254]
-    - [BW6-671]
+> [!NOTE]
+> Developers: We highly recommend reading our [documentation]
 
-## Build and usage
-
-> [!WARNING]
-> Stable versions of ICICLE and its bindings are released under versioned tags.
-> We will try our best to keep latest main stable as well but it should be considered unstable and may break at any time.
-
+> [!TIP]
+> Try out ICICLE by running some [examples] using ICICLE in C++ and our Rust bindings 
 
 ### Prerequisites
 
@@ -69,12 +60,25 @@ If you require more compute and have an interesting research project, we have [b
 ICICLE has three build systems.
 
 - [ICICLE core][ICICLE-CORE], C++ and CUDA
-- [ICICLE Rust][ICICLE-RUST] bindings
-- [ICICLE Golang][ICICLE-GO] bindings
+- [ICICLE Rust][ICICLE-RUST] bindings, requires [Rust](https://www.rust-lang.org/) version 1.70 and above
+- [ICICLE Golang][ICICLE-GO] bindings, requires [Go](https://go.dev/) version 1.20 and above
 
 ICICLE core always needs to be built as part of the other build systems as it contains the core ICICLE primitives implemented in CUDA. Reference these guides for the different build systems, [ICICLE core guide][ICICLE-CORE-README], [ICICLE Rust guide][ICICLE-RUST-README] and [ICICLE Golang guide][ICICLE-GO-README].
 
-### Docker
+### Compiling ICICLE
+
+Running ICICLE via Rust bindings is highly recommended and simple:
+- Clone this repo
+  - go to our [Rust bindings][ICICLE-RUST]
+  - Enter a [curve](./wrappers/rust/icicle-curves) implementation
+  - run `cargo build --release` to build or `cargo test -- --test-threads=1` to build and execute tests
+
+In any case you would want to compile and run core icicle c++ tests, just follow these setps:
+- Clone this repo
+  - go to [ICICLE core][ICICLE-CORE]
+  - execute the small [script](https://github.com/ingonyama-zk/icicle/tree/main/icicle#running-tests) to compile via cmake and run c++ and cuda tests
+
+## Docker
 
 We offer a simple Docker container so you can simply run ICICLE without setting everything up locally.
 
@@ -83,13 +87,9 @@ docker build -t <name_of_your_choice> .
 docker run --gpus all -it <name_of_your_choice> /bin/bash
 ```
 
-## Examples
-
-We've provided a few [examples](./examples/) using ICICLE with c++ and our rust bindings.
-
 ## Contributions
 
-Join our [Discord Server][DISCORD] and find us on the #icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
+Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
 
 ### Development Contributions
 
@@ -99,7 +99,7 @@ If you are changing code, please make sure to change your [git hooks path][HOOKS
 git config core.hooksPath ./scripts/hooks
 ```
 
-In case `clang-format` is missing on your system, you can install it using the following command:
+In case `clang-format` is missing on your system, you can install it  using the following command:
 
 ```sh
 sudo apt install clang-format
@@ -125,14 +125,11 @@ ICICLE is distributed under the terms of the MIT License.
 See [LICENSE-MIT][LMIT] for details.
 
 <!-- Begin Links -->
-[BLS12-381]: ./icicle/curves/bls12_381/supported_operations.cu
-[BLS12-377]: ./icicle/curves/bls12_377/supported_operations.cu
-[BN254]: ./icicle/curves/bn254/supported_operations.cu
-[BW6-671]: ./icicle/curves/bw6_671/supported_operations.cu
+[BLS12-381]: ./icicle/curves/
+[BLS12-377]: ./icicle/curves/
+[BN254]: ./icicle/curves/
+[BW6-671]: ./icicle/curves/
 [NVCC]: https://docs.nvidia.com/cuda/#installation-guides
-[CRV_TEMPLATE]: ./icicle/curves/curve_template/
-[CRV_CONFIG]: ./icicle/curves/index.cu
-[B_SCRIPT]: ./build.rs
 [LMIT]: ./LICENSE
 [DISCORD]: https://discord.gg/Y4SkbDf2Ff
 [googletest]: https://github.com/google/googletest/
@@ -147,6 +144,7 @@ See [LICENSE-MIT][LMIT] for details.
 [ICICLE-CORE-README]: ./icicle/README.md
 [ICICLE-RUST-README]: ./wrappers/rust/README.md
 [ICICLE-GO-README]: ./goicicle/README.md
-
+[documentation]: https://dev.ingonyama.com/icicle/overview
+[examples]: ./examples/
 
 <!-- End Links -->
