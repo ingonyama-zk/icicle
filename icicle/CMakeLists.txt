@@ -98,16 +98,10 @@ if (NOT BUILD_TESTS)
     appUtils/msm/msm.cu
     appUtils/ntt/ntt.cu
   )
-  #set_target_properties(icicle PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  #set_target_properties(icicle PROPERTIES CUDA_SEPARABLE_COMPILATION ON) #TODO: enable asap
   #set_target_properties(icicle PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
-  # # cuda_add_library(cudanet STATIC ${cu})
-  # target_link_libraries(icicle ${CUDA_LIBRARIES})
-  # target_link_libraries(icicle cudart cuda cublas curand)
-  # message(STATUS "include & link cuda")
-  # link_directories(/usr/local/cuda/lib64)
   target_compile_options(icicle PRIVATE -c)
-  # find_package(CUDA QUIET REQUIRED)
 
   add_custom_command(
     TARGET icicle
@@ -125,8 +119,6 @@ if (NOT BUILD_TESTS)
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ScalarConvertMontgomery=${CURVE}ScalarConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym AffineConvertMontgomery=${CURVE}AffineConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
     COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ProjectiveConvertMontgomery=${CURVE}ProjectiveConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
-    # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
-    # COMMAND ${CMAKE_OBJCOPY} ARGS --prefix-symbols=${CURVE}_ ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o
     COMMAND ${CMAKE_AR} ARGS -rcs ${PROJECT_BINARY_DIR}/libingo_${CURVE}.a 
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/vec_ops.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/field.cu.o
@@ -135,11 +127,6 @@ if (NOT BUILD_TESTS)
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
                                                                                  
   )
-  # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o)
-  # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o)
-  # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/lde/lde.cu.o)
-  # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o)
-  # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/utils_kernels.cu.o)
 
 else()
 
