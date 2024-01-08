@@ -38,6 +38,8 @@ namespace vec_ops {
   cudaError_t
   Mul(S* vec_a, E* vec_b, int n, bool is_on_device, bool is_montgomery, device_context::DeviceContext ctx, E* result)
   {
+    CHK_INIT_IF_RETURN();
+
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
@@ -46,34 +48,36 @@ namespace vec_ops {
     E *d_vec_b, *d_result;
     if (!is_on_device) {
       // Allocate memory on the device for the input vectors and the output vector
-      cudaMallocAsync(&d_vec_a, n * sizeof(S), ctx.stream);
-      cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_a, n * sizeof(S), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream));
 
       // Copy the input vectors and the modulus from the host to the device
-      cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream);
-      cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
     }
 
+    E* d_res = is_on_device ? result : d_result;
     // Call the kernel to perform element-wise modular multiplication
     MulKernel<<<num_blocks, num_threads, 0, ctx.stream>>>(
-      is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
-    if (is_montgomery) mont::FromMontgomery(is_on_device ? result : d_result, n, ctx.stream);
+      is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, d_res);
+    if (is_montgomery) CHK_IF_RETURN(mont::FromMontgomery(d_res, n, ctx.stream, d_res));
 
     if (!is_on_device) {
-      cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-      cudaFreeAsync(d_vec_a, ctx.stream);
-      cudaFreeAsync(d_vec_b, ctx.stream);
-      cudaFreeAsync(d_result, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_a, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_b, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_result, ctx.stream));
     }
 
-    cudaStreamSynchronize(ctx.stream);
-    return cudaSuccess;
+    return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
   }
 
   template <typename E>
   cudaError_t Add(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::DeviceContext ctx, E* result)
   {
+    CHK_INIT_IF_RETURN();
+
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
@@ -81,13 +85,13 @@ namespace vec_ops {
     E *d_vec_a, *d_vec_b, *d_result;
     if (!is_on_device) {
       // Allocate memory on the device for the input vectors and the output vector
-      cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream));
 
       // Copy the input vectors from the host to the device
-      cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
-      cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
     }
 
     // Call the kernel to perform element-wise addition
@@ -95,19 +99,20 @@ namespace vec_ops {
       is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
     if (!is_on_device) {
-      cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-      cudaFreeAsync(d_vec_a, ctx.stream);
-      cudaFreeAsync(d_vec_b, ctx.stream);
-      cudaFreeAsync(d_result, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_a, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_b, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_result, ctx.stream));
     }
 
-    cudaStreamSynchronize(ctx.stream);
-    return cudaSuccess;
+    return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
   }
 
   template <typename E>
   cudaError_t Sub(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::DeviceContext ctx, E* result)
   {
+    CHK_INIT_IF_RETURN();
+
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
@@ -115,13 +120,13 @@ namespace vec_ops {
     E *d_vec_a, *d_vec_b, *d_result;
     if (!is_on_device) {
       // Allocate memory on the device for the input vectors and the output vector
-      cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream);
-      cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_a, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_b, n * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), ctx.stream));
 
       // Copy the input vectors from the host to the device
-      cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
-      cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
     }
 
     // Call the kernel to perform element-wise subtraction
@@ -129,14 +134,13 @@ namespace vec_ops {
       is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
 
     if (!is_on_device) {
-      cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream);
-      cudaFreeAsync(d_vec_a, ctx.stream);
-      cudaFreeAsync(d_vec_b, ctx.stream);
-      cudaFreeAsync(d_result, ctx.stream);
+      CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_a, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_vec_b, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_result, ctx.stream));
     }
 
-    cudaStreamSynchronize(ctx.stream);
-    return cudaSuccess;
+    return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
   }
 
   /**

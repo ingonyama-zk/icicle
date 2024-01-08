@@ -11,26 +11,10 @@ namespace ntt {
 
   namespace {
 
-    const uint32_t MAX_NUM_THREADS = 512;
-    const uint32_t MAX_THREADS_BATCH = 512;          // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
+    const uint32_t MAX_NUM_THREADS = 512;   // TODO: hotfix - should be 1024, currently limits shared memory size
+    const uint32_t MAX_THREADS_BATCH = 512; // TODO: allows 100% occupancy for scalar NTT for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
-
-    /**
-     * Computes the twiddle factors.
-     * Outputs: d_twiddles[i] = omega^i.
-     * @param d_twiddles input empty array.
-     * @param n_twiddles number of twiddle factors.
-     * @param omega multiplying factor.
-     */
-    template <typename S>
-    __global__ void twiddle_factors_kernel(S* d_twiddles, int n_twiddles, S omega)
-    {
-      d_twiddles[0] = S::one();
-      for (int i = 0; i < n_twiddles - 1; i++) {
-        d_twiddles[i + 1] = omega * d_twiddles[i];
-      }
-    }
 
     template <typename E>
     __global__ void reverse_order_kernel(E* arr, E* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
@@ -281,7 +265,7 @@ namespace ntt {
      * @param d_output Output array
      */
     template <typename E, typename S>
-    void ntt_inplace_batch_template(
+    cudaError_t ntt_inplace_batch_template(
       E* d_input,
       int n,
       S* d_twiddles,
@@ -290,11 +274,13 @@ namespace ntt {
       int logn,
       bool inverse,
       bool ct_buttterfly,
+      S* arbitrary_coset,
       int coset_gen_index,
       cudaStream_t stream,
-      bool is_async,
       E* d_output)
     {
+      CHK_INIT_IF_RETURN();
+
       bool is_shared_mem_enabled = sizeof(E) <= MAX_SHARED_MEM_ELEMENT_SIZE;
       const int log2_shmem_elems = is_shared_mem_enabled ? int(log(int(MAX_SHARED_MEM / sizeof(E))) / log(2)) : logn;
       int num_threads = max(min(min(n / 2, MAX_THREADS_BATCH), 1 << (log2_shmem_elems - 1)), 1);
@@ -313,11 +299,12 @@ namespace ntt {
         n_twiddles = -n_twiddles;
       }
 
-      bool is_on_coset = (coset_gen_index > 0);
+      bool is_on_coset = (coset_gen_index != 0) || arbitrary_coset;
       bool direct_coset = (!inverse && is_on_coset);
       if (direct_coset)
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
-          d_input, n, batch_size, d_twiddles, coset_gen_index, n_twiddles, d_output);
+          d_input, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles, arbitrary_coset ? 1 : coset_gen_index,
+          n_twiddles, logn, ct_buttterfly, d_output);
 
       if (ct_buttterfly) {
         if (is_shared_mem_enabled)
@@ -328,8 +315,7 @@ namespace ntt {
         for (int s = logn_shmem; s < logn; s++) // TODO: this loop also can be unrolled
         {
           ntt_template_kernel<E, S><<<num_blocks, num_threads, 0, stream>>>(
-            (direct_coset && (s == 0)) ? d_input : d_output, n, d_twiddles, n_twiddles, total_tasks, s, false,
-            d_output);
+            (direct_coset || (s > 0)) ? d_output : d_input, n, d_twiddles, n_twiddles, total_tasks, s, false, d_output);
         }
       } else {
         for (int s = logn - 1; s >= logn_shmem; s--) // TODO: this loop also can be unrolled
@@ -348,15 +334,14 @@ namespace ntt {
       if (inverse) {
         if (is_on_coset)
           utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
-            d_output, n, batch_size, d_twiddles, -coset_gen_index, -n_twiddles, d_output);
+            d_output, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles,
+            arbitrary_coset ? 1 : -coset_gen_index, -n_twiddles, logn, !ct_buttterfly, d_output);
 
         utils_internal::NormalizeKernel<E, S>
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
       }
 
-      if (is_async) return;
-
-      cudaStreamSynchronize(stream);
+      return CHK_LAST();
     }
 
   } // namespace
@@ -380,7 +365,7 @@ namespace ntt {
     friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
-    friend cudaError_t NTT<U, E>(E* input, int size, bool is_inverse, NTTConfig<U>& config, E* output);
+    friend cudaError_t NTT<U, E>(E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
 
   template <typename S>
@@ -393,11 +378,20 @@ namespace ntt {
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
-    // only generate twiddles if they haven't been generated yet (TODO: thread safety)
+    CHK_INIT_IF_RETURN();
+
+    // only generate twiddles if they haven't been generated yet
+    // please note that this is not thread-safe at all,
+    // but it's a singleton that is supposed to be initialized once per program lifetime
     if (!Domain<S>::twiddles) {
-      // TODO DmytroTym: the following line is just a temporary patch to make it work,
-      // having issues creating default stream on rust side
-      device_context::DeviceContext ctx = device_context::get_default_device_context();
+      S omega = primitive_root;
+      for (int i = 0; i < S::TWO_ADICITY; i++)
+        omega = S::sqr(omega);
+      if (omega != S::one()) {
+        std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
+        throw -1;
+      }
+
       std::vector<S> h_twiddles;
       h_twiddles.push_back(S::one());
       int n = 1;
@@ -405,37 +399,59 @@ namespace ntt {
         Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
         h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
       } while (h_twiddles.at(n++) != S::one());
-      cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream);
-      cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream);
+
+      CHK_IF_RETURN(cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream));
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
+
       Domain<S>::max_size = n - 1;
+      CHK_IF_RETURN(cudaStreamSynchronize(ctx.stream));
     }
-    return cudaSuccess;
+
+    return CHK_LAST();
   }
 
   template <typename S, typename E>
-  cudaError_t NTT(E* input, int size, bool is_inverse, NTTConfig<S>& config, E* output)
+  cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
-    CHECK_LAST_CUDA_ERROR();
+    CHK_INIT_IF_RETURN();
 
-    cudaStream_t stream = config.ctx.stream;
+    cudaStream_t& stream = config.ctx.stream;
     int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
-    bool is_input_on_device = config.are_inputs_on_device;
-    bool is_output_on_device = config.are_outputs_on_device;
+    bool are_inputs_on_device = config.are_inputs_on_device; // TODO: unify name to is_
+    bool are_outputs_on_device = config.are_outputs_on_device;
+
+    S* coset = nullptr;
+    int coset_index = 0;
+    try {
+      coset_index = Domain<S>::coset_index.at(config.coset_gen);
+    } catch (...) {
+      // if coset index is not found in the subgroup, compute coset powers on CPU and move them to device
+      std::vector<S> h_coset;
+      h_coset.push_back(S::one());
+      S coset_gen = (dir == NTTDir::kInverse) ? S::inverse(config.coset_gen) : config.coset_gen;
+      for (int i = 1; i < size; i++) {
+        h_coset.push_back(h_coset.at(i - 1) * coset_gen);
+      }
+      CHK_IF_RETURN(cudaMallocAsync(&coset, size * sizeof(S), stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(coset, &h_coset.front(), size * sizeof(S), cudaMemcpyHostToDevice, stream));
+      h_coset.clear();
+    }
 
     E* d_input;
-    if (is_input_on_device) {
+    if (are_inputs_on_device) {
       d_input = input;
     } else {
-      cudaMallocAsync(&d_input, input_size_bytes, stream);
-      cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_input, input_size_bytes, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
     }
     E* d_output;
-    if (is_input_on_device) {
+    if (are_outputs_on_device) {
       d_output = output;
     } else {
-      cudaMallocAsync(&d_output, input_size_bytes, stream);
+      CHK_IF_RETURN(cudaMallocAsync(&d_output, input_size_bytes, stream));
     }
 
     bool ct_butterfly = true;
@@ -452,30 +468,22 @@ namespace ntt {
       ct_butterfly = false;
       break;
     }
-    CHECK_LAST_CUDA_ERROR();
 
     if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
-    CHECK_LAST_CUDA_ERROR();
 
-    ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn, is_inverse,
-      ct_butterfly, Domain<S>::coset_index[config.coset_gen], stream, !config.is_async, d_output);
-    CHECK_LAST_CUDA_ERROR();
+    CHK_IF_RETURN(ntt_inplace_batch_template(
+      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
 
-    if (is_output_on_device) {
-      // free(config->inout); // TODO: ? or callback?+
-      output = d_output;
-    } else {
-      cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream);
-      CHECK_LAST_CUDA_ERROR();
-    }
-    CHECK_LAST_CUDA_ERROR();
+    if (!are_outputs_on_device)
+      CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
-    if (!config.is_async) cudaStreamSynchronize(stream);
+    if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
+    if (!are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));
+    if (!are_outputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_output, stream));
+    if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
 
-    CHECK_LAST_CUDA_ERROR();
-
-    return cudaSuccess;
+    return CHK_LAST();
   }
 
   template <typename S>
@@ -483,13 +491,13 @@ namespace ntt {
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
+      ctx,           // ctx
       S::one(),      // coset_gen
+      1,             // batch_size
       Ordering::kNN, // ordering
       false,         // are_inputs_on_device
       false,         // are_outputs_on_device
-      1,             // batch_size
       false,         // is_async
-      ctx,           // ctx
     };
     return config;
   }
@@ -524,11 +532,11 @@ namespace ntt {
   extern "C" cudaError_t NTTCuda(
     curve_config::scalar_t* input,
     int size,
-    bool is_inverse,
+    NTTDir dir,
     NTTConfig<curve_config::scalar_t>& config,
     curve_config::scalar_t* output)
   {
-    return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, is_inverse, config, output);
+    return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, dir, config, output);
   }
 
 #if defined(ECNTT_DEFINED)
@@ -543,11 +551,11 @@ namespace ntt {
   extern "C" cudaError_t ECNTTCuda(
     curve_config::projective_t* input,
     int size,
-    bool is_inverse,
+    NTTDir dir,
     NTTConfig<curve_config::scalar_t>& config,
     curve_config::projective_t* output)
   {
-    return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, is_inverse, config, output);
+    return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, dir, config, output);
   }
 
 #endif

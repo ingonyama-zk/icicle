@@ -9,35 +9,35 @@ namespace mont {
 #define MAX_THREADS_PER_BLOCK 256
 
     template <typename E, bool is_into>
-    __global__ void MontgomeryKernel(E* inout, int n)
+    __global__ void MontgomeryKernel(E* input, int n, E* output)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
-      if (tid < n) { inout[tid] = is_into ? E::ToMontgomery(inout[tid]) : E::FromMontgomery(inout[tid]); }
+      if (tid < n) { output[tid] = is_into ? E::ToMontgomery(input[tid]) : E::FromMontgomery(input[tid]); }
     }
 
     template <typename E, bool is_into>
-    int ConvertMontgomery(E* d_inout, int n, cudaStream_t stream)
+    cudaError_t ConvertMontgomery(E* d_input, int n, cudaStream_t stream, E* d_output)
     {
       // Set the grid and block dimensions
       int num_threads = MAX_THREADS_PER_BLOCK;
       int num_blocks = (n + num_threads - 1) / num_threads;
-      MontgomeryKernel<E, is_into><<<num_blocks, num_threads, 0, stream>>>(d_inout, n);
+      MontgomeryKernel<E, is_into><<<num_blocks, num_threads, 0, stream>>>(d_input, n, d_output);
 
-      return 0; // TODO: void with propper error handling
+      return CHK_LAST();
     }
 
   } // namespace
 
   template <typename E>
-  int ToMontgomery(E* d_inout, int n, cudaStream_t stream)
+  cudaError_t ToMontgomery(E* d_input, int n, cudaStream_t stream, E* d_output)
   {
-    return ConvertMontgomery<E, true>(d_inout, n, stream);
+    return ConvertMontgomery<E, true>(d_input, n, stream, d_output);
   }
 
   template <typename E>
-  int FromMontgomery(E* d_inout, int n, cudaStream_t stream)
+  cudaError_t FromMontgomery(E* d_input, int n, cudaStream_t stream, E* d_output)
   {
-    return ConvertMontgomery<E, false>(d_inout, n, stream);
+    return ConvertMontgomery<E, false>(d_input, n, stream, d_output);
   }
 
 } // namespace mont

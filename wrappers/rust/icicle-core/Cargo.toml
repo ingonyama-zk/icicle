@@ -1,6 +1,6 @@
 [package]
 name = "icicle-core"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
 description = "A library for GPU ZK acceleration by Ingonyama"
@@ -14,6 +14,8 @@ icicle-cuda-runtime = { path = "../icicle-cuda-runtime" }
 
 ark-ff = { version = "0.4.0", optional = true }
 ark-ec = { version = "0.4.0", optional = true, features = [ "parallel" ] }
+ark-poly = { version = "0.4.0", optional = true }
+ark-std = { version = "0.4.0", optional = true }
 
 # [build-dependencies]
 # cc = { version = "1.0", features = ["parallel"] }
@@ -21,16 +23,9 @@ ark-ec = { version = "0.4.0", optional = true, features = [ "parallel" ] }
 # bindgen = "*"
 # libc = "*" #TODO: move libc dependencies to build 
 
-# [dev-dependencies]
-# rustacuda = "0.1"
-# rustacuda_core = "0.1"
-# rustacuda_derive = "0.1"
-
-# "criterion" = "*"
-
 [features]
 default = []
-arkworks = ["ark-ff", "ark-ec"]
+arkworks = ["ark-ff", "ark-ec", "ark-poly", "ark-std"]
 # TODO: impl G2 and EC NTT
 g2 = []
 ec_ntt = []

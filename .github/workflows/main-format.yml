@@ -43,4 +43,4 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: Check clang-format
-      run: if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]]; then echo "Please run clang-format"; exit 1; fi
+      run: if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]]; then echo "Please run clang-format"; exit 1; fi

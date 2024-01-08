@@ -1,50 +1,65 @@
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
+use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, PrimeField};
+use icicle_cuda_runtime::error::CudaError;
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-#[cfg(feature = "arkworks")]
-pub trait FieldConfig: PartialEq + Copy + Clone {
-    type ArkField: PrimeField;
-}
-#[cfg(not(feature = "arkworks"))]
-pub trait FieldConfig: PartialEq + Copy + Clone {}
-
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
 pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
-    limbs: [u32; NUM_LIMBS],
+    limbs: [u64; NUM_LIMBS],
     p: PhantomData<F>,
 }
 
-pub(crate) fn get_fixed_limbs<const NUM_LIMBS: usize>(val: &[u32]) -> [u32; NUM_LIMBS] {
-    match val.len() {
-        n if n < NUM_LIMBS => {
-            let mut padded: [u32; NUM_LIMBS] = [0; NUM_LIMBS];
-            padded[..val.len()].copy_from_slice(&val);
-            padded
+impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "0x")?;
+        for &b in self
+            .limbs
+            .iter()
+            .rev()
+        {
+            write!(f, "{:02x}", b)?;
         }
-        n if n == NUM_LIMBS => val
-            .try_into()
-            .unwrap(),
-        _ => panic!("slice has too many elements"),
+        Ok(())
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
-    pub fn get_limbs(&self) -> [u32; NUM_LIMBS] {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Debug for Field<NUM_LIMBS, F> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "0x")?;
+        for &b in self
+            .limbs
+            .iter()
+            .rev()
+        {
+            write!(f, "{:02x}", b)?;
+        }
+        Ok(())
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn into(self) -> [u64; NUM_LIMBS] {
         self.limbs
     }
+}
 
-    pub fn set_limbs(value: &[u32]) -> Self {
-        Self {
-            limbs: get_fixed_limbs(value),
-            p: PhantomData,
-        }
+impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn from(limbs: [u64; NUM_LIMBS]) -> Self {
+        Self { limbs, p: PhantomData }
     }
+}
 
-    pub fn to_bytes_le(&self) -> Vec<u8> {
+impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
+    type Config = F;
+    type Repr = [u64; NUM_LIMBS];
+
+    fn to_bytes_le(&self) -> Vec<u8> {
         self.limbs
             .iter()
             .map(|limb| {
@@ -55,31 +70,51 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Field<NUM_LIMBS, F> {
             .collect::<Vec<_>>()
     }
 
-    pub fn from_bytes_le(bytes: &[u8]) -> Self {
-        let limbs = bytes
-            .chunks(4)
-            .map(|chunk| {
-                u32::from_le_bytes(
-                    chunk
-                        .try_into()
-                        .unwrap(),
-                )
-            })
-            .collect::<Vec<_>>();
-        Self::set_limbs(&limbs)
+    // please note that this function zero-pads if there are not enough bytes
+    // and only takes the first bytes in there are too many of them
+    fn from_bytes_le(bytes: &[u8]) -> Self {
+        let mut limbs: [u64; NUM_LIMBS] = [0; NUM_LIMBS];
+        for (i, chunk) in bytes
+            .chunks(8)
+            .take(NUM_LIMBS)
+            .enumerate()
+        {
+            let mut chunk_array: [u8; 8] = [0; 8];
+            chunk_array[..chunk.len()].clone_from_slice(chunk);
+            limbs[i] = u64::from_le_bytes(chunk_array);
+        }
+        Self::from(limbs)
     }
 
-    pub fn zero() -> Self {
+    fn zero() -> Self {
         Field {
-            limbs: [0u32; NUM_LIMBS],
+            limbs: [0u64; NUM_LIMBS],
             p: PhantomData,
         }
     }
 
-    pub fn one() -> Self {
-        let mut limbs = [0u32; NUM_LIMBS];
+    fn one() -> Self {
+        let mut limbs = [0u64; NUM_LIMBS];
         limbs[0] = 1;
         Field { limbs, p: PhantomData }
+    }
+}
+
+pub trait MontgomeryConvertibleField<F: FieldImpl> {
+    fn to_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
+    fn from_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
+where
+    F: MontgomeryConvertibleField<Self>,
+{
+    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
+        F::to_mont(values)
+    }
+
+    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
+        F::from_mont(values)
     }
 }
 
@@ -95,4 +130,91 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS,
         let ark_bigint: <Self::ArkEquivalent as PrimeField>::BigInt = ark.into();
         Self::from_bytes_le(&ark_bigint.to_bytes_le())
     }
+}
+
+#[macro_export]
+macro_rules! impl_field {
+    (
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident,
+        $ark_equiv:ident
+    ) => {
+        #[doc(hidden)]
+        #[derive(Debug, PartialEq, Copy, Clone)]
+        pub struct $field_cfg {}
+
+        impl FieldConfig for $field_cfg {
+            #[cfg(feature = "arkworks")]
+            type ArkField = $ark_equiv;
+        }
+        pub type $field_name = Field<$num_limbs, $field_cfg>;
+    };
+}
+
+#[macro_export]
+macro_rules! impl_scalar_field {
+    (
+        $field_prefix:literal,
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident,
+        $ark_equiv:ident
+    ) => {
+        impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
+
+        extern "C" {
+            #[link_name = concat!($field_prefix, "GenerateScalars")]
+            fn generate_scalars(scalars: *mut $field_name, size: usize);
+
+            #[link_name = concat!($field_prefix, "ScalarConvertMontgomery")]
+            fn _convert_scalars_montgomery(
+                scalars: *mut $field_name,
+                size: usize,
+                is_into: bool,
+                ctx: *const DeviceContext,
+            ) -> CudaError;
+        }
+
+        impl GenerateRandom<$field_name> for $field_cfg {
+            fn generate_random(size: usize) -> Vec<$field_name> {
+                let mut res = vec![$field_name::zero(); size];
+                unsafe { generate_scalars(&mut res[..] as *mut _ as *mut $field_name, size) };
+                res
+            }
+        }
+
+        fn convert_scalars_montgomery(scalars: &mut HostOrDeviceSlice<$field_name>, is_into: bool) -> CudaError {
+            unsafe {
+                _convert_scalars_montgomery(
+                    scalars.as_mut_ptr(),
+                    scalars.len(),
+                    is_into,
+                    &get_default_device_context() as *const _ as *const DeviceContext,
+                )
+            }
+        }
+
+        impl MontgomeryConvertibleField<$field_name> for $field_cfg {
+            fn to_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
+                convert_scalars_montgomery(values, true)
+            }
+
+            fn from_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
+                convert_scalars_montgomery(values, false)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_field_tests {
+    (
+        $field_name:ident
+    ) => {
+        #[test]
+        fn test_field_convert_montgomery() {
+            check_field_convert_montgomery::<$field_name>()
+        }
+    };
 }
