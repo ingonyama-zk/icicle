@@ -30,6 +30,7 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     type ArkSWConfig: SWCurveConfig;
 }
 
+/// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct Projective<C: Curve> {
@@ -38,6 +39,7 @@ pub struct Projective<C: Curve> {
     pub z: C::BaseField,
 }
 
+/// An [affine](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) elliptic curve point.
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(C)]
 pub struct Affine<C: Curve> {

@@ -23,7 +23,6 @@ pub struct IcicleError {
 }
 
 pub type IcicleResult<T> = Result<T, IcicleError>;
-pub type OptionCudaError = Option<CudaError>;
 
 impl IcicleError {
     pub fn from_cuda_error(cuda_error: CudaError) -> Self {
