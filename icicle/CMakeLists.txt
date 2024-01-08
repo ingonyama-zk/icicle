@@ -64,6 +64,7 @@ project(icicle LANGUAGES CUDA CXX)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
+include_directories(icicle PUBLIC "${CMAKE_SOURCE_DIR}")
 
 
 # when adding a new curve/field, append its name to the end of this list
@@ -98,36 +99,8 @@ if (NOT BUILD_TESTS)
     appUtils/msm/msm.cu
     appUtils/ntt/ntt.cu
   )
-  #set_target_properties(icicle PROPERTIES CUDA_SEPARABLE_COMPILATION ON) #TODO: enable asap
-  #set_target_properties(icicle PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-
-  target_compile_options(icicle PRIVATE -c)
-
-  add_custom_command(
-    TARGET icicle
-    POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym MSMCuda=${CURVE}MSMCuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym DefaultMSMConfig=${CURVE}DefaultMSMConfig ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym NTTCuda=${CURVE}NTTCuda ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GetDefaultNTTConfig=${CURVE}DefaultNTTConfig ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym InitializeDomain=${CURVE}InitializeDomain ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GenerateScalars=${CURVE}GenerateScalars ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/field.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym Eq=${CURVE}Eq ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ToAffine=${CURVE}ToAffine ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GenerateProjectivePoints=${CURVE}GenerateProjectivePoints ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym GenerateAffinePoints=${CURVE}GenerateAffinePoints ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ScalarConvertMontgomery=${CURVE}ScalarConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym AffineConvertMontgomery=${CURVE}AffineConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
-    COMMAND ${CMAKE_OBJCOPY} ARGS --redefine-sym ProjectiveConvertMontgomery=${CURVE}ProjectiveConvertMontgomery ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
-    COMMAND ${CMAKE_AR} ARGS -rcs ${PROJECT_BINARY_DIR}/libingo_${CURVE}.a 
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/vec_ops.cu.o
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/field.cu.o
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o 
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
-    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
-                                                                                 
-  )
+  set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
+  target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  
 
 else()
 
