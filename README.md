@@ -41,7 +41,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE 
 ## Build and usage
 
 > [!WARNING]
-> Stable versions of icicle and its bindings are released under versioned tags.
+> Stable versions of ICICLE and its bindings are released under versioned tags.
 > We will try our best to keep latest main stable as well but it should be considered unstable and may break at any time.
 
 
@@ -74,7 +74,7 @@ ICICLE has three build systems.
 
 ICICLE core always needs to be built as part of the other build systems as it contains the core ICICLE primitives implemented in CUDA. Reference these guides for the different build systems, [ICICLE core guide][ICICLE-CORE-README], [ICICLE Rust guide][ICICLE-RUST-README] and [ICICLE Golang guide][ICICLE-GO-README].
 
-## Docker
+### Docker
 
 We offer a simple Docker container so you can simply run ICICLE without setting everything up locally.
 
@@ -83,9 +83,13 @@ docker build -t <name_of_your_choice> .
 docker run --gpus all -it <name_of_your_choice> /bin/bash
 ```
 
+## Examples
+
+We've provided a few [examples](./examples/) using ICICLE with c++ and our rust bindings.
+
 ## Contributions
 
-Join our [Discord Server][DISCORD] and find us on the icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
+Join our [Discord Server][DISCORD] and find us on the #icicle channel. We will be happy to work together to support your use case and talk features, bugs and design.
 
 ### Development Contributions
 
@@ -95,7 +99,7 @@ If you are changing code, please make sure to change your [git hooks path][HOOKS
 git config core.hooksPath ./scripts/hooks
 ```
 
-In case `clang-format` is missing on your system, you can install it  using the following command:
+In case `clang-format` is missing on your system, you can install it using the following command:
 
 ```sh
 sudo apt install clang-format

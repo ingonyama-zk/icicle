@@ -1,0 +1,20 @@
+[package]
+name = "ntt"
+version = "1.0.0"
+edition = "2018"
+
+[dependencies]
+icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev", features = ["arkworks"] }
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev", features = ["arkworks"] }
+icicle-bls12-377 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev", features = ["arkworks"] }
+
+ark-ff = { version = "0.4.0" }
+ark-poly = "0.4.0"
+ark-std = "0.4.0"
+ark-bn254 = { version = "0.4.0" }
+ark-bls12-377 = { version = "0.4.0" }
+clap = { version = "4.4.12", features = ["derive"] }
+
+[features]
+profile = []
