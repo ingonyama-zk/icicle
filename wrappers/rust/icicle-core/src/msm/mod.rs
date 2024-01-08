@@ -7,17 +7,13 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 #[doc(hidden)]
 pub mod tests;
 
-/// Struct that encodes MSM parameters to be passed into the `msm` function.
+/// Struct that encodes MSM parameters to be passed into the [`msm`](msm) function.
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct MSMConfig<'a> {
-    /// Details related to the device such as its id and stream id.
+    /// Details related to the device such as its id and stream.
     pub ctx: DeviceContext<'a>,
 
-    /// Number of points in the MSM. If a batch of MSMs needs to be computed, this should be a number
-    /// of different points. So, if each MSM re-uses the same set of points, this variable is set equal
-    /// to the MSM size. And if every MSM uses a distinct set of points, it should be set to the product of
-    /// MSM size and batch_size. Default value: 0 (meaning it's equal to the MSM size).
     points_size: i32,
 
     /// The number of extra points to pre-compute for each point. Larger values decrease the number of computations
@@ -39,23 +35,18 @@ pub struct MSMConfig<'a> {
     /// Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10.
     pub large_bucket_factor: i32,
 
-    /// The number of MSMs to compute. Default value: 1.
     batch_size: i32,
 
-    /// True if scalars are on device and false if they're on host. Default value: false.
     are_scalars_on_device: bool,
 
     /// True if scalars are in Montgomery form and false otherwise. Default value: true.
     pub are_scalars_montgomery_form: bool,
 
-    /// True if points are on device and false if they're on host. Default value: false.
     are_points_on_device: bool,
 
     /// True if coordinates of points are in Montgomery form and false otherwise. Default value: true.
     pub are_points_montgomery_form: bool,
 
-    /// True if the results should be on device and false if they should be on host. If set to false,
-    /// `is_async` won't take effect because a synchronization is needed to transfer results to the host. Default value: false.
     are_results_on_device: bool,
 
     /// Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly
@@ -80,6 +71,18 @@ pub trait MSM<C: Curve> {
     fn get_default_msm_config() -> MSMConfig<'static>;
 }
 
+/// Computes the multi-scalar multiplication, or MSM: `s1*P1 + s2*P2 + ... + sn*Pn`, or a batch of several MSMs.
+///
+/// # Arguments
+///
+/// * `scalars` - scalar values `s1, s2, ..., sn`.
+///
+/// * `points` - points `P1, P2, ..., Pn`. The number of points can be smaller than the number of scalars
+/// in the case of batch MSM. In this case points are re-used periodically.
+///
+/// * `cfg` - config used to specify extra arguments of the MSM.
+///
+/// * `results` - buffer to write results into. Its length is equal to the batch size i.e. number of MSMs to compute.
 pub fn msm<C: Curve + MSM<C>>(
     scalars: &HostOrDeviceSlice<C::ScalarField>,
     points: &HostOrDeviceSlice<Affine<C>>,
@@ -95,9 +98,9 @@ pub fn msm<C: Curve + MSM<C>>(
     }
     if scalars.len() % results.len() != 0 {
         panic!(
-            "Number of points {} does not divide the number of results {}",
-            points.len(),
-            results.len()
+            "Number of results {} does not divide the number of scalars {}",
+            results.len(),
+            scalars.len()
         );
     }
     let mut local_cfg = cfg.clone();
@@ -110,6 +113,7 @@ pub fn msm<C: Curve + MSM<C>>(
     C::msm_unchecked(scalars, points, &local_cfg, results)
 }
 
+/// Returns [MSM config](MSMConfig) struct populated with default values.
 pub fn get_default_msm_config<C: Curve + MSM<C>>() -> MSMConfig<'static> {
     C::get_default_msm_config()
 }
