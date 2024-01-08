@@ -14,7 +14,7 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
-// #define PERFORMANCE
+#define PERFORMANCE
 
 using namespace BLS12_377;
 // using namespace BLS12_381;
@@ -43,12 +43,13 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 27;
+  int NTT_LOG_SIZE = 26;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
   int INV = false;
   int DIT = false;
+  printf("running ntt 2^%d\n", NTT_LOG_SIZE);
 
   //cpu allocation
   test_scalar* cpuIcicle;
@@ -100,8 +101,8 @@ int main(){
   gpuIntTwiddles = generate_external_twiddles(gpuTwiddles, TT_LOG_SIZE, INV);
   printf("finished generating twiddles\n");
   // generate_internal_twiddles<<<1,1>>>(gpuIntTwiddles);
-  cudaDeviceSynchronize();
-  printf("cuda err tw %d\n",cudaGetLastError());
+  // cudaDeviceSynchronize();
+  // printf("cuda err tw %d\n",cudaGetLastError());
 
   #ifdef PERFORMANCE
   $CUDA(cudaEventCreate(&icicle_start));
@@ -112,7 +113,7 @@ int main(){
   
 
   //run ntts
-  int count = 100;
+  int count = 10;
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
   for (size_t i = 0; i < count; i++){
