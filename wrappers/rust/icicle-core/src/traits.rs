@@ -1,6 +1,7 @@
 use crate::error::IcicleResult;
 #[cfg(feature = "arkworks")]
 use ark_ff::PrimeField;
+use icicle_cuda_runtime::{error::CudaError, memory::HostOrDeviceSlice};
 use std::{fmt::Debug, mem::MaybeUninit};
 
 #[doc(hidden)]
@@ -31,6 +32,11 @@ pub trait ArkConvertible {
 
     fn to_ark(&self) -> Self::ArkEquivalent;
     fn from_ark(ark: Self::ArkEquivalent) -> Self;
+}
+
+pub trait MontgomeryConvertible: Sized {
+    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError;
+    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError;
 }
 
 pub trait IcicleResultWrap {

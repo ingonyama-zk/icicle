@@ -127,6 +127,7 @@ if (NOT BUILD_TESTS)
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/primitives/projective.cu.o
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o 
     ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o
+    ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/utils/mont.cu.o
                                                                                  
   )
   # file(REMOVE ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/msm/msm.cu.o)

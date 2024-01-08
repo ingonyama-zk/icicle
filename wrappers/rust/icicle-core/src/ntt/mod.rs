@@ -1,4 +1,5 @@
 use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
 
@@ -6,11 +7,8 @@ use crate::{error::IcicleResult, traits::FieldImpl};
 #[doc(hidden)]
 pub mod tests;
 
-/**
- * @enum NTTDir
- * Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
- * evaluations from coefficients while inverse NTT computes coefficients from evaluations.
- */
+/// Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
+/// evaluations from coefficients while inverse NTT computes coefficients from evaluations.
 #[allow(non_camel_case_types)]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -19,22 +17,19 @@ pub enum NTTDir {
     kInverse,
 }
 
-/**
- * @enum Ordering
- * How to order inputs and outputs of the NTT. If needed, use this field to specify decimation: decimation in time
- * (DIT) corresponds to `Ordering::kRN` while decimation in frequency (DIF) to `Ordering::kNR`. Also, to specify
- * butterfly to be used, select `Ordering::kRN` for Cooley-Tukey and `Ordering::kNR` for Gentleman-Sande. There's
- * no implication that a certain decimation or butterfly will actually be used under the hood, this is just for
- * compatibility with codebases that use "decimation" and "butterfly" to denote ordering of inputs and outputs.
- *
- * Ordering options are:
- * - kNN: inputs and outputs are natural-order (example of natural ordering: \f$ \{a_0, a_1, a_2, a_3, a_4, a_5, a_6,
- * a_7\} \f$).
- * - kNR: inputs are natural-order and outputs are bit-reversed-order (example of bit-reversed ordering: \f$ \{a_0,
- * a_4, a_2, a_6, a_1, a_5, a_3, a_7\} \f$).
- * - kRN: inputs are bit-reversed-order and outputs are natural-order.
- * - kRR: inputs and outputs are bit-reversed-order.
- */
+/// How to order inputs and outputs of the NTT. If needed, use this field to specify decimation: decimation in time
+/// (DIT) corresponds to `Ordering::kRN` while decimation in frequency (DIF) to `Ordering::kNR`. Also, to specify
+/// butterfly to be used, select `Ordering::kRN` for Cooley-Tukey and `Ordering::kNR` for Gentleman-Sande. There's
+/// no implication that a certain decimation or butterfly will actually be used under the hood, this is just for
+/// compatibility with codebases that use "decimation" and "butterfly" to denote ordering of inputs and outputs.
+///
+/// Ordering options are:
+/// - kNN: inputs and outputs are natural-order (example of natural ordering: `a_0, a_1, a_2, a_3, a_4, a_5, a_6,
+/// a_7`.
+/// - kNR: inputs are natural-order and outputs are bit-reversed-order (example of bit-reversed ordering: `a_0,
+/// a_4, a_2, a_6, a_1, a_5, a_3, a_7`.
+/// - kRN: inputs are bit-reversed-order and outputs are natural-order.
+/// - kRR: inputs and outputs are bit-reversed-order.
 #[allow(non_camel_case_types)]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -45,46 +40,81 @@ pub enum Ordering {
     kRR,
 }
 
-/**
- * @struct NTTConfig
- * Struct that encodes NTT parameters to be passed into the [ntt](@ref ntt) function.
- */
+/// Struct that encodes NTT parameters to be passed into the [ntt](ntt) function.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NTTConfig<'a, S> {
-    /** Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext). */
+    /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
     pub ctx: DeviceContext<'a>,
-    /** Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used). */
+    /// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
     pub coset_gen: S,
-    /** The number of NTTs to compute. Default value: 1. */
+    /// The number of NTTs to compute. Default value: 1.
     pub batch_size: i32,
-    /** Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`. */
+    /// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
     pub ordering: Ordering,
-    /** True if inputs are on device and false if they're on host. Default value: false. */
-    pub are_inputs_on_device: bool,
-    /** If true, output is preserved on device for subsequent use in config and not freed after calculation. Default value: false. */
-    pub are_outputs_on_device: bool,
-    /** Whether to run the NTT asyncronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
-     *  it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
-     *  function will block the current CPU thread. */
+    are_inputs_on_device: bool,
+    are_outputs_on_device: bool,
+    /// Whether to run the NTT asyncronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
+    /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
 }
 
 #[doc(hidden)]
 pub trait NTT<F: FieldImpl> {
-    fn ntt(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> IcicleResult<()>;
+    fn ntt_unchecked(
+        input: &HostOrDeviceSlice<F>,
+        dir: NTTDir,
+        cfg: &NTTConfig<F>,
+        output: &mut HostOrDeviceSlice<F>,
+    ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
-pub fn ntt<F>(input: &[F], dir: NTTDir, cfg: &NTTConfig<F>, output: &mut [F]) -> IcicleResult<()>
+/// Computes the NTT, or a batch of several NTTs.
+///
+/// # Arguments
+///
+/// * `input` - inputs of the NTT.
+///
+/// * `dir` - whether to compute forward of inverse NTT.
+///
+/// * `cfg` - config used to specify extra arguments of the NTT.
+///
+/// * `output` - buffer to write the NTT outputs into. Must be of the same size as `input`.
+pub fn ntt<F>(
+    input: &HostOrDeviceSlice<F>,
+    dir: NTTDir,
+    cfg: &NTTConfig<F>,
+    output: &mut HostOrDeviceSlice<F>,
+) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>,
 {
-    <<F as FieldImpl>::Config as NTT<F>>::ntt(input, dir, cfg, output)
+    if input.len() != output.len() {
+        panic!(
+            "input and output lengths {}; {} do not match",
+            input.len(),
+            output.len()
+        );
+    }
+    let mut local_cfg = cfg.clone();
+    local_cfg.are_inputs_on_device = input.is_on_device();
+    local_cfg.are_outputs_on_device = output.is_on_device();
+
+    <<F as FieldImpl>::Config as NTT<F>>::ntt_unchecked(input, dir, &local_cfg, output)
 }
 
+/// Generates twiddle factors which will be used to compute NTTs.
+///
+/// # Arguments
+///
+/// * `primitive_root` - primitive root to generate twiddles from. Should be of large enough order to cover all
+/// NTTs that you need. For example, if NTTs of sizes 2^17 and 2^18 are computed, use the primitive root of order 2^18.
+/// This function will panic if the order of `primitive_root` is not a power of two.
+///
+/// * `ctx` - GPU index and stream to perform the computation.
 pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
 where
     F: FieldImpl,
@@ -93,6 +123,7 @@ where
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
 
+/// Returns [NTT config](NTTConfig) struct populated with default values.
 pub fn get_default_ntt_config<F>() -> NTTConfig<'static, F>
 where
     F: FieldImpl,
@@ -126,20 +157,19 @@ macro_rules! impl_ntt {
         }
 
         impl NTT<$field> for $field_config {
-            fn ntt(input: &[$field], dir: NTTDir, cfg: &NTTConfig<$field>, output: &mut [$field]) -> IcicleResult<()> {
-                if input.len() != output.len() {
-                    panic!("input and output lengths do not match")
-                }
-
-                //TODO: more validations for cfg
-
+            fn ntt_unchecked(
+                input: &HostOrDeviceSlice<$field>,
+                dir: NTTDir,
+                cfg: &NTTConfig<$field>,
+                output: &mut HostOrDeviceSlice<$field>,
+            ) -> IcicleResult<()> {
                 unsafe {
                     ntt_cuda(
-                        input as *const _ as *const $field,
+                        input.as_ptr(),
                         (input.len() / (cfg.batch_size as usize)) as i32,
                         dir,
                         cfg,
-                        output as *mut _ as *mut $field,
+                        output.as_mut_ptr(),
                     )
                     .wrap()
                 }

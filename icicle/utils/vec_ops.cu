@@ -57,10 +57,11 @@ namespace vec_ops {
       CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
     }
 
+    E* d_res = is_on_device ? result : d_result;
     // Call the kernel to perform element-wise modular multiplication
     MulKernel<<<num_blocks, num_threads, 0, ctx.stream>>>(
-      is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, is_on_device ? result : d_result);
-    if (is_montgomery) CHK_IF_RETURN(mont::FromMontgomery(is_on_device ? result : d_result, n, ctx.stream));
+      is_on_device ? vec_a : d_vec_a, is_on_device ? vec_b : d_vec_b, n, d_res);
+    if (is_montgomery) CHK_IF_RETURN(mont::FromMontgomery(d_res, n, ctx.stream, d_res));
 
     if (!is_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
@@ -76,7 +77,7 @@ namespace vec_ops {
   cudaError_t Add(E* vec_a, E* vec_b, int n, bool is_on_device, device_context::DeviceContext ctx, E* result)
   {
     CHK_INIT_IF_RETURN();
-    
+
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;

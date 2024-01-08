@@ -1,7 +1,8 @@
 use super::{get_default_msm_config, msm, MSM};
 use crate::curve::{Affine, Curve, Projective};
 use crate::traits::{FieldImpl, GenerateRandom};
-use icicle_cuda_runtime::{memory::DeviceSlice, stream::CudaStream};
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::stream::CudaStream;
 
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
@@ -19,7 +20,7 @@ where
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
-    let mut msm_results = DeviceSlice::cuda_malloc(1).unwrap();
+    let mut msm_results = HostOrDeviceSlice::cuda_malloc(1).unwrap();
     for test_size in test_sizes {
         let points = C::generate_random_affine_points(test_size);
         let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
@@ -35,7 +36,7 @@ where
         // (just beware the possible extra flag in affine point types, can't transmute ark Affine because of that)
         let scalars_mont = unsafe { &*(&scalars_ark[..] as *const _ as *const [C::ScalarField]) };
 
-        let mut scalars_d = DeviceSlice::cuda_malloc(test_size).unwrap();
+        let mut scalars_d = HostOrDeviceSlice::cuda_malloc(test_size).unwrap();
         let stream = CudaStream::create().unwrap();
         scalars_d
             .copy_from_host_async(&scalars_mont, &stream)
@@ -45,10 +46,14 @@ where
         cfg.ctx
             .stream = &stream;
         cfg.is_async = true;
-        cfg.are_results_on_device = true;
-        cfg.are_scalars_on_device = true;
         cfg.are_scalars_montgomery_form = true;
-        msm(&scalars_d.as_slice(), &points, &cfg, &mut msm_results.as_slice()).unwrap();
+        msm(&scalars_d, &HostOrDeviceSlice::on_host(points), &cfg, &mut msm_results).unwrap();
+        // need to make sure that scalars_d weren't mutated by the previous call
+        let mut scalars_mont_after = vec![C::ScalarField::zero(); test_size];
+        scalars_d
+            .copy_to_host_async(&mut scalars_mont_after, &stream)
+            .unwrap();
+        assert_eq!(scalars_mont, scalars_mont_after);
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results
@@ -83,15 +88,17 @@ where
         for batch_size in batch_sizes {
             let points = C::generate_random_affine_points(test_size);
             let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
-
-            let mut msm_results_1 = DeviceSlice::cuda_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceSlice::cuda_malloc(batch_size).unwrap();
-            let mut points_d = DeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
             // a version of batched msm without using `cfg.points_size`, requires copying bases
             let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
                 .take(batch_size)
                 .flatten()
                 .collect();
+            let points_h = HostOrDeviceSlice::on_host(points);
+            let scalars_h = HostOrDeviceSlice::on_host(scalars);
+
+            let mut msm_results_1 = HostOrDeviceSlice::cuda_malloc(batch_size).unwrap();
+            let mut msm_results_2 = HostOrDeviceSlice::cuda_malloc(batch_size).unwrap();
+            let mut points_d = HostOrDeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
             let stream = CudaStream::create().unwrap();
             points_d
                 .copy_from_host_async(&points_cloned, &stream)
@@ -100,13 +107,9 @@ where
             let mut cfg = get_default_msm_config::<C>();
             cfg.ctx
                 .stream = &stream;
-            cfg.batch_size = batch_size as i32;
             cfg.is_async = true;
-            cfg.are_results_on_device = true;
-            msm(&scalars, &points, &cfg, &mut msm_results_1.as_slice()).unwrap();
-            cfg.points_size = (test_size * batch_size) as i32;
-            cfg.are_points_on_device = true;
-            msm(&scalars, &points_d.as_slice(), &cfg, &mut msm_results_2.as_slice()).unwrap();
+            msm(&scalars_h, &points_h, &cfg, &mut msm_results_1).unwrap();
+            msm(&scalars_h, &points_d, &cfg, &mut msm_results_2).unwrap();
 
             let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
             let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
@@ -123,11 +126,13 @@ where
                 .destroy()
                 .unwrap();
 
-            let points_ark: Vec<_> = points
+            let points_ark: Vec<_> = points_h
+                .as_slice()
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
-            let scalars_ark: Vec<_> = scalars
+            let scalars_ark: Vec<_> = scalars_h
+                .as_slice()
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
@@ -165,17 +170,6 @@ where
                 scalars[rng.gen_range(0..test_size * batch_size)] =
                     C::ScalarField::from_ark(<C::ScalarField as ArkConvertible>::ArkEquivalent::rand(rng));
             }
-
-            let mut msm_results = vec![Projective::<C>::zero(); batch_size];
-
-            let mut cfg = get_default_msm_config::<C>();
-            cfg.batch_size = batch_size as i32;
-            cfg.points_size = (test_size * batch_size) as i32;
-            if test_size < test_threshold {
-                cfg.bitsize = 1;
-            }
-            msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
-
             let points_ark: Vec<_> = points
                 .iter()
                 .map(|x| x.to_ark())
@@ -184,6 +178,21 @@ where
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
+
+            let mut msm_results = HostOrDeviceSlice::on_host(vec![Projective::<C>::zero(); batch_size]);
+
+            let mut cfg = get_default_msm_config::<C>();
+            if test_size < test_threshold {
+                cfg.bitsize = 1;
+            }
+            msm(
+                &HostOrDeviceSlice::on_host(scalars),
+                &HostOrDeviceSlice::on_host(points),
+                &cfg,
+                &mut msm_results,
+            )
+            .unwrap();
+
             for (i, (scalars_chunk, points_chunk)) in scalars_ark
                 .chunks(test_size)
                 .zip(points_ark.chunks(test_size))
@@ -191,7 +200,7 @@ where
             {
                 let msm_result_ark: ark_ec::models::short_weierstrass::Projective<C::ArkSWConfig> =
                     VariableBaseMSM::msm(&points_chunk, &scalars_chunk).unwrap();
-                assert_eq!(msm_results[i].to_ark(), msm_result_ark);
+                assert_eq!(msm_results.as_slice()[i].to_ark(), msm_result_ark);
             }
         }
     }

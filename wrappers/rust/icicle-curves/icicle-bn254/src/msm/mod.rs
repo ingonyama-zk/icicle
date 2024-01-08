@@ -6,7 +6,7 @@ use icicle_core::{
     msm::{MSMConfig, MSM},
     traits::IcicleResultWrap,
 };
-use icicle_cuda_runtime::error::CudaError;
+use icicle_cuda_runtime::{error::CudaError, memory::HostOrDeviceSlice};
 
 impl_msm!("bn254", CurveCfg);
 
