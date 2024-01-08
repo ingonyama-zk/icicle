@@ -7,6 +7,7 @@ use icicle_core::{
     traits::IcicleResultWrap,
 };
 use icicle_cuda_runtime::error::CudaError;
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 impl_msm!("bls12_377", CurveCfg);
 
