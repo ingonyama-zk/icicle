@@ -1,14 +1,14 @@
-# ZKContainer™️
+# ZKContainer
 
-We recommend using [ZKContainer™️](https://ingonyama.com/blog/Immanuel-ZKDC), where we have already preinstalled all the required dependencies, to run Icicle examples. 
+We recommend using [ZKContainer](https://ingonyama.com/blog/Immanuel-ZKDC), where we have already preinstalled all the required dependencies, to run Icicle examples. 
 To use our containers you will need [Docker](https://www.docker.com/) and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html).
 
-In each example directory, ZKContainer™️ files are located in a subdirectory `.devcontainer`. 
+In each example directory, ZKContainer files are located in a subdirectory `.devcontainer`. 
 
-- File `Dockerfile` specifies how to build an image of a ZKContainer™️. 
-- File `devcontainer.json` enables running ZKContainer™️ from Visual Studio Code.
+- File `Dockerfile` specifies how to build an image of a ZKContainer. 
+- File `devcontainer.json` enables running ZKContainer from Visual Studio Code.
 
-## Running ZKContainer™️ from shell
+## Running ZKContainer from shell
 
 ```sh
 docker build -t icicle-example-poseidon -f .devcontainer/Dockerfile .
