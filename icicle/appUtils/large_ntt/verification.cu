@@ -135,8 +135,8 @@ int main(){
   $CUDA(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
   cudaDeviceSynchronize();
   printf("cuda err %d\n",cudaGetLastError());
-  fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time);
-  fprintf(stderr, "New Runtime=%0.3f MS\n", new_time);
+  fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time/count);
+  fprintf(stderr, "New Runtime=%0.3f MS\n", new_time/count);
   #else
   if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE);
   new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
