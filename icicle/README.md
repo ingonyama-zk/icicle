@@ -84,20 +84,23 @@ Alternatively, you can replace the old CUDA root with a symlink to the new CUDA 
 
 Make sure `libssl` is installed.
 
-```
+```sh
 sudo apt-get update
 sudo apt-get install libssl1.0.0 libssl-dev
 ```
+
+### 9 - PIC and Linking against shared libraries
+
+Note that currently - ICICLE is static library with [PIC](https://en.wikipedia.org/wiki/Position-independent_code) enabled by default. You can disable it by setting either `ICICLE_PIC` environment variable to `OFF` or passing `-DICICLE_PIC=OFF` to CMake.
 
 ## Running with Nix
 
 If you have Nix or NixOs installed on your machine, you can create a development shell to load all build dependencies and set the required environmental variables.
 
-From the ```/icicle/icicle```  directory run the following command. 
+From the ```/icicle/icicle```  directory run the following command.
 
-```
+```sh
 nix-shell --pure cuda-shell.nix
 ```
 
 This will install everything you need to build and run ICICLE Core.
-
