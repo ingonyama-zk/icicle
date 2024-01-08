@@ -10,13 +10,14 @@
 #include <stdexcept>
 #include <vector>
 
-#include "../../curves/curve_config.cuh"
-#include "../../primitives/affine.cuh"
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
-#include "../../utils/error_handler.cuh"
-#include "../../utils/mont.cuh"
+#include "curves/curve_config.cuh"
+#include "primitives/affine.cuh"
+#include "primitives/field.cuh"
+#include "primitives/projective.cuh"
+#include "utils/cuda_utils.cuh"
+#include "utils/error_handler.cuh"
+#include "utils/mont.cuh"
+#include "utils/utils.h"
 
 namespace msm {
 
@@ -966,7 +967,7 @@ namespace msm {
 
   } // namespace
 
-  extern "C" MSMConfig DefaultMSMConfig()
+  extern "C" MSMConfig CONCAT_EXPAND(CURVE, DefaultMSMConfig)()
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     MSMConfig config = {
@@ -1016,7 +1017,7 @@ namespace msm {
    *  - `P` is the [projective representation](@ref projective_t) of curve points.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t MSMCuda(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
     curve_config::scalar_t* scalars,
     curve_config::affine_t* points,
     int msm_size,
