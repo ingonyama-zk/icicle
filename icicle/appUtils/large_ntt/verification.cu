@@ -26,7 +26,7 @@ typedef scalar_t test_scalar;
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
     // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    res[i]= i==1? test_scalar::one() : test_scalar::zero();
+    res[i]= i==0? test_scalar::one() : test_scalar::zero();
     // res[i]= i%2? test_scalar::one() : (test_scalar::one() - test_scalar::one() - test_scalar::one());
     // res[i]= i==0? test_scalar::one() : test_scalar::omega_inv(9) * res[i-1];
 }
@@ -43,7 +43,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 17;
+  int NTT_LOG_SIZE = 27;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
@@ -73,7 +73,7 @@ int main(){
   $CUDA(cudaMalloc((void**)&gpuIcicle, sizeof(test_scalar)*NTT_SIZE));
   $CUDA(cudaMalloc((void**)&gpuNew, sizeof(uint4)*NTT_SIZE*2));
   $CUDA(cudaMalloc((void**)&gpuNew2, sizeof(uint4)*NTT_SIZE*2));
-  $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*(TT_SIZE+2*(TT_SIZE>>6))*2));
+  $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*(TT_SIZE+2*(TT_SIZE>>5))*2)); //TODO - sketchy
   // $CUDA(cudaMalloc((void**)&gpuIntTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
@@ -176,17 +176,17 @@ int main(){
     // new_temp.store_half(cpuTwiddles[i+NTT_SIZE], true);
     new_temp.store_half(cpuNew2[i], false);
     new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
-    // if (i%(64*64) < 64*2) if (i%64 == 0) printf("%d\n",i/64);
+    // if (i%(32*32*32) < 64*2) if (i%32 == 0) printf("%d\n",i/32);
     // if (i%64 == 0) printf("%d\n",i/64);
     // if (icicle_temp != test_scalar::zero()){
     if (icicle_temp != new_temp){
       success = false;
       // std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
-      // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      // if (i%(32*32*32) < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
     }
     else{
       // std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
-      // if (i%(64*64) < 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+      // if (i%(32*32*32)< 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
     }
     // }
   }

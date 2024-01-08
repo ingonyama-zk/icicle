@@ -492,13 +492,13 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
   engine.loadGlobalData(in, data_stride, log_size, strided, s_meta);
-  // if (blockIdx.x == 0 && threadIdx.x == 4){
-  //     for (int i = 0; i < 8; i++)
-  //     {
-  //       printf("%d, ",engine.X[i]);
-  //     }
-  //     printf("\n");
-  //   }
+  if (blockIdx.x == 0 && threadIdx.x == 0){
+      for (int i = 0; i < 8; i++)
+      {
+        printf("%d, ",engine.X[i]);
+      }
+      printf("\n");
+    }
   if (twiddle_stride && dit) {
     // if (blockIdx.x == 8 && threadIdx.x == 8){
     //   for (int i = 0; i < 8; i++)
@@ -542,22 +542,22 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
     // for(uint32_t phase=0;phase<2;phase++) {
       // this code produces a lot of instructions, so we put this in a loop
       engine.ntt8win(); 
-    //   if (blockIdx.x == 0 && threadIdx.x == 4){
-    //   for (int i = 0; i < 8; i++)
-    //   {
-    //     printf("%d, ",engine.X[i]);
-    //   }
-    //   printf("\n");
-    // }
+      if (blockIdx.x == 0 && threadIdx.x == 0){
+      for (int i = 0; i < 8; i++)
+      {
+        printf("%d, ",engine.X[i]);
+      }
+      printf("\n");
+    }
       // if(phase==0) {
       engine.twiddles32();
-      // if (blockIdx.x == 0 && threadIdx.x == 4){
-      // for (int i = 0; i < 8; i++)
-      // {
-      //   printf("%d, ",engine.X[i]);
-      // }
-      // printf("\n");
-    // }
+      if (blockIdx.x == 0 && threadIdx.x == 0){
+      for (int i = 0; i < 8; i++)
+      {
+        printf("%d, ",engine.X[i]);
+      }
+      printf("\n");
+    }
       engine.SharedData32Columns8(shmem, true, false, strided); //store low
       __syncthreads();
       // if (blockIdx.x ==0 && threadIdx.x ==0){
@@ -593,13 +593,13 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
       // printf("\n");
       // }
       engine.ntt4_2();
-      // if (blockIdx.x == 0 && threadIdx.x == 4){
-      // for (int i = 0; i < 8; i++)
-      // {
-      //   printf("%d, ",engine.X[i]);
-      // }
-      // printf("\n");
-    // }
+      if (blockIdx.x == 0 && threadIdx.x == 0){
+      for (int i = 0; i < 8; i++)
+      {
+        printf("%d, ",engine.X[i]);
+      }
+      printf("\n");
+    }
       // }
     // }
     // if (twiddle_stride) engine.twiddlesExternal();
@@ -783,41 +783,58 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
     ntt32<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
     return;
   }
-  if (log_size==10){
-    ntt32<<<2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32, 32, true, 1, inv, dit);
-    ntt32<<<2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
-    return;
+  // if (log_size==10){
+  //   ntt32<<<2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32, 32, true, 1, inv, dit);
+  //   ntt32<<<2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+  //   return;
+  // }
+  // if (log_size==11){
+  //   ntt32<<<2*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1, inv, dit);
+  //   ntt64<<<2*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+  //   return;
+  // }
+  // if (log_size==16){
+  //   ntt32<<<2*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*32, 64*32, true, 2, inv, dit); //stride is the size of the next meta block
+  //   ntt32<<<2*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1, inv, dit);
+  //   ntt64<<<2*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+  //   return;
+  // }
+  // if (log_size==17){
+  //   ntt32<<<2*64*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*64, 64*64, true, 2, inv, dit);
+  //   ntt64<<<2*64*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1, inv, dit);
+  //   ntt64<<<2*64*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+  //   return;
+  // }
+  // if (log_size==15){
+  //   ntt32<<<2*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32*32, 32*32, true, 2, inv, dit);
+  //   ntt32<<<2*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32, 32, true, 1, inv, dit);
+  //   ntt32<<<2*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+  //   return;
+  // }
+  // if (log_size==20){
+  //   ntt32<<<2*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32*32*32, 0, true, 3, inv, dit);
+  //   // ntt32<<<4*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*32, 0, true, 2, inv, dit);
+  //   // ntt32<<<4*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 0, true, 1, inv, dit);
+  //   // ntt64<<<4*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+  //   return;
+  // }
+  // if (log_size==21){
+  //   ntt32<<<4*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*32*32, 0, true, 3, inv, dit);
+  //   // ntt32<<<4*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*32, 0, true, 2, inv, dit);
+  //   // ntt32<<<4*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 0, true, 1, inv, dit);
+  //   // ntt64<<<4*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+  //   return;
+  // }
+  for (int i = 4; i >= 0; i--)
+  {
+    uint32_t stage_size = STAGE_SIZES_HOST[log_size][i];
+    uint32_t stride_log = 0;
+    for (int j=0; j<i; j++) stride_log += STAGE_SIZES_HOST[log_size][j];
+    printf(" %d %d %d sdfgsdfg\n", i,stage_size, stride_log);
+    if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+    if (stage_size == 5) ntt32<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
   }
-  if (log_size==11){
-    ntt32<<<2*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1, inv, dit);
-    ntt64<<<2*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
-    return;
-  }
-  if (log_size==16){
-    ntt32<<<2*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*32, 64*32, true, 2, inv, dit);
-    ntt32<<<2*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1, inv, dit);
-    ntt64<<<2*64,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
-    return;
-  }
-  if (log_size==17){
-    ntt32<<<2*64*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64*64, 64*64, true, 2, inv, dit);
-    ntt64<<<2*64*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 64, 64, true, 1, inv, dit);
-    ntt64<<<2*64*2,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
-    return;
-  }
-  if (log_size==15){
-    ntt32<<<2*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32*32, 32*32, true, 2, inv, dit);
-    ntt32<<<2*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32, 32, true, 1, inv, dit);
-    ntt32<<<2*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
-    return;
-  }
-  if (log_size==20){
-    ntt32<<<2*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32*32*32, 32*32*32, true, 3, inv, dit);
-    ntt32<<<2*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32*32, 32*32, true, 2, inv, dit);
-    ntt32<<<2*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 32, 32, true, 1, inv, dit);
-    ntt32<<<2*32*32,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
-    return;
-  }
+  return;
 
   uint32_t nof_stages = log_size/6;
   if (nof_stages==1){
