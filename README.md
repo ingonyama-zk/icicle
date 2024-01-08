@@ -28,7 +28,7 @@ We believe GPUs are as important for ZK as for AI.
 
 ## Getting Started
 
-ICICLE is a CUDA implementation of general functions widely used in ZKP. ICICLE currently provides support for MSM, NTT, and ECNTT, with plans to support Hash functions soon.
+ICICLE is a CUDA implementation of general functions widely used in ZKP.
 
 > [!NOTE]
 > Developers: We highly recommend reading our [documentation]
