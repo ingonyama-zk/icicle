@@ -33,7 +33,7 @@ void random_samples(test_scalar* res, uint32_t count) {
 
 void incremental_values(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
-    res[i]=i? res[i-1]+test_scalar::one() : test_scalar::zero();
+    res[i]=i? res[i-1]+test_scalar::one()*test_scalar::omega(4) : test_scalar::zero();
 }
 
 int main(){
@@ -43,12 +43,12 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 5;
+  int NTT_LOG_SIZE = 25;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
-  int INV = true;
-  int DIT = true;
+  int INV = false;
+  int DIT = false;
   printf("running ntt 2^%d ", NTT_LOG_SIZE);
   if (DIT) printf("DIT ");
   else printf("DIF ");
@@ -78,12 +78,12 @@ int main(){
   $CUDA(cudaMalloc((void**)&gpuIcicle, sizeof(test_scalar)*NTT_SIZE));
   $CUDA(cudaMalloc((void**)&gpuNew, sizeof(uint4)*NTT_SIZE*2));
   $CUDA(cudaMalloc((void**)&gpuNew2, sizeof(uint4)*NTT_SIZE*2));
-  $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*(TT_SIZE+2*(TT_SIZE>>5))*2)); //TODO - sketchy
+  $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*(TT_SIZE+2*(TT_SIZE>>4))*2)); //TODO - sketchy
   // $CUDA(cudaMalloc((void**)&gpuIntTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
-  // random_samples(cpuIcicle, NTT_SIZE);
-  incremental_values(cpuIcicle, NTT_SIZE);
+  random_samples(cpuIcicle, NTT_SIZE);
+  // incremental_values(cpuIcicle, NTT_SIZE);
   for (int i = 0; i < NTT_SIZE; i++)
   {
     cpuNew[i] = cpuIcicle[i].load_half(false);
@@ -182,7 +182,7 @@ int main(){
     new_temp.store_half(cpuNew2[i], false);
     new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
     // if (i%(32*32*32) < 64*2) if (i%32 == 0) printf("%d\n",i/32);
-    // if (i%64 == 0) printf("%d\n",i/64);
+    // if (i%16 == 0) printf("%d\n",i/16);
     // if (i%(32*32*32*32) == 1){
     // if (new_temp != test_scalar::zero()){
     if (icicle_temp != new_temp){
