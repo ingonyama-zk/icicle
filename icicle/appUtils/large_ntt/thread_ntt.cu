@@ -338,11 +338,11 @@ __device__ constexpr uint32_t HIGH_W_OFFSETS[31][5] = {{0,0,0,0,0},
                               {0,1<<12,(2<<12)+(1<<17),(2<<12)+(2<<17)+(1<<22),0},
                               {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<23),0},
                               {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<24),0}, //24
-                              {0,1<<10,(2<<10)+(1<<15),(2<<10)+(2<<15)+(1<<20),(2<<10)+(2<<15)+(2<<20)+(2<<25)},
-                              {0,1<<11,(2<<11)+(1<<16),(2<<11)+(2<<16)+(1<<21),(2<<11)+(2<<16)+(2<<21)+(2<<26)},
-                              {0,1<<12,(2<<12)+(1<<17),(2<<12)+(2<<17)+(1<<22),(2<<12)+(2<<17)+(2<<22)+(2<<27)},
-                              {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<23),(2<<12)+(2<<18)+(2<<23)+(2<<28)},
-                              {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<24),(2<<12)+(2<<18)+(2<<24)+(2<<29)},
+                              {0,1<<10,(2<<10)+(1<<15),(2<<10)+(2<<15)+(1<<20),(2<<10)+(2<<15)+(2<<20)+(1<<25)},
+                              {0,1<<11,(2<<11)+(1<<16),(2<<11)+(2<<16)+(1<<21),(2<<11)+(2<<16)+(2<<21)+(1<<26)},
+                              {0,1<<12,(2<<12)+(1<<17),(2<<12)+(2<<17)+(1<<22),(2<<12)+(2<<17)+(2<<22)+(1<<27)},
+                              {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<23),(2<<12)+(2<<18)+(2<<23)+(1<<28)},
+                              {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<24),(2<<12)+(2<<18)+(2<<24)+(1<<29)},
                               {0,1<<12,(2<<12)+(1<<18),(2<<12)+(2<<18)+(1<<24),(2<<12)+(2<<18)+(2<<24)+(1<<30)}}; //30
 
 class NTTEngine {
@@ -485,6 +485,7 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
 
     // data += max_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id%tw_stride)*(max_stride/tw_stride);
     data += tw_stride*s_meta.ntt_inp_id*2 + s_meta.ntt_block_id%tw_stride;
+    // if (tw_stride ==(1<<20) && blockIdx.x == 0 && threadIdx.x == 1) printf("tw addr %d\n", tw_stride*s_meta.ntt_inp_id*2 + s_meta.ntt_block_id%tw_stride);
     // if (tw_stride == max_stride){
       // data += (s_meta.ntt_meta_inp_id*blockDim.x) % (s_meta.ntt_meta_block_size*blockDim.x*blockDim.x);
       // tw_stride = (tw_stride << extra_tw);
@@ -502,10 +503,12 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     for(uint32_t j=0;j<2;j++) {
       #pragma unroll
       for(uint32_t i=0;i<4;i++) {
+            // if (tw_stride ==(1<<20) && blockIdx.x == 0 && threadIdx.x == 1) printf("tw addr delta %d\n", (8*i+j)*tw_stride);
         // data[(8*i+j)*data_stride] = X[4*j+i].load_half(false);
         // data[(8*i+j)*data_stride + (1<<log_size)] = X[4*j+i].load_half(true);
         WE[4*j+i].store_half(data[(8*i+j)*tw_stride + LOW_W_OFFSETS[log_size][stage_num]], false);
         WE[4*j+i].store_half(data[(8*i+j)*tw_stride + HIGH_W_OFFSETS[log_size][stage_num]], true);
+        // if (tw_stride ==(1<<20) && blockIdx.x == 0 && threadIdx.x == 1) printf("tw  %d\n", WE[4*j+i]);
       }
     }
     
@@ -563,6 +566,8 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     //   X[i].store_half(data[16*i*stride + high_bits_offset], true);
 
   }
+
+  
   
   __device__ __forceinline__ void storeGlobalData(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
     
@@ -577,22 +582,25 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     // if (blockIdx.x<2){
     //   printf("block %d thread %d read address %d\n",blockIdx.x, threadIdx.x, block_offset + (threadIdx.x & 0xf) + 256 * (threadIdx.x >> 4));
     // }
+        // if (data_stride == (1<<20) && blockIdx.x == 65537 && threadIdx.x ==1) printf("block %d store addr %d\n", blockIdx.x, s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id + (s_meta.ntt_block_id/data_stride)*data_stride*s_meta.ntt_block_size);
+
     
     // uint4 zero{0,0,0,0};
     #pragma unroll
     for(uint32_t i=0;i<8;i++) {
-      // if (data_stride == 64){
-      //   // if (i==0){
-      //   //   data[8*i*data_stride] = uint4{2,0,0,0};
-      //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
-      //   //   continue;
-      //   // }
-      //   data[8*i*data_stride] = WE[i].load_half(false);
-      //   data[8*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
+      // if (data_stride == (32*32*32*32)){
+      //   if (blockIdx.x == 0 && threadIdx.x%16==1){
+      //     // continue;
+      //     data[s_meta.th_stride*i*data_stride] = uint4{2,0,0,0};
+      //     data[s_meta.th_stride*i*data_stride + (1<<log_size)] = uint4{3,0,0,0};
+      //     continue;
+      //   }
+      //   data[s_meta.th_stride*i*data_stride] = WE[i].load_half(false);
+      //   data[s_meta.th_stride*i*data_stride + (1<<log_size)] = WE[i].load_half(true);
       // }
       // else{
-        data[8*i*data_stride] = X[i].load_half(false);
-        data[8*i*data_stride + (1<<log_size)] = X[i].load_half(true);
+        data[s_meta.th_stride*i*data_stride] = X[i].load_half(false);
+        data[s_meta.th_stride*i*data_stride + (1<<log_size)] = X[i].load_half(true);
       // }
     }
       // data[16*i*stride] = zero;
@@ -601,6 +609,36 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     //   data[16*i*stride + high_bits_offset] = X[i].load_half(true);
       // data[16*i*stride + high_bits_offset] = zero;
 
+  }
+
+  __device__ __forceinline__ void loadGlobalData32(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
+    
+    if (strided){
+      data += s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id*2 + (s_meta.ntt_block_id/data_stride)*data_stride*s_meta.ntt_block_size;
+      // data += 8 * (blockIdx.x & 0x7) + ((1<<log_size)/data_stride) * (blockIdx.x >> 3) + (threadIdx.x & 0x7) + data_stride * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+    else {
+      data += s_meta.ntt_block_id*s_meta.ntt_block_size + s_meta.ntt_inp_id*2;
+      // data += 8 * 64 * blockIdx.x + (threadIdx.x & 0x7) + 64 * (threadIdx.x >> 3); //block offset, thread offset, ntt_offset
+    }
+    // if (data_stride == (1<<20) && blockIdx.x == 65537 && threadIdx.x ==1) printf("block %d load addr %d\n", blockIdx.x, s_meta.ntt_block_id%data_stride + data_stride*s_meta.ntt_inp_id*2 + (s_meta.ntt_block_id/data_stride)*data_stride*s_meta.ntt_block_size);
+
+    #pragma unroll
+    for(uint32_t j=0;j<2;j++) {
+      #pragma unroll
+      for(uint32_t i=0;i<4;i++) {
+        // if (data_stride == (1<<20) && blockIdx.x == 65537 && threadIdx.x ==1) printf("%d tttt\n", (8*i+j)*data_stride);
+        X[4*j+i].store_half(data[(8*i+j)*data_stride], false);
+        X[4*j+i].store_half(data[(8*i+j)*data_stride + (1<<log_size)], true);
+      }
+    }
+
+    
+    // #pragma unroll
+    // for(uint32_t i=0;i<8;i++) {
+    //   X[i].store_half(data[s_meta.th_stride*i*data_stride], false);
+    //   X[i].store_half(data[s_meta.th_stride*i*data_stride + (1<<log_size)], true);
+    // }
   }
 
    __device__ __forceinline__ void storeGlobalData32(uint4* data, uint32_t data_stride, uint32_t log_size, bool strided, stage_metadata s_meta) {
@@ -622,11 +660,11 @@ __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     for(uint32_t j=0;j<2;j++) {
       #pragma unroll
       for(uint32_t i=0;i<4;i++) {
-        // if (data_stride == 32){
-        //   // if (i==0){
-        //   //   data[8*i*data_stride] = uint4{2,0,0,0};
-        //   //   data[8*i*data_stride + (1<<log_size)] = uint4{0,0,0,0};
-        //   //   continue;
+        // if (data_stride == 32*32*32*32){
+        //   // if (threadIdx.x%16==1){
+        //     data[(8*i+j)*data_stride] = uint4{2,0,0,0};
+        //     data[(8*i+j)*data_stride + (1<<log_size)] = uint4{3,0,0,0};
+        //     continue;
         //   // }
         //   data[(8*i+j)*data_stride] = WE[4*j+i].load_half(false);
         //   data[(8*i+j)*data_stride + (1<<log_size)] = WE[4*j+i].load_half(true);
