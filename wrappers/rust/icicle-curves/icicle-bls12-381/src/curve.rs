@@ -11,17 +11,15 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 pub(crate) const SCALAR_LIMBS: usize = 4;
 pub(crate) const BASE_LIMBS: usize = 6;
 
-impl_scalar_field!("bls12_381", SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
+impl_scalar_field!("bls12_381", bls12_381, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
 impl_field!(BASE_LIMBS, BaseField, BaseCfg, Fq);
 impl_curve!("bls12_381", CurveCfg, ScalarField, BaseField);
 
 #[cfg(test)]
 mod tests {
-    use super::ScalarField;
-    use super::{CurveCfg, BASE_LIMBS};
+    use super::{ScalarField, CurveCfg, BASE_LIMBS};
     use icicle_core::curve::Curve;
-    use icicle_core::impl_curve_tests;
-    use icicle_core::impl_field_tests;
+    use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_core::tests::*;
     use icicle_core::traits::FieldImpl;
 
