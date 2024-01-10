@@ -43,12 +43,12 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 25;
+  int NTT_LOG_SIZE = 19;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
-  int INV = false;
-  int DIT = false;
+  int INV = true;
+  int DIT = true;
   printf("running ntt 2^%d ", NTT_LOG_SIZE);
   if (DIT) printf("DIT ");
   else printf("DIF ");
