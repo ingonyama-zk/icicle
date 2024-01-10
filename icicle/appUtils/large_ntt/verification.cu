@@ -14,7 +14,7 @@
 // #include <stdint.h>
 // #include <cooperative_groups.h>
 
-#define PERFORMANCE
+// #define PERFORMANCE
 
 using namespace BLS12_377;
 // using namespace BLS12_381;
@@ -28,7 +28,7 @@ void random_samples(test_scalar* res, uint32_t count) {
     // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
     res[i]= i==0? test_scalar::one() : test_scalar::zero();
     // res[i]= i%2? test_scalar::one() : (test_scalar::one() - test_scalar::one() - test_scalar::one());
-    // res[i]= i==0? test_scalar::one() : test_scalar::omega_inv(9) * res[i-1];
+    // res[i]= i==0? test_scalar::one() : test_scalar::omega_inv(25) * res[i-1];
 }
 
 void incremental_values(test_scalar* res, uint32_t count) {
@@ -43,13 +43,17 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 26;
+  int NTT_LOG_SIZE = 5;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
-  int INV = false;
-  int DIT = false;
-  printf("running ntt 2^%d\n", NTT_LOG_SIZE);
+  int INV = true;
+  int DIT = true;
+  printf("running ntt 2^%d ", NTT_LOG_SIZE);
+  if (DIT) printf("DIT ");
+  else printf("DIF ");
+  if (INV) printf("inverse\n");
+  else printf("\n");
 
   //cpu allocation
   test_scalar* cpuIcicle;
@@ -138,10 +142,10 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time/count);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time/count);
   #else
-  if (DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE);
+  if (DIT) reorder64_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
   new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
   // if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
-  if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE);
+  if (!DIT) reorder64_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
   printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
@@ -179,15 +183,19 @@ int main(){
     new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
     // if (i%(32*32*32) < 64*2) if (i%32 == 0) printf("%d\n",i/32);
     // if (i%64 == 0) printf("%d\n",i/64);
-    // if (icicle_temp != test_scalar::zero()){
+    // if (i%(32*32*32*32) == 1){
+    // if (new_temp != test_scalar::zero()){
     if (icicle_temp != new_temp){
       success = false;
-      // std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
-      // if (i%(32*32*32) < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      // std::cout << i <<" ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      // break;
+      // if (i%(1048576) < 64*2) std::cout << i<< " ref "<< icicle_temp << " != " << new_temp <<std::endl;
+      // if (i < 64*2) std::cout << "ref "<< icicle_temp << " != " << new_temp <<std::endl;
     }
     else{
-      // std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
-      // if (i%(32*32*32)< 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
+      // std::cout << i<< " ref "<< icicle_temp << " == " << new_temp <<std::endl;
+      // if (i%(1048576)< 64*2) std::cout << i<< " ref "<< icicle_temp << " == " << new_temp <<std::endl;
+      // if (i< 64*2) std::cout << "ref "<< icicle_temp << " == " << new_temp <<std::endl;
     }
     // }
   }
