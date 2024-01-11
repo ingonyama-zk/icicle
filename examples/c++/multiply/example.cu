@@ -1,16 +1,15 @@
 #include <iostream>
 #include <iomanip> 
 #include <chrono>
-#include <cuda_runtime.h>
 #include <nvml.h>
 
 #define CURVE_ID 1
-#include "/icicle/icicle/curves/curve_config.cuh"
+#include "icicle/curves/curve_config.cuh"
 using namespace curve_config;
-typedef scalar_t T;
-// typedef point_field_t T;
 
-const std::string curve = "BN254";
+// select scalar or point field
+//typedef scalar_t T;
+typedef point_field_t T;
 
 #define MAX_THREADS_PER_BLOCK 256
 
@@ -48,11 +47,10 @@ int main(int argc, char** argv)
   std::cout << "Icicle-Examples: vector multiplications" << std::endl;
   char name[NVML_DEVICE_NAME_BUFFER_SIZE];
   if (nvmlDeviceGetName(device, name, NVML_DEVICE_NAME_BUFFER_SIZE) == NVML_SUCCESS) {
-        std::cout << "GPU Model: " << name << std::endl;
-    } else {
-        std::cerr << "Failed to get GPU model name." << std::endl;
-    }
-
+    std::cout << "GPU Model: " << name << std::endl;
+  } else {
+    std::cerr << "Failed to get GPU model name." << std::endl;
+  }
   unsigned power_limit;
   nvmlDeviceGetPowerManagementLimit(device, &power_limit);
   
@@ -87,21 +85,18 @@ int main(int argc, char** argv)
   T* device_out;
 
   err = cudaMalloc((void**)&device_in1, vector_size * sizeof(T));
-
   if (err != cudaSuccess) {
       std::cerr << "Failed to allocate device memory - " << cudaGetErrorString(err) << std::endl;
       return 0;
   }
 
   err = cudaMalloc((void**)&device_in2, vector_size * sizeof(T));
-
   if (err != cudaSuccess) {
       std::cerr << "Failed to allocate device memory - " << cudaGetErrorString(err) << std::endl;
       return 0;
   }
 
   err = cudaMalloc((void**)&device_out, vector_size * sizeof(T));
-
   if (err != cudaSuccess) {
       std::cerr << "Failed to allocate device memory - " << cudaGetErrorString(err) << std::endl;
       return 0;
@@ -109,29 +104,21 @@ int main(int argc, char** argv)
 
   // copy from host to device
   err = cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);
-
   if (err != cudaSuccess) {
       std::cerr << "Failed to copy data from host to device - " << cudaGetErrorString(err) << std::endl;
       return 0;
   }
 
   err = cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice);
-
   if (err != cudaSuccess) {
       std::cerr << "Failed to copy data from host to device - " << cudaGetErrorString(err) << std::endl;
       return 0;
   }
-
   
   std::cout << "Starting warm-up" << std::endl;
   // Warm-up loop
   for (int i = 0; i < repetitions; i++) {
     vector_mult(device_in1, device_in2, device_out, vector_size);
-    // err = lde::Mul(device_in1, device_in2, vector_size, is_on_device, is_montgomery, ctx, device_out);
-    // if (err != cudaSuccess) {
-    //   std::cerr << "Failed to call lde::Mul" << cudaGetErrorString(err) << std::endl;
-    //   return 0;
-    // }
   }
 
   std::cout << "Starting benchmarking" << std::endl;
@@ -146,17 +133,10 @@ int main(int argc, char** argv)
     std::cerr << "Failed to get GPU temperature." << std::endl;
   }
   auto start_time = std::chrono::high_resolution_clock::now();
-
   // Benchmark loop
   for (int i = 0; i < repetitions; i++) {
     vector_mult(device_in1, device_in2, device_out, vector_size);
-    // err = lde::Mul(device_in1, device_in2, vector_size, is_on_device, is_montgomery, ctx, device_out);
-    // if (err != cudaSuccess) {
-    //   std::cerr << "Failed to call lde::Mul" << cudaGetErrorString(err) << std::endl;
-    //   return 0;
-    // }
   }
-  
   auto end_time = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
   std::cout << "Elapsed time: " << duration.count() << " microseconds" << std::endl;
@@ -182,15 +162,13 @@ int main(int argc, char** argv)
 
   // validate multiplication here...
 
+  // clean up and exit
   free(host_in1); 
   free(host_in2);
   free(host_out); 
   cudaFree(device_in1);
   cudaFree(device_in2);
   cudaFree(device_out);
-
   nvmlShutdown();
-
   return 0;
-  
 }
