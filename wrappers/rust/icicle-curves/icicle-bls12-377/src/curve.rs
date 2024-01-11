@@ -12,9 +12,9 @@ pub(crate) const SCALAR_LIMBS: usize = 4;
 pub(crate) const BASE_LIMBS: usize = 6;
 
 impl_scalar_field!("bls12_377", bls12_377, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
-#[cfg(not(feature = "base-field-ntt"))]
+#[cfg(not(feature = "bw6_761"))]
 impl_field!(BASE_LIMBS, BaseField, BaseCfg, Fq);
-#[cfg(feature = "base-field-ntt")]
+#[cfg(feature = "bw6_761")]
 impl_scalar_field!("bw6_761", bw6_761, BASE_LIMBS, BaseField, BaseCfg, Fq);
 impl_curve!("bls12_377", CurveCfg, ScalarField, BaseField);
 

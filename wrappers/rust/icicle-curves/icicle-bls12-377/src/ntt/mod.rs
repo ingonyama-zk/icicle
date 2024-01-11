@@ -9,7 +9,7 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 impl_ntt!("bls12_377", bls12_377, ScalarField, ScalarCfg);
-#[cfg(feature = "base-field-ntt")]
+#[cfg(feature = "bw6_761")]
 impl_ntt!("bw6_761", bw6_761, BaseField, BaseCfg);
 
 #[cfg(test)]

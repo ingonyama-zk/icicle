@@ -10,7 +10,7 @@ repository = "https://github.com/ingonyama-zk/icicle"
 [dependencies]
 icicle-core = { path = "../../icicle-core" }
 icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
-icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["base-field-ntt"] }
+icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6_761"] }
 ark-bw6-761 = { version = "0.4.0", optional = true }
 
 [build-dependencies]
