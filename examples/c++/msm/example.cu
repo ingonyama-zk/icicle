@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iostream>
 
-
 // include MSM template
 #include "appUtils/msm/msm.cu"
 // select the curve
@@ -42,7 +41,8 @@ int main(int argc, char* argv[])
   cudaStream_t stream1;
   cudaStreamCreate(&stream1);
   auto begin = std::chrono::high_resolution_clock::now();
-  large_msm<scalar_t, projective_t, affine_t>(scalars_d, points_d, msm_size, result_d, true, false, bucket_factor, stream1);
+  large_msm<scalar_t, projective_t, affine_t>(
+    scalars_d, points_d, msm_size, result_d, true, false, bucket_factor, stream1);
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   printf("On-device runtime: %.3f seconds.\n", elapsed.count() * 1e-9);
