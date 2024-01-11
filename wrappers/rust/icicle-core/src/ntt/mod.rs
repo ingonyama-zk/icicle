@@ -153,7 +153,7 @@ macro_rules! impl_ntt {
                     output: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "DefaultNTTConfig")]
+                #[link_name = concat!($field_prefix, "GetDefaultNTTConfig")]
                 pub(crate) fn default_ntt_config() -> NTTConfig<'static, $field>;
 
                 #[link_name = concat!($field_prefix, "InitializeDomain")]
