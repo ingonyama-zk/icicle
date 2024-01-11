@@ -1,11 +1,10 @@
 # ICICLE
- **<div align="center">ICICLE is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
 
-                  
+**<div align="center">ICICLE is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
+
 <p align="center">
   <img alt="ICICLE" width="300" height="300" src="https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png"/>
 </p>
-
 <p align="center">
   <a href="https://discord.gg/EVVXTdt6DF">
     <img src="https://img.shields.io/discord/1063033227788423299?logo=discord" alt="Chat with us on Discord">
@@ -13,6 +12,7 @@
   <a href="https://twitter.com/intent/follow?screen_name=Ingo_zk">
     <img src="https://img.shields.io/twitter/follow/Ingo_zk?style=social&logo=twitter" alt="Follow us on Twitter">
   </a>
+  <img src="https://img.shields.io/badge/Machines%20running%20ICICLE-544-lightblue" alt="Machines running ICICLE">
 </p>
 
 ## Background
