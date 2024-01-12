@@ -2,7 +2,7 @@
 use crate::traits::ArkConvertible;
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{BigInteger, PrimeField, Field as ArkField};
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use std::fmt::{Debug, Display};
@@ -100,6 +100,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 }
 
+#[doc(hidden)]
 pub trait MontgomeryConvertibleField<F: FieldImpl> {
     fn to_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
     fn from_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
@@ -123,12 +124,12 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS,
     type ArkEquivalent = F::ArkField;
 
     fn to_ark(&self) -> Self::ArkEquivalent {
-        F::ArkField::from_le_bytes_mod_order(&self.to_bytes_le())
+        F::ArkField::from_random_bytes(&self.to_bytes_le()).unwrap()
     }
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
-        let ark_bigint: <Self::ArkEquivalent as PrimeField>::BigInt = ark.into();
-        Self::from_bytes_le(&ark_bigint.to_bytes_le())
+        let ark_bytes: Vec<u8> = ark.to_base_prime_field_elements().map(|x| x.into_bigint().to_bytes_le()).flatten().collect();
+        Self::from_bytes_le(&ark_bytes)
     }
 }
 

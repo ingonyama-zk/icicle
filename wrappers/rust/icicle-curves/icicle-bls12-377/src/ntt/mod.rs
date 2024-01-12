@@ -1,4 +1,6 @@
-use crate::curve::{ScalarCfg, ScalarField, BaseCfg, BaseField};
+use crate::curve::{ScalarCfg, ScalarField};
+#[cfg(feature = "bw6-761")]
+use crate::curve::{BaseCfg, BaseField};
 
 use icicle_core::error::IcicleResult;
 use icicle_core::impl_ntt;
@@ -9,7 +11,7 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 impl_ntt!("bls12_377", bls12_377, ScalarField, ScalarCfg);
-#[cfg(feature = "bw6_761")]
+#[cfg(feature = "bw6-761")]
 impl_ntt!("bw6_761", bw6_761, BaseField, BaseCfg);
 
 #[cfg(test)]

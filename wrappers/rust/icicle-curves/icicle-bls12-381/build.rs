@@ -4,10 +4,16 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=../../../../icicle");
 
+    #[cfg(not(feature = "g2"))]
+    let g2_str = "";
+    #[cfg(feature = "g2")]
+    let g2_str = "ON";
+
     let out_dir = Config::new("../../../../icicle")
                 .define("BUILD_TESTS", "OFF")
                 .define("CURVE", "bls12_381")
                 .define("CMAKE_BUILD_TYPE", "Release")
+                .define("G2_DEFINED", g2_str)
                 .build_target("icicle")
                 .build();
 

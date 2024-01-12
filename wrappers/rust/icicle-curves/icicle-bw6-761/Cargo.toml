@@ -10,7 +10,7 @@ repository = "https://github.com/ingonyama-zk/icicle"
 [dependencies]
 icicle-core = { path = "../../icicle-core" }
 icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
-icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6_761"] }
+icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"] }
 ark-bw6-761 = { version = "0.4.0", optional = true }
 
 [build-dependencies]
@@ -27,4 +27,5 @@ icicle-bw6-761 = { path = ".", features = ["arkworks"] }
 
 [features]
 default = []
+g2 = ["icicle-bls12-377/bw6-761-g2"]
 arkworks = ["ark-bw6-761", "icicle-core/arkworks", "icicle-bls12-377/arkworks"]
