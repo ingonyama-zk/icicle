@@ -1,13 +1,15 @@
 #include <chrono>
 #include <iostream>
 
-
+// select the curve
+#define CURVE_ID 1
 // include NTT template
-#include "icicle/appUtils/ntt/ntt.cuh"
+#include "/icicle/icicle/appUtils/ntt/ntt.cu"
+using namespace curve_config;
 
 // select the curve
-#include "icicle/curves/bls12_381/curve_config.cuh"
-using namespace BLS12_381;
+// #include "icicle/curves/bls12_381/curve_config.cuh"
+// using namespace BLS12_381;
 
 // Operate on scalars
 typedef scalar_t S;
@@ -61,7 +63,7 @@ int main(int argc, char* argv[])
 {
   std::cout << "Icicle Examples: Number Theoretical Transform (NTT)" << std::endl;
   std::cout << "Example parameters" << std::endl;
-  const unsigned log_ntt_size = 26;
+  const unsigned log_ntt_size = 20;
   std::cout << "Log2(NTT size): " << log_ntt_size << std::endl;
   const unsigned ntt_size = 1 << log_ntt_size;
   std::cout << "NTT size: " << ntt_size << std::endl;
@@ -70,23 +72,44 @@ int main(int argc, char* argv[])
   const unsigned batch_size = nof_ntts * ntt_size;
   
   std::cout << "Generating input data for harmonics 0,1" << std::endl;
-  E* elements;
-  elements = (scalar_t*) malloc(sizeof(E) * batch_size);
-  initialize_input(ntt_size, nof_ntts, elements );
+  E* input;
+  input = (scalar_t*) malloc(sizeof(E) * batch_size);
+  initialize_input(ntt_size, nof_ntts, input );
+  E* output;
+  output = (scalar_t*) malloc(sizeof(E) * batch_size);
   
   std::cout << "Running easy-to-use NTT" << std::endl;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
+  // Create a device context
+  device_context::DeviceContext ctx={
+    stream, // stream
+    0,      // device_id
+    0       // memory_pool_id
+  };
+  // Create an NTTConfig instance
+  ntt::NTTConfig<S> config={
+    ctx,                // device_context
+    S::one(),           // coset_gen
+    nof_ntts,           // batch_size
+    ntt::Ordering::kNN, // natural ordering
+    false,              // are_inputs_on_device
+    false,              // are_outputs_on_device
+    true               // is_async
+  };
   
-  bool inverse = false;
   auto begin0 = std::chrono::high_resolution_clock::now();
-  ntt_end2end_batch_template<scalar_t, scalar_t>(elements, batch_size, ntt_size, inverse, stream);
+  // ntt_end2end_batch_template<scalar_t, scalar_t>(elements, batch_size, ntt_size, inverse, stream);
+  cudaError_t err;
+  err = ntt::NTT<S, E>(input, ntt_size, ntt::NTTDir::kForward, config, output);
+
   auto end0 = std::chrono::high_resolution_clock::now();
   auto elapsed0 = std::chrono::duration_cast<std::chrono::nanoseconds>(end0 - begin0);
   printf("On-device runtime: %.3f seconds\n", elapsed0.count() * 1e-9);
-  validate_output(ntt_size, nof_ntts, elements );
+  validate_output(ntt_size, nof_ntts, output );
   cudaStreamSynchronize(stream);
 
+/*
   std::cout << "Running not that easy-to-use but fast NTT" << std::endl;
   
   uint32_t n_twiddles = ntt_size; // n_twiddles is set to 4096 as BLS12_381::scalar_t::omega() is of that order.
@@ -111,9 +134,10 @@ int main(int argc, char* argv[])
   validate_output(ntt_size, nof_ntts, elements );
   cudaFreeAsync(d_elements, stream);
   cudaFreeAsync(d_twiddles, stream);
-  
+*/  
   cudaStreamDestroy(stream);
 
-  free(elements);
+  free(input);
+  free(output);
   return 0;
 }
