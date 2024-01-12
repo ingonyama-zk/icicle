@@ -421,7 +421,7 @@ namespace ntt {
     int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
-    bool are_inputs_on_device = config.are_inputs_on_device; // TODO: unify name to is_
+    bool are_inputs_on_device = config.are_inputs_on_device;
     bool are_outputs_on_device = config.are_outputs_on_device;
 
     S* coset = nullptr;
@@ -550,7 +550,7 @@ namespace ntt {
    *  - `E` is the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t ECNTTCuda(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
     curve_config::projective_t* input,
     int size,
     NTTDir dir,
