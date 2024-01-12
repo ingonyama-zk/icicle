@@ -126,7 +126,7 @@ macro_rules! impl_msm {
       $curve:ident
     ) => {
         mod $curve_prefix_indent {
-            use super::{$curve, Curve, Affine, Projective, MSMConfig, CudaError};
+            use super::{$curve, Affine, CudaError, Curve, MSMConfig, Projective};
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "MSMCuda")]

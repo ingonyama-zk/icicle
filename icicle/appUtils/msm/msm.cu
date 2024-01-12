@@ -1032,9 +1032,7 @@ namespace msm {
   /**
    * Extern "C" version of [DefaultMSMConfig](@ref DefaultMSMConfig) function.
    */
-  extern "C" MSMConfig CONCAT_EXPAND(CURVE, DefaultMSMConfig)() {
-    return DefaultMSMConfig<curve_config::affine_t>();
-  }
+  extern "C" MSMConfig CONCAT_EXPAND(CURVE, DefaultMSMConfig)() { return DefaultMSMConfig<curve_config::affine_t>(); }
 
 #if defined(G2_DEFINED)
 
@@ -1058,10 +1056,11 @@ namespace msm {
   }
 
   /**
-   * Extern "C" version of [DefaultMSMConfig](@ref DefaultMSMConfig) function for the G2 curve 
+   * Extern "C" version of [DefaultMSMConfig](@ref DefaultMSMConfig) function for the G2 curve
    * (functionally no different than the default MSM config function for G1).
    */
-  extern "C" MSMConfig CONCAT_EXPAND(CURVE, G2DefaultMSMConfig)() {
+  extern "C" MSMConfig CONCAT_EXPAND(CURVE, G2DefaultMSMConfig)()
+  {
     return DefaultMSMConfig<curve_config::g2_affine_t>();
   }
 

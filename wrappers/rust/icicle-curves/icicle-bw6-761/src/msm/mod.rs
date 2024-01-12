@@ -17,11 +17,11 @@ impl_msm!("bw6_761G2", bw6_761_g2, G2CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use icicle_core::impl_msm_tests;
-    use icicle_core::msm::tests::*;
     use crate::curve::CurveCfg;
     #[cfg(feature = "g2")]
     use crate::curve::G2CurveCfg;
+    use icicle_core::impl_msm_tests;
+    use icicle_core::msm::tests::*;
 
     impl_msm_tests!(CurveCfg);
     #[cfg(feature = "g2")]

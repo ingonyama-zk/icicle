@@ -2,7 +2,7 @@
 use crate::traits::ArkConvertible;
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
-use ark_ff::{BigInteger, PrimeField, Field as ArkField};
+use ark_ff::{BigInteger, Field as ArkField, PrimeField};
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use std::fmt::{Debug, Display};
@@ -128,7 +128,14 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS,
     }
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
-        let ark_bytes: Vec<u8> = ark.to_base_prime_field_elements().map(|x| x.into_bigint().to_bytes_le()).flatten().collect();
+        let ark_bytes: Vec<u8> = ark
+            .to_base_prime_field_elements()
+            .map(|x| {
+                x.into_bigint()
+                    .to_bytes_le()
+            })
+            .flatten()
+            .collect();
         Self::from_bytes_le(&ark_bytes)
     }
 }
@@ -166,7 +173,7 @@ macro_rules! impl_scalar_field {
         impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
 
         mod $field_prefix_ident {
-            use crate::curve::{$field_name, DeviceContext, CudaError, HostOrDeviceSlice, get_default_device_context};
+            use crate::curve::{get_default_device_context, $field_name, CudaError, DeviceContext, HostOrDeviceSlice};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "GenerateScalars")]
@@ -181,8 +188,10 @@ macro_rules! impl_scalar_field {
                 ) -> CudaError;
             }
 
-
-            pub (crate) fn convert_scalars_montgomery(scalars: &mut HostOrDeviceSlice<$field_name>, is_into: bool) -> CudaError {
+            pub(crate) fn convert_scalars_montgomery(
+                scalars: &mut HostOrDeviceSlice<$field_name>,
+                is_into: bool,
+            ) -> CudaError {
                 unsafe {
                     _convert_scalars_montgomery(
                         scalars.as_mut_ptr(),

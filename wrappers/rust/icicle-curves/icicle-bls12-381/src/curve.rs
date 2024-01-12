@@ -19,19 +19,37 @@ impl_scalar_field!("bls12_381", bls12_381_sf, SCALAR_LIMBS, ScalarField, ScalarC
 impl_field!(BASE_LIMBS, BaseField, BaseCfg, Fq);
 #[cfg(feature = "g2")]
 impl_field!(G2_BASE_LIMBS, G2BaseField, G2BaseCfg, Fq2);
-impl_curve!("bls12_381", bls12_381, CurveCfg, ScalarField, BaseField, ArkG1Config, G1Affine, G1Projective);
+impl_curve!(
+    "bls12_381",
+    bls12_381,
+    CurveCfg,
+    ScalarField,
+    BaseField,
+    ArkG1Config,
+    G1Affine,
+    G1Projective
+);
 #[cfg(feature = "g2")]
-impl_curve!("bls12_381G2", bls12_381_g2, G2CurveCfg, ScalarField, G2BaseField, ArkG2Config, G2Affine, G2Projective);
+impl_curve!(
+    "bls12_381G2",
+    bls12_381_g2,
+    G2CurveCfg,
+    ScalarField,
+    G2BaseField,
+    ArkG2Config,
+    G2Affine,
+    G2Projective
+);
 
 #[cfg(test)]
 mod tests {
-    use super::{ScalarField, CurveCfg, BASE_LIMBS};
+    use super::{CurveCfg, ScalarField, BASE_LIMBS};
     #[cfg(feature = "g2")]
     use super::{G2CurveCfg, G2_BASE_LIMBS};
     use icicle_core::curve::Curve;
-    use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_core::tests::*;
     use icicle_core::traits::FieldImpl;
+    use icicle_core::{impl_curve_tests, impl_field_tests};
 
     impl_field_tests!(ScalarField);
     impl_curve_tests!(BASE_LIMBS, CurveCfg);

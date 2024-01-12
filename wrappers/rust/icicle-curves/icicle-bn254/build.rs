@@ -10,12 +10,12 @@ fn main() {
     let g2_str = "ON";
 
     let out_dir = Config::new("../../../../icicle")
-                .define("BUILD_TESTS", "OFF")
-                .define("CURVE", "bn254")
-                .define("CMAKE_BUILD_TYPE", "Release")
-                .define("G2_DEFINED", g2_str)
-                .build_target("icicle")
-                .build();
+        .define("BUILD_TESTS", "OFF")
+        .define("CURVE", "bn254")
+        .define("CMAKE_BUILD_TYPE", "Release")
+        .define("G2_DEFINED", g2_str)
+        .build_target("icicle")
+        .build();
 
     println!("cargo:rustc-link-search={}/build", out_dir.display());
 

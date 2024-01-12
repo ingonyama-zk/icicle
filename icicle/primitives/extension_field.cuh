@@ -40,12 +40,12 @@ public:
 
   static constexpr HOST_DEVICE_INLINE ExtensionField ToMontgomery(const ExtensionField& xs)
   {
-    return ExtensionField { xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r} };
+    return ExtensionField{xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r}};
   }
 
   static constexpr HOST_DEVICE_INLINE ExtensionField FromMontgomery(const ExtensionField& xs)
   {
-    return ExtensionField { xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv} };
+    return ExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
   }
 
   static HOST_INLINE ExtensionField rand_host() { return ExtensionField{FF::rand_host(), FF::rand_host()}; }

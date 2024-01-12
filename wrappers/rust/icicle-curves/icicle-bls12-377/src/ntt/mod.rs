@@ -1,6 +1,6 @@
-use crate::curve::{ScalarCfg, ScalarField};
 #[cfg(feature = "bw6-761")]
 use crate::curve::{BaseCfg, BaseField};
+use crate::curve::{ScalarCfg, ScalarField};
 
 use icicle_core::error::IcicleResult;
 use icicle_core::impl_ntt;

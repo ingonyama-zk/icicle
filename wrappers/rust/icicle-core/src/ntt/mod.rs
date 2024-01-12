@@ -141,7 +141,7 @@ macro_rules! impl_ntt {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::ntt::{$field, $field_config, NTTDir, NTTConfig, CudaError, DeviceContext};
+            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "NTTCuda")]

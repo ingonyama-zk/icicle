@@ -219,8 +219,8 @@ macro_rules! impl_curve {
         pub type $projective_type = Projective<$curve>;
 
         mod $curve_prefix_ident {
-            use super::{DeviceContext, CudaError, $projective_type, $affine_type};
-        
+            use super::{$affine_type, $projective_type, CudaError, DeviceContext};
+
             extern "C" {
                 #[link_name = concat!($curve_prefix, "Eq")]
                 pub(crate) fn eq(point1: *const $projective_type, point2: *const $projective_type) -> bool;
@@ -261,13 +261,20 @@ macro_rules! impl_curve {
 
             fn generate_random_projective_points(size: usize) -> Vec<$projective_type> {
                 let mut res = vec![$projective_type::zero(); size];
-                unsafe { $curve_prefix_ident::generate_projective_points(&mut res[..] as *mut _ as *mut $projective_type, size) };
+                unsafe {
+                    $curve_prefix_ident::generate_projective_points(
+                        &mut res[..] as *mut _ as *mut $projective_type,
+                        size,
+                    )
+                };
                 res
             }
 
             fn generate_random_affine_points(size: usize) -> Vec<$affine_type> {
                 let mut res = vec![$affine_type::zero(); size];
-                unsafe { $curve_prefix_ident::generate_affine_points(&mut res[..] as *mut _ as *mut $affine_type, size) };
+                unsafe {
+                    $curve_prefix_ident::generate_affine_points(&mut res[..] as *mut _ as *mut $affine_type, size)
+                };
                 res
             }
 
@@ -282,7 +289,10 @@ macro_rules! impl_curve {
                 }
             }
 
-            fn convert_projective_montgomery(points: &mut HostOrDeviceSlice<$projective_type>, is_into: bool) -> CudaError {
+            fn convert_projective_montgomery(
+                points: &mut HostOrDeviceSlice<$projective_type>,
+                is_into: bool,
+            ) -> CudaError {
                 unsafe {
                     $curve_prefix_ident::_convert_projective_montgomery(
                         points.as_mut_ptr(),

@@ -1,4 +1,4 @@
-use ark_ff::{FftField, One, Field as ArkField};
+use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::device_context::get_default_device_context;
