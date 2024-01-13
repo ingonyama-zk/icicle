@@ -18,6 +18,7 @@
 using namespace bn254;
 #elif CURVE_ID == BLS12_381
 #include "bls12_381_params.cuh"
+#include "../appUtils/poseidon/constants/bls12_381_poseidon.h"
 using namespace bls12_381;
 #elif CURVE_ID == BLS12_377
 #include "bls12_377_params.cuh"
