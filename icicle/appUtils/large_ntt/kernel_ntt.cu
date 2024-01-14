@@ -302,6 +302,10 @@ uint4* generate_external_twiddles(test_scalar basic_root, uint4* twiddles, uint4
 
 void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, bool inv, bool dit){
 
+  //special cases:
+  if (log_size==1 || log_size==2 || log_size==3 || log_size==7){
+    throw std::invalid_argument("size not implemented");
+  }
   if (log_size==4){
     if (dit) {ntt16dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);}
     else {ntt16<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);}
@@ -325,6 +329,7 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
     return;
   }
   
+  //general case:
   if (dit){
     for (int i = 0; i < 5; i++)
     {

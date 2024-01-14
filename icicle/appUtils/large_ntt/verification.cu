@@ -39,7 +39,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 19;
+  int NTT_LOG_SIZE = 13;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
