@@ -43,7 +43,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 24;
+  int NTT_LOG_SIZE = 19;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
@@ -63,7 +63,7 @@ int main(){
   cpuIcicle=(test_scalar*)malloc(sizeof(test_scalar)*NTT_SIZE);
   cpuNew=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2);
   cpuNew2=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2);
-  // cpuTwiddles=(uint4*)malloc(sizeof(uint4)*NTT_SIZE*2*64);
+  cpuTwiddles=(uint4*)malloc(sizeof(uint4)*6);
   if(cpuIcicle==NULL || cpuNew==NULL || cpuNew2==NULL) {
     fprintf(stderr, "Malloc failed\n");
     exit(1);
@@ -75,10 +75,12 @@ int main(){
   uint4* gpuNew2;
   uint4* gpuTwiddles;
   uint4* gpuIntTwiddles;
+  uint4* gpuBasicTwiddles;
   $CUDA(cudaMalloc((void**)&gpuIcicle, sizeof(test_scalar)*NTT_SIZE));
   $CUDA(cudaMalloc((void**)&gpuNew, sizeof(uint4)*NTT_SIZE*2));
   $CUDA(cudaMalloc((void**)&gpuNew2, sizeof(uint4)*NTT_SIZE*2));
   $CUDA(cudaMalloc((void**)&gpuTwiddles, sizeof(uint4)*(TT_SIZE+2*(TT_SIZE>>4))*2)); //TODO - sketchy
+  $CUDA(cudaMalloc((void**)&gpuBasicTwiddles, sizeof(uint4)*3*2));
   // $CUDA(cudaMalloc((void**)&gpuIntTwiddles, sizeof(uint4)*TT_SIZE*2));
 
   //init inputs
@@ -102,7 +104,7 @@ int main(){
   $CUDA(cudaMemcpy(gpuIcicle, cpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew, cpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
   $CUDA(cudaMemcpy(gpuNew2, cpuNew2, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyHostToDevice));
-  gpuIntTwiddles = generate_external_twiddles(gpuTwiddles, TT_LOG_SIZE, INV);
+  gpuIntTwiddles = generate_external_twiddles(INV? test_scalar::omega_inv(30) : test_scalar::omega(30), gpuTwiddles, gpuBasicTwiddles, TT_LOG_SIZE, INV);
   printf("finished generating twiddles\n");
   // generate_internal_twiddles<<<1,1>>>(gpuIntTwiddles);
   // cudaDeviceSynchronize();
@@ -121,7 +123,7 @@ int main(){
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
   for (size_t i = 0; i < count; i++){
-    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
+    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, NTT_LOG_SIZE, INV, DIT);
   }
     // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   $CUDA(cudaEventRecord(new_stop, 0));
@@ -143,7 +145,7 @@ int main(){
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time/count);
   #else
   if (DIT) reorder64_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
-  new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, NTT_LOG_SIZE, INV, DIT);
+  new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, NTT_LOG_SIZE, INV, DIT);
   // if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
   if (!DIT) reorder64_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
   printf("finished new\n");
@@ -157,13 +159,13 @@ int main(){
   $CUDA(cudaMemcpy(cpuIcicle, gpuIcicle, sizeof(test_scalar)*NTT_SIZE, cudaMemcpyDeviceToHost));
   $CUDA(cudaMemcpy(cpuNew, gpuNew, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
   $CUDA(cudaMemcpy(cpuNew2, gpuNew2, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
-  // $CUDA(cudaMemcpy(cpuTwiddles, gpuTwiddles, sizeof(uint4)*NTT_SIZE*2, cudaMemcpyDeviceToHost));
-  // for (int i = 0; i < NTT_SIZE; i++)
+  // $CUDA(cudaMemcpy(cpuTwiddles, gpuBasicTwiddles, sizeof(uint4)*3*2, cudaMemcpyDeviceToHost));
+  // for (int i = 0; i < 3; i++)
   // {
   //   test_scalar new_temp;
-  //   new_temp.store_half(cpuNew[i], false);
-  //   new_temp.store_half(cpuNew[i+NTT_SIZE], true);
-  //   if (i%64 == 0) printf("%d\n",i/64);
+  //   new_temp.store_half(cpuTwiddles[i], false);
+  //   new_temp.store_half(cpuTwiddles[i+3], true);
+  //   // if (i%64 == 0) printf("%d\n",i/64);
   //   std::cout << new_temp <<std::endl;
   // }
   // printf("\n\n");

@@ -367,16 +367,29 @@ class NTTEngine {
     }
   }
 
-__device__ __forceinline__ void loadBasicTwiddles(bool inv){
+// __device__ __forceinline__ void loadBasicTwiddles(bool inv){
     
-    // #pragma unroll
-    // for (int i = 1; i < 4; i++)
-    // {
-      // WB[0] = inv? test_scalar::omega_inv(3) : test_scalar::omega(3);
-      WB[0] = inv? test_scalar::omega4_inv(4) : test_scalar::omega4(4);
-      WB[1] = inv? test_scalar::win3_inv(6) : test_scalar::win3(6);
-      WB[2] = inv? test_scalar::win3_inv(7) : test_scalar::win3(7);
-    // }
+//     // #pragma unroll
+//     // for (int i = 1; i < 4; i++)
+//     // {
+//       // WB[0] = inv? test_scalar::omega_inv(3) : test_scalar::omega(3);
+//       WB[0] = inv? test_scalar::omega4_inv(4) : test_scalar::omega4(4);
+//       WB[1] = inv? test_scalar::win3_inv(6) : test_scalar::win3(6);
+//       WB[2] = inv? test_scalar::win3_inv(7) : test_scalar::win3(7);
+//     // }
+//   }
+
+  __device__ __forceinline__ void loadBasicTwiddles(uint4* basic_twiddles){
+    
+    #pragma unroll
+    for (int i = 0; i < 3; i++)
+    {
+      WB[i].store_half(basic_twiddles[i], false);
+      WB[i].store_half(basic_twiddles[i+3], true);
+      // WB[0] = inv? test_scalar::omega4_inv(4) : test_scalar::omega4(4);
+      // WB[1] = inv? test_scalar::win3_inv(6) : test_scalar::win3(6);
+      // WB[2] = inv? test_scalar::win3_inv(7) : test_scalar::win3(7);
+    }
   }
 
   __device__ __forceinline__ void loadInternalTwiddles(uint4* data, bool stride){
