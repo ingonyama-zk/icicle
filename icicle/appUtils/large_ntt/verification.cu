@@ -10,10 +10,6 @@
 #include "ntt.cuh"
 // #include "../../curves/bn254/curve_config.cuh"
 
-// #include <stdio.h>
-// #include <stdint.h>
-// #include <cooperative_groups.h>
-
 // #define PERFORMANCE
 
 using namespace BLS12_377;
@@ -146,10 +142,8 @@ int main(){
   #else
   if (DIT) reorder_digits_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
   new_ntt(DIT? gpuNew2 : gpuNew, DIT? gpuNew : gpuNew2, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, NTT_LOG_SIZE, INV, DIT);
-  // if (!DIT) reorder_digits_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
   if (!DIT) reorder_digits_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew2, gpuNew, NTT_LOG_SIZE, DIT);
   printf("finished new\n");
-  // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
   ntt_end2end_batch_template<test_scalar, test_scalar>(gpuIcicle, NTT_SIZE, NTT_SIZE, INV, 0);
   if (!INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
