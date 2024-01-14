@@ -19,12 +19,13 @@ using namespace curve_config;
 using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 
 // Arity
-#define A 2
-#define T A+1
+#define A      2
+#define T      A + 1
 #define A_TYPE ARITY::TWO
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg) printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+#define END_TIMER(timer, msg)                                                                                          \
+  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int main(int argc, char* argv[])
 {
@@ -82,9 +83,7 @@ int main(int argc, char* argv[])
     std::cout << "{";
     for (int j = 0; j < 8; j++) {
       std::cout << ((uint32_t*)&el.limbs_storage)[j];
-      if (j != 7) {
-        std::cout << ", ";
-      }
+      if (j != 7) { std::cout << ", "; }
     }
     std::cout << "}," << std::endl;
   }

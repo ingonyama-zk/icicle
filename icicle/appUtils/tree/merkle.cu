@@ -65,7 +65,7 @@ namespace merkle {
     S* big_tree_digests,
     size_t start_segment_size,
     PoseidonConstants<S>& poseidon,
-    cudaStream_t &stream)
+    cudaStream_t& stream)
   {
     PoseidonConfig config = default_poseidon_config(T);
     config.are_inputs_on_device = true;
@@ -83,7 +83,8 @@ namespace merkle {
       CHK_IF_RETURN(poseidon_res);
 
       S* digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_blocks;
-      CHK_IF_RETURN(cudaMemcpyAsync(digests_with_offset, digests, number_of_blocks * sizeof(S), cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(digests_with_offset, digests, number_of_blocks * sizeof(S), cudaMemcpyDeviceToHost, stream));
 
       number_of_blocks /= arity;
       segment_offset += segment_size;
@@ -95,7 +96,8 @@ namespace merkle {
   }
 
   template <typename S, int T>
-  cudaError_t build_merkle_tree(const S* leaves, S* digests, uint32_t height, poseidon::PoseidonConstants<S>& poseidon, MerkleConfig& config)
+  cudaError_t build_merkle_tree(
+    const S* leaves, S* digests, uint32_t height, poseidon::PoseidonConstants<S>& poseidon, MerkleConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -133,7 +135,7 @@ namespace merkle {
       CHK_IF_RETURN(cudaStreamCreate(&streams[i]));
     }
 
-  #if !defined(__CUDA_ARCH__) && defined(MERKLE_DEBUG)
+#if !defined(__CUDA_ARCH__) && defined(MERKLE_DEBUG)
     std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Number of streams = " << number_of_streams << std::endl;
     std::cout << "Number of subtrees = " << number_of_subtrees << std::endl;
@@ -144,7 +146,7 @@ namespace merkle {
     std::cout << "Digest elements for a subtree = " << get_digests_len(subtree_height, arity) << std::endl;
     std::cout << "Size of 1 subtree states = " << subtree_state_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Size of 1 subtree digests = " << subtree_digests_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
-  #endif
+#endif
 
     // Allocate memory for the leaves and digests
     // These are shared by streams in a pool
@@ -165,15 +167,15 @@ namespace merkle {
       // We need to copy the first level from RAM to device
       // The pitch property of cudaMemcpy2D will allow us to deal with shape differences
       CHK_IF_RETURN(cudaMemcpy2DAsync(
-        subtree_state, T * sizeof(S),      // Device pointer and device pitch
-        subtree_leaves, arity * sizeof(S), // Host pointer and pitch
-        arity * sizeof(S),                 // Size of the source matrix (Arity)
-        subtree_leaves_size / arity,       // Size of the source matrix (Number of blocks)
-        cudaMemcpyHostToDevice, subtree_stream));    // Direction and stream
-      
+        subtree_state, T * sizeof(S),             // Device pointer and device pitch
+        subtree_leaves, arity * sizeof(S),        // Host pointer and pitch
+        arity * sizeof(S),                        // Size of the source matrix (Arity)
+        subtree_leaves_size / arity,              // Size of the source matrix (Number of blocks)
+        cudaMemcpyHostToDevice, subtree_stream)); // Direction and stream
+
       cudaError_t subtree_result = __build_merkle_subtree<S, T>(
-              subtree_state, subtree_digests, subtree_idx, subtree_leaves_size, digests, number_of_leaves / arity,
-              poseidon, subtree_stream);
+        subtree_state, subtree_digests, subtree_idx, subtree_leaves_size, digests, number_of_leaves / arity, poseidon,
+        subtree_stream);
       CHK_IF_RETURN(subtree_result);
     }
 
@@ -187,4 +189,4 @@ namespace merkle {
     free(streams);
     return CHK_LAST();
   }
-}
+} // namespace merkle

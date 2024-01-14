@@ -13,12 +13,13 @@
 using namespace poseidon;
 using namespace curve_config;
 
-#define A 2
-#define T A+1
+#define A      2
+#define T      A + 1
 #define A_TYPE ARITY::TWO
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg) printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+#define END_TIMER(timer, msg)                                                                                          \
+  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int main(int argc, char* argv[])
 {

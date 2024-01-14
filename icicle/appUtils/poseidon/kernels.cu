@@ -2,8 +2,7 @@
 
 namespace poseidon {
   template <typename S, int T>
-  __global__ void prepare_poseidon_states(
-    S* states, size_t number_of_states, S domain_tag, bool aligned)
+  __global__ void prepare_poseidon_states(S* states, size_t number_of_states, S domain_tag, bool aligned)
   {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int state_number = idx / T;
@@ -44,10 +43,9 @@ namespace poseidon {
     __syncthreads();
 
     typename S::Wide element_wide = S::mul_wide(shared_states[vec_number * T], matrix[element_number]);
-    #pragma unroll
+#pragma unroll
     for (int i = 1; i < T; i++) {
-      element_wide =
-        element_wide + S::mul_wide(shared_states[vec_number * T + i], matrix[i * T + element_number]);
+      element_wide = element_wide + S::mul_wide(shared_states[vec_number * T + i], matrix[i * T + element_number]);
     }
     __syncthreads();
 
@@ -94,8 +92,9 @@ namespace poseidon {
     bool add_pre_round_constants = first_half;
     for (int i = 0; i < constants.full_rounds_half; i++) {
       states[idx] = full_round<S, T>(
-        states[idx], rc_offset, local_state_number, element_number, !first_half || (i < (constants.full_rounds_half - 1)),
-        add_pre_round_constants, !first_half && (i == constants.full_rounds_half - 1), shared_states, constants);
+        states[idx], rc_offset, local_state_number, element_number,
+        !first_half || (i < (constants.full_rounds_half - 1)), add_pre_round_constants,
+        !first_half && (i == constants.full_rounds_half - 1), shared_states, constants);
       rc_offset += T;
 
       if (add_pre_round_constants) {
@@ -116,14 +115,14 @@ namespace poseidon {
 
     typename S::Wide state_0_wide = S::mul_wide(element, sparse_matrix[0]);
 
-    #pragma unroll
+#pragma unroll
     for (int i = 1; i < T; i++) {
       state_0_wide = state_0_wide + S::mul_wide(state[i], sparse_matrix[i]);
     }
 
     state[0] = S::reduce(state_0_wide);
 
-    #pragma unroll
+#pragma unroll
     for (int i = 1; i < T; i++) {
       state[i] = state[i] + (element * sparse_matrix[T + i - 1]);
     }
@@ -163,4 +162,4 @@ namespace poseidon {
 
     state[(idx / (T - 1) * T) + (idx % (T - 1)) + 1] = out[idx];
   }
-}
+} // namespace poseidon

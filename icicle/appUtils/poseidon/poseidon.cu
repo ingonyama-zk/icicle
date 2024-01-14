@@ -42,7 +42,12 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  cudaError_t permute_many(S* states, size_t number_of_states, PoseidonKernelsConfiguration& kernel_cfg, PoseidonConstants<S>& constants, cudaStream_t& stream)
+  cudaError_t permute_many(
+    S* states,
+    size_t number_of_states,
+    PoseidonKernelsConfiguration& kernel_cfg,
+    PoseidonConstants<S>& constants,
+    cudaStream_t& stream)
   {
     size_t rc_offset = 0;
 
@@ -52,9 +57,9 @@ namespace poseidon {
       states, number_of_states, rc_offset, FIRST_FULL_ROUNDS, constants);
     rc_offset += T * (constants.full_rounds_half + 1);
 
-    partial_rounds<S, T><<<
-      kernel_cfg.number_of_singlehash_blocks(number_of_states), kernel_cfg.singlehash_block_size, 0, stream>>>(
-      states, number_of_states, rc_offset, constants);
+    partial_rounds<S, T>
+      <<<kernel_cfg.number_of_singlehash_blocks(number_of_states), kernel_cfg.singlehash_block_size, 0, stream>>>(
+        states, number_of_states, rc_offset, constants);
     rc_offset += constants.partial_rounds;
 
     full_rounds<S, T><<<
@@ -65,17 +70,12 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  cudaError_t poseidon_hash(
-    S* input,
-    S* output,
-    size_t number_of_states,
-    PoseidonConstants<S>& constants,
-    PoseidonConfig& config
-  )
+  cudaError_t
+  poseidon_hash(S* input, S* output, size_t number_of_states, PoseidonConstants<S>& constants, PoseidonConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
-    S *states;
+    S* states;
     if (config.input_is_a_state) {
       states = input;
     } else {
@@ -86,28 +86,28 @@ namespace poseidon {
       // padded and coppied to device in a T x NumberOfBlocks matrix
       CHK_IF_RETURN(cudaMemcpy2DAsync(
         states, T * sizeof(S),                 // Device pointer and device pitch
-        input, (T - 1) * sizeof(S),              // Host pointer and pitch
+        input, (T - 1) * sizeof(S),            // Host pointer and pitch
         (T - 1) * sizeof(S), number_of_states, // Size of the source matrix (Arity x NumberOfBlocks)
         cudaMemcpyHostToDevice, stream));
     }
 
-    S *output_device;
+    S* output_device;
     if (config.are_outputs_on_device) {
       output_device = output;
     } else {
       CHK_IF_RETURN(cudaMallocAsync(&output_device, number_of_states * sizeof(S), stream))
     }
 
-    prepare_poseidon_states<S, T><<<
-      config.kernel_cfg.number_of_full_blocks(number_of_states), config.kernel_cfg.number_of_threads, 0, stream>>>(
-      states, number_of_states, constants.domain_tag, config.aligned);
-    
+    prepare_poseidon_states<S, T>
+      <<<config.kernel_cfg.number_of_full_blocks(number_of_states), config.kernel_cfg.number_of_threads, 0, stream>>>(
+        states, number_of_states, constants.domain_tag, config.aligned);
+
     cudaError_t hash_error = permute_many<S, T>(states, number_of_states, config.kernel_cfg, constants, stream);
     CHK_IF_RETURN(hash_error);
 
     get_hash_results<S, T><<<
-        config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0, stream>>>(
-        states, number_of_states, output_device);
+      config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0,
+      stream>>>(states, number_of_states, output_device);
 
     if (config.loop_results) {
       copy_recursive<S, T><<<
@@ -118,7 +118,8 @@ namespace poseidon {
     if (!config.input_is_a_state) CHK_IF_RETURN(cudaFreeAsync(states, stream));
 
     if (!config.are_outputs_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(output, output_device, number_of_states * sizeof(S), cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(output, output_device, number_of_states * sizeof(S), cudaMemcpyDeviceToHost, stream));
       CHK_IF_RETURN(cudaFreeAsync(output_device, stream));
     }
 
@@ -141,14 +142,13 @@ namespace poseidon {
     int constants_len = round_constants_len + mds_matrix_len * 2 + sparse_matrices_len;
 
     // Malloc memory for copying constants
-    S *d_constants;
+    S* d_constants;
     cudaMallocAsync(&d_constants, sizeof(S) * constants_len, stream);
 
     // Copy constants
-    cudaMemcpyAsync(
-      d_constants, constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_constants, constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream);
 
-    S *round_constants = d_constants;
+    S* round_constants = d_constants;
     S* mds_matrix = round_constants + round_constants_len;
     S* non_sparse_matrix = mds_matrix + mds_matrix_len;
     S* sparse_matrices = non_sparse_matrix + mds_matrix_len;
@@ -161,15 +161,8 @@ namespace poseidon {
 
     // Make sure all the constants have been copied
     cudaStreamSynchronize(stream);
-    PoseidonConstants<S> consts = {
-      partial_rounds,
-      full_rounds_half,
-      round_constants,
-      mds_matrix,
-      non_sparse_matrix,
-      sparse_matrices,
-      domain_tag
-    };
+    PoseidonConstants<S> consts = {partial_rounds,    full_rounds_half, round_constants, mds_matrix,
+                                   non_sparse_matrix, sparse_matrices,  domain_tag};
     return consts;
   }
 } // namespace poseidon
