@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include "../../utils/device_context.cuh"
+#include "../../curves/curve_config.cuh"
 #include "../../utils/error_handler.cuh"
 
 namespace poseidon {
@@ -75,13 +76,13 @@ namespace poseidon {
 
     return config;
   }
-
   struct PoseidonConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
     PoseidonKernelsConfiguration kernel_cfg;
     bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     bool input_is_a_state;
+    bool aligned;
     bool is_async;              /**< Whether to run the NTT asyncronously. If set to `true`, the NTT function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
@@ -98,6 +99,7 @@ namespace poseidon {
       false,      // are_inputes_on_device
       false,      // are_outputs_on_device
       false,      // input_is_a_state
+      false,      // aligned
       false,      // is_async
       false,      // loop_results
     };

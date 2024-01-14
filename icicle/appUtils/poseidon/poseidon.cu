@@ -100,19 +100,19 @@ namespace poseidon {
 
     prepare_poseidon_states<S, T><<<
       config.kernel_cfg.number_of_full_blocks(number_of_states), config.kernel_cfg.number_of_threads, 0, stream>>>(
-      states, number_of_states, constants.domain_tag, false);
+      states, number_of_states, constants.domain_tag, config.aligned);
     
     cudaError_t hash_error = permute_many<S, T>(states, number_of_states, config.kernel_cfg, constants, stream);
     CHK_IF_RETURN(hash_error);
 
     get_hash_results<S, T><<<
-      config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0, stream>>>(
-      states, number_of_states, output_device);
+        config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0, stream>>>(
+        states, number_of_states, output_device);
 
     if (config.loop_results) {
       copy_recursive<S, T><<<
         config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0,
-        stream>>>(states, number_of_states, output);
+        stream>>>(states, number_of_states, output_device);
     }
 
     if (!config.input_is_a_state) CHK_IF_RETURN(cudaFreeAsync(states, stream));
