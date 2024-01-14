@@ -144,10 +144,10 @@ int main(){
   fprintf(stderr, "Icicle Runtime=%0.3f MS\n", icicle_time/count);
   fprintf(stderr, "New Runtime=%0.3f MS\n", new_time/count);
   #else
-  if (DIT) reorder64_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
-  new_ntt(DIT? gpuNew2 : gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, NTT_LOG_SIZE, INV, DIT);
-  // if (!DIT) reorder64_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
-  if (!DIT) reorder64_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
+  if (DIT) reorder_digits_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew, gpuNew2, NTT_LOG_SIZE, DIT);
+  new_ntt(DIT? gpuNew2 : gpuNew, DIT? gpuNew : gpuNew2, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, NTT_LOG_SIZE, INV, DIT);
+  // if (!DIT) reorder_digits_kernel<<<(1<<(NTT_LOG_SIZE-6)),64>>>(gpuNew, gpuNew2, NTT_LOG_SIZE/6);
+  if (!DIT) reorder_digits_kernel<<<(1<<(max(NTT_LOG_SIZE,6)-6)),min(64, 1<<NTT_LOG_SIZE)>>>(gpuNew2, gpuNew, NTT_LOG_SIZE, DIT);
   printf("finished new\n");
   // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   if (INV) reverse_order_batch(gpuIcicle, NTT_SIZE, NTT_LOG_SIZE, 1, 0);
@@ -181,8 +181,8 @@ int main(){
     // new_temp.store_half(cpuTwiddles[2*64*64*64 + i+64*NTT_SIZE], true);
     // new_temp.store_half(cpuTwiddles[i], false);
     // new_temp.store_half(cpuTwiddles[i+NTT_SIZE], true);
-    new_temp.store_half(cpuNew2[i], false);
-    new_temp.store_half(cpuNew2[i+NTT_SIZE], true);
+    new_temp.store_half(cpuNew[i], false);
+    new_temp.store_half(cpuNew[i+NTT_SIZE], true);
     // if (i%(32*32*32) < 64*2) if (i%32 == 0) printf("%d\n",i/32);
     // if (i%16 == 0) printf("%d\n",i/16);
     // if (i%(32*32*32*32) == 1){
