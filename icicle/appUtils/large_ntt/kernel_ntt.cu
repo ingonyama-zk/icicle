@@ -367,7 +367,7 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
 
 
 __launch_bounds__(64)
-__global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -385,7 +385,8 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // if (twiddle_stride && threadIdx.x>15) return;
   
   // engine.initializeRoot(strided);
-  engine.loadBasicTwiddles(inv);
+  // engine.loadBasicTwiddles(inv);
+  engine.loadBasicTwiddles(basic_twiddles);
   // engine.loadInternalTwiddles(internal_twiddles, strided);
     
   // #pragma unroll 1
@@ -481,7 +482,7 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
 }
 
 __launch_bounds__(64)
-__global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -499,7 +500,8 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // if (twiddle_stride && threadIdx.x>15) return;
   
   // engine.initializeRoot(strided);
-  engine.loadBasicTwiddles(inv);
+  // engine.loadBasicTwiddles(inv);
+  engine.loadBasicTwiddles(basic_twiddles);
   // engine.loadInternalTwiddles32(internal_twiddles, strided);
     
   // #pragma unroll 1
@@ -694,7 +696,7 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
 // }
 
 __launch_bounds__(64)
-__global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -712,7 +714,8 @@ __global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   // if (twiddle_stride && threadIdx.x>15) return;
   
   // engine.initializeRoot(strided);
-  engine.loadBasicTwiddles(inv);
+  // engine.loadBasicTwiddles(inv);
+  engine.loadBasicTwiddles(basic_twiddles);
   // engine.loadInternalTwiddles32(internal_twiddles, strided);
     
   // #pragma unroll 1
@@ -866,7 +869,7 @@ __global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
 }
 
 __launch_bounds__(64)
-__global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -884,7 +887,8 @@ __global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // if (twiddle_stride && threadIdx.x>15) return;
   
   // engine.initializeRoot(strided);
-  engine.loadBasicTwiddles(inv);
+  // engine.loadBasicTwiddles(inv);
+  engine.loadBasicTwiddles(basic_twiddles);
   // engine.loadInternalTwiddles16(internal_twiddles, strided);
     
   // #pragma unroll 1
@@ -1077,7 +1081,7 @@ __global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
 
 
 __launch_bounds__(64)
-__global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -1095,7 +1099,8 @@ __global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   // if (twiddle_stride && threadIdx.x>15) return;
   
   // engine.initializeRoot(strided);
-  engine.loadBasicTwiddles(inv);
+  // engine.loadBasicTwiddles(inv);
+  engine.loadBasicTwiddles(basic_twiddles);
   // engine.loadInternalTwiddles16(internal_twiddles, strided);
     
   // #pragma unroll 1
@@ -1295,18 +1300,33 @@ __global__ void normalize_kernel(uint4* data, uint32_t size, test_scalar norm_fa
   data[threadIdx.x+size] = temp.load_half(true);
 }
 
-__global__ void generate_base_table(int x, uint4* base_table, bool inv, test_scalar norm_factor){
+// __global__ void generate_base_table(int x, uint4* base_table, bool inv, test_scalar norm_factor){
+__global__ void generate_base_table(test_scalar basic_root, uint4* base_table){
   
-  test_scalar w = inv? test_scalar::omega_inv(x) : test_scalar::omega(x);
-  test_scalar t = test_scalar::one(), temp;
+  // test_scalar w = inv? test_scalar::omega_inv(x) : test_scalar::omega(x);
+  test_scalar w = basic_root;
+  test_scalar t = test_scalar::one();
   for (int i = 0; i < 64; i++)
   {
     // base_table[i] = t;
-    temp = t * norm_factor;
-    base_table[i] = temp.load_half(false);
-    base_table[i+64] = temp.load_half(true);
+    // temp = t * norm_factor;
+    base_table[i] = t.load_half(false);
+    base_table[i+64] = t.load_half(true);
     t = t * w;
   }
+}
+
+__global__ void generate_basic_twiddles(test_scalar basic_root, uint4* basic_twiddles){
+  
+  test_scalar w0 = basic_root*basic_root;
+  test_scalar w1 = (basic_root + w0*basic_root)*test_scalar::inv_log_size(1);
+  test_scalar w2 = (basic_root - w0*basic_root)*test_scalar::inv_log_size(1);
+  basic_twiddles[0] = w0.load_half(false);
+  basic_twiddles[3] = w0.load_half(true);
+  basic_twiddles[1] = w1.load_half(false);
+  basic_twiddles[4] = w1.load_half(true);
+  basic_twiddles[2] = w2.load_half(false);
+  basic_twiddles[5] = w2.load_half(true);
 }
 
 __global__ void generate_twiddle_combinations(uint4* w6_table, uint4* w12_table, uint4* w18_table, uint4* w24_table, uint4* w30_table, uint4* twiddles, uint32_t log_size, uint32_t stage_num, test_scalar norm_factor){
@@ -1356,7 +1376,7 @@ __global__ void generate_twiddle_combinations(uint4* w6_table, uint4* w12_table,
 //   }
 // }
 
-uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size, bool inv){
+uint4* generate_external_twiddles(test_scalar basic_root, uint4* twiddles, uint4* basic_twiddles, uint32_t log_size, bool inv){
 
   uint4* w6_table;
   uint4* w12_table;
@@ -1370,11 +1390,18 @@ uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size, bool inv){
   cudaMalloc((void**)&w30_table, sizeof(uint4)*64*2);
   // generate_base_table<<<1,1>>>(6, w6_table, inv, (log_size <= 6 && inv)? test_scalar::inv_log_size(log_size) : test_scalar::one()); //TODO - generalize inv
   // generate_base_table<<<1,1>>>(6, w6_table, inv, test_scalar::inv_log_size(6)); //TODO - generalize inv
-  generate_base_table<<<1,1>>>(6, w6_table, inv, test_scalar::one()); //TODO - generalize inv
-  generate_base_table<<<1,1>>>(12, w12_table, inv, test_scalar::one());
-  generate_base_table<<<1,1>>>(18, w18_table, inv, test_scalar::one());
-  generate_base_table<<<1,1>>>(24, w24_table, inv, test_scalar::one());
-  generate_base_table<<<1,1>>>(30, w30_table, inv, test_scalar::one());
+  test_scalar temp_root = basic_root;
+  generate_base_table<<<1,1>>>(basic_root, w30_table);
+  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w24_table);
+  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w18_table);
+  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w12_table);
+  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w6_table);
+  for (int i=0; i<3; i++) temp_root = temp_root*temp_root;
+  generate_basic_twiddles<<<1,1>>>(temp_root, basic_twiddles);
   // for (int i = 1; i < log_size/6; i++)
   // {
   //   generate_twiddle_combinations<<<16<<((i-1)*6),256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles, log_size, i, ((i+1)*6 == log_size && inv)? test_scalar::inv_log_size(log_size) : test_scalar::one());
@@ -1386,7 +1413,7 @@ uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size, bool inv){
     // printf("ergwrtheryhetyjetyjthert %d\n",temp);
     if (!STAGE_SIZES_HOST[log_size][i]) break;
     temp += STAGE_SIZES_HOST[log_size][i];
-    generate_twiddle_combinations<<<1<<(temp-8),256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles, log_size, i, (temp == log_size && inv)? test_scalar::inv_log_size(log_size) : test_scalar::one()); //TODO - generalize inv
+    generate_twiddle_combinations<<<1<<(temp-8),256>>>(w6_table, w12_table, w18_table, w24_table, w30_table, twiddles, log_size, i, (temp == log_size && inv)? test_scalar::inv_log_size(log_size) : test_scalar::one()); 
   }
   
 
@@ -1397,31 +1424,31 @@ uint4* generate_external_twiddles(uint4* twiddles, uint32_t log_size, bool inv){
   return w6_table;
 }
 
-void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, bool inv, bool dit){
+void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, bool inv, bool dit){
 // void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size){
   if (log_size==4){
-    if (dit) {ntt16dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
-    else {ntt16<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
+    if (dit) {ntt16dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
+    else {ntt16<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
     // ntt16<<<1,2,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
     if (inv) normalize_kernel<<<1,16>>>(in, 16, test_scalar::inv_log_size(4));
     return;
   }
   if (log_size==5){
-    if (dit) {ntt32dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
-    else {ntt32<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
+    if (dit) {ntt32dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
+    else {ntt32<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
     if (inv) normalize_kernel<<<1,32>>>(in, 32, test_scalar::inv_log_size(5));
     return;
   }
   if (log_size==6){
-    ntt64<<<1,8,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+    ntt64<<<1,8,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);
     if (inv) normalize_kernel<<<1,64>>>(in, 64, test_scalar::inv_log_size(6));
     return;
   }
   if (log_size==8){
     // if (dit) {ntt16dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
     // else {ntt16<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
-    ntt16<<<1,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 16, 16, true, 1, inv, dit); //we need threads 32+ although 16-31 are idle
-    ntt16<<<1,32,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
+    ntt16<<<1,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 16, true, 1, inv, dit); //we need threads 32+ although 16-31 are idle
+    ntt16<<<1,32,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);
     // if (inv) normalize_kernel<<<1,16>>>(in, 16, test_scalar::inv_log_size(4));
     return;
   }
@@ -1475,9 +1502,9 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
       uint32_t stride_log = 0;
       for (int j=0; j<i; j++) stride_log += STAGE_SIZES_HOST[log_size][j];
       // printf(" %d %d %d sdfgsdfg\n", i,stage_size, stride_log);
-      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 5) ntt32dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 4) ntt16dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 5) ntt32dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 4) ntt16dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
       //  cudaDeviceSynchronize();
       // printf("cuda err %d\n",cudaGetLastError());
     }
@@ -1490,9 +1517,9 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
       uint32_t stride_log = 0;
       for (int j=0; j<i; j++) stride_log += STAGE_SIZES_HOST[log_size][j];
       // printf(" %d %d %d sdfgsdfg\n", i,stage_size, stride_log);
-      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 5) ntt32<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 4) ntt16<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 5) ntt32<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 4) ntt16<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
       //  cudaDeviceSynchronize();
       // printf("cuda err %d\n",cudaGetLastError());
     }
