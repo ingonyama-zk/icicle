@@ -367,7 +367,7 @@ __global__ void ntt_kernel_split_transpose(uint4* out, uint4* in) {
 
 
 __launch_bounds__(64)
-__global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t log_data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -392,7 +392,7 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
-  engine.loadGlobalData(in, data_stride, log_size, strided, s_meta);
+  engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
   if (twiddle_stride && dit) {
     // if (blockIdx.x == 8 && threadIdx.x == 8){
     //   for (int i = 0; i < 8; i++)
@@ -477,12 +477,12 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   }
 
     // engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
-    engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
+    engine.storeGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // }
 }
 
 __launch_bounds__(64)
-__global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t log_data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -507,7 +507,7 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
-  engine.loadGlobalData(in, data_stride, log_size, strided, s_meta);
+  engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // if (blockIdx.x == 0 && threadIdx.x == 0){
   //     for (int i = 0; i < 8; i++)
   //     {
@@ -649,7 +649,7 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   }
 
     // engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
-    engine.storeGlobalData32(in, data_stride, log_size, strided, s_meta);
+    engine.storeGlobalData32(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // }
 }
 
@@ -696,7 +696,7 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
 // }
 
 __launch_bounds__(64)
-__global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t log_data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -721,7 +721,7 @@ __global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
-  engine.loadGlobalData32(in, data_stride, log_size, strided, s_meta);
+  engine.loadGlobalData32(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // if (blockIdx.x == 0 && threadIdx.x == 1){
   //     for (int i = 0; i < 8; i++)
   //     {
@@ -864,12 +864,12 @@ __global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   }
 
     // engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
-    engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
+    engine.storeGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // }
 }
 
 __launch_bounds__(64)
-__global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t log_data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -894,7 +894,7 @@ __global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
-  engine.loadGlobalData(in, data_stride, log_size, strided, s_meta);
+  engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // if (blockIdx.x == 0 && threadIdx.x == 0){
   //   printf("after load\n");
   //   printf("low\n");
@@ -1074,14 +1074,14 @@ __global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   }
 
     // engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
-    engine.storeGlobalData16(in, data_stride, log_size, strided, s_meta);
+    engine.storeGlobalData16(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // }
 }
 
 
 
 __launch_bounds__(64)
-__global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
+__global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, uint32_t data_stride, uint32_t log_data_stride, uint32_t twiddle_stride, bool strided, uint32_t stage_num, bool inv, bool dit) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
 // __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size, uint32_t tw_log_size, uint32_t data_stride, uint32_t twiddle_stride) {
   NTTEngine engine;
@@ -1106,7 +1106,7 @@ __global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
   // {
-  engine.loadGlobalData16(in, data_stride, log_size, strided, s_meta);
+  engine.loadGlobalData16(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // if (blockIdx.x == 0 && threadIdx.x == 0){
   //   printf("after load\n");
   //   printf("low\n");
@@ -1286,7 +1286,7 @@ __global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   }
 
     // engine.storeGlobalData(twiddle_stride? out :in, data_stride, log_size);
-    engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
+    engine.storeGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
   // }
 }
 
@@ -1331,15 +1331,15 @@ __global__ void generate_basic_twiddles(test_scalar basic_root, uint4* basic_twi
 
 __global__ void generate_twiddle_combinations(uint4* w6_table, uint4* w12_table, uint4* w18_table, uint4* w24_table, uint4* w30_table, uint4* twiddles, uint32_t log_size, uint32_t stage_num, test_scalar norm_factor){
   
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  // int pow = stage_num*6;
-  // int exp = ((tid & ((1<<pow)-1)) * (tid >> pow)) << (24-pow);
-  int range1 = 0, range2 = 0, ind;
+  uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // uint32_t pow = stage_num*6;
+  // uint32_t exp = ((tid & ((1<<pow)-1)) * (tid >> pow)) << (24-pow);
+  uint32_t range1 = 0, range2 = 0, ind;
   for (ind = 0; ind < stage_num; ind++) range1 += STAGE_SIZES_DEVICE[log_size][ind];
   range2 = STAGE_SIZES_DEVICE[log_size][ind];
-  int root_order = range1 + range2;
-  int exp = ((tid & ((1<<range1)-1)) * (tid >> range1)) << (30-root_order);
-  // int exp = ((tid & 0x3f) * (tid >> 6)) << (18-pow);
+  uint32_t root_order = range1 + range2;
+  uint32_t exp = ((tid & ((1<<range1)-1)) * (tid >> range1)) << (30-root_order);
+  // uint32_t exp = ((tid & 0x3f) * (tid >> 6)) << (18-pow);
   test_scalar w6,w12,w18,w24,w30;
   w6.store_half(w6_table[exp >> 24], false);
   w6.store_half(w6_table[(exp >> 24) + 64], true);
@@ -1427,28 +1427,28 @@ uint4* generate_external_twiddles(test_scalar basic_root, uint4* twiddles, uint4
 void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, uint4* basic_twiddles, uint32_t log_size, bool inv, bool dit){
 // void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint32_t log_size){
   if (log_size==4){
-    if (dit) {ntt16dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
-    else {ntt16<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
+    if (dit) {ntt16dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);}
+    else {ntt16<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);}
     // ntt16<<<1,2,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);
     if (inv) normalize_kernel<<<1,16>>>(in, 16, test_scalar::inv_log_size(4));
     return;
   }
   if (log_size==5){
-    if (dit) {ntt32dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
-    else {ntt32<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);}
+    if (dit) {ntt32dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);}
+    else {ntt32<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);}
     if (inv) normalize_kernel<<<1,32>>>(in, 32, test_scalar::inv_log_size(5));
     return;
   }
   if (log_size==6){
-    ntt64<<<1,8,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);
+    ntt64<<<1,8,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
     if (inv) normalize_kernel<<<1,64>>>(in, 64, test_scalar::inv_log_size(6));
     return;
   }
   if (log_size==8){
     // if (dit) {ntt16dit<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
     // else {ntt16<<<1,4,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, log_size, 1, 0, false, 0, inv, dit);}
-    ntt16<<<1,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 16, true, 1, inv, dit); //we need threads 32+ although 16-31 are idle
-    ntt16<<<1,32,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, false, 0, inv, dit);
+    ntt16<<<1,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv, dit); //we need threads 32+ although 16-31 are idle
+    ntt16<<<1,32,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
     // if (inv) normalize_kernel<<<1,16>>>(in, 16, test_scalar::inv_log_size(4));
     return;
   }
@@ -1502,9 +1502,9 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
       uint32_t stride_log = 0;
       for (int j=0; j<i; j++) stride_log += STAGE_SIZES_HOST[log_size][j];
       // printf(" %d %d %d sdfgsdfg\n", i,stage_size, stride_log);
-      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 5) ntt32dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 4) ntt16dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 5) ntt32dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 4) ntt16dit<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
       //  cudaDeviceSynchronize();
       // printf("cuda err %d\n",cudaGetLastError());
     }
@@ -1517,9 +1517,9 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
       uint32_t stride_log = 0;
       for (int j=0; j<i; j++) stride_log += STAGE_SIZES_HOST[log_size][j];
       // printf(" %d %d %d sdfgsdfg\n", i,stage_size, stride_log);
-      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 5) ntt32<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
-      if (stage_size == 4) ntt16<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 6) ntt64<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 5) ntt32<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
+      if (stage_size == 4) ntt16<<<1<<(log_size-9),64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1<<stride_log, stride_log, i? (1<<stride_log) : 0, i, i, inv, dit);
       //  cudaDeviceSynchronize();
       // printf("cuda err %d\n",cudaGetLastError());
     }
