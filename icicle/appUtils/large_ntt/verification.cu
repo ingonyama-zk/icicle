@@ -47,8 +47,8 @@ int main(){
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
-  int INV = true;
-  int DIT = true;
+  int INV = false;
+  int DIT = false;
   printf("running ntt 2^%d ", NTT_LOG_SIZE);
   if (DIT) printf("DIT ");
   else printf("DIF ");
@@ -132,10 +132,10 @@ int main(){
   cudaDeviceSynchronize();
   printf("cuda err %d\n",cudaGetLastError());
   test_scalar *icicle_tw;
-  icicle_tw = fill_twiddle_factors_array(NTT_SIZE, test_scalar::omega(NTT_LOG_SIZE), 0);
+  // icicle_tw = fill_twiddle_factors_array(NTT_SIZE, test_scalar::omega(NTT_LOG_SIZE), 0);
   $CUDA(cudaEventRecord(icicle_start, 0));
-  for (size_t i = 0; i < count; i++)
-    ntt_inplace_batch_template<test_scalar, test_scalar>(gpuIcicle, icicle_tw, NTT_SIZE, 1, INV, false, nullptr, 0, false);
+  // for (size_t i = 0; i < count; i++)
+    // ntt_inplace_batch_template<test_scalar, test_scalar>(gpuIcicle, icicle_tw, NTT_SIZE, 1, INV, false, nullptr, 0, false);
   $CUDA(cudaEventRecord(icicle_stop, 0));
   $CUDA(cudaDeviceSynchronize());
   $CUDA(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
