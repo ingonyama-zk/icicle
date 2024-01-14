@@ -25,8 +25,8 @@ typedef scalar_t test_scalar;
 
 void random_samples(test_scalar* res, uint32_t count) {
   for(int i=0;i<count;i++)
-    // res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
-    res[i]= i==0? test_scalar::one() : test_scalar::zero();
+    res[i]= i<1000? test_scalar::rand_host() : res[i-1000];
+    // res[i]= i==0? test_scalar::one() : test_scalar::zero();
     // res[i]= i%2? test_scalar::one() : (test_scalar::one() - test_scalar::one() - test_scalar::one());
     // res[i]= i==0? test_scalar::one() : test_scalar::omega_inv(25) * res[i-1];
 }
@@ -43,7 +43,7 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 20;
+  int NTT_LOG_SIZE = 24;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;

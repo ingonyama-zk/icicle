@@ -386,7 +386,7 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   
   // engine.initializeRoot(strided);
   engine.loadBasicTwiddles(inv);
-  engine.loadInternalTwiddles(internal_twiddles, strided);
+  // engine.loadInternalTwiddles(internal_twiddles, strided);
     
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
@@ -417,6 +417,8 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
     //   printf("\n");
     // }
   }
+  engine.loadInternalTwiddles(internal_twiddles, strided);
+
     // engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
     // return;
 
@@ -498,7 +500,7 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   
   // engine.initializeRoot(strided);
   engine.loadBasicTwiddles(inv);
-  engine.loadInternalTwiddles32(internal_twiddles, strided);
+  // engine.loadInternalTwiddles32(internal_twiddles, strided);
     
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
@@ -536,6 +538,8 @@ __global__ void ntt32(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
     //   printf("\n");
     // }
   }
+  engine.loadInternalTwiddles32(internal_twiddles, strided);
+
     // engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
     // return;
 
@@ -709,7 +713,7 @@ __global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   
   // engine.initializeRoot(strided);
   engine.loadBasicTwiddles(inv);
-  engine.loadInternalTwiddles32(internal_twiddles, strided);
+  // engine.loadInternalTwiddles32(internal_twiddles, strided);
     
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
@@ -747,6 +751,8 @@ __global__ void ntt32dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
     //   printf("\n");
     // }
   }
+  engine.loadInternalTwiddles32(internal_twiddles, strided);
+
     // engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
     // return;
 
@@ -879,7 +885,7 @@ __global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
   
   // engine.initializeRoot(strided);
   engine.loadBasicTwiddles(inv);
-  engine.loadInternalTwiddles16(internal_twiddles, strided);
+  // engine.loadInternalTwiddles16(internal_twiddles, strided);
     
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
@@ -924,6 +930,8 @@ __global__ void ntt16(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
     //   printf("\n");
     // }
   }
+  engine.loadInternalTwiddles16(internal_twiddles, strided);
+
     // engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
     // return;
 
@@ -1088,7 +1096,7 @@ __global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
   
   // engine.initializeRoot(strided);
   engine.loadBasicTwiddles(inv);
-  engine.loadInternalTwiddles16(internal_twiddles, strided);
+  // engine.loadInternalTwiddles16(internal_twiddles, strided);
     
   // #pragma unroll 1
   // for (int i = 0; i < 260; i++) //todo - function of size
@@ -1133,6 +1141,8 @@ __global__ void ntt16dit(uint4* in, uint4* out, uint4* twiddles, uint4* internal
     //   printf("\n");
     // }
   }
+  engine.loadInternalTwiddles16(internal_twiddles, strided);
+
     // engine.storeGlobalData(in, data_stride, log_size, strided, s_meta);
     // return;
 
