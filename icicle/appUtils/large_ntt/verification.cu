@@ -39,12 +39,12 @@ int main(){
   float       icicle_time, new_time;
   #endif
 
-  int NTT_LOG_SIZE = 8;
+  int NTT_LOG_SIZE = 2;
   int TT_LOG_SIZE = NTT_LOG_SIZE;
   int NTT_SIZE = 1<<NTT_LOG_SIZE;
   int TT_SIZE = 1<<TT_LOG_SIZE;
-  int INV = true;
-  int DIT = true;
+  int INV = false;
+  int DIT = false;
   printf("running ntt 2^%d ", NTT_LOG_SIZE);
   if (DIT) printf("DIT ");
   else printf("DIF ");
@@ -115,11 +115,11 @@ int main(){
   
 
   //run ntts
-  int count = 10;
+  int count = 100;
   $CUDA(cudaEventRecord(new_start, 0));
   // ntt64<<<1, 8, 512*sizeof(uint4)>>>(gpuNew, gpuNew, gpuTwiddles, NTT_LOG_SIZE ,1,0);
   for (size_t i = 0; i < count; i++){
-    new_ntt(gpuNew, gpuNew2, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, NTT_LOG_SIZE, INV, DIT);
+    new_ntt(gpuNew, gpuNew, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, NTT_LOG_SIZE, INV, DIT);
   }
     // new_ntt(gpuNew, gpuNew2, gpuTwiddles, NTT_LOG_SIZE);
   $CUDA(cudaEventRecord(new_stop, 0));
