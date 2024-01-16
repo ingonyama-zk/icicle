@@ -215,11 +215,11 @@ __global__ void normalize_kernel(uint4* data, uint32_t size, test_scalar norm_fa
   data[threadIdx.x+size] = temp.load_half(true);
 }
 
-__global__ void generate_base_table(test_scalar basic_root, uint4* base_table){
+__global__ void generate_base_table(test_scalar basic_root, uint4* base_table, uint32_t skip){
   
   test_scalar w = basic_root;
   test_scalar t = test_scalar::one();
-  for (int i = 0; i < 64; i++)
+  for (int i = 0; i < 64; i+=skip)
   {
     base_table[i] = t.load_half(false);
     base_table[i+64] = t.load_half(true);
@@ -278,16 +278,16 @@ uint4* generate_external_twiddles(test_scalar basic_root, uint4* twiddles, uint4
   cudaMalloc((void**)&w30_table, sizeof(uint4)*64*2);
 
   test_scalar temp_root = basic_root;
-  generate_base_table<<<1,1>>>(basic_root, w30_table);
-  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
-  generate_base_table<<<1,1>>>(temp_root, w24_table);
-  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
-  generate_base_table<<<1,1>>>(temp_root, w18_table);
-  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
-  generate_base_table<<<1,1>>>(temp_root, w12_table);
-  for (int i=0; i<6; i++) temp_root = temp_root*temp_root;
-  generate_base_table<<<1,1>>>(temp_root, w6_table);
-  for (int i=0; i<3; i++) temp_root = temp_root*temp_root;
+generate_base_table<<<1,1>>>(basic_root, w30_table,1<<(30-log_size));
+  if (log_size>24) for (int i=0; i<6-(30-log_size); i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w24_table,1<<(log_size>24? 0 : 24-log_size));
+  if (log_size>18) for (int i=0; i<6-(log_size>24? 0 : 24-log_size); i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w18_table,1<<(log_size>18? 0 : 18-log_size));
+  if (log_size>12) for (int i=0; i<6-(log_size>18? 0 : 18-log_size); i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w12_table,1<<(log_size>12? 0 : 12-log_size));
+  if (log_size>6) for (int i=0; i<6-(log_size>12? 0 : 12-log_size); i++) temp_root = temp_root*temp_root;
+  generate_base_table<<<1,1>>>(temp_root, w6_table,1<<(log_size>6? 0 : 6-log_size));
+  for (int i=0; i<3-(log_size>6? 0 : 6-log_size); i++) temp_root = temp_root*temp_root;
   generate_basic_twiddles<<<1,1>>>(temp_root, basic_twiddles);
 
   uint32_t temp = STAGE_SIZES_HOST[log_size][0];
@@ -324,8 +324,10 @@ void new_ntt(uint4* in, uint4* out, uint4* twiddles, uint4* internal_twiddles, u
     return;
   }
   if (log_size==8){
-    ntt16<<<1,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv, dit); //we need threads 32+ although 16-31 are idle
-    ntt16<<<1,32,8*64*sizeof(uint4)>>>(out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
+    if (dit) ntt16dit<<<1,32,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit); 
+    if (dit) ntt16dit<<<1,64,8*64*sizeof(uint4)>>>(out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv, dit); //we need threads 32+ although 16-31 are idle
+    if (!dit)ntt16<<<1,64,8*64*sizeof(uint4)>>>(in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv, dit); //we need threads 32+ although 16-31 are idle
+    if (!dit)ntt16<<<1,32,8*64*sizeof(uint4)>>>(out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
     return;
   }
   
