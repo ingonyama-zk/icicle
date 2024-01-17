@@ -65,12 +65,12 @@ __global__ void ntt64(uint4* in, uint4* out, uint4* twiddles, uint4* internal_tw
     
     engine.ntt8win(); 
     if(phase==0) {
-      engine.SharedDataColumns2(shmem, true, false, strided); //store low
+      engine.SharedData64Columns8(shmem, true, false, strided); //store low
       __syncthreads();
-      engine.SharedDataRows2(shmem, false, false, strided); //load low
-      engine.SharedDataRows2(shmem, true, true, strided); //store high
+      engine.SharedData64Rows8(shmem, false, false, strided); //load low
+      engine.SharedData64Rows8(shmem, true, true, strided); //store high
       __syncthreads();
-      engine.SharedDataColumns2(shmem, false, true, strided); //load high
+      engine.SharedData64Columns8(shmem, false, true, strided); //load high
       engine.twiddlesInternal();
     }
   }
