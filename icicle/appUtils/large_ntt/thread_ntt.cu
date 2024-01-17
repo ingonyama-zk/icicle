@@ -632,43 +632,8 @@ class NTTEngine {
 
   }
 
-     
-  __device__ __forceinline__ void SharedDataColumns(uint4 *shmem, bool store, bool high_bits) {
-
-    uint32_t ntt_id = threadIdx.x & 0x7;
-    uint32_t column_id = threadIdx.x >> 3;
-      
-    #pragma unroll
-    for(uint32_t i=0;i<4;i++) {
-      #pragma unroll
-      for(uint32_t j=0;j<4;j++){
-        uint32_t row_id = i*4+j;
-        if (store) {
-          shmem[ntt_id * 256 + row_id * 16 + column_id] = X[i+j*4].load_half(high_bits);       
-        }
-        else {
-          X[i+j*4].store_half(shmem[ntt_id * 256 + row_id * 16 + column_id], high_bits);
-        }
-      }
-    }
-  }
-
-  __device__ __forceinline__ void SharedDataRows(uint4 *shmem, bool store, bool high_bits) {
-    uint32_t ntt_id = threadIdx.x & 0x7;
-    uint32_t row_id = threadIdx.x >> 3;
  
-    #pragma unroll
-    for(uint32_t i=0;i<16;i++) {
-      if (store) {
-        shmem[ntt_id * 256 + row_id * 16 + i] = X[i].load_half(high_bits);
-      }
-      else {
-        X[i].store_half(shmem[ntt_id * 256 + row_id * 16 + i] ,high_bits);   
-      }
-    }
-  }
-
-  __device__ __forceinline__ void SharedDataColumns2(uint4 *shmem, bool store, bool high_bits, bool stride) {
+  __device__ __forceinline__ void SharedData64Columns8(uint4 *shmem, bool store, bool high_bits, bool stride) {
     
     uint32_t ntt_id = stride? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t column_id = stride? threadIdx.x >> 3 : threadIdx.x & 0x7;
@@ -684,7 +649,7 @@ class NTTEngine {
     }
   }
 
-  __device__ __forceinline__ void SharedDataRows2(uint4 *shmem, bool store, bool high_bits, bool stride) {
+  __device__ __forceinline__ void SharedData64Rows8(uint4 *shmem, bool store, bool high_bits, bool stride) {
 
     uint32_t ntt_id = stride? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t row_id = stride? threadIdx.x >> 3 : threadIdx.x & 0x7;
