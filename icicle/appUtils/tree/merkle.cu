@@ -1,11 +1,6 @@
 #include "merkle.cuh"
 
 namespace merkle {
-  static constexpr size_t GIGA = 1024 * 1024 * 1024;
-
-  /// Bytes per stream
-  static constexpr size_t STREAM_CHUNK_SIZE = 1024 * 1024 * 1024;
-
   /// Flattens the tree digests and sum them up to get
   /// the memory needed to contain all the digests
   size_t get_digests_len(uint32_t height, uint32_t arity)
@@ -61,34 +56,42 @@ namespace merkle {
     S* state,
     S* digests,
     size_t subtree_idx,
-    size_t leaves_size,
+    size_t subtree_height,
     S* big_tree_digests,
     size_t start_segment_size,
+    size_t start_segment_offset,
+    int keep_rows,
     PoseidonConstants<S>& poseidon,
     cudaStream_t& stream)
   {
+    int arity = T - 1;
+
     PoseidonConfig config = default_poseidon_config(T);
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
     config.input_is_a_state = true;
-    config.loop_results = true;
+    config.loop_state = true;
     config.ctx.stream = stream;
-    int arity = T - 1;
+
+    size_t leaves_size = pow(arity, subtree_height - 1);
     uint32_t number_of_blocks = leaves_size / arity;
     size_t segment_size = start_segment_size;
-    size_t segment_offset = 0;
+    size_t segment_offset = start_segment_offset;
 
     while (number_of_blocks > 0) {
       cudaError_t poseidon_res = poseidon_hash<S, T>(state, digests, number_of_blocks, poseidon, config);
       CHK_IF_RETURN(poseidon_res);
 
-      S* digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_blocks;
-      CHK_IF_RETURN(
-        cudaMemcpyAsync(digests_with_offset, digests, number_of_blocks * sizeof(S), cudaMemcpyDeviceToHost, stream));
+      if (!keep_rows || subtree_height <= keep_rows + 1) {
+        S* digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_blocks;
+        CHK_IF_RETURN(
+          cudaMemcpyAsync(digests_with_offset, digests, number_of_blocks * sizeof(S), cudaMemcpyDeviceToHost, stream));
+        segment_offset += segment_size;
+      }
 
-      number_of_blocks /= arity;
-      segment_offset += segment_size;
       segment_size /= arity;
+      subtree_height--;
+      number_of_blocks /= arity;
       config.aligned = true;
     }
 
@@ -112,7 +115,7 @@ namespace merkle {
     uint32_t subtree_height = height;
     uint32_t subtree_leaves_size = pow(arity, height - 1);
     uint32_t subtree_state_size = subtree_leaves_size / arity * T;
-    uint32_t subtree_digests_size = subtree_state_size / arity;
+    uint32_t subtree_digests_size = get_digests_len(subtree_height, arity);
     size_t subtree_memory_required = sizeof(S) * (subtree_state_size + subtree_digests_size);
     while (subtree_memory_required > STREAM_CHUNK_SIZE) {
       number_of_subtrees *= arity;
@@ -122,6 +125,8 @@ namespace merkle {
       subtree_digests_size = subtree_state_size / arity;
       subtree_memory_required = sizeof(S) * (subtree_state_size + subtree_digests_size);
     }
+    int cap_height = height - subtree_height + 1;
+    size_t caps_len = pow(arity, cap_height - 1);
 
     size_t available_memory, _total_memory;
     CHK_IF_RETURN(cudaMemGetInfo(&available_memory, &_total_memory));
@@ -156,6 +161,12 @@ namespace merkle {
     // We should wait for these allocations to finish in order to proceed
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
 
+    bool caps_mode = config.keep_rows && config.keep_rows < cap_height;
+    S *caps;
+    if (caps_mode) {
+      caps = static_cast<S*>(malloc(caps_len * sizeof(S)));
+    }
+
     for (size_t subtree_idx = 0; subtree_idx < number_of_subtrees; subtree_idx++) {
       size_t stream_idx = subtree_idx % number_of_streams;
       cudaStream_t subtree_stream = streams[stream_idx];
@@ -173,10 +184,65 @@ namespace merkle {
         subtree_leaves_size / arity,              // Size of the source matrix (Number of blocks)
         cudaMemcpyHostToDevice, subtree_stream)); // Direction and stream
 
+      int subtree_keep_rows = 0;
+      if (config.keep_rows) {
+        int diff = config.keep_rows - cap_height + 1;
+        subtree_keep_rows = diff <= 0 ? 1 : diff;
+      }
+      size_t start_segment_size = number_of_leaves / arity;
       cudaError_t subtree_result = __build_merkle_subtree<S, T>(
-        subtree_state, subtree_digests, subtree_idx, subtree_leaves_size, digests, number_of_leaves / arity, poseidon,
-        subtree_stream);
+        subtree_state,              // state
+        subtree_digests,            // digests
+        subtree_idx,                // subtree_idx
+        subtree_height,             // subtree_height
+        caps_mode ? caps : digests, // big_tree_digests
+        start_segment_size,         // start_segment_size
+        0,                          // start_segment_offset
+        subtree_keep_rows,        // keep_rows
+        poseidon,                   // hash
+        subtree_stream              // stream
+      );
       CHK_IF_RETURN(subtree_result);
+    }
+
+    for (size_t i = 0; i < number_of_streams; i++) {
+      CHK_IF_RETURN(cudaStreamSynchronize(streams[i]));
+    }
+
+    // Finish the top-level tree if any
+    if (cap_height > 1) {
+      size_t start_segment_size = caps_len / arity;
+      size_t start_segment_offset = 0;
+      if (!caps_mode) {
+        size_t layer_size = pow(arity, config.keep_rows - 1);
+        for (int i = 0; i < config.keep_rows - cap_height + 1; i++) {
+          start_segment_offset += layer_size;
+          layer_size /= arity;
+        }
+      }
+      CHK_IF_RETURN(cudaMemcpy2DAsync(
+        states_ptr, T * sizeof(S),
+        caps_mode ? caps : (digests + start_segment_offset - caps_len),
+        arity * sizeof(S), arity * sizeof(S),
+        caps_len / arity,   // Size of the source 
+        cudaMemcpyHostToDevice, stream)); // Direction and stream
+
+      cudaError_t top_tree_result = __build_merkle_subtree<S, T>(
+        states_ptr,           // state
+        digests_ptr,          // digests
+        0,                    // subtree_idx
+        cap_height,       // subtree_height
+        digests,              // big_tree_digests
+        start_segment_size,   // start_segment_size
+        start_segment_offset, // start_segment_offset
+        config.keep_rows,   // keep_rows
+        poseidon,             // hash
+        stream                // stream
+      );
+      CHK_IF_RETURN(top_tree_result); 
+      if (caps_mode) {
+        free(caps);
+      }
     }
 
     CHK_IF_RETURN(cudaFreeAsync(states_ptr, stream));

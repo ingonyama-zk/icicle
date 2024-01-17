@@ -41,12 +41,53 @@ namespace poseidon {
     return reinterpret_cast<S*>(constants);
   }
 
+#if !defined(__CUDA_ARCH__) && defined(DEBUG)
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <sstream>
+template <typename S, int T>
+__host__ void print_buffer_from_cuda(S * device_ptr, size_t size) {
+  S * buffer = static_cast< S * >(malloc(size * sizeof(S)));
+  cudaMemcpy(buffer, device_ptr, size * sizeof(S), cudaMemcpyDeviceToHost);
+
+  std::cout << "Start print" << std::endl;
+  for(int i = 0; i < size / T; i++) {
+    std::cout << "State #" << i << std::endl;
+    for (int j = 0; j < T; j++) {
+      std::cout << buffer[i * T + j] << std::endl;
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+  free(buffer);
+}
+#endif
+
+#ifdef DEBUG
+template <typename S>
+__device__ void print_scalar(S element, int data) {
+    printf("D# %d, T# %d: 0x%08x%08x%08x%08x%08x%08x%08x%08x\n",
+           data,
+           threadIdx.x,
+           element.limbs_storage.limbs[0],
+           element.limbs_storage.limbs[1],
+           element.limbs_storage.limbs[2],
+           element.limbs_storage.limbs[3],
+           element.limbs_storage.limbs[4],
+           element.limbs_storage.limbs[5],
+           element.limbs_storage.limbs[6],
+           element.limbs_storage.limbs[7]
+    );
+}
+#endif
+
   template <typename S, int T>
   cudaError_t permute_many(
     S* states,
     size_t number_of_states,
-    PoseidonKernelsConfiguration& kernel_cfg,
-    PoseidonConstants<S>& constants,
+    const PoseidonKernelsConfiguration& kernel_cfg,
+    const PoseidonConstants<S>& constants,
     cudaStream_t& stream)
   {
     size_t rc_offset = 0;
@@ -71,7 +112,7 @@ namespace poseidon {
 
   template <typename S, int T>
   cudaError_t
-  poseidon_hash(S* input, S* output, size_t number_of_states, PoseidonConstants<S>& constants, PoseidonConfig& config)
+  poseidon_hash(S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -102,18 +143,37 @@ namespace poseidon {
       <<<config.kernel_cfg.number_of_full_blocks(number_of_states), config.kernel_cfg.number_of_threads, 0, stream>>>(
         states, number_of_states, constants.domain_tag, config.aligned);
 
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceSynchronize();
+    std::cout << "Domain separation: " << std::endl;
+    print_buffer_from_cuda<S, T>(states, number_of_states * T);
+    #endif
+
     cudaError_t hash_error = permute_many<S, T>(states, number_of_states, config.kernel_cfg, constants, stream);
     CHK_IF_RETURN(hash_error);
+
+    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+    cudaDeviceSynchronize();
+    std::cout << "Permutations: " << std::endl;
+    print_buffer_from_cuda<S, T>(states, number_of_states * T);
+    #endif
 
     get_hash_results<S, T><<<
       config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0,
       stream>>>(states, number_of_states, output_device);
 
-    if (config.loop_results) {
+    if (config.loop_state) {
       copy_recursive<S, T><<<
         config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0,
         stream>>>(states, number_of_states, output_device);
+
+      #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+      cudaDeviceSynchronize();
+      std::cout << "Looping: " << std::endl;
+      print_buffer_from_cuda<S, T>(states, number_of_states / (T - 1) * T);
+      #endif
     }
+
 
     if (!config.input_is_a_state) CHK_IF_RETURN(cudaFreeAsync(states, stream));
 

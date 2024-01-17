@@ -38,14 +38,14 @@ namespace poseidon {
     int hashes_per_block;
     int singlehash_block_size;
 
-    int number_of_full_blocks(size_t number_of_states)
+    int number_of_full_blocks(size_t number_of_states) const
     {
       int total_number_of_threads = number_of_states * t;
       return total_number_of_threads / number_of_threads +
              static_cast<bool>(total_number_of_threads % number_of_threads);
     }
 
-    int number_of_singlehash_blocks(size_t number_of_states)
+    int number_of_singlehash_blocks(size_t number_of_states) const
     {
       return number_of_states / singlehash_block_size + static_cast<bool>(number_of_states % singlehash_block_size);
     }
@@ -79,11 +79,11 @@ namespace poseidon {
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     bool input_is_a_state;
     bool aligned;
+    bool loop_state;
     bool is_async; /**< Whether to run the NTT asyncronously. If set to `true`, the NTT function will be
                     *   non-blocking and you'd need to synchronize it explicitly by running
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
                     *   function will block the current CPU thread. */
-    bool loop_results;
   };
 
   PoseidonConfig default_poseidon_config(int t)
@@ -97,8 +97,8 @@ namespace poseidon {
       false,      // are_outputs_on_device
       false,      // input_is_a_state
       false,      // aligned
+      false,      // loop_state
       false,      // is_async
-      false,      // loop_results
     };
     return config;
   }
@@ -137,7 +137,7 @@ namespace poseidon {
   ///======================================================
   template <typename S, int T>
   cudaError_t
-  poseidon_hash(S* input, S* output, size_t number_of_states, PoseidonConstants<S>& constants, PoseidonConfig& config);
+  poseidon_hash(S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config);
 
   extern "C" cudaError_t PoseidonHash(
     curve_config::scalar_t* input,
