@@ -26,40 +26,17 @@ int main(int argc, char* argv[])
   scalar_t::RandHostMany(scalars, N);
   projective_t::RandHostManyAffine(points, N);
 
-  std::cout << "Configuring MSM to use on-host inputs" << std::endl;
-  // Create a CUDA stream
-  cudaStream_t stream;
-  cudaStreamCreate(&stream);
+  std::cout << "Using default MSM configuration with on-host inputs" << std::endl;
+  auto config = msm::DefaultMSMConfig();
+  config.batch_size = batch_size;
+  
+  std::cout << "Running MSM kernel" << std::endl;
+  // Create two events to time the MSM kernel
+  cudaStream_t stream = config.ctx.stream;
   cudaEvent_t start, stop;
   float time;
-  // Create two events to time the MSM kernel
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
-  // Create a device context
-  device_context::DeviceContext ctx = {
-    stream, // stream
-    0,      // device_id
-    0,      // mempool
-  };
-  // Create a MSM configuration
-  msm::MSMConfig config = {
-    ctx,   // DeviceContext
-    0,     // points_size
-    1,     // precompute_factor
-    0,     // c
-    0,     // bitsize
-    10,    // large_bucket_factor
-    batch_size,    
-    false, // are_scalars_on_device
-    false, // are_scalars_montgomery_form
-    false, // are_points_on_device
-    false, // are_points_montgomery_form
-    false,  // are_results_on_device
-    false, // is_big_triangle
-    true,  // is_async
-  };
-
-  std::cout << "Running MSM kernel with on-host inputs" << std::endl;
   // Record the start event on the stream
   cudaEventRecord(start, stream);
   // Execute the MSM kernel

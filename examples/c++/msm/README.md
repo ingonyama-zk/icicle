@@ -36,6 +36,12 @@ The configuration is passed to the kernel as a structure of type `msm::MSMConfig
 
 - `large_bucket_factor`:  distinguishes between large bucket and normal bucket sizes. If there is a scalar distribution that is skewed heavily to a few values we can operate on those separately from the rest of the values. The ideal value here can vary by circuit (based on the distribution of scalars) but start with 10 and adjust to see if it improves performance.
 
+## Running the example
+
+- `cd` to your example directory
+- compile with  `./compile.sh`
+- run with `./run.sh`
+
 ## What's in the example
 
 1. Define the parameters of MSM
