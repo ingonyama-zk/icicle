@@ -2,10 +2,8 @@
 #include <iostream>
 #include <iomanip>
 
-// select the curve. TODO: can we use curve names instead of IDs?
-#define CURVE_ID 1
-
 // include MSM template
+#define CURVE_ID 1
 #include "icicle/appUtils/msm/msm.cu"
 using namespace curve_config;
 
