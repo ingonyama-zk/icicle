@@ -20,8 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"unsafe"
-
-	"github.com/ingonyama-zk/icicle/goicicle"
 )
 
 // #cgo CFLAGS: -I./include/
@@ -103,15 +101,7 @@ func ReverseScalars(d_scalars unsafe.Pointer, len int) (int, error) {
 	return 0, nil
 }
 
-func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCoset bool) unsafe.Pointer {
-	size_d := size * 32
-	dp, err := goicicle.CudaMalloc(size_d)
-
-	if err != nil {
-		return nil
-	}
-
-	d_out := (*C.BLS12_381_scalar_t)(dp)
+func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCoset bool) {
 	scalarsC := (*C.BLS12_381_scalar_t)(scalars)
 	twiddlesC := (*C.BLS12_381_scalar_t)(twiddles)
 	cosetPowersC := (*C.BLS12_381_scalar_t)(cosetPowers)
@@ -119,15 +109,13 @@ func Interpolate(scalars, twiddles, cosetPowers unsafe.Pointer, size int, isCose
 
 	var ret C.int
 	if isCoset {
-		ret = C.interpolate_scalars_on_coset_cuda_bls12_381(d_out, scalarsC, twiddlesC, sizeC, cosetPowersC, 0, 0)
+		ret = C.interpolate_scalars_on_coset_cuda_bls12_381(scalarsC, scalarsC, twiddlesC, sizeC, cosetPowersC, 0, 0)
 	} else {
-		ret = C.interpolate_scalars_cuda_bls12_381(d_out, scalarsC, twiddlesC, sizeC, 0, 0)
+		ret = C.interpolate_scalars_cuda_bls12_381(scalarsC, scalarsC, twiddlesC, sizeC, 0, 0)
 	}
 	if ret != 0 {
 		fmt.Print("error interpolating")
 	}
-
-	return unsafe.Pointer(d_out)
 }
 
 func Evaluate(scalars_out, scalars, twiddles, coset_powers unsafe.Pointer, scalars_size, twiddles_size int, isCoset bool) int {
