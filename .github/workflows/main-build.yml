@@ -1,0 +1,114 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+  push:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  ARCH_TYPE: native
+
+jobs:
+  check-changed-files:
+    name: Check Changed Files
+    runs-on: ubuntu-22.04
+    outputs:
+      golang: ${{ steps.changed_files.outputs.golang }}
+      rust: ${{ steps.changed_files.outputs.rust }}
+      cpp_cuda: ${{ steps.changed_files.outputs.cpp_cuda }}
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Get all changed files
+      id: changed-files-yaml
+      uses: tj-actions/changed-files@v39
+      # https://github.com/tj-actions/changed-files#input_files_yaml_from_source_file
+      with:
+        files_yaml_from_source_file: .github/changed-files.yml
+    - name: Run Changed Files script
+      id: changed_files
+      # https://github.com/tj-actions/changed-files#outputs-
+      run: |
+        echo "golang=${{ steps.changed-files-yaml.outputs.golang_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "cpp_cuda=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"
+
+  build-rust-linux:
+    name: Build Rust on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: check-changed-files
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Build Rust
+      working-directory: ./wrappers/rust
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      # Building from the root workspace will build all members of the workspace by default
+      run: cargo build --release --verbose
+
+  build-rust-windows:
+    name: Build Rust on Windows
+    runs-on: windows-2022
+    needs: check-changed-files
+    steps:     
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Download and Install Cuda
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: '12.0.0'
+        method: 'network'
+        # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
+        sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
+    - name: Build Rust Targets
+      working-directory: ./wrappers/rust
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      env:
+        CUDA_PATH: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}
+      # Building from the root workspace will build all members of the workspace by default
+      run: cargo build --release --verbose
+
+  # TODO: Reenable once Golang bindings for v1+ is finished
+  # build-golang-linux:
+  #   name: Build Golang on Linux
+  #   runs-on: [self-hosted, Linux, X64, icicle]
+  #   needs: check-changed-files
+  #   steps:
+  #   - name: Checkout Repo
+  #     uses: actions/checkout@v3
+  #   - name: Build CUDA libs
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     run: make all
+  #     working-directory: ./goicicle
+
+  # TODO: Add once Golang make file supports building for Windows
+  # build-golang-windows:
+  #   name: Build Golang on Windows
+  #   runs-on: windows-2022
+  #   needs: check-changed-files
+  #   steps:     
+  #   - name: Checkout Repo
+  #     uses: actions/checkout@v3
+  #   - name: Download and Install Cuda
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     uses: Jimver/cuda-toolkit@v0.2.11
+  #     with:
+  #       cuda: '12.0.0'
+  #       method: 'network'
+  #       # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
+  #       sub-packages: '["cudart", "nvcc", "thrust"]'
+  #   - name: Build cpp libs
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     run: make all
+  #     working-directory: ./goicicle

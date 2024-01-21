@@ -1,0 +1,13 @@
+golang:
+  - goicicle/**/*.go'
+  - go.mod
+rust:
+  - wrappers/rust
+cpp:
+  - icicle/**/*.cu
+  - icicle/**/*.cuh
+  - icicle/**/*.cpp
+  - icicle/**/*.hpp
+  - icicle/**/*.c
+  - icicle/**/*.h
+  - icicle/CMakeLists.txt

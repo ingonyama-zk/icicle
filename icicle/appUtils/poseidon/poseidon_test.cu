@@ -1,3 +1,4 @@
+// TODO: add to gtest or remove
 // #define DEBUG
 
 #include "../../curves/bls12_381/curve_config.cuh"

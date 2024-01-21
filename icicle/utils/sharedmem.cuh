@@ -58,10 +58,7 @@
 #ifndef _SHAREDMEM_H_
 #define _SHAREDMEM_H_
 
-#include "../curves/bls12_377/curve_config.cuh"
-#include "../curves/bls12_381/curve_config.cuh"
-#include "../curves/bn254/curve_config.cuh"
-#include "../curves/bw6_761/curve_config.cuh"
+#include "../curves/curve_config.cuh"
 
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
  *
@@ -218,74 +215,20 @@ struct SharedMemory<uchar4> {
 };
 
 template <>
-struct SharedMemory<BLS12_381::scalar_t> {
-  __device__ BLS12_381::scalar_t* getPointer()
+struct SharedMemory<curve_config::scalar_t> {
+  __device__ curve_config::scalar_t* getPointer()
   {
-    extern __shared__ BLS12_381::scalar_t s_scalar_t_bls12_381[];
-    return s_scalar_t_bls12_381;
+    extern __shared__ curve_config::scalar_t s_scalar_[];
+    return s_scalar_;
   }
 };
 
 template <>
-struct SharedMemory<BLS12_381::projective_t> {
-  __device__ BLS12_381::projective_t* getPointer()
+struct SharedMemory<curve_config::projective_t> {
+  __device__ curve_config::projective_t* getPointer()
   {
-    extern __shared__ BLS12_381::projective_t s_projective_t_bls12_381[];
-    return s_projective_t_bls12_381;
-  }
-};
-
-template <>
-struct SharedMemory<BLS12_377::scalar_t> {
-  __device__ BLS12_377::scalar_t* getPointer()
-  {
-    extern __shared__ BLS12_377::scalar_t s_scalar_t_bls12_377[];
-    return s_scalar_t_bls12_377;
-  }
-};
-
-template <>
-struct SharedMemory<BLS12_377::projective_t> {
-  __device__ BLS12_377::projective_t* getPointer()
-  {
-    extern __shared__ BLS12_377::projective_t s_projective_t_bls12_377[];
-    return s_projective_t_bls12_377;
-  }
-};
-
-template <>
-struct SharedMemory<BN254::scalar_t> {
-  __device__ BN254::scalar_t* getPointer()
-  {
-    extern __shared__ BN254::scalar_t s_scalar_t_bn254[];
-    return s_scalar_t_bn254;
-  }
-};
-
-template <>
-struct SharedMemory<BN254::projective_t> {
-  __device__ BN254::projective_t* getPointer()
-  {
-    extern __shared__ BN254::projective_t s_projective_t_bn254[];
-    return s_projective_t_bn254;
-  }
-};
-
-template <>
-struct SharedMemory<BW6_761::scalar_t> {
-  __device__ BW6_761::scalar_t* getPointer()
-  {
-    extern __shared__ BW6_761::scalar_t s_scalar_t_bw6_761[];
-    return s_scalar_t_bw6_761;
-  }
-};
-
-template <>
-struct SharedMemory<BW6_761::projective_t> {
-  __device__ BW6_761::projective_t* getPointer()
-  {
-    extern __shared__ BW6_761::projective_t s_projective_t_bw6_761[];
-    return s_projective_t_bw6_761;
+    extern __shared__ curve_config::projective_t s_projective_[];
+    return s_projective_;
   }
 };
 

@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+  "icicle-cuda-runtime",
+  "icicle-core",
+  "icicle-curves/icicle-bw6-761",
+  "icicle-curves/icicle-bls12-377",
+  "icicle-curves/icicle-bls12-381",
+  "icicle-curves/icicle-bn254",
+]
