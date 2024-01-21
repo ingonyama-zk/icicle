@@ -41,7 +41,7 @@ type G1BaseField struct {
 }
 
 /*
- * BaseField Constrctors
+ * BaseField Constructors
  */
 
 func (f *G1BaseField) SetZero() *G1BaseField {
