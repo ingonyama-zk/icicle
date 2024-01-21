@@ -1,2 +1,2 @@
 #!/bin/bash
-/icicle-example/build/example
+./build/example

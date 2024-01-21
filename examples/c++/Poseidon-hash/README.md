@@ -41,6 +41,12 @@ poseidon.hash_blocks(inBlocks, nBlocks, outHashes, hashType, stream);
 
 - **HashType:** In this example we use `Poseidon<BLS12_381::scalar_t>::HashType::MerkleTree`.
 
+## Running the example
+
+- `cd` to your example directory
+- compile with `./compile.sh`
+- run with `./run.sh`
+
 ## What's in the example
 
 1. Define the size of the example: the hight of the full binary Merkle tree. 

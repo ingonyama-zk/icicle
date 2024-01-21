@@ -25,6 +25,12 @@ scalar_t a;
 point_field_t b;
 ```
 
+## Running the example
+
+- `cd` to your example directory
+- compile with `./compile.sh`
+- run with `./run.sh`
+
 ## What's in the example
 
 1. Define the parameters for the example such as vector size 
@@ -32,3 +38,4 @@ point_field_t b;
 3. Copy them on-device
 4. Execute element-wise vector multiplication on-device
 5. Copy results on-host
+

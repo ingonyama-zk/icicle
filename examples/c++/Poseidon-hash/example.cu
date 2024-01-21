@@ -5,7 +5,7 @@
 // select the curve
 #define CURVE_ID 1
 // include Poseidon template
-#include "/icicle/icicle/appUtils/poseidon/poseidon.cu"
+#include "icicle/appUtils/poseidon/poseidon.cu"
 using namespace curve_config;
 
 
