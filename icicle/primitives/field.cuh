@@ -54,16 +54,16 @@ public:
     return Field{scalar};
   }
 
-  HOST_DEVICE_INLINE uint4 load_half(bool high_bits){
+  HOST_DEVICE_INLINE uint4 load_half(bool high_bits)
+  {
     uint4 res;
 
-    if (!high_bits){
+    if (!high_bits) {
       res.w = limbs_storage.limbs[0];
       res.x = limbs_storage.limbs[1];
       res.y = limbs_storage.limbs[2];
       res.z = limbs_storage.limbs[3];
-    }
-    else{
+    } else {
       res.w = limbs_storage.limbs[4];
       res.x = limbs_storage.limbs[5];
       res.y = limbs_storage.limbs[6];
@@ -71,18 +71,16 @@ public:
     }
 
     return res;
-
   }
 
-  HOST_DEVICE_INLINE void store_half(uint4 inp, bool high_bits){
-
-    if (!high_bits){
+  HOST_DEVICE_INLINE void store_half(uint4 inp, bool high_bits)
+  {
+    if (!high_bits) {
       limbs_storage.limbs[0] = inp.w;
       limbs_storage.limbs[1] = inp.x;
       limbs_storage.limbs[2] = inp.y;
       limbs_storage.limbs[3] = inp.z;
-    }
-    else{
+    } else {
       limbs_storage.limbs[4] = inp.w;
       limbs_storage.limbs[5] = inp.x;
       limbs_storage.limbs[6] = inp.y;
@@ -97,20 +95,20 @@ public:
     // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::win3;
-    return Field{omega.storages[i-6]};
+    return Field{omega.storages[i - 6]};
   }
 
-   static HOST_DEVICE_INLINE Field win3_inv(uint32_t i)
+  static HOST_DEVICE_INLINE Field win3_inv(uint32_t i)
   {
     // if (logn == 0) { return Field{CONFIG::one}; }
 
     // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::win3_inv;
-    return Field{omega.storages[i-6]};
+    return Field{omega.storages[i - 6]};
   }
 
-   static HOST_DEVICE_INLINE Field win4(uint32_t i)
+  static HOST_DEVICE_INLINE Field win4(uint32_t i)
   {
     // if (logn == 0) { return Field{CONFIG::one}; }
 
@@ -120,42 +118,42 @@ public:
     return Field{omega.storages[i]};
   }
 
-  static HOST_DEVICE_INLINE Field omega4(uint32_t i)
-  {
-    // if (logn == 0) { return Field{CONFIG::one}; }
+  // static HOST_DEVICE_INLINE Field omega4(uint32_t i)
+  // {
+  //   // if (logn == 0) { return Field{CONFIG::one}; }
 
-    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+  //   // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
 
-    storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega4;
-    return Field{omega.storages[i]};
-  }
+  //   storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega4;
+  //   return Field{omega.storages[i]};
+  // }
 
-  static HOST_DEVICE_INLINE Field omega4_inv(uint32_t i)
-  {
-    // if (logn == 0) { return Field{CONFIG::one}; }
+  // static HOST_DEVICE_INLINE Field omega4_inv(uint32_t i)
+  // {
+  //   // if (logn == 0) { return Field{CONFIG::one}; }
 
-    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+  //   // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
 
-    storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega4_inv;
-    return Field{omega.storages[i]};
-  }
+  //   storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega4_inv;
+  //   return Field{omega.storages[i]};
+  // }
 
-  static HOST_DEVICE_INLINE Field omega8(uint32_t i)
-  {
-    // if (logn == 0) { return Field{CONFIG::one}; }
+  // static HOST_DEVICE_INLINE Field omega8(uint32_t i)
+  // {
+  //   // if (logn == 0) { return Field{CONFIG::one}; }
 
-    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
+  //   // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
 
-    storage_array<64, TLC> const omega = CONFIG::omega8;
-    return Field{omega.storages[i]};
-  }
-
+  //   storage_array<64, TLC> const omega = CONFIG::omega8;
+  //   return Field{omega.storages[i]};
+  // }
 
   static HOST_DEVICE_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega index"); }
+    // if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega
+    // index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
     return Field{omega.storages[logn - 1]};
@@ -165,9 +163,9 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) {
-      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index");
-    }
+    // if (logn > CONFIG::omegas_count) {
+    //   THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index");
+    // }
 
     storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
     return Field{omega_inv.storages[logn - 1]};
@@ -177,7 +175,7 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
+    // if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
   }
@@ -771,7 +769,7 @@ public:
   {
     std::random_device rd;
     // std::mt19937_64 generator(rd());
-    std::mt19937_64 generator(rand()); //remove when finished debugging
+    std::mt19937_64 generator(rand()); // remove when finished debugging
     std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)

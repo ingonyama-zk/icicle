@@ -1,14 +1,6 @@
-test_debug_ntt:
+build_verification:
 	mkdir -p work
-	nvcc --generate-line-info -o work/test_ntt -I. Tester.cu
-	work/test_ntt 1 10
+	nvcc -o work/test_verification -I. -I.. -I../.. -I../ntt verification.cu
 
-test_ntt:
-	mkdir -p work
-	nvcc -o work/test_ntt -I. Tester.cu
-	work/test_ntt 1 1
-
-test_verification:
-	mkdir -p work
-	nvcc -o work/test_verification -I. -I../ntt verification.cu
+test_verification: build_verification
 	work/test_verification
