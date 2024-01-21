@@ -4,11 +4,12 @@
 
 #include <cuda_runtime.h>
 
-#include "../../curves/curve_config.cuh"
-#include "../../utils/device_context.cuh"
-#include "../../utils/error_handler.cuh"
-#include "../../utils/sharedmem.cuh"
-#include "../../utils/utils_kernels.cuh"
+#include "curves/curve_config.cuh"
+#include "utils/device_context.cuh"
+#include "utils/error_handler.cuh"
+#include "utils/sharedmem.cuh"
+#include "utils/utils_kernels.cuh"
+#include "utils/utils.h"
 
 /**
  * @namespace ntt
@@ -86,7 +87,7 @@ namespace ntt {
    * @return Default value of [NTTConfig](@ref NTTConfig).
    */
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig();
+  NTTConfig<S> CONCAT_EXPAND(CURVE, DefaultNTTConfig)();
 
   /**
    * A function that computes NTT or iNTT in-place.
