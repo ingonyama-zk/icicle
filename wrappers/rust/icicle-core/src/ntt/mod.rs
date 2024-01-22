@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::{DeviceContext, get_default_device_context};
+use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
