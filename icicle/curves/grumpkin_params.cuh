@@ -123,6 +123,7 @@ namespace grumpkin {
   struct fq_config {
     static constexpr unsigned limbs_count = 8;
     static constexpr unsigned modulus_bit_count = 254;
+    static constexpr unsigned num_of_reductions = 1;
     static constexpr storage<limbs_count> modulus = {0xf0000001, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
     static constexpr storage<limbs_count> modulus_2 = {0xe0000002, 0x87c3eb27, 0xf372e122, 0x5067d090, 0x0302b0ba, 0x70a08b6d, 0xc2634053, 0x60c89ce5};
     static constexpr storage<limbs_count> modulus_4 = {0xc0000004, 0x0f87d64f, 0xe6e5c245, 0xa0cfa121, 0x06056174, 0xe14116da, 0x84c680a6, 0xc19139cb};
@@ -153,3 +154,5 @@ namespace grumpkin {
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_re = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 }
+
+#endif
