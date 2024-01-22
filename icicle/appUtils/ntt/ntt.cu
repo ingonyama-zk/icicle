@@ -260,7 +260,7 @@ namespace ntt {
      * @param n_twiddles Size of `d_twiddles`
      * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
      * @param inverse true for iNTT
-     * @param coset should be array of lenght n or a nullptr if NTT is not computed on a coset
+     * @param coset should be array of length n or a nullptr if NTT is not computed on a coset
      * @param stream CUDA stream
      * @param is_async if false, perform sync of the supplied CUDA stream at the end of processing
      * @param d_output Output array

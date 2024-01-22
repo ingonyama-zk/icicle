@@ -16,7 +16,7 @@ namespace vec_ops {
    * @param vec_b Second input vector.
    * @param n Size of vectors `vec_a` and `vec_b`.
    * @param is_on_device If true, inputs and outputs are on device, if false - on the host.
-   * @param is_montgomery If true, inputs are expected to be in Montgomery form and results are retured in Montgomery
+   * @param is_montgomery If true, inputs are expected to be in Montgomery form and results are returned in Montgomery
    * form. If false - inputs and outputs are non-Montgomery.
    * @param ctx [DeviceContext](@ref device_context::DeviceContext) used in this method.
    * @param result Resulting vector - element-wise product of `vec_a` and `vec_b`, can be the same pointer as `vec_b`.
