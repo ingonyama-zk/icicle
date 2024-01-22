@@ -67,7 +67,7 @@ set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 
 
 # when adding a new curve/field, append its name to the end of this list
-set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761)
+set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin)
 
 set(IS_CURVE_SUPPORTED FALSE)
 set(I 0)
