@@ -386,7 +386,8 @@ namespace ntt {
     // but it's a singleton that is supposed to be initialized once per program lifetime
     if (!Domain<S>::twiddles) {
       S omega = primitive_root;
-      for (int i = 0; i < S::TWO_ADICITY; i++)
+      unsigned omegas_count = S::get_omegas_count();
+      for (int i = 0; i < omegas_count; i++)
         omega = S::sqr(omega);
       if (omega != S::one()) {
         std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
@@ -501,17 +502,6 @@ namespace ntt {
       false,         // is_async
     };
     return config;
-  }
-
-  /**
-   * Extern "C" version of [DefaultNTTConfig](@ref DefaultNTTConfig) function with the following
-   * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
-   * @return Default [NTTConfig](@ref NTTConfig).
-   */
-  extern "C" NTTConfig<curve_config::scalar_t> CONCAT_EXPAND(CURVE, GetDefaultNTTConfig)()
-  {
-    return DefaultNTTConfig<curve_config::scalar_t>();
   }
 
   /**
