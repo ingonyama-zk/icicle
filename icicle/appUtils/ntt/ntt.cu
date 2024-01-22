@@ -416,6 +416,12 @@ namespace ntt {
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
+    if (size > Domain<S>::max_size) {
+      std::cerr
+        << "NTT size is too large for the domain. Consider generating your domain with a higher order root of unity"
+        << '\n';
+      throw -1;
+    }
 
     cudaStream_t& stream = config.ctx.stream;
     int batch_size = config.batch_size;
@@ -520,7 +526,7 @@ namespace ntt {
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    */
   extern "C" cudaError_t
-    CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx)
+  CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx)
   {
     return InitDomain(primitive_root, ctx);
   }
