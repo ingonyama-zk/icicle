@@ -10,6 +10,10 @@ namespace grumpkin {
     static constexpr unsigned omegas_count = 28;
     static constexpr unsigned modulus_bit_count = 254;
 
+    static constexpr unsigned num_of_reductions = 1;
+    // neg_modulus should be changed
+    static constexpr storage<limbs_count> neg_modulus = {0x278302b9, 0xc3df73e9, 0x978e3572, 0x687e956e,
+                                                         0x7e7ea7a2, 0x47afba49, 0x1ece5fd6, 0xcf9bb18d};
     static constexpr storage<limbs_count> modulus = {0xd87cfd47, 0x3c208c16, 0x6871ca8d, 0x97816a91, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
     static constexpr storage<limbs_count> modulus_2 = {0xb0f9fa8e, 0x7841182d, 0xd0e3951a, 0x2f02d522, 0x0302b0bb, 0x70a08b6d, 0xc2634053, 0x60c89ce5};
     static constexpr storage<limbs_count> modulus_4 = {0x61f3f51c, 0xf082305b, 0xa1c72a34, 0x5e05aa45, 0x06056176, 0xe14116da, 0x84c680a6, 0xc19139cb};
@@ -124,9 +128,12 @@ namespace grumpkin {
     static constexpr unsigned limbs_count = 8;
     static constexpr unsigned modulus_bit_count = 254;
     static constexpr unsigned num_of_reductions = 1;
+    // neg_modulus should be changed
     static constexpr storage<limbs_count> modulus = {0xf0000001, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
     static constexpr storage<limbs_count> modulus_2 = {0xe0000002, 0x87c3eb27, 0xf372e122, 0x5067d090, 0x0302b0ba, 0x70a08b6d, 0xc2634053, 0x60c89ce5};
     static constexpr storage<limbs_count> modulus_4 = {0xc0000004, 0x0f87d64f, 0xe6e5c245, 0xa0cfa121, 0x06056174, 0xe14116da, 0x84c680a6, 0xc19139cb};
+    static constexpr storage<limbs_count> neg_modulus = {0x0fffffff, 0xbc1e0a6c, 0x86468f6e, 0xd7cc17b7,
+                                                         0x7e7ea7a2, 0x47afba49, 0x1ece5fd6, 0xcf9bb18d};
     static constexpr storage<2*limbs_count> modulus_wide = {0xf0000001, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<2*limbs_count> modulus_squared = {0xe0000001, 0x08c3eb27, 0xdcb34000, 0xc7f26223, 0x68c9bb7f, 0xffe9a62c, 0xe821ddb0, 0xa6ce1975, 0x47b62fe7, 0x2c77527b, 0xd379d3df, 0x85f73bb0, 0x0348d21c, 0x599a6f7c, 0x763cbf9c, 0x0925c4b8};
     static constexpr storage<2*limbs_count> modulus_squared_2 = {0xc0000002, 0x1187d64f, 0xb9668000, 0x8fe4c447, 0xd19376ff, 0xffd34c58, 0xd043bb61, 0x4d9c32eb, 0x8f6c5fcf, 0x58eea4f6, 0xa6f3a7be, 0x0bee7761, 0x0691a439, 0xb334def8, 0xec797f38, 0x124b8970};
