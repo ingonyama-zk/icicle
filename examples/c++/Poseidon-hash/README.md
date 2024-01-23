@@ -49,7 +49,7 @@ poseidon.hash_blocks(inBlocks, nBlocks, outHashes, hashType, stream);
 
 ## What's in the example
 
-1. Define the size of the example: the hight of the full binary Merkle tree. 
+1. Define the size of the example: the height of the full binary Merkle tree. 
 2. Hash blocks in parallel. The tree width determines the number of blocks to hash.
 3. Build a Merkle tree from the hashes.
 4. Use the tree to generate a membership proof for one of computed hashes.

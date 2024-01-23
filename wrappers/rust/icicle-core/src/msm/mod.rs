@@ -53,7 +53,7 @@ pub struct MSMConfig<'a> {
     /// decreases parallelism, so only suitable for large batches of MSMs. Default value: false.
     pub is_big_triangle: bool,
 
-    /// Whether to run the MSM asyncronously. If set to `true`, the MSM function will be non-blocking
+    /// Whether to run the MSM asynchronously. If set to `true`, the MSM function will be non-blocking
     /// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
     /// If set to `false`, the MSM function will block the current CPU thread.
     pub is_async: bool,
@@ -122,20 +122,25 @@ pub fn get_default_msm_config<C: Curve + MSM<C>>() -> MSMConfig<'static> {
 macro_rules! impl_msm {
     (
       $curve_prefix:literal,
+      $curve_prefix_indent:ident,
       $curve:ident
     ) => {
-        extern "C" {
-            #[link_name = concat!($curve_prefix, "MSMCuda")]
-            fn msm_cuda(
-                scalars: *const <$curve as Curve>::ScalarField,
-                points: *const Affine<$curve>,
-                count: i32,
-                config: &MSMConfig,
-                out: *mut Projective<$curve>,
-            ) -> CudaError;
+        mod $curve_prefix_indent {
+            use super::{$curve, Affine, CudaError, Curve, MSMConfig, Projective};
 
-            #[link_name = concat!($curve_prefix, "DefaultMSMConfig")]
-            fn default_msm_config() -> MSMConfig<'static>;
+            extern "C" {
+                #[link_name = concat!($curve_prefix, "MSMCuda")]
+                pub(crate) fn msm_cuda(
+                    scalars: *const <$curve as Curve>::ScalarField,
+                    points: *const Affine<$curve>,
+                    count: i32,
+                    config: &MSMConfig,
+                    out: *mut Projective<$curve>,
+                ) -> CudaError;
+
+                #[link_name = concat!($curve_prefix, "DefaultMSMConfig")]
+                pub(crate) fn default_msm_config() -> MSMConfig<'static>;
+            }
         }
 
         impl MSM<$curve> for $curve {
@@ -146,7 +151,7 @@ macro_rules! impl_msm {
                 results: &mut HostOrDeviceSlice<Projective<$curve>>,
             ) -> IcicleResult<()> {
                 unsafe {
-                    msm_cuda(
+                    $curve_prefix_indent::msm_cuda(
                         scalars.as_ptr(),
                         points.as_ptr(),
                         (scalars.len() / results.len()) as i32,
@@ -158,7 +163,7 @@ macro_rules! impl_msm {
             }
 
             fn get_default_msm_config() -> MSMConfig<'static> {
-                unsafe { default_msm_config() }
+                unsafe { $curve_prefix_indent::default_msm_config() }
             }
         }
     };
