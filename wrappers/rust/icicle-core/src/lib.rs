@@ -3,6 +3,8 @@ pub mod error;
 pub mod field;
 pub mod msm;
 pub mod ntt;
+pub mod poseidon;
+pub mod tree;
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
 pub mod tests;

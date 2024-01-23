@@ -72,6 +72,11 @@ namespace poseidon {
 
     return config;
   }
+
+  extern "C" PoseidonKernelsConfiguration DefaultPoseidonKernelsConfiguration(int t) {
+    return default_poseidon_kernels_configuration(t);
+  }
+
   struct PoseidonConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
     PoseidonKernelsConfiguration kernel_cfg;
@@ -101,6 +106,10 @@ namespace poseidon {
       false,      // is_async
     };
     return config;
+  }
+
+  extern "C" PoseidonConfig DefaultPoseidonConfig(int t) {
+    return default_poseidon_config(t);
   }
 
   template <typename S>
