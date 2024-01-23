@@ -53,7 +53,7 @@ pub struct MSMConfig<'a> {
     /// decreases parallelism, so only suitable for large batches of MSMs. Default value: false.
     pub is_big_triangle: bool,
 
-    /// Whether to run the MSM asyncronously. If set to `true`, the MSM function will be non-blocking
+    /// Whether to run the MSM asynchronously. If set to `true`, the MSM function will be non-blocking
     /// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
     /// If set to `false`, the MSM function will block the current CPU thread.
     pub is_async: bool,

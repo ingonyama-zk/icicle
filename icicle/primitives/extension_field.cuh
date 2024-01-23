@@ -119,10 +119,10 @@ public:
     return ExtensionField{real_prod + i_sq_times_im, re_im + im_re};
   }
 
-  template <uint32_t mutliplier, unsigned REDUCTION_SIZE = 1>
+  template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField mul_unsigned(const ExtensionField& xs)
   {
-    return {FF::template mul_unsigned<mutliplier>(xs.real), FF::template mul_unsigned<mutliplier>(xs.imaginary)};
+    return {FF::template mul_unsigned<multiplier>(xs.real), FF::template mul_unsigned<multiplier>(xs.imaginary)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>

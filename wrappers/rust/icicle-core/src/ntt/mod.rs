@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
@@ -54,9 +54,24 @@ pub struct NTTConfig<'a, S> {
     pub ordering: Ordering,
     are_inputs_on_device: bool,
     are_outputs_on_device: bool,
-    /// Whether to run the NTT asyncronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
+    /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
+}
+
+impl<'a, S: FieldImpl> NTTConfig<'a, S> {
+    pub fn default_config() -> Self {
+        let ctx = get_default_device_context();
+        NTTConfig {
+            ctx,
+            coset_gen: S::one(),
+            batch_size: 1,
+            ordering: Ordering::kNN,
+            are_inputs_on_device: false,
+            are_outputs_on_device: false,
+            is_async: false,
+        }
+    }
 }
 
 #[doc(hidden)]
@@ -143,22 +158,8 @@ macro_rules! impl_ntt {
         mod $field_prefix_ident {
             use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir};
 
-            extern "C" {
-                #[link_name = concat!($field_prefix, "NTTCuda")]
-                pub(crate) fn ntt_cuda(
-                    input: *const $field,
-                    size: i32,
-                    dir: NTTDir,
-                    config: &NTTConfig<$field>,
-                    output: *mut $field,
-                ) -> CudaError;
-
-                #[link_name = concat!($field_prefix, "GetDefaultNTTConfig")]
-                pub(crate) fn default_ntt_config() -> NTTConfig<'static, $field>;
-
-                #[link_name = concat!($field_prefix, "InitializeDomain")]
-                pub(crate) fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
-            }
+            #[link_name = concat!($field_prefix, "InitializeDomain")]
+            fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
         }
 
         impl NTT<$field> for $field_config {
@@ -185,7 +186,7 @@ macro_rules! impl_ntt {
             }
 
             fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                unsafe { $field_prefix_ident::default_ntt_config() }
+                NTTConfig::<$field>::default_config()
             }
         }
     };
