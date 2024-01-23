@@ -8,7 +8,7 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-impl_ntt!("bls12_381", ScalarField, ScalarCfg);
+impl_ntt!("bls12_381", bls12_381, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

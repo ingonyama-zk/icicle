@@ -136,24 +136,29 @@ where
 macro_rules! impl_ntt {
     (
       $field_prefix:literal,
+      $field_prefix_ident:ident,
       $field:ident,
       $field_config:ident
     ) => {
-        extern "C" {
-            #[link_name = concat!($field_prefix, "NTTCuda")]
-            fn ntt_cuda(
-                input: *const $field,
-                size: i32,
-                dir: NTTDir,
-                config: &NTTConfig<$field>,
-                output: *mut $field,
-            ) -> CudaError;
+        mod $field_prefix_ident {
+            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir};
 
-            #[link_name = concat!($field_prefix, "GetDefaultNTTConfig")]
-            fn default_ntt_config() -> NTTConfig<'static, $field>;
+            extern "C" {
+                #[link_name = concat!($field_prefix, "NTTCuda")]
+                pub(crate) fn ntt_cuda(
+                    input: *const $field,
+                    size: i32,
+                    dir: NTTDir,
+                    config: &NTTConfig<$field>,
+                    output: *mut $field,
+                ) -> CudaError;
 
-            #[link_name = concat!($field_prefix, "InitializeDomain")]
-            fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
+                #[link_name = concat!($field_prefix, "GetDefaultNTTConfig")]
+                pub(crate) fn default_ntt_config() -> NTTConfig<'static, $field>;
+
+                #[link_name = concat!($field_prefix, "InitializeDomain")]
+                pub(crate) fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
+            }
         }
 
         impl NTT<$field> for $field_config {
@@ -164,7 +169,7 @@ macro_rules! impl_ntt {
                 output: &mut HostOrDeviceSlice<$field>,
             ) -> IcicleResult<()> {
                 unsafe {
-                    ntt_cuda(
+                    $field_prefix_ident::ntt_cuda(
                         input.as_ptr(),
                         (input.len() / (cfg.batch_size as usize)) as i32,
                         dir,
@@ -176,11 +181,11 @@ macro_rules! impl_ntt {
             }
 
             fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { initialize_ntt_domain(primitive_root, ctx).wrap() }
+                unsafe { $field_prefix_ident::initialize_ntt_domain(primitive_root, ctx).wrap() }
             }
 
             fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                unsafe { default_ntt_config() }
+                unsafe { $field_prefix_ident::default_ntt_config() }
             }
         }
     };

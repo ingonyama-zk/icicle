@@ -2,7 +2,7 @@
 use crate::traits::ArkConvertible;
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{BigInteger, Field as ArkField, PrimeField};
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use std::fmt::{Debug, Display};
@@ -100,6 +100,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 }
 
+#[doc(hidden)]
 pub trait MontgomeryConvertibleField<F: FieldImpl> {
     fn to_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
     fn from_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
@@ -123,12 +124,19 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS,
     type ArkEquivalent = F::ArkField;
 
     fn to_ark(&self) -> Self::ArkEquivalent {
-        F::ArkField::from_le_bytes_mod_order(&self.to_bytes_le())
+        F::ArkField::from_random_bytes(&self.to_bytes_le()).unwrap()
     }
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
-        let ark_bigint: <Self::ArkEquivalent as PrimeField>::BigInt = ark.into();
-        Self::from_bytes_le(&ark_bigint.to_bytes_le())
+        let ark_bytes: Vec<u8> = ark
+            .to_base_prime_field_elements()
+            .map(|x| {
+                x.into_bigint()
+                    .to_bytes_le()
+            })
+            .flatten()
+            .collect();
+        Self::from_bytes_le(&ark_bytes)
     }
 }
 
@@ -156,6 +164,7 @@ macro_rules! impl_field {
 macro_rules! impl_scalar_field {
     (
         $field_prefix:literal,
+        $field_prefix_ident:ident,
         $num_limbs:ident,
         $field_name:ident,
         $field_cfg:ident,
@@ -163,45 +172,52 @@ macro_rules! impl_scalar_field {
     ) => {
         impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
 
-        extern "C" {
-            #[link_name = concat!($field_prefix, "GenerateScalars")]
-            fn generate_scalars(scalars: *mut $field_name, size: usize);
+        mod $field_prefix_ident {
+            use crate::curve::{get_default_device_context, $field_name, CudaError, DeviceContext, HostOrDeviceSlice};
 
-            #[link_name = concat!($field_prefix, "ScalarConvertMontgomery")]
-            fn _convert_scalars_montgomery(
-                scalars: *mut $field_name,
-                size: usize,
+            extern "C" {
+                #[link_name = concat!($field_prefix, "GenerateScalars")]
+                pub(crate) fn generate_scalars(scalars: *mut $field_name, size: usize);
+
+                #[link_name = concat!($field_prefix, "ScalarConvertMontgomery")]
+                fn _convert_scalars_montgomery(
+                    scalars: *mut $field_name,
+                    size: usize,
+                    is_into: bool,
+                    ctx: *const DeviceContext,
+                ) -> CudaError;
+            }
+
+            pub(crate) fn convert_scalars_montgomery(
+                scalars: &mut HostOrDeviceSlice<$field_name>,
                 is_into: bool,
-                ctx: *const DeviceContext,
-            ) -> CudaError;
+            ) -> CudaError {
+                unsafe {
+                    _convert_scalars_montgomery(
+                        scalars.as_mut_ptr(),
+                        scalars.len(),
+                        is_into,
+                        &get_default_device_context() as *const _ as *const DeviceContext,
+                    )
+                }
+            }
         }
 
         impl GenerateRandom<$field_name> for $field_cfg {
             fn generate_random(size: usize) -> Vec<$field_name> {
                 let mut res = vec![$field_name::zero(); size];
-                unsafe { generate_scalars(&mut res[..] as *mut _ as *mut $field_name, size) };
+                unsafe { $field_prefix_ident::generate_scalars(&mut res[..] as *mut _ as *mut $field_name, size) };
                 res
-            }
-        }
-
-        fn convert_scalars_montgomery(scalars: &mut HostOrDeviceSlice<$field_name>, is_into: bool) -> CudaError {
-            unsafe {
-                _convert_scalars_montgomery(
-                    scalars.as_mut_ptr(),
-                    scalars.len(),
-                    is_into,
-                    &get_default_device_context() as *const _ as *const DeviceContext,
-                )
             }
         }
 
         impl MontgomeryConvertibleField<$field_name> for $field_cfg {
             fn to_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
-                convert_scalars_montgomery(values, true)
+                $field_prefix_ident::convert_scalars_montgomery(values, true)
             }
 
             fn from_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
-                convert_scalars_montgomery(values, false)
+                $field_prefix_ident::convert_scalars_montgomery(values, false)
             }
         }
     };
