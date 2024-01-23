@@ -158,8 +158,19 @@ macro_rules! impl_ntt {
         mod $field_prefix_ident {
             use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir};
 
-            #[link_name = concat!($field_prefix, "InitializeDomain")]
-            fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
+            extern "C" {
+                #[link_name = concat!($field_prefix, "NTTCuda")]
+                pub(crate) fn ntt_cuda(
+                    input: *const $field,
+                    size: i32,
+                    dir: NTTDir,
+                    config: &NTTConfig<$field>,
+                    output: *mut $field,
+                ) -> CudaError;
+    
+                #[link_name = concat!($field_prefix, "InitializeDomain")]
+                pub(crate) fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
+            }
         }
 
         impl NTT<$field> for $field_config {
