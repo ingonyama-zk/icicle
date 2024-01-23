@@ -1,8 +1,6 @@
-#ifndef K_NTT
-#define K_NTT
-#pragma once
 
-#include "thread_ntt.cu"
+#include "thread_ntt.cu" // TODO Yuval: include header instead of source
+#include "curves/curve_config.cuh"
 
 __device__ uint32_t dig_rev(uint32_t num, uint32_t log_size, bool dit)
 {
@@ -262,9 +260,9 @@ __launch_bounds__(64) __global__ void ntt16dit(
   engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
 }
 
-__global__ void normalize_kernel(uint4* data, uint32_t size, test_scalar norm_factor)
+__global__ void normalize_kernel(uint4* data, uint32_t size, curve_config::scalar_t norm_factor)
 {
-  test_scalar temp;
+  curve_config::scalar_t temp;
   temp.store_half(data[threadIdx.x], false);
   temp.store_half(data[threadIdx.x + size], true);
   temp = temp * norm_factor;
@@ -272,10 +270,10 @@ __global__ void normalize_kernel(uint4* data, uint32_t size, test_scalar norm_fa
   data[threadIdx.x + size] = temp.load_half(true);
 }
 
-__global__ void generate_base_table(test_scalar basic_root, uint4* base_table, uint32_t skip)
+__global__ void generate_base_table(curve_config::scalar_t basic_root, uint4* base_table, uint32_t skip)
 {
-  test_scalar w = basic_root;
-  test_scalar t = test_scalar::one();
+  curve_config::scalar_t w = basic_root;
+  curve_config::scalar_t t = curve_config::scalar_t::one();
   for (int i = 0; i < 64; i += skip) {
     base_table[i] = t.load_half(false);
     base_table[i + 64] = t.load_half(true);
@@ -283,11 +281,11 @@ __global__ void generate_base_table(test_scalar basic_root, uint4* base_table, u
   }
 }
 
-__global__ void generate_basic_twiddles(test_scalar basic_root, uint4* basic_twiddles)
+__global__ void generate_basic_twiddles(curve_config::scalar_t basic_root, uint4* basic_twiddles)
 {
-  test_scalar w0 = basic_root * basic_root;
-  test_scalar w1 = (basic_root + w0 * basic_root) * test_scalar::inv_log_size(1);
-  test_scalar w2 = (basic_root - w0 * basic_root) * test_scalar::inv_log_size(1);
+  curve_config::scalar_t w0 = basic_root * basic_root;
+  curve_config::scalar_t w1 = (basic_root + w0 * basic_root) * curve_config::scalar_t::inv_log_size(1);
+  curve_config::scalar_t w2 = (basic_root - w0 * basic_root) * curve_config::scalar_t::inv_log_size(1);
   basic_twiddles[0] = w0.load_half(false);
   basic_twiddles[3] = w0.load_half(true);
   basic_twiddles[1] = w1.load_half(false);
@@ -305,7 +303,7 @@ __global__ void generate_twiddle_combinations(
   uint4* twiddles,
   uint32_t log_size,
   uint32_t stage_num,
-  test_scalar norm_factor)
+  curve_config::scalar_t norm_factor)
 {
   uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   uint32_t range1 = 0, range2 = 0, ind;
@@ -314,7 +312,7 @@ __global__ void generate_twiddle_combinations(
   range2 = STAGE_SIZES_DEVICE[log_size][ind];
   uint32_t root_order = range1 + range2;
   uint32_t exp = ((tid & ((1 << range1) - 1)) * (tid >> range1)) << (30 - root_order);
-  test_scalar w6, w12, w18, w24, w30;
+  curve_config::scalar_t w6, w12, w18, w24, w30;
   w6.store_half(w6_table[exp >> 24], false);
   w6.store_half(w6_table[(exp >> 24) + 64], true);
   w12.store_half(w12_table[((exp >> 18) & 0x3f)], false);
@@ -325,13 +323,13 @@ __global__ void generate_twiddle_combinations(
   w24.store_half(w24_table[((exp >> 6) & 0x3f) + 64], true);
   w30.store_half(w30_table[(exp & 0x3f)], false);
   w30.store_half(w30_table[(exp & 0x3f) + 64], true);
-  test_scalar t = w6 * w12 * w18 * w24 * w30 * norm_factor;
+  curve_config::scalar_t t = w6 * w12 * w18 * w24 * w30 * norm_factor;
   twiddles[tid + LOW_W_OFFSETS[log_size][stage_num]] = t.load_half(false);
   twiddles[tid + HIGH_W_OFFSETS[log_size][stage_num]] = t.load_half(true);
 }
 
-uint4*
-generate_external_twiddles(test_scalar basic_root, uint4* twiddles, uint4* basic_twiddles, uint32_t log_size, bool inv)
+uint4* generate_external_twiddles(
+  curve_config::scalar_t basic_root, uint4* twiddles, uint4* basic_twiddles, uint32_t log_size, bool inv)
 {
   uint4* w6_table;
   uint4* w12_table;
@@ -344,7 +342,7 @@ generate_external_twiddles(test_scalar basic_root, uint4* twiddles, uint4* basic
   cudaMalloc((void**)&w24_table, sizeof(uint4) * 64 * 2);
   cudaMalloc((void**)&w30_table, sizeof(uint4) * 64 * 2);
 
-  test_scalar temp_root = basic_root;
+  curve_config::scalar_t temp_root = basic_root;
   generate_base_table<<<1, 1>>>(basic_root, w30_table, 1 << (30 - log_size));
   if (log_size > 24)
     for (int i = 0; i < 6 - (30 - log_size); i++)
@@ -372,7 +370,7 @@ generate_external_twiddles(test_scalar basic_root, uint4* twiddles, uint4* basic
     temp += STAGE_SIZES_HOST[log_size][i];
     generate_twiddle_combinations<<<1 << (temp - 8), 256>>>(
       w6_table, w12_table, w18_table, w24_table, w30_table, twiddles, log_size, i,
-      (temp == log_size && inv) ? test_scalar::inv_log_size(log_size) : test_scalar::one());
+      (temp == log_size && inv) ? curve_config::scalar_t::inv_log_size(log_size) : curve_config::scalar_t::one());
   }
   return w6_table;
 }
@@ -399,7 +397,7 @@ void new_ntt(
       ntt16<<<1, 4, 8 * 64 * sizeof(uint4)>>>(
         in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
     }
-    if (inv) normalize_kernel<<<1, 16>>>(out, 16, test_scalar::inv_log_size(4));
+    if (inv) normalize_kernel<<<1, 16>>>(out, 16, curve_config::scalar_t::inv_log_size(4));
     return;
   }
   if (log_size == 5) {
@@ -410,13 +408,13 @@ void new_ntt(
       ntt32<<<1, 4, 8 * 64 * sizeof(uint4)>>>(
         in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
     }
-    if (inv) normalize_kernel<<<1, 32>>>(out, 32, test_scalar::inv_log_size(5));
+    if (inv) normalize_kernel<<<1, 32>>>(out, 32, curve_config::scalar_t::inv_log_size(5));
     return;
   }
   if (log_size == 6) {
     ntt64<<<1, 8, 8 * 64 * sizeof(uint4)>>>(
       in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
-    if (inv) normalize_kernel<<<1, 64>>>(out, 64, test_scalar::inv_log_size(6));
+    if (inv) normalize_kernel<<<1, 64>>>(out, 64, curve_config::scalar_t::inv_log_size(6));
     return;
   }
   if (log_size == 8) {
@@ -481,5 +479,3 @@ void new_ntt(
     }
   }
 }
-
-#endif

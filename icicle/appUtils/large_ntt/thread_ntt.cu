@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include "curves/curve_config.cuh"
 
 struct stage_metadata {
   uint32_t th_stride;
@@ -110,16 +111,16 @@ __device__ constexpr uint32_t HIGH_W_OFFSETS[31][5] = {
 class NTTEngine
 {
 public:
-  test_scalar X[8];
-  test_scalar WB[3];
-  test_scalar WI[7];
-  test_scalar WE[8];
+  curve_config::scalar_t X[8];
+  curve_config::scalar_t WB[3];
+  curve_config::scalar_t WI[7];
+  curve_config::scalar_t WE[8];
 
   //   __device__ __forceinline__ void initializeRoot(bool stride)
   //   {
   // #pragma unroll
   //     for (int i = 0; i < 7; i++) {
-  //       WI[i] = test_scalar::omega8(((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1));
+  //       WI[i] = curve_config::scalar_t::omega8(((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1));
   //     }
   //   }
 
@@ -331,18 +332,19 @@ public:
     }
   }
 
-  __device__ __forceinline__ void ntt2(test_scalar& X0, test_scalar& X1)
+  __device__ __forceinline__ void ntt2(curve_config::scalar_t& X0, curve_config::scalar_t& X1)
   {
-    test_scalar T;
+    curve_config::scalar_t T;
 
     T = X0 + X1;
     X1 = X0 - X1;
     X0 = T;
   }
 
-  __device__ __forceinline__ void ntt4(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3)
+  __device__ __forceinline__ void
+  ntt4(curve_config::scalar_t& X0, curve_config::scalar_t& X1, curve_config::scalar_t& X2, curve_config::scalar_t& X3)
   {
-    test_scalar T;
+    curve_config::scalar_t T;
 
     T = X0 + X2;
     X2 = X0 - X2;
@@ -358,9 +360,10 @@ public:
   }
 
   // rbo vertion
-  __device__ __forceinline__ void ntt4rbo(test_scalar& X0, test_scalar& X1, test_scalar& X2, test_scalar& X3)
+  __device__ __forceinline__ void ntt4rbo(
+    curve_config::scalar_t& X0, curve_config::scalar_t& X1, curve_config::scalar_t& X2, curve_config::scalar_t& X3)
   {
-    test_scalar T;
+    curve_config::scalar_t T;
 
     T = X0 - X1;
     X0 = X0 + X1;
@@ -376,16 +379,16 @@ public:
   }
 
   __device__ __forceinline__ void ntt8(
-    test_scalar& X0,
-    test_scalar& X1,
-    test_scalar& X2,
-    test_scalar& X3,
-    test_scalar& X4,
-    test_scalar& X5,
-    test_scalar& X6,
-    test_scalar& X7)
+    curve_config::scalar_t& X0,
+    curve_config::scalar_t& X1,
+    curve_config::scalar_t& X2,
+    curve_config::scalar_t& X3,
+    curve_config::scalar_t& X4,
+    curve_config::scalar_t& X5,
+    curve_config::scalar_t& X6,
+    curve_config::scalar_t& X7)
   {
-    test_scalar T;
+    curve_config::scalar_t T;
 
     // out of 56,623,104 possible mappings, we have:
     T = X3 - X7;
@@ -425,7 +428,7 @@ public:
 
   __device__ __forceinline__ void ntt8win()
   {
-    test_scalar T;
+    curve_config::scalar_t T;
 
     T = X[3] - X[7];
     X[7] = X[3] + X[7];
@@ -471,17 +474,17 @@ public:
   //     for (uint32_t i = 0; i < 4; i++)
   //       ntt4(X[i], X[i + 4], X[i + 8], X[i + 12]);
 
-  //     X[5] = X[5] * test_scalar::omega4(1);
-  //     X[6] = X[6] * test_scalar::omega4(2);
-  //     X[7] = X[7] * test_scalar::omega4(3);
+  //     X[5] = X[5] * curve_config::scalar_t::omega4(1);
+  //     X[6] = X[6] * curve_config::scalar_t::omega4(2);
+  //     X[7] = X[7] * curve_config::scalar_t::omega4(3);
 
-  //     X[9] = X[9] * test_scalar::omega4(2);
-  //     X[10] = X[10] * test_scalar::omega4(4);
-  //     X[11] = X[11] * test_scalar::omega4(6);
+  //     X[9] = X[9] * curve_config::scalar_t::omega4(2);
+  //     X[10] = X[10] * curve_config::scalar_t::omega4(4);
+  //     X[11] = X[11] * curve_config::scalar_t::omega4(6);
 
-  //     X[13] = X[13] * test_scalar::omega4(3);
-  //     X[14] = X[14] * test_scalar::omega4(6);
-  //     X[15] = X[15] * test_scalar::omega4(9);
+  //     X[13] = X[13] * curve_config::scalar_t::omega4(3);
+  //     X[14] = X[14] * curve_config::scalar_t::omega4(6);
+  //     X[15] = X[15] * curve_config::scalar_t::omega4(9);
 
   // #pragma unroll
   //     for (uint32_t i = 0; i < 16; i += 4)
@@ -489,7 +492,7 @@ public:
   //   }
 
   // __device__ __forceinline__ void ntt16win() {
-  //   test_scalar temp;
+  //   curve_config::scalar_t temp;
 
   //   // 1
   //   temp  = X[0] + X[8];
@@ -509,7 +512,7 @@ public:
   //   X[11] = X[7] + X[15];
   //   X[7]  = X[7] - X[15];
 
-  //   X[4] = test_scalar::win4(3) * X[4];
+  //   X[4] = curve_config::scalar_t::win4(3) * X[4];
 
   //   // 2
   //   X[15] = temp  + X[8];
@@ -529,9 +532,9 @@ public:
   //   X[7]  = X[3]  + X[5];
   //   X[3]  = X[3]  - X[5];
 
-  //   X[12] = test_scalar::win4(5) * X[12];
-  //   X[10] = test_scalar::win4(6) * X[10];
-  //   X[2]  = test_scalar::win4(7) * X[2];
+  //   X[12] = curve_config::scalar_t::win4(5) * X[12];
+  //   X[10] = curve_config::scalar_t::win4(6) * X[10];
+  //   X[2]  = curve_config::scalar_t::win4(7) * X[2];
 
   //   // 3
   //   X[5]  = X[10] + X[2];
@@ -542,14 +545,14 @@ public:
   //   X[14] = X[14] - X[13];
 
   //   X[13] = X[11] + X[7];
-  //   X[13] = test_scalar::win4(14) * X[13];
-  //   X[11] = test_scalar::win4(12) * X[11] + X[13];
-  //   X[7]  = test_scalar::win4(13) * X[7]  + X[13];
+  //   X[13] = curve_config::scalar_t::win4(14) * X[13];
+  //   X[11] = curve_config::scalar_t::win4(12) * X[11] + X[13];
+  //   X[7]  = curve_config::scalar_t::win4(13) * X[7]  + X[13];
 
   //   X[13] = X[1] + X[3];
-  //   X[13] = test_scalar::win4(17) * X[13];
-  //   X[1]  = test_scalar::win4(15) * X[1] + X[13];
-  //   X[3]  = test_scalar::win4(16) * X[3] + X[13];
+  //   X[13] = curve_config::scalar_t::win4(17) * X[13];
+  //   X[1]  = curve_config::scalar_t::win4(15) * X[1] + X[13];
+  //   X[3]  = curve_config::scalar_t::win4(16) * X[3] + X[13];
 
   //   // 4
   //   X[13] = X[15] + X[4];
@@ -561,9 +564,9 @@ public:
   //   X[5]  = X[0]  + X[10];
   //   X[0]  = X[0]  - X[10];
 
-  //   X[6]   = test_scalar::win4(9)  * X[6];
-  //   X[9]   = test_scalar::win4(10) * X[9];
-  //   X[14]  = test_scalar::win4(11) * X[14];
+  //   X[6]   = curve_config::scalar_t::win4(9)  * X[6];
+  //   X[9]   = curve_config::scalar_t::win4(10) * X[9];
+  //   X[14]  = curve_config::scalar_t::win4(11) * X[14];
 
   //   X[10] = X[9]  + X[14];
   //   X[9]  = X[9]  - X[14];

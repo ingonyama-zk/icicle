@@ -98,6 +98,7 @@ if (NOT BUILD_TESTS)
     primitives/projective.cu
     appUtils/msm/msm.cu
     appUtils/ntt/ntt.cu
+    appUtils/large_ntt/kernel_ntt.cu
   )
   set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
   target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  

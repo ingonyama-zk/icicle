@@ -7,6 +7,7 @@
 #include "utils/sharedmem.cuh"
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
+#include "appUtils/large_ntt/large_ntt.cuh"
 
 namespace ntt {
 
@@ -455,6 +456,8 @@ namespace ntt {
       CHK_IF_RETURN(cudaMallocAsync(&d_output, input_size_bytes, stream));
     }
 
+    const bool is_radix2_algorithm = false; // TODO Yuval
+
     bool ct_butterfly = true;
     bool reverse_input = false;
     switch (config.ordering) {
@@ -470,14 +473,66 @@ namespace ntt {
       break;
     }
 
-    if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
+    if (is_radix2_algorithm) {
+      if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
 
-    CHK_IF_RETURN(ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
-      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
+      CHK_IF_RETURN(ntt_inplace_batch_template(
+        reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+        dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
+      if (!are_outputs_on_device)
+        CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
-    if (!are_outputs_on_device)
-      CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
+    } else { // mixed-radix algorithm
+      std::cout << "Mixed-Radix algorithm" << std::endl;
+
+      int TT_SIZE = size;
+      int INV = dir == NTTDir::kInverse;
+
+      uint4* gpuNew;
+      uint4* gpuNew2;
+      uint4* gpuTwiddles;
+      uint4* gpuIntTwiddles;
+      uint4* gpuBasicTwiddles;
+      CHK_IF_RETURN(cudaMalloc((void**)&gpuNew, sizeof(uint4) * size * 2));
+      CHK_IF_RETURN(cudaMalloc((void**)&gpuNew2, sizeof(uint4) * size * 2));
+      CHK_IF_RETURN(
+        cudaMalloc((void**)&gpuTwiddles, sizeof(uint4) * (TT_SIZE + 2 * (TT_SIZE >> 4)) * 2)); // TODO - sketchy
+      CHK_IF_RETURN(cudaMalloc((void**)&gpuBasicTwiddles, sizeof(uint4) * 3 * 2));
+
+      uint4* cpuNew;
+      uint4* cpuNew2;
+      cpuNew = (uint4*)malloc(sizeof(uint4) * size * 2);
+      cpuNew2 = (uint4*)malloc(sizeof(uint4) * size * 2);
+
+      for (int i = 0; i < size; i++) {
+        cpuNew[i] = input[i].load_half(false);
+        cpuNew[size + i] = input[i].load_half(true);
+        cpuNew2[i] = uint4{0, 0, 0, 0};
+        cpuNew2[size + i] = uint4{0, 0, 0, 0};
+      }
+      CHK_IF_RETURN(cudaMemcpy(gpuNew, cpuNew, sizeof(uint4) * size * 2, cudaMemcpyHostToDevice));
+      CHK_IF_RETURN(cudaMemcpy(gpuNew2, cpuNew2, sizeof(uint4) * size * 2, cudaMemcpyHostToDevice));
+
+      const auto basic_root = INV ? curve_config::scalar_t::omega_inv(logn) : curve_config::scalar_t::omega(logn);
+      gpuIntTwiddles = generate_external_twiddles(basic_root, gpuTwiddles, gpuBasicTwiddles, logn, INV);
+
+      int DIT = reverse_input; // TODO Yuval
+      if (DIT) { reorder_digits_kernel<<<(1 << (max(logn, 6) - 6)), min(64, 1 << logn)>>>(gpuNew, gpuNew2, logn, DIT); }
+
+      new_ntt(
+        DIT ? gpuNew2 : gpuNew, DIT ? gpuNew : gpuNew2, gpuTwiddles, gpuIntTwiddles, gpuBasicTwiddles, logn, INV, DIT);
+
+      if (!DIT) {
+        reorder_digits_kernel<<<(1 << (max(logn, 6) - 6)), min(64, 1 << logn)>>>(gpuNew2, gpuNew, logn, DIT);
+      }
+
+      CHK_IF_RETURN(cudaMemcpy(cpuNew, gpuNew, sizeof(uint4) * size * 2, cudaMemcpyDeviceToHost));
+
+      for (int i = 0; i < size; i++) {
+        output[i].store_half(cpuNew[i], false);
+        output[i].store_half(cpuNew[i + size], true);
+      }
+    }
 
     if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     if (!are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));
@@ -499,6 +554,7 @@ namespace ntt {
       false,         // are_inputs_on_device
       false,         // are_outputs_on_device
       false,         // is_async
+      false,         // force radix2 algorithm
     };
     return config;
   }
