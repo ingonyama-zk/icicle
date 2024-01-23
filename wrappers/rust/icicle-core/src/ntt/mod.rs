@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
@@ -57,6 +57,21 @@ pub struct NTTConfig<'a, S> {
     /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
+}
+
+impl<'a, S: FieldImpl> NTTConfig<'a, S> {
+    pub fn default_config() -> Self {
+        let ctx = get_default_device_context();
+        NTTConfig {
+            ctx,
+            coset_gen: S::one(),
+            batch_size: 1,
+            ordering: Ordering::kNN,
+            are_inputs_on_device: false,
+            are_outputs_on_device: false,
+            is_async: false,
+        }
+    }
 }
 
 #[doc(hidden)]
@@ -149,9 +164,6 @@ macro_rules! impl_ntt {
                 output: *mut $field,
             ) -> CudaError;
 
-            #[link_name = concat!($field_prefix, "GetDefaultNTTConfig")]
-            fn default_ntt_config() -> NTTConfig<'static, $field>;
-
             #[link_name = concat!($field_prefix, "InitializeDomain")]
             fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
         }
@@ -180,7 +192,7 @@ macro_rules! impl_ntt {
             }
 
             fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                unsafe { default_ntt_config() }
+                NTTConfig::<$field>::default_config()
             }
         }
     };

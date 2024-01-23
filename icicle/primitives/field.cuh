@@ -38,7 +38,6 @@ class Field
 public:
   static constexpr unsigned TLC = CONFIG::limbs_count;
   static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
-  static constexpr unsigned TWO_ADICITY = CONFIG::omegas_count;
 
   static constexpr HOST_DEVICE_INLINE Field zero() { return Field{CONFIG::zero}; }
 
@@ -83,6 +82,21 @@ public:
     if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
+  }
+
+  static constexpr HOST_INLINE unsigned get_omegas_count()
+  {
+    if constexpr (has_member_omegas_count<CONFIG>()) {
+      return CONFIG::omegas_count;
+    } else {
+      return 0;
+    }
+  }
+
+  template <typename T>
+  static constexpr bool has_member_omegas_count()
+  {
+    return sizeof(T::omegas_count) > 0;
   }
 
   // private:
