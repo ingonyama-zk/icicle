@@ -86,7 +86,7 @@ public:
 
   static constexpr HOST_INLINE unsigned get_omegas_count()
   {
-    if constexpr (has_member_name<CONFIG>()) {
+    if constexpr (has_member_omegas_count<CONFIG>()) {
       return CONFIG::omegas_count;
     } else {
       return 0;
@@ -94,14 +94,9 @@ public:
   }
 
   template <typename T>
-  static constexpr bool has_member_name()
+  static constexpr bool has_member_omegas_count()
   {
-    // if (std::is_same<unsigned, decltype(T::omegas_count)>) {
-    if (sizeof(T::omegas_count) > 0) {
-      return true;
-    } else {
-      return false;
-    }
+    return sizeof(T::omegas_count) > 0;
   }
 
   // private:
