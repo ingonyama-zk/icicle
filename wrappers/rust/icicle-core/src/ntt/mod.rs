@@ -54,7 +54,7 @@ pub struct NTTConfig<'a, S> {
     pub ordering: Ordering,
     are_inputs_on_device: bool,
     are_outputs_on_device: bool,
-    /// Whether to run the NTT asyncronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
+    /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
 }
@@ -149,7 +149,7 @@ macro_rules! impl_ntt {
                 output: *mut $field,
             ) -> CudaError;
 
-            #[link_name = concat!($field_prefix, "DefaultNTTConfig")]
+            #[link_name = concat!($field_prefix, "GetDefaultNTTConfig")]
             fn default_ntt_config() -> NTTConfig<'static, $field>;
 
             #[link_name = concat!($field_prefix, "InitializeDomain")]

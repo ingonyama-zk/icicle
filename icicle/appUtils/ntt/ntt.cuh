@@ -4,11 +4,12 @@
 
 #include <cuda_runtime.h>
 
-#include "../../curves/curve_config.cuh"
-#include "../../utils/device_context.cuh"
-#include "../../utils/error_handler.cuh"
-#include "../../utils/sharedmem.cuh"
-#include "../../utils/utils_kernels.cuh"
+#include "curves/curve_config.cuh"
+#include "utils/device_context.cuh"
+#include "utils/error_handler.cuh"
+#include "utils/sharedmem.cuh"
+#include "utils/utils_kernels.cuh"
+#include "utils/utils.h"
 
 /**
  * @namespace ntt
@@ -75,7 +76,7 @@ namespace ntt {
                                  *   `Ordering::kNN`. */
     bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    bool is_async;              /**< Whether to run the NTT asyncronously. If set to `true`, the NTT function will be
+    bool is_async;              /**< Whether to run the NTT asynchronously. If set to `true`, the NTT function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
                                  *   function will block the current CPU thread. */
@@ -86,7 +87,7 @@ namespace ntt {
    * @return Default value of [NTTConfig](@ref NTTConfig).
    */
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig();
+  NTTConfig<S> CONCAT_EXPAND(CURVE, DefaultNTTConfig)();
 
   /**
    * A function that computes NTT or iNTT in-place.

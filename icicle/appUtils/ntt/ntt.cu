@@ -3,9 +3,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../../curves/curve_config.cuh"
-#include "../../utils/sharedmem.cuh"
-#include "../../utils/utils_kernels.cuh"
+#include "curves/curve_config.cuh"
+#include "utils/sharedmem.cuh"
+#include "utils/utils_kernels.cuh"
+#include "utils/utils.h"
 
 namespace ntt {
 
@@ -259,7 +260,7 @@ namespace ntt {
      * @param n_twiddles Size of `d_twiddles`
      * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
      * @param inverse true for iNTT
-     * @param coset should be array of lenght n or a nullptr if NTT is not computed on a coset
+     * @param coset should be array of length n or a nullptr if NTT is not computed on a coset
      * @param stream CUDA stream
      * @param is_async if false, perform sync of the supplied CUDA stream at the end of processing
      * @param d_output Output array
@@ -508,7 +509,7 @@ namespace ntt {
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    * @return Default [NTTConfig](@ref NTTConfig).
    */
-  extern "C" NTTConfig<curve_config::scalar_t> GetDefaultNTTConfig()
+  extern "C" NTTConfig<curve_config::scalar_t> CONCAT_EXPAND(CURVE, GetDefaultNTTConfig)()
   {
     return DefaultNTTConfig<curve_config::scalar_t>();
   }
@@ -518,7 +519,8 @@ namespace ntt {
    * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    */
-  extern "C" cudaError_t InitializeDomain(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx)
+  extern "C" cudaError_t
+  CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx)
   {
     return InitDomain(primitive_root, ctx);
   }
@@ -529,7 +531,7 @@ namespace ntt {
    *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t NTTCuda(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, NTTCuda)(
     curve_config::scalar_t* input,
     int size,
     NTTDir dir,

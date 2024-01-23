@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone Icicle from a GitHub repository
-RUN git clone https://github.com/ingonyama-zk/icicle.git  /icicle
+RUN git clone https://github.com/ingonyama-zk/icicle.git  /opt/icicle
 
 # Set the working directory in the container
 WORKDIR /icicle-example
