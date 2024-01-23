@@ -4,19 +4,41 @@
 
 #include <stdint.h>
 
-__global__ void reorder_digits_kernel(uint4* arr, uint4* arr_reordered, uint32_t log_size, bool dit);
+namespace ntt {
+  class MixedRadixNTT
+  {
+  public:
+    MixedRadixNTT(int ntt_size, bool is_inverse, bool is_dit, cudaStream_t cuda_stream = cudaStreamPerThread);
+    ~MixedRadixNTT();
 
-void new_ntt(
-  uint4* in,
-  uint4* out,
-  uint4* twiddles,
-  uint4* internal_twiddles,
-  uint4* basic_twiddles,
-  uint32_t log_size,
-  bool inv,
-  bool dit);
+    // disable copy
+    MixedRadixNTT(const MixedRadixNTT&) = delete;
+    MixedRadixNTT(MixedRadixNTT&&) = delete;
+    MixedRadixNTT& operator=(const MixedRadixNTT&) = delete;
+    MixedRadixNTT& operator=(MixedRadixNTT&&) = delete;
 
-uint4* generate_external_twiddles(
-  curve_config::scalar_t basic_root, uint4* twiddles, uint4* basic_twiddles, uint32_t log_size, bool inv);
+    template <typename E>
+    cudaError_t operator()(E* d_input, E* d_output);
 
+  private:
+    void generate_external_twiddles(curve_config::scalar_t basic_root);
+
+    const int m_ntt_size;
+    const int m_ntt_log_size;
+    const bool m_is_inverse;
+    const bool m_is_dit;
+    cudaStream_t m_cuda_stream;
+
+    uint4* m_gpuTwiddles = nullptr;
+    uint4* m_gpuIntTwiddles = nullptr;
+    uint4* m_gpuBasicTwiddles = nullptr;
+
+    uint4* m_w6_table = nullptr;
+    uint4* m_w12_table = nullptr;
+    uint4* m_w18_table = nullptr;
+    uint4* m_w24_table = nullptr;
+    uint4* m_w30_table = nullptr;
+  };
+
+} // namespace ntt
 #endif //_LARGE_NTT_H
