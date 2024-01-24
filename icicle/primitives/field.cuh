@@ -750,13 +750,6 @@ public:
     return rs;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
-
-  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
-  {
-    return xs * Field{CONFIG::montgomery_r_inv};
-  }
-
   /**
    * This method reduces a Wide number `xs` modulo `p` and returns the result as a Field element.
    *
