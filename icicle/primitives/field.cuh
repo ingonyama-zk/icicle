@@ -8,7 +8,7 @@
  * refactoring it is low in the priority list.
  *
  * Documentation of methods is intended to explain inner workings to developers working on icicle. In its current state
- * it mostly explains modular mutliplication and related methods. One important quirk of modern CUDA that's affecting
+ * it mostly explains modular multiplication and related methods. One important quirk of modern CUDA that's affecting
  * most methods is explained by [Niall Emmart](https://youtu.be/KAWlySN7Hm8?si=h7nzDujnvubWXeDX&t=4039). In short, when
  * 64-bit MAD (`r = a * b + c`) instructions get compiled down to SASS (CUDA assembly) they require two-register values
  * `r` and `c` to start from even register (e.g. `r` can live in registers 20 and 21, or 14 and 15, but not 15 and 16).
@@ -38,7 +38,6 @@ class Field
 public:
   static constexpr unsigned TLC = CONFIG::limbs_count;
   static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
-  static constexpr unsigned TWO_ADICITY = CONFIG::omegas_count;
 
   static constexpr HOST_DEVICE_INLINE Field zero() { return Field{CONFIG::zero}; }
 
@@ -88,96 +87,50 @@ public:
     }
   }
 
-  static HOST_DEVICE_INLINE Field win3(uint32_t i)
-  {
-    // if (logn == 0) { return Field{CONFIG::one}; }
-
-    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
-
-    storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::win3;
-    return Field{omega.storages[i - 6]};
-  }
-
-  static HOST_DEVICE_INLINE Field win3_inv(uint32_t i)
-  {
-    // if (logn == 0) { return Field{CONFIG::one}; }
-
-    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
-
-    storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::win3_inv;
-    return Field{omega.storages[i - 6]};
-  }
-
-  static HOST_DEVICE_INLINE Field win4(uint32_t i)
-  {
-    // if (logn == 0) { return Field{CONFIG::one}; }
-
-    // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
-
-    storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::win4;
-    return Field{omega.storages[i]};
-  }
-
-  // static HOST_DEVICE_INLINE Field omega4(uint32_t i)
-  // {
-  //   // if (logn == 0) { return Field{CONFIG::one}; }
-
-  //   // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
-
-  //   storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega4;
-  //   return Field{omega.storages[i]};
-  // }
-
-  // static HOST_DEVICE_INLINE Field omega4_inv(uint32_t i)
-  // {
-  //   // if (logn == 0) { return Field{CONFIG::one}; }
-
-  //   // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
-
-  //   storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega4_inv;
-  //   return Field{omega.storages[i]};
-  // }
-
-  // static HOST_DEVICE_INLINE Field omega8(uint32_t i)
-  // {
-  //   // if (logn == 0) { return Field{CONFIG::one}; }
-
-  //   // if (logn > CONFIG::omegas_count) { throw std::invalid_argument("Field: Invalid omega index"); }
-
-  //   storage_array<64, TLC> const omega = CONFIG::omega8;
-  //   return Field{omega.storages[i]};
-  // }
-
-  static HOST_DEVICE_INLINE Field omega(uint32_t logn)
+  static HOST_INLINE Field omega(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    // if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega
-    // index"); }
+    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
     return Field{omega.storages[logn - 1]};
   }
 
-  static HOST_DEVICE_INLINE Field omega_inv(uint32_t logn)
+  static HOST_INLINE Field omega_inv(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    // if (logn > CONFIG::omegas_count) {
-    //   THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index");
-    // }
+    if (logn > CONFIG::omegas_count) {
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index");
+    }
 
     storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
     return Field{omega_inv.storages[logn - 1]};
   }
 
-  static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)
+  static HOST_INLINE Field inv_log_size(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    // if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
+    if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
+  }
+
+  static constexpr HOST_INLINE unsigned get_omegas_count()
+  {
+    if constexpr (has_member_omegas_count<CONFIG>()) {
+      return CONFIG::omegas_count;
+    } else {
+      return 0;
+    }
+  }
+
+  template <typename T>
+  static constexpr bool has_member_omegas_count()
+  {
+    return sizeof(T::omegas_count) > 0;
   }
 
   // private:
@@ -585,7 +538,7 @@ public:
     __align__(16) uint32_t odd[TLC - 1];
     size_t i;
     // `b[0]` is \f$ 2^{32} \f$ minus the last limb of prime modulus. Because most scalar (and some base) primes
-    // are neccessarily NTT-friendly, `b[0]` often turns out to be \f$ 2^{32} - 1 \f$. This actually leads to
+    // are necessarily NTT-friendly, `b[0]` often turns out to be \f$ 2^{32} - 1 \f$. This actually leads to
     // less efficient SASS generated by nvcc, so this case needed separate handling.
     if (b[0] == UINT32_MAX) {
       add_sub_u32_device<true, false>(cs.limbs, a, even, TLC);
@@ -768,8 +721,7 @@ public:
   static HOST_INLINE Field rand_host()
   {
     std::random_device rd;
-    // std::mt19937_64 generator(rd());
-    std::mt19937_64 generator(rand()); // remove when finished debugging
+    std::mt19937_64 generator(rd());
     std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
@@ -832,18 +784,11 @@ public:
     return rs;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
-
-  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
-  {
-    return xs * Field{CONFIG::montgomery_r_inv};
-  }
-
   /**
    * This method reduces a Wide number `xs` modulo `p` and returns the result as a Field element.
    *
    * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
-   * numbers with thier high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
+   * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
    * factor of `modulus_squared` first.
    *
    * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
@@ -926,7 +871,7 @@ public:
     return mul * xs;
   }
 
-  template <uint32_t mutliplier, class T, unsigned REDUCTION_SIZE = 1>
+  template <uint32_t multiplier, class T, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T& xs)
   {
     T rs = {};
@@ -936,11 +881,11 @@ public:
 #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
-      if (mutliplier & (1 << i)) {
+      if (multiplier & (1 << i)) {
         rs = is_zero ? temp : (rs + temp);
         is_zero = false;
       }
-      if (mutliplier & ((1 << (31 - i) - 1) << (i + 1))) break;
+      if (multiplier & ((1 << (31 - i) - 1) << (i + 1))) break;
       temp = temp + temp;
     }
     return rs;
