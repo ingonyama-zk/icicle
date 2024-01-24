@@ -5,6 +5,7 @@
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
 #include <cuda.h>
+
 #include <iostream>
 #include <stdexcept>
 #include <vector>
