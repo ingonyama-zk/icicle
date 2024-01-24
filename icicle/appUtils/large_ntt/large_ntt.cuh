@@ -3,12 +3,13 @@
 #define _LARGE_NTT_H
 
 #include <stdint.h>
+#include "appUtils/ntt/ntt.cuh" // for enum Ordering
 
 namespace ntt {
   class MixedRadixNTT
   {
   public:
-    MixedRadixNTT(int ntt_size, bool is_inverse, bool is_dit, cudaStream_t cuda_stream = cudaStreamPerThread);
+    MixedRadixNTT(int ntt_size, bool is_inverse, Ordering ordering, cudaStream_t cuda_stream = cudaStreamPerThread);
     ~MixedRadixNTT();
 
     // disable copy
@@ -26,7 +27,7 @@ namespace ntt {
     const int m_ntt_size;
     const int m_ntt_log_size;
     const bool m_is_inverse;
-    const bool m_is_dit;
+    const Ordering m_ordering;
     cudaStream_t m_cuda_stream;
 
     uint4* m_gpuTwiddles = nullptr;
