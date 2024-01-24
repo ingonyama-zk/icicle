@@ -109,11 +109,12 @@ public:
     return Field{omega_inv.storages[logn - 1]};
   }
 
-  static HOST_INLINE Field inv_log_size(uint32_t logn)
+  static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
-
+#ifndef __CUDA_ARCH__
     if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
+#endif // __CUDA_ARCH__
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
   }
