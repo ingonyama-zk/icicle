@@ -5,7 +5,7 @@ use std::path::PathBuf;
 fn cuda_include_path() -> &'static str {
     #[cfg(target_os = "windows")]
     {
-        concat!(env!("CUDA_PATH"), "/include")
+        concat!(env!("CUDA_PATH"), "\\include")
     }
 
     #[cfg(target_os = "linux")]
@@ -17,7 +17,7 @@ fn cuda_include_path() -> &'static str {
 fn cuda_lib_path() -> &'static str {
     #[cfg(target_os = "windows")]
     {
-        concat!(env!("CUDA_PATH"), "/lib/x64")
+        concat!(env!("CUDA_PATH"), "\\lib\\x64")
     }
 
     #[cfg(target_os = "linux")]

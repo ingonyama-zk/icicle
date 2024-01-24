@@ -147,7 +147,7 @@ Poseidon<S>::hash_blocks(const S* inp, size_t blocks, S* out, HashType hash_type
   CHK_IF_RETURN(cudaMallocAsync(&states, blocks * this->t * sizeof(S), stream));
 
   // This is where the input matrix of size Arity x NumberOfBlocks is
-  // padded and coppied to device in a T x NumberOfBlocks matrix
+  // padded and copied to device in a T x NumberOfBlocks matrix
   CHK_IF_RETURN(cudaMemcpy2DAsync(
     states, this->t * sizeof(S),       // Device pointer and device pitch
     inp, (this->t - 1) * sizeof(S),    // Host pointer and pitch

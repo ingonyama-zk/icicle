@@ -38,14 +38,14 @@ public:
 
   static constexpr HOST_DEVICE_INLINE ExtensionField one() { return ExtensionField{FF::one(), FF::zero()}; }
 
-  static constexpr HOST_DEVICE_INLINE ExtensionField generator_x()
+  static constexpr HOST_DEVICE_INLINE ExtensionField ToMontgomery(const ExtensionField& xs)
   {
-    return ExtensionField{FF{CONFIG::g2_gen_x_re}, FF{CONFIG::g2_gen_x_im}};
+    return ExtensionField{xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r}};
   }
 
-  static constexpr HOST_DEVICE_INLINE ExtensionField generator_y()
+  static constexpr HOST_DEVICE_INLINE ExtensionField FromMontgomery(const ExtensionField& xs)
   {
-    return ExtensionField{FF{CONFIG::g2_gen_y_re}, FF{CONFIG::g2_gen_y_im}};
+    return ExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
   }
 
   static HOST_INLINE ExtensionField rand_host() { return ExtensionField{FF::rand_host(), FF::rand_host()}; }
@@ -119,10 +119,10 @@ public:
     return ExtensionField{real_prod + i_sq_times_im, re_im + im_re};
   }
 
-  template <uint32_t mutliplier, unsigned REDUCTION_SIZE = 1>
+  template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField mul_unsigned(const ExtensionField& xs)
   {
-    return {FF::template mul_unsigned<mutliplier>(xs.real), FF::template mul_unsigned<mutliplier>(xs.imaginary)};
+    return {FF::template mul_unsigned<multiplier>(xs.real), FF::template mul_unsigned<multiplier>(xs.imaginary)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>

@@ -1,6 +1,15 @@
 #!/bin/bash
 
 status=0
+
+if [[ $(codespell --skip ./**/target,./**/build -I .codespellignore 2>&1) ]];
+then
+    echo "There are typos in some of the files you've changed. Please run the following to check what they are:"
+    echo "codespell --skip ./**/target,./**/build -I .codespellignore"
+    echo ""
+    status=1
+fi
+
 # Run clang-format on CUDA, C, and CPP files
 # clang-format writes to stderr in dry-run mode. In order to capture the output to detect if there are changes needed we redirect stderr to stdin
 if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]];

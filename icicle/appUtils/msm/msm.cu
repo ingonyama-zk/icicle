@@ -327,7 +327,7 @@ namespace msm {
       if (tid >= nof_msms) return;
       P final_result = P::zero();
       // Note: in some cases accumulation of bm is implemented such that some bms are known to be empty. Therefore
-      // skiping them.
+      // skipping them.
       for (unsigned i = nof_bms - nof_empty_bms; i > 1; i--) {
         final_result = final_result + final_sums[i - 1 + tid * nof_bms]; // add
         for (unsigned j = 0; j < c; j++)                                 // double
@@ -347,7 +347,7 @@ namespace msm {
       A* points,
       unsigned batch_size,      // number of MSMs to compute
       unsigned single_msm_size, // number of elements per MSM (a.k.a N)
-      unsigned nof_points,      // numer of EC points in 'points' array. Must be either (1) single_msm_size if MSMs are
+      unsigned nof_points,      // number of EC points in 'points' array. Must be either (1) single_msm_size if MSMs are
                                 // sharing points or (2) single_msm_size*batch_size otherwise
       P* final_result,
       bool are_scalars_on_device,
@@ -363,11 +363,10 @@ namespace msm {
       CHK_INIT_IF_RETURN();
 
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
-      const bool is_nof_points_valid = (nof_points == single_msm_size) || (nof_points == single_msm_size * batch_size);
+      const bool is_nof_points_valid = ((single_msm_size * batch_size) % nof_points == 0);
       if (!is_nof_points_valid) {
         THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be either (1) single_msm_size if sharing "
-                                          "points or (2) single_msm_size*batch_size");
+          IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
       }
 
       S* d_scalars;
@@ -557,7 +556,7 @@ namespace msm {
       CHK_IF_RETURN(cudaMallocAsync(&nof_large_buckets, sizeof(unsigned), stream));
       CHK_IF_RETURN(cudaMemset(nof_large_buckets, 0, sizeof(unsigned)));
 
-      unsigned TOTAL_THREADS = 129000; // todo - device dependant
+      unsigned TOTAL_THREADS = 129000; // todo - device dependent
       unsigned cutoff_run_length = max(2, h_nof_buckets_to_compute / TOTAL_THREADS);
       unsigned cutoff_nof_runs = (h_nof_buckets_to_compute + cutoff_run_length - 1) / cutoff_run_length;
       NUM_THREADS = min(1 << 5, cutoff_nof_runs);
@@ -716,10 +715,10 @@ namespace msm {
             }
           }
           if (target_bits_count == 1) {
-            // Note: the reduction ends up with 'target_windows_count' windows per batch element. Some are guranteed to
+            // Note: the reduction ends up with 'target_windows_count' windows per batch element. Some are guaranteed to
             // be empty when target_windows_count>bitsize.
             // for example consider bitsize=253 and c=2. The reduction ends with 254 bms but the most significant one is
-            // guranteed to be zero since the scalars are 253b.
+            // guaranteed to be zero since the scalars are 253b.
             nof_bms_per_msm = target_windows_count;
             nof_empty_bms_per_batch = target_windows_count - bitsize;
             nof_bms_in_batch = nof_bms_per_msm * batch_size;
@@ -787,7 +786,8 @@ namespace msm {
     }
   } // namespace
 
-  extern "C" MSMConfig CONCAT_EXPAND(CURVE, DefaultMSMConfig)()
+  template <typename A>
+  MSMConfig DefaultMSMConfig()
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     MSMConfig config = {
@@ -849,6 +849,11 @@ namespace msm {
       scalars, points, msm_size, config, out);
   }
 
+  /**
+   * Extern "C" version of [DefaultMSMConfig](@ref DefaultMSMConfig) function.
+   */
+  extern "C" MSMConfig CONCAT_EXPAND(CURVE, DefaultMSMConfig)() { return DefaultMSMConfig<curve_config::affine_t>(); }
+
 #if defined(G2_DEFINED)
 
   /**
@@ -859,7 +864,7 @@ namespace msm {
    *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t G2MSMCuda(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
     curve_config::scalar_t* scalars,
     curve_config::g2_affine_t* points,
     int msm_size,
@@ -868,6 +873,15 @@ namespace msm {
   {
     return MSM<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(
       scalars, points, msm_size, config, out);
+  }
+
+  /**
+   * Extern "C" version of [DefaultMSMConfig](@ref DefaultMSMConfig) function for the G2 curve
+   * (functionally no different than the default MSM config function for G1).
+   */
+  extern "C" MSMConfig CONCAT_EXPAND(CURVE, G2DefaultMSMConfig)()
+  {
+    return DefaultMSMConfig<curve_config::g2_affine_t>();
   }
 
 #endif
