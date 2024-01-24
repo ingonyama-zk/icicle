@@ -22,7 +22,8 @@ namespace ntt {
     cudaError_t operator()(E* d_input, E* d_output);
 
   private:
-    void generate_external_twiddles(curve_config::scalar_t basic_root);
+    cudaError_t init();
+    cudaError_t generate_external_twiddles(curve_config::scalar_t basic_root);
 
     const int m_ntt_size;
     const int m_ntt_log_size;
@@ -39,6 +40,10 @@ namespace ntt {
     uint4* m_w18_table = nullptr;
     uint4* m_w24_table = nullptr;
     uint4* m_w30_table = nullptr;
+
+    // temp memory
+    uint4* m_gpuMemA = nullptr;
+    uint4* m_gpuMemB = nullptr;
   };
 
 } // namespace ntt

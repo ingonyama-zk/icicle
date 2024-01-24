@@ -441,23 +441,34 @@ namespace ntt {
       : m_ntt_size(ntt_size), m_ntt_log_size(int(log2(ntt_size))), m_is_inverse(is_inverse), m_ordering(ordering),
         m_cuda_stream(cuda_stream)
   {
-    // TODO Yuval: verify memory allocations
-    // TODO Yuval: how to avoid allocation? caching? per size (+inverse)?
-    cudaMalloc(&m_gpuTwiddles, sizeof(uint4) * (ntt_size + 2 * (ntt_size >> 4)) * 2); // TODO - sketchy
-    cudaMalloc(&m_gpuBasicTwiddles, sizeof(uint4) * 3 * 2);
+    cudaError_t err_result = init();
+    if (err_result != cudaSuccess) throw(IcicleError(err_result, "CUDA error"));
+  }
+
+  cudaError_t MixedRadixNTT::init()
+  {
+    CHK_IF_RETURN(
+      cudaMalloc(&m_gpuTwiddles, sizeof(uint4) * (m_ntt_size + 2 * (m_ntt_size >> 4)) * 2)); // TODO - sketchy
+    CHK_IF_RETURN(cudaMalloc(&m_gpuBasicTwiddles, sizeof(uint4) * 3 * 2));
 
     const auto basic_root =
       m_is_inverse ? curve_config::scalar_t::omega_inv(m_ntt_log_size) : curve_config::scalar_t::omega(m_ntt_log_size);
-    generate_external_twiddles(basic_root);
+    CHK_IF_RETURN(generate_external_twiddles(basic_root));
+
+    // temp memory for algorithm
+    CHK_IF_RETURN(cudaMalloc(&m_gpuMemA, sizeof(uint4) * m_ntt_size * 2));
+    CHK_IF_RETURN(cudaMalloc(&m_gpuMemB, sizeof(uint4) * m_ntt_size * 2));
+
+    return CHK_LAST();
   }
 
-  void MixedRadixNTT::generate_external_twiddles(curve_config::scalar_t basic_root)
+  cudaError_t MixedRadixNTT::generate_external_twiddles(curve_config::scalar_t basic_root)
   {
-    cudaMalloc(&m_w6_table, sizeof(uint4) * 64 * 2);
-    cudaMalloc(&m_w12_table, sizeof(uint4) * 64 * 2);
-    cudaMalloc(&m_w18_table, sizeof(uint4) * 64 * 2);
-    cudaMalloc(&m_w24_table, sizeof(uint4) * 64 * 2);
-    cudaMalloc(&m_w30_table, sizeof(uint4) * 64 * 2);
+    CHK_IF_RETURN(cudaMalloc(&m_w6_table, sizeof(uint4) * 64 * 2));
+    CHK_IF_RETURN(cudaMalloc(&m_w12_table, sizeof(uint4) * 64 * 2));
+    CHK_IF_RETURN(cudaMalloc(&m_w18_table, sizeof(uint4) * 64 * 2));
+    CHK_IF_RETURN(cudaMalloc(&m_w24_table, sizeof(uint4) * 64 * 2));
+    CHK_IF_RETURN(cudaMalloc(&m_w30_table, sizeof(uint4) * 64 * 2));
 
     curve_config::scalar_t temp_root = basic_root;
     generate_base_table<<<1, 1>>>(basic_root, m_w30_table, 1 << (30 - m_ntt_log_size));
@@ -491,6 +502,8 @@ namespace ntt {
                                                  : curve_config::scalar_t::one());
     }
     m_gpuIntTwiddles = m_w6_table;
+
+    return CHK_LAST();
   }
 
   MixedRadixNTT::~MixedRadixNTT()
@@ -502,6 +515,8 @@ namespace ntt {
     cudaFreeAsync(m_w18_table, m_cuda_stream);
     cudaFreeAsync(m_w24_table, m_cuda_stream);
     cudaFreeAsync(m_w30_table, m_cuda_stream);
+    cudaFreeAsync(m_gpuMemA, m_cuda_stream);
+    cudaFreeAsync(m_gpuMemB, m_cuda_stream);
   }
 
   template <typename E>
@@ -527,29 +542,21 @@ namespace ntt {
   {
     CHK_INIT_IF_RETURN();
 
-    // Note:
-    // - for dit: (1) copy input to gpuMemA, (2) reorder into gpuMemB and (3) calculate ntt from gpuMemB to gpuMemA
-    // - for dif: (1) copy input to gpuMemA, (2) calculate ntt from gpuMemA to gpuMemB and (3) reorder gpuMemB to
-    // gpuMemA
-    uint4* gpuMemA;
-    uint4* gpuMemB;
-    CHK_IF_RETURN(cudaMalloc(&gpuMemA, sizeof(uint4) * m_ntt_size * 2));
-    CHK_IF_RETURN(cudaMalloc(&gpuMemB, sizeof(uint4) * m_ntt_size * 2));
-    CHK_IF_RETURN(cudaMemset(gpuMemB, 0, sizeof(uint4) * m_ntt_size * 2));
-
     const int NOF_BLOCKS = (1 << (max(m_ntt_log_size, 6) - 6));
     const int NOF_THREADS = min(64, 1 << m_ntt_log_size);
 
-    copy_input_large_ntt<<<NOF_BLOCKS, NOF_THREADS>>>(d_input, gpuMemA, m_ntt_size);
+    copy_input_large_ntt<<<NOF_BLOCKS, NOF_THREADS>>>(d_input, m_gpuMemA, m_ntt_size);
 
     const bool reverse_input = m_ordering == Ordering::kNN;
     const bool reverse_output = m_ordering == Ordering::kRR;
     const bool is_dit = m_ordering == Ordering::kNN || m_ordering == Ordering::kRN;
 
-    if (reverse_input) { reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(gpuMemA, gpuMemB, m_ntt_log_size, is_dit); }
+    if (reverse_input) {
+      reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(m_gpuMemA, m_gpuMemB, m_ntt_log_size, is_dit);
+    }
 
-    uint4* ntt_input = reverse_input ? gpuMemB : gpuMemA;
-    uint4* ntt_output = reverse_input ? gpuMemA : gpuMemB;
+    uint4* ntt_input = reverse_input ? m_gpuMemB : m_gpuMemA;
+    uint4* ntt_output = reverse_input ? m_gpuMemA : m_gpuMemB;
     large_ntt(
       ntt_input, ntt_output, m_gpuTwiddles, m_gpuIntTwiddles, m_gpuBasicTwiddles, m_ntt_log_size, m_is_inverse, is_dit);
 
@@ -559,9 +566,6 @@ namespace ntt {
     }
 
     copy_output_large_ntt<<<NOF_BLOCKS, NOF_THREADS>>>(ntt_output, d_output, m_ntt_size);
-
-    CHK_IF_RETURN(cudaFreeAsync(gpuMemA, m_cuda_stream));
-    CHK_IF_RETURN(cudaFreeAsync(gpuMemB, m_cuda_stream));
 
     return CHK_LAST();
   }

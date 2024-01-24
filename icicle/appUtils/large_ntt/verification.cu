@@ -87,7 +87,7 @@ int main()
   $CUDA(cudaEventCreate(&new_stop));
 
   // run ntts
-  int count = 10;
+  int count = 100;
   $CUDA(cudaEventRecord(new_start, 0));
   for (size_t i = 0; i < count; i++) {
     new_ntt(gpuScalars, GpuOutputNew);
