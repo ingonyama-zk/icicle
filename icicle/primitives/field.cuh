@@ -114,6 +114,11 @@ public:
     if (logn == 0) { return Field{CONFIG::one}; }
 #ifndef __CUDA_ARCH__
     if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
+#else
+    if (logn > CONFIG::omegas_count)
+      printf(
+        "CUDA ERROR: field.cuh: error on inv_log_size(logn): logn(=%u) > omegas_count (=%u)", logn,
+        CONFIG::omegas_count);
 #endif // __CUDA_ARCH__
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};

@@ -41,9 +41,9 @@ namespace ntt {
     uint4* m_w24_table = nullptr;
     uint4* m_w30_table = nullptr;
 
-    // temp memory
-    uint4* m_gpuMemA = nullptr;
-    uint4* m_gpuMemB = nullptr;
+    // temp memory for 16B slices
+    uint4* m_gpu_16B_slices_A = nullptr;
+    uint4* m_gpu_16B_slices_B = nullptr;
   };
 
 } // namespace ntt

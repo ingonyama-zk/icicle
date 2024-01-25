@@ -463,21 +463,6 @@ namespace ntt {
       h_coset.clear();
     }
 
-    bool ct_butterfly = true;
-    bool reverse_input = false;
-    switch (config.ordering) {
-    case Ordering::kNN:
-      reverse_input = true;
-      break;
-    case Ordering::kNR:
-      ct_butterfly = false;
-      break;
-    case Ordering::kRR:
-      reverse_input = true;
-      ct_butterfly = false;
-      break;
-    }
-
     const bool is_small_ntt = logn < 16;                  // cutoff point where miax-radix algorithm is faster
     const bool is_large_field = sizeof(E) > 32;           // >256b field not supported by mix-radix algorithm
     const bool is_on_coset = (coset_index != 0) || coset; // coset not supported by mix-radix algorithm
@@ -487,6 +472,21 @@ namespace ntt {
       config.is_force_radix2 || is_batch_ntt || is_small_ntt || is_large_field || is_on_coset || !is_NN;
 
     if (is_radix2_algorithm) {
+      bool ct_butterfly = true;
+      bool reverse_input = false;
+      switch (config.ordering) {
+      case Ordering::kNN:
+        reverse_input = true;
+        break;
+      case Ordering::kNR:
+        ct_butterfly = false;
+        break;
+      case Ordering::kRR:
+        reverse_input = true;
+        ct_butterfly = false;
+        break;
+      }
+
       if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
 
       CHK_IF_RETURN(ntt_inplace_batch_template(
@@ -495,7 +495,7 @@ namespace ntt {
 
       if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     } else { // mixed-radix algorithm
-      std::cout << "Mixed-Radix algorithm" << std::endl;
+      // std::cout << "Mixed-Radix algorithm" << std::endl;
       MixedRadixNTT mixed_radix_ntt(size, dir == NTTDir::kInverse /*=is_inverse*/, config.ordering, config.ctx.stream);
 
       CHK_IF_RETURN(mixed_radix_ntt(d_input, d_output));
