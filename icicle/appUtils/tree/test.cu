@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 
   // Load poseidon constants
   START_TIMER(timer_const);
-  PoseidonConstants<scalar_t> constants = load_optimized_poseidon_constants<scalar_t>(T, stream);
+  PoseidonConstants<scalar_t> constants = init_optimized_poseidon_constants<scalar_t>(T, stream);
   END_TIMER(timer_const, "Load poseidon constants: ");
 
   /// Tree of height N and arity A contains \sum{A^i} for i in 0..N-1 elements

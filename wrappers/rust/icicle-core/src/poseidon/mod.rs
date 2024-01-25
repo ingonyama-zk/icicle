@@ -1,4 +1,6 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::{device_context::DeviceContext};
+
+use crate::traits::FieldImpl;
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -53,4 +55,16 @@ impl<'a> Default for PoseidonConfig<'a> {
     fn default() -> Self {
         unsafe { default_poseidon_config() }
     }
+}
+
+pub trait Poseidon<F: FieldImpl> {
+
+}
+
+pub fn initialize_poseidon_constants<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
+{
+    <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }

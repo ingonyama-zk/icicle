@@ -41,53 +41,12 @@ namespace poseidon {
     return reinterpret_cast<S*>(constants);
   }
 
-#if !defined(__CUDA_ARCH__) && defined(DEBUG)
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <sstream>
-template <typename S, int T>
-__host__ void print_buffer_from_cuda(S * device_ptr, size_t size) {
-  S * buffer = static_cast< S * >(malloc(size * sizeof(S)));
-  cudaMemcpy(buffer, device_ptr, size * sizeof(S), cudaMemcpyDeviceToHost);
-
-  std::cout << "Start print" << std::endl;
-  for(int i = 0; i < size / T; i++) {
-    std::cout << "State #" << i << std::endl;
-    for (int j = 0; j < T; j++) {
-      std::cout << buffer[i * T + j] << std::endl;
-    }
-    std::cout << std::endl;
-  }
-  std::cout << std::endl;
-  free(buffer);
-}
-#endif
-
-#ifdef DEBUG
-template <typename S>
-__device__ void print_scalar(S element, int data) {
-    printf("D# %d, T# %d: 0x%08x%08x%08x%08x%08x%08x%08x%08x\n",
-           data,
-           threadIdx.x,
-           element.limbs_storage.limbs[0],
-           element.limbs_storage.limbs[1],
-           element.limbs_storage.limbs[2],
-           element.limbs_storage.limbs[3],
-           element.limbs_storage.limbs[4],
-           element.limbs_storage.limbs[5],
-           element.limbs_storage.limbs[6],
-           element.limbs_storage.limbs[7]
-    );
-}
-#endif
-
   template <typename S, int T>
   cudaError_t permute_many(
     S* states,
     size_t number_of_states,
     const PoseidonKernelsConfiguration& kernel_cfg,
-    const PoseidonConstants<S>& constants,
+    const PoseidonConstants<S, T>& constants,
     cudaStream_t& stream)
   {
     size_t rc_offset = 0;
@@ -112,7 +71,7 @@ __device__ void print_scalar(S element, int data) {
 
   template <typename S, int T>
   cudaError_t
-  poseidon_hash(S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config)
+  poseidon_hash(S* input, S* output, size_t number_of_states, const PoseidonConstants<S, T>& constants, const PoseidonConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -187,26 +146,26 @@ __device__ void print_scalar(S element, int data) {
     return CHK_LAST();
   }
 
-  template <typename S>
-  PoseidonConstants<S> load_optimized_poseidon_constants(int t, cudaStream_t stream)
+  template <typename S, int T>
+  cudaError_t init_optimized_poseidon_constants(cudaStream_t stream)
   {
     int full_rounds_half = FULL_ROUNDS_DEFAULT;
-    int partial_rounds = partial_rounds_number_from_arity(t - 1);
+    int partial_rounds = partial_rounds_number_from_arity(T - 1);
 
-    int round_constants_len = t * full_rounds_half * 2 + partial_rounds;
-    int mds_matrix_len = t * t;
-    int sparse_matrices_len = (t * 2 - 1) * partial_rounds;
+    int round_constants_len = T * full_rounds_half * 2 + partial_rounds;
+    int mds_matrix_len = T * T;
+    int sparse_matrices_len = (T * 2 - 1) * partial_rounds;
 
     // All the constants are stored in a single file
-    S* constants = optimized_constants<S>(t - 1);
+    S* constants = optimized_constants<S>(T - 1);
     int constants_len = round_constants_len + mds_matrix_len * 2 + sparse_matrices_len;
 
     // Malloc memory for copying constants
     S* d_constants;
-    cudaMallocAsync(&d_constants, sizeof(S) * constants_len, stream);
+    CHK_IF_RETURN(cudaMallocAsync(&d_constants, sizeof(S) * constants_len, stream));
 
     // Copy constants
-    cudaMemcpyAsync(d_constants, constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream);
+    CHK_IF_RETURN(cudaMemcpyAsync(d_constants, constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream));
 
     S* round_constants = d_constants;
     S* mds_matrix = round_constants + round_constants_len;
@@ -216,13 +175,13 @@ __device__ void print_scalar(S element, int data) {
     // Pick the domain_tag accordinaly
     // For now, we only support Merkle tree mode
     uint32_t tree_domain_tag_value = 1;
-    tree_domain_tag_value = (tree_domain_tag_value << (t - 1)) - tree_domain_tag_value;
+    tree_domain_tag_value = (tree_domain_tag_value << (T - 1)) - tree_domain_tag_value;
     S domain_tag = S::from(tree_domain_tag_value);
 
     // Make sure all the constants have been copied
-    cudaStreamSynchronize(stream);
-    PoseidonConstants<S> consts = {partial_rounds,    full_rounds_half, round_constants, mds_matrix,
-                                   non_sparse_matrix, sparse_matrices,  domain_tag};
-    return consts;
+    CHK_IF_RETURN(cudaStreamSynchronize(stream));
+    preloaded_constants<S, T> = {partial_rounds,    full_rounds_half, round_constants, mds_matrix,
+                                 non_sparse_matrix, sparse_matrices,  domain_tag};
+    return CHK_LAST();
   }
 } // namespace poseidon

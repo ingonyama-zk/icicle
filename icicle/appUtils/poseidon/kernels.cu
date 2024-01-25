@@ -62,7 +62,7 @@ namespace poseidon {
     bool add_pre_round_constants,
     bool skip_rc,
     S* shared_states,
-    const PoseidonConstants<S>& constants)
+    const PoseidonConstants<S, T>& constants)
   {
     if (add_pre_round_constants) {
       element = element + constants.round_constants[rc_offset + element_number];
@@ -79,7 +79,7 @@ namespace poseidon {
   // Execute full rounds
   template <typename S, int T>
   __global__ void full_rounds(
-    S* states, size_t number_of_states, size_t rc_offset, bool first_half, const PoseidonConstants<S> constants)
+    S* states, size_t number_of_states, size_t rc_offset, bool first_half, const PoseidonConstants<S, T> constants)
   {
     extern __shared__ S shared_states[];
 
@@ -105,7 +105,7 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  __device__ S partial_round(S* state, size_t rc_offset, int round_number, const PoseidonConstants<S>& constants)
+  __device__ S partial_round(S* state, size_t rc_offset, int round_number, const PoseidonConstants<S, T>& constants)
   {
     S element = state[0];
     element = sbox_alpha_five(element);
@@ -131,7 +131,7 @@ namespace poseidon {
   // Execute partial rounds
   template <typename S, int T>
   __global__ void
-  partial_rounds(S* states, size_t number_of_states, size_t rc_offset, const PoseidonConstants<S> constants)
+  partial_rounds(S* states, size_t number_of_states, size_t rc_offset, const PoseidonConstants<S, T> constants)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }

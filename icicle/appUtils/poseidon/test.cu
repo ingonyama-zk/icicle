@@ -15,7 +15,6 @@ using namespace curve_config;
 
 #define A      2
 #define T      A + 1
-#define A_TYPE ARITY::TWO
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
@@ -31,7 +30,7 @@ int main(int argc, char* argv[])
 
   // Load poseidon constants
   START_TIMER(timer_const);
-  PoseidonConstants<scalar_t> constants = load_optimized_poseidon_constants<scalar_t>(T, stream);
+  init_optimized_poseidon_constants<scalar_t, T>(stream);
   END_TIMER(timer_const, "Load poseidon constants");
 
   START_TIMER(allocation_timer);
@@ -49,7 +48,7 @@ int main(int argc, char* argv[])
 
   START_TIMER(poseidon_timer);
   PoseidonConfig config = default_poseidon_config(T);
-  PoseidonHash(in_ptr, out_ptr, number_of_blocks, A_TYPE, constants, config);
+  PoseidonHash(in_ptr, out_ptr, number_of_blocks, A, config);
   END_TIMER(poseidon_timer, "Poseidon")
 
   scalar_t expected[1024] = {
