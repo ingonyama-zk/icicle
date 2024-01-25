@@ -138,7 +138,7 @@ See [LICENSE-MIT][LMIT] for details.
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
 [CMAKELISTS]: https://github.com/ingonyama-zk/icicle/blob/f0e6b465611227b858ec4590f4de5432e892748d/icicle/CMakeLists.txt#L28
-[GOOGLE-COLAB-ICICLE]: https://github.com/gkigiermo/rust-cuda-colab
+[GOOGLE-COLAB-ICICLE]: https://dev.ingonyama.com/icicle/colab-instructions
 [GRANT_PROGRAM]: https://medium.com/@ingonyama/icicle-for-researchers-grants-challenges-9be1f040998e
 [ICICLE-CORE]: ./icicle/
 [ICICLE-RUST]: ./wrappers/rust/

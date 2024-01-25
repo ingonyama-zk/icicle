@@ -364,11 +364,10 @@ namespace msm {
       CHK_INIT_IF_RETURN();
 
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
-      const bool is_nof_points_valid = (nof_points == single_msm_size) || (nof_points == single_msm_size * batch_size);
+      const bool is_nof_points_valid = ((single_msm_size * batch_size) % nof_points == 0);
       if (!is_nof_points_valid) {
         THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be either (1) single_msm_size if sharing "
-                                          "points or (2) single_msm_size*batch_size");
+          IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
       }
 
       S* d_scalars;
