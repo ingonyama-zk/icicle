@@ -20,7 +20,7 @@ pub struct PoseidonConfig<'a> {
 
     pub loop_state: bool,
 
-    /// Whether to run Poseidon asyncronously. If set to `true`, Poseidon will be non-blocking
+    /// Whether to run Poseidon asynchronously. If set to `true`, Poseidon will be non-blocking
     /// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
     /// If set to `false`, Poseidon will block the current CPU thread.
     pub is_async: bool,

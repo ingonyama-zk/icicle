@@ -68,7 +68,7 @@ namespace poseidon {
     bool input_is_a_state;
     bool aligned;
     bool loop_state;
-    bool is_async; /**< Whether to run the NTT asyncronously. If set to `true`, the NTT function will be
+    bool is_async; /**< Whether to run the NTT asynchronously. If set to `true`, the NTT function will be
                     *   non-blocking and you'd need to synchronize it explicitly by running
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
                     *   function will block the current CPU thread. */

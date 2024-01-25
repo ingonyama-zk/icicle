@@ -83,7 +83,7 @@ namespace poseidon {
       CHK_IF_RETURN(cudaMallocAsync(&states, number_of_states * T * sizeof(S), stream))
 
       // This is where the input matrix of size Arity x NumberOfBlocks is
-      // padded and coppied to device in a T x NumberOfBlocks matrix
+      // padded and copied to device in a T x NumberOfBlocks matrix
       CHK_IF_RETURN(cudaMemcpy2DAsync(
         states, T * sizeof(S),                 // Device pointer and device pitch
         input, (T - 1) * sizeof(S),            // Host pointer and pitch
