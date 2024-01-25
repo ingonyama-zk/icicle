@@ -7,6 +7,7 @@
 #include "../../utils/device_context.cuh"
 #include "../../curves/curve_config.cuh"
 #include "../../utils/error_handler.cuh"
+#include "../../utils/utils.h"
 
 namespace poseidon {
 #define FIRST_FULL_ROUNDS  true
@@ -30,55 +31,37 @@ namespace poseidon {
 
   /// This class describes the logic of calculating CUDA kernels parameters
   /// such as the number of threads and the number of blocks
-  struct PoseidonKernelsConfiguration {
-    int t;
-    int number_of_threads;
-    int hashes_per_block;
-    int singlehash_block_size;
+  template <int T>
+  class PoseidonKernelsConfiguration {
+  public:
+    // The logic behind this is that 1 thread only works on 1 element
+    // We have {t} elements in each state, and {number_of_states} states total
+    static const int number_of_threads = 256 / T * T;
 
-    int number_of_full_blocks(size_t number_of_states) const
+    // The partial rounds operates on the whole state, so we define
+    // the parallelism params for processing a single hash preimage per thread
+    static const int singlehash_block_size = 128;
+
+    static const int hashes_per_block = number_of_threads / T;
+
+    static int number_of_full_blocks(size_t number_of_states)
     {
-      int total_number_of_threads = number_of_states * t;
+      int total_number_of_threads = number_of_states * T;
       return total_number_of_threads / number_of_threads +
              static_cast<bool>(total_number_of_threads % number_of_threads);
     }
 
-    int number_of_singlehash_blocks(size_t number_of_states) const
+    static int number_of_singlehash_blocks(size_t number_of_states)
     {
       return number_of_states / singlehash_block_size + static_cast<bool>(number_of_states % singlehash_block_size);
     }
   };
 
-  template <typename S>
-  PoseidonKernelsConfiguration default_poseidon_kernels_configuration(int t)
-  {
-    // The logic behind this is that 1 thread only works on 1 element
-    // We have {t} elements in each state, and {number_of_states} states total
-
-    int number_of_threads = (256 / t) * t;
-    int hashes_per_block = number_of_threads / t;
-
-    // The partial rounds operates on the whole state, so we define
-    // the parallelism params for processing a single hash preimage per thread
-    int singlehash_block_size = 128;
-
-    PoseidonKernelsConfiguration config = {
-      t,
-      number_of_threads,
-      hashes_per_block,
-      singlehash_block_size,
-    };
-
-    return config;
-  }
-
-  extern "C" PoseidonKernelsConfiguration DefaultPoseidonKernelsConfiguration(int t) {
-    return default_poseidon_kernels_configuration<curve_config::scalar_t>(t);
-  }
+  template<int T>
+  using PKC = PoseidonKernelsConfiguration<T>;
 
   struct PoseidonConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    PoseidonKernelsConfiguration kernel_cfg;
     bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     bool input_is_a_state;
@@ -94,10 +77,8 @@ namespace poseidon {
   PoseidonConfig default_poseidon_config(int t)
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
-    PoseidonKernelsConfiguration kernel_cfg = default_poseidon_kernels_configuration<S>(t);
     PoseidonConfig config = {
       ctx,        // ctx
-      kernel_cfg, // kernel_cfg
       false,      // are_inputes_on_device
       false,      // are_outputs_on_device
       false,      // input_is_a_state
@@ -108,24 +89,20 @@ namespace poseidon {
     return config;
   }
 
-  extern "C" PoseidonConfig DefaultPoseidonConfig(int t) {
-    return default_poseidon_config<curve_config::scalar_t>(t);
-  }
-
   template <typename S, int T>
-  cudaError_t init_optimized_poseidon_constants(cudaStream_t stream);
+  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext ctx);
 
-  extern "C" cudaError_t InitOptimizedPoseidonConstants(int arity, cudaStream_t stream) {
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitOptimizedPoseidonConstants)(int arity, device_context::DeviceContext ctx) {
     switch (arity)
     {
     case 2:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 3>(stream);
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 3>(ctx);
     case 4:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 5>(stream);
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 5>(ctx);
     case 8:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 9>(stream);
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 9>(ctx);
     case 11:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 12>(stream);
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 12>(ctx);
     default:
       throw std::runtime_error("invalid arity");
       break;
@@ -165,7 +142,7 @@ namespace poseidon {
   cudaError_t
   poseidon_hash(S* input, S* output, size_t number_of_states, const PoseidonConstants<S, T>& constants, const PoseidonConfig& config);
 
-  extern "C" cudaError_t PoseidonHash(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, PoseidonHash)(
     curve_config::scalar_t* input,
     curve_config::scalar_t* output,
     int number_of_states,

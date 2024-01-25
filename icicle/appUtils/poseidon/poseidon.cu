@@ -45,26 +45,25 @@ namespace poseidon {
   cudaError_t permute_many(
     S* states,
     size_t number_of_states,
-    const PoseidonKernelsConfiguration& kernel_cfg,
     const PoseidonConstants<S, T>& constants,
     cudaStream_t& stream)
   {
     size_t rc_offset = 0;
 
     full_rounds<S, T><<<
-      kernel_cfg.number_of_full_blocks(number_of_states), kernel_cfg.number_of_threads,
-      sizeof(S) * kernel_cfg.hashes_per_block * T, stream>>>(
+      PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads,
+      sizeof(S) * PKC<T>::hashes_per_block * T, stream>>>(
       states, number_of_states, rc_offset, FIRST_FULL_ROUNDS, constants);
     rc_offset += T * (constants.full_rounds_half + 1);
 
     partial_rounds<S, T>
-      <<<kernel_cfg.number_of_singlehash_blocks(number_of_states), kernel_cfg.singlehash_block_size, 0, stream>>>(
+      <<<PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0, stream>>>(
         states, number_of_states, rc_offset, constants);
     rc_offset += constants.partial_rounds;
 
     full_rounds<S, T><<<
-      kernel_cfg.number_of_full_blocks(number_of_states), kernel_cfg.number_of_threads,
-      sizeof(S) * kernel_cfg.hashes_per_block * T, stream>>>(
+      PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads,
+      sizeof(S) * PKC<T>::hashes_per_block * T, stream>>>(
       states, number_of_states, rc_offset, SECOND_FULL_ROUNDS, constants);
     return CHK_LAST();
   }
@@ -99,7 +98,7 @@ namespace poseidon {
     }
 
     prepare_poseidon_states<S, T>
-      <<<config.kernel_cfg.number_of_full_blocks(number_of_states), config.kernel_cfg.number_of_threads, 0, stream>>>(
+      <<<PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads, 0, stream>>>(
         states, number_of_states, constants.domain_tag, config.aligned);
 
     #if !defined(__CUDA_ARCH__) && defined(DEBUG)
@@ -108,7 +107,7 @@ namespace poseidon {
     print_buffer_from_cuda<S, T>(states, number_of_states * T);
     #endif
 
-    cudaError_t hash_error = permute_many<S, T>(states, number_of_states, config.kernel_cfg, constants, stream);
+    cudaError_t hash_error = permute_many<S, T>(states, number_of_states, constants, stream);
     CHK_IF_RETURN(hash_error);
 
     #if !defined(__CUDA_ARCH__) && defined(DEBUG)
@@ -118,12 +117,12 @@ namespace poseidon {
     #endif
 
     get_hash_results<S, T><<<
-      config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0,
+      PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0,
       stream>>>(states, number_of_states, output_device);
 
     if (config.loop_state) {
       copy_recursive<S, T><<<
-        config.kernel_cfg.number_of_singlehash_blocks(number_of_states), config.kernel_cfg.singlehash_block_size, 0,
+        PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0,
         stream>>>(states, number_of_states, output_device);
 
       #if !defined(__CUDA_ARCH__) && defined(DEBUG)
@@ -147,8 +146,10 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  cudaError_t init_optimized_poseidon_constants(cudaStream_t stream)
+  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext ctx)
   {
+    CHK_INIT_IF_RETURN();
+    cudaStream_t& stream = ctx.stream;
     int full_rounds_half = FULL_ROUNDS_DEFAULT;
     int partial_rounds = partial_rounds_number_from_arity(T - 1);
 

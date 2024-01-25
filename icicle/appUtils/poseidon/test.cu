@@ -2,6 +2,7 @@
 
 #define CURVE_ID 2
 #include "../../curves/curve_config.cuh"
+#include "../../utils/device_context.cuh"
 #include "poseidon.cu"
 
 #ifndef __CUDA_ARCH__
@@ -30,7 +31,7 @@ int main(int argc, char* argv[])
 
   // Load poseidon constants
   START_TIMER(timer_const);
-  init_optimized_poseidon_constants<scalar_t, T>(stream);
+  init_optimized_poseidon_constants<scalar_t, T>(device_context::get_default_device_context());
   END_TIMER(timer_const, "Load poseidon constants");
 
   START_TIMER(allocation_timer);
@@ -47,8 +48,8 @@ int main(int argc, char* argv[])
   scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
   START_TIMER(poseidon_timer);
-  PoseidonConfig config = default_poseidon_config(T);
-  PoseidonHash(in_ptr, out_ptr, number_of_blocks, A, config);
+  PoseidonConfig config = default_poseidon_config<scalar_t>(T);
+  poseidon_hash<curve_config::scalar_t, 3>(in_ptr, out_ptr, number_of_blocks, preloaded_constants<curve_config::scalar_t, 3>, config);
   END_TIMER(poseidon_timer, "Poseidon")
 
   scalar_t expected[1024] = {
