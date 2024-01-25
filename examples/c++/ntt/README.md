@@ -6,27 +6,27 @@ We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to s
 
 ## Key-Takeaway
 
-`Icicle` provides several CUDA C++ template functions for [Number Theoretical Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md), also known as Discrete Fourier Transform. The templates differ in terms of ease-of-use vs. speed. In this example we look a the easiest one.
+`Icicle` provides CUDA C++ template function NTT for [Number Theoretical Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md), also known as Discrete Fourier Transform. 
 
 ## Concise Usage Explanation
 
-First include NTT template, next select the curve, and finally supply the curve types to the template. 
+1. Select the curve
+2. Include NTT template
+3. Configure NTT (TODO)
+4. Call NTT
 
 ```c++
-#include "icicle/appUtils/ntt/ntt.cuh"              // template
-#include "icicle/curves/bls12_381/curve_config.cuh" // curve
-using namespace BLS12_381;
+#define CURVE_ID 1
+#include "icicle/appUtils/ntt/ntt.cu"
+using namespace curve_config;
+
 ...
-ntt_end2end_batch_template<scalar_t, scalar_t>(scalars, batch_size, ntt_size, inverse, stream);
+ntt::NTT<S, E>(input, ntt_size, ntt::NTTDir::kForward, config, output);
 ```
-
-In this example we use `BLS12_381` curve. The function computes TODO.
-
 
 **Parameters:**
 
 TODO
-
 
 ## What's in the example
 

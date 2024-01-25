@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 
+#define G2_DEFINED
 // include MSM template
 #define CURVE_ID 1
 #include "icicle/appUtils/msm/msm.cu"
@@ -16,6 +17,8 @@ int main(int argc, char* argv[])
   unsigned msm_size = 1048576;
   std::cout << "MSM size: " << msm_size << std::endl;
   int N = batch_size * msm_size;
+
+  std::cout << "Part I: use G1 points" << std::endl;
   
   std::cout << "Generating random inputs on-host" << std::endl;
   scalar_t* scalars = new scalar_t[N];
@@ -25,10 +28,27 @@ int main(int argc, char* argv[])
   projective_t::RandHostManyAffine(points, N);
 
   std::cout << "Using default MSM configuration with on-host inputs" << std::endl;
-  auto config = msm::DefaultMSMConfig();
+  // auto config = msm::DefaultMSMConfig();
+  device_context::DeviceContext ctx = device_context::get_default_device_context();
+  msm::MSMConfig config = {
+      ctx,   // ctx
+      0,     // points_size
+      1,     // precompute_factor
+      0,     // c
+      0,     // bitsize
+      10,    // large_bucket_factor
+      1,     // batch_size
+      false, // are_scalars_on_device
+      false, // are_scalars_montgomery_form
+      false, // are_points_on_device
+      false, // are_points_montgomery_form
+      false, // are_results_on_device
+      false, // is_big_triangle
+      false, // is_async
+    };
   config.batch_size = batch_size;
   
-  std::cout << "Running MSM kernel" << std::endl;
+  std::cout << "Running MSM kernel with on-host inputs" << std::endl;
   // Create two events to time the MSM kernel
   cudaStream_t stream = config.ctx.stream;
   cudaEvent_t start, stop;
@@ -95,6 +115,66 @@ int main(int argc, char* argv[])
   cudaFree(scalars_d);
   cudaFree(points_d);
   cudaFree(result_d);
+  // Free the host memory, keep scalars for G2 example
+  delete[] points;
+
+  std::cout << "Part II: use G2 points" << std::endl;
+
+  std::cout << "Generating random inputs on-host" << std::endl;
+  // use the same scalars
+  g2_affine_t* g2_points = new g2_affine_t[N];
+  g2_projective_t::RandHostManyAffine(g2_points, N);
+
+  std::cout << "Reconfiguring MSM to use on-host inputs" << std::endl;
+  config.are_results_on_device = false;
+  config.are_scalars_on_device = false;
+  config.are_points_on_device = false;
+  g2_projective_t g2_result;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start, stream);
+  msm::MSM<scalar_t, g2_affine_t, g2_projective_t>(scalars, g2_points, msm_size, config, &g2_result);
+  cudaEventRecord(stop, stream);
+  cudaEventSynchronize(stop);
+  cudaEventElapsedTime(&time, start, stop);
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+  std::cout << "Kernel runtime: " << std::fixed << std::setprecision(3) << time * 1e-3 << " sec." << std::endl;
+  std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
+
+  std::cout << "Copying inputs on-device" << std::endl;
+  g2_affine_t* g2_points_d;
+  g2_projective_t* g2_result_d;
+  cudaMalloc(&scalars_d, sizeof(scalar_t) * N);
+  cudaMalloc(&g2_points_d, sizeof(g2_affine_t) * N);
+  cudaMalloc(&g2_result_d, sizeof(g2_projective_t));
+  cudaMemcpy(scalars_d, scalars, sizeof(scalar_t) * N, cudaMemcpyHostToDevice);
+  cudaMemcpy(g2_points_d, g2_points, sizeof(g2_affine_t) * N, cudaMemcpyHostToDevice);
+
+  std::cout << "Reconfiguring MSM to use on-device inputs" << std::endl;
+  config.are_results_on_device = true;
+  config.are_scalars_on_device = true;
+  config.are_points_on_device = true;
+
+  std::cout << "Running MSM kernel with on-device inputs" << std::endl;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start, stream);
+  msm::MSM<scalar_t, g2_affine_t, g2_projective_t>(scalars_d, g2_points_d, msm_size, config, g2_result_d);
+  cudaEventRecord(stop, stream);
+  cudaEventSynchronize(stop);
+  cudaEventElapsedTime(&time, start, stop);
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+  std::cout << "Kernel runtime: " << std::fixed << std::setprecision(3) << time * 1e-3 << " sec." << std::endl;
+  cudaMemcpy(&g2_result, g2_result_d, sizeof(g2_projective_t), cudaMemcpyDeviceToHost);
+  std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
+
+  cudaFree(scalars_d);
+  cudaFree(g2_points_d);
+  cudaFree(g2_result_d);
+  delete[] g2_points;
+  delete[] scalars;
   cudaStreamDestroy(stream);
   return 0;
 }
