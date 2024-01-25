@@ -12,7 +12,7 @@ use icicle_bls12_377::curve::{
 
 use icicle_cuda_runtime::{
     stream::CudaStream,
-    memory::DeviceSlice
+    memory::HostOrDeviceSlice
 };
 
 use icicle_core::{
@@ -74,40 +74,39 @@ fn main() {
         let size = 1 << log_size;
         println!("---------------------- MSM size 2^{}={} ------------------------", log_size, size);
         // Setting Bn254 points and scalars
-        let points = &upper_points[..size];
-        let scalars = &upper_scalars[..size];
+        let points = HostOrDeviceSlice::Host(upper_points[..size].to_vec());
+        let scalars = HostOrDeviceSlice::Host(upper_scalars[..size].to_vec());
         
         // Setting bls12377 points and scalars
-        let points_bls12377 = &upper_points_bls12377[..size];
-        let scalars_bls12377 = &upper_scalars_bls12377[..size];
+        // let points_bls12377 = &upper_points_bls12377[..size];
+        let points_bls12377 =  HostOrDeviceSlice::Host(upper_points_bls12377[..size].to_vec()); //  &upper_points_bls12377[..size];
+        let scalars_bls12377 = HostOrDeviceSlice::Host(upper_scalars_bls12377[..size].to_vec());
 
         println!("Configuring bn254 MSM...");
-        let mut msm_results: DeviceSlice<'_, G1Projective> = DeviceSlice::cuda_malloc(1).unwrap();
+        let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream = CudaStream::create().unwrap();
         let mut cfg = msm::get_default_msm_config::<CurveCfg>();
         cfg.ctx.stream = &stream;
         cfg.is_async = true;
-        cfg.are_results_on_device = true;
 
         println!("Configuring bls12377 MSM...");
-        let mut msm_results_bls12377: DeviceSlice<'_, BLS12377G1Projective> = DeviceSlice::cuda_malloc(1).unwrap();
+        let mut msm_results_bls12377: HostOrDeviceSlice<'_, BLS12377G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream_bls12377 = CudaStream::create().unwrap();
         let mut cfg_bls12377 = msm::get_default_msm_config::<BLS12377CurveCfg>();
         cfg_bls12377.ctx.stream = &stream_bls12377;
         cfg_bls12377.is_async = true;
-        cfg_bls12377.are_results_on_device = true;
 
         println!("Executing bn254 MSM on device...");
         #[cfg(feature = "profile")]
         let start = Instant::now();
-        msm::msm(&scalars, &points, &cfg, &mut msm_results.as_slice()).unwrap();
+        msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
         #[cfg(feature = "profile")]
         println!("ICICLE BN254 MSM on size 2^{log_size} took: {} ms", start.elapsed().as_millis());
 
         println!("Executing bls12377 MSM on device...");
         #[cfg(feature = "profile")]
         let start = Instant::now();
-        msm::msm(&scalars_bls12377, &points_bls12377, &cfg_bls12377, &mut msm_results_bls12377.as_slice()).unwrap();
+        msm::msm(&scalars_bls12377, &points_bls12377, &cfg_bls12377, &mut msm_results_bls12377 ).unwrap();
         #[cfg(feature = "profile")]
         println!("ICICLE BLS12377 MSM on size 2^{log_size} took: {} ms", start.elapsed().as_millis());
 
