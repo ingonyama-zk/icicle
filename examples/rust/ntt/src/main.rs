@@ -10,7 +10,7 @@ use icicle_bls12_377::curve::{
 
 use icicle_cuda_runtime::{
     stream::CudaStream,
-    memory::DeviceSlice,
+    memory::HostOrDeviceSlice,
     device_context::get_default_device_context
 };
 
@@ -48,13 +48,13 @@ fn main() {
     println!("---------------------- NTT size 2^{}={} ------------------------", log_size, size);
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
-    let scalars = ScalarCfg::generate_random(size);
-    let mut ntt_results: DeviceSlice<'_, ScalarField> = DeviceSlice::cuda_malloc(size).unwrap();
+    let scalars = HostOrDeviceSlice::Host(ScalarCfg::generate_random(size));
+    let mut ntt_results: HostOrDeviceSlice<'_, ScalarField> = HostOrDeviceSlice::cuda_malloc(size).unwrap();
     
     // Setting bls12377 points and scalars
     println!("Generating random inputs on host for bls12377...");
-    let scalars_bls12377 = BLS12377ScalarCfg::generate_random(size);
-    let mut ntt_results_bls12377: DeviceSlice<'_, BLS12377ScalarField> = DeviceSlice::cuda_malloc(size).unwrap();
+    let scalars_bls12377 = HostOrDeviceSlice::Host(BLS12377ScalarCfg::generate_random(size));
+    let mut ntt_results_bls12377: HostOrDeviceSlice<'_, BLS12377ScalarField> = HostOrDeviceSlice::cuda_malloc(size).unwrap();
     
     println!("Setting up bn254 Domain...");
     let icicle_omega = <Bn254Fr as FftField>::get_root_of_unity(size.try_into().unwrap()).unwrap();
@@ -66,7 +66,6 @@ fn main() {
     let mut cfg = ntt::get_default_ntt_config::<ScalarField>();
     cfg.ctx.stream = &stream;
     cfg.is_async = true;
-    cfg.are_outputs_on_device = true;
 
     println!("Setting up bls12377 Domain...");
     let icicle_omega = <Bls12377Fr as FftField>::get_root_of_unity(size.try_into().unwrap()).unwrap();
@@ -78,19 +77,18 @@ fn main() {
     let mut cfg_bls12377 = ntt::get_default_ntt_config::<BLS12377ScalarField>();
     cfg_bls12377.ctx.stream = &stream_bls12377;
     cfg_bls12377.is_async = true;
-    cfg_bls12377.are_outputs_on_device = true;
 
     println!("Executing bn254 NTT on device...");
     #[cfg(feature = "profile")]
     let start = Instant::now();
-    ntt::ntt(scalars.as_slice(), ntt::NTTDir::kForward, &cfg, ntt_results.as_slice()).unwrap();
+    ntt::ntt(&scalars, ntt::NTTDir::kForward, &cfg, &mut ntt_results).unwrap();
     #[cfg(feature = "profile")]
     println!("ICICLE BN254 NTT on size 2^{log_size} took: {} μs", start.elapsed().as_micros());
 
     println!("Executing bls12377 NTT on device...");
     #[cfg(feature = "profile")]
     let start = Instant::now();
-    ntt::ntt(scalars_bls12377.as_slice(), ntt::NTTDir::kForward, &cfg_bls12377, ntt_results_bls12377.as_slice()).unwrap();
+    ntt::ntt(&scalars_bls12377, ntt::NTTDir::kForward, &cfg_bls12377, &mut ntt_results_bls12377).unwrap();
     #[cfg(feature = "profile")]
     println!("ICICLE BLS12377 NTT on size 2^{log_size} took: {} μs", start.elapsed().as_micros());
 
@@ -112,10 +110,10 @@ fn main() {
         .unwrap();
     
     println!("Checking against arkworks...");
-    let mut ark_scalars: Vec<Bn254Fr> = scalars.iter().map(|scalar| scalar.to_ark()).collect();
+    let mut ark_scalars: Vec<Bn254Fr> = scalars.as_slice().iter().map(|scalar| scalar.to_ark()).collect();
     let bn254_domain = <Radix2EvaluationDomain<Bn254Fr> as EvaluationDomain<Bn254Fr>>::new(size).unwrap();
     
-    let mut ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377.iter().map(|scalar| scalar.to_ark()).collect();
+    let mut ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377.as_slice().iter().map(|scalar| scalar.to_ark()).collect();
     let bls12_377_domain = <Radix2EvaluationDomain<Bls12377Fr> as EvaluationDomain<Bls12377Fr>>::new(size).unwrap();
     
     #[cfg(feature = "profile")]
