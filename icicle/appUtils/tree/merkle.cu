@@ -162,10 +162,8 @@ namespace merkle {
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
 
     bool caps_mode = config.keep_rows && config.keep_rows < cap_height;
-    S *caps;
-    if (caps_mode) {
-      caps = static_cast<S*>(malloc(caps_len * sizeof(S)));
-    }
+    S* caps;
+    if (caps_mode) { caps = static_cast<S*>(malloc(caps_len * sizeof(S))); }
 
     for (size_t subtree_idx = 0; subtree_idx < number_of_subtrees; subtree_idx++) {
       size_t stream_idx = subtree_idx % number_of_streams;
@@ -198,7 +196,7 @@ namespace merkle {
         caps_mode ? caps : digests, // big_tree_digests
         start_segment_size,         // start_segment_size
         0,                          // start_segment_offset
-        subtree_keep_rows,        // keep_rows
+        subtree_keep_rows,          // keep_rows
         poseidon,                   // hash
         subtree_stream              // stream
       );
@@ -221,28 +219,25 @@ namespace merkle {
         }
       }
       CHK_IF_RETURN(cudaMemcpy2DAsync(
-        states_ptr, T * sizeof(S),
-        caps_mode ? caps : (digests + start_segment_offset - caps_len),
-        arity * sizeof(S), arity * sizeof(S),
-        caps_len / arity,   // Size of the source 
+        states_ptr, T * sizeof(S), caps_mode ? caps : (digests + start_segment_offset - caps_len), arity * sizeof(S),
+        arity * sizeof(S),
+        caps_len / arity,                 // Size of the source
         cudaMemcpyHostToDevice, stream)); // Direction and stream
 
       cudaError_t top_tree_result = __build_merkle_subtree<S, T>(
         states_ptr,           // state
         digests_ptr,          // digests
         0,                    // subtree_idx
-        cap_height,       // subtree_height
+        cap_height,           // subtree_height
         digests,              // big_tree_digests
         start_segment_size,   // start_segment_size
         start_segment_offset, // start_segment_offset
-        config.keep_rows,   // keep_rows
+        config.keep_rows,     // keep_rows
         poseidon,             // hash
         stream                // stream
       );
-      CHK_IF_RETURN(top_tree_result); 
-      if (caps_mode) {
-        free(caps);
-      }
+      CHK_IF_RETURN(top_tree_result);
+      if (caps_mode) { free(caps); }
     }
 
     CHK_IF_RETURN(cudaFreeAsync(states_ptr, stream));

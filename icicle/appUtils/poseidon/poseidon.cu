@@ -42,11 +42,8 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  cudaError_t permute_many(
-    S* states,
-    size_t number_of_states,
-    const PoseidonConstants<S, T>& constants,
-    cudaStream_t& stream)
+  cudaError_t
+  permute_many(S* states, size_t number_of_states, const PoseidonConstants<S, T>& constants, cudaStream_t& stream)
   {
     size_t rc_offset = 0;
 
@@ -69,8 +66,12 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  cudaError_t
-  poseidon_hash(S* input, S* output, size_t number_of_states, const PoseidonConstants<S, T>& constants, const PoseidonConfig& config)
+  cudaError_t poseidon_hash(
+    S* input,
+    S* output,
+    size_t number_of_states,
+    const PoseidonConstants<S, T>& constants,
+    const PoseidonConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -101,37 +102,36 @@ namespace poseidon {
       <<<PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads, 0, stream>>>(
         states, number_of_states, constants.domain_tag, config.aligned);
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+#if !defined(__CUDA_ARCH__) && defined(DEBUG)
     cudaDeviceSynchronize();
     std::cout << "Domain separation: " << std::endl;
     print_buffer_from_cuda<S, T>(states, number_of_states * T);
-    #endif
+#endif
 
     cudaError_t hash_error = permute_many<S, T>(states, number_of_states, constants, stream);
     CHK_IF_RETURN(hash_error);
 
-    #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+#if !defined(__CUDA_ARCH__) && defined(DEBUG)
     cudaDeviceSynchronize();
     std::cout << "Permutations: " << std::endl;
     print_buffer_from_cuda<S, T>(states, number_of_states * T);
-    #endif
+#endif
 
-    get_hash_results<S, T><<<
-      PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0,
-      stream>>>(states, number_of_states, output_device);
+    get_hash_results<S, T>
+      <<<PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0, stream>>>(
+        states, number_of_states, output_device);
 
     if (config.loop_state) {
-      copy_recursive<S, T><<<
-        PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0,
-        stream>>>(states, number_of_states, output_device);
+      copy_recursive<S, T>
+        <<<PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0, stream>>>(
+          states, number_of_states, output_device);
 
-      #if !defined(__CUDA_ARCH__) && defined(DEBUG)
+#if !defined(__CUDA_ARCH__) && defined(DEBUG)
       cudaDeviceSynchronize();
       std::cout << "Looping: " << std::endl;
       print_buffer_from_cuda<S, T>(states, number_of_states / (T - 1) * T);
-      #endif
+#endif
     }
-
 
     if (!config.input_is_a_state) CHK_IF_RETURN(cudaFreeAsync(states, stream));
 

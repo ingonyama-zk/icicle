@@ -1,4 +1,7 @@
-use icicle_cuda_runtime::{device_context::{get_default_device_context, DeviceContext}, memory::HostOrDeviceSlice};
+use icicle_cuda_runtime::{
+    device_context::{get_default_device_context, DeviceContext},
+    memory::HostOrDeviceSlice,
+};
 
 use crate::{error::IcicleResult, traits::FieldImpl};
 
@@ -33,14 +36,20 @@ impl<'a> Default for PoseidonConfig<'a> {
             input_is_a_state: false,
             aligned: false,
             loop_state: false,
-            is_async: false
+            is_async: false,
         }
     }
 }
 
 pub trait Poseidon<F: FieldImpl> {
     fn initialize_constants(arity: i32, ctx: &DeviceContext) -> IcicleResult<()>;
-    fn poseidon_unchecked(input: &mut HostOrDeviceSlice<F>, output: &mut HostOrDeviceSlice<F>, number_of_states: i32, arity: i32, config: &PoseidonConfig) -> IcicleResult<()>;
+    fn poseidon_unchecked(
+        input: &mut HostOrDeviceSlice<F>,
+        output: &mut HostOrDeviceSlice<F>,
+        number_of_states: i32,
+        arity: i32,
+        config: &PoseidonConfig,
+    ) -> IcicleResult<()>;
 }
 
 pub fn initialize_poseidon_constants<F>(arity: i32, ctx: &DeviceContext) -> IcicleResult<()>
@@ -56,8 +65,8 @@ pub fn poseidon_hash_many<F>(
     output: &mut HostOrDeviceSlice<F>,
     number_of_states: i32,
     arity: i32,
-    config: &PoseidonConfig
-) -> IcicleResult<()> 
+    config: &PoseidonConfig,
+) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: Poseidon<F>,
@@ -67,7 +76,7 @@ where
     } else {
         number_of_states * arity
     };
-    
+
     if input.len() < input_len_required as usize {
         panic!(
             "input len is {}; but needs to be at least {}",
@@ -106,7 +115,13 @@ macro_rules! impl_poseidon {
                 pub(crate) fn initialize_poseidon_constants(arity: i32, ctx: &DeviceContext) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "PoseidonHash")]
-                pub(crate) fn hash_many(input: *mut $field, output: *mut $field, number_of_states: i32, arity: i32, config: &PoseidonConfig) -> CudaError;
+                pub(crate) fn hash_many(
+                    input: *mut $field,
+                    output: *mut $field,
+                    number_of_states: i32,
+                    arity: i32,
+                    config: &PoseidonConfig,
+                ) -> CudaError;
             }
         }
 
@@ -120,7 +135,7 @@ macro_rules! impl_poseidon {
                 output: &mut HostOrDeviceSlice<$field>,
                 number_of_states: i32,
                 arity: i32,
-                config: &PoseidonConfig
+                config: &PoseidonConfig,
             ) -> IcicleResult<()> {
                 unsafe {
                     $field_prefix_ident::hash_many(
@@ -129,7 +144,8 @@ macro_rules! impl_poseidon {
                         number_of_states,
                         arity,
                         config,
-                    ).wrap()
+                    )
+                    .wrap()
                 }
             }
         }

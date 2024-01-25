@@ -14,8 +14,8 @@
 using namespace poseidon;
 using namespace curve_config;
 
-#define A      2
-#define T      A + 1
+#define A 2
+#define T A + 1
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
@@ -49,7 +49,8 @@ int main(int argc, char* argv[])
 
   START_TIMER(poseidon_timer);
   PoseidonConfig config = default_poseidon_config<scalar_t>(T);
-  poseidon_hash<curve_config::scalar_t, 3>(in_ptr, out_ptr, number_of_blocks, preloaded_constants<curve_config::scalar_t, 3>, config);
+  poseidon_hash<curve_config::scalar_t, 3>(
+    in_ptr, out_ptr, number_of_blocks, preloaded_constants<curve_config::scalar_t, 3>, config);
   END_TIMER(poseidon_timer, "Poseidon")
 
   scalar_t expected[1024] = {

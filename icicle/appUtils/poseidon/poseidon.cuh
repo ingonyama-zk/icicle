@@ -32,7 +32,8 @@ namespace poseidon {
   /// This class describes the logic of calculating CUDA kernels parameters
   /// such as the number of threads and the number of blocks
   template <int T>
-  class PoseidonKernelsConfiguration {
+  class PoseidonKernelsConfiguration
+  {
   public:
     // The logic behind this is that 1 thread only works on 1 element
     // We have {t} elements in each state, and {number_of_states} states total
@@ -57,7 +58,7 @@ namespace poseidon {
     }
   };
 
-  template<int T>
+  template <int T>
   using PKC = PoseidonKernelsConfiguration<T>;
 
   struct PoseidonConfig {
@@ -78,13 +79,13 @@ namespace poseidon {
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     PoseidonConfig config = {
-      ctx,        // ctx
-      false,      // are_inputes_on_device
-      false,      // are_outputs_on_device
-      false,      // input_is_a_state
-      false,      // aligned
-      false,      // loop_state
-      false,      // is_async
+      ctx,   // ctx
+      false, // are_inputes_on_device
+      false, // are_outputs_on_device
+      false, // input_is_a_state
+      false, // aligned
+      false, // loop_state
+      false, // is_async
     };
     return config;
   }
@@ -92,9 +93,10 @@ namespace poseidon {
   template <typename S, int T>
   cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext ctx);
 
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitOptimizedPoseidonConstants)(int arity, device_context::DeviceContext ctx) {
-    switch (arity)
-    {
+  extern "C" cudaError_t
+  CONCAT_EXPAND(CURVE, InitOptimizedPoseidonConstants)(int arity, device_context::DeviceContext ctx)
+  {
+    switch (arity) {
     case 2:
       return init_optimized_poseidon_constants<curve_config::scalar_t, 3>(ctx);
     case 4:
@@ -139,8 +141,12 @@ namespace poseidon {
   /// After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
   ///======================================================
   template <typename S, int T>
-  cudaError_t
-  poseidon_hash(S* input, S* output, size_t number_of_states, const PoseidonConstants<S, T>& constants, const PoseidonConfig& config);
+  cudaError_t poseidon_hash(
+    S* input,
+    S* output,
+    size_t number_of_states,
+    const PoseidonConstants<S, T>& constants,
+    const PoseidonConfig& config);
 
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, PoseidonHash)(
     curve_config::scalar_t* input,
@@ -151,13 +157,17 @@ namespace poseidon {
   {
     switch (arity) {
     case 2:
-      return poseidon_hash<curve_config::scalar_t, 3>(input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 3>, config);
+      return poseidon_hash<curve_config::scalar_t, 3>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 3>, config);
     case 4:
-      return poseidon_hash<curve_config::scalar_t, 5>(input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 5>, config);
+      return poseidon_hash<curve_config::scalar_t, 5>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 5>, config);
     case 8:
-      return poseidon_hash<curve_config::scalar_t, 9>(input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 9>, config);
+      return poseidon_hash<curve_config::scalar_t, 9>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 9>, config);
     case 11:
-      return poseidon_hash<curve_config::scalar_t, 12>(input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 12>, config);
+      return poseidon_hash<curve_config::scalar_t, 12>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 12>, config);
     default:
       throw std::runtime_error("invalid arity");
     }
