@@ -1,5 +1,5 @@
 
-#define CURVE_ID 3 // TODO Yuval: move to makefile
+#define CURVE_ID 2 // TODO Yuval: move to makefile
 
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
@@ -42,9 +42,9 @@ int main()
   float icicle_time, new_time;
 #endif
 
-  int NTT_LOG_SIZE = 19;
+  int NTT_LOG_SIZE = 4;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
-  int INV = false;
+  int INV = true;
   const ntt::Ordering ordering = ntt::Ordering::kNN;
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
                              : ordering == ntt::Ordering::kNR ? "NR"
@@ -71,13 +71,13 @@ int main()
 
   // new algorithm init
   ntt::MixedRadixNTT new_ntt(NTT_SIZE, INV, ordering);
-  const test_scalar basic_root = INV ? test_scalar::omega_inv(NTT_LOG_SIZE) : test_scalar::omega(NTT_LOG_SIZE);
   // old algorithm init
   auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
   ntt_config.ordering = ordering;
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
   ntt_config.is_force_radix2 = true; // to compare to radix2 algorithm
+  const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
   ntt::InitDomain(basic_root, ntt_config.ctx);
 
 #ifdef PERFORMANCE
