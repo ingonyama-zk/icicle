@@ -6,7 +6,6 @@ use icicle_bn254::curve::{
     G2Projective 
 };
 
-
 use icicle_bls12_377::curve::{
     CurveCfg as BLS12377CurveCfg,
     ScalarCfg as BLS12377ScalarCfg,
@@ -66,6 +65,7 @@ fn main() {
     let upper_size = 1 << (upper_bound);
     println!("Generating random inputs on host for bn254...");
     let upper_points = CurveCfg::generate_random_affine_points(upper_size);
+    let g2_upper_points = G2CurveCfg::generate_random_affine_points(upper_size);
     let upper_scalars = ScalarCfg::generate_random(upper_size);
     
     println!("Generating random inputs on host for bls12377...");
@@ -78,6 +78,7 @@ fn main() {
         println!("---------------------- MSM size 2^{}={} ------------------------", log_size, size);
         // Setting Bn254 points and scalars
         let points = HostOrDeviceSlice::Host(upper_points[..size].to_vec());
+        let g2_points = HostOrDeviceSlice::Host(g2_upper_points[..size].to_vec());
         let scalars = HostOrDeviceSlice::Host(upper_scalars[..size].to_vec());
         
         // Setting bls12377 points and scalars
@@ -87,10 +88,15 @@ fn main() {
 
         println!("Configuring bn254 MSM...");
         let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
+        let mut g2_msm_results: HostOrDeviceSlice<'_, G2Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream = CudaStream::create().unwrap();
+        let g2_stream = CudaStream::create().unwrap();
         let mut cfg = msm::get_default_msm_config::<CurveCfg>();
+        let mut g2_cfg = msm::get_default_msm_config::<G2CurveCfg>();
         cfg.ctx.stream = &stream;
+        g2_cfg.ctx.stream = &g2_stream;
         cfg.is_async = true;
+        g2_cfg.is_async = true;
 
         println!("Configuring bls12377 MSM...");
         let mut msm_results_bls12377: HostOrDeviceSlice<'_, BLS12377G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
@@ -105,6 +111,8 @@ fn main() {
         msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
         #[cfg(feature = "profile")]
         println!("ICICLE BN254 MSM on size 2^{log_size} took: {} ms", start.elapsed().as_millis());
+        msm::msm(&scalars, &g2_points, &g2_cfg, &mut g2_msm_results).unwrap();
+
 
         println!("Executing bls12377 MSM on device...");
         #[cfg(feature = "profile")]
@@ -115,15 +123,23 @@ fn main() {
 
         println!("Moving results to host..");
         let mut msm_host_result = vec![G1Projective::zero(); 1];
+        let mut g2_msm_host_result = vec![G2Projective::zero(); 1];
         let mut msm_host_result_bls12377 = vec![BLS12377G1Projective::zero(); 1];
         
         stream
             .synchronize()
             .unwrap();
+        g2_stream
+            .synchronize()
+            .unwrap();
         msm_results
             .copy_to_host(&mut msm_host_result[..])
             .unwrap();
+        g2_msm_results
+            .copy_to_host(&mut g2_msm_host_result[..])
+            .unwrap();
         println!("bn254 result: {:#?}", msm_host_result);
+        println!("G2 bn254 result: {:#?}", g2_msm_host_result);
         
         stream_bls12377
             .synchronize()

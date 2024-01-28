@@ -4,10 +4,10 @@ version = "1.0.0"
 edition = "2018"
 
 [dependencies]
-icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "main" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "main" }
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "main", features = [ "g2" ] }
-icicle-bls12-377 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "main" }
+icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev" }
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev", features = [ "g2" ] }
+icicle-bls12-377 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev" }
 
 ark-bn254 = { version = "0.4.0", optional = true}
 ark-bls12-377 = { version = "0.4.0", optional = true}
