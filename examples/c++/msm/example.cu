@@ -28,24 +28,24 @@ int main(int argc, char* argv[])
   projective_t::RandHostManyAffine(points, N);
 
   std::cout << "Using default MSM configuration with on-host inputs" << std::endl;
-  // auto config = msm::DefaultMSMConfig();
+  auto config = msm::DefaultMSMConfig();
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  msm::MSMConfig config = {
-      ctx,   // ctx
-      0,     // points_size
-      1,     // precompute_factor
-      0,     // c
-      0,     // bitsize
-      10,    // large_bucket_factor
-      1,     // batch_size
-      false, // are_scalars_on_device
-      false, // are_scalars_montgomery_form
-      false, // are_points_on_device
-      false, // are_points_montgomery_form
-      false, // are_results_on_device
-      false, // is_big_triangle
-      false, // is_async
-    };
+  // msm::MSMConfig config = {
+  //     ctx,   // ctx
+  //     0,     // points_size
+  //     1,     // precompute_factor
+  //     0,     // c
+  //     0,     // bitsize
+  //     10,    // large_bucket_factor
+  //     1,     // batch_size
+  //     false, // are_scalars_on_device
+  //     false, // are_scalars_montgomery_form
+  //     false, // are_points_on_device
+  //     false, // are_points_montgomery_form
+  //     false, // are_results_on_device
+  //     false, // is_big_triangle
+  //     false, // is_async
+  //   };
   config.batch_size = batch_size;
   
   std::cout << "Running MSM kernel with on-host inputs" << std::endl;
