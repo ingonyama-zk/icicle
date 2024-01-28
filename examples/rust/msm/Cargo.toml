@@ -17,3 +17,4 @@ clap = { version = "4.4.12", features = ["derive"] }
 [features]
 arkworks = ["ark-bn254", "ark-bls12-377", "ark-ec", "icicle-core/arkworks", "icicle-bn254/arkworks", "icicle-bls12-377/arkworks"]
 profile = []
+g2 = []
