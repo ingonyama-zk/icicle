@@ -36,14 +36,14 @@ void incremental_values(test_scalar* res, uint32_t count)
     res[i] = i ? res[i - 1] + test_scalar::one() * test_scalar::omega(4) : test_scalar::zero();
 }
 
-int main()
+int main(int argc, char** argv)
 {
 #ifdef PERFORMANCE
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
   float icicle_time, new_time;
 #endif
 
-  int NTT_LOG_SIZE = 21;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 22; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   int INV = false;
   const ntt::Ordering ordering = ntt::Ordering::kNN;
@@ -69,16 +69,17 @@ int main()
   random_samples(CpuScalars.get(), NTT_SIZE);
   $CUDA(cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE, cudaMemcpyHostToDevice));
 
-  // new algorithm init
-  // ntt::MixedRadixNTT new_ntt(NTT_SIZE, INV, ordering);
-  // old algorithm init
+  // init
   auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
   ntt_config.ordering = ordering;
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
-  ntt_config.is_force_radix2 = true; // to compare to radix2 algorithm
+  // ntt_config.is_async = true;
+
   const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
   ntt::InitDomain(basic_root, ntt_config.ctx);
+
+  $CUDA(cudaStreamSynchronize(ntt_config.ctx.stream));
 
 #ifdef PERFORMANCE
   $CUDA(cudaEventCreate(&icicle_start));
@@ -88,30 +89,31 @@ int main()
 
   // run ntt
   auto benchmark = [&](bool is_print, int iterations) {
-    $CUDA(cudaEventRecord(new_start, 0));
+    // NEW
+    $CUDA(cudaEventRecord(new_start, ntt_config.ctx.stream));
+    ntt_config.is_force_radix2 = false; // mixed-radix ntt (a.k.a new ntt)
     for (size_t i = 0; i < iterations; i++) {
-      // Note: measuring construction/destruction everytime since this is what real usecase is doing
-      ntt::MixedRadixNTT new_ntt(NTT_SIZE, INV, ordering);
-      new_ntt(GpuScalars, GpuOutputNew);
+      ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputNew);
     }
-    $CUDA(cudaEventRecord(new_stop, 0));
-    $CUDA(cudaDeviceSynchronize());
+    $CUDA(cudaEventRecord(new_stop, ntt_config.ctx.stream));
+    $CUDA(cudaStreamSynchronize(ntt_config.ctx.stream));
     $CUDA(cudaEventElapsedTime(&new_time, new_start, new_stop));
-    cudaDeviceSynchronize();
-    if (is_print) { printf("cuda err %d\n", cudaGetLastError()); }
+    if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
 
-    $CUDA(cudaEventRecord(icicle_start, 0));
+    // OLD
+    $CUDA(cudaEventRecord(icicle_start, ntt_config.ctx.stream));
+    ntt_config.is_force_radix2 = true;
     for (size_t i = 0; i < iterations; i++) {
       ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld);
     }
-    $CUDA(cudaEventRecord(icicle_stop, 0));
-    $CUDA(cudaDeviceSynchronize());
+    $CUDA(cudaEventRecord(icicle_stop, ntt_config.ctx.stream));
+    $CUDA(cudaStreamSynchronize(ntt_config.ctx.stream));
     $CUDA(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
-    cudaDeviceSynchronize();
+    if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
+
     if (is_print) {
-      printf("cuda err %d\n", cudaGetLastError());
-      fprintf(stderr, "Old Runtime=%0.3f MS\n", icicle_time / iterations);
-      fprintf(stderr, "New Runtime=%0.3f MS\n", new_time / iterations);
+      printf("Old Runtime=%0.3f MS\n", icicle_time / iterations);
+      printf("New Runtime=%0.3f MS\n", new_time / iterations);
     }
   };
 
@@ -119,16 +121,18 @@ int main()
   benchmark(false /*=print*/, 1); // warmup - is this applicable to real usecase??
   benchmark(true /*=print*/, count);
 #else
-  new_ntt(GpuScalars, GpuOutputNew);
-  cudaDeviceSynchronize();
+  ntt_config.is_force_radix2 = false;
+  ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputNew);
   printf("finished new\n");
 
+  ntt_config.is_force_radix2 = true;
   ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld);
   printf("finished old\n");
 
   // verify
   $CUDA(cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE, cudaMemcpyDeviceToHost));
   $CUDA(cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE, cudaMemcpyDeviceToHost));
+#endif // PERFORMANCE
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE; i++) {
@@ -142,8 +146,7 @@ int main()
     }
   }
   const char* success_str = success ? "SUCCESS!" : "FAIL!";
-  printf("%s\n", success_str);
-#endif
+  fprintf(stderr, "%s\n", success_str);
 
   $CUDA(cudaFree(GpuScalars));
   $CUDA(cudaFree(GpuOutputOld));

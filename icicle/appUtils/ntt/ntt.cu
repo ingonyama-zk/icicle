@@ -463,13 +463,11 @@ namespace ntt {
       h_coset.clear();
     }
 
-    const bool is_small_ntt = logn < 16;                  // cutoff point where miax-radix algorithm is faster
-    const bool is_large_field = sizeof(E) > 32;           // >256b field not supported by mix-radix algorithm
-    const bool is_on_coset = (coset_index != 0) || coset; // coset not supported by mix-radix algorithm
-    const bool is_batch_ntt = batch_size > 1;             // batch not supported by mix-radidx algorithm
+    const bool is_small_ntt = logn < 16;                  // cutoff point where mixed-radix algorithm is faster
+    const bool is_on_coset = (coset_index != 0) || coset; // coset not supported by mixed-radix algorithm
+    const bool is_batch_ntt = batch_size > 1;             // batch not supported by mixed\-radidx algorithm
     const bool is_NN = config.ordering == Ordering::kNN;  // TODO Yuval: relax this once issue is solved
-    const bool is_radix2_algorithm =
-      config.is_force_radix2 || is_batch_ntt || is_small_ntt || is_large_field || is_on_coset || !is_NN;
+    const bool is_radix2_algorithm = config.is_force_radix2 || is_batch_ntt || is_small_ntt || is_on_coset || !is_NN;
 
     if (is_radix2_algorithm) {
       bool ct_butterfly = true;

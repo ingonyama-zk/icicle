@@ -31,19 +31,15 @@ namespace ntt {
     const Ordering m_ordering;
     cudaStream_t m_cuda_stream;
 
-    uint4* m_gpuTwiddles = nullptr;
-    uint4* m_gpuIntTwiddles = nullptr;
-    uint4* m_gpuBasicTwiddles = nullptr;
+    curve_config::scalar_t* m_gpuTwiddles = nullptr;
+    curve_config::scalar_t* m_gpuIntTwiddles = nullptr;
+    curve_config::scalar_t* m_gpuBasicTwiddles = nullptr;
 
-    uint4* m_w6_table = nullptr;
-    uint4* m_w12_table = nullptr;
-    uint4* m_w18_table = nullptr;
-    uint4* m_w24_table = nullptr;
-    uint4* m_w30_table = nullptr;
-
-    // temp memory for 16B slices
-    uint4* m_gpu_16B_slices_A = nullptr;
-    uint4* m_gpu_16B_slices_B = nullptr;
+    curve_config::scalar_t* m_w6_table = nullptr;
+    curve_config::scalar_t* m_w12_table = nullptr;
+    curve_config::scalar_t* m_w18_table = nullptr;
+    curve_config::scalar_t* m_w24_table = nullptr;
+    curve_config::scalar_t* m_w30_table = nullptr;
   };
 
 } // namespace ntt
