@@ -204,68 +204,83 @@ where
 macro_rules! impl_curve {
     (
         $curve_prefix:literal,
+        $curve_prefix_ident:ident,
         $curve:ident,
         $scalar_field:ident,
-        $base_field:ident
+        $base_field:ident,
+        $ark_config:ident,
+        $affine_type:ident,
+        $projective_type:ident
     ) => {
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct $curve {}
 
-        pub type G1Affine = Affine<$curve>;
-        pub type G1Projective = Projective<$curve>;
+        pub type $affine_type = Affine<$curve>;
+        pub type $projective_type = Projective<$curve>;
 
-        extern "C" {
-            #[link_name = concat!($curve_prefix, "Eq")]
-            fn eq(point1: *const G1Projective, point2: *const G1Projective) -> bool;
-            #[link_name = concat!($curve_prefix, "ToAffine")]
-            fn proj_to_affine(point: *const G1Projective, point_out: *mut G1Affine);
-            #[link_name = concat!($curve_prefix, "GenerateProjectivePoints")]
-            fn generate_projective_points(points: *mut G1Projective, size: usize);
-            #[link_name = concat!($curve_prefix, "GenerateAffinePoints")]
-            fn generate_affine_points(points: *mut G1Affine, size: usize);
-            #[link_name = concat!($curve_prefix, "AffineConvertMontgomery")]
-            fn _convert_affine_montgomery(
-                points: *mut G1Affine,
-                size: usize,
-                is_into: bool,
-                ctx: *const DeviceContext,
-            ) -> CudaError;
-            #[link_name = concat!($curve_prefix, "ProjectiveConvertMontgomery")]
-            fn _convert_projective_montgomery(
-                points: *mut G1Projective,
-                size: usize,
-                is_into: bool,
-                ctx: *const DeviceContext,
-            ) -> CudaError;
+        mod $curve_prefix_ident {
+            use super::{$affine_type, $projective_type, CudaError, DeviceContext};
+
+            extern "C" {
+                #[link_name = concat!($curve_prefix, "Eq")]
+                pub(crate) fn eq(point1: *const $projective_type, point2: *const $projective_type) -> bool;
+                #[link_name = concat!($curve_prefix, "ToAffine")]
+                pub(crate) fn proj_to_affine(point: *const $projective_type, point_out: *mut $affine_type);
+                #[link_name = concat!($curve_prefix, "GenerateProjectivePoints")]
+                pub(crate) fn generate_projective_points(points: *mut $projective_type, size: usize);
+                #[link_name = concat!($curve_prefix, "GenerateAffinePoints")]
+                pub(crate) fn generate_affine_points(points: *mut $affine_type, size: usize);
+                #[link_name = concat!($curve_prefix, "AffineConvertMontgomery")]
+                pub(crate) fn _convert_affine_montgomery(
+                    points: *mut $affine_type,
+                    size: usize,
+                    is_into: bool,
+                    ctx: *const DeviceContext,
+                ) -> CudaError;
+                #[link_name = concat!($curve_prefix, "ProjectiveConvertMontgomery")]
+                pub(crate) fn _convert_projective_montgomery(
+                    points: *mut $projective_type,
+                    size: usize,
+                    is_into: bool,
+                    ctx: *const DeviceContext,
+                ) -> CudaError;
+            }
         }
 
         impl Curve for $curve {
             type BaseField = $base_field;
             type ScalarField = $scalar_field;
 
-            fn eq_proj(point1: *const G1Projective, point2: *const G1Projective) -> bool {
-                unsafe { eq(point1, point2) }
+            fn eq_proj(point1: *const $projective_type, point2: *const $projective_type) -> bool {
+                unsafe { $curve_prefix_ident::eq(point1, point2) }
             }
 
-            fn to_affine(point: *const Projective<$curve>, point_out: *mut Affine<$curve>) {
-                unsafe { proj_to_affine(point, point_out) };
+            fn to_affine(point: *const $projective_type, point_out: *mut $affine_type) {
+                unsafe { $curve_prefix_ident::proj_to_affine(point, point_out) };
             }
 
-            fn generate_random_projective_points(size: usize) -> Vec<G1Projective> {
-                let mut res = vec![G1Projective::zero(); size];
-                unsafe { generate_projective_points(&mut res[..] as *mut _ as *mut G1Projective, size) };
-                res
-            }
-
-            fn generate_random_affine_points(size: usize) -> Vec<G1Affine> {
-                let mut res = vec![G1Affine::zero(); size];
-                unsafe { generate_affine_points(&mut res[..] as *mut _ as *mut G1Affine, size) };
-                res
-            }
-
-            fn convert_affine_montgomery(points: &mut HostOrDeviceSlice<G1Affine>, is_into: bool) -> CudaError {
+            fn generate_random_projective_points(size: usize) -> Vec<$projective_type> {
+                let mut res = vec![$projective_type::zero(); size];
                 unsafe {
-                    _convert_affine_montgomery(
+                    $curve_prefix_ident::generate_projective_points(
+                        &mut res[..] as *mut _ as *mut $projective_type,
+                        size,
+                    )
+                };
+                res
+            }
+
+            fn generate_random_affine_points(size: usize) -> Vec<$affine_type> {
+                let mut res = vec![$affine_type::zero(); size];
+                unsafe {
+                    $curve_prefix_ident::generate_affine_points(&mut res[..] as *mut _ as *mut $affine_type, size)
+                };
+                res
+            }
+
+            fn convert_affine_montgomery(points: &mut HostOrDeviceSlice<$affine_type>, is_into: bool) -> CudaError {
+                unsafe {
+                    $curve_prefix_ident::_convert_affine_montgomery(
                         points.as_mut_ptr(),
                         points.len(),
                         is_into,
@@ -274,9 +289,12 @@ macro_rules! impl_curve {
                 }
             }
 
-            fn convert_projective_montgomery(points: &mut HostOrDeviceSlice<G1Projective>, is_into: bool) -> CudaError {
+            fn convert_projective_montgomery(
+                points: &mut HostOrDeviceSlice<$projective_type>,
+                is_into: bool,
+            ) -> CudaError {
                 unsafe {
-                    _convert_projective_montgomery(
+                    $curve_prefix_ident::_convert_projective_montgomery(
                         points.as_mut_ptr(),
                         points.len(),
                         is_into,
@@ -286,7 +304,7 @@ macro_rules! impl_curve {
             }
 
             #[cfg(feature = "arkworks")]
-            type ArkSWConfig = ArkG1Config;
+            type ArkSWConfig = $ark_config;
         }
     };
 }

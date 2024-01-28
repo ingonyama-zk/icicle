@@ -6,7 +6,7 @@ We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to s
 
 ## Key-Takeaway
 
-`Icicle` accelerates multiplication operation `*` using [Karatsuba algorythm](https://en.wikipedia.org/wiki/Karatsuba_algorithm)
+`Icicle` accelerates multiplication operation `*` using [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm)
 
 ## Concise Usage Explanation
 
