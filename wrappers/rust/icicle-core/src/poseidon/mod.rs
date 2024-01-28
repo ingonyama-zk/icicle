@@ -1,3 +1,6 @@
+#[doc(hidden)]
+pub mod tests;
+
 use icicle_cuda_runtime::{
     device_context::{get_default_device_context, DeviceContext},
     memory::HostOrDeviceSlice,
@@ -29,7 +32,7 @@ pub struct PoseidonConfig<'a> {
 impl<'a> Default for PoseidonConfig<'a> {
     fn default() -> Self {
         let ctx = get_default_device_context();
-        PoseidonConfig {
+        Self {
             ctx,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
@@ -42,17 +45,17 @@ impl<'a> Default for PoseidonConfig<'a> {
 }
 
 pub trait Poseidon<F: FieldImpl> {
-    fn initialize_constants(arity: i32, ctx: &DeviceContext) -> IcicleResult<()>;
+    fn initialize_constants(arity: u32, ctx: &DeviceContext) -> IcicleResult<()>;
     fn poseidon_unchecked(
         input: &mut HostOrDeviceSlice<F>,
         output: &mut HostOrDeviceSlice<F>,
-        number_of_states: i32,
-        arity: i32,
+        number_of_states: u32,
+        arity: u32,
         config: &PoseidonConfig,
     ) -> IcicleResult<()>;
 }
 
-pub fn initialize_poseidon_constants<F>(arity: i32, ctx: &DeviceContext) -> IcicleResult<()>
+pub fn initialize_poseidon_constants<F>(arity: u32, ctx: &DeviceContext) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: Poseidon<F>,
@@ -63,8 +66,8 @@ where
 pub fn poseidon_hash_many<F>(
     input: &mut HostOrDeviceSlice<F>,
     output: &mut HostOrDeviceSlice<F>,
-    number_of_states: i32,
-    arity: i32,
+    number_of_states: u32,
+    arity: u32,
     config: &PoseidonConfig,
 ) -> IcicleResult<()>
 where
@@ -111,30 +114,30 @@ macro_rules! impl_poseidon {
         mod $field_prefix_ident {
             use crate::poseidon::{$field, $field_config, CudaError, DeviceContext, PoseidonConfig};
             extern "C" {
-                #[link_name = concat!($field_prefix, "InitPoseidonConstants")]
-                pub(crate) fn initialize_poseidon_constants(arity: i32, ctx: &DeviceContext) -> CudaError;
+                #[link_name = concat!($field_prefix, "InitOptimizedPoseidonConstants")]
+                pub(crate) fn initialize_poseidon_constants(arity: u32, ctx: &DeviceContext) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "PoseidonHash")]
                 pub(crate) fn hash_many(
                     input: *mut $field,
                     output: *mut $field,
-                    number_of_states: i32,
-                    arity: i32,
+                    number_of_states: u32,
+                    arity: u32,
                     config: &PoseidonConfig,
                 ) -> CudaError;
             }
         }
 
         impl Poseidon<$field> for $field_config {
-            fn initialize_constants(arity: i32, ctx: &DeviceContext) -> IcicleResult<()> {
+            fn initialize_constants(arity: u32, ctx: &DeviceContext) -> IcicleResult<()> {
                 unsafe { $field_prefix_ident::initialize_poseidon_constants(arity, ctx).wrap() }
             }
 
             fn poseidon_unchecked(
                 input: &mut HostOrDeviceSlice<$field>,
                 output: &mut HostOrDeviceSlice<$field>,
-                number_of_states: i32,
-                arity: i32,
+                number_of_states: u32,
+                arity: u32,
                 config: &PoseidonConfig,
             ) -> IcicleResult<()> {
                 unsafe {
@@ -148,6 +151,22 @@ macro_rules! impl_poseidon {
                     .wrap()
                 }
             }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_poseidon_tests {
+    (
+      $field:ident
+    ) => {
+        const SUPPORTED_ARITIES: [u32; 4] = [2, 4, 8, 11];
+        static INIT: OnceLock<()> = OnceLock::new();
+
+        #[test]
+        fn test_poseidon_hash_many() {
+            INIT.get_or_init(move || init_poseidon::<$field>(&SUPPORTED_ARITIES));
+            check_poseidon_hash_many::<$field>()
         }
     };
 }

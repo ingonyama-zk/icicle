@@ -2,6 +2,21 @@
 #include "kernels.cu"
 
 namespace poseidon {
+  PoseidonConfig default_poseidon_config(int t)
+  {
+    device_context::DeviceContext ctx = device_context::get_default_device_context();
+    PoseidonConfig config = {
+      ctx,   // ctx
+      false, // are_inputes_on_device
+      false, // are_outputs_on_device
+      false, // input_is_a_state
+      false, // aligned
+      false, // loop_state
+      false, // is_async
+    };
+    return config;
+  }
+
   int partial_rounds_number_from_arity(const int arity)
   {
     switch (arity) {
@@ -102,20 +117,8 @@ namespace poseidon {
       <<<PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads, 0, stream>>>(
         states, number_of_states, constants.domain_tag, config.aligned);
 
-#if !defined(__CUDA_ARCH__) && defined(DEBUG)
-    cudaDeviceSynchronize();
-    std::cout << "Domain separation: " << std::endl;
-    print_buffer_from_cuda<S, T>(states, number_of_states * T);
-#endif
-
     cudaError_t hash_error = permute_many<S, T>(states, number_of_states, constants, stream);
     CHK_IF_RETURN(hash_error);
-
-#if !defined(__CUDA_ARCH__) && defined(DEBUG)
-    cudaDeviceSynchronize();
-    std::cout << "Permutations: " << std::endl;
-    print_buffer_from_cuda<S, T>(states, number_of_states * T);
-#endif
 
     get_hash_results<S, T>
       <<<PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0, stream>>>(
@@ -125,12 +128,6 @@ namespace poseidon {
       copy_recursive<S, T>
         <<<PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0, stream>>>(
           states, number_of_states, output_device);
-
-#if !defined(__CUDA_ARCH__) && defined(DEBUG)
-      cudaDeviceSynchronize();
-      std::cout << "Looping: " << std::endl;
-      print_buffer_from_cuda<S, T>(states, number_of_states / (T - 1) * T);
-#endif
     }
 
     if (!config.input_is_a_state) CHK_IF_RETURN(cudaFreeAsync(states, stream));
@@ -146,8 +143,9 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext ctx)
+  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext& ctx)
   {
+    if (preloaded_constants<S, T>.round_constants != nullptr) { return CHK_LAST(); }
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = ctx.stream;
     int full_rounds_half = FULL_ROUNDS_DEFAULT;
@@ -184,5 +182,48 @@ namespace poseidon {
     preloaded_constants<S, T> = {partial_rounds,    full_rounds_half, round_constants, mds_matrix,
                                  non_sparse_matrix, sparse_matrices,  domain_tag};
     return CHK_LAST();
+  }
+
+  extern "C" cudaError_t
+  CONCAT_EXPAND(CURVE, InitOptimizedPoseidonConstants)(int arity, device_context::DeviceContext& ctx)
+  {
+    switch (arity) {
+    case 2:
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 3>(ctx);
+    case 4:
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 5>(ctx);
+    case 8:
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 9>(ctx);
+    case 11:
+      return init_optimized_poseidon_constants<curve_config::scalar_t, 12>(ctx);
+    default:
+      throw std::runtime_error("invalid arity");
+      break;
+    }
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, PoseidonHash)(
+    curve_config::scalar_t* input,
+    curve_config::scalar_t* output,
+    int number_of_states,
+    int arity,
+    PoseidonConfig& config)
+  {
+    switch (arity) {
+    case 2:
+      return poseidon_hash<curve_config::scalar_t, 3>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 3>, config);
+    case 4:
+      return poseidon_hash<curve_config::scalar_t, 5>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 5>, config);
+    case 8:
+      return poseidon_hash<curve_config::scalar_t, 9>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 9>, config);
+    case 11:
+      return poseidon_hash<curve_config::scalar_t, 12>(
+        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 12>, config);
+    default:
+      throw std::runtime_error("invalid arity");
+    }
   }
 } // namespace poseidon

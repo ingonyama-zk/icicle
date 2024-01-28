@@ -19,9 +19,8 @@ using namespace curve_config;
 using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 
 // Arity
-#define A      2
-#define T      A + 1
-#define A_TYPE ARITY::TWO
+#define A 2
+#define T A + 1
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
@@ -34,8 +33,9 @@ int main(int argc, char* argv[])
 
   // Load poseidon constants
   START_TIMER(timer_const);
-  PoseidonConstants<scalar_t> constants = init_optimized_poseidon_constants<scalar_t>(T, stream);
-  END_TIMER(timer_const, "Load poseidon constants: ");
+  device_context::DeviceContext ctx = device_context::get_default_device_context();
+  init_optimized_poseidon_constants<scalar_t, T>(ctx);
+  END_TIMER(timer_const, "Load poseidon constants");
 
   /// Tree of height N and arity A contains \sum{A^i} for i in 0..N-1 elements
   uint32_t tree_height = argc > 1 ? atoi(argv[1]) : 28;
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
   MerkleConfig config = default_merkle_config();
   config.keep_rows = keep_rows;
   START_TIMER(timer_merkle);
-  BuildMerkleTree(leaves, digests, tree_height, A_TYPE, constants, config);
+  build_merkle_tree<scalar_t, T>(leaves, digests, tree_height, preloaded_constants<curve_config::scalar_t, T>, config);
   END_TIMER(timer_merkle, "Merkle tree built: ")
 
   // Use this to generate test vectors

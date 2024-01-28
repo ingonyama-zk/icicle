@@ -4,6 +4,7 @@
 
 #include "../../utils/device_context.cuh"
 #include "../../utils/error_handler.cuh"
+#include "../../utils/utils.h"
 #include "../poseidon/poseidon.cuh"
 
 #include <iostream>
@@ -56,30 +57,8 @@ namespace merkle {
   /// After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
   ///======================================================
   template <typename S, int T>
-  cudaError_t
-  build_merkle_tree(const S* leaves, S* digests, uint32_t height, PoseidonConstants<S>& poseidon, MerkleConfig& config);
-
-  extern "C" cudaError_t BuildMerkleTree(
-    const curve_config::scalar_t* leaves,
-    curve_config::scalar_t* digests,
-    uint32_t height,
-    ARITY arity,
-    PoseidonConstants<curve_config::scalar_t>& poseidon,
-    MerkleConfig& config)
-  {
-    switch (arity) {
-    case TWO:
-      return build_merkle_tree<curve_config::scalar_t, 3>(leaves, digests, height, poseidon, config);
-    case FOUR:
-      return build_merkle_tree<curve_config::scalar_t, 5>(leaves, digests, height, poseidon, config);
-    case EIGHT:
-      return build_merkle_tree<curve_config::scalar_t, 9>(leaves, digests, height, poseidon, config);
-    case ELEVEN:
-      return build_merkle_tree<curve_config::scalar_t, 12>(leaves, digests, height, poseidon, config);
-    default:
-      throw std::runtime_error("invalid arity");
-    }
-  }
+  cudaError_t build_merkle_tree(
+    const S* leaves, S* digests, uint32_t height, const PoseidonConstants<S, T>& poseidon, const MerkleConfig& config);
 } // namespace merkle
 
 #endif

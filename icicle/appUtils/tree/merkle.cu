@@ -52,7 +52,7 @@ namespace merkle {
   /// Total digests array:
   /// [4 5 6 7 2 3]
   template <typename S, int T>
-  cudaError_t __build_merkle_subtree(
+  cudaError_t build_merkle_subtree(
     S* state,
     S* digests,
     size_t subtree_idx,
@@ -61,7 +61,7 @@ namespace merkle {
     size_t start_segment_size,
     size_t start_segment_offset,
     int keep_rows,
-    PoseidonConstants<S>& poseidon,
+    const PoseidonConstants<S, T>& poseidon,
     cudaStream_t& stream)
   {
     int arity = T - 1;
@@ -100,7 +100,11 @@ namespace merkle {
 
   template <typename S, int T>
   cudaError_t build_merkle_tree(
-    const S* leaves, S* digests, uint32_t height, poseidon::PoseidonConstants<S>& poseidon, MerkleConfig& config)
+    const S* leaves,
+    S* digests,
+    uint32_t height,
+    const poseidon::PoseidonConstants<S, T>& poseidon,
+    const MerkleConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -176,11 +180,11 @@ namespace merkle {
       // We need to copy the first level from RAM to device
       // The pitch property of cudaMemcpy2D will allow us to deal with shape differences
       CHK_IF_RETURN(cudaMemcpy2DAsync(
-        subtree_state, T * sizeof(S),             // Device pointer and device pitch
-        subtree_leaves, arity * sizeof(S),        // Host pointer and pitch
-        arity * sizeof(S),                        // Size of the source matrix (Arity)
-        subtree_leaves_size / arity,              // Size of the source matrix (Number of blocks)
-        cudaMemcpyHostToDevice, subtree_stream)); // Direction and stream
+        subtree_state, T * sizeof(S),      // Device pointer and device pitch
+        subtree_leaves, arity * sizeof(S), // Host pointer and pitch
+        arity * sizeof(S),                 // Size of the source matrix (Arity)
+        subtree_leaves_size / arity,       // Size of the source matrix (Number of blocks)
+        config.are_inputs_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, subtree_stream));
 
       int subtree_keep_rows = 0;
       if (config.keep_rows) {
@@ -188,7 +192,7 @@ namespace merkle {
         subtree_keep_rows = diff <= 0 ? 1 : diff;
       }
       size_t start_segment_size = number_of_leaves / arity;
-      cudaError_t subtree_result = __build_merkle_subtree<S, T>(
+      cudaError_t subtree_result = build_merkle_subtree<S, T>(
         subtree_state,              // state
         subtree_digests,            // digests
         subtree_idx,                // subtree_idx
@@ -224,7 +228,7 @@ namespace merkle {
         caps_len / arity,                 // Size of the source
         cudaMemcpyHostToDevice, stream)); // Direction and stream
 
-      cudaError_t top_tree_result = __build_merkle_subtree<S, T>(
+      cudaError_t top_tree_result = build_merkle_subtree<S, T>(
         states_ptr,           // state
         digests_ptr,          // digests
         0,                    // subtree_idx
@@ -249,5 +253,30 @@ namespace merkle {
     }
     free(streams);
     return CHK_LAST();
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, BuildMerkleTree)(
+    const curve_config::scalar_t* leaves,
+    curve_config::scalar_t* digests,
+    uint32_t height,
+    int arity,
+    MerkleConfig& config)
+  {
+    switch (arity) {
+    case 2:
+      return build_merkle_tree<curve_config::scalar_t, 3>(
+        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 3>, config);
+    case 4:
+      return build_merkle_tree<curve_config::scalar_t, 5>(
+        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 5>, config);
+    case 8:
+      return build_merkle_tree<curve_config::scalar_t, 9>(
+        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 9>, config);
+    case 11:
+      return build_merkle_tree<curve_config::scalar_t, 12>(
+        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 12>, config);
+    default:
+      throw std::runtime_error("invalid arity");
+    }
   }
 } // namespace merkle
