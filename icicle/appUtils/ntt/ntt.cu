@@ -389,7 +389,7 @@ namespace ntt {
       unsigned omegas_count = S::get_omegas_count();
       for (int i = 0; i < omegas_count; i++)
         omega = S::sqr(omega);
-      if (omega != S::one()) {
+      if (omega != S::one()) { // TODO: THROW_ICILE_ERR
         std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
         throw -1;
       }
@@ -417,7 +417,7 @@ namespace ntt {
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
-    if (size > Domain<S>::max_size) {
+    if (size > Domain<S>::max_size) { // TODO: proper error handling
       std::cerr
         << "NTT size is too large for the domain. Consider generating your domain with a higher order root of unity"
         << '\n';

@@ -61,7 +61,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         }
     }
 
-    pub fn on_host(src: Vec<T>) -> Self {
+    pub fn on_host(src: Vec<T>) -> Self { //TODO: HostOrDeviceSlice on_host() with slice input without actually copying the data 
         Self::Host(src)
     }
 

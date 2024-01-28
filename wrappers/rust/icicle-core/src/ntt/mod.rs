@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
+use icicle_cuda_runtime::device_context::{get_default_context_for_device, get_default_device_context, DeviceContext};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
@@ -62,6 +62,18 @@ pub struct NTTConfig<'a, S> {
 impl<'a, S: FieldImpl> NTTConfig<'a, S> {
     pub fn default_config() -> Self {
         let ctx = get_default_device_context();
+        NTTConfig {
+            ctx,
+            coset_gen: S::one(),
+            batch_size: 1,
+            ordering: Ordering::kNN,
+            are_inputs_on_device: false,
+            are_outputs_on_device: false,
+            is_async: false,
+        }
+    }
+    pub fn default_config_for_device(device_id: usize) -> Self {
+        let ctx = get_default_context_for_device(device_id);
         NTTConfig {
             ctx,
             coset_gen: S::one(),
@@ -233,6 +245,12 @@ macro_rules! impl_ntt_tests {
         fn test_ntt_batch() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
             check_ntt_batch::<$field>()
+        }
+
+        #[test]
+        fn test_ntt_multidevice() {
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            check_ntt_batch_multidevice::<$field>()
         }
 
         #[test]

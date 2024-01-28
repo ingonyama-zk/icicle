@@ -46,6 +46,7 @@ fn main() {
         // device management
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html
         .allowlist_function("cudaSetDevice")
+        .allowlist_function("cudaGetDeviceCount")
         // error handling
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__ERROR.html
         .allowlist_function("cudaGetLastError")

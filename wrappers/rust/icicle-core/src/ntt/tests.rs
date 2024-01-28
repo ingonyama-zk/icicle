@@ -1,9 +1,11 @@
 use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
-use icicle_cuda_runtime::device_context::get_default_device_context;
+use icicle_cuda_runtime::device::set_device;
+use icicle_cuda_runtime::device_context::get_default_context_for_device;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use icicle_cuda_runtime::stream::CudaStream;
+use icicle_cuda_runtime::{device::get_device_count, device_context::get_default_device_context};
 
 use crate::{
     ntt::{get_default_ntt_config, initialize_domain, ntt, NTTDir, Ordering},
@@ -243,8 +245,70 @@ where
                             )
                             .unwrap();
                             assert_eq!(
-                                batch_ntt_result[i * test_size..(i + 1) * test_size],
-                                *one_ntt_result.as_slice()
+                                &batch_ntt_result[i * test_size..(i + 1) * test_size],
+                                one_ntt_result.as_slice()
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn check_ntt_batch_multidevice<F: FieldImpl>()
+where
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+{
+    let test_sizes = [1 << 4, 1 << 12];
+    let batch_sizes = [2, 4];
+
+    let device_count = get_device_count().unwrap();
+    let is_multi_gpu_capable = device_count > 1;
+    for test_size in test_sizes {
+        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+        if false && !is_multi_gpu_capable {
+            println!("Warning: Lest then 2 GPUs available. Skipping multi-GPU NTT test.");
+            return;
+        }
+        let mut config = get_default_ntt_config();
+
+        for batch_size in batch_sizes {
+            let full_test_size = test_size * batch_size;
+            let scalars = HostOrDeviceSlice::on_host(F::Config::generate_random(full_test_size));
+
+            for coset_gen in coset_generators {
+                for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
+                    for ordering in [Ordering::kNN, Ordering::kNR, Ordering::kRN, Ordering::kRR] {
+                        config.coset_gen = coset_gen;
+                        config.ordering = ordering;
+                        config.batch_size = batch_size as i32;
+
+                        let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); full_test_size as usize]);
+                        ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
+
+                        for i in 0..2 {
+                            let mut device_ntt_config = config.clone();
+                            device_ntt_config.batch_size = batch_size as i32 / 2;
+                            let full_test_size_per_device = full_test_size / 2;
+                            device_ntt_config.ctx = get_default_context_for_device(0);
+
+                            let mut one_device_ntt_result = HostOrDeviceSlice::on_host(vec![F::one(); full_test_size_per_device]);
+
+                            ntt(
+                                &HostOrDeviceSlice::on_host(
+                                    scalars[i * full_test_size_per_device..(i + 1) * full_test_size_per_device]
+                                        .to_vec(),
+                                ),
+                                is_inverse,
+                                &device_ntt_config,
+                                &mut one_device_ntt_result,
+                            )
+                            .unwrap();
+
+                            assert_eq!(
+                                &batch_ntt_result[i as usize * full_test_size_per_device..(i + 1) * full_test_size_per_device],
+                                one_device_ntt_result.as_slice()
                             );
                         }
                     }

@@ -14,7 +14,6 @@
 #include "primitives/affine.cuh"
 #include "primitives/field.cuh"
 #include "primitives/projective.cuh"
-#include "utils/cuda_utils.cuh"
 #include "utils/error_handler.cuh"
 #include "utils/mont.cuh"
 #include "utils/utils.h"
