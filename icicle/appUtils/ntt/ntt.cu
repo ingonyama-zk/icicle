@@ -260,7 +260,7 @@ namespace ntt {
      * @param n_twiddles Size of `d_twiddles`
      * @param batch_size The size of the batch; the length of `d_inout` is `n` * `batch_size`.
      * @param inverse true for iNTT
-     * @param coset should be array of lenght n or a nullptr if NTT is not computed on a coset
+     * @param coset should be array of length n or a nullptr if NTT is not computed on a coset
      * @param stream CUDA stream
      * @param is_async if false, perform sync of the supplied CUDA stream at the end of processing
      * @param d_output Output array
@@ -386,7 +386,8 @@ namespace ntt {
     // but it's a singleton that is supposed to be initialized once per program lifetime
     if (!Domain<S>::twiddles) {
       S omega = primitive_root;
-      for (int i = 0; i < S::TWO_ADICITY; i++)
+      unsigned omegas_count = S::get_omegas_count();
+      for (int i = 0; i < omegas_count; i++)
         omega = S::sqr(omega);
       if (omega != S::one()) {
         std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
@@ -416,12 +417,18 @@ namespace ntt {
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
+    if (size > Domain<S>::max_size) {
+      std::cerr
+        << "NTT size is too large for the domain. Consider generating your domain with a higher order root of unity"
+        << '\n';
+      throw -1;
+    }
 
     cudaStream_t& stream = config.ctx.stream;
     int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
-    bool are_inputs_on_device = config.are_inputs_on_device; // TODO: unify name to is_
+    bool are_inputs_on_device = config.are_inputs_on_device;
     bool are_outputs_on_device = config.are_outputs_on_device;
 
     S* coset = nullptr;
@@ -504,17 +511,6 @@ namespace ntt {
   }
 
   /**
-   * Extern "C" version of [DefaultNTTConfig](@ref DefaultNTTConfig) function with the following
-   * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
-   * @return Default [NTTConfig](@ref NTTConfig).
-   */
-  extern "C" NTTConfig<curve_config::scalar_t> CONCAT_EXPAND(CURVE, GetDefaultNTTConfig)()
-  {
-    return DefaultNTTConfig<curve_config::scalar_t>();
-  }
-
-  /**
    * Extern "C" version of [InitDomain](@ref InitDomain) function with the following
    * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
@@ -550,7 +546,7 @@ namespace ntt {
    *  - `E` is the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t ECNTTCuda(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
     curve_config::projective_t* input,
     int size,
     NTTDir dir,

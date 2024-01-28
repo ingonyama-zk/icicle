@@ -84,6 +84,10 @@ if (NOT IS_CURVE_SUPPORTED)
   message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported curves: ${SUPPORTED_CURVES}" )
 endif ()
 
+if (G2_DEFINED STREQUAL "ON")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2_DEFINED=ON")
+endif ()
+
 option(BUILD_TESTS "Build tests" OFF)
 
 if (NOT BUILD_TESTS)

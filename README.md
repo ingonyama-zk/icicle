@@ -105,6 +105,8 @@ In case `clang-format` is missing on your system, you can install it  using the 
 sudo apt install clang-format
 ```
 
+You will also need to install [codespell](https://github.com/codespell-project/codespell?tab=readme-ov-file#installation) to check for typos.
+
 This will ensure our custom hooks are run and will make it easier to follow our coding guidelines.
 
 ### Hall of Fame
