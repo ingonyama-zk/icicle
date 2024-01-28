@@ -1,15 +1,11 @@
 use icicle_bn254::curve::{
     CurveCfg,
     ScalarCfg,
-    G1Projective
+    G1Projective,
+    G2CurveCfg,
+    G2Projective 
 };
 
-// use icicle_bn254_g2::curve::G2Projective;
-use icicle_bn254::curve::G2CurveCfg;
-// use icicle_bn254::curve::{
-//     CurveCfg,
-//     ScalarCfg,
-// };
 
 use icicle_bls12_377::curve::{
     CurveCfg as BLS12377CurveCfg,
