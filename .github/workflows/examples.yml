@@ -9,7 +9,7 @@ name: Examples
 
 on:
   push:
-  branches: temp/new-examples-api
+    branches: temp/new-examples-api
 
 jobs:  
   test-examples:
