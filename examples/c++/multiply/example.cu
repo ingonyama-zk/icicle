@@ -34,8 +34,8 @@ int vector_mult(T* vec_b, T* vec_a, T* vec_result, size_t n_elments)
 
 int main(int argc, char** argv)
 {
-  const unsigned vector_size = 1 << 20;
-  const unsigned repetitions = 1 << 20;
+  const unsigned vector_size = 1 << 15;
+  const unsigned repetitions = 1 << 15;
 
   cudaError_t err;
   nvmlInit();
