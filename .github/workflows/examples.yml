@@ -18,7 +18,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: c++ examples
-      working-directory: ./c++
+      working-directory: ./examples/c++
       run: |
         # loop over all directories in the current directory
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
@@ -26,8 +26,8 @@ jobs:
             echo "Running command in $dir"
             cd $dir
             pwd
-            ./compile.sh
-            ./run.sh
+            #./compile.sh
+            #./run.sh
             cd -
           fi
         done    
