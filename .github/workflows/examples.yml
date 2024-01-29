@@ -31,17 +31,15 @@ jobs:
             cd -
           fi
         done    
-    # - name: Rust examples
-    #   working-directory: ./rust
-    #   run: |
-    #     # loop over all directories in the current directory
-    #     for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
-    #       if [ -d "$dir" ]; then
-    #         echo "Running command in $dir"
-    #         cd $dir
-    #         pwd
-    #         ./compile.sh
-    #         ./run.sh
-    #         cd -
-    #       fi
-    #     done      
+    - name: Rust examples
+      working-directory: ./examples/rust
+      run: |
+        # loop over all directories in the current directory
+        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+          if [ -d "$dir" ]; then
+            echo "Running command in $dir"
+            cd $dir
+            pwd
+            cd -
+          fi
+        done      
