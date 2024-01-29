@@ -16,6 +16,8 @@
 #define PERFORMANCE
 
 typedef curve_config::scalar_t test_scalar;
+typedef curve_config::scalar_t test_data; // uncomment for NTT
+// typedef curve_config::projective_t test_data; // uncomment for ECNTT
 #include "kernel_ntt.cu"
 
 #define $CUDA(call)                                                                                                    \
@@ -24,10 +26,10 @@ typedef curve_config::scalar_t test_scalar;
     exit(1);                                                                                                           \
   }
 
-void random_samples(test_scalar* res, uint32_t count)
+void random_samples(test_data* res, uint32_t count)
 {
   for (int i = 0; i < count; i++)
-    res[i] = i < 1000 ? test_scalar::rand_host() : res[i - 1000];
+    res[i] = i < 1000 ? test_data::rand_host() : res[i - 1000];
 }
 
 void incremental_values(test_scalar* res, uint32_t count)
@@ -43,7 +45,7 @@ int main(int argc, char** argv)
   float icicle_time, new_time;
 #endif
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 22; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 20; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   int INV = false;
   const ntt::Ordering ordering = ntt::Ordering::kNN;
@@ -55,15 +57,15 @@ int main(int argc, char** argv)
   printf("running ntt 2^%d, INV=%d, ordering=%s\n", NTT_LOG_SIZE, INV, ordering_str);
 
   // cpu allocation
-  auto CpuScalars = std::make_unique<test_scalar[]>(NTT_SIZE);
-  auto CpuOutputOld = std::make_unique<test_scalar[]>(NTT_SIZE);
-  auto CpuOutputNew = std::make_unique<test_scalar[]>(NTT_SIZE);
+  auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE);
+  auto CpuOutputOld = std::make_unique<test_data[]>(NTT_SIZE);
+  auto CpuOutputNew = std::make_unique<test_data[]>(NTT_SIZE);
 
   // gpu allocation
-  test_scalar *GpuScalars, *GpuOutputOld, *GpuOutputNew;
-  $CUDA(cudaMalloc(&GpuScalars, sizeof(test_scalar) * NTT_SIZE));
-  $CUDA(cudaMalloc(&GpuOutputOld, sizeof(test_scalar) * NTT_SIZE));
-  $CUDA(cudaMalloc(&GpuOutputNew, sizeof(test_scalar) * NTT_SIZE));
+  test_data *GpuScalars, *GpuOutputOld, *GpuOutputNew;
+  $CUDA(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE));
+  $CUDA(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE));
+  $CUDA(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE));
 
   // init inputs
   random_samples(CpuScalars.get(), NTT_SIZE);
@@ -117,7 +119,7 @@ int main(int argc, char** argv)
     }
   };
 
-  int count = 1;
+  int count = 3;
   benchmark(false /*=print*/, 1); // warmup - is this applicable to real usecase??
   benchmark(true /*=print*/, count);
 #else
@@ -128,11 +130,11 @@ int main(int argc, char** argv)
   ntt_config.is_force_radix2 = true;
   ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld);
   printf("finished old\n");
+#endif // PERFORMANCE
 
   // verify
-  $CUDA(cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE, cudaMemcpyDeviceToHost));
-  $CUDA(cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE, cudaMemcpyDeviceToHost));
-#endif // PERFORMANCE
+  $CUDA(cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+  $CUDA(cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE; i++) {

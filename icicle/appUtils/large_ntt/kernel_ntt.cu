@@ -5,7 +5,7 @@
 
 namespace ntt {
 
-  __device__ uint32_t dig_rev(uint32_t num, uint32_t log_size, bool dit)
+  static __device__ uint32_t dig_rev(uint32_t num, uint32_t log_size, bool dit)
   {
     uint32_t rev_num = 0, temp, dig_len;
     if (dit) {
@@ -28,8 +28,8 @@ namespace ntt {
     return rev_num;
   }
 
-  __launch_bounds__(64) __global__ void reorder_digits_kernel(
-    curve_config::scalar_t* arr, curve_config::scalar_t* arr_reordered, uint32_t log_size, bool dit)
+  template <typename E>
+  __launch_bounds__(64) __global__ void reorder_digits_kernel(E* arr, E* arr_reordered, uint32_t log_size, bool dit)
   {
     uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
     uint32_t rd = tid;
@@ -37,12 +37,13 @@ namespace ntt {
     arr_reordered[wr] = arr[rd];
   }
 
+  template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt64(
-    curve_config::scalar_t* in,
-    curve_config::scalar_t* out,
-    curve_config::scalar_t* twiddles,
-    curve_config::scalar_t* internal_twiddles,
-    curve_config::scalar_t* basic_twiddles,
+    E* in,
+    E* out,
+    S* twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
     uint32_t log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -52,9 +53,10 @@ namespace ntt {
     bool inv,
     bool dit)
   {
-    NTTEngine engine;
+    NTTEngine<E, S> engine;
     stage_metadata s_meta;
-    extern __shared__ curve_config::scalar_t shmem[];
+    SharedMemory<E> smem;
+    E* shmem = smem.getPointer();
 
     s_meta.th_stride = 8;
     s_meta.ntt_block_size = 64;
@@ -87,12 +89,13 @@ namespace ntt {
     engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
+  template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt32(
-    curve_config::scalar_t* in,
-    curve_config::scalar_t* out,
-    curve_config::scalar_t* twiddles,
-    curve_config::scalar_t* internal_twiddles,
-    curve_config::scalar_t* basic_twiddles,
+    E* in,
+    E* out,
+    S* twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
     uint32_t log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -102,9 +105,11 @@ namespace ntt {
     bool inv,
     bool dit)
   {
-    NTTEngine engine;
+    NTTEngine<E, S> engine;
     stage_metadata s_meta;
-    extern __shared__ curve_config::scalar_t shmem[];
+
+    SharedMemory<E> smem;
+    E* shmem = smem.getPointer();
 
     s_meta.th_stride = 4;
     s_meta.ntt_block_size = 32;
@@ -127,12 +132,13 @@ namespace ntt {
     engine.storeGlobalData32(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
+  template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt32dit(
-    curve_config::scalar_t* in,
-    curve_config::scalar_t* out,
-    curve_config::scalar_t* twiddles,
-    curve_config::scalar_t* internal_twiddles,
-    curve_config::scalar_t* basic_twiddles,
+    E* in,
+    E* out,
+    S* twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
     uint32_t log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -142,9 +148,11 @@ namespace ntt {
     bool inv,
     bool dit)
   {
-    NTTEngine engine;
+    NTTEngine<E, S> engine;
     stage_metadata s_meta;
-    extern __shared__ curve_config::scalar_t shmem[];
+
+    SharedMemory<E> smem;
+    E* shmem = smem.getPointer();
 
     s_meta.th_stride = 4;
     s_meta.ntt_block_size = 32;
@@ -167,12 +175,13 @@ namespace ntt {
     engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
+  template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt16(
-    curve_config::scalar_t* in,
-    curve_config::scalar_t* out,
-    curve_config::scalar_t* twiddles,
-    curve_config::scalar_t* internal_twiddles,
-    curve_config::scalar_t* basic_twiddles,
+    E* in,
+    E* out,
+    S* twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
     uint32_t log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -182,9 +191,11 @@ namespace ntt {
     bool inv,
     bool dit)
   {
-    NTTEngine engine;
+    NTTEngine<E, S> engine;
     stage_metadata s_meta;
-    extern __shared__ curve_config::scalar_t shmem[];
+
+    SharedMemory<E> smem;
+    E* shmem = smem.getPointer();
 
     s_meta.th_stride = 2;
     s_meta.ntt_block_size = 16;
@@ -210,12 +221,13 @@ namespace ntt {
     engine.storeGlobalData16(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
+  template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt16dit(
-    curve_config::scalar_t* in,
-    curve_config::scalar_t* out,
-    curve_config::scalar_t* twiddles,
-    curve_config::scalar_t* internal_twiddles,
-    curve_config::scalar_t* basic_twiddles,
+    E* in,
+    E* out,
+    S* twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
     uint32_t log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -225,9 +237,11 @@ namespace ntt {
     bool inv,
     bool dit)
   {
-    NTTEngine engine;
+    NTTEngine<E, S> engine;
     stage_metadata s_meta;
-    extern __shared__ curve_config::scalar_t shmem[];
+
+    SharedMemory<E> smem;
+    E* shmem = smem.getPointer();
 
     s_meta.th_stride = 2;
     s_meta.ntt_block_size = 16;
@@ -253,42 +267,45 @@ namespace ntt {
     engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
-  __global__ void normalize_kernel(curve_config::scalar_t* data, uint32_t size, curve_config::scalar_t norm_factor)
+  template <typename E, typename S>
+  __global__ void normalize_kernel(E* data, uint32_t size, S norm_factor)
   {
     data[threadIdx.x] = data[threadIdx.x] * norm_factor;
   }
 
-  __global__ void
-  generate_base_table(curve_config::scalar_t basic_root, curve_config::scalar_t* base_table, uint32_t skip)
+  template <typename S>
+  __global__ void generate_base_table(S basic_root, S* base_table, uint32_t skip)
   {
-    curve_config::scalar_t w = basic_root;
-    curve_config::scalar_t t = curve_config::scalar_t::one();
+    S w = basic_root;
+    S t = S::one();
     for (int i = 0; i < 64; i += skip) {
       base_table[i] = t;
       t = t * w;
     }
   }
 
-  __global__ void generate_basic_twiddles(curve_config::scalar_t basic_root, curve_config::scalar_t* basic_twiddles)
+  template <typename S>
+  __global__ void generate_basic_twiddles(S basic_root, S* basic_twiddles)
   {
-    curve_config::scalar_t w0 = basic_root * basic_root;
-    curve_config::scalar_t w1 = (basic_root + w0 * basic_root) * curve_config::scalar_t::inv_log_size(1);
-    curve_config::scalar_t w2 = (basic_root - w0 * basic_root) * curve_config::scalar_t::inv_log_size(1);
+    S w0 = basic_root * basic_root;
+    S w1 = (basic_root + w0 * basic_root) * S::inv_log_size(1);
+    S w2 = (basic_root - w0 * basic_root) * S::inv_log_size(1);
     basic_twiddles[0] = w0;
     basic_twiddles[1] = w1;
     basic_twiddles[2] = w2;
   }
 
+  template <typename S>
   __global__ void generate_twiddle_combinations(
-    curve_config::scalar_t* w6_table,
-    curve_config::scalar_t* w12_table,
-    curve_config::scalar_t* w18_table,
-    curve_config::scalar_t* w24_table,
-    curve_config::scalar_t* w30_table,
-    curve_config::scalar_t* twiddles,
+    S* w6_table,
+    S* w12_table,
+    S* w18_table,
+    S* w24_table,
+    S* w30_table,
+    S* twiddles,
     uint32_t log_size,
     uint32_t stage_num,
-    curve_config::scalar_t norm_factor)
+    S norm_factor)
   {
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
     uint32_t range1 = 0, range2 = 0, ind;
@@ -297,25 +314,20 @@ namespace ntt {
     range2 = STAGE_SIZES_DEVICE[log_size][ind];
     uint32_t root_order = range1 + range2;
     uint32_t exp = ((tid & ((1 << range1) - 1)) * (tid >> range1)) << (30 - root_order);
-    curve_config::scalar_t w6, w12, w18, w24, w30;
+    S w6, w12, w18, w24, w30;
     w6 = w6_table[exp >> 24];
     w12 = w12_table[((exp >> 18) & 0x3f)];
     w18 = w18_table[((exp >> 12) & 0x3f)];
     w24 = w24_table[((exp >> 6) & 0x3f)];
     w30 = w30_table[(exp & 0x3f)];
-    curve_config::scalar_t t = w6 * w12 * w18 * w24 * w30 * norm_factor;
+    S t = w6 * w12 * w18 * w24 * w30 * norm_factor;
     twiddles[tid + W_OFFSETS[log_size][stage_num]] = t;
   }
 
-  void large_ntt(
-    curve_config::scalar_t* in,
-    curve_config::scalar_t* out,
-    curve_config::scalar_t* twiddles,
-    curve_config::scalar_t* internal_twiddles,
-    curve_config::scalar_t* basic_twiddles,
-    uint32_t log_size,
-    bool inv,
-    bool dit)
+  // TODO Yuval: which type here?
+  template <typename E, typename S>
+  void
+  large_ntt(E* in, E* out, S* twiddles, S* internal_twiddles, S* basic_twiddles, uint32_t log_size, bool inv, bool dit)
   {
     // special cases:
     if (log_size == 1 || log_size == 2 || log_size == 3 || log_size == 7) {
@@ -323,46 +335,46 @@ namespace ntt {
     }
     if (log_size == 4) {
       if (dit) {
-        ntt16dit<<<1, 4, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt16dit<<<1, 4, 8 * 64 * sizeof(E)>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
       } else {
-        ntt16<<<1, 4, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt16<<<1, 4, 8 * 64 * sizeof(E)>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
       }
-      if (inv) normalize_kernel<<<1, 16>>>(out, 16, curve_config::scalar_t::inv_log_size(4));
+      if (inv) normalize_kernel<<<1, 16>>>(out, 16, S::inv_log_size(4));
       return;
     }
     if (log_size == 5) {
       if (dit) {
-        ntt32dit<<<1, 4, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt32dit<<<1, 4, 8 * 64 * sizeof(E)>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
       } else {
-        ntt32<<<1, 4, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt32<<<1, 4, 8 * 64 * sizeof(E)>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
       }
-      if (inv) normalize_kernel<<<1, 32>>>(out, 32, curve_config::scalar_t::inv_log_size(5));
+      if (inv) normalize_kernel<<<1, 32>>>(out, 32, S::inv_log_size(5));
       return;
     }
     if (log_size == 6) {
-      ntt64<<<1, 8, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+      ntt64<<<1, 8, 8 * 64 * sizeof(E)>>>(
         in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
-      if (inv) normalize_kernel<<<1, 64>>>(out, 64, curve_config::scalar_t::inv_log_size(6));
+      if (inv) normalize_kernel<<<1, 64>>>(out, 64, S::inv_log_size(6));
       return;
     }
     if (log_size == 8) {
       if (dit)
-        ntt16dit<<<1, 32, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt16dit<<<1, 32, 8 * 64 * sizeof(E)>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
       if (dit)
-        ntt16dit<<<1, 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt16dit<<<1, 64, 8 * 64 * sizeof(E)>>>(
           out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv,
           dit); // we need threads 32+ although 16-31 are idle
       if (!dit)
-        ntt16<<<1, 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt16<<<1, 64, 8 * 64 * sizeof(E)>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv,
           dit); // we need threads 32+ although 16-31 are idle
       if (!dit)
-        ntt16<<<1, 32, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+        ntt16<<<1, 32, 8 * 64 * sizeof(E)>>>(
           out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
       return;
     }
@@ -375,15 +387,15 @@ namespace ntt {
         for (int j = 0; j < i; j++)
           stride_log += STAGE_SIZES_HOST[log_size][j];
         if (stage_size == 6)
-          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
             i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log, stride_log,
             i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 5)
-          ntt32dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+          ntt32dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
             i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log, stride_log,
             i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 4)
-          ntt16dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+          ntt16dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
             i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log, stride_log,
             i ? (1 << stride_log) : 0, i, i, inv, dit);
       }
@@ -396,15 +408,15 @@ namespace ntt {
           stride_log += STAGE_SIZES_HOST[log_size][j];
         first_run = stage_size && !prev_stage;
         if (stage_size == 6)
-          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
             first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log,
             stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 5)
-          ntt32<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+          ntt32<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
             first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log,
             stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 4)
-          ntt16<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(curve_config::scalar_t)>>>(
+          ntt16<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
             first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log,
             stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         prev_stage = stage_size;
@@ -413,7 +425,8 @@ namespace ntt {
   }
 
   /*================================ MixedRadixNTT =========================================*/
-  MixedRadixNTT::MixedRadixNTT(int ntt_size, bool is_inverse, Ordering ordering, cudaStream_t cuda_stream)
+  template <typename E, typename S>
+  MixedRadixNTT<E, S>::MixedRadixNTT(int ntt_size, bool is_inverse, Ordering ordering, cudaStream_t cuda_stream)
       : m_ntt_size(ntt_size), m_ntt_log_size(int(log2(ntt_size))), m_is_inverse(is_inverse), m_ordering(ordering),
         m_cuda_stream(cuda_stream)
   {
@@ -421,30 +434,31 @@ namespace ntt {
     if (err_result != cudaSuccess) throw(IcicleError(err_result, "CUDA error"));
   }
 
-  cudaError_t MixedRadixNTT::init()
+  template <typename E, typename S>
+  cudaError_t MixedRadixNTT<E, S>::init()
   {
     // TODO Yuval: allocate once at initDomain based on the basic_root
     CHK_IF_RETURN(cudaMallocAsync(
-      &m_gpuTwiddles, sizeof(curve_config::scalar_t) * (m_ntt_size + 2 * (m_ntt_size >> 4)),
+      &m_gpuTwiddles, sizeof(S) * (m_ntt_size + 2 * (m_ntt_size >> 4)),
       m_cuda_stream)); // TODO - sketchy
-    CHK_IF_RETURN(cudaMallocAsync(&m_gpuBasicTwiddles, sizeof(curve_config::scalar_t) * 3, m_cuda_stream));
+    CHK_IF_RETURN(cudaMallocAsync(&m_gpuBasicTwiddles, sizeof(S) * 3, m_cuda_stream));
 
-    const auto basic_root =
-      m_is_inverse ? curve_config::scalar_t::omega_inv(m_ntt_log_size) : curve_config::scalar_t::omega(m_ntt_log_size);
+    const auto basic_root = m_is_inverse ? S::omega_inv(m_ntt_log_size) : S::omega(m_ntt_log_size);
     CHK_IF_RETURN(generate_external_twiddles(basic_root));
 
     return CHK_LAST();
   }
 
-  cudaError_t MixedRadixNTT::generate_external_twiddles(curve_config::scalar_t basic_root)
+  template <typename E, typename S>
+  cudaError_t MixedRadixNTT<E, S>::generate_external_twiddles(S basic_root)
   {
-    CHK_IF_RETURN(cudaMallocAsync(&m_w6_table, sizeof(curve_config::scalar_t) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w12_table, sizeof(curve_config::scalar_t) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w18_table, sizeof(curve_config::scalar_t) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w24_table, sizeof(curve_config::scalar_t) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w30_table, sizeof(curve_config::scalar_t) * 64, m_cuda_stream));
+    CHK_IF_RETURN(cudaMallocAsync(&m_w6_table, sizeof(S) * 64, m_cuda_stream));
+    CHK_IF_RETURN(cudaMallocAsync(&m_w12_table, sizeof(S) * 64, m_cuda_stream));
+    CHK_IF_RETURN(cudaMallocAsync(&m_w18_table, sizeof(S) * 64, m_cuda_stream));
+    CHK_IF_RETURN(cudaMallocAsync(&m_w24_table, sizeof(S) * 64, m_cuda_stream));
+    CHK_IF_RETURN(cudaMallocAsync(&m_w30_table, sizeof(S) * 64, m_cuda_stream));
 
-    curve_config::scalar_t temp_root = basic_root;
+    S temp_root = basic_root;
     generate_base_table<<<1, 1>>>(basic_root, m_w30_table, 1 << (30 - m_ntt_log_size));
     if (m_ntt_log_size > 24)
       for (int i = 0; i < 6 - (30 - m_ntt_log_size); i++)
@@ -472,15 +486,15 @@ namespace ntt {
       temp += STAGE_SIZES_HOST[m_ntt_log_size][i];
       generate_twiddle_combinations<<<1 << (temp - 8), 256>>>(
         m_w6_table, m_w12_table, m_w18_table, m_w24_table, m_w30_table, m_gpuTwiddles, m_ntt_log_size, i,
-        (temp == m_ntt_log_size && m_is_inverse) ? curve_config::scalar_t::inv_log_size(m_ntt_log_size)
-                                                 : curve_config::scalar_t::one());
+        (temp == m_ntt_log_size && m_is_inverse) ? S::inv_log_size(m_ntt_log_size) : S::one());
     }
     m_gpuIntTwiddles = m_w6_table;
 
     return CHK_LAST();
   }
 
-  MixedRadixNTT::~MixedRadixNTT()
+  template <typename E, typename S>
+  MixedRadixNTT<E, S>::~MixedRadixNTT()
   {
     cudaFreeAsync(m_gpuTwiddles, m_cuda_stream);
     cudaFreeAsync(m_gpuBasicTwiddles, m_cuda_stream);
@@ -491,8 +505,8 @@ namespace ntt {
     cudaFreeAsync(m_w30_table, m_cuda_stream);
   }
 
-  template <typename E>
-  cudaError_t MixedRadixNTT::operator()(E* d_input, E* d_output)
+  template <typename E, typename S>
+  cudaError_t MixedRadixNTT<E, S>::operator()(E* d_input, E* d_output)
   {
     CHK_INIT_IF_RETURN();
 
@@ -519,7 +533,8 @@ namespace ntt {
   }
 
   // Explicit instantiation for scalar type
-  template cudaError_t
-  MixedRadixNTT::operator()<curve_config::scalar_t>(curve_config::scalar_t*, curve_config::scalar_t*);
+  template class MixedRadixNTT<curve_config::scalar_t, curve_config::scalar_t>;
+  // template class MixedRadixNTT<curve_config::projective_t, curve_config::scalar_t>; // for ECNTT (really slow build
+  // time)
 
 } // namespace ntt

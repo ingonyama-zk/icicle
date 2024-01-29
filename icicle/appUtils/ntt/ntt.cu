@@ -494,7 +494,8 @@ namespace ntt {
       if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     } else { // mixed-radix algorithm
       // std::cout << "Mixed-Radix algorithm" << std::endl;
-      MixedRadixNTT mixed_radix_ntt(size, dir == NTTDir::kInverse /*=is_inverse*/, config.ordering, config.ctx.stream);
+      MixedRadixNTT<E, S> mixed_radix_ntt(
+        size, dir == NTTDir::kInverse /*=is_inverse*/, config.ordering, config.ctx.stream);
 
       CHK_IF_RETURN(mixed_radix_ntt(d_input, d_output));
     }

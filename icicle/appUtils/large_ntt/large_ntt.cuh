@@ -6,6 +6,8 @@
 #include "appUtils/ntt/ntt.cuh" // for enum Ordering
 
 namespace ntt {
+
+  template <typename E, typename S>
   class MixedRadixNTT
   {
   public:
@@ -18,12 +20,11 @@ namespace ntt {
     MixedRadixNTT& operator=(const MixedRadixNTT&) = delete;
     MixedRadixNTT& operator=(MixedRadixNTT&&) = delete;
 
-    template <typename E>
     cudaError_t operator()(E* d_input, E* d_output);
 
   private:
     cudaError_t init();
-    cudaError_t generate_external_twiddles(curve_config::scalar_t basic_root);
+    cudaError_t generate_external_twiddles(S basic_root);
 
     const int m_ntt_size;
     const int m_ntt_log_size;
@@ -31,15 +32,15 @@ namespace ntt {
     const Ordering m_ordering;
     cudaStream_t m_cuda_stream;
 
-    curve_config::scalar_t* m_gpuTwiddles = nullptr;
-    curve_config::scalar_t* m_gpuIntTwiddles = nullptr;
-    curve_config::scalar_t* m_gpuBasicTwiddles = nullptr;
+    S* m_gpuTwiddles = nullptr;
+    S* m_gpuIntTwiddles = nullptr;
+    S* m_gpuBasicTwiddles = nullptr;
 
-    curve_config::scalar_t* m_w6_table = nullptr;
-    curve_config::scalar_t* m_w12_table = nullptr;
-    curve_config::scalar_t* m_w18_table = nullptr;
-    curve_config::scalar_t* m_w24_table = nullptr;
-    curve_config::scalar_t* m_w30_table = nullptr;
+    S* m_w6_table = nullptr;
+    S* m_w12_table = nullptr;
+    S* m_w18_table = nullptr;
+    S* m_w24_table = nullptr;
+    S* m_w30_table = nullptr;
   };
 
 } // namespace ntt

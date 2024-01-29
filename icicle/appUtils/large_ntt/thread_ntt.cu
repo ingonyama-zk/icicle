@@ -141,23 +141,16 @@ __device__ constexpr uint32_t HIGH_W_OFFSETS[31][5] = {
   {0, 1 << 12, (2 << 12) + (1 << 18), (2 << 12) + (2 << 18) + (1 << 24),
    (2 << 12) + (2 << 18) + (2 << 24) + (1 << 30)}}; // 30
 
+template <typename E, typename S>
 class NTTEngine
 {
 public:
-  curve_config::scalar_t X[8];
-  curve_config::scalar_t WB[3];
-  curve_config::scalar_t WI[7];
-  curve_config::scalar_t WE[8];
+  E X[8];
+  S WB[3];
+  S WI[7];
+  S WE[8];
 
-  //   __device__ __forceinline__ void initializeRoot(bool stride)
-  //   {
-  // #pragma unroll
-  //     for (int i = 0; i < 7; i++) {
-  //       WI[i] = curve_config::scalar_t::omega8(((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1));
-  //     }
-  //   }
-
-  __device__ __forceinline__ void loadBasicTwiddles(curve_config::scalar_t* basic_twiddles)
+  __device__ __forceinline__ void loadBasicTwiddles(S* basic_twiddles)
   {
 #pragma unroll
     for (int i = 0; i < 3; i++) {
@@ -165,7 +158,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles(curve_config::scalar_t* data, bool stride)
+  __device__ __forceinline__ void loadInternalTwiddles(S* data, bool stride)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
@@ -173,7 +166,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles32(curve_config::scalar_t* data, bool stride)
+  __device__ __forceinline__ void loadInternalTwiddles32(S* data, bool stride)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
@@ -181,7 +174,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles16(curve_config::scalar_t* data, bool stride)
+  __device__ __forceinline__ void loadInternalTwiddles16(S* data, bool stride)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
@@ -190,12 +183,7 @@ public:
   }
 
   __device__ __forceinline__ void loadExternalTwiddles(
-    curve_config::scalar_t* data,
-    uint32_t tw_stride,
-    bool strided,
-    stage_metadata s_meta,
-    uint32_t log_size,
-    uint32_t stage_num)
+    S* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t log_size, uint32_t stage_num)
   {
     data += tw_stride * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_stride - 1));
 
@@ -225,12 +213,7 @@ public:
   }
 
   __device__ __forceinline__ void loadExternalTwiddles16(
-    curve_config::scalar_t* data,
-    uint32_t tw_stride,
-    bool strided,
-    stage_metadata s_meta,
-    uint32_t log_size,
-    uint32_t stage_num)
+    S* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t log_size, uint32_t stage_num)
   {
     data += tw_stride * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_stride - 1));
 
@@ -244,12 +227,7 @@ public:
   }
 
   __device__ __forceinline__ void loadGlobalData(
-    curve_config::scalar_t* data,
-    uint32_t data_stride,
-    uint32_t log_data_stride,
-    uint32_t log_size,
-    bool strided,
-    stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -265,12 +243,7 @@ public:
   }
 
   __device__ __forceinline__ void storeGlobalData(
-    curve_config::scalar_t* data,
-    uint32_t data_stride,
-    uint32_t log_data_stride,
-    uint32_t log_size,
-    bool strided,
-    stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -286,12 +259,7 @@ public:
   }
 
   __device__ __forceinline__ void loadGlobalData32(
-    curve_config::scalar_t* data,
-    uint32_t data_stride,
-    uint32_t log_data_stride,
-    uint32_t log_size,
-    bool strided,
-    stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -310,12 +278,7 @@ public:
   }
 
   __device__ __forceinline__ void storeGlobalData32(
-    curve_config::scalar_t* data,
-    uint32_t data_stride,
-    uint32_t log_data_stride,
-    uint32_t log_size,
-    bool strided,
-    stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -334,12 +297,7 @@ public:
   }
 
   __device__ __forceinline__ void loadGlobalData16(
-    curve_config::scalar_t* data,
-    uint32_t data_stride,
-    uint32_t log_data_stride,
-    uint32_t log_size,
-    bool strided,
-    stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -358,12 +316,7 @@ public:
   }
 
   __device__ __forceinline__ void storeGlobalData16(
-    curve_config::scalar_t* data,
-    uint32_t data_stride,
-    uint32_t log_data_stride,
-    uint32_t log_size,
-    bool strided,
-    stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -397,19 +350,18 @@ public:
     }
   }
 
-  __device__ __forceinline__ void ntt2(curve_config::scalar_t& X0, curve_config::scalar_t& X1)
+  __device__ __forceinline__ void ntt2(E& X0, E& X1)
   {
-    curve_config::scalar_t T;
+    E T;
 
     T = X0 + X1;
     X1 = X0 - X1;
     X0 = T;
   }
 
-  __device__ __forceinline__ void
-  ntt4(curve_config::scalar_t& X0, curve_config::scalar_t& X1, curve_config::scalar_t& X2, curve_config::scalar_t& X3)
+  __device__ __forceinline__ void ntt4(E& X0, E& X1, E& X2, E& X3)
   {
-    curve_config::scalar_t T;
+    E T;
 
     T = X0 + X2;
     X2 = X0 - X2;
@@ -424,11 +376,10 @@ public:
     X0 = T + X0;
   }
 
-  // rbo vertion
-  __device__ __forceinline__ void ntt4rbo(
-    curve_config::scalar_t& X0, curve_config::scalar_t& X1, curve_config::scalar_t& X2, curve_config::scalar_t& X3)
+  // rbo version
+  __device__ __forceinline__ void ntt4rbo(E& X0, E& X1, E& X2, E& X3)
   {
-    curve_config::scalar_t T;
+    E T;
 
     T = X0 - X1;
     X0 = X0 + X1;
@@ -443,17 +394,9 @@ public:
     X3 = T - X3;
   }
 
-  __device__ __forceinline__ void ntt8(
-    curve_config::scalar_t& X0,
-    curve_config::scalar_t& X1,
-    curve_config::scalar_t& X2,
-    curve_config::scalar_t& X3,
-    curve_config::scalar_t& X4,
-    curve_config::scalar_t& X5,
-    curve_config::scalar_t& X6,
-    curve_config::scalar_t& X7)
+  __device__ __forceinline__ void ntt8(E& X0, E& X1, E& X2, E& X3, E& X4, E& X5, E& X6, E& X7)
   {
-    curve_config::scalar_t T;
+    E T;
 
     // out of 56,623,104 possible mappings, we have:
     T = X3 - X7;
@@ -493,7 +436,7 @@ public:
 
   __device__ __forceinline__ void ntt8win()
   {
-    curve_config::scalar_t T;
+    E T;
 
     T = X[3] - X[7];
     X[7] = X[3] + X[7];
@@ -533,156 +476,7 @@ public:
     X[4] = X[4] - T;
   }
 
-  //   __device__ __forceinline__ void ntt16()
-  //   {
-  // #pragma unroll
-  //     for (uint32_t i = 0; i < 4; i++)
-  //       ntt4(X[i], X[i + 4], X[i + 8], X[i + 12]);
-
-  //     X[5] = X[5] * curve_config::scalar_t::omega4(1);
-  //     X[6] = X[6] * curve_config::scalar_t::omega4(2);
-  //     X[7] = X[7] * curve_config::scalar_t::omega4(3);
-
-  //     X[9] = X[9] * curve_config::scalar_t::omega4(2);
-  //     X[10] = X[10] * curve_config::scalar_t::omega4(4);
-  //     X[11] = X[11] * curve_config::scalar_t::omega4(6);
-
-  //     X[13] = X[13] * curve_config::scalar_t::omega4(3);
-  //     X[14] = X[14] * curve_config::scalar_t::omega4(6);
-  //     X[15] = X[15] * curve_config::scalar_t::omega4(9);
-
-  // #pragma unroll
-  //     for (uint32_t i = 0; i < 16; i += 4)
-  //       ntt4(X[i], X[i + 1], X[i + 2], X[i + 3]);
-  //   }
-
-  // __device__ __forceinline__ void ntt16win() {
-  //   curve_config::scalar_t temp;
-
-  //   // 1
-  //   temp  = X[0] + X[8];
-  //   X[0]  = X[0] - X[8];
-  //   X[8]  = X[4] + X[12];
-  //   X[4]  = X[4] - X[12];
-  //   X[12] = X[2] + X[10];
-  //   X[2]  = X[2] - X[10];
-  //   X[10] = X[6] + X[14];
-  //   X[6]  = X[6] - X[14];
-  //   X[14] = X[1] + X[9];
-  //   X[1]  = X[1] - X[9];
-  //   X[9]  = X[5] + X[13];
-  //   X[5]  = X[5] - X[13];
-  //   X[13] = X[3] + X[11];
-  //   X[3]  = X[3] - X[11];
-  //   X[11] = X[7] + X[15];
-  //   X[7]  = X[7] - X[15];
-
-  //   X[4] = curve_config::scalar_t::win4(3) * X[4];
-
-  //   // 2
-  //   X[15] = temp  + X[8];
-  //   temp  = temp  - X[8];
-  //   X[8]  = X[0]  + X[4];
-  //   X[0]  = X[0]  - X[4];
-  //   X[4]  = X[12] + X[10];
-  //   X[12] = X[12] - X[10];
-  //   X[10] = X[2]  + X[6];
-  //   X[2]  = X[2]  - X[6];
-  //   X[6]  = X[14] + X[9];
-  //   X[14] = X[14] - X[9];
-  //   X[9]  = X[13] + X[11];
-  //   X[13] = X[13] - X[11];
-  //   X[11] = X[1]  + X[7];
-  //   X[1]  = X[1]  - X[7];
-  //   X[7]  = X[3]  + X[5];
-  //   X[3]  = X[3]  - X[5];
-
-  //   X[12] = curve_config::scalar_t::win4(5) * X[12];
-  //   X[10] = curve_config::scalar_t::win4(6) * X[10];
-  //   X[2]  = curve_config::scalar_t::win4(7) * X[2];
-
-  //   // 3
-  //   X[5]  = X[10] + X[2];
-  //   X[10] = X[10] - X[2];
-  //   X[2]  = X[6]  + X[9];
-  //   X[6]  = X[6]  - X[9];
-  //   X[9]  = X[14] + X[13];
-  //   X[14] = X[14] - X[13];
-
-  //   X[13] = X[11] + X[7];
-  //   X[13] = curve_config::scalar_t::win4(14) * X[13];
-  //   X[11] = curve_config::scalar_t::win4(12) * X[11] + X[13];
-  //   X[7]  = curve_config::scalar_t::win4(13) * X[7]  + X[13];
-
-  //   X[13] = X[1] + X[3];
-  //   X[13] = curve_config::scalar_t::win4(17) * X[13];
-  //   X[1]  = curve_config::scalar_t::win4(15) * X[1] + X[13];
-  //   X[3]  = curve_config::scalar_t::win4(16) * X[3] + X[13];
-
-  //   // 4
-  //   X[13] = X[15] + X[4];
-  //   X[15] = X[15] - X[4];
-  //   X[4]  = temp  + X[12];
-  //   temp  = temp  - X[12];
-  //   X[12] = X[8]  + X[5];
-  //   X[8]  = X[8]  - X[5];
-  //   X[5]  = X[0]  + X[10];
-  //   X[0]  = X[0]  - X[10];
-
-  //   X[6]   = curve_config::scalar_t::win4(9)  * X[6];
-  //   X[9]   = curve_config::scalar_t::win4(10) * X[9];
-  //   X[14]  = curve_config::scalar_t::win4(11) * X[14];
-
-  //   X[10] = X[9]  + X[14];
-  //   X[9]  = X[9]  - X[14];
-  //   X[14] = X[11] + X[1];
-  //   X[11] = X[11] - X[1];
-  //   X[1]  = X[7]  + X[3];
-  //   X[7]  = X[7]  - X[3];
-
-  //   // 5
-  //   X[3]  = X[13] + X[2];
-  //   X[13] = X[13] - X[2];
-  //   X[2]  = X[15] + X[6];
-  //   X[15] = X[15] - X[6];
-  //   X[6]  = X[4]  + X[10];
-  //   X[4]  = X[4]  - X[10];
-  //   X[10] = temp + X[9];
-  //   temp  = temp - X[9];
-  //   X[9]  = X[12] + X[14];
-  //   X[12] = X[12] - X[14];
-  //   X[14] = X[8]  + X[7];
-  //   X[8]  = X[8]  - X[7];
-  //   X[7]  = X[5]  + X[1];
-  //   X[5]  = X[5]  - X[1];
-  //   X[1]  = X[0]  + X[11];
-  //   X[0]  = X[0]  - X[11];
-
-  //   // reorder + return;
-  //   X[11] = X[0];
-  //   X[0]  = X[3];
-  //   X[3]  = X[7];
-  //   X[7]  = X[1];
-  //   X[1]  = X[9];
-  //   X[9]  = X[12];
-  //   X[12] = X[15];
-  //   X[15] = X[11];
-  //   X[11] = X[5];
-  //   X[5]  = X[14];
-  //   X[14] = temp;
-  //   temp  = X[8];
-  //   X[8]  = X[13];
-  //   X[13] = temp;
-  //   temp  = X[4];
-  //   X[4]  = X[2];
-  //   X[2]  = X[6];
-  //   X[6]  = X[10];
-  //   X[10] = temp;
-
-  // }
-
-  __device__ __forceinline__ void
-  SharedData64Columns8(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData64Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t column_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
@@ -697,8 +491,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData64Rows8(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData64Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t row_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
@@ -713,8 +506,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData32Columns8(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData32Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
@@ -729,8 +521,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData32Rows8(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData32Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
@@ -745,8 +536,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData32Columns4_2(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData32Columns4_2(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
@@ -764,8 +554,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData32Rows4_2(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData32Rows4_2(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
@@ -783,8 +572,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData16Columns8(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData16Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
@@ -799,8 +587,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData16Rows8(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData16Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
@@ -815,8 +602,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData16Columns2_4(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData16Columns2_4(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
@@ -834,8 +620,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
-  SharedData16Rows2_4(curve_config::scalar_t* shmem, bool store, bool high_bits, bool stride)
+  __device__ __forceinline__ void SharedData16Rows2_4(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
