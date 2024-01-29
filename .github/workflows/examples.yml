@@ -25,7 +25,6 @@ jobs:
           if [ -d "$dir" ]; then
             echo "Running command in $dir"
             cd $dir
-            pwd
             ./compile.sh
             ./run.sh
             cd -
@@ -39,7 +38,7 @@ jobs:
           if [ -d "$dir" ]; then
             echo "Running command in $dir"
             cd $dir
-            pwd
+            cargo run --release
             cd -
           fi
         done      
