@@ -13,7 +13,7 @@ on:
 
 jobs:  
   test-examples:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, icicle] # ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v2
