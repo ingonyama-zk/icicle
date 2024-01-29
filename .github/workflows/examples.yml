@@ -26,8 +26,8 @@ jobs:
             echo "Running command in $dir"
             cd $dir
             pwd
-            #./compile.sh
-            #./run.sh
+            ./compile.sh
+            ./run.sh
             cd -
           fi
         done    
