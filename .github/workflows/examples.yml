@@ -8,7 +8,8 @@
 name: Examples
 
 on:
-  workflow_dispatch:
+  push:
+  branches: temp/new-examples-api
 
 jobs:  
   test-examples:
