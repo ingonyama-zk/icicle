@@ -8,8 +8,15 @@
 name: Examples
 
 on:
+  pull_request:
+    branches:
+      - main
+      - dev
   push:
-    branches: temp/new-examples-api
+    branches:
+      - main
+      - dev
+      - temp/*
 
 jobs:  
   test-examples:
