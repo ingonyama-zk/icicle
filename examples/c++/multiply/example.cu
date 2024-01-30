@@ -4,7 +4,7 @@
 #include <nvml.h>
 
 #define CURVE_ID 1
-#include "icicle/curves/curve_config.cuh"
+#include "curves/curve_config.cuh"
 using namespace curve_config;
 
 // select scalar or point field
