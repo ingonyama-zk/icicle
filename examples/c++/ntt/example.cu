@@ -20,13 +20,13 @@ void print_elements(const unsigned n, E * elements ) {
 void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, E * elements ) {
   // Lowest Harmonics
   for (unsigned i = 0; i < ntt_size; i=i+1) {
-    elements[i] = scalar_t::one();
+    elements[i] = E::one();
   }
   // print_elements(ntt_size, elements );
   // Highest Harmonics
   for (unsigned i = 1*ntt_size; i < 2*ntt_size; i=i+2) {
-    elements[i] =  scalar_t::one();
-    elements[i+1] = scalar_t::neg(scalar_t::one());
+    elements[i] =  E::one();
+    elements[i+1] = E::neg(scalar_t::one());
   }
   // print_elements(ntt_size, &elements[1*ntt_size] );
 }
@@ -34,7 +34,7 @@ void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, E * elem
 int validate_output(const unsigned ntt_size, const unsigned nof_ntts, E* elements)
 {
   int nof_errors = 0;
-  E amplitude = scalar_t::from((uint32_t) ntt_size);
+  E amplitude = E::from((uint32_t) ntt_size);
   // std::cout << "Amplitude: " << amplitude << std::endl;
   // Lowest Harmonics
   if (elements[0] != amplitude) {
@@ -69,10 +69,10 @@ int main(int argc, char* argv[])
   
   std::cout << "Generating input data for lowest and highest harmonics" << std::endl;
   E* input;
-  input = (scalar_t*) malloc(sizeof(E) * batch_size);
+  input = (E*) malloc(sizeof(E) * batch_size);
   initialize_input(ntt_size, nof_ntts, input );
   E* output;
-  output = (scalar_t*) malloc(sizeof(E) * batch_size);
+  output = (E*) malloc(sizeof(E) * batch_size);
   
   std::cout << "Running NTT with on-host data" << std::endl;
   cudaStream_t stream;
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
   // Create a device context
   auto ctx = device_context::get_default_device_context();
   // the next line is valid only for CURVE_ID 1 (will add support for other curves soon)
-  scalar_t rou = scalar_t{ {0x53337857, 0x53422da9, 0xdbed349f, 0xac616632, 0x6d1e303, 0x27508aba, 0xa0ed063, 0x26125da1} };
+  S rou = S{ {0x53337857, 0x53422da9, 0xdbed349f, 0xac616632, 0x6d1e303, 0x27508aba, 0xa0ed063, 0x26125da1} };
   ntt::InitDomain(rou, ctx);
   // Create an NTTConfig instance
   ntt::NTTConfig<S> config=ntt::DefaultNTTConfig<S>();

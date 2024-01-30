@@ -66,7 +66,6 @@ fn main() {
     let mut cfg = ntt::get_default_ntt_config::<ScalarField>();
     cfg.ctx.stream = &stream;
     cfg.is_async = true;
-    // cfg.are_outputs_on_device = true;
 
     println!("Setting up bls12377 Domain...");
     let icicle_omega = <Bls12377Fr as FftField>::get_root_of_unity(size.try_into().unwrap()).unwrap();
@@ -78,7 +77,6 @@ fn main() {
     let mut cfg_bls12377 = ntt::get_default_ntt_config::<BLS12377ScalarField>();
     cfg_bls12377.ctx.stream = &stream_bls12377;
     cfg_bls12377.is_async = true;
-    // cfg_bls12377.are_outputs_on_device = true;
 
     println!("Executing bn254 NTT on device...");
     #[cfg(feature = "profile")]
