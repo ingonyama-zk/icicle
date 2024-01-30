@@ -14,7 +14,7 @@ Define a `CURVE_ID` and include curve configuration header:
 
 ```c++
 #define CURVE_ID 1
-#include "icicle/curves/curve_config.cuh"
+#include "curves/curve_config.cuh"
 ```
 
 The values of `CURVE_ID` for different curves are in the above header. Multiplication is accelerated both for field scalars and point fields.
