@@ -1,5 +1,5 @@
 
-#define CURVE_ID 1 // TODO Yuval: move to makefile
+#define CURVE_ID BLS12_377 // TODO Yuval: move to makefile
 
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
@@ -34,8 +34,10 @@ void random_samples(test_data* res, uint32_t count)
 
 void incremental_values(test_scalar* res, uint32_t count)
 {
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < count; i++) {
     res[i] = i ? res[i - 1] + test_scalar::one() * test_scalar::omega(4) : test_scalar::zero();
+    // res[i] = i ? test_data::zero() : test_data::one();
+  }
 }
 
 int main(int argc, char** argv)
@@ -45,16 +47,17 @@ int main(int argc, char** argv)
   float icicle_time, new_time;
 #endif
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 20; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 22; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   int INV = false;
+  bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   const ntt::Ordering ordering = ntt::Ordering::kNN;
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
                              : ordering == ntt::Ordering::kNR ? "NR"
                              : ordering == ntt::Ordering::kRN ? "RN"
                                                               : "RR";
 
-  printf("running ntt 2^%d, INV=%d, ordering=%s\n", NTT_LOG_SIZE, INV, ordering_str);
+  printf("running ntt 2^%d, INV=%d, ordering=%s, inplace=%d\n", NTT_LOG_SIZE, INV, ordering_str, INPLACE);
 
   // cpu allocation
   auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE);
@@ -68,8 +71,11 @@ int main(int argc, char** argv)
   $CUDA(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE));
 
   // init inputs
-  random_samples(CpuScalars.get(), NTT_SIZE);
+  incremental_values(CpuScalars.get(), NTT_SIZE);
   $CUDA(cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE, cudaMemcpyHostToDevice));
+
+  // inplace
+  if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
 
   // init
   auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
@@ -95,7 +101,9 @@ int main(int argc, char** argv)
     $CUDA(cudaEventRecord(new_start, ntt_config.ctx.stream));
     ntt_config.is_force_radix2 = false; // mixed-radix ntt (a.k.a new ntt)
     for (size_t i = 0; i < iterations; i++) {
-      ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputNew);
+      ntt::NTT(
+        INPLACE ? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
+        GpuOutputNew);
     }
     $CUDA(cudaEventRecord(new_stop, ntt_config.ctx.stream));
     $CUDA(cudaStreamSynchronize(ntt_config.ctx.stream));
@@ -119,12 +127,15 @@ int main(int argc, char** argv)
     }
   };
 
-  int count = 3;
+  int count = INPLACE ? 1 : 1;
   benchmark(false /*=print*/, 1); // warmup - is this applicable to real usecase??
+  if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
   benchmark(true /*=print*/, count);
 #else
   ntt_config.is_force_radix2 = false;
-  ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputNew);
+  ntt::NTT(
+    INPLACE ? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
+    GpuOutputNew);
   printf("finished new\n");
 
   ntt_config.is_force_radix2 = true;
@@ -141,14 +152,14 @@ int main(int argc, char** argv)
     if (CpuOutputNew[i] != CpuOutputOld[i]) {
       success = false;
       std::cout << i << " ref " << CpuOutputOld[i] << " != " << CpuOutputNew[i] << std::endl;
-      // break;
+      break;
     } else {
       // std::cout << i << " ref " << CpuOutputOld[i] << " == " << CpuOutputNew[i] << std::endl;
       // break;
     }
   }
   const char* success_str = success ? "SUCCESS!" : "FAIL!";
-  fprintf(stderr, "%s\n", success_str);
+  printf("%s\n", success_str);
 
   $CUDA(cudaFree(GpuScalars));
   $CUDA(cudaFree(GpuOutputOld));

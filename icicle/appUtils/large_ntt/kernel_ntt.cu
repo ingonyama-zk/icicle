@@ -25,7 +25,40 @@ namespace ntt {
         rev_num = rev_num | temp;
       }
     }
-    return rev_num;
+        return rev_num;
+  }
+
+#define N 80 // worst case group size
+  template <typename E>
+  static __global__ void reorder_digits_inplace_kernel(E* arr, uint32_t log_size, bool dit)
+  {
+    // launch N threads
+    // each thread starts from one index and calculates the corresponding group
+    // if its index is the smallest number in the group -> do the memory transformation
+    //  else --> do nothing
+
+    const uint32_t idx = blockDim.x * blockIdx.x + threadIdx.x;
+    uint32_t next_element = idx;
+    // uint32_t max_elemt = idx;
+    uint32_t group[N];
+    group[0] = idx;
+
+    uint32_t i = 1;
+    for (; i < N;) {
+      next_element = dig_rev(next_element, log_size, dit);
+      if (next_element < idx) return; // not handling this group
+      if (next_element == idx) break; // calculated whole group
+      group[i++] = next_element;
+    }
+
+    if (i == 1) return; // single element in group --> nothing to do
+    --i;
+    // reaching here means I am handling this group
+    const E last_element_in_group = arr[group[i]];
+    for (; i > 0; --i) {
+      arr[group[i]] = arr[group[i - 1]];
+    }
+    arr[idx] = last_element_in_group;
   }
 
   template <typename E>
@@ -427,6 +460,7 @@ namespace ntt {
       : m_ntt_size(ntt_size), m_ntt_log_size(int(log2(ntt_size))), m_is_inverse(is_inverse), m_ordering(ordering),
         m_cuda_stream(cuda_stream)
   {
+    if (nullptr != m_gpuTwiddles) { return; } // behave as if TFs are generated at init
     cudaError_t err_result = init();
     if (err_result != cudaSuccess) throw(IcicleError(err_result, "CUDA error"));
   }
@@ -493,13 +527,13 @@ namespace ntt {
   template <typename E, typename S>
   MixedRadixNTT<E, S>::~MixedRadixNTT()
   {
-    cudaFreeAsync(m_gpuTwiddles, m_cuda_stream);
-    cudaFreeAsync(m_gpuBasicTwiddles, m_cuda_stream);
-    cudaFreeAsync(m_w6_table, m_cuda_stream);
-    cudaFreeAsync(m_w12_table, m_cuda_stream);
-    cudaFreeAsync(m_w18_table, m_cuda_stream);
-    cudaFreeAsync(m_w24_table, m_cuda_stream);
-    cudaFreeAsync(m_w30_table, m_cuda_stream);
+    // cudaFreeAsync(m_gpuTwiddles, m_cuda_stream);
+    // cudaFreeAsync(m_gpuBasicTwiddles, m_cuda_stream);
+    // cudaFreeAsync(m_w6_table, m_cuda_stream);
+    // cudaFreeAsync(m_w12_table, m_cuda_stream);
+    // cudaFreeAsync(m_w18_table, m_cuda_stream);
+    // cudaFreeAsync(m_w24_table, m_cuda_stream);
+    // cudaFreeAsync(m_w30_table, m_cuda_stream);
   }
 
   template <typename E, typename S>
@@ -519,7 +553,16 @@ namespace ntt {
     const bool is_dit = m_ordering == Ordering::kNN || m_ordering == Ordering::kRN;
 
     if (reverse_input) {
-      reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(d_input, d_output, m_ntt_log_size, is_dit);
+      // reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(d_input, d_output, m_ntt_log_size, is_dit);
+      // cudaDeviceSynchronize();
+      // printf("cudaDeviceSynchronize() done\n");
+
+      if (d_input == d_output) {
+        // inplace
+        reorder_digits_inplace_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(d_output, m_ntt_log_size, is_dit);
+      } else {
+        reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(d_input, d_output, m_ntt_log_size, is_dit);
+      }
     }
 
     // inplace ntt

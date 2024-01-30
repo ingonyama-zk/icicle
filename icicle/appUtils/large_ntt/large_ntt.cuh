@@ -32,15 +32,14 @@ namespace ntt {
     const Ordering m_ordering;
     cudaStream_t m_cuda_stream;
 
-    S* m_gpuTwiddles = nullptr;
-    S* m_gpuIntTwiddles = nullptr;
-    S* m_gpuBasicTwiddles = nullptr;
-
-    S* m_w6_table = nullptr;
-    S* m_w12_table = nullptr;
-    S* m_w18_table = nullptr;
-    S* m_w24_table = nullptr;
-    S* m_w30_table = nullptr;
+    static inline S* m_gpuTwiddles = nullptr;
+    static inline S* m_gpuIntTwiddles = nullptr;
+    static inline S* m_gpuBasicTwiddles = nullptr;
+    static inline S* m_w6_table = nullptr;
+    static inline S* m_w12_table = nullptr;
+    static inline S* m_w18_table = nullptr;
+    static inline S* m_w24_table = nullptr;
+    static inline S* m_w30_table = nullptr;
   };
 
 } // namespace ntt
