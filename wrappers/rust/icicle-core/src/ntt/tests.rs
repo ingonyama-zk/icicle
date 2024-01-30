@@ -268,8 +268,8 @@ where
     let is_multi_gpu_capable = device_count > 1;
     for test_size in test_sizes {
         let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-        if false && !is_multi_gpu_capable {
-            println!("Warning: Lest then 2 GPUs available. Skipping multi-GPU NTT test.");
+        if !is_multi_gpu_capable {
+            println!("Warning: Less then 2 GPUs available. Skipping multi-GPU NTT test.");
             return;
         }
         let mut config = get_default_ntt_config();
@@ -335,7 +335,7 @@ where
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-                // let stream = CudaStream::create().unwrap(); // TODO: should work but fails with CUDA Runtime Error: invalid resource handle 
+                // let stream = CudaStream::create().unwrap(); // TODO: should work like that but fails later with CUDA Runtime Error: invalid resource handle 
                 let mut config = get_default_ntt_config();
                 let stream = config.ctx.stream;
                 for batch_size in batch_sizes {

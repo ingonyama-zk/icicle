@@ -23,7 +23,7 @@ where
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
     let device_count = get_device_count().unwrap();
-    (0..device_count)
+    (0..device_count) // TODO: this is proto-loadbalancer
         .into_par_iter()
         .for_each(move |id| {
             set_device(id).unwrap();
