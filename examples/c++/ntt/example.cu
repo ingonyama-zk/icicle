@@ -4,7 +4,7 @@
 // select the curve
 #define CURVE_ID 1
 // include NTT template
-#include "icicle/appUtils/ntt/ntt.cu"
+#include "appUtils/ntt/ntt.cu"
 using namespace curve_config;
 
 // Operate on scalars
