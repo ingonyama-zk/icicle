@@ -3,9 +3,9 @@
 #include <iomanip>
 
 #define G2_DEFINED
-// include MSM template
 #define CURVE_ID 1
-#include "icicle/appUtils/msm/msm.cu"
+// include MSM template
+#include "appUtils/msm/msm.cu"
 using namespace curve_config;
 
 int main(int argc, char* argv[])
