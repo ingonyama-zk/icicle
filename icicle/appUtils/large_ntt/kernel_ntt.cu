@@ -256,12 +256,9 @@ namespace ntt {
     }
     engine.loadInternalTwiddles16(internal_twiddles, strided);
     engine.ntt2_4();
-    engine.SharedData16Columns2_4(shmem, true, false, strided); // store low
+    engine.SharedData16Columns2_4(shmem, true, false, strided); // store
     __syncthreads();
-    engine.SharedData16Rows8(shmem, false, false, strided); // load low
-    engine.SharedData16Rows2_4(shmem, true, true, strided); // store high
-    __syncthreads();
-    engine.SharedData16Columns8(shmem, false, true, strided); // load high
+    engine.SharedData16Rows8(shmem, false, false, strided); // load
     engine.twiddlesInternal();
     engine.ntt8win();
     engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
