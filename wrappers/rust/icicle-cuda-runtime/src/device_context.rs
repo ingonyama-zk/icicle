@@ -29,10 +29,11 @@ pub fn get_default_context_for_device(device_id: usize) -> DeviceContext<'static
     static default_stream: CudaStream = CudaStream {
         handle: std::ptr::null_mut(),
     };
+
     // TODO: default mempool? on what device? or create one after set_device
     DeviceContext {
         stream: &default_stream,
         device_id,
-        mempool: 0,
+        mempool: std::ptr::null_mut(),
     }
 }

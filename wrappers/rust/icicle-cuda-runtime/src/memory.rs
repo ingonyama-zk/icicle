@@ -1,4 +1,4 @@
-use crate::bindings::{cudaFree, cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind};
+use crate::bindings::{cudaFree, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
 use std::mem::{size_of, MaybeUninit};
@@ -256,4 +256,4 @@ impl<'a, T> Drop for HostOrDeviceSlice<'a, T> {
 }
 
 #[allow(non_camel_case_types)]
-pub type CudaMemPool = usize; // This is a placeholder, TODO: actually make this into a proper CUDA wrapper
+pub type CudaMemPool = cudaMemPool_t;

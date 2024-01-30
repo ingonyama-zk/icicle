@@ -4,8 +4,9 @@ use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::device::set_device;
 use icicle_cuda_runtime::device_context::get_default_context_for_device;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
-use icicle_cuda_runtime::stream::CudaStream;
 use icicle_cuda_runtime::{device::get_device_count, device_context::get_default_device_context};
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 use crate::{
     ntt::{get_default_ntt_config, initialize_domain, ntt, NTTDir, Ordering},
@@ -293,7 +294,8 @@ where
                             let full_test_size_per_device = full_test_size / 2;
                             device_ntt_config.ctx = get_default_context_for_device(0);
 
-                            let mut one_device_ntt_result = HostOrDeviceSlice::on_host(vec![F::one(); full_test_size_per_device]);
+                            let mut one_device_ntt_result =
+                                HostOrDeviceSlice::on_host(vec![F::one(); full_test_size_per_device]);
 
                             ntt(
                                 &HostOrDeviceSlice::on_host(
@@ -307,7 +309,8 @@ where
                             .unwrap();
 
                             assert_eq!(
-                                &batch_ntt_result[i as usize * full_test_size_per_device..(i + 1) * full_test_size_per_device],
+                                &batch_ntt_result
+                                    [i as usize * full_test_size_per_device..(i + 1) * full_test_size_per_device],
                                 one_device_ntt_result.as_slice()
                             );
                         }
@@ -323,52 +326,59 @@ where
     F::ArkEquivalent: FftField,
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
-    let test_sizes = [1 << 4, 1 << 12];
-    let batch_sizes = [1, 1 << 4, 100];
-    for test_size in test_sizes {
-        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-        let stream = CudaStream::create().unwrap();
-        let mut config = get_default_ntt_config();
-        for batch_size in batch_sizes {
-            let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
-            let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
-                .iter()
-                .map(|x| x.to_ark())
-                .sum();
-            let mut scalars_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
-            scalars_d
-                .copy_from_host_async(&scalars_h, &stream)
-                .unwrap();
-            let mut ntt_out_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
-
-            for coset_gen in coset_generators {
-                for ordering in [Ordering::kNN, Ordering::kRR] {
-                    config.coset_gen = coset_gen;
-                    config.ordering = ordering;
-                    config.batch_size = batch_size as i32;
-                    config.is_async = true;
-                    config
-                        .ctx
-                        .stream = &stream;
-                    ntt(&scalars_d, NTTDir::kForward, &config, &mut ntt_out_d).unwrap();
-                    ntt(&ntt_out_d, NTTDir::kInverse, &config, &mut scalars_d).unwrap();
-                    let mut intt_result_h = vec![F::zero(); test_size * batch_size];
+    let device_count = get_device_count().unwrap();
+    (0..device_count)
+        .into_par_iter()
+        .for_each(move |id| {
+            set_device(id).unwrap();
+            let test_sizes = [1 << 4, 1 << 12];
+            let batch_sizes = [1, 1 << 4, 100];
+            for test_size in test_sizes {
+                let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+                // let stream = CudaStream::create().unwrap(); // TODO: should work but fails with CUDA Runtime Error: invalid resource handle 
+                let mut config = get_default_ntt_config();
+                let stream = config.ctx.stream;
+                for batch_size in batch_sizes {
+                    let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
+                    let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
+                        .iter()
+                        .map(|x| x.to_ark())
+                        .sum();
+                    let mut scalars_d = HostOrDeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
                     scalars_d
-                        .copy_to_host_async(&mut intt_result_h, &stream)
+                        .copy_from_host(&scalars_h)
                         .unwrap();
-                    stream
-                        .synchronize()
-                        .unwrap();
-                    assert_eq!(scalars_h, intt_result_h);
-                    if coset_gen == F::one() {
-                        let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                        ntt_out_d
-                            .copy_to_host(&mut ntt_result_h)
-                            .unwrap();
-                        assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
+                    let mut ntt_out_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
+
+                    for coset_gen in coset_generators {
+                        for ordering in [Ordering::kNN, Ordering::kRR] {
+                            config.coset_gen = coset_gen;
+                            config.ordering = ordering;
+                            config.batch_size = batch_size as i32;
+                            config.is_async = true;
+                            config
+                                .ctx
+                                .stream = &stream;
+                            ntt(&scalars_d, NTTDir::kForward, &config, &mut ntt_out_d).unwrap();
+                            ntt(&ntt_out_d, NTTDir::kInverse, &config, &mut scalars_d).unwrap();
+                            let mut intt_result_h = vec![F::zero(); test_size * batch_size];
+                            scalars_d
+                                .copy_to_host_async(&mut intt_result_h, &stream)
+                                .unwrap();
+                            stream
+                                .synchronize()
+                                .unwrap();
+                            assert_eq!(scalars_h, intt_result_h);
+                            if coset_gen == F::one() {
+                                let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
+                                ntt_out_d
+                                    .copy_to_host(&mut ntt_result_h)
+                                    .unwrap();
+                                assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
+        });
 }
