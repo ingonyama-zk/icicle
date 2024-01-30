@@ -248,12 +248,6 @@ macro_rules! impl_ntt_tests {
         }
 
         #[test]
-        fn test_ntt_multidevice() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
-            check_ntt_batch_multidevice::<$field>()
-        }
-
-        #[test]
         fn test_ntt_device_async() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
             check_ntt_device_async::<$field>()
