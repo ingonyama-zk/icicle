@@ -6,40 +6,34 @@ We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to s
 
 ## Key-Takeaway
 
-`Icicle` provides CUDA C++ template classes to accelerate Zero Knowledge (ZK) applications, for example, a popular [Poseidon hash function](https://www.poseidon-hash.info/).
-Use class `Poseidon` to instantiate and use the hash function
+`Icicle` provides CUDA C++ template `poseidon_hash` to accelerate the popular [Poseidon hash function](https://www.poseidon-hash.info/).
 
-
-### Instantiate hash function
+## Concise Usage Explanation
 
 ```c++
-Poseidon<BLS12_381::scalar_t> poseidon(arity, stream);
+#include "appUtils/poseidon/poseidon.cu"
+...
+poseidon_hash<scalar_t, arity+1>(input, output, n, constants, config);
 ```
 
 **Parameters:**
 
-- **data class:** Here the hash operates on `BLS12_381::scalar_t`, a scalar field of the curve  `BLS12-381`.
-You can think of field's elements as 32-bytes integers modulo `p`, where `p` is a prime number, specific to this field.
+- **`scalar_t`:** a scalar field of the selected curve. Currently only `BLS12-381`.
+You can think of field's elements as 32-byte integers modulo `p`, where `p` is a prime number, specific to this field.
 
-- **arity:** The number of elements in a hashed block.
+- **arity:** number of elements in a hashed block.
 
-- **stream:** CUDA streams allow multiple hashes and higher throughput.
+- **n:** number of blocks we hash in parallel.
 
-### Hash multiple blocks in parallel
+- **input, output:** `scalar_t` arrays of size $arity*n$ and $n$ respectively.
+
+- **constants:** are defined as below
 
 ```c++
-poseidon.hash_blocks(inBlocks, nBlocks, outHashes, hashType, stream);
+device_context::DeviceContext ctx= device_context::get_default_device_context();
+PoseidonConstants<scalar_t> constants;
+init_optimized_poseidon_constants<scalar_t>(ctx, &constants);
 ```
-
-**Parameters:**
-
-- **nBlocks:** number of blocks we hash in parallel.
-
-- **inBlocks:** input array of size `arity*nBlocks`. The blocks are arranged sequentially in the array.
-
-- **outHashes:** output array of size `nBlocks`.
-
-- **HashType:** In this example we use `Poseidon<BLS12_381::scalar_t>::HashType::MerkleTree`.
 
 ## What's in the example
 
@@ -59,8 +53,7 @@ Our Merkle tree is a **full binary tree** stored in a 1D array.
 The tree nodes are stored following a level-first traversal of the binary tree.
 For a given level, we use offset to number elements from left to right. The node numbers on the figure below correspond to their locations in the array.
 
-
-```
+```text
         Tree        Level
           0         0 
         /   \
@@ -70,16 +63,10 @@ For a given level, we use offset to number elements from left to right. The node
 
 1D array representation: {0, 1, 2, 3, 4, 5, 6}
 ```
+
 ### Membership proof structure
 
 We use two arrays:
+
 - position (left/right) of the node along the path toward the root
-- hash of a second node with the same parent 
-
-
-
-
-
-
-
-
+- hash of a second node with the same parent
