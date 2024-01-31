@@ -3,7 +3,7 @@ use crate::{
     error::{CudaResult, CudaResultWrap},
 };
 
-pub fn set_device(device_id: usize) -> CudaResult<()> { 
+pub fn set_device(device_id: usize) -> CudaResult<()> {
     unsafe { cudaSetDevice(device_id as i32) }.wrap()
 }
 

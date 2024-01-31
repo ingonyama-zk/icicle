@@ -272,7 +272,9 @@ where
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
                 // let stream = CudaStream::create().unwrap(); // TODO: should work like that but fails later with CUDA Runtime Error: invalid resource handle
                 let mut config = get_default_ntt_config();
-                let stream = config.ctx.stream;
+                let stream = config
+                    .ctx
+                    .stream;
                 for batch_size in batch_sizes {
                     let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
                     let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
