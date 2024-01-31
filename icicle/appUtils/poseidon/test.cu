@@ -26,13 +26,11 @@ int main(int argc, char* argv[])
   using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
   using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 
-  cudaStream_t stream;
-  cudaStreamCreate(&stream);
-
   // Load poseidon constants
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  init_optimized_poseidon_constants<scalar_t, T>(ctx);
+  PoseidonConstants<scalar_t> constants;
+  init_optimized_poseidon_constants<scalar_t>(A, ctx, &constants);
   END_TIMER(timer_const, "Load poseidon constants");
 
   START_TIMER(allocation_timer);
@@ -50,8 +48,7 @@ int main(int argc, char* argv[])
 
   START_TIMER(poseidon_timer);
   PoseidonConfig config = default_poseidon_config(T);
-  poseidon_hash<curve_config::scalar_t, T>(
-    in_ptr, out_ptr, number_of_blocks, preloaded_constants<curve_config::scalar_t, T>, config);
+  poseidon_hash<curve_config::scalar_t, T>(in_ptr, out_ptr, number_of_blocks, constants, config);
   END_TIMER(poseidon_timer, "Poseidon")
 
   scalar_t expected[1024] = {

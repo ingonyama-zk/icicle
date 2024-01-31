@@ -28,13 +28,11 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
 
 int main(int argc, char* argv[])
 {
-  cudaStream_t stream;
-  cudaStreamCreate(&stream);
-
   // Load poseidon constants
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  init_optimized_poseidon_constants<scalar_t, T>(ctx);
+  PoseidonConstants<scalar_t> constants;
+  init_optimized_poseidon_constants<scalar_t>(A, ctx, &constants);
   END_TIMER(timer_const, "Load poseidon constants");
 
   /// Tree of height N and arity A contains \sum{A^i} for i in 0..N-1 elements
@@ -72,10 +70,10 @@ int main(int argc, char* argv[])
   std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
             << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
 
-  MerkleConfig config = default_merkle_config();
+  TreeBuilderConfig config = default_merkle_config();
   config.keep_rows = keep_rows;
   START_TIMER(timer_merkle);
-  build_merkle_tree<scalar_t, T>(leaves, digests, tree_height, preloaded_constants<curve_config::scalar_t, T>, config);
+  build_merkle_tree<scalar_t, T>(leaves, digests, tree_height, constants, config);
   END_TIMER(timer_merkle, "Merkle tree built: ")
 
   // Use this to generate test vectors

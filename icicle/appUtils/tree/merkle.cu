@@ -15,8 +15,7 @@ namespace merkle {
     return digests_len;
   }
 
-  /// Construct merkle subtree without parallelization
-  /// We would need to align the digests of a big tree correctly
+  /// Constructs merkle subtree without parallelization
   /// The digests are aligned sequentially per row
   /// Example:
   ///
@@ -34,7 +33,7 @@ namespace merkle {
   ///  4   5        6   7
   ///
   /// Digests array for subtree 1:
-  /// [4 5 . . 2 .]
+  /// [4 5 . . 2 . .]
   /// |   |    |
   /// -----    V
   ///   |    Segment (offset = 4, subtree_idx = 0)
@@ -42,7 +41,7 @@ namespace merkle {
   /// Segment (offset = 0, subtree_idx = 0)
   ///
   /// Digests array for subtree 2:
-  /// [. . 6 7 . 3]
+  /// [. . 6 7 . 3 .]
   ///     |   |
   ///     -----
   ///       |
@@ -50,7 +49,7 @@ namespace merkle {
   ///    Segment (offset = 0, subtree_idx = 1)
   ///
   /// Total digests array:
-  /// [4 5 6 7 2 3]
+  /// [4 5 6 7 2 3 .]
   template <typename S, int T>
   cudaError_t build_merkle_subtree(
     S* state,
@@ -61,7 +60,7 @@ namespace merkle {
     size_t start_segment_size,
     size_t start_segment_offset,
     int keep_rows,
-    const PoseidonConstants<S, T>& poseidon,
+    const PoseidonConstants<S>& poseidon,
     cudaStream_t& stream)
   {
     int arity = T - 1;
@@ -103,8 +102,8 @@ namespace merkle {
     const S* leaves,
     S* digests,
     uint32_t height,
-    const poseidon::PoseidonConstants<S, T>& poseidon,
-    const MerkleConfig& config)
+    const poseidon::PoseidonConstants<S>& poseidon,
+    const TreeBuilderConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -162,7 +161,7 @@ namespace merkle {
     S *states_ptr, *digests_ptr;
     CHK_IF_RETURN(cudaMallocAsync(&states_ptr, subtree_state_size * number_of_streams * sizeof(S), stream))
     CHK_IF_RETURN(cudaMallocAsync(&digests_ptr, subtree_digests_size * number_of_streams * sizeof(S), stream))
-    // We should wait for these allocations to finish in order to proceed
+    // Wait for these allocations to finish
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
 
     bool caps_mode = config.keep_rows && config.keep_rows < cap_height;
@@ -177,8 +176,8 @@ namespace merkle {
       S* subtree_state = states_ptr + stream_idx * subtree_state_size;
       S* subtree_digests = digests_ptr + stream_idx * subtree_digests_size;
 
-      // We need to copy the first level from RAM to device
-      // The pitch property of cudaMemcpy2D will allow us to deal with shape differences
+      // Copy the first level from RAM / device to device
+      // The pitch property of cudaMemcpy2D resolves shape differences
       CHK_IF_RETURN(cudaMemcpy2DAsync(
         subtree_state, T * sizeof(S),      // Device pointer and device pitch
         subtree_leaves, arity * sizeof(S), // Host pointer and pitch
@@ -255,26 +254,23 @@ namespace merkle {
     return CHK_LAST();
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, BuildMerkleTree)(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, BuildPoseidonMerkleTree)(
     const curve_config::scalar_t* leaves,
     curve_config::scalar_t* digests,
     uint32_t height,
     int arity,
-    MerkleConfig& config)
+    PoseidonConstants<curve_config::scalar_t>& constants,
+    TreeBuilderConfig& config)
   {
     switch (arity) {
     case 2:
-      return build_merkle_tree<curve_config::scalar_t, 3>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 3>, config);
+      return build_merkle_tree<curve_config::scalar_t, 3>(leaves, digests, height, constants, config);
     case 4:
-      return build_merkle_tree<curve_config::scalar_t, 5>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 5>, config);
+      return build_merkle_tree<curve_config::scalar_t, 5>(leaves, digests, height, constants, config);
     case 8:
-      return build_merkle_tree<curve_config::scalar_t, 9>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 9>, config);
+      return build_merkle_tree<curve_config::scalar_t, 9>(leaves, digests, height, constants, config);
     case 11:
-      return build_merkle_tree<curve_config::scalar_t, 12>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 12>, config);
+      return build_merkle_tree<curve_config::scalar_t, 12>(leaves, digests, height, constants, config);
     default:
       throw std::runtime_error("invalid arity");
     }
