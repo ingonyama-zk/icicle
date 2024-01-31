@@ -8,11 +8,14 @@ use crate::{error::IcicleResult, traits::FieldImpl};
 #[doc(hidden)]
 pub mod tests;
 
+/// Struct that encodes Tree Builder parameters to be passed into the [build_merkle_tree](build_merkle_tree) function.
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct TreeBuilderConfig<'a> {
+    /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
     pub ctx: DeviceContext<'a>,
 
+    /// How many rows of the Merkle tree rows should be written to output. '0' means all of them
     keep_rows: u32,
 
     are_inputs_on_device: bool,
@@ -46,7 +49,7 @@ pub fn merkle_tree_digests_len(height: u32, arity: u32) -> usize {
 }
 
 pub trait TreeBuilder<F: FieldImpl> {
-    fn build_tree_unchecked(
+    fn build_poseidon_tree_unchecked(
         leaves: &mut HostOrDeviceSlice<F>,
         digests: &mut [F],
         height: u32,
@@ -55,7 +58,18 @@ pub trait TreeBuilder<F: FieldImpl> {
     ) -> IcicleResult<()>;
 }
 
-pub fn build_merkle_tree<F>(
+/// Builds a Poseidon Merkle tree.
+///
+/// # Arguments
+///
+/// * `leaves` - a pointer to the leaves layer. Expected to have arity ^ (height - 1) elements
+///
+/// * `digests` - a pointer to the digests storage. Expected to have `sum(arity ^ (i)) for i in [0..height-1]`
+///
+/// * `height` - the height of the merkle tree
+///
+/// * `config` - config used to specify extra arguments of the Tree builder.
+pub fn build_poseidon_merkle_tree<F>(
     leaves: &mut HostOrDeviceSlice<F>,
     digests: &mut [F],
     height: u32,
@@ -83,7 +97,9 @@ where
     let mut local_cfg = config.clone();
     local_cfg.are_inputs_on_device = leaves.is_on_device();
 
-    <<F as FieldImpl>::Config as TreeBuilder<F>>::build_tree_unchecked(leaves, digests, height, arity, &local_cfg)
+    <<F as FieldImpl>::Config as TreeBuilder<F>>::build_poseidon_tree_unchecked(
+        leaves, digests, height, arity, &local_cfg,
+    )
 }
 
 #[macro_export]
@@ -97,8 +113,8 @@ macro_rules! impl_tree_builder {
         mod $field_prefix_ident {
             use crate::tree::{$field, $field_config, CudaError, DeviceContext, TreeBuilderConfig};
             extern "C" {
-                #[link_name = concat!($field_prefix, "BuildMerkleTree")]
-                pub(crate) fn _build_merkle_tree(
+                #[link_name = concat!($field_prefix, "BuildPoseidonMerkleTree")]
+                pub(crate) fn _build_poseidon_merkle_tree(
                     leaves: *mut $field,
                     digests: *mut $field,
                     height: u32,
@@ -109,7 +125,7 @@ macro_rules! impl_tree_builder {
         }
 
         impl TreeBuilder<$field> for $field_config {
-            fn build_tree_unchecked(
+            fn build_poseidon_tree_unchecked(
                 leaves: &mut HostOrDeviceSlice<$field>,
                 digests: &mut [$field],
                 height: u32,
@@ -117,7 +133,7 @@ macro_rules! impl_tree_builder {
                 config: &TreeBuilderConfig,
             ) -> IcicleResult<()> {
                 unsafe {
-                    $field_prefix_ident::_build_merkle_tree(
+                    $field_prefix_ident::_build_poseidon_merkle_tree(
                         leaves.as_mut_ptr(),
                         digests as *mut _ as *mut $field,
                         height,
@@ -140,7 +156,7 @@ macro_rules! impl_tree_builder_tests {
         static INIT: OnceLock<()> = OnceLock::new();
 
         #[test]
-        fn test_build_merkle_tree() {
+        fn test_build_poseidon_merkle_tree() {
             INIT.get_or_init(move || init_poseidon::<$field>(&SUPPORTED_ARITIES));
             check_build_merkle_tree::<$field>()
         }

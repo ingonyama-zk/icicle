@@ -2,7 +2,7 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{
     traits::FieldImpl,
-    tree::{build_merkle_tree, merkle_tree_digests_len, TreeBuilderConfig},
+    tree::{build_poseidon_merkle_tree, merkle_tree_digests_len, TreeBuilderConfig},
 };
 
 use super::TreeBuilder;
@@ -21,7 +21,7 @@ where
 
     let mut config = TreeBuilderConfig::default();
     config.keep_rows = keep_rows;
-    build_merkle_tree::<F>(&mut leaves_slice, &mut digests, height, arity, &config).unwrap();
+    build_poseidon_merkle_tree::<F>(&mut leaves_slice, &mut digests, height, arity, &config).unwrap();
 
     println!("Root: {:?}", digests[0..1][0]);
 }

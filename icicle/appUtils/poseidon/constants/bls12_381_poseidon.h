@@ -3,6 +3,14 @@
 #define BLS12_381_POSEIDON_H
 
 namespace poseidon {
+  /**
+   * This inner namespace contains optimized constants for running Poseidon.
+   * These constants were generated using an algorithm defined at
+   * https://spec.filecoin.io/algorithms/crypto/poseidon/
+   * The number in the name corresponds to the arity of hash function
+   * Each array contains:
+   * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matricies
+  */
   namespace {
 unsigned char poseidon_constants_2[] = {
   0xd8, 0xd3, 0x6e, 0x9d, 0x00, 0x0a, 0x32, 0xa7, 0x36, 0x8b, 0x75, 0xa2, 0x92, 0xac, 0x1e, 0x50, 0x24, 0x4a, 0xbb,

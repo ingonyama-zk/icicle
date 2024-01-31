@@ -8,19 +8,28 @@ use icicle_cuda_runtime::{
 
 use crate::{error::IcicleResult, traits::FieldImpl};
 
+/// Struct that encodes Poseidon parameters to be passed into the [poseidon_hash_many](poseidon_hash_many) function.
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct PoseidonConfig<'a> {
+    /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
     pub ctx: DeviceContext<'a>,
 
     are_inputs_on_device: bool,
 
     are_outputs_on_device: bool,
 
+    /// If true, input is considered to be a states vector, holding the preimages
+    /// in aligned or not aligned format. Memory under the input pointer will be used for states
+    /// If false, fresh states memory will be allocated and input will be copied into it
     pub input_is_a_state: bool,
 
+    /// If true - input should be already aligned for poseidon permutation.
+    /// Aligned format: [0, A, B, 0, C, D, ...] (as you might get by using loop_state)
+    /// not aligned format: [A, B, 0, C, D, 0, ...] (as you might get from cudaMemcpy2D)
     pub aligned: bool,
 
+    /// If true, hash results will also be copied in the input pointer in aligned format
     pub loop_state: bool,
 
     /// Whether to run Poseidon asynchronously. If set to `true`, Poseidon will be non-blocking
@@ -55,6 +64,8 @@ pub trait Poseidon<F: FieldImpl> {
     ) -> IcicleResult<()>;
 }
 
+/// Preloads poseidon constants on the GPU.
+/// This function should be called once in a program lifetime before any calls to [poseidon_hash_many](poseidon_hash_many)
 pub fn initialize_poseidon_constants<F>(arity: u32, ctx: &DeviceContext) -> IcicleResult<()>
 where
     F: FieldImpl,
@@ -63,6 +74,19 @@ where
     <<F as FieldImpl>::Config as Poseidon<F>>::initialize_constants(arity, ctx)
 }
 
+/// Computes the poseidon hashes for multiple preimages.
+///
+/// # Arguments
+///
+/// * `input` - a pointer to the input data. May point to a vector of preimages or a vector of states filled with preimages.
+///
+/// * `output` - a pointer to the output data. Must be at least of size [number_of_states](number_of_states)
+///
+/// * `number_of_states` - number of input blocks of size `arity`
+///
+/// * `arity` - the arity of the hash function (the size of 1 preimage)
+///
+/// * `config` - config used to specify extra arguments of the Poseidon.
 pub fn poseidon_hash_many<F>(
     input: &mut HostOrDeviceSlice<F>,
     output: &mut HostOrDeviceSlice<F>,

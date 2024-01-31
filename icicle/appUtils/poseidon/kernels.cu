@@ -22,6 +22,8 @@ namespace poseidon {
       }
     }
 
+    // We need __syncthreads here if the state is not aligned
+    // because then we need to shift the vector [A, B, 0] -> [D, A, B]
     if (!aligned) { __syncthreads(); }
 
     // Store element in state
@@ -76,7 +78,6 @@ namespace poseidon {
     return vecs_mul_matrix<S, T>(element, matrix, element_number, local_state_number, shared_states);
   }
 
-  // Execute full rounds
   template <typename S, int T>
   __global__ void full_rounds(
     S* states, size_t number_of_states, size_t rc_offset, bool first_half, const PoseidonConstants<S, T> constants)
@@ -128,7 +129,6 @@ namespace poseidon {
     }
   }
 
-  // Execute partial rounds
   template <typename S, int T>
   __global__ void
   partial_rounds(S* states, size_t number_of_states, size_t rc_offset, const PoseidonConstants<S, T> constants)

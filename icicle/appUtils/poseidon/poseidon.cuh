@@ -9,12 +9,29 @@
 #include "../../utils/error_handler.cuh"
 #include "../../utils/utils.h"
 
+/**
+ * @namespace poseidon
+ * Implementation of the [Poseidon hash function](https://eprint.iacr.org/2019/458.pdf)
+ * Specifically, the optimized [Filecoin version](https://spec.filecoin.io/algorithms/crypto/poseidon/)
+ */
 namespace poseidon {
 #define FIRST_FULL_ROUNDS  true
 #define SECOND_FULL_ROUNDS false
 
+  /**
+   * For most of the Poseidon configurations this is the case
+   * To-do: Add support for different full rounds numbers
+   */
   const int FULL_ROUNDS_DEFAULT = 4;
 
+  /**
+   * @struct PoseidonConstants
+   * This constants are enough to define a Poseidon instantce
+   * @param round_constants A pointer to round constants allocated on the device
+   * @param mds_matrix A pointer to an mds matrix allocated on the device
+   * @param non_sparse_matrix A pointer to non sparse matrix allocated on the device
+   * @param sparse_matrices A pointer to sparse matrices allocated on the device
+   */
   template <typename S, int T>
   struct PoseidonConstants {
     int partial_rounds;
@@ -26,11 +43,18 @@ namespace poseidon {
     S domain_tag;
   };
 
+  /**
+   * Globally stored preloaded Poseidon constants
+   * Initialized in [init_optimized_poseidon_constants](@ref init_optimized_poseidon_constants) function
+   */
   template <typename S, int T>
   static PoseidonConstants<S, T> preloaded_constants;
 
-  /// This class describes the logic of calculating CUDA kernels parameters
-  /// such as the number of threads and the number of blocks
+  /**
+   * @class PoseidonKernelsConfiguration
+   * Describes the logic of deriving CUDA kernels parameters
+   * such as the number of threads and the number of blocks
+   */
   template <int T>
   class PoseidonKernelsConfiguration
   {
@@ -61,53 +85,46 @@ namespace poseidon {
   template <int T>
   using PKC = PoseidonKernelsConfiguration<T>;
 
+  /**
+   * @struct NTTConfig
+   * Struct that encodes various Poseidon parameters.
+   */
   struct PoseidonConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
     bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    bool input_is_a_state;
-    bool aligned;
-    bool loop_state;
-    bool is_async; /**< Whether to run the NTT asynchronously. If set to `true`, the NTT function will be
+    bool input_is_a_state;      /**< If true, input is considered to be a states vector, holding the preimages
+                                 * in aligned or not aligned format. Memory under the input pointer will be used for states
+                                 * If false, fresh states memory will be allocated and input will be copied into it */
+    bool aligned;               /**< If true - input should be already aligned for poseidon permutation.
+                                 * Aligned format: [0, A, B, 0, C, D, ...] (as you might get by using loop_state)
+                                 * not aligned format: [A, B, 0, C, D, 0, ...] (as you might get from cudaMemcpy2D) */
+    bool loop_state;            /**< If true, hash results will also be copied in the input pointer in aligned format */
+    bool is_async; /**< Whether to run the Poseidon asynchronously. If set to `true`, the poseidon_hash function will be
                     *   non-blocking and you'd need to synchronize it explicitly by running
-                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
+                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the poseidon_hash
                     *   function will block the current CPU thread. */
   };
 
   PoseidonConfig default_poseidon_config(int t);
 
+  /**
+   * Reads optimized constants, moves them to the device, writes pointers in
+   * global [preloaded_constants](@ref preloaded_constants) variables
+   */
   template <typename S, int T>
   cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext& ctx);
 
-  // Compute the poseidon hash over a sequence of preimages
-  ///
-  ///=====================================================
-  /// # Arguments
-  /// * `states`  - a device pointer to the states memory. Expected to be of size `number_of_states * t` elements.
-  /// States should contain the leaves values
-  /// * `number_of_states`  - number of preimages number_of_states. Each block is of size t
-  /// * `out` - a device pointer to the digests memory. Expected to be of size `sum(arity ^ (i)) for i in
-  /// [0..height-1]`
-  /// * `hash_type`  - this will determine the domain_tag value
-  /// * `stream` - a cuda stream to run the kernels
-  /// * `aligned` - if set to `true`, the algorithm expects the states to contain leaves in an aligned form
-  /// * `loop_results` - if set to `true`, the resulting hash will be also copied into the states memory in aligned
-  /// form.
-  ///
-  /// Aligned form (for arity = 2):
-  /// [0, X1, X2, 0, X3, X4, ...]
-  ///
-  /// Not aligned form (for arity = 2) (you will get this format
-  ///                                   after copying leaves with cudaMemcpy2D):
-  /// [X1, X2, 0, X3, X4, 0]
-  /// Note: elements denoted by 0 doesn't need to be set to 0, the algorithm
-  /// will replace them with domain tags.
-  ///
-  /// # Algorithm
-  /// The function will split large trees into many subtrees of size that will fit `STREAM_CHUNK_SIZE`.
-  /// The subtrees will be constructed in streams pool. Each stream will handle a subtree
-  /// After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
-  ///======================================================
+  /**
+   * Compute the poseidon hash over a sequence of preimages.
+   * Takes {number_of_states * (T-1)} elements of input and computes {number_of_states} hash images
+   * @param T size of the poseidon state, should be equal to {arity + 1}
+   * @param input a pointer to the input data. May be allocated on device or on host, regulated
+   * by the config. May point to a string of preimages or a string of states filled with preimages.
+   * @param output a pointer to the output data. May be allocated on device or on host, regulated
+   * by the config. Must be at least of size [number_of_states](@ref number_of_states)
+   * @param number_of_states number of input blocks of size T-1 (arity)
+   */
   template <typename S, int T>
   cudaError_t poseidon_hash(
     S* input,
