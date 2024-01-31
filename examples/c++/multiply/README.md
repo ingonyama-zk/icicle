@@ -6,7 +6,7 @@ We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to s
 
 ## Key-Takeaway
 
-`Icicle` accelerates multiplication operation `*` using [Karatsuba algorythm](https://en.wikipedia.org/wiki/Karatsuba_algorithm)
+`Icicle` accelerates multiplication operation `*` using [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm)
 
 ## Concise Usage Explanation
 
@@ -14,16 +14,22 @@ Define a `CURVE_ID` and include curve configuration header:
 
 ```c++
 #define CURVE_ID 1
-#include "icicle/curves/curve_config.cuh"
+#include "curves/curve_config.cuh"
 ```
 
-The values of `CURVE_ID` for different curves are in the abobe header. Multiplication is accelerated both for field scalars and point fields.
+The values of `CURVE_ID` for different curves are in the above header. Multiplication is accelerated both for field scalars and point fields.
 
 ```c++
 using namespace curve_config;
 scalar_t a;
 point_field_t b;
 ```
+
+## Running the example
+
+- `cd` to your example directory
+- compile with `./compile.sh`
+- run with `./run.sh`
 
 ## What's in the example
 
@@ -32,3 +38,4 @@ point_field_t b;
 3. Copy them on-device
 4. Execute element-wise vector multiplication on-device
 5. Copy results on-host
+

@@ -73,7 +73,7 @@ namespace msm {
     bool is_big_triangle;       /**< Whether to do "bucket accumulation" serially. Decreases computational complexity
                                  *   but also greatly decreases parallelism, so only suitable for large batches of MSMs.
                                  *   Default value: false. */
-    bool is_async;              /**< Whether to run the MSM asyncronously. If set to true, the MSM function will be
+    bool is_async;              /**< Whether to run the MSM asynchronously. If set to true, the MSM function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */
@@ -83,7 +83,8 @@ namespace msm {
    * A function that returns the default value of [MSMConfig](@ref MSMConfig) for the [MSM](@ref MSM) function.
    * @return Default value of [MSMConfig](@ref MSMConfig).
    */
-  extern "C" MSMConfig DefaultMSMConfig();
+  template <typename A>
+  MSMConfig DefaultMSMConfig();
 
   /**
    * A function that computes MSM: \f$ MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i \f$.
@@ -103,7 +104,7 @@ namespace msm {
    *
    * **Note:** this function is still WIP and the following [MSMConfig](@ref MSMConfig) members do not yet have any
    * effect: `precompute_factor` (always equals 1) and `ctx.device_id` (0 device is always used).
-   * Also, it's currently better to use `batch_size=1` in most cases (expept with dealing with very many MSMs).
+   * Also, it's currently better to use `batch_size=1` in most cases (except with dealing with very many MSMs).
    */
   template <typename S, typename A, typename P>
   cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig& config, P* results);

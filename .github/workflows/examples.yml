@@ -1,0 +1,50 @@
+# This workflow is a demo of how to run all examples in the Icicle repository.
+# For each language directory (c++, Rust, etc.) the workflow 
+#   (1) loops over all examples (msm, ntt, etc.) and 
+#   (2) runs ./compile.sh and ./run.sh in each directory.
+# The script ./compile.sh should compile the example and ./run.sh should run it.
+# Each script should return 0 for success and 1 otherwise.
+
+name: Examples
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:  
+  test-examples:
+    runs-on: [self-hosted, Linux, X64, icicle] # ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: c++ examples
+      working-directory: ./examples/c++
+      run: |
+        # loop over all directories in the current directory
+        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+          if [ -d "$dir" ]; then
+            echo "Running command in $dir"
+            cd $dir
+            ./compile.sh
+            ./run.sh
+            cd -
+          fi
+        done    
+    - name: Rust examples
+      working-directory: ./examples/rust
+      run: |
+        # loop over all directories in the current directory
+        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+          if [ -d "$dir" ]; then
+            echo "Running command in $dir"
+            cd $dir
+            cargo run --release
+            cd -
+          fi
+        done      

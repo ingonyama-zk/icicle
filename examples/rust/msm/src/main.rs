@@ -1,7 +1,9 @@
 use icicle_bn254::curve::{
     CurveCfg,
     ScalarCfg,
-    G1Projective
+    G1Projective,
+    G2CurveCfg,
+    G2Projective 
 };
 
 use icicle_bls12_377::curve::{
@@ -12,7 +14,7 @@ use icicle_bls12_377::curve::{
 
 use icicle_cuda_runtime::{
     stream::CudaStream,
-    memory::DeviceSlice
+    memory::HostOrDeviceSlice
 };
 
 use icicle_core::{
@@ -63,6 +65,7 @@ fn main() {
     let upper_size = 1 << (upper_bound);
     println!("Generating random inputs on host for bn254...");
     let upper_points = CurveCfg::generate_random_affine_points(upper_size);
+    let g2_upper_points = G2CurveCfg::generate_random_affine_points(upper_size);
     let upper_scalars = ScalarCfg::generate_random(upper_size);
     
     println!("Generating random inputs on host for bls12377...");
@@ -74,54 +77,69 @@ fn main() {
         let size = 1 << log_size;
         println!("---------------------- MSM size 2^{}={} ------------------------", log_size, size);
         // Setting Bn254 points and scalars
-        let points = &upper_points[..size];
-        let scalars = &upper_scalars[..size];
+        let points = HostOrDeviceSlice::Host(upper_points[..size].to_vec());
+        let g2_points = HostOrDeviceSlice::Host(g2_upper_points[..size].to_vec());
+        let scalars = HostOrDeviceSlice::Host(upper_scalars[..size].to_vec());
         
         // Setting bls12377 points and scalars
-        let points_bls12377 = &upper_points_bls12377[..size];
-        let scalars_bls12377 = &upper_scalars_bls12377[..size];
+        // let points_bls12377 = &upper_points_bls12377[..size];
+        let points_bls12377 =  HostOrDeviceSlice::Host(upper_points_bls12377[..size].to_vec()); //  &upper_points_bls12377[..size];
+        let scalars_bls12377 = HostOrDeviceSlice::Host(upper_scalars_bls12377[..size].to_vec());
 
         println!("Configuring bn254 MSM...");
-        let mut msm_results: DeviceSlice<'_, G1Projective> = DeviceSlice::cuda_malloc(1).unwrap();
+        let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
+        let mut g2_msm_results: HostOrDeviceSlice<'_, G2Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream = CudaStream::create().unwrap();
+        let g2_stream = CudaStream::create().unwrap();
         let mut cfg = msm::get_default_msm_config::<CurveCfg>();
+        let mut g2_cfg = msm::get_default_msm_config::<G2CurveCfg>();
         cfg.ctx.stream = &stream;
+        g2_cfg.ctx.stream = &g2_stream;
         cfg.is_async = true;
-        cfg.are_results_on_device = true;
+        g2_cfg.is_async = true;
 
         println!("Configuring bls12377 MSM...");
-        let mut msm_results_bls12377: DeviceSlice<'_, BLS12377G1Projective> = DeviceSlice::cuda_malloc(1).unwrap();
+        let mut msm_results_bls12377: HostOrDeviceSlice<'_, BLS12377G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream_bls12377 = CudaStream::create().unwrap();
         let mut cfg_bls12377 = msm::get_default_msm_config::<BLS12377CurveCfg>();
         cfg_bls12377.ctx.stream = &stream_bls12377;
         cfg_bls12377.is_async = true;
-        cfg_bls12377.are_results_on_device = true;
 
         println!("Executing bn254 MSM on device...");
         #[cfg(feature = "profile")]
         let start = Instant::now();
-        msm::msm(&scalars, &points, &cfg, &mut msm_results.as_slice()).unwrap();
+        msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
         #[cfg(feature = "profile")]
         println!("ICICLE BN254 MSM on size 2^{log_size} took: {} ms", start.elapsed().as_millis());
+        msm::msm(&scalars, &g2_points, &g2_cfg, &mut g2_msm_results).unwrap();
+
 
         println!("Executing bls12377 MSM on device...");
         #[cfg(feature = "profile")]
         let start = Instant::now();
-        msm::msm(&scalars_bls12377, &points_bls12377, &cfg_bls12377, &mut msm_results_bls12377.as_slice()).unwrap();
+        msm::msm(&scalars_bls12377, &points_bls12377, &cfg_bls12377, &mut msm_results_bls12377 ).unwrap();
         #[cfg(feature = "profile")]
         println!("ICICLE BLS12377 MSM on size 2^{log_size} took: {} ms", start.elapsed().as_millis());
 
         println!("Moving results to host..");
         let mut msm_host_result = vec![G1Projective::zero(); 1];
+        let mut g2_msm_host_result = vec![G2Projective::zero(); 1];
         let mut msm_host_result_bls12377 = vec![BLS12377G1Projective::zero(); 1];
         
         stream
             .synchronize()
             .unwrap();
+        g2_stream
+            .synchronize()
+            .unwrap();
         msm_results
             .copy_to_host(&mut msm_host_result[..])
             .unwrap();
+        g2_msm_results
+            .copy_to_host(&mut g2_msm_host_result[..])
+            .unwrap();
         println!("bn254 result: {:#?}", msm_host_result);
+        println!("G2 bn254 result: {:#?}", g2_msm_host_result);
         
         stream_bls12377
             .synchronize()
@@ -134,11 +152,11 @@ fn main() {
         #[cfg(feature = "arkworks")]
         {
             println!("Checking against arkworks...");
-            let ark_points: Vec<Bn254G1Affine> = points.iter().map(|&point| point.to_ark()).collect();
-            let ark_scalars: Vec<Bn254Fr> = scalars.iter().map(|scalar| scalar.to_ark()).collect();
+            let ark_points: Vec<Bn254G1Affine> = points.as_slice().iter().map(|&point| point.to_ark()).collect();
+            let ark_scalars: Vec<Bn254Fr> = scalars.as_slice().iter().map(|scalar| scalar.to_ark()).collect();
 
-            let ark_points_bls12377: Vec<Bls12377G1Affine> = points_bls12377.iter().map(|point| point.to_ark()).collect();
-            let ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377.iter().map(|scalar| scalar.to_ark()).collect();
+            let ark_points_bls12377: Vec<Bls12377G1Affine> = points_bls12377.as_slice().iter().map(|point| point.to_ark()).collect();
+            let ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377.as_slice().iter().map(|scalar| scalar.to_ark()).collect();
 
             #[cfg(feature = "profile")]
             let start = Instant::now();
