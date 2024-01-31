@@ -1,5 +1,5 @@
 #[cfg(feature = "arkworks")]
-use ark_bn254::{Fq, Fr, g1::Config as ArkG1Config};
+use ark_grumpkin::{Fq, Fr, GrumpkinConfig as ArkG1Config};
 use icicle_core::curve::{Affine, Curve, Projective};
 use icicle_core::field::{Field, MontgomeryConvertibleField};
 use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
@@ -11,9 +11,18 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 pub(crate) const SCALAR_LIMBS: usize = 4;
 pub(crate) const BASE_LIMBS: usize = 4;
 
-impl_scalar_field!("grumpkin", SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
+impl_scalar_field!("grumpkin", grumpkin_sf, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
 impl_field!(BASE_LIMBS, BaseField, BaseCfg, Fq);
-impl_curve!("grumpkin", CurveCfg, ScalarField, BaseField);
+impl_curve!(
+    "grumpkin",
+    grumpkin,
+    CurveCfg,
+    ScalarField,
+    BaseField,
+    ArkG1Config,
+    G1Affine,
+    G1Projective
+);
 
 #[cfg(test)]
 mod tests {
