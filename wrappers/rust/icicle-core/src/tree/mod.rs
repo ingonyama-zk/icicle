@@ -3,7 +3,7 @@ use icicle_cuda_runtime::{
     memory::HostOrDeviceSlice,
 };
 
-use crate::{error::IcicleResult, traits::FieldImpl};
+use crate::{error::IcicleResult, poseidon::PoseidonConstants, traits::FieldImpl};
 
 #[doc(hidden)]
 pub mod tests;
@@ -54,6 +54,7 @@ pub trait TreeBuilder<F: FieldImpl> {
         digests: &mut [F],
         height: u32,
         arity: u32,
+        constants: &PoseidonConstants<F>,
         config: &TreeBuilderConfig,
     ) -> IcicleResult<()>;
 }
@@ -74,6 +75,7 @@ pub fn build_poseidon_merkle_tree<F>(
     digests: &mut [F],
     height: u32,
     arity: u32,
+    constants: &PoseidonConstants<F>,
     config: &TreeBuilderConfig,
 ) -> IcicleResult<()>
 where
@@ -98,7 +100,7 @@ where
     local_cfg.are_inputs_on_device = leaves.is_on_device();
 
     <<F as FieldImpl>::Config as TreeBuilder<F>>::build_poseidon_tree_unchecked(
-        leaves, digests, height, arity, &local_cfg,
+        leaves, digests, height, arity, constants, &local_cfg,
     )
 }
 
@@ -112,6 +114,8 @@ macro_rules! impl_tree_builder {
     ) => {
         mod $field_prefix_ident {
             use crate::tree::{$field, $field_config, CudaError, DeviceContext, TreeBuilderConfig};
+            use icicle_core::poseidon::PoseidonConstants;
+
             extern "C" {
                 #[link_name = concat!($field_prefix, "BuildPoseidonMerkleTree")]
                 pub(crate) fn _build_poseidon_merkle_tree(
@@ -119,6 +123,7 @@ macro_rules! impl_tree_builder {
                     digests: *mut $field,
                     height: u32,
                     arity: u32,
+                    constants: &PoseidonConstants<$field>,
                     config: &TreeBuilderConfig,
                 ) -> CudaError;
             }
@@ -130,6 +135,7 @@ macro_rules! impl_tree_builder {
                 digests: &mut [$field],
                 height: u32,
                 arity: u32,
+                constants: &PoseidonConstants<$field>,
                 config: &TreeBuilderConfig,
             ) -> IcicleResult<()> {
                 unsafe {
@@ -138,6 +144,7 @@ macro_rules! impl_tree_builder {
                         digests as *mut _ as *mut $field,
                         height,
                         arity,
+                        constants,
                         config,
                     )
                     .wrap()
@@ -152,12 +159,8 @@ macro_rules! impl_tree_builder_tests {
     (
       $field:ident
     ) => {
-        const SUPPORTED_ARITIES: [u32; 4] = [2, 4, 8, 11];
-        static INIT: OnceLock<()> = OnceLock::new();
-
         #[test]
         fn test_build_poseidon_merkle_tree() {
-            INIT.get_or_init(move || init_poseidon::<$field>(&SUPPORTED_ARITIES));
             check_build_merkle_tree::<$field>()
         }
     };

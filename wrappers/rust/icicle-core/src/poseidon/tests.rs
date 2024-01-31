@@ -2,17 +2,15 @@ use crate::traits::FieldImpl;
 use icicle_cuda_runtime::device_context::get_default_device_context;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-use super::{initialize_poseidon_constants, poseidon_hash_many, Poseidon, PoseidonConfig};
+use super::{load_optimized_poseidon_constants, poseidon_hash_many, Poseidon, PoseidonConfig, PoseidonConstants};
 
-pub fn init_poseidon<F: FieldImpl>(arities: &[u32])
+pub fn init_poseidon<'a, F: FieldImpl>(arity: u32) -> PoseidonConstants<'a, F>
 where
     <F as FieldImpl>::Config: Poseidon<F>,
 {
     let ctx = get_default_device_context();
 
-    for arity in arities {
-        initialize_poseidon_constants::<F>(*arity, &ctx).unwrap();
-    }
+    load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap()
 }
 
 pub fn check_poseidon_hash_many<F: FieldImpl>()
@@ -20,12 +18,14 @@ where
     <F as FieldImpl>::Config: Poseidon<F>,
 {
     let test_size = 1 << 10;
-    let arity = 2;
-    let inputs = vec![F::one(); test_size * arity];
+    let arity = 2u32;
+    let inputs = vec![F::one(); test_size * arity as usize];
     let outputs = vec![F::zero(); test_size];
 
     let mut input_slice = HostOrDeviceSlice::on_host(inputs);
     let mut output_slice = HostOrDeviceSlice::on_host(outputs);
+
+    let constants = init_poseidon(arity as u32);
 
     let config = PoseidonConfig::default();
     poseidon_hash_many::<F>(
@@ -33,6 +33,7 @@ where
         &mut output_slice,
         test_size as u32,
         arity as u32,
+        &constants,
         &config,
     )
     .unwrap();

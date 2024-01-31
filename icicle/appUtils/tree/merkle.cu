@@ -60,7 +60,7 @@ namespace merkle {
     size_t start_segment_size,
     size_t start_segment_offset,
     int keep_rows,
-    const PoseidonConstants<S, T>& poseidon,
+    const PoseidonConstants<S>& poseidon,
     cudaStream_t& stream)
   {
     int arity = T - 1;
@@ -102,7 +102,7 @@ namespace merkle {
     const S* leaves,
     S* digests,
     uint32_t height,
-    const poseidon::PoseidonConstants<S, T>& poseidon,
+    const poseidon::PoseidonConstants<S>& poseidon,
     const TreeBuilderConfig& config)
   {
     CHK_INIT_IF_RETURN();
@@ -259,21 +259,18 @@ namespace merkle {
     curve_config::scalar_t* digests,
     uint32_t height,
     int arity,
+    PoseidonConstants<curve_config::scalar_t>& constants,
     TreeBuilderConfig& config)
   {
     switch (arity) {
     case 2:
-      return build_merkle_tree<curve_config::scalar_t, 3>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 3>, config);
+      return build_merkle_tree<curve_config::scalar_t, 3>(leaves, digests, height, constants, config);
     case 4:
-      return build_merkle_tree<curve_config::scalar_t, 5>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 5>, config);
+      return build_merkle_tree<curve_config::scalar_t, 5>(leaves, digests, height, constants, config);
     case 8:
-      return build_merkle_tree<curve_config::scalar_t, 9>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 9>, config);
+      return build_merkle_tree<curve_config::scalar_t, 9>(leaves, digests, height, constants, config);
     case 11:
-      return build_merkle_tree<curve_config::scalar_t, 12>(
-        leaves, digests, height, preloaded_constants<curve_config::scalar_t, 12>, config);
+      return build_merkle_tree<curve_config::scalar_t, 12>(leaves, digests, height, constants, config);
     default:
       throw std::runtime_error("invalid arity");
     }

@@ -32,8 +32,9 @@ namespace poseidon {
    * @param non_sparse_matrix A pointer to non sparse matrix allocated on the device
    * @param sparse_matrices A pointer to sparse matrices allocated on the device
    */
-  template <typename S, int T>
+  template <typename S>
   struct PoseidonConstants {
+    int arity;
     int partial_rounds;
     int full_rounds_half;
     S* round_constants = nullptr;
@@ -42,13 +43,6 @@ namespace poseidon {
     S* sparse_matrices = nullptr;
     S domain_tag;
   };
-
-  /**
-   * Globally stored preloaded Poseidon constants
-   * Initialized in [init_optimized_poseidon_constants](@ref init_optimized_poseidon_constants) function
-   */
-  template <typename S, int T>
-  static PoseidonConstants<S, T> preloaded_constants;
 
   /**
    * @class PoseidonKernelsConfiguration
@@ -109,11 +103,10 @@ namespace poseidon {
   PoseidonConfig default_poseidon_config(int t);
 
   /**
-   * Reads optimized constants, moves them to the device, writes pointers in
-   * global [preloaded_constants](@ref preloaded_constants) variables
+   * Loads pre-calculated optimized constants, moves them to the device
    */
-  template <typename S, int T>
-  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext& ctx);
+  template <typename S>
+  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext& ctx, PoseidonConstants<S>* constants);
 
   /**
    * Compute the poseidon hash over a sequence of preimages.
@@ -127,11 +120,7 @@ namespace poseidon {
    */
   template <typename S, int T>
   cudaError_t poseidon_hash(
-    S* input,
-    S* output,
-    size_t number_of_states,
-    const PoseidonConstants<S, T>& constants,
-    const PoseidonConfig& config);
+    S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config);
 } // namespace poseidon
 
 #endif

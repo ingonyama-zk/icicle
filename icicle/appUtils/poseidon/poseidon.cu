@@ -58,7 +58,7 @@ namespace poseidon {
 
   template <typename S, int T>
   cudaError_t
-  permute_many(S* states, size_t number_of_states, const PoseidonConstants<S, T>& constants, cudaStream_t& stream)
+  permute_many(S* states, size_t number_of_states, const PoseidonConstants<S>& constants, cudaStream_t& stream)
   {
     size_t rc_offset = 0;
 
@@ -82,11 +82,7 @@ namespace poseidon {
 
   template <typename S, int T>
   cudaError_t poseidon_hash(
-    S* input,
-    S* output,
-    size_t number_of_states,
-    const PoseidonConstants<S, T>& constants,
-    const PoseidonConfig& config)
+    S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -142,21 +138,22 @@ namespace poseidon {
     return CHK_LAST();
   }
 
-  template <typename S, int T>
-  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext& ctx)
+  template <typename S>
+  cudaError_t
+  init_optimized_poseidon_constants(int arity, device_context::DeviceContext& ctx, PoseidonConstants<S>* constants)
   {
-    if (preloaded_constants<S, T>.round_constants != nullptr) { return CHK_LAST(); }
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = ctx.stream;
+    int width = arity + 1;
     int full_rounds_half = FULL_ROUNDS_DEFAULT;
-    int partial_rounds = partial_rounds_number_from_arity(T - 1);
+    int partial_rounds = partial_rounds_number_from_arity(arity);
 
-    int round_constants_len = T * full_rounds_half * 2 + partial_rounds;
-    int mds_matrix_len = T * T;
-    int sparse_matrices_len = (T * 2 - 1) * partial_rounds;
+    int round_constants_len = width * full_rounds_half * 2 + partial_rounds;
+    int mds_matrix_len = width * width;
+    int sparse_matrices_len = (width * 2 - 1) * partial_rounds;
 
     // All the constants are stored in a single file
-    S* constants = optimized_constants<S>(T - 1);
+    S* h_constants = optimized_constants<S>(width - 1);
     int constants_len = round_constants_len + mds_matrix_len * 2 + sparse_matrices_len;
 
     // Malloc memory for copying constants
@@ -164,7 +161,7 @@ namespace poseidon {
     CHK_IF_RETURN(cudaMallocAsync(&d_constants, sizeof(S) * constants_len, stream));
 
     // Copy constants
-    CHK_IF_RETURN(cudaMemcpyAsync(d_constants, constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream));
+    CHK_IF_RETURN(cudaMemcpyAsync(d_constants, h_constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream));
 
     S* round_constants = d_constants;
     S* mds_matrix = round_constants + round_constants_len;
@@ -174,32 +171,20 @@ namespace poseidon {
     // Pick the domain_tag accordinaly
     // For now, we only support Merkle tree mode
     uint32_t tree_domain_tag_value = 1;
-    tree_domain_tag_value = (tree_domain_tag_value << (T - 1)) - tree_domain_tag_value;
+    tree_domain_tag_value = (tree_domain_tag_value << (width - 1)) - tree_domain_tag_value;
     S domain_tag = S::from(tree_domain_tag_value);
 
     // Make sure all the constants have been copied
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
-    preloaded_constants<S, T> = {partial_rounds,    full_rounds_half, round_constants, mds_matrix,
-                                 non_sparse_matrix, sparse_matrices,  domain_tag};
+    *constants = {arity,      partial_rounds,    full_rounds_half, round_constants,
+                  mds_matrix, non_sparse_matrix, sparse_matrices,  domain_tag};
     return CHK_LAST();
   }
 
-  extern "C" cudaError_t
-  CONCAT_EXPAND(CURVE, InitOptimizedPoseidonConstants)(int arity, device_context::DeviceContext& ctx)
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitOptimizedPoseidonConstants)(
+    int arity, device_context::DeviceContext& ctx, PoseidonConstants<curve_config::scalar_t>* constants)
   {
-    switch (arity) {
-    case 2:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 3>(ctx);
-    case 4:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 5>(ctx);
-    case 8:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 9>(ctx);
-    case 11:
-      return init_optimized_poseidon_constants<curve_config::scalar_t, 12>(ctx);
-    default:
-      throw std::runtime_error("invalid arity");
-      break;
-    }
+    return init_optimized_poseidon_constants<curve_config::scalar_t>(arity, ctx, constants);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, PoseidonHash)(
@@ -207,21 +192,18 @@ namespace poseidon {
     curve_config::scalar_t* output,
     int number_of_states,
     int arity,
+    const PoseidonConstants<curve_config::scalar_t>& constants,
     PoseidonConfig& config)
   {
     switch (arity) {
     case 2:
-      return poseidon_hash<curve_config::scalar_t, 3>(
-        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 3>, config);
+      return poseidon_hash<curve_config::scalar_t, 3>(input, output, number_of_states, constants, config);
     case 4:
-      return poseidon_hash<curve_config::scalar_t, 5>(
-        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 5>, config);
+      return poseidon_hash<curve_config::scalar_t, 5>(input, output, number_of_states, constants, config);
     case 8:
-      return poseidon_hash<curve_config::scalar_t, 9>(
-        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 9>, config);
+      return poseidon_hash<curve_config::scalar_t, 9>(input, output, number_of_states, constants, config);
     case 11:
-      return poseidon_hash<curve_config::scalar_t, 12>(
-        input, output, number_of_states, preloaded_constants<curve_config::scalar_t, 12>, config);
+      return poseidon_hash<curve_config::scalar_t, 12>(input, output, number_of_states, constants, config);
     default:
       throw std::runtime_error("invalid arity");
     }

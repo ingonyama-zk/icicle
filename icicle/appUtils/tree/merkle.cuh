@@ -67,7 +67,7 @@ namespace merkle {
     const S* leaves,
     S* digests,
     uint32_t height,
-    const PoseidonConstants<S, T>& poseidon,
+    const PoseidonConstants<S>& poseidon,
     const TreeBuilderConfig& config);
 } // namespace merkle
 
