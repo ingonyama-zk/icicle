@@ -1,5 +1,5 @@
 use crate::{
-    bindings::{cudaGetDeviceCount, cudaSetDevice},
+    bindings::{cudaGetDevice, cudaGetDeviceCount, cudaSetDevice},
     error::{CudaResult, CudaResultWrap},
 };
 
@@ -10,4 +10,9 @@ pub fn set_device(device_id: usize) -> CudaResult<()> {
 pub fn get_device_count() -> CudaResult<usize> {
     let mut count = 0;
     unsafe { cudaGetDeviceCount(&mut count) }.wrap_value(count as usize)
+}
+
+pub fn get_device() -> CudaResult<usize> {
+    let mut device_id = 0;
+    unsafe { cudaGetDevice(&mut device_id) }.wrap_value(device_id as usize)
 }

@@ -2,7 +2,6 @@ use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::device::set_device;
-use icicle_cuda_runtime::device_context::get_default_context_for_device;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use icicle_cuda_runtime::{device::get_device_count, device_context::get_default_device_context};
 use rayon::iter::IntoParallelIterator;
@@ -265,13 +264,13 @@ where
     let device_count = get_device_count().unwrap();
     (0..device_count)
         .into_par_iter()
-        .for_each(move |id| {
-            set_device(id).unwrap();
+        .for_each(move |device_id| {
+            set_device(device_id).unwrap();
             let test_sizes = [1 << 4, 1 << 12];
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-                // let stream = CudaStream::create().unwrap(); // TODO: should work like that but fails later with CUDA Runtime Error: invalid resource handle 
+                // let stream = CudaStream::create().unwrap(); // TODO: should work like that but fails later with CUDA Runtime Error: invalid resource handle
                 let mut config = get_default_ntt_config();
                 let stream = config.ctx.stream;
                 for batch_size in batch_sizes {

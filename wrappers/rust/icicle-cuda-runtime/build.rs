@@ -45,6 +45,7 @@ fn main() {
         .must_use_type("cudaError")
         // device management
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html
+        .allowlist_function("cudaGetDevice")
         .allowlist_function("cudaSetDevice")
         .allowlist_function("cudaGetDeviceCount")
         // error handling

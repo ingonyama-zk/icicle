@@ -25,8 +25,8 @@ where
     let device_count = get_device_count().unwrap();
     (0..device_count) // TODO: this is proto-loadbalancer
         .into_par_iter()
-        .for_each(move |id| {
-            set_device(id).unwrap();
+        .for_each(move |device_id| {
+            set_device(device_id).unwrap();
             let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
             let mut msm_results = HostOrDeviceSlice::cuda_malloc(1).unwrap();
             for test_size in test_sizes {
