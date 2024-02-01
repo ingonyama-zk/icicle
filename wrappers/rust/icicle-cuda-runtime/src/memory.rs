@@ -9,45 +9,16 @@ use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, Ran
 use std::os::raw::c_void;
 use std::slice::from_raw_parts_mut;
 
-const UNDEFINED_DEVICE: i32 = -1;
-
 pub enum HostOrDeviceSlice<'a, T> {
     Host(Vec<T>),
     Device(&'a mut [T], i32),
 }
 
 impl<'a, T> HostOrDeviceSlice<'a, T> {
-    pub fn set_device_id(&mut self, new_id: i32) {
-        if new_id <= UNDEFINED_DEVICE {
-            panic!("device_id must be a positive value");
-        }
-
-        match self {
-            HostOrDeviceSlice::Device(_, device_id) => {
-                match *device_id {
-                    UNDEFINED_DEVICE => *device_id = new_id, // Set if currently undefined
-                    current_id if current_id != new_id => {
-                        panic!("Attempt to change device_id from {} to {}", current_id, new_id);
-                    }
-                    _ => {} // Do nothing if the same ID is set again
-                }
-            }
-            HostOrDeviceSlice::Host(_) => {
-                panic!("Attempt to set device_id on a Host variant");
-            }
-        }
-    }
-
     // Function to get the device_id for Device variant
     pub fn get_device_id(&self) -> Option<i32> {
         match self {
-            HostOrDeviceSlice::Device(_, device_id) => {
-                if *device_id == UNDEFINED_DEVICE {
-                    None
-                } else {
-                    Some(*device_id)
-                }
-            }
+            HostOrDeviceSlice::Device(_, device_id) => Some(*device_id),
             HostOrDeviceSlice::Host(_) => None,
         }
     }
