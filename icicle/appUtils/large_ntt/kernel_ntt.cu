@@ -1,7 +1,8 @@
 
-#include "thread_ntt.cu"
+#include "appUtils/large_ntt/thread_ntt.cu"
 #include "curves/curve_config.cuh"
-#include "appUtils/large_ntt/large_ntt.cuh"
+#include "utils/sharedmem.cuh"
+#include "appUtils/ntt/ntt.cuh" // for Ordering
 
 namespace ntt {
 
@@ -25,11 +26,10 @@ namespace ntt {
         rev_num = rev_num | temp;
       }
     }
-        return rev_num;
+    return rev_num;
   }
 
-#define N 80 // worst case group size
-  template <typename E>
+  template <typename E, uint32_t MAX_GROUP_SIZE = 80>
   static __global__ void reorder_digits_inplace_kernel(E* arr, uint32_t log_size, bool dit)
   {
     // launch N threads
@@ -39,12 +39,11 @@ namespace ntt {
 
     const uint32_t idx = blockDim.x * blockIdx.x + threadIdx.x;
     uint32_t next_element = idx;
-    // uint32_t max_elemt = idx;
-    uint32_t group[N];
+    uint32_t group[MAX_GROUP_SIZE];
     group[0] = idx;
 
     uint32_t i = 1;
-    for (; i < N;) {
+    for (; i < MAX_GROUP_SIZE;) {
       next_element = dig_rev(next_element, log_size, dit);
       if (next_element < idx) return; // not handling this group
       if (next_element == idx) break; // calculated whole group
@@ -78,6 +77,7 @@ namespace ntt {
     S* internal_twiddles,
     S* basic_twiddles,
     uint32_t log_size,
+    uint32_t tw_log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -96,13 +96,13 @@ namespace ntt {
     s_meta.ntt_block_id = (blockIdx.x << 3) + (strided ? (threadIdx.x & 0x7) : (threadIdx.x >> 3));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 3) : (threadIdx.x & 0x7);
 
-    engine.loadBasicTwiddles(basic_twiddles);
+    engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
     if (twiddle_stride && dit) {
-      engine.loadExternalTwiddles(twiddles, twiddle_stride, strided, s_meta, log_size, stage_num);
+      engine.loadExternalTwiddlesGeneric64(twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    engine.loadInternalTwiddles(internal_twiddles, strided);
+    engine.loadInternalTwiddles64(internal_twiddles, strided, inv);
 
 #pragma unroll 1
     for (uint32_t phase = 0; phase < 2; phase++) {
@@ -116,7 +116,7 @@ namespace ntt {
     }
 
     if (twiddle_stride && !dit) {
-      engine.loadExternalTwiddles(twiddles, twiddle_stride, strided, s_meta, log_size, stage_num);
+      engine.loadExternalTwiddlesGeneric64(twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
     engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -130,6 +130,7 @@ namespace ntt {
     S* internal_twiddles,
     S* basic_twiddles,
     uint32_t log_size,
+    uint32_t tw_log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -149,9 +150,9 @@ namespace ntt {
     s_meta.ntt_block_id = (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 4) : (threadIdx.x & 0x3);
 
-    engine.loadBasicTwiddles(basic_twiddles);
+    engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
-    engine.loadInternalTwiddles32(internal_twiddles, strided);
+    engine.loadInternalTwiddles32(internal_twiddles, strided, inv);
     engine.ntt8win();
     engine.twiddlesInternal();
     engine.SharedData32Columns8(shmem, true, false, strided); // store
@@ -159,7 +160,7 @@ namespace ntt {
     engine.SharedData32Rows4_2(shmem, false, false, strided); // load
     engine.ntt4_2();
     if (twiddle_stride) {
-      engine.loadExternalTwiddles32(twiddles, twiddle_stride, strided, s_meta, log_size, stage_num);
+      engine.loadExternalTwiddlesGeneric32(twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
     engine.storeGlobalData32(out, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -173,6 +174,7 @@ namespace ntt {
     S* internal_twiddles,
     S* basic_twiddles,
     uint32_t log_size,
+    int32_t tw_log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -192,13 +194,13 @@ namespace ntt {
     s_meta.ntt_block_id = (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 4) : (threadIdx.x & 0x3);
 
-    engine.loadBasicTwiddles(basic_twiddles);
+    engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData32(in, data_stride, log_data_stride, log_size, strided, s_meta);
     if (twiddle_stride) {
-      engine.loadExternalTwiddles32(twiddles, twiddle_stride, strided, s_meta, log_size, stage_num);
+      engine.loadExternalTwiddlesGeneric32(twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    engine.loadInternalTwiddles32(internal_twiddles, strided);
+    engine.loadInternalTwiddles32(internal_twiddles, strided, inv);
     engine.ntt4_2();
     engine.SharedData32Columns4_2(shmem, true, false, strided); // store
     __syncthreads();
@@ -216,6 +218,7 @@ namespace ntt {
     S* internal_twiddles,
     S* basic_twiddles,
     uint32_t log_size,
+    uint32_t tw_log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -235,9 +238,9 @@ namespace ntt {
     s_meta.ntt_block_id = (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 5) : (threadIdx.x & 0x1);
 
-    engine.loadBasicTwiddles(basic_twiddles);
+    engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
-    engine.loadInternalTwiddles16(internal_twiddles, strided);
+    engine.loadInternalTwiddles16(internal_twiddles, strided, inv);
     engine.ntt8win();
     engine.twiddlesInternal();
     engine.SharedData16Columns8(shmem, true, false, strided); // store
@@ -248,7 +251,7 @@ namespace ntt {
     engine.SharedData16Rows2_4(shmem, false, false, strided); // load
     engine.ntt2_4();
     if (twiddle_stride) {
-      engine.loadExternalTwiddles16(twiddles, twiddle_stride, strided, s_meta, log_size, stage_num);
+      engine.loadExternalTwiddlesGeneric16(twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
     engine.storeGlobalData16(out, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -262,6 +265,7 @@ namespace ntt {
     S* internal_twiddles,
     S* basic_twiddles,
     uint32_t log_size,
+    uint32_t tw_log_size,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -281,13 +285,13 @@ namespace ntt {
     s_meta.ntt_block_id = (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 5) : (threadIdx.x & 0x1);
 
-    engine.loadBasicTwiddles(basic_twiddles);
+    engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData16(in, data_stride, log_data_stride, log_size, strided, s_meta);
     if (twiddle_stride) {
-      engine.loadExternalTwiddles16(twiddles, twiddle_stride, strided, s_meta, log_size, stage_num);
+      engine.loadExternalTwiddlesGeneric16(twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    engine.loadInternalTwiddles16(internal_twiddles, strided);
+    engine.loadInternalTwiddles16(internal_twiddles, strided, inv);
     engine.ntt2_4();
     engine.SharedData16Columns2_4(shmem, true, false, strided); // store
     __syncthreads();
@@ -298,9 +302,10 @@ namespace ntt {
   }
 
   template <typename E, typename S>
-  __global__ void normalize_kernel(E* data, uint32_t size, S norm_factor)
+  __global__ void normalize_kernel(E* data, S norm_factor)
   {
-    data[threadIdx.x] = data[threadIdx.x] * norm_factor;
+    uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+    data[tid] = data[tid] * norm_factor;
   }
 
   template <typename S>
@@ -315,7 +320,7 @@ namespace ntt {
   }
 
   template <typename S>
-  __global__ void generate_basic_twiddles(S basic_root, S* basic_twiddles)
+  __global__ void generate_basic_twiddles(S basic_root, S* w6_table, S* basic_twiddles)
   {
     S w0 = basic_root * basic_root;
     S w1 = (basic_root + w0 * basic_root) * S::inv_log_size(1);
@@ -323,6 +328,13 @@ namespace ntt {
     basic_twiddles[0] = w0;
     basic_twiddles[1] = w1;
     basic_twiddles[2] = w2;
+    S basic_inv = w6_table[64 - 8];
+    w0 = basic_inv * basic_inv;
+    w1 = (basic_inv + w0 * basic_inv) * S::inv_log_size(1);
+    w2 = (basic_inv - w0 * basic_inv) * S::inv_log_size(1);
+    basic_twiddles[3] = w0;
+    basic_twiddles[4] = w1;
+    basic_twiddles[5] = w2;
   }
 
   template <typename S>
@@ -354,10 +366,105 @@ namespace ntt {
     twiddles[tid + W_OFFSETS[log_size][stage_num]] = t;
   }
 
-  // TODO Yuval: which type here?
+  template <typename S>
+  __global__ void generate_twiddle_combinations_generic(
+    S* w6_table, S* w12_table, S* w18_table, S* w24_table, S* w30_table, S* twiddles, uint32_t log_size)
+  {
+    uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+    uint32_t exp = tid << (30 - log_size);
+    S w6, w12, w18, w24, w30;
+    w6 = w6_table[exp >> 24];
+    w12 = w12_table[((exp >> 18) & 0x3f)];
+    w18 = w18_table[((exp >> 12) & 0x3f)];
+    w24 = w24_table[((exp >> 6) & 0x3f)];
+    w30 = w30_table[(exp & 0x3f)];
+    S t = w6 * w12 * w18 * w24 * w30;
+    twiddles[tid] = t;
+  }
+
+  template <typename S>
+  __global__ void set_value(S* arr, int idx, S val)
+  {
+    arr[idx] = val;
+  }
+
+  template <typename S>
+  cudaError_t generate_external_twiddles_generic(
+    const S& basic_root,
+    S*& external_twiddles,
+    S*& internal_twiddles,
+    S*& basic_twiddles,
+    uint32_t log_size,
+    cudaStream_t& stream)
+  {
+    CHK_INIT_IF_RETURN();
+
+    const int n = pow(2, log_size);
+    // Note: for compatability with radix-2 INTT, need ONE in last element (in addition to first element)
+    CHK_IF_RETURN(cudaMallocAsync(&external_twiddles, (n + 1) * sizeof(S), stream));
+    set_value<<<1, 1, 0, stream>>>(external_twiddles, n /*last element idx*/, S::one());
+    CHK_IF_RETURN(cudaMallocAsync(&basic_twiddles, 6 * sizeof(S), stream));
+
+    cudaStreamSynchronize(stream);
+
+    S* w6_table;
+    S* w12_table;
+    S* w18_table;
+    S* w24_table;
+    S* w30_table;
+    CHK_IF_RETURN(cudaMallocAsync(&w6_table, sizeof(S) * 64, stream));
+    CHK_IF_RETURN(cudaMallocAsync(&w12_table, sizeof(S) * 64, stream));
+    CHK_IF_RETURN(cudaMallocAsync(&w18_table, sizeof(S) * 64, stream));
+    CHK_IF_RETURN(cudaMallocAsync(&w24_table, sizeof(S) * 64, stream));
+    CHK_IF_RETURN(cudaMallocAsync(&w30_table, sizeof(S) * 64, stream));
+
+    S temp_root = basic_root;
+    generate_base_table<<<1, 1, 0, stream>>>(basic_root, w30_table, 1 << (30 - log_size));
+    if (log_size > 24)
+      for (int i = 0; i < 6 - (30 - log_size); i++)
+        temp_root = temp_root * temp_root;
+    generate_base_table<<<1, 1, 0, stream>>>(temp_root, w24_table, 1 << (log_size > 24 ? 0 : 24 - log_size));
+    if (log_size > 18)
+      for (int i = 0; i < 6 - (log_size > 24 ? 0 : 24 - log_size); i++)
+        temp_root = temp_root * temp_root;
+    generate_base_table<<<1, 1, 0, stream>>>(temp_root, w18_table, 1 << (log_size > 18 ? 0 : 18 - log_size));
+    if (log_size > 12)
+      for (int i = 0; i < 6 - (log_size > 18 ? 0 : 18 - log_size); i++)
+        temp_root = temp_root * temp_root;
+    generate_base_table<<<1, 1, 0, stream>>>(temp_root, w12_table, 1 << (log_size > 12 ? 0 : 12 - log_size));
+    if (log_size > 6)
+      for (int i = 0; i < 6 - (log_size > 12 ? 0 : 12 - log_size); i++)
+        temp_root = temp_root * temp_root;
+    generate_base_table<<<1, 1, 0, stream>>>(temp_root, w6_table, 1 << (log_size > 6 ? 0 : 6 - log_size));
+    for (int i = 0; i < 3 - (log_size > 6 ? 0 : 6 - log_size); i++)
+      temp_root = temp_root * temp_root;
+    generate_basic_twiddles<<<1, 1, 0, stream>>>(temp_root, w6_table, basic_twiddles);
+
+    generate_twiddle_combinations_generic<<<1 << (log_size - 8), 256, 0, stream>>>(
+      w6_table, w12_table, w18_table, w24_table, w30_table, external_twiddles, log_size);
+
+    internal_twiddles = w6_table;
+
+    CHK_IF_RETURN(cudaFreeAsync(w12_table, stream));
+    CHK_IF_RETURN(cudaFreeAsync(w18_table, stream));
+    CHK_IF_RETURN(cudaFreeAsync(w24_table, stream));
+    CHK_IF_RETURN(cudaFreeAsync(w30_table, stream));
+
+    return CHK_LAST();
+  }
+
   template <typename E, typename S>
-  void
-  large_ntt(E* in, E* out, S* twiddles, S* internal_twiddles, S* basic_twiddles, uint32_t log_size, bool inv, bool dit)
+  void large_ntt(
+    E* in,
+    E* out,
+    S* twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
+    uint32_t log_size,
+    uint32_t tw_log_size,
+    bool inv,
+    bool dit,
+    cudaStream_t cuda_stream)
   {
     // special cases:
     if (log_size == 1 || log_size == 2 || log_size == 3 || log_size == 7) {
@@ -365,47 +472,47 @@ namespace ntt {
     }
     if (log_size == 4) {
       if (dit) {
-        ntt16dit<<<1, 4, 8 * 64 * sizeof(E)>>>(
-          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
+        ntt16dit<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       } else {
-        ntt16<<<1, 4, 8 * 64 * sizeof(E)>>>(
-          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
+        ntt16<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       }
-      if (inv) normalize_kernel<<<1, 16>>>(out, 16, S::inv_log_size(4));
+      if (inv) normalize_kernel<<<1, 160, 0, cuda_stream>>>(out, S::inv_log_size(4));
       return;
     }
     if (log_size == 5) {
       if (dit) {
-        ntt32dit<<<1, 4, 8 * 64 * sizeof(E)>>>(
-          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
+        ntt32dit<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       } else {
-        ntt32<<<1, 4, 8 * 64 * sizeof(E)>>>(
-          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
+        ntt32<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       }
-      if (inv) normalize_kernel<<<1, 32>>>(out, 32, S::inv_log_size(5));
+      if (inv) normalize_kernel<<<1, 32, 0, cuda_stream>>>(out, S::inv_log_size(5));
       return;
     }
     if (log_size == 6) {
-      ntt64<<<1, 8, 8 * 64 * sizeof(E)>>>(
-        in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
-      if (inv) normalize_kernel<<<1, 64>>>(out, 64, S::inv_log_size(6));
+      ntt64<<<1, 8, 8 * 64 * sizeof(E), cuda_stream>>>(
+        in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
+      if (inv) normalize_kernel<<<1, 64, 0, cuda_stream>>>(out, S::inv_log_size(6));
       return;
     }
     if (log_size == 8) {
       if (dit)
-        ntt16dit<<<1, 32, 8 * 64 * sizeof(E)>>>(
-          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
+        ntt16dit<<<1, 32, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       if (dit)
-        ntt16dit<<<1, 64, 8 * 64 * sizeof(E)>>>(
-          out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv,
+        ntt16dit<<<1, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          out, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 16, 4, 16, true, 1, inv,
           dit); // we need threads 32+ although 16-31 are idle
       if (!dit)
-        ntt16<<<1, 64, 8 * 64 * sizeof(E)>>>(
-          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 16, 4, 16, true, 1, inv,
+        ntt16<<<1, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 16, 4, 16, true, 1, inv,
           dit); // we need threads 32+ although 16-31 are idle
       if (!dit)
-        ntt16<<<1, 32, 8 * 64 * sizeof(E)>>>(
-          out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1, 0, 0, false, 0, inv, dit);
+        ntt16<<<1, 32, 8 * 64 * sizeof(E), cuda_stream>>>(
+          out, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       return;
     }
 
@@ -417,18 +524,19 @@ namespace ntt {
         for (int j = 0; j < i; j++)
           stride_log += STAGE_SIZES_HOST[log_size][j];
         if (stage_size == 6)
-          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
-            i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log, stride_log,
-            i ? (1 << stride_log) : 0, i, i, inv, dit);
+          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1 << stride_log,
+            stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 5)
-          ntt32dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
-            i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log, stride_log,
-            i ? (1 << stride_log) : 0, i, i, inv, dit);
+          ntt32dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1 << stride_log,
+            stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 4)
-          ntt16dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
-            i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log, stride_log,
-            i ? (1 << stride_log) : 0, i, i, inv, dit);
+          ntt16dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1 << stride_log,
+            stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
       }
+      if (inv) normalize_kernel<<<1 << (log_size - 8), 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
     } else {
       bool first_run = false, prev_stage = false;
       for (int i = 4; i >= 0; i--) {
@@ -438,143 +546,87 @@ namespace ntt {
           stride_log += STAGE_SIZES_HOST[log_size][j];
         first_run = stage_size && !prev_stage;
         if (stage_size == 6)
-          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
-            first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 5)
-          ntt32<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
-            first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+          ntt32<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         if (stage_size == 4)
-          ntt16<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E)>>>(
-            first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+          ntt16<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            first_run ? in : out, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         prev_stage = stage_size;
       }
+      if (inv) normalize_kernel<<<1 << (log_size - 8), 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
     }
   }
 
-  /*================================ MixedRadixNTT =========================================*/
   template <typename E, typename S>
-  MixedRadixNTT<E, S>::MixedRadixNTT(int ntt_size, bool is_inverse, Ordering ordering, cudaStream_t cuda_stream)
-      : m_ntt_size(ntt_size), m_ntt_log_size(int(log2(ntt_size))), m_is_inverse(is_inverse), m_ordering(ordering),
-        m_cuda_stream(cuda_stream)
-  {
-    if (nullptr != m_gpuTwiddles) { return; } // behave as if TFs are generated at init
-    cudaError_t err_result = init();
-    if (err_result != cudaSuccess) throw(IcicleError(err_result, "CUDA error"));
-  }
-
-  template <typename E, typename S>
-  cudaError_t MixedRadixNTT<E, S>::init()
-  {
-    // TODO Yuval: allocate once at initDomain based on the basic_root
-    CHK_IF_RETURN(cudaMallocAsync(
-      &m_gpuTwiddles, sizeof(S) * (m_ntt_size + 2 * (m_ntt_size >> 4)),
-      m_cuda_stream)); // TODO - sketchy
-    CHK_IF_RETURN(cudaMallocAsync(&m_gpuBasicTwiddles, sizeof(S) * 3, m_cuda_stream));
-
-    const auto basic_root = m_is_inverse ? S::omega_inv(m_ntt_log_size) : S::omega(m_ntt_log_size);
-    CHK_IF_RETURN(generate_external_twiddles(basic_root));
-
-    return CHK_LAST();
-  }
-
-  template <typename E, typename S>
-  cudaError_t MixedRadixNTT<E, S>::generate_external_twiddles(S basic_root)
-  {
-    CHK_IF_RETURN(cudaMallocAsync(&m_w6_table, sizeof(S) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w12_table, sizeof(S) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w18_table, sizeof(S) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w24_table, sizeof(S) * 64, m_cuda_stream));
-    CHK_IF_RETURN(cudaMallocAsync(&m_w30_table, sizeof(S) * 64, m_cuda_stream));
-
-    S temp_root = basic_root;
-    generate_base_table<<<1, 1>>>(basic_root, m_w30_table, 1 << (30 - m_ntt_log_size));
-    if (m_ntt_log_size > 24)
-      for (int i = 0; i < 6 - (30 - m_ntt_log_size); i++)
-        temp_root = temp_root * temp_root;
-    generate_base_table<<<1, 1>>>(temp_root, m_w24_table, 1 << (m_ntt_log_size > 24 ? 0 : 24 - m_ntt_log_size));
-    if (m_ntt_log_size > 18)
-      for (int i = 0; i < 6 - (m_ntt_log_size > 24 ? 0 : 24 - m_ntt_log_size); i++)
-        temp_root = temp_root * temp_root;
-    generate_base_table<<<1, 1>>>(temp_root, m_w18_table, 1 << (m_ntt_log_size > 18 ? 0 : 18 - m_ntt_log_size));
-    if (m_ntt_log_size > 12)
-      for (int i = 0; i < 6 - (m_ntt_log_size > 18 ? 0 : 18 - m_ntt_log_size); i++)
-        temp_root = temp_root * temp_root;
-    generate_base_table<<<1, 1>>>(temp_root, m_w12_table, 1 << (m_ntt_log_size > 12 ? 0 : 12 - m_ntt_log_size));
-    if (m_ntt_log_size > 6)
-      for (int i = 0; i < 6 - (m_ntt_log_size > 12 ? 0 : 12 - m_ntt_log_size); i++)
-        temp_root = temp_root * temp_root;
-    generate_base_table<<<1, 1>>>(temp_root, m_w6_table, 1 << (m_ntt_log_size > 6 ? 0 : 6 - m_ntt_log_size));
-    for (int i = 0; i < 3 - (m_ntt_log_size > 6 ? 0 : 6 - m_ntt_log_size); i++)
-      temp_root = temp_root * temp_root;
-    generate_basic_twiddles<<<1, 1>>>(temp_root, m_gpuBasicTwiddles);
-
-    uint32_t temp = STAGE_SIZES_HOST[m_ntt_log_size][0];
-    for (int i = 1; i < 5; i++) {
-      if (!STAGE_SIZES_HOST[m_ntt_log_size][i]) break;
-      temp += STAGE_SIZES_HOST[m_ntt_log_size][i];
-      generate_twiddle_combinations<<<1 << (temp - 8), 256>>>(
-        m_w6_table, m_w12_table, m_w18_table, m_w24_table, m_w30_table, m_gpuTwiddles, m_ntt_log_size, i,
-        (temp == m_ntt_log_size && m_is_inverse) ? S::inv_log_size(m_ntt_log_size) : S::one());
-    }
-    m_gpuIntTwiddles = m_w6_table;
-
-    return CHK_LAST();
-  }
-
-  template <typename E, typename S>
-  MixedRadixNTT<E, S>::~MixedRadixNTT()
-  {
-    // cudaFreeAsync(m_gpuTwiddles, m_cuda_stream);
-    // cudaFreeAsync(m_gpuBasicTwiddles, m_cuda_stream);
-    // cudaFreeAsync(m_w6_table, m_cuda_stream);
-    // cudaFreeAsync(m_w12_table, m_cuda_stream);
-    // cudaFreeAsync(m_w18_table, m_cuda_stream);
-    // cudaFreeAsync(m_w24_table, m_cuda_stream);
-    // cudaFreeAsync(m_w30_table, m_cuda_stream);
-  }
-
-  template <typename E, typename S>
-  cudaError_t MixedRadixNTT<E, S>::operator()(E* d_input, E* d_output)
+  cudaError_t mixed_radix_ntt(
+    E* d_input,
+    E* d_output,
+    S* external_twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
+    int ntt_size,
+    int max_logn,
+    bool is_inverse,
+    Ordering ordering,
+    cudaStream_t cuda_stream)
   {
     CHK_INIT_IF_RETURN();
 
     // TODO: can we support all orderings? Note that reversal is generally digit reverse (generalization of bit reverse)
-    if (m_ordering != Ordering::kNN) {
+    if (ordering != Ordering::kNN) {
       throw IcicleError(IcicleError_t::InvalidArgument, "Mixed-Radix NTT supports NN ordering only");
     }
 
-    const int NOF_BLOCKS = (1 << (max(m_ntt_log_size, 6) - 6));
-    const int NOF_THREADS = min(64, 1 << m_ntt_log_size);
+    const int logn = int(log2(ntt_size));
 
-    const bool reverse_input = m_ordering == Ordering::kNN;
-    const bool is_dit = m_ordering == Ordering::kNN || m_ordering == Ordering::kRN;
+    const int NOF_BLOCKS = (1 << (max(logn, 6) - 6));
+    const int NOF_THREADS = min(64, 1 << logn);
+
+    const bool reverse_input = ordering == Ordering::kNN;
+    const bool is_dit = ordering == Ordering::kNN || ordering == Ordering::kRN;
 
     if (reverse_input) {
-      // reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(d_input, d_output, m_ntt_log_size, is_dit);
-      // cudaDeviceSynchronize();
-      // printf("cudaDeviceSynchronize() done\n");
-
-      if (d_input == d_output) {
-        // inplace
-        reorder_digits_inplace_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(d_output, m_ntt_log_size, is_dit);
+      const bool is_reverse_in_place = (d_input == d_output);
+      if (is_reverse_in_place) {
+        reorder_digits_inplace_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(d_output, logn, is_dit);
       } else {
-        reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(d_input, d_output, m_ntt_log_size, is_dit);
+        reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(d_input, d_output, logn, is_dit);
       }
     }
 
     // inplace ntt
     large_ntt(
-      d_output, d_output, m_gpuTwiddles, m_gpuIntTwiddles, m_gpuBasicTwiddles, m_ntt_log_size, m_is_inverse, is_dit);
+      d_output, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, is_inverse, is_dit,
+      cuda_stream);
 
     return CHK_LAST();
   }
 
   // Explicit instantiation for scalar type
-  template class MixedRadixNTT<curve_config::scalar_t, curve_config::scalar_t>;
-  // template class MixedRadixNTT<curve_config::projective_t, curve_config::scalar_t>; // for ECNTT (really slow build
-  // time)
+  template cudaError_t generate_external_twiddles_generic(
+    const curve_config::scalar_t& basic_root,
+    curve_config::scalar_t*& external_twiddles,
+    curve_config::scalar_t*& internal_twiddles,
+    curve_config::scalar_t*& basic_twiddles,
+    uint32_t log_size,
+    cudaStream_t& stream);
+
+  template cudaError_t mixed_radix_ntt<curve_config::scalar_t, curve_config::scalar_t>(
+    curve_config::scalar_t* d_input,
+    curve_config::scalar_t* d_output,
+    curve_config::scalar_t* external_twiddles,
+    curve_config::scalar_t* internal_twiddles,
+    curve_config::scalar_t* basic_twiddles,
+    int ntt_size,
+    int max_logn,
+    bool is_inverse,
+    Ordering ordering,
+    cudaStream_t cuda_stream);
 
 } // namespace ntt

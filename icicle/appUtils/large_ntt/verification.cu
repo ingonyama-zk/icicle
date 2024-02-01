@@ -1,5 +1,5 @@
 
-#define CURVE_ID BLS12_377 // TODO Yuval: move to makefile
+#define CURVE_ID BLS12_377
 
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
@@ -10,7 +10,7 @@
 
 #include "curves/curve_config.cuh"
 #include "ntt/ntt.cu"
-#include "large_ntt/large_ntt.cuh"
+#include "ntt/ntt_impl.cuh"
 #include <memory>
 
 #define PERFORMANCE
@@ -36,7 +36,6 @@ void incremental_values(test_scalar* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
     res[i] = i ? res[i - 1] + test_scalar::one() * test_scalar::omega(4) : test_scalar::zero();
-    // res[i] = i ? test_data::zero() : test_data::one();
   }
 }
 
@@ -47,10 +46,11 @@ int main(int argc, char** argv)
   float icicle_time, new_time;
 #endif
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 22; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 20; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
-  int INV = false;
-  bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
+  bool INPLACE = (argc > 2) ? atoi(argv[2]) : true;
+  int INV = (argc > 3) ? atoi(argv[3]) : true;
+
   const ntt::Ordering ordering = ntt::Ordering::kNN;
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
                              : ordering == ntt::Ordering::kNR ? "NR"
@@ -58,6 +58,8 @@ int main(int argc, char** argv)
                                                               : "RR";
 
   printf("running ntt 2^%d, INV=%d, ordering=%s, inplace=%d\n", NTT_LOG_SIZE, INV, ordering_str, INPLACE);
+
+  cudaFree(nullptr); // init GPU context (warmup)
 
   // cpu allocation
   auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE);
@@ -84,16 +86,13 @@ int main(int argc, char** argv)
   ntt_config.are_outputs_on_device = true;
   // ntt_config.is_async = true;
 
-  const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  ntt::InitDomain(basic_root, ntt_config.ctx);
-
-  $CUDA(cudaStreamSynchronize(ntt_config.ctx.stream));
-
-#ifdef PERFORMANCE
   $CUDA(cudaEventCreate(&icicle_start));
   $CUDA(cudaEventCreate(&icicle_stop));
   $CUDA(cudaEventCreate(&new_start));
   $CUDA(cudaEventCreate(&new_stop));
+
+  const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
+  ntt::InitDomain(basic_root, ntt_config.ctx);
 
   // run ntt
   auto benchmark = [&](bool is_print, int iterations) {
@@ -128,20 +127,8 @@ int main(int argc, char** argv)
   };
 
   int count = INPLACE ? 1 : 1;
-  benchmark(false /*=print*/, 1); // warmup - is this applicable to real usecase??
   if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
   benchmark(true /*=print*/, count);
-#else
-  ntt_config.is_force_radix2 = false;
-  ntt::NTT(
-    INPLACE ? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
-    GpuOutputNew);
-  printf("finished new\n");
-
-  ntt_config.is_force_radix2 = true;
-  ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld);
-  printf("finished old\n");
-#endif // PERFORMANCE
 
   // verify
   $CUDA(cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));

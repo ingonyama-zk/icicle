@@ -83,35 +83,38 @@ public:
   S WI[7];
   S WE[8];
 
-  __device__ __forceinline__ void loadBasicTwiddles(S* basic_twiddles)
+  __device__ __forceinline__ void loadBasicTwiddles(S* basic_twiddles, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 3; i++) {
-      WB[i] = basic_twiddles[i];
+      WB[i] = basic_twiddles[inv ? i + 3 : i];
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles(S* data, bool stride)
+  __device__ __forceinline__ void loadInternalTwiddles64(S* data, bool stride, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
-      WI[i] = data[((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1)];
+      uint32_t exp = ((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1);
+      WI[i] = data[(inv && exp) ? 64 - exp : exp]; // if exp = 0 we also take exp and not 64-exp
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles32(S* data, bool stride)
+  __device__ __forceinline__ void loadInternalTwiddles32(S* data, bool stride, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
-      WI[i] = data[2 * ((stride ? (threadIdx.x >> 4) : (threadIdx.x)) & 0x3) * (i + 1)];
+      uint32_t exp = 2 * ((stride ? (threadIdx.x >> 4) : (threadIdx.x)) & 0x3) * (i + 1);
+      WI[i] = data[(inv && exp) ? 64 - exp : exp];
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles16(S* data, bool stride)
+  __device__ __forceinline__ void loadInternalTwiddles16(S* data, bool stride, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
-      WI[i] = data[4 * ((stride ? (threadIdx.x >> 5) : (threadIdx.x)) & 0x1) * (i + 1)];
+      uint32_t exp = 4 * ((stride ? (threadIdx.x >> 5) : (threadIdx.x)) & 0x1) * (i + 1);
+      WI[i] = data[(inv && exp) ? 64 - exp : exp];
     }
   }
 
@@ -126,13 +129,47 @@ public:
     }
   }
 
+  __device__ __forceinline__ void loadExternalTwiddlesGeneric64(
+    E* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+  {
+#pragma unroll
+    for (uint32_t i = 0; i < 8; i++) {
+      uint32_t exp = (s_meta.ntt_inp_id + 8 * i) * (s_meta.ntt_block_id & (tw_order - 1))
+                     << (tw_log_size - tw_log_order - 6);
+      WE[i] = data[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
+    }
+  }
+
+  __device__ __forceinline__ void loadExternalTwiddlesGeneric32(
+    E* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+  {
+#pragma unroll
+    for (uint32_t j = 0; j < 2; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 4; i++) {
+        uint32_t exp = (s_meta.ntt_inp_id * 2 + 8 * i + j) * (s_meta.ntt_block_id & (tw_order - 1))
+                       << (tw_log_size - tw_log_order - 5);
+        WE[4 * j + i] = data[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void loadExternalTwiddlesGeneric16(
+    E* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+  {
+#pragma unroll
+    for (uint32_t j = 0; j < 4; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 2; i++) {
+        uint32_t exp = (s_meta.ntt_inp_id * 4 + 8 * i + j) * (s_meta.ntt_block_id & (tw_order - 1))
+                       << (tw_log_size - tw_log_order - 4);
+        WE[2 * j + i] = data[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
+      }
+    }
+  }
+
   __device__ __forceinline__ void loadExternalTwiddles32(
-    curve_config::scalar_t* data,
-    uint32_t tw_stride,
-    bool strided,
-    stage_metadata s_meta,
-    uint32_t log_size,
-    uint32_t stage_num)
+    E* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t log_size, uint32_t stage_num)
   {
     data += tw_stride * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_stride - 1));
 
@@ -146,7 +183,7 @@ public:
   }
 
   __device__ __forceinline__ void loadExternalTwiddles16(
-    S* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t log_size, uint32_t stage_num)
+    E* data, uint32_t tw_stride, bool strided, stage_metadata s_meta, uint32_t log_size, uint32_t stage_num)
   {
     data += tw_stride * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_stride - 1));
 
