@@ -397,8 +397,8 @@ namespace ntt {
       }
       Domain<S>::max_size = (int)pow(2, Domain<S>::max_log_size);
       if (omega != S::one()) {
-        std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
-        throw -1;
+        throw IcicleError(
+          IcicleError_t::InvalidArgument, "Primitive root provided to the InitDomain function is not in the subgroup");
       }
 
       // allocate and calculate twiddles on GPU
