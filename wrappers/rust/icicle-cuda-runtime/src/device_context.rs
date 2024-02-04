@@ -21,7 +21,6 @@ pub fn get_default_device_context() -> DeviceContext<'static> {
     get_default_context_for_device(DEFAULT_DEVICE_ID)
 }
 
-// TODO: CudaResult
 pub fn get_default_context_for_device(device_id: usize) -> DeviceContext<'static> {
     static default_stream: CudaStream = CudaStream {
         handle: std::ptr::null_mut(),
