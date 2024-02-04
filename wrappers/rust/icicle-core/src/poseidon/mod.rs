@@ -74,6 +74,13 @@ impl<'a> Default for PoseidonConfig<'a> {
 }
 
 pub trait Poseidon<F: FieldImpl> {
+    fn create_optimized_constants<'a>(
+        arity: u32,
+        full_rounds_half: u32,
+        partial_rounds: u32,
+        constants: &mut [F],
+        ctx: &DeviceContext,
+    ) -> IcicleResult<PoseidonConstants<'a, F>>;
     fn load_optimized_constants<'a>(arity: u32, ctx: &DeviceContext) -> IcicleResult<PoseidonConstants<'a, F>>;
     fn poseidon_unchecked(
         input: &mut HostOrDeviceSlice<F>,
@@ -95,6 +102,27 @@ where
     <F as FieldImpl>::Config: Poseidon<F>,
 {
     <<F as FieldImpl>::Config as Poseidon<F>>::load_optimized_constants(arity, ctx)
+}
+
+/// Creates new instance of poseidon constants on the GPU.
+pub fn create_optimized_poseidon_constants<'a, F>(
+    arity: u32,
+    ctx: &DeviceContext,
+    full_rounds_half: u32,
+    partial_rounds: u32,
+    constants: &mut [F],
+) -> IcicleResult<PoseidonConstants<'a, F>>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: Poseidon<F>,
+{
+    <<F as FieldImpl>::Config as Poseidon<F>>::create_optimized_constants(
+        arity,
+        full_rounds_half,
+        partial_rounds,
+        constants,
+        ctx,
+    )
 }
 
 /// Computes the poseidon hashes for multiple preimages.
@@ -171,6 +199,16 @@ macro_rules! impl_poseidon {
         mod $field_prefix_ident {
             use crate::poseidon::{$field, $field_config, CudaError, DeviceContext, PoseidonConfig, PoseidonConstants};
             extern "C" {
+                #[link_name = concat!($field_prefix, "CreateOptimizedPoseidonConstants")]
+                pub(crate) fn _create_optimized_constants(
+                    arity: u32,
+                    full_rounds_half: u32,
+                    partial_rounds: u32,
+                    constants: *mut $field,
+                    ctx: &DeviceContext,
+                    poseidon_constants: *mut PoseidonConstants<$field>,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "InitOptimizedPoseidonConstants")]
                 pub(crate) fn _load_optimized_constants(
                     arity: u32,
@@ -191,6 +229,28 @@ macro_rules! impl_poseidon {
         }
 
         impl Poseidon<$field> for $field_config {
+            fn create_optimized_constants<'a>(
+                arity: u32,
+                full_rounds_half: u32,
+                partial_rounds: u32,
+                constants: &mut [$field],
+                ctx: &DeviceContext,
+            ) -> IcicleResult<PoseidonConstants<'a, $field>> {
+                unsafe {
+                    let mut poseidon_constants = MaybeUninit::<PoseidonConstants<'a, $field>>::uninit();
+                    let err = $field_prefix_ident::_create_optimized_constants(
+                        arity,
+                        full_rounds_half,
+                        partial_rounds,
+                        constants as *mut _ as *mut $field,
+                        ctx,
+                        poseidon_constants.as_mut_ptr(),
+                    )
+                    .wrap();
+                    err.and(Ok(poseidon_constants.assume_init()))
+                }
+            }
+
             fn load_optimized_constants<'a>(
                 arity: u32,
                 ctx: &DeviceContext,
@@ -229,11 +289,18 @@ macro_rules! impl_poseidon {
 #[macro_export]
 macro_rules! impl_poseidon_tests {
     (
-      $field:ident
+      $field:ident,
+      $field_bytes:literal,
+      $field_prefix:literal
     ) => {
         #[test]
         fn test_poseidon_hash_many() {
             check_poseidon_hash_many::<$field>()
+        }
+
+        #[test]
+        fn test_poseidon_custom_config() {
+            check_poseidon_custom_config::<$field>($field_bytes, $field_prefix)
         }
     };
 }
