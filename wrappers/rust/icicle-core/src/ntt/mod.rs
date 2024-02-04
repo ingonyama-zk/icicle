@@ -222,7 +222,7 @@ macro_rules! impl_ntt_tests {
     ) => {
         const MAX_SIZE: u64 = 1 << 16;
         static INIT: OnceLock<()> = OnceLock::new();
-
+        
         #[test]
         fn test_ntt() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
@@ -249,7 +249,6 @@ macro_rules! impl_ntt_tests {
 
         #[test]
         fn test_ntt_device_async() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
             check_ntt_device_async::<$field>()
         }
     };

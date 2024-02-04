@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
@@ -266,6 +268,11 @@ where
         .into_par_iter()
         .for_each(move |device_id| {
             set_device(device_id).unwrap();
+
+            const MAX_SIZE: u64 = 1 << 16;
+            thread_local!(static INIT: OnceLock<()> = OnceLock::new());
+            INIT.with(|domain| *domain.get_or_init(move || init_domain::<F>(MAX_SIZE))); // init domain per device
+
             let test_sizes = [1 << 4, 1 << 12];
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
