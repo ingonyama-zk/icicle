@@ -420,7 +420,7 @@ namespace ntt {
     CHK_IF_RETURN(cudaMallocAsync(&w24_table, sizeof(S) * 64, stream));
     CHK_IF_RETURN(cudaMallocAsync(&w30_table, sizeof(S) * 64, stream));
 
-    // Note: for compatability with radix-2 INTT, need ONE in last element (in addition to first element)
+    // Note: for compatibility with radix-2 INTT, need ONE in last element (in addition to first element)
     set_value<<<1, 1, 0, stream>>>(external_twiddles, n /*last element idx*/, S::one());
 
     cudaStreamSynchronize(stream);

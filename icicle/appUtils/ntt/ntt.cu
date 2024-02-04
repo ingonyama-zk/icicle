@@ -403,15 +403,15 @@ namespace ntt {
 
       // allocate and calculate twiddles on GPU
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
-      // Managed allocation allows host to read power of S (logn value) without copying all (n) TFs back to host
+      // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
       CHK_IF_RETURN(cudaMallocManaged(&Domain<S>::twiddles, (Domain<S>::max_size + 1) * sizeof(S)));
       CHK_IF_RETURN(generate_external_twiddles_generic(
         primitive_root, Domain<S>::twiddles, Domain<S>::internal_twiddles, Domain<S>::basic_twiddles,
         Domain<S>::max_log_size, ctx.stream));
       CHK_IF_RETURN(cudaStreamSynchronize(ctx.stream));
 
-      const bool is_map_only_power_of_primitive_root = true;
-      if (is_map_only_power_of_primitive_root) {
+      const bool is_map_only_powers_of_primitive_root = true;
+      if (is_map_only_powers_of_primitive_root) {
         // populate the coset_index map. Note that only powers of the primitive-root are stored (1, PR, PR^2, PR^3...)
         Domain<S>::coset_index[S::one()] = 0;
         for (int i = 0; i < Domain<S>::max_log_size; ++i) {

@@ -46,7 +46,7 @@ int main(int argc, char** argv)
   float icicle_time, new_time;
 #endif
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 20; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : true;
   int INV = (argc > 3) ? atoi(argv[3]) : true;
