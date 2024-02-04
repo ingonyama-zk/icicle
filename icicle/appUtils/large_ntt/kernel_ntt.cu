@@ -29,8 +29,10 @@ namespace ntt {
     return rev_num;
   }
 
-  template <typename E, uint32_t MAX_GROUP_SIZE = 80>
-  static __global__ void reorder_digits_inplace_kernel(E* arr, uint32_t log_size, bool dit)
+  // Note: the following reorder kernels are fused with normalization for INTT
+  template <typename E, typename S, uint32_t MAX_GROUP_SIZE = 80>
+  static __global__ void
+  reorder_digits_inplace_kernel(E* arr, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
   {
     // launch N threads
     // each thread starts from one index and calculates the corresponding group
@@ -50,23 +52,28 @@ namespace ntt {
       group[i++] = next_element;
     }
 
-    if (i == 1) return; // single element in group --> nothing to do
+    if (i == 1) { // single element in group --> nothing to do (except maybe normalize for INTT)
+      if (is_normalize) { arr[idx] = arr[idx] * inverse_N; }
+      return;
+    }
+    if (idx == 0) printf("i=%d\n", i);
     --i;
     // reaching here means I am handling this group
     const E last_element_in_group = arr[group[i]];
     for (; i > 0; --i) {
-      arr[group[i]] = arr[group[i - 1]];
+      arr[group[i]] = is_normalize ? (arr[group[i - 1]] * inverse_N) : arr[group[i - 1]];
     }
-    arr[idx] = last_element_in_group;
+    arr[idx] = is_normalize ? (last_element_in_group * inverse_N) : last_element_in_group;
   }
 
-  template <typename E>
-  __launch_bounds__(64) __global__ void reorder_digits_kernel(E* arr, E* arr_reordered, uint32_t log_size, bool dit)
+  template <typename E, typename S>
+  __launch_bounds__(64) __global__
+    void reorder_digits_kernel(E* arr, E* arr_reordered, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
   {
     uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
     uint32_t rd = tid;
     uint32_t wr = dig_rev(tid, log_size, dit);
-    arr_reordered[wr] = arr[rd];
+    arr_reordered[wr] = is_normalize ? arr[rd] * inverse_N : arr[rd];
   }
 
   template <typename E, typename S>
@@ -463,6 +470,7 @@ namespace ntt {
     uint32_t log_size,
     uint32_t tw_log_size,
     bool inv,
+    bool normalize,
     bool dit,
     cudaStream_t cuda_stream)
   {
@@ -478,7 +486,7 @@ namespace ntt {
         ntt16<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       }
-      if (inv) normalize_kernel<<<1, 160, 0, cuda_stream>>>(out, S::inv_log_size(4));
+      if (normalize) normalize_kernel<<<1, 16, 0, cuda_stream>>>(out, S::inv_log_size(4));
       return;
     }
     if (log_size == 5) {
@@ -489,13 +497,13 @@ namespace ntt {
         ntt32<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       }
-      if (inv) normalize_kernel<<<1, 32, 0, cuda_stream>>>(out, S::inv_log_size(5));
+      if (normalize) normalize_kernel<<<1, 32, 0, cuda_stream>>>(out, S::inv_log_size(5));
       return;
     }
     if (log_size == 6) {
       ntt64<<<1, 8, 8 * 64 * sizeof(E), cuda_stream>>>(
         in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
-      if (inv) normalize_kernel<<<1, 64, 0, cuda_stream>>>(out, S::inv_log_size(6));
+      if (normalize) normalize_kernel<<<1, 64, 0, cuda_stream>>>(out, S::inv_log_size(6));
       return;
     }
     if (log_size == 8) {
@@ -513,6 +521,7 @@ namespace ntt {
       if (!dit)
         ntt16<<<1, 32, 8 * 64 * sizeof(E), cuda_stream>>>(
           out, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
+      if (normalize) normalize_kernel<<<1, 256, 0, cuda_stream>>>(out, S::inv_log_size(8));
       return;
     }
 
@@ -536,7 +545,6 @@ namespace ntt {
             i ? out : in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1 << stride_log,
             stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
       }
-      if (inv) normalize_kernel<<<1 << (log_size - 8), 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
     } else {
       bool first_run = false, prev_stage = false;
       for (int i = 4; i >= 0; i--) {
@@ -559,8 +567,8 @@ namespace ntt {
             1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         prev_stage = stage_size;
       }
-      if (inv) normalize_kernel<<<1 << (log_size - 8), 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
     }
+    if (normalize) normalize_kernel<<<1 << (log_size - 8), 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
   }
 
   template <typename E, typename S>
@@ -590,20 +598,25 @@ namespace ntt {
 
     const bool reverse_input = ordering == Ordering::kNN;
     const bool is_dit = ordering == Ordering::kNN || ordering == Ordering::kRN;
+    bool is_normalize = is_inverse;
 
     if (reverse_input) {
+      // Note: fusing reorder with normalize for INTT
       const bool is_reverse_in_place = (d_input == d_output);
       if (is_reverse_in_place) {
-        reorder_digits_inplace_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(d_output, logn, is_dit);
+        reorder_digits_inplace_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_output, logn, is_dit, is_normalize, S::inv_log_size(logn));
       } else {
-        reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(d_input, d_output, logn, is_dit);
+        reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_input, d_output, logn, is_dit, is_normalize, S::inv_log_size(logn));
       }
+      is_normalize = false;
     }
 
     // inplace ntt
     large_ntt(
-      d_output, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, is_inverse, is_dit,
-      cuda_stream);
+      d_output, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, is_inverse,
+      is_normalize, is_dit, cuda_stream);
 
     return CHK_LAST();
   }
