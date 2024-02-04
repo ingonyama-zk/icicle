@@ -391,7 +391,7 @@ namespace ntt {
   template <typename S>
   cudaError_t generate_external_twiddles_generic(
     const S& basic_root,
-    S*& external_twiddles,
+    S* external_twiddles,
     S*& internal_twiddles,
     S*& basic_twiddles,
     uint32_t log_size,
@@ -400,12 +400,7 @@ namespace ntt {
     CHK_INIT_IF_RETURN();
 
     const int n = pow(2, log_size);
-    // Note: for compatability with radix-2 INTT, need ONE in last element (in addition to first element)
-    CHK_IF_RETURN(cudaMallocAsync(&external_twiddles, (n + 1) * sizeof(S), stream));
-    set_value<<<1, 1, 0, stream>>>(external_twiddles, n /*last element idx*/, S::one());
     CHK_IF_RETURN(cudaMallocAsync(&basic_twiddles, 6 * sizeof(S), stream));
-
-    cudaStreamSynchronize(stream);
 
     S* w6_table;
     S* w12_table;
@@ -417,6 +412,11 @@ namespace ntt {
     CHK_IF_RETURN(cudaMallocAsync(&w18_table, sizeof(S) * 64, stream));
     CHK_IF_RETURN(cudaMallocAsync(&w24_table, sizeof(S) * 64, stream));
     CHK_IF_RETURN(cudaMallocAsync(&w30_table, sizeof(S) * 64, stream));
+
+    // Note: for compatability with radix-2 INTT, need ONE in last element (in addition to first element)
+    set_value<<<1, 1, 0, stream>>>(external_twiddles, n /*last element idx*/, S::one());
+
+    cudaStreamSynchronize(stream);
 
     S temp_root = basic_root;
     generate_base_table<<<1, 1, 0, stream>>>(basic_root, w30_table, 1 << (30 - log_size));
@@ -611,7 +611,7 @@ namespace ntt {
   // Explicit instantiation for scalar type
   template cudaError_t generate_external_twiddles_generic(
     const curve_config::scalar_t& basic_root,
-    curve_config::scalar_t*& external_twiddles,
+    curve_config::scalar_t* external_twiddles,
     curve_config::scalar_t*& internal_twiddles,
     curve_config::scalar_t*& basic_twiddles,
     uint32_t log_size,

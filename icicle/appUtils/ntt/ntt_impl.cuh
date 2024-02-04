@@ -10,7 +10,7 @@ namespace ntt {
   template <typename S>
   cudaError_t generate_external_twiddles_generic(
     const S& basic_root,
-    S*& external_twiddles,
+    S* external_twiddles,
     S*& internal_twiddles,
     S*& basic_twiddles,
     uint32_t log_size,

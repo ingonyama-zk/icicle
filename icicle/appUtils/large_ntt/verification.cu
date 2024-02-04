@@ -1,5 +1,5 @@
 
-#define CURVE_ID BLS12_377
+#define CURVE_ID BLS12_381
 
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
@@ -61,6 +61,24 @@ int main(int argc, char** argv)
 
   cudaFree(nullptr); // init GPU context (warmup)
 
+  // init domain
+  auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
+  ntt_config.ordering = ordering;
+  ntt_config.are_inputs_on_device = true;
+  ntt_config.are_outputs_on_device = true;
+
+  $CUDA(cudaEventCreate(&icicle_start));
+  $CUDA(cudaEventCreate(&icicle_stop));
+  $CUDA(cudaEventCreate(&new_start));
+  $CUDA(cudaEventCreate(&new_stop));
+
+  auto start = std::chrono::high_resolution_clock::now();
+  const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
+  ntt::InitDomain(basic_root, ntt_config.ctx);
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+  std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
+
   // cpu allocation
   auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE);
   auto CpuOutputOld = std::make_unique<test_data[]>(NTT_SIZE);
@@ -78,21 +96,6 @@ int main(int argc, char** argv)
 
   // inplace
   if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
-
-  // init
-  auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
-  ntt_config.ordering = ordering;
-  ntt_config.are_inputs_on_device = true;
-  ntt_config.are_outputs_on_device = true;
-  // ntt_config.is_async = true;
-
-  $CUDA(cudaEventCreate(&icicle_start));
-  $CUDA(cudaEventCreate(&icicle_stop));
-  $CUDA(cudaEventCreate(&new_start));
-  $CUDA(cudaEventCreate(&new_stop));
-
-  const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  ntt::InitDomain(basic_root, ntt_config.ctx);
 
   // run ntt
   auto benchmark = [&](bool is_print, int iterations) {
@@ -126,6 +129,7 @@ int main(int argc, char** argv)
     }
   };
 
+  benchmark(false /*=print*/, 1); // warmup
   int count = INPLACE ? 1 : 1;
   if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
   benchmark(true /*=print*/, count);
