@@ -62,7 +62,7 @@ func convertScalarsMontgomery[T any, S any](scalars cr.HostOrDeviceSlice[T, S], 
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx) // templatize this per curve??
+	__ret := C.bn254ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx) // template this per curve
 	err := (cr.CudaError)(__ret)
 	return err
 }
@@ -73,7 +73,7 @@ func convertScalarsMontgomeryUnsafe(scalars unsafe.Pointer, size int, isInto boo
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx) // templatize this per curve??
+	__ret := C.bn254ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx) // template this per curve
 	err := (cr.CudaError)(__ret)
 	return err
 }

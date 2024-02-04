@@ -1,5 +1,11 @@
 package cuda_runtime
 
+// #cgo CFLAGS: -I /usr/local/cuda/include
+// #cgo LDFLAGS: -L/usr/local/cuda/lib64 -lcudart
+/*
+#include <cuda.h>
+#include <cuda_runtime.h>
+*/
 import "C"
 
 import (
@@ -21,10 +27,13 @@ func Malloc(size uint) (unsafe.Pointer, CudaError) {
 	}
 
 	var p C.void
-	dp := unsafe.Pointer(&p)
-	err := cudaMalloc(dp, uint64(size))
+	devicePtr := unsafe.Pointer(&p)
+	cSize := (C.size_t)(size)
+	
+	ret := C.cudaMalloc(&devicePtr, cSize)
+	err := (CudaError)(ret)
 
-	return dp, err
+	return devicePtr, err
 }
 
 func MallocAsync(size uint, stream CudaStream) (unsafe.Pointer, CudaError) {
@@ -33,33 +42,55 @@ func MallocAsync(size uint, stream CudaStream) (unsafe.Pointer, CudaError) {
 	}
 
 	var p C.void
-	dp := unsafe.Pointer(&p)
-	err := cudaMallocAsync(dp, uint64(size), stream)
+	devicePtr := unsafe.Pointer(&p)
+	cSize := (C.size_t)(size)
+	cStream := (C.cudaStream_t)(stream)
 
-	return dp, err
+	ret := C.cudaMallocAsync(&devicePtr, cSize, cStream)
+	err := (CudaError)(ret)
+
+	return devicePtr, err
 }
 
-func Free(d unsafe.Pointer) CudaError {
-	return cudaFree(d)
+func Free(devicePtr unsafe.Pointer) CudaError {
+	ret := C.cudaFree(devicePtr)
+	err := (CudaError)(ret)
+	return err
 }
 
-func CopyToHost[T any](hostDst []T, deviceSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
-	cHostDst := unsafe.Pointer(&hostDst[0])
-	err := cudaMemcpy(cHostDst, deviceSrc, uint64(size), CudaMemcpyDeviceToHost)
-	return cHostDst, err
+func FreeAsync(devicePtr unsafe.Pointer, stream Stream) CudaError {
+	cStream := (C.cudaStream_t)(stream)
+	ret := C.cudaFreeAsync(devicePtr, cStream)
+	err := (CudaError)(ret)
+	return err
 }
 
-func CopyToHostAsync(hostDst, deviceSrc unsafe.Pointer, size uint, stream CudaStream) unsafe.Pointer {
-	cudaMemcpyAsync(hostDst, deviceSrc, int(size), CudaMemcpyDeviceToHost, stream)
-	return hostDst
+func CopyToHost(hostDst, deviceSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
+	cCount := (C.size_t)(size)
+	ret := C.cudaMemcpy(hostDst, deviceSrc, cCount, uint32(CudaMemcpyDeviceToHost))
+	err  := (CudaError)(ret)
+	return hostDst, err
+}
+
+func CopyToHostAsync(hostDst, deviceSrc unsafe.Pointer, size uint, stream CudaStream) CudaError {
+	cSize := (C.size_t)(size)
+	cStream := (C.cudaStream_t)(stream)
+	ret := C.cudaMemcpyAsync(hostDst, deviceSrc, cSize, uint32(CudaMemcpyDeviceToHost), cStream)
+	err := (CudaError)(ret)
+	return err
 }
 
 func CopyFromHost(deviceDst, hostSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
-	err := cudaMemcpy(deviceDst, hostSrc, uint64(size), CudaMemcpyHostToDevice)
+	cSize := (C.size_t)(size)
+	ret := C.cudaMemcpy(deviceDst, hostSrc, cSize, uint32(CudaMemcpyHostToDevice))
+	err := (CudaError)(ret)
 	return deviceDst, err
 }
 
-func CopyFromHostAsync(deviceDst, hostSrc unsafe.Pointer, size uint, stream CudaStream) unsafe.Pointer {
-	cudaMemcpyAsync(deviceDst, hostSrc, int(size), CudaMemcpyHostToDevice, stream)
-	return deviceDst
+func CopyFromHostAsync(deviceDst, hostSrc unsafe.Pointer, size uint, stream CudaStream) CudaError {
+	cCount := (C.size_t)(size)
+	cStream := (C.cudaStream_t)(stream)
+	ret := C.cudaMemcpyAsync(deviceDst, hostSrc, cCount, uint32(CudaMemcpyHostToDevice), cStream)
+	err := (CudaError)(ret)
+	return err
 }

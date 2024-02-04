@@ -1,7 +1,6 @@
 package cuda_runtime
 
 import (
-	"fmt"
 	"testing"
 
 	"unsafe"
@@ -21,7 +20,6 @@ func TestMallocAsync(t *testing.T) {
 }
 
 func TestFree(t *testing.T) {
-	t.Skip() //TODO: Freeing memory is failing due to "CudaErrorInvalidValue"
 	mem, err := Malloc(20)
 	assert.Equal(t, CudaSuccess, err, "Unable to allocate device memory due to %d", err)
 
@@ -38,7 +36,7 @@ func TestCopyFromToHost(t *testing.T) {
 	assert.Equal(t, CudaSuccess, err, "Couldn't copy to device due to %v", err)
 
 	someInts2 := make([]int32, 1)
-	_, err = CopyToHost(someInts2, deviceMem, numBytes)
+	_, err = CopyToHost(unsafe.Pointer(&someInts2[0]), deviceMem, numBytes)
 	assert.Equal(t, CudaSuccess, err, "Couldn't copy to device due to %v", err)
-	fmt.Println(someInts2)
+	assert.Equal(t, someInts, someInts2, "Elements of host slices do not match. Copying from/to host failed")
 }
