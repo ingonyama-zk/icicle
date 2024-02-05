@@ -3,6 +3,7 @@
 namespace merkle {
   /// Flattens the tree digests and sum them up to get
   /// the memory needed to contain all the digests
+  template <typename S>
   size_t get_digests_len(uint32_t height, uint32_t arity)
   {
     size_t digests_len = 0;
@@ -65,7 +66,7 @@ namespace merkle {
   {
     int arity = T - 1;
 
-    PoseidonConfig config = default_poseidon_config(T);
+    PoseidonConfig config = default_poseidon_config<S>(T);
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
     config.input_is_a_state = true;
@@ -118,7 +119,7 @@ namespace merkle {
     uint32_t subtree_height = height;
     uint32_t subtree_leaves_size = pow(arity, height - 1);
     uint32_t subtree_state_size = subtree_leaves_size / arity * T;
-    uint32_t subtree_digests_size = get_digests_len(subtree_height, arity);
+    uint32_t subtree_digests_size = get_digests_len<S>(subtree_height, arity);
     size_t subtree_memory_required = sizeof(S) * (subtree_state_size + subtree_digests_size);
     while (subtree_memory_required > STREAM_CHUNK_SIZE) {
       number_of_subtrees *= arity;
@@ -151,7 +152,7 @@ namespace merkle {
     std::cout << "Cutoff height = " << height - subtree_height + 1 << std::endl;
     std::cout << "Number of leaves in a subtree = " << subtree_leaves_size << std::endl;
     std::cout << "State of a subtree = " << subtree_state_size << std::endl;
-    std::cout << "Digest elements for a subtree = " << get_digests_len(subtree_height, arity) << std::endl;
+    std::cout << "Digest elements for a subtree = " << get_digests_len<S>(subtree_height, arity) << std::endl;
     std::cout << "Size of 1 subtree states = " << subtree_state_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Size of 1 subtree digests = " << subtree_digests_size * sizeof(S) / 1024 / 1024 << " MB" << std::endl;
 #endif
@@ -272,7 +273,8 @@ namespace merkle {
     case 11:
       return build_merkle_tree<curve_config::scalar_t, 12>(leaves, digests, height, constants, config);
     default:
-      throw std::runtime_error("invalid arity");
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "BuildPoseidonMerkleTree: #arity must be one of [2, 4, 8, 11]");
     }
+    return CHK_LAST();
   }
 } // namespace merkle

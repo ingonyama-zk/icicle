@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 
   /// Use keep_rows to specify how many rows do you want to store
   int keep_rows = argc > 2 ? atoi(argv[2]) : 7;
-  size_t digests_len = get_digests_len(keep_rows + 1, A);
+  size_t digests_len = get_digests_len<scalar_t>(keep_rows + 1, A);
 
   /// Fill leaves with scalars [0, 1, ... 2^{tree_height - 1} - 1]
   START_TIMER(timer_allocation);
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
   std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
             << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
 
-  TreeBuilderConfig config = default_merkle_config();
+  TreeBuilderConfig config = default_merkle_config<scalar_t>();
   config.keep_rows = keep_rows;
   START_TIMER(timer_merkle);
   build_merkle_tree<scalar_t, T>(leaves, digests, tree_height, constants, config);

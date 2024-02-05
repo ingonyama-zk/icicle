@@ -3,21 +3,6 @@
 #include "kernels.cu"
 
 namespace poseidon {
-  PoseidonConfig default_poseidon_config(int t)
-  {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
-    PoseidonConfig config = {
-      ctx,   // ctx
-      false, // are_inputes_on_device
-      false, // are_outputs_on_device
-      false, // input_is_a_state
-      false, // aligned
-      false, // loop_state
-      false, // is_async
-    };
-    return config;
-  }
-
   template <typename S, int T>
   cudaError_t
   permute_many(S* states, size_t number_of_states, const PoseidonConstants<S>& constants, cudaStream_t& stream)
@@ -118,7 +103,8 @@ namespace poseidon {
     case 11:
       return poseidon_hash<curve_config::scalar_t, 12>(input, output, number_of_states, constants, config);
     default:
-      throw std::runtime_error("invalid arity");
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "PoseidonHash: #arity must be one of [2, 4, 8, 11]");
     }
+    return CHK_LAST();
   }
 } // namespace poseidon

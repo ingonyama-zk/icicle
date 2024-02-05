@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# 0.3.7
 import galois
 import numpy as np
 
@@ -7,13 +8,13 @@ import numpy as np
 from poseidon import round_constants as rc, round_numbers as rn
 
 # Modify these
-arity = 2
-# p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001 # bls12-381
+arity = 11
+p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001 # bls12-381
 # p = 0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001 # bls12-377
 # p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001 # bn254
-p = 0x1ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d44300000008508c00000000001 # bw6-761
-prime_bit_len = 377
-field_bytes = 48
+# p = 0x1ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d44300000008508c00000000001 # bw6-761
+prime_bit_len = 255
+field_bytes = 32
 
 # leave set to -1 if not sure
 full_round = -1
@@ -30,7 +31,10 @@ security_level = 128
 # F.primitive_element()
 #
 # primitive_element = None
-primitive_element = 15
+primitive_element = 7 # bls12-381
+# primitive_element = 22 # bls12-377
+# primitive_element = 5 # bn254
+# primitive_element = 15 # bw6-761
 
 # currently we only support alpha 5, if you need alpha other than 5 - feal free to reach out
 alpha = 5

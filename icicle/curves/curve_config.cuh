@@ -15,20 +15,16 @@
 
 #if CURVE_ID == BN254
 #include "bn254_params.cuh"
-#include "../appUtils/poseidon/constants/bn254_poseidon.h"
 using namespace bn254;
 #elif CURVE_ID == BLS12_381
 #include "bls12_381_params.cuh"
-#include "../appUtils/poseidon/constants/bls12_381_poseidon.h"
 using namespace bls12_381;
 #elif CURVE_ID == BLS12_377
 #include "bls12_377_params.cuh"
-#include "../appUtils/poseidon/constants/bls12_377_poseidon.h"
 using namespace bls12_377;
 #elif CURVE_ID == BW6_761
 #include "bls12_377_params.cuh"
 #include "bw6_761_params.cuh"
-#include "../appUtils/poseidon/constants/bw6_761_poseidon.h"
 using namespace bw6_761;
 #endif
 

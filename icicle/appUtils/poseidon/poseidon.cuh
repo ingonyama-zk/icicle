@@ -100,7 +100,21 @@ namespace poseidon {
                     *   function will block the current CPU thread. */
   };
 
-  PoseidonConfig default_poseidon_config(int t);
+  template <typename S>
+  PoseidonConfig default_poseidon_config(int t)
+  {
+    device_context::DeviceContext ctx = device_context::get_default_device_context();
+    PoseidonConfig config = {
+      ctx,   // ctx
+      false, // are_inputes_on_device
+      false, // are_outputs_on_device
+      false, // input_is_a_state
+      false, // aligned
+      false, // loop_state
+      false, // is_async
+    };
+    return config;
+  }
 
   /**
    * Loads pre-calculated optimized constants, moves them to the device

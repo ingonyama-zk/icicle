@@ -1,45 +1,21 @@
 #include "poseidon.cuh"
 
+/// These are pre-calculated constants for different curves
+#if CURVE_ID == BN254
+#include "constants/bn254_poseidon.h"
+using namespace poseidon_constants_bn254;
+#elif CURVE_ID == BLS12_381
+#include "constants/bls12_381_poseidon.h"
+using namespace poseidon_constants_bls12_381;
+#elif CURVE_ID == BLS12_377
+#include "constants/bls12_377_poseidon.h"
+using namespace poseidon_constants_bls12_377;
+#elif CURVE_ID == BW6_761
+#include "constants/bw6_761_poseidon.h"
+using namespace poseidon_constants_bw6_761;
+#endif
+
 namespace poseidon {
-  int partial_rounds_number_from_arity(const int arity)
-  {
-    switch (arity) {
-    case 2:
-      return 55;
-    case 4:
-      return 56;
-    case 8:
-      return 57;
-    case 11:
-      return 57;
-    default:
-      throw std::invalid_argument("unsupported arity");
-    }
-  };
-
-  template <typename S>
-  S* precalculated_optimized_constants(const int arity)
-  {
-    unsigned char* constants;
-    switch (arity) {
-    case 2:
-      constants = poseidon_constants_2;
-      break;
-    case 4:
-      constants = poseidon_constants_4;
-      break;
-    case 8:
-      constants = poseidon_constants_8;
-      break;
-    case 11:
-      constants = poseidon_constants_11;
-      break;
-    default:
-      throw std::invalid_argument("unsupported arity");
-    }
-    return reinterpret_cast<S*>(constants);
-  }
-
   template <typename S>
   cudaError_t create_optimized_poseidon_constants(
     int arity,
@@ -83,18 +59,37 @@ namespace poseidon {
   }
 
   template <typename S>
-  cudaError_t
-  init_optimized_poseidon_constants(int arity, device_context::DeviceContext& ctx, PoseidonConstants<S>* constants)
+  cudaError_t init_optimized_poseidon_constants(
+    int arity, device_context::DeviceContext& ctx, PoseidonConstants<S>* poseidon_constants)
   {
     CHK_INIT_IF_RETURN();
-    int width = arity + 1;
     int full_rounds_half = FULL_ROUNDS_DEFAULT;
-    int partial_rounds = partial_rounds_number_from_arity(arity);
+    int partial_rounds;
+    unsigned char* constants;
+    switch (arity) {
+    case 2:
+      constants = poseidon_constants_2;
+      partial_rounds = partial_rounds_2;
+      break;
+    case 4:
+      constants = poseidon_constants_4;
+      partial_rounds = partial_rounds_4;
+      break;
+    case 8:
+      constants = poseidon_constants_8;
+      partial_rounds = partial_rounds_8;
+      break;
+    case 11:
+      constants = poseidon_constants_11;
+      partial_rounds = partial_rounds_11;
+      break;
+    default:
+      THROW_ICICLE_ERR(
+        IcicleError_t::InvalidArgument, "init_optimized_poseidon_constants: #arity must be one of [2, 4, 8, 11]");
+    }
+    S* h_constants = reinterpret_cast<S*>(constants);
 
-    // All the constants are stored in a single file
-    S* h_constants = precalculated_optimized_constants<S>(width - 1);
-
-    create_optimized_poseidon_constants(arity, full_rounds_half, partial_rounds, h_constants, ctx, constants);
+    create_optimized_poseidon_constants(arity, full_rounds_half, partial_rounds, h_constants, ctx, poseidon_constants);
 
     return CHK_LAST();
   }

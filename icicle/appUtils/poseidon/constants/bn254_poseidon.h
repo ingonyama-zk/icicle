@@ -2,16 +2,24 @@
 #ifndef BN254_POSEIDON_H
 #define BN254_POSEIDON_H
 
-namespace poseidon {
+namespace poseidon_constants_bn254 {
   /**
    * This inner namespace contains optimized constants for running Poseidon.
    * These constants were generated using an algorithm defined at
    * https://spec.filecoin.io/algorithms/crypto/poseidon/
    * The number in the name corresponds to the arity of hash function
    * Each array contains:
-   * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matricies
+   * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matrices
   */
-  namespace {
+
+  int partial_rounds_2 = 56;
+
+  int partial_rounds_4 = 56;
+
+  int partial_rounds_8 = 57;
+
+  int partial_rounds_11 = 57;
+
     unsigned char poseidon_constants_2[] = {
         0x43, 0x2b, 0xcf, 0x42, 0xd2, 0x41, 0xdc, 0xcd, 0x76, 0xa4, 0xf0, 0xb6,
         0x41, 0x8b, 0x17, 0x74, 0x05, 0x9e, 0xb4, 0x12, 0x57, 0x9f, 0xe9, 0x27,
@@ -10797,6 +10805,5 @@ namespace poseidon {
         0x43, 0xe9, 0x10, 0xaa, 0x8b, 0x92, 0x2a, 0x8a, 0xd6, 0x38, 0x11, 0x54,
         0x95, 0x8a, 0x2a, 0xa1, 0x7f, 0xda, 0x8d, 0xd2, 0x21, 0x99, 0xef, 0x12
     };
-  }
 } // namespace poseidon_constants
 #endif
