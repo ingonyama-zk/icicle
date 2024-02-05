@@ -48,7 +48,7 @@ where
     F::ArkEquivalent: FftField,
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
-    let test_sizes = [1 << 4, 1 << 16];
+    let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
         let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
@@ -161,7 +161,7 @@ where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let mut seed = test_rng();
-    let test_sizes = [1 << 4, 1 << 16];
+    let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
         let coset_generators = [
             F::ArkEquivalent::rand(&mut seed),
