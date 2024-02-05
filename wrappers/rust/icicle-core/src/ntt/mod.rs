@@ -210,7 +210,7 @@ macro_rules! impl_ntt_tests {
     (
       $field:ident
     ) => {
-        const MAX_SIZE: u64 = 1 << 16;
+        const MAX_SIZE: u64 = 1 << 17;
         static INIT: OnceLock<()> = OnceLock::new();
 
         #[test]
