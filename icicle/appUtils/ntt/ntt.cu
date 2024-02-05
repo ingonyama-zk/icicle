@@ -417,12 +417,18 @@ namespace ntt {
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
+    if (size > Domain<S>::max_size) {
+      std::cerr
+        << "NTT size is too large for the domain. Consider generating your domain with a higher order root of unity"
+        << '\n';
+      throw -1;
+    }
 
     cudaStream_t& stream = config.ctx.stream;
     int batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
     int input_size_bytes = size * batch_size * sizeof(E);
-    bool are_inputs_on_device = config.are_inputs_on_device; // TODO: unify name to is_
+    bool are_inputs_on_device = config.are_inputs_on_device;
     bool are_outputs_on_device = config.are_outputs_on_device;
 
     S* coset = nullptr;
@@ -540,7 +546,7 @@ namespace ntt {
    *  - `E` is the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t ECNTTCuda(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
     curve_config::projective_t* input,
     int size,
     NTTDir dir,

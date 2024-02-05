@@ -50,8 +50,8 @@ jobs:
       working-directory: ./wrappers/rust
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # Running tests from the root workspace will run all workspace members' tests by default
-      #TODO: remove test-threads once thread safety is finalized
-      run: cargo test --release --verbose -- --test-threads=1
+      # We need to limit the number of threads to avoid running out of memory on weaker machines
+      run: cargo test --release --verbose --features=g2 -- --test-threads=2
 
   test-cpp-linux:
     name: Test C++ on Linux

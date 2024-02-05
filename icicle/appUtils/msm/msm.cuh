@@ -83,7 +83,8 @@ namespace msm {
    * A function that returns the default value of [MSMConfig](@ref MSMConfig) for the [MSM](@ref MSM) function.
    * @return Default value of [MSMConfig](@ref MSMConfig).
    */
-  extern "C" MSMConfig DefaultMSMConfig();
+  template <typename A>
+  MSMConfig DefaultMSMConfig();
 
   /**
    * A function that computes MSM: \f$ MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i \f$.

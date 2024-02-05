@@ -87,10 +87,12 @@ namespace ntt {
    * @return Default value of [NTTConfig](@ref NTTConfig).
    */
   template <typename S>
-  NTTConfig<S> CONCAT_EXPAND(CURVE, DefaultNTTConfig)();
+  NTTConfig<S> DefaultNTTConfig();
 
   /**
-   * A function that computes NTT or iNTT in-place.
+   * A function that computes NTT or iNTT in-place. It's necessary to call [InitDomain](@ref InitDomain) with an
+   * appropriate primitive root before calling this function (only one call to `InitDomain` should suffice for all
+   * NTTs).
    * @param input Input of the NTT. Length of this array needs to be \f$ size \cdot config.batch\_size \f$. Note
    * that if inputs are in Montgomery form, the outputs will be as well and vice-versa: non-Montgomery inputs produce
    * non-Montgomety outputs.
