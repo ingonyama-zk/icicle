@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   int NTT_LOG_SIZE = 25;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
 
-  cudaFree(nullptr); // init GPU context (warmup)
+  CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context
 
   // init domain
   auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
