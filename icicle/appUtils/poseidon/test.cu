@@ -15,7 +15,7 @@ using namespace poseidon;
 using namespace curve_config;
 
 #define A 2
-#define T A + 1
+#define T (A + 1)
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 
   START_TIMER(allocation_timer);
   // Prepare input data of [0, 1, 2 ... (number_of_blocks * arity) - 1]
-  int number_of_blocks = 1024;
+  int number_of_blocks = argc > 1 ? 1 << atoi(argv[1]) : 1024;
   scalar_t input = scalar_t::zero();
   scalar_t* in_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * A * sizeof(scalar_t)));
   for (uint32_t i = 0; i < number_of_blocks * A; i++) {
@@ -1077,13 +1077,15 @@ int main(int argc, char* argv[])
     {3906397586, 3290474371, 1675512984, 4178526889, 2952985253, 3592646253, 1572272369, 508740262},
     {4126315652, 3786312147, 3699923125, 3674356834, 1459586774, 373249965, 2436297855, 1091365949}};
 
-  for (int i = 0; i < number_of_blocks; i++) {
+  if (number_of_blocks == 1024) {
+    for (int i = 0; i < number_of_blocks; i++) {
 #ifdef DEBUG
-    std::cout << out_ptr[i] << std::endl;
+      std::cout << out_ptr[i] << std::endl;
 #endif
-    assert((out_ptr[i] == expected[i]));
+      assert((out_ptr[i] == expected[i]));
+    }
+    printf("Expected output matches\n");
   }
-  printf("Expected output matches\n");
 
   free(in_ptr);
   free(out_ptr);

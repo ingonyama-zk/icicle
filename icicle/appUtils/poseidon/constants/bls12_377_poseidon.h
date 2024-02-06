@@ -12,7 +12,7 @@ namespace poseidon_constants_bls12_377 {
    * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matrices
   */
 
-    int partial_rounds_2 = 55;
+    int partial_rounds_2 = 56;
 
     int partial_rounds_4 = 56;
 

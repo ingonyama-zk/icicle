@@ -2,16 +2,16 @@
 
 /// These are pre-calculated constants for different curves
 #if CURVE_ID == BN254
-#include "constants/bn254_poseidon.h"
+#include "appUtils/poseidon/constants/bn254_poseidon.h"
 using namespace poseidon_constants_bn254;
 #elif CURVE_ID == BLS12_381
-#include "constants/bls12_381_poseidon.h"
+#include "appUtils/poseidon/constants/bls12_381_poseidon.h"
 using namespace poseidon_constants_bls12_381;
 #elif CURVE_ID == BLS12_377
-#include "constants/bls12_377_poseidon.h"
+#include "appUtils/poseidon/constants/bls12_377_poseidon.h"
 using namespace poseidon_constants_bls12_377;
 #elif CURVE_ID == BW6_761
-#include "constants/bw6_761_poseidon.h"
+#include "appUtils/poseidon/constants/bw6_761_poseidon.h"
 using namespace poseidon_constants_bw6_761;
 #endif
 

@@ -20,7 +20,7 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
 
 // Arity
 #define A 2
-#define T A + 1
+#define T (A + 1)
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \

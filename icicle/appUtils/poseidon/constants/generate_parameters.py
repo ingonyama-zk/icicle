@@ -62,9 +62,9 @@ if __name__ == "__main__":
     for m in sparse_matrices:
         m = flatten(m.tolist())
         for j in range(0, t * t, t):
-                sparse_aligned.append(m[j])
+            sparse_aligned.append(m[j])
         for j in range(1, t):
-                sparse_aligned.append(m[j])
+            sparse_aligned.append(m[j])
 
     with open("constants.bin", "wb") as constants_file:
         for l in [opt_rc, flatten(mds_matrix), flatten(pre_matrix), sparse_aligned]:

@@ -18,7 +18,7 @@ namespace poseidon {
       if (aligned) {
         prepared_element = states[idx];
       } else {
-        prepared_element = states[state_number * T + element_number - 1];
+        prepared_element = states[idx - 1];
       }
     }
 
@@ -41,6 +41,7 @@ namespace poseidon {
   template <typename S, int T>
   __device__ S vecs_mul_matrix(S element, S* matrix, int element_number, int vec_number, S* shared_states)
   {
+    __syncthreads();
     shared_states[threadIdx.x] = element;
     __syncthreads();
 
@@ -49,7 +50,6 @@ namespace poseidon {
     for (int i = 1; i < T; i++) {
       element_wide = element_wide + S::mul_wide(shared_states[vec_number * T + i], matrix[i * T + element_number]);
     }
-    __syncthreads();
 
     return S::reduce(element_wide);
   }
@@ -106,7 +106,7 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  __device__ S partial_round(S* state, size_t rc_offset, int round_number, const PoseidonConstants<S>& constants)
+  __device__ S partial_round(S state[T], size_t rc_offset, int round_number, const PoseidonConstants<S>& constants)
   {
     S element = state[0];
     element = sbox_alpha_five(element);
@@ -136,11 +136,20 @@ namespace poseidon {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }
 
-    S* state = &states[idx * T];
+    S state[T];
+#pragma unroll
+    for (int i = 0; i < T; i++) {
+      state[i] = states[idx * T + i];
+    }
 
     for (int i = 0; i < constants.partial_rounds; i++) {
       partial_round<S, T>(state, rc_offset, i, constants);
       rc_offset++;
+    }
+
+#pragma unroll
+    for (int i = 0; i < T; i++) {
+      states[idx * T + i] = state[i];
     }
   }
 

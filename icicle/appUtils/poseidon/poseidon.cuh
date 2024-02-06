@@ -4,10 +4,10 @@
 
 #include <cstdint>
 #include <stdexcept>
-#include "../../utils/device_context.cuh"
-#include "../../curves/curve_config.cuh"
-#include "../../utils/error_handler.cuh"
-#include "../../utils/utils.h"
+#include "utils/device_context.cuh"
+#include "curves/curve_config.cuh"
+#include "utils/error_handler.cuh"
+#include "utils/utils.h"
 
 /**
  * @namespace poseidon
@@ -54,7 +54,7 @@ namespace poseidon {
   {
   public:
     // The logic behind this is that 1 thread only works on 1 element
-    // We have {t} elements in each state, and {number_of_states} states total
+    // We have {T} elements in each state, and {number_of_states} states total
     static const int number_of_threads = 256 / T * T;
 
     // The partial rounds operates on the whole state, so we define
