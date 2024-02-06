@@ -487,10 +487,10 @@ namespace ntt {
 
     if (log_size == 4) {
       if (dit) {
-        ntt16dit<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
+        ntt16dit<<<1, 2, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       } else { // dif
-        ntt16<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
+        ntt16<<<1, 2, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv, dit);
       }
       if (normalize) normalize_kernel<<<1, 16, 0, cuda_stream>>>(out, S::inv_log_size(4));
