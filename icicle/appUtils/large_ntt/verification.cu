@@ -13,11 +13,8 @@
 #include "ntt/ntt_impl.cuh"
 #include <memory>
 
-#define PERFORMANCE
-
 typedef curve_config::scalar_t test_scalar;
 typedef curve_config::scalar_t test_data; // uncomment for NTT
-// typedef curve_config::projective_t test_data; // uncomment for ECNTT
 #include "kernel_ntt.cu"
 
 #define $CUDA(call)                                                                                                    \
@@ -41,15 +38,14 @@ void incremental_values(test_scalar* res, uint32_t count)
 
 int main(int argc, char** argv)
 {
-#ifdef PERFORMANCE
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
   float icicle_time, new_time;
-#endif
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 16; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : true;
-  int INV = (argc > 3) ? atoi(argv[3]) : true;
+  int INV = (argc > 3) ? atoi(argv[3]) : false;
+  bool COSET_IDX = (argc > 4) ? atoi(argv[4]) : 0;
 
   const ntt::Ordering ordering = ntt::Ordering::kNN;
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -57,7 +53,9 @@ int main(int argc, char** argv)
                              : ordering == ntt::Ordering::kRN ? "RN"
                                                               : "RR";
 
-  printf("running ntt 2^%d, INV=%d, ordering=%s, inplace=%d\n", NTT_LOG_SIZE, INV, ordering_str, INPLACE);
+  printf(
+    "running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d, coset-idx=%d\n", NTT_LOG_SIZE, ordering_str, INPLACE, INV,
+    COSET_IDX);
 
   cudaFree(nullptr); // init GPU context (warmup)
 
@@ -92,12 +90,16 @@ int main(int argc, char** argv)
 
   // init inputs
   incremental_values(CpuScalars.get(), NTT_SIZE);
-  $CUDA(cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE, cudaMemcpyHostToDevice));
+  $CUDA(cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
   // inplace
   if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
 
   // run ntt
+  for (int coset_idx = 0; coset_idx < COSET_IDX; ++coset_idx) {
+    ntt_config.coset_gen *= basic_root;
+  }
+
   auto benchmark = [&](bool is_print, int iterations) {
     // NEW
     $CUDA(cudaEventRecord(new_start, ntt_config.ctx.stream));

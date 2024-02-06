@@ -27,6 +27,8 @@ namespace ntt {
     int max_logn,
     bool is_inverse,
     Ordering ordering,
+    S* arbitrary_coset,
+    int coset_gen_index,
     cudaStream_t cuda_stream);
 
 } // namespace ntt

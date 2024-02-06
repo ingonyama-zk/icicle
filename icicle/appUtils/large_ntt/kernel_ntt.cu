@@ -32,7 +32,7 @@ namespace ntt {
   // Note: the following reorder kernels are fused with normalization for INTT
   template <typename E, typename S, uint32_t MAX_GROUP_SIZE = 80>
   static __global__ void
-  reorder_digits_inplace_kernel(E* arr, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
+  reorder_digits_inplace_and_normalize_kernel(E* arr, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
   {
     // launch N threads
     // each thread starts from one index and calculates the corresponding group
@@ -67,13 +67,33 @@ namespace ntt {
   }
 
   template <typename E, typename S>
-  __launch_bounds__(64) __global__
-    void reorder_digits_kernel(E* arr, E* arr_reordered, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
+  __launch_bounds__(64) __global__ void reorder_digits_and_normalize_kernel(
+    E* arr, E* arr_reordered, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
   {
     uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
     uint32_t rd = tid;
     uint32_t wr = dig_rev(tid, log_size, dit);
     arr_reordered[wr] = is_normalize ? arr[rd] * inverse_N : arr[rd];
+  }
+
+  template <typename E, typename S>
+  static __global__ void BatchMulKernelDigReverse(
+    E* in_vec,
+    int n_elements,
+    int batch_size,
+    S* scalar_vec,
+    int step,
+    int n_scalars,
+    int logn,
+    bool digit_rev,
+    bool dit,
+    E* out_vec)
+  {
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid >= n_elements * batch_size) return;
+    int64_t scalar_id = tid % n_elements;
+    if (digit_rev) scalar_id = dig_rev(tid, logn, dit);
+    out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
   }
 
   template <typename E, typename S>
@@ -593,6 +613,8 @@ namespace ntt {
     int max_logn,
     bool is_inverse,
     Ordering ordering,
+    S* arbitrary_coset,
+    int coset_gen_index,
     cudaStream_t cuda_stream)
   {
     CHK_INIT_IF_RETURN();
@@ -610,15 +632,28 @@ namespace ntt {
     const bool reverse_input = ordering == Ordering::kNN;
     const bool is_dit = ordering == Ordering::kNN || ordering == Ordering::kRN;
     bool is_normalize = is_inverse;
+    const bool is_on_coset = (coset_gen_index != 0) || arbitrary_coset;
+    const int n_twiddles = 1 << max_logn;
+
+    // Note: can fuse this with input reorder (and normalize) but no performance improvement is measured and it
+    // complicates the reorder-normalize kernel. In addition note that reorder is not required for all orderings, and
+    // normalization is used for INTT only.
+    if (is_on_coset && !is_inverse) {
+      BatchMulKernelDigReverse<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+        d_input, ntt_size, 1 /*=batch_size*/, arbitrary_coset ? arbitrary_coset : external_twiddles,
+        arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn, false /*digit_rev*/, is_dit, d_output);
+
+      d_input = d_output;
+    }
 
     if (reverse_input) {
-      // Note: fusing reorder with normalize for INTT
+      // Note: fused reorder and normalize (for INTT)
       const bool is_reverse_in_place = (d_input == d_output);
       if (is_reverse_in_place) {
-        reorder_digits_inplace_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+        reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
           d_output, logn, is_dit, is_normalize, S::inv_log_size(logn));
       } else {
-        reorder_digits_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+        reorder_digits_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
           d_input, d_output, logn, is_dit, is_normalize, S::inv_log_size(logn));
       }
       is_normalize = false;
@@ -628,6 +663,12 @@ namespace ntt {
     CHK_IF_RETURN(large_ntt(
       d_output, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, is_inverse,
       is_normalize, is_dit, cuda_stream));
+
+    if (is_on_coset && is_inverse) {
+      BatchMulKernelDigReverse<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+        d_output, ntt_size, 1 /*=batch_size*/, arbitrary_coset ? arbitrary_coset : external_twiddles + n_twiddles,
+        arbitrary_coset ? 1 : -coset_gen_index, n_twiddles, logn, false /*digit_rev*/, is_dit, d_output);
+    }
 
     return CHK_LAST();
   }
@@ -651,6 +692,8 @@ namespace ntt {
     int max_logn,
     bool is_inverse,
     Ordering ordering,
+    curve_config::scalar_t* arbitrary_coset,
+    int coset_gen_index,
     cudaStream_t cuda_stream);
 
 } // namespace ntt

@@ -811,6 +811,8 @@ public:
     return reduce(xy);          // reduce mod p
   }
 
+  friend HOST_DEVICE_INLINE Field operator*=(const Field& xs, const Field& ys) { return xs * ys; }
+
   friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys)
   {
 #ifdef __CUDA_ARCH__
