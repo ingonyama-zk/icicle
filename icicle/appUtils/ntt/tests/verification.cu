@@ -35,11 +35,12 @@ int main(int argc, char** argv)
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
   float icicle_time, new_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 16; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
   int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 32;
+  int COSET_IDX = (argc > 5) ? atoi(argv[5]) : 1;
 
   const ntt::Ordering ordering = ntt::Ordering::kNN;
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -48,8 +49,8 @@ int main(int argc, char** argv)
                                                               : "RR";
 
   printf(
-    "running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d, batch_size=%d\n", NTT_LOG_SIZE, ordering_str, INPLACE, INV,
-    BATCH_SIZE);
+    "running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d, batch_size=%d, coset-idx=%d\n", NTT_LOG_SIZE, ordering_str,
+    INPLACE, INV, BATCH_SIZE, COSET_IDX);
 
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
@@ -95,7 +96,10 @@ int main(int argc, char** argv)
       cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
   }
 
-  // run ntt
+  for (int coset_idx = 0; coset_idx < COSET_IDX; ++coset_idx) {
+    ntt_config.coset_gen = ntt_config.coset_gen * basic_root;
+  }
+
   auto benchmark = [&](bool is_print, int iterations) -> cudaError_t {
     // NEW
     CHK_IF_RETURN(cudaEventRecord(new_start, ntt_config.ctx.stream));
