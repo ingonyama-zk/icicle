@@ -25,6 +25,7 @@ namespace poseidon {
     device_context::DeviceContext& ctx,
     PoseidonConstants<S>* poseidon_constants)
   {
+    CHK_INIT_IF_RETURN();
     cudaStream_t& stream = ctx.stream;
     int width = arity + 1;
     int round_constants_len = width * full_rounds_half * 2 + partial_rounds;
