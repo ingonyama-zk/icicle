@@ -291,7 +291,8 @@ macro_rules! impl_poseidon_tests {
     (
       $field:ident,
       $field_bytes:literal,
-      $field_prefix:literal
+      $field_prefix:literal,
+      $partial_rounds:literal
     ) => {
         #[test]
         fn test_poseidon_hash_many() {
@@ -300,7 +301,7 @@ macro_rules! impl_poseidon_tests {
 
         #[test]
         fn test_poseidon_custom_config() {
-            check_poseidon_custom_config::<$field>($field_bytes, $field_prefix)
+            check_poseidon_custom_config::<$field>($field_bytes, $field_prefix, $partial_rounds)
         }
     };
 }

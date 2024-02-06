@@ -62,7 +62,7 @@ where
     _check_poseidon_hash_many(constants);
 }
 
-pub fn check_poseidon_custom_config<F: FieldImpl>(field_bytes: usize, field_prefix: &str)
+pub fn check_poseidon_custom_config<F: FieldImpl>(field_bytes: usize, field_prefix: &str, partial_rounds: u32)
 where
     <F as FieldImpl>::Config: Poseidon<F>,
 {
@@ -70,14 +70,12 @@ where
     let constants = init_poseidon::<F>(arity as u32);
 
     let full_rounds_half = 4;
-    let partial_rounds = 55;
 
     let ctx = get_default_device_context();
     let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
     let constants_file = PathBuf::from(cargo_manifest_dir)
         .join("tests")
         .join(format!("{}_constants.bin", field_prefix));
-    println!("Path: {:?}", constants_file);
     let mut constants_buf = vec![];
     File::open(constants_file)
         .unwrap()
