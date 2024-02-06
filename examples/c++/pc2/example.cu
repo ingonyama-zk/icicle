@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     std::cout << "Defining the size of the example" << std::endl;
     const uint32_t size_col=11;
     std::cout << "Number of layers: " << size_col << std::endl;
-    const uint32_t height=9;
+    const uint32_t height=10;
     const uint32_t height_icicle = height + 1;
     std::cout << "Tree height (edges, +1 to count levels): " << height <<  std::endl;
     const uint32_t tree_arity = 8;
@@ -38,8 +38,13 @@ int main(int argc, char* argv[])
  
     std::cout << "Allocating memory" << std::endl;
     scalar_t* layers = static_cast<scalar_t*>(malloc(size_col * size_row * sizeof(scalar_t)));
+    if (layers == nullptr) {
+        std::cerr << "Memory allocation for 'layers' failed." << std::endl;
+    }
     scalar_t* column_hash = static_cast<scalar_t*>(malloc(size_row * sizeof(scalar_t)));
-
+    if (column_hash == nullptr) {
+        std::cerr << "Memory allocation for 'column_hash' failed." << std::endl;
+    }
 
     std::cout << "Generating random inputs" << std::endl;
     scalar_t::RandHostMany(layers, size_col /* *size_row */);
@@ -52,8 +57,16 @@ int main(int argc, char* argv[])
     PoseidonConstants<scalar_t> constants1;
     init_optimized_poseidon_constants<scalar_t>(size_col, ctx, &constants1);
     PoseidonConfig config1 = default_poseidon_config<scalar_t>(size_col+1);
-    err = poseidon_hash<curve_config::scalar_t, size_col+1>(layers, column_hash, size_row, constants1, config1);
-    checkCudaError(err);
+    const unsigned nof_partitions = 32;
+    std::cout << "Using " <<  nof_partitions <<  " partitions" <<std::endl;
+    const unsigned size_partition = size_row / nof_partitions;
+    for (unsigned i = 0; i < nof_partitions; i++) {
+        std::cout << "Hashing partition " <<  i << std::endl;
+        err = poseidon_hash<curve_config::scalar_t, size_col+1>(&layers[i*size_col*size_partition], &column_hash[i*size_partition], size_partition, constants1, config1);
+        checkCudaError(err);
+    }
+    free(layers);
+    return 0;
     std::cout << "Step 2: Merkle Tree-C" << std::endl;
     auto digests_len = get_digests_len<scalar_t>(height_icicle, tree_arity);  // keep all digests
     // std::cout << "Digests length: " << digests_len << std::endl;
@@ -65,7 +78,7 @@ int main(int argc, char* argv[])
     checkCudaError(err);
 
     std::cout << "Cleaning up memory" << std::endl;
-    free(layers);
+    
     free(column_hash);
     free(digests);
 
