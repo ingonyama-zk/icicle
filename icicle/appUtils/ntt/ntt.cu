@@ -28,7 +28,7 @@ namespace ntt {
         int idx_reversed = __brev(idx) >> (32 - logn);
 
         E val = arr[batch_idx * n + idx];
-        __syncthreads(); // for in-place (when pointers arr==arr_reversed)
+        if (arr == arr_reversed) { __syncthreads(); } // for in-place (when pointers arr==arr_reversed)
         arr_reversed[batch_idx * n + idx_reversed] = val;
       }
     }

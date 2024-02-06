@@ -80,7 +80,8 @@ namespace ntt {
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
                                  *   function will block the current CPU thread. */
-    bool is_force_radix2;
+    bool is_force_radix2; /**< Explicitly select radix-2 NTT algorithm. Default value: false (the implementation selects
+                             radix-2 or mixed-radix algorithm based on heuristics). */
   };
 
   /**
