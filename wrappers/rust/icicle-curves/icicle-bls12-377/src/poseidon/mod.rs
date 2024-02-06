@@ -12,7 +12,7 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use core::mem::MaybeUninit;
 
-impl_poseidon!("bls12_377", bls12_77, ScalarField, ScalarCfg);
+impl_poseidon!("bls12_377", bls12_377, ScalarField, ScalarCfg);
 
 #[cfg(feature = "bw6-761")]
 impl_poseidon!("bw6_761", bw6_761, BaseField, BaseCfg);
