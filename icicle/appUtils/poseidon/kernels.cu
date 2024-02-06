@@ -90,12 +90,12 @@ namespace poseidon {
     int local_state_number = threadIdx.x / T;
     int element_number = idx % T;
 
+    S new_el = states[idx];
     bool add_pre_round_constants = first_half;
     for (int i = 0; i < constants.full_rounds_half; i++) {
-      states[idx] = full_round<S, T>(
-        states[idx], rc_offset, local_state_number, element_number,
-        !first_half || (i < (constants.full_rounds_half - 1)), add_pre_round_constants,
-        !first_half && (i == constants.full_rounds_half - 1), shared_states, constants);
+      new_el = full_round<S, T>(
+        new_el, rc_offset, local_state_number, element_number, !first_half || (i < (constants.full_rounds_half - 1)),
+        add_pre_round_constants, !first_half && (i == constants.full_rounds_half - 1), shared_states, constants);
       rc_offset += T;
 
       if (add_pre_round_constants) {
@@ -103,6 +103,7 @@ namespace poseidon {
         add_pre_round_constants = false;
       }
     }
+    states[idx] = new_el;
   }
 
   template <typename S, int T>
