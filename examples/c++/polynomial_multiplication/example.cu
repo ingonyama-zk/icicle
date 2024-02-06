@@ -39,7 +39,7 @@ int main(int argc, char** argv)
   cudaEvent_t start, stop;
   float measured_time;
 
-  int NTT_LOG_SIZE = 25;
+  int NTT_LOG_SIZE = 23;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
 
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context
