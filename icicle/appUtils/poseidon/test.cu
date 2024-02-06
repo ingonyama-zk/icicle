@@ -1,67 +1,57 @@
-// TODO: add to gtest or remove
 // #define DEBUG
 
-#include "../../curves/bls12_381/curve_config.cuh"
-#include "../../curves/bls12_381/poseidon.cu"
+#define CURVE_ID 2
+#include "../../curves/curve_config.cuh"
+#include "../../utils/device_context.cuh"
+#include "poseidon.cu"
 
 #ifndef __CUDA_ARCH__
+#include <cassert>
 #include <chrono>
 #include <fstream>
 #include <iostream>
+
+using namespace poseidon;
+using namespace curve_config;
+
+#define A 2
+#define T (A + 1)
+
+#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
+#define END_TIMER(timer, msg)                                                                                          \
+  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int main(int argc, char* argv[])
 {
   using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
   using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 
-  const int arity = 2;
-  const int t = arity + 1;
+  // Load poseidon constants
+  START_TIMER(timer_const);
+  device_context::DeviceContext ctx = device_context::get_default_device_context();
+  PoseidonConstants<scalar_t> constants;
+  init_optimized_poseidon_constants<scalar_t>(A, ctx, &constants);
+  END_TIMER(timer_const, "Load poseidon constants");
 
-  cudaStream_t stream;
-  cudaStreamCreate(&stream);
-
-  cudaEvent_t start_event, end_event;
-  cudaEventCreate(&start_event);
-  cudaEventCreate(&end_event);
-  cudaEventRecord(start_event, stream);
-  auto start_time1 = std::chrono::high_resolution_clock::now();
-  Poseidon<BLS12_381::scalar_t> poseidon(arity, stream);
-
-  auto end_time1 = std::chrono::high_resolution_clock::now();
-  auto elapsed_time1 = std::chrono::duration_cast<std::chrono::microseconds>(end_time1 - start_time1);
-  printf("Elapsed time poseidon: %.0f us\n", FpMicroseconds(elapsed_time1).count());
-
-  int number_of_blocks = 1024;
-
-  BLS12_381::scalar_t input = BLS12_381::scalar_t::zero();
-  BLS12_381::scalar_t* in_ptr =
-    static_cast<BLS12_381::scalar_t*>(malloc(number_of_blocks * arity * sizeof(BLS12_381::scalar_t)));
-  for (uint32_t i = 0; i < number_of_blocks * arity; i++) {
+  START_TIMER(allocation_timer);
+  // Prepare input data of [0, 1, 2 ... (number_of_blocks * arity) - 1]
+  int number_of_blocks = argc > 1 ? 1 << atoi(argv[1]) : 1024;
+  scalar_t input = scalar_t::zero();
+  scalar_t* in_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * A * sizeof(scalar_t)));
+  for (uint32_t i = 0; i < number_of_blocks * A; i++) {
     in_ptr[i] = input;
-    input = input + BLS12_381::scalar_t::one();
+    input = input + scalar_t::one();
   }
-  std::cout << std::endl;
+  END_TIMER(allocation_timer, "Allocate mem and fill input");
 
-  BLS12_381::scalar_t* out_ptr =
-    static_cast<BLS12_381::scalar_t*>(malloc(number_of_blocks * sizeof(BLS12_381::scalar_t)));
+  scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
-  auto start_time = std::chrono::high_resolution_clock::now();
+  START_TIMER(poseidon_timer);
+  PoseidonConfig config = default_poseidon_config<scalar_t>(T);
+  poseidon_hash<curve_config::scalar_t, T>(in_ptr, out_ptr, number_of_blocks, constants, config);
+  END_TIMER(poseidon_timer, "Poseidon")
 
-  poseidon.hash_blocks(in_ptr, number_of_blocks, out_ptr, Poseidon<BLS12_381::scalar_t>::HashType::MerkleTree, stream);
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-  printf("Elapsed time hash: %.0f us\n", FpMicroseconds(elapsed_time).count());
-  cudaEventRecord(end_event, stream);
-  cudaEventSynchronize(end_event);
-
-  float elapsedTime;
-  cudaEventElapsedTime(&elapsedTime, start_event, end_event);
-  printf("Elapsed time: %8.3f ms\n", elapsedTime);
-
-  cudaEventDestroy(start_event);
-  cudaEventDestroy(end_event);
-
-  BLS12_381::scalar_t expected[1024] = {
+  scalar_t expected[1024] = {
     {2583881727, 773864502, 2634393245, 2801510707, 49275233, 1939738585, 1584833899, 962922711},
     {1482052501, 2945755510, 2790332687, 3994795689, 2690398473, 2055226187, 3927265331, 526041267},
     {908959580, 3968357170, 168369822, 4279251122, 172491869, 1810633943, 1108167336, 461319268},
@@ -1087,14 +1077,15 @@ int main(int argc, char* argv[])
     {3906397586, 3290474371, 1675512984, 4178526889, 2952985253, 3592646253, 1572272369, 508740262},
     {4126315652, 3786312147, 3699923125, 3674356834, 1459586774, 373249965, 2436297855, 1091365949}};
 
-  for (int i = 0; i < number_of_blocks; i++) {
-    assert((out_ptr[i] == expected[i]));
-
+  if (number_of_blocks == 1024) {
+    for (int i = 0; i < number_of_blocks; i++) {
 #ifdef DEBUG
-    std::cout << out_ptr[i] << std::endl;
+      std::cout << out_ptr[i] << std::endl;
 #endif
+      assert((out_ptr[i] == expected[i]));
+    }
+    printf("Expected output matches\n");
   }
-  printf("Expected output matches\n");
 
   free(in_ptr);
   free(out_ptr);
