@@ -13,11 +13,8 @@
 #include "ntt/ntt_impl.cuh"
 #include <memory>
 
-#define PERFORMANCE
-
 typedef curve_config::scalar_t test_scalar;
 typedef curve_config::scalar_t test_data; // uncomment for NTT
-// typedef curve_config::projective_t test_data; // uncomment for ECNTT
 #include "kernel_ntt.cu"
 
 #define $CUDA(call)                                                                                                    \
@@ -41,10 +38,8 @@ void incremental_values(test_scalar* res, uint32_t count)
 
 int main(int argc, char** argv)
 {
-#ifdef PERFORMANCE
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
   float icicle_time, new_time;
-#endif
 
   int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
@@ -57,7 +52,7 @@ int main(int argc, char** argv)
                              : ordering == ntt::Ordering::kRN ? "RN"
                                                               : "RR";
 
-  printf("running ntt 2^%d, INV=%d, ordering=%s, inplace=%d\n", NTT_LOG_SIZE, INV, ordering_str, INPLACE);
+  printf("running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d\n", NTT_LOG_SIZE, ordering_str, INPLACE, INV);
 
   cudaFree(nullptr); // init GPU context (warmup)
 
@@ -130,7 +125,7 @@ int main(int argc, char** argv)
   };
 
   benchmark(false /*=print*/, 1); // warmup
-  int count = INPLACE ? 1 : 1;
+  int count = INPLACE ? 1 : 10;
   if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
   benchmark(true /*=print*/, count);
 
@@ -142,7 +137,7 @@ int main(int argc, char** argv)
   for (int i = 0; i < NTT_SIZE; i++) {
     if (CpuOutputNew[i] != CpuOutputOld[i]) {
       success = false;
-      std::cout << i << " ref " << CpuOutputOld[i] << " != " << CpuOutputNew[i] << std::endl;
+      // std::cout << i << " ref " << CpuOutputOld[i] << " != " << CpuOutputNew[i] << std::endl;
       break;
     } else {
       // std::cout << i << " ref " << CpuOutputOld[i] << " == " << CpuOutputNew[i] << std::endl;

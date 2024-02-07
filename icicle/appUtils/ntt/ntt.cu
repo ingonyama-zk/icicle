@@ -415,7 +415,8 @@ namespace ntt {
 
       const bool is_map_only_powers_of_primitive_root = true;
       if (is_map_only_powers_of_primitive_root) {
-        // populate the coset_index map. Note that only powers of the primitive-root are stored (1, PR, PR^2, PR^3...)
+        // populate the coset_index map. Note that only powers of the primitive-root are stored (1, PR, PR^2, PR^4, PR^8
+        // etc.)
         Domain<S>::coset_index[S::one()] = 0;
         for (int i = 0; i < Domain<S>::max_log_size; ++i) {
           const int index = (int)pow(2, i);

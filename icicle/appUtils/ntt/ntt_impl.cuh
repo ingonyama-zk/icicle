@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _LARGE_NTT_H
-#define _LARGE_NTT_H
+#ifndef _NTT_IMPL_H
+#define _NTT_IMPL_H
 
 #include <stdint.h>
 #include "appUtils/ntt/ntt.cuh" // for enum Ordering
@@ -30,4 +30,4 @@ namespace ntt {
     cudaStream_t cuda_stream);
 
 } // namespace ntt
-#endif //_LARGE_NTT_H
+#endif //_NTT_IMPL_H
