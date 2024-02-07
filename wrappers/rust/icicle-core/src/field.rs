@@ -23,7 +23,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
             .iter()
             .rev()
         {
-            write!(f, "{:02x}", b)?;
+            write!(f, "{:016x}", b)?;
         }
         Ok(())
     }
@@ -37,7 +37,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Debug for Field<NUM_LIMBS, F> {
             .iter()
             .rev()
         {
-            write!(f, "{:02x}", b)?;
+            write!(f, "{:016x}", b)?;
         }
         Ok(())
     }
@@ -231,6 +231,11 @@ macro_rules! impl_field_tests {
         #[test]
         fn test_field_convert_montgomery() {
             check_field_convert_montgomery::<$field_name>()
+        }
+
+        #[test]
+        fn test_print_field() {
+            check_field_print::<$field_name>()
         }
     };
 }
