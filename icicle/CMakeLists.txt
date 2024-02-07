@@ -69,6 +69,7 @@ include_directories("${CMAKE_SOURCE_DIR}")
 
 # when adding a new curve/field, append its name to the end of this list
 set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761)
+set(SUPPORTED_CURVES_WITH_POSEIDON bn254;bls12_381;bls12_377;bw6_761)
 
 set(IS_CURVE_SUPPORTED FALSE)
 set(I 0)
@@ -94,6 +95,11 @@ if (NOT BUILD_TESTS)
 
   message(STATUS "Building without tests.")
 
+  if (CURVE IN_LIST SUPPORTED_CURVES_WITH_POSEIDON)
+    list(APPEND ICICLE_SOURCES appUtils/poseidon/poseidon.cu)
+    list(APPEND ICICLE_SOURCES appUtils/tree/merkle.cu)
+  endif()
+
   add_library(
     icicle
     utils/vec_ops.cu
@@ -102,6 +108,7 @@ if (NOT BUILD_TESTS)
     primitives/projective.cu
     appUtils/msm/msm.cu
     appUtils/ntt/ntt.cu
+    ${ICICLE_SOURCES}
   )
   set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
   target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  
