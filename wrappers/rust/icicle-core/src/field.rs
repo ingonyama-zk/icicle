@@ -31,15 +31,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> Debug for Field<NUM_LIMBS, F> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "0x")?;
-        for &b in self
-            .limbs
-            .iter()
-            .rev()
-        {
-            write!(f, "{:016x}", b)?;
-        }
-        Ok(())
+        write!(f, "{}", self.to_string())
     }
 }
 

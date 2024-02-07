@@ -189,4 +189,5 @@ pub fn check_field_print<F: FieldImpl>() {
         scalar.to_string(),
         "0x0000000000000004000000000000000300000000000000020000000000000001"
     );
+    assert_eq!(format!("{}", scalar), format!("{:?}", scalar));
 }
