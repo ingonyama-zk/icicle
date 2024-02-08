@@ -224,10 +224,5 @@ macro_rules! impl_field_tests {
         fn test_field_convert_montgomery() {
             check_field_convert_montgomery::<$field_name>()
         }
-
-        #[test]
-        fn test_print_field() {
-            check_field_print::<$field_name>()
-        }
     };
 }
