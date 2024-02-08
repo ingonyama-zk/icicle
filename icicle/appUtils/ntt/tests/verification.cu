@@ -1,9 +1,9 @@
 
 #define CURVE_ID BLS12_381
 
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
+#include "primitives/field.cuh"
+#include "primitives/projective.cuh"
+#include "utils/cuda_utils.cuh"
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -14,14 +14,8 @@
 #include <memory>
 
 typedef curve_config::scalar_t test_scalar;
-typedef curve_config::scalar_t test_data; // uncomment for NTT
+typedef curve_config::scalar_t test_data;
 #include "kernel_ntt.cu"
-
-#define $CUDA(call)                                                                                                    \
-  if ((call) != 0) {                                                                                                   \
-    printf("\nCall \"" #call "\" failed from %s, line %d, error=%d\n", __FILE__, __LINE__, cudaGetLastError());        \
-    exit(1);                                                                                                           \
-  }
 
 void random_samples(test_data* res, uint32_t count)
 {
@@ -62,10 +56,10 @@ int main(int argc, char** argv)
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
 
-  $CUDA(cudaEventCreate(&icicle_start));
-  $CUDA(cudaEventCreate(&icicle_stop));
-  $CUDA(cudaEventCreate(&new_start));
-  $CUDA(cudaEventCreate(&new_stop));
+  CHK_IF_RETURN(cudaEventCreate(&icicle_start));
+  CHK_IF_RETURN(cudaEventCreate(&icicle_stop));
+  CHK_IF_RETURN(cudaEventCreate(&new_start));
+  CHK_IF_RETURN(cudaEventCreate(&new_stop));
 
   auto start = std::chrono::high_resolution_clock::now();
   const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
@@ -81,57 +75,63 @@ int main(int argc, char** argv)
 
   // gpu allocation
   test_data *GpuScalars, *GpuOutputOld, *GpuOutputNew;
-  $CUDA(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE));
-  $CUDA(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE));
-  $CUDA(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE));
 
   // init inputs
   incremental_values(CpuScalars.get(), NTT_SIZE);
-  $CUDA(cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE, cudaMemcpyHostToDevice));
+  CHK_IF_RETURN(cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE, cudaMemcpyHostToDevice));
 
   // inplace
-  if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
+  if (INPLACE) {
+    CHK_IF_RETURN(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+  }
 
   // run ntt
-  auto benchmark = [&](bool is_print, int iterations) {
+  auto benchmark = [&](bool is_print, int iterations) -> cudaError_t {
     // NEW
-    $CUDA(cudaEventRecord(new_start, ntt_config.ctx.stream));
+    CHK_IF_RETURN(cudaEventRecord(new_start, ntt_config.ctx.stream));
     ntt_config.is_force_radix2 = false; // mixed-radix ntt (a.k.a new ntt)
     for (size_t i = 0; i < iterations; i++) {
       ntt::NTT(
         INPLACE ? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
         GpuOutputNew);
     }
-    $CUDA(cudaEventRecord(new_stop, ntt_config.ctx.stream));
-    $CUDA(cudaStreamSynchronize(ntt_config.ctx.stream));
-    $CUDA(cudaEventElapsedTime(&new_time, new_start, new_stop));
+    CHK_IF_RETURN(cudaEventRecord(new_stop, ntt_config.ctx.stream));
+    CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
+    CHK_IF_RETURN(cudaEventElapsedTime(&new_time, new_start, new_stop));
     if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
 
     // OLD
-    $CUDA(cudaEventRecord(icicle_start, ntt_config.ctx.stream));
+    CHK_IF_RETURN(cudaEventRecord(icicle_start, ntt_config.ctx.stream));
     ntt_config.is_force_radix2 = true;
     for (size_t i = 0; i < iterations; i++) {
       ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld);
     }
-    $CUDA(cudaEventRecord(icicle_stop, ntt_config.ctx.stream));
-    $CUDA(cudaStreamSynchronize(ntt_config.ctx.stream));
-    $CUDA(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
+    CHK_IF_RETURN(cudaEventRecord(icicle_stop, ntt_config.ctx.stream));
+    CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
+    CHK_IF_RETURN(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
     if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
 
     if (is_print) {
       printf("Old Runtime=%0.3f MS\n", icicle_time / iterations);
       printf("New Runtime=%0.3f MS\n", new_time / iterations);
     }
+
+    return CHK_LAST();
   };
 
-  benchmark(false /*=print*/, 1); // warmup
+  CHK_IF_RETURN(benchmark(false /*=print*/, 1)); // warmup
   int count = INPLACE ? 1 : 10;
-  if (INPLACE) { $CUDA(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice)); }
-  benchmark(true /*=print*/, count);
+  if (INPLACE) {
+    CHK_IF_RETURN(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+  }
+  CHK_IF_RETURN(benchmark(true /*=print*/, count));
 
   // verify
-  $CUDA(cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
-  $CUDA(cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+  CHK_IF_RETURN(cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+  CHK_IF_RETURN(cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE; i++) {
@@ -147,9 +147,9 @@ int main(int argc, char** argv)
   const char* success_str = success ? "SUCCESS!" : "FAIL!";
   printf("%s\n", success_str);
 
-  $CUDA(cudaFree(GpuScalars));
-  $CUDA(cudaFree(GpuOutputOld));
-  $CUDA(cudaFree(GpuOutputNew));
+  CHK_IF_RETURN(cudaFree(GpuScalars));
+  CHK_IF_RETURN(cudaFree(GpuOutputOld));
+  CHK_IF_RETURN(cudaFree(GpuOutputNew));
 
-  return 0;
+  return CHK_LAST();
 }

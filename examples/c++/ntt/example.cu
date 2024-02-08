@@ -5,7 +5,7 @@
 #define CURVE_ID 1
 // include NTT template
 #include "appUtils/ntt/ntt.cu"
-#include "appUtils/large_ntt/kernel_ntt.cu"
+#include "appUtils/ntt/kernel_ntt.cu"
 using namespace curve_config;
 
 // Operate on scalars

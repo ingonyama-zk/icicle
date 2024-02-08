@@ -6,7 +6,7 @@
 
 #include "curves/curve_config.cuh"
 #include "appUtils/ntt/ntt.cu"
-#include "appUtils/large_ntt/kernel_ntt.cu"
+#include "appUtils/ntt/kernel_ntt.cu"
 #include "utils/vec_ops.cu"
 #include "utils/error_handler.cuh"
 #include <memory>

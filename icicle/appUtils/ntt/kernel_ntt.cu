@@ -1,5 +1,5 @@
 
-#include "appUtils/large_ntt/thread_ntt.cu"
+#include "appUtils/ntt/thread_ntt.cu"
 #include "curves/curve_config.cuh"
 #include "utils/sharedmem.cuh"
 #include "appUtils/ntt/ntt.cuh" // for Ordering

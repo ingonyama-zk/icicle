@@ -53,7 +53,7 @@ struct Args {
     lower_bound_log_size: u8,
 
     /// Upper bound of MSM sizes to run for
-    #[arg(short, long, default_value_t = 23)]
+    #[arg(short, long, default_value_t = 22)]
     upper_bound_log_size: u8,
 }
 

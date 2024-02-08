@@ -396,6 +396,7 @@ namespace ntt {
         if (!found_logn) {
           ++Domain<S>::max_log_size;
           found_logn = omega == S::one();
+          if (found_logn) break;
         }
       }
       Domain<S>::max_size = (int)pow(2, Domain<S>::max_log_size);
