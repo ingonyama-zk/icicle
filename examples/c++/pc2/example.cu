@@ -10,6 +10,7 @@
 using namespace poseidon;
 using namespace merkle;
 using namespace curve_config;
+using FpSeconds = std::chrono::duration<float, std::chrono::seconds::period>;
 
 device_context::DeviceContext ctx= device_context::get_default_device_context();
 
@@ -19,11 +20,15 @@ void checkCudaError(cudaError_t error) {
         // Handle the error, e.g., exit the program or throw an exception.
     }
 }
+#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
+#define END_TIMER(timer, msg) printf("%s: %.0f sec\n", msg, FpSeconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int main(int argc, char* argv[])
 {
     // Outline of Filecoin PC2:
     // github.com/ingonyama-zk/research/blob/main/filecoin/doc/Filecoin.pdf
+
+    cudaError_t err;
 
     std::cout << "Defining the size of the example" << std::endl;
     const uint32_t size_col=11;
@@ -35,43 +40,63 @@ int main(int argc, char* argv[])
     std::cout << "Tree arity: " << tree_arity << std::endl;
     const uint32_t size_row = pow(tree_arity,height); // (1<<(3*height));
     std::cout << "Tree width: " << size_row << std::endl;
-    const unsigned nof_partitions = 32;
+    const unsigned nof_partitions = 64;
     const unsigned size_partition = size_row / nof_partitions;
     std::cout << "Using " <<  nof_partitions <<  " partitions of size " << size_partition <<std::endl;
 
-    std::cout << "Allocating memory" << std::endl;
+    std::cout << "Allocating on-host memory" << std::endl;
     // layers is allocated only for one partition, need to resuse for different partitions
-    // scalar_t* layers = static_cast<scalar_t*>(malloc(size_col * size_row * sizeof(scalar_t)));
-    scalar_t* layers = static_cast<scalar_t*>(malloc(size_col * size_partition * sizeof(scalar_t)));
+    const uint32_t size_layers = size_col * size_partition; // size_col * size_row
+    std::cout << "Memory for partitioned layers (GiB): " << size_layers * sizeof(scalar_t) / 1024 / 1024 / 1024 << std::endl;
+    scalar_t* layers = static_cast<scalar_t*>(malloc(size_layers * sizeof(scalar_t)));
     if (layers == nullptr) {
         std::cerr << "Memory allocation for 'layers' failed." << std::endl;
     }
+    std::cout << "Size of column_hash (GiB): " << size_row * sizeof(scalar_t) / 1024 / 1024 / 1024 << std::endl;
     scalar_t* column_hash = static_cast<scalar_t*>(malloc(size_row * sizeof(scalar_t)));
     if (column_hash == nullptr) {
         std::cerr << "Memory allocation for 'column_hash' failed." << std::endl;
     }
+
+    std::cout << "Allocating on-device memory" << std::endl;
+    scalar_t* layers_d;
+    err = cudaMalloc(&layers_d, sizeof(scalar_t) * size_layers );
+    checkCudaError(err);
+    scalar_t* column_hash_d;
+    // on-device memory for column_hash_d is allocated for one partition, need to resuse for different partitions
+    err = cudaMalloc(&column_hash_d, sizeof(scalar_t) * size_partition);
+    checkCudaError(err);
 
     std::cout << "Generating random inputs" << std::endl;
     scalar_t::RandHostMany(layers, size_col /* *size_row */);
     for (unsigned i = size_col; i < size_col*size_partition /* size_raw */; i++) {
         layers[i] = scalar_t::one();
     }
-    std::cout << "Data generated" << std::endl;
-    cudaError_t err;
+
+    std::cout << "Moving inputs to device" << std::endl;
+    START_TIMER(copy);
+    cudaMemcpy(layers_d, layers, sizeof(scalar_t) * size_layers, cudaMemcpyHostToDevice);
+    END_TIMER(copy, "Copy to device");
+
     std::cout << "Step 1: Column Hashing" << std::endl;
-    PoseidonConstants<scalar_t> constants1;
-    init_optimized_poseidon_constants<scalar_t>(size_col, ctx, &constants1);
-    PoseidonConfig config1 = default_poseidon_config<scalar_t>(size_col+1);
-    
+    START_TIMER(step1);
+    PoseidonConstants<scalar_t> column_constants;
+    init_optimized_poseidon_constants<scalar_t>(size_col, ctx, &column_constants);
+    PoseidonConfig column_config = default_poseidon_config<scalar_t>(size_col+1);
+    column_config.are_inputs_on_device = true;
+    column_config.are_outputs_on_device = true;
     for (unsigned i = 0; i < nof_partitions; i++) {
         std::cout << "Hashing partition " <<  i << std::endl;
         // while debuging, use the same inputs for different partitions
-        err = poseidon_hash<curve_config::scalar_t, size_col+1>(&layers[0 /*i*size_col*size_partition*/], &column_hash[i*size_partition], size_partition, constants1, config1);
+        err = poseidon_hash<curve_config::scalar_t, size_col+1>(layers_d, column_hash_d, size_partition, column_constants, column_config);
         checkCudaError(err);
     }
     free(layers);
-    // return 0;
+    cudaFree(layers_d);
+    END_TIMER(step1, "Step1");
+    
     std::cout << "Step 2: Merkle Tree-C" << std::endl;
+    START_TIMER(step2);
     auto digests_len = get_digests_len<scalar_t>(height_icicle, tree_arity);  // keep all digests
     std::cout << "Digests length: " << digests_len << std::endl;
     scalar_t* digests = static_cast<scalar_t*>(malloc(digests_len * sizeof(scalar_t)));
@@ -84,6 +109,7 @@ int main(int argc, char* argv[])
     init_optimized_poseidon_constants<scalar_t>(tree_arity, ctx, &tree_constants);
     err = build_merkle_tree<scalar_t, tree_arity+1>(column_hash, digests, height_icicle, tree_constants, tree_config);
     checkCudaError(err);
+    END_TIMER(step2, "Step2");
 
     std::cout << "Cleaning up memory" << std::endl;
     
