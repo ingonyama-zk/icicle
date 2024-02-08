@@ -73,9 +73,13 @@ int main(int argc, char* argv[])
     // return 0;
     std::cout << "Step 2: Merkle Tree-C" << std::endl;
     auto digests_len = get_digests_len<scalar_t>(height_icicle, tree_arity);  // keep all digests
-    // std::cout << "Digests length: " << digests_len << std::endl;
+    std::cout << "Digests length: " << digests_len << std::endl;
     scalar_t* digests = static_cast<scalar_t*>(malloc(digests_len * sizeof(scalar_t)));
+    if (digests == nullptr) {
+        std::cerr << "Memory allocation for 'digests' failed." << std::endl;
+    }
     TreeBuilderConfig tree_config = default_merkle_config<scalar_t>(); // default: keep all digest raws
+    tree_config.keep_rows=1;
     PoseidonConstants<scalar_t> tree_constants;
     init_optimized_poseidon_constants<scalar_t>(tree_arity, ctx, &tree_constants);
     err = build_merkle_tree<scalar_t, tree_arity+1>(column_hash, digests, height_icicle, tree_constants, tree_config);
