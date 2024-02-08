@@ -35,9 +35,14 @@ int main(int argc, char* argv[])
     std::cout << "Tree arity: " << tree_arity << std::endl;
     const uint32_t size_row = pow(tree_arity,height); // (1<<(3*height));
     std::cout << "Tree width: " << size_row << std::endl;
- 
+    const unsigned nof_partitions = 32;
+    const unsigned size_partition = size_row / nof_partitions;
+    std::cout << "Using " <<  nof_partitions <<  " partitions of size " << size_partition <<std::endl;
+
     std::cout << "Allocating memory" << std::endl;
-    scalar_t* layers = static_cast<scalar_t*>(malloc(size_col * size_row * sizeof(scalar_t)));
+    // layers is allocated only for one partition, need to resuse for different partitions
+    // scalar_t* layers = static_cast<scalar_t*>(malloc(size_col * size_row * sizeof(scalar_t)));
+    scalar_t* layers = static_cast<scalar_t*>(malloc(size_col * size_partition * sizeof(scalar_t)));
     if (layers == nullptr) {
         std::cerr << "Memory allocation for 'layers' failed." << std::endl;
     }
@@ -48,7 +53,7 @@ int main(int argc, char* argv[])
 
     std::cout << "Generating random inputs" << std::endl;
     scalar_t::RandHostMany(layers, size_col /* *size_row */);
-    for (unsigned i = size_col; i < size_col*size_row; i++) {
+    for (unsigned i = size_col; i < size_col*size_partition /* size_raw */; i++) {
         layers[i] = scalar_t::one();
     }
     std::cout << "Data generated" << std::endl;
@@ -57,16 +62,15 @@ int main(int argc, char* argv[])
     PoseidonConstants<scalar_t> constants1;
     init_optimized_poseidon_constants<scalar_t>(size_col, ctx, &constants1);
     PoseidonConfig config1 = default_poseidon_config<scalar_t>(size_col+1);
-    const unsigned nof_partitions = 32;
-    std::cout << "Using " <<  nof_partitions <<  " partitions" <<std::endl;
-    const unsigned size_partition = size_row / nof_partitions;
+    
     for (unsigned i = 0; i < nof_partitions; i++) {
         std::cout << "Hashing partition " <<  i << std::endl;
-        err = poseidon_hash<curve_config::scalar_t, size_col+1>(&layers[i*size_col*size_partition], &column_hash[i*size_partition], size_partition, constants1, config1);
+        // while debuging, use the same inputs for different partitions
+        err = poseidon_hash<curve_config::scalar_t, size_col+1>(&layers[0 /*i*size_col*size_partition*/], &column_hash[i*size_partition], size_partition, constants1, config1);
         checkCudaError(err);
     }
     free(layers);
-    return 0;
+    // return 0;
     std::cout << "Step 2: Merkle Tree-C" << std::endl;
     auto digests_len = get_digests_len<scalar_t>(height_icicle, tree_arity);  // keep all digests
     // std::cout << "Digests length: " << digests_len << std::endl;
