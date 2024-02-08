@@ -108,6 +108,7 @@ if (NOT BUILD_TESTS)
     primitives/projective.cu
     appUtils/msm/msm.cu
     appUtils/ntt/ntt.cu
+    appUtils/ntt/kernel_ntt.cu
     ${ICICLE_SOURCES}
   )
   set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
