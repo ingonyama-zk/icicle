@@ -57,6 +57,8 @@ pub struct NTTConfig<'a, S> {
     /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
+    /// Explicitly select radix-2 NTT algorithm. Default value: false (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
+    pub is_force_radix2: bool,
 }
 
 impl<'a, S: FieldImpl> NTTConfig<'a, S> {
@@ -70,6 +72,7 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
+            is_force_radix2: false,
         }
     }
 }
@@ -208,7 +211,7 @@ macro_rules! impl_ntt_tests {
     (
       $field:ident
     ) => {
-        const MAX_SIZE: u64 = 1 << 16;
+        const MAX_SIZE: u64 = 1 << 17;
         static INIT: OnceLock<()> = OnceLock::new();
 
         #[test]

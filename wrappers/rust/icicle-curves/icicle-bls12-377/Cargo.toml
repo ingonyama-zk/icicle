@@ -1,6 +1,6 @@
 [package]
 name = "icicle-bls12-377"
-version = "1.0.0"
+version = "1.3.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
 description = "Rust wrapper for the CUDA implementation of BLS12-377 pairing friendly elliptic curve by Ingonyama"

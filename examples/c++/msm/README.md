@@ -45,8 +45,8 @@ The configuration is passed to the kernel as a structure of type `msm::MSMConfig
 ## What's in the example
 
 1. Define the parameters of MSM
-2. Generate random inputs on-host 
+2. Generate random inputs on-host
 3. Configure and execute MSM using on-host data
 4. Copy inputs on-device
 5. Configure and execute MSM using on-device data
-
+6. Repeat the above steps for G2 points

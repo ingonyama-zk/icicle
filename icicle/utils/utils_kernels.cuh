@@ -34,7 +34,7 @@ namespace utils_internal {
   {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid < n_elements * batch_size) {
-      int scalar_id = tid % n_elements;
+      int64_t scalar_id = tid % n_elements;
       if (bitrev) scalar_id = __brev(scalar_id) >> (32 - logn);
       out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
     }

@@ -75,6 +75,7 @@ if (CURVE IN_LIST SUPPORTED_CURVES_WITH_NTT)
     list(APPEND ICICLE_SOURCES appUtils/ntt/ntt.cu)
     list(APPEND ICICLE_SOURCES_TESTS ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o)
 endif()
+set(SUPPORTED_CURVES_WITH_POSEIDON bn254;bls12_381;bls12_377;bw6_761)
 
 set(IS_CURVE_SUPPORTED FALSE)
 set(I 0)
@@ -99,6 +100,11 @@ option(BUILD_TESTS "Build tests" OFF)
 if (NOT BUILD_TESTS)
 
   message(STATUS "Building without tests.")
+
+  if (CURVE IN_LIST SUPPORTED_CURVES_WITH_POSEIDON)
+    list(APPEND ICICLE_SOURCES appUtils/poseidon/poseidon.cu)
+    list(APPEND ICICLE_SOURCES appUtils/tree/merkle.cu)
+  endif()
 
   add_library(
     icicle
