@@ -1,17 +1,17 @@
 [package]
 name = "msm"
-version = "1.0.0"
+version = "1.2.0"
 edition = "2018"
 
 [dependencies]
-icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0" }
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0", features = [ "g2" ] }
-icicle-bls12-377 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0" }
+icicle-cuda-runtime = { path = "../../../wrappers/rust/icicle-cuda-runtime" }
+icicle-core = { path = "../../../wrappers/rust/icicle-core" }
+icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254", features = ["g2"] }
+icicle-bls12-377 = { path = "../../../wrappers/rust/icicle-curves/icicle-bls12-377" }
 ark-bn254 = { version = "0.4.0", optional = true}
 ark-bls12-377 = { version = "0.4.0", optional = true}
 ark-ec = { version = "0.4.0", optional = true}
-clap = { version = "4.4.12", features = ["derive"] }
+clap = { version = "<=4.4.12", features = ["derive"] }
 
 [features]
 arkworks = ["ark-bn254", "ark-bls12-377", "ark-ec", "icicle-core/arkworks", "icicle-bn254/arkworks", "icicle-bls12-377/arkworks"]
