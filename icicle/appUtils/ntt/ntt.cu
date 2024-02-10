@@ -7,6 +7,7 @@
 #include "utils/sharedmem.cuh"
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
+#include "appUtils/ntt/ntt_impl.cuh"
 
 namespace ntt {
 
@@ -25,7 +26,10 @@ namespace ntt {
         int idx = threadId % n;
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
-        arr_reversed[batch_idx * n + idx_reversed] = arr[batch_idx * n + idx];
+
+        E val = arr[batch_idx * n + idx];
+        if (arr == arr_reversed) { __syncthreads(); } // for in-place (when pointers arr==arr_reversed)
+        arr_reversed[batch_idx * n + idx_reversed] = val;
       }
     }
 
@@ -357,24 +361,23 @@ namespace ntt {
   template <typename S>
   class Domain
   {
-    static int max_size;
-    static S* twiddles;
-    static std::unordered_map<S, int> coset_index;
+    static inline int max_size = 0;
+    static inline int max_log_size = 0;
+    static inline S* twiddles = nullptr;
+    static inline std::unordered_map<S, int> coset_index = {};
+
+    static inline S* internal_twiddles = nullptr; // required by mixed-radix NTT
+    static inline S* basic_twiddles = nullptr;    // required by mixed-radix NTT
 
   public:
     template <typename U>
     friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx);
 
+    static cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
+
     template <typename U, typename E>
     friend cudaError_t NTT<U, E>(E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
-
-  template <typename S>
-  int Domain<S>::max_size = 0;
-  template <typename S>
-  S* Domain<S>::twiddles = nullptr;
-  template <typename S>
-  std::unordered_map<S, int> Domain<S>::coset_index = {};
 
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
@@ -385,30 +388,66 @@ namespace ntt {
     // please note that this is not thread-safe at all,
     // but it's a singleton that is supposed to be initialized once per program lifetime
     if (!Domain<S>::twiddles) {
+      bool found_logn = false;
       S omega = primitive_root;
       unsigned omegas_count = S::get_omegas_count();
-      for (int i = 0; i < omegas_count; i++)
+      for (int i = 0; i < omegas_count; i++) {
         omega = S::sqr(omega);
-      if (omega != S::one()) { // TODO: THROW_ICILE_ERR
-        std::cerr << "Primitive root provided to the InitDomain function is not in the subgroup" << '\n';
-        throw -1;
+        if (!found_logn) {
+          ++Domain<S>::max_log_size;
+          found_logn = omega == S::one();
+          if (found_logn) break;
+        }
+      }
+      Domain<S>::max_size = (int)pow(2, Domain<S>::max_log_size);
+      if (omega != S::one()) {
+        throw IcicleError(
+          IcicleError_t::InvalidArgument, "Primitive root provided to the InitDomain function is not in the subgroup");
       }
 
-      std::vector<S> h_twiddles;
-      h_twiddles.push_back(S::one());
-      int n = 1;
-      do {
-        Domain<S>::coset_index[h_twiddles.at(n - 1)] = n - 1;
-        h_twiddles.push_back(h_twiddles.at(n - 1) * primitive_root);
-      } while (h_twiddles.at(n++) != S::one());
-
-      CHK_IF_RETURN(cudaMallocAsync(&Domain<S>::twiddles, n * sizeof(S), ctx.stream));
-      CHK_IF_RETURN(
-        cudaMemcpyAsync(Domain<S>::twiddles, &h_twiddles.front(), n * sizeof(S), cudaMemcpyHostToDevice, ctx.stream));
-
-      Domain<S>::max_size = n - 1;
+      // allocate and calculate twiddles on GPU
+      // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
+      // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
+      CHK_IF_RETURN(cudaMallocManaged(&Domain<S>::twiddles, (Domain<S>::max_size + 1) * sizeof(S)));
+      CHK_IF_RETURN(generate_external_twiddles_generic(
+        primitive_root, Domain<S>::twiddles, Domain<S>::internal_twiddles, Domain<S>::basic_twiddles,
+        Domain<S>::max_log_size, ctx.stream));
       CHK_IF_RETURN(cudaStreamSynchronize(ctx.stream));
+
+      const bool is_map_only_powers_of_primitive_root = true;
+      if (is_map_only_powers_of_primitive_root) {
+        // populate the coset_index map. Note that only powers of the primitive-root are stored (1, PR, PR^2, PR^4, PR^8
+        // etc.)
+        Domain<S>::coset_index[S::one()] = 0;
+        for (int i = 0; i < Domain<S>::max_log_size; ++i) {
+          const int index = (int)pow(2, i);
+          Domain<S>::coset_index[Domain<S>::twiddles[index]] = index;
+        }
+      } else {
+        // populate all values
+        for (int i = 0; i < Domain<S>::max_size; ++i) {
+          Domain<S>::coset_index[Domain<S>::twiddles[i]] = i;
+        }
+      }
     }
+
+    return CHK_LAST();
+  }
+
+  template <typename S>
+  cudaError_t Domain<S>::ReleaseDomain(device_context::DeviceContext& ctx)
+  {
+    CHK_INIT_IF_RETURN();
+
+    max_size = 0;
+    max_log_size = 0;
+    cudaFreeAsync(twiddles, ctx.stream);
+    twiddles = nullptr;
+    cudaFreeAsync(internal_twiddles, ctx.stream);
+    internal_twiddles = nullptr;
+    cudaFreeAsync(basic_twiddles, ctx.stream);
+    basic_twiddles = nullptr;
+    coset_index.clear();
 
     return CHK_LAST();
   }
@@ -431,6 +470,20 @@ namespace ntt {
     bool are_inputs_on_device = config.are_inputs_on_device;
     bool are_outputs_on_device = config.are_outputs_on_device;
 
+    E* d_input;
+    if (are_inputs_on_device) {
+      d_input = input;
+    } else {
+      CHK_IF_RETURN(cudaMallocAsync(&d_input, input_size_bytes, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
+    }
+    E* d_output;
+    if (are_outputs_on_device) {
+      d_output = output;
+    } else {
+      CHK_IF_RETURN(cudaMallocAsync(&d_output, input_size_bytes, stream));
+    }
+
     S* coset = nullptr;
     int coset_index = 0;
     try {
@@ -448,45 +501,44 @@ namespace ntt {
       h_coset.clear();
     }
 
-    E* d_input;
-    if (are_inputs_on_device) {
-      d_input = input;
-    } else {
-      CHK_IF_RETURN(cudaMallocAsync(&d_input, input_size_bytes, stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
-    }
-    E* d_output;
-    if (are_outputs_on_device) {
-      d_output = output;
-    } else {
-      CHK_IF_RETURN(cudaMallocAsync(&d_output, input_size_bytes, stream));
-    }
+    const bool is_small_ntt = logn < 16;                  // cutoff point where mixed-radix is faster than radix-2
+    const bool is_on_coset = (coset_index != 0) || coset; // coset not supported by mixed-radix algorithm yet
+    const bool is_batch_ntt = batch_size > 1;             // batch not supported by mixed-radidx algorithm yet
+    const bool is_NN = config.ordering == Ordering::kNN;  // TODO Yuval: relax this limitation
+    const bool is_radix2_algorithm = config.is_force_radix2 || is_batch_ntt || is_small_ntt || is_on_coset || !is_NN;
 
-    bool ct_butterfly = true;
-    bool reverse_input = false;
-    switch (config.ordering) {
-    case Ordering::kNN:
-      reverse_input = true;
-      break;
-    case Ordering::kNR:
-      ct_butterfly = false;
-      break;
-    case Ordering::kRR:
-      reverse_input = true;
-      ct_butterfly = false;
-      break;
+    if (is_radix2_algorithm) {
+      bool ct_butterfly = true;
+      bool reverse_input = false;
+      switch (config.ordering) {
+      case Ordering::kNN:
+        reverse_input = true;
+        break;
+      case Ordering::kNR:
+        ct_butterfly = false;
+        break;
+      case Ordering::kRR:
+        reverse_input = true;
+        ct_butterfly = false;
+        break;
+      }
+
+      if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
+
+      CHK_IF_RETURN(ntt_inplace_batch_template(
+        reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+        dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
+
+      if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
+    } else { // mixed-radix algorithm
+      CHK_IF_RETURN(ntt::mixed_radix_ntt(
+        d_input, d_output, Domain<S>::twiddles, Domain<S>::internal_twiddles, Domain<S>::basic_twiddles, size,
+        Domain<S>::max_log_size, dir == NTTDir::kInverse, config.ordering, stream));
     }
-
-    if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
-
-    CHK_IF_RETURN(ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
-      dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
 
     if (!are_outputs_on_device)
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
-    if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     if (!are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));
     if (!are_outputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_output, stream));
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
@@ -506,6 +558,7 @@ namespace ntt {
       false,         // are_inputs_on_device
       false,         // are_outputs_on_device
       false,         // is_async
+      false,         // is_force_radix2
     };
     return config;
   }
