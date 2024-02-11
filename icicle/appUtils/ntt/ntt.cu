@@ -388,7 +388,7 @@ namespace ntt {
 
     // only generate twiddles if they haven't been generated yet
     // please note that this is not thread-safe at all,
-    // but it's a singleton that is supposed to be initialized once per program lifetime
+    // but it's a singleton that is supposed to be initialized once per device per program lifetime
     if (!Domain<S>::twiddles_for_device[ctx.device_id]) {
       bool found_logn = false;
       S omega = primitive_root;
@@ -410,11 +410,7 @@ namespace ntt {
       // allocate and calculate twiddles on GPU
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
       // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
-      int device_id = ctx.device_id;
-      int current_device_id;
-      CHK_IF_RETURN(cudaGetDevice(&current_device_id));
-      assert(device_id == current_device_id);
-      printf("domain size %d, %d \n", Domain<S>::max_size_for_device[ctx.device_id], device_id);
+
       CHK_IF_RETURN(
         cudaMallocManaged(&Domain<S>::twiddles_for_device[ctx.device_id], (Domain<S>::max_size_for_device[ctx.device_id] + 1) * sizeof(S)));
       CHK_IF_RETURN(generate_external_twiddles_generic(

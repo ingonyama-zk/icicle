@@ -24,13 +24,11 @@ pub fn get_default_device_context() -> DeviceContext<'static> {
 }
 
 pub fn get_default_context_for_device(device_id: usize) -> DeviceContext<'static> {
-    check_device(device_id as i32);
-    // TODO: default stream? on what device? or create one after set_device
-    let stream: &'static CudaStream  = Box::leak(Box::new(CudaStream::create().unwrap()));
-    Box::leak(Box::new(stream)); // TODO: leaky abstraction
-    // TODO: default mempool? on what device? or create one after set_device
+    static default_stream: CudaStream = CudaStream {
+        handle: std::ptr::null_mut(),
+    };
     DeviceContext {
-        stream,
+        stream: &default_stream,
         device_id,
         mempool: std::ptr::null_mut(),
     }
