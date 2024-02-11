@@ -239,7 +239,7 @@ namespace msm {
       unsigned large_bucket_index = tid / threads_per_bucket;
       unsigned bucket_segment_index = tid % threads_per_bucket;
       if (tid >= nof_buckets_to_compute * threads_per_bucket) { return; }
-      if ((single_bucket_indices[large_bucket_index] & ((1 << c) - 1)) == 0) { // dont need
+      if ((single_bucket_indices[large_bucket_index] & ((1 << c) - 1)) == 0) { // don't need
         return;                                                                // skip zero buckets
       }
       unsigned write_bucket_index = bucket_segment_index * nof_buckets_to_compute + large_bucket_index;

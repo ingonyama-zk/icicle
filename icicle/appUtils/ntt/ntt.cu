@@ -409,8 +409,9 @@ namespace ntt {
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
       // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
 
-      CHK_IF_RETURN(
-        cudaMallocManaged(&Domain<S>::twiddles_for_device[ctx.device_id], (Domain<S>::max_size_for_device[ctx.device_id] + 1) * sizeof(S)));
+      CHK_IF_RETURN(cudaMallocManaged(
+        &Domain<S>::twiddles_for_device[ctx.device_id],
+        (Domain<S>::max_size_for_device[ctx.device_id] + 1) * sizeof(S)));
       CHK_IF_RETURN(generate_external_twiddles_generic(
         primitive_root, Domain<S>::twiddles_for_device[ctx.device_id],
         Domain<S>::internal_twiddles_for_device[ctx.device_id], Domain<S>::basic_twiddles_for_device[ctx.device_id],
@@ -424,7 +425,8 @@ namespace ntt {
         Domain<S>::coset_index_for_device[ctx.device_id][S::one()] = 0;
         for (int i = 0; i < Domain<S>::max_log_size_for_device[ctx.device_id]; ++i) {
           const int index = (int)pow(2, i);
-          Domain<S>::coset_index_for_device[ctx.device_id][Domain<S>::twiddles_for_device[ctx.device_id][index]] = index;
+          Domain<S>::coset_index_for_device[ctx.device_id][Domain<S>::twiddles_for_device[ctx.device_id][index]] =
+            index;
         }
       } else {
         // populate all values
@@ -530,16 +532,16 @@ namespace ntt {
 
       CHK_IF_RETURN(ntt_inplace_batch_template(
         reverse_input ? d_output : d_input, size, Domain<S>::twiddles_for_device[config.ctx.device_id],
-        Domain<S>::max_size_for_device[config.ctx.device_id], batch_size, logn, dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream,
-        d_output));
+        Domain<S>::max_size_for_device[config.ctx.device_id], batch_size, logn, dir == NTTDir::kInverse, ct_butterfly,
+        coset, coset_index, stream, d_output));
 
       if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     } else { // mixed-radix algorithm
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
         d_input, d_output, Domain<S>::twiddles_for_device[config.ctx.device_id],
         Domain<S>::internal_twiddles_for_device[config.ctx.device_id],
-        Domain<S>::basic_twiddles_for_device[config.ctx.device_id], size, Domain<S>::max_log_size_for_device[config.ctx.device_id],
-        dir == NTTDir::kInverse, config.ordering, stream));
+        Domain<S>::basic_twiddles_for_device[config.ctx.device_id], size,
+        Domain<S>::max_log_size_for_device[config.ctx.device_id], dir == NTTDir::kInverse, config.ordering, stream));
     }
 
     if (!are_outputs_on_device)
@@ -575,7 +577,7 @@ namespace ntt {
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    */
   extern "C" cudaError_t
-  CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx)
+    CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx)
   {
     return InitDomain(primitive_root, ctx);
   }

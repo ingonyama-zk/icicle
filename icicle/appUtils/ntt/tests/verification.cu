@@ -41,10 +41,9 @@ int main(int argc, char** argv)
   int INV = (argc > 3) ? atoi(argv[3]) : true;
 
   const ntt::Ordering ordering = ntt::Ordering::kNN;
-  const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
-                             : ordering == ntt::Ordering::kNR ? "NR"
-                             : ordering == ntt::Ordering::kRN ? "RN"
-                                                              : "RR";
+  const char* ordering_str = ordering == ntt::Ordering::kNN
+                               ? "NN"
+                               : ordering == ntt::Ordering::kNR ? "NR" : ordering == ntt::Ordering::kRN ? "RN" : "RR";
 
   printf("running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d\n", NTT_LOG_SIZE, ordering_str, INPLACE, INV);
 

@@ -32,7 +32,6 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP.
 
 > [!NOTE]
 > Developers: We highly recommend reading our [documentation]
-
 > [!TIP]
 > Try out ICICLE by running some [examples] using ICICLE in C++ and our Rust bindings 
 
@@ -43,8 +42,8 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP.
 - [GCC](https://gcc.gnu.org/install/download.html) version 9, latest version is recommended.
 - Any Nvidia GPU (which supports CUDA Toolkit version 12.0 or above).
 
-> [!NOTE] 
-> It is possible to use CUDA 11 for cards which dont support CUDA 12, however we dont officially support this version and in the future there may be issues.
+> [!NOTE]
+> It is possible to use CUDA 11 for cards which don't support CUDA 12, however we don't officially support this version and in the future there may be issues.
 
 ### Accessing Hardware
 
