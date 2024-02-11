@@ -274,7 +274,7 @@ where
         .into_par_iter()
         .for_each(move |device_id| {
             set_device(device_id).unwrap();
-            init_domain::<F>(1 << 15, device_id); // init domain per device
+            init_domain::<F>(1 << 16, device_id); // init domain per device
             let test_sizes = [1 << 4, 1 << 6];
             let batch_sizes = [1, 1 << 4];
             for test_size in test_sizes {

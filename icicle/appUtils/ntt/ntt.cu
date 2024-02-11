@@ -8,6 +8,8 @@
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
 #include "appUtils/ntt/ntt_impl.cuh"
+#include <cassert>
+
 
 namespace ntt {
 
@@ -361,13 +363,13 @@ namespace ntt {
   template <typename S>
   class Domain
   {
-    static inline int max_size = 0;
-    static inline int max_log_size = 0;
+    static inline std::unordered_map<int, int> max_size_for_device = {};
+    static inline std::unordered_map<int, int> max_log_size_for_device = {};
     static inline std::unordered_map<int, S*> twiddles_for_device = {};
     static inline std::unordered_map<int, S*> internal_twiddles_for_device = {}; // required by mixed-radix NTT
     static inline std::unordered_map<int, S*> basic_twiddles_for_device = {};    // required by mixed-radix NTT
 
-    static inline std::unordered_map<S, int> coset_index = {};
+    static inline std::unordered_map<int, std::unordered_map<S, int>> coset_index_for_device = {};
 
   public:
     template <typename U>
@@ -394,12 +396,12 @@ namespace ntt {
       for (int i = 0; i < omegas_count; i++) {
         omega = S::sqr(omega);
         if (!found_logn) {
-          ++Domain<S>::max_log_size;
+          ++Domain<S>::max_log_size_for_device[ctx.device_id];
           found_logn = omega == S::one();
           if (found_logn) break;
         }
       }
-      Domain<S>::max_size = (int)pow(2, Domain<S>::max_log_size);
+      Domain<S>::max_size_for_device[ctx.device_id] = (int)pow(2, Domain<S>::max_log_size_for_device[ctx.device_id]);
       if (omega != S::one()) {
         throw IcicleError(
           IcicleError_t::InvalidArgument, "Primitive root provided to the InitDomain function is not in the subgroup");
@@ -408,25 +410,32 @@ namespace ntt {
       // allocate and calculate twiddles on GPU
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
       // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
-      CHK_IF_RETURN(cudaMallocManaged(&Domain<S>::twiddles_for_device[ctx.device_id], (Domain<S>::max_size + 1) * sizeof(S)));
+      int device_id = ctx.device_id;
+      int current_device_id;
+      CHK_IF_RETURN(cudaGetDevice(&current_device_id));
+      assert(device_id == current_device_id);
+      printf("domain size %d, %d \n", Domain<S>::max_size_for_device[ctx.device_id], device_id);
+      CHK_IF_RETURN(
+        cudaMallocManaged(&Domain<S>::twiddles_for_device[ctx.device_id], (Domain<S>::max_size_for_device[ctx.device_id] + 1) * sizeof(S)));
       CHK_IF_RETURN(generate_external_twiddles_generic(
-        primitive_root, Domain<S>::twiddles_for_device[ctx.device_id], Domain<S>::internal_twiddles_for_device[ctx.device_id], Domain<S>::basic_twiddles_for_device[ctx.device_id],
-        Domain<S>::max_log_size, ctx.stream));
+        primitive_root, Domain<S>::twiddles_for_device[ctx.device_id],
+        Domain<S>::internal_twiddles_for_device[ctx.device_id], Domain<S>::basic_twiddles_for_device[ctx.device_id],
+        Domain<S>::max_log_size_for_device[ctx.device_id], ctx.stream));
       CHK_IF_RETURN(cudaStreamSynchronize(ctx.stream));
 
       const bool is_map_only_powers_of_primitive_root = true;
       if (is_map_only_powers_of_primitive_root) {
         // populate the coset_index map. Note that only powers of the primitive-root are stored (1, PR, PR^2, PR^4, PR^8
         // etc.)
-        Domain<S>::coset_index[S::one()] = 0;
-        for (int i = 0; i < Domain<S>::max_log_size; ++i) {
+        Domain<S>::coset_index_for_device[ctx.device_id][S::one()] = 0;
+        for (int i = 0; i < Domain<S>::max_log_size_for_device[ctx.device_id]; ++i) {
           const int index = (int)pow(2, i);
-          Domain<S>::coset_index[Domain<S>::twiddles_for_device[ctx.device_id][index]] = index;
+          Domain<S>::coset_index_for_device[ctx.device_id][Domain<S>::twiddles_for_device[ctx.device_id][index]] = index;
         }
       } else {
         // populate all values
-        for (int i = 0; i < Domain<S>::max_size; ++i) {
-          Domain<S>::coset_index[Domain<S>::twiddles_for_device[ctx.device_id][i]] = i;
+        for (int i = 0; i < Domain<S>::max_size_for_device[ctx.device_id]; ++i) {
+          Domain<S>::coset_index_for_device[ctx.device_id][Domain<S>::twiddles_for_device[ctx.device_id][i]] = i;
         }
       }
     }
@@ -439,15 +448,15 @@ namespace ntt {
   {
     CHK_INIT_IF_RETURN();
 
-    max_size = 0;
-    max_log_size = 0;
+    max_size_for_device[ctx.device_id] = 0;
+    max_log_size_for_device[ctx.device_id] = 0;
     cudaFreeAsync(twiddles_for_device[ctx.device_id], ctx.stream);
     twiddles_for_device[ctx.device_id] = nullptr;
     cudaFreeAsync(internal_twiddles_for_device[ctx.device_id], ctx.stream);
     internal_twiddles_for_device[ctx.device_id] = nullptr;
     cudaFreeAsync(basic_twiddles_for_device[ctx.device_id], ctx.stream);
     basic_twiddles_for_device[ctx.device_id] = nullptr;
-    coset_index.clear();
+    coset_index_for_device[ctx.device_id].clear();
 
     return CHK_LAST();
   }
@@ -456,7 +465,7 @@ namespace ntt {
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
-    if (size > Domain<S>::max_size) { // TODO: proper error handling
+    if (size > Domain<S>::max_size_for_device[config.ctx.device_id]) { // TODO: proper error handling
       std::cerr
         << "NTT size is too large for the domain. Consider generating your domain with a higher order root of unity"
         << '\n';
@@ -487,7 +496,7 @@ namespace ntt {
     S* coset = nullptr;
     int coset_index = 0;
     try {
-      coset_index = Domain<S>::coset_index.at(config.coset_gen);
+      coset_index = Domain<S>::coset_index_for_device[config.ctx.device_id].at(config.coset_gen);
     } catch (...) {
       // if coset index is not found in the subgroup, compute coset powers on CPU and move them to device
       std::vector<S> h_coset;
@@ -526,14 +535,17 @@ namespace ntt {
       if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
 
       CHK_IF_RETURN(ntt_inplace_batch_template(
-        reverse_input ? d_output : d_input, size, Domain<S>::twiddles_for_device[config.ctx.device_id], Domain<S>::max_size, batch_size, logn,
-        dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
+        reverse_input ? d_output : d_input, size, Domain<S>::twiddles_for_device[config.ctx.device_id],
+        Domain<S>::max_size_for_device[config.ctx.device_id], batch_size, logn, dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream,
+        d_output));
 
       if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     } else { // mixed-radix algorithm
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
-        d_input, d_output, Domain<S>::twiddles_for_device[config.ctx.device_id], Domain<S>::internal_twiddles_for_device[config.ctx.device_id], Domain<S>::basic_twiddles_for_device[config.ctx.device_id], size,
-        Domain<S>::max_log_size, dir == NTTDir::kInverse, config.ordering, stream));
+        d_input, d_output, Domain<S>::twiddles_for_device[config.ctx.device_id],
+        Domain<S>::internal_twiddles_for_device[config.ctx.device_id],
+        Domain<S>::basic_twiddles_for_device[config.ctx.device_id], size, Domain<S>::max_log_size_for_device[config.ctx.device_id],
+        dir == NTTDir::kInverse, config.ordering, stream));
     }
 
     if (!are_outputs_on_device)
