@@ -9,7 +9,7 @@ use crate::traits::ArkConvertible;
 #[cfg(feature = "arkworks")]
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
-use ark_ec::{AffineRepr, VariableBaseMSM};
+use ark_ec::VariableBaseMSM;
 #[cfg(feature = "arkworks")]
 use ark_std::{rand::Rng, test_rng, UniformRand};
 
@@ -24,7 +24,10 @@ where
     for test_size in test_sizes {
         let mut points = C::generate_random_affine_points(test_size);
         let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
-        let mut points_ark: Vec<_> = points
+        // sprinkle in some zero points
+        points[0] = Affine::<C>::zero();
+        points[3] = Affine::<C>::zero();
+        let points_ark: Vec<_> = points
             .iter()
             .map(|x| x.to_ark())
             .collect();
@@ -32,11 +35,6 @@ where
             .iter()
             .map(|x| x.to_ark())
             .collect();
-        // sprinkle in some zero points
-        points[0] = Affine::<C>::zero();
-        points_ark[0] = <Affine<C> as ArkConvertible>::ArkEquivalent::zero();
-        points[3] = Affine::<C>::zero();
-        points_ark[3] = <Affine<C> as ArkConvertible>::ArkEquivalent::zero();
         // if we simply transmute arkworks types, we'll get scalars or points in Montgomery format
         // (just beware the possible extra flag in affine point types, can't transmute ark Affine because of that)
         let scalars_mont = unsafe { &*(&scalars_ark[..] as *const _ as *const [C::ScalarField]) };
@@ -168,6 +166,12 @@ where
         for batch_size in batch_sizes {
             let mut points = C::generate_random_affine_points(test_size * batch_size);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];
+
+            // add some zero points
+            for _ in 0..100 {
+                let ind = rng.gen_range(0..test_size * batch_size);
+                points[ind] = Affine::<C>::zero();
+            }
             for _ in 0..(test_size * batch_size) {
                 scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::one();
             }
@@ -175,7 +179,7 @@ where
                 scalars[rng.gen_range(0..test_size * batch_size)] =
                     C::ScalarField::from_ark(<C::ScalarField as ArkConvertible>::ArkEquivalent::rand(rng));
             }
-            let mut points_ark: Vec<_> = points
+            let points_ark: Vec<_> = points
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
@@ -183,13 +187,6 @@ where
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
-
-            // add some zero points
-            for _ in 0..100 {
-                let ind = rng.gen_range(0..test_size * batch_size);
-                points[ind] = Affine::<C>::zero();
-                points_ark[ind] = <Affine<C> as ArkConvertible>::ArkEquivalent::zero();
-            }
 
             let mut msm_results = HostOrDeviceSlice::on_host(vec![Projective::<C>::zero(); batch_size]);
 
