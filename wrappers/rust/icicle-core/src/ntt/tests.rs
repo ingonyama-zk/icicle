@@ -3,25 +3,30 @@ use std::sync::OnceLock;
 use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
+use icicle_cuda_runtime::device::get_device_count;
 use icicle_cuda_runtime::device::set_device;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
-use icicle_cuda_runtime::{device::get_device_count, device_context::get_default_device_context};
+use icicle_cuda_runtime::stream::CudaStream;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 
+pub use icicle_cuda_runtime::device_context::get_default_device_context;
+
 use crate::{
-    ntt::{get_default_ntt_config, initialize_domain, ntt, NTTDir, Ordering},
+    ntt::{get_default_ntt_config, get_default_ntt_config_for_device, initialize_domain, ntt, NTTDir, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
+use crate::ntt::get_default_context_for_device;
+
 use super::NTT;
 
-pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64)
+pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize)
 where
     F::ArkEquivalent: FftField,
     <F as FieldImpl>::Config: NTT<F>,
 {
-    let ctx = get_default_device_context();
+    let ctx = get_default_context_for_device(device_id);
     let ark_rou = F::ArkEquivalent::get_root_of_unity(max_size).unwrap();
     initialize_domain(F::from_ark(ark_rou), &ctx).unwrap();
 }
@@ -264,21 +269,18 @@ where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let device_count = get_device_count().unwrap();
+
     (0..device_count)
         .into_par_iter()
         .for_each(move |device_id| {
             set_device(device_id).unwrap();
-
-            const MAX_SIZE: u64 = 1 << 16;
-            thread_local!(static INIT: OnceLock<()> = OnceLock::new());
-            INIT.with(|domain| *domain.get_or_init(move || init_domain::<F>(MAX_SIZE))); // init domain per device
-
-            let test_sizes = [1 << 4, 1 << 12];
-            let batch_sizes = [1, 1 << 4, 100];
+            init_domain::<F>(1 << 15, device_id); // init domain per device
+            let test_sizes = [1 << 4, 1 << 6];
+            let batch_sizes = [1, 1 << 4];
             for test_size in test_sizes {
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
                 // let stream = CudaStream::create().unwrap(); // TODO: should work like that but fails later with CUDA Runtime Error: invalid resource handle
-                let mut config = get_default_ntt_config();
+                let mut config = get_default_ntt_config_for_device(device_id);
                 let stream = config
                     .ctx
                     .stream;

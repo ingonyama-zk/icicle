@@ -26,6 +26,12 @@ where
     (0..device_count) // TODO: this is proto-loadbalancer
         .into_par_iter()
         .for_each(move |device_id| {
+            //TODO: currently supported multi-GPU workflow:
+            //      1) User starts child host thread from parent host thread
+            //      2) Calls set_device once with selected device_id (0 is default device .. < device_count)
+            //      3) Perform all operations (without changing device on the thread)
+            //      4) If necessary - export results to parent host thread
+
             set_device(device_id).unwrap();
             let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
             let mut msm_results = HostOrDeviceSlice::cuda_malloc(1).unwrap();

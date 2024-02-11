@@ -85,6 +85,7 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
+            is_force_radix2: false,
         }
     }
 }
@@ -99,6 +100,7 @@ pub trait NTT<F: FieldImpl> {
     ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
+    fn get_default_ntt_config_for_device(device_id: usize) -> NTTConfig<'static, F>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -153,13 +155,22 @@ where
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
 
-/// Returns [NTT config](NTTConfig) struct populated with default values.
+/// Returns [NTT config](NTTConfig) struct for default device populated with default values.
 pub fn get_default_ntt_config<F>() -> NTTConfig<'static, F>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>,
 {
     <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config()
+}
+
+/// Returns [NTT config](NTTConfig) struct populated with default values.
+pub fn get_default_ntt_config_for_device<F>(device_id: usize) -> NTTConfig<'static, F>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
+{
+    <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config_for_device(device_id)
 }
 
 #[macro_export]
@@ -212,7 +223,11 @@ macro_rules! impl_ntt {
             }
 
             fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                NTTConfig::<$field>::default_config()
+                NTTConfig::<$field>::default_config_for_device(DEFAULT_DEVICE_ID)
+            }
+
+            fn get_default_ntt_config_for_device(device_id: usize) -> NTTConfig<'static, $field> {
+                NTTConfig::<$field>::default_config_for_device(device_id)
             }
         }
     };
@@ -225,33 +240,34 @@ macro_rules! impl_ntt_tests {
     ) => {
         const MAX_SIZE: u64 = 1 << 17;
         static INIT: OnceLock<()> = OnceLock::new();
-        
+
         #[test]
         fn test_ntt() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt::<$field>()
         }
 
         #[test]
         fn test_ntt_coset_from_subgroup() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_coset_from_subgroup::<$field>()
         }
 
         #[test]
         fn test_ntt_arbitrary_coset() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_arbitrary_coset::<$field>()
         }
 
         #[test]
         fn test_ntt_batch() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_batch::<$field>()
         }
 
         #[test]
         fn test_ntt_device_async() {
+            //INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_device_async::<$field>()
         }
     };

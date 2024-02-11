@@ -3,6 +3,9 @@ use crate::stream::CudaStream;
 
 pub const DEFAULT_DEVICE_ID: usize = 0;
 
+use crate::device::get_device;
+use crate::device::set_device;
+
 /// Properties of the device used in Icicle functions.
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -22,13 +25,22 @@ pub fn get_default_device_context() -> DeviceContext<'static> {
 }
 
 pub fn get_default_context_for_device(device_id: usize) -> DeviceContext<'static> {
-    static default_stream: CudaStream = CudaStream {
-        handle: std::ptr::null_mut(),
-    };
-
+    set_device(device_id).unwrap();
+    check_device(device_id as i32);
+    // TODO: default stream? on what device? or create one after set_device
+    let stream: &'static CudaStream  = Box::leak(Box::new(CudaStream::create().unwrap()));
+    Box::leak(Box::new(stream)); // TODO: leaky abstraction
+    // TODO: default mempool? on what device? or create one after set_device
     DeviceContext {
-        stream: &default_stream,
+        stream,
         device_id,
         mempool: std::ptr::null_mut(),
+    }
+}
+
+pub fn check_device(device_id: i32) {
+    match device_id == get_device().unwrap() as i32 {
+        true => (),
+        false => panic!("Attempt to use on a different device"),
     }
 }

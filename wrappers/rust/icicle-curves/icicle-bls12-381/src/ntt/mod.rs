@@ -7,6 +7,7 @@ use icicle_core::traits::IcicleResultWrap;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
 
 impl_ntt!("bls12_381", bls12_381, ScalarField, ScalarCfg);
 
@@ -16,6 +17,7 @@ pub(crate) mod tests {
     use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
     use std::sync::OnceLock;
+    use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
 
     impl_ntt_tests!(ScalarField);
 }

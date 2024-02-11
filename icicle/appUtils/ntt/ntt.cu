@@ -363,11 +363,11 @@ namespace ntt {
   {
     static inline int max_size = 0;
     static inline int max_log_size = 0;
-    static inline S* twiddles = nullptr;
-    static inline std::unordered_map<S, int> coset_index = {};
+    static inline std::unordered_map<int, S*> twiddles_for_device = {};
+    static inline std::unordered_map<int, S*> internal_twiddles_for_device = {}; // required by mixed-radix NTT
+    static inline std::unordered_map<int, S*> basic_twiddles_for_device = {};    // required by mixed-radix NTT
 
-    static inline S* internal_twiddles = nullptr; // required by mixed-radix NTT
-    static inline S* basic_twiddles = nullptr;    // required by mixed-radix NTT
+    static inline std::unordered_map<S, int> coset_index = {};
 
   public:
     template <typename U>
@@ -387,7 +387,7 @@ namespace ntt {
     // only generate twiddles if they haven't been generated yet
     // please note that this is not thread-safe at all,
     // but it's a singleton that is supposed to be initialized once per program lifetime
-    if (!Domain<S>::twiddles) {
+    if (!Domain<S>::twiddles_for_device[ctx.device_id]) {
       bool found_logn = false;
       S omega = primitive_root;
       unsigned omegas_count = S::get_omegas_count();
@@ -408,9 +408,9 @@ namespace ntt {
       // allocate and calculate twiddles on GPU
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
       // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
-      CHK_IF_RETURN(cudaMallocManaged(&Domain<S>::twiddles, (Domain<S>::max_size + 1) * sizeof(S)));
+      CHK_IF_RETURN(cudaMallocManaged(&Domain<S>::twiddles_for_device[ctx.device_id], (Domain<S>::max_size + 1) * sizeof(S)));
       CHK_IF_RETURN(generate_external_twiddles_generic(
-        primitive_root, Domain<S>::twiddles, Domain<S>::internal_twiddles, Domain<S>::basic_twiddles,
+        primitive_root, Domain<S>::twiddles_for_device[ctx.device_id], Domain<S>::internal_twiddles_for_device[ctx.device_id], Domain<S>::basic_twiddles_for_device[ctx.device_id],
         Domain<S>::max_log_size, ctx.stream));
       CHK_IF_RETURN(cudaStreamSynchronize(ctx.stream));
 
@@ -421,12 +421,12 @@ namespace ntt {
         Domain<S>::coset_index[S::one()] = 0;
         for (int i = 0; i < Domain<S>::max_log_size; ++i) {
           const int index = (int)pow(2, i);
-          Domain<S>::coset_index[Domain<S>::twiddles[index]] = index;
+          Domain<S>::coset_index[Domain<S>::twiddles_for_device[ctx.device_id][index]] = index;
         }
       } else {
         // populate all values
         for (int i = 0; i < Domain<S>::max_size; ++i) {
-          Domain<S>::coset_index[Domain<S>::twiddles[i]] = i;
+          Domain<S>::coset_index[Domain<S>::twiddles_for_device[ctx.device_id][i]] = i;
         }
       }
     }
@@ -441,12 +441,12 @@ namespace ntt {
 
     max_size = 0;
     max_log_size = 0;
-    cudaFreeAsync(twiddles, ctx.stream);
-    twiddles = nullptr;
-    cudaFreeAsync(internal_twiddles, ctx.stream);
-    internal_twiddles = nullptr;
-    cudaFreeAsync(basic_twiddles, ctx.stream);
-    basic_twiddles = nullptr;
+    cudaFreeAsync(twiddles_for_device[ctx.device_id], ctx.stream);
+    twiddles_for_device[ctx.device_id] = nullptr;
+    cudaFreeAsync(internal_twiddles_for_device[ctx.device_id], ctx.stream);
+    internal_twiddles_for_device[ctx.device_id] = nullptr;
+    cudaFreeAsync(basic_twiddles_for_device[ctx.device_id], ctx.stream);
+    basic_twiddles_for_device[ctx.device_id] = nullptr;
     coset_index.clear();
 
     return CHK_LAST();
@@ -526,13 +526,13 @@ namespace ntt {
       if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
 
       CHK_IF_RETURN(ntt_inplace_batch_template(
-        reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
+        reverse_input ? d_output : d_input, size, Domain<S>::twiddles_for_device[config.ctx.device_id], Domain<S>::max_size, batch_size, logn,
         dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
 
       if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     } else { // mixed-radix algorithm
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
-        d_input, d_output, Domain<S>::twiddles, Domain<S>::internal_twiddles, Domain<S>::basic_twiddles, size,
+        d_input, d_output, Domain<S>::twiddles_for_device[config.ctx.device_id], Domain<S>::internal_twiddles_for_device[config.ctx.device_id], Domain<S>::basic_twiddles_for_device[config.ctx.device_id], size,
         Domain<S>::max_log_size, dir == NTTDir::kInverse, config.ordering, stream));
     }
 
