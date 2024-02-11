@@ -8,8 +8,6 @@
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
 #include "appUtils/ntt/ntt_impl.cuh"
-#include <cassert>
-
 
 namespace ntt {
 
