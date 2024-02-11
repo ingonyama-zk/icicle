@@ -31,6 +31,47 @@ namespace msm {
 
     unsigned get_optimal_c(int bitsize) { return max((unsigned)ceil(log2(bitsize)) - 4, 1U); }
 
+    template <typename E>
+    __global__ void normalize_kernel(E* inout, E factor, int n)
+    {
+      int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid < n) inout[tid] = (inout[tid] + factor - 1) / factor;
+    }
+
+    template <typename P>
+    __global__ void initialize_large_bucket_indices(
+      unsigned* sorted_bucket_sizes_sum,
+      unsigned nof_pts_per_thread,
+      unsigned nof_large_buckets,
+      unsigned log_nof_large_buckets,
+      unsigned* bucket_indices)
+    {
+      const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid >= nof_large_buckets) { return; }
+      unsigned start = (sorted_bucket_sizes_sum[tid] + nof_pts_per_thread - 1) / nof_pts_per_thread + tid;
+      unsigned end = (sorted_bucket_sizes_sum[tid + 1] + nof_pts_per_thread - 1) / nof_pts_per_thread + tid + 1;
+      for (unsigned i = start; i < end; i++) {
+        bucket_indices[i] = tid | ((i - start) << log_nof_large_buckets);
+      }
+    }
+
+    template <typename P>
+    __global__ void sum_reduction_variable_size_kernel(
+      P* v,
+      unsigned* bucket_sizes_sum,
+      unsigned* bucket_sizes,
+      unsigned* large_bucket_thread_indices,
+      unsigned num_of_threads)
+    {
+      const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid >= num_of_threads) { return; }
+
+      unsigned large_bucket_tid = large_bucket_thread_indices[tid];
+      unsigned segment_ind = tid - bucket_sizes_sum[large_bucket_tid] - large_bucket_tid;
+      unsigned large_bucket_size = bucket_sizes[large_bucket_tid];
+      if (segment_ind < (large_bucket_size >> 1)) { v[tid] = v[tid] + v[tid + ((large_bucket_size + 1) >> 1)]; }
+    }
+
     template <typename P>
     __global__ void single_stage_multi_reduction_kernel(
       const P* v,
@@ -38,23 +79,23 @@ namespace msm {
       unsigned block_size,
       unsigned write_stride,
       unsigned write_phase,
-      unsigned padding,
+      unsigned step,
       unsigned num_of_threads)
     {
       const int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid >= num_of_threads) { return; }
 
+      const int shifted_tid = write_phase ? tid : tid + (tid + step - 1) / (step - 1);
       const int jump = block_size / 2;
-      const int tid_p = padding ? (tid / (2 * padding)) * padding + tid % padding : tid;
-      const int block_id = tid_p / jump;
-      const int block_tid = tid_p % jump;
-      const unsigned read_ind = block_size * block_id + block_tid;
-      const unsigned write_ind = tid;
+      const int block_id = shifted_tid / jump;
+      const int shifted_block_id = write_phase ? block_id + (block_id + step - 1) / (step - 1) : block_id;
+      const int block_tid = shifted_tid % jump;
+      const unsigned read_ind = block_size * shifted_block_id + block_tid;
+      const unsigned write_ind = jump * shifted_block_id + block_tid;
       const unsigned v_r_key =
         write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride
                      : write_ind;
-      v_r[v_r_key] = padding ? (tid % (2 * padding) < padding) ? v[read_ind] + v[read_ind + jump] : P::zero()
-                             : v[read_ind] + v[read_ind + jump];
+      v_r[v_r_key] = v[read_ind] + v[read_ind + jump];
     }
 
     // this kernel performs single scalar multiplication
@@ -136,8 +177,8 @@ namespace msm {
         buckets_indices[current_index] =
           (msm_index << (c + bm_bitsize)) | (bm << c) |
           bucket_index; // the bucket module number and the msm number are appended at the msbs
-        if (scalar == S::zero() || bucket_index == 0) buckets_indices[current_index] = 0; // will be skipped
-        point_indices[current_index] = tid % points_size; // the point index is saved for later
+        if (bucket_index == 0) buckets_indices[current_index] = 0; // will be skipped
+        point_indices[current_index] = tid % points_size;          // the point index is saved for later
 #endif
       }
     }
@@ -159,19 +200,6 @@ namespace msm {
       if (tid == 0 && v[size - 1] > cutoff) { result[0] = size; }
     }
 
-    template <typename S>
-    __global__ void
-    find_max_size(unsigned* bucket_sizes, unsigned* single_bucket_indices, unsigned c, unsigned* largest_bucket_size)
-    {
-      for (int i = 0;; i++) {
-        if (single_bucket_indices[i] & ((1 << c) - 1)) {
-          largest_bucket_size[0] = bucket_sizes[i];
-          largest_bucket_size[1] = i;
-          break;
-        }
-      }
-    }
-
     // this kernel adds up the points in each bucket
     template <typename P, typename A>
     __global__ void accumulate_buckets_kernel(
@@ -189,9 +217,6 @@ namespace msm {
       // constexpr unsigned sign_mask = 0x80000000;
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_buckets_to_compute) return;
-      if ((single_bucket_indices[tid] & ((1 << c) - 1)) == 0) {
-        return; // skip zero buckets
-      }
 #ifdef SIGNED_DIG // todo - fix
       const unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
       const unsigned bm_index = (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1)) >> c;
@@ -199,7 +224,8 @@ namespace msm {
         msm_index * nof_buckets + bm_index * ((1 << (c - 1)) + 1) + (single_bucket_indices[tid] & ((1 << c) - 1));
 #else
       unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
-      unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
+      const unsigned single_bucket_index = (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
+      unsigned bucket_index = msm_index * nof_buckets + single_bucket_index;
 #endif
       const unsigned bucket_offset = bucket_offsets[tid];
       const unsigned bucket_size = bucket_sizes[tid];
@@ -216,7 +242,8 @@ namespace msm {
 #else
         A point = points[point_ind];
 #endif
-        bucket = i ? bucket + point : P::from_affine(point);
+        bucket =
+          i ? (point == A::zero() ? bucket : bucket + point) : (point == A::zero() ? P::zero() : P::from_affine(point));
       }
       buckets[bucket_index] = bucket;
     }
@@ -226,43 +253,38 @@ namespace msm {
       P* __restrict__ buckets,
       unsigned* __restrict__ bucket_offsets,
       unsigned* __restrict__ bucket_sizes,
-      unsigned* __restrict__ single_bucket_indices,
-      const unsigned* __restrict__ point_indices,
+      unsigned* __restrict__ large_bucket_thread_indices,
+      unsigned* __restrict__ point_indices,
       A* __restrict__ points,
-      const unsigned nof_buckets,
       const unsigned nof_buckets_to_compute,
-      const unsigned msm_idx_shift,
       const unsigned c,
-      const unsigned threads_per_bucket,
-      const unsigned max_run_length)
+      const int points_per_thread,
+      const unsigned log_nof_buckets_to_compute,
+      const unsigned nof_threads)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-      unsigned large_bucket_index = tid / threads_per_bucket;
-      unsigned bucket_segment_index = tid % threads_per_bucket;
-      if (tid >= nof_buckets_to_compute * threads_per_bucket) { return; }
-      if ((single_bucket_indices[large_bucket_index] & ((1 << c) - 1)) == 0) { // dont need
-        return;                                                                // skip zero buckets
-      }
-      unsigned write_bucket_index = bucket_segment_index * nof_buckets_to_compute + large_bucket_index;
-      const unsigned bucket_offset = bucket_offsets[large_bucket_index] + bucket_segment_index * max_run_length;
-      const unsigned bucket_size = bucket_sizes[large_bucket_index] > bucket_segment_index * max_run_length
-                                     ? bucket_sizes[large_bucket_index] - bucket_segment_index * max_run_length
-                                     : 0;
+      if (tid >= nof_threads) return;
+      int bucket_segment_index = large_bucket_thread_indices[tid] >> log_nof_buckets_to_compute;
+      large_bucket_thread_indices[tid] &= ((1 << log_nof_buckets_to_compute) - 1);
+      int bucket_ind = large_bucket_thread_indices[tid];
+      const unsigned bucket_offset = bucket_offsets[bucket_ind] + bucket_segment_index * points_per_thread;
+      const unsigned bucket_size = max(0, (int)bucket_sizes[bucket_ind] - bucket_segment_index * points_per_thread);
       P bucket;
-      unsigned run_length = min(bucket_size, max_run_length);
+      unsigned run_length = min(bucket_size, points_per_thread);
       for (unsigned i = 0; i < run_length;
            i++) { // add the relevant points starting from the relevant offset up to the bucket size
         unsigned point_ind = point_indices[bucket_offset + i];
         A point = points[point_ind];
         bucket = i ? bucket + point : P::from_affine(point); // init empty buckets
       }
-      buckets[write_bucket_index] = run_length ? bucket : P::zero();
+      buckets[tid] = run_length ? bucket : P::zero();
     }
 
     template <typename P>
     __global__ void distribute_large_buckets_kernel(
       const P* large_buckets,
       P* buckets,
+      const unsigned* sorted_bucket_sizes_sum,
       const unsigned* single_bucket_indices,
       const unsigned size,
       const unsigned nof_buckets,
@@ -273,7 +295,8 @@ namespace msm {
 
       unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
       unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
-      buckets[bucket_index] = large_buckets[tid];
+      unsigned large_bucket_index = sorted_bucket_sizes_sum[tid] + tid;
+      buckets[bucket_index] = large_buckets[large_bucket_index];
     }
 
     // this kernel sums the entire bucket module
@@ -372,7 +395,6 @@ namespace msm {
       }
 
       S* d_scalars;
-      A* d_points;
       if (!are_scalars_on_device) {
         // copy scalars to gpu
         CHK_IF_RETURN(cudaMallocAsync(&d_scalars, sizeof(S) * nof_scalars, stream));
@@ -380,15 +402,7 @@ namespace msm {
       } else {
         d_scalars = scalars;
       }
-      cudaStream_t stream_points;
-      if (!are_points_on_device || are_points_montgomery_form) CHK_IF_RETURN(cudaStreamCreate(&stream_points));
-      if (!are_points_on_device) {
-        // copy points to gpu
-        CHK_IF_RETURN(cudaMallocAsync(&d_points, sizeof(A) * nof_points, stream_points));
-        CHK_IF_RETURN(cudaMemcpyAsync(d_points, points, sizeof(A) * nof_points, cudaMemcpyHostToDevice, stream_points));
-      } else {
-        d_points = points;
-      }
+
       if (are_scalars_montgomery_form) {
         if (are_scalars_on_device) {
           S* d_mont_scalars;
@@ -398,6 +412,97 @@ namespace msm {
         } else
           CHK_IF_RETURN(mont::FromMontgomery(d_scalars, nof_scalars, stream, d_scalars));
       }
+
+      unsigned nof_bms_per_msm = (bitsize + c - 1) / c;
+      unsigned* bucket_indices;
+      unsigned* point_indices;
+      unsigned* sorted_bucket_indices;
+      unsigned* sorted_point_indices;
+      CHK_IF_RETURN(cudaMallocAsync(&bucket_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&point_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&sorted_bucket_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&sorted_point_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
+
+      unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms_per_msm));
+      // split scalars into digits
+      unsigned NUM_THREADS = 1 << 10;
+      unsigned NUM_BLOCKS = (nof_scalars + NUM_THREADS - 1) / NUM_THREADS;
+      split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+        bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, nof_bms_per_msm, bm_bitsize,
+        c);
+
+      // sort indices - the indices are sorted from smallest to largest in order to group together the points that
+      // belong to each bucket
+      unsigned* sort_indices_temp_storage{};
+      size_t sort_indices_temp_storage_bytes;
+      // The second to last parameter is the default value supplied explicitly to allow passing the stream
+      // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for
+      // more info
+      CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
+        sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices, sorted_bucket_indices,
+        point_indices, sorted_point_indices, nof_scalars * nof_bms_per_msm, 0, sizeof(unsigned) * 8, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream));
+      // The second to last parameter is the default value supplied explicitly to allow passing the stream
+      // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for
+      // more info
+      CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
+        sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices, sorted_bucket_indices,
+        point_indices, sorted_point_indices, nof_scalars * nof_bms_per_msm, 0, sizeof(unsigned) * 8, stream));
+      CHK_IF_RETURN(cudaFreeAsync(sort_indices_temp_storage, stream));
+      CHK_IF_RETURN(cudaFreeAsync(bucket_indices, stream));
+      CHK_IF_RETURN(cudaFreeAsync(point_indices, stream));
+
+      // compute number of bucket modules and number of buckets in each module
+      unsigned nof_bms_in_batch = nof_bms_per_msm * batch_size;
+#ifdef SIGNED_DIG
+      const unsigned nof_buckets = nof_bms_per_msm * ((1 << (c - 1)) + 1); // signed digits
+#else
+      const unsigned nof_buckets = (nof_bms_per_msm << c) - nof_bms_per_msm;
+#endif
+      const unsigned total_nof_buckets = nof_buckets * batch_size;
+
+      // find bucket_sizes
+      unsigned* single_bucket_indices;
+      unsigned* bucket_sizes;
+      unsigned* nof_buckets_to_compute;
+      CHK_IF_RETURN(cudaMallocAsync(&single_bucket_indices, sizeof(unsigned) * (total_nof_buckets + 1), stream));
+      CHK_IF_RETURN(cudaMallocAsync(&bucket_sizes, sizeof(unsigned) * (total_nof_buckets + 1), stream));
+      CHK_IF_RETURN(cudaMallocAsync(&nof_buckets_to_compute, sizeof(unsigned), stream));
+      unsigned* encode_temp_storage{};
+      size_t encode_temp_storage_bytes = 0;
+      CHK_IF_RETURN(cub::DeviceRunLengthEncode::Encode(
+        encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
+        nof_buckets_to_compute, nof_bms_per_msm * nof_scalars, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&encode_temp_storage, encode_temp_storage_bytes, stream));
+      CHK_IF_RETURN(cub::DeviceRunLengthEncode::Encode(
+        encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
+        nof_buckets_to_compute, nof_bms_per_msm * nof_scalars, stream));
+      CHK_IF_RETURN(cudaFreeAsync(encode_temp_storage, stream));
+      CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_indices, stream));
+
+      // get offsets - where does each new bucket begin
+      unsigned* bucket_offsets;
+      CHK_IF_RETURN(cudaMallocAsync(&bucket_offsets, sizeof(unsigned) * (total_nof_buckets + 1), stream));
+      unsigned* offsets_temp_storage{};
+      size_t offsets_temp_storage_bytes = 0;
+      CHK_IF_RETURN(cub::DeviceScan::ExclusiveSum(
+        offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets + 1, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&offsets_temp_storage, offsets_temp_storage_bytes, stream));
+      CHK_IF_RETURN(cub::DeviceScan::ExclusiveSum(
+        offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets + 1, stream));
+      CHK_IF_RETURN(cudaFreeAsync(offsets_temp_storage, stream));
+
+      A* d_points;
+      cudaStream_t stream_points;
+      if (!are_points_on_device || are_points_montgomery_form) CHK_IF_RETURN(cudaStreamCreate(&stream_points));
+      if (!are_points_on_device) {
+        // copy points to gpu
+        CHK_IF_RETURN(cudaMallocAsync(&d_points, sizeof(A) * nof_points, stream_points));
+        CHK_IF_RETURN(cudaMemcpyAsync(d_points, points, sizeof(A) * nof_points, cudaMemcpyHostToDevice, stream_points));
+      } else {
+        d_points = points;
+      }
+
       if (are_points_montgomery_form) {
         if (are_points_on_device) {
           A* d_mont_points;
@@ -414,111 +519,25 @@ namespace msm {
       }
 
       P* buckets;
-      // compute number of bucket modules and number of buckets in each module
-      unsigned nof_bms_per_msm = (bitsize + c - 1) / c;
-      unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms_per_msm));
-      unsigned nof_bms_in_batch = nof_bms_per_msm * batch_size;
-#ifdef SIGNED_DIG
-      const unsigned nof_buckets = nof_bms_per_msm * ((1 << (c - 1)) + 1); // signed digits
-#else
-      const unsigned nof_buckets = nof_bms_per_msm << c;
-#endif
-      const unsigned total_nof_buckets = nof_buckets * batch_size;
-      CHK_IF_RETURN(cudaMallocAsync(&buckets, sizeof(P) * total_nof_buckets, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&buckets, sizeof(P) * (total_nof_buckets + nof_bms_in_batch), stream));
 
       // launch the bucket initialization kernel with maximum threads
-      unsigned NUM_THREADS = 1 << 10;
-      unsigned NUM_BLOCKS = (total_nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-      initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets);
-
-      unsigned* bucket_indices;
-      unsigned* point_indices;
-      CHK_IF_RETURN(cudaMallocAsync(&bucket_indices, sizeof(unsigned) * nof_scalars * (nof_bms_per_msm + 1), stream));
-      CHK_IF_RETURN(cudaMallocAsync(&point_indices, sizeof(unsigned) * nof_scalars * (nof_bms_per_msm + 1), stream));
-
-      // split scalars into digits
       NUM_THREADS = 1 << 10;
-      NUM_BLOCKS = (nof_scalars + NUM_THREADS - 1) / NUM_THREADS;
-      split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        bucket_indices + nof_scalars, point_indices + nof_scalars, d_scalars, nof_scalars, nof_points, single_msm_size,
-        nof_bms_per_msm, bm_bitsize, c); //+nof_scalars - leaving the first bm free for the out of place sort later
+      NUM_BLOCKS = (total_nof_buckets + nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
+      initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets + nof_bms_in_batch);
 
-      // sort indices - the indices are sorted from smallest to largest in order to group together the points that
-      // belong to each bucket
-      unsigned* sort_indices_temp_storage{};
-      size_t sort_indices_temp_storage_bytes;
-      // The second to last parameter is the default value supplied explicitly to allow passing the stream
-      // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for
-      // more info
-      CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
-        sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + nof_scalars, bucket_indices,
-        point_indices + nof_scalars, point_indices, nof_scalars, 0, sizeof(unsigned) * 8, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream));
-      for (unsigned i = 0; i < nof_bms_per_msm; i++) {
-        unsigned offset_out = i * nof_scalars;
-        unsigned offset_in = offset_out + nof_scalars;
-        // The second to last parameter is the default value supplied explicitly to allow passing the stream
-        // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for
-        // more info
-        CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
-          sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
-          bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, nof_scalars, 0,
-          sizeof(unsigned) * 8, stream));
-      }
-      CHK_IF_RETURN(cudaFreeAsync(sort_indices_temp_storage, stream));
-
-      // find bucket_sizes
-      unsigned* single_bucket_indices;
-      unsigned* bucket_sizes;
-      unsigned* nof_buckets_to_compute;
-      CHK_IF_RETURN(cudaMallocAsync(&single_bucket_indices, sizeof(unsigned) * total_nof_buckets, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&bucket_sizes, sizeof(unsigned) * total_nof_buckets, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&nof_buckets_to_compute, sizeof(unsigned), stream));
-      unsigned* encode_temp_storage{};
-      size_t encode_temp_storage_bytes = 0;
-      CHK_IF_RETURN(cub::DeviceRunLengthEncode::Encode(
-        encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
-        nof_buckets_to_compute, nof_bms_per_msm * nof_scalars, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&encode_temp_storage, encode_temp_storage_bytes, stream));
-      CHK_IF_RETURN(cub::DeviceRunLengthEncode::Encode(
-        encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
-        nof_buckets_to_compute, nof_bms_per_msm * nof_scalars, stream));
-      CHK_IF_RETURN(cudaFreeAsync(encode_temp_storage, stream));
-
-      // get offsets - where does each new bucket begin
-      unsigned* bucket_offsets;
-      CHK_IF_RETURN(cudaMallocAsync(&bucket_offsets, sizeof(unsigned) * total_nof_buckets, stream));
-      unsigned* offsets_temp_storage{};
-      size_t offsets_temp_storage_bytes = 0;
-      CHK_IF_RETURN(cub::DeviceScan::ExclusiveSum(
-        offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&offsets_temp_storage, offsets_temp_storage_bytes, stream));
-      CHK_IF_RETURN(cub::DeviceScan::ExclusiveSum(
-        offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets, stream));
-      CHK_IF_RETURN(cudaFreeAsync(offsets_temp_storage, stream));
+      // removing zero bucket, if it exists
+      unsigned smallest_bucket_index;
+      CHK_IF_RETURN(cudaMemcpyAsync(
+        &smallest_bucket_index, single_bucket_indices, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
+      unsigned zero_bucket_offset = (smallest_bucket_index == 0) ? 1 : 0;
 
       // sort by bucket sizes
       unsigned h_nof_buckets_to_compute;
       CHK_IF_RETURN(cudaMemcpyAsync(
         &h_nof_buckets_to_compute, nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
-
-      // if all points are 0 just return point 0
-      if (h_nof_buckets_to_compute == 0) {
-        if (!are_results_on_device) {
-          for (unsigned batch_element = 0; batch_element < batch_size; ++batch_element) {
-            final_result[batch_element] = P::zero();
-          }
-        } else {
-          P* h_final_result = (P*)malloc(sizeof(P) * batch_size);
-          for (unsigned batch_element = 0; batch_element < batch_size; ++batch_element) {
-            h_final_result[batch_element] = P::zero();
-          }
-          CHK_IF_RETURN(
-            cudaMemcpyAsync(final_result, h_final_result, sizeof(P) * batch_size, cudaMemcpyHostToDevice, stream));
-        }
-
-        return CHK_LAST();
-      }
+      CHK_IF_RETURN(cudaFreeAsync(nof_buckets_to_compute, stream));
+      h_nof_buckets_to_compute = h_nof_buckets_to_compute - zero_bucket_offset;
 
       unsigned* sorted_bucket_sizes;
       CHK_IF_RETURN(cudaMallocAsync(&sorted_bucket_sizes, sizeof(unsigned) * h_nof_buckets_to_compute, stream));
@@ -527,13 +546,16 @@ namespace msm {
       unsigned* sort_offsets_temp_storage{};
       size_t sort_offsets_temp_storage_bytes = 0;
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairsDescending(
-        sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes, sorted_bucket_sizes, bucket_offsets,
-        sorted_bucket_offsets, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, stream));
+        sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes + zero_bucket_offset,
+        sorted_bucket_sizes, bucket_offsets + zero_bucket_offset, sorted_bucket_offsets, h_nof_buckets_to_compute, 0,
+        sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaMallocAsync(&sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, stream));
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairsDescending(
-        sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes, sorted_bucket_sizes, bucket_offsets,
-        sorted_bucket_offsets, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, stream));
+        sort_offsets_temp_storage, sort_offsets_temp_storage_bytes, bucket_sizes + zero_bucket_offset,
+        sorted_bucket_sizes, bucket_offsets + zero_bucket_offset, sorted_bucket_offsets, h_nof_buckets_to_compute, 0,
+        sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaFreeAsync(sort_offsets_temp_storage, stream));
+      CHK_IF_RETURN(cudaFreeAsync(bucket_offsets, stream));
 
       unsigned* sorted_single_bucket_indices;
       CHK_IF_RETURN(
@@ -541,92 +563,122 @@ namespace msm {
       unsigned* sort_single_temp_storage{};
       size_t sort_single_temp_storage_bytes = 0;
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairsDescending(
-        sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes, sorted_bucket_sizes,
-        single_bucket_indices, sorted_single_bucket_indices, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8,
-        stream));
+        sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes + zero_bucket_offset,
+        sorted_bucket_sizes, single_bucket_indices + zero_bucket_offset, sorted_single_bucket_indices,
+        h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaMallocAsync(&sort_single_temp_storage, sort_single_temp_storage_bytes, stream));
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairsDescending(
-        sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes, sorted_bucket_sizes,
-        single_bucket_indices, sorted_single_bucket_indices, h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8,
-        stream));
+        sort_single_temp_storage, sort_single_temp_storage_bytes, bucket_sizes + zero_bucket_offset,
+        sorted_bucket_sizes, single_bucket_indices + zero_bucket_offset, sorted_single_bucket_indices,
+        h_nof_buckets_to_compute, 0, sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaFreeAsync(sort_single_temp_storage, stream));
+      CHK_IF_RETURN(cudaFreeAsync(bucket_sizes, stream));
+      CHK_IF_RETURN(cudaFreeAsync(single_bucket_indices, stream));
 
       // find large buckets
-      unsigned avarage_size = single_msm_size / (1 << c);
-      unsigned bucket_th = large_bucket_factor * avarage_size;
+      unsigned average_bucket_size = single_msm_size / (1 << c);
+      unsigned bucket_th = large_bucket_factor * average_bucket_size;
       unsigned* nof_large_buckets;
       CHK_IF_RETURN(cudaMallocAsync(&nof_large_buckets, sizeof(unsigned), stream));
       CHK_IF_RETURN(cudaMemset(nof_large_buckets, 0, sizeof(unsigned)));
 
-      unsigned TOTAL_THREADS = 129000; // todo - device dependent
+      unsigned TOTAL_THREADS = 129000; // TODO: device dependent
       unsigned cutoff_run_length = max(2, h_nof_buckets_to_compute / TOTAL_THREADS);
       unsigned cutoff_nof_runs = (h_nof_buckets_to_compute + cutoff_run_length - 1) / cutoff_run_length;
       NUM_THREADS = min(1 << 5, cutoff_nof_runs);
       NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
-      find_cutoff_kernel<S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
-
+      if (bucket_th > 0)
+        find_cutoff_kernel<S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+          sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
       unsigned h_nof_large_buckets;
       CHK_IF_RETURN(
         cudaMemcpyAsync(&h_nof_large_buckets, nof_large_buckets, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
-
-      unsigned* max_res;
-      CHK_IF_RETURN(cudaMallocAsync(&max_res, sizeof(unsigned) * 2, stream));
-      find_max_size<S><<<1, 1, 0, stream>>>(sorted_bucket_sizes, sorted_single_bucket_indices, c, max_res);
-
-      unsigned h_max_res[2];
-      CHK_IF_RETURN(cudaMemcpyAsync(h_max_res, max_res, sizeof(unsigned) * 2, cudaMemcpyDeviceToHost, stream));
-      unsigned h_largest_bucket_size = h_max_res[0];
-      unsigned h_nof_zero_large_buckets = h_max_res[1];
-      unsigned large_buckets_to_compute =
-        h_nof_large_buckets > h_nof_zero_large_buckets ? h_nof_large_buckets - h_nof_zero_large_buckets : 0;
+      CHK_IF_RETURN(cudaFreeAsync(nof_large_buckets, stream));
 
       if (!are_points_on_device || are_points_montgomery_form) {
         // by this point, points need to be already uploaded and un-Montgomeried
         CHK_IF_RETURN(cudaStreamWaitEvent(stream, event_points_uploaded));
+        CHK_IF_RETURN(cudaEventDestroy(event_points_uploaded));
         CHK_IF_RETURN(cudaStreamDestroy(stream_points));
       }
 
       cudaStream_t stream_large_buckets;
       cudaEvent_t event_large_buckets_accumulated;
-      P* large_buckets;
-      if (large_buckets_to_compute > 0 && bucket_th > 0) {
+      if (h_nof_large_buckets > 0 && bucket_th > 0) {
         CHK_IF_RETURN(cudaStreamCreate(&stream_large_buckets));
         CHK_IF_RETURN(cudaEventCreateWithFlags(&event_large_buckets_accumulated, cudaEventDisableTiming));
 
-        unsigned threads_per_bucket =
-          1 << (unsigned)ceil(log2((h_largest_bucket_size + bucket_th - 1) / bucket_th)); // global param
-        unsigned max_bucket_size_run_length = (h_largest_bucket_size + threads_per_bucket - 1) / threads_per_bucket;
-        unsigned total_large_buckets_size = large_buckets_to_compute * threads_per_bucket;
-        CHK_IF_RETURN(cudaMallocAsync(&large_buckets, sizeof(P) * total_large_buckets_size, stream));
+        unsigned* sorted_bucket_sizes_sum;
+        CHK_IF_RETURN(cudaMallocAsync(
+          &sorted_bucket_sizes_sum, sizeof(unsigned) * (h_nof_large_buckets + 1), stream_large_buckets));
+        CHK_IF_RETURN(cudaMemsetAsync(sorted_bucket_sizes_sum, 0, sizeof(unsigned), stream_large_buckets));
+        unsigned* large_bucket_temp_storage{};
+        size_t large_bucket_temp_storage_bytes = 0;
+        CHK_IF_RETURN(cub::DeviceScan::InclusiveSum(
+          large_bucket_temp_storage, large_bucket_temp_storage_bytes, sorted_bucket_sizes, sorted_bucket_sizes_sum + 1,
+          h_nof_large_buckets, stream_large_buckets));
+        CHK_IF_RETURN(
+          cudaMallocAsync(&large_bucket_temp_storage, large_bucket_temp_storage_bytes, stream_large_buckets));
+        CHK_IF_RETURN(cub::DeviceScan::InclusiveSum(
+          large_bucket_temp_storage, large_bucket_temp_storage_bytes, sorted_bucket_sizes, sorted_bucket_sizes_sum + 1,
+          h_nof_large_buckets, stream_large_buckets));
+        CHK_IF_RETURN(cudaFreeAsync(large_bucket_temp_storage, stream_large_buckets));
+        unsigned h_nof_pts_in_large_buckets;
+        CHK_IF_RETURN(cudaMemcpyAsync(
+          &h_nof_pts_in_large_buckets, sorted_bucket_sizes_sum + h_nof_large_buckets, sizeof(unsigned),
+          cudaMemcpyDeviceToHost, stream_large_buckets));
+        unsigned h_largest_bucket;
+        CHK_IF_RETURN(cudaMemcpyAsync(
+          &h_largest_bucket, sorted_bucket_sizes, sizeof(unsigned), cudaMemcpyDeviceToHost, stream_large_buckets));
 
-        NUM_THREADS = min(1 << 8, total_large_buckets_size);
-        NUM_BLOCKS = (total_large_buckets_size + NUM_THREADS - 1) / NUM_THREADS;
+        unsigned large_buckets_nof_threads =
+          h_nof_large_buckets + (h_nof_pts_in_large_buckets + average_bucket_size - 1) / average_bucket_size;
+        unsigned log_nof_large_buckets = (unsigned)ceil(log2(h_nof_large_buckets));
+        unsigned* large_bucket_indices;
+        CHK_IF_RETURN(cudaMallocAsync(&large_bucket_indices, sizeof(unsigned) * large_buckets_nof_threads, stream));
+        NUM_THREADS = min(1 << 8, h_nof_large_buckets);
+        NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
+        initialize_large_bucket_indices<P><<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
+          sorted_bucket_sizes_sum, average_bucket_size, h_nof_large_buckets, log_nof_large_buckets,
+          large_bucket_indices);
+
+        P* large_buckets;
+        CHK_IF_RETURN(cudaMallocAsync(&large_buckets, sizeof(P) * large_buckets_nof_threads, stream_large_buckets));
+
+        NUM_THREADS = min(1 << 8, large_buckets_nof_threads);
+        NUM_BLOCKS = (large_buckets_nof_threads + NUM_THREADS - 1) / NUM_THREADS;
         accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
-          large_buckets, sorted_bucket_offsets + h_nof_zero_large_buckets,
-          sorted_bucket_sizes + h_nof_zero_large_buckets, sorted_single_bucket_indices + h_nof_zero_large_buckets,
-          point_indices, d_points, nof_buckets, large_buckets_to_compute, c + bm_bitsize, c, threads_per_bucket,
-          max_bucket_size_run_length);
+          large_buckets, sorted_bucket_offsets, sorted_bucket_sizes, large_bucket_indices, sorted_point_indices,
+          d_points, h_nof_large_buckets, c, average_bucket_size, log_nof_large_buckets, large_buckets_nof_threads);
 
+        NUM_THREADS = min(MAX_TH, h_nof_large_buckets);
+        NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
+        normalize_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
+          sorted_bucket_sizes_sum, average_bucket_size, h_nof_large_buckets);
         // reduce
-        for (int s = total_large_buckets_size >> 1; s > large_buckets_to_compute - 1; s >>= 1) {
-          NUM_THREADS = min(MAX_TH, s);
-          NUM_BLOCKS = (s + NUM_THREADS - 1) / NUM_THREADS;
-          single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
-            large_buckets, large_buckets, s * 2, 0, 0, 0, s);
+        for (int s = h_largest_bucket; s > 1; s = ((s + 1) >> 1)) {
+          NUM_THREADS = min(MAX_TH, h_nof_large_buckets);
+          NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
+          normalize_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
+            sorted_bucket_sizes, s == h_largest_bucket ? average_bucket_size : 2, h_nof_large_buckets);
+          NUM_THREADS = min(MAX_TH, large_buckets_nof_threads);
+          NUM_BLOCKS = (large_buckets_nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+          sum_reduction_variable_size_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
+            large_buckets, sorted_bucket_sizes_sum, sorted_bucket_sizes, large_bucket_indices,
+            large_buckets_nof_threads);
         }
+        CHK_IF_RETURN(cudaFreeAsync(large_bucket_indices, stream_large_buckets));
 
         // distribute
-        NUM_THREADS = min(MAX_TH, large_buckets_to_compute);
-        NUM_BLOCKS = (large_buckets_to_compute + NUM_THREADS - 1) / NUM_THREADS;
+        NUM_THREADS = min(MAX_TH, h_nof_large_buckets);
+        NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
         distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
-          large_buckets, buckets, sorted_single_bucket_indices + h_nof_zero_large_buckets, large_buckets_to_compute,
-          nof_buckets, c + bm_bitsize);
+          large_buckets, buckets, sorted_bucket_sizes_sum, sorted_single_bucket_indices, h_nof_large_buckets,
+          nof_buckets + nof_bms_per_msm, c + bm_bitsize);
+        CHK_IF_RETURN(cudaFreeAsync(large_buckets, stream_large_buckets));
+        CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_sizes_sum, stream_large_buckets));
 
         CHK_IF_RETURN(cudaEventRecord(event_large_buckets_accumulated, stream_large_buckets));
-        CHK_IF_RETURN(cudaStreamDestroy(stream_large_buckets));
-      } else {
-        h_nof_large_buckets = 0;
       }
 
       // launch the accumulation kernel with maximum threads
@@ -635,13 +687,18 @@ namespace msm {
         NUM_BLOCKS = (h_nof_buckets_to_compute - h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
         accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
           buckets, sorted_bucket_offsets + h_nof_large_buckets, sorted_bucket_sizes + h_nof_large_buckets,
-          sorted_single_bucket_indices + h_nof_large_buckets, point_indices, d_points, nof_buckets,
-          h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c);
+          sorted_single_bucket_indices + h_nof_large_buckets, sorted_point_indices, d_points,
+          nof_buckets + nof_bms_per_msm, h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c);
       }
-
-      if (large_buckets_to_compute > 0 && bucket_th > 0)
+      CHK_IF_RETURN(cudaFreeAsync(sorted_point_indices, stream));
+      CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_sizes, stream));
+      CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_offsets, stream));
+      CHK_IF_RETURN(cudaFreeAsync(sorted_single_bucket_indices, stream));
+      if (h_nof_large_buckets > 0 && bucket_th > 0) {
         // all the large buckets need to be accumulated before the final summation
         CHK_IF_RETURN(cudaStreamWaitEvent(stream, event_large_buckets_accumulated));
+        CHK_IF_RETURN(cudaStreamDestroy(stream_large_buckets));
+      }
 
 #ifdef SSM_SUM
       // sum each bucket
@@ -678,7 +735,7 @@ namespace msm {
         unsigned source_bits_count = c;
         // bool odd_source_c = source_bits_count % 2;
         unsigned source_windows_count = nof_bms_per_msm;
-        unsigned source_buckets_count = nof_buckets;
+        unsigned source_buckets_count = nof_buckets + nof_bms_per_msm;
         unsigned target_windows_count = 0;
         P* source_buckets = buckets;
         buckets = nullptr;
@@ -700,20 +757,19 @@ namespace msm {
             for (unsigned j = 0; j < target_bits_count; j++) {
               const bool is_first_iter = (j == 0);
               const bool is_last_iter = (j == target_bits_count - 1);
-              unsigned nof_threads = (source_buckets_count >> (1 + j)) * batch_size;
+              unsigned nof_threads =
+                (((target_buckets_count - target_windows_count) >> 1) << (target_bits_count - 1 - j)) * batch_size;
               NUM_THREADS = min(MAX_TH, nof_threads);
               NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter ? source_buckets : temp_buckets1, is_last_iter ? target_buckets : temp_buckets1,
                 1 << (source_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 0 /*=write_phase*/,
-                0 /*=padding*/, nof_threads);
+                1 << target_bits_count, nof_threads);
 
-              NUM_THREADS = min(MAX_TH, nof_threads);
-              NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter ? source_buckets : temp_buckets2, is_last_iter ? target_buckets : temp_buckets2,
                 1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 /*=write_phase*/,
-                0 /*=padding*/, nof_threads);
+                1 << target_bits_count, nof_threads);
             }
           }
           if (target_bits_count == 1) {
@@ -763,24 +819,10 @@ namespace msm {
           cudaMemcpyAsync(final_result, d_final_result, sizeof(P) * batch_size, cudaMemcpyDeviceToHost, stream));
 
       // free memory
-      if (!are_scalars_on_device) CHK_IF_RETURN(cudaFreeAsync(d_scalars, stream));
-      if (!are_points_on_device) CHK_IF_RETURN(cudaFreeAsync(d_points, stream));
+      if (!are_scalars_on_device || are_scalars_montgomery_form) CHK_IF_RETURN(cudaFreeAsync(d_scalars, stream));
+      if (!are_points_on_device || are_points_montgomery_form) CHK_IF_RETURN(cudaFreeAsync(d_points, stream));
       if (!are_results_on_device) CHK_IF_RETURN(cudaFreeAsync(d_final_result, stream));
       CHK_IF_RETURN(cudaFreeAsync(buckets, stream));
-#ifndef PHASE1_TEST
-      CHK_IF_RETURN(cudaFreeAsync(bucket_indices, stream));
-      CHK_IF_RETURN(cudaFreeAsync(point_indices, stream));
-      CHK_IF_RETURN(cudaFreeAsync(single_bucket_indices, stream));
-      CHK_IF_RETURN(cudaFreeAsync(bucket_sizes, stream));
-      CHK_IF_RETURN(cudaFreeAsync(nof_buckets_to_compute, stream));
-      CHK_IF_RETURN(cudaFreeAsync(bucket_offsets, stream));
-#endif
-      CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_sizes, stream));
-      CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_offsets, stream));
-      CHK_IF_RETURN(cudaFreeAsync(sorted_single_bucket_indices, stream));
-      CHK_IF_RETURN(cudaFreeAsync(nof_large_buckets, stream));
-      CHK_IF_RETURN(cudaFreeAsync(max_res, stream));
-      if (large_buckets_to_compute > 0 && bucket_th > 0) CHK_IF_RETURN(cudaFreeAsync(large_buckets, stream));
 
       if (!is_async) CHK_IF_RETURN(cudaStreamSynchronize(stream));
 

@@ -9,7 +9,7 @@ use crate::traits::ArkConvertible;
 #[cfg(feature = "arkworks")]
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
-use ark_ec::VariableBaseMSM;
+use ark_ec::{VariableBaseMSM, AffineRepr};
 #[cfg(feature = "arkworks")]
 use ark_std::{rand::Rng, test_rng, UniformRand};
 
@@ -22,9 +22,9 @@ where
     let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
     let mut msm_results = HostOrDeviceSlice::cuda_malloc(1).unwrap();
     for test_size in test_sizes {
-        let points = C::generate_random_affine_points(test_size);
+        let mut points = C::generate_random_affine_points(test_size);
         let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
-        let points_ark: Vec<_> = points
+        let mut points_ark: Vec<_> = points
             .iter()
             .map(|x| x.to_ark())
             .collect();
@@ -32,6 +32,11 @@ where
             .iter()
             .map(|x| x.to_ark())
             .collect();
+        // sprinkle in some zero points
+        points[0] = Affine::<C>::zero();
+        points_ark[0] = <Affine::<C> as ArkConvertible>::ArkEquivalent::zero();
+        points[3] = Affine::<C>::zero();
+        points_ark[3] = <Affine::<C> as ArkConvertible>::ArkEquivalent::zero();
         // if we simply transmute arkworks types, we'll get scalars or points in Montgomery format
         // (just beware the possible extra flag in affine point types, can't transmute ark Affine because of that)
         let scalars_mont = unsafe { &*(&scalars_ark[..] as *const _ as *const [C::ScalarField]) };
