@@ -1,7 +1,15 @@
-package core
+package internal
 
 type Projective struct {
 	X, Y, Z Field
+}
+
+func (p Projective) Size() int {
+	return p.X.Size()*3
+}
+
+func (p Projective) AsPointer() *uint32 {
+	return p.X.AsPointer()
 }
 
 func (p* Projective) Zero() Projective {
@@ -21,26 +29,32 @@ func (p* Projective) FromLimbs(x, y, z []uint32) Projective {
 }
 
 func (p* Projective) FromAffine(a Affine) Projective {
-	z := &Field {
-		Limbs: make([]uint32, len(a.X.Limbs)),
-	}
+	var z Field
 	z.One()
+
+	p.X = a.X
+	p.Y = a.Y
+	p.Z = z
 	
-	return Projective{
-		X: a.X,
-		Y: a.Y,
-		Z: *z,
-	}
+	return *p
 }
 
 type Affine struct {
 	X, Y Field
 }
 
+func (a Affine) Size() int {
+	return a.X.Size()*2
+}
+
+func (a Affine) AsPointer() *uint32 {
+	return a.X.AsPointer()
+}
+
 func (a* Affine) Zero() Affine {
 	a.X.Zero()
 	a.Y.Zero()
-	
+
 	return *a
 }
 
@@ -51,15 +65,13 @@ func (a* Affine) FromLimbs(x, y []uint32) Affine {
 	return *a
 }
 
-func (a* Affine) ToProjective() Projective {
-	z := &Field {
-		Limbs: make([]uint32, len(a.X.Limbs)),
-	}
+func (a Affine) ToProjective() Projective {
+	var z Field
 	z.One()
 	
 	return Projective{
 		X: a.X,
 		Y: a.Y,
-		Z: *z,
+		Z: z,
 	}
 }

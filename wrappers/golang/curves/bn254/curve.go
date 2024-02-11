@@ -6,122 +6,169 @@ package bn254
 import "C"
 
 import (
-	core "local/hello/icicle/wrappers/golang/core"
+	"local/hello/icicle/wrappers/golang/core"
 	cr "local/hello/icicle/wrappers/golang/cuda_runtime"
 	"unsafe"
 )
 
 type Projective struct {
-	core.Projective
+	X, Y, Z BaseField
 }
 
-func NewBN254Projective() Projective {
-	return Projective{
-		core.Projective{
-			X: newBN254Field(),
-			Y: newBN254Field(),
-			Z: newBN254Field(),
-		},
-	}
+func (p Projective) Size() int {
+	return p.X.Size() * 3
 }
 
-// When templatizing, move this to be its own curveG2.go with the same template 
-// as curve.go.tmpl but with g2bn254 as curve name
-// func NewG2BN254Projective() Projective {
-// 	return Projective{
-// 		core.Projective{
-// 			X: newG2BN254Field(),
-// 			Y: newG2BN254Field(),
-// 			Z: newG2BN254Field(),
-// 		},
-// 	}
-// }
+func (p Projective) AsPointer() *uint32 {
+	return p.X.AsPointer()
+}
 
-func (p *Projective) Eq(p2 *Projective) bool {
-	cP := (*C.projective_t)(unsafe.Pointer(p))
-	cP2 := (*C.projective_t)(unsafe.Pointer(p2))
+func (p *Projective) Zero() Projective {
+	p.X.Zero()
+	p.Y.Zero()
+	p.Z.Zero()
+
+	return *p
+}
+
+func (p *Projective) FromLimbs(x, y, z []uint32) Projective {
+	p.X.FromLimbs(x)
+	p.Y.FromLimbs(y)
+	p.Z.FromLimbs(z)
+
+	return *p
+}
+
+func (p *Projective) FromAffine(a Affine) Projective {
+	z := BaseField{}
+	z.One()
+
+	p.X = a.X
+	p.Y = a.Y
+	p.Z = z
+
+	return *p
+}
+
+func (p Projective) ProjectiveEq(p2 *Projective) bool {
+	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
+	cP2 := (*C.projective_t)(unsafe.Pointer(p2.AsPointer()))
 	__ret := C.bn254Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 
-func (p *Projective) ToAffine() (a Affine) {
-	cA := (*C.affine_t)(unsafe.Pointer(&a))
-	cP := (*C.projective_t)(unsafe.Pointer(p))
+func (p *Projective) ProjectiveToAffine() Affine {
+	var a Affine
+
+	cA := (*C.affine_t)(unsafe.Pointer(a.AsPointer()))
+	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
+	// TODO: hangs
 	C.bn254ToAffine(cP, cA)
 	return a
 }
 
-func GenerateProjectivePoints(size int) []Projective {
+func GenerateProjectivePoints(size int) core.HostSlice[Projective] {
 	points := make([]Projective, size)
-	pPoints := (*C.projective_t)(unsafe.Pointer(&points[0]))
+	for i := range points {
+		points[i] = Projective{}
+	}
+
+	pointsSlice := core.HostSliceFromElements[Projective](points)
+	pPoints := (*C.projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
 	C.bn254GenerateProjectivePoints(pPoints, cSize)
 
-	return points
+	return pointsSlice
 }
 
 type Affine struct {
-	core.Affine
+	X, Y BaseField
 }
 
-func NewBN254Affine() Affine {
-	return Affine {
-		core.Affine{
-			X: newBN254Field(),
-			Y: newBN254Field(),
-		},
+func (a Affine) Size() int {
+	return a.X.Size() * 2
+}
+
+func (a Affine) AsPointer() *uint32 {
+	return a.X.AsPointer()
+}
+
+func (a *Affine) Zero() Affine {
+	a.X.Zero()
+	a.Y.Zero()
+
+	return *a
+}
+
+func (a *Affine) FromLimbs(x, y []uint32) Affine {
+	a.X.FromLimbs(x)
+	a.Y.FromLimbs(y)
+
+	return *a
+}
+
+func (a Affine) ToProjective() Projective {
+	var z BaseField
+
+	return Projective{
+		X: a.X,
+		Y: a.Y,
+		Z: z.One(),
 	}
 }
 
-func (a* Affine) FromProjective(p *Projective) {
-	aff := p.ToAffine()
-	a.X = aff.X
-	a.Y = aff.Y
+func AffineFromProjective(p *Projective) Affine {
+	return p.ProjectiveToAffine()
 }
 
-func GenerateAffinePoints(size int) []Affine {
+func GenerateAffinePoints(size int) core.HostSlice[Affine] {
 	points := make([]Affine, size)
-	cPoints := (*C.affine_t)(unsafe.Pointer(&points[0]))
+	for i := range points {
+		points[i] = Affine{}
+	}
+
+	pointsSlice := core.HostSliceFromElements[Affine](points)
+	cPoints := (*C.affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
 	C.bn254GenerateAffinePoints(cPoints, cSize)
 
-	return points
+	return pointsSlice
 }
 
-func convertAffinePointsMontgomery(points cr.HostOrDeviceSlice[any, any], isInto bool) cr.CudaError {
-	cValues := (*C.affine_t)(unsafe.Pointer(points.AsPointer()))
+func convertAffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C.affine_t)(points.AsPointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx) // templatize this per curve??
+	__ret := C.bn254AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
 
-func ConvertAffineToMontgomery(points cr.HostOrDeviceSlice[any, any]) cr.CudaError {
+func AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
 	return convertAffinePointsMontgomery(points, true)
 }
 
-func ConvertAffineFromMontgomery(points cr.HostOrDeviceSlice[any, any]) cr.CudaError {
+func AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 	return convertAffinePointsMontgomery(points, false)
 }
 
-func convertProjectivePointsMontgomery(points cr.HostOrDeviceSlice[any, any], isInto bool) cr.CudaError {
-	cValues := (*C.projective_t)(unsafe.Pointer(points.AsPointer()))
+func convertProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C.projective_t)(points.AsPointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx) // templatize this per curve??
+	__ret := C.bn254ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
 
-func ConvertProjectiveToMontgomery(points cr.HostOrDeviceSlice[any, any]) cr.CudaError {
+func ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
 	return convertProjectivePointsMontgomery(points, true)
 }
 
-func ConvertProjectiveFromMontgomery(points cr.HostOrDeviceSlice[any, any]) cr.CudaError {
+func ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 	return convertProjectivePointsMontgomery(points, false)
 }

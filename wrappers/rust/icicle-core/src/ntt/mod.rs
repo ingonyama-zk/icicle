@@ -194,7 +194,7 @@ macro_rules! impl_ntt {
                     output: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "InitializeDomain")]
+                #[link_name = concat!($field_prefix, "InitializeDomainInt")]
                 pub(crate) fn initialize_ntt_domain(primitive_root: $field, ctx: &DeviceContext) -> CudaError;
             }
         }

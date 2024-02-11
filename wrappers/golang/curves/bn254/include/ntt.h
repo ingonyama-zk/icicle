@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 cudaError_t bn254NTTCuda(scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
-cudaError_t bn254InitializeDomainInt(scalar_t* primitive_root, DeviceContext* ctx);
+cudaError_t bn254InitializeDomain(scalar_t* primitive_root, DeviceContext* ctx);
 
 #ifdef __cplusplus
 }

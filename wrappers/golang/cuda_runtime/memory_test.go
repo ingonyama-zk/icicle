@@ -32,11 +32,11 @@ func TestCopyFromToHost(t *testing.T) {
 	someInts[0] = 34
 	numBytes := uint(8)
 	deviceMem, _ := Malloc(numBytes)
-	deviceMem, err := CopyFromHost(deviceMem, unsafe.Pointer(&someInts[0]), numBytes)
+	deviceMem, err := CopyToDevice(deviceMem, unsafe.Pointer(&someInts[0]), numBytes)
 	assert.Equal(t, CudaSuccess, err, "Couldn't copy to device due to %v", err)
 
 	someInts2 := make([]int32, 1)
-	_, err = CopyToHost(unsafe.Pointer(&someInts2[0]), deviceMem, numBytes)
+	_, err = CopyFromDevice(unsafe.Pointer(&someInts2[0]), deviceMem, numBytes)
 	assert.Equal(t, CudaSuccess, err, "Couldn't copy to device due to %v", err)
 	assert.Equal(t, someInts, someInts2, "Elements of host slices do not match. Copying from/to host failed")
 }

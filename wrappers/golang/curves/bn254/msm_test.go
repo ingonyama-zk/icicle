@@ -1,57 +1,119 @@
 package bn254
 
 import (
-	"fmt"
-	// "reflect"
 	"testing"
-	// "time"
-	"unsafe"
 
 	"local/hello/icicle/wrappers/golang/core"
-	// cr "local/hello/icicle/wrappers/golang/cuda_runtime"
-	// "github.com/stretchr/testify/assert"
+	cr "local/hello/icicle/wrappers/golang/cuda_runtime"
+
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/ecc/bn254"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/stretchr/testify/assert"
 )
 
+func projectiveToGnarkAffine(p Projective) bn254.G1Affine {
+	px, _ := fp.LittleEndian.Element((*[32]byte)((&p.X).ToBytesLittleEndian()))
+	py, _ := fp.LittleEndian.Element((*[32]byte)((&p.Y).ToBytesLittleEndian()))
+	pz, _ := fp.LittleEndian.Element((*[32]byte)((&p.Z).ToBytesLittleEndian()))
+
+	zInv := new(fp.Element)
+	x := new(fp.Element)
+	y := new(fp.Element)
+
+	zInv.Inverse(&pz)
+
+	x.Mul(&px, zInv)
+	y.Mul(&py, zInv)
+
+	return bn254.G1Affine{X: *x, Y: *y}
+}
+
 func TestMSM(t *testing.T) {
-	// for _, v := range []int{4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18} {
-	for _, v := range []int{1} {
-		count := 1 << v
-		fmt.Println(count)
-		
-		// TODO: accurately reflect the size of Projective and Affine
-		// var p Projective
-		// out, e := cr.Malloc(uint(reflect.Tye(p.X).Size()))
-		// fmt.Println("Finished malloc")
-		// fmt.Println(out)
-		// assert.Equal(t, e, cr.CudaSuccess, "error should be nil")
-		
-		//TODO: getting crazy values for points
-		// points := GenerateAffinePoints(count)
-		// fmt.Println("Finished generating points")
-		// fmt.Println(points[0])
-		
-		scalars := GenerateScalars(count)
-		fmt.Println("Finished generating scalars")
-		fmt.Println(scalars)
-	
+	cfg := GetDefaultMSMConfig()
+	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+		size := 1 << power
 
-		unsafeScalars := unsafe.Pointer(scalars.AsPointer())
-		success := ToMontgomeryUnsafe(unsafeScalars, scalars.Len())
-		fmt.Println(success)
-		successFrom := FromMontgomery[[]core.Field, uint32](&scalars)
-		fmt.Println(successFrom)
+		scalars := GenerateScalars(size)
+		points := GenerateAffinePoints(size)
 
-		fmt.Println(scalars)
+		var p Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-		cfg := GetDefaultMSMConfig()
-		fmt.Println("Finished generating cfg MSM")
-		fmt.Println(cfg)
+		e = Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+		outHost := core.HostSliceFromElements[Projective]([]Projective{p})
+		outHost.CopyFromDevice(&out)
+		out.Free()
 
+		// Check with gnark-crypto
+		scalarsFr := make([]fr.Element, size)
+		for i, v := range scalars {
+			slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+			scalarsFr[i] = slice64
+		}
 
-		// startTime := time.Now()
-		// e := Msm(scalars, points, &cfg, out)
-		// fmt.Printf("icicle MSM took: %d ms\n", time.Since(startTime).Milliseconds())
+		pointsFp := make([]bn254.G1Affine, size)
+		for i, v := range points {
+			pointsFp[i] = projectiveToGnarkAffine(v.ToProjective())
+		}
+		var msmRes bn254.G1Jac
+		msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
 
-		// assert.Equal(t, e, cr.CudaSuccess, "error should be nil")
+		var icicleResAsJac bn254.G1Jac
+		proj := projectiveToGnarkAffine(outHost[0])
+		icicleResAsJac.FromAffine(&proj)
+
+		assert.True(t, msmRes.Equal(&icicleResAsJac))
+	}
+}
+
+func TestMSMBatch(t *testing.T) {
+	cfg := GetDefaultMSMConfig()
+	// for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+	for _, power := range []int{2} {
+		for _, batchSize := range []int{3} {
+			size := 1 << power
+			totalSize := size * batchSize
+			scalars := GenerateScalars(totalSize)
+			points := GenerateAffinePoints(totalSize)
+
+			var p Projective
+			var out core.DeviceSlice
+			_, e := out.Malloc(batchSize*p.Size(), p.Size())
+			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+
+			e = Msm(scalars, points, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			outHost := make(core.HostSlice[Projective], batchSize)
+			outHost.CopyFromDevice(&out)
+			out.Free()
+
+			// Check with gnark-crypto
+			for i := 0; i < batchSize; i++ {
+				scalarsFr := make([]fr.Element, size)
+				for m, v := range scalars[i*size : (i+1)*size] {
+					slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+					scalarsFr[m] = slice64
+				}
+
+				pointsFp := make([]bn254.G1Affine, size)
+				for m, v := range points[i*size : (i+1)*size] {
+					pointsFp[m] = projectiveToGnarkAffine(v.ToProjective())
+				}
+
+				var msmRes bn254.G1Jac
+				msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
+
+				var icicleResAsJac bn254.G1Jac
+				proj := projectiveToGnarkAffine(outHost[i])
+				icicleResAsJac.FromAffine(&proj)
+
+				assert.True(t, msmRes.Equal(&icicleResAsJac))
+			}
+		}
 	}
 }

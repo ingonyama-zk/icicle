@@ -1,0 +1,55 @@
+package bn254
+
+import (
+	"fmt"
+	"local/hello/icicle/wrappers/golang/core"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewScalarField(t *testing.T) {
+	scalarFieldZeroLimbs := make([]uint32, SCALAR_LIMBS)
+	scalarField := ScalarField{}
+
+	assert.ElementsMatch(t, scalarFieldZeroLimbs, scalarField.GetLimbs())
+}
+
+func TestNewBaseField(t *testing.T) {
+	baseFieldZeroLimbs := make([]uint32, BASE_LIMBS)
+	baseField := BaseField{}
+
+	assert.ElementsMatch(t, baseFieldZeroLimbs, baseField.GetLimbs())
+}
+
+func TestGenerateScalars(t *testing.T) {
+	const numScalars = 8
+	scalars := GenerateScalars(numScalars)
+
+	assert.Implements(t, (*core.HostOrDeviceSlice)(nil), &scalars)
+
+	assert.Equal(t, numScalars, scalars.Len())
+	zeroScalar := ScalarField{}
+	assert.NotContains(t, scalars, zeroScalar)
+}
+
+func TestMongtomeryConversion(t *testing.T) {
+	size := 1 << 23
+	scalars := GenerateScalars(size)
+	fmt.Println(scalars.Len())
+
+	var deviceScalars core.DeviceSlice
+	scalars.CopyToDevice(&deviceScalars, true)
+
+	ToMontgomery(&deviceScalars)
+
+	scalarsMontHost := GenerateScalars(size)
+
+	scalarsMontHost.CopyFromDevice(&deviceScalars)
+	assert.NotEqual(t, scalars, scalarsMontHost)
+
+	FromMontgomery(&deviceScalars)
+
+	scalarsMontHost.CopyFromDevice(&deviceScalars)
+	assert.Equal(t, scalars, scalarsMontHost)
+}

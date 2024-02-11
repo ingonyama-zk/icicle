@@ -646,17 +646,9 @@ namespace ntt {
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    */
   extern "C" cudaError_t
-  CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx)
+  CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t* primitive_root, device_context::DeviceContext& ctx)
   {
-    return InitDomain(primitive_root, ctx);
-  }
-
-    
-  extern "C" cudaError_t
-  CONCAT_EXPAND(CURVE, InitializeDomainInt)(uint32_t* primitive_root_int, device_context::DeviceContext& ctx)
-  {
-    curve_config::scalar_t primitive_root = curve_config::scalar_t::from_limbs(primitive_root_int);
-    return InitDomain(primitive_root, ctx);
+    return InitDomain(*primitive_root, ctx);
   }
 
   /**

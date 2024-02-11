@@ -79,7 +79,7 @@ func GetDefaultMSMConfig() MSMConfig {
     }
 }
 
-func MsmCheck(scalars cuda_runtime.HostOrDeviceSlice[any, any], points cuda_runtime.HostOrDeviceSlice[any, any], cfg *MSMConfig, results cuda_runtime.HostOrDeviceSlice[any, any]) {
+func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) {
     scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len(), results.Len()
     if scalarsLength % pointsLength != 0 {
         errorString := fmt.Sprintf(

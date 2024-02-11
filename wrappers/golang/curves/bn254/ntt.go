@@ -11,31 +11,48 @@ import (
 	"unsafe"
 )
 
-func GetDefaultNttConfig() core.NTTConfig[*core.Field] {
-	cosetGenField := newBN254ScalarField()
+func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint32] {
+	cosetGenField := ScalarField{}
 	cosetGenField.One()
-	return core.GetDefaultNTTConfig(&cosetGenField)
+	var cosetGen [SCALAR_LIMBS]uint32
+	for i, v := range cosetGenField.GetLimbs() {
+		cosetGen[i] = v
+	}
+
+	return core.GetDefaultNTTConfig(cosetGen)
 }
 
-// maybe change to CudaErrorT??
-func Ntt(scalars cr.HostOrDeviceSlice[any, any], dir core.NTTDir, cfg *core.NTTConfig[*core.Field], results cr.HostOrDeviceSlice[any, any]) core.IcicleError {
-	core.NttCheck(scalars, cfg, results)
-	cScalars := (*C.scalar_t)(unsafe.Pointer(scalars.AsPointer()))
+func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+	core.NttCheck[T](scalars, cfg, results)
+
+	var scalarsPointer unsafe.Pointer
+	if scalars.IsOnDevice() {
+		scalarsPointer = scalars.(core.DeviceSlice).AsPointer()
+	} else {
+		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
+	}
+	cScalars := (*C.scalar_t)(scalarsPointer)
 	cSize := (C.int)(scalars.Len() / int(cfg.BatchSize))
 	cDir := (C.int)(dir)
 	cCfg := (*C.NTTConfig)(unsafe.Pointer(cfg))
-	cResults := (*C.scalar_t)(unsafe.Pointer(results.AsPointer()))
+
+	var resultsPointer unsafe.Pointer
+	if results.IsOnDevice() {
+		resultsPointer = results.(core.DeviceSlice).AsPointer()
+	} else {
+		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[ScalarField])[0])
+	}
+	cResults := (*C.scalar_t)(resultsPointer)
+
 	__ret := C.bn254NTTCuda(cScalars, cSize, cDir, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }
 
-// TODO: Figure out how to pass primitiveRoot as a value
-func InitDomain(primitiveRoot core.FieldInter, ctx cr.DeviceContext) core.IcicleError {
-	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(&primitiveRoot.GetLimbs()[0]))
+func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext) core.IcicleError {
+	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	__ret := C.bn254InitializeDomainInt(cPrimitiveRoot, cCtx)
-	// __ret := 1
+	__ret := C.bn254InitializeDomain(cPrimitiveRoot, cCtx)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

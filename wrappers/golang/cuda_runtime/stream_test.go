@@ -31,7 +31,11 @@ func TestSyncStream(t *testing.T) {
 	stream, err := CreateStream()
 	assert.Equal(t, CudaSuccess, err, "Unable to create stream due to %d", err)
 
-	_, err = MallocAsync(20, stream)
+	_, err = MallocAsync(200000, stream)
+	assert.Equal(t, CudaSuccess, err, "Unable to allocate device memory due to %d", err)
+	
+	dp, err := Malloc(20)
+	assert.NotNil(t, dp)
 	assert.Equal(t, CudaSuccess, err, "Unable to allocate device memory due to %d", err)
 	
 	err = SynchronizeStream(&stream)

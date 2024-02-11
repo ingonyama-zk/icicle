@@ -16,6 +16,7 @@ extern "C" {
 // typedef curve_config::affine_t affine_t;
 // typedef curve_config::g2_affine_t g2_affine_t;
 
+// typedef struct uint32 unsigned long int;
 typedef struct scalar_t scalar_t;
 typedef struct projective_t projective_t;
 typedef struct g2_projective_t g2_projective_t;

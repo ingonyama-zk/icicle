@@ -12,15 +12,6 @@ import (
 	"unsafe"
 )
 
-type HostOrDeviceSlice[T, S any] interface {
-	Len() int
-	Cap() int
-	IsEmpty() bool
-	AsSlice() T
-	AsPointer() *S
-	IsOnDevice() bool
-}
-
 func Malloc(size uint) (unsafe.Pointer, CudaError) {
 	if size == 0 {
 		return nil, CudaErrorMemoryAllocation
@@ -65,14 +56,14 @@ func FreeAsync(devicePtr unsafe.Pointer, stream Stream) CudaError {
 	return err
 }
 
-func CopyToHost(hostDst, deviceSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
+func CopyFromDevice(hostDst, deviceSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
 	cCount := (C.size_t)(size)
 	ret := C.cudaMemcpy(hostDst, deviceSrc, cCount, uint32(CudaMemcpyDeviceToHost))
 	err  := (CudaError)(ret)
 	return hostDst, err
 }
 
-func CopyToHostAsync(hostDst, deviceSrc unsafe.Pointer, size uint, stream CudaStream) CudaError {
+func CopyFromDeviceAsync(hostDst, deviceSrc unsafe.Pointer, size uint, stream CudaStream) CudaError {
 	cSize := (C.size_t)(size)
 	cStream := (C.cudaStream_t)(stream)
 	ret := C.cudaMemcpyAsync(hostDst, deviceSrc, cSize, uint32(CudaMemcpyDeviceToHost), cStream)
@@ -80,14 +71,14 @@ func CopyToHostAsync(hostDst, deviceSrc unsafe.Pointer, size uint, stream CudaSt
 	return err
 }
 
-func CopyFromHost(deviceDst, hostSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
+func CopyToDevice(deviceDst, hostSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
 	cSize := (C.size_t)(size)
 	ret := C.cudaMemcpy(deviceDst, hostSrc, cSize, uint32(CudaMemcpyHostToDevice))
 	err := (CudaError)(ret)
 	return deviceDst, err
 }
 
-func CopyFromHostAsync(deviceDst, hostSrc unsafe.Pointer, size uint, stream CudaStream) CudaError {
+func CopyToDeviceAsync(deviceDst, hostSrc unsafe.Pointer, size uint, stream CudaStream) CudaError {
 	cCount := (C.size_t)(size)
 	cStream := (C.cudaStream_t)(stream)
 	ret := C.cudaMemcpyAsync(deviceDst, hostSrc, cCount, uint32(CudaMemcpyHostToDevice), cStream)
