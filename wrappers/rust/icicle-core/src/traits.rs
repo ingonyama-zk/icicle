@@ -18,7 +18,9 @@ pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
     type ArkField: ArkField;
 }
 
-pub trait FieldImpl: Display + Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> + Send + Sync {
+pub trait FieldImpl:
+    Display + Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> + Send + Sync
+{
     #[doc(hidden)]
     type Config: FieldConfig;
     type Repr;

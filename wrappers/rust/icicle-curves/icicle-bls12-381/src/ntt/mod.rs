@@ -5,9 +5,9 @@ use icicle_core::impl_ntt;
 use icicle_core::ntt::{NTTConfig, NTTDir, NTT};
 use icicle_core::traits::IcicleResultWrap;
 use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
-use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
 
 impl_ntt!("bls12_381", bls12_381, ScalarField, ScalarCfg);
 

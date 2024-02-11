@@ -16,4 +16,3 @@ pub fn get_device() -> CudaResult<usize> {
     let mut device_id = 0;
     unsafe { cudaGetDevice(&mut device_id) }.wrap_value(device_id as usize)
 }
-
