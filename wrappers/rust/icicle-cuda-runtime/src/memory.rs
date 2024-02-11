@@ -65,6 +65,10 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
         Self::Host(src)
     }
 
+    pub fn from_slice(slice: &'a mut [T]) -> Self {
+        Self::Device(slice)
+    }
+
     pub fn cuda_malloc(count: usize) -> CudaResult<Self> {
         let size = count
             .checked_mul(size_of::<T>())

@@ -89,13 +89,13 @@ pub fn msm<C: Curve + MSM<C>>(
     cfg: &MSMConfig,
     results: &mut HostOrDeviceSlice<Projective<C>>,
 ) -> IcicleResult<()> {
-    if scalars.len() % points.len() != 0 {
-        panic!(
-            "Number of points {} does not divide the number of scalars {}",
-            points.len(),
-            scalars.len()
-        );
-    }
+    // if scalars.len() % points.len() != 0 {
+    //     panic!(
+    //         "Number of points {} does not divide the number of scalars {}",
+    //         points.len(),
+    //         scalars.len()
+    //     );
+    // }
     if scalars.len() % results.len() != 0 {
         panic!(
             "Number of results {} does not divide the number of scalars {}",
@@ -104,7 +104,7 @@ pub fn msm<C: Curve + MSM<C>>(
         );
     }
     let mut local_cfg = cfg.clone();
-    local_cfg.points_size = points.len() as i32;
+    local_cfg.points_size = scalars.len() as i32;
     local_cfg.batch_size = results.len() as i32;
     local_cfg.are_scalars_on_device = scalars.is_on_device();
     local_cfg.are_points_on_device = points.is_on_device();
