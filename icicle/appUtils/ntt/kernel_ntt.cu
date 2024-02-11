@@ -6,7 +6,7 @@
 
 namespace ntt {
 
-  static __device__ uint32_t dig_rev(uint32_t num, uint32_t log_size, bool dit)
+  static inline __device__ uint32_t dig_rev(uint32_t num, uint32_t log_size, bool dit)
   {
     uint32_t rev_num = 0, temp, dig_len;
     if (dit) {
@@ -29,10 +29,34 @@ namespace ntt {
     return rev_num;
   }
 
+  static inline __device__ uint32_t bit_rev(uint32_t num, uint32_t log_size) { return __brev(num) >> (32 - log_size); }
+
+  enum eRevType { None, RevToMixedRev, MixedRevToRev, NaturalToMixedRev, NaturalToRev, MixedRevToNatural };
+
+  static __device__ uint32_t generalized_rev(uint32_t num, uint32_t log_size, bool dit, eRevType rev_type)
+  {
+    switch (rev_type) {
+    case eRevType::RevToMixedRev:
+      // R -> N -> MR
+      return dig_rev(bit_rev(num, log_size), log_size, dit);
+    case eRevType::MixedRevToRev:
+      // MR -> N -> R
+      return bit_rev(dig_rev(num, log_size, dit), log_size);
+    case eRevType::NaturalToMixedRev:
+    case eRevType::MixedRevToNatural:
+      return dig_rev(num, log_size, dit);
+    case eRevType::NaturalToRev:
+      return bit_rev(num, log_size);
+    default:
+      return num;
+    }
+    return num;
+  }
+
   // Note: the following reorder kernels are fused with normalization for INTT
   template <typename E, typename S, uint32_t MAX_GROUP_SIZE = 80>
-  static __global__ void
-  reorder_digits_inplace_and_normalize_kernel(E* arr, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
+  static __global__ void reorder_digits_inplace_and_normalize_kernel(
+    E* arr, uint32_t log_size, bool dit, eRevType rev_type, bool is_normalize, S inverse_N)
   {
     // launch N threads (per batch element)
     // each thread starts from one index and calculates the corresponding group
@@ -50,7 +74,7 @@ namespace ntt {
 
     uint32_t i = 1;
     for (; i < MAX_GROUP_SIZE;) {
-      next_element = dig_rev(next_element, log_size, dit);
+      next_element = generalized_rev(next_element, log_size, dit, rev_type);
       if (next_element < idx) return; // not handling this group
       if (next_element == idx) break; // calculated whole group
       group[i++] = next_element + size * batch_idx;
@@ -67,16 +91,17 @@ namespace ntt {
 
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void reorder_digits_and_normalize_kernel(
-    E* arr, E* arr_reordered, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
+    E* arr, E* arr_reordered, uint32_t log_size, bool dit, eRevType rev_type, bool is_normalize, S inverse_N)
   {
     uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
     uint32_t rd = tid;
-    uint32_t wr = ((tid >> log_size) << log_size) + dig_rev(tid & ((1 << log_size) - 1), log_size, dit);
+    uint32_t wr =
+      ((tid >> log_size) << log_size) + generalized_rev(tid & ((1 << log_size) - 1), log_size, dit, rev_type);
     arr_reordered[wr] = is_normalize ? arr[rd] * inverse_N : arr[rd];
   }
 
   template <typename E, typename S>
-  static __global__ void BatchMulKernelDigReverse(
+  static __global__ void batch_elementwise_mul_with_reorder(
     E* in_vec,
     int n_elements,
     int batch_size,
@@ -84,14 +109,14 @@ namespace ntt {
     int step,
     int n_scalars,
     int logn,
-    bool digit_rev,
+    eRevType rev_type,
     bool dit,
     E* out_vec)
   {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid >= n_elements * batch_size) return;
     int64_t scalar_id = tid % n_elements;
-    if (digit_rev) scalar_id = dig_rev(tid, logn, dit);
+    if (rev_type != eRevType::None) scalar_id = generalized_rev(tid, logn, dit, rev_type);
     out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
   }
 
@@ -630,56 +655,80 @@ namespace ntt {
   {
     CHK_INIT_IF_RETURN();
 
-    // TODO: can we support all orderings? Note that reversal is generally digit reverse (generalization of bit reverse)
-    if (ordering != Ordering::kNN) {
-      throw IcicleError(IcicleError_t::InvalidArgument, "Mixed-Radix NTT supports NN ordering only");
-    }
-
     const int logn = int(log2(ntt_size));
-
     const int NOF_BLOCKS = ((1 << logn) * batch_size + 64 - 1) / 64;
     const int NOF_THREADS = min(64, (1 << logn) * batch_size);
 
-    // Note: dif is slightly faster than dit but since reordering is a post-process stage, it must be computed in-place
-    // which make it slower e2e in most cases. dit reorders as a pre-process stage and therefore supports both in-place
-    // and out-of-place (when in!=out);
-    const bool reverse_input = ordering == Ordering::kNN;
-    const bool is_dit = ordering == Ordering::kNN || ordering == Ordering::kRN;
     bool is_normalize = is_inverse;
     const bool is_on_coset = (coset_gen_index != 0) || arbitrary_coset;
     const int n_twiddles = 1 << max_logn;
+    // Note: for evaluation on coset, need to reorder the coset too to match the data for element-wise multiplication
+    eRevType reverse_input = None, reverse_output = None, reverse_coset = None;
+    bool dit = false;
+    switch (ordering) {
+    case Ordering::kNN:
+      reverse_input = eRevType::NaturalToMixedRev;
+      dit = true;
+      break;
+    case Ordering::kRN:
+      reverse_input = eRevType::RevToMixedRev;
+      dit = true;
+      reverse_coset = is_inverse ? eRevType::None : eRevType::NaturalToRev;
+      break;
+    case Ordering::kNR:
+      reverse_output = eRevType::MixedRevToRev;
+      reverse_coset = is_inverse ? eRevType::NaturalToRev : eRevType::None;
+      break;
+    case Ordering::kRR:
+      reverse_input = eRevType::RevToMixedRev;
+      dit = true;
+      reverse_output = eRevType::NaturalToRev;
+      reverse_coset = eRevType::NaturalToRev;
+      break;
+    case Ordering::kMN:
+      dit = true;
+      reverse_coset = is_inverse ? None : eRevType::NaturalToMixedRev;
+      break;
+    case Ordering::kNM:
+      reverse_coset = is_inverse ? eRevType::NaturalToMixedRev : eRevType::None;
+      break;
+    }
 
-    // TODO: fuse BatchMulKernelDigReverse with input reorder (and normalize)?
     if (is_on_coset && !is_inverse) {
-      BatchMulKernelDigReverse<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+      batch_elementwise_mul_with_reorder<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_input, ntt_size, batch_size, arbitrary_coset ? arbitrary_coset : external_twiddles,
-        arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn, false /*digit_rev*/, is_dit, d_output);
+        arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn, reverse_coset, dit, d_output);
 
       d_input = d_output;
     }
 
-    if (reverse_input) {
-      // Note: fused reorder and normalize (for INTT)
+    if (reverse_input != eRevType::None) {
       const bool is_reverse_in_place = (d_input == d_output);
       if (is_reverse_in_place) {
         reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_output, logn, is_dit, is_normalize, S::inv_log_size(logn));
+          d_output, logn, dit, reverse_input, is_normalize, S::inv_log_size(logn));
       } else {
         reorder_digits_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_input, d_output, logn, is_dit, is_normalize, S::inv_log_size(logn));
+          d_input, d_output, logn, dit, reverse_input, is_normalize, S::inv_log_size(logn));
       }
       is_normalize = false;
+      d_input = d_output;
     }
 
     // inplace ntt
     CHK_IF_RETURN(large_ntt(
-      d_output, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size, is_inverse,
-      is_normalize, is_dit, cuda_stream));
+      d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size, is_inverse,
+      (is_normalize && reverse_output == eRevType::None), dit, cuda_stream));
+
+    if (reverse_output != eRevType::None) {
+      reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+        d_output, logn, dit, reverse_output, is_normalize, S::inv_log_size(logn));
+    }
 
     if (is_on_coset && is_inverse) {
-      BatchMulKernelDigReverse<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+      batch_elementwise_mul_with_reorder<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_output, ntt_size, batch_size, arbitrary_coset ? arbitrary_coset : external_twiddles + n_twiddles,
-        arbitrary_coset ? 1 : -coset_gen_index, n_twiddles, logn, false /*digit_rev*/, is_dit, d_output);
+        arbitrary_coset ? 1 : -coset_gen_index, n_twiddles, logn, reverse_coset, dit, d_output);
     }
 
     return CHK_LAST();

@@ -452,6 +452,29 @@ namespace ntt {
     return CHK_LAST();
   }
 
+  template <typename S>
+  static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
+  {
+    const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
+    const bool is_user_selected_radix2_alg = config.ntt_algorithm == NttAlgorithm::Radix2;
+    const bool is_force_radix2 = !is_mixed_radix_alg_supported || is_user_selected_radix2_alg;
+    if (is_force_radix2) return true;
+
+    const bool is_user_selected_mixed_radix_alg = config.ntt_algorithm == NttAlgorithm::MixedRadix;
+    if (is_user_selected_mixed_radix_alg) return false;
+
+    // Heuristic to automatically select an algorithm
+    // Note that generally the decision depends on {logn, batch, ordering, inverse, coset, in-place, coeff-field} and
+    // the specific GPU.
+    // the following heuristic is a simplification based on measurements. Users can try both and select the algorithm
+    // based on the specific case via the 'NTTConfig.ntt_algorithm' field
+
+    if (logn >= 16) return false; // mixed-radix is typically faster in those cases
+    if (logn <= 11) return true;  //  radix-2 is typically faster for batch<=256 in those cases
+    const int log_batch = (int)log2(batch_size);
+    return (logn + log_batch <= 18); // almost the cutoff point where both are equal
+  }
+
   template <typename S, typename E>
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
@@ -501,10 +524,7 @@ namespace ntt {
       h_coset.clear();
     }
 
-    // (heuristic) cutoff point where mixed-radix is faster than radix-2
-    const bool is_small_ntt = (logn < 16) && ((size_t)size * batch_size < (1 << 20));
-    const bool is_NN = config.ordering == Ordering::kNN; // TODO Yuval: relax this limitation
-    const bool is_radix2_algorithm = config.is_force_radix2 || is_small_ntt || !is_NN;
+    const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
 
     if (is_radix2_algorithm) {
       bool ct_butterfly = true;
@@ -514,6 +534,7 @@ namespace ntt {
         reverse_input = true;
         break;
       case Ordering::kNR:
+      case Ordering::kNM:
         ct_butterfly = false;
         break;
       case Ordering::kRR:
@@ -550,14 +571,14 @@ namespace ntt {
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
-      ctx,           // ctx
-      S::one(),      // coset_gen
-      1,             // batch_size
-      Ordering::kNN, // ordering
-      false,         // are_inputs_on_device
-      false,         // are_outputs_on_device
-      false,         // is_async
-      false,         // is_force_radix2
+      ctx,                // ctx
+      S::one(),           // coset_gen
+      1,                  // batch_size
+      Ordering::kNN,      // ordering
+      false,              // are_inputs_on_device
+      false,              // are_outputs_on_device
+      false,              // is_async
+      NttAlgorithm::Auto, // ntt_algorithm
     };
     return config;
   }
