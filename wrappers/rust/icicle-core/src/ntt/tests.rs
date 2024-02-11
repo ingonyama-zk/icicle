@@ -1,4 +1,4 @@
-use ark_ff::{FftField, One, PrimeField};
+use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::device_context::get_default_device_context;
@@ -48,7 +48,7 @@ where
     F::ArkEquivalent: FftField,
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
-    let test_sizes = [1 << 4, 1 << 16];
+    let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
         let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
@@ -157,11 +157,11 @@ where
 
 pub fn check_ntt_arbitrary_coset<F: FieldImpl + ArkConvertible>()
 where
-    F::ArkEquivalent: FftField + PrimeField,
+    F::ArkEquivalent: FftField + ArkField,
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let mut seed = test_rng();
-    let test_sizes = [1 << 4, 1 << 16];
+    let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
         let coset_generators = [
             F::ArkEquivalent::rand(&mut seed),
@@ -179,7 +179,7 @@ where
             let mut ark_scalars = scalars
                 .as_slice()
                 .iter()
-                .map(|v| F::ArkEquivalent::from_le_bytes_mod_order(&v.to_bytes_le()))
+                .map(|v| F::ArkEquivalent::from_random_bytes(&v.to_bytes_le()).unwrap())
                 .collect::<Vec<F::ArkEquivalent>>();
 
             let mut config = get_default_ntt_config();

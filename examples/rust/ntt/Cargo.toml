@@ -4,10 +4,10 @@ version = "1.0.0"
 edition = "2018"
 
 [dependencies]
-icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev", features = ["arkworks"] }
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev", features = ["arkworks"] }
-icicle-bls12-377 = { git = "https://github.com/ingonyama-zk/icicle.git", branch = "dev", features = ["arkworks"] }
+icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0", features = ["arkworks"] }
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0", features = ["arkworks"] }
+icicle-bls12-377 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.1.0", features = ["arkworks"] }
 
 ark-ff = { version = "0.4.0" }
 ark-poly = "0.4.0"
