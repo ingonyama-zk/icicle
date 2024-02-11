@@ -25,7 +25,6 @@ pub fn get_default_device_context() -> DeviceContext<'static> {
 }
 
 pub fn get_default_context_for_device(device_id: usize) -> DeviceContext<'static> {
-    set_device(device_id).unwrap();
     check_device(device_id as i32);
     // TODO: default stream? on what device? or create one after set_device
     let stream: &'static CudaStream  = Box::leak(Box::new(CudaStream::create().unwrap()));
