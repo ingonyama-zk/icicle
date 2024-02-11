@@ -151,8 +151,7 @@ where
     fn to_ark(&self) -> Self::ArkEquivalent {
         if *self == Self::zero() {
             Self::ArkEquivalent::zero()
-        }
-        else {
+        } else {
             let ark_x = self
                 .x
                 .to_ark();

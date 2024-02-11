@@ -169,8 +169,7 @@ where
 
             // add some zero points
             for _ in 0..100 {
-                let ind = rng.gen_range(0..test_size * batch_size);
-                points[ind] = Affine::<C>::zero();
+                points[rng.gen_range(0..test_size * batch_size)] = Affine::<C>::zero();
             }
             for _ in 0..(test_size * batch_size) {
                 scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::one();
