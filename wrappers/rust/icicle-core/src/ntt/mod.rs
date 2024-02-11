@@ -182,7 +182,7 @@ macro_rules! impl_ntt {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir};
+            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "NTTCuda")]
@@ -267,7 +267,6 @@ macro_rules! impl_ntt_tests {
 
         #[test]
         fn test_ntt_device_async() {
-            //INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_device_async::<$field>()
         }
     };

@@ -4,7 +4,6 @@ use crate::stream::CudaStream;
 pub const DEFAULT_DEVICE_ID: usize = 0;
 
 use crate::device::get_device;
-use crate::device::set_device;
 
 /// Properties of the device used in Icicle functions.
 #[repr(C)]

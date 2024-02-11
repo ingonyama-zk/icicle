@@ -1,12 +1,9 @@
-use std::sync::OnceLock;
-
 use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
 use icicle_cuda_runtime::device::get_device_count;
 use icicle_cuda_runtime::device::set_device;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
-use icicle_cuda_runtime::stream::CudaStream;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 
