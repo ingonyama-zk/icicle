@@ -275,7 +275,8 @@ namespace msm {
            i++) { // add the relevant points starting from the relevant offset up to the bucket size
         unsigned point_ind = point_indices[bucket_offset + i];
         A point = points[point_ind];
-        bucket = i ? bucket + point : P::from_affine(point); // init empty buckets
+        bucket =
+          i ? (point == A::zero() ? bucket : bucket + point) : (point == A::zero() ? P::zero() : P::from_affine(point));
       }
       buckets[tid] = run_length ? bucket : P::zero();
     }
