@@ -216,7 +216,7 @@ pub fn check_ntt_batch<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
-    let test_sizes = [1 << 4, 1 << 12];
+    let test_sizes = [1 << 4, 1 << 14];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
         let coset_generators = [F::one(), F::Config::generate_random(1)[0]];

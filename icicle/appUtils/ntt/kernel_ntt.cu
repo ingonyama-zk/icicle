@@ -34,35 +34,35 @@ namespace ntt {
   static __global__ void
   reorder_digits_inplace_kernel(E* arr, uint32_t log_size, bool dit, bool is_normalize, S inverse_N)
   {
-    // launch N threads
+    // launch N threads (per batch element)
     // each thread starts from one index and calculates the corresponding group
     // if its index is the smallest number in the group -> do the memory transformation
     //  else --> do nothing
 
-    const uint32_t idx = blockDim.x * blockIdx.x + threadIdx.x;
+    const uint32_t size = 1 << log_size;
+    const uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+    const uint32_t idx = tid % size;
+    const uint32_t batch_idx = tid / size;
+
     uint32_t next_element = idx;
     uint32_t group[MAX_GROUP_SIZE];
-    group[0] = idx;
+    group[0] = next_element + size * batch_idx;
 
     uint32_t i = 1;
     for (; i < MAX_GROUP_SIZE;) {
       next_element = dig_rev(next_element, log_size, dit);
       if (next_element < idx) return; // not handling this group
       if (next_element == idx) break; // calculated whole group
-      group[i++] = next_element;
+      group[i++] = next_element + size * batch_idx;
     }
 
-    if (i == 1) { // single element in group --> nothing to do (except maybe normalize for INTT)
-      if (is_normalize) { arr[idx] = arr[idx] * inverse_N; }
-      return;
-    }
     --i;
     // reaching here means I am handling this group
     const E last_element_in_group = arr[group[i]];
     for (; i > 0; --i) {
       arr[group[i]] = is_normalize ? (arr[group[i - 1]] * inverse_N) : arr[group[i - 1]];
     }
-    arr[idx] = is_normalize ? (last_element_in_group * inverse_N) : last_element_in_group;
+    arr[group[0]] = is_normalize ? (last_element_in_group * inverse_N) : last_element_in_group;
   }
 
   template <typename E, typename S>
@@ -71,7 +71,7 @@ namespace ntt {
   {
     uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
     uint32_t rd = tid;
-    uint32_t wr = dig_rev(tid, log_size, dit);
+    uint32_t wr = ((tid >> log_size) << log_size) + dig_rev(tid & ((1 << log_size) - 1), log_size, dit);
     arr_reordered[wr] = is_normalize ? arr[rd] * inverse_N : arr[rd];
   }
 
@@ -84,6 +84,7 @@ namespace ntt {
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -101,6 +102,8 @@ namespace ntt {
     s_meta.ntt_block_size = 64;
     s_meta.ntt_block_id = (blockIdx.x << 3) + (strided ? (threadIdx.x & 0x7) : (threadIdx.x >> 3));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 3) : (threadIdx.x & 0x7);
+
+    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
 
     engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -139,6 +142,7 @@ namespace ntt {
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -157,6 +161,8 @@ namespace ntt {
     s_meta.ntt_block_size = 32;
     s_meta.ntt_block_id = (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 4) : (threadIdx.x & 0x3);
+
+    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
 
     engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -183,7 +189,8 @@ namespace ntt {
     S* internal_twiddles,
     S* basic_twiddles,
     uint32_t log_size,
-    int32_t tw_log_size,
+    uint32_t tw_log_size,
+    uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -202,6 +209,8 @@ namespace ntt {
     s_meta.ntt_block_size = 32;
     s_meta.ntt_block_id = (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 4) : (threadIdx.x & 0x3);
+
+    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
 
     engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData32(in, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -229,6 +238,7 @@ namespace ntt {
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -247,6 +257,8 @@ namespace ntt {
     s_meta.ntt_block_size = 16;
     s_meta.ntt_block_id = (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 5) : (threadIdx.x & 0x1);
+
+    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
 
     engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -274,6 +286,7 @@ namespace ntt {
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
     uint32_t twiddle_stride,
@@ -292,6 +305,8 @@ namespace ntt {
     s_meta.ntt_block_size = 16;
     s_meta.ntt_block_id = (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 5) : (threadIdx.x & 0x1);
+
+    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
 
     engine.loadBasicTwiddles(basic_twiddles, inv);
     engine.loadGlobalData16(in, data_stride, log_data_stride, log_size, strided, s_meta);
@@ -450,6 +465,7 @@ namespace ntt {
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t batch_size,
     bool inv,
     bool normalize,
     bool dit,
@@ -462,63 +478,72 @@ namespace ntt {
     }
 
     if (log_size == 4) {
+      const int NOF_THREADS = min(64, 2 * batch_size);
+      const int NOF_BLOCKS = (2 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
+
       if (dit) {
-        ntt16dit<<<1, 2, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv,
-          dit);
+        ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
+          false, 0, inv, dit);
       } else { // dif
-        ntt16<<<1, 2, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv,
-          dit);
+        ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
+          false, 0, inv, dit);
       }
-      if (normalize) normalize_kernel<<<1, 16, 0, cuda_stream>>>(out, S::inv_log_size(4));
+      if (normalize) normalize_kernel<<<batch_size, 16, 0, cuda_stream>>>(out, S::inv_log_size(4));
       return CHK_LAST();
     }
 
     if (log_size == 5) {
+      const int NOF_THREADS = min(64, 4 * batch_size);
+      const int NOF_BLOCKS = (4 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
       if (dit) {
-        ntt32dit<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv,
-          dit);
+        ntt32dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
+          false, 0, inv, dit);
       } else { // dif
-        ntt32<<<1, 4, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv,
-          dit);
+        ntt32<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
+          false, 0, inv, dit);
       }
-      if (normalize) normalize_kernel<<<1, 32, 0, cuda_stream>>>(out, S::inv_log_size(5));
+      if (normalize) normalize_kernel<<<batch_size, 32, 0, cuda_stream>>>(out, S::inv_log_size(5));
       return CHK_LAST();
     }
 
     if (log_size == 6) {
-      ntt64<<<1, 8, 8 * 64 * sizeof(E), cuda_stream>>>(
-        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv,
-        dit);
-      if (normalize) normalize_kernel<<<1, 64, 0, cuda_stream>>>(out, S::inv_log_size(6));
+      const int NOF_THREADS = min(64, 8 * batch_size);
+      const int NOF_BLOCKS = (8 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
+      ntt64<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
+        false, 0, inv, dit);
+      if (normalize) normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6));
       return CHK_LAST();
     }
 
     if (log_size == 8) {
+      const int NOF_THREADS = 64;
+      const int NOF_BLOCKS = (32 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
       if (dit) {
-        ntt16dit<<<1, 32, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv,
-          dit);
-        ntt16dit<<<1, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 16, 4, 16, true, 1,
-          inv,
-          dit); // we need threads 32+ although 16-31 are idle
-      } else {  // dif
-        ntt16<<<1, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 16, 4, 16, true, 1, inv,
-          dit); // we need threads 32+ although 16-31 are idle
-        ntt16<<<1, 32, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, 1, 0, 0, false, 0, inv,
-          dit);
+        ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          (1 << log_size - 4) * batch_size, 1, 0, 0, false, 0, inv, dit);
+        ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          (1 << log_size - 4) * batch_size, 16, 4, 16, true, 1, inv, dit);
+      } else { // dif
+        ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          (1 << log_size - 4) * batch_size, 16, 4, 16, true, 1, inv, dit);
+        ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          (1 << log_size - 4) * batch_size, 1, 0, 0, false, 0, inv, dit);
       }
-      if (normalize) normalize_kernel<<<1, 256, 0, cuda_stream>>>(out, S::inv_log_size(8));
+      if (normalize) normalize_kernel<<<batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(8));
       return CHK_LAST();
     }
 
     // general case:
+    uint32_t nof_blocks = (1 << (log_size - 9)) * batch_size;
     if (dit) {
       for (int i = 0; i < 5; i++) {
         uint32_t stage_size = STAGE_SIZES_HOST[log_size][i];
@@ -526,17 +551,17 @@ namespace ntt {
         for (int j = 0; j < i; j++)
           stride_log += STAGE_SIZES_HOST[log_size][j];
         if (stage_size == 6)
-          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+            (1 << log_size - 6) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         else if (stage_size == 5)
-          ntt32dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          ntt32dit<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+            (1 << log_size - 5) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         else if (stage_size == 4)
-          ntt16dit<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          ntt16dit<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+            (1 << log_size - 4) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
       }
     } else { // dif
       bool first_run = false, prev_stage = false;
@@ -547,21 +572,22 @@ namespace ntt {
           stride_log += STAGE_SIZES_HOST[log_size][j];
         first_run = stage_size && !prev_stage;
         if (stage_size == 6)
-          ntt64<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+            (1 << log_size - 6) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         else if (stage_size == 5)
-          ntt32<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          ntt32<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+            (1 << log_size - 5) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         else if (stage_size == 4)
-          ntt16<<<1 << (log_size - 9), 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          ntt16<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
+            (1 << log_size - 4) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit);
         prev_stage = stage_size;
       }
     }
-    if (normalize) normalize_kernel<<<1 << (log_size - 8), 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
+    if (normalize)
+      normalize_kernel<<<(1 << (log_size - 8)) * batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
 
     return CHK_LAST();
   }
@@ -575,6 +601,7 @@ namespace ntt {
     S* basic_twiddles,
     int ntt_size,
     int max_logn,
+    int batch_size,
     bool is_inverse,
     Ordering ordering,
     cudaStream_t cuda_stream)
@@ -588,9 +615,12 @@ namespace ntt {
 
     const int logn = int(log2(ntt_size));
 
-    const int NOF_BLOCKS = (1 << (max(logn, 6) - 6));
-    const int NOF_THREADS = min(64, 1 << logn);
+    const int NOF_BLOCKS = ((1 << logn) * batch_size + 64 - 1) / 64;
+    const int NOF_THREADS = min(64, (1 << logn) * batch_size);
 
+    // Note: dif is slightly faster than dit but since reordering is a post-process stage, it must be computed in-place
+    // which make it slower e2e in most cases. dit reorders as a pre-process stage and therefore supports both in-place
+    // and out-of-place (when in!=out);
     const bool reverse_input = ordering == Ordering::kNN;
     const bool is_dit = ordering == Ordering::kNN || ordering == Ordering::kRN;
     bool is_normalize = is_inverse;
@@ -610,7 +640,7 @@ namespace ntt {
 
     // inplace ntt
     CHK_IF_RETURN(large_ntt(
-      d_output, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, is_inverse,
+      d_output, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size, is_inverse,
       is_normalize, is_dit, cuda_stream));
 
     return CHK_LAST();
@@ -633,6 +663,7 @@ namespace ntt {
     curve_config::scalar_t* basic_twiddles,
     int ntt_size,
     int max_logn,
+    int batch_size,
     bool is_inverse,
     Ordering ordering,
     cudaStream_t cuda_stream);

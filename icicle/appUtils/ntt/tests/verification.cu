@@ -26,7 +26,7 @@ void random_samples(test_data* res, uint32_t count)
 void incremental_values(test_scalar* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
-    res[i] = i ? res[i - 1] + test_scalar::one() * test_scalar::omega(4) : test_scalar::zero();
+    res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
   }
 }
 
@@ -37,8 +37,9 @@ int main(int argc, char** argv)
 
   int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
-  bool INPLACE = (argc > 2) ? atoi(argv[2]) : true;
-  int INV = (argc > 3) ? atoi(argv[3]) : true;
+  bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
+  int INV = (argc > 3) ? atoi(argv[3]) : false;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 32;
 
   const ntt::Ordering ordering = ntt::Ordering::kNN;
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -46,15 +47,18 @@ int main(int argc, char** argv)
                              : ordering == ntt::Ordering::kRN ? "RN"
                                                               : "RR";
 
-  printf("running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d\n", NTT_LOG_SIZE, ordering_str, INPLACE, INV);
+  printf(
+    "running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d, batch_size=%d\n", NTT_LOG_SIZE, ordering_str, INPLACE, INV,
+    BATCH_SIZE);
 
-  cudaFree(nullptr); // init GPU context (warmup)
+  CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
   // init domain
   auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
   ntt_config.ordering = ordering;
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
+  ntt_config.batch_size = BATCH_SIZE;
 
   CHK_IF_RETURN(cudaEventCreate(&icicle_start));
   CHK_IF_RETURN(cudaEventCreate(&icicle_stop));
@@ -69,23 +73,26 @@ int main(int argc, char** argv)
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
 
   // cpu allocation
-  auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE);
-  auto CpuOutputOld = std::make_unique<test_data[]>(NTT_SIZE);
-  auto CpuOutputNew = std::make_unique<test_data[]>(NTT_SIZE);
+  auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuOutputOld = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuOutputNew = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
 
   // gpu allocation
   test_data *GpuScalars, *GpuOutputOld, *GpuOutputNew;
-  CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
 
   // init inputs
-  incremental_values(CpuScalars.get(), NTT_SIZE);
-  CHK_IF_RETURN(cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE, cudaMemcpyHostToDevice));
+  // incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  CHK_IF_RETURN(
+    cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
   // inplace
   if (INPLACE) {
-    CHK_IF_RETURN(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+    CHK_IF_RETURN(
+      cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
   }
 
   // run ntt
@@ -125,16 +132,19 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(benchmark(false /*=print*/, 1)); // warmup
   int count = INPLACE ? 1 : 10;
   if (INPLACE) {
-    CHK_IF_RETURN(cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+    CHK_IF_RETURN(
+      cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
   }
   CHK_IF_RETURN(benchmark(true /*=print*/, count));
 
   // verify
-  CHK_IF_RETURN(cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
-  CHK_IF_RETURN(cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+  CHK_IF_RETURN(
+    cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+  CHK_IF_RETURN(
+    cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
   bool success = true;
-  for (int i = 0; i < NTT_SIZE; i++) {
+  for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
     if (CpuOutputNew[i] != CpuOutputOld[i]) {
       success = false;
       // std::cout << i << " ref " << CpuOutputOld[i] << " != " << CpuOutputNew[i] << std::endl;
