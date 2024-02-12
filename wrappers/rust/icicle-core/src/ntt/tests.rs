@@ -276,7 +276,6 @@ where
             let batch_sizes = [1, 1 << 4];
             for test_size in test_sizes {
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-                // let stream = CudaStream::create().unwrap(); // TODO: should work like that but fails later with CUDA Runtime Error: invalid resource handle
                 let mut config = get_default_ntt_config_for_device(device_id);
                 let stream = config
                     .ctx
