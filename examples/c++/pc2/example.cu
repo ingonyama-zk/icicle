@@ -10,7 +10,7 @@
 using namespace poseidon;
 using namespace merkle;
 using namespace curve_config;
-using FpSeconds = std::chrono::duration<float, std::chrono::seconds::period>;
+using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 
 device_context::DeviceContext ctx= device_context::get_default_device_context();
 
@@ -21,7 +21,7 @@ void checkCudaError(cudaError_t error) {
     }
 }
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg) printf("%s: %.0f sec\n", msg, FpSeconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+#define END_TIMER(timer, msg) printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int main(int argc, char* argv[])
 {
@@ -88,7 +88,9 @@ int main(int argc, char* argv[])
     for (unsigned i = 0; i < nof_partitions; i++) {
         std::cout << "Hashing partition " <<  i << std::endl;
         // while debuging, use the same inputs for different partitions
+        START_TIMER(hash_partition);
         err = poseidon_hash<curve_config::scalar_t, size_col+1>(layers_d, column_hash_d, size_partition, column_constants, column_config);
+        END_TIMER(hash_partition, "Hash partition");
         checkCudaError(err);
     }
     free(layers);
