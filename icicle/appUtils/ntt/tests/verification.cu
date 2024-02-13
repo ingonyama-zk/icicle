@@ -35,22 +35,25 @@ int main(int argc, char** argv)
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
   float icicle_time, new_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 16; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 4; // assuming second input is the log-size
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
-  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 32;
-  int COSET_IDX = (argc > 5) ? atoi(argv[5]) : 1;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1;
+  int COSET_IDX = (argc > 5) ? atoi(argv[5]) : 0;
+  const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
 
-  const ntt::Ordering ordering = ntt::Ordering::kNN;
+  // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
                              : ordering == ntt::Ordering::kNR ? "NR"
                              : ordering == ntt::Ordering::kRN ? "RN"
-                                                              : "RR";
+                             : ordering == ntt::Ordering::kRR ? "RR"
+                             : ordering == ntt::Ordering::kNM ? "NM"
+                                                              : "MN";
 
   printf(
-    "running ntt 2^%d, ordering=%s, inplace=%d, inverse=%d, batch_size=%d, coset-idx=%d\n", NTT_LOG_SIZE, ordering_str,
-    INPLACE, INV, BATCH_SIZE, COSET_IDX);
+    "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, coset-idx=%d, ordering=%s\n", NTT_LOG_SIZE, INPLACE, INV,
+    BATCH_SIZE, COSET_IDX, ordering_str);
 
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
@@ -103,7 +106,7 @@ int main(int argc, char** argv)
   auto benchmark = [&](bool is_print, int iterations) -> cudaError_t {
     // NEW
     CHK_IF_RETURN(cudaEventRecord(new_start, ntt_config.ctx.stream));
-    ntt_config.is_force_radix2 = false; // mixed-radix ntt (a.k.a new ntt)
+    ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
     for (size_t i = 0; i < iterations; i++) {
       ntt::NTT(
         INPLACE ? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
@@ -116,7 +119,7 @@ int main(int argc, char** argv)
 
     // OLD
     CHK_IF_RETURN(cudaEventRecord(icicle_start, ntt_config.ctx.stream));
-    ntt_config.is_force_radix2 = true;
+    ntt_config.ntt_algorithm = ntt::NttAlgorithm::Radix2;
     for (size_t i = 0; i < iterations; i++) {
       ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld);
     }

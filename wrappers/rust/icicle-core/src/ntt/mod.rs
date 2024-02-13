@@ -30,6 +30,17 @@ pub enum NTTDir {
 /// a_4, a_2, a_6, a_1, a_5, a_3, a_7`.
 /// - kRN: inputs are bit-reversed-order and outputs are natural-order.
 /// - kRR: inputs and outputs are bit-reversed-order.
+///
+/// Mixed-Radix NTT: digit-reversal is a generalization of bit-reversal where the latter is a special case with 1b
+/// digits. Mixed-radix NTTs of different sizes would generate different reordering of inputs/outputs. Having said
+/// that, for a given size N it is guaranteed that every two mixed-radix NTTs of size N would have the same
+/// digit-reversal pattern. The following orderings kNM and kMN are conceptually like kNR and kRN but for
+/// mixed-digit-reordering. Note that for the cases '(1) NTT, (2) elementwise ops and (3) INTT' kNM and kMN are most
+/// efficient.
+/// Note: kNR, kRN, kRR refer to the radix-2 NTT reversal pattern. Those cases are supported by mixed-radix NTT with
+/// reduced efficiency compared to kNM and kMN.
+/// - kNM: inputs are natural-order and outputs are digit-reversed-order (=mixed).
+/// - kMN: inputs are digit-reversed-order (=mixed) and outputs are natural-order.
 #[allow(non_camel_case_types)]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,6 +49,22 @@ pub enum Ordering {
     kNR,
     kRN,
     kRR,
+    kNM,
+    kMN,
+}
+
+///Which NTT algorithm to use. options are:
+///- Auto: implementation selects automatically based on heuristic. This value is a good default for most cases.
+///- Radix2: explicitly select radix-2 NTT algorithm
+///- MixedRadix: explicitly select mixed-radix NTT algorithm
+///
+#[allow(non_camel_case_types)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NttAlgorithm {
+    Auto,
+    Radix2,
+    MixedRadix,
 }
 
 /// Struct that encodes NTT parameters to be passed into the [ntt](ntt) function.
@@ -57,8 +84,9 @@ pub struct NTTConfig<'a, S> {
     /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
-    /// Explicitly select radix-2 NTT algorithm. Default value: false (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
-    pub is_force_radix2: bool,
+    /// Explicitly select the NTT algorithm. Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based
+    /// on heuristics
+    pub ntt_algorithm: NttAlgorithm,
 }
 
 impl<'a, S: FieldImpl> NTTConfig<'a, S> {
@@ -72,7 +100,7 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
-            is_force_radix2: false,
+            ntt_algorithm: NttAlgorithm::Auto,
         }
     }
 }
