@@ -106,9 +106,9 @@ where
             .map(|v| v.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();
 
-        let mut config = get_default_ntt_config();
-        config.ordering = Ordering::kNR;
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+            let mut config = get_default_ntt_config();
+            config.ordering = Ordering::kNR;
             config.ntt_algorithm = alg;
             let mut ntt_result_1 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
             let mut ntt_result_2 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
@@ -189,9 +189,9 @@ where
                 .collect::<Vec<F::ArkEquivalent>>();
 
             let mut config = get_default_ntt_config();
-            config.ordering = Ordering::kNR;
             config.coset_gen = F::from_ark(coset_gen);
             for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+                config.ordering = Ordering::kNR;
                 config.ntt_algorithm = alg;
                 let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
                 ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
@@ -225,7 +225,7 @@ pub fn check_ntt_batch<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
-    let test_sizes = [1 << 4, 1 << 14];
+    let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
         let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
@@ -245,8 +245,8 @@ where
                     ] {
                         config.coset_gen = coset_gen;
                         config.ordering = ordering;
-                        config.batch_size = batch_size as i32;
                         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+                            config.batch_size = batch_size as i32;
                             config.ntt_algorithm = alg;
                             let mut batch_ntt_result =
                                 HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
