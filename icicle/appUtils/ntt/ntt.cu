@@ -278,7 +278,7 @@ namespace ntt {
       int batch_size,
       int logn,
       bool inverse,
-      bool ct_buttterfly,
+      bool dit,
       S* arbitrary_coset,
       int coset_gen_index,
       cudaStream_t stream,
@@ -309,9 +309,9 @@ namespace ntt {
       if (direct_coset)
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
           d_input, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles, arbitrary_coset ? 1 : coset_gen_index,
-          n_twiddles, logn, ct_buttterfly, d_output);
+          n_twiddles, logn, dit, d_output);
 
-      if (ct_buttterfly) {
+      if (dit) {
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
             direct_coset ? d_output : d_input, 1 << logn_shmem, d_twiddles, n_twiddles, total_tasks, 0, logn_shmem,
@@ -340,7 +340,7 @@ namespace ntt {
         if (is_on_coset)
           utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
             d_output, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles,
-            arbitrary_coset ? 1 : -coset_gen_index, -n_twiddles, logn, !ct_buttterfly, d_output);
+            arbitrary_coset ? 1 : -coset_gen_index, -n_twiddles, logn, !dit, d_output);
 
         utils_internal::NormalizeKernel<E, S>
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
@@ -493,7 +493,7 @@ namespace ntt {
 
     const int logn = int(log2(ntt_size));
 
-    bool ct_butterfly = true;
+    bool dit = true;
     bool reverse_input = false;
     switch (ordering) {
     case Ordering::kNN:
@@ -501,22 +501,22 @@ namespace ntt {
       break;
     case Ordering::kNR:
     case Ordering::kNM:
-      ct_butterfly = false;
+      dit = false;
       break;
     case Ordering::kRR:
       reverse_input = true;
-      ct_butterfly = false;
+      dit = false;
       break;
     case Ordering::kRN:
     case Ordering::kMN:
-      ct_butterfly = true;
+      dit = true;
       reverse_input = false;
     }
 
     if (reverse_input) reverse_order_batch(d_input, ntt_size, logn, batch_size, cuda_stream, d_output);
 
     CHK_IF_RETURN(ntt_inplace_batch_template(
-      reverse_input ? d_output : d_input, ntt_size, twiddles, max_size, batch_size, logn, is_inverse, ct_butterfly,
+      reverse_input ? d_output : d_input, ntt_size, twiddles, max_size, batch_size, logn, is_inverse, dit,
       arbitrary_coset, coset_gen_index, cuda_stream, d_output));
 
     return CHK_LAST();
