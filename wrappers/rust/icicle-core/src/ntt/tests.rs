@@ -272,8 +272,8 @@ where
         .for_each(move |device_id| {
             set_device(device_id).unwrap();
             init_domain::<F>(1 << 16, device_id); // init domain per device
-            let test_sizes = [1 << 4, 1 << 6];
-            let batch_sizes = [1, 1 << 4];
+            let test_sizes = [1 << 4, 1 << 12];
+            let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
                 let mut config = get_default_ntt_config_for_device(device_id);
