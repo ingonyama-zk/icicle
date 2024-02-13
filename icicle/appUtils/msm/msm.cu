@@ -43,6 +43,7 @@ namespace msm {
       unsigned* sorted_bucket_sizes_sum,
       unsigned nof_pts_per_thread,
       unsigned nof_large_buckets,
+      // log_nof_buckets_to_compute should be equal to ceil(log(nof_buckets_to_compute))
       unsigned log_nof_large_buckets,
       unsigned* bucket_indices)
     {
@@ -259,6 +260,7 @@ namespace msm {
       const unsigned nof_buckets_to_compute,
       const unsigned c,
       const int points_per_thread,
+      // log_nof_buckets_to_compute should be equal to ceil(log(nof_buckets_to_compute))
       const unsigned log_nof_buckets_to_compute,
       const unsigned nof_threads)
     {

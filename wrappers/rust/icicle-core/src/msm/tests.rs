@@ -13,6 +13,15 @@ use ark_ec::VariableBaseMSM;
 #[cfg(feature = "arkworks")]
 use ark_std::{rand::Rng, test_rng, UniformRand};
 
+fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: usize) -> Vec<Affine<C>> {
+    let rng = &mut test_rng();
+    let mut points = C::generate_random_affine_points(size);
+    for _ in 0..num_zeroes {
+        points[rng.gen_range(0..size)] = Affine::<C>::zero();
+    }
+    points
+}
+
 pub fn check_msm<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
@@ -22,11 +31,8 @@ where
     let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
     let mut msm_results = HostOrDeviceSlice::cuda_malloc(1).unwrap();
     for test_size in test_sizes {
-        let mut points = C::generate_random_affine_points(test_size);
+        let points = generate_random_affine_points_with_zeroes(test_size, 2);
         let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
-        // sprinkle in some zero points
-        points[0] = Affine::<C>::zero();
-        points[3] = Affine::<C>::zero();
         let points_ark: Vec<_> = points
             .iter()
             .map(|x| x.to_ark())
@@ -89,7 +95,7 @@ where
     let batch_sizes = [1, 3, 1 << 4];
     for test_size in test_sizes {
         for batch_size in batch_sizes {
-            let points = C::generate_random_affine_points(test_size);
+            let points = generate_random_affine_points_with_zeroes(test_size, 10);
             let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
             // a version of batched msm without using `cfg.points_size`, requires copying bases
             let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
@@ -164,7 +170,7 @@ where
     let rng = &mut test_rng();
     for test_size in test_sizes {
         for batch_size in batch_sizes {
-            let mut points = C::generate_random_affine_points(test_size * batch_size);
+            let mut points = generate_random_affine_points_with_zeroes(test_size * batch_size, 5);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];
 
             // add some zero points
