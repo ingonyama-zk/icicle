@@ -278,7 +278,7 @@ namespace ntt {
       int batch_size,
       int logn,
       bool inverse,
-      bool ct_buttterfly,
+      bool dit,
       S* arbitrary_coset,
       int coset_gen_index,
       cudaStream_t stream,
@@ -309,9 +309,9 @@ namespace ntt {
       if (direct_coset)
         utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
           d_input, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles, arbitrary_coset ? 1 : coset_gen_index,
-          n_twiddles, logn, ct_buttterfly, d_output);
+          n_twiddles, logn, dit, d_output);
 
-      if (ct_buttterfly) {
+      if (dit) {
         if (is_shared_mem_enabled)
           ntt_template_kernel_shared<<<num_blocks, num_threads, shared_mem, stream>>>(
             direct_coset ? d_output : d_input, 1 << logn_shmem, d_twiddles, n_twiddles, total_tasks, 0, logn_shmem,
@@ -340,7 +340,7 @@ namespace ntt {
         if (is_on_coset)
           utils_internal::BatchMulKernel<E, S><<<num_blocks_coset, num_threads_coset, 0, stream>>>(
             d_output, n, batch_size, arbitrary_coset ? arbitrary_coset : d_twiddles,
-            arbitrary_coset ? 1 : -coset_gen_index, -n_twiddles, logn, !ct_buttterfly, d_output);
+            arbitrary_coset ? 1 : -coset_gen_index, -n_twiddles, logn, !dit, d_output);
 
         utils_internal::NormalizeKernel<E, S>
           <<<num_blocks_coset, num_threads_coset, 0, stream>>>(d_output, S::inv_log_size(logn), n * batch_size);
@@ -452,6 +452,76 @@ namespace ntt {
     return CHK_LAST();
   }
 
+  template <typename S>
+  static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
+  {
+    const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
+    const bool is_user_selected_radix2_alg = config.ntt_algorithm == NttAlgorithm::Radix2;
+    const bool is_force_radix2 = !is_mixed_radix_alg_supported || is_user_selected_radix2_alg;
+    if (is_force_radix2) return true;
+
+    const bool is_user_selected_mixed_radix_alg = config.ntt_algorithm == NttAlgorithm::MixedRadix;
+    if (is_user_selected_mixed_radix_alg) return false;
+
+    // Heuristic to automatically select an algorithm
+    // Note that generally the decision depends on {logn, batch, ordering, inverse, coset, in-place, coeff-field} and
+    // the specific GPU.
+    // the following heuristic is a simplification based on measurements. Users can try both and select the algorithm
+    // based on the specific case via the 'NTTConfig.ntt_algorithm' field
+
+    if (logn >= 16) return false; // mixed-radix is typically faster in those cases
+    if (logn <= 11) return true;  //  radix-2 is typically faster for batch<=256 in those cases
+    const int log_batch = (int)log2(batch_size);
+    return (logn + log_batch <= 18); // almost the cutoff point where both are equal
+  }
+
+  template <typename S, typename E>
+  cudaError_t radix2_ntt(
+    E* d_input,
+    E* d_output,
+    S* twiddles,
+    int ntt_size,
+    int max_size,
+    int batch_size,
+    bool is_inverse,
+    Ordering ordering,
+    S* arbitrary_coset,
+    int coset_gen_index,
+    cudaStream_t cuda_stream)
+  {
+    CHK_INIT_IF_RETURN();
+
+    const int logn = int(log2(ntt_size));
+
+    bool dit = true;
+    bool reverse_input = false;
+    switch (ordering) {
+    case Ordering::kNN:
+      reverse_input = true;
+      break;
+    case Ordering::kNR:
+    case Ordering::kNM:
+      dit = false;
+      break;
+    case Ordering::kRR:
+      reverse_input = true;
+      dit = false;
+      break;
+    case Ordering::kRN:
+    case Ordering::kMN:
+      dit = true;
+      reverse_input = false;
+    }
+
+    if (reverse_input) reverse_order_batch(d_input, ntt_size, logn, batch_size, cuda_stream, d_output);
+
+    CHK_IF_RETURN(ntt_inplace_batch_template(
+      reverse_input ? d_output : d_input, ntt_size, twiddles, max_size, batch_size, logn, is_inverse, dit,
+      arbitrary_coset, coset_gen_index, cuda_stream, d_output));
+
+    return CHK_LAST();
+  }
+
   template <typename S, typename E>
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
@@ -464,9 +534,9 @@ namespace ntt {
     }
 
     cudaStream_t& stream = config.ctx.stream;
-    int batch_size = config.batch_size;
+    size_t batch_size = config.batch_size;
     int logn = int(log(size) / log(2));
-    int input_size_bytes = size * batch_size * sizeof(E);
+    size_t input_size_bytes = (size_t)size * batch_size * sizeof(E);
     bool are_inputs_on_device = config.are_inputs_on_device;
     bool are_outputs_on_device = config.are_outputs_on_device;
 
@@ -501,44 +571,23 @@ namespace ntt {
       h_coset.clear();
     }
 
-    const bool is_small_ntt = logn < 16;                  // cutoff point where mixed-radix is faster than radix-2
-    const bool is_on_coset = (coset_index != 0) || coset; // coset not supported by mixed-radix algorithm yet
-    const bool is_batch_ntt = batch_size > 1;             // batch not supported by mixed-radidx algorithm yet
-    const bool is_NN = config.ordering == Ordering::kNN;  // TODO Yuval: relax this limitation
-    const bool is_radix2_algorithm = config.is_force_radix2 || is_batch_ntt || is_small_ntt || is_on_coset || !is_NN;
+    const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
+    const bool is_inverse = dir == NTTDir::kInverse;
 
     if (is_radix2_algorithm) {
-      bool ct_butterfly = true;
-      bool reverse_input = false;
-      switch (config.ordering) {
-      case Ordering::kNN:
-        reverse_input = true;
-        break;
-      case Ordering::kNR:
-        ct_butterfly = false;
-        break;
-      case Ordering::kRR:
-        reverse_input = true;
-        ct_butterfly = false;
-        break;
-      }
-
-      if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
-
-      CHK_IF_RETURN(ntt_inplace_batch_template(
-        reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
-        dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
-
-      if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
-    } else { // mixed-radix algorithm
+      CHK_IF_RETURN(ntt::radix2_ntt(
+        d_input, d_output, Domain<S>::twiddles, size, Domain<S>::max_size, batch_size, is_inverse, config.ordering,
+        coset, coset_index, stream));
+    } else {
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
         d_input, d_output, Domain<S>::twiddles, Domain<S>::internal_twiddles, Domain<S>::basic_twiddles, size,
-        Domain<S>::max_log_size, dir == NTTDir::kInverse, config.ordering, stream));
+        Domain<S>::max_log_size, batch_size, is_inverse, config.ordering, coset, coset_index, stream));
     }
 
     if (!are_outputs_on_device)
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
+    if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
     if (!are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));
     if (!are_outputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_output, stream));
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
@@ -551,14 +600,14 @@ namespace ntt {
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
-      ctx,           // ctx
-      S::one(),      // coset_gen
-      1,             // batch_size
-      Ordering::kNN, // ordering
-      false,         // are_inputs_on_device
-      false,         // are_outputs_on_device
-      false,         // is_async
-      false,         // is_force_radix2
+      ctx,                // ctx
+      S::one(),           // coset_gen
+      1,                  // batch_size
+      Ordering::kNN,      // ordering
+      false,              // are_inputs_on_device
+      false,              // are_outputs_on_device
+      false,              // is_async
+      NttAlgorithm::Auto, // ntt_algorithm
     };
     return config;
   }
