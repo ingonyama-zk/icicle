@@ -476,6 +476,53 @@ namespace ntt {
   }
 
   template <typename S, typename E>
+  cudaError_t radix2_ntt(
+    E* d_input,
+    E* d_output,
+    S* twiddles,
+    int ntt_size,
+    int max_size,
+    int batch_size,
+    bool is_inverse,
+    Ordering ordering,
+    S* arbitrary_coset,
+    int coset_gen_index,
+    cudaStream_t cuda_stream)
+  {
+    CHK_INIT_IF_RETURN();
+
+    const int logn = int(log2(ntt_size));
+
+    bool ct_butterfly = true;
+    bool reverse_input = false;
+    switch (ordering) {
+    case Ordering::kNN:
+      reverse_input = true;
+      break;
+    case Ordering::kNR:
+    case Ordering::kNM:
+      ct_butterfly = false;
+      break;
+    case Ordering::kRR:
+      reverse_input = true;
+      ct_butterfly = false;
+      break;
+    case Ordering::kRN:
+    case Ordering::kMN:
+      ct_butterfly = true;
+      reverse_input = false;
+    }
+
+    if (reverse_input) reverse_order_batch(d_input, ntt_size, logn, batch_size, cuda_stream, d_output);
+
+    CHK_IF_RETURN(ntt_inplace_batch_template(
+      reverse_input ? d_output : d_input, ntt_size, twiddles, max_size, batch_size, logn, is_inverse, ct_butterfly,
+      arbitrary_coset, coset_gen_index, cuda_stream, d_output));
+
+    return CHK_LAST();
+  }
+
+  template <typename S, typename E>
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
@@ -525,38 +572,16 @@ namespace ntt {
     }
 
     const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
+    const bool is_inverse = dir == NTTDir::kInverse;
 
     if (is_radix2_algorithm) {
-      bool ct_butterfly = true;
-      bool reverse_input = false;
-      switch (config.ordering) {
-      case Ordering::kNN:
-        reverse_input = true;
-        break;
-      case Ordering::kNR:
-      case Ordering::kNM:
-        ct_butterfly = false;
-        break;
-      case Ordering::kRR:
-        reverse_input = true;
-        ct_butterfly = false;
-        break;
-      case Ordering::kRN:
-      case Ordering::kMN:
-        ct_butterfly = true;
-        reverse_input = false;
-      }
-
-      if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);
-
-      CHK_IF_RETURN(ntt_inplace_batch_template(
-        reverse_input ? d_output : d_input, size, Domain<S>::twiddles, Domain<S>::max_size, batch_size, logn,
-        dir == NTTDir::kInverse, ct_butterfly, coset, coset_index, stream, d_output));
-
-    } else { // mixed-radix algorithm
+      CHK_IF_RETURN(ntt::radix2_ntt(
+        d_input, d_output, Domain<S>::twiddles, size, Domain<S>::max_size, batch_size, is_inverse, config.ordering,
+        coset, coset_index, stream));
+    } else {
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
         d_input, d_output, Domain<S>::twiddles, Domain<S>::internal_twiddles, Domain<S>::basic_twiddles, size,
-        Domain<S>::max_log_size, batch_size, dir == NTTDir::kInverse, config.ordering, coset, coset_index, stream));
+        Domain<S>::max_log_size, batch_size, is_inverse, config.ordering, coset, coset_index, stream));
     }
 
     if (!are_outputs_on_device)
