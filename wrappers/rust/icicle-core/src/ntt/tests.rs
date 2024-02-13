@@ -50,20 +50,19 @@ where
 {
     let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
+        let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
+
+        let scalars: Vec<F> = F::Config::generate_random(test_size);
+        let ark_scalars = scalars
+            .iter()
+            .map(|v| v.to_ark())
+            .collect::<Vec<F::ArkEquivalent>>();
+        // if we simply transmute arkworks types, we'll get scalars in Montgomery format
+        let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const [F]) };
+        let scalars_mont_h = HostOrDeviceSlice::on_host(scalars_mont.to_vec());
+
+        let mut config = get_default_ntt_config();
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-            let ark_domain: GeneralEvaluationDomain<<F as ArkConvertible>::ArkEquivalent> =
-                GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
-
-            let scalars: Vec<F> = F::Config::generate_random(test_size);
-            let ark_scalars = scalars
-                .iter()
-                .map(|v| v.to_ark())
-                .collect::<Vec<F::ArkEquivalent>>();
-            // if we simply transmute arkworks types, we'll get scalars in Montgomery format
-            let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const [F]) };
-            let scalars_mont_h = HostOrDeviceSlice::on_host(scalars_mont.to_vec());
-
-            let mut config = get_default_ntt_config();
             config.ntt_algorithm = alg;
             let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
             ntt(&scalars_mont_h, NTTDir::kForward, &config, &mut ntt_result).unwrap();
@@ -92,24 +91,24 @@ where
 {
     let test_sizes = [1 << 4, 1 << 16];
     for test_size in test_sizes {
+        let small_size = test_size >> 1;
+        let test_size_rou = F::ArkEquivalent::get_root_of_unity(test_size as u64).unwrap();
+        let ark_small_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(small_size)
+            .unwrap()
+            .get_coset(test_size_rou)
+            .unwrap();
+        let ark_large_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
+
+        let mut scalars: Vec<F> = F::Config::generate_random(small_size);
+        let scalars_h = HostOrDeviceSlice::on_host(scalars.clone());
+        let mut ark_scalars = scalars
+            .iter()
+            .map(|v| v.to_ark())
+            .collect::<Vec<F::ArkEquivalent>>();
+
+        let mut config = get_default_ntt_config();
+        config.ordering = Ordering::kNR;
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-            let small_size = test_size >> 1;
-            let test_size_rou = F::ArkEquivalent::get_root_of_unity(test_size as u64).unwrap();
-            let ark_small_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(small_size)
-                .unwrap()
-                .get_coset(test_size_rou)
-                .unwrap();
-            let ark_large_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
-
-            let mut scalars: Vec<F> = F::Config::generate_random(small_size);
-            let scalars_h = HostOrDeviceSlice::on_host(scalars.clone());
-            let mut ark_scalars = scalars
-                .iter()
-                .map(|v| v.to_ark())
-                .collect::<Vec<F::ArkEquivalent>>();
-
-            let mut config = get_default_ntt_config();
-            config.ordering = Ordering::kNR;
             config.ntt_algorithm = alg;
             let mut ntt_result_1 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
             let mut ntt_result_2 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
@@ -170,29 +169,29 @@ where
     let mut seed = test_rng();
     let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
-        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-            let coset_generators = [
-                F::ArkEquivalent::rand(&mut seed),
-                F::ArkEquivalent::neg(F::ArkEquivalent::one()),
-                F::ArkEquivalent::get_root_of_unity(test_size as u64).unwrap(),
-            ];
-            for coset_gen in coset_generators {
-                let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size)
-                    .unwrap()
-                    .get_coset(coset_gen)
-                    .unwrap();
+        let coset_generators = [
+            F::ArkEquivalent::rand(&mut seed),
+            F::ArkEquivalent::neg(F::ArkEquivalent::one()),
+            F::ArkEquivalent::get_root_of_unity(test_size as u64).unwrap(),
+        ];
+        for coset_gen in coset_generators {
+            let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size)
+                .unwrap()
+                .get_coset(coset_gen)
+                .unwrap();
 
-                let mut scalars = HostOrDeviceSlice::on_host(F::Config::generate_random(test_size));
-                // here you can see how arkworks type can be easily created without any purpose-built conversions
-                let mut ark_scalars = scalars
-                    .as_slice()
-                    .iter()
-                    .map(|v| F::ArkEquivalent::from_random_bytes(&v.to_bytes_le()).unwrap())
-                    .collect::<Vec<F::ArkEquivalent>>();
+            let mut scalars = HostOrDeviceSlice::on_host(F::Config::generate_random(test_size));
+            // here you can see how arkworks type can be easily created without any purpose-built conversions
+            let mut ark_scalars = scalars
+                .as_slice()
+                .iter()
+                .map(|v| F::ArkEquivalent::from_random_bytes(&v.to_bytes_le()).unwrap())
+                .collect::<Vec<F::ArkEquivalent>>();
 
-                let mut config = get_default_ntt_config();
-                config.ordering = Ordering::kNR;
-                config.coset_gen = F::from_ark(coset_gen);
+            let mut config = get_default_ntt_config();
+            config.ordering = Ordering::kNR;
+            config.coset_gen = F::from_ark(coset_gen);
+            for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                 config.ntt_algorithm = alg;
                 let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
                 ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
@@ -229,25 +228,25 @@ where
     let test_sizes = [1 << 4, 1 << 14];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-            let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-            let mut config = get_default_ntt_config();
-            for batch_size in batch_sizes {
-                let scalars = HostOrDeviceSlice::on_host(F::Config::generate_random(test_size * batch_size));
+        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+        let mut config = get_default_ntt_config();
+        for batch_size in batch_sizes {
+            let scalars = HostOrDeviceSlice::on_host(F::Config::generate_random(test_size * batch_size));
 
-                for coset_gen in coset_generators {
-                    for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
-                        for ordering in [
-                            Ordering::kNN,
-                            Ordering::kNR,
-                            Ordering::kRN,
-                            Ordering::kRR,
-                            Ordering::kNM,
-                            Ordering::kMN,
-                        ] {
-                            config.coset_gen = coset_gen;
-                            config.ordering = ordering;
-                            config.batch_size = batch_size as i32;
+            for coset_gen in coset_generators {
+                for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
+                    for ordering in [
+                        Ordering::kNN,
+                        Ordering::kNR,
+                        Ordering::kRN,
+                        Ordering::kRR,
+                        Ordering::kNM,
+                        Ordering::kMN,
+                    ] {
+                        config.coset_gen = coset_gen;
+                        config.ordering = ordering;
+                        config.batch_size = batch_size as i32;
+                        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                             config.ntt_algorithm = alg;
                             let mut batch_ntt_result =
                                 HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
@@ -283,32 +282,32 @@ where
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-            let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-            let stream = CudaStream::create().unwrap();
-            let mut config = get_default_ntt_config();
-            for batch_size in batch_sizes {
-                let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
-                let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
-                    .iter()
-                    .map(|x| x.to_ark())
-                    .sum();
-                let mut scalars_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
-                scalars_d
-                    .copy_from_host_async(&scalars_h, &stream)
-                    .unwrap();
-                let mut ntt_out_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
+        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+        let stream = CudaStream::create().unwrap();
+        let mut config = get_default_ntt_config();
+        for batch_size in batch_sizes {
+            let scalars_h: Vec<F> = F::Config::generate_random(test_size * batch_size);
+            let sum_of_coeffs: F::ArkEquivalent = scalars_h[..test_size]
+                .iter()
+                .map(|x| x.to_ark())
+                .sum();
+            let mut scalars_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
+            scalars_d
+                .copy_from_host_async(&scalars_h, &stream)
+                .unwrap();
+            let mut ntt_out_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
 
-                for coset_gen in coset_generators {
-                    for ordering in [Ordering::kNN, Ordering::kRR] {
-                        config.coset_gen = coset_gen;
-                        config.ordering = ordering;
-                        config.batch_size = batch_size as i32;
-                        config.is_async = true;
+            for coset_gen in coset_generators {
+                for ordering in [Ordering::kNN, Ordering::kRR] {
+                    config.coset_gen = coset_gen;
+                    config.ordering = ordering;
+                    config.batch_size = batch_size as i32;
+                    config.is_async = true;
+                    config
+                        .ctx
+                        .stream = &stream;
+                    for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                         config.ntt_algorithm = alg;
-                        config
-                            .ctx
-                            .stream = &stream;
                         ntt(&scalars_d, NTTDir::kForward, &config, &mut ntt_out_d).unwrap();
                         ntt(&ntt_out_d, NTTDir::kInverse, &config, &mut scalars_d).unwrap();
                         let mut intt_result_h = vec![F::zero(); test_size * batch_size];

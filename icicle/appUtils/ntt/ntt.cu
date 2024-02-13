@@ -541,6 +541,10 @@ namespace ntt {
         reverse_input = true;
         ct_butterfly = false;
         break;
+      case Ordering::kRN:
+      case Ordering::kMN:
+        ct_butterfly = true;
+        reverse_input = false;
       }
 
       if (reverse_input) reverse_order_batch(d_input, size, logn, batch_size, stream, d_output);

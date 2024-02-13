@@ -137,7 +137,7 @@ int main(int argc, char** argv)
   };
 
   CHK_IF_RETURN(benchmark(false /*=print*/, 1)); // warmup
-  int count = INPLACE ? 1 : 1;
+  int count = INPLACE ? 1 : 10;
   if (INPLACE) {
     CHK_IF_RETURN(
       cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));

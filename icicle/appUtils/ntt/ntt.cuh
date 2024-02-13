@@ -60,7 +60,7 @@ namespace ntt {
    * - kRN: inputs are bit-reversed-order and outputs are natural-order.
    * - kRR: inputs and outputs are bit-reversed-order.
    *
-   * Mixed-Radix NTT: digit-reversal is a generalization of bit-reversal where the latter is a private case with 1b
+   * Mixed-Radix NTT: digit-reversal is a generalization of bit-reversal where the latter is a special case with 1b
    * digits. Mixed-radix NTTs of different sizes would generate different reordering of inputs/outputs. Having said
    * that, for a given size N it is guaranteed that every two mixed-radix NTTs of size N would have the same
    * digit-reversal pattern. The following orderings kNM and kMN are conceptually like kNR and kRN but for
@@ -76,7 +76,7 @@ namespace ntt {
   /**
    * @enum NttAlgorithm
    * Which NTT algorithm to use. options are:
-   * - Auto: implementation selects autoamtically based on heuristic
+   * - Auto: implementation selects automatically based on heuristic. This value is a good default for most cases.
    * - Radix2: explicitly select radix-2 NTT algorithm
    * - MixedRadix: explicitly select mixed-radix NTT algorithm
    */
