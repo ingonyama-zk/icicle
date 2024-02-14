@@ -19,18 +19,23 @@ pub struct DeviceContext<'a> {
     pub mempool: CudaMemPool, // Assuming the type is provided by a CUDA binding crate
 }
 
-pub fn get_default_device_context() -> DeviceContext<'static> {
-    get_default_context_for_device(DEFAULT_DEVICE_ID)
+impl Default for DeviceContext<'_>{
+    fn default() -> Self {
+        Self::default_for_device(DEFAULT_DEVICE_ID)
+    }
 }
 
-pub fn get_default_context_for_device(device_id: usize) -> DeviceContext<'static> {
-    static default_stream: CudaStream = CudaStream {
-        handle: std::ptr::null_mut(),
-    };
-    DeviceContext {
-        stream: &default_stream,
-        device_id,
-        mempool: std::ptr::null_mut(),
+impl DeviceContext<'_> {
+    /// Default for device_id
+    pub fn default_for_device(device_id: usize) -> DeviceContext<'static> {
+        static default_stream: CudaStream = CudaStream {
+            handle: std::ptr::null_mut(),
+        };
+        DeviceContext {
+            stream: &default_stream,
+            device_id,
+            mempool: std::ptr::null_mut(),
+        }
     }
 }
 

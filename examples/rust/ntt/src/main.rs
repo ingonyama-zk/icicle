@@ -11,7 +11,7 @@ use icicle_bls12_377::curve::{
 use icicle_cuda_runtime::{
     stream::CudaStream,
     memory::HostOrDeviceSlice,
-    device_context::get_default_device_context
+    device_context::DeviceContext
 };
 
 use icicle_core::{
@@ -58,12 +58,12 @@ fn main() {
     
     println!("Setting up bn254 Domain...");
     let icicle_omega = <Bn254Fr as FftField>::get_root_of_unity(size.try_into().unwrap()).unwrap();
-    let ctx = get_default_device_context();
+    let ctx = DeviceContext::default();
     ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
 
     println!("Configuring bn254 NTT...");
     let stream = CudaStream::create().unwrap();
-    let mut cfg = ntt::get_default_ntt_config::<ScalarField>();
+    let mut cfg = ntt::NTTConfig::default();
     cfg.ctx.stream = &stream;
     cfg.is_async = true;
 
@@ -74,7 +74,7 @@ fn main() {
 
     println!("Configuring bls12377 NTT...");
     let stream_bls12377 = CudaStream::create().unwrap();
-    let mut cfg_bls12377 = ntt::get_default_ntt_config::<BLS12377ScalarField>();
+    let mut cfg_bls12377 = ntt::NTTConfig::default();
     cfg_bls12377.ctx.stream = &stream_bls12377;
     cfg_bls12377.is_async = true;
 

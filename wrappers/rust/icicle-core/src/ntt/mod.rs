@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::{get_default_context_for_device, get_default_device_context, DeviceContext};
+use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
@@ -89,11 +89,10 @@ pub struct NTTConfig<'a, S> {
     pub ntt_algorithm: NttAlgorithm,
 }
 
-impl<'a, S: FieldImpl> NTTConfig<'a, S> {
-    pub fn default_config() -> Self {
-        let ctx = get_default_device_context();
+impl<'a, S: FieldImpl> Default for NTTConfig<'a, S> {
+    fn default() -> Self {
         NTTConfig {
-            ctx,
+            ctx: DeviceContext::default(),
             coset_gen: S::one(),
             batch_size: 1,
             ordering: Ordering::kNN,
@@ -103,10 +102,17 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
             ntt_algorithm: NttAlgorithm::Auto,
         }
     }
-    pub fn default_config_for_device(device_id: usize) -> Self {
-        let ctx = get_default_context_for_device(device_id);
+}
+
+impl<'a, S: FieldImpl> NTTConfig<'a, S> {
+    #[deprecated = "Use NTTConfig::default instead"]
+    pub fn default_config() -> Self {
+        NTTConfig::default()
+    }
+
+    pub fn default_for_device(device_id: usize) -> Self {
         NTTConfig {
-            ctx,
+            ctx: DeviceContext::default_for_device(device_id),
             coset_gen: S::one(),
             batch_size: 1,
             ordering: Ordering::kNN,
@@ -127,8 +133,8 @@ pub trait NTT<F: FieldImpl> {
         output: &mut HostOrDeviceSlice<F>,
     ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
+    #[deprecated = "Use NTTConfig::default instead"]
     fn get_default_ntt_config() -> NTTConfig<'static, F>;
-    fn get_default_ntt_config_for_device(device_id: usize) -> NTTConfig<'static, F>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -183,24 +189,6 @@ where
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
 
-/// Returns [NTT config](NTTConfig) struct for default device populated with default values.
-pub fn get_default_ntt_config<F>() -> NTTConfig<'static, F>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
-{
-    <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config()
-}
-
-/// Returns [NTT config](NTTConfig) struct populated with default values.
-pub fn get_default_ntt_config_for_device<F>(device_id: usize) -> NTTConfig<'static, F>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
-{
-    <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config_for_device(device_id)
-}
-
 #[macro_export]
 macro_rules! impl_ntt {
     (
@@ -250,12 +238,9 @@ macro_rules! impl_ntt {
                 unsafe { $field_prefix_ident::initialize_ntt_domain(primitive_root, ctx).wrap() }
             }
 
+            #[deprecated = "use NTTConfig::default() instead"]
             fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                NTTConfig::<$field>::default_config_for_device(DEFAULT_DEVICE_ID)
-            }
-
-            fn get_default_ntt_config_for_device(device_id: usize) -> NTTConfig<'static, $field> {
-                NTTConfig::<$field>::default_config_for_device(device_id)
+                NTTConfig::<$field>::default()
             }
         }
     };

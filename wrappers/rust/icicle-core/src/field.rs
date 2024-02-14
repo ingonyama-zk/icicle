@@ -168,7 +168,7 @@ macro_rules! impl_scalar_field {
         impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
 
         mod $field_prefix_ident {
-            use crate::curve::{get_default_device_context, $field_name, CudaError, DeviceContext, HostOrDeviceSlice};
+            use crate::curve::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "GenerateScalars")]
@@ -192,7 +192,7 @@ macro_rules! impl_scalar_field {
                         scalars.as_mut_ptr(),
                         scalars.len(),
                         is_into,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
+                        &DeviceContext::default() as *const _ as *const DeviceContext,
                     )
                 }
             }
