@@ -526,16 +526,24 @@ namespace ntt {
   cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
+
     if (size > Domain<S>::max_size) {
-      std::cerr
-        << "NTT size is too large for the domain. Consider generating your domain with a higher order root of unity"
-        << '\n';
-      throw -1;
+      std::ostringstream oss;
+      oss << "NTT size=" << size
+          << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
+    }
+
+    int logn = int(log2(size));
+    const bool is_size_power_of_two = size == (1 << logn);
+    if (!is_size_power_of_two) {
+      std::ostringstream oss;
+      oss << "NTT size=" << size << " is not supported since it is not a power of two.\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
     }
 
     cudaStream_t& stream = config.ctx.stream;
     size_t batch_size = config.batch_size;
-    int logn = int(log(size) / log(2));
     size_t input_size_bytes = (size_t)size * batch_size * sizeof(E);
     bool are_inputs_on_device = config.are_inputs_on_device;
     bool are_outputs_on_device = config.are_outputs_on_device;

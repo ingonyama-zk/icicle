@@ -108,9 +108,9 @@ int main(int argc, char** argv)
     CHK_IF_RETURN(cudaEventRecord(new_start, ntt_config.ctx.stream));
     ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
     for (size_t i = 0; i < iterations; i++) {
-      ntt::NTT(
+      CHK_IF_RETURN(ntt::NTT(
         INPLACE ? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
-        GpuOutputNew);
+        GpuOutputNew));
     }
     CHK_IF_RETURN(cudaEventRecord(new_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
@@ -121,7 +121,8 @@ int main(int argc, char** argv)
     CHK_IF_RETURN(cudaEventRecord(icicle_start, ntt_config.ctx.stream));
     ntt_config.ntt_algorithm = ntt::NttAlgorithm::Radix2;
     for (size_t i = 0; i < iterations; i++) {
-      ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld);
+      CHK_IF_RETURN(
+        ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld));
     }
     CHK_IF_RETURN(cudaEventRecord(icicle_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
