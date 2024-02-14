@@ -106,7 +106,7 @@ void inline throwIcicleErr(
   IcicleError_t err, const char* const reason, const char* const func, const char* const file, const int line)
 {
   std::string err_msg =
-    std::string{IcicleGetErrorString(err)} + " : by: " + func + " at: " + file + ":" + std::to_string(line);
+    std::string{IcicleGetErrorString(err)} + ": " + reason + " : by: " + func + " at: " + file + ":" + std::to_string(line);
   std::cerr << err_msg << std::endl; // TODO: Logging
   throw IcicleError{err, err_msg};
 }
