@@ -18,7 +18,7 @@ poseidon_hash<scalar_t, arity+1>(input, output, n, constants, config);
 
 **Parameters:**
 
-- **`scalar_t`:** a scalar field of the selected curve. Currently only `BLS12-381`.
+- **`scalar_t`:** a scalar field of the selected curve.
 You can think of field's elements as 32-byte integers modulo `p`, where `p` is a prime number, specific to this field.
 
 - **arity:** number of elements in a hashed block.
