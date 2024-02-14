@@ -9,6 +9,8 @@
 #include "utils/utils.h"
 #include "appUtils/ntt/ntt_impl.cuh"
 
+#include <mutex>
+
 namespace ntt {
 
   namespace {
@@ -351,6 +353,9 @@ namespace ntt {
 
   } // namespace
 
+  // Mutex for protecting access to the domain/device container array
+  std::mutex device_domain_mutex;
+
   /**
    * @struct Domain
    * Struct containing information about the domain on which (i)NTT is evaluated i.e. twiddle factors.
@@ -385,6 +390,12 @@ namespace ntt {
   template <typename S>
   Domain<S> Domain<S>::domains_for_devices[device_context::MAX_DEVICES] = {};
 
+  /**
+   * Initializes the domain for the given device with the given primitive root of unity.
+   * @param primitive_root The primitive root of unity for the domain.
+   * @param ctx The device context.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
@@ -393,9 +404,15 @@ namespace ntt {
     Domain<S>& domain = Domain<S>::domains_for_devices[ctx.device_id];
 
     // only generate twiddles if they haven't been generated yet
-    // please note that this is not thread-safe at all,
-    // but it's a singleton that is supposed to be initialized once per device per program lifetime
+    // please note that this assumes just basic thread-safety,
+    // it's assumed a singleton (non-enforced) that is supposed
+    // to be initialized once per device per program lifetime
     if (!domain.twiddles) {
+      // Mutex is automatically released when lock goes out of scope, even in case of exceptions
+      std::lock_guard<std::mutex> lock(device_domain_mutex);
+      // double check locking
+      if (domain.twiddles) return CHK_LAST(); // another thread is already initializing the domain
+
       bool found_logn = false;
       S omega = primitive_root;
       unsigned omegas_count = S::get_omegas_count();
@@ -590,8 +607,8 @@ namespace ntt {
         coset_index, stream));
     } else {
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
-        d_input, d_output, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, size,
-        domain.max_log_size, batch_size, is_inverse, config.ordering, coset, coset_index, stream));
+        d_input, d_output, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, size, domain.max_log_size,
+        batch_size, is_inverse, config.ordering, coset, coset_index, stream));
     }
 
     if (!are_outputs_on_device)

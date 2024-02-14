@@ -295,6 +295,7 @@ macro_rules! impl_ntt_tests {
 
         #[test]
         fn test_ntt_device_async() {
+            // init_domain is in this test is performed per-device
             check_ntt_device_async::<$field>()
         }
     };
