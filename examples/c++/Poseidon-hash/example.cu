@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iostream>
 
-// select the curve (only 2 available so far)
+// select the curve
 #define CURVE_ID 2
 // include Poseidon template
 #include "appUtils/poseidon/poseidon.cu"
@@ -121,7 +121,6 @@ int main(int argc, char* argv[])
   poseidon_hash<curve_config::scalar_t, data_arity+1>(data, &tree[tree_index(leaf_level, 0)], tree_width, constants, config);
 
   std::cout << "3. Building Merkle tree" << std::endl;
-  // Poseidon<BLS12_381::scalar_t> tree_poseidon(tree_arity, stream);
   PoseidonConstants<scalar_t> tree_constants;
   init_optimized_poseidon_constants<scalar_t>(tree_arity, ctx, &tree_constants);
   PoseidonConfig tree_config = default_poseidon_config<scalar_t>(tree_arity+1);
