@@ -133,8 +133,6 @@ pub trait NTT<F: FieldImpl> {
         output: &mut HostOrDeviceSlice<F>,
     ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
-    #[deprecated = "Use NTTConfig::default instead"]
-    fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -236,11 +234,6 @@ macro_rules! impl_ntt {
 
             fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
                 unsafe { $field_prefix_ident::initialize_ntt_domain(primitive_root, ctx).wrap() }
-            }
-
-            #[deprecated = "use NTTConfig::default() instead"]
-            fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                NTTConfig::<$field>::default()
             }
         }
     };
