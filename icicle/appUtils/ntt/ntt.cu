@@ -366,7 +366,6 @@ namespace ntt {
     // Mutex for protecting access to the domain/device container array
     static inline std::mutex device_domain_mutex;
     // The domain-per-device container - assumption is InitDomain is called once per device per program.
-    static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
 
     int max_size = 0;
     int max_log_size = 0;
@@ -387,11 +386,14 @@ namespace ntt {
   };
 
   template <typename S>
+  static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
+
+  template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
 
-    Domain<S>& domain = Domain<S>::domains_for_devices[ctx.device_id];
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
 
     // only generate twiddles if they haven't been generated yet
     // please note that this offers just basic thread-safety,
@@ -543,7 +545,7 @@ namespace ntt {
   {
     CHK_INIT_IF_RETURN();
 
-    Domain<S>& domain = Domain<S>::domains_for_devices[config.ctx.device_id];
+    Domain<S>& domain = domains_for_devices<S>[config.ctx.device_id];
 
     if (size > domain.max_size) {
       std::ostringstream oss;
