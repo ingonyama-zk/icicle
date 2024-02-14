@@ -1,6 +1,5 @@
-use super::{msm, MSM};
 use crate::curve::{Affine, Curve, Projective};
-use crate::msm::MSMConfig;
+use crate::msm::{msm, MSMConfig, MSM};
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::device::{get_device_count, set_device};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
