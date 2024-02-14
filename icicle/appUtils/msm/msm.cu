@@ -38,6 +38,8 @@ namespace msm {
       if (tid < n) inout[tid] = (inout[tid] + factor - 1) / factor;
     }
 
+    // a kernel that writes to bucket_indices which enables large bucket accumulation to happen afterwards.
+    // specifically we map thread indices to buckets which said threads will handle in accumulation. 
     template <typename P>
     __global__ void initialize_large_bucket_indices(
       unsigned* sorted_bucket_sizes_sum,
@@ -52,10 +54,13 @@ namespace msm {
       unsigned start = (sorted_bucket_sizes_sum[tid] + nof_pts_per_thread - 1) / nof_pts_per_thread + tid;
       unsigned end = (sorted_bucket_sizes_sum[tid + 1] + nof_pts_per_thread - 1) / nof_pts_per_thread + tid + 1;
       for (unsigned i = start; i < end; i++) {
+        // this just concatenates two pieces of data - large bucket index and (i - start)
         bucket_indices[i] = tid | ((i - start) << log_nof_large_buckets);
       }
     }
 
+    // this function provides a single step of reduction across buckets sizes of
+    // which are given by large_bucket_sizes pointer
     template <typename P>
     __global__ void sum_reduction_variable_size_kernel(
       P* v,
@@ -86,10 +91,14 @@ namespace msm {
       const int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid >= num_of_threads) { return; }
 
-      const int shifted_tid = write_phase ? tid : tid + (tid + step - 1) / (step - 1);
+      // we need shifted tid because we don't want to be reducing into zero buckets, this allows to skip them.
+      // for write_phase==1, the read pattern is different so we don't skip over anything.  
+      const int shifted_tid = write_phase ? tid : tid + (tid + step) / step;
       const int jump = block_size / 2;
       const int block_id = shifted_tid / jump;
-      const int shifted_block_id = write_phase ? block_id + (block_id + step - 1) / (step - 1) : block_id;
+      // here the reason for shifting is the same as for shifted_tid but we skip over entire blocks which happens
+      // only for write_phase=1 because of its read pattern.
+      const int shifted_block_id = write_phase ? block_id + (block_id + step) / step : block_id;
       const int block_tid = shifted_tid % jump;
       const unsigned read_ind = block_size * shifted_block_id + block_tid;
       const unsigned write_ind = jump * shifted_block_id + block_tid;
@@ -459,6 +468,7 @@ namespace msm {
 #ifdef SIGNED_DIG
       const unsigned nof_buckets = nof_bms_per_msm * ((1 << (c - 1)) + 1); // signed digits
 #else
+      // minus nof_bms_per_msm because zero bucket is not included in each bucket module
       const unsigned nof_buckets = (nof_bms_per_msm << c) - nof_bms_per_msm;
 #endif
       const unsigned total_nof_buckets = nof_buckets * batch_size;
@@ -467,6 +477,7 @@ namespace msm {
       unsigned* single_bucket_indices;
       unsigned* bucket_sizes;
       unsigned* nof_buckets_to_compute;
+      // +1 here and in other places because there still is zero index corresponding to zero bucket at this point
       CHK_IF_RETURN(cudaMallocAsync(&single_bucket_indices, sizeof(unsigned) * (total_nof_buckets + 1), stream));
       CHK_IF_RETURN(cudaMallocAsync(&bucket_sizes, sizeof(unsigned) * (total_nof_buckets + 1), stream));
       CHK_IF_RETURN(cudaMallocAsync(&nof_buckets_to_compute, sizeof(unsigned), stream));
@@ -532,6 +543,7 @@ namespace msm {
       unsigned smallest_bucket_index;
       CHK_IF_RETURN(cudaMemcpyAsync(
         &smallest_bucket_index, single_bucket_indices, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
+      // maybe zero bucket is empty after all? in this case zero_bucket_offset is set to 0
       unsigned zero_bucket_offset = (smallest_bucket_index == 0) ? 1 : 0;
 
       // sort by bucket sizes
@@ -539,7 +551,7 @@ namespace msm {
       CHK_IF_RETURN(cudaMemcpyAsync(
         &h_nof_buckets_to_compute, nof_buckets_to_compute, sizeof(unsigned), cudaMemcpyDeviceToHost, stream));
       CHK_IF_RETURN(cudaFreeAsync(nof_buckets_to_compute, stream));
-      h_nof_buckets_to_compute = h_nof_buckets_to_compute - zero_bucket_offset;
+      h_nof_buckets_to_compute -= zero_bucket_offset;
 
       unsigned* sorted_bucket_sizes;
       CHK_IF_RETURN(cudaMallocAsync(&sorted_bucket_sizes, sizeof(unsigned) * h_nof_buckets_to_compute, stream));
@@ -579,6 +591,7 @@ namespace msm {
 
       // find large buckets
       unsigned average_bucket_size = single_msm_size / (1 << c);
+      // how large a bucket must be to qualify as a "large bucket"
       unsigned bucket_th = large_bucket_factor * average_bucket_size;
       unsigned* nof_large_buckets;
       CHK_IF_RETURN(cudaMallocAsync(&nof_large_buckets, sizeof(unsigned), stream));
@@ -606,6 +619,7 @@ namespace msm {
 
       cudaStream_t stream_large_buckets;
       cudaEvent_t event_large_buckets_accumulated;
+      // this is where handling of large buckets happens (if there are any)
       if (h_nof_large_buckets > 0 && bucket_th > 0) {
         CHK_IF_RETURN(cudaStreamCreate(&stream_large_buckets));
         CHK_IF_RETURN(cudaEventCreateWithFlags(&event_large_buckets_accumulated, cudaEventDisableTiming));
@@ -633,8 +647,10 @@ namespace msm {
         CHK_IF_RETURN(cudaMemcpyAsync(
           &h_largest_bucket, sorted_bucket_sizes, sizeof(unsigned), cudaMemcpyDeviceToHost, stream_large_buckets));
 
+        // the number of threads for large buckets has an extra h_nof_large_buckets term to account for bucket sizes
+        // unevenly divisible by average_bucket_size. there are similar corrections elsewhere when accessing large buckets
         unsigned large_buckets_nof_threads =
-          h_nof_large_buckets + (h_nof_pts_in_large_buckets + average_bucket_size - 1) / average_bucket_size;
+          (h_nof_pts_in_large_buckets + average_bucket_size - 1) / average_bucket_size + h_nof_large_buckets;
         unsigned log_nof_large_buckets = (unsigned)ceil(log2(h_nof_large_buckets));
         unsigned* large_bucket_indices;
         CHK_IF_RETURN(cudaMallocAsync(&large_bucket_indices, sizeof(unsigned) * large_buckets_nof_threads, stream));
@@ -655,6 +671,7 @@ namespace msm {
 
         NUM_THREADS = min(MAX_TH, h_nof_large_buckets);
         NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
+        // normalization is needed to update buckets sizes and offsets due to reduction that already took place
         normalize_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           sorted_bucket_sizes_sum, average_bucket_size, h_nof_large_buckets);
         // reduce
@@ -766,12 +783,12 @@ namespace msm {
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter ? source_buckets : temp_buckets1, is_last_iter ? target_buckets : temp_buckets1,
                 1 << (source_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 0 /*=write_phase*/,
-                1 << target_bits_count, nof_threads);
+                (1 << target_bits_count) - 1, nof_threads);
 
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter ? source_buckets : temp_buckets2, is_last_iter ? target_buckets : temp_buckets2,
                 1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 /*=write_phase*/,
-                1 << target_bits_count, nof_threads);
+                (1 << target_bits_count) - 1, nof_threads);
             }
           }
           if (target_bits_count == 1) {

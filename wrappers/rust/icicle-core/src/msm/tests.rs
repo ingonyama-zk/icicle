@@ -117,6 +117,7 @@ where
             cfg.ctx
                 .stream = &stream;
             cfg.is_async = true;
+            cfg.large_bucket_factor = 2;
             msm(&scalars_h, &points_h, &cfg, &mut msm_results_1).unwrap();
             msm(&scalars_h, &points_d, &cfg, &mut msm_results_2).unwrap();
 
