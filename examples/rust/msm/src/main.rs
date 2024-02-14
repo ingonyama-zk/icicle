@@ -91,8 +91,8 @@ fn main() {
         let mut g2_msm_results: HostOrDeviceSlice<'_, G2Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream = CudaStream::create().unwrap();
         let g2_stream = CudaStream::create().unwrap();
-        let mut cfg = msm::get_default_msm_config::<CurveCfg>();
-        let mut g2_cfg = msm::get_default_msm_config::<G2CurveCfg>();
+        let mut cfg = msm::MSMConfig::default();
+        let mut g2_cfg = msm::MSMConfig::default();
         cfg.ctx.stream = &stream;
         g2_cfg.ctx.stream = &g2_stream;
         cfg.is_async = true;
@@ -101,7 +101,7 @@ fn main() {
         println!("Configuring bls12377 MSM...");
         let mut msm_results_bls12377: HostOrDeviceSlice<'_, BLS12377G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream_bls12377 = CudaStream::create().unwrap();
-        let mut cfg_bls12377 = msm::get_default_msm_config::<BLS12377CurveCfg>();
+        let mut cfg_bls12377 = msm::MSMConfig::default();
         cfg_bls12377.ctx.stream = &stream_bls12377;
         cfg_bls12377.is_async = true;
 

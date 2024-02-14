@@ -1,5 +1,6 @@
-use super::{get_default_msm_config, msm, MSM};
+use super::{msm, MSM};
 use crate::curve::{Affine, Curve, Projective};
+use crate::msm::MSMConfig;
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::device::{get_device_count, set_device};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
@@ -56,7 +57,7 @@ where
                     .copy_from_host_async(&scalars_mont, &stream)
                     .unwrap();
 
-                let mut cfg = get_default_msm_config::<C>();
+                let mut cfg = MSMConfig::default_for_device(device_id);
                 cfg.ctx
                     .stream = &stream;
                 cfg.is_async = true;
@@ -119,7 +120,7 @@ where
                 .copy_from_host_async(&points_cloned, &stream)
                 .unwrap();
 
-            let mut cfg = get_default_msm_config::<C>();
+            let mut cfg = MSMConfig::default();
             cfg.ctx
                 .stream = &stream;
             cfg.is_async = true;
@@ -196,7 +197,7 @@ where
 
             let mut msm_results = HostOrDeviceSlice::on_host(vec![Projective::<C>::zero(); batch_size]);
 
-            let mut cfg = get_default_msm_config::<C>();
+            let mut cfg = MSMConfig::default();
             if test_size < test_threshold {
                 cfg.bitsize = 1;
             }

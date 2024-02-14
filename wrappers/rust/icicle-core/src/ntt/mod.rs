@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
@@ -91,25 +91,11 @@ pub struct NTTConfig<'a, S> {
 
 impl<'a, S: FieldImpl> Default for NTTConfig<'a, S> {
     fn default() -> Self {
-        NTTConfig {
-            ctx: DeviceContext::default(),
-            coset_gen: S::one(),
-            batch_size: 1,
-            ordering: Ordering::kNN,
-            are_inputs_on_device: false,
-            are_outputs_on_device: false,
-            is_async: false,
-            ntt_algorithm: NttAlgorithm::Auto,
-        }
+        Self::default_for_device(DEFAULT_DEVICE_ID)
     }
 }
 
 impl<'a, S: FieldImpl> NTTConfig<'a, S> {
-    #[deprecated = "Use NTTConfig::default instead"]
-    pub fn default_config() -> Self {
-        NTTConfig::default()
-    }
-
     pub fn default_for_device(device_id: usize) -> Self {
         NTTConfig {
             ctx: DeviceContext::default_for_device(device_id),
