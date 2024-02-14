@@ -19,7 +19,7 @@ pub struct DeviceContext<'a> {
     pub mempool: CudaMemPool, // Assuming the type is provided by a CUDA binding crate
 }
 
-impl Default for DeviceContext<'_>{
+impl Default for DeviceContext<'_> {
     fn default() -> Self {
         Self::default_for_device(DEFAULT_DEVICE_ID)
     }
