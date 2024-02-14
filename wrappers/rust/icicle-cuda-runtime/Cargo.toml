@@ -2,6 +2,7 @@
 name = "icicle-cuda-runtime"
 version = "1.3.0"
 edition = "2021"
+license = "MIT License"
 authors = [ "Ingonyama" ]
 description = "Ingonyama's Rust wrapper of CUDA runtime"
 homepage = "https://www.ingonyama.com"
