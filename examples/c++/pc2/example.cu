@@ -68,9 +68,11 @@ int main(int argc, char* argv[])
     checkCudaError(err);
 
     std::cout << "Generating random inputs" << std::endl;
-    scalar_t::RandHostMany(layers, size_col /* *size_row */);
-    for (unsigned i = size_col; i < size_col*size_partition /* size_raw */; i++) {
-        layers[i] = scalar_t::one();
+    // scalar_t::RandHostMany(layers, size_col /* *size_row */);
+    scalar_t s = scalar_t::zero();
+    for (unsigned i = 0; i < size_col*size_partition /* size_raw */; i++) {
+        layers[i] = s;
+        s = s + scalar_t::one();
     }
 
     std::cout << "Moving inputs to device" << std::endl;
@@ -90,8 +92,10 @@ int main(int argc, char* argv[])
         // while debuging, use the same inputs for different partitions
         START_TIMER(hash_partition);
         err = poseidon_hash<curve_config::scalar_t, size_col+1>(layers_d, column_hash_d, size_partition, column_constants, column_config);
-        END_TIMER(hash_partition, "Hash partition");
         checkCudaError(err);
+        END_TIMER(hash_partition, "Hash partition");
+        cudaMemcpy(column_hash, column_hash_d, sizeof(scalar_t) * size_partition, cudaMemcpyDeviceToHost);
+        std::cout << "First 10 hashes: " << column_hash[0] << ", " << column_hash[1] << std::endl;
     }
     free(layers);
     cudaFree(layers_d);
