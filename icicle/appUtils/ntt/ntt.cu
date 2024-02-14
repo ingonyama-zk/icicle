@@ -353,9 +353,6 @@ namespace ntt {
 
   } // namespace
 
-  // Mutex for protecting access to the domain/device container array
-  std::mutex device_domain_mutex;
-
   /**
    * @struct Domain
    * Struct containing information about the domain on which (i)NTT is evaluated i.e. twiddle factors.
@@ -366,8 +363,10 @@ namespace ntt {
   template <typename S>
   class Domain
   {
+    // Mutex for protecting access to the domain/device container array
+    static inline std::mutex device_domain_mutex;
     // The domain-per-device container - assumption is InitDomain is called once per device per program.
-    static Domain<S> domains_for_devices[device_context::MAX_DEVICES];
+    static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
 
     int max_size = 0;
     int max_log_size = 0;
@@ -388,9 +387,6 @@ namespace ntt {
   };
 
   template <typename S>
-  Domain<S> Domain<S>::domains_for_devices[device_context::MAX_DEVICES] = {};
-
-  template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
@@ -403,7 +399,7 @@ namespace ntt {
     // to be initialized once per device per program lifetime
     if (!domain.twiddles) {
       // Mutex is automatically released when lock goes out of scope, even in case of exceptions
-      std::lock_guard<std::mutex> lock(device_domain_mutex);
+      std::lock_guard<std::mutex> lock(Domain<S>::device_domain_mutex);
       // double check locking
       if (domain.twiddles) return CHK_LAST(); // another thread is already initializing the domain
 
