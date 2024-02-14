@@ -528,16 +528,18 @@ namespace ntt {
     CHK_INIT_IF_RETURN();
 
     if (size > Domain<S>::max_size) {
-      std::cerr << "[ERROR] NTT size=" << size
-                << " is too large for the domain. Consider generating your domain with a higher order root of unity.";
-      return cudaErrorInvalidValue;
+      std::ostringstream oss;
+      oss << "NTT size=" << size
+          << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
     }
 
     int logn = int(log2(size));
     const bool is_size_power_of_two = size == (1 << logn);
     if (!is_size_power_of_two) {
-      std::cerr << "[ERROR] NTT size=" << size << " is not supported since it is not a power of two.";
-      return cudaErrorInvalidValue;
+      std::ostringstream oss;
+      oss << "NTT size=" << size << " is not supported since it is not a power of two.\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
     }
 
     cudaStream_t& stream = config.ctx.stream;
