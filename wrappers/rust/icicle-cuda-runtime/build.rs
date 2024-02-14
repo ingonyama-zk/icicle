@@ -12,6 +12,9 @@ fn cuda_include_path() -> &'static str {
     {
         "/usr/local/cuda/include"
     }
+
+    // Fallback or default path if none of the above conditions are met
+    panic!("Unsupported operating system for CUDA paths");
 }
 
 fn cuda_lib_path() -> &'static str {
@@ -24,6 +27,8 @@ fn cuda_lib_path() -> &'static str {
     {
         "/usr/local/cuda/lib64"
     }
+
+    panic!("Unsupported operating system for CUDA paths");
 }
 
 fn main() {
