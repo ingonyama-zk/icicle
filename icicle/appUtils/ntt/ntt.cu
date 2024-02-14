@@ -390,12 +390,6 @@ namespace ntt {
   template <typename S>
   Domain<S> Domain<S>::domains_for_devices[device_context::MAX_DEVICES] = {};
 
-  /**
-   * Initializes the domain for the given device with the given primitive root of unity.
-   * @param primitive_root The primitive root of unity for the domain.
-   * @param ctx The device context.
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
   template <typename S>
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
   {
@@ -404,7 +398,7 @@ namespace ntt {
     Domain<S>& domain = Domain<S>::domains_for_devices[ctx.device_id];
 
     // only generate twiddles if they haven't been generated yet
-    // please note that this assumes just basic thread-safety,
+    // please note that this offers just basic thread-safety,
     // it's assumed a singleton (non-enforced) that is supposed
     // to be initialized once per device per program lifetime
     if (!domain.twiddles) {
