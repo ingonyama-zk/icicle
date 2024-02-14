@@ -17,6 +17,10 @@ on:
       - main
       - dev
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:  
   test-examples:
     runs-on: [self-hosted, Linux, X64, icicle] # ubuntu-latest
