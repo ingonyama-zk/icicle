@@ -2,7 +2,7 @@
 pub mod tests;
 
 use icicle_cuda_runtime::{
-    device_context::{get_default_device_context, DeviceContext},
+    device_context::{DeviceContext, DEFAULT_DEVICE_ID},
     memory::HostOrDeviceSlice,
 };
 
@@ -60,9 +60,14 @@ pub struct PoseidonConfig<'a> {
 
 impl<'a> Default for PoseidonConfig<'a> {
     fn default() -> Self {
-        let ctx = get_default_device_context();
+        Self::default_for_device(DEFAULT_DEVICE_ID)
+    }
+}
+
+impl<'a> PoseidonConfig<'a> {
+    pub fn default_for_device(device_id: usize) -> Self {
         Self {
-            ctx,
+            ctx: DeviceContext::default_for_device(device_id),
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             input_is_a_state: false,
