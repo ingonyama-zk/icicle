@@ -10,7 +10,10 @@ use rayon::iter::ParallelIterator;
 pub use icicle_cuda_runtime::device_context::get_default_device_context;
 
 use crate::{
-    ntt::{get_default_ntt_config, get_default_ntt_config_for_device, initialize_domain, ntt, NTTDir, Ordering},
+    ntt::{
+        get_default_ntt_config, get_default_ntt_config_for_device, initialize_domain, ntt, NTTDir, NttAlgorithm,
+        Ordering,
+    },
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
@@ -67,23 +70,26 @@ where
         let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const [F]) };
         let scalars_mont_h = HostOrDeviceSlice::on_host(scalars_mont.to_vec());
 
-        let config = get_default_ntt_config();
-        let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
-        ntt(&scalars_mont_h, NTTDir::kForward, &config, &mut ntt_result).unwrap();
-        assert_ne!(ntt_result.as_slice(), scalars_mont);
+        let mut config = get_default_ntt_config();
+        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+            config.ntt_algorithm = alg;
+            let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
+            ntt(&scalars_mont_h, NTTDir::kForward, &config, &mut ntt_result).unwrap();
+            assert_ne!(ntt_result.as_slice(), scalars_mont);
 
-        let mut ark_ntt_result = ark_scalars.clone();
-        ark_domain.fft_in_place(&mut ark_ntt_result);
-        assert_ne!(ark_ntt_result, ark_scalars);
+            let mut ark_ntt_result = ark_scalars.clone();
+            ark_domain.fft_in_place(&mut ark_ntt_result);
+            assert_ne!(ark_ntt_result, ark_scalars);
 
-        let ntt_result_as_ark =
-            unsafe { &*(ntt_result.as_slice() as *const _ as *const [<F as ArkConvertible>::ArkEquivalent]) };
-        assert_eq!(ark_ntt_result, ntt_result_as_ark);
+            let ntt_result_as_ark =
+                unsafe { &*(ntt_result.as_slice() as *const _ as *const [<F as ArkConvertible>::ArkEquivalent]) };
+            assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
-        let mut intt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
-        ntt(&ntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
+            let mut intt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
+            ntt(&ntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
 
-        assert_eq!(intt_result.as_slice(), scalars_mont);
+            assert_eq!(intt_result.as_slice(), scalars_mont);
+        }
     }
 }
 
@@ -109,55 +115,58 @@ where
             .map(|v| v.to_ark())
             .collect::<Vec<F::ArkEquivalent>>();
 
-        let mut config = get_default_ntt_config();
-        config.ordering = Ordering::kNR;
-        let mut ntt_result_1 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
-        let mut ntt_result_2 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
-        ntt(&scalars_h, NTTDir::kForward, &config, &mut ntt_result_1).unwrap();
-        assert_ne!(*ntt_result_1.as_slice(), scalars);
-        config.coset_gen = F::from_ark(test_size_rou);
-        ntt(&scalars_h, NTTDir::kForward, &config, &mut ntt_result_2).unwrap();
-        let mut ntt_large_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
-        // back to non-coset NTT
-        config.coset_gen = F::one();
-        scalars.resize(test_size, F::zero());
-        ntt(
-            &HostOrDeviceSlice::on_host(scalars.clone()),
-            NTTDir::kForward,
-            &config,
-            &mut ntt_large_result,
-        )
-        .unwrap();
-        assert_eq!(*ntt_result_1.as_slice(), ntt_large_result.as_slice()[..small_size]);
-        assert_eq!(*ntt_result_2.as_slice(), ntt_large_result.as_slice()[small_size..]);
+        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+            let mut config = get_default_ntt_config();
+            config.ordering = Ordering::kNR;
+            config.ntt_algorithm = alg;
+            let mut ntt_result_1 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
+            let mut ntt_result_2 = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
+            ntt(&scalars_h, NTTDir::kForward, &config, &mut ntt_result_1).unwrap();
+            assert_ne!(*ntt_result_1.as_slice(), scalars);
+            config.coset_gen = F::from_ark(test_size_rou);
+            ntt(&scalars_h, NTTDir::kForward, &config, &mut ntt_result_2).unwrap();
+            let mut ntt_large_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
+            // back to non-coset NTT
+            config.coset_gen = F::one();
+            scalars.resize(test_size, F::zero());
+            ntt(
+                &HostOrDeviceSlice::on_host(scalars.clone()),
+                NTTDir::kForward,
+                &config,
+                &mut ntt_large_result,
+            )
+            .unwrap();
+            assert_eq!(*ntt_result_1.as_slice(), ntt_large_result.as_slice()[..small_size]);
+            assert_eq!(*ntt_result_2.as_slice(), ntt_large_result.as_slice()[small_size..]);
 
-        let mut ark_large_scalars = ark_scalars.clone();
-        ark_small_domain.fft_in_place(&mut ark_scalars);
-        let ntt_result_as_ark = ntt_large_result
-            .as_slice()
-            .iter()
-            .map(|p| p.to_ark())
-            .collect::<Vec<F::ArkEquivalent>>();
-        assert_eq!(
-            ark_scalars[..small_size],
-            list_to_reverse_bit_order(&ntt_result_as_ark[small_size..])
-        );
-        ark_large_domain.fft_in_place(&mut ark_large_scalars);
-        assert_eq!(ark_large_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
+            let mut ark_large_scalars = ark_scalars.clone();
+            ark_small_domain.fft_in_place(&mut ark_scalars);
+            let ntt_result_as_ark = ntt_large_result
+                .as_slice()
+                .iter()
+                .map(|p| p.to_ark())
+                .collect::<Vec<F::ArkEquivalent>>();
+            assert_eq!(
+                ark_scalars[..small_size],
+                list_to_reverse_bit_order(&ntt_result_as_ark[small_size..])
+            );
+            ark_large_domain.fft_in_place(&mut ark_large_scalars);
+            assert_eq!(ark_large_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
 
-        config.coset_gen = F::from_ark(test_size_rou);
-        config.ordering = Ordering::kRN;
-        let mut intt_result = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
-        ntt(&ntt_result_2, NTTDir::kInverse, &config, &mut intt_result).unwrap();
-        assert_eq!(*intt_result.as_slice(), scalars[..small_size]);
+            config.coset_gen = F::from_ark(test_size_rou);
+            config.ordering = Ordering::kRN;
+            let mut intt_result = HostOrDeviceSlice::on_host(vec![F::zero(); small_size]);
+            ntt(&ntt_result_2, NTTDir::kInverse, &config, &mut intt_result).unwrap();
+            assert_eq!(*intt_result.as_slice(), scalars[..small_size]);
 
-        ark_small_domain.ifft_in_place(&mut ark_scalars);
-        let intt_result_as_ark = intt_result
-            .as_slice()
-            .iter()
-            .map(|p| p.to_ark())
-            .collect::<Vec<F::ArkEquivalent>>();
-        assert_eq!(ark_scalars[..small_size], intt_result_as_ark);
+            ark_small_domain.ifft_in_place(&mut ark_scalars);
+            let intt_result_as_ark = intt_result
+                .as_slice()
+                .iter()
+                .map(|p| p.to_ark())
+                .collect::<Vec<F::ArkEquivalent>>();
+            assert_eq!(ark_scalars[..small_size], intt_result_as_ark);
+        }
     }
 }
 
@@ -189,31 +198,34 @@ where
                 .collect::<Vec<F::ArkEquivalent>>();
 
             let mut config = get_default_ntt_config();
-            config.ordering = Ordering::kNR;
             config.coset_gen = F::from_ark(coset_gen);
-            let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
-            ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
-            assert_ne!(scalars.as_slice(), ntt_result.as_slice());
+            for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+                config.ordering = Ordering::kNR;
+                config.ntt_algorithm = alg;
+                let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
+                ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
+                assert_ne!(scalars.as_slice(), ntt_result.as_slice());
 
-            let ark_scalars_copy = ark_scalars.clone();
-            ark_domain.fft_in_place(&mut ark_scalars);
-            let ntt_result_as_ark = ntt_result
-                .as_slice()
-                .iter()
-                .map(|p| p.to_ark())
-                .collect::<Vec<F::ArkEquivalent>>();
-            assert_eq!(ark_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
-            ark_domain.ifft_in_place(&mut ark_scalars);
-            assert_eq!(ark_scalars, ark_scalars_copy);
+                let ark_scalars_copy = ark_scalars.clone();
+                ark_domain.fft_in_place(&mut ark_scalars);
+                let ntt_result_as_ark = ntt_result
+                    .as_slice()
+                    .iter()
+                    .map(|p| p.to_ark())
+                    .collect::<Vec<F::ArkEquivalent>>();
+                assert_eq!(ark_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
+                ark_domain.ifft_in_place(&mut ark_scalars);
+                assert_eq!(ark_scalars, ark_scalars_copy);
 
-            config.ordering = Ordering::kRN;
-            ntt(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
-            let ntt_result_as_ark = scalars
-                .as_slice()
-                .iter()
-                .map(|p| p.to_ark())
-                .collect::<Vec<F::ArkEquivalent>>();
-            assert_eq!(ark_scalars, ntt_result_as_ark);
+                config.ordering = Ordering::kRN;
+                ntt(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
+                let ntt_result_as_ark = scalars
+                    .as_slice()
+                    .iter()
+                    .map(|p| p.to_ark())
+                    .collect::<Vec<F::ArkEquivalent>>();
+                assert_eq!(ark_scalars, ntt_result_as_ark);
+            }
         }
     }
 }
@@ -232,26 +244,37 @@ where
 
             for coset_gen in coset_generators {
                 for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
-                    for ordering in [Ordering::kNN, Ordering::kNR, Ordering::kRN, Ordering::kRR] {
+                    for ordering in [
+                        Ordering::kNN,
+                        Ordering::kNR,
+                        Ordering::kRN,
+                        Ordering::kRR,
+                        Ordering::kNM,
+                        Ordering::kMN,
+                    ] {
                         config.coset_gen = coset_gen;
                         config.ordering = ordering;
-                        config.batch_size = batch_size as i32;
-                        let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
-                        ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
-                        config.batch_size = 1;
-                        let mut one_ntt_result = HostOrDeviceSlice::on_host(vec![F::one(); test_size]);
-                        for i in 0..batch_size {
-                            ntt(
-                                &HostOrDeviceSlice::on_host(scalars[i * test_size..(i + 1) * test_size].to_vec()),
-                                is_inverse,
-                                &config,
-                                &mut one_ntt_result,
-                            )
-                            .unwrap();
-                            assert_eq!(
-                                &batch_ntt_result[i * test_size..(i + 1) * test_size],
-                                one_ntt_result.as_slice()
-                            );
+                        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+                            config.batch_size = batch_size as i32;
+                            config.ntt_algorithm = alg;
+                            let mut batch_ntt_result =
+                                HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
+                            ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
+                            config.batch_size = 1;
+                            let mut one_ntt_result = HostOrDeviceSlice::on_host(vec![F::one(); test_size]);
+                            for i in 0..batch_size {
+                                ntt(
+                                    &HostOrDeviceSlice::on_host(scalars[i * test_size..(i + 1) * test_size].to_vec()),
+                                    is_inverse,
+                                    &config,
+                                    &mut one_ntt_result,
+                                )
+                                .unwrap();
+                                assert_eq!(
+                                    batch_ntt_result[i * test_size..(i + 1) * test_size],
+                                    *one_ntt_result.as_slice()
+                                );
+                            }
                         }
                     }
                 }
@@ -301,22 +324,25 @@ where
                             config
                                 .ctx
                                 .stream = &stream;
-                            ntt(&scalars_d, NTTDir::kForward, &config, &mut ntt_out_d).unwrap();
-                            ntt(&ntt_out_d, NTTDir::kInverse, &config, &mut scalars_d).unwrap();
-                            let mut intt_result_h = vec![F::zero(); test_size * batch_size];
-                            scalars_d
-                                .copy_to_host_async(&mut intt_result_h, &stream)
-                                .unwrap();
-                            stream
-                                .synchronize()
-                                .unwrap();
-                            assert_eq!(scalars_h, intt_result_h);
-                            if coset_gen == F::one() {
-                                let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                                ntt_out_d
-                                    .copy_to_host(&mut ntt_result_h)
+                            for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+                                config.ntt_algorithm = alg;
+                                ntt(&scalars_d, NTTDir::kForward, &config, &mut ntt_out_d).unwrap();
+                                ntt(&ntt_out_d, NTTDir::kInverse, &config, &mut scalars_d).unwrap();
+                                let mut intt_result_h = vec![F::zero(); test_size * batch_size];
+                                scalars_d
+                                    .copy_to_host_async(&mut intt_result_h, &stream)
                                     .unwrap();
-                                assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
+                                stream
+                                    .synchronize()
+                                    .unwrap();
+                                assert_eq!(scalars_h, intt_result_h);
+                                if coset_gen == F::one() {
+                                    let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
+                                    ntt_out_d
+                                        .copy_to_host(&mut ntt_result_h)
+                                        .unwrap();
+                                    assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
+                                }
                             }
                         }
                     }
