@@ -11,6 +11,8 @@ public:
 
   static HOST_DEVICE_INLINE Affine neg(const Affine& point) { return {point.x, FF::neg(point.y)}; }
 
+  static HOST_DEVICE_INLINE Affine zero() { return {FF::zero(), FF::zero()}; }
+
   static HOST_DEVICE_INLINE Affine ToMontgomery(const Affine& point)
   {
     return {FF::ToMontgomery(point.x), FF::ToMontgomery(point.y)};

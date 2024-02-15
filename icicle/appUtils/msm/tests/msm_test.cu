@@ -196,7 +196,7 @@ int main()
   printf("No Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
   config.is_big_triangle = true;
   config.are_results_on_device = false;
-  // std::cout<<test_projective::to_affine(large_res[0])<<std::endl;
+  std::cout << test_projective::to_affine(large_res[0]) << std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
   msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res);
   // test_reduce_triangle(scalars);
