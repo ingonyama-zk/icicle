@@ -119,6 +119,7 @@ namespace poseidon {
   /**
    * Loads pre-calculated optimized constants, moves them to the device
    */
+  // Stas: I have an issue with the number of argumnets
   template <typename S>
   cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext& ctx, PoseidonConstants<S>* constants);
 

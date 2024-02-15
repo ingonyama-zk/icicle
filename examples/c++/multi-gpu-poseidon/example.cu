@@ -16,11 +16,9 @@ void setCudaDevice(const unsigned device_id) {
 }
 
 // function that a thread will execute
-void processData(const device_context::DeviceContext ctx, const std::vector<int>& inputData, std::vector<int>& outputData) {
-    // Simulate some processing
+void processData(device_context::DeviceContext ctx, const std::vector<int>& inputData, std::vector<int>& outputData) {
     PoseidonConstants<scalar_t> column_constants;
     int size_col = 11;
-    // init_optimized_poseidon_constants<scalar_t>(ctx, &column_constants);
     init_optimized_poseidon_constants<scalar_t>(size_col, ctx, &column_constants);
     PoseidonConfig column_config = default_poseidon_config<scalar_t>(size_col+1);
     column_config.are_inputs_on_device = true;
@@ -61,36 +59,33 @@ int main() {
     err = cudaStreamCreate(&stream1);
     checkCudaError(err);
 
-    device_context::DeviceContext ctx0 = device_context::DeviceContext{
-      (cudaStream_t&)stream0, // SP: simulate different device as stream
-      0,                             // device_id
-      0,                             // mempool
-    };
-    device_context::DeviceContext ctx1 = device_context::DeviceContext{
-      (cudaStream_t&)stream1, // SP: simulate different device as stream
-      0,                             // device_id
-      0,                             // mempool
-    };
+    device_context::DeviceContext ctx0 = device_context::get_default_device_context();
+    ctx0.device_id=0;
+    device_context::DeviceContext ctx1 = device_context::get_default_device_context();
+    ctx1.device_id=1;
+
+    
+    
 
     // Allocate and initialize memory for the layers
-    scalar_t* layers0 = static_cast<scalar_t*>(malloc(size_layers * sizeof(scalar_t)));
-    if (layers0 == nullptr) {
-        std::cerr << "Memory allocation for 'layers' failed." << std::endl;
-    }
-    scalar_t s = scalar_t::zero();
-    for (unsigned i = 0; i < size_col*size_partition ; i++) {
-        layers0[i] = s;
-        s = s + scalar_t::one();
-    }
-    scalar_t* layers1 = static_cast<scalar_t*>(malloc(size_layers * sizeof(scalar_t)));
-    if (layers1 == nullptr) {
-        std::cerr << "Memory allocation for 'layers' failed." << std::endl;
-    }
-    s = scalar_t::zero() + scalar_t::one();
-    for (unsigned i = 0; i < size_col*size_partition ; i++) {
-        layers1[i] = s;
-        s = s + scalar_t::one();
-    }
+    // scalar_t* layers0 = static_cast<scalar_t*>(malloc(size_layers * sizeof(scalar_t)));
+    // if (layers0 == nullptr) {
+    //     std::cerr << "Memory allocation for 'layers' failed." << std::endl;
+    // }
+    // scalar_t s = scalar_t::zero();
+    // for (unsigned i = 0; i < size_col*size_partition ; i++) {
+    //     layers0[i] = s;
+    //     s = s + scalar_t::one();
+    // }
+    // scalar_t* layers1 = static_cast<scalar_t*>(malloc(size_layers * sizeof(scalar_t)));
+    // if (layers1 == nullptr) {
+    //     std::cerr << "Memory allocation for 'layers' failed." << std::endl;
+    // }
+    // s = scalar_t::zero() + scalar_t::one();
+    // for (unsigned i = 0; i < size_col*size_partition ; i++) {
+    //     layers1[i] = s;
+    //     s = s + scalar_t::one();
+    // }
 
 
 
