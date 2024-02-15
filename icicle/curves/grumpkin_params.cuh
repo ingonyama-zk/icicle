@@ -39,10 +39,7 @@ namespace grumpkin {
                                                           0x7879462c, 0x666ea36f, 0x9a07df2f, 0x0e0a77c1};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x014afa37, 0xed84884a, 0x0278edf8, 0xeb202285,
                                                               0xb74492d9, 0xcf63e9cf, 0x59e5c639, 0x2e671571};
-    // i^2, the square of the imaginary unit for the extension field
-    static constexpr uint32_t i_squared = 1;
-    // true if i^2 is negative
-    static constexpr bool i_squared_is_negative = true;
+
   };
 
   struct fq_config {
