@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
+use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
@@ -89,11 +89,16 @@ pub struct NTTConfig<'a, S> {
     pub ntt_algorithm: NttAlgorithm,
 }
 
+impl<'a, S: FieldImpl> Default for NTTConfig<'a, S> {
+    fn default() -> Self {
+        Self::default_for_device(DEFAULT_DEVICE_ID)
+    }
+}
+
 impl<'a, S: FieldImpl> NTTConfig<'a, S> {
-    pub fn default_config() -> Self {
-        let ctx = get_default_device_context();
+    pub fn default_for_device(device_id: usize) -> Self {
         NTTConfig {
-            ctx,
+            ctx: DeviceContext::default_for_device(device_id),
             coset_gen: S::one(),
             batch_size: 1,
             ordering: Ordering::kNN,
@@ -114,7 +119,6 @@ pub trait NTT<F: FieldImpl> {
         output: &mut HostOrDeviceSlice<F>,
     ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
-    fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -169,15 +173,6 @@ where
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
 
-/// Returns [NTT config](NTTConfig) struct populated with default values.
-pub fn get_default_ntt_config<F>() -> NTTConfig<'static, F>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
-{
-    <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config()
-}
-
 #[macro_export]
 macro_rules! impl_ntt {
     (
@@ -187,7 +182,7 @@ macro_rules! impl_ntt {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir};
+            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "NTTCuda")]
@@ -226,10 +221,6 @@ macro_rules! impl_ntt {
             fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
                 unsafe { $field_prefix_ident::initialize_ntt_domain(primitive_root, ctx).wrap() }
             }
-
-            fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                NTTConfig::<$field>::default_config()
-            }
         }
     };
 }
@@ -244,31 +235,31 @@ macro_rules! impl_ntt_tests {
 
         #[test]
         fn test_ntt() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt::<$field>()
         }
 
         #[test]
         fn test_ntt_coset_from_subgroup() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_coset_from_subgroup::<$field>()
         }
 
         #[test]
         fn test_ntt_arbitrary_coset() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_arbitrary_coset::<$field>()
         }
 
         #[test]
         fn test_ntt_batch() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_batch::<$field>()
         }
 
         #[test]
         fn test_ntt_device_async() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            // init_domain is in this test is performed per-device
             check_ntt_device_async::<$field>()
         }
     };
