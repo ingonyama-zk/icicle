@@ -38,7 +38,7 @@ namespace msm {
     }
 
     // a kernel that writes to bucket_indices which enables large bucket accumulation to happen afterwards.
-    // specifically we map thread indices to buckets which said threads will handle in accumulation. 
+    // specifically we map thread indices to buckets which said threads will handle in accumulation.
     template <typename P>
     __global__ void initialize_large_bucket_indices(
       unsigned* sorted_bucket_sizes_sum,
@@ -91,7 +91,7 @@ namespace msm {
       if (tid >= num_of_threads) { return; }
 
       // we need shifted tid because we don't want to be reducing into zero buckets, this allows to skip them.
-      // for write_phase==1, the read pattern is different so we don't skip over anything.  
+      // for write_phase==1, the read pattern is different so we don't skip over anything.
       const int shifted_tid = write_phase ? tid : tid + (tid + step) / step;
       const int jump = block_size / 2;
       const int block_id = shifted_tid / jump;
@@ -647,7 +647,8 @@ namespace msm {
           &h_largest_bucket, sorted_bucket_sizes, sizeof(unsigned), cudaMemcpyDeviceToHost, stream_large_buckets));
 
         // the number of threads for large buckets has an extra h_nof_large_buckets term to account for bucket sizes
-        // unevenly divisible by average_bucket_size. there are similar corrections elsewhere when accessing large buckets
+        // unevenly divisible by average_bucket_size. there are similar corrections elsewhere when accessing large
+        // buckets
         unsigned large_buckets_nof_threads =
           (h_nof_pts_in_large_buckets + average_bucket_size - 1) / average_bucket_size + h_nof_large_buckets;
         unsigned log_nof_large_buckets = (unsigned)ceil(log2(h_nof_large_buckets));
