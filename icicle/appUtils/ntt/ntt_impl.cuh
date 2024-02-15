@@ -25,16 +25,11 @@ namespace ntt {
     S* basic_twiddles,
     int ntt_size,
     int max_logn,
-<<<<<<< HEAD
     int batch_size,
     bool is_inverse,
     Ordering ordering,
     S* arbitrary_coset,
     int coset_gen_index,
-=======
-    bool is_inverse,
-    Ordering ordering,
->>>>>>> main
     cudaStream_t cuda_stream);
 
 } // namespace ntt
