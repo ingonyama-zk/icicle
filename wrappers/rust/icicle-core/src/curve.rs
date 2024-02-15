@@ -290,7 +290,7 @@ macro_rules! impl_curve {
                         points.as_mut_ptr(),
                         points.len(),
                         is_into,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
+                        &DeviceContext::default() as *const _ as *const DeviceContext,
                     )
                 }
             }
@@ -304,7 +304,7 @@ macro_rules! impl_curve {
                         points.as_mut_ptr(),
                         points.len(),
                         is_into,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
+                        &DeviceContext::default() as *const _ as *const DeviceContext,
                     )
                 }
             }

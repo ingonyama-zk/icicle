@@ -80,7 +80,7 @@ namespace poseidon {
   using PKC = PoseidonKernelsConfiguration<T>;
 
   /**
-   * @struct NTTConfig
+   * @struct PoseidonConfig
    * Struct that encodes various Poseidon parameters.
    */
   struct PoseidonConfig {
