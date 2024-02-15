@@ -3,7 +3,6 @@
 
 #include "primitives/field.cuh"
 #include "primitives/projective.cuh"
-#include "utils/cuda_utils.cuh"
 #include <chrono>
 #include <iostream>
 #include <vector>
