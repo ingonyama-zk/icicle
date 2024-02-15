@@ -14,7 +14,7 @@ ark-poly = "0.4.0"
 ark-std = "0.4.0"
 ark-bn254 = { version = "0.4.0" }
 ark-bls12-377 = { version = "0.4.0" }
-clap = { version = "4.4.12", features = ["derive"] }
+clap = { version = "<=4.4.12", features = ["derive"] }
 
 [features]
 profile = []
