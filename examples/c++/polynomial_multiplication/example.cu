@@ -46,10 +46,17 @@ int main(int argc, char** argv)
 
   // init domain
   auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
+<<<<<<< HEAD
   const bool is_radix2_alg = (argc > 1) ? atoi(argv[1]) : false;
   ntt_config.ntt_algorithm = is_radix2_alg ? ntt::NttAlgorithm::Radix2 : ntt::NttAlgorithm::MixedRadix;
 
   const char* ntt_alg_str = is_radix2_alg ? "Radix-2" : "Mixed-Radix";
+=======
+  ntt_config.ordering = ntt::Ordering::kNN; // TODO: use NR for forward and RN for backward
+  ntt_config.is_force_radix2 = (argc > 1) ? atoi(argv[1]) : false;
+
+  const char* ntt_alg_str = ntt_config.is_force_radix2 ? "Radix-2" : "Mixed-Radix";
+>>>>>>> main
   std::cout << "Polynomial multiplication with " << ntt_alg_str << " NTT: ";
 
   CHK_IF_RETURN(cudaEventCreate(&start));
@@ -78,7 +85,10 @@ int main(int argc, char** argv)
       // (3) NTT for A,B from cpu to gpu
       ntt_config.are_inputs_on_device = false;
       ntt_config.are_outputs_on_device = true;
+<<<<<<< HEAD
       ntt_config.ordering = ntt::Ordering::kNM;
+=======
+>>>>>>> main
       CHK_IF_RETURN(ntt::NTT(CpuA.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuA));
       CHK_IF_RETURN(ntt::NTT(CpuB.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuB));
 
@@ -90,7 +100,10 @@ int main(int argc, char** argv)
       // (5) INTT (in place)
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
+<<<<<<< HEAD
       ntt_config.ordering = ntt::Ordering::kMN;
+=======
+>>>>>>> main
       CHK_IF_RETURN(ntt::NTT(MulGpu, NTT_SIZE, ntt::NTTDir::kInverse, ntt_config, MulGpu));
 
       CHK_IF_RETURN(cudaFreeAsync(GpuA, ntt_config.ctx.stream));
