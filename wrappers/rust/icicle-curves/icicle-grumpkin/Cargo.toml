@@ -10,14 +10,12 @@ repository = "https://github.com/ingonyama-zk/icicle"
 [dependencies]
 icicle-core = { path = "../../icicle-core" }
 icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
-ark-bn254 = { version = "0.4.0", optional = true }
-ark-grumpkin = { git = "https://github.com/arkworks-rs/curves.git", version = "0.4.0"}
+ark-grumpkin-test = { git = "https://github.com/nonam3e/ark-grumpkin-test.git", optional = true}
 
 [build-dependencies]
 cmake = "0.1.50"
 
 [dev-dependencies]
-ark-bn254 = "0.4.0"
 ark-std = "0.4.0"
 ark-ff = "0.4.0"
 ark-ec = "0.4.0"
@@ -27,4 +25,4 @@ icicle-grumpkin = { path = ".", features = ["arkworks"] }
 
 [features]
 default = []
-arkworks = ["ark-bn254", "icicle-core/arkworks"]
+arkworks = ["ark-grumpkin-test", "icicle-core/arkworks"]

@@ -1,5 +1,5 @@
 #[cfg(feature = "arkworks")]
-use ark_grumpkin::{Fq, Fr, GrumpkinConfig as ArkG1Config};
+use ark_grumpkin_test::{Fq, Fr, GrumpkinConfig as ArkG1Config};
 use icicle_core::curve::{Affine, Curve, Projective};
 use icicle_core::field::{Field, MontgomeryConvertibleField};
 use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
