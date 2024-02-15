@@ -87,9 +87,9 @@ namespace grumpkin {
 
   // G1 and G2 generators
   static constexpr storage<fq_config::limbs_count> g1_gen_x = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-  static constexpr storage<fq_config::limbs_count> g1_gen_y = {0x448c41d8, 0x11b2dff1, 0x21c77dc3, 0x23d3446f, 0x35dfafbb, 0xaa7b8cf4, 0x9dc25d68, 0x14b34cf6};
+  static constexpr storage<fq_config::limbs_count> g1_gen_y = {0x823f272c, 0x833fc48d, 0xf1181294, 0x2d270d45, 0x6a45d63, 0xcf135e75, 0x2, 0x0};
 
-  static constexpr storage<fq_config::limbs_count> weierstrass_b = {0x6000005a, 0xdd705602, 0xcb319311, 0x223fa97a, 0x877910c0, 0xcc388229, 0x2b724eaa, 0x03439463};
+  static constexpr storage<fq_config::limbs_count> weierstrass_b = {0xeffffff0, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
 }
 
 #endif
