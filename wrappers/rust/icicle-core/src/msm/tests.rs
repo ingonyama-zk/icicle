@@ -171,13 +171,9 @@ where
     let rng = &mut test_rng();
     for test_size in test_sizes {
         for batch_size in batch_sizes {
-            let mut points = generate_random_affine_points_with_zeroes(test_size * batch_size, 5);
+            let points = generate_random_affine_points_with_zeroes(test_size * batch_size, 100);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];
 
-            // add some zero points
-            for _ in 0..100 {
-                points[rng.gen_range(0..test_size * batch_size)] = Affine::<C>::zero();
-            }
             for _ in 0..(test_size * batch_size) {
                 scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::one();
             }

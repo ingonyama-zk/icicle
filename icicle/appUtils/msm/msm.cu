@@ -600,9 +600,9 @@ namespace msm {
       unsigned TOTAL_THREADS = 129000; // TODO: device dependent
       unsigned cutoff_run_length = max(2, h_nof_buckets_to_compute / TOTAL_THREADS);
       unsigned cutoff_nof_runs = (h_nof_buckets_to_compute + cutoff_run_length - 1) / cutoff_run_length;
-      NUM_THREADS = min(1 << 5, cutoff_nof_runs);
+      NUM_THREADS = 1 << 5;
       NUM_BLOCKS = (cutoff_nof_runs + NUM_THREADS - 1) / NUM_THREADS;
-      if (bucket_th > 0)
+      if (h_nof_buckets_to_compute > 0 && bucket_th > 0)
         find_cutoff_kernel<S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
           sorted_bucket_sizes, h_nof_buckets_to_compute, bucket_th, cutoff_run_length, nof_large_buckets);
       unsigned h_nof_large_buckets;
