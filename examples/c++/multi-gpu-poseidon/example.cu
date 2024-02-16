@@ -37,7 +37,7 @@ void threadPoseidon(device_context::DeviceContext ctx, unsigned size_partition, 
         false, // input_is_a_state
         false, // aligned
         false, // loop_state
-        true, // is_async
+        false, // is_async
         };
     cudaError_t err = poseidon_hash<scalar_t, size_col+1>(layers, column_hashes, (size_t) size_partition, *constants, column_config);
     checkCudaError(err);
@@ -102,6 +102,11 @@ int main() {
 
     PoseidonConstants<scalar_t> column_constants0, column_constants1;
     init_optimized_poseidon_constants<scalar_t>(size_col, ctx0, &column_constants0);
+    cudaError_t err_result =  CHK_STICKY(cudaSetDevice(ctx1.device_id));
+    if (err_result != cudaSuccess) {
+        std::cerr << "CUDA error: " << cudaGetErrorString(err_result) << std::endl;
+        return; 
+    }
     init_optimized_poseidon_constants<scalar_t>(size_col, ctx1, &column_constants1);
 
     std::cout << "Parallel execution of Poseidon threads" << std::endl;
