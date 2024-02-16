@@ -7,6 +7,7 @@
 // select the curve
 #define CURVE_ID 2
 #include "appUtils/poseidon/poseidon.cu"
+#include "utils/error_handler.cuh"
 
 using namespace poseidon;
 using namespace curve_config;
@@ -23,6 +24,12 @@ const int size_col = 11;
 
 // this function executes the Poseidon thread
 void threadPoseidon(device_context::DeviceContext ctx, unsigned size_partition, scalar_t * layers, scalar_t * column_hashes, PoseidonConstants<scalar_t> * constants) {
+    cudaError_t err_result =  CHK_STICKY(cudaSetDevice(ctx.device_id));
+    if (err_result != cudaSuccess) {
+        std::cerr << "CUDA error: " << cudaGetErrorString(err_result) << std::endl;
+        return; 
+    }
+    // CHK_IF_RETURN(); I can't use it in a standard thread function
     PoseidonConfig column_config = {
         ctx,   // ctx
         false, // are_inputes_on_device
@@ -30,7 +37,7 @@ void threadPoseidon(device_context::DeviceContext ctx, unsigned size_partition, 
         false, // input_is_a_state
         false, // aligned
         false, // loop_state
-        false, // is_async
+        true, // is_async
         };
     cudaError_t err = poseidon_hash<scalar_t, size_col+1>(layers, column_hashes, (size_t) size_partition, *constants, column_config);
     checkCudaError(err);
