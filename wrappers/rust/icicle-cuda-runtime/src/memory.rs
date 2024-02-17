@@ -79,7 +79,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
     }
 
     pub fn from_slice(slice: &'a mut [T]) -> Self {
-        Self::Device(slice)
+        Self::Device(slice, 0)
     }
 
     pub fn cuda_malloc(count: usize) -> CudaResult<Self> {
