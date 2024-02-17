@@ -54,7 +54,7 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
 }
 
 int main() {
-    const unsigned size_row = (1<<26);
+    const unsigned size_row = (1<<30);
     const unsigned nof_partitions = 64;
     const unsigned size_partition = size_row / nof_partitions;
     // layers is allocated only for one partition, need to resuse for different partitions
@@ -64,15 +64,23 @@ int main() {
     unsigned int deviceCount;
     nvmlDeviceGetCount(&deviceCount);
     std::cout << "Available GPUs: " << deviceCount << std::endl;
+
     for (unsigned int i = 0; i < deviceCount; ++i) {
         nvmlDevice_t device;
+        nvmlMemory_t memory;
         char name[NVML_DEVICE_NAME_BUFFER_SIZE];
         nvmlDeviceGetHandleByIndex(i, &device);
         nvmlDeviceGetName(device, name, NVML_DEVICE_NAME_BUFFER_SIZE);
-        std::cout << "Device ID: " << i << ", Type: " << name << std::endl;
+        nvmlDeviceGetMemoryInfo(device, &memory);
+        std::cout << "Device ID: " << i << ", Type: " << name << ", Memory Total/Free (MiB) " << memory.total/1024/1024 << "/"  << memory.free/1024/1024 << std::endl;
     }
 
+    const unsigned memory_partition = sizeof(scalar_t)*(size_col+1)*size_partition/1024/1024;
+    std::cout << "Required Memory (MiB) " << memory_partition << std::endl;
+
+    //===============================================================================
     // Key: multiple devices are supported by device context
+    //===============================================================================
 
     device_context::DeviceContext ctx0 = device_context::get_default_device_context();
     ctx0.device_id=0;
