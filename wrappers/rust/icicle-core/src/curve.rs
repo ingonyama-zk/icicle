@@ -5,6 +5,8 @@ use crate::traits::{FieldImpl, MontgomeryConvertible};
 use ark_ec::models::CurveConfig as ArkCurveConfig;
 #[cfg(feature = "arkworks")]
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
+#[cfg(feature = "arkworks")]
+use ark_ec::AffineRepr;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use std::fmt::Debug;
@@ -147,13 +149,17 @@ where
     type ArkEquivalent = ArkAffine<C::ArkSWConfig>;
 
     fn to_ark(&self) -> Self::ArkEquivalent {
-        let proj_x = self
-            .x
-            .to_ark();
-        let proj_y = self
-            .y
-            .to_ark();
-        Self::ArkEquivalent::new_unchecked(proj_x, proj_y)
+        if *self == Self::zero() {
+            Self::ArkEquivalent::zero()
+        } else {
+            let ark_x = self
+                .x
+                .to_ark();
+            let ark_y = self
+                .y
+                .to_ark();
+            Self::ArkEquivalent::new_unchecked(ark_x, ark_y)
+        }
     }
 
     fn from_ark(ark: Self::ArkEquivalent) -> Self {
@@ -284,7 +290,7 @@ macro_rules! impl_curve {
                         points.as_mut_ptr(),
                         points.len(),
                         is_into,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
+                        &DeviceContext::default() as *const _ as *const DeviceContext,
                     )
                 }
             }
@@ -298,7 +304,7 @@ macro_rules! impl_curve {
                         points.as_mut_ptr(),
                         points.len(),
                         is_into,
-                        &get_default_device_context() as *const _ as *const DeviceContext,
+                        &DeviceContext::default() as *const _ as *const DeviceContext,
                     )
                 }
             }

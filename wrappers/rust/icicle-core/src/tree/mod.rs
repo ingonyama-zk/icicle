@@ -1,5 +1,5 @@
 use icicle_cuda_runtime::{
-    device_context::{get_default_device_context, DeviceContext},
+    device_context::{DeviceContext, DEFAULT_DEVICE_ID},
     memory::HostOrDeviceSlice,
 };
 
@@ -28,9 +28,13 @@ pub struct TreeBuilderConfig<'a> {
 
 impl<'a> Default for TreeBuilderConfig<'a> {
     fn default() -> Self {
-        let ctx = get_default_device_context();
+        Self::default_for_device(DEFAULT_DEVICE_ID)
+    }
+}
+impl<'a> TreeBuilderConfig<'a> {
+    fn default_for_device(device_id: usize) -> Self {
         Self {
-            ctx,
+            ctx: DeviceContext::default_for_device(device_id),
             keep_rows: 0,
             are_inputs_on_device: false,
             is_async: false,

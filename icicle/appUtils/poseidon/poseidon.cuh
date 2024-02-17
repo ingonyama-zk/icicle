@@ -80,7 +80,7 @@ namespace poseidon {
   using PKC = PoseidonKernelsConfiguration<T>;
 
   /**
-   * @struct NTTConfig
+   * @struct PoseidonConfig
    * Struct that encodes various Poseidon parameters.
    */
   struct PoseidonConfig {
@@ -120,7 +120,8 @@ namespace poseidon {
    * Loads pre-calculated optimized constants, moves them to the device
    */
   template <typename S>
-  cudaError_t init_optimized_poseidon_constants(device_context::DeviceContext& ctx, PoseidonConstants<S>* constants);
+  cudaError_t
+  init_optimized_poseidon_constants(int arity, device_context::DeviceContext& ctx, PoseidonConstants<S>* constants);
 
   /**
    * Compute the poseidon hash over a sequence of preimages.

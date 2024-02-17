@@ -1,4 +1,4 @@
-use icicle_cuda_runtime::device_context::{get_default_device_context, DeviceContext};
+use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{error::IcicleResult, traits::FieldImpl};
@@ -30,6 +30,17 @@ pub enum NTTDir {
 /// a_4, a_2, a_6, a_1, a_5, a_3, a_7`.
 /// - kRN: inputs are bit-reversed-order and outputs are natural-order.
 /// - kRR: inputs and outputs are bit-reversed-order.
+///
+/// Mixed-Radix NTT: digit-reversal is a generalization of bit-reversal where the latter is a special case with 1b
+/// digits. Mixed-radix NTTs of different sizes would generate different reordering of inputs/outputs. Having said
+/// that, for a given size N it is guaranteed that every two mixed-radix NTTs of size N would have the same
+/// digit-reversal pattern. The following orderings kNM and kMN are conceptually like kNR and kRN but for
+/// mixed-digit-reordering. Note that for the cases '(1) NTT, (2) elementwise ops and (3) INTT' kNM and kMN are most
+/// efficient.
+/// Note: kNR, kRN, kRR refer to the radix-2 NTT reversal pattern. Those cases are supported by mixed-radix NTT with
+/// reduced efficiency compared to kNM and kMN.
+/// - kNM: inputs are natural-order and outputs are digit-reversed-order (=mixed).
+/// - kMN: inputs are digit-reversed-order (=mixed) and outputs are natural-order.
 #[allow(non_camel_case_types)]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,6 +49,22 @@ pub enum Ordering {
     kNR,
     kRN,
     kRR,
+    kNM,
+    kMN,
+}
+
+///Which NTT algorithm to use. options are:
+///- Auto: implementation selects automatically based on heuristic. This value is a good default for most cases.
+///- Radix2: explicitly select radix-2 NTT algorithm
+///- MixedRadix: explicitly select mixed-radix NTT algorithm
+///
+#[allow(non_camel_case_types)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NttAlgorithm {
+    Auto,
+    Radix2,
+    MixedRadix,
 }
 
 /// Struct that encodes NTT parameters to be passed into the [ntt](ntt) function.
@@ -57,22 +84,28 @@ pub struct NTTConfig<'a, S> {
     /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
-    /// Explicitly select radix-2 NTT algorithm. Default value: false (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
-    pub is_force_radix2: bool,
+    /// Explicitly select the NTT algorithm. Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based
+    /// on heuristics
+    pub ntt_algorithm: NttAlgorithm,
+}
+
+impl<'a, S: FieldImpl> Default for NTTConfig<'a, S> {
+    fn default() -> Self {
+        Self::default_for_device(DEFAULT_DEVICE_ID)
+    }
 }
 
 impl<'a, S: FieldImpl> NTTConfig<'a, S> {
-    pub fn default_config() -> Self {
-        let ctx = get_default_device_context();
+    pub fn default_for_device(device_id: usize) -> Self {
         NTTConfig {
-            ctx,
+            ctx: DeviceContext::default_for_device(device_id),
             coset_gen: S::one(),
             batch_size: 1,
             ordering: Ordering::kNN,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
-            is_force_radix2: false,
+            ntt_algorithm: NttAlgorithm::Auto,
         }
     }
 }
@@ -86,7 +119,6 @@ pub trait NTT<F: FieldImpl> {
         output: &mut HostOrDeviceSlice<F>,
     ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
-    fn get_default_ntt_config() -> NTTConfig<'static, F>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -141,15 +173,6 @@ where
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
 
-/// Returns [NTT config](NTTConfig) struct populated with default values.
-pub fn get_default_ntt_config<F>() -> NTTConfig<'static, F>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
-{
-    <<F as FieldImpl>::Config as NTT<F>>::get_default_ntt_config()
-}
-
 #[macro_export]
 macro_rules! impl_ntt {
     (
@@ -159,7 +182,7 @@ macro_rules! impl_ntt {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir};
+            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "NTTCuda")]
@@ -198,10 +221,6 @@ macro_rules! impl_ntt {
             fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
                 unsafe { $field_prefix_ident::initialize_ntt_domain(primitive_root, ctx).wrap() }
             }
-
-            fn get_default_ntt_config() -> NTTConfig<'static, $field> {
-                NTTConfig::<$field>::default_config()
-            }
         }
     };
 }
@@ -216,31 +235,31 @@ macro_rules! impl_ntt_tests {
 
         #[test]
         fn test_ntt() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt::<$field>()
         }
 
         #[test]
         fn test_ntt_coset_from_subgroup() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_coset_from_subgroup::<$field>()
         }
 
         #[test]
         fn test_ntt_arbitrary_coset() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_arbitrary_coset::<$field>()
         }
 
         #[test]
         fn test_ntt_batch() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
             check_ntt_batch::<$field>()
         }
 
         #[test]
         fn test_ntt_device_async() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE));
+            // init_domain is in this test is performed per-device
             check_ntt_device_async::<$field>()
         }
     };

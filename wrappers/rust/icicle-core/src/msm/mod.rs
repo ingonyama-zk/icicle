@@ -1,6 +1,6 @@
 use crate::curve::{Affine, Curve, Projective};
 use crate::error::IcicleResult;
-use icicle_cuda_runtime::device_context::DeviceContext;
+use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 #[cfg(feature = "arkworks")]
@@ -59,6 +59,33 @@ pub struct MSMConfig<'a> {
     pub is_async: bool,
 }
 
+impl<'a> Default for MSMConfig<'a> {
+    fn default() -> Self {
+        Self::default_for_device(DEFAULT_DEVICE_ID)
+    }
+}
+
+impl<'a> MSMConfig<'a> {
+    pub fn default_for_device(device_id: usize) -> Self {
+        Self {
+            ctx: DeviceContext::default_for_device(device_id),
+            points_size: 0,
+            precompute_factor: 1,
+            c: 0,
+            bitsize: 0,
+            large_bucket_factor: 10,
+            batch_size: 1,
+            are_scalars_on_device: false,
+            are_scalars_montgomery_form: false,
+            are_points_on_device: false,
+            are_points_montgomery_form: false,
+            are_results_on_device: false,
+            is_big_triangle: false,
+            is_async: false,
+        }
+    }
+}
+
 #[doc(hidden)]
 pub trait MSM<C: Curve> {
     fn msm_unchecked(
@@ -67,8 +94,6 @@ pub trait MSM<C: Curve> {
         cfg: &MSMConfig,
         results: &mut HostOrDeviceSlice<Projective<C>>,
     ) -> IcicleResult<()>;
-
-    fn get_default_msm_config() -> MSMConfig<'static>;
 }
 
 /// Computes the multi-scalar multiplication, or MSM: `s1*P1 + s2*P2 + ... + sn*Pn`, or a batch of several MSMs.
@@ -113,11 +138,6 @@ pub fn msm<C: Curve + MSM<C>>(
     C::msm_unchecked(scalars, points, &local_cfg, results)
 }
 
-/// Returns [MSM config](MSMConfig) struct populated with default values.
-pub fn get_default_msm_config<C: Curve + MSM<C>>() -> MSMConfig<'static> {
-    C::get_default_msm_config()
-}
-
 #[macro_export]
 macro_rules! impl_msm {
     (
@@ -160,10 +180,6 @@ macro_rules! impl_msm {
                     )
                     .wrap()
                 }
-            }
-
-            fn get_default_msm_config() -> MSMConfig<'static> {
-                unsafe { $curve_prefix_indent::default_msm_config() }
             }
         }
     };
