@@ -8,7 +8,6 @@
 #include "../../primitives/affine.cuh"
 #include "../../primitives/field.cuh"
 #include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
 #include "../../utils/device_context.cuh"
 #include "../../utils/error_handler.cuh"
 

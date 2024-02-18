@@ -1,5 +1,5 @@
 use crate::traits::FieldImpl;
-use icicle_cuda_runtime::device_context::get_default_device_context;
+use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use std::io::Read;
@@ -15,7 +15,7 @@ pub fn init_poseidon<'a, F: FieldImpl>(arity: u32) -> PoseidonConstants<'a, F>
 where
     <F as FieldImpl>::Config: Poseidon<F>,
 {
-    let ctx = get_default_device_context();
+    let ctx = DeviceContext::default();
 
     load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap()
 }
@@ -71,7 +71,7 @@ where
 
     let full_rounds_half = 4;
 
-    let ctx = get_default_device_context();
+    let ctx = DeviceContext::default();
     let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
     let constants_file = PathBuf::from(cargo_manifest_dir)
         .join("tests")

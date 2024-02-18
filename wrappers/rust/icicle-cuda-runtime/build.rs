@@ -45,7 +45,9 @@ fn main() {
         .must_use_type("cudaError")
         // device management
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__DEVICE.html
+        .allowlist_function("cudaGetDevice")
         .allowlist_function("cudaSetDevice")
+        .allowlist_function("cudaGetDeviceCount")
         // error handling
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__ERROR.html
         .allowlist_function("cudaGetLastError")
@@ -69,6 +71,7 @@ fn main() {
         .allowlist_function("cudaMemcpyAsync")
         .allowlist_function("cudaMemset")
         .allowlist_function("cudaMemsetAsync")
+        .allowlist_function("cudaDeviceGetDefaultMemPool")
         .rustified_enum("cudaMemcpyKind")
         // Stream Ordered Memory Allocator
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html

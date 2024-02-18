@@ -2,7 +2,10 @@ use crate::error::IcicleResult;
 #[cfg(feature = "arkworks")]
 use ark_ff::Field as ArkField;
 use icicle_cuda_runtime::{error::CudaError, memory::HostOrDeviceSlice};
-use std::{fmt::Debug, mem::MaybeUninit};
+use std::{
+    fmt::{Debug, Display},
+    mem::MaybeUninit,
+};
 
 #[doc(hidden)]
 pub trait GenerateRandom<F> {
@@ -15,7 +18,9 @@ pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
     type ArkField: ArkField;
 }
 
-pub trait FieldImpl: Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> {
+pub trait FieldImpl:
+    Display + Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> + Send + Sync
+{
     #[doc(hidden)]
     type Config: FieldConfig;
     type Repr;

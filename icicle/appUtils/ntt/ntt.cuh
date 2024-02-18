@@ -59,8 +59,28 @@ namespace ntt {
    * a_4, a_2, a_6, a_1, a_5, a_3, a_7\} \f$).
    * - kRN: inputs are bit-reversed-order and outputs are natural-order.
    * - kRR: inputs and outputs are bit-reversed-order.
+   *
+   * Mixed-Radix NTT: digit-reversal is a generalization of bit-reversal where the latter is a special case with 1b
+   * digits. Mixed-radix NTTs of different sizes would generate different reordering of inputs/outputs. Having said
+   * that, for a given size N it is guaranteed that every two mixed-radix NTTs of size N would have the same
+   * digit-reversal pattern. The following orderings kNM and kMN are conceptually like kNR and kRN but for
+   * mixed-digit-reordering. Note that for the cases '(1) NTT, (2) elementwise ops and (3) INTT' kNM and kMN are most
+   * efficient.
+   * Note: kNR, kRN, kRR refer to the radix-2 NTT reversal pattern. Those cases are supported by mixed-radix NTT with
+   * reduced efficiency compared to kNM and kMN.
+   * - kNM: inputs are natural-order and outputs are digit-reversed-order (=mixed).
+   * - kMN: inputs are digit-reversed-order (=mixed) and outputs are natural-order.
    */
-  enum class Ordering { kNN, kNR, kRN, kRR };
+  enum class Ordering { kNN, kNR, kRN, kRR, kNM, kMN };
+
+  /**
+   * @enum NttAlgorithm
+   * Which NTT algorithm to use. options are:
+   * - Auto: implementation selects automatically based on heuristic. This value is a good default for most cases.
+   * - Radix2: explicitly select radix-2 NTT algorithm
+   * - MixedRadix: explicitly select mixed-radix NTT algorithm
+   */
+  enum class NttAlgorithm { Auto, Radix2, MixedRadix };
 
   /**
    * @struct NTTConfig
@@ -80,8 +100,8 @@ namespace ntt {
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
                                  *   function will block the current CPU thread. */
-    bool is_force_radix2; /**< Explicitly select radix-2 NTT algorithm. Default value: false (the implementation selects
-                             radix-2 or mixed-radix algorithm based on heuristics). */
+    NttAlgorithm ntt_algorithm; /**< Explicitly select the NTT algorithm. Default value: Auto (the implementation
+                             selects radix-2 or mixed-radix algorithm based on heuristics). */
   };
 
   /**

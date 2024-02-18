@@ -1,3 +1,4 @@
+// TODO: remove this file, seems working without it
 // based on https://leimao.github.io/blog/CUDA-Shared-Memory-Templated-Kernel/
 // may be outdated, but only worked like that
 
