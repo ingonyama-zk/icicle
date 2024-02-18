@@ -43,12 +43,14 @@ int main(int argc, char** argv)
   const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
 
   // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
-  const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
-                             : ordering == ntt::Ordering::kNR ? "NR"
-                             : ordering == ntt::Ordering::kRN ? "RN"
-                             : ordering == ntt::Ordering::kRR ? "RR"
-                             : ordering == ntt::Ordering::kNM ? "NM"
-                                                              : "MN";
+  const char* ordering_str =
+    ordering == ntt::Ordering::kNN
+      ? "NN"
+      : ordering == ntt::Ordering::kNR
+          ? "NR"
+          : ordering == ntt::Ordering::kRN
+              ? "RN"
+              : ordering == ntt::Ordering::kRR ? "RR" : ordering == ntt::Ordering::kNM ? "NM" : "MN";
 
   printf(
     "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, coset-idx=%d, ordering=%s\n", NTT_LOG_SIZE, INPLACE, INV,

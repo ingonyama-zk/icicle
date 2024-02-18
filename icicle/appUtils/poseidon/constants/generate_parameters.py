@@ -9,7 +9,8 @@ from poseidon import round_constants as rc, round_numbers as rn
 
 # Modify these
 arity = 11
-p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001 # bls12-381
+p = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47 # grumpkin
+# p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001 # bls12-381
 # p = 0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001 # bls12-377
 # p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001 # bn254
 # p = 0x1ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d44300000008508c00000000001 # bw6-761
@@ -30,11 +31,12 @@ security_level = 128
 # F = GF(p)
 # F.primitive_element()
 #
-# primitive_element = None
-primitive_element = 7 # bls12-381
+primitive_element = None
+# primitive_element = 7 # bls12-381
 # primitive_element = 22 # bls12-377
 # primitive_element = 5 # bn254
 # primitive_element = 15 # bw6-761
+primitive_element = 3 # grumpkin
 
 # currently we only support alpha 5, if you need alpha other than 5 - feal free to reach out
 alpha = 5
@@ -50,7 +52,7 @@ if __name__ == "__main__":
         print("Partial rounds:", partial_round)
 
     print("Loading galois... This might take from several minutes to an hour")
-    field_p = galois.GF(p, 1, verify=False, primitive_element=primitive_element)
+    field_p = galois.GF(p, None, verify=False, primitive_element=primitive_element)
     print("Galois loaded")
     mds_matrix = rc.mds_matrix_generator(field_p, t)
     non_opt_rc = rc.calc_round_constants(t, full_round, partial_round, p, field_p, alpha, prime_bit_len)
@@ -66,7 +68,8 @@ if __name__ == "__main__":
         for j in range(1, t):
             sparse_aligned.append(m[j])
 
-    with open("constants.bin", "wb") as constants_file:
-        for l in [opt_rc, flatten(mds_matrix), flatten(pre_matrix), sparse_aligned]:
-            for c in l:
-                constants_file.write(int(c).to_bytes(field_bytes, byteorder='little'))
+    for i, l in enumerate([opt_rc, flatten(mds_matrix), flatten(pre_matrix), sparse_aligned]):
+        for c in l:
+            hex_data = ', '.join('0x{:02x}'.format(byte) for byte in int(c).to_bytes(field_bytes, byteorder='little')) + ', '
+            with open(f"constants{i}.txt", 'a') as text_file:
+                text_file.write(hex_data)

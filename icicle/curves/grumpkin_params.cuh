@@ -39,7 +39,6 @@ namespace grumpkin {
                                                           0x7879462c, 0x666ea36f, 0x9a07df2f, 0x0e0a77c1};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x014afa37, 0xed84884a, 0x0278edf8, 0xeb202285,
                                                               0xb74492d9, 0xcf63e9cf, 0x59e5c639, 0x2e671571};
-
   };
 
   struct fq_config {
@@ -86,10 +85,13 @@ namespace grumpkin {
   };
 
   // G1 and G2 generators
-  static constexpr storage<fq_config::limbs_count> g1_gen_x = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-  static constexpr storage<fq_config::limbs_count> g1_gen_y = {0x823f272c, 0x833fc48d, 0xf1181294, 0x2d270d45, 0x6a45d63, 0xcf135e75, 0x2, 0x0};
+  static constexpr storage<fq_config::limbs_count> g1_gen_x = {0x00000001, 0x00000000, 0x00000000, 0x00000000,
+                                                               0x00000000, 0x00000000, 0x00000000, 0x00000000};
+  static constexpr storage<fq_config::limbs_count> g1_gen_y = {0x823f272c, 0x833fc48d, 0xf1181294, 0x2d270d45,
+                                                               0x6a45d63,  0xcf135e75, 0x00000002, 0x00000000};
 
-  static constexpr storage<fq_config::limbs_count> weierstrass_b = {0xeffffff0, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
-}
+  static constexpr storage<fq_config::limbs_count> weierstrass_b = {0xeffffff0, 0x43e1f593, 0x79b97091, 0x2833e848,
+                                                                    0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
+} // namespace grumpkin
 
 #endif
