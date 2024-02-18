@@ -27,6 +27,24 @@ __device__ constexpr uint32_t STAGE_SIZES_DEVICE[31][5] = {
   {6, 5, 5, 5, 0}, {6, 5, 5, 6, 0}, {6, 6, 6, 5, 0}, {6, 6, 6, 6, 0}, {5, 5, 5, 5, 5}, {6, 5, 4, 5, 6}, {6, 5, 5, 5, 6},
   {6, 5, 6, 5, 6}, {6, 6, 5, 6, 6}, {6, 6, 6, 6, 6}};
 
+// construction for fast-twiddles
+uint32_t constexpr STAGE_PREV_SIZES[31] = {0,  0,  0,  0,  0,  0,  0,  0,  4,  5,  5,  6,  6,  9,  9, 10,
+                                           11, 11, 12, 15, 15, 16, 16, 18, 18, 20, 21, 21, 22, 23, 24};
+
+uint32_t constexpr STAGE_SIZES_HOST_FT[31][5] = {
+  {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {4, 0, 0, 0, 0}, {5, 0, 0, 0, 0}, {6, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0}, {4, 4, 0, 0, 0}, {5, 4, 0, 0, 0}, {5, 5, 0, 0, 0}, {6, 5, 0, 0, 0}, {6, 6, 0, 0, 0}, {5, 4, 4, 0, 0},
+  {5, 4, 5, 0, 0}, {5, 5, 5, 0, 0}, {6, 5, 5, 0, 0}, {6, 5, 6, 0, 0}, {6, 6, 6, 0, 0}, {5, 5, 5, 4, 0}, {5, 5, 5, 5, 0},
+  {6, 5, 5, 5, 0}, {6, 5, 5, 6, 0}, {6, 6, 6, 5, 0}, {6, 6, 6, 6, 0}, {5, 5, 5, 5, 5}, {6, 5, 5, 5, 5}, {6, 5, 5, 5, 6},
+  {6, 5, 5, 6, 6}, {6, 6, 6, 5, 6}, {6, 6, 6, 6, 6}};
+
+__device__ constexpr uint32_t STAGE_SIZES_DEVICE_FT[31][5] = {
+  {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {4, 0, 0, 0, 0}, {5, 0, 0, 0, 0}, {6, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0}, {4, 4, 0, 0, 0}, {5, 4, 0, 0, 0}, {5, 5, 0, 0, 0}, {6, 5, 0, 0, 0}, {6, 6, 0, 0, 0}, {5, 4, 4, 0, 0},
+  {5, 4, 5, 0, 0}, {5, 5, 5, 0, 0}, {6, 5, 5, 0, 0}, {6, 5, 6, 0, 0}, {6, 6, 6, 0, 0}, {5, 5, 5, 4, 0}, {5, 5, 5, 5, 0},
+  {6, 5, 5, 5, 0}, {6, 5, 5, 6, 0}, {6, 6, 6, 5, 0}, {6, 6, 6, 6, 0}, {5, 5, 5, 5, 5}, {6, 5, 5, 5, 5}, {6, 5, 5, 5, 6},
+  {6, 5, 5, 6, 6}, {6, 6, 6, 5, 6}, {6, 6, 6, 6, 6}};
+
 template <typename E, typename S>
 class NTTEngine
 {
@@ -36,7 +54,15 @@ public:
   S WI[7];
   S WE[8];
 
-  __device__ __forceinline__ void loadBasicTwiddles(S* basic_twiddles, bool inv)
+  __device__ __forceinline__ void loadBasicTwiddles(S* basic_twiddles)
+  {
+#pragma unroll
+    for (int i = 0; i < 3; i++) {
+      WB[i] = basic_twiddles[i];
+    }
+  }
+
+  __device__ __forceinline__ void loadBasicTwiddlesGeneric(S* basic_twiddles, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 3; i++) {
@@ -44,7 +70,31 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles64(S* data, bool stride, bool inv)
+  __device__ __forceinline__ void loadInternalTwiddles64(S* data, bool stride)
+  {
+#pragma unroll
+    for (int i = 0; i < 7; i++) {
+      WI[i] = data[((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1)];
+    }
+  }
+
+  __device__ __forceinline__ void loadInternalTwiddles32(S* data, bool stride)
+  {
+#pragma unroll
+    for (int i = 0; i < 7; i++) {
+      WI[i] = data[2 * ((stride ? (threadIdx.x >> 4) : (threadIdx.x)) & 0x3) * (i + 1)];
+    }
+  }
+
+  __device__ __forceinline__ void loadInternalTwiddles16(S* data, bool stride)
+  {
+#pragma unroll
+    for (int i = 0; i < 7; i++) {
+      WI[i] = data[4 * ((stride ? (threadIdx.x >> 5) : (threadIdx.x)) & 0x1) * (i + 1)];
+    }
+  }
+
+  __device__ __forceinline__ void loadInternalTwiddlesGeneric64(S* data, bool stride, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
@@ -53,7 +103,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles32(S* data, bool stride, bool inv)
+  __device__ __forceinline__ void loadInternalTwiddlesGeneric32(S* data, bool stride, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
@@ -62,7 +112,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles16(S* data, bool stride, bool inv)
+  __device__ __forceinline__ void loadInternalTwiddlesGeneric16(S* data, bool stride, bool inv)
   {
 #pragma unroll
     for (int i = 0; i < 7; i++) {
@@ -71,8 +121,47 @@ public:
     }
   }
 
+  __device__ __forceinline__ void
+  loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  {
+    data += tw_order * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_order - 1));
+
+#pragma unroll
+    for (uint32_t i = 0; i < 8; i++) {
+      WE[i] = data[8 * i * tw_order + (1 << tw_log_order + 6) - 1];
+    }
+  }
+
+  __device__ __forceinline__ void
+  loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  {
+    data += tw_order * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_order - 1));
+
+#pragma unroll
+    for (uint32_t j = 0; j < 2; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 4; i++) {
+        WE[4 * j + i] = data[(8 * i + j) * tw_order + (1 << tw_log_order + 5) - 1];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void
+  loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  {
+    data += tw_order * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_order - 1));
+
+#pragma unroll
+    for (uint32_t j = 0; j < 4; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 2; i++) {
+        WE[2 * j + i] = data[(8 * i + j) * tw_order + (1 << tw_log_order + 4) - 1];
+      }
+    }
+  }
+
   __device__ __forceinline__ void loadExternalTwiddlesGeneric64(
-    E* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+    S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
 #pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
@@ -83,7 +172,7 @@ public:
   }
 
   __device__ __forceinline__ void loadExternalTwiddlesGeneric32(
-    E* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+    S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
 #pragma unroll
     for (uint32_t j = 0; j < 2; j++) {
@@ -97,7 +186,7 @@ public:
   }
 
   __device__ __forceinline__ void loadExternalTwiddlesGeneric16(
-    E* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+    S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
 #pragma unroll
     for (uint32_t j = 0; j < 4; j++) {
