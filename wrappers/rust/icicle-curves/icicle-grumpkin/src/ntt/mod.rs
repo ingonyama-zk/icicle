@@ -21,10 +21,6 @@ impl NTT<ScalarField> for ScalarCfg {
     fn initialize_domain(_primitive_root: ScalarField, _ctx: &DeviceContext) -> IcicleResult<()> {
         todo!()
     }
-
-    fn get_default_ntt_config() -> NTTConfig<'static, ScalarField> {
-        todo!()
-    }
 }
 
 // impl_ntt!("grumpkin", grumpkin, ScalarField, ScalarCfg);
