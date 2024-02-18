@@ -16,10 +16,11 @@ We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to s
 // Include NTT template
 #include "appUtils/ntt/ntt.cu"
 using namespace curve_config;
+using namespace ntt;
 // Configure NTT
-ntt::NTTConfig<S> config=ntt::DefaultNTTConfig<S>();
+NTTConfig<S> config=DefaultNTTConfig<S>();
 // Call NTT
-ntt::NTT<S, E>(input, ntt_size, ntt::NTTDir::kForward, config, output);
+NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
 ```
 
 ## Running the example
@@ -28,5 +29,10 @@ ntt::NTT<S, E>(input, ntt_size, ntt::NTTDir::kForward, config, output);
 - compile with  `./compile.sh`
 - run with `./run.sh`
 
+## What's in the example
 
-
+1. Define the size of the example
+2. Initialize input
+3. Run Radix2 NTT
+4. Run MexedRadix NTT
+5. Validate the data output
