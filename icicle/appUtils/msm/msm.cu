@@ -17,6 +17,7 @@
 #include "utils/error_handler.cuh"
 #include "utils/mont.cuh"
 #include "utils/utils.h"
+#include "utils/vec_ops.cuh"
 
 namespace msm {
 
@@ -27,6 +28,29 @@ namespace msm {
     // #define SIGNED_DIG //WIP
     // #define BIG_TRIANGLE
     // #define SSM_SUM  //WIP
+
+    template <typename A>
+    cudaError_t init_msm_bases_with_precompute(A* bases, int size, A** output_bases, int precompute_factor, bool are_bases_on_device, device_context::DeviceContext& ctx) {
+      CHK_INIT_IF_RETURN();
+
+      cudaStream_t& stream = config.ctx.stream;
+
+      CHK_IF_RETURN(cudaMallocAsync(output_bases, sizeof(A) * size * precompute_factor, stream));
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(
+          *output_bases,
+          bases,
+          sizeof(A) * size,
+          are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice,
+          stream)
+      );
+
+      for (int i = 1; i < precompute_factor; i++) {
+        CHK_IF_RETURN(ShiftLeft(*output_bases + size * (i - 1), size, ctx, *output_bases + size * i));
+      }
+
+      return CHK_LAST();
+    }
 
     unsigned get_optimal_c(int bitsize) { return max((unsigned)ceil(log2(bitsize)) - 4, 1U); }
 
