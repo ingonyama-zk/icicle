@@ -69,13 +69,8 @@ include_directories("${CMAKE_SOURCE_DIR}")
 
 # when adding a new curve/field, append its name to the end of this list
 set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin)
-SET(SUPPORTED_CURVES_WITH_NTT bn254;bls12_381;bls12_377;bw6_761)
-
-if (CURVE IN_LIST SUPPORTED_CURVES_WITH_NTT)
-    list(APPEND ICICLE_SOURCES appUtils/ntt/ntt.cu)
-    list(APPEND ICICLE_SOURCES_TESTS ${PROJECT_BINARY_DIR}/CMakeFiles/icicle.dir/appUtils/ntt/ntt.cu.o)
-endif()
 set(SUPPORTED_CURVES_WITH_POSEIDON bn254;bls12_381;bls12_377;bw6_761)
+SET(SUPPORTED_CURVES_WITHOUT_NTT grumpkin)
 
 set(IS_CURVE_SUPPORTED FALSE)
 set(I 0)
@@ -90,6 +85,10 @@ endforeach()
 if (NOT IS_CURVE_SUPPORTED)
   message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported curves: ${SUPPORTED_CURVES}" )
 endif ()
+
+if (NOT CURVE IN_LIST SUPPORTED_CURVES_WITHOUT_NTT)
+    list(APPEND ICICLE_SOURCES appUtils/ntt/ntt.cu)
+endif()
 
 if (G2_DEFINED STREQUAL "ON")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2_DEFINED=ON")
