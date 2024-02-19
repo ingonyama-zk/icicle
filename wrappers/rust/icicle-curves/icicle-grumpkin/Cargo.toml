@@ -10,7 +10,7 @@ repository = "https://github.com/ingonyama-zk/icicle"
 [dependencies]
 icicle-core = { path = "../../icicle-core" }
 icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
-ark-grumpkin-test = { git = "https://github.com/nonam3e/ark-grumpkin-test.git", optional = true}
+ark-grumpkin-test = { git = "https://github.com/ingonyama-zk/ark-grumpkin-test.git", optional = true}
 
 [build-dependencies]
 cmake = "0.1.50"

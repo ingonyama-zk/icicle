@@ -8,23 +8,6 @@ use icicle_core::{
 };
 use icicle_cuda_runtime::{error::CudaError, memory::HostOrDeviceSlice};
 
-// impl MSM<CurveCfg> for CurveCfg {
-//     fn msm_unchecked(
-//         _scalars: &HostOrDeviceSlice<<CurveCfg as Curve>::ScalarField>,
-//         _points: &HostOrDeviceSlice<Affine<CurveCfg>>,
-//         _cfg: &MSMConfig,
-//         _results: &mut HostOrDeviceSlice<Projective<CurveCfg>>,
-//     ) -> IcicleResult<()> {
-//         todo!()
-//     }
-
-//     fn get_default_msm_config() -> MSMConfig<'static> {
-//         todo!()
-//     }
-// }
-// #[cfg(test)]
-// mod tests {
-// }
 impl_msm!("grumpkin", grumpkin, CurveCfg);
 
 #[cfg(test)]
