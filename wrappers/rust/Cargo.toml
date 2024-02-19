@@ -1,4 +1,5 @@
 [workspace]
+name = "icicle"
 resolver = "2"
 members = [
   "icicle-cuda-runtime",

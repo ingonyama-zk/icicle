@@ -14,6 +14,8 @@ fn main() {
     // Optional Features
     #[cfg(feature = "g2")]
     config.define("G2_DEFINED", "ON");
+    #[cfg(feature = "ec_ntt")]
+    config.define("ECNTT", "ON");
 
     // Build
     let out_dir = config

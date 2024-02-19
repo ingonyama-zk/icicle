@@ -28,3 +28,4 @@ icicle-bn254 = { path = ".", features = ["arkworks"] }
 default = []
 g2 = ["icicle-core/g2"]
 arkworks = ["ark-bn254", "icicle-core/arkworks"]
+# ec_ntt = ["icicle-core/ec_ntt"]

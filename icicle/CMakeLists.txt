@@ -89,6 +89,12 @@ if (G2_DEFINED STREQUAL "ON")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2_DEFINED=ON")
 endif ()
 
+option(ECNTT "Add ECNTT to build" OFF)
+if (ECNTT)
+  message(STATUS "Building with ECNTT")
+  add_compile_definitions(ECNTT_DEFINED)
+endif ()
+
 option(BUILD_TESTS "Build tests" OFF)
 
 if (NOT BUILD_TESTS)
