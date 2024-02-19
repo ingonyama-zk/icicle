@@ -5,8 +5,8 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core/internal"
 	"github.com/stretchr/testify/assert"
-	"local/hello/icicle/wrappers/golang/core/internal"
 )
 
 func randomField(size int) internal.Field {
@@ -106,7 +106,7 @@ func TestDeviceSlice(t *testing.T) {
 	assert.Equal(t, 0, emptyDeviceSlice.Cap())
 	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())
 
-	emptyDeviceSlice.Malloc(numFields * fieldBytesSize, fieldBytesSize)
+	emptyDeviceSlice.Malloc(numFields*fieldBytesSize, fieldBytesSize)
 	assert.Equal(t, numFields, emptyDeviceSlice.Len())
 	assert.Equal(t, numFields*fieldBytesSize, emptyDeviceSlice.Cap())
 	assert.NotEqual(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())

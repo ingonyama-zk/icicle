@@ -6,8 +6,8 @@ package bn254
 // import "C"
 
 // import (
-// 	"local/hello/icicle/wrappers/golang/core"
-// 	cr "local/hello/icicle/wrappers/golang/cuda_runtime"
+// 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+// 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 // 	"unsafe"
 // )
 

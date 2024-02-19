@@ -5,8 +5,8 @@ package bn254
 // // #include "field.h"
 // import "C"
 // import (
-// 	// core "local/hello/icicle/wrappers/golang/core"
-// 	// cr "local/hello/icicle/wrappers/golang/cuda_runtime"
+// 	// core "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+// 	// cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 // 	// "unsafe"
 // 	"encoding/binary"
 // )

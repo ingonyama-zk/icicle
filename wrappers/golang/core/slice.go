@@ -1,8 +1,9 @@
 package core
 
 import (
-	"local/hello/icicle/wrappers/golang/cuda_runtime"
 	"unsafe"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 type HostOrDeviceSlice interface {

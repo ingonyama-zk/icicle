@@ -24,7 +24,7 @@ import "C"
 // import (
 // 	"fmt"
 // 	"unsafe"
-// 	cuda "local/hello/icicle/wrappers/golang/cuda_runtime"
+// 	cuda "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 // )
 
 // func VecScalarMulMod(scalarVec1, scalarVec2 unsafe.Pointer, size int) int {

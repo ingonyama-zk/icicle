@@ -7,8 +7,8 @@ package bn254
 
 // import (
 // 	"unsafe"
-// 	"local/hello/icicle/wrappers/golang/core"
-// 	cr "local/hello/icicle/wrappers/golang/cuda_runtime"
+// 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+// 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 // )
 
 // func G2GetDefaultMSMConfig() core.MSMConfig {

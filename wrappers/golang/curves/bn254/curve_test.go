@@ -1,7 +1,7 @@
 package bn254
 
 // import (
-// 	"local/hello/icicle/wrappers/golang/core"
+// 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 // 	"testing"
 
 // 	"github.com/stretchr/testify/assert"

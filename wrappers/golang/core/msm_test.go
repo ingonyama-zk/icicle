@@ -1,9 +1,10 @@
 package core
 
 import (
-	"local/hello/icicle/wrappers/golang/cuda_runtime"
-	"local/hello/icicle/wrappers/golang/core/internal"
 	"testing"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core/internal"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -35,7 +36,7 @@ func TestMSMDefaultConfig(t *testing.T) {
 func TestMSMCheckHostSlices(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 
-	randLimbs := []uint32{1,2,3,4,5,6,7,8}
+	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
 	rawScalars := make([]internal.Field, 10)
 	for i := range rawScalars {
 		var emptyField internal.Field
@@ -46,7 +47,7 @@ func TestMSMCheckHostSlices(t *testing.T) {
 	scalars := HostSliceFromElements[internal.Field](rawScalars)
 
 	affine := internal.Affine{}
-	limbs := []uint32{1,2,3,4,5,6,7,8}
+	limbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
 	affine.FromLimbs(limbs, limbs)
 	rawAffinePoints := make([]internal.Affine, 10)
 	for i := range rawAffinePoints {
@@ -68,7 +69,7 @@ func TestMSMCheckHostSlices(t *testing.T) {
 func TestMSMCheckDeviceSlices(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 
-	randLimbs := []uint32{1,2,3,4,5,6,7,8}
+	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
 	rawScalars := make([]internal.Field, 10)
 	for i := range rawScalars {
 		var emptyField internal.Field
@@ -81,7 +82,7 @@ func TestMSMCheckDeviceSlices(t *testing.T) {
 	scalars.CopyToDevice(&scalarsOnDevice, true)
 
 	affine := internal.Affine{}
-	limbs := []uint32{1,2,3,4,5,6,7,8}
+	limbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
 	affine.FromLimbs(limbs, limbs)
 	rawAffinePoints := make([]internal.Affine, 10)
 	for i := range rawAffinePoints {

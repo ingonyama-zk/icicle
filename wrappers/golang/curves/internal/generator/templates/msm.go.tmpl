@@ -1,7 +1,7 @@
-package bn254
+package {{.Curve}}
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_{{.Curve}}
 // #include "msm.h"
 import "C"
 
@@ -11,11 +11,11 @@ import (
 	"unsafe"
 )
 
-func GetDefaultMSMConfig() core.MSMConfig {
+func {{if .IsG2}}G2{{end}}GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
-func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+func Msm{{if .IsG2}}G2{{end}}(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
@@ -29,22 +29,22 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 	if points.IsOnDevice() {
 		pointsPointer = points.(core.DeviceSlice).AsPointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Affine])[0])
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[{{if .IsG2}}G2{{end}}Affine])[0])
 	}
-	cPoints := (*C.affine_t)(pointsPointer)
+	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(pointsPointer)
 
 	var resultsPointer unsafe.Pointer
 	if results.IsOnDevice() {
 		resultsPointer = results.(core.DeviceSlice).AsPointer()
 	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[Projective])[0])
+		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[{{if .IsG2}}G2{{end}}Projective])[0])
 	}
-	cResults := (*C.projective_t)(resultsPointer)
+	cResults := (*C.{{if .IsG2}}g2_{{end}}projective_t)(resultsPointer)
 
 	cSize := (C.int)(scalars.Len() / results.Len())
 	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 
-	__ret := C.bn254MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
+	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return err
 }

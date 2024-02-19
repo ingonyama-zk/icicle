@@ -1,15 +1,62 @@
 package bn254
 
 import (
-	"local/hello/icicle/wrappers/golang/core"
-	cr "local/hello/icicle/wrappers/golang/cuda_runtime"
 	"reflect"
 	"testing"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 	"github.com/stretchr/testify/assert"
 )
+
+func initDomain[T any](largsetTestSize int, cfg core.NTTConfig[T]) {
+	rouMont, _ := fft.Generator(uint64(1 << largsetTestSize))
+	rou := rouMont.Bits()
+	rouIcicle := ScalarField{}
+	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
+
+	rouIcicle.FromLimbs(limbs)
+	InitDomain(rouIcicle, cfg.Ctx)
+}
+
+func compareWithGnarkCrypto(size int, scalars core.HostSlice[ScalarField], output core.HostSlice[ScalarField], order core.Ordering, direction core.NTTDir) bool {
+	domainWithPrecompute := fft.NewDomain(uint64(size))
+	scalarsFr := make([]fr.Element, size)
+	for i, v := range scalars {
+		slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+		scalarsFr[i] = slice64
+	}
+	outputAsFr := make([]fr.Element, size)
+	for i, v := range output {
+		slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+		outputAsFr[i] = slice64
+	}
+
+	// DIT + BitReverse == Ordering.kRR
+	// DIT == Ordering.kRN
+	// DIF + BitReverse == Ordering.kNN
+	// DIF == Ordering.kNR
+	var decimation fft.Decimation
+	if order == core.KRN || order == core.KRR {
+		decimation = fft.DIT
+	} else {
+		decimation = fft.DIF
+	}
+
+	if direction == core.KForward {
+		domainWithPrecompute.FFT(scalarsFr, decimation)
+	} else {
+		domainWithPrecompute.FFTInverse(scalarsFr, decimation)
+	}
+
+	if order == core.KNN || order == core.KRR {
+		fft.BitReverse(scalarsFr)
+	}
+	return reflect.DeepEqual(scalarsFr, outputAsFr)
+}
 
 func TestNTTGetDefaultConfig(t *testing.T) {
 	actual := GetDefaultNttConfig()
@@ -33,101 +80,53 @@ func TestInitDomain(t *testing.T) {
 }
 
 func TestNtt(t *testing.T) {
-	for _, size := range []int{20} {
+	cfg := GetDefaultNttConfig()
+	largsetTestSize := 17
+	scalars := GenerateScalars(1 << largsetTestSize)
+	// init domain
+	initDomain(largsetTestSize, cfg)
+
+	for _, size := range []int{4, largsetTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 			testSize := 1 << size
-			scalars := GenerateScalars(testSize)
 
-			cfg := GetDefaultNttConfig()
-
-			var scalarsCopy core.HostSlice[ScalarField]
-			for _, v := range scalars {
-				var scalar ScalarField
-				scalarsCopy = append(scalarsCopy, scalar.FromLimbs(v.GetLimbs()))
-			}
-
-			// init domain
-			rouMont, _ := fft.Generator(1 << 20)
-			rou := rouMont.Bits()
-			rouIcicle := ScalarField{}
-			limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
-
-			rouIcicle.FromLimbs(limbs)
-			InitDomain(rouIcicle, cfg.Ctx)
+			scalarsCopy := core.HostSliceFromElements[ScalarField](scalars[:testSize])
 			cfg.Ordering = v
 
 			// run ntt
 			output := make(core.HostSlice[ScalarField], testSize)
-			Ntt(scalars, core.KForward, &cfg, output)
+			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
-			domainWithPrecompute := fft.NewDomain(uint64(testSize))
-			scalarsFr := make([]fr.Element, testSize)
-			for i, v := range scalarsCopy {
-				slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
-				scalarsFr[i] = slice64
-			}
-			outputAsFr := make([]fr.Element, testSize)
-			for i, v := range output {
-				slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
-				outputAsFr[i] = slice64
-			}
-
-			// DIT + BitReverse == Ordering.kRR
-			// DIT == Ordering.kRN
-			// DIF + BitReverse == Ordering.kNN
-			// DIF == Ordering.kNR
-			var decimation fft.Decimation
-			if v == core.KRN || v == core.KRR {
-				decimation = fft.DIT
-			} else {
-				decimation = fft.DIF
-			}
-			domainWithPrecompute.FFT(scalarsFr, decimation)
-			if v == core.KNN || v == core.KRR {
-				fft.BitReverse(scalarsFr)
-			}
-			if !assert.True(t, reflect.DeepEqual(scalarsFr, outputAsFr)) {
-				t.FailNow()
-			}
+			assert.True(t, compareWithGnarkCrypto(testSize, scalarsCopy, output, v, core.KForward))
 		}
 	}
 }
 
 func TestNttDeviceAsync(t *testing.T) {
-	for _, size := range []int{20} {
+	cfg := GetDefaultNttConfig()
+	// init domain
+	largestTestSize := 20
+	scalars := GenerateScalars(1 << largestTestSize)
+	initDomain(largestTestSize, cfg)
+
+	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 				testSize := 1 << size
-				scalars := GenerateScalars(testSize)
+				scalarsCopy := core.HostSliceFromElements[ScalarField](scalars[:testSize])
 
-				cfg := GetDefaultNttConfig()
-
-				var scalarsCopy core.HostSlice[ScalarField]
-				for _, v := range scalars {
-					var scalar ScalarField
-					scalarsCopy = append(scalarsCopy, scalar.FromLimbs(v.GetLimbs()))
-				}
-
-				// init domain
-				rouMont, _ := fft.Generator(1 << 20)
-				rou := rouMont.Bits()
-				rouIcicle := ScalarField{}
-				limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
-
-				rouIcicle.FromLimbs(limbs)
-				InitDomain(rouIcicle, cfg.Ctx)
-				
 				stream, _ := cr.CreateStream()
 
 				cfg.Ordering = v
 				cfg.IsAsync = true
-				
+				cfg.Ctx.Stream = &stream
+
 				var deviceInput core.DeviceSlice
-				scalars.CopyToDeviceAsync(&deviceInput, stream, true)
+				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
-				deviceOutput.MallocAsync(testSize*scalars.SizeOfElement(), scalars.SizeOfElement(), stream)
-				
+				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
+
 				// run ntt
 				Ntt(deviceInput, direction, &cfg, deviceOutput)
 				output := make(core.HostSlice[ScalarField], testSize)
@@ -136,72 +135,32 @@ func TestNttDeviceAsync(t *testing.T) {
 				cr.SynchronizeStream(&stream)
 
 				// Compare with gnark-crypto
-				domainWithPrecompute := fft.NewDomain(uint64(testSize))
-				scalarsFr := make([]fr.Element, testSize)
-				for i, v := range scalarsCopy {
-					slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
-					scalarsFr[i] = slice64
-				}
-				outputAsFr := make([]fr.Element, testSize)
-				for i, v := range output {
-					slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
-					outputAsFr[i] = slice64
-				}
-
-				// DIT + BitReverse == Ordering.kRR
-				// DIT == Ordering.kRN
-				// DIF + BitReverse == Ordering.kNN
-				// DIF == Ordering.kNR
-				var decimation fft.Decimation
-				if v == core.KRN || v == core.KRR {
-					decimation = fft.DIT
-				} else {
-					decimation = fft.DIF
-				}
-				if direction == core.KForward {
-					domainWithPrecompute.FFT(scalarsFr, decimation)
-					} else {
-					domainWithPrecompute.FFTInverse(scalarsFr, decimation)
-				}
-				if v == core.KNN || v == core.KRR {
-					fft.BitReverse(scalarsFr)
-				}
-				if !assert.True(t, reflect.DeepEqual(scalarsFr, outputAsFr)) {
-					t.FailNow()
-				}
+				assert.True(t, compareWithGnarkCrypto(testSize, scalarsCopy, output, v, direction))
 			}
 		}
 	}
 }
 
 func TestNttBatch(t *testing.T) {
-	for _, size := range []int{4, 12} {
-		for _, batchSize := range []int{1, 16, 100} {
+	cfg := GetDefaultNttConfig()
+	// init domain
+	largestTestSize := 12
+	largestBatchSize := 100
+	scalars := GenerateScalars(1 << largestTestSize * largestBatchSize)
+	initDomain(largestTestSize, cfg)
+
+	for _, size := range []int{4, largestTestSize} {
+		for _, batchSize := range []int{1, 16, largestBatchSize} {
 			testSize := 1 << size
-			totalSize := testSize*batchSize
-			scalars := GenerateScalars(totalSize)
+			totalSize := testSize * batchSize
 
-			cfg := GetDefaultNttConfig()
+			scalarsCopy := core.HostSliceFromElements[ScalarField](scalars[:totalSize])
 
-			var scalarsCopy core.HostSlice[ScalarField]
-			for _, v := range scalars {
-				var scalar ScalarField
-				scalarsCopy = append(scalarsCopy, scalar.FromLimbs(v.GetLimbs()))
-			}
-
-			// init domain
-			rouMont, _ := fft.Generator(1 << 20)
-			rou := rouMont.Bits()
-			rouIcicle := ScalarField{}
-			limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
-
-			rouIcicle.FromLimbs(limbs)
-			InitDomain(rouIcicle, cfg.Ctx)
 			cfg.Ordering = core.KNN
 			cfg.BatchSize = int32(batchSize)
 			// run ntt
 			output := make(core.HostSlice[ScalarField], totalSize)
-			Ntt(scalars, core.KForward, &cfg, output)
+			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
 			domainWithPrecompute := fft.NewDomain(uint64(testSize))
@@ -210,10 +169,10 @@ func TestNttBatch(t *testing.T) {
 				slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
 				outputAsFr[i] = slice64
 			}
-			
+
 			for i := 0; i < batchSize; i++ {
 				scalarsFr := make([]fr.Element, testSize)
-				for i, v := range scalarsCopy[i*testSize:(i+1)*testSize] {
+				for i, v := range scalarsCopy[i*testSize : (i+1)*testSize] {
 					slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
 					scalarsFr[i] = slice64
 				}

@@ -2,8 +2,9 @@ package bn254
 
 import (
 	"fmt"
-	"local/hello/icicle/wrappers/golang/core"
 	"testing"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 
 	"github.com/stretchr/testify/assert"
 )

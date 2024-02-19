@@ -6,9 +6,10 @@ package bn254
 import "C"
 
 import (
-	"local/hello/icicle/wrappers/golang/core"
-	cr "local/hello/icicle/wrappers/golang/cuda_runtime"
 	"unsafe"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint32] {
