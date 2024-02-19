@@ -31,7 +31,7 @@ security_level = 128
 # F = GF(p)
 # F.primitive_element()
 #
-primitive_element = None
+# primitive_element = None
 # primitive_element = 7 # bls12-381
 # primitive_element = 22 # bls12-377
 # primitive_element = 5 # bn254
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         print("Partial rounds:", partial_round)
 
     print("Loading galois... This might take from several minutes to an hour")
-    field_p = galois.GF(p, None, verify=False, primitive_element=primitive_element)
+    field_p = galois.GF(p, 1, verify=False, primitive_element=primitive_element)
     print("Galois loaded")
     mds_matrix = rc.mds_matrix_generator(field_p, t)
     non_opt_rc = rc.calc_round_constants(t, full_round, partial_round, p, field_p, alpha, prime_bit_len)
@@ -68,8 +68,7 @@ if __name__ == "__main__":
         for j in range(1, t):
             sparse_aligned.append(m[j])
 
-    for i, l in enumerate([opt_rc, flatten(mds_matrix), flatten(pre_matrix), sparse_aligned]):
-        for c in l:
-            hex_data = ', '.join('0x{:02x}'.format(byte) for byte in int(c).to_bytes(field_bytes, byteorder='little')) + ', '
-            with open(f"constants{i}.txt", 'a') as text_file:
-                text_file.write(hex_data)
+    with open("constants.bin", "wb") as constants_file:
+        for l in [opt_rc, flatten(mds_matrix), flatten(pre_matrix), sparse_aligned]:
+            for c in l:
+                constants_file.write(int(c).to_bytes(field_bytes, byteorder='little'))
