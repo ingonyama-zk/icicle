@@ -34,5 +34,5 @@ NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
 1. Define the size of the example
 2. Initialize input
 3. Run Radix2 NTT
-4. Run MexedRadix NTT
+4. Run MixedRadix NTT
 5. Validate the data output

@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 {
   std::cout << "Icicle Examples: Number Theoretical Transform (NTT)" << std::endl;
   std::cout << "Example parameters" << std::endl;
-  const unsigned log_ntt_size = 26;
+  const unsigned log_ntt_size = 20;
   std::cout << "Log2(NTT size): " << log_ntt_size << std::endl;
   const unsigned ntt_size = 1 << log_ntt_size;
   std::cout << "NTT size: " << ntt_size << std::endl;
@@ -96,6 +96,9 @@ int main(int argc, char* argv[])
   cudaError_t err = NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(MixedRadix, "MixedRadix NTT");
   
+  std::cout << "Validating output" << std::endl;
+  validate_output(ntt_size, nof_ntts, output);
+
   config.ntt_algorithm = NttAlgorithm::Radix2; 
   START_TIMER(Radix2);
   err = NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
