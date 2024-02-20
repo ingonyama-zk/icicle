@@ -1,4 +1,4 @@
-package bn254
+package bls12377
 
 import (
 	"encoding/binary"
@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	G2_BASE_LIMBS int8 = 16
+	G2_BASE_LIMBS int8 = 24
 )
 
 type G2BaseField struct {

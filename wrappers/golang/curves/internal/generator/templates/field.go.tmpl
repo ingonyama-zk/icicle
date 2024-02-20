@@ -11,19 +11,19 @@ import (
 )
 
 const (
-	{{if .IsScalar}}SCALAR{{else}}BASE{{end}}_LIMBS int8 = {{if .IsScalar}}{{.ScalarLimbsNum}}{{else}}{{.BaseLimbsNum}}{{end}}
+	{{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS int8 = {{if .IsScalar}}{{.ScalarLimbsNum}}{{else}}{{if .IsG2}}{{.G2BaseLimbsNum}}{{else}}{{.BaseLimbsNum}}{{end}}{{end}}
 )
 
 type {{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}Field struct {
-	limbs [{{- if .IsScalar}}SCALAR{{else}}BASE{{end}}_LIMBS]uint32
+	limbs [{{- if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS]uint32
 }
 
 func (f {{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}Field) Len() int {
-	return int({{- if .IsScalar}}SCALAR{{else}}BASE{{end}}_LIMBS)
+	return int({{- if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS)
 }
 
 func (f {{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}Field) Size() int {
-	return int({{- if .IsScalar}}SCALAR{{else}}BASE{{end}}_LIMBS * 4)
+	return int({{- if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS * 4)
 }
 
 func (f {{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}Field) GetLimbs() []uint32 {

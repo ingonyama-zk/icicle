@@ -40,7 +40,7 @@ func (p *{{if .IsG2}}G2{{end}}Projective) FromLimbs(x, y, z []uint32) {{if .IsG2
 	return *p
 }
 
-func (p *{{if .IsG2}}G2{{end}}Projective) FromAffine(a Affine) {{if .IsG2}}G2{{end}}Projective {
+func (p *{{if .IsG2}}G2{{end}}Projective) FromAffine(a {{if .IsG2}}G2{{end}}Affine) {{if .IsG2}}G2{{end}}Projective {
 	z := {{if .IsG2}}G2{{end}}BaseField{}
 	z.One()
 
@@ -52,8 +52,8 @@ func (p *{{if .IsG2}}G2{{end}}Projective) FromAffine(a Affine) {{if .IsG2}}G2{{e
 }
 
 func (p {{if .IsG2}}G2{{end}}Projective) ProjectiveEq(p2 *{{if .IsG2}}G2{{end}}Projective) bool {
-	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
-	cP2 := (*C.projective_t)(unsafe.Pointer(p2.AsPointer()))
+	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p.AsPointer()))
+	cP2 := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p2.AsPointer()))
 	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
@@ -61,8 +61,9 @@ func (p {{if .IsG2}}G2{{end}}Projective) ProjectiveEq(p2 *{{if .IsG2}}G2{{end}}P
 func (p *{{if .IsG2}}G2{{end}}Projective) ProjectiveToAffine() {{if .IsG2}}G2{{end}}Affine {
 	var a {{if .IsG2}}G2{{end}}Affine
 
-	cA := (*C.affine_t)(unsafe.Pointer(a.AsPointer()))
-	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
+	cA := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(a.AsPointer()))
+	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p.AsPointer()))
+	// TODO: hangs
 	C.{{.Curve}}{{if .IsG2}}G2{{end}}ToAffine(cP, cA)
 	return a
 }
@@ -74,7 +75,7 @@ func {{if .IsG2}}G2{{end}}GenerateProjectivePoints(size int) core.HostSlice[{{if
 	}
 
 	pointsSlice := core.HostSliceFromElements[{{if .IsG2}}G2{{end}}Projective](points)
-	pPoints := (*C.projective_t)(unsafe.Pointer(&pointsSlice[0]))
+	pPoints := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
 	C.{{.Curve}}{{if .IsG2}}G2{{end}}GenerateProjectivePoints(pPoints, cSize)
 
@@ -128,7 +129,7 @@ func {{if .IsG2}}G2{{end}}GenerateAffinePoints(size int) core.HostSlice[{{if .Is
 	}
 
 	pointsSlice := core.HostSliceFromElements[{{if .IsG2}}G2{{end}}Affine](points)
-	cPoints := (*C.affine_t)(unsafe.Pointer(&pointsSlice[0]))
+	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
 	C.{{.Curve}}{{if .IsG2}}G2{{end}}GenerateAffinePoints(cPoints, cSize)
 
@@ -136,7 +137,7 @@ func {{if .IsG2}}G2{{end}}GenerateAffinePoints(size int) core.HostSlice[{{if .Is
 }
 
 func convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.affine_t)(points.AsPointer())
+	cValues := (*C.{{if .IsG2}}g2_{{end}}affine_t)(points.AsPointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
@@ -155,7 +156,7 @@ func {{if .IsG2}}G2{{end}}AffineFromMontgomery(points *core.DeviceSlice) cr.Cuda
 }
 
 func convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.projective_t)(points.AsPointer())
+	cValues := (*C.{{if .IsG2}}g2_{{end}}projective_t)(points.AsPointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()

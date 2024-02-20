@@ -1,4 +1,4 @@
-package bn254
+package bls12381
 
 import (
 	"testing"
@@ -7,12 +7,12 @@ import (
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/ecc/bn254"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fp"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/stretchr/testify/assert"
 )
-func projectiveToGnarkAffine(p Projective) bn254.G1Affine {
+func projectiveToGnarkAffine(p Projective) bls12381.G1Affine {
 	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
 	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
 	pz, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Z).ToBytesLittleEndian()))
@@ -26,7 +26,7 @@ func projectiveToGnarkAffine(p Projective) bn254.G1Affine {
 	x.Mul(&px, zInv)
 	y.Mul(&py, zInv)
 
-	return bn254.G1Affine{X: *x, Y: *y}
+	return bls12381.G1Affine{X: *x, Y: *y}
 }
 
 func testAgainstGnarkCryptoMsm(scalars core.HostSlice[ScalarField], points core.HostSlice[Affine], out Projective) bool {
@@ -36,14 +36,14 @@ func testAgainstGnarkCryptoMsm(scalars core.HostSlice[ScalarField], points core.
 		scalarsFr[i] = slice64
 	}
 
-	pointsFp := make([]bn254.G1Affine, len(points))
+	pointsFp := make([]bls12381.G1Affine, len(points))
 	for i, v := range points {
 		pointsFp[i] = projectiveToGnarkAffine(v.ToProjective())
 	}
-	var msmRes bn254.G1Jac
+	var msmRes bls12381.G1Jac
 	msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
 
-	var icicleResAsJac bn254.G1Jac
+	var icicleResAsJac bls12381.G1Jac
 	proj := projectiveToGnarkAffine(out)
 	icicleResAsJac.FromAffine(&proj)
 

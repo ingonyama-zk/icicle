@@ -1,4 +1,4 @@
-package bn254
+package bls12381
 
 import (
 	"reflect"
@@ -7,9 +7,13 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	largestTestSize = 20
 )
 
 func initDomain[T any](largsetTestSize int, cfg core.NTTConfig[T]) {
@@ -69,7 +73,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 }
 
 func TestInitDomain(t *testing.T) {
-	rouMont, _ := fft.Generator(1 << 17)
+	rouMont, _ := fft.Generator(1 << largestTestSize)
 	rou := rouMont.Bits()
 	rouIcicle := ScalarField{}
 	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
@@ -82,12 +86,11 @@ func TestInitDomain(t *testing.T) {
 
 func TestNtt(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	largsetTestSize := 17
-	scalars := GenerateScalars(1 << largsetTestSize)
+	scalars := GenerateScalars(1 << largestTestSize)
 	// init domain
-	initDomain(largsetTestSize, cfg)
+	initDomain(largestTestSize, cfg)
 
-	for _, size := range []int{4, largsetTestSize} {
+	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 			testSize := 1 << size
 
@@ -107,7 +110,6 @@ func TestNtt(t *testing.T) {
 func TestNttDeviceAsync(t *testing.T) {
 	cfg := GetDefaultNttConfig()
 	// init domain
-	largestTestSize := 20
 	scalars := GenerateScalars(1 << largestTestSize)
 	initDomain(largestTestSize, cfg)
 

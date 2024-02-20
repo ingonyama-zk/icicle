@@ -74,19 +74,24 @@ var bls12377 = CurveData{
 	IsG2: 					false,
 	IsScalar: 			false,
 }
-// var bw6761 = CurveData{
-// 	PackageName:        	"bw6761",
-// 	Curve:        		"bw6_761",
-// 	ScalarLimbsNum: 8,
-// 	BaseLimbsNum:   12,
-// 	G2BaseLimbsNum: 16,
-// 	IsG2: false,
-// 	IsScalar: false,
-// }
+var bw6761 = CurveData{
+	PackageName:    "bw6761",
+	Curve:        	"bw6_761",
+	GnarkImport:    "bw6-761",
+	ScalarLimbsNum: 8,
+	BaseLimbsNum:   12,
+	G2BaseLimbsNum: 16,
+	IsG2: false,
+	IsScalar: false,
+}
 
 type Entry struct {
 	outputName string
 	parsedTemplate *template.Template
+}
+
+func toPackage(s string) string {
+	return strings.ReplaceAll(s, "-", "")
 }
 
 func generateFiles() {
@@ -95,35 +100,94 @@ func generateFiles() {
 		"log":       fmt.Println,
 		"toLower":   strings.ToLower,
 		"toUpper":   strings.ToUpper,
+		"toPackage": toPackage,
 	}
 
 	curvesData := []CurveData{bn254, bls12377, bls12381}
+	// curvesData := []CurveData{bn254}
 	var entries []Entry
 
-	for _, tmplName := range []string{"msm.go.tmpl", "ntt.go.tmpl", "curve.go.tmpl"/*, "vec_ops.h.tmpl"*/} {
-		tmpl := template.New(tmplName)
-		tmplParsed, _ := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
-		fileName, _ := strings.CutSuffix(tmplName, ".tmpl")
+	templateFiles := []string{
+		"msm.go.tmpl",
+		"msm_test.go.tmpl",
+		"ntt.go.tmpl",
+		"ntt_test.go.tmpl",
+		"curve_test.go.tmpl",
+		"curve.go.tmpl",
+		/* "vec_ops.h.tmpl,"*/
+		"helpers_test.go.tmpl",
+	}
+
+	for _, tmplName := range templateFiles {
+		tmpl := template.New(tmplName).Funcs(funcs)
+		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
+		if err != nil {
+			panic(err)
+		}
+		fileName, ok := strings.CutSuffix(tmplName, ".tmpl")
+		if !ok {
+			panic(err)
+		}
 		entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
 	}
 
-	tmplName := "field.go.tmpl"
-	tmpl := template.New(tmplName)
-	tmplParsed, _ := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
-	fieldFile, _ := strings.CutSuffix(tmplName, ".tmpl")
-	fileName := strings.Join([]string{"base", fieldFile}, "_")
-	entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
-	
-	tmplName = "field.go.tmpl"
-	tmpl = template.New(tmplName)
-	tmplParsed, _ = tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName), "templates/scalar_field.go.tmpl")
-	fieldFile, _ = strings.CutSuffix(tmplName, ".tmpl")
-	fileName = strings.Join([]string{"scalar", fieldFile}, "_")
-	entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
+	templateG2Files := []string{
+		"msm.go.tmpl",
+		"msm_test.go.tmpl",
+		"curve_test.go.tmpl",
+		"curve.go.tmpl",
+	}
 
-	for _, includeFile := range []string{"curve.h.tmpl", "scalar_field.h.tmpl", "msm.h.tmpl", "ntt.h.tmpl"/*, "vec_ops.h.tmpl"*/} {
+	for _, tmplName := range templateG2Files {
+		tmpl := template.New(tmplName).Funcs(funcs)
+		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
+		if err != nil {
+			panic(err)
+		}
+		rawFileName, _ := strings.CutSuffix(tmplName, ".tmpl")
+		fileName := fmt.Sprintf("g2_%s", rawFileName)
+		entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
+	}
+
+	templateFieldFiles := []string{
+		"field.go.tmpl",
+		"field_test.go.tmpl",
+	}
+
+	fieldFilePrefixes := []string{
+		"base",
+		"g2_base",
+		"scalar",
+	}
+
+	for _, tmplName := range templateFieldFiles {
+		tmpl := template.New(tmplName).Funcs(funcs)
+		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName), "templates/scalar_field.go.tmpl", "templates/scalar_field_test.go.tmpl")
+		if err != nil {
+			panic(err)
+		}
+		fieldFile, _ := strings.CutSuffix(tmplName, ".tmpl")
+		for _, fieldPrefix := range fieldFilePrefixes {
+			fileName := strings.Join([]string{fieldPrefix, fieldFile}, "_")
+			entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
+		}
+	}
+
+	// Header files
+	templateIncludeFiles := []string{
+		"curve.h.tmpl",
+		"scalar_field.h.tmpl",
+		"msm.h.tmpl",
+		"ntt.h.tmpl",
+		/*"vec_ops.h.tmpl",*/
+	}
+
+	for _, includeFile := range templateIncludeFiles {
 		tmpl := template.New(includeFile).Funcs(funcs)
-		tmplParsed, _ := tmpl.ParseFiles(fmt.Sprintf("templates/include/%s", includeFile))
+		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/include/%s", includeFile))
+		if err != nil {
+			panic(err)
+		}
 		fileName, _ := strings.CutSuffix(includeFile, ".tmpl")
 		entries = append(entries, Entry{outputName: fmt.Sprintf("include/%s", fileName), parsedTemplate: tmplParsed})
 	}
@@ -132,10 +196,15 @@ func generateFiles() {
 		for _, entry := range entries {
 			outFile := filepath.Join(baseDir, curveData.PackageName, entry.outputName)
 			var buf bytes.Buffer
-			if entry.outputName == "scalar_field.go" {
+			if strings.Contains(entry.outputName, "scalar_field") {
 				curveData.IsScalar = true
 			} else {
 				curveData.IsScalar = false
+			}
+			if strings.Contains(entry.outputName, "g2") {
+				curveData.IsG2 = true
+			} else {
+				curveData.IsG2 = false
 			}
 			entry.parsedTemplate.Execute(&buf, curveData)
 			create(outFile, &buf)

@@ -12,86 +12,113 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/stretchr/testify/assert"
 )
-func projectiveToGnarkAffine(p Projective) bn254.G1Affine {
-	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
-	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
-	pz, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Z).ToBytesLittleEndian()))
+func projectiveToGnarkAffineG2(p G2Projective) bn254.G2Affine {
+	pxBytes := p.X.ToBytesLittleEndian()
+	pxA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[:fp.Bytes]))
+	pxA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[fp.Bytes:]))
+	x := bn254.E2{
+		A0: pxA0,
+		A1: pxA1,
+	}
 
-	zInv := new(fp.Element)
-	x := new(fp.Element)
-	y := new(fp.Element)
+	pyBytes := p.Y.ToBytesLittleEndian()
+	pyA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[:fp.Bytes]))
+	pyA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[fp.Bytes:]))
+	y := bn254.E2{
+		A0: pyA0,
+		A1: pyA1,
+	}
 
-	zInv.Inverse(&pz)
+	pzBytes := p.Z.ToBytesLittleEndian()
+	pzA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[:fp.Bytes]))
+	pzA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[fp.Bytes:]))
+	z := bn254.E2{
+		A0: pzA0,
+		A1: pzA1,
+	}
 
-	x.Mul(&px, zInv)
-	y.Mul(&py, zInv)
+	var zSquared bn254.E2
+	zSquared.Mul(&z, &z)
 
-	return bn254.G1Affine{X: *x, Y: *y}
+	var X bn254.E2
+	X.Mul(&x, &z)
+
+	var Y bn254.E2
+	Y.Mul(&y, &zSquared)
+
+	g2Jac := bn254.G2Jac{
+		X: X,
+		Y: Y,
+		Z: z,
+	}
+
+	var g2Affine bn254.G2Affine
+	return *g2Affine.FromJacobian(&g2Jac)
 }
 
-func testAgainstGnarkCryptoMsm(scalars core.HostSlice[ScalarField], points core.HostSlice[Affine], out Projective) bool {
+func testAgainstGnarkCryptoMsmG2(scalars core.HostSlice[ScalarField], points core.HostSlice[G2Affine], out G2Projective) bool {
 	scalarsFr := make([]fr.Element, len(scalars))
 	for i, v := range scalars {
 		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
 		scalarsFr[i] = slice64
 	}
 
-	pointsFp := make([]bn254.G1Affine, len(points))
+	pointsFp := make([]bn254.G2Affine, len(points))
 	for i, v := range points {
-		pointsFp[i] = projectiveToGnarkAffine(v.ToProjective())
+		pointsFp[i] = projectiveToGnarkAffineG2(v.ToProjective())
 	}
-	var msmRes bn254.G1Jac
+	var msmRes bn254.G2Jac
 	msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
 
-	var icicleResAsJac bn254.G1Jac
-	proj := projectiveToGnarkAffine(out)
+	var icicleResAsJac bn254.G2Jac
+	proj := projectiveToGnarkAffineG2(out)
 	icicleResAsJac.FromAffine(&proj)
 
 	return msmRes.Equal(&icicleResAsJac)
 }
 
-func TestMSM(t *testing.T) {
+func TestMSMG2(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
 		scalars := GenerateScalars(size)
-		points := GenerateAffinePoints(size)
+		points := G2GenerateAffinePoints(size)
 
 		stream, _ := cr.CreateStream()
-		var p Projective
+		var p G2Projective
 		var out core.DeviceSlice
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
-		e = Msm(scalars, points, &cfg, out)
+		e = G2Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
-		outHost := make(core.HostSlice[Projective], 1)
+		outHost := make(core.HostSlice[G2Projective], 1)
 		outHost.CopyFromDevice(&out)
 		out.Free()
 
 		// Check with gnark-crypto
-		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+		assert.True(t, testAgainstGnarkCryptoMsmG2(scalars, points, outHost[0]))
 	}
 }
 
-func TestMSMBatch(t *testing.T) {
+func TestMSMG2Batch(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
 			totalSize := size * batchSize
 			scalars := GenerateScalars(totalSize)
-			points := GenerateAffinePoints(totalSize)
+			points := G2GenerateAffinePoints(totalSize)
 
-			var p Projective
+			var p G2Projective
 			var out core.DeviceSlice
 			_, e := out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-			e = Msm(scalars, points, &cfg, out)
+			e = G2Msm(scalars, points, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
-			outHost := make(core.HostSlice[Projective], batchSize)
+			outHost := make(core.HostSlice[G2Projective], batchSize)
 			outHost.CopyFromDevice(&out)
 			out.Free()
 
@@ -100,13 +127,13 @@ func TestMSMBatch(t *testing.T) {
 				scalarsSlice := scalars[i*size : (i+1)*size]
 				pointsSlice := points[i*size : (i+1)*size]
 				out := outHost[i]
-				assert.True(t, testAgainstGnarkCryptoMsm(scalarsSlice, pointsSlice, out))
+				assert.True(t, testAgainstGnarkCryptoMsmG2(scalarsSlice, pointsSlice, out))
 			}
 		}
 	}
 }
 
-func TestMSMSkewedDistribution(t *testing.T) {
+func TestMSMG2SkewedDistribution(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
@@ -115,23 +142,23 @@ func TestMSMSkewedDistribution(t *testing.T) {
 		for i := size / 4; i < size; i++ {
 			scalars[i].One()
 		}
-		points := GenerateAffinePoints(size)
+		points := G2GenerateAffinePoints(size)
 		for i := 0; i < size/4; i++ {
 			points[i].Zero()
 		}
 
-		var p Projective
+		var p G2Projective
 		var out core.DeviceSlice
 		_, e := out.Malloc(p.Size(), p.Size())
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-		e = Msm(scalars, points, &cfg, out)
+		e = G2Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
-		outHost := make(core.HostSlice[Projective], 1)
+		outHost := make(core.HostSlice[G2Projective], 1)
 		outHost.CopyFromDevice(&out)
 		out.Free()
 
 		// Check with gnark-crypto
-		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+		assert.True(t, testAgainstGnarkCryptoMsmG2(scalars, points, outHost[0]))
 	}
 }

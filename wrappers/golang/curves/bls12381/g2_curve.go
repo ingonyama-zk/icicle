@@ -1,7 +1,7 @@
-package bn254
+package bls12381
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_381
 // #include "curve.h"
 import "C"
 
@@ -54,7 +54,7 @@ func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
 func (p G2Projective) ProjectiveEq(p2 *G2Projective) bool {
 	cP := (*C.g2_projective_t)(unsafe.Pointer(p.AsPointer()))
 	cP2 := (*C.g2_projective_t)(unsafe.Pointer(p2.AsPointer()))
-	__ret := C.bn254G2Eq(cP, cP2)
+	__ret := C.bls12_381G2Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 
@@ -64,7 +64,7 @@ func (p *G2Projective) ProjectiveToAffine() G2Affine {
 	cA := (*C.g2_affine_t)(unsafe.Pointer(a.AsPointer()))
 	cP := (*C.g2_projective_t)(unsafe.Pointer(p.AsPointer()))
 	// TODO: hangs
-	C.bn254G2ToAffine(cP, cA)
+	C.bls12_381G2ToAffine(cP, cA)
 	return a
 }
 
@@ -77,7 +77,7 @@ func G2GenerateProjectivePoints(size int) core.HostSlice[G2Projective] {
 	pointsSlice := core.HostSliceFromElements[G2Projective](points)
 	pPoints := (*C.g2_projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bn254G2GenerateProjectivePoints(pPoints, cSize)
+	C.bls12_381G2GenerateProjectivePoints(pPoints, cSize)
 
 	return pointsSlice
 }
@@ -131,7 +131,7 @@ func G2GenerateAffinePoints(size int) core.HostSlice[G2Affine] {
 	pointsSlice := core.HostSliceFromElements[G2Affine](points)
 	cPoints := (*C.g2_affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bn254G2GenerateAffinePoints(cPoints, cSize)
+	C.bls12_381G2GenerateAffinePoints(cPoints, cSize)
 
 	return pointsSlice
 }
@@ -142,7 +142,7 @@ func convertG2AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.C
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254G2AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bls12_381G2AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
@@ -161,7 +161,7 @@ func convertG2ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) 
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254G2ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bls12_381G2ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }

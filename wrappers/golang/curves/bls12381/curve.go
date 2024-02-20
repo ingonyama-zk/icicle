@@ -63,6 +63,7 @@ func (p *Projective) ProjectiveToAffine() Affine {
 
 	cA := (*C.affine_t)(unsafe.Pointer(a.AsPointer()))
 	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
+	// TODO: hangs
 	C.bls12_381ToAffine(cP, cA)
 	return a
 }

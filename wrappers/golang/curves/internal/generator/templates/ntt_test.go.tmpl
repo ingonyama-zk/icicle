@@ -22,7 +22,7 @@ func initDomain[T any](largsetTestSize int, cfg core.NTTConfig[T]) {
 	InitDomain(rouIcicle, cfg.Ctx)
 }
 
-func testAgainstGnarkCrypto(size int, scalars core.HostSlice[ScalarField], output core.HostSlice[ScalarField], order core.Ordering, direction core.NTTDir) bool {
+func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[ScalarField], output core.HostSlice[ScalarField], order core.Ordering, direction core.NTTDir) bool {
 	domainWithPrecompute := fft.NewDomain(uint64(size))
 	scalarsFr := make([]fr.Element, size)
 	for i, v := range scalars {
@@ -60,7 +60,8 @@ func testAgainstGnarkCrypto(size int, scalars core.HostSlice[ScalarField], outpu
 
 func TestNTTGetDefaultConfig(t *testing.T) {
 	actual := GetDefaultNttConfig()
-	assert.Equal(t, [SCALAR_LIMBS]uint32{1, 0, 0, 0, 0, 0, 0, 0}, actual.CosetGen)
+	expected := generateLimbOne(int(SCALAR_LIMBS))
+	assert.Equal(t, expected, actual.CosetGen[:])
 
 	cosetGenField := ScalarField{}
 	cosetGenField.One()
@@ -98,7 +99,7 @@ func TestNtt(t *testing.T) {
 			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
-			assert.True(t, testAgainstGnarkCrypto(testSize, scalarsCopy, output, v, core.KForward))
+			assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, core.KForward))
 		}
 	}
 }
@@ -135,7 +136,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				cr.SynchronizeStream(&stream)
 
 				// Compare with gnark-crypto
-				assert.True(t, testAgainstGnarkCrypto(testSize, scalarsCopy, output, v, direction))
+				assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, direction))
 			}
 		}
 	}

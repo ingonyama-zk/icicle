@@ -1,0 +1,88 @@
+package {{.PackageName}}
+
+import (
+	"testing"
+  {{if .IsScalar}}
+  {{- template "scalar_field_tests_imports" . -}}
+  {{end}}
+	"github.com/stretchr/testify/assert"
+)
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldFromLimbs(t *testing.T) {
+	emptyField := {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
+	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	emptyField.FromLimbs(randLimbs[:])
+	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field's limbs")
+	randLimbs[0] = 100
+	assert.NotEqual(t, randLimbs, emptyField.limbs)
+}
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldGetLimbs(t *testing.T) {
+	emptyField := {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
+	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	emptyField.FromLimbs(randLimbs[:])
+
+	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field's limbs")
+}
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldOne(t *testing.T) {
+	var emptyField {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+	emptyField.One()
+	limbOne := generateLimbOne(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
+
+	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	emptyField.FromLimbs(randLimbs[:])
+
+	emptyField.One()
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field with limbs to field one did not work")
+}
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldZero(t *testing.T) {
+	var emptyField {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+	emptyField.Zero()
+	limbsZero := make([]uint32, {{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS)
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
+
+	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	emptyField.FromLimbs(randLimbs[:])
+
+	emptyField.Zero()
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field with limbs to field zero failed")
+}
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldSize(t *testing.T) {
+	var emptyField {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	emptyField.FromLimbs(randLimbs[:])
+
+	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+}
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldAsPointer(t *testing.T) {
+	var emptyField {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	emptyField.FromLimbs(randLimbs[:])
+
+	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
+}
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldFromBytes(t *testing.T) {
+	var emptyField {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+	bytes, expected := generateBytesArray(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+
+	emptyField.FromBytesLittleEndian(bytes)
+
+	assert.ElementsMatch(t, emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
+}
+
+func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldToBytes(t *testing.T) {
+	var emptyField {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+	expected, limbs := generateBytesArray(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
+	emptyField.FromLimbs(limbs)
+	
+	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
+}
+{{if .IsScalar}}
+{{- template "scalar_field_tests" .}}
+{{end}}

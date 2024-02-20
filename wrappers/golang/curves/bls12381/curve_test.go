@@ -1,4 +1,4 @@
-package bn254
+package bls12381
 
 import (
 	"testing"

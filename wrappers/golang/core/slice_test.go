@@ -139,8 +139,7 @@ func TestDeviceSliceIsOnDevice(t *testing.T) {
 func TestCopyToFromHostDeviceField(t *testing.T) {
 	var emptyDeviceSlice DeviceSlice
 
-	// TODO: Fails on 115+ fields
-	numFields := 100
+	numFields := 1 << 10
 	randFields := randomFields(numFields, fieldSize)
 	hostSlice := HostSliceFromElements(randFields)
 	hostSlice.CopyToDevice(&emptyDeviceSlice, true)
@@ -168,14 +167,13 @@ func TestCopyToFromHostDeviceAffinePoints(t *testing.T) {
 	hostSlice2.CopyFromDevice(&emptyDeviceSlice)
 	emptyDeviceSlice.Free()
 
-	// TODO: Fails on 60+ points
-	// assert.Equal(t, hostSlice, hostSlice2)
+	assert.Equal(t, hostSlice, hostSlice2)
 }
 
 func TestCopyToFromHostDeviceProjectivePoints(t *testing.T) {
 	var emptyDeviceSlice DeviceSlice
 
-	numPoints := 1 << 23
+	numPoints := 1 << 15
 	randProjectives := randomProjectivePoints(numPoints, fieldSize)
 	hostSlice := HostSliceFromElements(randProjectives)
 	hostSlice.CopyToDevice(&emptyDeviceSlice, true)
@@ -186,6 +184,5 @@ func TestCopyToFromHostDeviceProjectivePoints(t *testing.T) {
 	assert.NotEqual(t, hostSlice, hostSlice2)
 	hostSlice2.CopyFromDevice(&emptyDeviceSlice)
 
-	// TODO: Fails on 40+ points
-	// assert.Equal(t, hostSlice, hostSlice2)
+	assert.Equal(t, hostSlice, hostSlice2)
 }
