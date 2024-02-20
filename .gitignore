@@ -3,7 +3,7 @@
 *.gpu
 *.ptx
 *.cubin
-*.bin
+# *.bin
 *.fatbin
 *.so
 *.nsys-rep
