@@ -1,7 +1,7 @@
-package bn254Temp
+package bls12381
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254Temp
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_381
 // #include "msm.h"
 import "C"
 
@@ -44,7 +44,7 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 	cSize := (C.int)(scalars.Len() / results.Len())
 	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 
-	__ret := C.bn254TempMSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
+	__ret := C.bls12_381MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return err
 }

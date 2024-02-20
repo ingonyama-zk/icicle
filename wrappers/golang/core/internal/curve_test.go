@@ -6,7 +6,7 @@ import (
 )
 
 func TestAffineZero(t *testing.T) {
-	var fieldZero = Field{}
+	var fieldZero = MockField{}
 
 	var affineZero Affine
 	affineZero.Zero()
@@ -14,13 +14,13 @@ func TestAffineZero(t *testing.T) {
 	assert.Equal(t, affineZero.X, fieldZero)
 	assert.Equal(t, affineZero.Y, fieldZero)
 
-	var fieldZeroOfLength = Field{}
+	var fieldZeroOfLength = MockField{}
 
 	affine := Affine{
-		X: Field{
+		X: MockField{
 			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
 		},
-		Y: Field{
+		Y: MockField{
 			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
 		},
 	}
@@ -44,15 +44,15 @@ func TestAffineFromLimbs(t *testing.T) {
 func TestAffineToProjective(t *testing.T) {
 	randLimbs := [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8}
 	randLimbs2 := [BASE_LIMBS]uint32{11,12,13,14,15,16,17,18}
-	var fieldOne Field
+	var fieldOne MockField
 	limbsOne := []uint32{1,0,0,0,0,0,0,0}
 	fieldOne.FromLimbs(limbsOne)
 
 	expected := Projective{
-		X: Field{
+		X: MockField{
 			limbs: randLimbs,
 		},
-		Y: Field{
+		Y: MockField{
 			limbs: randLimbs2,
 		},
 		Z: fieldOne,
@@ -66,7 +66,7 @@ func TestAffineToProjective(t *testing.T) {
 }
 
 func TestProjectiveZero(t *testing.T) {
-	var fieldZero = Field{}
+	var fieldZero = MockField{}
 
 	var projectiveZero Projective
 	projectiveZero.Zero()
@@ -74,18 +74,18 @@ func TestProjectiveZero(t *testing.T) {
 	assert.Equal(t, projectiveZero.X, fieldZero)
 	assert.Equal(t, projectiveZero.Y, fieldZero)
 
-	var fieldZeroOfLength = Field{
+	var fieldZeroOfLength = MockField{
 		limbs: [BASE_LIMBS]uint32{0,0,0,0,0,0,0,0},
 	}
 
 	projective := Projective{
-		X: Field{
+		X: MockField{
 			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
 		},
-		Y: Field{
+		Y: MockField{
 			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
 		},
-		Z: Field{
+		Z: MockField{
 			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
 		},
 	}
@@ -112,15 +112,15 @@ func TestProjectiveFromLimbs(t *testing.T) {
 func TestProjectiveFromAffine(t *testing.T) {
 	randLimbs := [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8}
 	randLimbs2 := [BASE_LIMBS]uint32{11,12,13,14,15,16,17,18}
-	var fieldOne Field
+	var fieldOne MockField
 	limbsOne := []uint32{1,0,0,0,0,0,0,0}
 	fieldOne.FromLimbs(limbsOne)
 
 	expected := Projective{
-		X: Field{
+		X: MockField{
 			limbs: randLimbs,
 		},
-		Y: Field{
+		Y: MockField{
 			limbs: randLimbs2,
 		},
 		Z: fieldOne,

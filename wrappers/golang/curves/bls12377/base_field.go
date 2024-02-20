@@ -1,4 +1,4 @@
-package bn254
+package bls12377
 
 import (
 	"encoding/binary"
@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	BASE_LIMBS int8 = 8
+	BASE_LIMBS int8 = 12
 )
 
 type BaseField struct {

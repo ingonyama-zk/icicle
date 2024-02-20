@@ -9,20 +9,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func randomField(size int) internal.Field {
+func randomField(size int) internal.MockField {
 	limbs := make([]uint32, size)
 	for i := range limbs {
 		limbs[i] = rand.Uint32()
 	}
 
-	var field internal.Field
+	var field internal.MockField
 	field.FromLimbs(limbs)
 
 	return field
 }
 
-func randomFields(numFields, fieldSize int) []internal.Field {
-	var randFields []internal.Field
+func randomFields(numFields, fieldSize int) []internal.MockField {
+	var randFields []internal.MockField
 
 	for i := 0; i < numFields; i++ {
 		randFields = append(randFields, randomField(fieldSize))
@@ -68,7 +68,7 @@ const (
 )
 
 func TestHostSlice(t *testing.T) {
-	var emptyHostSlice HostSlice[internal.Field]
+	var emptyHostSlice HostSlice[internal.MockField]
 	assert.Equal(t, emptyHostSlice.Len(), 0)
 	assert.Equal(t, emptyHostSlice.Cap(), 0)
 
@@ -80,7 +80,7 @@ func TestHostSlice(t *testing.T) {
 }
 
 func TestHostSliceIsEmpty(t *testing.T) {
-	var emptyHostSlice HostSlice[*internal.Field]
+	var emptyHostSlice HostSlice[*internal.MockField]
 	assert.True(t, emptyHostSlice.IsEmpty())
 
 	randFields := randomFields(numFields, fieldSize)
@@ -90,7 +90,7 @@ func TestHostSliceIsEmpty(t *testing.T) {
 }
 
 func TestHostSliceIsOnDevice(t *testing.T) {
-	var emptyHostSlice HostSlice[*internal.Field]
+	var emptyHostSlice HostSlice[*internal.MockField]
 	assert.False(t, emptyHostSlice.IsOnDevice())
 }
 

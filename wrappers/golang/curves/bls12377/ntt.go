@@ -1,7 +1,7 @@
-package {{.PackageName}}
+package bls12377
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_{{.Curve}}
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_377
 // #include "ntt.h"
 import "C"
 
@@ -45,7 +45,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 	}
 	cResults := (*C.scalar_t)(resultsPointer)
 
-	__ret := C.{{.Curve}}NTTCuda(cScalars, cSize, cDir, cCfg, cResults)
+	__ret := C.bls12_377NTTCuda(cScalars, cSize, cDir, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }
@@ -53,7 +53,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext) core.IcicleError {
 	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	__ret := C.{{.Curve}}InitializeDomain(cPrimitiveRoot, cCtx)
+	__ret := C.bls12_377InitializeDomain(cPrimitiveRoot, cCtx)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

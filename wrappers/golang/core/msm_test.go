@@ -37,14 +37,14 @@ func TestMSMCheckHostSlices(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 
 	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-	rawScalars := make([]internal.Field, 10)
+	rawScalars := make([]internal.MockField, 10)
 	for i := range rawScalars {
-		var emptyField internal.Field
+		var emptyField internal.MockField
 		emptyField.FromLimbs(randLimbs)
 
 		rawScalars[i] = emptyField
 	}
-	scalars := HostSliceFromElements[internal.Field](rawScalars)
+	scalars := HostSliceFromElements[internal.MockField](rawScalars)
 
 	affine := internal.Affine{}
 	limbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
@@ -70,14 +70,14 @@ func TestMSMCheckDeviceSlices(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 
 	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-	rawScalars := make([]internal.Field, 10)
+	rawScalars := make([]internal.MockField, 10)
 	for i := range rawScalars {
-		var emptyField internal.Field
+		var emptyField internal.MockField
 		emptyField.FromLimbs(randLimbs)
 
 		rawScalars[i] = emptyField
 	}
-	scalars := HostSliceFromElements[internal.Field](rawScalars)
+	scalars := HostSliceFromElements[internal.MockField](rawScalars)
 	var scalarsOnDevice DeviceSlice
 	scalars.CopyToDevice(&scalarsOnDevice, true)
 

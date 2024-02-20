@@ -9,27 +9,27 @@ const (
 	BASE_LIMBS int8 = 8
 )
 
-type Field struct {
+type MockField struct {
 	limbs [BASE_LIMBS]uint32
 }
 
-func (f Field) Len() int {
+func (f MockField) Len() int {
 	return int(BASE_LIMBS)
 }
 
-func (f Field) Size() int {
+func (f MockField) Size() int {
 	return int(BASE_LIMBS*4)
 }
 
-func (f Field) AsPointer() *uint32 {
+func (f MockField) AsPointer() *uint32 {
 	return &f.limbs[0]
 }
 
-func (f Field) GetLimbs() []uint32 {
+func (f MockField) GetLimbs() []uint32 {
 	return f.limbs[:]
 }
 
-func (f *Field) FromLimbs(limbs []uint32) Field {
+func (f *MockField) FromLimbs(limbs []uint32) MockField {
 	if len(limbs) != f.Len() {
 		panic("Called FromLimbs with limbs of different length than field")
 	}
@@ -40,7 +40,7 @@ func (f *Field) FromLimbs(limbs []uint32) Field {
 	return *f
 }
 
-func (f *Field) Zero() Field {
+func (f *MockField) Zero() MockField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
@@ -48,7 +48,7 @@ func (f *Field) Zero() Field {
 	return *f
 }
 
-func (f *Field) One() Field {
+func (f *MockField) One() MockField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
@@ -57,7 +57,7 @@ func (f *Field) One() Field {
 	return *f
 }
 
-func (f *Field) FromBytesLittleEndian(bytes []byte) Field {
+func (f *MockField) FromBytesLittleEndian(bytes []byte) MockField {
 	if len(bytes)/4 != f.Len() {
 		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*4, len(bytes)))
 	}
@@ -69,7 +69,7 @@ func (f *Field) FromBytesLittleEndian(bytes []byte) Field {
 	return *f
 }
 
-func (f Field) ToBytesLittleEndian() []byte {
+func (f MockField) ToBytesLittleEndian() []byte {
 	bytes := make([]byte, f.Len()*4)
 	for i, v := range f.limbs {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)

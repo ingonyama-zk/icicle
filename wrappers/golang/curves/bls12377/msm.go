@@ -1,7 +1,7 @@
-package {{.PackageName}}
+package bls12377
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_{{.Curve}}
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_377
 // #include "msm.h"
 import "C"
 
@@ -11,11 +11,11 @@ import (
 	"unsafe"
 )
 
-func {{if .IsG2}}G2{{end}}GetDefaultMSMConfig() core.MSMConfig {
+func GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
-func Msm{{if .IsG2}}G2{{end}}(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
@@ -29,22 +29,22 @@ func Msm{{if .IsG2}}G2{{end}}(scalars core.HostOrDeviceSlice, points core.HostOr
 	if points.IsOnDevice() {
 		pointsPointer = points.(core.DeviceSlice).AsPointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[{{if .IsG2}}G2{{end}}Affine])[0])
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Affine])[0])
 	}
-	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(pointsPointer)
+	cPoints := (*C.affine_t)(pointsPointer)
 
 	var resultsPointer unsafe.Pointer
 	if results.IsOnDevice() {
 		resultsPointer = results.(core.DeviceSlice).AsPointer()
 	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[{{if .IsG2}}G2{{end}}Projective])[0])
+		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[Projective])[0])
 	}
-	cResults := (*C.{{if .IsG2}}g2_{{end}}projective_t)(resultsPointer)
+	cResults := (*C.projective_t)(resultsPointer)
 
 	cSize := (C.int)(scalars.Len() / results.Len())
 	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 
-	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
+	__ret := C.bls12_377MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return err
 }

@@ -1,7 +1,7 @@
-package bn254
+package bls12377
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_377
 // #include "scalar_field.h"
 import "C"
 import (
@@ -96,7 +96,7 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)
-	C.bn254GenerateScalars(cScalars, cSize)
+	C.bls12_377GenerateScalars(cScalars, cSize)
 
 	return scalarSlice
 }
@@ -107,7 +107,7 @@ func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaErr
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bls12_377ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }

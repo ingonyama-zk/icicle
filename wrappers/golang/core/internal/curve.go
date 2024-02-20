@@ -1,7 +1,7 @@
 package internal
 
 type Projective struct {
-	X, Y, Z Field
+	X, Y, Z MockField
 }
 
 func (p Projective) Size() int {
@@ -29,7 +29,7 @@ func (p* Projective) FromLimbs(x, y, z []uint32) Projective {
 }
 
 func (p* Projective) FromAffine(a Affine) Projective {
-	var z Field
+	var z MockField
 	z.One()
 
 	p.X = a.X
@@ -40,7 +40,7 @@ func (p* Projective) FromAffine(a Affine) Projective {
 }
 
 type Affine struct {
-	X, Y Field
+	X, Y MockField
 }
 
 func (a Affine) Size() int {
@@ -66,7 +66,7 @@ func (a* Affine) FromLimbs(x, y []uint32) Affine {
 }
 
 func (a Affine) ToProjective() Projective {
-	var z Field
+	var z MockField
 	z.One()
 	
 	return Projective{

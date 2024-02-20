@@ -1,7 +1,7 @@
-package bn254
+package bls12377
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_377
 // #include "curve.h"
 import "C"
 
@@ -54,7 +54,7 @@ func (p *Projective) FromAffine(a Affine) Projective {
 func (p Projective) ProjectiveEq(p2 *Projective) bool {
 	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
 	cP2 := (*C.projective_t)(unsafe.Pointer(p2.AsPointer()))
-	__ret := C.bn254Eq(cP, cP2)
+	__ret := C.bls12_377Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 
@@ -63,7 +63,7 @@ func (p *Projective) ProjectiveToAffine() Affine {
 
 	cA := (*C.affine_t)(unsafe.Pointer(a.AsPointer()))
 	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
-	C.bn254ToAffine(cP, cA)
+	C.bls12_377ToAffine(cP, cA)
 	return a
 }
 
@@ -76,7 +76,7 @@ func GenerateProjectivePoints(size int) core.HostSlice[Projective] {
 	pointsSlice := core.HostSliceFromElements[Projective](points)
 	pPoints := (*C.projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bn254GenerateProjectivePoints(pPoints, cSize)
+	C.bls12_377GenerateProjectivePoints(pPoints, cSize)
 
 	return pointsSlice
 }
@@ -130,7 +130,7 @@ func GenerateAffinePoints(size int) core.HostSlice[Affine] {
 	pointsSlice := core.HostSliceFromElements[Affine](points)
 	cPoints := (*C.affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bn254GenerateAffinePoints(cPoints, cSize)
+	C.bls12_377GenerateAffinePoints(cPoints, cSize)
 
 	return pointsSlice
 }
@@ -141,7 +141,7 @@ func convertAffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.Cud
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bls12_377AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
@@ -160,7 +160,7 @@ func convertProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bls12_377ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
