@@ -78,7 +78,9 @@ namespace vec_ops {
       CHK_IF_RETURN(cudaFreeAsync(d_result, config.ctx.stream));
     }
 
-    return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
+    if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
+
+    return CHK_LAST();
   }
 
   template <typename E>
