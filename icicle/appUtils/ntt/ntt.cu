@@ -370,6 +370,7 @@ namespace ntt {
     int max_size = 0;
     int max_log_size = 0;
     S* twiddles = nullptr;
+    bool initialized = false; // protection for multi-threaded case
     std::unordered_map<S, int> coset_index = {};
 
     S* internal_twiddles = nullptr; // required by mixed-radix NTT
@@ -407,11 +408,11 @@ namespace ntt {
     // please note that this offers just basic thread-safety,
     // it's assumed a singleton (non-enforced) that is supposed
     // to be initialized once per device per program lifetime
-    if (!domain.twiddles) {
+    if (!domain.initialized) {
       // Mutex is automatically released when lock goes out of scope, even in case of exceptions
       std::lock_guard<std::mutex> lock(Domain<S>::device_domain_mutex);
       // double check locking
-      if (domain.twiddles) return CHK_LAST(); // another thread is already initializing the domain
+      if (domain.initialized) return CHK_LAST(); // another thread is already initializing the domain
 
       bool found_logn = false;
       S omega = primitive_root;
@@ -474,6 +475,7 @@ namespace ntt {
           domain.coset_index[domain.twiddles[i]] = i;
         }
       }
+      domain.initialized = true;
     }
 
     return CHK_LAST();
