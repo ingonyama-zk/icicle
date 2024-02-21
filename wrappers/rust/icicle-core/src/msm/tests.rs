@@ -16,6 +16,15 @@ use ark_ec::VariableBaseMSM;
 #[cfg(feature = "arkworks")]
 use ark_std::{rand::Rng, test_rng, UniformRand};
 
+fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: usize) -> Vec<Affine<C>> {
+    let rng = &mut test_rng();
+    let mut points = C::generate_random_affine_points(size);
+    for _ in 0..num_zeroes {
+        points[rng.gen_range(0..size)] = Affine::<C>::zero();
+    }
+    points
+}
+
 pub fn check_msm<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
@@ -36,7 +45,7 @@ where
             let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
             let mut msm_results = HostOrDeviceSlice::cuda_malloc(1).unwrap();
             for test_size in test_sizes {
-                let points = C::generate_random_affine_points(test_size);
+                let points = generate_random_affine_points_with_zeroes(test_size, 2);
                 let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
                 let points_ark: Vec<_> = points
                     .iter()
@@ -101,7 +110,7 @@ where
     let batch_sizes = [1, 3, 1 << 4];
     for test_size in test_sizes {
         for batch_size in batch_sizes {
-            let points = C::generate_random_affine_points(test_size);
+            let points = generate_random_affine_points_with_zeroes(test_size, 10);
             let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
             // a version of batched msm without using `cfg.points_size`, requires copying bases
             let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
@@ -123,6 +132,7 @@ where
             cfg.ctx
                 .stream = &stream;
             cfg.is_async = true;
+            cfg.large_bucket_factor = 2;
             msm(&scalars_h, &points_h, &cfg, &mut msm_results_1).unwrap();
             msm(&scalars_h, &points_d, &cfg, &mut msm_results_2).unwrap();
 
@@ -170,15 +180,16 @@ where
     C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
-    let test_sizes = [1 << 6, 1000];
-    let test_threshold = 1 << 8;
-    let batch_sizes = [1, 3, 1 << 8];
+    let test_sizes = [1 << 10, 10000];
+    let test_threshold = 1 << 11;
+    let batch_sizes = [1, 3, 1 << 4];
     let rng = &mut test_rng();
     for test_size in test_sizes {
         for batch_size in batch_sizes {
-            let points = C::generate_random_affine_points(test_size * batch_size);
+            let points = generate_random_affine_points_with_zeroes(test_size * batch_size, 100);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];
-            for _ in 0..(test_size * batch_size / 2) {
+
+            for _ in 0..(test_size * batch_size) {
                 scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::one();
             }
             for _ in test_threshold..test_size {
