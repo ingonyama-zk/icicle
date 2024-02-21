@@ -9,6 +9,7 @@ pub mod poseidon;
 pub mod tests;
 pub mod traits;
 pub mod tree;
+pub mod vec_ops;
 
 pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
 where
