@@ -34,7 +34,7 @@ namespace ntt {
    * @param ctx Details related to the device such as its id and stream id.
    * @param fast_twiddles_mode A mode where more memory is allocated for twiddle factors in exchange for faster compute.
    * In this mode need additional 4N memory when N is the largest NTT size to be supported (which is derived by the
-   * primitive_root.
+   * primitive_root).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S>
