@@ -56,7 +56,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&stop));
 
   const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  ntt::InitDomain(basic_root, ntt_config.ctx);
+  ntt::InitDomain(basic_root, ntt_config.ctx, true /*=fast_twidddles_mode*/);
 
   // (1) cpu allocation
   auto CpuA = std::make_unique<test_data[]>(NTT_SIZE);
