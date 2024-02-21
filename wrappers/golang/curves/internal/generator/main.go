@@ -176,8 +176,10 @@ func generateFiles() {
 	// Header files
 	templateIncludeFiles := []string{
 		"curve.h.tmpl",
+		"g2_curve.h.tmpl",
 		"scalar_field.h.tmpl",
 		"msm.h.tmpl",
+		"g2_msm.h.tmpl",
 		"ntt.h.tmpl",
 		/*"vec_ops.h.tmpl",*/
 	}

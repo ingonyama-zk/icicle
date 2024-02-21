@@ -4,7 +4,7 @@ package bls12377
 
 // #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_377
-// #include "msm.h"
+// #include "g2_msm.h"
 import "C"
 
 import (

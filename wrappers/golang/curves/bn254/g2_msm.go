@@ -4,7 +4,7 @@ package bn254
 
 // #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254
-// #include "msm.h"
+// #include "g2_msm.h"
 import "C"
 
 import (

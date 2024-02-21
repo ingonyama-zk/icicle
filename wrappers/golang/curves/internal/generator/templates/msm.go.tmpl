@@ -6,7 +6,7 @@ package {{.PackageName}}
 
 // #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_{{.Curve}}
-// #include "msm.h"
+// #include "{{if .IsG2 -}}g2_{{end}}msm.h"
 import "C"
 
 import (
