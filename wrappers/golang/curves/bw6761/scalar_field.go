@@ -1,7 +1,6 @@
 package bw6761
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bw6_761
 // #include "scalar_field.h"
 import "C"
 import (

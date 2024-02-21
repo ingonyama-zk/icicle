@@ -1,7 +1,6 @@
 package bls12377
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_377 -lstdc++ -lm
 // #include "msm.h"
 import "C"
 

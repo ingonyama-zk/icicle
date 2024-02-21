@@ -1,7 +1,6 @@
 package bn254
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254
 // #include "scalar_field.h"
 import "C"
 import (

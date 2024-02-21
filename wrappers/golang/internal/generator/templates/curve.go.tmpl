@@ -5,7 +5,6 @@
 package {{.PackageName}}
 {{if not .IsMock}}
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_{{.Curve}}
 // #include "{{if .IsG2 -}}g2_{{end}}curve.h"
 import "C"
 

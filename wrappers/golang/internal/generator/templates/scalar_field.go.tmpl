@@ -1,6 +1,5 @@
 {{- define "scalar_field_c_imports" }}
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_{{.Curve}}
 // #include "scalar_field.h"
 import "C"
 {{- end }}

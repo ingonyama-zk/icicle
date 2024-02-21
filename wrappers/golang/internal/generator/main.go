@@ -97,6 +97,7 @@ func generateFiles() {
 	var entries []Entry
 
 	templateFiles := []string{
+		"main.go.tmpl",
 		"msm.go.tmpl",
 		"msm_test.go.tmpl",
 		"ntt.go.tmpl",
@@ -185,7 +186,11 @@ func generateFiles() {
 
 	for _, curveData := range curvesData {
 		for _, entry := range entries {
-			outFile := filepath.Join(baseDir, curveData.PackageName, entry.outputName)
+			fileName := entry.outputName
+			if strings.Contains(fileName, "main") {
+				fileName = strings.Replace(fileName, "main", curveData.Curve, 1)
+			}
+			outFile := filepath.Join(baseDir, curveData.PackageName, fileName)
 			var buf bytes.Buffer
 			data := struct {
 				CurveData
@@ -194,8 +199,8 @@ func generateFiles() {
 				IsMock   bool
 			}{
 				curveData,
-				strings.Contains(entry.outputName, "scalar_field"),
-				strings.Contains(entry.outputName, "g2"),
+				strings.Contains(fileName, "scalar_field"),
+				strings.Contains(fileName, "g2"),
 				false,
 			}
 			entry.parsedTemplate.Execute(&buf, data)

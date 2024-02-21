@@ -3,7 +3,6 @@
 package bls12381
 
 // #cgo CFLAGS: -I./include/
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bls12_381
 // #include "g2_curve.h"
 import "C"
 
