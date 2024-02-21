@@ -1,3 +1,4 @@
+//go:build g2
 package bls12377
 
 import (

@@ -1,3 +1,6 @@
+{{if .IsG2 -}}
+//go:build g2
+{{end -}}
 package {{.PackageName}}
 
 // #cgo CFLAGS: -I./include/

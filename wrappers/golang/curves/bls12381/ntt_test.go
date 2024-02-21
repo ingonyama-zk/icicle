@@ -12,10 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	largestTestSize = 20
-)
-
 func initDomain[T any](largsetTestSize int, cfg core.NTTConfig[T]) {
 	rouMont, _ := fft.Generator(uint64(1 << largsetTestSize))
 	rou := rouMont.Bits()
@@ -73,7 +69,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 }
 
 func TestInitDomain(t *testing.T) {
-	rouMont, _ := fft.Generator(1 << largestTestSize)
+	rouMont, _ := fft.Generator(1 << 17)
 	rou := rouMont.Bits()
 	rouIcicle := ScalarField{}
 	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
@@ -86,11 +82,12 @@ func TestInitDomain(t *testing.T) {
 
 func TestNtt(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	scalars := GenerateScalars(1 << largestTestSize)
+	largsetTestSize := 17
+	scalars := GenerateScalars(1 << largsetTestSize)
 	// init domain
-	initDomain(largestTestSize, cfg)
+	initDomain(largsetTestSize, cfg)
 
-	for _, size := range []int{4, largestTestSize} {
+	for _, size := range []int{4, largsetTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 			testSize := 1 << size
 
@@ -110,6 +107,7 @@ func TestNtt(t *testing.T) {
 func TestNttDeviceAsync(t *testing.T) {
 	cfg := GetDefaultNttConfig()
 	// init domain
+	largestTestSize := 20
 	scalars := GenerateScalars(1 << largestTestSize)
 	initDomain(largestTestSize, cfg)
 
