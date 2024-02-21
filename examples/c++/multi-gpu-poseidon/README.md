@@ -1,4 +1,4 @@
-# Icicle example: using muliple GPU to hash large dataset
+# Icicle example: using multiple GPU to hash large dataset
 
 ## Best-Practices
 
@@ -31,6 +31,7 @@ ctx0.device_id=0;
 device_context::DeviceContext ctx1 = device_context::get_default_device_context();
 ctx1.device_id=1;
 ``` 
+
 4. Finally, spawn the threads and wait for their completion
 
 ```c++

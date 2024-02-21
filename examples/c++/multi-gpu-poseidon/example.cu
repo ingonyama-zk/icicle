@@ -57,7 +57,7 @@ int main() {
     const unsigned size_row = (1<<30);
     const unsigned nof_partitions = 64;
     const unsigned size_partition = size_row / nof_partitions;
-    // layers is allocated only for one partition, need to resuse for different partitions
+    // layers is allocated only for one partition, need to reuse for different partitions
     const uint32_t size_layers = size_col * size_partition;
     
     nvmlInit();
