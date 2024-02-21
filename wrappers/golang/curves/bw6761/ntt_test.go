@@ -1,4 +1,4 @@
-package bls12381
+package bw6761
 
 import (
 	"reflect"
@@ -7,8 +7,8 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
-	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
+	"github.com/consensys/gnark-crypto/ecc/bw6-761/fr"
+	"github.com/consensys/gnark-crypto/ecc/bw6-761/fr/fft"
 	"github.com/stretchr/testify/assert"
 )
 

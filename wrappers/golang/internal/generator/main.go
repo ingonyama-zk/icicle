@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	baseDir = "../../" // wrappers/golang/curves
+	baseDir = "../../curves/" // wrappers/golang/curves
 )
 
 func create(output string, buf *bytes.Buffer) error {
@@ -40,8 +40,6 @@ type CurveData struct {
 	ScalarLimbsNum int
 	BaseLimbsNum   int
 	G2BaseLimbsNum int
-	IsG2           bool
-	IsScalar       bool
 }
 
 var bn254 = CurveData{
@@ -51,8 +49,6 @@ var bn254 = CurveData{
 	ScalarLimbsNum: 8,
 	BaseLimbsNum:   8,
 	G2BaseLimbsNum: 16,
-	IsG2:           false,
-	IsScalar:       false,
 }
 var bls12381 = CurveData{
 	PackageName:    "bls12381",
@@ -61,8 +57,6 @@ var bls12381 = CurveData{
 	ScalarLimbsNum: 8,
 	BaseLimbsNum:   12,
 	G2BaseLimbsNum: 24,
-	IsG2:           false,
-	IsScalar:       false,
 }
 var bls12377 = CurveData{
 	PackageName:    "bls12377",
@@ -71,18 +65,14 @@ var bls12377 = CurveData{
 	ScalarLimbsNum: 8,
 	BaseLimbsNum:   12,
 	G2BaseLimbsNum: 24,
-	IsG2:           false,
-	IsScalar:       false,
 }
 var bw6761 = CurveData{
 	PackageName:    "bw6761",
 	Curve:          "bw6_761",
 	GnarkImport:    "bw6-761",
-	ScalarLimbsNum: 8,
+	ScalarLimbsNum: 12,
 	BaseLimbsNum:   12,
-	G2BaseLimbsNum: 16,
-	IsG2:           false,
-	IsScalar:       false,
+	G2BaseLimbsNum: 12,
 }
 
 type Entry struct {
@@ -103,8 +93,7 @@ func generateFiles() {
 		"toPackage": toPackage,
 	}
 
-	curvesData := []CurveData{bn254, bls12377, bls12381}
-	// curvesData := []CurveData{bn254}
+	curvesData := []CurveData{bn254, bls12377, bls12381, bw6761}
 	var entries []Entry
 
 	templateFiles := []string{
@@ -198,19 +187,56 @@ func generateFiles() {
 		for _, entry := range entries {
 			outFile := filepath.Join(baseDir, curveData.PackageName, entry.outputName)
 			var buf bytes.Buffer
-			if strings.Contains(entry.outputName, "scalar_field") {
-				curveData.IsScalar = true
-			} else {
-				curveData.IsScalar = false
+			data := struct {
+				CurveData
+				IsScalar bool
+				IsG2 bool
+				IsMock bool
+			} {
+				curveData,
+				strings.Contains(entry.outputName, "scalar_field"),
+				strings.Contains(entry.outputName, "g2"),
+				false,
 			}
-			if strings.Contains(entry.outputName, "g2") {
-				curveData.IsG2 = true
-			} else {
-				curveData.IsG2 = false
-			}
-			entry.parsedTemplate.Execute(&buf, curveData)
+			entry.parsedTemplate.Execute(&buf, data)
 			create(outFile, &buf)
 		}
+	}
+
+	// Generate internal mock field and mock curve files for testing core package
+	internalTemplateFiles := []string{
+		"curve_test.go.tmpl",
+		"curve.go.tmpl",
+		"field_test.go.tmpl",
+		"field.go.tmpl",
+		"helpers_test.go.tmpl",
+	}
+
+	for _, internalTemplate := range internalTemplateFiles {
+		tmpl := template.New(internalTemplate).Funcs(funcs)
+		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", internalTemplate))
+		if err != nil {
+			panic(err)
+		}
+		fileName, _ := strings.CutSuffix(internalTemplate, ".tmpl")
+		outFile := filepath.Join("../../core/internal/", fileName)
+		
+		var buf bytes.Buffer
+		data := struct {
+			PackageName    string
+			BaseLimbsNum   int
+			IsMock bool
+			IsG2 bool
+			IsScalar bool
+		} {
+			"internal",
+			8,
+			true,
+			false,
+			false,
+		}
+		tmplParsed.Execute(&buf, data)
+		create(outFile, &buf)
 	}
 }
 

@@ -1,18 +1,18 @@
 package internal
 
-type Projective struct {
+type MockProjective struct {
 	X, Y, Z MockField
 }
 
-func (p Projective) Size() int {
+func (p MockProjective) Size() int {
 	return p.X.Size() * 3
 }
 
-func (p Projective) AsPointer() *uint32 {
+func (p MockProjective) AsPointer() *uint32 {
 	return p.X.AsPointer()
 }
 
-func (p *Projective) Zero() Projective {
+func (p *MockProjective) Zero() MockProjective {
 	p.X.Zero()
 	p.Y.Zero()
 	p.Z.Zero()
@@ -20,7 +20,7 @@ func (p *Projective) Zero() Projective {
 	return *p
 }
 
-func (p *Projective) FromLimbs(x, y, z []uint32) Projective {
+func (p *MockProjective) FromLimbs(x, y, z []uint32) MockProjective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
 	p.Z.FromLimbs(z)
@@ -28,8 +28,8 @@ func (p *Projective) FromLimbs(x, y, z []uint32) Projective {
 	return *p
 }
 
-func (p *Projective) FromAffine(a Affine) Projective {
-	var z MockField
+func (p *MockProjective) FromAffine(a MockAffine) MockProjective {
+	z := MockField{}
 	z.One()
 
 	p.X = a.X
@@ -39,39 +39,38 @@ func (p *Projective) FromAffine(a Affine) Projective {
 	return *p
 }
 
-type Affine struct {
+type MockAffine struct {
 	X, Y MockField
 }
 
-func (a Affine) Size() int {
+func (a MockAffine) Size() int {
 	return a.X.Size() * 2
 }
 
-func (a Affine) AsPointer() *uint32 {
+func (a MockAffine) AsPointer() *uint32 {
 	return a.X.AsPointer()
 }
 
-func (a *Affine) Zero() Affine {
+func (a *MockAffine) Zero() MockAffine {
 	a.X.Zero()
 	a.Y.Zero()
 
 	return *a
 }
 
-func (a *Affine) FromLimbs(x, y []uint32) Affine {
+func (a *MockAffine) FromLimbs(x, y []uint32) MockAffine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
 
 	return *a
 }
 
-func (a Affine) ToProjective() Projective {
+func (a MockAffine) ToProjective() MockProjective {
 	var z MockField
-	z.One()
 
-	return Projective{
+	return MockProjective{
 		X: a.X,
 		Y: a.Y,
-		Z: z,
+		Z: z.One(),
 	}
 }

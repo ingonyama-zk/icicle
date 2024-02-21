@@ -9,16 +9,16 @@ import (
 	"testing"
 )
 
-func Test{{if .IsG2}}G2{{end}}AffineZero(t *testing.T) {
-	var fieldZero = {{if .IsG2}}G2{{end}}BaseField{}
+func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}AffineZero(t *testing.T) {
+	var fieldZero = {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
 
-	var affineZero {{if .IsG2}}G2{{end}}Affine
+	var affineZero {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine
 	assert.Equal(t, affineZero.X, fieldZero)
 	assert.Equal(t, affineZero.Y, fieldZero)
 
 	x := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 	y := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
-	var affine {{if .IsG2}}G2{{end}}Affine
+	var affine {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine
 	affine.FromLimbs(x, y)
 
 	affine.Zero()
@@ -26,44 +26,44 @@ func Test{{if .IsG2}}G2{{end}}AffineZero(t *testing.T) {
 	assert.Equal(t, affine.Y, fieldZero)
 }
 
-func Test{{if .IsG2}}G2{{end}}AffineFromLimbs(t *testing.T) {
+func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}AffineFromLimbs(t *testing.T) {
 	randLimbs := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 	randLimbs2 := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 
-	var affine {{if .IsG2}}G2{{end}}Affine
+	var affine {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
 
 	assert.ElementsMatch(t, randLimbs, affine.X.GetLimbs())
 	assert.ElementsMatch(t, randLimbs2, affine.Y.GetLimbs())
 }
 
-func Test{{if .IsG2}}G2{{end}}AffineToProjective(t *testing.T) {
+func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}AffineToProjective(t *testing.T) {
 	randLimbs := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 	randLimbs2 := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
-	var fieldOne {{if .IsG2}}G2{{end}}BaseField
+	var fieldOne {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 	fieldOne.One()
 
-	var expected {{if .IsG2}}G2{{end}}Projective
+	var expected {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
 	expected.FromLimbs(randLimbs, randLimbs2, fieldOne.limbs[:])
 
-	var affine {{if .IsG2}}G2{{end}}Affine
+	var affine {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
 
 	projectivePoint := affine.ToProjective()
 	assert.Equal(t, expected, projectivePoint)
 }
 
-func Test{{if .IsG2}}G2{{end}}ProjectiveZero(t *testing.T) {
-	var fieldZero = {{if .IsG2}}G2{{end}}BaseField{}
+func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}ProjectiveZero(t *testing.T) {
+	var fieldZero = {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
 
-	var projectiveZero {{if .IsG2}}G2{{end}}Projective
+	var projectiveZero {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
 	projectiveZero.Zero()
 
 	assert.Equal(t, projectiveZero.X, fieldZero)
 	assert.Equal(t, projectiveZero.Y, fieldZero)
 
 	randLimbs := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
-	var projective {{if .IsG2}}G2{{end}}Projective
+	var projective {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
 	projective.FromLimbs(randLimbs, randLimbs, randLimbs)
 
 	projective.Zero()
@@ -72,12 +72,12 @@ func Test{{if .IsG2}}G2{{end}}ProjectiveZero(t *testing.T) {
 	assert.Equal(t, projective.Z, fieldZero)
 }
 
-func Test{{if .IsG2}}G2{{end}}ProjectiveFromLimbs(t *testing.T) {
+func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}ProjectiveFromLimbs(t *testing.T) {
 	randLimbs := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 	randLimbs2 := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 	randLimbs3 := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 
-	var projective {{if .IsG2}}G2{{end}}Projective
+	var projective {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
 	projective.FromLimbs(randLimbs, randLimbs2, randLimbs3)
 
 	assert.ElementsMatch(t, randLimbs, projective.X.GetLimbs())
@@ -85,19 +85,19 @@ func Test{{if .IsG2}}G2{{end}}ProjectiveFromLimbs(t *testing.T) {
 	assert.ElementsMatch(t, randLimbs3, projective.Z.GetLimbs())
 }
 
-func Test{{if .IsG2}}G2{{end}}ProjectiveFromAffine(t *testing.T) {
+func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}ProjectiveFromAffine(t *testing.T) {
 	randLimbs := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 	randLimbs2 := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
-	var fieldOne {{if .IsG2}}G2{{end}}BaseField
+	var fieldOne {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 	fieldOne.One()
 
-	var expected {{if .IsG2}}G2{{end}}Projective
+	var expected {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
 	expected.FromLimbs(randLimbs, randLimbs2, fieldOne.limbs[:])
 
-	var affine {{if .IsG2}}G2{{end}}Affine
+	var affine {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
 
-	var projectivePoint {{if .IsG2}}G2{{end}}Projective
+	var projectivePoint {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
 	projectivePoint.FromAffine(affine)
 	assert.Equal(t, expected, projectivePoint)
 }

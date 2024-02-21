@@ -26,12 +26,12 @@ func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[ScalarField], ou
 	domainWithPrecompute := fft.NewDomain(uint64(size))
 	scalarsFr := make([]fr.Element, size)
 	for i, v := range scalars {
-		slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
 		scalarsFr[i] = slice64
 	}
 	outputAsFr := make([]fr.Element, size)
 	for i, v := range output {
-		slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
 		outputAsFr[i] = slice64
 	}
 
@@ -167,14 +167,14 @@ func TestNttBatch(t *testing.T) {
 			domainWithPrecompute := fft.NewDomain(uint64(testSize))
 			outputAsFr := make([]fr.Element, totalSize)
 			for i, v := range output {
-				slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+				slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
 				outputAsFr[i] = slice64
 			}
 
 			for i := 0; i < batchSize; i++ {
 				scalarsFr := make([]fr.Element, testSize)
 				for i, v := range scalarsCopy[i*testSize : (i+1)*testSize] {
-					slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+					slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
 					scalarsFr[i] = slice64
 				}
 
@@ -220,12 +220,12 @@ func TestNttBatch(t *testing.T) {
 // 			domainWithPrecompute := fft.NewDomain(uint64(testSize))
 // 			scalarsFr := make([]fr.Element, testSize)
 // 			for i, v := range scalarsCopy {
-// 				slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+// 				slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
 // 				scalarsFr[i] = slice64
 // 			}
 // 			outputAsFr := make([]fr.Element, testSize)
 // 			for i, v := range output {
-// 				slice64, _ := fr.LittleEndian.Element((*[32]byte)(v.ToBytesLittleEndian()))
+// 				slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
 // 				outputAsFr[i] = slice64
 // 			}
 

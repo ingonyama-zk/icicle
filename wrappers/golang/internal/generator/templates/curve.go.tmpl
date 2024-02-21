@@ -3,7 +3,7 @@
 
 {{end -}}
 package {{.PackageName}}
-
+{{if not .IsMock}}
 // #cgo CFLAGS: -I./include/
 // #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_{{.Curve}}
 // #include "{{if .IsG2 -}}g2_{{end}}curve.h"
@@ -15,20 +15,20 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
-
-type {{if .IsG2}}G2{{end}}Projective struct {
-	X, Y, Z {{if .IsG2}}G2{{end}}BaseField
+{{end}}
+type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective struct {
+	X, Y, Z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 }
 
-func (p {{if .IsG2}}G2{{end}}Projective) Size() int {
+func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Size() int {
 	return p.X.Size() * 3
 }
 
-func (p {{if .IsG2}}G2{{end}}Projective) AsPointer() *uint32 {
+func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) AsPointer() *uint32 {
 	return p.X.AsPointer()
 }
 
-func (p *{{if .IsG2}}G2{{end}}Projective) Zero() {{if .IsG2}}G2{{end}}Projective {
+func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Zero() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
 	p.X.Zero()
 	p.Y.Zero()
 	p.Z.Zero()
@@ -36,7 +36,7 @@ func (p *{{if .IsG2}}G2{{end}}Projective) Zero() {{if .IsG2}}G2{{end}}Projective
 	return *p
 }
 
-func (p *{{if .IsG2}}G2{{end}}Projective) FromLimbs(x, y, z []uint32) {{if .IsG2}}G2{{end}}Projective {
+func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromLimbs(x, y, z []uint32) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
 	p.Z.FromLimbs(z)
@@ -44,8 +44,8 @@ func (p *{{if .IsG2}}G2{{end}}Projective) FromLimbs(x, y, z []uint32) {{if .IsG2
 	return *p
 }
 
-func (p *{{if .IsG2}}G2{{end}}Projective) FromAffine(a {{if .IsG2}}G2{{end}}Affine) {{if .IsG2}}G2{{end}}Projective {
-	z := {{if .IsG2}}G2{{end}}BaseField{}
+func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromAffine(a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+	z := {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
 	z.One()
 
 	p.X = a.X
@@ -54,7 +54,7 @@ func (p *{{if .IsG2}}G2{{end}}Projective) FromAffine(a {{if .IsG2}}G2{{end}}Affi
 
 	return *p
 }
-
+{{if not .IsMock}}
 func (p {{if .IsG2}}G2{{end}}Projective) ProjectiveEq(p2 *{{if .IsG2}}G2{{end}}Projective) bool {
 	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p.AsPointer()))
 	cP2 := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p2.AsPointer()))
@@ -85,43 +85,43 @@ func {{if .IsG2}}G2{{end}}GenerateProjectivePoints(size int) core.HostSlice[{{if
 
 	return pointsSlice
 }
-
-type {{if .IsG2}}G2{{end}}Affine struct {
-	X, Y {{if .IsG2}}G2{{end}}BaseField
+{{end}}
+type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine struct {
+	X, Y {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 }
 
-func (a {{if .IsG2}}G2{{end}}Affine) Size() int {
+func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Size() int {
 	return a.X.Size() * 2
 }
 
-func (a {{if .IsG2}}G2{{end}}Affine) AsPointer() *uint32 {
+func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) AsPointer() *uint32 {
 	return a.X.AsPointer()
 }
 
-func (a *{{if .IsG2}}G2{{end}}Affine) Zero() {{if .IsG2}}G2{{end}}Affine {
+func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Zero() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
 	a.X.Zero()
 	a.Y.Zero()
 
 	return *a
 }
 
-func (a *{{if .IsG2}}G2{{end}}Affine) FromLimbs(x, y []uint32) {{if .IsG2}}G2{{end}}Affine {
+func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) FromLimbs(x, y []uint32) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
 
 	return *a
 }
 
-func (a {{if .IsG2}}G2{{end}}Affine) ToProjective() {{if .IsG2}}G2{{end}}Projective {
-	var z {{if .IsG2}}G2{{end}}BaseField
+func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) ToProjective() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+	var z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 
-	return {{if .IsG2}}G2{{end}}Projective{
+	return {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective{
 		X: a.X,
 		Y: a.Y,
 		Z: z.One(),
 	}
 }
-
+{{if not .IsMock}}
 func {{if .IsG2}}G2{{end}}AffineFromProjective(p *{{if .IsG2}}G2{{end}}Projective) {{if .IsG2}}G2{{end}}Affine {
 	return p.ProjectiveToAffine()
 }
@@ -177,3 +177,4 @@ func {{if .IsG2}}G2{{end}}ProjectiveToMontgomery(points *core.DeviceSlice) cr.Cu
 func {{if .IsG2}}G2{{end}}ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 	return convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points, false)
 }
+{{end}}

@@ -1,20 +1,22 @@
-package internal
+//go:build g2
+
+package bw6761
 
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestMockAffineZero(t *testing.T) {
-	var fieldZero = MockField{}
+func TestG2AffineZero(t *testing.T) {
+	var fieldZero = G2BaseField{}
 
-	var affineZero MockAffine
+	var affineZero G2Affine
 	assert.Equal(t, affineZero.X, fieldZero)
 	assert.Equal(t, affineZero.Y, fieldZero)
 
-	x := generateRandomLimb(int(BASE_LIMBS))
-	y := generateRandomLimb(int(BASE_LIMBS))
-	var affine MockAffine
+	x := generateRandomLimb(int(G2_BASE_LIMBS))
+	y := generateRandomLimb(int(G2_BASE_LIMBS))
+	var affine G2Affine
 	affine.FromLimbs(x, y)
 
 	affine.Zero()
@@ -22,44 +24,44 @@ func TestMockAffineZero(t *testing.T) {
 	assert.Equal(t, affine.Y, fieldZero)
 }
 
-func TestMockAffineFromLimbs(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
+func TestG2AffineFromLimbs(t *testing.T) {
+	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
+	randLimbs2 := generateRandomLimb(int(G2_BASE_LIMBS))
 
-	var affine MockAffine
+	var affine G2Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
 
 	assert.ElementsMatch(t, randLimbs, affine.X.GetLimbs())
 	assert.ElementsMatch(t, randLimbs2, affine.Y.GetLimbs())
 }
 
-func TestMockAffineToProjective(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
-	var fieldOne MockField
+func TestG2AffineToProjective(t *testing.T) {
+	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
+	randLimbs2 := generateRandomLimb(int(G2_BASE_LIMBS))
+	var fieldOne G2BaseField
 	fieldOne.One()
 
-	var expected MockProjective
+	var expected G2Projective
 	expected.FromLimbs(randLimbs, randLimbs2, fieldOne.limbs[:])
 
-	var affine MockAffine
+	var affine G2Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
 
 	projectivePoint := affine.ToProjective()
 	assert.Equal(t, expected, projectivePoint)
 }
 
-func TestMockProjectiveZero(t *testing.T) {
-	var fieldZero = MockField{}
+func TestG2ProjectiveZero(t *testing.T) {
+	var fieldZero = G2BaseField{}
 
-	var projectiveZero MockProjective
+	var projectiveZero G2Projective
 	projectiveZero.Zero()
 
 	assert.Equal(t, projectiveZero.X, fieldZero)
 	assert.Equal(t, projectiveZero.Y, fieldZero)
 
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	var projective MockProjective
+	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
+	var projective G2Projective
 	projective.FromLimbs(randLimbs, randLimbs, randLimbs)
 
 	projective.Zero()
@@ -68,12 +70,12 @@ func TestMockProjectiveZero(t *testing.T) {
 	assert.Equal(t, projective.Z, fieldZero)
 }
 
-func TestMockProjectiveFromLimbs(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs3 := generateRandomLimb(int(BASE_LIMBS))
+func TestG2ProjectiveFromLimbs(t *testing.T) {
+	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
+	randLimbs2 := generateRandomLimb(int(G2_BASE_LIMBS))
+	randLimbs3 := generateRandomLimb(int(G2_BASE_LIMBS))
 
-	var projective MockProjective
+	var projective G2Projective
 	projective.FromLimbs(randLimbs, randLimbs2, randLimbs3)
 
 	assert.ElementsMatch(t, randLimbs, projective.X.GetLimbs())
@@ -81,19 +83,19 @@ func TestMockProjectiveFromLimbs(t *testing.T) {
 	assert.ElementsMatch(t, randLimbs3, projective.Z.GetLimbs())
 }
 
-func TestMockProjectiveFromAffine(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
-	var fieldOne MockField
+func TestG2ProjectiveFromAffine(t *testing.T) {
+	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
+	randLimbs2 := generateRandomLimb(int(G2_BASE_LIMBS))
+	var fieldOne G2BaseField
 	fieldOne.One()
 
-	var expected MockProjective
+	var expected G2Projective
 	expected.FromLimbs(randLimbs, randLimbs2, fieldOne.limbs[:])
 
-	var affine MockAffine
+	var affine G2Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
 
-	var projectivePoint MockProjective
+	var projectivePoint G2Projective
 	projectivePoint.FromAffine(affine)
 	assert.Equal(t, expected, projectivePoint)
 }

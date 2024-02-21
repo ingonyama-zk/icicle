@@ -31,11 +31,11 @@ func randomFields(numFields, fieldSize int) []internal.MockField {
 	return randFields
 }
 
-func randomProjectivePoints(numPoints, fieldSize int) []internal.Projective {
-	var randProjectives []internal.Projective
+func randomProjectivePoints(numPoints, fieldSize int) []internal.MockProjective {
+	var randProjectives []internal.MockProjective
 
 	for i := 0; i < numPoints; i++ {
-		projective := internal.Projective{
+		projective := internal.MockProjective{
 			X: randomField(fieldSize),
 			Y: randomField(fieldSize),
 			Z: randomField(fieldSize),
@@ -46,11 +46,11 @@ func randomProjectivePoints(numPoints, fieldSize int) []internal.Projective {
 	return randProjectives
 }
 
-func randomAffinePoints(numPoints, fieldSize int) []internal.Affine {
-	var randAffines []internal.Affine
+func randomAffinePoints(numPoints, fieldSize int) []internal.MockAffine {
+	var randAffines []internal.MockAffine
 
 	for i := 0; i < numPoints; i++ {
-		affine := internal.Affine{
+		affine := internal.MockAffine{
 			X: randomField(fieldSize),
 			Y: randomField(fieldSize),
 		}

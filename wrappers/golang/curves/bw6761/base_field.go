@@ -1,4 +1,4 @@
-package internal
+package bw6761
 
 import (
 	"encoding/binary"
@@ -6,30 +6,30 @@ import (
 )
 
 const (
-	BASE_LIMBS int8 = 8
+	BASE_LIMBS int8 = 12
 )
 
-type MockField struct {
+type BaseField struct {
 	limbs [BASE_LIMBS]uint32
 }
 
-func (f MockField) Len() int {
+func (f BaseField) Len() int {
 	return int(BASE_LIMBS)
 }
 
-func (f MockField) Size() int {
+func (f BaseField) Size() int {
 	return int(BASE_LIMBS * 4)
 }
 
-func (f MockField) GetLimbs() []uint32 {
+func (f BaseField) GetLimbs() []uint32 {
 	return f.limbs[:]
 }
 
-func (f MockField) AsPointer() *uint32 {
+func (f BaseField) AsPointer() *uint32 {
 	return &f.limbs[0]
 }
 
-func (f *MockField) FromLimbs(limbs []uint32) MockField {
+func (f *BaseField) FromLimbs(limbs []uint32) BaseField {
 	if len(limbs) != f.Len() {
 		panic("Called FromLimbs with limbs of different length than field")
 	}
@@ -40,7 +40,7 @@ func (f *MockField) FromLimbs(limbs []uint32) MockField {
 	return *f
 }
 
-func (f *MockField) Zero() MockField {
+func (f *BaseField) Zero() BaseField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
@@ -48,7 +48,7 @@ func (f *MockField) Zero() MockField {
 	return *f
 }
 
-func (f *MockField) One() MockField {
+func (f *BaseField) One() BaseField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
@@ -57,7 +57,7 @@ func (f *MockField) One() MockField {
 	return *f
 }
 
-func (f *MockField) FromBytesLittleEndian(bytes []byte) MockField {
+func (f *BaseField) FromBytesLittleEndian(bytes []byte) BaseField {
 	if len(bytes)/4 != f.Len() {
 		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*4, len(bytes)))
 	}
@@ -69,7 +69,7 @@ func (f *MockField) FromBytesLittleEndian(bytes []byte) MockField {
 	return *f
 }
 
-func (f MockField) ToBytesLittleEndian() []byte {
+func (f BaseField) ToBytesLittleEndian() []byte {
 	bytes := make([]byte, f.Len()*4)
 	for i, v := range f.limbs {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)

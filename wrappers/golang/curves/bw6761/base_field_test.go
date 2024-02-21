@@ -1,29 +1,29 @@
-package internal
+package bw6761
 
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestMockFieldFromLimbs(t *testing.T) {
-	emptyField := MockField{}
+func TestBaseFieldFromLimbs(t *testing.T) {
+	emptyField := BaseField{}
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
-	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the MockField's limbs")
+	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the BaseField's limbs")
 	randLimbs[0] = 100
 	assert.NotEqual(t, randLimbs, emptyField.limbs)
 }
 
-func TestMockFieldGetLimbs(t *testing.T) {
-	emptyField := MockField{}
+func TestBaseFieldGetLimbs(t *testing.T) {
+	emptyField := BaseField{}
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the MockField's limbs")
+	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the BaseField's limbs")
 }
 
-func TestMockFieldOne(t *testing.T) {
-	var emptyField MockField
+func TestBaseFieldOne(t *testing.T) {
+	var emptyField BaseField
 	emptyField.One()
 	limbOne := generateLimbOne(int(BASE_LIMBS))
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
@@ -32,11 +32,11 @@ func TestMockFieldOne(t *testing.T) {
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "MockField with limbs to field one did not work")
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "BaseField with limbs to field one did not work")
 }
 
-func TestMockFieldZero(t *testing.T) {
-	var emptyField MockField
+func TestBaseFieldZero(t *testing.T) {
+	var emptyField BaseField
 	emptyField.Zero()
 	limbsZero := make([]uint32, BASE_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
@@ -45,27 +45,27 @@ func TestMockFieldZero(t *testing.T) {
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "MockField with limbs to field zero failed")
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "BaseField with limbs to field zero failed")
 }
 
-func TestMockFieldSize(t *testing.T) {
-	var emptyField MockField
+func TestBaseFieldSize(t *testing.T) {
+	var emptyField BaseField
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func TestMockFieldAsPointer(t *testing.T) {
-	var emptyField MockField
+func TestBaseFieldAsPointer(t *testing.T) {
+	var emptyField BaseField
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func TestMockFieldFromBytes(t *testing.T) {
-	var emptyField MockField
+func TestBaseFieldFromBytes(t *testing.T) {
+	var emptyField BaseField
 	bytes, expected := generateBytesArray(int(BASE_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
@@ -73,8 +73,8 @@ func TestMockFieldFromBytes(t *testing.T) {
 	assert.ElementsMatch(t, emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func TestMockFieldToBytes(t *testing.T) {
-	var emptyField MockField
+func TestBaseFieldToBytes(t *testing.T) {
+	var emptyField BaseField
 	expected, limbs := generateBytesArray(int(BASE_LIMBS))
 	emptyField.FromLimbs(limbs)
 
