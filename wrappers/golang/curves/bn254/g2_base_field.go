@@ -1,4 +1,5 @@
 //go:build g2
+
 package bn254
 
 import (
@@ -45,7 +46,7 @@ func (f *G2BaseField) Zero() G2BaseField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
-	
+
 	return *f
 }
 

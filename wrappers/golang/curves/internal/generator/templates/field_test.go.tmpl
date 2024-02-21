@@ -1,14 +1,14 @@
 {{if .IsG2 -}}
 //go:build g2
+
 {{end -}}
 package {{.PackageName}}
 
 import (
-	"testing"
-  {{if .IsScalar}}
-  {{- template "scalar_field_tests_imports" . -}}
-  {{end}}
+  {{- if .IsScalar}}
+  {{- template "scalar_field_tests_imports" . -}}{{end}}
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldFromLimbs(t *testing.T) {
@@ -83,7 +83,7 @@ func Test{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}FieldToBy
 	var emptyField {{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 	expected, limbs := generateBytesArray(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
 	emptyField.FromLimbs(limbs)
-	
+
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
 {{if .IsScalar}}

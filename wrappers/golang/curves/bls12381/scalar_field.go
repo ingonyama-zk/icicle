@@ -7,10 +7,9 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	
-	"unsafe"
 	core "github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 const (
@@ -52,7 +51,7 @@ func (f *ScalarField) Zero() ScalarField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
-	
+
 	return *f
 }
 

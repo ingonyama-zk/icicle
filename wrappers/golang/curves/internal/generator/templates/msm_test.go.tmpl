@@ -1,9 +1,11 @@
 {{if .IsG2 -}}
 //go:build g2
+
 {{end -}}
 package {{.PackageName}}
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
@@ -13,9 +15,8 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}"
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fp"
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr"
-	"github.com/stretchr/testify/assert"
 )
-{{- if not .IsG2 }}
+{{if not .IsG2 }}
 func projectiveToGnarkAffine(p Projective) {{toPackage .GnarkImport}}.G1Affine {
 	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
 	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))

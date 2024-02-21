@@ -13,18 +13,18 @@ type CudaStreamCreateFlags C.uint
 
 const (
 	// CudaStreamDefault as defined in include/driver_types.h:98
-	CudaStreamDefault 			CudaStreamCreateFlags = iota
+	CudaStreamDefault CudaStreamCreateFlags = iota
 	// CudaStreamNonBlocking as defined in include/driver_types.h:99
-	CudaStreamNonBlocking 	CudaStreamCreateFlags = 1
+	CudaStreamNonBlocking CudaStreamCreateFlags = 1
 )
 
 type CudaStreamWaitFlags C.uint
 
 const (
 	// CudaEventWaitDefault as defined in include/driver_types.h:129
-	CudaEventWaitDefault 		CudaStreamWaitFlags = iota
+	CudaEventWaitDefault CudaStreamWaitFlags = iota
 	// CudaEventWaitExternal as defined in include/driver_types.h:130
-	CudaEventWaitExternal 	CudaStreamWaitFlags = 1
+	CudaEventWaitExternal CudaStreamWaitFlags = 1
 )
 
 // CudaErrorT as declared in include/driver_types.h:2868
@@ -167,13 +167,13 @@ type CudaMemcpyKind C.uint
 
 const (
 	// CudaMemcpyHostToHost as declared in include/driver_types.h:1219
-	CudaMemcpyHostToHost 			CudaMemcpyKind = iota
+	CudaMemcpyHostToHost CudaMemcpyKind = iota
 	// CudaMemcpyHostToDevice as declared in include/driver_types.h:1220
-	CudaMemcpyHostToDevice 		CudaMemcpyKind = 1
+	CudaMemcpyHostToDevice CudaMemcpyKind = 1
 	// CudaMemcpyDeviceToHost as declared in include/driver_types.h:1221
-	CudaMemcpyDeviceToHost 		CudaMemcpyKind = 2
+	CudaMemcpyDeviceToHost CudaMemcpyKind = 2
 	// CudaMemcpyDeviceToDevice as declared in include/driver_types.h:1222
-	CudaMemcpyDeviceToDevice 	CudaMemcpyKind = 3
+	CudaMemcpyDeviceToDevice CudaMemcpyKind = 3
 	// CudaMemcpyDefault as declared in include/driver_types.h:1223
-	CudaMemcpyDefault 				CudaMemcpyKind = 4
+	CudaMemcpyDefault CudaMemcpyKind = 4
 )

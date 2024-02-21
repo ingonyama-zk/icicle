@@ -1,9 +1,10 @@
 //go:build g2
+
 package bls12377
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestG2AffineZero(t *testing.T) {

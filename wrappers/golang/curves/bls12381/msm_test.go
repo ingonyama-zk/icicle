@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
@@ -10,8 +11,8 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-381"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fp"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	"github.com/stretchr/testify/assert"
 )
+
 func projectiveToGnarkAffine(p Projective) bls12381.G1Affine {
 	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
 	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))

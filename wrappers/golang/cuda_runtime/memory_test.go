@@ -28,7 +28,7 @@ func TestFree(t *testing.T) {
 }
 
 func TestCopyFromToHost(t *testing.T) {
-	someInts := make([]int32,1)
+	someInts := make([]int32, 1)
 	someInts[0] = 34
 	numBytes := uint(8)
 	deviceMem, _ := Malloc(numBytes)

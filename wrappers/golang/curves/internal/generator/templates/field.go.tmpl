@@ -1,5 +1,6 @@
 {{if .IsG2 -}}
 //go:build g2
+
 {{end -}}
 package {{.PackageName}}
 {{if .IsScalar}}
@@ -9,7 +10,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	{{- if .IsScalar}}
-	{{template "scalar_field_go_imports" -}}
+	{{- template "scalar_field_go_imports" -}}
 	{{end}}
 )
 
@@ -52,7 +53,7 @@ func (f *{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}Field) 
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
-	
+
 	return *f
 }
 
@@ -86,5 +87,4 @@ func (f {{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}Field) T
 	return bytes
 }
 {{- if .IsScalar}}
-{{template "scalar_field_funcs" . }}
-{{end -}}
+{{template "scalar_field_funcs" . }}{{end}}

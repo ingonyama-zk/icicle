@@ -44,7 +44,7 @@ func (f *BaseField) Zero() BaseField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
-	
+
 	return *f
 }
 

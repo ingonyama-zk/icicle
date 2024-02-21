@@ -1,7 +1,7 @@
 package bls12381
 
 import (
-  "math/rand"
+	"math/rand"
 )
 
 func generateRandomLimb(size int) []uint32 {
@@ -19,13 +19,13 @@ func generateLimbOne(size int) []uint32 {
 }
 
 func generateBytesArray(size int) ([]byte, []uint32) {
-	baseBytes := []byte{1,2,3,4}
+	baseBytes := []byte{1, 2, 3, 4}
 	var bytes []byte
 	var limbs []uint32
 	for i := 0; i < size; i++ {
 		bytes = append(bytes, baseBytes...)
 		limbs = append(limbs, 67305985)
 	}
- 
+
 	return bytes, limbs
 }

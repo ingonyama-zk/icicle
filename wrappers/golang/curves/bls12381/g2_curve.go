@@ -1,4 +1,5 @@
 //go:build g2
+
 package bls12381
 
 // #cgo CFLAGS: -I./include/

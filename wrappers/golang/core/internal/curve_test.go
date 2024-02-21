@@ -1,8 +1,8 @@
 package internal
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestAffineZero(t *testing.T) {
@@ -18,10 +18,10 @@ func TestAffineZero(t *testing.T) {
 
 	affine := Affine{
 		X: MockField{
-			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
+			limbs: [BASE_LIMBS]uint32{1, 2, 3, 4, 5, 6, 7, 8},
 		},
 		Y: MockField{
-			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
+			limbs: [BASE_LIMBS]uint32{1, 2, 3, 4, 5, 6, 7, 8},
 		},
 	}
 
@@ -31,8 +31,8 @@ func TestAffineZero(t *testing.T) {
 }
 
 func TestAffineFromLimbs(t *testing.T) {
-	randLimbs := []uint32{1,2,3,4,5,6,7,8}
-	randLimbs2 := []uint32{11,12,13,14,15,16,17,18}
+	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
+	randLimbs2 := []uint32{11, 12, 13, 14, 15, 16, 17, 18}
 
 	var affine Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
@@ -42,10 +42,10 @@ func TestAffineFromLimbs(t *testing.T) {
 }
 
 func TestAffineToProjective(t *testing.T) {
-	randLimbs := [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8}
-	randLimbs2 := [BASE_LIMBS]uint32{11,12,13,14,15,16,17,18}
+	randLimbs := [BASE_LIMBS]uint32{1, 2, 3, 4, 5, 6, 7, 8}
+	randLimbs2 := [BASE_LIMBS]uint32{11, 12, 13, 14, 15, 16, 17, 18}
 	var fieldOne MockField
-	limbsOne := []uint32{1,0,0,0,0,0,0,0}
+	limbsOne := []uint32{1, 0, 0, 0, 0, 0, 0, 0}
 	fieldOne.FromLimbs(limbsOne)
 
 	expected := Projective{
@@ -75,18 +75,18 @@ func TestProjectiveZero(t *testing.T) {
 	assert.Equal(t, projectiveZero.Y, fieldZero)
 
 	var fieldZeroOfLength = MockField{
-		limbs: [BASE_LIMBS]uint32{0,0,0,0,0,0,0,0},
+		limbs: [BASE_LIMBS]uint32{0, 0, 0, 0, 0, 0, 0, 0},
 	}
 
 	projective := Projective{
 		X: MockField{
-			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
+			limbs: [BASE_LIMBS]uint32{1, 2, 3, 4, 5, 6, 7, 8},
 		},
 		Y: MockField{
-			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
+			limbs: [BASE_LIMBS]uint32{1, 2, 3, 4, 5, 6, 7, 8},
 		},
 		Z: MockField{
-			limbs: [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8},
+			limbs: [BASE_LIMBS]uint32{1, 2, 3, 4, 5, 6, 7, 8},
 		},
 	}
 
@@ -97,9 +97,9 @@ func TestProjectiveZero(t *testing.T) {
 }
 
 func TestProjectiveFromLimbs(t *testing.T) {
-	randLimbs := []uint32{1,2,3,4,5,6,7,8}
-	randLimbs2 := []uint32{11,12,13,14,15,16,17,18}
-	randLimbs3 := []uint32{21,22,23,24,25,26,27,28}
+	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
+	randLimbs2 := []uint32{11, 12, 13, 14, 15, 16, 17, 18}
+	randLimbs3 := []uint32{21, 22, 23, 24, 25, 26, 27, 28}
 
 	var projective Projective
 	projective.FromLimbs(randLimbs, randLimbs2, randLimbs3)
@@ -110,10 +110,10 @@ func TestProjectiveFromLimbs(t *testing.T) {
 }
 
 func TestProjectiveFromAffine(t *testing.T) {
-	randLimbs := [BASE_LIMBS]uint32{1,2,3,4,5,6,7,8}
-	randLimbs2 := [BASE_LIMBS]uint32{11,12,13,14,15,16,17,18}
+	randLimbs := [BASE_LIMBS]uint32{1, 2, 3, 4, 5, 6, 7, 8}
+	randLimbs2 := [BASE_LIMBS]uint32{11, 12, 13, 14, 15, 16, 17, 18}
 	var fieldOne MockField
-	limbsOne := []uint32{1,0,0,0,0,0,0,0}
+	limbsOne := []uint32{1, 0, 0, 0, 0, 0, 0, 0}
 	fieldOne.FromLimbs(limbsOne)
 
 	expected := Projective{

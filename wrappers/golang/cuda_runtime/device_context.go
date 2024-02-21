@@ -27,10 +27,10 @@ type DeviceContext struct {
 func GetDefaultDeviceContext() (DeviceContext, CudaError) {
 	var defaultStream Stream
 
-	return DeviceContext {
-			&defaultStream,
-			0,
-			0,
+	return DeviceContext{
+		&defaultStream,
+		0,
+		0,
 	}, CudaSuccess
 }
 

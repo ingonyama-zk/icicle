@@ -6,9 +6,9 @@ import "C"
 {{- end }}
 
 {{- define "scalar_field_go_imports" }}
-	"unsafe"
 	core "github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
 {{- end }}
 
 {{- define "scalar_field_funcs" }}
@@ -44,5 +44,4 @@ func ToMontgomery(scalars *core.DeviceSlice) cr.CudaError {
 
 func FromMontgomery(scalars *core.DeviceSlice) cr.CudaError {
 	return convertScalarsMontgomery(scalars, false)
-}
-{{- end }}
+}{{- end}}

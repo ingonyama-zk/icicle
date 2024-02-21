@@ -20,7 +20,7 @@ func Malloc(size uint) (unsafe.Pointer, CudaError) {
 	var p C.void
 	devicePtr := unsafe.Pointer(&p)
 	cSize := (C.size_t)(size)
-	
+
 	ret := C.cudaMalloc(&devicePtr, cSize)
 	err := (CudaError)(ret)
 
@@ -59,7 +59,7 @@ func FreeAsync(devicePtr unsafe.Pointer, stream Stream) CudaError {
 func CopyFromDevice(hostDst, deviceSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {
 	cCount := (C.size_t)(size)
 	ret := C.cudaMemcpy(hostDst, deviceSrc, cCount, uint32(CudaMemcpyDeviceToHost))
-	err  := (CudaError)(ret)
+	err := (CudaError)(ret)
 	return hostDst, err
 }
 

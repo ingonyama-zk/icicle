@@ -1,6 +1,6 @@
 {{- define "scalar_field_tests_imports"}}
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-{{end}}
+{{- end -}}
 {{- define "scalar_field_tests"}}
 func TestGenerateScalars(t *testing.T) {
 	const numScalars = 8
@@ -31,5 +31,4 @@ func TestMongtomeryConversion(t *testing.T) {
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)
-}
-{{end}}
+}{{end}}

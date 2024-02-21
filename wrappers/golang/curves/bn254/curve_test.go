@@ -1,8 +1,8 @@
 package bn254
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestAffineZero(t *testing.T) {

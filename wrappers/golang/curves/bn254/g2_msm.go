@@ -1,4 +1,5 @@
 //go:build g2
+
 package bn254
 
 // #cgo CFLAGS: -I./include/

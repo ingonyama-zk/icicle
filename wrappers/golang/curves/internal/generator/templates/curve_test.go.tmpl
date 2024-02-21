@@ -1,11 +1,12 @@
 {{if .IsG2 -}}
 //go:build g2
+
 {{end -}}
 package {{.PackageName}}
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func Test{{if .IsG2}}G2{{end}}AffineZero(t *testing.T) {

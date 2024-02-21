@@ -18,7 +18,7 @@ func (f MockField) Len() int {
 }
 
 func (f MockField) Size() int {
-	return int(BASE_LIMBS*4)
+	return int(BASE_LIMBS * 4)
 }
 
 func (f MockField) AsPointer() *uint32 {
@@ -44,7 +44,7 @@ func (f *MockField) Zero() MockField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
-	
+
 	return *f
 }
 

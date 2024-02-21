@@ -16,7 +16,7 @@ func TestGetDefaultContext(t *testing.T) {
 func TestSetDevice(t *testing.T) {
 	err := SetDevice(0)
 	assert.Equal(t, CudaSuccess, err, "Couldn't set device due to %v", err)
-	
+
 	count, _ := GetDeviceCount()
 	err = SetDevice(count)
 	assert.Equal(t, CudaErrorInvalidDevice, err, "Couldn't set device due to %v", err)

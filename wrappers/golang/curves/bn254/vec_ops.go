@@ -21,6 +21,7 @@ package bn254
 // #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build -lingo_bn254
 // #include "ve_mod_mult.h"
 import "C"
+
 // import (
 // 	"fmt"
 // 	"unsafe"

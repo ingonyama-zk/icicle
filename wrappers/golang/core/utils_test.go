@@ -1,40 +1,40 @@
 package core
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestConvertUint32ArrToUint64Arr(t *testing.T) {
 	testCases := []struct {
-		name  string
-		input []uint32
-		expected  []uint64
+		name     string
+		input    []uint32
+		expected []uint64
 	}{
 		{
-			name:  "Test with incremental array",
-			input: []uint32{1, 2, 3, 4, 5, 6, 7, 8},
-			expected:  []uint64{4294967298, 12884901892, 21474836486, 30064771080},
+			name:     "Test with incremental array",
+			input:    []uint32{1, 2, 3, 4, 5, 6, 7, 8},
+			expected: []uint64{4294967298, 12884901892, 21474836486, 30064771080},
 		},
 		{
-			name:  "Test with all zeros",
-			input: []uint32{0, 0, 0, 0, 0, 0, 0, 0},
-			expected:  []uint64{0, 0, 0, 0},
+			name:     "Test with all zeros",
+			input:    []uint32{0, 0, 0, 0, 0, 0, 0, 0},
+			expected: []uint64{0, 0, 0, 0},
 		},
 		{
-			name:  "Test with maximum uint32 values",
-			input: []uint32{4294967295, 4294967295, 4294967295, 4294967295, 4294967295, 4294967295, 4294967295, 4294967295},
-			expected:  []uint64{18446744073709551615, 18446744073709551615, 18446744073709551615, 18446744073709551615},
+			name:     "Test with maximum uint32 values",
+			input:    []uint32{4294967295, 4294967295, 4294967295, 4294967295, 4294967295, 4294967295, 4294967295, 4294967295},
+			expected: []uint64{18446744073709551615, 18446744073709551615, 18446744073709551615, 18446744073709551615},
 		},
 		{
-			name:  "Test with alternating min and max uint32 values",
-			input: []uint32{0, 4294967295, 0, 4294967295, 0, 4294967295, 0, 4294967295},
-			expected:  []uint64{4294967295, 4294967295, 4294967295, 4294967295},
+			name:     "Test with alternating min and max uint32 values",
+			input:    []uint32{0, 4294967295, 0, 4294967295, 0, 4294967295, 0, 4294967295},
+			expected: []uint64{4294967295, 4294967295, 4294967295, 4294967295},
 		},
 		{
-			name:  "Test with alternating max and min uint32 values",
-			input: []uint32{4294967295, 0, 4294967295, 0, 4294967295, 0, 4294967295, 0},
-			expected:  []uint64{18446744069414584320, 18446744069414584320, 18446744069414584320, 18446744069414584320},
+			name:     "Test with alternating max and min uint32 values",
+			input:    []uint32{4294967295, 0, 4294967295, 0, 4294967295, 0, 4294967295, 0},
+			expected: []uint64{18446744069414584320, 18446744069414584320, 18446744069414584320, 18446744069414584320},
 		},
 	}
 

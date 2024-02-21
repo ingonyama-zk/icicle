@@ -1,10 +1,10 @@
 //go:build g2
+
 package bls12381
 
 import (
-	"testing"
-  
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestG2BaseFieldFromLimbs(t *testing.T) {
@@ -79,6 +79,6 @@ func TestG2BaseFieldToBytes(t *testing.T) {
 	var emptyField G2BaseField
 	expected, limbs := generateBytesArray(int(G2_BASE_LIMBS))
 	emptyField.FromLimbs(limbs)
-	
+
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }

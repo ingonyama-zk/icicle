@@ -1,9 +1,8 @@
 package cuda_runtime
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestCreateStream(t *testing.T) {
@@ -33,11 +32,11 @@ func TestSyncStream(t *testing.T) {
 
 	_, err = MallocAsync(200000, stream)
 	assert.Equal(t, CudaSuccess, err, "Unable to allocate device memory due to %d", err)
-	
+
 	dp, err := Malloc(20)
 	assert.NotNil(t, dp)
 	assert.Equal(t, CudaSuccess, err, "Unable to allocate device memory due to %d", err)
-	
+
 	err = SynchronizeStream(&stream)
 	assert.Equal(t, CudaSuccess, err, "Unable to sync stream due to %d", err)
 

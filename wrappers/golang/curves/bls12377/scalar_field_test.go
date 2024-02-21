@@ -1,11 +1,9 @@
 package bls12377
 
 import (
-	"testing"
-  
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestScalarFieldFromLimbs(t *testing.T) {
@@ -80,7 +78,7 @@ func TestScalarFieldToBytes(t *testing.T) {
 	var emptyField ScalarField
 	expected, limbs := generateBytesArray(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(limbs)
-	
+
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
 
@@ -114,4 +112,3 @@ func TestMongtomeryConversion(t *testing.T) {
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)
 }
-

@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strings"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
 const (
-	baseDir         = "../../" // wrappers/golang/curves
+	baseDir = "../../" // wrappers/golang/curves
 )
 
 func create(output string, buf *bytes.Buffer) error {
@@ -34,59 +34,59 @@ func create(output string, buf *bytes.Buffer) error {
 }
 
 type CurveData struct {
-	PackageName     string
-	Curve        		string
-	GnarkImport     string
-	ScalarLimbsNum  int
-	BaseLimbsNum    int
-	G2BaseLimbsNum  int
-	IsG2 						bool
-	IsScalar 				bool
+	PackageName    string
+	Curve          string
+	GnarkImport    string
+	ScalarLimbsNum int
+	BaseLimbsNum   int
+	G2BaseLimbsNum int
+	IsG2           bool
+	IsScalar       bool
 }
 
 var bn254 = CurveData{
 	PackageName:    "bn254",
-	Curve:        	"bn254",
+	Curve:          "bn254",
 	GnarkImport:    "bn254",
 	ScalarLimbsNum: 8,
 	BaseLimbsNum:   8,
 	G2BaseLimbsNum: 16,
-	IsG2: 					false,
-	IsScalar: 			false,
+	IsG2:           false,
+	IsScalar:       false,
 }
 var bls12381 = CurveData{
 	PackageName:    "bls12381",
-	Curve:        	"bls12_381",
+	Curve:          "bls12_381",
 	GnarkImport:    "bls12-381",
 	ScalarLimbsNum: 8,
 	BaseLimbsNum:   12,
 	G2BaseLimbsNum: 24,
-	IsG2: 					false,
-	IsScalar: 			false,
+	IsG2:           false,
+	IsScalar:       false,
 }
 var bls12377 = CurveData{
 	PackageName:    "bls12377",
-	Curve:        	"bls12_377",
+	Curve:          "bls12_377",
 	GnarkImport:    "bls12-377",
 	ScalarLimbsNum: 8,
 	BaseLimbsNum:   12,
 	G2BaseLimbsNum: 24,
-	IsG2: 					false,
-	IsScalar: 			false,
+	IsG2:           false,
+	IsScalar:       false,
 }
 var bw6761 = CurveData{
 	PackageName:    "bw6761",
-	Curve:        	"bw6_761",
+	Curve:          "bw6_761",
 	GnarkImport:    "bw6-761",
 	ScalarLimbsNum: 8,
 	BaseLimbsNum:   12,
 	G2BaseLimbsNum: 16,
-	IsG2: false,
-	IsScalar: false,
+	IsG2:           false,
+	IsScalar:       false,
 }
 
 type Entry struct {
-	outputName string
+	outputName     string
 	parsedTemplate *template.Template
 }
 
@@ -191,7 +191,7 @@ func generateFiles() {
 		fileName, _ := strings.CutSuffix(includeFile, ".tmpl")
 		entries = append(entries, Entry{outputName: fmt.Sprintf("include/%s", fileName), parsedTemplate: tmplParsed})
 	}
-	
+
 	for _, curveData := range curvesData {
 		for _, entry := range entries {
 			outFile := filepath.Join(baseDir, curveData.PackageName, entry.outputName)

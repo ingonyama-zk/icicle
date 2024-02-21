@@ -1,9 +1,8 @@
 package bls12381
 
 import (
-	"testing"
-  
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestBaseFieldFromLimbs(t *testing.T) {
@@ -78,6 +77,6 @@ func TestBaseFieldToBytes(t *testing.T) {
 	var emptyField BaseField
 	expected, limbs := generateBytesArray(int(BASE_LIMBS))
 	emptyField.FromLimbs(limbs)
-	
+
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }

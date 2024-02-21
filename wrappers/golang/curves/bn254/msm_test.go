@@ -1,6 +1,7 @@
 package bn254
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
@@ -10,8 +11,8 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/stretchr/testify/assert"
 )
+
 func projectiveToGnarkAffine(p Projective) bn254.G1Affine {
 	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
 	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
