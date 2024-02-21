@@ -71,8 +71,8 @@ var bw6761 = CurveData{
 	Curve:          "bw6_761",
 	GnarkImport:    "bw6-761",
 	ScalarLimbsNum: 12,
-	BaseLimbsNum:   12,
-	G2BaseLimbsNum: 12,
+	BaseLimbsNum:   24,
+	G2BaseLimbsNum: 24,
 }
 
 type Entry struct {
@@ -190,9 +190,9 @@ func generateFiles() {
 			data := struct {
 				CurveData
 				IsScalar bool
-				IsG2 bool
-				IsMock bool
-			} {
+				IsG2     bool
+				IsMock   bool
+			}{
 				curveData,
 				strings.Contains(entry.outputName, "scalar_field"),
 				strings.Contains(entry.outputName, "g2"),
@@ -220,15 +220,15 @@ func generateFiles() {
 		}
 		fileName, _ := strings.CutSuffix(internalTemplate, ".tmpl")
 		outFile := filepath.Join("../../core/internal/", fileName)
-		
+
 		var buf bytes.Buffer
 		data := struct {
-			PackageName    string
-			BaseLimbsNum   int
-			IsMock bool
-			IsG2 bool
-			IsScalar bool
-		} {
+			PackageName  string
+			BaseLimbsNum int
+			IsMock       bool
+			IsG2         bool
+			IsScalar     bool
+		}{
 			"internal",
 			8,
 			true,

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	G2_BASE_LIMBS int8 = 12
+	G2_BASE_LIMBS int8 = 24
 )
 
 type G2BaseField struct {

@@ -16,47 +16,20 @@ import (
 )
 
 func projectiveToGnarkAffineG2(p G2Projective) bw6761.G2Affine {
-	pxBytes := p.X.ToBytesLittleEndian()
-	pxA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[:fp.Bytes]))
-	pxA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[fp.Bytes:]))
-	x := bw6761.E2{
-		A0: pxA0,
-		A1: pxA1,
-	}
+	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
+	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
+	pz, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Z).ToBytesLittleEndian()))
 
-	pyBytes := p.Y.ToBytesLittleEndian()
-	pyA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[:fp.Bytes]))
-	pyA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[fp.Bytes:]))
-	y := bw6761.E2{
-		A0: pyA0,
-		A1: pyA1,
-	}
+	zInv := new(fp.Element)
+	x := new(fp.Element)
+	y := new(fp.Element)
 
-	pzBytes := p.Z.ToBytesLittleEndian()
-	pzA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[:fp.Bytes]))
-	pzA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[fp.Bytes:]))
-	z := bw6761.E2{
-		A0: pzA0,
-		A1: pzA1,
-	}
+	zInv.Inverse(&pz)
 
-	var zSquared bw6761.E2
-	zSquared.Mul(&z, &z)
+	x.Mul(&px, zInv)
+	y.Mul(&py, zInv)
 
-	var X bw6761.E2
-	X.Mul(&x, &z)
-
-	var Y bw6761.E2
-	Y.Mul(&y, &zSquared)
-
-	g2Jac := bw6761.G2Jac{
-		X: X,
-		Y: Y,
-		Z: z,
-	}
-
-	var g2Affine bw6761.G2Affine
-	return *g2Affine.FromJacobian(&g2Jac)
+	return bw6761.G2Affine{X: *x, Y: *y}
 }
 
 func testAgainstGnarkCryptoMsmG2(scalars core.HostSlice[ScalarField], points core.HostSlice[G2Affine], out G2Projective) bool {

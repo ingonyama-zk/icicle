@@ -12,8 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func initDomain[T any](largsetTestSize int, cfg core.NTTConfig[T]) {
-	rouMont, _ := fft.Generator(uint64(1 << largsetTestSize))
+const (
+	largestTestSize = 17
+)
+
+func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) {
+	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
 	rouIcicle := ScalarField{}
 	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
@@ -69,25 +73,15 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 }
 
 func TestInitDomain(t *testing.T) {
-	rouMont, _ := fft.Generator(1 << 17)
-	rou := rouMont.Bits()
-	rouIcicle := ScalarField{}
-	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
-
-	rouIcicle.FromLimbs(limbs)
-
-	ctx, _ := cr.GetDefaultDeviceContext()
-	assert.NotPanics(t, func() { InitDomain(rouIcicle, ctx) })
+	cfg := GetDefaultNttConfig()
+	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
 }
 
 func TestNtt(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	largsetTestSize := 17
-	scalars := GenerateScalars(1 << largsetTestSize)
-	// init domain
-	initDomain(largsetTestSize, cfg)
+	scalars := GenerateScalars(1 << largestTestSize)
 
-	for _, size := range []int{4, largsetTestSize} {
+	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 			testSize := 1 << size
 
@@ -106,10 +100,7 @@ func TestNtt(t *testing.T) {
 
 func TestNttDeviceAsync(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	// init domain
-	largestTestSize := 20
 	scalars := GenerateScalars(1 << largestTestSize)
-	initDomain(largestTestSize, cfg)
 
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
@@ -144,11 +135,8 @@ func TestNttDeviceAsync(t *testing.T) {
 
 func TestNttBatch(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	// init domain
-	largestTestSize := 12
 	largestBatchSize := 100
 	scalars := GenerateScalars(1 << largestTestSize * largestBatchSize)
-	initDomain(largestTestSize, cfg)
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{1, 16, largestBatchSize} {

@@ -16,8 +16,8 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fp"
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr"
 )
-{{if not .IsG2 }}
-func projectiveToGnarkAffine(p Projective) {{toPackage .GnarkImport}}.G1Affine {
+{{$isBW6 := eq .Curve "bw6_761"}}{{$isG1 := not .IsG2}}{{if or $isBW6 $isG1}}
+func projectiveToGnarkAffine{{if and $isBW6 .IsG2}}G2{{end}}(p {{if and $isBW6 .IsG2}}G2{{end}}Projective) {{toPackage .GnarkImport}}.{{if and $isBW6 .IsG2}}G2{{else}}G1{{end}}Affine {
 	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
 	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
 	pz, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Z).ToBytesLittleEndian()))
@@ -31,10 +31,10 @@ func projectiveToGnarkAffine(p Projective) {{toPackage .GnarkImport}}.G1Affine {
 	x.Mul(&px, zInv)
 	y.Mul(&py, zInv)
 
-	return {{toPackage .GnarkImport}}.G1Affine{X: *x, Y: *y}
+	return {{toPackage .GnarkImport}}.{{if and $isBW6 .IsG2}}G2{{else}}G1{{end}}Affine{X: *x, Y: *y}
 }
 {{end}}
-{{- if .IsG2 }}
+{{- $isNotBW6 := ne .Curve "bw6_761"}}{{if and $isNotBW6 .IsG2 }}
 func projectiveToGnarkAffineG2(p G2Projective) {{toPackage .GnarkImport}}.G2Affine {
 	pxBytes := p.X.ToBytesLittleEndian()
 	pxA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[:fp.Bytes]))
