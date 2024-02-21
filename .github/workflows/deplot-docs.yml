@@ -16,11 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: 'repo'
       - uses: actions/setup-node@v3
         with:
           node-version: 18
           cache: npm
-          path: 'repo'
+          cache-dependency-path: ./repo/docs/package-lock.json
 
       - name: Install dependencies
         run: npm install --frozen-lockfile
