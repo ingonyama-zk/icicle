@@ -397,6 +397,9 @@ namespace ntt {
     template <typename U>
     friend cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
+    template <typename U>
+    friend U GetRootOfUnity<U>(uint64_t logn, device_context::DeviceContext& ctx);
+
     template <typename U, typename E>
     friend cudaError_t NTT<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
@@ -519,6 +522,22 @@ namespace ntt {
 
     return CHK_LAST();
   }
+
+  template <typename S>
+  S GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx)
+  {
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+    if (logn > domain.max_log_size) {
+      std::ostringstream oss;
+      oss << "NTT log_size=" << logn
+          << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
+    }
+    const size_t twiddles_idx = 1ULL << (domain.max_log_size - logn);
+    return domain.twiddles[twiddles_idx];
+  }
+  // explicit instantiation to avoid having to include this file
+  template curve_config::scalar_t GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx);
 
   template <typename S>
   static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
@@ -698,9 +717,8 @@ namespace ntt {
   }
 
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig()
+  NTTConfig<S> DefaultNTTConfig(const device_context::DeviceContext& ctx)
   {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
       ctx,                // ctx
       S::one(),           // coset_gen
@@ -714,6 +732,8 @@ namespace ntt {
     };
     return config;
   }
+  // explicit instantiation to avoid having to include this file
+  template NTTConfig<curve_config::scalar_t> DefaultNTTConfig(const device_context::DeviceContext& ctx);
 
   /**
    * Extern "C" version of [InitDomain](@ref InitDomain) function with the following

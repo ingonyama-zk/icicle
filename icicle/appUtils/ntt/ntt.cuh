@@ -56,6 +56,15 @@ namespace ntt {
   template <typename S>
   cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
+  /* Returns the basic root of unity Wn corresponding to the basic root used to initialize the domain.
+   * Useful when computing NTT on cosets. In that case we must use the root W_2n that is between W_n and W_n+1.
+   * @param logn log size of the required root.
+   * @param ctx Details related to the device such as its id and stream id.
+   * @return Wn root of unity corresponding to logn and the basic root used for initDomain(root)
+   */
+  template <typename S>
+  S GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx);
+
   /**
    * @enum NTTDir
    * Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
@@ -130,7 +139,8 @@ namespace ntt {
    * @return Default value of [NTTConfig](@ref NTTConfig).
    */
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig();
+  NTTConfig<S>
+  DefaultNTTConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context());
 
   /**
    * A function that computes NTT or iNTT in-place. It's necessary to call [InitDomain](@ref InitDomain) with an
