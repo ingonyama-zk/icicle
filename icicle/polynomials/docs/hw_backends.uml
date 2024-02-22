@@ -1,0 +1,69 @@
+@startuml
+
+interface IPolynomialBackend {
+    +add(): void
+    +subtract(): void
+    +multiply(): void
+    +divide(): void
+    +evaluate(): void
+}
+
+class PolynomialAPI {
+    -backendStrategy: IPolynomialBackend
+    +setBackendStrategy(IPolynomialBackend): void
+    +add(): void
+    +subtract(): void
+    +multiply(): void
+    +divide(): void
+    +evaluate(): void
+}
+
+class GPUPolynomialBackend implements IPolynomialBackend {
+    #gpuResources: Resource
+    +add(): void
+    +subtract(): void
+    +multiply(): void
+    +divide(): void
+    +evaluate(): void
+}
+
+class ZPUPolynomialBackend implements IPolynomialBackend {
+    #zpuResources: Resource
+    +add(): void
+    +subtract(): void
+    +multiply(): void
+    +divide(): void
+    +evaluate(): void
+}
+
+class TracerPolynomialBackend implements IPolynomialBackend {
+    #traceData: Data
+    +add(): void
+    +subtract(): void
+    +multiply(): void
+    +divide(): void
+    +evaluate(): void
+}
+
+class SparseGPUPolynomialBackend implements IPolynomialBackend {
+    #sparseGpuResources: Resource
+    +add(): void
+    +subtract(): void
+    +multiply(): void
+    +divide(): void
+    +evaluate(): void
+}
+
+class SparseZPUPolynomialBackend implements IPolynomialBackend {
+    #sparseZpuResources: Resource
+    +add(): void
+    +subtract(): void
+    +multiply(): void
+    +divide(): void
+    +evaluate(): void
+}
+
+PolynomialAPI *-- IPolynomialBackend : uses
+
+
+@enduml

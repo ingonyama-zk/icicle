@@ -702,6 +702,8 @@ namespace ntt {
     };
     return config;
   }
+  // explicit instantiation to avoid having to include this file
+  template NTTConfig<curve_config::scalar_t> DefaultNTTConfig();
 
   /**
    * Extern "C" version of [InitDomain](@ref InitDomain) function with the following
