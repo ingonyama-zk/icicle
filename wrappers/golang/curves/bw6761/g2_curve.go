@@ -53,8 +53,8 @@ func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
 }
 
 func (p G2Projective) ProjectiveEq(p2 *G2Projective) bool {
-	cP := (*C.g2_projective_t)(unsafe.Pointer(p.AsPointer()))
-	cP2 := (*C.g2_projective_t)(unsafe.Pointer(p2.AsPointer()))
+	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C.g2_projective_t)(unsafe.Pointer(&p2))
 	__ret := C.bw6_761G2Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
@@ -62,9 +62,8 @@ func (p G2Projective) ProjectiveEq(p2 *G2Projective) bool {
 func (p *G2Projective) ProjectiveToAffine() G2Affine {
 	var a G2Affine
 
-	cA := (*C.g2_affine_t)(unsafe.Pointer(a.AsPointer()))
-	cP := (*C.g2_projective_t)(unsafe.Pointer(p.AsPointer()))
-	// TODO: hangs
+	cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
+	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
 	C.bw6_761G2ToAffine(cP, cA)
 	return a
 }

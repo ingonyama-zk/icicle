@@ -55,8 +55,8 @@ func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromA
 }
 {{if not .IsMock}}
 func (p {{if .IsG2}}G2{{end}}Projective) ProjectiveEq(p2 *{{if .IsG2}}G2{{end}}Projective) bool {
-	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p.AsPointer()))
-	cP2 := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p2.AsPointer()))
+	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p2))
 	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
@@ -64,9 +64,8 @@ func (p {{if .IsG2}}G2{{end}}Projective) ProjectiveEq(p2 *{{if .IsG2}}G2{{end}}P
 func (p *{{if .IsG2}}G2{{end}}Projective) ProjectiveToAffine() {{if .IsG2}}G2{{end}}Affine {
 	var a {{if .IsG2}}G2{{end}}Affine
 
-	cA := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(a.AsPointer()))
-	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(p.AsPointer()))
-	// TODO: hangs
+	cA := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(&a))
+	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p))
 	C.{{.Curve}}{{if .IsG2}}G2{{end}}ToAffine(cP, cA)
 	return a
 }

@@ -51,8 +51,8 @@ func (p *Projective) FromAffine(a Affine) Projective {
 }
 
 func (p Projective) ProjectiveEq(p2 *Projective) bool {
-	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
-	cP2 := (*C.projective_t)(unsafe.Pointer(p2.AsPointer()))
+	cP := (*C.projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C.projective_t)(unsafe.Pointer(&p2))
 	__ret := C.bls12_377Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
@@ -60,9 +60,8 @@ func (p Projective) ProjectiveEq(p2 *Projective) bool {
 func (p *Projective) ProjectiveToAffine() Affine {
 	var a Affine
 
-	cA := (*C.affine_t)(unsafe.Pointer(a.AsPointer()))
-	cP := (*C.projective_t)(unsafe.Pointer(p.AsPointer()))
-	// TODO: hangs
+	cA := (*C.affine_t)(unsafe.Pointer(&a))
+	cP := (*C.projective_t)(unsafe.Pointer(&p))
 	C.bls12_377ToAffine(cP, cA)
 	return a
 }
