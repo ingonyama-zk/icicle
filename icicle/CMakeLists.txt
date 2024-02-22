@@ -101,6 +101,7 @@ if (ECNTT_DEFINED STREQUAL "ON")
 endif ()
 
 option(BUILD_TESTS "Build tests" OFF)
+option(POLYNOMIAL_TB "Build polynomial test bench" OFF)
 
 if (NOT BUILD_TESTS)
 
@@ -129,7 +130,13 @@ if (NOT BUILD_TESTS)
     ${ICICLE_SOURCES}
   )
   set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
-  target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  
+  target_compile_definitions(icicle PUBLIC CURVE=${CURVE})  
+
+  if (POLYNOMIAL_TB)
+    message(STATUS "Building polynomial test-bench.")
+    add_executable(polynomial_tb tests/polynomial_test.cu)
+    target_link_libraries(polynomial_tb PUBLIC icicle) 
+  endif()
 
 else()
 
