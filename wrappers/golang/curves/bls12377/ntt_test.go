@@ -23,7 +23,7 @@ func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) {
 	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
 
 	rouIcicle.FromLimbs(limbs)
-	InitDomain(rouIcicle, cfg.Ctx)
+	InitDomain(rouIcicle, cfg.Ctx, false)
 }
 
 func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[ScalarField], output core.HostSlice[ScalarField], order core.Ordering, direction core.NTTDir) bool {

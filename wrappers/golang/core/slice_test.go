@@ -31,6 +31,8 @@ func randomFields(numFields, fieldSize int) []internal.MockField {
 	return randFields
 }
 
+// This function is solely for the purpose of testing HostDeviceSlice
+// It can produce invalid points and should not be used to test curve operations
 func randomProjectivePoints(numPoints, fieldSize int) []internal.MockProjective {
 	var randProjectives []internal.MockProjective
 
@@ -46,6 +48,8 @@ func randomProjectivePoints(numPoints, fieldSize int) []internal.MockProjective 
 	return randProjectives
 }
 
+// This function is solely for the purpose of testing HostDeviceSlice
+// It can produce invalid points and should not be used to test curve operations
 func randomAffinePoints(numPoints, fieldSize int) []internal.MockAffine {
 	var randAffines []internal.MockAffine
 

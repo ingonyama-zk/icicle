@@ -52,13 +52,15 @@ func TestG2AffineToProjective(t *testing.T) {
 }
 
 func TestG2ProjectiveZero(t *testing.T) {
-	var fieldZero = G2BaseField{}
-
 	var projectiveZero G2Projective
 	projectiveZero.Zero()
+	var fieldZero = G2BaseField{}
+	var fieldOne G2BaseField
+	fieldOne.One()
 
 	assert.Equal(t, projectiveZero.X, fieldZero)
-	assert.Equal(t, projectiveZero.Y, fieldZero)
+	assert.Equal(t, projectiveZero.Y, fieldOne)
+	assert.Equal(t, projectiveZero.Z, fieldZero)
 
 	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
 	var projective G2Projective
@@ -66,7 +68,7 @@ func TestG2ProjectiveZero(t *testing.T) {
 
 	projective.Zero()
 	assert.Equal(t, projective.X, fieldZero)
-	assert.Equal(t, projective.Y, fieldZero)
+	assert.Equal(t, projective.Y, fieldOne)
 	assert.Equal(t, projective.Z, fieldZero)
 }
 

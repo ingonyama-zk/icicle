@@ -29,7 +29,7 @@ func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) AsPoin
 
 func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Zero() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
 	p.X.Zero()
-	p.Y.Zero()
+	p.Y.One()
 	p.Z.Zero()
 
 	return *p

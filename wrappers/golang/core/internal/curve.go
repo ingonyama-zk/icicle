@@ -14,7 +14,7 @@ func (p MockProjective) AsPointer() *uint32 {
 
 func (p *MockProjective) Zero() MockProjective {
 	p.X.Zero()
-	p.Y.Zero()
+	p.Y.One()
 	p.Z.Zero()
 
 	return *p

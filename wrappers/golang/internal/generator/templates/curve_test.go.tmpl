@@ -54,13 +54,15 @@ func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}AffineToProjectiv
 }
 
 func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}ProjectiveZero(t *testing.T) {
-	var fieldZero = {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
-
 	var projectiveZero {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
 	projectiveZero.Zero()
+	var fieldZero = {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
+	var fieldOne {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+	fieldOne.One()
 
 	assert.Equal(t, projectiveZero.X, fieldZero)
-	assert.Equal(t, projectiveZero.Y, fieldZero)
+	assert.Equal(t, projectiveZero.Y, fieldOne)
+	assert.Equal(t, projectiveZero.Z, fieldZero)
 
 	randLimbs := generateRandomLimb(int({{if .IsG2}}G2_{{end}}BASE_LIMBS))
 	var projective {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective
@@ -68,7 +70,7 @@ func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}ProjectiveZero(t 
 
 	projective.Zero()
 	assert.Equal(t, projective.X, fieldZero)
-	assert.Equal(t, projective.Y, fieldZero)
+	assert.Equal(t, projective.Y, fieldOne)
 	assert.Equal(t, projective.Z, fieldZero)
 }
 

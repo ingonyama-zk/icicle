@@ -20,6 +20,8 @@ const (
 	KNR Ordering = 1
 	KRN Ordering = 2
 	KRR Ordering = 3
+	KNM Ordering = 4
+	KMN Ordering = 5
 )
 
 type NTTConfig[T any] struct {

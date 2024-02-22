@@ -50,13 +50,15 @@ func TestAffineToProjective(t *testing.T) {
 }
 
 func TestProjectiveZero(t *testing.T) {
-	var fieldZero = BaseField{}
-
 	var projectiveZero Projective
 	projectiveZero.Zero()
+	var fieldZero = BaseField{}
+	var fieldOne BaseField
+	fieldOne.One()
 
 	assert.Equal(t, projectiveZero.X, fieldZero)
-	assert.Equal(t, projectiveZero.Y, fieldZero)
+	assert.Equal(t, projectiveZero.Y, fieldOne)
+	assert.Equal(t, projectiveZero.Z, fieldZero)
 
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
 	var projective Projective
@@ -64,7 +66,7 @@ func TestProjectiveZero(t *testing.T) {
 
 	projective.Zero()
 	assert.Equal(t, projective.X, fieldZero)
-	assert.Equal(t, projective.Y, fieldZero)
+	assert.Equal(t, projective.Y, fieldOne)
 	assert.Equal(t, projective.Z, fieldZero)
 }
 

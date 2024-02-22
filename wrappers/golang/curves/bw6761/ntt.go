@@ -49,10 +49,11 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 	return core.FromCudaError(err)
 }
 
-func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext) core.IcicleError {
+func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError {
 	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	__ret := C.bw6_761InitializeDomain(cPrimitiveRoot, cCtx)
+	cFastTwiddles := (C._Bool)(fastTwiddles)
+	__ret := C.bw6_761InitializeDomain(cPrimitiveRoot, cCtx, cFastTwiddles)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

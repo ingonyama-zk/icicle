@@ -50,13 +50,15 @@ func TestMockAffineToProjective(t *testing.T) {
 }
 
 func TestMockProjectiveZero(t *testing.T) {
-	var fieldZero = MockField{}
-
 	var projectiveZero MockProjective
 	projectiveZero.Zero()
+	var fieldZero = MockField{}
+	var fieldOne MockField
+	fieldOne.One()
 
 	assert.Equal(t, projectiveZero.X, fieldZero)
-	assert.Equal(t, projectiveZero.Y, fieldZero)
+	assert.Equal(t, projectiveZero.Y, fieldOne)
+	assert.Equal(t, projectiveZero.Z, fieldZero)
 
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
 	var projective MockProjective
@@ -64,7 +66,7 @@ func TestMockProjectiveZero(t *testing.T) {
 
 	projective.Zero()
 	assert.Equal(t, projective.X, fieldZero)
-	assert.Equal(t, projective.Y, fieldZero)
+	assert.Equal(t, projective.Y, fieldOne)
 	assert.Equal(t, projective.Z, fieldZero)
 }
 

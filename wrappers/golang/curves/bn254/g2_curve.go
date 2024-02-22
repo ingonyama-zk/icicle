@@ -27,7 +27,7 @@ func (p G2Projective) AsPointer() *uint32 {
 
 func (p *G2Projective) Zero() G2Projective {
 	p.X.Zero()
-	p.Y.Zero()
+	p.Y.One()
 	p.Z.Zero()
 
 	return *p
