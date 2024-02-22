@@ -23,7 +23,7 @@ concurrency:
 
 jobs:  
   test-examples:
-    runs-on: [self-hosted, Linux, X64, icicle] # ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, icicle, examples]
     steps:
     - name: Checkout
       uses: actions/checkout@v2
