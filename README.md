@@ -32,6 +32,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP.
 
 > [!NOTE]
 > Developers: We highly recommend reading our [documentation]
+
 > [!TIP]
 > Try out ICICLE by running some [examples] using ICICLE in C++ and our Rust bindings 
 

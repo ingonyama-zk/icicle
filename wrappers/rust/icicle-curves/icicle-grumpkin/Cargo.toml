@@ -1,0 +1,28 @@
+[package]
+name = "icicle-grumpkin"
+version = "1.4.0"
+edition = "2021"
+authors = [ "Ingonyama" ]
+description = "Rust wrapper for the CUDA implementation of Grumpkin elliptic curve by Ingonyama"
+homepage = "https://www.ingonyama.com"
+repository = "https://github.com/ingonyama-zk/icicle"
+
+[dependencies]
+icicle-core = { path = "../../icicle-core" }
+icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
+ark-grumpkin-test = { git = "https://github.com/ingonyama-zk/ark-grumpkin-test.git", optional = true}
+
+[build-dependencies]
+cmake = "0.1.50"
+
+[dev-dependencies]
+ark-std = "0.4.0"
+ark-ff = "0.4.0"
+ark-ec = "0.4.0"
+ark-poly = "0.4.0"
+icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
+icicle-grumpkin = { path = ".", features = ["arkworks"] }
+
+[features]
+default = []
+arkworks = ["ark-grumpkin-test", "icicle-core/arkworks"]

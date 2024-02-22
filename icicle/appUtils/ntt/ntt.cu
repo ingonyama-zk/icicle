@@ -370,14 +370,23 @@ namespace ntt {
     int max_size = 0;
     int max_log_size = 0;
     S* twiddles = nullptr;
+    bool initialized = false; // protection for multi-threaded case
     std::unordered_map<S, int> coset_index = {};
 
     S* internal_twiddles = nullptr; // required by mixed-radix NTT
     S* basic_twiddles = nullptr;    // required by mixed-radix NTT
 
+    // mixed-radix NTT supports a fast-twiddle option at the cost of additional 4N memory (where N is max NTT size)
+    S* fast_external_twiddles = nullptr;     // required by mixed-radix NTT (fast-twiddles mode)
+    S* fast_internal_twiddles = nullptr;     // required by mixed-radix NTT (fast-twiddles mode)
+    S* fast_basic_twiddles = nullptr;        // required by mixed-radix NTT (fast-twiddles mode)
+    S* fast_external_twiddles_inv = nullptr; // required by mixed-radix NTT (fast-twiddles mode)
+    S* fast_internal_twiddles_inv = nullptr; // required by mixed-radix NTT (fast-twiddles mode)
+    S* fast_basic_twiddles_inv = nullptr;    // required by mixed-radix NTT (fast-twiddles mode)
+
   public:
     template <typename U>
-    friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx);
+    friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
 
     cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
@@ -389,7 +398,7 @@ namespace ntt {
   static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
 
   template <typename S>
-  cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx)
+  cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
     CHK_INIT_IF_RETURN();
 
@@ -399,11 +408,11 @@ namespace ntt {
     // please note that this offers just basic thread-safety,
     // it's assumed a singleton (non-enforced) that is supposed
     // to be initialized once per device per program lifetime
-    if (!domain.twiddles) {
+    if (!domain.initialized) {
       // Mutex is automatically released when lock goes out of scope, even in case of exceptions
       std::lock_guard<std::mutex> lock(Domain<S>::device_domain_mutex);
       // double check locking
-      if (domain.twiddles) return CHK_LAST(); // another thread is already initializing the domain
+      if (domain.initialized) return CHK_LAST(); // another thread is already initializing the domain
 
       bool found_logn = false;
       S omega = primitive_root;
@@ -430,6 +439,25 @@ namespace ntt {
       CHK_IF_RETURN(generate_external_twiddles_generic(
         primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
         ctx.stream));
+
+      if (fast_twiddles_mode) {
+        // generating fast-twiddles (note that this cost 4N additional memory)
+        CHK_IF_RETURN(cudaMallocAsync(&domain.fast_external_twiddles, domain.max_size * sizeof(S) * 2, ctx.stream));
+        CHK_IF_RETURN(cudaMallocAsync(&domain.fast_external_twiddles_inv, domain.max_size * sizeof(S) * 2, ctx.stream));
+
+        // fast-twiddles forward NTT
+        CHK_IF_RETURN(generate_external_twiddles_fast_twiddles_mode(
+          primitive_root, domain.fast_external_twiddles, domain.fast_internal_twiddles, domain.fast_basic_twiddles,
+          domain.max_log_size, ctx.stream));
+
+        // fast-twiddles inverse NTT
+        S primitive_root_inv;
+        CHK_IF_RETURN(cudaMemcpyAsync(
+          &primitive_root_inv, &domain.twiddles[domain.max_size - 1], sizeof(S), cudaMemcpyDeviceToHost, ctx.stream));
+        CHK_IF_RETURN(generate_external_twiddles_fast_twiddles_mode(
+          primitive_root_inv, domain.fast_external_twiddles_inv, domain.fast_internal_twiddles_inv,
+          domain.fast_basic_twiddles_inv, domain.max_log_size, ctx.stream));
+      }
       CHK_IF_RETURN(cudaStreamSynchronize(ctx.stream));
 
       const bool is_map_only_powers_of_primitive_root = true;
@@ -447,6 +475,7 @@ namespace ntt {
           domain.coset_index[domain.twiddles[i]] = i;
         }
       }
+      domain.initialized = true;
     }
 
     return CHK_LAST();
@@ -466,6 +495,19 @@ namespace ntt {
     cudaFreeAsync(basic_twiddles, ctx.stream);
     basic_twiddles = nullptr;
     coset_index.clear();
+
+    cudaFreeAsync(fast_external_twiddles, ctx.stream);
+    fast_external_twiddles = nullptr;
+    cudaFreeAsync(fast_internal_twiddles, ctx.stream);
+    fast_internal_twiddles = nullptr;
+    cudaFreeAsync(fast_basic_twiddles, ctx.stream);
+    fast_basic_twiddles = nullptr;
+    cudaFreeAsync(fast_external_twiddles_inv, ctx.stream);
+    fast_external_twiddles_inv = nullptr;
+    cudaFreeAsync(fast_internal_twiddles_inv, ctx.stream);
+    fast_internal_twiddles_inv = nullptr;
+    cudaFreeAsync(fast_basic_twiddles_inv, ctx.stream);
+    fast_basic_twiddles_inv = nullptr;
 
     return CHK_LAST();
   }
@@ -607,9 +649,21 @@ namespace ntt {
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
         coset_index, stream));
     } else {
+      const bool is_on_coset = (coset_index != 0) || coset;
+      const bool is_fast_twiddles_enabled = (domain.fast_external_twiddles != nullptr) && !is_on_coset;
+      S* twiddles = is_fast_twiddles_enabled
+                      ? (is_inverse ? domain.fast_external_twiddles_inv : domain.fast_external_twiddles)
+                      : domain.twiddles;
+      S* internal_twiddles = is_fast_twiddles_enabled
+                               ? (is_inverse ? domain.fast_internal_twiddles_inv : domain.fast_internal_twiddles)
+                               : domain.internal_twiddles;
+      S* basic_twiddles = is_fast_twiddles_enabled
+                            ? (is_inverse ? domain.fast_basic_twiddles_inv : domain.fast_basic_twiddles)
+                            : domain.basic_twiddles;
+
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
-        d_input, d_output, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, size, domain.max_log_size,
-        batch_size, is_inverse, config.ordering, coset, coset_index, stream));
+        d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
+        is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
     }
 
     if (!are_outputs_on_device)
@@ -645,10 +699,10 @@ namespace ntt {
    * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    */
-  extern "C" cudaError_t
-  CONCAT_EXPAND(CURVE, InitializeDomain)(curve_config::scalar_t* primitive_root, device_context::DeviceContext& ctx)
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitializeDomain)(
+    curve_config::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
-    return InitDomain(*primitive_root, ctx);
+    return InitDomain(*primitive_root, ctx, fast_twiddles_mode);
   }
 
   /**

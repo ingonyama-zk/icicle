@@ -119,6 +119,7 @@ pub trait NTT<F: FieldImpl> {
         output: &mut HostOrDeviceSlice<F>,
     ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
+    fn initialize_domain_fast_twiddles_mode(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -172,6 +173,13 @@ where
 {
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
+pub fn initialize_domain_fast_twiddles_mode<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
+{
+    <<F as FieldImpl>::Config as NTT<F>>::initialize_domain_fast_twiddles_mode(primitive_root, ctx)
+}
 
 #[macro_export]
 macro_rules! impl_ntt {
@@ -195,7 +203,11 @@ macro_rules! impl_ntt {
                 ) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "InitializeDomain")]
-                pub(crate) fn initialize_ntt_domain(primitive_root: &$field, ctx: &DeviceContext) -> CudaError;
+                pub(crate) fn initialize_ntt_domain(
+                    primitive_root: &$field,
+                    ctx: &DeviceContext,
+                    fast_twiddles_mode: bool,
+                ) -> CudaError;
             }
         }
 
@@ -219,7 +231,10 @@ macro_rules! impl_ntt {
             }
 
             fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx).wrap() }
+                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, false).wrap() }
+            }
+            fn initialize_domain_fast_twiddles_mode(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
+                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, true).wrap() }
             }
         }
     };
@@ -232,28 +247,29 @@ macro_rules! impl_ntt_tests {
     ) => {
         const MAX_SIZE: u64 = 1 << 17;
         static INIT: OnceLock<()> = OnceLock::new();
+        const FAST_TWIDDLES_MODE: bool = false;
 
         #[test]
         fn test_ntt() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
             check_ntt::<$field>()
         }
 
         #[test]
         fn test_ntt_coset_from_subgroup() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
             check_ntt_coset_from_subgroup::<$field>()
         }
 
         #[test]
         fn test_ntt_arbitrary_coset() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
             check_ntt_arbitrary_coset::<$field>()
         }
 
         #[test]
         fn test_ntt_batch() {
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID));
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
             check_ntt_batch::<$field>()
         }
 
