@@ -30,9 +30,20 @@ module.exports = {
           id: "icicle/golang-bindings",
         },
         {
-          type: "doc",
+          type: "category",
           label: "Rust bindings",
-          id: "icicle/rust-bindings",
+          link: {
+            type: `doc`,
+            id: "icicle/rust-bindings",
+          },
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              label: "Multi GPU Support",
+              id: "icicle/rust-bindings/multi-gpu",
+            }
+          ]
         },
         {
           type: "category",
@@ -59,6 +70,11 @@ module.exports = {
               id: "icicle/primitives/ntt",
             }
           ],
+        },
+        {
+          type: "doc",
+          label: "Multi GPU Support",
+          id: "icicle/multi-gpu",
         },
         {
           type: "doc",
