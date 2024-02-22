@@ -1,0 +1,46 @@
+{{- define "scalar_field_c_imports" }}
+// #cgo CFLAGS: -I./include/
+// #include "scalar_field.h"
+import "C"
+{{- end }}
+
+{{- define "scalar_field_go_imports" }}
+	core "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
+{{- end }}
+
+{{- define "scalar_field_funcs" }}
+func GenerateScalars(size int) core.HostSlice[ScalarField] {
+	scalars := make([]ScalarField, size)
+	for i := range scalars {
+		scalars[i] = ScalarField{}
+	}
+
+	scalarSlice := core.HostSliceFromElements[ScalarField](scalars)
+
+	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
+	cSize := (C.int)(size)
+	C.{{.Curve}}GenerateScalars(cScalars, cSize)
+
+	return scalarSlice
+}
+
+func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C.scalar_t)(scalars.AsPointer())
+	cSize := (C.size_t)(scalars.Len())
+	cIsInto := (C._Bool)(isInto)
+	defaultCtx, _ := cr.GetDefaultDeviceContext()
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
+	__ret := C.{{.Curve}}ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func ToMontgomery(scalars *core.DeviceSlice) cr.CudaError {
+	return convertScalarsMontgomery(scalars, true)
+}
+
+func FromMontgomery(scalars *core.DeviceSlice) cr.CudaError {
+	return convertScalarsMontgomery(scalars, false)
+}{{- end}}

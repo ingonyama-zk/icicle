@@ -204,7 +204,7 @@ macro_rules! impl_ntt {
 
                 #[link_name = concat!($field_prefix, "InitializeDomain")]
                 pub(crate) fn initialize_ntt_domain(
-                    primitive_root: $field,
+                    primitive_root: &$field,
                     ctx: &DeviceContext,
                     fast_twiddles_mode: bool,
                 ) -> CudaError;
@@ -231,10 +231,10 @@ macro_rules! impl_ntt {
             }
 
             fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::initialize_ntt_domain(primitive_root, ctx, false).wrap() }
+                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, false).wrap() }
             }
             fn initialize_domain_fast_twiddles_mode(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::initialize_ntt_domain(primitive_root, ctx, true).wrap() }
+                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, true).wrap() }
             }
         }
     };

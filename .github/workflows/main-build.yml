@@ -80,18 +80,22 @@ jobs:
       # Building from the root workspace will build all members of the workspace by default
       run: cargo build --release --verbose
 
-  # TODO: Re-enable once Golang bindings for v1+ is finished
-  # build-golang-linux:
-  #   name: Build Golang on Linux
-  #   runs-on: [self-hosted, Linux, X64, icicle]
-  #   needs: check-changed-files
-  #   steps:
-  #   - name: Checkout Repo
-  #     uses: actions/checkout@v3
-  #   - name: Build CUDA libs
-  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-  #     run: make all
-  #     working-directory: ./goicicle
+  build-golang-linux:
+    name: Build Golang on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: check-changed-files
+    strategy:
+      matrix:
+        curve: [bn254, bls12_381, bls12_377, bw6_761]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    - name: Build CUDA libs
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      working-directory: ./wrappers/golang
+      run: |
+        export CPATH=$CPATH:/usr/local/cuda/include
+        ./build.sh ${{ matrix.curve }} ON
 
   # TODO: Add once Golang make file supports building for Windows
   # build-golang-windows:

@@ -1,0 +1,53 @@
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <stdbool.h>
+// ve_mod_mult.h
+
+#ifndef _BN254_VEC_MULT_H
+#define _BN254_VEC_MULT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
+  cudaStream_t stream;   /**< Stream to use. Default value: 0. */
+  int device_id;         /**< Index of the currently used GPU. Default value: 0. */
+  cudaMemPool_t mempool; /**< Mempool to use. Default value: 0. */
+} DeviceContext;
+
+typedef struct BN254_scalar_t BN254_scalar_t;
+
+int bn254AddCuda(
+  BN254_scalar_t* vec_a,
+  BN254_scalar_t* vec_b,
+  int n,
+  bool is_on_device,
+  DeviceContext ctx,
+  BN254_scalar_t* result
+);
+
+int bn254SubCuda(
+  BN254_scalar_t* vec_a,
+  BN254_scalar_t* vec_b,
+  int n,
+  bool is_on_device,
+  DeviceContext ctx,
+  BN254_scalar_t* result
+);
+
+int bn254MulCuda(
+  BN254_scalar_t* vec_a,
+  BN254_scalar_t* vec_b,
+  int n,
+  bool is_on_device,
+  bool is_montgomery,
+  DeviceContext ctx,
+  BN254_scalar_t* result
+);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

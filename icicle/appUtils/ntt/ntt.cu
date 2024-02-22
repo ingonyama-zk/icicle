@@ -700,9 +700,9 @@ namespace ntt {
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    */
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitializeDomain)(
-    curve_config::scalar_t primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+    curve_config::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
-    return InitDomain(primitive_root, ctx, fast_twiddles_mode);
+    return InitDomain(*primitive_root, ctx, fast_twiddles_mode);
   }
 
   /**
