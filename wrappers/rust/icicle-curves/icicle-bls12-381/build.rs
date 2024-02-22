@@ -15,6 +15,9 @@ fn main() {
     #[cfg(feature = "g2")]
     config.define("G2_DEFINED", "ON");
 
+    #[cfg(feature = "ec_ntt")]
+    config.define("ECNTT_DEFINED", "ON");
+
     // Build
     let out_dir = config
         .build_target("icicle")

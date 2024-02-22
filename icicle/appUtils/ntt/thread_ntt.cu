@@ -52,7 +52,7 @@ public:
 
   __device__ __forceinline__ void loadBasicTwiddles(S* basic_twiddles)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 3; i++) {
       WB[i] = basic_twiddles[i];
     }
@@ -60,7 +60,7 @@ public:
 
   __device__ __forceinline__ void loadBasicTwiddlesGeneric(S* basic_twiddles, bool inv)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 3; i++) {
       WB[i] = basic_twiddles[inv ? i + 3 : i];
     }
@@ -68,7 +68,7 @@ public:
 
   __device__ __forceinline__ void loadInternalTwiddles64(S* data, bool stride)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 7; i++) {
       WI[i] = data[((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1)];
     }
@@ -76,7 +76,7 @@ public:
 
   __device__ __forceinline__ void loadInternalTwiddles32(S* data, bool stride)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 7; i++) {
       WI[i] = data[2 * ((stride ? (threadIdx.x >> 4) : (threadIdx.x)) & 0x3) * (i + 1)];
     }
@@ -84,7 +84,7 @@ public:
 
   __device__ __forceinline__ void loadInternalTwiddles16(S* data, bool stride)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 7; i++) {
       WI[i] = data[4 * ((stride ? (threadIdx.x >> 5) : (threadIdx.x)) & 0x1) * (i + 1)];
     }
@@ -92,7 +92,7 @@ public:
 
   __device__ __forceinline__ void loadInternalTwiddlesGeneric64(S* data, bool stride, bool inv)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 7; i++) {
       uint32_t exp = ((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1);
       WI[i] = data[(inv && exp) ? 64 - exp : exp]; // if exp = 0 we also take exp and not 64-exp
@@ -101,7 +101,7 @@ public:
 
   __device__ __forceinline__ void loadInternalTwiddlesGeneric32(S* data, bool stride, bool inv)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 7; i++) {
       uint32_t exp = 2 * ((stride ? (threadIdx.x >> 4) : (threadIdx.x)) & 0x3) * (i + 1);
       WI[i] = data[(inv && exp) ? 64 - exp : exp];
@@ -110,7 +110,7 @@ public:
 
   __device__ __forceinline__ void loadInternalTwiddlesGeneric16(S* data, bool stride, bool inv)
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 7; i++) {
       uint32_t exp = 4 * ((stride ? (threadIdx.x >> 5) : (threadIdx.x)) & 0x1) * (i + 1);
       WI[i] = data[(inv && exp) ? 64 - exp : exp];
@@ -122,7 +122,7 @@ public:
   {
     data += tw_order * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_order - 1));
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       WE[i] = data[8 * i * tw_order + (1 << tw_log_order + 6) - 1];
     }
@@ -133,9 +133,9 @@ public:
   {
     data += tw_order * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_order - 1));
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 4; i++) {
         WE[4 * j + i] = data[(8 * i + j) * tw_order + (1 << tw_log_order + 5) - 1];
       }
@@ -147,9 +147,9 @@ public:
   {
     data += tw_order * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_order - 1));
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         WE[2 * j + i] = data[(8 * i + j) * tw_order + (1 << tw_log_order + 4) - 1];
       }
@@ -159,7 +159,7 @@ public:
   __device__ __forceinline__ void loadExternalTwiddlesGeneric64(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       uint32_t exp = (s_meta.ntt_inp_id + 8 * i) * (s_meta.ntt_block_id & (tw_order - 1))
                      << (tw_log_size - tw_log_order - 6);
@@ -170,9 +170,9 @@ public:
   __device__ __forceinline__ void loadExternalTwiddlesGeneric32(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 4; i++) {
         uint32_t exp = (s_meta.ntt_inp_id * 2 + 8 * i + j) * (s_meta.ntt_block_id & (tw_order - 1))
                        << (tw_log_size - tw_log_order - 5);
@@ -184,9 +184,9 @@ public:
   __device__ __forceinline__ void loadExternalTwiddlesGeneric16(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         uint32_t exp = (s_meta.ntt_inp_id * 4 + 8 * i + j) * (s_meta.ntt_block_id & (tw_order - 1))
                        << (tw_log_size - tw_log_order - 4);
@@ -205,7 +205,7 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
     }
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       X[i] = data[s_meta.th_stride * i * data_stride];
     }
@@ -221,7 +221,7 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
     }
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       data[s_meta.th_stride * i * data_stride] = X[i];
     }
@@ -237,9 +237,9 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 2;
     }
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 4; i++) {
         X[4 * j + i] = data[(8 * i + j) * data_stride];
       }
@@ -256,9 +256,9 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 2;
     }
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 4; i++) {
         data[(8 * i + j) * data_stride] = X[4 * j + i];
       }
@@ -275,9 +275,9 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 4;
     }
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         X[2 * j + i] = data[(8 * i + j) * data_stride];
       }
@@ -294,9 +294,9 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 4;
     }
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         data[(8 * i + j) * data_stride] = X[2 * j + i];
       }
@@ -305,7 +305,7 @@ public:
 
   __device__ __forceinline__ void ntt4_2()
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 2; i++) {
       ntt4(X[4 * i], X[4 * i + 1], X[4 * i + 2], X[4 * i + 3]);
     }
@@ -313,7 +313,7 @@ public:
 
   __device__ __forceinline__ void ntt2_4()
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 4; i++) {
       ntt2(X[2 * i], X[2 * i + 1]);
     }
@@ -450,7 +450,7 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t column_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 64 + i * 8 + column_id] = X[i];
@@ -465,7 +465,7 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t row_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 64 + row_id * 8 + i] = X[i];
@@ -480,7 +480,7 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 32 + i * 4 + column_id] = X[i];
@@ -495,7 +495,7 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 32 + row_id * 8 + i] = X[i];
@@ -510,9 +510,9 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 4; i++) {
         if (store) {
           shmem[ntt_id * 32 + i * 8 + column_id + j] = X[4 * j + i];
@@ -528,9 +528,9 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 4; i++) {
         if (store) {
           shmem[ntt_id * 32 + row_id * 4 + 4 * j + i] = X[4 * j + i];
@@ -546,7 +546,7 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 16 + i * 2 + column_id] = X[i];
@@ -561,7 +561,7 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 16 + row_id * 8 + i] = X[i];
@@ -576,9 +576,9 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         if (store) {
           shmem[ntt_id * 16 + i * 8 + column_id + j] = X[2 * j + i];
@@ -594,9 +594,9 @@ public:
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
 
-#pragma unroll
+//#pragma unroll
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+//#pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         if (store) {
           shmem[ntt_id * 16 + row_id * 2 + 2 * j + i] = X[2 * j + i];
@@ -609,7 +609,7 @@ public:
 
   __device__ __forceinline__ void twiddlesInternal()
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 1; i < 8; i++) {
       X[i] = X[i] * WI[i - 1];
     }
@@ -617,7 +617,7 @@ public:
 
   __device__ __forceinline__ void twiddlesExternal()
   {
-#pragma unroll
+//#pragma unroll
     for (int i = 0; i < 8; i++) {
       X[i] = X[i] * WE[i];
     }

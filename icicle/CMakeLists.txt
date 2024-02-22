@@ -62,8 +62,8 @@ endif()
 project(icicle LANGUAGES CUDA CXX)
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
-set(CMAKE_CUDA_FLAGS_RELEASE "")
-set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
+set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -v -O0 --ptxas-options=-O0 --ptxas-options=-v --ptxas-options=-allow-expensive-optimizations=false")
+set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -O0 -lineinfo")
 include_directories("${CMAKE_SOURCE_DIR}")
 
 
