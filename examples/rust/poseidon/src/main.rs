@@ -1,4 +1,3 @@
-use icicle_bls12_381::poseidon;
 use icicle_bls12_381::curve::ScalarField as F;
 
 use icicle_cuda_runtime::device_context::DeviceContext;
