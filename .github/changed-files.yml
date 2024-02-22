@@ -1,5 +1,7 @@
 golang:
-  - goicicle/**/*.go'
+  - wrappers/golang/**/*.go'
+  - wrappers/golang/**/*.h'
+  - wrappers/golang/**/*.tmpl'
   - go.mod
 rust:
   - wrappers/rust

@@ -4,7 +4,7 @@ G2_DEFINED=OFF
 
 if [[ $2 ]]
 then
-  G2_DEFINED=$2
+  G2_DEFINED=ON
 fi
 
 BUILD_DIR=$(realpath "$PWD/../../icicle/build")

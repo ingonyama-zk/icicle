@@ -1,56 +1,60 @@
 # Golang Bindings
 
-To build the shared library:
+In order to build the underlying ICICLE libraries you should run the build script `build.sh` found in the `wrappers/golang` directory.
 
-To build shared libraries for all supported curves.
-
-```
-make all
-```
-
-If you wish to build for a specific curve, for example bn254.
+Build script USAGE
 
 ```
-make libbn254.so
+./build <curve> [G2_enabled]
+
+curve - The name of the curve to build or "all" to build all curves
+G2_enabled - Optional - To build with G2 enabled 
 ```
 
-The current supported options are `libbn254.so`, `libbls12_381.so`, `libbls12_377.so` and `libbw6_671.so`. The resulting `.so` files are the compiled shared libraries for each curve.
-
-Finally to allow your system to find the shared libraries
+To build ICICLE libraries for all supported curves with G2 enabled.
 
 ```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH/<path_to_shared_libs>
+./build.sh all ON
 ```
+
+If you wish to build for a specific curve, for example bn254, without G2 enabled.
+
+```
+./build.sh bn254
+```
+
+>[!NOTE]
+>Current supported curves are `bn254`, `bls12_381`, `bls12_377` and `bw6_671`
+
+>[!NOTE]
+>G2 is enabled by building your golang project with the build tag `g2`
+>Make sure to add it to your build tags if you want it enabled
 
 ## Running golang tests
 
 To run the tests for curve bn254.
 
 ```
-go test ./goicicle/curves/bn254 -count=1
+go test ./wrappers/golang/curves/bn254 -count=1
 ```
 
-## Cleaning up
-
-If you want to remove the compiled files
+To run all the tests in the golang bindings
 
 ```
-make clean
+go test --tags=g2 ./... -count=1
 ```
 
-This will remove all shared libraries generated from the `make` file.
+## How do Golang bindings work?
 
-# How do Golang bindings work?
+The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
 
-The shared libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
+1. These libraries (named `libingo_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
 
-1. These shared libraries (`libbn254.so`, `libbls12_381.so`, `libbls12_377.so`, `libbw6_671.so`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
-
-2. In your Go project, you can use `cgo` to link these shared libraries. Here's a basic example on how you can use `cgo` to link these libraries:
+2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 
 ```go
 /*
-#cgo LDFLAGS: -L/path/to/shared/libs -lbn254 -lbls12_381 -lbls12_377 -lbw6_671
+#cgo LDFLAGS: -L/path/to/shared/libs -lingo_bn254
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"
@@ -63,7 +67,7 @@ func main() {
 
 Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
 
-# Common issues
+## Common issues
 
 ### Cannot find shared library
 
@@ -80,3 +84,20 @@ collect2: error: ld returned 1 exit status
 ```
 
 This is normally fixed by exporting the path to the shared library location in the following way: `export CGO_LDFLAGS="-L/<path_to_shared_lib>/"`
+
+### cuda_runtime.h: No such file or directory
+
+```
+# github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381
+In file included from wrappers/golang/curves/bls12381/curve.go:5:
+wrappers/golang/curves/bls12381/include/curve.h:1:10: fatal error: cuda_runtime.h: No such file or directory
+    1 | #include <cuda_runtime.h>
+      |          ^~~~~~~~~~~~~~~~
+compilation terminated.
+```
+
+Our golang bindings rely on cuda headers and require that they can be found as system headers. Make sure to add the `cuda/include` of your cuda installation to your CPATH
+
+```
+export CPATH=$CPATH:<path/to/cuda/include>
+```

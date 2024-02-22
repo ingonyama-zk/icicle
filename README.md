@@ -141,10 +141,10 @@ See [LICENSE-MIT][LMIT] for details.
 [GRANT_PROGRAM]: https://medium.com/@ingonyama/icicle-for-researchers-grants-challenges-9be1f040998e
 [ICICLE-CORE]: ./icicle/
 [ICICLE-RUST]: ./wrappers/rust/
-[ICICLE-GO]: ./goicicle/
+[ICICLE-GO]: ./wrappers/golang/
 [ICICLE-CORE-README]: ./icicle/README.md
 [ICICLE-RUST-README]: ./wrappers/rust/README.md
-[ICICLE-GO-README]: ./goicicle/README.md
+[ICICLE-GO-README]: ./wrappers/golang/README.md
 [documentation]: https://dev.ingonyama.com/icicle/overview
 [examples]: ./examples/
 
