@@ -114,6 +114,7 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 - [Robik](https://github.com/robik75), for his ongoing support and mentorship
 - [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
 - [gkigiermo](https://github.com/gkigiermo), for making it intuitive to use ICICLE in Google Colab.
+- [nonam3e](https://github.com/nonam3e), for adding Grumpkin curve support into ICICLE
 
 ## Help & Support
 
@@ -142,10 +143,10 @@ See [LICENSE-MIT][LMIT] for details.
 [GRANT_PROGRAM]: https://medium.com/@ingonyama/icicle-for-researchers-grants-challenges-9be1f040998e
 [ICICLE-CORE]: ./icicle/
 [ICICLE-RUST]: ./wrappers/rust/
-[ICICLE-GO]: ./goicicle/
+[ICICLE-GO]: ./wrappers/golang/
 [ICICLE-CORE-README]: ./icicle/README.md
 [ICICLE-RUST-README]: ./wrappers/rust/README.md
-[ICICLE-GO-README]: ./goicicle/README.md
+[ICICLE-GO-README]: ./wrappers/golang/README.md
 [documentation]: https://dev.ingonyama.com/icicle/overview
 [examples]: ./examples/
 

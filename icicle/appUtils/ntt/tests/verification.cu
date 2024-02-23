@@ -34,13 +34,14 @@ int main(int argc, char** argv)
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
   float icicle_time, new_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 4; // assuming second input is the log-size
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
-  int INV = (argc > 3) ? atoi(argv[3]) : false;
+  int INV = (argc > 3) ? atoi(argv[3]) : true;
   int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1;
   int COSET_IDX = (argc > 5) ? atoi(argv[5]) : 0;
   const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
+  bool FAST_TW = (argc > 7) ? atoi(argv[7]) : true;
 
   // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -51,8 +52,8 @@ int main(int argc, char** argv)
                                                               : "MN";
 
   printf(
-    "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, coset-idx=%d, ordering=%s\n", NTT_LOG_SIZE, INPLACE, INV,
-    BATCH_SIZE, COSET_IDX, ordering_str);
+    "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, coset-idx=%d, ordering=%s, fast_tw=%d\n", NTT_LOG_SIZE,
+    INPLACE, INV, BATCH_SIZE, COSET_IDX, ordering_str, FAST_TW);
 
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
@@ -70,7 +71,7 @@ int main(int argc, char** argv)
 
   auto start = std::chrono::high_resolution_clock::now();
   const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  ntt::InitDomain(basic_root, ntt_config.ctx);
+  ntt::InitDomain(basic_root, ntt_config.ctx, FAST_TW);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;

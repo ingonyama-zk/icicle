@@ -32,10 +32,13 @@ namespace ntt {
    * @param primitive_root Primitive root in field `S` of order \f$ 2^s \f$. This should be the smallest power-of-2
    * order that's large enough to support any NTT you might want to perform.
    * @param ctx Details related to the device such as its id and stream id.
+   * @param fast_twiddles_mode A mode where more memory is allocated for twiddle factors in exchange for faster compute.
+   * In this mode need additional 4N memory when N is the largest NTT size to be supported (which is derived by the
+   * primitive_root).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S>
-  cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx);
+  cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
 
   /**
    * @enum NTTDir

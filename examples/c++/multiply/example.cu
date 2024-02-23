@@ -10,15 +10,15 @@
 
 using namespace curve_config;
 
-// select scalar or point field
-//typedef scalar_t T;
-typedef point_field_t T;
+typedef scalar_t T;
 
 int vector_mult(T* vec_b, T* vec_a, T* vec_result, size_t n_elments, device_context::DeviceContext ctx)
 {
-  const bool is_on_device = true;
-  const bool is_montgomery = false;
-  cudaError_t err =  vec_ops::Mul<T,T>(vec_a, vec_b, n_elments, is_on_device, is_montgomery, ctx, vec_result);
+  vec_ops::VecOpsConfig<scalar_t> config = vec_ops::DefaultVecOpsConfig<scalar_t>();
+  config.is_a_on_device = true;
+  config.is_b_on_device = true;
+  config.is_result_on_device = true;
+  cudaError_t err =  vec_ops::Mul<T>(vec_a, vec_b, n_elments, config, vec_result);
   if (err != cudaSuccess) {
     std::cerr << "Failed to multiply vectors - " << cudaGetErrorString(err) << std::endl;
     return 0;
