@@ -1,79 +1,93 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <cassert>
 #include <nvml.h>
 
 #define CURVE_ID 1
 #include "curves/curve_config.cuh"
+
 // #include "utils/device_context.cuh"
 // #include "utils/vec_ops.cu"
 
 using namespace curve_config;
 
 
+typedef point_field_t T;
 
-scalar_t modPow(scalar_t base, scalar_t exp) {
-    scalar_t r = scalar_t::one();
-    scalar_t b = base;
-    scalar_t e = exp;
-    while (e != scalar_t::zero()) {
+
+T modPow(T base, T exp) {
+    T r = T::one();
+    T b = base;
+    T e = exp;
+    while (e != T::zero()) {
         // If exp is odd, multiply the base with result
-        if (scalar_t::is_odd(e)) {
+        if (T::is_odd(e)) {
             r = r * b;
         }
         // Now exp must be even, divide it by 2
-        e =scalar_t::div2(e);
+        e =T::div2(e);
         b = b * b;
     }
     // *result = r;
     return r;
 }
 
- 
+// def is_quadratic_residue(x, p, a=0, b=3):
+//     # Calculate the RHS of the curve equation
+//     rhs = (x**3 + a*x + b) % p
+    
+//     # Check if rhs is a quadratic residue mod p using Euler's Criterion
+//     return pow(rhs, (p-1) // 2, p) == 1
 
-bool mySQRT(scalar_t a, /*scalar_t p,*/ scalar_t *result) {
+// Check if y2 is a quadratic residue using Euler's Criterion
+bool quadratic_residue(T y2) {
+  return modPow(y2, T::div2(T::zero() - T::one())) == T::one();
+}
+
+bool mySQRT(T a, T *result) {
   // a %= p; if (a < 0) a += p;
-  if (a == scalar_t::zero()) {
-    *result = scalar_t::zero();
+  if (a == T::zero()) {
+    *result = T::zero();
     return true;
   }
-  if (modPow(a, scalar_t::div2(scalar_t::zero()-scalar_t::one())) != scalar_t::one() ) {
+  if (modPow(a, T::div2(T::zero() - T::one())) != T::one() ) {
     return false; // solution does not exist
   }
   // if (p % 4 == 3) return power(a, (p + 1) / 4, p);
-  scalar_t s = scalar_t::zero()-scalar_t::one(); // p - 1, 
-  scalar_t n = scalar_t::one() + scalar_t::one(); //2;
-  scalar_t r = scalar_t::zero(); 
-  scalar_t m;
-  while (scalar_t::is_even(s)) {
-    r = r + scalar_t::one();
-    s = scalar_t::div2(s); //s /= 2;
+  T s = T::zero() - T::one(); // p - 1, 
+  T n = T::one() + T::one(); //2;
+  T r = T::zero(); 
+  T m;
+  while (T::is_even(s)) {
+    r = r + T::one();
+    s = T::div2(s); //s /= 2;
   }
   // find a non-square mod p
   // while (power(n, (p - 1) / 2, p) != p - 1) ++n;
-  while (modPow(n, scalar_t::div2((scalar_t::zero() - scalar_t::one())) ) != scalar_t::zero() - scalar_t::one()) {
-    n = n + scalar_t::one();
+  while (modPow(n, T::div2((T::zero() - T::one())) ) != T::zero() - T::one()) {
+    n = n + T::one();
   }
 
 
   // int x = power(a, (s + 1) / 2, p);
-  scalar_t x = modPow(a, scalar_t::div2(s + scalar_t::one()));
+  T x = modPow(a, T::div2(s + T::one()));
   //int b = power(a, s, p)
-  scalar_t b = modPow(a, s);
+  T b = modPow(a, s);
   //int g = power(n, s, p);
-  scalar_t g = modPow(n, s);
+  T g = modPow(n, s);
   for (;; r = m) {
     // int t = b;
-    scalar_t t = b;
+    T t = b;
     // for (m = 0; m < r && t != 1; ++m) t = 1LL * t * t % p;
-    for (m = scalar_t::zero(); scalar_t::lt(m,r) /* m < r*/ && t != scalar_t::one(); m = m + scalar_t::one()) t =  t * t;
+    for (m = T::zero(); T::lt(m,r) /* m < r*/ && t != T::one(); m = m + T::one()) t =  t * t;
 
-    if (m == scalar_t::zero() ) {
+    if (m == T::zero() ) {
       *result = x;
       return true;
     }
     //int gs = power(g, 1LL << (r - m - 1), p);
-    scalar_t gs = modPow(g, modPow(scalar_t::one()+scalar_t::one(), r - m - scalar_t::one()) );
+    T gs = modPow(g, modPow(T::one() + T::one(), r - m - T::one()) );
 
     g = gs * gs ;
     x = x * gs ;
@@ -121,22 +135,38 @@ int SQRT(int a, int p) {
 
 int main(int argc, char** argv)
 {
-  scalar_t base = scalar_t::rand_host();
-  std::cout << base << std::endl;
-  scalar_t exp = scalar_t::div2(scalar_t::zero()-scalar_t::one());
-  std::cout << exp << std::endl;
-  scalar_t result = modPow(base, exp);
-  std::cout << "Result: " << result << std::endl;
-  scalar_t a = scalar_t::zero();
-  int b=0;  
-  for(int i=0; i<4; i++) {
-    a = a + scalar_t::one();
-    b = b + 1;
+  T x = T::rand_host();
+  const T wb = T { weierstrass_b };
+  // const scalar_t wb = scalar_t::one()+scalar_t::one()+scalar_t::one(); // 3
+  T y2;
+  
+  while (y2 = x*x*x + wb, quadratic_residue(y2) == false)
+  {
+    std::cout << "x: " << x << std::endl;
+    x = x + T::one();
   }
-  std::cout << b << " " << SQRT(b,23) << std::endl;
-  std::cout << "test lt " << scalar_t::lt(scalar_t::one(),scalar_t::one()) << std::endl;
-  scalar_t res;
-  bool found = mySQRT(a, &res);
-  std::cout << a << " " << found << " " << res << std::endl;
+  std::cout << "x: " << x << " y2: " << y2 << std::endl;
+  T y;
+  bool found = mySQRT(y2, &y);
+  std::cout << "x: " << x << " " << found << " y: " << T::zero()- y << std::endl;
+  std::cout << "y*y: " << y*y << " y2: " << y2 << std::endl;
+  assert(y*y == y2);
+  // affine_t pt = affine_t{ x, y }; 
+  affine_t pt;
+  pt.x = x;
+  pt.y = y;
+  return 0;
+
+  
+
+  
+
+  // for(int i=0; i<16; i++) {
+  //   a = a + scalar_t::one();
+  //   b = b + 1;
+  // }
+  // std::cout << b << " " << SQRT(b,23) << std::endl;
+  // std::cout << "test modPow " << modPow(scalar_t::one()+scalar_t::one(), scalar_t::zero())   << std::endl;
+  
   return 0;
 }
