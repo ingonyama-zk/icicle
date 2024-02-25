@@ -4,13 +4,18 @@
 #include <memory>
 
 namespace polynomials {
-  template <typename CoefficientType, typename DomainType = CoefficientType, typename ImageType = CoefficientType>
+  template <typename CoefficientType, typename DomainType, typename ImageType, typename ECpoint>
   class IPolynomialBackend;
-  template <typename CoefficientType, typename DomainType = CoefficientType, typename ImageType = CoefficientType>
+
+  template <typename CoefficientType, typename DomainType, typename ImageType>
   class IPolynomialContext;
 
   /*============================== Polynomial API ==============================*/
-  template <typename CoefficientType, typename DomainType = CoefficientType, typename ImageType = CoefficientType>
+  template <
+    typename CoefficientType = curve_config::scalar_t,
+    typename DomainType = CoefficientType,
+    typename ImageType = CoefficientType,
+    typename ECpoint = curve_config::affine_t>
   class Polynomial
   {
   public:
@@ -29,8 +34,7 @@ namespace polynomials {
     Polynomial divide_by_vanishing_polynomial(uint32_t vanishing_polynomial_degree) const;
 
     // dot-product with coefficients (e.g. MSM when computing P(tau)G1)
-    template <typename R>
-    R dot_product_with_coefficients(R* points, uint32_t nof_points);
+    ECpoint dot_product_with_coefficients(ECpoint* points, uint32_t nof_points);
 
     // // arithmetic ops with monomial
     Polynomial& add_monomial_inplace(CoefficientType monomial_coeff, uint32_t monomial = 0) const;
@@ -60,7 +64,7 @@ namespace polynomials {
     // context is a wrapper for the polynomial state, including allocated memory, device context etc.
     std::unique_ptr<IPolynomialContext<CoefficientType, DomainType, ImageType>> m_context = nullptr;
     // backend is the actual API implementation
-    std::unique_ptr<IPolynomialBackend<CoefficientType, DomainType, ImageType>> m_backend = nullptr;
+    std::unique_ptr<IPolynomialBackend<CoefficientType, DomainType, ImageType, ECpoint>> m_backend = nullptr;
 
     Polynomial();
 
@@ -97,7 +101,7 @@ namespace polynomials {
   };
 
   /*============================== Polynomial Backend ==============================*/
-  template <typename C, typename D, typename I>
+  template <typename C, typename D, typename I, typename ECpoint>
   class IPolynomialBackend
   {
   public:
@@ -122,8 +126,7 @@ namespace polynomials {
     virtual void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) = 0;
 
     // dot product with coefficients
-    // template <typename R>
-    // virtual R dot_product_with_coefficients(PolyContext& op, R* points, uint32_t nof_points) = 0;
+    virtual ECpoint dot_product_with_coefficients(PolyContext& op, ECpoint* points, uint32_t nof_points) = 0;
 
     virtual void reciprocal(PolyContext& out, PolyContext& op) = 0;
 
