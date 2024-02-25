@@ -36,9 +36,9 @@ namespace polynomials {
       transform_state(State::Coefficients);
       return std::make_pair(m_coefficients, m_nof_elements);
     }
-    std::pair<I*, uint32_t> get_rou_evaluations() override
+    std::pair<I*, uint32_t> get_rou_evaluations(uint32_t nof_evals) override
     {
-      transform_state(State::EvaluationsOnRou);
+      transform_state(State::EvaluationsOnRou, nof_evals);
       return std::make_pair(m_evaluations, m_nof_elements);
     }
 
@@ -107,20 +107,54 @@ namespace polynomials {
       m_state = state;
     }
 
-    void transform_state(State state)
+    void transform_state(State new_state, uint32_t new_nof_elements = 0)
     {
-      const bool is_already_in_state = state == m_state;
-      if (is_already_in_state) return;
+      // TODO Yuval ceil to power of two
+      uint32_t old_nof_elements = m_nof_elements;
+      new_nof_elements = new_nof_elements == 0 ? old_nof_elements : new_nof_elements;
+      const bool is_mem_alloc_required = new_nof_elements > old_nof_elements;
 
-      const bool is_coeff_to_rou_evaluations = state == State::EvaluationsOnRou;
+      const bool is_already_in_state = new_state == m_state;
+      if (is_already_in_state && !is_mem_alloc_required) return;
 
-      auto ntt_config = ntt::DefaultNTTConfig<C>();
-      if (is_coeff_to_rou_evaluations) {
-        ntt::NTT(m_coefficients, m_nof_elements, ntt::NTTDir::kForward, ntt_config, m_evaluations);
-      } else { // rou_evalutions to coefficients
-        ntt::NTT(m_evaluations, m_nof_elements, ntt::NTTDir::kInverse, ntt_config, m_coefficients);
+      void* src_p = m_storage;
+      void* dst_p = m_storage;
+
+      const size_t old_mem_size = old_nof_elements * ElementSize;
+      const size_t new_mem_size = new_nof_elements * ElementSize;
+      if (is_mem_alloc_required) {
+        cudaMallocManaged(&m_storage, new_mem_size);
+        dst_p = m_storage;
       }
-      set_state(state);
+
+      const bool is_coeffs_to_coeffs = m_state == State::Coefficients && new_state == State::Coefficients;
+      const bool is_coeff_to_rou_evaluations = m_state == State::Coefficients && new_state == State::EvaluationsOnRou;
+      const bool is_rou_evals_to_rou_evals = m_state == State::EvaluationsOnRou && new_state == State::EvaluationsOnRou;
+      const bool is_rou_evals_to_coeffs = m_state == State::EvaluationsOnRou && new_state == State::Coefficients;
+
+      // TODO Yuval: can do the NTTs with more efficient ordering and store it
+      auto ntt_config = ntt::DefaultNTTConfig<C>();
+      // TODO Yuval: set device context
+      ntt_config.are_inputs_on_device = true;
+      ntt_config.are_outputs_on_device = true;
+      if (is_coeffs_to_coeffs) {
+        // simply copy old coefficients to larger memory
+        cudaMemcpy(dst_p, src_p, old_mem_size, cudaMemcpyDeviceToDevice);
+      } else if (is_coeff_to_rou_evaluations) {
+        // copy coeffs to new mem and to NTT inplace with new size
+        cudaMemcpy(dst_p, src_p, old_mem_size, cudaMemcpyDeviceToDevice);
+        ntt::NTT((C*)dst_p, new_mem_size, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
+      } else if (is_rou_evals_to_rou_evals) {
+        // NTT to coeffs and a second in-place NTT for compute evals
+        ntt::NTT((C*)src_p, old_mem_size, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
+        ntt::NTT((C*)dst_p, old_mem_size, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
+      } else if (is_rou_evals_to_coeffs) {
+        // NTT to new memory. Higher coefficients should be zeros
+        ntt::NTT((C*)src_p, old_mem_size, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
+      }
+
+      set_state(new_state);
+      m_nof_elements = new_nof_elements;
     }
 
     size_t size() const { return m_nof_elements * ElementSize; }
@@ -160,7 +194,6 @@ namespace polynomials {
     }
 
     void add(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, true /*=add*/); }
-
     void subtract(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, false /*=sub*/); }
 
     void multiply(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
