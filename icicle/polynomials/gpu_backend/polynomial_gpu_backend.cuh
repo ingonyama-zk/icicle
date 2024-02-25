@@ -6,18 +6,62 @@
 #include "polynomials/gpu_backend/kernels.cuh"
 
 namespace polynomials {
-  template <typename C, typename D, typename I>
-  class GPUPolynomialBackend : public IPolynomialBackend<C, D, I>
-  {
-  public:
-    enum State { Coefficients, EvaluationsOnRou };
 
-    ~GPUPolynomialBackend()
+  /*============================== Polynomial GPU-context ==============================*/
+  template <typename C, typename D, typename I>
+  class GPUPolynomialContext : public IPolynomialContext<C, D, I>
+  {
+    // TODO Yuval: add device context to be able to know which device it is and get a corresponding stream
+  public:
+    C* init_from_coefficients(uint32_t nof_coefficients, const C* h_coefficients) override
     {
-      std::cout << "~GPUPolynomialBackend(id=" << IPolynomialBackend<C, D, I>::m_id << ")" << std::endl;
-      release();
+      void* storage = getOrAllocate(nof_coefficients);
+      if (h_coefficients) { cudaMemcpy(storage, h_coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice); }
+      set_state(State::Coefficients);
+      return m_coefficients;
     }
 
+    I* init_from_rou_evaluations(uint32_t nof_evaluations, const I* h_evaluations) override
+    {
+      void* storage = getOrAllocate(nof_evaluations);
+      if (h_evaluations) { cudaMemcpy(storage, h_evaluations, nof_evaluations * sizeof(I), cudaMemcpyHostToDevice); }
+      set_state(State::EvaluationsOnRou);
+      return m_evaluations;
+    }
+
+    std::pair<C*, uint32_t> get_coefficients() override
+    {
+      transform_state(State::Coefficients);
+      return std::make_pair(m_coefficients, m_nof_elements);
+    }
+    std::pair<I*, uint32_t> get_rou_evaluations() override
+    {
+      transform_state(State::EvaluationsOnRou);
+      return std::make_pair(m_evaluations, m_nof_elements);
+    }
+
+    void print(std::ostream& os) override
+    {
+      os << "(id=" << IPolynomialContext<C, D, I>::m_id << ")[";
+      if (m_state == State::Coefficients) {
+        for (size_t i = 0; i < m_nof_elements; ++i) {
+          os << m_coefficients[i];
+          if (i < m_nof_elements - 1) { os << ", "; }
+        }
+        os << "] (state=coefficients)" << std::endl;
+      } else if (m_state == State::EvaluationsOnRou) {
+        for (size_t i = 0; i < m_nof_elements; ++i) {
+          os << m_evaluations[i];
+          if (i < m_nof_elements - 1) { os << ", "; }
+        }
+        os << "] (state=rou evaluations)" << std::endl;
+      }
+    }
+
+    ~GPUPolynomialContext() { release(); }
+
+  private:
+    enum State { Coefficients, EvaluationsOnRou };
     void release()
     {
       if (m_storage != nullptr) { cudaFree(m_storage); }
@@ -42,40 +86,6 @@ namespace polynomials {
       // TODO Yuval: memset zeros?
       m_nof_elements = nof_elements_nearset_power_of_two;
       return m_storage;
-    }
-
-    size_t size() const { return m_nof_elements * ElementSize; }
-
-    void print(std::ostream& os) override
-    {
-      os << "(id=" << IPolynomialBackend<C, D, I>::m_id << ")[";
-      if (m_state == State::Coefficients) {
-        for (size_t i = 0; i < m_nof_elements; ++i) {
-          os << m_coefficients[i];
-          if (i < m_nof_elements - 1) { os << ", "; }
-        }
-        os << "] (state=coefficients)" << std::endl;
-      } else if (m_state == State::EvaluationsOnRou) {
-        for (size_t i = 0; i < m_nof_elements; ++i) {
-          os << m_evaluations[i];
-          if (i < m_nof_elements - 1) { os << ", "; }
-        }
-        os << "] (state=rou evaluations)" << std::endl;
-      }
-    }
-
-    void init_from_coefficients(const C* coefficients, uint32_t nof_coefficients) override
-    {
-      void* storage = getOrAllocate(nof_coefficients);
-      cudaMemcpy(storage, coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice);
-      set_state(State::Coefficients);
-    }
-
-    void init_from_rou_evaluations(const I* evaluations, uint32_t nof_evaluations) override
-    {
-      void* storage = getOrAllocate(nof_evaluations);
-      cudaMemcpy(storage, evaluations, nof_evaluations * sizeof(I), cudaMemcpyHostToDevice);
-      set_state(State::EvaluationsOnRou);
     }
 
     void set_state(State state)
@@ -111,94 +121,10 @@ namespace polynomials {
       set_state(state);
     }
 
-    // TODO Yuval: how to avoid this ugly downcast??
-    static inline GPUPolynomialBackend& get_backend(const Polynomial<C, D, I>& poly)
-    {
-      // TODO Yuval: backend object per GPU? then also check same GPU. If yes, can use the stream, else throw error
-      auto backend = dynamic_cast<GPUPolynomialBackend<C, D, I>*>(poly.m_backend.get());
-      if (nullptr == backend) { throw std::runtime_error("[ERROR] expecting GPUPolynomialBackend"); }
-      return *backend;
-    }
+    size_t size() const { return m_nof_elements * ElementSize; }
+    State get_state() const { return m_state; }
 
-    void add_sub(Polynomial<C, D, I>& res, const Polynomial<C, D, I>& a, const Polynomial<C, D, I>& b, bool add1_sub0)
-    {
-      auto& res_backend = get_backend(res);
-      auto& a_backend = get_backend(a);
-      auto& b_backend = get_backend(b);
-
-      // TODO support computation in evaluations form too
-      a_backend.transform_state(State::Coefficients);
-      b_backend.transform_state(State::Coefficients);
-
-      res_backend.getOrAllocate(max(a_backend.m_nof_elements, b_backend.m_nof_elements));
-      res_backend.set_state(State::Coefficients);
-
-      const int NOF_THREADS = 32;
-      const int NOF_BLOCKS = (res_backend.m_nof_elements + NOF_THREADS - 1) / NOF_THREADS;
-      AddSubKernel<<<NOF_BLOCKS, NOF_THREADS>>>(
-        a_backend.m_coefficients, b_backend.m_coefficients, a_backend.m_nof_elements, b_backend.m_nof_elements,
-        add1_sub0, res_backend.m_coefficients);
-    }
-
-    void add(Polynomial<C, D, I>& res, const Polynomial<C, D, I>& a, const Polynomial<C, D, I>& b) override
-    {
-      add_sub(res, a, b, true /*=add*/);
-    }
-
-    void subtract(Polynomial<C, D, I>& res, const Polynomial<C, D, I>& a, const Polynomial<C, D, I>& b) override
-    {
-      add_sub(res, a, b, false /*=sub*/);
-    }
-
-    void divide(
-      Polynomial<C, D, I>& Quotient,
-      Polynomial<C, D, I>& Remainder,
-      const Polynomial<C, D, I>& a,
-      const Polynomial<C, D, I>& b) override
-    {
-    }
-    void add_monomial_inplace(Polynomial<C, D, I>& self, C monomial_coeff, uint32_t monomial) override {}
-
-    int32_t degree(Polynomial<C, D, I>& p) override
-    {
-      auto& backend = get_backend(p);
-      backend.transform_state(State::Coefficients);
-
-      // TODO Yuval use streams and async
-      int32_t* d_degree;
-      int32_t h_degree;
-      cudaMalloc(&d_degree, sizeof(int32_t));
-      // TODO parallelize kernel
-      HighestNonZeroIdx<<<1, 1>>>(backend.m_coefficients, backend.m_nof_elements, d_degree);
-      cudaMemcpy(&h_degree, d_degree, sizeof(int32_t), cudaMemcpyDeviceToHost);
-      cudaFree(d_degree);
-
-      return h_degree + 1;
-    }
-
-    I evaluate(Polynomial<C, D, I>& self, const D& domain_x) override
-    {
-      // TODO Yuval
-      I im = {};
-      return im;
-    }
-    void
-    evaluate(Polynomial<C, D, I>& self, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override
-    {
-    }
-
-    C get_coefficient(Polynomial<C, D, I>& self, uint32_t coeff_idx) override
-    {
-      // TODO Yuval
-      C coeff = {};
-      return coeff;
-    }
-    // if coefficients==nullptr, fills nof_coeff only
-    void get_coefficients(Polynomial<C, D, I>& self, C* coefficients, uint32_t& nof_coeff) override
-    {
-      // TODO Yuval
-    }
-
+    // Members
     // ElementSize helps allocate single memory for both coefficients and evaluations
     static constexpr size_t ElementSize = std::max(sizeof(C), sizeof(I));
 
@@ -210,4 +136,85 @@ namespace polynomials {
     State m_state; // whether data is in coefficients or evaluations form
   };
 
+  /*============================== Polynomial GPU-backend ==============================*/
+
+  template <typename C, typename D, typename I>
+  class GPUPolynomialBackend : public IPolynomialBackend<C, D, I>
+  {
+    typedef IPolynomialContext<C, D, I> PolyContext;
+
+  public:
+    void add_sub(
+      IPolynomialContext<C, D, I>& res, IPolynomialContext<C, D, I>& a, IPolynomialContext<C, D, I>& b, bool add1_sub0)
+    {
+      auto [a_coeff_p, a_nof_coeff] = a.get_coefficients();
+      auto [b_coeff_p, b_nof_coeff] = b.get_coefficients();
+
+      const auto res_nof_coeff = max(a_nof_coeff, b_nof_coeff);
+      auto* res_coeff_p = res.init_from_coefficients(res_nof_coeff);
+
+      const int NOF_THREADS = 32;
+      const int NOF_BLOCKS = (res_nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
+      AddSubKernel<<<NOF_BLOCKS, NOF_THREADS>>>(a_coeff_p, b_coeff_p, a_nof_coeff, b_nof_coeff, add1_sub0, res_coeff_p);
+    }
+
+    void add(IPolynomialContext<C, D, I>& res, IPolynomialContext<C, D, I>& a, IPolynomialContext<C, D, I>& b) override
+    {
+      add_sub(res, a, b, true /*=add*/);
+    }
+
+    void
+    subtract(IPolynomialContext<C, D, I>& res, IPolynomialContext<C, D, I>& a, IPolynomialContext<C, D, I>& b) override
+    {
+      add_sub(res, a, b, false /*=sub*/);
+    }
+
+    void multiply(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
+    void divide(PolyContext& Quotient_out, PolyContext& Remainder_out, PolyContext& op_a, PolyContext& op_b) override {}
+    void quotient(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
+    void remainder(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
+    void divide_by_vanishing_polynomial(PolyContext& out, PolyContext& op_a, uint32_t vanishing_poly_degree) override {}
+    void reciprocal(PolyContext& out, PolyContext& op) override {}
+
+    // arithmetic with monomials
+    void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override {}
+    void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override {}
+
+    int32_t degree(IPolynomialContext<C, D, I>& p) override
+    {
+      auto [coeff, nof_coeff] = p.get_coefficients();
+
+      // TODO Yuval use streams and async
+      int32_t* d_degree;
+      int32_t h_degree;
+      cudaMalloc(&d_degree, sizeof(int32_t));
+      // TODO parallelize kernel
+      HighestNonZeroIdx<<<1, 1>>>(coeff, nof_coeff, d_degree);
+      cudaMemcpy(&h_degree, d_degree, sizeof(int32_t), cudaMemcpyDeviceToHost);
+      cudaFree(d_degree);
+
+      return h_degree + 1;
+    }
+
+    I evaluate(IPolynomialContext<C, D, I>& self, const D& domain_x) override
+    {
+      // TODO Yuval
+      I im = {};
+      return im;
+    }
+    void evaluate(
+      IPolynomialContext<C, D, I>& self, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override
+    {
+    }
+
+    C get_coefficient(PolyContext& op, uint32_t coeff_idx) override
+    {
+      // TODO Yuval: implement by copying to hostreturn
+      return C::zero();
+    }
+    uint32_t get_coefficients(PolyContext& op, C* coefficients) override
+    {
+      return 0; // TODO Yuval: implement by copying to hostreturn }
+    }
+  };
 } // namespace polynomials
