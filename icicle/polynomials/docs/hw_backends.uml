@@ -1,69 +1,86 @@
 @startuml
 
+' Define Interface for Polynomial Backend Operations
 interface IPolynomialBackend {
-    +add(): void
-    +subtract(): void
-    +multiply(): void
-    +divide(): void
-    +evaluate(): void
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
 }
 
+' Define Interface for Polynomial Context (State Management)
+interface IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
+}
+
+' PolynomialAPI now uses two strategies: Backend and Context
 class PolynomialAPI {
     -backendStrategy: IPolynomialBackend
-    +setBackendStrategy(IPolynomialBackend): void
-    +add(): void
-    +subtract(): void
-    +multiply(): void
-    +divide(): void
-    +evaluate(): void
+    -contextStrategy: IPolynomialContext
+    -setBackendStrategy(IPolynomialBackend)
+    -setContextStrategy(IPolynomialContext)
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
 }
 
+' Backend Implementations
 class GPUPolynomialBackend implements IPolynomialBackend {
     #gpuResources: Resource
-    +add(): void
-    +subtract(): void
-    +multiply(): void
-    +divide(): void
-    +evaluate(): void
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
 }
 
 class ZPUPolynomialBackend implements IPolynomialBackend {
     #zpuResources: Resource
-    +add(): void
-    +subtract(): void
-    +multiply(): void
-    +divide(): void
-    +evaluate(): void
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
 }
 
 class TracerPolynomialBackend implements IPolynomialBackend {
     #traceData: Data
-    +add(): void
-    +subtract(): void
-    +multiply(): void
-    +divide(): void
-    +evaluate(): void
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
 }
 
-class SparseGPUPolynomialBackend implements IPolynomialBackend {
-    #sparseGpuResources: Resource
-    +add(): void
-    +subtract(): void
-    +multiply(): void
-    +divide(): void
-    +evaluate(): void
+' Context Implementations (Placeholder for actual implementation)
+class GPUContext implements IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
 }
 
-class SparseZPUPolynomialBackend implements IPolynomialBackend {
-    #sparseZpuResources: Resource
-    +add(): void
-    +subtract(): void
-    +multiply(): void
-    +divide(): void
-    +evaluate(): void
+class ZPUContext implements IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
 }
 
-PolynomialAPI *-- IPolynomialBackend : uses
+class TracerContext implements IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
+}
 
-
+' Relationships
+PolynomialAPI o-- IPolynomialBackend : uses
+PolynomialAPI o-- IPolynomialContext : uses
 @enduml
