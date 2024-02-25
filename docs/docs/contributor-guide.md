@@ -6,7 +6,7 @@ We welcome all contributions with open arms. At Ingonyama we take a village appr
 
 - Make suggestions or report bugs via [GitHub issues](https://github.com/ingonyama-zk/icicle/issues)
 - Contribute to the ICICLE by opening a [pull request](https://github.com/ingonyama-zk/icicle/pulls).
-- Contribute to our [documentation](https://github.com/ingonyama-zk/developer-docs) and [examples](https://github.com/ingonyama-zk/icicle/tree/main/examples).
+- Contribute to our [documentation](https://github.com/ingonyama-zk/icicle/tree/main/docs) and [examples](https://github.com/ingonyama-zk/icicle/tree/main/examples).
 - Ask questions on Discord
 
 ### Opening a pull request
