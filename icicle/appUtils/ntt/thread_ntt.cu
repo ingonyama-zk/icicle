@@ -208,6 +208,7 @@ public:
 #pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       X[i] = data[s_meta.th_stride * i * data_stride];
+      // if (blockIdx.x == 0 && threadIdx.x == 0) printf("t %d b %d add %d\n", threadIdx.x, blockIdx.x, s_meta.th_stride * i * data_stride);
     }
   }
 

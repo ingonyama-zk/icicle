@@ -666,6 +666,7 @@ namespace ntt {
     uint32_t log_size,
     uint32_t tw_log_size,
     uint32_t batch_size,
+    bool columns_batch,
     bool inv,
     bool normalize,
     bool dit,
@@ -715,8 +716,8 @@ namespace ntt {
       const int NOF_THREADS = min(64, 8 * batch_size);
       const int NOF_BLOCKS = (8 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
       ntt64<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
-        false, 0, inv, dit, fast_tw);
+        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size,
+        1<<(columns_batch? log_size : 0), columns_batch? log_size : 0, 0, columns_batch, 0, inv, dit, fast_tw);
       if (normalize) normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6));
       return CHK_LAST();
     }
@@ -809,6 +810,7 @@ namespace ntt {
     int ntt_size,
     int max_logn,
     int batch_size,
+    bool columns_batch,
     bool is_inverse,
     bool fast_tw,
     Ordering ordering,
@@ -880,7 +882,7 @@ namespace ntt {
 
     // inplace ntt
     CHK_IF_RETURN(large_ntt(
-      d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size, is_inverse,
+      d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size, columns_batch, is_inverse,
       (is_normalize && reverse_output == eRevType::None), dit, fast_tw, cuda_stream));
 
     if (reverse_output != eRevType::None) {
@@ -923,6 +925,7 @@ namespace ntt {
     int ntt_size,
     int max_logn,
     int batch_size,
+    bool columns_batch,
     bool is_inverse,
     bool fast_tw,
     Ordering ordering,
