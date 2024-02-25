@@ -1,0 +1,82 @@
+name: Rust
+
+on:
+  push:
+    branches:
+      - ci-test/language-specific-flows
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-changed-files:
+    uses: ./.github/workflows/check-changed-files.yml
+
+  check-format:
+    name: Check Code Format
+    runs-on: ubuntu-22.04
+    needs: check-changed-files
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Check rustfmt
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      working-directory: ./wrappers/rust
+      # "-name tagret -prune" removes searching in any directory named "target"
+      # Formatting by single file is necessary due to generated files not being present
+      # before building the project.
+      # e.g. icicle-cuda-runtime/src/bindings.rs is generated and icicle-cuda-runtime/src/lib.rs includes that module
+      # causing rustfmt to fail.
+      run: if [[ $(find . -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
+
+  build-linux:
+    name: Build on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Build
+      working-directory: ./wrappers/rust
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      # Building from the root workspace will build all members of the workspace by default
+      run: cargo build --release --verbose
+  
+  test-linux:
+    name: Test on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: build-linux
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Run Rust Tests
+      working-directory: ./wrappers/rust
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      # Running tests from the root workspace will run all workspace members' tests by default
+      # We need to limit the number of threads to avoid running out of memory on weaker machines
+      run: cargo test --release --verbose --features=g2 -- --test-threads=2
+
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-2022
+    needs: check-changed-files
+    steps:     
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Download and Install Cuda
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      id: cuda-toolkit
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: '12.0.0'
+        method: 'network'
+        # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
+        sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
+    - name: Build Rust Targets
+      working-directory: ./wrappers/rust
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      env:
+        CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+      # Building from the root workspace will build all members of the workspace by default
+      run: cargo build --release --verbose

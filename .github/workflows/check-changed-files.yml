@@ -1,0 +1,39 @@
+name: Check Changed Files
+
+on:
+  workflow_call:
+    outputs:
+      golang:
+        description: "Flag for if GoLang files changed"
+        value: ${{ jobs.check-changed-files.outputs.golang }}
+      rust:
+        description: "Flag for if Rust files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust }}
+      cpp_cuda:
+        description: "Flag for if C++/CUDA files changed"
+        value: ${{ jobs.check-changed-files.outputs.cpp_cuda }}
+
+jobs:
+  check-changed-files:
+    name: Check Changed Files
+    runs-on: ubuntu-22.04
+    outputs:
+      golang: ${{ steps.changed_files.outputs.golang }}
+      rust: ${{ steps.changed_files.outputs.rust }}
+      cpp_cuda: ${{ steps.changed_files.outputs.cpp_cuda }}
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Get all changed files
+      id: changed-files-yaml
+      uses: tj-actions/changed-files@v39
+      # https://github.com/tj-actions/changed-files#input_files_yaml_from_source_file
+      with:
+        files_yaml_from_source_file: .github/changed-files.yml
+    - name: Run Changed Files script
+      id: changed_files
+      # https://github.com/tj-actions/changed-files#outputs-
+      run: |
+        echo "golang=${{ steps.changed-files-yaml.outputs.golang_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "cpp_cuda=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"

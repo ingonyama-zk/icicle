@@ -8,27 +8,27 @@
 name: Examples
 
 on:
-  pull_request:
-    branches:
-      - main
-      - dev
   push:
     branches:
-      - main
-      - dev
+      - ci-test/language-specific-flows
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:  
+jobs:
+  check-changed-files:
+    uses: ./.github/workflows/check-changed-files.yml
+
   test-examples:
     runs-on: [self-hosted, Linux, X64, icicle, examples]
+    needs: check-changed-files
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: c++ examples
       working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         # loop over all directories in the current directory
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
@@ -42,6 +42,7 @@ jobs:
         done    
     - name: Rust examples
       working-directory: ./examples/rust
+      if: needs.check-changed-files.outputs.rust == 'true'
       run: |
         # loop over all directories in the current directory
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do

@@ -1,7 +1,7 @@
 golang:
-  - wrappers/golang/**/*.go'
-  - wrappers/golang/**/*.h'
-  - wrappers/golang/**/*.tmpl'
+  - wrappers/golang/**/*.go
+  - wrappers/golang/**/*.h
+  - wrappers/golang/**/*.tmpl
   - go.mod
 rust:
   - wrappers/rust
