@@ -8,7 +8,7 @@ Here we will cover the core multi GPU apis and a [example](#a-multi-gpu-example)
 
 To streamline device management we offer as part of `icicle-cuda-runtime` package methods for dealing with devices.
 
-#### [`set_device`](https://github.com/vhnatyk/icicle/blob/275eaa99040ab06b088154d64cfa50b25fbad2df/wrappers/rust/icicle-cuda-runtime/src/device.rs#L6)
+#### [`set_device`](https://github.com/ingonyama-zk/icicle/blob/e6035698b5e54632f2c44e600391352ccc11cad4/wrappers/rust/icicle-cuda-runtime/src/device.rs#L6)
 
 Sets the current CUDA device by its ID, when calling `set_device` it will set the current thread to a CUDA device.
 
@@ -34,7 +34,7 @@ match set_device(device_id) {
 }
 ```
 
-#### [`get_device_count`](https://github.com/vhnatyk/icicle/blob/275eaa99040ab06b088154d64cfa50b25fbad2df/wrappers/rust/icicle-cuda-runtime/src/device.rs#L10)
+#### [`get_device_count`](https://github.com/ingonyama-zk/icicle/blob/e6035698b5e54632f2c44e600391352ccc11cad4/wrappers/rust/icicle-cuda-runtime/src/device.rs#L10)
 
 Retrieves the number of CUDA devices available on the machine.
 
@@ -55,7 +55,7 @@ match get_device_count() {
 }
 ```
 
-#### [`get_device`](https://github.com/vhnatyk/icicle/blob/275eaa99040ab06b088154d64cfa50b25fbad2df/wrappers/rust/icicle-cuda-runtime/src/device.rs#L15)
+#### [`get_device`](https://github.com/ingonyama-zk/icicle/blob/e6035698b5e54632f2c44e600391352ccc11cad4/wrappers/rust/icicle-cuda-runtime/src/device.rs#L15)
 
 Retrieves the ID of the current CUDA device.
 
@@ -78,11 +78,11 @@ match get_device() {
 
 ## Device context API
 
-The `DeviceContext` is embedded into `NTTConfig`, `MSMConfig` and `PoseidonConfig`, meaning you can simple pass a `device_id` to your existing config an the same computation will be triggered on a different device automatically.
+The `DeviceContext` is embedded into `NTTConfig`, `MSMConfig` and `PoseidonConfig`, meaning you can simply pass a `device_id` to your existing config and the same computation will be triggered on a different device.
 
-#### [`DeviceContext`](https://github.com/vhnatyk/icicle/blob/eef6876b037a6b0797464e7cdcf9c1ecfcf41808/wrappers/rust/icicle-cuda-runtime/src/device_context.rs#L11)
+#### [`DeviceContext`](https://github.com/ingonyama-zk/icicle/blob/e6035698b5e54632f2c44e600391352ccc11cad4/wrappers/rust/icicle-cuda-runtime/src/device_context.rs#L11)
 
-Represents the configuration a CUDA device, encapsulating the device's stream, ID, and memory pool. The default device is always `0`, unless configured otherwise.
+Represents the configuration a CUDA device, encapsulating the device's stream, ID, and memory pool. The default device is always `0`.
 
 ```rust
 pub struct DeviceContext<'a> {
@@ -102,6 +102,8 @@ pub struct DeviceContext<'a> {
 
   The index of the GPU currently in use. The default value is `0`, indicating the first GPU in the system.
 
+  In some cases assuming `CUDA_VISIBLE_DEVICES` was configured, for example as `CUDA_VISIBLE_DEVICES=2,3,7` in the system with 8 GPUs - the `device_id=0` will correspond to GPU with id 2. So the mapping may not always be a direct reflection of the number of GPUs installed on a system.
+
 - **`mempool: CudaMemPool`**
 
   Represents the memory pool used for CUDA memory allocations. The default is set to a null pointer, which signifies the use of the default CUDA memory pool.
@@ -111,7 +113,7 @@ pub struct DeviceContext<'a> {
 - The `DeviceContext` structure is cloneable and can be debugged, facilitating easier logging and duplication of contexts when needed.
 
 
-#### [`DeviceContext::default_for_device(device_id: usize) -> DeviceContext<'static>`](https://github.com/vhnatyk/icicle/blob/eef6876b037a6b0797464e7cdcf9c1ecfcf41808/wrappers/rust/icicle-cuda-runtime/src/device_context.rs#L30C12-L30C30)
+#### [`DeviceContext::default_for_device(device_id: usize) -> DeviceContext<'static>`](https://github.com/ingonyama-zk/icicle/blob/e6035698b5e54632f2c44e600391352ccc11cad4/wrappers/rust/icicle-cuda-runtime/src/device_context.rs#L30)
 
 Provides a default `DeviceContext` with system-wide defaults, ideal for straightforward setups.
 

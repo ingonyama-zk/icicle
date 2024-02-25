@@ -31,7 +31,7 @@ These bindings allow you to easily use ICICLE in a Rust or Golang project. Setti
 
 ## Running ICICLE
 
-This guide assumes that you have a Linux or Windows machine with a Nvidia GPU installed. If you don't have access to a Nvidia GPU you can access one for free on [Google Colab](https://colab.google/).
+This guide assumes that you have a Linux or Windows machine with an Nvidia GPU installed. If you don't have access to an Nvidia GPU you can access one for free on [Google Colab](https://colab.google/).
 
 ### Prerequisites
 
@@ -154,10 +154,8 @@ This may take a couple of minutes since we are compiling both the CUDA and Rust 
 To run the tests
 
 ```sh
-cargo test -- --test-threads=1
+cargo test
 ```
-
-`--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.
 
 We also include some benchmarks
 

@@ -1,11 +1,5 @@
 # Supporting Additional Curves
 
-:::note
-
-Supporting additional curves is still a work in progress and is bound to change in the future. Currently, the process is very manual but plan to automate the majority of it in future releases.
-
-:::
-
 We understand the need for ZK developers to use different curves, some common some more exotic. For this reason we designed ICICLE to allow developers to add any curve they desire.
 
 ## ICICLE Core
@@ -23,7 +17,8 @@ We also require some changes to [`curve_config.cuh`](https://github.com/ingonyam
 #define BLS12_381 2
 #define BLS12_377 3
 #define BW6_761   4
-#define <curve_name> 5
+#define GRUMPKIN  5
+#define <curve_name> 6
 
 ...
 ```

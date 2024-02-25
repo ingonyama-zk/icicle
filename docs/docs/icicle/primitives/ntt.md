@@ -1,6 +1,6 @@
 # NTT - Number Theoretic Transform
 
-The Number Theoretic Transform (NTT) is a variant of the Fourier Transform used over finite fields or rings, particularly those of integers modulo a prime number. NTT operates in a discrete domain and is used primarily in applications requiring modular arithmetic, such as cryptography and polynomial multiplication.
+The Number Theoretic Transform (NTT) is a variant of the Fourier Transform used over finite fields, particularly those of integers modulo a prime number. NTT operates in a discrete domain and is used primarily in applications requiring modular arithmetic, such as cryptography and polynomial multiplication.
 
 NTT is defined similarly to the Discrete Fourier Transform (DFT), but instead of using complex roots of unity, it uses roots of unity within a finite field. The definition hinges on the properties of the finite field, specifically the existence of a primitive root of unity of order $N$ (where $N$ is typically a power of 2), and the modulo operation is performed with respect to a specific prime number that supports these roots.
 

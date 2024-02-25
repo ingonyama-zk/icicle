@@ -221,6 +221,6 @@ The benchmarks include copying data from and to the device.
 
 | Rows to keep parameter      | Run time, Icicle | Supranational PC2
 | ----------- | ----------- | ----------- |  
-| 10          | 8.3 seconds       |    13.6 seconds
-| 20          | 8.2 seconds       |    13.6 seconds
-| 29          | 12.2 seconds       |    13.6 seconds
+| 10          | 9.4 seconds       |    13.6 seconds
+| 20          | 9.5 seconds       |    13.6 seconds
+| 29          | 13.7 seconds       |    13.6 seconds

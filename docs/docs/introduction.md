@@ -21,7 +21,7 @@ We believe GPUs are as important for ZK as for AI.
 
 - GPUs are a perfect match for ZK compute - around 97% of ZK protocol runtime is parallel by nature.
 - GPUs are simple for developers to use and scale compared to other hardware platforms.
-- GPUs are extremely competitive in terms of power / performance and price (3x cheaper).
+- GPUs are extremely competitive in terms of power / performance and price (3x cheaper compared to FPGAs).
 - GPUs are popular and readily available.
 
 For a more in-depth understanding on this topic we suggest you read [our article on the subject](https://www.ingonyama.com/blog/revisiting-paradigm-hardware-acceleration-for-zero-knowledge-proofs).

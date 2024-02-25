@@ -41,9 +41,9 @@ $G_j \in G$ - points from an Elliptic Curve group.
 
 $a_0, \ldots, a_n$ - Scalars
 
-$MSM(a, G) \in G$ - a single EC (elliptic curve point) point
+$MSM(a, G) \in G$ - a single EC - elliptic curve point
 
-In words, MSM is the sum of scalar and EC point multiplications. We can see from this definition that the core operations occurring are Modular Multiplication and Elliptic curve point addition. Each multiplication can be computed independently and then the products are summed, making MSM inherently parallelizable.
+In words, MSM is the sum of scalar and EC point multiplications. We can see from this definition that the core operations occurring are Modular Multiplication and Elliptic curve point addition. Its obvious that multiplication can be computed in parallel and then the products summed, making MSM inherently parallelizable.
 
 Accelerating MSM is crucial to a ZK protocol's performance due to the [large percent of run time](https://hackmd.io/@0xMonia/SkQ6-oRz3#Hardware-acceleration-in-action) they take when generating proofs.
 
@@ -55,7 +55,7 @@ You can learn more about how MSMs work from this [video](https://www.youtube.com
 
 MSM supports the following curves:
 
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
+`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
 
 ## Supported algorithms
 

@@ -14,9 +14,9 @@ Simply add the following to your `Cargo.toml`.
 
 ```
 # GPU Icicle integration
-icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.0.0" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.0.0" }
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v1.0.0" }
+icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git" }
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git" }
 ```
 
 `icicle-bn254` being the curve you wish to use and `icicle-core` and `icicle-cuda-runtime` contain ICICLE utilities and CUDA wrappers.

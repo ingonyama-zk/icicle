@@ -1,6 +1,6 @@
 # Run ICICLE on Google Colab
 
-Google Colab let's you use a GPU free of charge, it's an Nvidia T4 GPU with 16 GB of memory, capable of running latest CUDA (tested on Cuda 12.2)
+Google Colab lets you use a GPU free of charge, it's an Nvidia T4 GPU with 16 GB of memory, capable of running latest CUDA (tested on Cuda 12.2)
 As Colab is able to interact with shell commands, a user can also install a framework and load git repositories into Colab space.
 
 ## Prepare Colab environment
