@@ -92,6 +92,21 @@ void point_near_x(T x, affine_t *point) {
   point->y = y;
 }
 
+static int seed = 0;
+static HOST_INLINE T rand_host_seed()
+  {
+    std::mt19937_64 generator(seed++);
+    std::uniform_int_distribution<unsigned> distribution;
+    
+    T value;
+    for (unsigned i = 0; i <  T::TLC-1 ; i++)
+    // TODO: use the full range of limbs: for (unsigned i = 0; i <  T::TLC ; i++)
+      value.limbs_storage.limbs[i] = distribution(generator);
+    // while (lt(Field{get_modulus()}, value))
+    //   value = value - Field{get_modulus()};
+    return value;
+  }
+
 using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg) printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
@@ -102,8 +117,15 @@ int main(int argc, char** argv)
   const unsigned N = pow(2, 10);
   T xs[N];
   START_TIMER(gen);
-  T::RandHostMany(xs, N);
+  // T::RandHostMany(xs, N);
+  seed = 1234;
+  for (unsigned i = 0; i < N; i++) {
+    xs[i] = rand_host_seed();
+  }
   END_TIMER(gen, "Generated random x");
+  std::cout << "rand_host_seed 0: " << xs[0]  << std::endl;
+  std::cout << "rand_host_seed 1: " << xs[1]  << std::endl;
+  
   affine_t points[N];
   START_TIMER(points);
   for (unsigned i = 0; i < N; i++) {
