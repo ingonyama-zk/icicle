@@ -1,13 +1,12 @@
 use icicle_bn254::curve::ScalarField as F;
-use icicle_cuda_runtime::device_context::DeviceContext;
+// use icicle_bls12_381::curve::ScalarField as F;
+use icicle_core::traits::FieldImpl;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use icicle_core::fft::fft_evaluate;
 
 #[cfg(feature = "profile")]
 use std::time::Instant;
-
-use clap::Parser;
 
 fn main() {
     let n = 16usize;
@@ -16,11 +15,11 @@ fn main() {
     let ws = vec![F::one(); n];
 
     let mut inout_slice = HostOrDeviceSlice::on_host(inout);
-    let mut ws_slice = HostOrDeviceSlice::on_host(inout);
+    let mut ws_slice = HostOrDeviceSlice::on_host(ws);
 
     #[cfg(feature = "profile")]
     let start = Instant::now();
-    fft_evaluate::<F>(&mut inout, &mut ws, n).unwrap();
+    fft_evaluate::<F>(&mut inout_slice, &mut ws_slice, n as u32).unwrap();
 
     #[cfg(feature = "profile")]
     println!(

@@ -9,6 +9,7 @@ edition = "2021"
 icicle-cuda-runtime = { path = "../../../wrappers/rust/icicle-cuda-runtime" }
 icicle-core = { path = "../../../wrappers/rust/icicle-core" }
 icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254" }
+icicle-bls12-381 = { path = "../../../wrappers/rust/icicle-curves/icicle-bls12-381" }
 
 [features]
 profile = []

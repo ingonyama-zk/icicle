@@ -1,6 +1,3 @@
-#[doc(hidden)]
-pub mod tests;
-
 use icicle_cuda_runtime::{
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
     memory::HostOrDeviceSlice,
@@ -9,20 +6,15 @@ use icicle_cuda_runtime::{
 use crate::{error::IcicleResult, traits::FieldImpl};
 
 pub trait Fft<F: FieldImpl> {
-    fn fft_unchecked(
-        input: &mut HostOrDeviceSlice<F>,
-        output: &mut HostOrDeviceSlice<F>,
-        ws: &mut HostOrDeviceSlice<F>,
-        n: u32,
-    ) -> IcicleResult<()>;
+    fn evaluate_unchecked(inout: &mut HostOrDeviceSlice<F>, ws: &mut HostOrDeviceSlice<F>, n: u32) -> IcicleResult<()>;
 }
 
-pub fn fft_evaluate<F>(inout: &mut HostOrDeviceSlice<F>, ws: &[F], n: u32) -> IcicleResult<()>
+pub fn fft_evaluate<F>(inout: &mut HostOrDeviceSlice<F>, ws: &mut HostOrDeviceSlice<F>, n: u32) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: Fft<F>,
 {
-    <<F as FieldImpl>::Config as Fft<F>>::fft_evaluate_unchecked(leaves, digests, height, arity, constants, &local_cfg)
+    <<F as FieldImpl>::Config as Fft<F>>::evaluate_unchecked(inout, ws, n)
 }
 
 #[macro_export]

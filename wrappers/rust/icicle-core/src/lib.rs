@@ -1,5 +1,6 @@
 pub mod curve;
 pub mod error;
+pub mod fft;
 pub mod field;
 pub mod msm;
 pub mod ntt;
