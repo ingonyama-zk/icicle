@@ -21,7 +21,7 @@ This approach usually involves a single or multiple CPUs opening threads to read
 
 ![alt text](image.png)
 
-This approach wont let us tackle larger computation sizes but it will allow us to compute multiple computations which we wouldn't be able to load onto a single GPU.
+This approach won't let us tackle larger computation sizes but it will allow us to compute multiple computations which we wouldn't be able to load onto a single GPU.
 
 For example lets say that you had to compute two MSMs of size 2^26 on a 16GB VRAM GPU you would normally have to perform them asynchronously. However, if you double the number of GPUs in your system you can now run them in parallel. 
 
