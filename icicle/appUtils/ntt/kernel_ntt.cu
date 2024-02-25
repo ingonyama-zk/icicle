@@ -930,4 +930,21 @@ namespace ntt {
     int coset_gen_index,
     cudaStream_t cuda_stream);
 
+#ifdef ECNTT_DEFINED
+  template cudaError_t mixed_radix_ntt<curve_config::projective_t, curve_config::scalar_t>(
+    curve_config::projective_t* d_input,
+    curve_config::projective_t* d_output,
+    curve_config::scalar_t* external_twiddles,
+    curve_config::scalar_t* internal_twiddles,
+    curve_config::scalar_t* basic_twiddles,
+    int ntt_size,
+    int max_logn,
+    int batch_size,
+    bool is_inverse,
+    bool fast_tw,
+    Ordering ordering,
+    curve_config::scalar_t* arbitrary_coset,
+    int coset_gen_index,
+    cudaStream_t cuda_stream);
+#endif // ECNTT_DEFINED
 } // namespace ntt
