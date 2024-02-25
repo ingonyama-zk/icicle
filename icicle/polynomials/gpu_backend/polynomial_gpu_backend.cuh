@@ -11,6 +11,8 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   class GPUPolynomialContext : public IPolynomialContext<C, D, I>
   {
+    typedef IPolynomialContext<C, D, I> PolyContext;
+
     // TODO Yuval: add device context to be able to know which device it is and get a corresponding stream
   public:
     C* init_from_coefficients(uint32_t nof_coefficients, const C* h_coefficients) override
@@ -42,7 +44,7 @@ namespace polynomials {
 
     void print(std::ostream& os) override
     {
-      os << "(id=" << IPolynomialContext<C, D, I>::m_id << ")[";
+      os << "(id=" << PolyContext::m_id << ")[";
       if (m_state == State::Coefficients) {
         for (size_t i = 0; i < m_nof_elements; ++i) {
           os << m_coefficients[i];
@@ -138,14 +140,13 @@ namespace polynomials {
 
   /*============================== Polynomial GPU-backend ==============================*/
 
-  template <typename C, typename D, typename I>
-  class GPUPolynomialBackend : public IPolynomialBackend<C, D, I>
+  template <typename C, typename D, typename I, typename ECpoint>
+  class GPUPolynomialBackend : public IPolynomialBackend<C, D, I, ECpoint>
   {
     typedef IPolynomialContext<C, D, I> PolyContext;
 
   public:
-    void add_sub(
-      IPolynomialContext<C, D, I>& res, IPolynomialContext<C, D, I>& a, IPolynomialContext<C, D, I>& b, bool add1_sub0)
+    void add_sub(PolyContext& res, PolyContext& a, PolyContext& b, bool add1_sub0)
     {
       auto [a_coeff_p, a_nof_coeff] = a.get_coefficients();
       auto [b_coeff_p, b_nof_coeff] = b.get_coefficients();
@@ -158,16 +159,9 @@ namespace polynomials {
       AddSubKernel<<<NOF_BLOCKS, NOF_THREADS>>>(a_coeff_p, b_coeff_p, a_nof_coeff, b_nof_coeff, add1_sub0, res_coeff_p);
     }
 
-    void add(IPolynomialContext<C, D, I>& res, IPolynomialContext<C, D, I>& a, IPolynomialContext<C, D, I>& b) override
-    {
-      add_sub(res, a, b, true /*=add*/);
-    }
+    void add(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, true /*=add*/); }
 
-    void
-    subtract(IPolynomialContext<C, D, I>& res, IPolynomialContext<C, D, I>& a, IPolynomialContext<C, D, I>& b) override
-    {
-      add_sub(res, a, b, false /*=sub*/);
-    }
+    void subtract(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, false /*=sub*/); }
 
     void multiply(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
     void divide(PolyContext& Quotient_out, PolyContext& Remainder_out, PolyContext& op_a, PolyContext& op_b) override {}
@@ -180,7 +174,13 @@ namespace polynomials {
     void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override {}
     void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override {}
 
-    int32_t degree(IPolynomialContext<C, D, I>& p) override
+    // dot product with coefficients
+    ECpoint dot_product_with_coefficients(PolyContext& op, ECpoint* points, uint32_t nof_points) override
+    {
+      return ECpoint::zero();
+    }
+
+    int32_t degree(PolyContext& p) override
     {
       auto [coeff, nof_coeff] = p.get_coefficients();
 
@@ -196,16 +196,13 @@ namespace polynomials {
       return h_degree + 1;
     }
 
-    I evaluate(IPolynomialContext<C, D, I>& self, const D& domain_x) override
+    I evaluate(PolyContext& self, const D& domain_x) override
     {
       // TODO Yuval
       I im = {};
       return im;
     }
-    void evaluate(
-      IPolynomialContext<C, D, I>& self, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override
-    {
-    }
+    void evaluate(PolyContext& self, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override {}
 
     C get_coefficient(PolyContext& op, uint32_t coeff_idx) override
     {
