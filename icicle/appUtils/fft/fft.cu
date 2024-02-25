@@ -1,17 +1,9 @@
-#include <iostream>
-#include <iomanip>
-#include <chrono>
-#include <nvml.h>
-#include <vector>
-
-#include "curves/curve_config.cuh"
-#include "utils/device_context.cuh"
-#include "utils/vec_ops.cu"
+#include "fft.cuh"
 
 namespace fft {
   template <typename S>
   cudaError_t fft(
-    S* input, S* output, S* ws, int n, bool invert)
+    S* input, S* ws, int n)
   {
     CHK_INIT_IF_RETURN();
 
