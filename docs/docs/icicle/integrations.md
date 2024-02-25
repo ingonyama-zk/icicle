@@ -17,11 +17,11 @@ Engineers usually use a cryptographic library to implement their ZK protocols. T
 A developer may use ICICLE with two main approaches in mind.
 
 1. Drop-in replacement approach.
-2. Full GPU replacement approach.
+2. End-to-End GPU replacement approach.
 
 The first approach for GPU-accelerating your Prover with ICICLE is quick to implement, but it has limitations, such as reduced memory optimization and limited protocol tuning for GPUs. It's a solid starting point, but those committed to fully leveraging GPU acceleration should consider a more comprehensive approach.
 
-A full GPU replacement means performing the entire ZK proof on the GPU. This approach will reduce latency to a minimum and requires you to change the way you implement the protocol to be more GPU friendly. This approach will take full advantage of GPU acceleration. Redesigning your prover this way may take more engineering effort but we promise you that its worth it!
+A End-to-End GPU replacement means performing the entire ZK proof on the GPU. This approach will reduce latency to a minimum and requires you to change the way you implement the protocol to be more GPU friendly. This approach will take full advantage of GPU acceleration. Redesigning your prover this way may take more engineering effort but we promise you that its worth it!
 
 ## Using ICICLE integrated provers
 
