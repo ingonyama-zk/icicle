@@ -41,7 +41,7 @@ $G_j \in G$ - points from an Elliptic Curve group.
 
 $a_0, \ldots, a_n$ - Scalars
 
-$MSM(a, G) \in G$ - a single EC - elliptic curve point
+$MSM(a, G) \in G$ - a single EC (elliptic curve) point
 
 In words, MSM is the sum of scalar and EC point multiplications. We can see from this definition that the core operations occurring are Modular Multiplication and Elliptic curve point addition. Its obvious that multiplication can be computed in parallel and then the products summed, making MSM inherently parallelizable.
 
