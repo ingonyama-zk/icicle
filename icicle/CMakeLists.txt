@@ -99,6 +99,7 @@ if (NOT BUILD_TESTS)
   if (CURVE IN_LIST SUPPORTED_CURVES_WITH_POSEIDON)
     list(APPEND ICICLE_SOURCES appUtils/poseidon/poseidon.cu)
     list(APPEND ICICLE_SOURCES appUtils/tree/merkle.cu)
+    list(APPEND ICICLE_SOURCES appUtils/fft/fft.cu)
   endif()
 
   if (NOT CURVE IN_LIST SUPPORTED_CURVES_WITHOUT_NTT)
@@ -116,7 +117,7 @@ if (NOT BUILD_TESTS)
     ${ICICLE_SOURCES}
   )
   set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
-  target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  
+  target_compile_definitions(icicle PRIVATE CURVE=${CURVE})
 
 else()
 
