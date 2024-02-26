@@ -1,4 +1,4 @@
-package {{.PackageName}}
+package bw6761
 
 import (
 	"testing"

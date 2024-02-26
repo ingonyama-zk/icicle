@@ -55,11 +55,6 @@ type MSMConfig struct {
 	IsAsync bool
 }
 
-// type MSM interface {
-// 	Msm(scalars, points *cuda_runtime.HostOrDeviceSlice, cfg *MSMConfig, results *cuda_runtime.HostOrDeviceSlice) cuda_runtime.CudaError
-// 	GetDefaultMSMConfig() MSMConfig
-// }
-
 func GetDefaultMSMConfig() MSMConfig {
 	ctx, _ := cuda_runtime.GetDefaultDeviceContext()
 	return MSMConfig{
