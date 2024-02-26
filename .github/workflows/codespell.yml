@@ -11,7 +11,7 @@ jobs:
     name: Check Spelling
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: codespell-project/actions-codespell@v2
         with:
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
