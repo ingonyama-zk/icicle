@@ -12,10 +12,13 @@ typedef curve_config::scalar_t test_type;
 
 using namespace polynomials;
 
+typedef Polynomial<test_type> Polynomial_t;
+
 class PolynomialTest : public ::testing::Test
 {
 public:
   static inline const int MAX_NTT_LOG_SIZE = 20;
+  static inline const bool DEBUG = false; // set true for debug prints
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
@@ -38,6 +41,17 @@ public:
     // code that executes before each test
   }
 
+  static Polynomial_t randomize_polynomial(uint32_t size, bool random = true)
+  {
+    auto coeff = std::make_unique<test_type[]>(size);
+    if (random) {
+      random_samples(coeff.get(), size);
+    } else {
+      incremental_values(coeff.get(), size);
+    }
+    return Polynomial_t::from_coefficients(coeff.get(), size);
+  }
+
   static void random_samples(test_type* res, uint32_t count)
   {
     for (int i = 0; i < count; i++)
@@ -47,28 +61,50 @@ public:
   static void incremental_values(test_type* res, uint32_t count)
   {
     for (int i = 0; i < count; i++) {
-      res[i] = i ? res[i - 1] + test_type::one() : test_type::zero();
+      res[i] = i ? res[i - 1] + test_type::one() : test_type::one();
     }
   }
 };
 
+TEST_F(PolynomialTest, evalution)
+{
+  const auto a = test_type::one();
+  const auto b = a + a; // 2
+  const auto c = b + a; // 3
+  const test_type coeffs[3] = {a, b, c};
+  auto f = Polynomial_t::from_coefficients(coeffs, 3);
+  test_type x = test_type::rand_host();
+  auto f_x = f(x);
+
+  auto expected_f_x = a + b * x + c * x * x;
+
+  EXPECT_EQ(f_x, expected_f_x);
+}
+
 TEST_F(PolynomialTest, addition)
 {
-  const int size_0 = 3, size_1 = 2;
-  auto coeff_0 = std::make_unique<test_type[]>(size_0);
-  auto coeff_1 = std::make_unique<test_type[]>(size_1);
-  random_samples(coeff_0.get(), size_0);
-  random_samples(coeff_1.get(), size_1);
+  const int size_0 = 12, size_1 = 17;
+  auto f = randomize_polynomial(size_0);
+  auto g = randomize_polynomial(size_1);
 
-  auto a = Polynomial<test_type>::from_coefficients(coeff_0.get(), size_0);
-  auto b = Polynomial<test_type>::from_coefficients(coeff_1.get(), size_1);
-  auto c = a + b;
-  auto d = c - a;
+  test_type x = test_type::rand_host();
+  auto f_x = f(x);
+  auto g_x = g(x);
+  auto fx_plus_gx = f_x + g_x;
 
-  std::cout << "a=(deg=" << a.degree() << ")" << a;
-  std::cout << "b=(deg=" << b.degree() << ")" << b;
-  std::cout << "c=(deg=" << c.degree() << ")" << c;
-  std::cout << "d=(deg=" << d.degree() << ")" << d;
+  auto s = f + g;
+  auto s_x = s(x);
+
+  EXPECT_EQ(fx_plus_gx, s_x);
+  if (DEBUG) {
+    std::cout << "x=" << x << "\n";
+    std::cout << "f_x=" << f_x << "\n";
+    std::cout << "g_x=" << g_x << "\n";
+    std::cout << "s_x=" << s_x << "\n";
+    std::cout << "f=(deg=" << f.degree() << ")" << f;
+    std::cout << "g=(deg=" << g.degree() << ")" << g;
+    std::cout << "s=(deg=" << s.degree() << ")" << s;
+  }
 }
 
 TEST_F(PolynomialTest, cAPI)
@@ -77,15 +113,30 @@ TEST_F(PolynomialTest, cAPI)
   auto coeff = std::make_unique<test_type[]>(size);
   random_samples(coeff.get(), size);
 
-  auto a = polynomial_create_from_coefficients(coeff.get(), size);
-  auto res = polynomial_add(a, a);
+  auto f = polynomial_create_from_coefficients(coeff.get(), size);
+  auto g = polynomial_create_from_coefficients(coeff.get(), size);
+  auto s = polynomial_add(f, g);
 
-  std::cout << "a=(deg=" << a->degree() << ")" << *a;
-  std::cout << "res=(deg=" << res->degree() << ")" << *res;
+  test_type x = test_type::rand_host();
+  // TODO Yuval: use C-API for evalute too
+  auto f_x = f->evaluate(x);
+  auto g_x = g->evaluate(x);
+  auto fx_plus_gx = f_x + g_x;
+  auto s_x = s->evaluate(x);
+  EXPECT_EQ(fx_plus_gx, s_x);
 
-  polynomial_delete(a);
-  polynomial_delete(res);
+  polynomial_delete(f);
+  polynomial_delete(g);
+  polynomial_delete(s);
 }
+
+// TEST_F(PolynomialTest, multiplication)
+// {
+//   auto a = randomize_polynomial(8);
+//   auto b = randomize_polynomial(8);
+//   auto mul = a * b;
+//   std::cout << "mul = " << mul;
+// }
 
 int main(int argc, char** argv)
 {

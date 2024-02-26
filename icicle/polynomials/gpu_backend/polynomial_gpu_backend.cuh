@@ -80,8 +80,6 @@ namespace polynomials {
       const bool is_already_allocated = nof_elements_nearset_power_of_two <= m_nof_elements;
       if (is_already_allocated) { return m_storage; }
 
-      std::cout << "GPUPolynomialBackend allocating memory" << std::endl;
-
       release();
       const uint32_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
       cudaMallocManaged(&m_storage, mem_size); // TODO Yuval use streams and async
@@ -229,13 +227,30 @@ namespace polynomials {
       return h_degree + 1;
     }
 
-    I evaluate(PolyContext& self, const D& domain_x) override
+    I evaluate(PolyContext& p, const D& domain_x) override
     {
-      // TODO Yuval
-      I im = {};
-      return im;
+      auto [coeff, nof_coeff] = p.get_coefficients();
+      I *d_evaluation, *d_domain_x;
+      I* d_tmp;
+      cudaMalloc(&d_evaluation, sizeof(I));
+      cudaMalloc(&d_domain_x, sizeof(I));
+      cudaMemcpy(d_domain_x, &domain_x, sizeof(I), cudaMemcpyHostToDevice);
+      cudaMalloc(&d_tmp, sizeof(I) * nof_coeff);
+      const int NOF_THREADS = 32;
+      const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
+      // TODO Yuval: reduce better
+      evalutePolynomialWithoutReduction<<<NOF_BLOCKS, NOF_THREADS>>>(domain_x, coeff, nof_coeff, d_tmp);
+      dummyReduce<<<1, 1>>>(d_tmp, nof_coeff, d_evaluation);
+
+      I h_evaluation;
+      cudaMemcpy(&h_evaluation, d_evaluation, sizeof(I), cudaMemcpyDeviceToHost);
+      cudaFree(d_evaluation);
+      cudaFree(d_domain_x);
+      cudaFree(d_tmp);
+
+      return h_evaluation;
     }
-    void evaluate(PolyContext& self, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override {}
+    void evaluate(PolyContext& p, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override {}
 
     C get_coefficient(PolyContext& op, uint32_t coeff_idx) override
     {
