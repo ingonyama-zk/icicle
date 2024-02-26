@@ -1,4 +1,4 @@
-# Icicle example: Pedersen Commitment
+# ICICLE example: Pedersen Commitment
 
 ## Best-Practices
 

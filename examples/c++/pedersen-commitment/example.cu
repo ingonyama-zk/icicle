@@ -4,10 +4,8 @@
 #include <cassert>
 #include <nvml.h>
 
-#define CURVE_ID 1
-// #include "curves/curve_config.cuh"
+#define CURVE_ID BN254
 #include "appUtils/msm/msm.cu"
-
 using namespace curve_config;
 
 typedef point_field_t T;
@@ -37,7 +35,6 @@ bool quadratic_residue(T y2) {
 // modular square root adapted from:
 // https://github.com/ShahjalalShohag/code-library/blob/main/Number%20Theory/Tonelli%20Shanks%20Algorithm.cpp
 bool mySQRT(T a, T *result) {
-  // a %= p; if (a < 0) a += p;
   if (a == T::zero()) {
     *result = T::zero();
     return true;
