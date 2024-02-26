@@ -8,7 +8,7 @@ func (p MockProjective) Size() int {
 	return p.X.Size() * 3
 }
 
-func (p MockProjective) AsPointer() *uint32 {
+func (p MockProjective) AsPointer() *uint64 {
 	return p.X.AsPointer()
 }
 
@@ -20,7 +20,7 @@ func (p *MockProjective) Zero() MockProjective {
 	return *p
 }
 
-func (p *MockProjective) FromLimbs(x, y, z []uint32) MockProjective {
+func (p *MockProjective) FromLimbs(x, y, z []uint64) MockProjective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
 	p.Z.FromLimbs(z)
@@ -47,7 +47,7 @@ func (a MockAffine) Size() int {
 	return a.X.Size() * 2
 }
 
-func (a MockAffine) AsPointer() *uint32 {
+func (a MockAffine) AsPointer() *uint64 {
 	return a.X.AsPointer()
 }
 
@@ -58,7 +58,7 @@ func (a *MockAffine) Zero() MockAffine {
 	return *a
 }
 
-func (a *MockAffine) FromLimbs(x, y []uint32) MockAffine {
+func (a *MockAffine) FromLimbs(x, y []uint64) MockAffine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
 

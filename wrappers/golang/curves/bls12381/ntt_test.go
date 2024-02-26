@@ -20,9 +20,8 @@ func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) {
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
 	rouIcicle := ScalarField{}
-	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
 
-	rouIcicle.FromLimbs(limbs)
+	rouIcicle.FromLimbs(rou[:])
 	InitDomain(rouIcicle, cfg.Ctx, false)
 }
 

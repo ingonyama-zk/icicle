@@ -11,10 +11,10 @@ import (
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
-func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint32] {
+func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint64] {
 	cosetGenField := ScalarField{}
 	cosetGenField.One()
-	var cosetGen [SCALAR_LIMBS]uint32
+	var cosetGen [SCALAR_LIMBS]uint64
 	for i, v := range cosetGenField.GetLimbs() {
 		cosetGen[i] = v
 	}
