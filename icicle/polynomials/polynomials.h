@@ -84,7 +84,7 @@ namespace polynomials {
   {
   public:
     IPolynomialContext() : m_id(s_id++) {}
-    ~IPolynomialContext() { std::cout << "~IPolynomialContext(id=" << m_id << ")" << std::endl; }
+    virtual ~IPolynomialContext() = default;
 
     // initialization (if coeffs/evals are nullptr, initialize memory only)
     virtual C* init_from_coefficients(uint32_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
