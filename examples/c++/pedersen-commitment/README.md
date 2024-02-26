@@ -27,7 +27,7 @@ The original paper: T. P. Pedersen, "Non-Interactive and Information-Theoretic S
 ## What's in the example
 
 1. Define the curve and the size of commitment vector
-2. Use public random seed to transparantly generate elliptic points without known discrete logarithm
+2. Use public random seed to transparently generate elliptic points without known discrete logarithm
 3. Generate (random) commitment vector and salt (a.k.a blinding factor)
 4. Configure and execute MSM using on-host data
 5. Output commitment as elliptic point
