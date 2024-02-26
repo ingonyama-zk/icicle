@@ -1,31 +1,30 @@
-use icicle_bn254::curve::{CurveCfg, G1Projective, G1Affine, ScalarField};
+use icicle_bn254::curve::{CurveCfg, G1Affine, G1Projective, ScalarField};
+use icicle_core::{curve::Curve, msm, traits::FieldImpl};
 use icicle_cuda_runtime::{memory::HostOrDeviceSlice, stream::CudaStream};
-use icicle_core::{traits::FieldImpl, curve::Curve, msm};
 
-#[cfg(feature = "compare")]
-use halo2curves::{bn256, msm::best_multiexp, ff::PrimeField, group::Curve as halo2Curve};
 #[cfg(feature = "compare")]
 use ark_bn254::{Fq as arkFq, G1Affine as arkG1Affine};
 #[cfg(feature = "compare")]
-use ark_ff::{Field, biginteger::BigInteger256, bytes::FromBytes};
+use ark_ff::{biginteger::BigInteger256, bytes::FromBytes, Field};
+#[cfg(feature = "compare")]
+use halo2curves::{bn256, ff::PrimeField, group::Curve as halo2Curve, msm::best_multiexp};
 
 #[cfg(feature = "profile")]
 use std::time::Instant;
 
+use serde::de::DeserializeOwned;
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::BufReader;
-use std::convert::TryInto;
-use serde::de::DeserializeOwned;
 
 /// Path to the directory where Arecibo data will be stored.
 pub static ARECIBO_DATA: &str = ".arecibo_data";
 
 /// Reads and deserializes data from a specified section and label.
-fn read_arecibo_data<T: DeserializeOwned>(
-    section: String,
-    label: String,
-) -> Vec<T> {
-    let root_dir = home::home_dir().unwrap().join(ARECIBO_DATA);
+fn read_arecibo_data<T: DeserializeOwned>(section: String, label: String) -> Vec<T> {
+    let root_dir = home::home_dir()
+        .unwrap()
+        .join(ARECIBO_DATA);
     let section_path = root_dir.join(section);
     assert!(section_path.exists(), "Section directory does not exist");
 
@@ -39,11 +38,42 @@ fn read_arecibo_data<T: DeserializeOwned>(
 }
 
 fn icicle_to_bn256(point: &G1Affine) -> bn256::G1Affine {
-    bn256::G1Affine { x: bn256::Fq::from_repr(point.x.to_bytes_le().try_into().unwrap()).unwrap(), y: bn256::Fq::from_repr(point.y.to_bytes_le().try_into().unwrap()).unwrap() }
+    bn256::G1Affine {
+        x: bn256::Fq::from_repr(
+            point
+                .x
+                .to_bytes_le()
+                .try_into()
+                .unwrap(),
+        )
+        .unwrap(),
+        y: bn256::Fq::from_repr(
+            point
+                .y
+                .to_bytes_le()
+                .try_into()
+                .unwrap(),
+        )
+        .unwrap(),
+    }
 }
 
 fn icicle_to_ark(point: &G1Affine) -> arkG1Affine {
-    arkG1Affine::new(arkFq::from_random_bytes(&point.x.to_bytes_le()).unwrap(), arkFq::from_random_bytes(&point.y.to_bytes_le()).unwrap(), false)
+    arkG1Affine::new(
+        arkFq::from_random_bytes(
+            &point
+                .x
+                .to_bytes_le(),
+        )
+        .unwrap(),
+        arkFq::from_random_bytes(
+            &point
+                .y
+                .to_bytes_le(),
+        )
+        .unwrap(),
+        false,
+    )
 }
 
 // cargo run --features=compare,profile -- --nocapture
@@ -53,7 +83,10 @@ fn main() {
     // let section = "cross_term_0x02c29fabf43b87a73513f6ecbfb348c146809c1609c21b48333a8096700d63ad";
     // let label_i = format!("len_9873811_{}", 0);
     let scalars: Vec<[u64; 4]> = read_arecibo_data(section.to_string(), label_i.clone());
-    let scalars: Vec<ScalarField> = scalars.iter().map(|limbs| ScalarField::from(*limbs)).collect();
+    let scalars: Vec<ScalarField> = scalars
+        .iter()
+        .map(|limbs| ScalarField::from(*limbs))
+        .collect();
     let size = scalars.len();
     let points = CurveCfg::generate_random_affine_points(size);
 
@@ -96,7 +129,10 @@ fn main() {
             .map(|point| icicle_to_bn256(point))
             .collect();
         let bn256_witness: Vec<[u8; 32]> = read_arecibo_data(section.to_string(), label_i);
-        let bn256_witness: Vec<bn256::Fr> = bn256_witness.iter().map(|limbs| bn256::Fr::from_repr(*limbs).unwrap()).collect();
+        let bn256_witness: Vec<bn256::Fr> = bn256_witness
+            .iter()
+            .map(|limbs| bn256::Fr::from_repr(*limbs).unwrap())
+            .collect();
 
         #[cfg(feature = "profile")]
         let start = Instant::now();
