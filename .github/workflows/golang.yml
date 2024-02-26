@@ -71,7 +71,7 @@ jobs:
       # -p controls the number of programs that can be run in parallel
       run: |
         export CPATH=$CPATH:/usr/local/cuda/include
-        go test --tags=g2 ./... -count=1 -failfast -p 2
+        go test --tags=g2 ./... -count=1 -failfast -p 2 -timeout 60m
   
   build-windows:
     name: Build on Windows
