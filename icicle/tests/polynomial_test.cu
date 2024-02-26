@@ -18,7 +18,7 @@ class PolynomialTest : public ::testing::Test
 {
 public:
   static inline const int MAX_NTT_LOG_SIZE = 20;
-  static inline const bool DEBUG = false; // set true for debug prints
+  static inline const bool DEBUG = true; // set true for debug prints
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
@@ -130,13 +130,31 @@ TEST_F(PolynomialTest, cAPI)
   polynomial_delete(s);
 }
 
-// TEST_F(PolynomialTest, multiplication)
-// {
-//   auto a = randomize_polynomial(8);
-//   auto b = randomize_polynomial(8);
-//   auto mul = a * b;
-//   std::cout << "mul = " << mul;
-// }
+TEST_F(PolynomialTest, multiplication)
+{
+  const int size_0 = 2, size_1 = 2;
+  auto f = randomize_polynomial(size_0, false);
+  auto g = randomize_polynomial(size_1, false);
+
+  test_type x = test_type::rand_host();
+  auto f_x = f(x);
+  auto g_x = g(x);
+  auto fx_mul_gx = f_x * g_x;
+
+  auto m = f * g;
+  auto m_x = m(x);
+
+  EXPECT_EQ(fx_mul_gx, m_x);
+  if (DEBUG) {
+    std::cout << "x=" << x << "\n";
+    std::cout << "f_x=" << f_x << "\n";
+    std::cout << "g_x=" << g_x << "\n";
+    std::cout << "m_x=" << m_x << "\n";
+    std::cout << "f=(deg=" << f.degree() << ")" << f;
+    std::cout << "g=(deg=" << g.degree() << ")" << g;
+    std::cout << "m=(deg=" << m.degree() << ")" << m;
+  }
+}
 
 int main(int argc, char** argv)
 {

@@ -40,8 +40,6 @@ namespace polynomials {
     Polynomial& add_monomial_inplace(CoefficientType monomial_coeff, uint32_t monomial = 0) const;
     Polynomial& sub_monomial_inplace(CoefficientType monomial_coeff, uint32_t monomial = 0);
 
-    Polynomial reciprocal() const;
-
     // evaluation (caller is allocating output memory, for evalute(...))
     ImageType operator()(const DomainType& x) const;
     ImageType evaluate(const DomainType& x) const;
@@ -90,7 +88,9 @@ namespace polynomials {
     virtual C* init_from_coefficients(uint32_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
     virtual I* init_from_rou_evaluations(uint32_t nof_coefficients, const C* host_evaluations = nullptr) = 0;
 
-    virtual std::pair<C*, uint32_t> get_coefficients() = 0;
+    virtual uint32_t size() = 0; // TODO Yuval: bad name?
+
+    virtual std::pair<C*, uint32_t> get_coefficients(uint32_t nof_coeffs = 0) = 0;
     virtual std::pair<I*, uint32_t> get_rou_evaluations(uint32_t nof_evals = 0) = 0;
     virtual void print(std::ostream& os) = 0;
 
@@ -127,8 +127,6 @@ namespace polynomials {
 
     // dot product with coefficients
     virtual ECpoint dot_product_with_coefficients(PolyContext& op, ECpoint* points, uint32_t nof_points) = 0;
-
-    virtual void reciprocal(PolyContext& out, PolyContext& op) = 0;
 
     virtual int32_t degree(PolyContext& op) = 0;
 
