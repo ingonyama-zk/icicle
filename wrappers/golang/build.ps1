@@ -18,6 +18,6 @@ Set-Location "../../icicle"
 New-Item -ItemType Directory -Path "build" -Force
 
 foreach ($CURVE in $BUILD_CURVES) {
-  cmake -DCURVE:$CURVE -DG2_DEFINED:$G2_DEFINED -DCMAKE_BUILD_TYPE:Release -S . -B build
+  cmake -DCURVE:STRING=$CURVE -DG2_DEFINED:STRING=$G2_DEFINED -DCMAKE_BUILD_TYPE:STRING=Release -S . -B build
   cmake --build build
 }
