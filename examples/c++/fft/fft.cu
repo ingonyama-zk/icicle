@@ -281,15 +281,14 @@ T* run_gpu(std::vector<int> a) {
   }
 
   // function call
-  auto result = fft_gpu(a_field, n, device_ws, device_ws_inv, false);
+  auto eval_result = fft_gpu(a_field, n, device_ws, device_ws_inv, false);
+  auto interpolate_result = fft_gpu(eval_result, n, device_ws, device_ws_inv, true);
 
   for (int i = 0; i < 8; i++) {
-    std::cout << result[i] << std::endl;
+    std::cout << eval_result[i] << std::endl;
   }
 
-  return result;
-
-  // return fft_gpu(result, n, device_ws, device_ws_inv, true);
+  return interpolate_result;
 }
 
 T* run_cpu(std::vector<int> a) {
@@ -343,11 +342,6 @@ std::vector<int> gen_data() {
   //   int random = rand() % 1000;
   //   a.push_back(random);
   // }
-
-  for (int i = 0; i < 8; i++) {
-    std::cout << a[i] << std::endl;
-  }
-  std::cout << "=========" << std::endl;
 
   return a;
 }

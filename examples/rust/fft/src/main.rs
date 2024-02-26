@@ -5,7 +5,7 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use std::fs;
 use std::os::unix::fs::FileExt;
 
-use icicle_core::fft::fft_evaluate;
+use icicle_core::fft::{fft_evaluate, fft_interpolate};
 
 #[cfg(feature = "profile")]
 use std::time::Instant;
@@ -50,12 +50,13 @@ fn main() {
 
     let mut inout_slice = HostOrDeviceSlice::on_host(inout);
     let mut ws_slice = HostOrDeviceSlice::on_host(ws);
+    let mut ws_inv_slice = HostOrDeviceSlice::on_host(ws_inv);
 
     #[cfg(feature = "profile")]
     let start = Instant::now();
     fft_evaluate::<F>(&mut inout_slice, &mut ws_slice, n as u32).unwrap();
 
-    let result = inout_slice.as_slice();
+    fft_interpolate::<F>(&mut inout_slice, &mut ws_inv_slice, n as u32).unwrap();
 
     #[cfg(feature = "profile")]
     println!(

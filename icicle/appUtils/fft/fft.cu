@@ -45,6 +45,16 @@ namespace fft {
   }
 
   template <typename S>
+  __global__ void invert_result(S* b, S inv_n) {
+    uint32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    auto x = tid << 1;
+    b[x] = b[x] * inv_n;
+    b[x + 1] = b[x + 1] * inv_n;
+  }
+
+
+  template <typename S>
   cudaError_t fft(
     S* inout, S* ws, int n, bool invert)
   {
@@ -94,6 +104,12 @@ namespace fft {
       ws_index += len >> 1;
     }
 
+    // If this is interpolatio, invert the result
+    if (invert) {
+      S inv_n = S::inverse(S::from(n));
+      invert_result<<< num_blocks, num_threads  >>> (device_inout, inv_n);
+    }
+
     // copy back to host
     err = cudaMemcpy(inout, device_inout, n * sizeof(S), cudaMemcpyDeviceToHost);
 
@@ -109,5 +125,13 @@ namespace fft {
     int n)
   {
     return fft<curve_config::scalar_t>(inout, ws, n, false);
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, FftInterpolate)(
+    curve_config::scalar_t* inout,
+    curve_config::scalar_t* ws,
+    int n)
+  {
+    return fft<curve_config::scalar_t>(inout, ws, n, true);
   }
 }
