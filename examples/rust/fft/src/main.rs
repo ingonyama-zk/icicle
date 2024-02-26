@@ -2,8 +2,10 @@ use icicle_bn254::curve::ScalarField as F;
 use icicle_core::traits::FieldImpl;
 use icicle_core::traits::MontgomeryConvertible;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::fs;
 use std::os::unix::fs::FileExt;
+use std::time::Instant;
 
 use ark_ff::BigInteger;
 use ark_ff::Fp;
@@ -39,22 +41,14 @@ fn read_ws(name: &str, n: usize, size: usize) -> Vec<F> {
     ret
 }
 
-fn main() {
-    let n = 8usize;
+pub fn run_fft(a: Vec<FrBN254>) {
+    let n = a.len();
 
-    let a: Vec<u128> = vec![3, 1, 4, 1, 5, 9, 2, 6];
+    let start = Instant::now();
 
     let mut inout: Vec<F> = Vec::with_capacity(n);
-
     for i in 0..a.len() {
-        let x_ark = FrBN254::from(a[i]);
-
-        println!(
-            "x_ark = {:?}",
-            x_ark
-                .0
-                .to_string()
-        );
+        let x_ark = a[i];
 
         let bz = x_ark
             .0
@@ -63,46 +57,66 @@ fn main() {
         let num = F::from_bytes_le(bz.as_slice());
 
         inout.push(num);
-
-        // F::from_ark(x_ark);
     }
 
-    println!("AAAAAAAA 000000");
+    println!("Finish conversion, loading time = {:.2?}", start.elapsed());
+    let start = Instant::now();
 
     let ws = read_ws("ws.bin", n, 32);
     let ws_inv = read_ws("ws_inv.bin", n, 32);
+
+    println!("Finish loading ws! time = {:.2?}", start.elapsed());
+    let start = Instant::now();
 
     let mut inout_slice = HostOrDeviceSlice::on_host(inout);
     let mut ws_slice = HostOrDeviceSlice::on_host(ws);
     let mut ws_inv_slice = HostOrDeviceSlice::on_host(ws_inv);
 
     let is_mont = true;
-    // let convert_result = F::to_mont(&mut inout_slice);
-    // println!("AAAAAAAA 111111, convert_result = {:?}", convert_result);
 
-    #[cfg(feature = "profile")]
+    println!("Done preparing. Start running on GPU... time = {:.2?}", start.elapsed());
     let start = Instant::now();
-    fft_evaluate::<F>(&mut inout_slice, &mut ws_slice, n as u32, is_mont).unwrap();
 
-    println!("AAAAAAAA 22222 ============================================================");
+    fft_evaluate::<F>(&mut inout_slice, &mut ws_slice, n as u32, is_mont).unwrap();
 
     fft_interpolate::<F>(&mut inout_slice, &mut ws_inv_slice, n as u32, is_mont).unwrap();
 
+    println!("Done Running on GPU, time = {:.2?}", start.elapsed());
+    let start = Instant::now();
+
     let result = inout_slice.as_slice();
-    for x in result.iter() {
+    // for x in result.iter() {
+    for i in 0..result.len() {
+        let x = result[i];
         let x_big: FrBN254 = Fp(
             BigInt::try_from(BigUint::from_bytes_le(&x.to_bytes_le())).unwrap(),
             std::marker::PhantomData,
         );
 
-        println!("x = {:?}", x_big.to_string());
+        if i < 8 {
+            println!("x = {:?}", x_big.to_string());
+        }
     }
 
-    #[cfg(feature = "profile")]
-    println!(
-        "FFT evaluation with size {n} took: {} μs",
-        start
-            .elapsed()
-            .as_micros()
-    );
+    println!("Done Convert back to Arkwork, time = {:.2?}", start.elapsed());
+    let start = Instant::now();
+}
+
+fn main() {
+    let mut rng = StdRng::seed_from_u64(42);
+
+    let n = (1 << 23) as usize;
+
+    // let a: Vec<u128> = vec![3, 1, 4, 1, 5, 9, 2, 6];
+    let mut a: Vec<FrBN254> = Vec::with_capacity(n);
+    for i in 0..n {
+        let num = rng.gen_range(0..100);
+        a.push(FrBN254::from(num));
+
+        if i < 8 {
+            println!("num = {:?}", num);
+        }
+    }
+
+    run_fft(a);
 }
