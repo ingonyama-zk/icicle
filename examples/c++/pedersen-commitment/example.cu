@@ -5,16 +5,14 @@
 #include <nvml.h>
 
 #define CURVE_ID 1
-#include "curves/curve_config.cuh"
+// #include "curves/curve_config.cuh"
 #include "appUtils/msm/msm.cu"
-
-// #include "utils/device_context.cuh"
-// #include "utils/vec_ops.cu"
 
 using namespace curve_config;
 
 typedef point_field_t T;
 
+// modular power
 T modPow(T base, T exp) {
   T r = T::one();
   T b = base;
@@ -111,38 +109,54 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg) printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
-
 int main(int argc, char** argv)
 {
   const unsigned N = pow(2, 10);
-  T xs[N];
-  START_TIMER(gen);
-  // T::RandHostMany(xs, N);
+  std::cout << "Commitment vector size: " << N << "+1 for salt (a.k.a blinding factor)" << std::endl;
+  T* xs = new T[N+1];
+  
+  std::cout << "Generating random points transparently using publicly chosen seed" << std::endl;
+  std::cout << "Public seed prevents committer from knowing the discrete logs of points used in the commitment" << std::endl;
   seed = 1234;
+  std::cout << "Using seed: " << seed << std::endl;
+  std::cout << "Generating random field values" << std::endl;
+  START_TIMER(gen);
+  
   for (unsigned i = 0; i < N; i++) {
     xs[i] = rand_host_seed();
   }
-  END_TIMER(gen, "Generated random x");
-  std::cout << "rand_host_seed 0: " << xs[0]  << std::endl;
-  std::cout << "rand_host_seed 1: " << xs[1]  << std::endl;
+  END_TIMER(gen, "Time to generate field values");
+  std::cout << "xs[0]: " << xs[0]  << std::endl;
+  std::cout << "xs[1]: " << xs[1]  << std::endl;
   
-  affine_t points[N];
+  // affine_t points[N];
+  affine_t* points = new affine_t[N+1];
+  std::cout << "Generating point about random field values" << std::endl;
   START_TIMER(points);
-  for (unsigned i = 0; i < N; i++) {
+  for (unsigned i = 0; i < N+1; i++) {
     point_near_x(xs[i], &points[i]);
   }
-  END_TIMER(points, "Generated points");
+  END_TIMER(points, "Time to generate points");
   
-  std::cout << "Using MSM scalars to store commitment vector" << std::endl;
+  std::cout << "Generating commitment vector" << std::endl;
   projective_t result;
-  scalar_t* scalars = new scalar_t[N];
+  scalar_t* scalars = new scalar_t[N+1];
   scalar_t::RandHostMany(scalars, N);
+
+  std::cout << "Generating salt" << std::endl;
+  scalars[N] = scalar_t::rand_host();
 
   std::cout << "Executing MSM" << std::endl;
   auto config = msm::DefaultMSMConfig<scalar_t>();
-  msm::MSM<scalar_t, affine_t, projective_t>(scalars, points, N, config, &result);
+  START_TIMER(msm);
+  msm::MSM<scalar_t, affine_t, projective_t>(scalars, points, N+1, config, &result);
+  END_TIMER(msm, "Time to execute MSM");
+
+  std::cout << "Computed commitment: " << result << std::endl;
 
   std::cout << "Cleaning up..." << std::endl;
+  delete[] xs;
   delete[] scalars;
+  delete[] points;
   return 0;
 }
