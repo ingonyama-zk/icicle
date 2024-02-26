@@ -1,226 +1,149 @@
-use icicle_bn254::curve::{CurveCfg, G1Projective, G2CurveCfg, G2Projective, ScalarCfg};
-
-use icicle_bls12_377::curve::{
-    CurveCfg as BLS12377CurveCfg, G1Projective as BLS12377G1Projective, ScalarCfg as BLS12377ScalarCfg,
-};
-
+use icicle_bn254::curve::{CurveCfg, G1Projective, G1Affine, ScalarField};
 use icicle_cuda_runtime::{memory::HostOrDeviceSlice, stream::CudaStream};
+use icicle_core::{traits::FieldImpl, curve::Curve, msm};
 
-use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
-
-#[cfg(feature = "arkworks")]
-use icicle_core::traits::ArkConvertible;
-
-#[cfg(feature = "arkworks")]
-use ark_bls12_377::{Fr as Bls12377Fr, G1Affine as Bls12377G1Affine, G1Projective as Bls12377ArkG1Projective};
-#[cfg(feature = "arkworks")]
-use ark_bn254::{Fr as Bn254Fr, G1Affine as Bn254G1Affine, G1Projective as Bn254ArkG1Projective};
-#[cfg(feature = "arkworks")]
-use ark_ec::scalar_mul::variable_base::VariableBaseMSM;
+#[cfg(feature = "compare")]
+use halo2curves::{bn256, msm::best_multiexp, ff::PrimeField, group::Curve as halo2Curve};
+#[cfg(feature = "compare")]
+use ark_bn254::{Fq as arkFq, G1Affine as arkG1Affine};
+#[cfg(feature = "compare")]
+use ark_ff::{Field, biginteger::BigInteger256, bytes::FromBytes};
 
 #[cfg(feature = "profile")]
 use std::time::Instant;
 
-use clap::Parser;
+use std::fs::File;
+use std::io::BufReader;
+use std::convert::TryInto;
+use serde::de::DeserializeOwned;
 
-#[derive(Parser, Debug)]
-struct Args {
-    /// Lower bound (inclusive) of MSM sizes to run for
-    #[arg(short, long, default_value_t = 19)]
-    lower_bound_log_size: u8,
+/// Path to the directory where Arecibo data will be stored.
+pub static ARECIBO_DATA: &str = ".arecibo_data";
 
-    /// Upper bound of MSM sizes to run for
-    #[arg(short, long, default_value_t = 22)]
-    upper_bound_log_size: u8,
+/// Reads and deserializes data from a specified section and label.
+fn read_arecibo_data<T: DeserializeOwned>(
+    section: String,
+    label: String,
+) -> Vec<T> {
+    let root_dir = home::home_dir().unwrap().join(ARECIBO_DATA);
+    let section_path = root_dir.join(section);
+    assert!(section_path.exists(), "Section directory does not exist");
+
+    let file_path = section_path.join(label);
+    assert!(file_path.exists(), "Data file does not exist");
+
+    let file = File::open(file_path).expect("Failed to open data file");
+    let reader = BufReader::new(file);
+
+    bincode::deserialize_from(reader).expect("Failed to read data")
 }
 
+fn icicle_to_bn256(point: &G1Affine) -> bn256::G1Affine {
+    bn256::G1Affine { x: bn256::Fq::from_repr(point.x.to_bytes_le().try_into().unwrap()).unwrap(), y: bn256::Fq::from_repr(point.y.to_bytes_le().try_into().unwrap()).unwrap() }
+}
+
+fn icicle_to_ark(point: &G1Affine) -> arkG1Affine {
+    arkG1Affine::new(arkFq::from_random_bytes(&point.x.to_bytes_le()).unwrap(), arkFq::from_random_bytes(&point.y.to_bytes_le()).unwrap(), false)
+}
+
+// cargo run --features=compare,profile -- --nocapture
 fn main() {
-    let args = Args::parse();
-    let lower_bound = args.lower_bound_log_size;
-    let upper_bound = args.upper_bound_log_size;
-    println!("Running Icicle Examples: Rust MSM");
-    let upper_size = 1 << (upper_bound);
-    println!("Generating random inputs on host for bn254...");
-    let upper_points = CurveCfg::generate_random_affine_points(upper_size);
-    let g2_upper_points = G2CurveCfg::generate_random_affine_points(upper_size);
-    let upper_scalars = ScalarCfg::generate_random(upper_size);
+    let section = "witness_0x02c29fabf43b87a73513f6ecbfb348c146809c1609c21b48333a8096700d63ad";
+    let label_i = format!("len_8131411_{}", 0);
+    // let section = "cross_term_0x02c29fabf43b87a73513f6ecbfb348c146809c1609c21b48333a8096700d63ad";
+    // let label_i = format!("len_9873811_{}", 0);
+    let scalars: Vec<[u64; 4]> = read_arecibo_data(section.to_string(), label_i.clone());
+    let scalars: Vec<ScalarField> = scalars.iter().map(|limbs| ScalarField::from(*limbs)).collect();
+    let size = scalars.len();
+    let points = CurveCfg::generate_random_affine_points(size);
 
-    println!("Generating random inputs on host for bls12377...");
-    let upper_points_bls12377 = BLS12377CurveCfg::generate_random_affine_points(upper_size);
-    let upper_scalars_bls12377 = BLS12377ScalarCfg::generate_random(upper_size);
+    // Setting Bn254 points and scalars
+    let icicle_points = HostOrDeviceSlice::Host(points.clone());
+    let icicle_scalars = HostOrDeviceSlice::Host(scalars.clone());
 
-    for i in lower_bound..=upper_bound {
-        let log_size = i;
-        let size = 1 << log_size;
-        println!(
-            "---------------------- MSM size 2^{}={} ------------------------",
-            log_size, size
-        );
-        // Setting Bn254 points and scalars
-        let points = HostOrDeviceSlice::Host(upper_points[..size].to_vec());
-        let g2_points = HostOrDeviceSlice::Host(g2_upper_points[..size].to_vec());
-        let scalars = HostOrDeviceSlice::Host(upper_scalars[..size].to_vec());
+    let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
+    let stream = CudaStream::create().unwrap();
+    let mut cfg = msm::MSMConfig::default();
+    cfg.ctx
+        .stream = &stream;
+    cfg.is_async = true;
 
-        // Setting bls12377 points and scalars
-        // let points_bls12377 = &upper_points_bls12377[..size];
-        let points_bls12377 = HostOrDeviceSlice::Host(upper_points_bls12377[..size].to_vec()); //  &upper_points_bls12377[..size];
-        let scalars_bls12377 = HostOrDeviceSlice::Host(upper_scalars_bls12377[..size].to_vec());
+    #[cfg(feature = "profile")]
+    let start = Instant::now();
+    msm::msm(&icicle_scalars, &icicle_points, &cfg, &mut msm_results).unwrap();
+    #[cfg(feature = "profile")]
+    println!(
+        "icicle GPU accelerated bn254 MSM took: {} ms",
+        start
+            .elapsed()
+            .as_millis()
+    );
 
-        println!("Configuring bn254 MSM...");
-        let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
-        let mut g2_msm_results: HostOrDeviceSlice<'_, G2Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
-        let stream = CudaStream::create().unwrap();
-        let g2_stream = CudaStream::create().unwrap();
-        let mut cfg = msm::MSMConfig::default();
-        let mut g2_cfg = msm::MSMConfig::default();
-        cfg.ctx
-            .stream = &stream;
-        g2_cfg
-            .ctx
-            .stream = &g2_stream;
-        cfg.is_async = true;
-        g2_cfg.is_async = true;
+    let mut msm_host_result = vec![G1Projective::zero(); 1];
 
-        println!("Configuring bls12377 MSM...");
-        let mut msm_results_bls12377: HostOrDeviceSlice<'_, BLS12377G1Projective> =
-            HostOrDeviceSlice::cuda_malloc(1).unwrap();
-        let stream_bls12377 = CudaStream::create().unwrap();
-        let mut cfg_bls12377 = msm::MSMConfig::default();
-        cfg_bls12377
-            .ctx
-            .stream = &stream_bls12377;
-        cfg_bls12377.is_async = true;
-
-        println!("Executing bn254 MSM on device...");
-        #[cfg(feature = "profile")]
-        let start = Instant::now();
-        msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
-        #[cfg(feature = "profile")]
-        println!(
-            "ICICLE BN254 MSM on size 2^{log_size} took: {} ms",
-            start
-                .elapsed()
-                .as_millis()
-        );
-        msm::msm(&scalars, &g2_points, &g2_cfg, &mut g2_msm_results).unwrap();
-
-        println!("Executing bls12377 MSM on device...");
-        #[cfg(feature = "profile")]
-        let start = Instant::now();
-        msm::msm(
-            &scalars_bls12377,
-            &points_bls12377,
-            &cfg_bls12377,
-            &mut msm_results_bls12377,
-        )
+    stream
+        .synchronize()
         .unwrap();
+    msm_results
+        .copy_to_host(&mut msm_host_result[..])
+        .unwrap();
+    println!("MSM result: {:#?}", G1Affine::from(msm_host_result[0]));
+
+    #[cfg(feature = "compare")]
+    {
+        let bn256_points: Vec<bn256::G1Affine> = points
+            .iter()
+            .map(|point| icicle_to_bn256(point))
+            .collect();
+        let bn256_witness: Vec<[u8; 32]> = read_arecibo_data(section.to_string(), label_i);
+        let bn256_witness: Vec<bn256::Fr> = bn256_witness.iter().map(|limbs| bn256::Fr::from_repr(*limbs).unwrap()).collect();
+
+        #[cfg(feature = "profile")]
+        let start = Instant::now();
+        let bn256_res = best_multiexp::<bn256::G1Affine>(&bn256_witness, &bn256_points);
         #[cfg(feature = "profile")]
         println!(
-            "ICICLE BLS12377 MSM on size 2^{log_size} took: {} ms",
+            "CPU version took: {} ms",
             start
                 .elapsed()
                 .as_millis()
         );
 
-        println!("Moving results to host..");
-        let mut msm_host_result = vec![G1Projective::zero(); 1];
-        let mut g2_msm_host_result = vec![G2Projective::zero(); 1];
-        let mut msm_host_result_bls12377 = vec![BLS12377G1Projective::zero(); 1];
+        let icicle_bn256_result = icicle_to_bn256(&G1Affine::from(msm_host_result[0]));
+        println!(
+            "bn254 MSM check vs. halo2curves is correct: {}",
+            bn256_res.to_affine() == icicle_bn256_result
+        );
 
-        stream
-            .synchronize()
-            .unwrap();
-        g2_stream
-            .synchronize()
-            .unwrap();
-        msm_results
-            .copy_to_host(&mut msm_host_result[..])
-            .unwrap();
-        g2_msm_results
-            .copy_to_host(&mut g2_msm_host_result[..])
-            .unwrap();
-        println!("bn254 result: {:#?}", msm_host_result);
-        println!("G2 bn254 result: {:#?}", g2_msm_host_result);
+        let ark_points: Vec<arkG1Affine> = points
+            .iter()
+            .map(|point| icicle_to_ark(point))
+            .collect();
+        let ark_scalars: Vec<BigInteger256> = scalars
+            .iter()
+            .map(|scalar| <BigInteger256 as FromBytes>::read(&scalar.to_bytes_le()[..]).unwrap())
+            .collect();
 
-        stream_bls12377
-            .synchronize()
-            .unwrap();
-        msm_results_bls12377
-            .copy_to_host(&mut msm_host_result_bls12377[..])
-            .unwrap();
-        println!("bls12377 result: {:#?}", msm_host_result_bls12377);
+        #[cfg(feature = "profile")]
+        let start = Instant::now();
+        let sppark_res = msm_cuda::multi_scalar_mult_arkworks(&ark_points, &ark_scalars);
+        #[cfg(feature = "profile")]
+        println!(
+            "sppark GPU accelerated version took: {} ms",
+            start
+                .elapsed()
+                .as_millis()
+        );
 
-        #[cfg(feature = "arkworks")]
-        {
-            println!("Checking against arkworks...");
-            let ark_points: Vec<Bn254G1Affine> = points
-                .as_slice()
-                .iter()
-                .map(|&point| point.to_ark())
-                .collect();
-            let ark_scalars: Vec<Bn254Fr> = scalars
-                .as_slice()
-                .iter()
-                .map(|scalar| scalar.to_ark())
-                .collect();
-
-            let ark_points_bls12377: Vec<Bls12377G1Affine> = points_bls12377
-                .as_slice()
-                .iter()
-                .map(|point| point.to_ark())
-                .collect();
-            let ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377
-                .as_slice()
-                .iter()
-                .map(|scalar| scalar.to_ark())
-                .collect();
-
-            #[cfg(feature = "profile")]
-            let start = Instant::now();
-            let bn254_ark_msm_res = Bn254ArkG1Projective::msm(&ark_points, &ark_scalars).unwrap();
-            println!("Arkworks Bn254 result: {:#?}", bn254_ark_msm_res);
-            #[cfg(feature = "profile")]
-            println!(
-                "Ark BN254 MSM on size 2^{log_size} took: {} ms",
-                start
-                    .elapsed()
-                    .as_millis()
-            );
-
-            #[cfg(feature = "profile")]
-            let start = Instant::now();
-            let bls12377_ark_msm_res =
-                Bls12377ArkG1Projective::msm(&ark_points_bls12377, &ark_scalars_bls12377).unwrap();
-            println!("Arkworks Bls12377 result: {:#?}", bls12377_ark_msm_res);
-            #[cfg(feature = "profile")]
-            println!(
-                "Ark BLS12377 MSM on size 2^{log_size} took: {} ms",
-                start
-                    .elapsed()
-                    .as_millis()
-            );
-
-            let bn254_icicle_msm_res_as_ark = msm_host_result[0].to_ark();
-            let bls12377_icicle_msm_res_as_ark = msm_host_result_bls12377[0].to_ark();
-
-            println!(
-                "Bn254 MSM is correct: {}",
-                bn254_ark_msm_res.eq(&bn254_icicle_msm_res_as_ark)
-            );
-            println!(
-                "Bls12377 MSM is correct: {}",
-                bls12377_ark_msm_res.eq(&bls12377_icicle_msm_res_as_ark)
-            );
-        }
-
-        println!("Cleaning up bn254...");
-        stream
-            .destroy()
-            .unwrap();
-        println!("Cleaning up bls12377...");
-        stream_bls12377
-            .destroy()
-            .unwrap();
-        println!("");
+        let icicle_ark_result = icicle_to_ark(&G1Affine::from(msm_host_result[0]));
+        println!(
+            "bn254 MSM check vs. sppark is correct: {}",
+            sppark_res.eq(&icicle_ark_result)
+        );
     }
+
+    stream
+        .destroy()
+        .unwrap();
+    println!("");
 }
