@@ -45,6 +45,14 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I, typename EC>
+  Polynomial<C, D, I, EC> Polynomial<C, D, I, EC>::operator*(const Polynomial& rhs) const
+  {
+    Polynomial<C, D, I, EC> res = {};
+    m_backend->multiply(*res.m_context.get(), *m_context.get(), *rhs.m_context);
+    return res;
+  }
+
+  template <typename C, typename D, typename I, typename EC>
   std::pair<Polynomial<C, D, I, EC>, Polynomial<C, D, I, EC>>
   Polynomial<C, D, I, EC>::divide(const Polynomial<C, D, I, EC>& rhs) const
   {

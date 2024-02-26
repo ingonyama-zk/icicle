@@ -61,4 +61,12 @@ namespace polynomials {
     if (tid <= num_coeffs) { tmp[tid] = coeffs[tid] * pow(x, tid); }
   }
 
+  /*============================== multiply ==============================*/
+  template <typename E>
+  __global__ void Mul(E* element_vec1, E* element_vec2, int n, E* result)
+  {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < n) { result[tid] = element_vec1[tid] * element_vec2[tid]; }
+  }
+
 } // namespace polynomials
