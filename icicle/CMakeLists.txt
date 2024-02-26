@@ -103,6 +103,20 @@ endif ()
 option(BUILD_TESTS "Build tests" OFF)
 option(POLYNOMIAL_TB "Build polynomial test bench" OFF)
 
+function(fetch_google_test)
+    include(FetchContent)  
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+    enable_testing()
+    include(GoogleTest)
+endfunction()
+
 if (NOT BUILD_TESTS)
 
   message(STATUS "Building without tests.")
@@ -134,39 +148,18 @@ if (NOT BUILD_TESTS)
 
   if (POLYNOMIAL_TB)
     message(STATUS "Building polynomial test-bench.")
+    fetch_google_test()
     add_executable(polynomial_tb tests/polynomial_test.cu)
-    target_link_libraries(polynomial_tb PUBLIC icicle) 
+    target_link_libraries(polynomial_tb GTest::gtest_main icicle pthread)
+    set_target_properties(polynomial_tb PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    gtest_discover_tests(polynomial_tb)
   endif()
 
 else()
-
   message(STATUS "Building tests.")
-
-  include(FetchContent)
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
-  )
-  # For Windows: Prevent overriding the parent project's compiler/linker settings
-
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(googletest)
-
-  enable_testing()
-
-  add_executable(
-    runner
-    tests/runner.cu
-  )
-
-  target_link_libraries(
-    runner
-    GTest::gtest_main
-  )
-
-  include(GoogleTest)
+  fetch_google_test()
+  add_executable(runner tests/runner.cu)
+  target_link_libraries(runner GTest::gtest_main)
   set_target_properties(runner PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
   gtest_discover_tests(runner)
-
 endif ()
