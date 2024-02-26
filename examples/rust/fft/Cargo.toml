@@ -11,5 +11,13 @@ icicle-core = { path = "../../../wrappers/rust/icicle-core" }
 icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254" }
 icicle-bls12-381 = { path = "../../../wrappers/rust/icicle-curves/icicle-bls12-381" }
 
+# Arkwork
+ark-ff = "0.4.2"
+ark-std = "0.4"
+ark-bn254 = { version = "0.4.0", default-features = false, features = [
+  "curve",
+] }
+num-bigint = { version = "0.4.4", default-features = false }
+
 [features]
 profile = []

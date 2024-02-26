@@ -146,6 +146,16 @@ __global__ void swap_bits(T* b, uint n, uint log_n) {
   }
 }
 
+__global__ void from_montgomery(T* b) {
+  uint32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+  b[tid] = T::FromMontgomery(b[tid]);
+}
+
+__global__ void to_montgomery(T* b) {
+  uint32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+  b[tid] = T::ToMontgomery(b[tid]);
+}
+
 __global__ void fft_kernel(T* b, uint n, T inv_n, uint pow, uint ws_index, T* ws, T* ws_inv, bool invert) {
     uint32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -335,6 +345,14 @@ T* run_cpu(std::vector<int> a) {
   return a_field;
 }
 
+void test_montgomery(std::vector<int> a) {
+  auto tmp = T::ToMontgomery(T::from(a[0]));
+  std::cout << "To montgomery = " << tmp << std::endl;
+
+  auto tmp2 = T::FromMontgomery(tmp);
+  std::cout << "From montgomery = " << tmp2 << std::endl;
+}
+
 std::vector<int> gen_data() {
   std::vector<int> a = {3, 1, 4, 1, 5, 9, 2, 6};
   // std::vector<int> a;
@@ -350,7 +368,8 @@ int main(int argc, char** argv) {
   auto a = gen_data();
 
   // auto cpu_result = run_cpu(a);
-  auto gpu_result = run_gpu(a);
+  // auto gpu_result = run_gpu(a);
+  test_montgomery(a);
 
   // for (int i = 0; i < a.size(); i++) {
   //   if (cpu_result[i] != gpu_result[i]) {

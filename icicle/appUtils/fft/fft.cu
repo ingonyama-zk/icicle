@@ -10,6 +10,18 @@ namespace fft {
   }
 
   template <typename S>
+  __global__ void from_montgomery(S* b) {
+    uint32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+    b[tid] = S::FromMontgomery(b[tid]);
+  }
+
+  template <typename S>
+  __global__ void to_montgomery(S* b) {
+    uint32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+    b[tid] = S::ToMontgomery(b[tid]);
+  }
+
+  template <typename S>
   __global__ void swap_bits(S* b, uint32_t n, uint32_t log_n) {
     uint32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -56,7 +68,7 @@ namespace fft {
 
   template <typename S>
   cudaError_t fft(
-    S* inout, S* ws, int n, bool invert)
+    S* inout, S* ws, int n, bool is_montgomery, bool invert)
   {
     CHK_INIT_IF_RETURN();
 
@@ -65,6 +77,8 @@ namespace fft {
     // allocate device array
     cudaMalloc((void**)&device_inout, n * sizeof(S));
     cudaMalloc((void**)&device_ws, n * sizeof(S));
+
+    std::cout << "BBBBB 000000, is_montgomery = " << is_montgomery << std::endl;
 
     // copy from host to device
     auto err = cudaMemcpy(device_inout, inout, n * sizeof(S), cudaMemcpyHostToDevice);
@@ -78,6 +92,8 @@ namespace fft {
       return err;
     }
 
+    std::cout << "BBBBB 000000, HEEEERRRREEEEE = " << is_montgomery << std::endl;
+
     int cuda_device_ix = 0;
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, cuda_device_ix);
@@ -86,6 +102,19 @@ namespace fft {
     int worker_count = n >> 1;
     int num_threads = worker_count < prop.maxThreadsPerBlock ? worker_count : prop.maxThreadsPerBlock;
     int num_blocks = (worker_count + num_threads - 1) / num_threads;
+
+    std::cout << "BBBBB 111111, is_montgomery = " << is_montgomery << std::endl;
+    std::cout << "BBBBB Original INOUT : " << std::endl;
+    for (int i = 0; i < 8; i++) {
+      std::cout << inout[i] << std::endl;
+    }
+
+    // Convert from montgomery
+    if (is_montgomery) {
+      from_montgomery<<< num_blocks, num_threads  >>> (device_inout);
+    }
+
+    std::cout << "BBBBB 22222" << std::endl;
 
     const int log_n = log2(n);
     // Swap bits
@@ -104,14 +133,30 @@ namespace fft {
       ws_index += len >> 1;
     }
 
-    // If this is interpolatio, invert the result
+    std::cout << "BBBBB 33333" << std::endl;
+
+    // If this is interpolation, invert the result
     if (invert) {
       S inv_n = S::inverse(S::from(n));
       invert_result<<< num_blocks, num_threads  >>> (device_inout, inv_n);
     }
 
+    std::cout << "BBBBB 444444" << std::endl;
+
+    // Convert back to montgomery form if needed.
+    if (is_montgomery) {
+      to_montgomery<<< num_blocks, num_threads  >>> (device_inout);
+    }
+
+    std::cout << "BBBBB 555555" << std::endl;
+
     // copy back to host
     err = cudaMemcpy(inout, device_inout, n * sizeof(S), cudaMemcpyDeviceToHost);
+
+    std::cout << "BBBBB Result: " << std::endl;
+    for (int i = 0; i < 8; i++) {
+      std::cout << inout[i] << std::endl;
+    }
 
     cudaFree(device_inout);
     cudaFree(device_ws);
@@ -122,16 +167,18 @@ namespace fft {
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, FftEvaluate)(
     curve_config::scalar_t* inout,
     curve_config::scalar_t* ws,
-    int n)
+    int n,
+    bool is_montgomery)
   {
-    return fft<curve_config::scalar_t>(inout, ws, n, false);
+    return fft<curve_config::scalar_t>(inout, ws, n, is_montgomery, false);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, FftInterpolate)(
     curve_config::scalar_t* inout,
     curve_config::scalar_t* ws,
-    int n)
+    int n,
+    bool is_montgomery)
   {
-    return fft<curve_config::scalar_t>(inout, ws, n, true);
+    return fft<curve_config::scalar_t>(inout, ws, n, is_montgomery, true);
   }
 }
