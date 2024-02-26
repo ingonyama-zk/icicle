@@ -100,10 +100,15 @@ fn main() {
     cfg.ctx
         .stream = &stream;
     cfg.is_async = true;
+    let mut msm_host_result = vec![G1Projective::zero(); 1];
 
     #[cfg(feature = "profile")]
     let start = Instant::now();
     msm::msm(&icicle_scalars, &icicle_points, &cfg, &mut msm_results).unwrap();
+    // synchronize by copying to host to make sure measurement is correct
+    msm_results
+        .copy_to_host(&mut msm_host_result[..])
+        .unwrap();
     #[cfg(feature = "profile")]
     println!(
         "icicle GPU accelerated bn254 MSM took: {} ms",
@@ -112,14 +117,6 @@ fn main() {
             .as_millis()
     );
 
-    let mut msm_host_result = vec![G1Projective::zero(); 1];
-
-    stream
-        .synchronize()
-        .unwrap();
-    msm_results
-        .copy_to_host(&mut msm_host_result[..])
-        .unwrap();
     println!("MSM result: {:#?}", G1Affine::from(msm_host_result[0]));
 
     #[cfg(feature = "compare")]
