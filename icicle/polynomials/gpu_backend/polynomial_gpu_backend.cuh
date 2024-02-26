@@ -31,9 +31,11 @@ namespace polynomials {
       return m_evaluations;
     }
 
-    std::pair<C*, uint32_t> get_coefficients() override
+    uint32_t size() override { return m_nof_elements; }
+
+    std::pair<C*, uint32_t> get_coefficients(uint32_t nof_coeffs) override
     {
-      transform_state(State::Coefficients);
+      transform_state(State::Coefficients, nof_coeffs);
       return std::make_pair(m_coefficients, m_nof_elements);
     }
     std::pair<I*, uint32_t> get_rou_evaluations(uint32_t nof_evals) override
@@ -120,6 +122,7 @@ namespace polynomials {
 
       const size_t old_mem_size = old_nof_elements * ElementSize;
       const size_t new_mem_size = new_nof_elements * ElementSize;
+      std::cout << "is_mem_alloc_required=" << is_mem_alloc_required << std::endl;
       if (is_mem_alloc_required) {
         cudaMallocManaged(&m_storage, new_mem_size);
         dst_p = m_storage;
@@ -135,20 +138,26 @@ namespace polynomials {
       // TODO Yuval: set device context
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
+      // TODO Yuval: assumed that evals are always R and coeffs N
       if (is_coeffs_to_coeffs) {
         // simply copy old coefficients to larger memory
         cudaMemcpy(dst_p, src_p, old_mem_size, cudaMemcpyDeviceToDevice);
       } else if (is_coeff_to_rou_evaluations) {
-        // copy coeffs to new mem and to NTT inplace with new size
-        cudaMemcpy(dst_p, src_p, old_mem_size, cudaMemcpyDeviceToDevice);
-        ntt::NTT((C*)dst_p, new_mem_size, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
+        std::cout << "coeffs to evaluations!\n";
+        // copy coeffs to new mem and compute NTT inplace with new size
+        if (is_mem_alloc_required) { cudaMemcpy(dst_p, src_p, old_mem_size, cudaMemcpyDeviceToDevice); }
+        ntt_config.ordering = ntt::Ordering::kNR; // TODO Yuval how to choose that?
+        ntt::NTT((C*)dst_p, new_nof_elements, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
       } else if (is_rou_evals_to_rou_evals) {
         // NTT to coeffs and a second in-place NTT for compute evals
-        ntt::NTT((C*)src_p, old_mem_size, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
-        ntt::NTT((C*)dst_p, old_mem_size, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
+        ntt_config.ordering = ntt::Ordering::kRN; // TODO Yuval how to choose that?
+        ntt::NTT((C*)src_p, old_nof_elements, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
+        ntt_config.ordering = ntt::Ordering::kNR; // TODO Yuval how to choose that?
+        ntt::NTT((C*)dst_p, old_nof_elements, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
       } else if (is_rou_evals_to_coeffs) {
         // NTT to new memory. Higher coefficients should be zeros
-        ntt::NTT((C*)src_p, old_mem_size, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
+        ntt_config.ordering = ntt::Ordering::kRN; // TODO Yuval how to choose that?
+        ntt::NTT((C*)src_p, old_nof_elements, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
       }
 
       set_state(new_state);
@@ -194,16 +203,84 @@ namespace polynomials {
     void add(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, true /*=add*/); }
     void subtract(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, false /*=sub*/); }
 
-    void multiply(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
-    void divide(PolyContext& Quotient_out, PolyContext& Remainder_out, PolyContext& op_a, PolyContext& op_b) override {}
-    void quotient(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
-    void remainder(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override {}
-    void divide_by_vanishing_polynomial(PolyContext& out, PolyContext& op_a, uint32_t vanishing_poly_degree) override {}
-    void reciprocal(PolyContext& out, PolyContext& op) override {}
+    void multiply(PolyContext& c, PolyContext& a, PolyContext& b) override
+    {
+      const uint32_t a_N = a.size();
+      const uint32_t b_N = b.size();
+      const uint32_t N = max(a_N, b_N);
+
+      // (1) transform a,b to coefficients such that both have N coefficients
+      auto [a_coeff_p, a_nof_coeff] = a.get_coefficients(N);
+      auto [b_coeff_p, b_nof_coeff] = b.get_coefficients(N);
+
+      // (2) allocate c (c=a*b)
+      const auto c_N = 2 * N;
+      I* c_evals_low_p = c.init_from_rou_evaluations(c_N);
+      I* c_evals_high_p = c_evals_low_p + N;
+
+      std::cout << "a_N=" << a_N << ", b_N=" << b_N << ", c_N=" << c_N << "\n";
+
+      // (3) compute NTT of a,b on coset and write to c
+      auto ntt_config = ntt::DefaultNTTConfig<C>();
+      ntt_config.are_inputs_on_device = true;
+      ntt_config.are_outputs_on_device = true;
+      ntt_config.ordering = ntt::Ordering::kNR;
+      // ntt_config.coset_gen =
+      // test_type::omega(c_N); // TODO Yuval: MUST USE THE ROOT CORRESPONDING TO THE ONE IN INIT DOMAIN!!!
+
+      c.print(std::cout);
+      ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_low_p);  // a_H1
+      ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p); // b_H1
+
+      a.print(std::cout);
+      b.print(std::cout);
+      c.print(std::cout);
+
+      // (4) compute a_H1 * b_H1 inplace
+      const int NOF_THREADS = 32;
+      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
+      Mul<<<NOF_BLOCKS, NOF_THREADS>>>(c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
+
+      // (5) transform a,b to evaluations
+      auto [a_evals_p, a_nof_evals] = a.get_rou_evaluations(N);
+      auto [b_evals_p, b_nof_evals] = b.get_rou_evaluations(N);
+      a.print(std::cout);
+      b.print(std::cout);
+      c.print(std::cout);
+
+      // (6) compute a_H0 * b_H0
+      Mul<<<NOF_BLOCKS, NOF_THREADS>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
+      std::cout << "finally\n";
+      c.print(std::cout);
+      std::cout << "MUL DONE\n";
+      c.print(std::cout);
+    }
+    void divide(PolyContext& Quotient_out, PolyContext& Remainder_out, PolyContext& op_a, PolyContext& op_b) override
+    {
+      throw std::runtime_error("not implemented yet");
+    }
+    void quotient(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override
+    {
+      throw std::runtime_error("not implemented yet");
+    }
+    void remainder(PolyContext& out, PolyContext& op_a, PolyContext& op_b) override
+    {
+      throw std::runtime_error("not implemented yet");
+    }
+    void divide_by_vanishing_polynomial(PolyContext& out, PolyContext& op_a, uint32_t vanishing_poly_degree) override
+    {
+      throw std::runtime_error("not implemented yet");
+    }
 
     // arithmetic with monomials
-    void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override {}
-    void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override {}
+    void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override
+    {
+      throw std::runtime_error("not implemented yet");
+    }
+    void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override
+    {
+      throw std::runtime_error("not implemented yet");
+    }
 
     // dot product with coefficients
     ECpoint dot_product_with_coefficients(PolyContext& op, ECpoint* points, uint32_t nof_points) override
@@ -250,15 +327,20 @@ namespace polynomials {
 
       return h_evaluation;
     }
-    void evaluate(PolyContext& p, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override {}
+    void evaluate(PolyContext& p, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override
+    {
+      throw std::runtime_error("not implemented yet");
+    }
 
     C get_coefficient(PolyContext& op, uint32_t coeff_idx) override
     {
       // TODO Yuval: implement by copying to hostreturn
+      throw std::runtime_error("not implemented yet");
       return C::zero();
     }
     uint32_t get_coefficients(PolyContext& op, C* coefficients) override
     {
+      throw std::runtime_error("not implemented yet");
       return 0; // TODO Yuval: implement by copying to hostreturn }
     }
   };
