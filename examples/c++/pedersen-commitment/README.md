@@ -9,7 +9,7 @@ We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to s
 A Pedersen Commitment is a cryptographic primitive to commit to a value or a vector of values while keeping it hidden, yet enabling the committer to reveal the value later. It provides both hiding (the commitment does not reveal any information about the value) and binding properties (once a value is committed, it cannot be changed without detection).
 
 Pedersen commitment is based on Multi-Scalar Multiplication [MSM](https://github.com/ingonyama-zk/ingopedia/blob/master/src/msm.md).
-`Icicle` provides CUDA C++ and Rust support for [MSM](https://dev.ingonyama.com/icicle/primitives/msm). 
+`ICICLE` provides CUDA C++ support for [MSM](https://dev.ingonyama.com/icicle/primitives/msm). 
 An example of MSM is [here](../msm/README.md).
 
 ## Running the example
