@@ -50,7 +50,7 @@ void old_reverse_bit(T* b, uint n) {
 }
 
 T* precompute_w(uint n, T root, T root_inv, uint root_pw, bool invert) {
-  T* ws = (T*)malloc(n * sizeof(T));
+  T* ws = (T*)malloc((n - 1) * sizeof(T));
   uint index = 0;
 
   for (int len = 2; len <= n; len <<= 1)
@@ -258,6 +258,9 @@ T* run_gpu(std::vector<int> a) {
   T root = T::omega(log_n);
   T root_inv = T::inverse(root);
 
+  std::cout << "root = " << root << std::endl;
+  std::cout << "root_inv = " << root_inv << std::endl;
+
   T* ws = precompute_w(n, root, root_inv, root_pw, false);
   T* ws_inv = precompute_w(n, root, root_inv, root_pw, true);
 
@@ -279,6 +282,10 @@ T* run_gpu(std::vector<int> a) {
 
   // function call
   auto result = fft_gpu(a_field, n, device_ws, device_ws_inv, false);
+
+  for (int i = 0; i < 8; i++) {
+    std::cout << result[i] << std::endl;
+  }
 
   return result;
 
@@ -330,12 +337,12 @@ T* run_cpu(std::vector<int> a) {
 }
 
 std::vector<int> gen_data() {
-  // std::vector<int> a = {3, 1, 4, 1, 5, 9, 2, 6};
-  std::vector<int> a;
-  for (int i = 0; i < 1 << 4; i++) {
-    int random = rand() % 1000;
-    a.push_back(random);
-  }
+  std::vector<int> a = {3, 1, 4, 1, 5, 9, 2, 6};
+  // std::vector<int> a;
+  // for (int i = 0; i < 1 << 4; i++) {
+  //   int random = rand() % 1000;
+  //   a.push_back(random);
+  // }
 
   for (int i = 0; i < 8; i++) {
     std::cout << a[i] << std::endl;
