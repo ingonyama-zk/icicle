@@ -86,6 +86,7 @@ jobs:
       uses: actions/checkout@v4
     - name: Download and Install Cuda
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      id: cuda-toolkit
       uses: Jimver/cuda-toolkit@v0.2.11
       with:
         cuda: '12.0.0'
@@ -95,5 +96,7 @@ jobs:
     - name: Build cpp libs
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       working-directory: ./wrappers/golang
+      env:
+        CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
       shell: pwsh
       run: ./build.ps1 ${{ matrix.curve }} ON # builds a single curve with G2 enabled
