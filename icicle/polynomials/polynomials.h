@@ -81,23 +81,37 @@ namespace polynomials {
   class IPolynomialContext
   {
   public:
-    IPolynomialContext() : m_id(s_id++) {}
+    enum State { Coefficients, EvaluationsOnRou_Natural, EvaluationsOnRou_Reversed };
+    static constexpr size_t ElementSize = std::max(sizeof(C), sizeof(I));
+
+    IPolynomialContext() : m_id{s_id++}, m_nof_elements{0} {}
     virtual ~IPolynomialContext() = default;
 
-    // initialization (if coeffs/evals are nullptr, initialize memory only)
-    virtual C* init_from_coefficients(uint32_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
-    virtual I* init_from_rou_evaluations(uint32_t nof_coefficients, const C* host_evaluations = nullptr) = 0;
+    virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients) = 0;
+    virtual void release() = 0;
+    virtual void set_state(State state) = 0;
 
-    virtual uint32_t size() = 0; // TODO Yuval: bad name?
+    virtual C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
+    virtual I* init_from_rou_evaluations(uint64_t nof_evalutions, const I* host_evaluations = nullptr) = 0;
 
-    virtual std::pair<C*, uint32_t> get_coefficients(uint32_t nof_coeffs = 0) = 0;
-    virtual std::pair<I*, uint32_t> get_rou_evaluations(uint32_t nof_evals = 0) = 0;
+    virtual std::pair<C*, uint64_t> get_coefficients() = 0;
+    virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
+
+    virtual void transform_to_coefficients() = 0;
+    virtual void transform_to_evaluations(uint64_t nof_evalutions = 0, bool is_reversed = 0) = 0;
+
+    State get_state() const { return m_state; }
+    uint64_t get_nof_elements() const { return m_nof_elements; }
+
     virtual void print(std::ostream& os) = 0;
 
   protected:
-    // for debug. remove?
-    static inline uint32_t s_id = 0;
-    const uint32_t m_id;
+    State m_state;
+    uint64_t m_nof_elements = 0;
+
+    // id for debug
+    static inline uint64_t s_id = 0;
+    const uint64_t m_id;
   };
 
   /*============================== Polynomial Backend ==============================*/
