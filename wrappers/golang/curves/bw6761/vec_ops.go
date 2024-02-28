@@ -27,7 +27,7 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 		cB = (*C.scalar_t)(unsafe.Pointer(&b.(core.HostSlice[ScalarField])[0]))
 	}
 
-	if a.IsOnDevice() {
+	if out.IsOnDevice() {
 		cOut = (*C.scalar_t)(out.(core.DeviceSlice).AsPointer())
 	} else {
 		cOut = (*C.scalar_t)(unsafe.Pointer(&out.(core.HostSlice[ScalarField])[0]))

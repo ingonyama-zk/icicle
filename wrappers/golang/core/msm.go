@@ -3,12 +3,12 @@ package core
 import (
 	"fmt"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 type MSMConfig struct {
 	/// Details related to the device such as its id and stream.
-	Ctx cuda_runtime.DeviceContext
+	Ctx cr.DeviceContext
 
 	pointsSize int32
 
@@ -56,7 +56,7 @@ type MSMConfig struct {
 }
 
 func GetDefaultMSMConfig() MSMConfig {
-	ctx, _ := cuda_runtime.GetDefaultDeviceContext()
+	ctx, _ := cr.GetDefaultDeviceContext()
 	return MSMConfig{
 		ctx,   // Ctx
 		0,     // pointsSize

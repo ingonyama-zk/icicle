@@ -6,7 +6,7 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	core "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 	"unsafe"
 )

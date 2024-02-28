@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 type IcicleErrorCode int
@@ -16,13 +16,13 @@ const (
 
 type IcicleError struct {
 	IcicleErrorCode IcicleErrorCode
-	CudaErrorCode   cuda_runtime.CudaError
+	CudaErrorCode   cr.CudaError
 	reason          string
 }
 
-func FromCudaError(error cuda_runtime.CudaError) (err IcicleError) {
+func FromCudaError(error cr.CudaError) (err IcicleError) {
 	switch error {
-	case cuda_runtime.CudaSuccess:
+	case cr.CudaSuccess:
 		err.IcicleErrorCode = IcicleSuccess
 	default:
 		err.IcicleErrorCode = InternalCudaError
@@ -38,6 +38,6 @@ func FromCodeAndReason(code IcicleErrorCode, reason string) IcicleError {
 	return IcicleError{
 		IcicleErrorCode: code,
 		reason:          reason,
-		CudaErrorCode:   cuda_runtime.CudaErrorUnknown,
+		CudaErrorCode:   cr.CudaErrorUnknown,
 	}
 }
