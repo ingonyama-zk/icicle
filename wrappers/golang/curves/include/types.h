@@ -25,6 +25,7 @@ typedef struct g2_affine_t g2_affine_t;
 
 typedef struct MSMConfig MSMConfig;
 typedef struct NTTConfig NTTConfig;
+typedef struct VecOpsConfig VecOpsConfig;
 typedef struct DeviceContext DeviceContext;
 
 typedef cudaError_t cudaError_t;

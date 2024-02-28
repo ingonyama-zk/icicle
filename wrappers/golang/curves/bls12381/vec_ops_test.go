@@ -1,4 +1,4 @@
-package {{.PackageName}}
+package bls12381
 
 import (
 	"testing"

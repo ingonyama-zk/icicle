@@ -1,4 +1,4 @@
-package {{.PackageName}}
+package bn254
 
 import (
 	"testing"
