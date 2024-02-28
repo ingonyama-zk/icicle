@@ -12,171 +12,189 @@ namespace polynomials {
   class GPUPolynomialContext : public IPolynomialContext<C, D, I>
   {
     typedef IPolynomialContext<C, D, I> PolyContext;
+    using typename IPolynomialContext<C, D, I>::State;
+    using IPolynomialContext<C, D, I>::ElementSize;
 
-    // TODO Yuval: add device context to be able to know which device it is and get a corresponding stream
+    // TODO Yuval:
+    // (1) add device context (with stream, gpu id etc.)
+    // (2) use streams and async ops
   public:
-    C* init_from_coefficients(uint32_t nof_coefficients, const C* h_coefficients) override
-    {
-      void* storage = getOrAllocate(nof_coefficients);
-      if (h_coefficients) { cudaMemcpy(storage, h_coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice); }
-      set_state(State::Coefficients);
-      return m_coefficients;
-    }
-
-    I* init_from_rou_evaluations(uint32_t nof_evaluations, const I* h_evaluations) override
-    {
-      void* storage = getOrAllocate(nof_evaluations);
-      if (h_evaluations) { cudaMemcpy(storage, h_evaluations, nof_evaluations * sizeof(I), cudaMemcpyHostToDevice); }
-      set_state(State::EvaluationsOnRou);
-      return m_evaluations;
-    }
-
-    uint32_t size() override { return m_nof_elements; }
-
-    std::pair<C*, uint32_t> get_coefficients(uint32_t nof_coeffs) override
-    {
-      transform_state(State::Coefficients, nof_coeffs);
-      return std::make_pair(m_coefficients, m_nof_elements);
-    }
-    std::pair<I*, uint32_t> get_rou_evaluations(uint32_t nof_evals) override
-    {
-      transform_state(State::EvaluationsOnRou, nof_evals);
-      return std::make_pair(m_evaluations, m_nof_elements);
-    }
-
-    void print(std::ostream& os) override
-    {
-      os << "(id=" << PolyContext::m_id << ")[";
-      if (m_state == State::Coefficients) {
-        for (size_t i = 0; i < m_nof_elements; ++i) {
-          os << m_coefficients[i];
-          if (i < m_nof_elements - 1) { os << ", "; }
-        }
-        os << "] (state=coefficients)" << std::endl;
-      } else if (m_state == State::EvaluationsOnRou) {
-        for (size_t i = 0; i < m_nof_elements; ++i) {
-          os << m_evaluations[i];
-          if (i < m_nof_elements - 1) { os << ", "; }
-        }
-        os << "] (state=rou evaluations)" << std::endl;
-      }
-    }
-
     ~GPUPolynomialContext() { release(); }
 
-  private:
-    enum State { Coefficients, EvaluationsOnRou };
-    void release()
+    static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
+
+    void allocate(uint64_t nof_elements, State init_state) override
+    {
+      release();
+
+      const uint64_t nof_elements_nearset_power_of_two = ceil_to_power_of_two(nof_elements);
+      const uint64_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
+      cudaMalloc(&m_storage, mem_size);
+      cudaMemset(m_storage, 0, mem_size);
+      this->m_nof_elements = nof_elements_nearset_power_of_two;
+      set_state(init_state);
+    }
+
+    void extend_mem_and_pad(uint64_t nof_elements)
+    {
+      const uint64_t nof_elements_nearset_power_of_two = ceil_to_power_of_two(nof_elements);
+      const uint64_t new_mem_size = nof_elements_nearset_power_of_two * ElementSize;
+      const uint64_t old_mem_size = this->m_nof_elements * ElementSize;
+
+      void* new_storage;
+      cudaMalloc(&new_storage, new_mem_size);
+      cudaMemset(new_storage, 0, new_mem_size);
+
+      cudaMemcpy(new_storage, m_storage, old_mem_size, cudaMemcpyDeviceToDevice);
+      this->m_nof_elements = nof_elements_nearset_power_of_two;
+      cudaFree(this->m_storage);
+      this->m_storage = new_storage;
+    }
+
+    void release() override
     {
       if (m_storage != nullptr) { cudaFree(m_storage); }
 
       m_storage = nullptr;
-      m_coefficients = nullptr;
-      m_evaluations = nullptr;
-      m_nof_elements = 0;
+      this->m_nof_elements = 0;
     }
 
-    void* getOrAllocate(uint32_t nof_elements)
-    {
-      const uint32_t nof_elements_nearset_power_of_two = 1 << uint32_t(ceil(log2(nof_elements)));
-      const bool is_already_allocated = nof_elements_nearset_power_of_two <= m_nof_elements;
-      if (is_already_allocated) { return m_storage; }
+    void set_state(State state) override { this->m_state = state; }
 
-      release();
-      const uint32_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
-      cudaMallocManaged(&m_storage, mem_size); // TODO Yuval use streams and async
-      // TODO Yuval: memset zeros?
-      m_nof_elements = nof_elements_nearset_power_of_two;
-      return m_storage;
-    }
-
-    void set_state(State state)
+    C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients) override
     {
-      m_coefficients = nullptr;
-      m_evaluations = nullptr;
-      switch (state) {
-      case State::Coefficients:
-        m_coefficients = reinterpret_cast<C*>(m_storage);
-        break;
-      case State::EvaluationsOnRou:
-        m_evaluations = reinterpret_cast<I*>(m_storage);
-        break;
-      default:
-        throw std::runtime_error("not implemented");
+      allocate(nof_coefficients, State::Coefficients);
+      if (host_coefficients) {
+        cudaMemcpy(m_storage, host_coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice);
       }
-      m_state = state;
+      return static_cast<C*>(m_storage);
     }
 
-    void transform_state(State new_state, uint32_t new_nof_elements = 0)
+    I* init_from_rou_evaluations(uint64_t nof_evalutions, const I* host_evaluations) override
     {
-      // TODO Yuval ceil to power of two
-      uint32_t old_nof_elements = m_nof_elements;
-      new_nof_elements = new_nof_elements == 0 ? old_nof_elements : new_nof_elements;
-      const bool is_mem_alloc_required = new_nof_elements > old_nof_elements;
-
-      const bool is_already_in_state = new_state == m_state;
-      if (is_already_in_state && !is_mem_alloc_required) return;
-
-      void* src_p = m_storage;
-      void* dst_p = m_storage;
-
-      const size_t old_mem_size = old_nof_elements * ElementSize;
-      const size_t new_mem_size = new_nof_elements * ElementSize;
-      std::cout << "is_mem_alloc_required=" << is_mem_alloc_required << std::endl;
-      if (is_mem_alloc_required) {
-        cudaMallocManaged(&m_storage, new_mem_size);
-        dst_p = m_storage;
+      allocate(nof_evalutions, State::EvaluationsOnRou_Natural);
+      if (host_evaluations) {
+        cudaMemcpy(m_storage, host_evaluations, nof_evalutions * sizeof(C), cudaMemcpyHostToDevice);
       }
+      return static_cast<I*>(m_storage);
+    }
 
-      const bool is_coeffs_to_coeffs = m_state == State::Coefficients && new_state == State::Coefficients;
-      const bool is_coeff_to_rou_evaluations = m_state == State::Coefficients && new_state == State::EvaluationsOnRou;
-      const bool is_rou_evals_to_rou_evals = m_state == State::EvaluationsOnRou && new_state == State::EvaluationsOnRou;
-      const bool is_rou_evals_to_coeffs = m_state == State::EvaluationsOnRou && new_state == State::Coefficients;
+    std::pair<C*, uint64_t> get_coefficients() override
+    {
+      transform_to_coefficients();
+      return std::make_pair(static_cast<C*>(m_storage), this->m_nof_elements);
+    }
 
-      // TODO Yuval: can do the NTTs with more efficient ordering and store it
+    std::pair<I*, uint64_t> get_rou_evaluations() override
+    {
+      transform_to_evaluations(0, false);
+      return std::make_pair(static_cast<I*>(m_storage), this->m_nof_elements);
+    }
+
+    void transform_to_coefficients() override
+    {
+      const bool is_already_in_state = this->m_state == State::Coefficients;
+      if (is_already_in_state) { return; }
+
+      // transform from evaluations to coefficients
       auto ntt_config = ntt::DefaultNTTConfig<C>();
-      // TODO Yuval: set device context
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
-      // TODO Yuval: assumed that evals are always R and coeffs N
-      if (is_coeffs_to_coeffs) {
-        // simply copy old coefficients to larger memory
-        cudaMemcpy(dst_p, src_p, old_mem_size, cudaMemcpyDeviceToDevice);
-      } else if (is_coeff_to_rou_evaluations) {
-        std::cout << "coeffs to evaluations!\n";
-        // copy coeffs to new mem and compute NTT inplace with new size
-        if (is_mem_alloc_required) { cudaMemcpy(dst_p, src_p, old_mem_size, cudaMemcpyDeviceToDevice); }
-        ntt_config.ordering = ntt::Ordering::kNR; // TODO Yuval how to choose that?
-        ntt::NTT((C*)dst_p, new_nof_elements, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
-      } else if (is_rou_evals_to_rou_evals) {
-        // NTT to coeffs and a second in-place NTT for compute evals
-        ntt_config.ordering = ntt::Ordering::kRN; // TODO Yuval how to choose that?
-        ntt::NTT((C*)src_p, old_nof_elements, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
-        ntt_config.ordering = ntt::Ordering::kNR; // TODO Yuval how to choose that?
-        ntt::NTT((C*)dst_p, old_nof_elements, ntt::NTTDir::kForward, ntt_config, (C*)dst_p);
-      } else if (is_rou_evals_to_coeffs) {
-        // NTT to new memory. Higher coefficients should be zeros
-        ntt_config.ordering = ntt::Ordering::kRN; // TODO Yuval how to choose that?
-        ntt::NTT((C*)src_p, old_nof_elements, ntt::NTTDir::kInverse, ntt_config, (C*)dst_p); // to coeffs
-      }
 
-      set_state(new_state);
-      m_nof_elements = new_nof_elements;
+      ntt_config.ordering =
+        (this->m_state == State::EvaluationsOnRou_Natural) ? ntt::Ordering::kNN : ntt::Ordering::kRN;
+      C* coeffs = static_cast<C*>(m_storage);
+      I* evals = static_cast<I*>(m_storage);
+      ntt::NTT(evals, this->m_nof_elements, ntt::NTTDir::kInverse, ntt_config, coeffs);
+      set_state(State::Coefficients);
     }
 
-    size_t size() const { return m_nof_elements * ElementSize; }
-    State get_state() const { return m_state; }
+    void transform_to_evaluations(uint64_t nof_evaluations, bool is_reversed) override
+    {
+      // TODO Yuval: can maybe optimize this
+      nof_evaluations = (nof_evaluations == 0) ? this->m_nof_elements : ceil_to_power_of_two(nof_evaluations);
+      const bool is_same_nof_evaluations = nof_evaluations == this->m_nof_elements;
+      const bool is_same_order = is_reversed && this->m_state == State::EvaluationsOnRou_Reversed ||
+                                 (!is_reversed && State::EvaluationsOnRou_Natural);
+      const bool is_already_in_state = is_same_nof_evaluations && is_same_order;
+      if (is_already_in_state) { return; }
 
+      // There are 3 cases:
+      // (1) coefficients to evaluations
+      //    (1a) same size -> NTT (NR or NN)
+      //    (1b) different_size -> alloc new mem, copy coeffs and NTT (NR or NN) inplace
+      // (2) evaluations to evaluations (interpolation)
+      //     alloc memory, INTT to coeffs then NTT back to evals (NR or NN)
+
+      const bool is_allocate_new_mem = nof_evaluations > this->m_nof_elements;
+      // allocate more memory and copy+pad
+      if (is_allocate_new_mem) { extend_mem_and_pad(nof_evaluations); }
+
+      auto ntt_config = ntt::DefaultNTTConfig<C>();
+      ntt_config.are_inputs_on_device = true;
+      ntt_config.are_outputs_on_device = true;
+
+      C* coeffs = static_cast<C*>(m_storage);
+      I* evals = static_cast<I*>(m_storage);
+      const bool is_coeffs_to_evals = this->m_state == State::Coefficients;
+      if (is_coeffs_to_evals) {
+        // already copied the coefficients with padding. Now computing evaluations.
+        ntt_config.ordering = is_reversed ? ntt::Ordering::kNR : ntt::Ordering::kNN;
+        ntt::NTT(coeffs, nof_evaluations, ntt::NTTDir::kForward, ntt_config, evals);
+      } else {
+        // interpolation: transform to coefficients and back
+        transform_to_coefficients();
+        ntt_config.ordering = is_reversed ? ntt::Ordering::kNR : ntt::Ordering::kNN;
+        ntt::NTT(coeffs, nof_evaluations, ntt::NTTDir::kForward, ntt_config, evals);
+      }
+
+      this->m_nof_elements = nof_evaluations;
+      set_state(is_reversed ? State::EvaluationsOnRou_Natural : State::EvaluationsOnRou_Natural);
+    }
+
+    void print(std::ostream& os) override
+    {
+      if (this->get_state() == State::Coefficients) {
+        print_coeffs(os);
+      } else {
+        print_evals(os);
+      }
+    }
+
+    void print_coeffs(std::ostream& os) const
+    {
+      auto host_coeffs = std::make_unique<C[]>(this->m_nof_elements);
+      cudaMemcpy(host_coeffs.get(), m_storage, this->m_nof_elements * sizeof(C), cudaMemcpyDeviceToHost);
+
+      os << "(id=" << PolyContext::m_id << ")[";
+      for (size_t i = 0; i < this->m_nof_elements; ++i) {
+        os << host_coeffs.get()[i];
+        if (i < this->m_nof_elements - 1) { os << ", "; }
+      }
+      os << "] (state=coefficients)" << std::endl;
+    }
+
+    void print_evals(std::ostream& os) const
+    {
+      auto host_evals = std::make_unique<I[]>(this->m_nof_elements);
+      cudaMemcpy(host_evals.get(), m_storage, this->m_nof_elements * sizeof(I), cudaMemcpyDeviceToHost);
+
+      os << "(id=" << PolyContext::m_id << ")[";
+      for (size_t i = 0; i < this->m_nof_elements; ++i) {
+        os << host_evals.get()[i];
+        if (i < this->m_nof_elements - 1) { os << ", "; }
+      }
+
+      if (this->get_state() == State::EvaluationsOnRou_Reversed) {
+        os << "] (state=rou evaluations Reversed)";
+      } else {
+        os << "] (state=rou evaluations )";
+      }
+    }
+
+  private:
     // Members
-    // ElementSize helps allocate single memory for both coefficients and evaluations
-    static constexpr size_t ElementSize = std::max(sizeof(C), sizeof(I));
-
-    uint32_t m_nof_elements;   // #coefficients or #evaluations
-    void* m_storage = nullptr; // actual allocated memory. Coefficients/evaluations point to storage
-    C* m_coefficients = nullptr;
-    I* m_evaluations = nullptr;
-
-    State m_state; // whether data is in coefficients or evaluations form
+    void* m_storage = nullptr;
   };
 
   /*============================== Polynomial GPU-backend ==============================*/
@@ -185,15 +203,18 @@ namespace polynomials {
   class GPUPolynomialBackend : public IPolynomialBackend<C, D, I, ECpoint>
   {
     typedef IPolynomialContext<C, D, I> PolyContext;
+    typedef typename IPolynomialContext<C, D, I>::State State;
 
   public:
     void add_sub(PolyContext& res, PolyContext& a, PolyContext& b, bool add1_sub0)
     {
+      // TODO Yuval: can do it evaluations too but need to make sure same #evaluations (on ROU)
       auto [a_coeff_p, a_nof_coeff] = a.get_coefficients();
       auto [b_coeff_p, b_nof_coeff] = b.get_coefficients();
 
       const auto res_nof_coeff = max(a_nof_coeff, b_nof_coeff);
-      auto* res_coeff_p = res.init_from_coefficients(res_nof_coeff);
+      res.allocate(res_nof_coeff, State::Coefficients);
+      auto [res_coeff_p, _] = res.get_coefficients();
 
       const int NOF_THREADS = 32;
       const int NOF_BLOCKS = (res_nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
@@ -205,55 +226,57 @@ namespace polynomials {
 
     void multiply(PolyContext& c, PolyContext& a, PolyContext& b) override
     {
-      const uint32_t a_N = a.size();
-      const uint32_t b_N = b.size();
-      const uint32_t N = max(a_N, b_N);
+      const uint64_t nof_
 
-      // (1) transform a,b to coefficients such that both have N coefficients
-      auto [a_coeff_p, a_nof_coeff] = a.get_coefficients(N);
-      auto [b_coeff_p, b_nof_coeff] = b.get_coefficients(N);
+      // const uint32_t a_N = a.get_nof_elements();
+      // const uint32_t b_N = b.get_nof_elements();
+      // const uint32_t N = max(a_N, b_N);
 
-      // (2) allocate c (c=a*b)
-      const auto c_N = 2 * N;
-      I* c_evals_low_p = c.init_from_rou_evaluations(c_N);
-      I* c_evals_high_p = c_evals_low_p + N;
+      // // (1) transform a,b to coefficients such that both have N coefficients
+      // auto [a_coeff_p, a_nof_coeff] = a.get_coefficients(N);
+      // auto [b_coeff_p, b_nof_coeff] = b.get_coefficients(N);
 
-      std::cout << "a_N=" << a_N << ", b_N=" << b_N << ", c_N=" << c_N << "\n";
+      // // (2) allocate c (c=a*b)
+      // const auto c_N = 2 * N;
+      // I* c_evals_low_p = c.init_from_rou_evaluations(c_N);
+      // I* c_evals_high_p = c_evals_low_p + N;
 
-      // (3) compute NTT of a,b on coset and write to c
-      auto ntt_config = ntt::DefaultNTTConfig<C>();
-      ntt_config.are_inputs_on_device = true;
-      ntt_config.are_outputs_on_device = true;
-      ntt_config.ordering = ntt::Ordering::kNR;
-      // ntt_config.coset_gen =
-      // test_type::omega(c_N); // TODO Yuval: MUST USE THE ROOT CORRESPONDING TO THE ONE IN INIT DOMAIN!!!
+      // std::cout << "a_N=" << a_N << ", b_N=" << b_N << ", c_N=" << c_N << "\n";
 
-      c.print(std::cout);
-      ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_low_p);  // a_H1
-      ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p); // b_H1
+      // // (3) compute NTT of a,b on coset and write to c
+      // auto ntt_config = ntt::DefaultNTTConfig<C>();
+      // ntt_config.are_inputs_on_device = true;
+      // ntt_config.are_outputs_on_device = true;
+      // ntt_config.ordering = ntt::Ordering::kNR;
+      // // ntt_config.coset_gen =
+      // // test_type::omega(c_N); // TODO Yuval: MUST USE THE ROOT CORRESPONDING TO THE ONE IN INIT DOMAIN!!!
 
-      a.print(std::cout);
-      b.print(std::cout);
-      c.print(std::cout);
+      // c.print(std::cout);
+      // ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_low_p);  // a_H1
+      // ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p); // b_H1
 
-      // (4) compute a_H1 * b_H1 inplace
-      const int NOF_THREADS = 32;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      Mul<<<NOF_BLOCKS, NOF_THREADS>>>(c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
+      // a.print(std::cout);
+      // b.print(std::cout);
+      // c.print(std::cout);
 
-      // (5) transform a,b to evaluations
-      auto [a_evals_p, a_nof_evals] = a.get_rou_evaluations(N);
-      auto [b_evals_p, b_nof_evals] = b.get_rou_evaluations(N);
-      a.print(std::cout);
-      b.print(std::cout);
-      c.print(std::cout);
+      // // (4) compute a_H1 * b_H1 inplace
+      // const int NOF_THREADS = 32;
+      // const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
+      // Mul<<<NOF_BLOCKS, NOF_THREADS>>>(c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
 
-      // (6) compute a_H0 * b_H0
-      Mul<<<NOF_BLOCKS, NOF_THREADS>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
-      std::cout << "finally\n";
-      c.print(std::cout);
-      std::cout << "MUL DONE\n";
-      c.print(std::cout);
+      // // (5) transform a,b to evaluations
+      // auto [a_evals_p, a_nof_evals] = a.get_rou_evaluations(N);
+      // auto [b_evals_p, b_nof_evals] = b.get_rou_evaluations(N);
+      // a.print(std::cout);
+      // b.print(std::cout);
+      // c.print(std::cout);
+
+      // // (6) compute a_H0 * b_H0
+      // Mul<<<NOF_BLOCKS, NOF_THREADS>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
+      // std::cout << "finally\n";
+      // c.print(std::cout);
+      // std::cout << "MUL DONE\n";
+      // c.print(std::cout);
     }
     void divide(PolyContext& Quotient_out, PolyContext& Remainder_out, PolyContext& op_a, PolyContext& op_b) override
     {
@@ -292,11 +315,10 @@ namespace polynomials {
     {
       auto [coeff, nof_coeff] = p.get_coefficients();
 
-      // TODO Yuval use streams and async
       int32_t* d_degree;
       int32_t h_degree;
       cudaMalloc(&d_degree, sizeof(int32_t));
-      // TODO parallelize kernel
+      // TODO Yuval parallelize kernel
       HighestNonZeroIdx<<<1, 1>>>(coeff, nof_coeff, d_degree);
       cudaMemcpy(&h_degree, d_degree, sizeof(int32_t), cudaMemcpyDeviceToHost);
       cudaFree(d_degree);
@@ -315,7 +337,7 @@ namespace polynomials {
       cudaMalloc(&d_tmp, sizeof(I) * nof_coeff);
       const int NOF_THREADS = 32;
       const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
-      // TODO Yuval: reduce better
+      // TODO Yuval: parallelize kernel
       evalutePolynomialWithoutReduction<<<NOF_BLOCKS, NOF_THREADS>>>(domain_x, coeff, nof_coeff, d_tmp);
       dummyReduce<<<1, 1>>>(d_tmp, nof_coeff, d_evaluation);
 
@@ -334,14 +356,13 @@ namespace polynomials {
 
     C get_coefficient(PolyContext& op, uint32_t coeff_idx) override
     {
-      // TODO Yuval: implement by copying to hostreturn
       throw std::runtime_error("not implemented yet");
       return C::zero();
     }
     uint32_t get_coefficients(PolyContext& op, C* coefficients) override
     {
       throw std::runtime_error("not implemented yet");
-      return 0; // TODO Yuval: implement by copying to hostreturn }
+      return 0;
     }
   };
 } // namespace polynomials
