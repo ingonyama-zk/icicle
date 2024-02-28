@@ -87,7 +87,7 @@ namespace polynomials {
     IPolynomialContext() : m_id{s_id++}, m_nof_elements{0} {}
     virtual ~IPolynomialContext() = default;
 
-    virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients) = 0;
+    virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients, bool memset_zeros = true) = 0;
     virtual void release() = 0;
     virtual void set_state(State state) = 0;
 
@@ -97,7 +97,7 @@ namespace polynomials {
     virtual std::pair<C*, uint64_t> get_coefficients() = 0;
     virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
 
-    virtual void transform_to_coefficients() = 0;
+    virtual void transform_to_coefficients(uint64_t nof_coefficients = 0) = 0;
     virtual void transform_to_evaluations(uint64_t nof_evalutions = 0, bool is_reversed = 0) = 0;
 
     State get_state() const { return m_state; }
