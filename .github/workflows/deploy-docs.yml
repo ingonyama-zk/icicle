@@ -6,8 +6,6 @@ on:
       - main
     paths:
       - 'docs/*'
-  pull_request:
-    branches: [ "main" ]
 
 permissions:
   contents: write
@@ -37,9 +35,6 @@ jobs:
       - name: Copy CNAME to build directory
         run: echo "dev.ingonyama.com" > ./build/CNAME
         working-directory: ./repo/docs
-
-      - name: List output files
-        run: ls -l ./repo/docs/build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
