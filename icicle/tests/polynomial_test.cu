@@ -10,6 +10,12 @@ typedef curve_config::scalar_t test_type;
 #include "polynomials/polynomials.h"
 #include "appUtils/ntt/ntt.cuh"
 
+using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
+#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
+#define END_TIMER(timer, msg, enable)                                                                                  \
+  if (enable)                                                                                                          \
+    printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+
 using namespace polynomials;
 
 typedef Polynomial<test_type> Polynomial_t;
@@ -17,8 +23,9 @@ typedef Polynomial<test_type> Polynomial_t;
 class PolynomialTest : public ::testing::Test
 {
 public:
-  static inline const int MAX_NTT_LOG_SIZE = 20;
-  static inline const bool DEBUG = true; // set true for debug prints
+  static inline const int MAX_NTT_LOG_SIZE = 24;
+  static inline const bool DEBUG = false; // set true for debug prints
+  static inline const bool MEASURE = true;
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
@@ -132,28 +139,22 @@ TEST_F(PolynomialTest, cAPI)
 
 TEST_F(PolynomialTest, multiplication)
 {
-  const int size_0 = 2, size_1 = 2;
-  auto f = randomize_polynomial(size_0, false);
-  auto g = randomize_polynomial(size_1, false);
+  const int size_0 = 1 << 12, size_1 = 1 << 10;
+  auto f = randomize_polynomial(size_0);
+  auto g = randomize_polynomial(size_1);
 
   test_type x = test_type::rand_host();
   auto f_x = f(x);
   auto g_x = g(x);
   auto fx_mul_gx = f_x * g_x;
 
+  START_TIMER(poly_mult_start);
   auto m = f * g;
+  END_TIMER(poly_mult_start, "Polynomial multiplication took", MEASURE);
+
   auto m_x = m(x);
 
   EXPECT_EQ(fx_mul_gx, m_x);
-  if (DEBUG) {
-    std::cout << "x=" << x << "\n";
-    std::cout << "f_x=" << f_x << "\n";
-    std::cout << "g_x=" << g_x << "\n";
-    std::cout << "m_x=" << m_x << "\n";
-    std::cout << "f=(deg=" << f.degree() << ")" << f;
-    std::cout << "g=(deg=" << g.degree() << ")" << g;
-    std::cout << "m=(deg=" << m.degree() << ")" << m;
-  }
 }
 
 int main(int argc, char** argv)

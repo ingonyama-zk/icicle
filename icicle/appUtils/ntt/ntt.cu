@@ -388,8 +388,10 @@ namespace ntt {
   public:
     template <typename U>
     friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
-
     cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
+
+    template <typename U>
+    friend U GetRootOfUnity<U>(uint64_t logn, device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
     friend cudaError_t NTT<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
@@ -481,6 +483,22 @@ namespace ntt {
 
     return CHK_LAST();
   }
+
+  template <typename S>
+  S GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx)
+  {
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+    if (logn > domain.max_log_size) {
+      std::ostringstream oss;
+      oss << "NTT log_size=" << logn
+          << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
+    }
+    const size_t twiddles_idx = (size_t)pow(2, domain.max_log_size - logn);
+    return domain.twiddles[twiddles_idx];
+  }
+  // explicit instantiation to avoid having to include this file
+  template curve_config::scalar_t GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx);
 
   template <typename S>
   cudaError_t Domain<S>::ReleaseDomain(device_context::DeviceContext& ctx)

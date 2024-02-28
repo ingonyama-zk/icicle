@@ -58,12 +58,12 @@ namespace polynomials {
   __global__ void evalutePolynomialWithoutReduction(T x, T* coeffs, int num_coeffs, T* tmp)
   {
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid <= num_coeffs) { tmp[tid] = coeffs[tid] * pow(x, tid); }
+    if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * pow(x, tid); }
   }
 
   /*============================== multiply ==============================*/
-  template <typename E>
-  __global__ void Mul(E* element_vec1, E* element_vec2, int n, E* result)
+  template <typename T>
+  __global__ void Mul(T* element_vec1, T* element_vec2, int n, T* result)
   {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < n) { result[tid] = element_vec1[tid] * element_vec2[tid]; }
