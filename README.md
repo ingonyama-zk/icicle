@@ -48,7 +48,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP.
 
 ### Accessing Hardware
 
-If you don't have access to a Nvidia GPU we have some options for you. 
+If you don't have access to an Nvidia GPU we have some options for you. 
 
 Checkout [Google Colab](https://colab.google/). Google Colab offers a free [T4 GPU](https://www.nvidia.com/en-us/data-center/tesla-t4/) instance and ICICLE can be used with it, reference this guide for setting up your [Google Colab workplace][GOOGLE-COLAB-ICICLE].
 
@@ -71,7 +71,7 @@ Running ICICLE via Rust bindings is highly recommended and simple:
 - Clone this repo
   - go to our [Rust bindings][ICICLE-RUST]
   - Enter a [curve](./wrappers/rust/icicle-curves) implementation
-  - run `cargo build --release` to build or `cargo test -- --test-threads=1` to build and execute tests
+  - run `cargo build --release` to build or `cargo test` to build and execute tests
 
 In any case you would want to compile and run core icicle c++ tests, just follow these setps:
 - Clone this repo
