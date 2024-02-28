@@ -74,30 +74,30 @@ jobs:
         go test --tags=g2 ./... -count=1 -failfast -p 2 -timeout 60m
   
   # TODO: bw6 on windows requires more memory than the standard runner has
-  # Add a large runner and then enable this job
-  # build-windows:
-  #   name: Build on Windows
-  #   runs-on: windows-2022
-  #   needs: [check-changed-files, check-format]
-  #   strategy:
-  #     matrix:
-  #       curve: [bn254, bls12_381, bls12_377, bw6_761]
-  #   steps:     
-  #   - name: Checkout Repo
-  #     uses: actions/checkout@v4
-  #   - name: Download and Install Cuda
-  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-  #     id: cuda-toolkit
-  #     uses: Jimver/cuda-toolkit@v0.2.11
-  #     with:
-  #       cuda: '12.0.0'
-  #       method: 'network'
-  #       # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
-  #       sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
-  #   - name: Build libs
-  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-  #     working-directory: ./wrappers/golang
-  #     env:
-  #       CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
-  #     shell: pwsh
-  #     run: ./build.ps1 ${{ matrix.curve }} ON # builds a single curve with G2 enabled
+  # Add a large runner and then enable bw6_761
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-2022
+    needs: [check-changed-files, check-format]
+    strategy:
+      matrix:
+        curve: [bn254, bls12_381, bls12_377]
+    steps:     
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Download and Install Cuda
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      id: cuda-toolkit
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: '12.0.0'
+        method: 'network'
+        # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
+        sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
+    - name: Build libs
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      working-directory: ./wrappers/golang
+      env:
+        CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+      shell: pwsh
+      run: ./build.ps1 ${{ matrix.curve }} ON # builds a single curve with G2 enabled
