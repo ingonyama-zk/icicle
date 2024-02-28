@@ -104,7 +104,8 @@ func generateFiles() {
 		"ntt_test.go.tmpl",
 		"curve_test.go.tmpl",
 		"curve.go.tmpl",
-		/* "vec_ops.h.tmpl,"*/
+		"vec_ops_test.go.tmpl",
+		"vec_ops.go.tmpl",
 		"helpers_test.go.tmpl",
 	}
 
@@ -171,7 +172,7 @@ func generateFiles() {
 		"msm.h.tmpl",
 		"g2_msm.h.tmpl",
 		"ntt.h.tmpl",
-		/*"vec_ops.h.tmpl",*/
+		"vec_ops.h.tmpl",
 	}
 
 	for _, includeFile := range templateIncludeFiles {
