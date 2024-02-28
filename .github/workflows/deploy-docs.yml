@@ -7,10 +7,7 @@ on:
     paths:
       - 'docs/*'
   pull_request:
-    branches:
-      - main
-    paths:
-      - 'docs/*'
+    branches: [ "main" ]
 
 permissions:
   contents: write
