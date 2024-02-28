@@ -66,15 +66,15 @@ func TestNTTCheckDeviceScalars(t *testing.T) {
 	for i := range rawInput {
 		var emptyField internal.MockField
 		emptyField.One()
-		
+
 		rawInput[i] = emptyField
 	}
-	
+
 	hostElements := HostSliceFromElements[internal.MockField](rawInput)
-	
+
 	var input DeviceSlice
 	hostElements.CopyToDevice(&input, true)
-	
+
 	fieldBytesSize := hostElements.SizeOfElement()
 	var output DeviceSlice
 	output.Malloc(numFields*fieldBytesSize, fieldBytesSize)
