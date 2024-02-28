@@ -34,7 +34,6 @@ func (p *Projective) Zero() Projective {
 func (p *Projective) FromLimbs(x, y, z []uint32) Projective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
-	p.Z.Zero()
 	p.Z.FromLimbs(z)
 
 	return *p
