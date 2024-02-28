@@ -107,7 +107,7 @@ pub trait VecOps<F> {
 
 ### Argument Validation
 
-Before invoking any of the above vector operations, we always call `check_vec_ops_args`, to make sure that inputs `a` and `b` can be operated on with and that hte results pointer can contain the result:
+Before invoking any of the above vector operations, we always call `check_vec_ops_args`, to make sure that inputs `a` and `b` can be operated on with and that the results pointer can contain the result:
 
 ```rust
 fn check_vec_ops_args<F>(a: &HostOrDeviceSlice<F>, b: &HostOrDeviceSlice<F>, result: &mut HostOrDeviceSlice<F>) {
