@@ -244,7 +244,7 @@ public:
   }
 
   template <bool SUBTRACT, bool CARRY_OUT>
-  static constexpr __device__ __forceinline__ uint32_t
+  static constexpr DEVICE_INLINE uint32_t
   add_sub_u32_device(const uint32_t* x, const uint32_t* y, uint32_t* r, size_t n = (TLC >> 1))
   {
     r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
@@ -344,7 +344,7 @@ public:
   }
 
   template <bool CARRY_IN = false>
-  static __device__ __forceinline__ void
+  static DEVICE_INLINE void
   cmad_n(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC, uint32_t optional_carry = 0)
   {
     if (CARRY_IN) ptx::add_cc(UINT32_MAX, optional_carry);
@@ -359,7 +359,7 @@ public:
   }
 
   template <bool EVEN_PHASE>
-  static __device__ __forceinline__ void cmad_n_msb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
+  static DEVICE_INLINE void cmad_n_msb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
     if (EVEN_PHASE) {
       acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
@@ -375,7 +375,7 @@ public:
     }
   }
 
-  static __device__ __forceinline__ void cmad_n_lsb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
+  static DEVICE_INLINE void cmad_n_lsb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
     if (n > 1)
       acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
@@ -395,7 +395,7 @@ public:
   }
 
   template <bool CARRY_OUT = false, bool CARRY_IN = false>
-  static __device__ __forceinline__ uint32_t mad_row(
+  static DEVICE_INLINE uint32_t mad_row(
     uint32_t* odd,
     uint32_t* even,
     const uint32_t* a,
@@ -420,7 +420,7 @@ public:
   }
 
   template <bool EVEN_PHASE>
-  static __device__ __forceinline__ void
+  static DEVICE_INLINE void
   mad_row_msb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
     cmad_n_msb<!EVEN_PHASE>(odd, EVEN_PHASE ? a : (a + 1), bi, n - 2);
@@ -430,7 +430,7 @@ public:
     odd[EVEN_PHASE ? n : (n - 1)] = ptx::addc(odd[EVEN_PHASE ? n : (n - 1)], 0);
   }
 
-  static __device__ __forceinline__ void
+  static DEVICE_INLINE void
   mad_row_lsb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
     // bi here is constant so we can do a compile-time check for zero (which does happen once for bls12-381 scalar field
@@ -442,7 +442,7 @@ public:
     return;
   }
 
-  static __device__ __forceinline__ uint32_t
+  static DEVICE_INLINE uint32_t
   mul_n_and_add(uint32_t* acc, const uint32_t* a, uint32_t bi, uint32_t* extra, size_t n = (TLC >> 1))
   {
     acc[0] = ptx::mad_lo_cc(a[0], bi, extra[0]);
@@ -470,7 +470,7 @@ public:
    * \cdot b_0}{2^{32}}} + \dots + \floor{\frac{a_0 \cdot b_{TLC - 2}}{2^{32}}}) \leq 2^{64} + 2\cdot 2^{96} + \dots +
    * (TLC - 2) \cdot 2^{32(TLC - 1)} + (TLC - 1) \cdot 2^{32(TLC - 1)} \leq 2(TLC - 1) \cdot 2^{32(TLC - 1)}\f$.
    */
-  static __device__ __forceinline__ void
+  static DEVICE_INLINE void
   multiply_msb_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
     const uint32_t* a = as.limbs;
@@ -503,7 +503,7 @@ public:
    * is excluded if \f$ i + j > TLC - 1 \f$ and only the lower half is included if \f$ i + j = TLC - 1 \f$. All other
    * limb products are included.
    */
-  static __device__ __forceinline__ void
+  static DEVICE_INLINE void
   multiply_and_add_lsb_raw_device(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
   {
     const uint32_t* a = as.limbs;
@@ -545,7 +545,7 @@ public:
    * that the top bit of \f$ a_{hi} \f$ and \f$ b_{hi} \f$ are unset. This ensures correctness by allowing to keep the
    * result inside TLC limbs and ignore the carries from the highest limb.
    */
-  static __device__ __forceinline__ void
+  static DEVICE_INLINE void
   multiply_and_add_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even, uint32_t* in1, uint32_t* in2)
   {
     __align__(16) uint32_t odd[TLC - 2];
@@ -574,7 +574,7 @@ public:
    * This method multiplies `a` and `b` and writes the result into `even`. It assumes that `a` and `b` are TLC/2 limbs
    * long. The usual schoolbook algorithm is used.
    */
-  static __device__ __forceinline__ void multiply_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even)
+  static DEVICE_INLINE void multiply_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even)
   {
     __align__(16) uint32_t odd[TLC - 2];
     mul_n(even, a, b[0], TLC >> 1);

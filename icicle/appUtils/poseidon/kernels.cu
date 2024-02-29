@@ -31,7 +31,7 @@ namespace poseidon {
   }
 
   template <typename S>
-  __device__ __forceinline__ S sbox_alpha_five(S element)
+  DEVICE_INLINE S sbox_alpha_five(S element)
   {
     S result = S::sqr(element);
     result = S::sqr(result);
