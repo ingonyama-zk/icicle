@@ -28,10 +28,6 @@
 #include <sstream>
 #include <string>
 
-#define HOST_INLINE        __host__
-#define DEVICE_INLINE      __device__
-#define HOST_DEVICE_INLINE __host__ __device__
-
 template <class CONFIG>
 class Field
 {
@@ -130,7 +126,7 @@ public:
     {
       Field out{};
 #ifdef __CUDA_ARCH__
-//#pragma unroll
+UNROLL
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
@@ -141,7 +137,7 @@ public:
     {
       Field out{};
 #ifdef __CUDA_ARCH__
-//#pragma unroll
+UNROLL
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i + TLC];
@@ -152,7 +148,7 @@ public:
     {
       Field out{};
 #ifdef __CUDA_ARCH__
-//#pragma unroll
+UNROLL
 #endif
       for (unsigned i = 0; i < TLC; i++) {
 #ifdef __CUDA_ARCH__
@@ -327,7 +323,7 @@ public:
 
   static DEVICE_INLINE void mul_n(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
   {
-//#pragma unroll
+UNROLL
     for (size_t i = 0; i < n; i += 2) {
       acc[i] = ptx::mul_lo(a[i], bi);
       acc[i + 1] = ptx::mul_hi(a[i], bi);
@@ -336,7 +332,7 @@ public:
 
   static DEVICE_INLINE void mul_n_msb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC, size_t start_i = 0)
   {
-//#pragma unroll
+UNROLL
     for (size_t i = start_i; i < n; i += 2) {
       acc[i] = ptx::mul_lo(a[i], bi);
       acc[i + 1] = ptx::mul_hi(a[i], bi);
@@ -351,7 +347,7 @@ public:
     acc[0] = CARRY_IN ? ptx::madc_lo_cc(a[0], bi, acc[0]) : ptx::mad_lo_cc(a[0], bi, acc[0]);
     acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
 
-//#pragma unroll
+UNROLL
     for (size_t i = 2; i < n; i += 2) {
       acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
       acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
@@ -368,7 +364,7 @@ public:
       acc[1] = ptx::mad_hi_cc(a[0], bi, acc[1]);
     }
 
-//#pragma unroll
+UNROLL
     for (size_t i = 2; i < n; i += 2) {
       acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
       acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
@@ -383,7 +379,7 @@ public:
       acc[0] = ptx::mad_lo(a[0], bi, acc[0]);
 
     size_t i;
-//#pragma unroll
+UNROLL
     for (i = 1; i < n - 1; i += 2) {
       acc[i] = ptx::madc_hi_cc(a[i - 1], bi, acc[i]);
       if (i == n - 2)
@@ -447,7 +443,7 @@ public:
   {
     acc[0] = ptx::mad_lo_cc(a[0], bi, extra[0]);
 
-//#pragma unroll
+UNROLL
     for (size_t i = 1; i < n - 1; i += 2) {
       acc[i] = ptx::madc_hi_cc(a[i - 1], bi, extra[i]);
       acc[i + 1] = ptx::madc_lo_cc(a[i + 1], bi, extra[i + 1]);
@@ -482,7 +478,7 @@ public:
     odd[TLC - 2] = ptx::mul_lo(a[TLC - 1], b[0]);
     odd[TLC - 1] = ptx::mul_hi(a[TLC - 1], b[0]);
     size_t i;
-//#pragma unroll
+UNROLL
     for (i = 2; i < TLC - 1; i += 2) {
       mad_row_msb<true>(&even[TLC - 2], &odd[TLC - 2], &a[TLC - i - 1], b[i - 1], i + 1);
       mad_row_msb<false>(&odd[TLC - 2], &even[TLC - 2], &a[TLC - i - 2], b[i], i + 2);
@@ -523,7 +519,7 @@ public:
       mul_n(odd, a + 1, b[0], TLC - 1);
     }
     mad_row_lsb(&even[2], &odd[0], a, b[1], TLC - 1);
-//#pragma unroll
+UNROLL
     for (i = 2; i < TLC - 1; i += 2) {
       mad_row_lsb(&odd[i], &even[i], a, b[i], TLC - i);
       mad_row_lsb(&even[i + 2], &odd[i], a, b[i + 1], TLC - i - 1);
@@ -553,7 +549,7 @@ public:
     uint32_t carry = mul_n_and_add(odd, a + 1, b[0], &in2[1]);
 
     size_t i;
-//#pragma unroll
+UNROLL
     for (i = 2; i < ((TLC >> 1) - 1); i += 2) {
       carry = mad_row<true, false>(
         &even[i], &odd[i - 2], a, b[i - 1], TLC >> 1, in1[(TLC >> 1) + i - 2], in1[(TLC >> 1) + i - 1], carry);
@@ -582,7 +578,7 @@ public:
     mad_row(&even[2], &odd[0], a, b[1], TLC >> 1);
 
     size_t i;
-//#pragma unroll
+UNROLL
     for (i = 2; i < ((TLC >> 1) - 1); i += 2) {
       mad_row(&odd[i], &even[i], a, b[i], TLC >> 1);
       mad_row(&even[i + 2], &odd[i], a, b[i + 1], TLC >> 1);
@@ -817,7 +813,7 @@ public:
     const uint32_t* x = xs.limbs_storage.limbs;
     const uint32_t* y = ys.limbs_storage.limbs;
     uint32_t limbs_or = x[0] ^ y[0];
-//#pragma unroll
+UNROLL
     for (unsigned i = 1; i < TLC; i++)
       limbs_or |= x[i] ^ y[i];
     return limbs_or == 0;
@@ -836,7 +832,7 @@ public:
     Field mul = multiplier;
     static bool is_u32 = true;
 #ifdef __CUDA_ARCH__
-//#pragma unroll
+UNROLL
 #endif
     for (unsigned i = 1; i < TLC; i++)
       is_u32 &= (mul.limbs_storage.limbs[i] == 0);
@@ -852,7 +848,7 @@ public:
     T temp = xs;
     bool is_zero = true;
 #ifdef __CUDA_ARCH__
-//#pragma unroll
+UNROLL
 #endif
     for (unsigned i = 0; i < 32; i++) {
       if (multiplier & (1 << i)) {
@@ -902,7 +898,7 @@ public:
     Field rs = {};
     uint32_t* r = rs.limbs_storage.limbs;
 #ifdef __CUDA_ARCH__
-//#pragma unroll
+UNROLL
 #endif
     for (unsigned i = 0; i < TLC - 1; i++) {
 #ifdef __CUDA_ARCH__

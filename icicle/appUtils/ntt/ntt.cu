@@ -102,7 +102,7 @@ namespace ntt {
         uint32_t l = threadIdx.x;
 
         if (l < loop_limit) {
-//#pragma unroll
+UNROLL
           for (; ss < logn; ss++) {
             int s = logn - ss - 1;
             bool is_beginning = ss == 0;
@@ -174,7 +174,7 @@ namespace ntt {
         uint32_t l = threadIdx.x;
 
         if (l < loop_limit) {
-//#pragma unroll
+UNROLL
           for (; s < logn; s++) // TODO: this loop also can be unrolled
           {
             uint32_t ntw_i = task % chunks;
