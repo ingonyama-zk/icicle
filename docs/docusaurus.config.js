@@ -29,13 +29,13 @@ const config = {
           remarkPlugins: [math, require('mdx-mermaid')],
           rehypePlugins: [katex],
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/ingonyama-zk/developer-docs/tree/main',
+          editUrl: 'https://github.com/ingonyama-zk/icicle/tree/main',
         },
         blog: {
           remarkPlugins: [math, require('mdx-mermaid')],
           rehypePlugins: [katex],
           showReadingTime: true,
-          editUrl: 'https://github.com/ingonyama-zk/developer-docs/tree/main',
+          editUrl: 'https://github.com/ingonyama-zk/icicle/tree/main',
         },
         pages: {},
         theme: {
