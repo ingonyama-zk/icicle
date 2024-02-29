@@ -250,7 +250,7 @@ namespace polynomials {
   public:
     void add_sub(PolyContext& res, PolyContext& a, PolyContext& b, bool add1_sub0)
     {
-      // TODO Yuval: can do it evaluations too but need to make sure same #evaluations (on ROU)
+      // TODO Yuval: can do it evaluations too if same #evaluations (on ROU)
       auto [a_coeff_p, a_nof_coeff] = a.get_coefficients();
       auto [b_coeff_p, b_nof_coeff] = b.get_coefficients();
 
@@ -336,22 +336,58 @@ namespace polynomials {
       Mul<<<NOF_BLOCKS, NOF_THREADS>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
     }
 
-    void divide(PolyContext& Quotient_out, PolyContext& Remainder_out, PolyContext& op_a, PolyContext& op_b) override
+    void divide(PolyContext& Q /*OUT*/, PolyContext& R /*OUT*/, PolyContext& a, PolyContext& b) override
     {
-      throw std::runtime_error("not implemented yet");
+      auto [a_coeffs, a_N] = a.get_coefficients();
+      auto [b_coeffs, b_N] = b.get_coefficients();
+
+      // TODO Yuval: assert deg(b)<=deg(a) and that b!=0
+      const uint64_t deg_a = degree(a);
+      const uint64_t deg_b = degree(b);
+      const uint64_t Q_N = deg_a - deg_b + 1;
+
+      Q.allocate(Q_N, State::Coefficients);
+      // TODO Yuval: Can do better in terms of memory allocation? deg(R) <= deg(b) by definition but it starts as a.
+      R.allocate(a_N, State::Coefficients, false /*= memset_zeros*/);
+
+      auto [R_coeffs, __] = R.get_coefficients();
+      // init: Q=0, R=a
+      cudaMemcpy(R_coeffs, a_coeffs, a_N * sizeof(C), cudaMemcpyDeviceToDevice);
+
+      // TODO Yuval: divide on GPU! no need to copy to host and divide there
+      const C lc_b = get_coefficient_on_host(b, deg_b - 1); // largest coeff of b
+
+      // divide and subtract until degree of r is smaller than degree of b
+      uint64_t deg_r = degree(R);
+      while (deg_r >= deg_b) {
+        C lc_r = get_coefficient_on_host(R, deg_r - 1);
+        C s_coeff = lc_r * C::inverse(lc_b); // lc_r / lc_b
+        uint64_t s_monomial =
+          deg_r - deg_b; // divide largest coeff. This is the coeff of 'deg_r-deg_b'. s_monomial=1 is 'x', 2 is x^2 etc.
+        add_monomial_inplace(Q, s_coeff, s_monomial); // q = q+x^(degr-degb)
+        // TODO Yuval: revisit (#blocks, #threads)
+        const int NOF_THREADS = 32;
+        const int NOF_BLOCKS = (deg_r + NOF_THREADS - 1) / NOF_THREADS;
+        SchoolBookDivisionStepOnR<<<NOF_BLOCKS, NOF_THREADS>>>(
+          R_coeffs, b_coeffs, deg_r, deg_b, s_monomial, s_coeff); // r=r-sb
+        deg_r = degree(R);
+      }
     }
+
     void quotient(PolyContext& Q, PolyContext& op_a, PolyContext& op_b) override
     {
       // TODO Yuval: implement more efficiently
       GPUPolynomialContext<C, D, I> R = {};
       divide(Q, R, op_a, op_b);
     }
+
     void remainder(PolyContext& R, PolyContext& op_a, PolyContext& op_b) override
     {
       // TODO Yuval: implement more efficiently
       GPUPolynomialContext<C, D, I> Q = {};
       divide(Q, R, op_a, op_b);
     }
+
     void divide_by_vanishing_polynomial(PolyContext& out, PolyContext& op_a, uint64_t vanishing_poly_degree) override
     {
       throw std::runtime_error("not implemented yet");
@@ -360,7 +396,7 @@ namespace polynomials {
     // arithmetic with monomials
     void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) override
     {
-      const uint64_t new_nof_elements = max(poly.get_nof_elements(), monomial);
+      const uint64_t new_nof_elements = max(poly.get_nof_elements(), monomial + 1);
       poly.transform_to_coefficients(new_nof_elements);
       auto [coeffs, _] = poly.get_coefficients();
       AddSingleElementInplace<<<1, 1>>>(coeffs + monomial, monomial_coeff);
@@ -384,6 +420,7 @@ namespace polynomials {
       int32_t* d_degree;
       int32_t h_degree;
       cudaMalloc(&d_degree, sizeof(int32_t));
+      cudaMemset(d_degree, -1, sizeof(int32_t));
       // TODO Yuval parallelize kernel
       HighestNonZeroIdx<<<1, 1>>>(coeff, nof_coeff, d_degree);
       cudaMemcpy(&h_degree, d_degree, sizeof(int32_t), cudaMemcpyDeviceToHost);

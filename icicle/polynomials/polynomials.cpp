@@ -58,7 +58,7 @@ namespace polynomials {
   {
     Polynomial<C, D, I, EC> Q = {}, R = {};
     m_backend->divide(*Q.m_context.get(), *R.m_context.get(), *m_context.get(), *rhs.m_context.get());
-    return std::make_pair(Q, R);
+    return std::make_pair(std::move(Q), std::move(R));
   }
 
   template <typename C, typename D, typename I, typename EC>
