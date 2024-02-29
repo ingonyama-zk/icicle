@@ -157,6 +157,66 @@ TEST_F(PolynomialTest, multiplication)
   EXPECT_EQ(fx_mul_gx, m_x);
 }
 
+TEST_F(PolynomialTest, monomials)
+{
+  const auto zero = test_type::zero();
+  const auto one = test_type::one();
+  const auto two = one + one;
+  const auto three = two + one;
+
+  const test_type coeffs[3] = {one, zero, two}; // 1+2x^2
+  auto f = Polynomial_t::from_coefficients(coeffs, 3);
+  const auto x = three;
+  const auto expected_f_x = one + two * x * x;
+  auto f_x = f(x);
+
+  EXPECT_EQ(f_x, expected_f_x);
+
+  f.add_monomial_inplace(three, 1); // add 3x
+  const auto expected_addmonmon_f_x = f_x + three * x;
+  const auto addmonom_f_x = f(x);
+
+  EXPECT_EQ(addmonom_f_x, expected_addmonmon_f_x);
+
+  f.sub_monomial_inplace(one); // subtract 1. equivalant to 'f-1'
+  const auto expected_submonom_f_x = addmonom_f_x - one;
+  const auto submonom_f_x = f(x);
+
+  EXPECT_EQ(submonom_f_x, expected_submonom_f_x);
+}
+
+TEST_F(PolynomialTest, ReadCoeffsToHost)
+{
+  const auto zero = test_type::zero();
+  const auto one = test_type::one();
+  const auto two = one + one;
+  const auto three = two + one;
+
+  const test_type coeffs_f[3] = {zero, one, two}; // x+2x^2
+  auto f = Polynomial_t::from_coefficients(coeffs_f, 3);
+  const test_type coeffs_g[3] = {one, one, one}; // 1+x+x^2
+  auto g = Polynomial_t::from_coefficients(coeffs_g, 3);
+
+  auto h = f + g; // 1+2x+3x^3
+  const auto h0 = h.get_coefficient_on_host(0);
+  const auto h1 = h.get_coefficient_on_host(1);
+  const auto h2 = h.get_coefficient_on_host(2);
+  EXPECT_EQ(h0, one);
+  EXPECT_EQ(h1, two);
+  EXPECT_EQ(h2, three);
+
+  int64_t nof_coeffs = h.get_coefficients_on_host(nullptr); // query #coeffs
+  EXPECT_GE(nof_coeffs, 3);                                 // can be larger due to padding to powers of two
+  test_type h_coeffs[3] = {0};
+  nof_coeffs = h.get_coefficients_on_host(h_coeffs, 0, 2); // read the coefficients
+  EXPECT_EQ(nof_coeffs, 3);                                // expecting 3 due to specified indices
+
+  test_type expected_h_coeffs[nof_coeffs] = {one, two, three, zero};
+  for (int i = 0; i < nof_coeffs; ++i) {
+    EXPECT_EQ(expected_h_coeffs[i], h_coeffs[i]);
+  }
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
