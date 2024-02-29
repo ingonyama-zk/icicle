@@ -17,7 +17,6 @@ Vector operations are supported on the following curves:
 use icicle_bn254::curve::{ScalarCfg, ScalarField};
 use icicle_core::vec_ops::{add_scalars};
 
-
 let test_size = 1 << 18;
 
 let a: HostOrDeviceSlice<'_, ScalarField> = HostOrDeviceSlice::on_host(F::Config::generate_random(test_size));
@@ -49,6 +48,8 @@ sub_scalars(&a, &b, &mut result, &cfg).unwrap();
 ```rust
 use icicle_bn254::curve::{ScalarCfg, ScalarField};
 use icicle_core::vec_ops::{mul_scalars};
+
+let test_size = 1 << 18;
 
 let a: HostOrDeviceSlice<'_, ScalarField> = HostOrDeviceSlice::on_host(F::Config::generate_random(test_size));
 let ones: HostOrDeviceSlice<'_, ScalarField> = HostOrDeviceSlice::on_host(vec![F::one(); test_size]);
