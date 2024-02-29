@@ -1,4 +1,4 @@
-package {{.PackageName}}
+package bls12381
 
 // #cgo CFLAGS: -I./include/
 // #include "vec_ops.h"
@@ -38,11 +38,11 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 
 	switch op {
 	case core.Sub:
-		ret = (cr.CudaError)(C.{{.Curve}}SubCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.bls12_381SubCuda(cA, cB, cSize, cConfig, cOut))
 	case core.Add:
-		ret = (cr.CudaError)(C.{{.Curve}}AddCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.bls12_381AddCuda(cA, cB, cSize, cConfig, cOut))
 	case core.Mul:
-		ret = (cr.CudaError)(C.{{.Curve}}MulCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.bls12_381MulCuda(cA, cB, cSize, cConfig, cOut))
 	}
 
 	return ret

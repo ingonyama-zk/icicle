@@ -5,19 +5,14 @@ import "C"
 {{- end }}
 
 {{- define "scalar_field_go_imports" }}
-	core "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 	"unsafe"
 {{- end }}
 
 {{- define "scalar_field_funcs" }}
 func GenerateScalars(size int) core.HostSlice[ScalarField] {
-	scalars := make([]ScalarField, size)
-	for i := range scalars {
-		scalars[i] = ScalarField{}
-	}
-
-	scalarSlice := core.HostSliceFromElements[ScalarField](scalars)
+	scalarSlice := make(core.HostSlice[ScalarField], size)
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)

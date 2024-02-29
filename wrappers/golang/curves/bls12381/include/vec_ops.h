@@ -1,14 +1,14 @@
 #include <cuda_runtime.h>
 #include "../../include/types.h"
 
-#ifndef _{{toUpper .Curve}}_VEC_OPS_H
-#define _{{toUpper .Curve}}_VEC_OPS_H
+#ifndef _BLS12_381_VEC_OPS_H
+#define _BLS12_381_VEC_OPS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-cudaError_t {{.Curve}}MulCuda(
+cudaError_t bls12_381MulCuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -16,7 +16,7 @@ cudaError_t {{.Curve}}MulCuda(
   scalar_t* result
 );
 
-cudaError_t {{.Curve}}AddCuda(
+cudaError_t bls12_381AddCuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -24,7 +24,7 @@ cudaError_t {{.Curve}}AddCuda(
   scalar_t* result
 );
 
-cudaError_t {{.Curve}}SubCuda(
+cudaError_t bls12_381SubCuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,

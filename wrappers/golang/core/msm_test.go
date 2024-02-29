@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core/internal"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMSMDefaultConfig(t *testing.T) {
-	ctx, _ := cuda_runtime.GetDefaultDeviceContext()
+	ctx, _ := cr.GetDefaultDeviceContext()
 	expected := MSMConfig{
 		ctx,   // Ctx
 		0,     // pointsSize
