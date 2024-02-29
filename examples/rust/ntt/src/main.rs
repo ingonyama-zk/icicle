@@ -3,7 +3,6 @@ use icicle_bn254::curve::{ScalarCfg, ScalarField};
 use icicle_bls12_377::curve::{ScalarCfg as BLS12377ScalarCfg, ScalarField as BLS12377ScalarField};
 
 use icicle_bls12_377::{vec_ops::{ScalarField}, Curve, Fr};
-use icicle_core::vec_ops::add_scalars;
 use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSlice, stream::CudaStream};
 
 use icicle_core::{
@@ -61,8 +60,6 @@ fn main() {
     let ctx = DeviceContext::default();
     ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
 
-
-    add_scalars(a, b, result, cfg)
     println!("Configuring bn254 NTT...");
     let stream = CudaStream::create().unwrap();
     let mut cfg = ntt::NTTConfig::default();
