@@ -9,7 +9,7 @@ const config = {
   title: 'Ingonyama Developer Documentation',
   tagline: 'Ingonyama is a next-generation semiconductor company, focusing on Zero-Knowledge Proof hardware acceleration. We build accelerators for advanced cryptography, unlocking real-time applications.',
   url: 'https://dev.ingonyama.com/',
-  baseUrl: '/icicle/',
+  baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/logo.png',
