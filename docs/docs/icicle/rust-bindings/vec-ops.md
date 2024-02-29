@@ -152,6 +152,8 @@ pub trait VecOps<F> {
 
 #### Methods
 
+All operations are element-wise operations, and the results placed into the `result` param. These operations are not in place.
+
 - **`add`**: Computes the element-wise sum of two vectors.
 - **`sub`**: Computes the element-wise difference between two vectors.
 - **`mul`**: Performs element-wise multiplication of two vectors.

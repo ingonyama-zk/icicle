@@ -10,7 +10,7 @@ Here we will cover the core multi GPU apis and a [example](#a-multi-gpu-example)
 In this example we will display how you can
 
 1. Fetch the number of devices installed on a machine
-2. For every GPU launch a thread and set a active device per thread.
+2. For every GPU launch a thread and set an active device per thread.
 3. Execute a MSM on each GPU
 
 
@@ -41,7 +41,7 @@ let device_count = get_device_count().unwrap();
 ```
 
 
-We use `get_device_count` to fetch the number of connected devices, device IDs will be `0...device_count-1`
+We use `get_device_count` to fetch the number of connected devices, device IDs will be `0, 1, 2, ..., device_count - 1`
 
 [`into_par_iter`](https://docs.rs/rayon/latest/rayon/iter/trait.IntoParallelIterator.html#tymethod.into_par_iter) is a parallel iterator, you should expect it to launch a thread for every iteration.
 
