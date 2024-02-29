@@ -2,7 +2,6 @@ use icicle_bn254::curve::{ScalarCfg, ScalarField};
 
 use icicle_bls12_377::curve::{ScalarCfg as BLS12377ScalarCfg, ScalarField as BLS12377ScalarField};
 
-use icicle_bls12_377::{vec_ops::{ScalarField}, Curve, Fr};
 use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSlice, stream::CudaStream};
 
 use icicle_core::{
