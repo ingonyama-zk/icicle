@@ -101,13 +101,35 @@ namespace msm {
    * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) point in our codebase.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    *
-   * **Note:** this function is still WIP and the following [MSMConfig](@ref MSMConfig) members do not yet have any
-   * effect: `precompute_factor` (always equals 1) and `ctx.device_id` (0 device is always used).
-   * Also, it's currently better to use `batch_size=1` in most cases (except with dealing with very many MSMs).
+   * **Note:** this function is still WIP and it's currently better to use `batch_size=1` in most cases (except with
+   * dealing with very many MSMs).
    */
   template <typename S, typename A, typename P>
   cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig& config, P* results);
 
+  /**
+   * A function that precomputes MSM bases by extending them with their shifted copies.
+   * e.g.:
+   * Original points: \f$ P_0, P_1, P_2, ... P_{size} \f$
+   * Extended points: \f$ P_0, P_1, P_2, ... P_{size}, 2^ \f$
+   * @param bases Bases \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
+   * @param bases_size Number of bases.
+   * @param precompute_factor The number of total shifted sets of bases (including the original one).
+   * @param are_bases_on_device Whether the bases are on device.
+   * @param output_bases Buffer for the extended bases. Must be of size bases_size * precompute_factgor .
+   * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine
+   * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   *
+   */
+  template <typename A, typename P>
+  cudaError_t PrecomputeMSMBases(
+    A* bases,
+    int bases_size,
+    int precompute_factor,
+    bool are_bases_on_device,
+    A* output_bases,
+    device_context::DeviceContext& ctx);
 } // namespace msm
 
 #endif

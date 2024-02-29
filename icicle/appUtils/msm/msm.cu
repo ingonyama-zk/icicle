@@ -29,27 +29,15 @@ namespace msm {
     // #define BIG_TRIANGLE
     // #define SSM_SUM  //WIP
 
-    template <typename A>
-    cudaError_t init_msm_bases_with_precompute(A* bases, int size, A** output_bases, int precompute_factor, bool are_bases_on_device, device_context::DeviceContext& ctx) {
-      CHK_INIT_IF_RETURN();
-
-      cudaStream_t& stream = config.ctx.stream;
-
-      CHK_IF_RETURN(cudaMallocAsync(output_bases, sizeof(A) * size * precompute_factor, stream));
-      CHK_IF_RETURN(
-        cudaMemcpyAsync(
-          *output_bases,
-          bases,
-          sizeof(A) * size,
-          are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice,
-          stream)
-      );
-
-      for (int i = 1; i < precompute_factor; i++) {
-        CHK_IF_RETURN(ShiftLeft(*output_bases + size * (i - 1), size, ctx, *output_bases + size * i));
-      }
-
-      return CHK_LAST();
+    template <typename A, typename P>
+    __global__ void left_shift_kernel(A* points, const unsigned shift, const unsigned count, A* points_out)
+    {
+      const unsigned tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid >= count) return;
+      P point = P::from_affine(points[tid]);
+      for (unsigned i = 0; i < shift; i++)
+        point = P::dbl(point);
+      points_out[tid] = P::to_affine(point);
     }
 
     unsigned get_optimal_c(int bitsize) { return max((unsigned)ceil(log2(bitsize)) - 4, 1U); }
@@ -178,7 +166,8 @@ namespace msm {
       unsigned msm_size,
       unsigned nof_bms,
       unsigned bm_bitsize,
-      unsigned c)
+      unsigned c,
+      unsigned precomputed_bms_stride)
     {
       // constexpr unsigned sign_mask = 0x80000000;
       // constexpr unsigned trash_bucket = 0x80000000;
@@ -191,7 +180,11 @@ namespace msm {
       unsigned msm_index = tid / msm_size;
       // unsigned borrow = 0;
       S& scalar = scalars[tid];
+      const unsigned precomputations_count = precomputed_bms_stride ? (nof_bms - 1) / precomputed_bms_stride + 1 : 1;
       for (unsigned bm = 0; bm < nof_bms; bm++) {
+        const unsigned precomputed_index = precomputed_bms_stride ? bm / precomputed_bms_stride : 0;
+        const unsigned target_bm = precomputed_bms_stride ? bm % precomputed_bms_stride : bm;
+
         bucket_index = scalar.get_scalar_digit(bm, c);
 #ifdef SIGNED_DIG
         bucket_index += borrow;
@@ -203,15 +196,19 @@ namespace msm {
           sign = sign_mask;
         }
 #endif
-        current_index = bm * nof_scalars + tid;
+        current_index = target_bm * precomputations_count * nof_scalars + precomputed_index * nof_scalars + tid;
 #ifdef SIGNED_DIG
         point_indices[current_index] = sign | tid; // the point index is saved for later
 #else
-        buckets_indices[current_index] =
-          (msm_index << (c + bm_bitsize)) | (bm << c) |
-          bucket_index; // the bucket module number and the msm number are appended at the msbs
-        if (bucket_index == 0) buckets_indices[current_index] = 0; // will be skipped
-        point_indices[current_index] = tid % points_size;          // the point index is saved for later
+        if (bucket_index != 0) {
+          buckets_indices[current_index] =
+            (msm_index << (c + bm_bitsize)) | (target_bm << c) |
+            bucket_index; // the bucket module number and the msm number are appended at the msbs
+        } else {
+          buckets_indices[current_index] = 0; // will be skipped
+        }
+        point_indices[current_index] =
+          tid % points_size + points_size * precomputed_index; // the point index is saved for later
 #endif
       }
     }
@@ -416,6 +413,7 @@ namespace msm {
       bool are_results_on_device,
       bool is_big_triangle,
       int large_bucket_factor,
+      int precompute_factor,
       bool is_async,
       cudaStream_t stream)
     {
@@ -447,23 +445,39 @@ namespace msm {
           CHK_IF_RETURN(mont::FromMontgomery(d_scalars, nof_scalars, stream, d_scalars));
       }
 
-      unsigned nof_bms_per_msm = (bitsize + c - 1) / c;
+      unsigned total_bms_per_msm = (bitsize + c - 1) / c;
+      unsigned nof_bms_per_msm = (total_bms_per_msm - 1) / precompute_factor + 1;
+      unsigned input_indexes_count = nof_scalars * total_bms_per_msm;
+
+      std::cout << "total bms per msm: " << total_bms_per_msm << std::endl;
+      std::cout << "nof bms per msm: " << nof_bms_per_msm << std::endl;
+      std::cout << "input indexes count: " << input_indexes_count << std::endl;
+
+      unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms_per_msm));
+
       unsigned* bucket_indices;
       unsigned* point_indices;
       unsigned* sorted_bucket_indices;
       unsigned* sorted_point_indices;
-      CHK_IF_RETURN(cudaMallocAsync(&bucket_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&point_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&sorted_bucket_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
-      CHK_IF_RETURN(cudaMallocAsync(&sorted_point_indices, sizeof(unsigned) * nof_scalars * nof_bms_per_msm, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&bucket_indices, sizeof(unsigned) * input_indexes_count, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&point_indices, sizeof(unsigned) * input_indexes_count, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&sorted_bucket_indices, sizeof(unsigned) * input_indexes_count, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&sorted_point_indices, sizeof(unsigned) * input_indexes_count, stream));
 
-      unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms_per_msm));
       // split scalars into digits
       unsigned NUM_THREADS = 1 << 10;
       unsigned NUM_BLOCKS = (nof_scalars + NUM_THREADS - 1) / NUM_THREADS;
+
       split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, nof_bms_per_msm, bm_bitsize,
-        c);
+        bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, total_bms_per_msm,
+        bm_bitsize, c, nof_bms_per_msm);
+
+      // unsigned* h_bucket_indices = (unsigned *)malloc(sizeof(unsigned) * input_indexes_count);
+      // for (int i = 0; i < input_indexes_count; i++) {
+      //   if (i % 1000 == 0) {
+      //     std::cout << i << ": " << bucket_indices[i] << std::endl;
+      //   }
+      // }
 
       // sort indices - the indices are sorted from smallest to largest in order to group together the points that
       // belong to each bucket
@@ -474,14 +488,14 @@ namespace msm {
       // more info
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
         sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices, sorted_bucket_indices,
-        point_indices, sorted_point_indices, nof_scalars * nof_bms_per_msm, 0, sizeof(unsigned) * 8, stream));
+        point_indices, sorted_point_indices, input_indexes_count, 0, sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream));
       // The second to last parameter is the default value supplied explicitly to allow passing the stream
       // See https://nvlabs.github.io/cub/structcub_1_1_device_radix_sort.html#a65e82152de448c6373ed9563aaf8af7e for
       // more info
       CHK_IF_RETURN(cub::DeviceRadixSort::SortPairs(
         sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices, sorted_bucket_indices,
-        point_indices, sorted_point_indices, nof_scalars * nof_bms_per_msm, 0, sizeof(unsigned) * 8, stream));
+        point_indices, sorted_point_indices, input_indexes_count, 0, sizeof(unsigned) * 8, stream));
       CHK_IF_RETURN(cudaFreeAsync(sort_indices_temp_storage, stream));
       CHK_IF_RETURN(cudaFreeAsync(bucket_indices, stream));
       CHK_IF_RETURN(cudaFreeAsync(point_indices, stream));
@@ -495,6 +509,8 @@ namespace msm {
       const unsigned nof_buckets = (nof_bms_per_msm << c) - nof_bms_per_msm;
 #endif
       const unsigned total_nof_buckets = nof_buckets * batch_size;
+
+      std::cout << "Total nof buckets: " << total_nof_buckets << std::endl;
 
       // find bucket_sizes
       unsigned* single_bucket_indices;
@@ -914,7 +930,59 @@ namespace msm {
       bitsize, c, scalars, points, config.batch_size, msm_size,
       (config.points_size == 0) ? msm_size : config.points_size, results, config.are_scalars_on_device,
       config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
-      config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.is_async, stream));
+      config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.precompute_factor,
+      config.is_async, stream));
+  }
+
+  template <typename A, typename P>
+  cudaError_t PrecomputeMSMBases(
+    A* bases,
+    int bases_size,
+    int precompute_factor,
+    bool are_bases_on_device,
+    A* output_bases,
+    device_context::DeviceContext& ctx)
+  {
+    CHK_INIT_IF_RETURN();
+
+    cudaStream_t& stream = ctx.stream;
+
+    CHK_IF_RETURN(cudaMemcpyAsync(
+      output_bases, bases, sizeof(A) * bases_size,
+      are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
+
+    unsigned c = 16;
+    unsigned total_nof_bms = (A::SCALAR_FF_NBITS - 1) / c + 1;
+    unsigned shift = c * ((total_nof_bms - 1) / precompute_factor + 1);
+    std::cout << "Total nof bms: " << total_nof_bms << std::endl;
+    std::cout << "Shift value: " << shift << std::endl;
+
+    unsigned NUM_THREADS = 1 << 10;
+    unsigned NUM_BLOCKS = (bases_size + NUM_THREADS - 1) / NUM_THREADS;
+    for (int i = 1; i < precompute_factor; i++) {
+      left_shift_kernel<A, P><<<NUM_THREADS, NUM_BLOCKS, 0, stream>>>(
+        &output_bases[(i - 1) * bases_size], shift, bases_size, &output_bases[i * bases_size]);
+    }
+
+    return CHK_LAST();
+  }
+
+  /**
+   * Extern "C" version of [PrecomputeMSMBases](@ref PrecomputeMSMBases) function with the following values of template
+   * parameters (where the curve is given by `-DCURVE` env variable during build):
+   *  - `A` is the [affine representation](@ref affine_t) of curve points;
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, PrecomputeMSMBases)(
+    curve_config::affine_t* bases,
+    int bases_size,
+    int precompute_factor,
+    bool are_bases_on_device,
+    curve_config::affine_t* output_bases,
+    device_context::DeviceContext& ctx)
+  {
+    return PrecomputeMSMBases<curve_config::affine_t, curve_config::projective_t>(
+      bases, bases_size, precompute_factor, are_bases_on_device, output_bases, ctx);
   }
 
   /**

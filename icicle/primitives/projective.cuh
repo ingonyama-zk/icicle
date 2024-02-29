@@ -5,22 +5,28 @@
 template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
 class Projective
 {
-  friend Affine<FF>;
+  friend Affine<FF, SCALAR_FF>;
 
 public:
+  static constexpr unsigned SCALAR_FF_NBITS = SCALAR_FF::NBITS;
+  static constexpr unsigned FF_NBITS = FF::NBITS;
+
   FF x;
   FF y;
   FF z;
 
   static HOST_DEVICE_INLINE Projective zero() { return {FF::zero(), FF::one(), FF::zero()}; }
 
-  static HOST_DEVICE_INLINE Affine<FF> to_affine(const Projective& point)
+  static HOST_DEVICE_INLINE Affine<FF, SCALAR_FF> to_affine(const Projective& point)
   {
     FF denom = FF::inverse(point.z);
     return {point.x * denom, point.y * denom};
   }
 
-  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point) { return {point.x, point.y, FF::one()}; }
+  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF, SCALAR_FF>& point)
+  {
+    return {point.x, point.y, FF::one()};
+  }
 
   static HOST_DEVICE_INLINE Projective ToMontgomery(const Projective& point)
   {
@@ -36,30 +42,34 @@ public:
 
   static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
 
-  // static HOST_DEVICE_INLINE Projective dbl(const Projective& point) {
-  //   const FF X = point.x;
-  //   const FF Y = point.y;
-  //   const FF Z = point.z;
-  //   FF t0 = FF::template sqr<0>(Y);       // 1. t0 ← Y · Y
-  //   FF Z3 = FF::template dbl<2>(t0);      // 2. Z3 ← t0 + t0
-  //   Z3 = FF::template dbl<2>(Z3);              // 3. Z3 ← Z3 + Z3
-  //   Z3 = FF::template dbl<2>(Z3);              // 4. Z3 ← Z3 + Z3
-  //   FF t1 = FF::template mul<0>(Y, Z);    // 5. t1 ← Y · Z
-  //   FF t2 = FF::template sqr<0>(Z);       // 6. t2 ← Z · Z
-  //   t2 = FF::template mul<2>(3 * B_VALUE, t2); // 7. t2 ← b3 · t2
-  //   FF X3 = FF::template mul<0>(t2, Z3);  // 8. X3 ← t2 · Z3
-  //   FF Y3 = FF::template add<2>(t0, t2);  // 9. Y3 ← t0 + t2
-  //   Z3 = FF::template mul<0>(t1, Z3);          // 10. Z3 ← t1 · Z3
-  //   t1 = FF::template dbl<2>(t2);              // 11. t1 ← t2 + t2
-  //   t2 = FF::template add<2>(t1, t2);          // 12. t2 ← t1 + t2
-  //   t0 = FF::template sub<2>(t0, t2);          // 13. t0 ← t0 − t2
-  //   Y3 = FF::template mul<0>(t0, Y3);          // 14. Y3 ← t0 · Y3
-  //   Y3 = FF::template add<2>(X3, Y3);          // 15. Y3 ← X3 + Y3
-  //   t1 = FF::template mul<0>(X, Y);            // 16. t1 ← X · Y
-  //   X3 = FF::template mul<0>(t0, t1);          // 17. X3 ← t0 · t1
-  //   X3 = FF::template dbl<2>(X3);              // 18. X3 ← X3 + X3
-  //   return {X3, Y3, Z3};
-  // }
+  static HOST_DEVICE_INLINE Projective dbl(const Projective& point)
+  {
+    const FF X = point.x;
+    const FF Y = point.y;
+    const FF Z = point.z;
+
+    // TO-DO: Change to efficient dbl
+    // TO-DO: Change to efficient sqr
+    FF t0 = Y * Y;                                                          // 1. t0 ← Y · Y
+    FF Z3 = t0 + t0;                                                        // 2. Z3 ← t0 + t0
+    Z3 = Z3 + Z3;                                                           // 3. Z3 ← Z3 + Z3
+    Z3 = Z3 + Z3;                                                           // 4. Z3 ← Z3 + Z3
+    FF t1 = Y * Z;                                                          // 5. t1 ← Y · Z
+    FF t2 = Z * Z;                                                          // 6. t2 ← Z · Z
+    t2 = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(t2)); // 7. t2 ← b3 · t2
+    FF X3 = t2 * Z3;                                                        // 8. X3 ← t2 · Z3
+    FF Y3 = t0 + t2;                                                        // 9. Y3 ← t0 + t2
+    Z3 = t1 * Z3;                                                           // 10. Z3 ← t1 · Z3
+    t1 = t2 + t2;                                                           // 11. t1 ← t2 + t2
+    t2 = t1 + t2;                                                           // 12. t2 ← t1 + t2
+    t0 = t0 - t2;                                                           // 13. t0 ← t0 − t2
+    Y3 = t0 * Y3;                                                           // 14. Y3 ← t0 · Y3
+    Y3 = X3 + Y3;                                                           // 15. Y3 ← X3 + Y3
+    t1 = X * Y;                                                             // 16. t1 ← X · Y
+    X3 = t0 * t1;                                                           // 17. X3 ← t0 · t1
+    X3 = X3 + X3;                                                           // 18. X3 ← X3 + X3
+    return {X3, Y3, Z3};
+  }
 
   friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2)
   {
@@ -107,7 +117,7 @@ public:
 
   friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Projective& p2) { return p1 + neg(p2); }
 
-  friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Affine<FF>& p2)
+  friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Affine<FF, SCALAR_FF>& p2)
   {
     const FF X1 = p1.x;                                                                //                   < 2
     const FF Y1 = p1.y;                                                                //                   < 2
@@ -150,9 +160,9 @@ public:
     return {X3, Y3, Z3};
   }
 
-  friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Affine<FF>& p2)
+  friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Affine<FF, SCALAR_FF>& p2)
   {
-    return p1 + Affine<FF>::neg(p2);
+    return p1 + Affine<FF, SCALAR_FF>::neg(p2);
   }
 
   friend HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar, const Projective& point)
@@ -209,7 +219,7 @@ public:
       out[i] = (i % size < 100) ? rand_host() : out[i - 100];
   }
 
-  static void RandHostManyAffine(Affine<FF>* out, int size)
+  static void RandHostManyAffine(Affine<FF, SCALAR_FF>* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];

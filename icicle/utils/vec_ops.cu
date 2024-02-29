@@ -102,7 +102,8 @@ namespace vec_ops {
   }
 
   template <typename A>
-  cudaError_t ShiftLeft(A* points, int n, device_context::DeviceContext ctx, A* result) {
+  cudaError_t ShiftLeft(A* points, int n, device_context::DeviceContext ctx, A* result)
+  {
     // TO-DO
     return CHK_LAST();
   }

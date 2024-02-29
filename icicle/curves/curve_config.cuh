@@ -62,7 +62,7 @@ namespace curve_config {
   /**
    * Affine representation of G1 curve consisting of two coordinates of type [point_field_t](point_field_t).
    */
-  typedef Affine<point_field_t> affine_t;
+  typedef Affine<point_field_t, scalar_t> affine_t;
 
 #if defined(G2_DEFINED)
 #if CURVE_ID == BW6_761
