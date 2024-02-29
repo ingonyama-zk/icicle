@@ -77,4 +77,19 @@ namespace polynomials {
     if (tid < n) { result[tid] = element_vec1[tid] * element_vec2[tid]; }
   }
 
+  /*============================== division ==============================*/
+  template <typename T>
+  __global__ void SchoolBookDivisionStepOnR(T* r, T* b, int r_len, int b_len, uint64_t s_monomial, T s_coeff)
+  {
+    // computing one step 'r = r-sb' (for 'a = q*b+r')
+    // s is the highest monomial in current step. This step is subtracting the highest monomial of r. It it repeated
+    // until deg(r)<deg(b)
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= max(r_len, b_len)) return;
+    if ((tid < s_monomial)) return;
+
+    T b_coeff = b[tid - s_monomial];
+    r[tid] = r[tid] - s_coeff * b_coeff;
+  }
+
 } // namespace polynomials

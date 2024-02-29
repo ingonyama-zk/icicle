@@ -24,7 +24,6 @@ class PolynomialTest : public ::testing::Test
 {
 public:
   static inline const int MAX_NTT_LOG_SIZE = 24;
-  static inline const bool DEBUG = false; // set true for debug prints
   static inline const bool MEASURE = true;
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
@@ -103,15 +102,6 @@ TEST_F(PolynomialTest, addition)
   auto s_x = s(x);
 
   EXPECT_EQ(fx_plus_gx, s_x);
-  if (DEBUG) {
-    std::cout << "x=" << x << "\n";
-    std::cout << "f_x=" << f_x << "\n";
-    std::cout << "g_x=" << g_x << "\n";
-    std::cout << "s_x=" << s_x << "\n";
-    std::cout << "f=(deg=" << f.degree() << ")" << f;
-    std::cout << "g=(deg=" << g.degree() << ")" << g;
-    std::cout << "s=(deg=" << s.degree() << ")" << s;
-  }
 }
 
 TEST_F(PolynomialTest, cAPI)
@@ -189,8 +179,8 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
 {
   const auto zero = test_type::zero();
   const auto one = test_type::one();
-  const auto two = one + one;
-  const auto three = two + one;
+  const auto two = test_type::from(2);
+  const auto three = test_type::from(3);
 
   const test_type coeffs_f[3] = {zero, one, two}; // x+2x^2
   auto f = Polynomial_t::from_coefficients(coeffs_f, 3);
@@ -215,6 +205,55 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   for (int i = 0; i < nof_coeffs; ++i) {
     EXPECT_EQ(expected_h_coeffs[i], h_coeffs[i]);
   }
+}
+
+TEST_F(PolynomialTest, divisionSimple)
+{
+  const auto zero = test_type::zero();
+  const auto one = test_type::one();
+  const auto two = test_type::from(2);
+  const auto three = test_type::from(3);
+  const auto four = test_type::from(4);
+  const auto five = test_type::from(5);
+  const auto minus_one = zero - one;
+
+  const test_type coeffs_a[4] = {five, zero, four, three}; // 3x^3+4x^2+5
+  const test_type coeffs_b[3] = {minus_one, zero, one};    // x^2-1
+  auto a = Polynomial_t::from_coefficients(coeffs_a, 4);
+  auto b = Polynomial_t::from_coefficients(coeffs_b, 3);
+
+  auto [q, r] = a.divide(b);
+  test_type q_coeffs[2] = {0}; // 3x+4
+  test_type r_coeffs[2] = {0}; // 3x+9
+  const auto q_nof_coeffs = q.get_coefficients_on_host(q_coeffs, 0, 1);
+  const auto r_nof_coeffs = r.get_coefficients_on_host(r_coeffs, 0, 1);
+
+  ASSERT_EQ(q_nof_coeffs, 2);
+  ASSERT_EQ(r_nof_coeffs, 2);
+  ASSERT_EQ(q_coeffs[0], test_type::from(4));
+  ASSERT_EQ(q_coeffs[1], test_type::from(3));
+  ASSERT_EQ(r_coeffs[0], test_type::from(9));
+  ASSERT_EQ(r_coeffs[1], test_type::from(3));
+}
+
+TEST_F(PolynomialTest, divisionLarge)
+{
+  const int size_0 = 1 << 12, size_1 = 1 << 2;
+  auto a = randomize_polynomial(size_0);
+  auto b = randomize_polynomial(size_1);
+
+  START_TIMER(poly_mult_start);
+  auto [q, r] = a.divide(b);
+  END_TIMER(poly_mult_start, "Polynomial division took", MEASURE);
+
+  test_type x = test_type::rand_host();
+  auto a_x = a(x);
+  auto b_x = b(x);
+  auto q_x = q(x);
+  auto r_x = r(x);
+
+  // a(x) = b(x)*q(x)+r(x)
+  EXPECT_EQ(a_x, b_x * q_x + r_x);
 }
 
 int main(int argc, char** argv)
