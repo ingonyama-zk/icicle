@@ -13,7 +13,7 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I, typename EC>
-  Polynomial<C, D, I, EC> Polynomial<C, D, I, EC>::from_coefficients(const C* coefficients, uint32_t nof_coefficients)
+  Polynomial<C, D, I, EC> Polynomial<C, D, I, EC>::from_coefficients(const C* coefficients, uint64_t nof_coefficients)
   {
     Polynomial P = {};
     P.m_context->init_from_coefficients(nof_coefficients, coefficients);
@@ -21,7 +21,7 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I, typename EC>
-  Polynomial<C, D, I, EC> Polynomial<C, D, I, EC>::from_rou_evaluations(const I* evaluations, uint32_t nof_evaluations)
+  Polynomial<C, D, I, EC> Polynomial<C, D, I, EC>::from_rou_evaluations(const I* evaluations, uint64_t nof_evaluations)
   {
     Polynomial P = {};
     P.m_backend->init_from_rou_evaluations(nof_evaluations, evaluations);
@@ -62,9 +62,16 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I, typename EC>
-  Polynomial<C, D, I, EC>& Polynomial<C, D, I, EC>::add_monomial_inplace(C monomial_coeff, uint32_t monomial) const
+  Polynomial<C, D, I, EC>& Polynomial<C, D, I, EC>::add_monomial_inplace(C monomial_coeff, uint64_t monomial)
   {
-    m_backend->add_monomial_in_place(*m_context.get(), monomial_coeff, monomial);
+    m_backend->add_monomial_inplace(*m_context.get(), monomial_coeff, monomial);
+    return *this;
+  }
+
+  template <typename C, typename D, typename I, typename EC>
+  Polynomial<C, D, I, EC>& Polynomial<C, D, I, EC>::sub_monomial_inplace(C monomial_coeff, uint64_t monomial)
+  {
+    m_backend->sub_monomial_inplace(*m_context.get(), monomial_coeff, monomial);
     return *this;
   }
 
@@ -87,15 +94,15 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I, typename EC>
-  C Polynomial<C, D, I, EC>::get_coefficient(uint32_t idx) const
+  C Polynomial<C, D, I, EC>::get_coefficient_on_host(uint64_t idx) const
   {
-    return m_backend->get_coefficient(*m_context.get(), idx);
+    return m_backend->get_coefficient_on_host(*m_context.get(), idx);
   }
 
   template <typename C, typename D, typename I, typename EC>
-  uint32_t Polynomial<C, D, I, EC>::get_coefficients(C* coeff) const
+  int64_t Polynomial<C, D, I, EC>::get_coefficients_on_host(C* host_coeffs, int64_t start_idx, int64_t end_idx) const
   {
-    return m_backend->get_coefficients(*m_context.get(), coeff);
+    return m_backend->get_coefficients_on_host(*m_context.get(), host_coeffs, start_idx, end_idx);
   }
 
 } // namespace polynomials

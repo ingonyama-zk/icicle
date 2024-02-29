@@ -352,26 +352,30 @@ namespace polynomials {
       GPUPolynomialContext<C, D, I> Q = {};
       divide(Q, R, op_a, op_b);
     }
-    void divide_by_vanishing_polynomial(PolyContext& out, PolyContext& op_a, uint32_t vanishing_poly_degree) override
+    void divide_by_vanishing_polynomial(PolyContext& out, PolyContext& op_a, uint64_t vanishing_poly_degree) override
     {
       throw std::runtime_error("not implemented yet");
     }
 
     // arithmetic with monomials
-    void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override
+    void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) override
     {
-      throw std::runtime_error("not implemented yet");
-    }
-    void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint32_t monomial) override
-    {
-      throw std::runtime_error("not implemented yet");
+      const uint64_t new_nof_elements = max(poly.get_nof_elements(), monomial);
+      poly.transform_to_coefficients(new_nof_elements);
+      auto [coeffs, _] = poly.get_coefficients();
+      AddSingleElementInplace<<<1, 1>>>(coeffs + monomial, monomial_coeff);
     }
 
-    // dot product with coefficients
-    ECpoint dot_product_with_coefficients(PolyContext& op, ECpoint* points, uint32_t nof_points) override
+    void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) override
     {
-      return ECpoint::zero();
+      add_monomial_inplace(poly, C::zero() - monomial_coeff, monomial);
     }
+
+    // // dot product with coefficients
+    // ECpoint dot_product_with_coefficients(PolyContext& op, ECpoint* points, uint64_t nof_points) override
+    // {
+    //   return ECpoint::zero();
+    // }
 
     int32_t degree(PolyContext& p) override
     {
@@ -411,23 +415,44 @@ namespace polynomials {
 
       return h_evaluation;
     }
-    void evaluate(PolyContext& p, const D* domain_x, uint32_t nof_domain_points, I* evaluations /*OUT*/) override
+
+    void evaluate(PolyContext& p, const D* domain_x, uint64_t nof_domain_points, I* evaluations /*OUT*/) override
     {
       // TODO Yuval: implement more efficiently
-      for (uint32_t i = 0; i < nof_domain_points; ++i) {
+      for (uint64_t i = 0; i < nof_domain_points; ++i) {
         evaluations[i] = evaluate(p, domain_x[i]);
       }
     }
 
-    C get_coefficient(PolyContext& op, uint32_t coeff_idx) override
+    int64_t
+    get_coefficients_on_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
     {
-      throw std::runtime_error("not implemented yet");
-      return C::zero();
+      const uint64_t nof_coeffs = op.get_nof_elements();
+      if (nullptr == host_coeffs) { return nof_coeffs; } // no allocated memory
+
+      end_idx = (end_idx == -1) ? nof_coeffs - 1 : end_idx;
+
+      const bool is_valid_start_idx = start_idx < nof_coeffs && start_idx >= 0;
+      const bool is_valid_end_idx = end_idx < nof_coeffs && end_idx >= 0 && end_idx >= start_idx;
+      const bool is_valid_indices = is_valid_start_idx && is_valid_end_idx;
+      if (!is_valid_indices) {
+        // return -1 instead? I could but 'get_coefficient_on_host()' cannot with its current declaration
+        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "get_coefficients_on_host() invalid indices");
+      }
+
+      op.transform_to_coefficients();
+      auto [device_coeffs, _] = op.get_coefficients();
+      const size_t nof_coeffs_to_copy = end_idx - start_idx + 1;
+      cudaMemcpy(host_coeffs, device_coeffs + start_idx, nof_coeffs_to_copy * sizeof(C), cudaMemcpyDeviceToHost);
+      return nof_coeffs_to_copy;
     }
-    uint32_t get_coefficients(PolyContext& op, C* coefficients) override
+
+    // read coefficients to host
+    C get_coefficient_on_host(PolyContext& op, uint64_t coeff_idx) override
     {
-      throw std::runtime_error("not implemented yet");
-      return 0;
+      C host_coeff;
+      get_coefficients_on_host(op, &host_coeff, coeff_idx, coeff_idx);
+      return host_coeff;
     }
   };
 } // namespace polynomials

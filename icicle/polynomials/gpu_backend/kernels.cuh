@@ -15,6 +15,14 @@ namespace polynomials {
     result[tid] = add1_sub0 ? a + b : a - b;
   }
 
+  template <typename T>
+  __global__ void AddSingleElementInplace(T* self, T v)
+  {
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > 0) return;
+    *self = *self + v;
+  }
+
   /*============================== degree ==============================*/
   template <typename T>
   __global__ void HighestNonZeroIdx(T* vec, int len, int32_t* idx)
