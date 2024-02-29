@@ -50,8 +50,8 @@ namespace polynomials {
 
     CoefficientType get_coefficient_on_host(uint64_t idx) const;
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
-    int64_t get_coefficients_on_host(
-      CoefficientType* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
+    int64_t
+    get_coefficients_on_host(CoefficientType* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
 
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
     {
