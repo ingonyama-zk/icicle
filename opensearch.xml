@@ -4,8 +4,8 @@
   <ShortName>Ingonyama Developer Documentation</ShortName>
   <Description>Search Ingonyama Developer Documentation</Description>
   <InputEncoding>UTF-8</InputEncoding>
-  <Image width="16" height="16" type="image/x-icon">https://dev.ingonyama.com/icicle/img/logo.png</Image>
-  <Url type="text/html" method="get" template="https://dev.ingonyama.com/icicle/search?q={searchTerms}"/>
-  <Url type="application/opensearchdescription+xml" rel="self" template="https://dev.ingonyama.com/icicle/opensearch.xml" />
-  <moz:SearchForm>https://dev.ingonyama.com/icicle/</moz:SearchForm>
+  <Image width="16" height="16" type="image/x-icon">https://dev.ingonyama.com/img/logo.png</Image>
+  <Url type="text/html" method="get" template="https://dev.ingonyama.com/search?q={searchTerms}"/>
+  <Url type="application/opensearchdescription+xml" rel="self" template="https://dev.ingonyama.com/opensearch.xml" />
+  <moz:SearchForm>https://dev.ingonyama.com/</moz:SearchForm>
 </OpenSearchDescription>
