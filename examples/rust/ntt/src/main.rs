@@ -2,7 +2,11 @@ use icicle_bn254::curve::{ScalarCfg, ScalarField};
 
 use icicle_bls12_377::curve::{ScalarCfg as BLS12377ScalarCfg, ScalarField as BLS12377ScalarField};
 
-use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSlice, stream::CudaStream};
+use icicle_cuda_runtime::{
+    device_context::DeviceContext,
+    memory::{DeviceVec, HostSlice},
+    stream::CudaStream,
+};
 
 use icicle_core::{
     ntt::{self, NTT},
@@ -41,14 +45,13 @@ fn main() {
     );
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
-    let scalars = HostOrDeviceSlice::Host(ScalarCfg::generate_random(size));
-    let mut ntt_results: HostOrDeviceSlice<'_, ScalarField> = HostOrDeviceSlice::cuda_malloc(size).unwrap();
+    let scalars = ScalarCfg::generate_random(size);
+    let mut ntt_results = DeviceVec::<ScalarField>::cuda_malloc(size).unwrap();
 
     // Setting bls12377 points and scalars
     println!("Generating random inputs on host for bls12377...");
-    let scalars_bls12377 = HostOrDeviceSlice::Host(BLS12377ScalarCfg::generate_random(size));
-    let mut ntt_results_bls12377: HostOrDeviceSlice<'_, BLS12377ScalarField> =
-        HostOrDeviceSlice::cuda_malloc(size).unwrap();
+    let scalars_bls12377 = BLS12377ScalarCfg::generate_random(size);
+    let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::cuda_malloc(size).unwrap();
 
     println!("Setting up bn254 Domain...");
     let icicle_omega = <Bn254Fr as FftField>::get_root_of_unity(
@@ -86,7 +89,13 @@ fn main() {
     println!("Executing bn254 NTT on device...");
     #[cfg(feature = "profile")]
     let start = Instant::now();
-    ntt::ntt(&scalars, ntt::NTTDir::kForward, &cfg, &mut ntt_results).unwrap();
+    ntt::ntt(
+        HostSlice::from_slice(&scalars),
+        ntt::NTTDir::kForward,
+        &cfg,
+        &mut ntt_results[..],
+    )
+    .unwrap();
     #[cfg(feature = "profile")]
     println!(
         "ICICLE BN254 NTT on size 2^{log_size} took: {} μs",
@@ -99,10 +108,10 @@ fn main() {
     #[cfg(feature = "profile")]
     let start = Instant::now();
     ntt::ntt(
-        &scalars_bls12377,
+        HostSlice::from_slice(&scalars_bls12377),
         ntt::NTTDir::kForward,
         &cfg_bls12377,
-        &mut ntt_results_bls12377,
+        &mut ntt_results_bls12377[..],
     )
     .unwrap();
     #[cfg(feature = "profile")]
@@ -119,7 +128,7 @@ fn main() {
         .unwrap();
     let mut host_bn254_results = vec![ScalarField::zero(); size];
     ntt_results
-        .copy_to_host(&mut host_bn254_results[..])
+        .copy_to_host(HostSlice::from_mut_slice(&mut host_bn254_results[..]))
         .unwrap();
 
     stream_bls12377
@@ -127,7 +136,7 @@ fn main() {
         .unwrap();
     let mut host_bls12377_results = vec![BLS12377ScalarField::zero(); size];
     ntt_results_bls12377
-        .copy_to_host(&mut host_bls12377_results[..])
+        .copy_to_host(HostSlice::from_mut_slice(&mut host_bls12377_results[..]))
         .unwrap();
 
     println!("Checking against arkworks...");

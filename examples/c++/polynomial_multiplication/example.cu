@@ -89,7 +89,6 @@ int main(int argc, char** argv)
         true,  // is_a_on_device
         true,  // is_b_on_device
         true,  // is_result_on_device
-        false, // is_montgomery
         false  // is_async
       };
       CHK_IF_RETURN(
