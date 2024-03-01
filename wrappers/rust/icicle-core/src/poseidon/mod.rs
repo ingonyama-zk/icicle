@@ -1,6 +1,7 @@
 #[doc(hidden)]
 pub mod tests;
 
+use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::{
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
     memory::HostOrDeviceSlice,
@@ -88,8 +89,8 @@ pub trait Poseidon<F: FieldImpl> {
     ) -> IcicleResult<PoseidonConstants<'a, F>>;
     fn load_optimized_constants<'a>(arity: u32, ctx: &DeviceContext) -> IcicleResult<PoseidonConstants<'a, F>>;
     fn poseidon_unchecked(
-        input: &mut HostOrDeviceSlice<F>,
-        output: &mut HostOrDeviceSlice<F>,
+        input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         number_of_states: u32,
         arity: u32,
         constants: &PoseidonConstants<F>,
@@ -146,8 +147,8 @@ where
 ///
 /// * `config` - config used to specify extra arguments of the Poseidon.
 pub fn poseidon_hash_many<F>(
-    input: &mut HostOrDeviceSlice<F>,
-    output: &mut HostOrDeviceSlice<F>,
+    input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     number_of_states: u32,
     arity: u32,
     constants: &PoseidonConstants<F>,
@@ -179,6 +180,22 @@ where
         );
     }
 
+    let ctx_device_id = config
+        .ctx
+        .device_id;
+    if let Some(device_id) = input.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in input and context are different"
+        );
+    }
+    if let Some(device_id) = output.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in output and context are different"
+        );
+    }
+    check_device(ctx_device_id);
     let mut local_cfg = config.clone();
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
@@ -268,8 +285,8 @@ macro_rules! impl_poseidon {
             }
 
             fn poseidon_unchecked(
-                input: &mut HostOrDeviceSlice<$field>,
-                output: &mut HostOrDeviceSlice<$field>,
+                input: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 number_of_states: u32,
                 arity: u32,
                 constants: &PoseidonConstants<$field>,

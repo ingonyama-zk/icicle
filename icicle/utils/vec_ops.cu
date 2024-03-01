@@ -4,7 +4,6 @@
 #include "vec_ops.cuh"
 #include "../curves/curve_config.cuh"
 #include "device_context.cuh"
-#include "mont.cuh"
 #include "utils/utils.h"
 
 namespace vec_ops {
@@ -67,7 +66,6 @@ namespace vec_ops {
 
     // Call the kernel to perform element-wise operation
     Kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, n, d_result);
-    if (config.is_result_montgomery_form) CHK_IF_RETURN(mont::FromMontgomery(d_result, n, config.ctx.stream, d_result));
 
     if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_vec_a, config.ctx.stream)); }
 

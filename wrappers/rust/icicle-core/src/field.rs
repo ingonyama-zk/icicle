@@ -3,8 +3,9 @@ use crate::traits::ArkConvertible;
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, Field as ArkField, PrimeField};
+use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::memory::DeviceSlice;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
@@ -96,21 +97,22 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
 }
 
 #[doc(hidden)]
-pub trait MontgomeryConvertibleField<F: FieldImpl> {
-    fn to_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
-    fn from_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
+pub trait MontgomeryConvertibleField<'a, F: FieldImpl, const D_ID: usize = 0> {
+    fn to_mont(values: &mut DeviceSlice<F, D_ID>, ctx: &DeviceContext<'a>) -> CudaError;
+    fn from_mont(values: &mut DeviceSlice<F, D_ID>, ctx: &DeviceContext<'a>) -> CudaError;
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
+impl<'a, const NUM_LIMBS: usize, F: FieldConfig, const D_ID: usize> MontgomeryConvertible<'a, D_ID>
+    for Field<NUM_LIMBS, F>
 where
-    F: MontgomeryConvertibleField<Self>,
+    F: MontgomeryConvertibleField<'a, Self, D_ID>,
 {
-    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        F::to_mont(values)
+    fn to_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+        F::to_mont(values, ctx)
     }
 
-    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        F::from_mont(values)
+    fn from_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+        F::from_mont(values, ctx)
     }
 }
 
@@ -184,17 +186,12 @@ macro_rules! impl_scalar_field {
             }
 
             pub(crate) fn convert_scalars_montgomery(
-                scalars: &mut HostOrDeviceSlice<$field_name>,
+                scalars: *mut $field_name,
+                len: usize,
                 is_into: bool,
+                ctx: &DeviceContext,
             ) -> CudaError {
-                unsafe {
-                    _convert_scalars_montgomery(
-                        scalars.as_mut_ptr(),
-                        scalars.len(),
-                        is_into,
-                        &DeviceContext::default() as *const _ as *const DeviceContext,
-                    )
-                }
+                unsafe { _convert_scalars_montgomery(scalars, len, is_into, ctx as *const DeviceContext) }
             }
         }
 
@@ -206,13 +203,28 @@ macro_rules! impl_scalar_field {
             }
         }
 
-        impl MontgomeryConvertibleField<$field_name> for $field_cfg {
-            fn to_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
-                $field_prefix_ident::convert_scalars_montgomery(values, true)
+        impl<'a, const D_ID: usize> MontgomeryConvertibleField<'a, $field_name, D_ID> for $field_cfg {
+            fn to_mont(values: &mut DeviceSlice<$field_name, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+                check_device(D_ID);
+                assert_eq!(
+                    D_ID, ctx.device_id,
+                    "Device ids are different in slice and context"
+                );
+                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
             }
 
-            fn from_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
-                $field_prefix_ident::convert_scalars_montgomery(values, false)
+            fn from_mont(values: &mut DeviceSlice<$field_name, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+                check_device(D_ID);
+                assert_eq!(
+                    D_ID, ctx.device_id,
+                    "Device ids are different in slice and context"
+                );
+                $field_prefix_ident::convert_scalars_montgomery(
+                    unsafe { values.as_mut_ptr() },
+                    values.len(),
+                    false,
+                    ctx,
+                )
             }
         }
     };

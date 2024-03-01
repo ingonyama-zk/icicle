@@ -1,5 +1,6 @@
 use crate::curve::{Affine, Curve, Projective};
 use crate::error::IcicleResult;
+use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
@@ -89,10 +90,10 @@ impl<'a> MSMConfig<'a> {
 #[doc(hidden)]
 pub trait MSM<C: Curve> {
     fn msm_unchecked(
-        scalars: &HostOrDeviceSlice<C::ScalarField>,
-        points: &HostOrDeviceSlice<Affine<C>>,
+        scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
+        points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         cfg: &MSMConfig,
-        results: &mut HostOrDeviceSlice<Projective<C>>,
+        results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
     ) -> IcicleResult<()>;
 }
 
@@ -109,10 +110,10 @@ pub trait MSM<C: Curve> {
 ///
 /// * `results` - buffer to write results into. Its length is equal to the batch size i.e. number of MSMs to compute.
 pub fn msm<C: Curve + MSM<C>>(
-    scalars: &HostOrDeviceSlice<C::ScalarField>,
-    points: &HostOrDeviceSlice<Affine<C>>,
+    scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
+    points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     cfg: &MSMConfig,
-    results: &mut HostOrDeviceSlice<Projective<C>>,
+    results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
 ) -> IcicleResult<()> {
     if scalars.len() % points.len() != 0 {
         panic!(
@@ -128,6 +129,28 @@ pub fn msm<C: Curve + MSM<C>>(
             scalars.len()
         );
     }
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+    if let Some(device_id) = scalars.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in scalars and context are different"
+        );
+    }
+    if let Some(device_id) = points.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in points and context are different"
+        );
+    }
+    if let Some(device_id) = results.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in results and context are different"
+        );
+    }
+    check_device(ctx_device_id);
     let mut local_cfg = cfg.clone();
     local_cfg.points_size = points.len() as i32;
     local_cfg.batch_size = results.len() as i32;
@@ -165,10 +188,10 @@ macro_rules! impl_msm {
 
         impl MSM<$curve> for $curve {
             fn msm_unchecked(
-                scalars: &HostOrDeviceSlice<<$curve as Curve>::ScalarField>,
-                points: &HostOrDeviceSlice<Affine<$curve>>,
+                scalars: &(impl HostOrDeviceSlice<<$curve as Curve>::ScalarField> + ?Sized),
+                points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
                 cfg: &MSMConfig,
-                results: &mut HostOrDeviceSlice<Projective<$curve>>,
+                results: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
             ) -> IcicleResult<()> {
                 unsafe {
                     $curve_prefix_indent::msm_cuda(

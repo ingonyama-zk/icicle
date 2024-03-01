@@ -7,8 +7,10 @@ use ark_ec::models::CurveConfig as ArkCurveConfig;
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
 #[cfg(feature = "arkworks")]
 use ark_ec::AffineRepr;
+use icicle_cuda_runtime::device::check_device;
+use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
 use std::fmt::Debug;
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
@@ -24,9 +26,19 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     #[doc(hidden)]
     fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
     #[doc(hidden)]
-    fn convert_affine_montgomery(points: &mut HostOrDeviceSlice<Affine<Self>>, is_into: bool) -> CudaError;
+    fn convert_affine_montgomery(
+        points: *mut Affine<Self>,
+        len: usize,
+        is_into: bool,
+        ctx: &DeviceContext,
+    ) -> CudaError;
     #[doc(hidden)]
-    fn convert_projective_montgomery(points: &mut HostOrDeviceSlice<Projective<Self>>, is_into: bool) -> CudaError;
+    fn convert_projective_montgomery(
+        points: *mut Projective<Self>,
+        len: usize,
+        is_into: bool,
+        ctx: &DeviceContext,
+    ) -> CudaError;
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -109,35 +121,43 @@ impl<C: Curve> Projective<C> {
 
 impl<C: Curve> PartialEq for Projective<C> {
     fn eq(&self, other: &Self) -> bool {
-        C::eq_proj(self as *const _, other as *const _)
+        C::eq_proj(self as *const Self, other as *const Self)
     }
 }
 
 impl<C: Curve> From<Projective<C>> for Affine<C> {
     fn from(proj: Projective<C>) -> Self {
         let mut aff = Self::zero();
-        C::to_affine(&proj as *const _, &mut aff as *mut _);
+        C::to_affine(&proj as *const Projective<C>, &mut aff as *mut Self);
         aff
     }
 }
 
-impl<C: Curve> MontgomeryConvertible for Affine<C> {
-    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        C::convert_affine_montgomery(values, true)
+impl<'a, C: Curve, const D_ID: usize> MontgomeryConvertible<'a, D_ID> for Affine<C> {
+    fn to_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(D_ID);
+        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
     }
 
-    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        C::convert_affine_montgomery(values, false)
+    fn from_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(D_ID);
+        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, ctx)
     }
 }
 
-impl<C: Curve> MontgomeryConvertible for Projective<C> {
-    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        C::convert_projective_montgomery(values, true)
+impl<'a, C: Curve, const D_ID: usize> MontgomeryConvertible<'a, D_ID> for Projective<C> {
+    fn to_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(D_ID);
+        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
     }
 
-    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        C::convert_projective_montgomery(values, false)
+    fn from_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(D_ID);
+        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, ctx)
     }
 }
 
@@ -284,27 +304,29 @@ macro_rules! impl_curve {
                 res
             }
 
-            fn convert_affine_montgomery(points: &mut HostOrDeviceSlice<$affine_type>, is_into: bool) -> CudaError {
+            fn convert_affine_montgomery(
+                points: *mut $affine_type,
+                len: usize,
+                is_into: bool,
+                ctx: &DeviceContext,
+            ) -> CudaError {
                 unsafe {
-                    $curve_prefix_ident::_convert_affine_montgomery(
-                        points.as_mut_ptr(),
-                        points.len(),
-                        is_into,
-                        &DeviceContext::default() as *const _ as *const DeviceContext,
-                    )
+                    $curve_prefix_ident::_convert_affine_montgomery(points, len, is_into, ctx as *const DeviceContext)
                 }
             }
 
             fn convert_projective_montgomery(
-                points: &mut HostOrDeviceSlice<$projective_type>,
+                points: *mut $projective_type,
+                len: usize,
                 is_into: bool,
+                ctx: &DeviceContext,
             ) -> CudaError {
                 unsafe {
                     $curve_prefix_ident::_convert_projective_montgomery(
-                        points.as_mut_ptr(),
-                        points.len(),
+                        points,
+                        len,
                         is_into,
-                        &DeviceContext::default() as *const _ as *const DeviceContext,
+                        ctx as *const DeviceContext,
                     )
                 }
             }
