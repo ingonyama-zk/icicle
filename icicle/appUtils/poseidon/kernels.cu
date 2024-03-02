@@ -46,7 +46,7 @@ namespace poseidon {
     __syncthreads();
 
     typename S::Wide element_wide = S::mul_wide(shared_states[vec_number * T], matrix[element_number]);
-UNROLL
+    UNROLL
     for (int i = 1; i < T; i++) {
       element_wide = element_wide + S::mul_wide(shared_states[vec_number * T + i], matrix[i * T + element_number]);
     }
@@ -117,14 +117,14 @@ UNROLL
 
     typename S::Wide state_0_wide = S::mul_wide(element, sparse_matrix[0]);
 
-UNROLL
+    UNROLL
     for (int i = 1; i < T; i++) {
       state_0_wide = state_0_wide + S::mul_wide(state[i], sparse_matrix[i]);
     }
 
     state[0] = S::reduce(state_0_wide);
 
-UNROLL
+    UNROLL
     for (int i = 1; i < T; i++) {
       state[i] = state[i] + (element * sparse_matrix[T + i - 1]);
     }
@@ -138,7 +138,7 @@ UNROLL
     if (idx >= number_of_states) { return; }
 
     S state[T];
-UNROLL
+    UNROLL
     for (int i = 0; i < T; i++) {
       state[i] = states[idx * T + i];
     }
@@ -148,7 +148,7 @@ UNROLL
       rc_offset++;
     }
 
-UNROLL
+    UNROLL
     for (int i = 0; i < T; i++) {
       states[idx * T + i] = state[i];
     }
