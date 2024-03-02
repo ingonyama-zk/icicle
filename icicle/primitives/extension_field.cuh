@@ -1,10 +1,7 @@
 #pragma once
 
 #include "field.cuh"
-
-#define HOST_INLINE        __host__
-#define DEVICE_INLINE      __device__
-#define HOST_DEVICE_INLINE __host__
+#include "common.cuh"
 
 template <typename CONFIG>
 class ExtensionField
