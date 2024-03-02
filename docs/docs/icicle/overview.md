@@ -1,8 +1,8 @@
 # What is ICICLE?
 
-[![Static Badge](https://img.shields.io/badge/Latest-v1.4.0-8a2be2)](https://github.com/ingonyama-zk/icicle/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
 
-![Static Badge](https://img.shields.io/badge/Machines%20running%20ICICLE-544-lightblue)
+![Static Badge](https://img.shields.io/badge/Machines%20running%20ICICLE-544-blue)
 
 
 
