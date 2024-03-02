@@ -176,7 +176,8 @@ namespace ntt {
     else
       engine.loadInternalTwiddlesGeneric64(internal_twiddles, strided, inv);
 
-    UNROLL 1 for (uint32_t phase = 0; phase < 2; phase++)
+    UNROLL 1 
+    for (uint32_t phase = 0; phase < 2; phase++)
     {
       engine.ntt8win();
       if (phase == 0) {
