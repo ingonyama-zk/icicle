@@ -62,6 +62,15 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I, typename EC>
+  Polynomial<C, D, I, EC>
+  Polynomial<C, D, I, EC>::divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const
+  {
+    Polynomial<C, D, I, EC> res = {};
+    m_backend->divide_by_vanishing_polynomial(*res.m_context.get(), *m_context.get(), vanishing_polynomial_degree);
+    return res;
+  }
+
+  template <typename C, typename D, typename I, typename EC>
   Polynomial<C, D, I, EC>& Polynomial<C, D, I, EC>::add_monomial_inplace(C monomial_coeff, uint64_t monomial)
   {
     m_backend->add_monomial_inplace(*m_context.get(), monomial_coeff, monomial);
