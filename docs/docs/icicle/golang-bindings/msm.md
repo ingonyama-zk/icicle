@@ -109,7 +109,7 @@ type MSMConfig struct {
 - **arePointsOnDevice**: Indicates if points are located on the device.
 - **ArePointsMontgomeryForm**: True if point coordinates are in Montgomery form.
 - **areResultsOnDevice**: Indicates if results are stored on the device.
-- **IsBigTriangle**: Whether to perform bucket accumulation serially.
+- **IsBigTriangle**: If `true` MSM will run in Large triangle accumulation if `false` Bucket accumulation will be chosen. Default value: false.
 - **IsAsync**: If true, runs MSM asynchronously.
 
 ### Default Configuration
