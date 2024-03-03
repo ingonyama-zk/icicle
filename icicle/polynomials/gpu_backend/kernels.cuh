@@ -91,5 +91,12 @@ namespace polynomials {
     T b_coeff = b[tid - s_monomial];
     r[tid] = r[tid] - s_coeff * b_coeff;
   }
+  /*============================== division_by_vanishing_polynomial ==============================*/
+  template <typename T>
+  __global__ void DivElementWise(T* element_vec1, T* element_vec2, int n, T* result)
+  {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < n) { result[tid] = element_vec1[tid] * T::inverse(element_vec2[tid]); }
+  }
 
 } // namespace polynomials
