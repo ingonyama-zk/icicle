@@ -14,7 +14,8 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg, enable)                                                                                  \
   if (enable)                                                                                                          \
-    printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+    printf(                                                                                                            \
+      "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
 
 using namespace polynomials;
 
@@ -69,6 +70,20 @@ public:
     for (int i = 0; i < count; i++) {
       res[i] = i ? res[i - 1] + test_type::one() : test_type::one();
     }
+  }
+
+  static void assert_equal(Polynomial_t& a, Polynomial_t& b)
+  {
+    const int deg_a = a.degree();
+    const int deg_b = b.degree();
+    ASSERT_EQ(deg_a, deg_b);
+
+    auto a_coeffs = std::make_unique<test_type[]>(deg_a);
+    auto b_coeffs = std::make_unique<test_type[]>(deg_b);
+    a.get_coefficients_on_host(a_coeffs.get(), 1, deg_a - 1);
+    b.get_coefficients_on_host(b_coeffs.get(), 1, deg_b - 1);
+
+    ASSERT_EQ(0, memcmp(a_coeffs.get(), b_coeffs.get(), deg_a * sizeof(test_type)));
   }
 };
 
@@ -254,6 +269,30 @@ TEST_F(PolynomialTest, divisionLarge)
 
   // a(x) = b(x)*q(x)+r(x)
   EXPECT_EQ(a_x, b_x * q_x + r_x);
+}
+
+TEST_F(PolynomialTest, divideByVanishingPolynomial)
+{
+  const auto zero = test_type::zero();
+  const auto one = test_type::one();
+  const auto six = test_type::from(6);
+  const auto minus_one = zero - one;
+  const auto minus_five = zero - test_type::from(5);
+
+  const test_type coeffs_v[5] = {minus_one, zero, zero, zero, one}; // x^4-1 vanishes on 4th roots of unity
+  auto v = Polynomial_t::from_coefficients(coeffs_v, 5);
+  auto h = randomize_polynomial(1 << 11, false);
+  auto hv = h * v;
+
+  START_TIMER(poly_div_long);
+  auto [h_div, R] = hv.divide(v);
+  END_TIMER(poly_div_long, "Polynomial division by vanishing (long division) took", MEASURE);
+  assert_equal(h_div, h);
+
+  START_TIMER(poly_div_vanishing);
+  auto h_div_by_vanishing = hv.divide_by_vanishing_polynomial(4);
+  END_TIMER(poly_div_vanishing, "Polynomial division by vanishing (fast) took", MEASURE);
+  assert_equal(h_div_by_vanishing, h);
 }
 
 int main(int argc, char** argv)

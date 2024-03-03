@@ -376,21 +376,52 @@ namespace polynomials {
 
     void quotient(PolyContext& Q, PolyContext& op_a, PolyContext& op_b) override
     {
-      // TODO Yuval: implement more efficiently
+      // TODO: can implement more efficiently?
       GPUPolynomialContext<C, D, I> R = {};
       divide(Q, R, op_a, op_b);
     }
 
     void remainder(PolyContext& R, PolyContext& op_a, PolyContext& op_b) override
     {
-      // TODO Yuval: implement more efficiently
+      // TODO: can implement more efficiently?
       GPUPolynomialContext<C, D, I> Q = {};
       divide(Q, R, op_a, op_b);
     }
 
-    void divide_by_vanishing_polynomial(PolyContext& out, PolyContext& op_a, uint64_t vanishing_poly_degree) override
+    void
+    divide_by_vanishing_polynomial(PolyContext& out, PolyContext& numerator, uint64_t vanishing_poly_degree) override
     {
-      throw std::runtime_error("not implemented yet");
+      // (1) allocate vanishing polynomial in coefficients form
+      auto [numerator_coeffs, N] = numerator.get_coefficients();
+      if (vanishing_poly_degree > N) {
+        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "divide_by_vanishing_polynomial(): degree is too large");
+      }
+      out.allocate(N, State::Coefficients, true /*=set zeros*/);
+      add_monomial_inplace(out, C::zero() - C::one(), 0);         //-1
+      add_monomial_inplace(out, C::one(), vanishing_poly_degree); //+x^n
+
+      // (2) NTT on coset. Note that NTT on ROU evaluates to zeros for vanihsing polynomials by definition. Therefore
+      // evaluation on coset is required to compute non-zero evaluations, which make element-wise division possible
+      auto [out_coeffs, _] = out.get_coefficients();
+      auto ntt_config = ntt::DefaultNTTConfig<C>();
+      ntt_config.are_inputs_on_device = true;
+      ntt_config.are_outputs_on_device = true;
+      ntt_config.ordering = ntt::Ordering::kNM;
+      ntt_config.coset_gen = ntt::GetRootOfUnity<C>((uint64_t)log2(2 * N), ntt_config.ctx);
+
+      ntt::NTT(out_coeffs, N, ntt::NTTDir::kForward, ntt_config, out_coeffs);
+      ntt::NTT(numerator_coeffs, N, ntt::NTTDir::kForward, ntt_config, numerator_coeffs);
+
+      // (3) element wise division
+      // TODO Yuval: revisit (#threads,#blocks)
+      const int NOF_THREADS = 32;
+      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
+      DivElementWise<<<NOF_BLOCKS, NOF_THREADS>>>(numerator_coeffs, out_coeffs, N, out_coeffs);
+
+      // (4) INTT back both a and out
+      ntt_config.ordering = ntt::Ordering::kMN;
+      ntt::NTT(out_coeffs, N, ntt::NTTDir::kInverse, ntt_config, out_coeffs);
+      ntt::NTT(numerator_coeffs, N, ntt::NTTDir::kInverse, ntt_config, numerator_coeffs);
     }
 
     // arithmetic with monomials
