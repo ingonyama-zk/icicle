@@ -1137,39 +1137,39 @@ template <typename E, typename S>
       if (is_reverse_in_place) {
         if (columns_batch){
           reorder_digits_inplace_and_normalize_columns_batch_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_output, logn, batch_size, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
+          d_output, logn, batch_size, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
         }
         else {
           reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_output, logn, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
+          d_output, logn, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
         }
       } else {
         if (columns_batch){
           reorder_digits_and_normalize_columns_batch_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_input, d_output, logn, batch_size, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
+          d_input, d_output, logn, batch_size, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
         }
         else {
           reorder_digits_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_input, d_output, logn, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
+          d_input, d_output, logn, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
         }
       }
-      // is_normalize = false;
+      is_normalize = false;
       d_input = d_output;
     }
 
     // inplace ntt
     CHK_IF_RETURN(large_ntt(
       d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size, columns_batch, is_inverse,
-      (is_normalize /*&& reverse_output == eRevType::None*/), dit, fast_tw, cuda_stream));
+      (is_normalize && reverse_output == eRevType::None), dit, fast_tw, cuda_stream));
 
     if (reverse_output != eRevType::None) {
       if (columns_batch){
           reorder_digits_inplace_and_normalize_columns_batch_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_output, logn, batch_size, dit, fast_tw, reverse_output, false/*is_normalize*/, S::inv_log_size(logn));
+          d_output, logn, batch_size, dit, fast_tw, reverse_output, is_normalize, S::inv_log_size(logn));
         }
         else {
           reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_output, logn, dit, fast_tw, reverse_output, false/*is_normalize*/, S::inv_log_size(logn));
+          d_output, logn, dit, fast_tw, reverse_output, is_normalize, S::inv_log_size(logn));
         }
     }
 

@@ -68,11 +68,11 @@ int main(int argc, char** argv)
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop, trans_start, trans_middle, trans_stop;
   float icicle_time, new_time, trans1_time, trans2_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 24;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 18;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
-  bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
-  int INV = (argc > 3) ? atoi(argv[3]) : false;
-  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 4;
+  bool INPLACE = (argc > 2) ? atoi(argv[2]) : true;
+  int INV = (argc > 3) ? atoi(argv[3]) : true;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 150;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : true;
   int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 0;
   const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNR;
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
   // inplace
   if (INPLACE) {
     CHK_IF_RETURN(
-      cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+      cudaMemcpy(GpuOutputNew, COLUMNS_BATCH? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
   }
 
   for (int coset_idx = 0; coset_idx < COSET_IDX; ++coset_idx) {
@@ -186,7 +186,7 @@ int main(int argc, char** argv)
       CHK_IF_RETURN(ntt::NTT(
         // INPLACE? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
         // GpuOutputNew));
-        INPLACE || COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
+        INPLACE? GpuOutputNew : COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
         GpuOutputNew));
     }
     CHK_IF_RETURN(cudaEventRecord(new_stop, ntt_config.ctx.stream));
@@ -220,7 +220,7 @@ int main(int argc, char** argv)
   int count = INPLACE ? 1 : 1;
   if (INPLACE) {
     CHK_IF_RETURN(
-      cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+      cudaMemcpy(GpuOutputNew, COLUMNS_BATCH? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
   }
   CHK_IF_RETURN(benchmark(true /*=print*/, count));
 
