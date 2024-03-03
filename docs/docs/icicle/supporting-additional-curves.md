@@ -31,55 +31,37 @@ Finally we must modify the [`make` file](https://github.com/ingonyama-zk/icicle/
 set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;<curve_name>)
 ```
 
+### Poseidon
+
+If you want your curve to implement Poseidon hash function or a tree builder, you will need to pre-calculate the optimized parameters for it.  
+Copy [constants_template.h](https://github.com/ingonyama-zk/icicle/blob/main/icicle/appUtils/poseidon/constants/constants_template.h) into `icicle/appUtils/poseidon/constants/<CURVE>_poseidon.h`. Run the [constants generation script](https://dev.ingonyama.com/icicle/primitives/poseidon#constants). The script will print the number of partial rounds and generate `constants.bin` file. Use `xxd -i constants.bin` to parse the file into C declarations. Copy the `unsigned char constants_bin[]` contents inside your new file. Repeat this process for arities 2, 4, 8 and 11.
+
+After you've generated the constants, add your curve in this [SUPPORTED_CURVES_WITH_POSEIDON](https://github.com/ingonyama-zk/icicle/blob/main/icicle/CMakeLists.txt#L72) in the `CMakeLists.txt`.
+
 ## Bindings
 
 In order to support a new curves in the binding libraries you first must support it in ICICLE core.
 
 ### Rust
 
-Create a new folder named `icicle-<curve_name>` under the [rust wrappers folder](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-curves). Your new directory should look like this.
+Go to [rust wrappers folder](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-curves) and copy `icicle-curve-template` to a new folder named `icicle-<curve_name>`.
 
-```
-└── rust
-    ├── icicle-curves
-        ├── icicle-<curve_name>
-    │   │   ├── Cargo.toml
-    │   │   ├── build.rs
-    │   │   └── src/
-    │   │       ├── curve.rs
-    │   │       ├── lib.rs
-    │   │       ├── msm/
-    │   │       │   └── mod.rs
-    │   │       └── ntt/
-    │   │           └── mod.rs
-```
+Find all the occurrences of `<CURVE>` placeholder inside the crate. (You can use `Ctrl+Shift+F` in VS Code or `grep -nr "<CURVE>"` in bash). You will then need to replace each occurrence with your new curve name.
 
-Lets look at [`ntt/mod.rs`](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-curves/icicle-bn254/src/ntt/mod.rs) for example.
+#### Limbs
 
-```
-...
+Go to [curve file](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-curves/icicle-curve-template/src/curve.rs) and set `SCALAR_LIMBS`, `BASE_LIMBS` and `G2_BASE_LIMBS` (if G2 is needed) to a minimum number of `u64` required to store a single scalar field / base field element respectively.  
+e.g. for bn254, scalar field is 254 bit so `SCALAR_LIMBS` is set to 4.
 
-extern "C" {
-    #[link_name = "bn254NTTCuda"]
-    fn ntt_cuda<'a>(
-        input: *const ScalarField,
-        size: usize,
-        is_inverse: bool,
-        config: &NTTConfig<'a, ScalarField>,
-        output: *mut ScalarField,
-    ) -> CudaError;
+#### Primitives
 
-    #[link_name = "bn254DefaultNTTConfig"]
-    fn default_ntt_config() -> NTTConfig<'static, ScalarField>;
+If your curve doesn't support any of the primitives (ntt/msm/poseidon/merkle tree/), or you simply don't won't to include it, just remove a corresponding module from `src` and then from `lib.rs`
 
-    #[link_name = "bn254InitializeDomain"]
-    fn initialize_ntt_domain(primitive_root: ScalarField, ctx: &DeviceContext) -> CudaError;
-}
+#### G2
 
-...
-```
+If your curve doesn't support G2 - remove all the code under `#[cfg(feature = "g2")]` and remove the feature from `Cargo.toml` and `build.rs`.
 
-Here you would need to replace `bn254NTTCuda` with `<curve_name>NTTCuda`. Most of these changes are pretty straight forward. One thing you should pay attention to is limb sizes as these change for different curves. For example `BN254` [has limb size of 8](https://github.com/ingonyama-zk/icicle/blob/4beda3a900eda961f39af3a496f8184c52bf3b41/wrappers/rust/icicle-curves/icicle-bn254/src/curve.rs#L15) but for your curve this may be different.
+After this is done, add your new crate in the [global Cargo.toml](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/Cargo.toml).
 
 ### Golang
 
