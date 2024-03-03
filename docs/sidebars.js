@@ -97,14 +97,14 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Poseidon Hash",
-              id: "icicle/primitives/poseidon",
+              label: "NTT",
+              id: "icicle/primitives/ntt",
             },
             {
               type: "doc",
-              label: "NTT",
-              id: "icicle/primitives/ntt",
-            }
+              label: "Poseidon Hash",
+              id: "icicle/primitives/poseidon",
+            },
           ],
         },
         {

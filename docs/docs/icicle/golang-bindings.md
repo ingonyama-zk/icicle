@@ -1,57 +1,111 @@
 # Golang bindings
 
-Rust bindings allow you to use ICICLE as a rust library.
+Golang bindings allow you to use ICICLE as a golang library.
+The source code for all Golang libraries can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang).
 
-`icicle-core` defines all interfaces, macros and common methods.
+The Golang bindings are comprised of multiple packages.
 
-`icicle-cuda-runtime` defines DeviceContext which can be used to manage a specific GPU as well as wrapping common CUDA methods.
+[`core`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/core) which defines all common shared methods and structures, such as configuration structures, or memory slices.
 
-`icicle-curves` implements all interfaces and macros from icicle-core for each curve. For example icicle-bn254 implements curve bn254. Each curve has its own build script which will build the CUDA libraries for that curve as part of the rust-toolchain build.
+[`cuda-runtime`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/cuda_runtime) which defines abstractions for CUDA methods for allocating memory, initializing and managing streams. As well as `DeviceContext` which enables users to define and keep track of devices.
 
-## Using ICICLE Rust bindings in your project
+Each curve has its own package, you can find all curves [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves). If you project uses BN-254 you only need to install that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
 
-Simply add the following to your `Cargo.toml`.
+## Using ICICLE Golang bindings in your project
+
+Too add ICICLE to your `go.mod` file.
+
+```bash
+go get github.com/ingonyama-zk/icicle/goicicle
+```
+
+If you want to specify a specific branch
+
+```bash
+go get github.com/ingonyama-zk/icicle/goicicle@<branch_name>
+```
+
+For a specific commit
+
+```bash
+go get github.com/ingonyama-zk/icicle/goicicle@<commit_id>
+```
+
+To build the shared libraries you can run this script:
 
 ```
-# GPU Icicle integration
-icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git" }
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git" }
+./build <curve> [G2_enabled]
+
+curve - The name of the curve to build or "all" to build all curves
+G2_enabled - Optional - To build with G2 enabled 
 ```
 
-`icicle-bn254` being the curve you wish to use and `icicle-core` and `icicle-cuda-runtime` contain ICICLE utilities and CUDA wrappers.
+For example if you want to build all curves with G2 enabled you would run:
 
-If you wish to point to a specific ICICLE branch add `branch = "<name_of_branch>"` or `tag = "<name_of_tag>"` to the ICICLE dependency. For a specific commit add `rev = "<commit_id>"`.
+```bash
+./build.sh all ON
+```
 
-When you build your project ICICLE will be built as part of the build command.
+If you are interested in building a specific curve you would run:
 
-# How do the rust bindings work?
+```bash
+./build.sh bls12381 ON
+```
 
-The rust bindings are just rust wrappers for ICICLE Core static libraries which can be compiled. We integrate the compilation of the static libraries into rusts toolchain to make usage seamless and easy. This is achieved by [extending rusts build command](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-curves/icicle-bn254/build.rs).
+After building your shared libraries. You must export them so your system will be aware of their existence.
 
-```rust
-use cmake::Config;
-use std::env::var;
+```bash
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH/<path_to_shared_libs>
+```
 
-fn main() {
-    println!("cargo:rerun-if-env-changed=CXXFLAGS");
-    println!("cargo:rerun-if-changed=../../../../icicle");
+Now you can ICICLE into your project
 
-    let cargo_dir = var("CARGO_MANIFEST_DIR").unwrap();
-    let profile = var("PROFILE").unwrap();
+```golang
+import (
+    "github.com/stretchr/testify/assert"
+    "testing"
 
-    let out_dir = Config::new("../../../../icicle")
-                .define("BUILD_TESTS", "OFF") //TODO: feature
-                .define("CURVE", "bn254")
-                .define("CMAKE_BUILD_TYPE", "Release")
-                .build_target("icicle")
-                .build();
+    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+    cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+)
+...
+```
 
-    println!("cargo:rustc-link-search={}/build", out_dir.display());
+## Running tests
 
-    println!("cargo:rustc-link-lib=ingo_bn254");
-    println!("cargo:rustc-link-lib=stdc++");
-    // println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64");
-    println!("cargo:rustc-link-lib=cudart");
+To run all test, for all curves:
+
+```bash
+go test --tags=g2 ./... -count=1
+```
+
+If you dont want to include g2 tests then drop `--tags=g2`.
+
+If you wish to run test for a specific curve:
+
+```bash
+go test <path_to_curve> -count=1
+```
+
+## How do Golang bindings work?
+
+The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
+
+1. These libraries (named `libingo_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
+
+2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
+
+```go
+/*
+#cgo LDFLAGS: -L/path/to/shared/libs -lingo_bn254
+#include "icicle.h" // make sure you use the correct header file(s)
+*/
+import "C"
+
+func main() {
+    // Now you can call the C functions from the ICICLE libraries.
+    // Note that C function calls are prefixed with 'C.' in Go code.
 }
 ```
+
+Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
