@@ -58,8 +58,8 @@ MSM supports the following curves:
 
 ## Supported Bindings
 
-- [Golang](../goalng-bindings/msm)
-- [Rust](../rust-bindings//msm)
+- [Golang](../golang-bindings/msm.md)
+- [Rust](../rust-bindings//msm.md)
 
 ## Supported algorithms
 
