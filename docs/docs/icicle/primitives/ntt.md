@@ -150,7 +150,7 @@ Both work only on inputs of power of 2 (e.g., 256, 512, 1024).
 
 Radix 2 is faster for small NTTs. A small NTT would be around logN = 16 and batch size 1. Radix 2 won't necessarily perform better for smaller `logn` with larger batches.
 
-Mixed radix on the other hand better for larger NTTs with larger input sizes.
+Mixed radix on the other hand works better for larger NTTs with larger input sizes.
 
 Performance really depends on logn size, batch size, ordering, inverse, coset, coeff-field and which GPU you are using.
 
