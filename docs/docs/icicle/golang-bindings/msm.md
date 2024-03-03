@@ -36,6 +36,7 @@ func Main() {
     
     // Set the CUDA stream in the MSM configuration.
     cfg.Ctx.Stream = &stream
+    cfg.IsAsync = true
     
     // Perform the MSM operation.
     e = Msm(scalars, points, &cfg, out)
