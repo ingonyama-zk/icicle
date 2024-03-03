@@ -3,13 +3,13 @@
 // TODO Yuval: use current device context and stream
 #include "cuda_runtime.h"
 #include "appUtils/ntt/ntt.cuh"
-#include "polynomials/gpu_backend/kernels.cuh"
+#include "polynomials/cuda_backend/kernels.cuh"
 
 namespace polynomials {
 
-  /*============================== Polynomial GPU-context ==============================*/
+  /*============================== Polynomial CUDA-context ==============================*/
   template <typename C, typename D, typename I>
-  class GPUPolynomialContext : public IPolynomialContext<C, D, I>
+  class CUDAPolynomialContext : public IPolynomialContext<C, D, I>
   {
     typedef IPolynomialContext<C, D, I> PolyContext;
     using typename IPolynomialContext<C, D, I>::State;
@@ -19,7 +19,7 @@ namespace polynomials {
     // (1) add device context (with stream, gpu id etc.)
     // (2) use streams and async ops
   public:
-    ~GPUPolynomialContext() { release(); }
+    ~CUDAPolynomialContext() { release(); }
 
     static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
 
@@ -239,10 +239,10 @@ namespace polynomials {
     void* m_storage = nullptr;
   };
 
-  /*============================== Polynomial GPU-backend ==============================*/
+  /*============================== Polynomial CUDA-backend ==============================*/
 
   template <typename C, typename D, typename I, typename ECpoint>
-  class GPUPolynomialBackend : public IPolynomialBackend<C, D, I, ECpoint>
+  class CUDAPolynomialBackend : public IPolynomialBackend<C, D, I, ECpoint>
   {
     typedef IPolynomialContext<C, D, I> PolyContext;
     typedef typename IPolynomialContext<C, D, I>::State State;
@@ -377,14 +377,14 @@ namespace polynomials {
     void quotient(PolyContext& Q, PolyContext& op_a, PolyContext& op_b) override
     {
       // TODO: can implement more efficiently?
-      GPUPolynomialContext<C, D, I> R = {};
+      CUDAPolynomialContext<C, D, I> R = {};
       divide(Q, R, op_a, op_b);
     }
 
     void remainder(PolyContext& R, PolyContext& op_a, PolyContext& op_b) override
     {
       // TODO: can implement more efficiently?
-      GPUPolynomialContext<C, D, I> Q = {};
+      CUDAPolynomialContext<C, D, I> Q = {};
       divide(Q, R, op_a, op_b);
     }
 
@@ -524,7 +524,7 @@ namespace polynomials {
     }
   };
 
-  /*============================== Polynomial GPU-factory ==============================*/
+  /*============================== Polynomial CUDA-factory ==============================*/
   template <typename C = curve_config::scalar_t, typename D = C, typename I = C, typename EC = curve_config::affine_t>
   class CUDAPolynomialFactory : public AbstractPolynomialFactory<C, D, I, EC>
   {
@@ -533,11 +533,11 @@ namespace polynomials {
 
     std::shared_ptr<IPolynomialContext<C, D, I>> create_context() override
     {
-      return std::make_shared<GPUPolynomialContext<C, D, I>>();
+      return std::make_shared<CUDAPolynomialContext<C, D, I>>();
     }
     std::shared_ptr<IPolynomialBackend<C, D, I, EC>> create_backend() override
     {
-      return std::make_shared<GPUPolynomialBackend<C, D, I, EC>>();
+      return std::make_shared<CUDAPolynomialBackend<C, D, I, EC>>();
     }
   };
 } // namespace polynomials
