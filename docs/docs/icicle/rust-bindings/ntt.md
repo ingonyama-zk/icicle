@@ -1,5 +1,47 @@
 # NTT
 
+### Supported curves
+
+`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
+
+## Example 
+
+```rust
+use icicle_bn254::curve::{ScalarCfg, ScalarField};
+use icicle_core::{ntt::{self, NTT}, traits::GenerateRandom};
+use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSlice, stream::CudaStream};
+
+fn main() {
+    let size = 1 << 12; // Define the size of your input, e.g., 2^10
+
+    // Generate random inputs
+    println!("Generating random inputs...");
+    let scalars = HostOrDeviceSlice::Host(ScalarCfg::generate_random(size));
+
+    // Allocate memory on CUDA device for NTT results
+    let mut ntt_results: HostOrDeviceSlice<'_, ScalarField> = HostOrDeviceSlice::cuda_malloc(size).expect("Failed to allocate CUDA memory");
+
+    // Create a CUDA stream
+    let stream = CudaStream::create().expect("Failed to create CUDA stream");
+    let ctx = DeviceContext::default(); // Assuming default device context
+
+    // Configure NTT
+    let mut cfg = ntt::NTTConfig::default();
+    cfg.ctx.stream = &stream;
+    cfg.is_async = true; // Set to true for asynchronous execution
+
+    // Execute NTT on device
+    println!("Executing NTT on device...");
+    ntt::ntt(&scalars, ntt::NTTDir::kForward, &cfg, &mut ntt_results).expect("Failed to execute NTT");
+
+    // Synchronize CUDA stream to ensure completion
+    stream.synchronize().expect("Failed to synchronize CUDA stream");
+
+    // Optionally, move results to host for further processing or verification
+    println!("NTT execution complete.");
+}
+```
+
 ## NTT API overview
 
 ```rust

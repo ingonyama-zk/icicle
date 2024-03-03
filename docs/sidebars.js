@@ -66,14 +66,19 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Multi GPU Support",
-              id: "icicle/rust-bindings/multi-gpu",
+              label: "NTT",
+              id: "icicle/rust-bindings/ntt",
             },
             {
               type: "doc",
               label: "Vector operations",
               id: "icicle/rust-bindings/vec-ops",
-            }
+            },
+            {
+              type: "doc",
+              label: "Multi GPU Support",
+              id: "icicle/rust-bindings/multi-gpu",
+            },
           ],
         },
         {
