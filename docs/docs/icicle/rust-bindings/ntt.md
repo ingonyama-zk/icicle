@@ -14,6 +14,11 @@ use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSli
 fn main() {
     let size = 1 << 12; // Define the size of your input, e.g., 2^10
 
+    let icicle_omega = <Bn254Fr as FftField>::get_root_of_unity(
+        size.try_into()
+            .unwrap(),
+    )
+
     // Generate random inputs
     println!("Generating random inputs...");
     let scalars = HostOrDeviceSlice::Host(ScalarCfg::generate_random(size));
@@ -24,6 +29,7 @@ fn main() {
     // Create a CUDA stream
     let stream = CudaStream::create().expect("Failed to create CUDA stream");
     let ctx = DeviceContext::default(); // Assuming default device context
+    ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
 
     // Configure NTT
     let mut cfg = ntt::NTTConfig::default();
@@ -139,3 +145,53 @@ cfg.batch_size = 10 // your ntt using this config will run in batch mode.
 `batch_size=1` would keep our NTT in single NTT mode.
 
 Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
+
+## Advanced Usage
+
+### Initializing the NTT Domain
+
+Before performing NTT operations, its necessary to initialize the NTT domain, It only needs to be called once per GPU since the twiddles are cached.
+
+```rust
+ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
+```
+
+### `initialize_domain`
+
+```rust
+pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>;
+```
+
+#### Parameters
+
+- **`primitive_root`**: The primitive root of unity, chosen based on the maximum NTT size required for the computations. It must be of an order that is a power of two. This root is used to generate twiddle factors that are essential for the NTT operations.
+
+- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
+
+#### Returns
+
+- **`IcicleResult<()>`**: Will return an error if the operation fails.
+
+### `initialize_domain_fast_twiddles_mode`
+
+Similar to `initialize_domain`, `initialize_domain_fast_twiddles_mode` is a faster implementation and can be used for larger NTTs.
+
+```rust
+pub fn initialize_domain_fast_twiddles_mode<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>;
+```
+
+#### Parameters
+
+- **`primitive_root`**: The primitive root of unity, chosen based on the maximum NTT size required for the computations. It must be of an order that is a power of two. This root is used to generate twiddle factors that are essential for the NTT operations.
+
+- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
+
+#### Returns
+
+- **`IcicleResult<()>`**: Will return an error if the operation fails.
