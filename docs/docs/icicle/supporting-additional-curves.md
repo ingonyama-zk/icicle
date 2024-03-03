@@ -8,6 +8,44 @@ ICICLE core is very generic by design so all algorithms and primitives are desig
 
 To add support a new curve you must create a new file under [`icicle/curves`](https://github.com/ingonyama-zk/icicle/tree/main/icicle/curves). The file should be named `<curve_name>_params.cuh`.
 
+### curve_name_params.cuh
+
+Start by copying `bn254_params.cuh` contents in your params file. Params should include:
+ - **fq_config** - parameters of Base field.
+    - **limbs_count** - `ceil(field_byte_size / 4)`.
+    - **modulus_bit_count** - bit-size of the modulus.
+    - **num_of_reductions** - the number of times to reduce in reduce function.
+    - **modulus** - modulus of the field.
+    - **modulus_2** - modulus * 2.
+    - **modulus_4** - modulus * 4. 
+    - **neg_modulus** - negated modulus. 
+    - **modulus_wide** - modulus represented as a double-sized integer.
+    - **modulus_squared_2** - modulus**2 represented as a double-sized integer.
+    - **modulus_squared_4** - modulus**4 represented as a double-sized integer.
+    - **m** - value used in multiplication. Can be computed as `2**(2*modulus_bit_count) // modulus`. 
+    - **one** - multiplicative identity. 
+    - **zero** - additive identity. 
+    - **montgomery_r** - `2 ** 256 % modulus`
+    - **montgomery_r_inv** - `2 ** (-256) % modulus`
+ - **fp_config** - parameters of Scalar field.
+    Same as fq_config, but with additional arguments:
+    - **omegas_count** - [two-adicity](https://cryptologie.net/article/559/whats-two-adicity/) of the field. And thus the maximum size of NTT.
+    - **omegas** - an array of omegas for NTTs. An array of size `omegas_count`. The ith element is equal to `1.nth_root(2**(2**(omegas_count-i)))`.
+    - **inv** - an array of inverses of powers of two in a field. Ith element is equal to `(2 ** (i+1)) ** -1`.
+ - **G1 generators points** - affine coordinates of the generator point.
+ - **G2 generators points** - affine coordinates of the extension generator. Remove these if `G2` is not supported.
+ - **Weierstrass b value** - base field element equal to value of `b` in the curve equation.
+ - **Weierstrass b value G2** - base field element equal to value of `b` for the extension. Remove this if `G2` is not supported.
+ 
+Note: All the params are not in Montgomery form. To convert number values into `storage` type you can use this python function:
+
+```python
+import struct
+
+def unpack(x, field_size):
+    return ', '.join(["0x" + format(x, '08x') for x in struct.unpack('IIIIIIII', int(x).to_bytes(field_size, 'little'))])
+```
+
 We also require some changes to [`curve_config.cuh`](https://github.com/ingonyama-zk/icicle/blob/main/icicle/curves/curve_config.cuh#L16-L29), we need to add a new curve id.
 
 ```
