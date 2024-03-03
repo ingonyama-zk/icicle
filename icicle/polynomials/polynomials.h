@@ -180,6 +180,6 @@ namespace polynomials {
 
 } // namespace polynomials
 
-#include "gpu_backend/polynomial_gpu_backend.cuh"
+#include "cuda_backend/polynomial_cuda_backend.cuh"
 #include "polynomials.cpp" // TODO Yuval: avoid include with explicit instantiation?
 #include "polynomials_c_api.h"
