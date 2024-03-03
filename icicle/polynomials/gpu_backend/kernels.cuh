@@ -28,7 +28,7 @@ namespace polynomials {
   __global__ void HighestNonZeroIdx(T* vec, int len, int32_t* idx)
   {
     *idx = -1;
-    for (int i = len - 1; len >= 0; --i) {
+    for (int i = len - 1; i >= 0; --i) {
       if (vec[i] != T::zero()) {
         *idx = i;
         return;
