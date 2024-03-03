@@ -67,6 +67,7 @@ namespace ntt {
     const uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
     const uint32_t idx = tid % size;
     const uint32_t batch_idx = tid / size;
+    // if (tid >= size * batch_size) return;
     if (tid==0) printf("reorder 1\n");
 
     uint32_t next_element = idx;
@@ -90,6 +91,44 @@ namespace ntt {
     arr[group[0]] = is_normalize ? (last_element_in_group * inverse_N) : last_element_in_group;
   }
 
+    // Note: the following reorder kernels are fused with normalization for INTT
+  template <typename E, typename S, uint32_t MAX_GROUP_SIZE = 80>
+  static __global__ void reorder_digits_inplace_and_normalize_columns_batch_kernel(
+    E* arr, uint32_t log_size, uint32_t batch_size, bool dit, bool fast_tw, eRevType rev_type, bool is_normalize, S inverse_N)
+  {
+    // launch N threads (per batch element)
+    // each thread starts from one index and calculates the corresponding group
+    // if its index is the smallest number in the group -> do the memory transformation
+    //  else --> do nothing
+
+    const uint32_t size = 1 << log_size;
+    const uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+    const uint32_t idx = tid / batch_size;
+    const uint32_t batch_idx = tid % batch_size;
+    if (tid >= size * batch_size) return;
+    if (tid==0) printf("reorder 1.5\n");
+
+    uint32_t next_element = idx;
+    uint32_t group[MAX_GROUP_SIZE];
+    group[0] = next_element * batch_size + batch_idx;
+
+    uint32_t i = 1;
+    for (; i < MAX_GROUP_SIZE;) {
+      next_element = generalized_rev(next_element, log_size, dit, fast_tw, rev_type);
+      if (next_element < idx) return; // not handling this group
+      if (next_element == idx) break; // calculated whole group
+      group[i++] = next_element * batch_size + batch_idx;
+    }
+
+    --i;
+    // reaching here means I am handling this group
+    const E last_element_in_group = arr[group[i]];
+    for (; i > 0; --i) {
+      arr[group[i]] = is_normalize ? (arr[group[i - 1]] * inverse_N) : arr[group[i - 1]];
+    }
+    arr[group[0]] = is_normalize ? (last_element_in_group * inverse_N) : last_element_in_group;
+  }
+
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void reorder_digits_and_normalize_kernel(
     E* arr,
@@ -102,6 +141,7 @@ namespace ntt {
     S inverse_N)
   {
     uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+    // if (tid >= (1 << log_size) * batch_size) return;
     if (tid==0) printf("reorder 2\n");
     uint32_t rd = tid;
     uint32_t wr =
@@ -122,6 +162,7 @@ namespace ntt {
     S inverse_N)
   {
     uint32_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+    // if (tid >= (1 << log_size) * batch_size) return;
     if (tid==0) printf("reorder 2.5\n");
     uint32_t rd = tid;
     uint32_t wr = generalized_rev((tid / batch_size) & ((1 << log_size) - 1), log_size, dit, fast_tw, rev_type);
@@ -131,21 +172,42 @@ namespace ntt {
   template <typename E, typename S>
   static __global__ void batch_elementwise_mul_with_reorder(
     E* in_vec,
-    int n_elements,
+    int size,
     int batch_size,
     S* scalar_vec,
     int step,
     int n_scalars,
-    int logn,
+    int log_size,
     eRevType rev_type,
     bool dit,
     E* out_vec)
   {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid==0) printf("reorder 3\n");
-    if (tid >= n_elements * batch_size) return;
-    int64_t scalar_id = tid % n_elements;
-    if (rev_type != eRevType::None) scalar_id = generalized_rev(tid, logn, dit, false, rev_type);
+    if (tid >= size * batch_size) return;
+    int64_t scalar_id = tid % size;
+    if (rev_type != eRevType::None) scalar_id = generalized_rev(tid & ((1 << log_size) - 1), log_size, dit, false, rev_type);
+    out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
+  }
+
+  template <typename E, typename S>
+  static __global__ void batch_elementwise_mul_with_reorder_columns_batch(
+    E* in_vec,
+    int size,
+    int batch_size,
+    S* scalar_vec,
+    int step,
+    int n_scalars,
+    int log_size,
+    eRevType rev_type,
+    bool dit,
+    E* out_vec)
+  {
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid==0) printf("reorder 3.5\n");
+    if (tid >= size * batch_size) return;
+    int64_t scalar_id = (tid / batch_size) % size;
+    if (rev_type != eRevType::None) scalar_id = generalized_rev((tid / batch_size) & ((1 << log_size) - 1), log_size, dit, false, rev_type);
     out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
   }
 
@@ -186,9 +248,9 @@ template <typename E, typename S>
 
     if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
 
-    // if (fast_tw)
-    //   engine.loadBasicTwiddles(basic_twiddles);
-    // else
+    if (fast_tw)
+      engine.loadBasicTwiddles(basic_twiddles);
+    else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
     engine.loadGlobalDataBatched(in, data_stride, log_data_stride, log_size, strided, s_meta, batch_size);
 
@@ -202,16 +264,16 @@ template <typename E, typename S>
     // }
 
     if (twiddle_stride && dit) {
-      // if (fast_tw)
-      //   engine.loadExternalTwiddles64(external_twiddles, twiddle_stride, log_data_stride, strided, s_meta);
-      // else
+      if (fast_tw)
+        engine.loadExternalTwiddles64(external_twiddles, twiddle_stride, log_data_stride, strided, s_meta);
+      else
         engine.loadExternalTwiddlesGeneric64(
           external_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    // if (fast_tw)
-    //   engine.loadInternalTwiddles64(internal_twiddles, strided);
-    // else
+    if (fast_tw)
+      engine.loadInternalTwiddles64(internal_twiddles, strided);
+    else
       engine.loadInternalTwiddlesGeneric64(internal_twiddles, true, inv);
 
 #pragma unroll 1
@@ -243,9 +305,9 @@ template <typename E, typename S>
     }
 
     if (twiddle_stride && !dit) {
-      // if (fast_tw)
-      //   engine.loadExternalTwiddles64(external_twiddles, twiddle_stride, log_data_stride, strided, s_meta);
-      // else
+      if (fast_tw)
+        engine.loadExternalTwiddles64(external_twiddles, twiddle_stride, log_data_stride, strided, s_meta);
+      else
         engine.loadExternalTwiddlesGeneric64(
           external_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
@@ -558,9 +620,10 @@ template <typename E, typename S>
   }
 
   template <typename E, typename S>
-  __global__ void normalize_kernel(E* data, S norm_factor)
+  __global__ void normalize_kernel(E* data, S norm_factor, uint32_t size)
   {
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= size) return;
     data[tid] = data[tid] * norm_factor;
   }
 
@@ -819,7 +882,7 @@ template <typename E, typename S>
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
           false, 0, inv, dit, fast_tw);
       }
-      if (normalize) normalize_kernel<<<batch_size, 16, 0, cuda_stream>>>(out, S::inv_log_size(4));
+      if (normalize) normalize_kernel<<<batch_size, 16, 0, cuda_stream>>>(out, S::inv_log_size(4), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
@@ -835,7 +898,7 @@ template <typename E, typename S>
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
           false, 0, inv, dit, fast_tw);
       }
-      if (normalize) normalize_kernel<<<batch_size, 32, 0, cuda_stream>>>(out, S::inv_log_size(5));
+      if (normalize) normalize_kernel<<<batch_size, 32, 0, cuda_stream>>>(out, S::inv_log_size(5), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
@@ -845,9 +908,10 @@ template <typename E, typename S>
         const int NOF_BLOCKS = (batch_size+7)/8;
         ntt64batch<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
         in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1,
-        1 ,0, 0, false, 0, inv, dit, fast_tw);
+        1 ,0, 0, true, 0, inv, dit, fast_tw);
         cudaDeviceSynchronize();
         printf("batched err %d\n", cudaGetLastError());
+        if (normalize) normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6), (1<<log_size)*batch_size);
         return CHK_LAST();
       }
 
@@ -856,7 +920,7 @@ template <typename E, typename S>
       ntt64<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
         in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size,
         1 ,0, 0, false, 0, inv, dit, fast_tw);
-      if (normalize) normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6));
+      if (normalize) normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
@@ -878,11 +942,67 @@ template <typename E, typename S>
           out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
           (1 << log_size - 4) * batch_size, 1, 0, 0, false, 0, inv, dit, fast_tw);
       }
-      if (normalize) normalize_kernel<<<batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(8));
+      if (normalize) normalize_kernel<<<batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(8), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
     // general case:
+    if (columns_batch){
+      uint32_t nof_blocks = (1 << (log_size - 9)) * ((batch_size+7)/8) * 8;
+      if (dit) {
+        printf("dit\n");
+        for (int i = 0; i < 5; i++) {
+          uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
+          uint32_t stride_log = 0;
+          for (int j = 0; j < i; j++)
+            stride_log += fast_tw ? STAGE_SIZES_HOST_FT[log_size][j] : STAGE_SIZES_HOST[log_size][j];
+          if (stage_size == 6){
+            ntt64batch<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+              i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size,
+              (1 << log_size - 6), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, true, i, inv, dit,
+              fast_tw);
+            cudaDeviceSynchronize();
+            printf("batched err %d\n", cudaGetLastError());
+          }
+        }
+      }
+      else { // dif
+        printf("dif\n");
+        bool first_run = false, prev_stage = false;
+        for (int i = 4; i >= 0; i--) {
+          uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
+          uint32_t stride_log = 0;
+          for (int j = 0; j < i; j++)
+            stride_log += fast_tw ? STAGE_SIZES_HOST_FT[log_size][j] : STAGE_SIZES_HOST[log_size][j];
+          first_run = stage_size && !prev_stage;
+          if (stage_size == 6){
+            ntt64batch<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+              first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size,
+              (1 << log_size - 6), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, true, i, inv, dit,
+              fast_tw);
+            cudaDeviceSynchronize();
+            printf("batched err %d\n", cudaGetLastError());
+          }
+          // else if (stage_size == 5)
+          //   ntt32<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          //     first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          //     (1 << log_size - 5) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit,
+          //     fast_tw);
+          // else if (stage_size == 4)
+          //   ntt16<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+          //     first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          //     (1 << log_size - 4) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit,
+          //     fast_tw);
+          prev_stage = stage_size;
+        }
+      }
+      if (normalize){
+        normalize_kernel<<<(1 << (log_size - 8)) * ((batch_size+7)/8) * 8, 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size), (1<<log_size)*batch_size);
+        cudaDeviceSynchronize();
+        printf("norm err %d\n", cudaGetLastError());
+      }
+      return CHK_LAST();
+    }
     uint32_t nof_blocks = (1 << (log_size - 9)) * batch_size;
     if (dit) {
       for (int i = 0; i < 5; i++) {
@@ -933,7 +1053,7 @@ template <typename E, typename S>
       }
     }
     if (normalize)
-      normalize_kernel<<<(1 << (log_size - 8)) * batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size));
+      normalize_kernel<<<(1 << (log_size - 8)) * batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(log_size), (1<<log_size)*batch_size);
 
     return CHK_LAST();
   }
@@ -998,9 +1118,16 @@ template <typename E, typename S>
     }
 
     if (is_on_coset && !is_inverse) {
-      batch_elementwise_mul_with_reorder<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+      if (columns_batch){
+        batch_elementwise_mul_with_reorder_columns_batch<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_input, ntt_size, batch_size, arbitrary_coset ? arbitrary_coset : external_twiddles,
         arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn, reverse_coset, dit, d_output);
+      }
+      else {
+        batch_elementwise_mul_with_reorder<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+        d_input, ntt_size, batch_size, arbitrary_coset ? arbitrary_coset : external_twiddles,
+        arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn, reverse_coset, dit, d_output);
+      }
 
       d_input = d_output;
     }
@@ -1008,36 +1135,55 @@ template <typename E, typename S>
     if (reverse_input != eRevType::None) {
       const bool is_reverse_in_place = (d_input == d_output);
       if (is_reverse_in_place) {
-        reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_output, logn, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
+        if (columns_batch){
+          reorder_digits_inplace_and_normalize_columns_batch_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_output, logn, batch_size, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
+        }
+        else {
+          reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_output, logn, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
+        }
       } else {
         if (columns_batch){
           reorder_digits_and_normalize_columns_batch_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_input, d_output, logn, batch_size, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
+          d_input, d_output, logn, batch_size, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
         }
         else {
           reorder_digits_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-          d_input, d_output, logn, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
+          d_input, d_output, logn, dit, fast_tw, reverse_input, false/*is_normalize*/, S::inv_log_size(logn));
         }
       }
-      is_normalize = false;
+      // is_normalize = false;
       d_input = d_output;
     }
 
     // inplace ntt
     CHK_IF_RETURN(large_ntt(
       d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size, columns_batch, is_inverse,
-      (is_normalize && reverse_output == eRevType::None), dit, fast_tw, cuda_stream));
+      (is_normalize /*&& reverse_output == eRevType::None*/), dit, fast_tw, cuda_stream));
 
     if (reverse_output != eRevType::None) {
-      reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-        d_output, logn, dit, fast_tw, reverse_output, is_normalize, S::inv_log_size(logn));
+      if (columns_batch){
+          reorder_digits_inplace_and_normalize_columns_batch_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_output, logn, batch_size, dit, fast_tw, reverse_output, false/*is_normalize*/, S::inv_log_size(logn));
+        }
+        else {
+          reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_output, logn, dit, fast_tw, reverse_output, false/*is_normalize*/, S::inv_log_size(logn));
+        }
     }
 
     if (is_on_coset && is_inverse) {
-      batch_elementwise_mul_with_reorder<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+      if (columns_batch) {
+        batch_elementwise_mul_with_reorder_columns_batch<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_output, ntt_size, batch_size, arbitrary_coset ? arbitrary_coset : external_twiddles + n_twiddles,
         arbitrary_coset ? 1 : -coset_gen_index, n_twiddles, logn, reverse_coset, dit, d_output);
+      }
+      else {
+        batch_elementwise_mul_with_reorder<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+        d_output, ntt_size, batch_size, arbitrary_coset ? arbitrary_coset : external_twiddles + n_twiddles,
+        arbitrary_coset ? 1 : -coset_gen_index, n_twiddles, logn, reverse_coset, dit, d_output);
+      }
     }
 
     return CHK_LAST();

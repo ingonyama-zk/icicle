@@ -68,15 +68,15 @@ int main(int argc, char** argv)
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop, trans_start, trans_middle, trans_stop;
   float icicle_time, new_time, trans1_time, trans2_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 6;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 24;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
-  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1<<18;
-  bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 4;
+  bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : true;
   int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 0;
-  const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNN;
-  bool FAST_TW = (argc > 8) ? atoi(argv[8]) : true;
+  const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNR;
+  bool FAST_TW = (argc > 8) ? atoi(argv[8]) : false;
 
   // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -129,8 +129,8 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
 
   // init inputs
-  // incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
-  random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  // random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
