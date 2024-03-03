@@ -926,9 +926,9 @@ public:
 
   static constexpr HOST_DEVICE_INLINE bool is_even(const Field& xs) { return ~xs.limbs_storage.limbs[0] & 1; }
 
-  // inverse assumes that xs is nonzero
   static constexpr HOST_DEVICE_INLINE Field inverse(const Field& xs)
   {
+    if (xs == zero()) return zero();
     constexpr Field one = Field{CONFIG::one};
     constexpr ff_storage modulus = CONFIG::modulus;
     Field u = xs;

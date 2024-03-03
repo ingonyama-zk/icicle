@@ -1,0 +1,39 @@
+#include <cuda_runtime.h>
+#include "../../include/types.h"
+
+#ifndef _{{toUpper .Curve}}_VEC_OPS_H
+#define _{{toUpper .Curve}}_VEC_OPS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+cudaError_t {{.Curve}}MulCuda(
+  scalar_t* vec_a,
+  scalar_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+cudaError_t {{.Curve}}AddCuda(
+  scalar_t* vec_a,
+  scalar_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+cudaError_t {{.Curve}}SubCuda(
+  scalar_t* vec_a,
+  scalar_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

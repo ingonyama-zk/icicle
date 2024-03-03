@@ -1,0 +1,34 @@
+{{- define "scalar_field_tests_imports"}}
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+{{- end -}}
+{{- define "scalar_field_tests"}}
+func TestGenerateScalars(t *testing.T) {
+	const numScalars = 8
+	scalars := GenerateScalars(numScalars)
+
+	assert.Implements(t, (*core.HostOrDeviceSlice)(nil), &scalars)
+
+	assert.Equal(t, numScalars, scalars.Len())
+	zeroScalar := ScalarField{}
+	assert.NotContains(t, scalars, zeroScalar)
+}
+
+func TestMongtomeryConversion(t *testing.T) {
+	size := 1 << 15
+	scalars := GenerateScalars(size)
+
+	var deviceScalars core.DeviceSlice
+	scalars.CopyToDevice(&deviceScalars, true)
+
+	ToMontgomery(&deviceScalars)
+
+	scalarsMontHost := GenerateScalars(size)
+
+	scalarsMontHost.CopyFromDevice(&deviceScalars)
+	assert.NotEqual(t, scalars, scalarsMontHost)
+
+	FromMontgomery(&deviceScalars)
+
+	scalarsMontHost.CopyFromDevice(&deviceScalars)
+	assert.Equal(t, scalars, scalarsMontHost)
+}{{end}}
