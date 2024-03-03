@@ -30,8 +30,8 @@ NTT supports the following curves:
 
 ## Supported Bindings
 
-- [Golang](../goalng-bindings/msm)
-- [Rust](../rust-bindings//msm)
+- [Golang](../golang-bindings/ntt.md)
+- [Rust](../rust-bindings/ntt.md)
 
 ### Examples
 
