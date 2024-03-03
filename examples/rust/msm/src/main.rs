@@ -156,23 +156,19 @@ fn main() {
         {
             println!("Checking against arkworks...");
             let ark_points: Vec<Bn254G1Affine> = points
-                .as_slice()
                 .iter()
                 .map(|&point| point.to_ark())
                 .collect();
             let ark_scalars: Vec<Bn254Fr> = scalars
-                .as_slice()
                 .iter()
                 .map(|scalar| scalar.to_ark())
                 .collect();
 
             let ark_points_bls12377: Vec<Bls12377G1Affine> = points_bls12377
-                .as_slice()
                 .iter()
                 .map(|point| point.to_ark())
                 .collect();
             let ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377
-                .as_slice()
                 .iter()
                 .map(|scalar| scalar.to_ark())
                 .collect();

@@ -208,7 +208,6 @@ where
             let scalars = HostSlice::from_mut_slice(&mut scalars);
             // here you can see how arkworks type can be easily created without any purpose-built conversions
             let mut ark_scalars = scalars
-                .as_slice()
                 .iter()
                 .map(|v| F::ArkEquivalent::from_random_bytes(&v.to_bytes_le()).unwrap())
                 .collect::<Vec<F::ArkEquivalent>>();
@@ -226,7 +225,6 @@ where
                 let ark_scalars_copy = ark_scalars.clone();
                 ark_domain.fft_in_place(&mut ark_scalars);
                 let ntt_result_as_ark = ntt_result
-                    .as_slice()
                     .iter()
                     .map(|p| p.to_ark())
                     .collect::<Vec<F::ArkEquivalent>>();
@@ -237,7 +235,6 @@ where
                 config.ordering = Ordering::kRN;
                 ntt(ntt_result, NTTDir::kInverse, &config, scalars).unwrap();
                 let ntt_result_as_ark = scalars
-                    .as_slice()
                     .iter()
                     .map(|p| p.to_ark())
                     .collect::<Vec<F::ArkEquivalent>>();

@@ -103,6 +103,14 @@ impl<T> HostSlice<T> {
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         &mut self.0
     }
+
+    pub fn iter(&self) -> impl Iterator<Item=&T> {
+        self.0.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut T> {
+        self.0.iter_mut()
+    }
 }
 
 impl<T, const D_ID: usize> DeviceSlice<T, D_ID> {

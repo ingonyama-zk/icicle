@@ -158,12 +158,10 @@ where
                 .unwrap();
 
             let points_ark: Vec<_> = points_h
-                .as_slice()
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
             let scalars_ark: Vec<_> = scalars_h
-                .as_slice()
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();
@@ -232,7 +230,7 @@ where
             {
                 let msm_result_ark: ark_ec::models::short_weierstrass::Projective<C::ArkSWConfig> =
                     VariableBaseMSM::msm(&points_chunk, &scalars_chunk).unwrap();
-                assert_eq!(msm_results.as_slice()[i].to_ark(), msm_result_ark);
+                assert_eq!(msm_results[i].to_ark(), msm_result_ark);
             }
         }
     }

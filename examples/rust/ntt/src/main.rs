@@ -141,14 +141,12 @@ fn main() {
 
     println!("Checking against arkworks...");
     let mut ark_scalars: Vec<Bn254Fr> = scalars
-        .as_slice()
         .iter()
         .map(|scalar| scalar.to_ark())
         .collect();
     let bn254_domain = <Radix2EvaluationDomain<Bn254Fr> as EvaluationDomain<Bn254Fr>>::new(size).unwrap();
 
     let mut ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377
-        .as_slice()
         .iter()
         .map(|scalar| scalar.to_ark())
         .collect();
