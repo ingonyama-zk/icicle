@@ -93,7 +93,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T]
 
 ### Initializing the NTT Domain
 
-Before performing NTT operations, it might be necessary to initialize the NTT domain, especially when working with custom roots of unity or when operating in a specific finite field.
+Before performing NTT operations, its necessary to initialize the NTT domain, It only needs to be called once per GPU since the twiddles are cached.
 
 ```go
 func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError

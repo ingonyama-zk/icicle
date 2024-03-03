@@ -12,7 +12,6 @@ package main
 
 import (
     "github.com/stretchr/testify/assert"
-    "testing"
 
     "github.com/ingonyama-zk/icicle/wrappers/golang/core"
     cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
