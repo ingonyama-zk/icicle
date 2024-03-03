@@ -2,7 +2,7 @@
 #ifndef BN254_PARAMS_H
 #define BN254_PARAMS_H
 
-#include "../utils/storage.cuh"
+#include "utils/storage.cuh"
 
 namespace bn254 {
   struct fp_config {

@@ -2,7 +2,7 @@
 #ifndef GRUMPKIN_PARAMS_H
 #define GRUMPKIN_PARAMS_H
 
-#include "../utils/storage.cuh"
+#include "utils/storage.cuh"
 #include "bn254_params.cuh"
 
 namespace grumpkin {

@@ -3,7 +3,7 @@
 #ifndef G2_DEFINED
 #define G2_DEFINED
 
-#include "../curves/curve_config.cuh"
+#include "curves/curve_config.cuh"
 #include "extension_field.cuh"
 #include "projective.cuh"
 
