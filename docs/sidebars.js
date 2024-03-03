@@ -25,9 +25,20 @@ module.exports = {
           id: "icicle/integrations"
         },
         {
-          type: "doc",
+          type: "category",
           label: "Golang bindings",
-          id: "icicle/golang-bindings",
+          link: {
+            type: `doc`,
+            id: "icicle/golang-bindings",
+          },
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              label: "MSM",
+              id: "icicle/golang-bindings/msm",
+            },
+          ]
         },
         {
           type: "category",
@@ -40,6 +51,11 @@ module.exports = {
           items: [
             {
               type: "doc",
+              label: "MSM",
+              id: "icicle/rust-bindings/msm",
+            },
+            {
+              type: "doc",
               label: "Multi GPU Support",
               id: "icicle/rust-bindings/multi-gpu",
             },
@@ -48,7 +64,7 @@ module.exports = {
               label: "Vector operations",
               id: "icicle/rust-bindings/vec-ops",
             }
-          ]
+          ],
         },
         {
           type: "category",
