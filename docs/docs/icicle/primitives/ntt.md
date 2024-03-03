@@ -146,9 +146,11 @@ Mixed Radix can reduce the number of stages required to compute for large inputs
 
 ### Which algorithm should I choose ?
 
-Radix 2 is faster for small NTTs. A small NTT would be around logN = 16 and batch size 1. Its also more suited for inputs which are power of 2 (e.g., 256, 512, 1024). Radix 2 won't necessarily perform better for smaller `logn` with larger batches.
+Both work only on inputs of power of 2 (e.g., 256, 512, 1024).
 
-Mixed radix on the other hand better for larger NTTs with larger input sizes which are not necessarily power of 2.
+Radix 2 is faster for small NTTs. A small NTT would be around logN = 16 and batch size 1. Radix 2 won't necessarily perform better for smaller `logn` with larger batches.
+
+Mixed radix on the other hand better for larger NTTs with larger input sizes.
 
 Performance really depends on logn size, batch size, ordering, inverse, coset, coeff-field and which GPU you are using.
 
