@@ -1,7 +1,6 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
-#include <vector>
 #include <memory>
 
 #include "curves/curve_config.cuh"
@@ -34,6 +33,8 @@ public:
     auto ntt_config = ntt::DefaultNTTConfig<test_type>();
     const test_type basic_root = test_type::omega(MAX_NTT_LOG_SIZE);
     ntt::InitDomain(basic_root, ntt_config.ctx);
+    // initializing polynoimals factory for CUDA backend
+    Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
   }
 
   static void TearDownTestSuite() {}

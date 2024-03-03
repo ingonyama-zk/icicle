@@ -7,9 +7,11 @@ namespace polynomials {
   template <typename C, typename D, typename I, typename EC>
   Polynomial<C, D, I, EC>::Polynomial()
   {
-    // TODO Yuval: how to choose backend and context types
-    m_context = std::make_unique<GPUPolynomialContext<C, D, I>>();
-    m_backend = std::make_unique<GPUPolynomialBackend<C, D, I, EC>>();
+    if (nullptr == s_factory) {
+      throw std::runtime_error("Polynomial factory not intialized. Must call Polynomial::initialize(factory)");
+    }
+    m_context = s_factory->create_context();
+    m_backend = s_factory->create_backend();
   }
 
   template <typename C, typename D, typename I, typename EC>
