@@ -10,6 +10,9 @@ namespace polynomials {
   template <typename CoefficientType, typename DomainType, typename ImageType>
   class IPolynomialContext;
 
+  template <typename C, typename D, typename I, typename ECpoint>
+  class AbstractPolynomialFactory;
+
   /*============================== Polynomial API ==============================*/
   template <
     typename CoefficientType = curve_config::scalar_t,
@@ -59,11 +62,21 @@ namespace polynomials {
       return os;
     }
 
+    static void
+    initialize(std::unique_ptr<AbstractPolynomialFactory<CoefficientType, DomainType, ImageType, ECpoint>> factory)
+    {
+      s_factory = std::move(factory);
+    }
+
   private:
     // context is a wrapper for the polynomial state, including allocated memory, device context etc.
-    std::unique_ptr<IPolynomialContext<CoefficientType, DomainType, ImageType>> m_context = nullptr;
+    std::shared_ptr<IPolynomialContext<CoefficientType, DomainType, ImageType>> m_context = nullptr;
     // backend is the actual API implementation
-    std::unique_ptr<IPolynomialBackend<CoefficientType, DomainType, ImageType, ECpoint>> m_backend = nullptr;
+    std::shared_ptr<IPolynomialBackend<CoefficientType, DomainType, ImageType, ECpoint>> m_backend = nullptr;
+
+    // factory is building the context and backend for polynomial objects
+    static inline std::unique_ptr<AbstractPolynomialFactory<CoefficientType, DomainType, ImageType, ECpoint>>
+      s_factory = nullptr;
 
     Polynomial();
 
@@ -153,6 +166,16 @@ namespace polynomials {
     // if coefficients==nullptr, return nof_coefficients, without writing
     virtual int64_t
     get_coefficients_on_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
+  };
+
+  /*============================== Polynomial Absract Factory ==============================*/
+  template <typename C, typename D, typename I, typename ECpoint>
+  class AbstractPolynomialFactory
+  {
+  public:
+    virtual std::shared_ptr<IPolynomialContext<C, D, I>> create_context() = 0;
+    virtual std::shared_ptr<IPolynomialBackend<C, D, I, ECpoint>> create_backend() = 0;
+    virtual ~AbstractPolynomialFactory() = default;
   };
 
 } // namespace polynomials

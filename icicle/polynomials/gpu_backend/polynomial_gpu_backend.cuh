@@ -523,4 +523,21 @@ namespace polynomials {
       return host_coeff;
     }
   };
+
+  /*============================== Polynomial GPU-factory ==============================*/
+  template <typename C = curve_config::scalar_t, typename D = C, typename I = C, typename EC = curve_config::affine_t>
+  class CUDAPolynomialFactory : public AbstractPolynomialFactory<C, D, I, EC>
+  {
+  public:
+    CUDAPolynomialFactory() = default;
+
+    std::shared_ptr<IPolynomialContext<C, D, I>> create_context() override
+    {
+      return std::make_shared<GPUPolynomialContext<C, D, I>>();
+    }
+    std::shared_ptr<IPolynomialBackend<C, D, I, EC>> create_backend() override
+    {
+      return std::make_shared<GPUPolynomialBackend<C, D, I, EC>>();
+    }
+  };
 } // namespace polynomials
