@@ -49,8 +49,6 @@ Accelerating MSM is crucial to a ZK protocol's performance due to the [large per
 
 You can learn more about how MSMs work from this [video](https://www.youtube.com/watch?v=Bl5mQA7UL2I) and from our resource list on [Ingopedia](https://www.ingonyama.com/ingopedia/msm).
 
-# Using MSM
-
 ## Supported curves
 
 MSM supports the following curves:
@@ -58,7 +56,7 @@ MSM supports the following curves:
 `bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
 
 
-## Supported curves
+## Supported Bindings
 
 - [Golang](../goalng-bindings/msm)
 - [Rust](../rust-bindings//msm)

@@ -38,6 +38,16 @@ module.exports = {
               label: "MSM",
               id: "icicle/golang-bindings/msm",
             },
+            {
+              type: "doc",
+              label: "NTT",
+              id: "icicle/golang-bindings/ntt",
+            },
+            {
+              type: "doc",
+              label: "Vector operations",
+              id: "icicle/golang-bindings/vec-ops",
+            },
           ]
         },
         {

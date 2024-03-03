@@ -1,3 +1,5 @@
+# MSM
+
 ## How do I toggle between the supported algorithms?
 
 When creating your MSM Config you may state which algorithm you wish to use. `is_big_triangle=true` will activate Large triangle accumulation and `is_big_triangle=false` will activate Bucket accumulation.
