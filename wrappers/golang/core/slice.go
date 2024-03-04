@@ -83,6 +83,16 @@ func (d *DeviceSlice) Free() cr.CudaError {
 	return err
 }
 
+func (d *DeviceSlice) FreeAsync(stream cr.Stream) cr.CudaError {
+	d.CheckDevice()
+	err := cr.FreeAsync(d.inner, stream)
+	if err == cr.CudaSuccess {
+		d.length, d.capacity, d.deviceId = 0, 0, 0
+		d.inner = nil
+	}
+	return err
+}
+
 type HostSliceInterface interface {
 	Size() int
 }
