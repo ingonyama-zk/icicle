@@ -52,12 +52,6 @@ If you are interested in building a specific curve you would run:
 ./build.sh bls12_381 ON
 ```
 
-After building your shared libraries. You must export them so your system will be aware of their existence.
-
-```bash
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH/<path_to_shared_libs>
-```
-
 Now you can ICICLE into your project
 
 ```golang

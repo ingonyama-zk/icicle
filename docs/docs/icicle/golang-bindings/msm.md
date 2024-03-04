@@ -11,8 +11,6 @@
 package main
 
 import (
-    "github.com/stretchr/testify/assert"
-
     "github.com/ingonyama-zk/icicle/wrappers/golang/core"
     cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
@@ -35,8 +33,10 @@ func Main() {
     // Allocate memory on the device for the result of the MSM operation.
     var out core.DeviceSlice
     _, e := out.MallocAsync(p.Size(), p.Size(), stream)
-    // Check for errors in memory allocation.
-    assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+
+    if e != nil {
+        panic(e)
+    }
     
     // Set the CUDA stream in the MSM configuration.
     cfg.Ctx.Stream = &stream
@@ -44,8 +44,10 @@ func Main() {
     
     // Perform the MSM operation.
     e = Msm(scalars, points, &cfg, out)
-    // Check for errors in the MSM operation.
-    assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+    
+    if e != nil {
+        panic(e)
+    }
     
     // Allocate host memory for the results and copy the results from the device.
     outHost := make(core.HostSlice[Projective], 1)
