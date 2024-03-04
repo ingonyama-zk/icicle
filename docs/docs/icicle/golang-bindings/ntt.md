@@ -32,7 +32,7 @@ func Main() {
 
     // Perform the NTT operation.
     err := Ntt(scalars, dir, &cfg, results)
-    if err != nil {
+    if err != cr.CudaSuccess {
         panic("NTT operation failed")
     }
 }
