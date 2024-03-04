@@ -101,65 +101,56 @@ if (ECNTT_DEFINED STREQUAL "ON")
 endif ()
 
 option(BUILD_TESTS "Build tests" OFF)
-option(POLYNOMIAL_TB "Build polynomial test bench" OFF)
 
-function(fetch_google_test)
-    include(FetchContent)  
-    FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    )
-    # For Windows: Prevent overriding the parent project's compiler/linker settings
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
-    enable_testing()
-    include(GoogleTest)
-endfunction()
+if (CURVE IN_LIST SUPPORTED_CURVES_WITH_POSEIDON)
+  list(APPEND ICICLE_SOURCES appUtils/poseidon/poseidon.cu)
+  list(APPEND ICICLE_SOURCES appUtils/tree/merkle.cu)
+endif()
 
-if (NOT BUILD_TESTS)
+if (NOT CURVE IN_LIST SUPPORTED_CURVES_WITHOUT_NTT)
+    list(APPEND ICICLE_SOURCES appUtils/ntt/ntt.cu)
+    list(APPEND ICICLE_SOURCES appUtils/ntt/kernel_ntt.cu)
+    if(ECNTT_DEFINED STREQUAL "ON")
+      set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DECNTT_DEFINED=ON")
+    endif()
+endif()
 
-  message(STATUS "Building without tests.")
+add_library(
+  icicle
+  utils/vec_ops.cu
+  utils/mont.cu
+  primitives/field.cu
+  primitives/projective.cu
+  appUtils/msm/msm.cu
+  ${ICICLE_SOURCES}
+  polynomials/polynomials.cu 
+  polynomials/cuda_backend/polynomial_cuda_backend.cu
+)
+set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
+target_compile_definitions(icicle PUBLIC CURVE=${CURVE})  
 
-  if (CURVE IN_LIST SUPPORTED_CURVES_WITH_POSEIDON)
-    list(APPEND ICICLE_SOURCES appUtils/poseidon/poseidon.cu)
-    list(APPEND ICICLE_SOURCES appUtils/tree/merkle.cu)
-  endif()
-
-  if (NOT CURVE IN_LIST SUPPORTED_CURVES_WITHOUT_NTT)
-      list(APPEND ICICLE_SOURCES appUtils/ntt/ntt.cu)
-      list(APPEND ICICLE_SOURCES appUtils/ntt/kernel_ntt.cu)
-      if(ECNTT_DEFINED STREQUAL "ON")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DECNTT_DEFINED=ON")
-      endif()
-  endif()
-
-  add_library(
-    icicle
-    utils/vec_ops.cu
-    utils/mont.cu
-    primitives/field.cu
-    primitives/projective.cu
-    appUtils/msm/msm.cu
-    ${ICICLE_SOURCES}
-  )
-  set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
-  target_compile_definitions(icicle PUBLIC CURVE=${CURVE})  
-
-  if (POLYNOMIAL_TB)
-    message(STATUS "Building polynomial test-bench.")
-    fetch_google_test()
-    add_executable(polynomial_tb tests/polynomial_test.cu)
-    target_link_libraries(polynomial_tb GTest::gtest_main icicle pthread)
-    set_target_properties(polynomial_tb PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-    gtest_discover_tests(polynomial_tb)
-  endif()
-
-else()
+if (BUILD_TESTS)
   message(STATUS "Building tests.")
-  fetch_google_test()
+  
+  include(FetchContent)  
+  FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip      
+  )
+  # For Windows: Prevent overriding the parent project's compiler/linker settings
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(googletest)
+  enable_testing()
+  include(GoogleTest)
+
   add_executable(runner tests/runner.cu)
   target_link_libraries(runner GTest::gtest_main)
   set_target_properties(runner PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   gtest_discover_tests(runner)
+  
+  # polynomial test-bench
+  add_executable(polynomial_tb tests/polynomial_test.cu)
+  target_link_libraries(polynomial_tb GTest::gtest_main icicle pthread)
+  set_target_properties(polynomial_tb PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  gtest_discover_tests(polynomial_tb)
 endif ()
