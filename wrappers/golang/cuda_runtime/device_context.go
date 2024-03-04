@@ -20,18 +20,23 @@ type DeviceContext struct {
 	DeviceId uint
 
 	/// Mempool to use. Default value: 0.
-	// TODO: use cuda_bindings.CudaMemPool as type
-	Mempool uint // Assuming the type is provided by a CUDA binding crate
+	Mempool MemPool // Assuming the type is provided by a CUDA binding crate
 }
 
 func GetDefaultDeviceContext() (DeviceContext, CudaError) {
+	defaultContext := GetDefaultDeviceContextForDevice(0)
+	return defaultContext, CudaSuccess
+}
+
+func GetDefaultDeviceContextForDevice(deviceId int) DeviceContext {
 	var defaultStream Stream
+	var defaultMempool MemPool
 
 	return DeviceContext{
 		&defaultStream,
-		0,
-		0,
-	}, CudaSuccess
+		uint(deviceId),
+		defaultMempool,
+	}
 }
 
 func SetDevice(device int) CudaError {
@@ -46,4 +51,11 @@ func GetDeviceCount() (int, CudaError) {
 	cCount := (*C.int)(unsafe.Pointer(&count))
 	err := C.cudaGetDeviceCount(cCount)
 	return count, (CudaError)(err)
+}
+
+func GetDevice() (int, CudaError) {
+	var device int
+	cDevice := (*C.int)(unsafe.Pointer(&device))
+	err := C.cudaGetDevice(cDevice)
+	return device, (CudaError)(err)
 }

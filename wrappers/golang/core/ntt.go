@@ -41,7 +41,8 @@ type NTTConfig[T any] struct {
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
-	ctx, _ := cr.GetDefaultDeviceContext()
+	deviceId, _ := cr.GetDevice()
+	ctx := cr.GetDefaultDeviceContextForDevice(deviceId)
 	return NTTConfig[T]{
 		ctx,      // Ctx
 		cosetGen, // CosetGen
