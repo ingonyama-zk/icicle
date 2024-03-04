@@ -176,7 +176,7 @@ func TestMSMG2MultiDevice(t *testing.T) {
 
 				cr.SynchronizeStream(&stream)
 				// Check with gnark-crypto
-				assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+				assert.True(t, testAgainstGnarkCryptoMsmG2(scalars, points, outHost[0]))
 			}
 		})
 	}
