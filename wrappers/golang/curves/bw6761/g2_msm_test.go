@@ -149,7 +149,7 @@ func TestMSMG2MultiDevice(t *testing.T) {
 	numDevices, _ := cr.GetDeviceCount()
 	fmt.Println("There are ", numDevices, " devices available")
 	wg := sync.WaitGroup{}
-	
+
 	for i := 0; i < numDevices; i++ {
 		wg.Add(1)
 		cr.RunOnDevice(i, func(args ...any) {
@@ -160,14 +160,14 @@ func TestMSMG2MultiDevice(t *testing.T) {
 				size := 1 << power
 				scalars := GenerateScalars(size)
 				points := G2GenerateAffinePoints(size)
-				
+
 				var p G2Projective
 				var out core.DeviceSlice
 				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 				cfg.Ctx.Stream = &stream
 				cfg.IsAsync = true
-				
+
 				e = G2Msm(scalars, points, &cfg, out)
 				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 				outHost := make(core.HostSlice[G2Projective], 1)
