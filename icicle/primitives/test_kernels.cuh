@@ -1,7 +1,6 @@
 #pragma once
 
-#ifndef G2_DEFINED
-#define G2_DEFINED
+#ifdef G2_DEFINED
 #include "extension_field.cuh"
 #endif
 
