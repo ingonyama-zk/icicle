@@ -34,7 +34,7 @@ func Main() {
     var out core.DeviceSlice
     _, e := out.MallocAsync(p.Size(), p.Size(), stream)
 
-    if e != nil {
+    if e != cr.CudaSuccess {
         panic(e)
     }
     
