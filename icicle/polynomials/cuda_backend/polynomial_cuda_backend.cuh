@@ -490,6 +490,7 @@ namespace polynomials {
       HighestNonZeroIdx<<<1, 1, 0, m_device_context.stream>>>(coeff, nof_coeff, d_degree);
       CHK_STICKY(
         cudaMemcpyAsync(&h_degree, d_degree, sizeof(int32_t), cudaMemcpyDeviceToHost, m_device_context.stream));
+      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
       CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream));
 
       return h_degree + 1;
@@ -577,8 +578,6 @@ namespace polynomials {
   public:
     CUDAPolynomialFactory()
     {
-      static std::mutex s_stream_create_mutex; // only locked at init and then never reused
-      std::lock_guard<std::mutex> lock(s_stream_create_mutex);
       int nof_cuda_devices = -1;
       CHK_STICKY(cudaGetDeviceCount(&nof_cuda_devices));
       int orig_device = -1;
@@ -593,6 +592,13 @@ namespace polynomials {
         m_device_contexts.push_back(context);
       }
       CHK_STICKY(cudaSetDevice(orig_device)); // setting back original device
+    }
+
+    ~CUDAPolynomialFactory()
+    {
+      for (auto stream_it : m_device_streams) {
+        // CHK_STICKY(cudaStreamDestroy(stream_it)); // TODO Yuval: why does it fail?
+      }
     }
 
     std::shared_ptr<IPolynomialContext<C, D, I>> create_context() override

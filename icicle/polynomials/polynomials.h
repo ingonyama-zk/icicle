@@ -36,9 +36,6 @@ namespace polynomials {
     std::pair<Polynomial, Polynomial> divide(const Polynomial& rhs) const; //  returns (Q(x), R(x))
     Polynomial divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const;
 
-    // // dot-product with coefficients (e.g. MSM when computing P(tau)G1)
-    // ECpoint dot_product_with_coefficients(ECpoint* points, uint64_t nof_points);
-
     // arithmetic ops with monomial
     Polynomial& add_monomial_inplace(CoefficientType monomial_coeff, uint64_t monomial = 0);
     Polynomial& sub_monomial_inplace(CoefficientType monomial_coeff, uint64_t monomial = 0);
@@ -153,9 +150,6 @@ namespace polynomials {
     // arithmetic with monomials
     virtual void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) = 0;
     virtual void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) = 0;
-
-    // dot product with coefficients
-    // virtual ECpoint dot_product_with_coefficients(PolyContext& op, ECpoint* points, uint64_t nof_points) = 0;
 
     virtual int32_t degree(PolyContext& op) = 0;
 
