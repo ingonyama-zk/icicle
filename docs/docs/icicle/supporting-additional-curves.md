@@ -20,8 +20,9 @@ Start by copying `bn254_params.cuh` contents in your params file. Params should 
     - **modulus_4** - modulus * 4. 
     - **neg_modulus** - negated modulus. 
     - **modulus_wide** - modulus represented as a double-sized integer.
-    - **modulus_squared_2** - modulus**2 represented as a double-sized integer.
-    - **modulus_squared_4** - modulus**4 represented as a double-sized integer.
+    - **modulus_squared** - modulus**2 represented as a double-sized integer.
+    - **modulus_squared_2** - 2 * modulus**2 represented as a double-sized integer.
+    - **modulus_squared_4** - 4 * modulus**2 represented as a double-sized integer.
     - **m** - value used in multiplication. Can be computed as `2**(2*modulus_bit_count) // modulus`. 
     - **one** - multiplicative identity. 
     - **zero** - additive identity. 
@@ -43,7 +44,7 @@ Note: All the params are not in Montgomery form. To convert number values into `
 import struct
 
 def unpack(x, field_size):
-    return ', '.join(["0x" + format(x, '08x') for x in struct.unpack('IIIIIIII', int(x).to_bytes(field_size, 'little'))])
+    return ', '.join(["0x" + format(x, '08x') for x in struct.unpack('I' * (field_size) // 4, int(x).to_bytes(field_size, 'little'))])
 ```
 
 We also require some changes to [`curve_config.cuh`](https://github.com/ingonyama-zk/icicle/blob/main/icicle/curves/curve_config.cuh#L16-L29), we need to add a new curve id.
