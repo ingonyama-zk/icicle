@@ -73,32 +73,38 @@ public:
     }
   }
 
-  static void assert_equal(Polynomial_t& a, Polynomial_t& b)
+  static void assert_equal(Polynomial_t& lhs, Polynomial_t& rhs)
   {
-    const int deg_a = a.degree();
-    const int deg_b = b.degree();
-    ASSERT_EQ(deg_a, deg_b);
+    const int deg_lhs = lhs.degree();
+    const int deg_rhs = rhs.degree();
+    ASSERT_EQ(deg_lhs, deg_rhs);
 
-    auto a_coeffs = std::make_unique<test_type[]>(deg_a);
-    auto b_coeffs = std::make_unique<test_type[]>(deg_b);
-    a.get_coefficients_on_host(a_coeffs.get(), 1, deg_a - 1);
-    b.get_coefficients_on_host(b_coeffs.get(), 1, deg_b - 1);
+    auto lhs_coeffs = std::make_unique<test_type[]>(deg_lhs);
+    auto rhs_coeffs = std::make_unique<test_type[]>(deg_rhs);
+    lhs.get_coefficients_on_host(lhs_coeffs.get(), 1, deg_lhs - 1);
+    rhs.get_coefficients_on_host(rhs_coeffs.get(), 1, deg_rhs - 1);
 
-    ASSERT_EQ(0, memcmp(a_coeffs.get(), b_coeffs.get(), deg_a * sizeof(test_type)));
+    ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(test_type)));
   }
+
+  const static inline auto zero = test_type::zero();
+  const static inline auto one = test_type::one();
+  const static inline auto two = test_type::from(2);
+  const static inline auto three = test_type::from(3);
+  const static inline auto four = test_type::from(4);
+  const static inline auto five = test_type::from(5);
+  const static inline auto minus_one = zero - one;
 };
 
 TEST_F(PolynomialTest, evalution)
 {
-  const auto a = test_type::one();
-  const auto b = a + a; // 2
-  const auto c = b + a; // 3
-  const test_type coeffs[3] = {a, b, c};
+  const test_type coeffs[3] = {one, two, three};
   auto f = Polynomial_t::from_coefficients(coeffs, 3);
   test_type x = test_type::rand_host();
-  auto f_x = f(x);
 
-  auto expected_f_x = a + b * x + c * x * x;
+  auto f_x = f(x); // evaluation
+
+  auto expected_f_x = one + two * x + three * x * x;
 
   EXPECT_EQ(f_x, expected_f_x);
 }
@@ -145,7 +151,7 @@ TEST_F(PolynomialTest, cAPI)
 
 TEST_F(PolynomialTest, multiplication)
 {
-  const int size_0 = 1 << 12, size_1 = 1 << 10;
+  const int size_0 = 1 << 15, size_1 = 1 << 12;
   auto f = randomize_polynomial(size_0);
   auto g = randomize_polynomial(size_1);
 
@@ -165,11 +171,6 @@ TEST_F(PolynomialTest, multiplication)
 
 TEST_F(PolynomialTest, monomials)
 {
-  const auto zero = test_type::zero();
-  const auto one = test_type::one();
-  const auto two = one + one;
-  const auto three = two + one;
-
   const test_type coeffs[3] = {one, zero, two}; // 1+2x^2
   auto f = Polynomial_t::from_coefficients(coeffs, 3);
   const auto x = three;
@@ -193,11 +194,6 @@ TEST_F(PolynomialTest, monomials)
 
 TEST_F(PolynomialTest, ReadCoeffsToHost)
 {
-  const auto zero = test_type::zero();
-  const auto one = test_type::one();
-  const auto two = test_type::from(2);
-  const auto three = test_type::from(3);
-
   const test_type coeffs_f[3] = {zero, one, two}; // x+2x^2
   auto f = Polynomial_t::from_coefficients(coeffs_f, 3);
   const test_type coeffs_g[3] = {one, one, one}; // 1+x+x^2
@@ -225,14 +221,6 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
 
 TEST_F(PolynomialTest, divisionSimple)
 {
-  const auto zero = test_type::zero();
-  const auto one = test_type::one();
-  const auto two = test_type::from(2);
-  const auto three = test_type::from(3);
-  const auto four = test_type::from(4);
-  const auto five = test_type::from(5);
-  const auto minus_one = zero - one;
-
   const test_type coeffs_a[4] = {five, zero, four, three}; // 3x^3+4x^2+5
   const test_type coeffs_b[3] = {minus_one, zero, one};    // x^2-1
   auto a = Polynomial_t::from_coefficients(coeffs_a, 4);
@@ -274,12 +262,6 @@ TEST_F(PolynomialTest, divisionLarge)
 
 TEST_F(PolynomialTest, divideByVanishingPolynomial)
 {
-  const auto zero = test_type::zero();
-  const auto one = test_type::one();
-  const auto six = test_type::from(6);
-  const auto minus_one = zero - one;
-  const auto minus_five = zero - test_type::from(5);
-
   const test_type coeffs_v[5] = {minus_one, zero, zero, zero, one}; // x^4-1 vanishes on 4th roots of unity
   auto v = Polynomial_t::from_coefficients(coeffs_v, 5);
   auto h = randomize_polynomial(1 << 11, false);
