@@ -124,7 +124,8 @@ namespace ntt {
    * @return Default value of [NTTConfig](@ref NTTConfig).
    */
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig();
+  NTTConfig<S>
+  DefaultNTTConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context());
 
   /**
    * A function that computes NTT or iNTT in-place. It's necessary to call [InitDomain](@ref InitDomain) with an

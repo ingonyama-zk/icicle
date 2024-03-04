@@ -1,4 +1,4 @@
-#pragma once // TODO Yuval remove this
+#pragma once // TODO Yuval: probably better compile it rather than include
 
 #include "polynomials.h"
 
