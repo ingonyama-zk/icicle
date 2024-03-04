@@ -176,7 +176,7 @@ namespace ntt {
     else
       engine.loadInternalTwiddlesGeneric64(internal_twiddles, strided, inv);
 
-    UNROLL 1 
+#pragma unroll 1
     for (uint32_t phase = 0; phase < 2; phase++)
     {
       engine.ntt8win();
@@ -931,7 +931,7 @@ namespace ntt {
     int coset_gen_index,
     cudaStream_t cuda_stream);
 
-#ifdef ECNTT_DEFINED
+#if defined(ECNTT_DEFINED)
   template cudaError_t mixed_radix_ntt<curve_config::projective_t, curve_config::scalar_t>(
     curve_config::projective_t* d_input,
     curve_config::projective_t* d_output,

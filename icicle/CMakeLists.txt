@@ -62,8 +62,8 @@ endif()
 project(icicle LANGUAGES CUDA CXX)
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
-set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -v -O0 --ptxas-options=-O0 --ptxas-options=-v --ptxas-options=-allow-expensive-optimizations=false")
-set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -O0 -lineinfo")
+set(CMAKE_CUDA_FLAGS_RELEASE "")
+set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -lineinfo")
 include_directories("${CMAKE_SOURCE_DIR}")
 
 
@@ -88,6 +88,14 @@ endif ()
 
 if (G2_DEFINED STREQUAL "ON")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2_DEFINED=ON")
+endif ()
+
+if (ECNTT_DEFINED STREQUAL "ON")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DECNTT_DEFINED=ON")
+endif ()
+
+if (DEVMODE STREQUAL "ON")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O0 -v --ptxas-options=-v --ptxas-options=-O0 --ptxas-options=-allow-expensive-optimizations=false -DDEVMODE=ON")
 endif ()
 
 option(BUILD_TESTS "Build tests" OFF)
