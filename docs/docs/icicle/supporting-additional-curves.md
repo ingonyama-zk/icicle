@@ -6,12 +6,12 @@ We understand the need for ZK developers to use different curves, some common so
 
 ICICLE core is very generic by design so all algorithms and primitives are designed to work based of configuration files [selected during compile](https://github.com/ingonyama-zk/icicle/blob/main/icicle/curves/curve_config.cuh) time. This is why we compile ICICLE Core per curve.
 
-To add support a new curve you must create a new file under [`icicle/curves`](https://github.com/ingonyama-zk/icicle/tree/main/icicle/curves). The file should be named `<curve_name>_params.cuh`.
+To add support for a new curve you must create a new file under [`icicle/curves`](https://github.com/ingonyama-zk/icicle/tree/main/icicle/curves). The file should be named `<curve_name>_params.cuh`.
 
-### curve_name_params.cuh
+### Adding curve_name_params.cuh
 
 Start by copying `bn254_params.cuh` contents in your params file. Params should include:
- - **fq_config** - parameters of Base field.
+ - **fq_config** - parameters of the Base field.
     - **limbs_count** - `ceil(field_byte_size / 4)`.
     - **modulus_bit_count** - bit-size of the modulus.
     - **num_of_reductions** - the number of times to reduce in reduce function.
@@ -28,7 +28,7 @@ Start by copying `bn254_params.cuh` contents in your params file. Params should 
     - **zero** - additive identity. 
     - **montgomery_r** - `2 ** 256 % modulus`
     - **montgomery_r_inv** - `2 ** (-256) % modulus`
- - **fp_config** - parameters of Scalar field.
+ - **fp_config** - parameters of the Scalar field.
     Same as fq_config, but with additional arguments:
     - **omegas_count** - [two-adicity](https://cryptologie.net/article/559/whats-two-adicity/) of the field. And thus the maximum size of NTT.
     - **omegas** - an array of omegas for NTTs. An array of size `omegas_count`. The ith element is equal to `1.nth_root(2**(2**(omegas_count-i)))`.
@@ -70,10 +70,10 @@ Finally we must modify the [`make` file](https://github.com/ingonyama-zk/icicle/
 set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;<curve_name>)
 ```
 
-### Poseidon
+### Adding Poseidon support
 
-If you want your curve to implement Poseidon hash function or a tree builder, you will need to pre-calculate the optimized parameters for it.  
-Copy [constants_template.h](https://github.com/ingonyama-zk/icicle/blob/main/icicle/appUtils/poseidon/constants/constants_template.h) into `icicle/appUtils/poseidon/constants/<CURVE>_poseidon.h`. Run the [constants generation script](https://dev.ingonyama.com/icicle/primitives/poseidon#constants). The script will print the number of partial rounds and generate `constants.bin` file. Use `xxd -i constants.bin` to parse the file into C declarations. Copy the `unsigned char constants_bin[]` contents inside your new file. Repeat this process for arities 2, 4, 8 and 11.
+If you want your curve to implement a Poseidon hash function or a tree builder, you will need to pre-calculate its optimized parameters.  
+Copy [constants_template.h](https://github.com/ingonyama-zk/icicle/blob/main/icicle/appUtils/poseidon/constants/constants_template.h) into `icicle/appUtils/poseidon/constants/<CURVE>_poseidon.h`. Run the [constants generation script](https://dev.ingonyama.com/icicle/primitives/poseidon#constants). The script will print the number of partial rounds and generate a `constants.bin` file. Use `xxd -i constants.bin` to parse the file into C declarations. Copy the `unsigned char constants_bin[]` contents inside your new file. Repeat this process for arities 2, 4, 8 and 11.
 
 After you've generated the constants, add your curve in this [SUPPORTED_CURVES_WITH_POSEIDON](https://github.com/ingonyama-zk/icicle/blob/main/icicle/CMakeLists.txt#L72) in the `CMakeLists.txt`.
 
@@ -94,11 +94,11 @@ e.g. for bn254, scalar field is 254 bit so `SCALAR_LIMBS` is set to 4.
 
 #### Primitives
 
-If your curve doesn't support any of the primitives (ntt/msm/poseidon/merkle tree/), or you simply don't won't to include it, just remove a corresponding module from `src` and then from `lib.rs`
+If your curve doesn't support any of the primitives (ntt/msm/poseidon/merkle tree/), or you simply don't want to include it, just remove a corresponding module from `src` and then from `lib.rs`
 
 #### G2
 
-If your curve doesn't support G2 - remove all the code under `#[cfg(feature = "g2")]` and remove the feature from `Cargo.toml` and `build.rs`.
+If your curve doesn't support G2 - remove all the code under `#[cfg(feature = "g2")]` and remove the feature from [Cargo.toml](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-curves/icicle-bn254/Cargo.toml#L29) and [build.rs](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-curves/icicle-bn254/build.rs#L15).
 
 After this is done, add your new crate in the [global Cargo.toml](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/Cargo.toml).
 
