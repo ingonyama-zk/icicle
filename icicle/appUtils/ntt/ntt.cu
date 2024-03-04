@@ -704,9 +704,8 @@ namespace ntt {
   }
 
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig()
+  NTTConfig<S> DefaultNTTConfig(const device_context::DeviceContext& ctx)
   {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
       ctx,                // ctx
       S::one(),           // coset_gen
@@ -721,7 +720,7 @@ namespace ntt {
     return config;
   }
   // explicit instantiation to avoid having to include this file
-  template NTTConfig<curve_config::scalar_t> DefaultNTTConfig();
+  template NTTConfig<curve_config::scalar_t> DefaultNTTConfig(const device_context::DeviceContext& ctx);
 
   /**
    * Extern "C" version of [InitDomain](@ref InitDomain) function with the following
