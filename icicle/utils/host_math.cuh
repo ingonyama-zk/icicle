@@ -82,7 +82,7 @@ namespace host_math {
         return host_math::addc(x, y, carry);
     }
 
-    __host__ __forceinline__ uint32_t sub(const uint32_t x, const uint32_t y, uint32_t& carry)
+    HOST_INLINE uint32_t sub(const uint32_t x, const uint32_t y, uint32_t& carry)
     {
       index++;
       if (index == 1 && OPS_COUNT == 1 && !CARRY_IN && !CARRY_OUT)
