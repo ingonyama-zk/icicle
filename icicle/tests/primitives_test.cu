@@ -1,4 +1,4 @@
-#include "../primitives/test_kernels.cuh"
+#include "primitives/test_kernels.cuh"
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
 #include <iostream>

@@ -1,13 +1,6 @@
 #pragma once
 
-#ifndef G2_DEFINED
-#define G2_DEFINED
-
-#include "../curves/curve_config.cuh"
-#include "extension_field.cuh"
-#include "projective.cuh"
-
-#endif
+#include "curves/curve_config.cuh"
 
 using namespace curve_config;
 
