@@ -45,7 +45,7 @@ func Main() {
     // Perform the MSM operation.
     e = Msm(scalars, points, &cfg, out)
     
-    if e != nil {
+    if e != cr.CudaSuccess {
         panic(e)
     }
     
