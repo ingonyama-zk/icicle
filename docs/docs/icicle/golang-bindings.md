@@ -5,30 +5,30 @@ The source code for all Golang libraries can be found [here](https://github.com/
 
 The Golang bindings are comprised of multiple packages.
 
-[`core`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/core) which defines all common shared methods and structures, such as configuration structures, or memory slices.
+[`core`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/core) which defines all shared methods and structures, such as configuration structures, or memory slices.
 
-[`cuda-runtime`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/cuda_runtime) which defines abstractions for CUDA methods for allocating memory, initializing and managing streams. As well as `DeviceContext` which enables users to define and keep track of devices.
+[`cuda-runtime`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/cuda_runtime) which defines abstractions for CUDA methods for allocating memory, initializing and managing streams, and `DeviceContext` which enables users to define and keep track of devices.
 
-Each curve has its own package, you can find all curves [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves). If you project uses BN-254 you only need to install that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
+Each curve has its own package which you can find [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves). If your project uses BN254 you only need to install that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
 
 ## Using ICICLE Golang bindings in your project
 
-Too add ICICLE to your `go.mod` file.
+To add ICICLE to your `go.mod` file.
 
 ```bash
-go get github.com/ingonyama-zk/icicle/goicicle
+go get github.com/ingonyama-zk/icicle
 ```
 
 If you want to specify a specific branch
 
 ```bash
-go get github.com/ingonyama-zk/icicle/goicicle@<branch_name>
+go get github.com/ingonyama-zk/icicle@<branch_name>
 ```
 
 For a specific commit
 
 ```bash
-go get github.com/ingonyama-zk/icicle/goicicle@<commit_id>
+go get github.com/ingonyama-zk/icicle@<commit_id>
 ```
 
 To build the shared libraries you can run this script:
@@ -49,7 +49,7 @@ For example if you want to build all curves with G2 enabled you would run:
 If you are interested in building a specific curve you would run:
 
 ```bash
-./build.sh bls12381 ON
+./build.sh bls12_381 ON
 ```
 
 After building your shared libraries. You must export them so your system will be aware of their existence.

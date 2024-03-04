@@ -3,7 +3,7 @@
 
 ### Supported curves
 
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
 
 ## MSM Example
 
@@ -49,6 +49,7 @@ func Main() {
     
     // Allocate host memory for the results and copy the results from the device.
     outHost := make(core.HostSlice[Projective], 1)
+    cr.SynchronizeStream(&stream)
     outHost.CopyFromDevice(&out)
     
     // Free the device memory allocated for the results.

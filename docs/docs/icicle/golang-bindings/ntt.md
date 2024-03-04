@@ -2,7 +2,7 @@
 
 ### Supported curves
 
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
 
 ## NTT Example
 
@@ -93,7 +93,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T]
 
 ### Initializing the NTT Domain
 
-Before performing NTT operations, its necessary to initialize the NTT domain, It only needs to be called once per GPU since the twiddles are cached.
+Before performing NTT operations, it's necessary to initialize the NTT domain; it only needs to be called once per GPU since the twiddles are cached.
 
 ```go
 func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError

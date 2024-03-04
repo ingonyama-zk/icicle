@@ -53,7 +53,7 @@ You can learn more about how MSMs work from this [video](https://www.youtube.com
 
 MSM supports the following curves:
 
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `grumpkin`
 
 
 ## Supported Bindings
