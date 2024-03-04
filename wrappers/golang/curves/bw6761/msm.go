@@ -18,7 +18,9 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 	core.MsmCheck(scalars, points, cfg, results)
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
-		scalarsPointer = scalars.(core.DeviceSlice).AsPointer()
+		scalarsDevice := scalars.(core.DeviceSlice)
+		scalarsDevice.CheckDevice()
+		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
 		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
 	}
@@ -26,7 +28,9 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 
 	var pointsPointer unsafe.Pointer
 	if points.IsOnDevice() {
-		pointsPointer = points.(core.DeviceSlice).AsPointer()
+		pointsDevice := points.(core.DeviceSlice)
+		pointsDevice.CheckDevice()
+		pointsPointer = pointsDevice.AsPointer()
 	} else {
 		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Affine])[0])
 	}
@@ -34,7 +38,9 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 
 	var resultsPointer unsafe.Pointer
 	if results.IsOnDevice() {
-		resultsPointer = results.(core.DeviceSlice).AsPointer()
+		resultsDevice := results.(core.DeviceSlice)
+		resultsDevice.CheckDevice()
+		resultsPointer = resultsDevice.AsPointer()
 	} else {
 		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[Projective])[0])
 	}

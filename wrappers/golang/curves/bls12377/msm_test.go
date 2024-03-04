@@ -1,8 +1,11 @@
 package bls12377
 
 import (
-	"github.com/stretchr/testify/assert"
+	"fmt"
+	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
@@ -53,24 +56,27 @@ func testAgainstGnarkCryptoMsm(scalars core.HostSlice[ScalarField], points core.
 
 func TestMSM(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
+	stream, _ := cr.CreateStream()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
 		scalars := GenerateScalars(size)
 		points := GenerateAffinePoints(size)
 
-		stream, _ := cr.CreateStream()
 		var p Projective
 		var out core.DeviceSlice
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
+		cfg.IsAsync = true
+
 		e = Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[Projective], 1)
-		outHost.CopyFromDevice(&out)
-		out.Free()
+		outHost.CopyFromDeviceAsync(&out, stream)
+		out.FreeAsync(stream)
 
+		cr.SynchronizeStream(&stream)
 		// Check with gnark-crypto
 		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
 	}
@@ -135,4 +141,42 @@ func TestMSMSkewedDistribution(t *testing.T) {
 		// Check with gnark-crypto
 		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
 	}
+}
+
+func TestMSMMultiDevice(t *testing.T) {
+	numDevices, _ := cr.GetDeviceCount()
+	fmt.Println("There are ", numDevices, " devices available")
+	wg := sync.WaitGroup{}
+	
+	for i := 0; i < numDevices; i++ {
+		wg.Add(1)
+		cr.RunOnDevice(i, func(args ...any) {
+			defer wg.Done()
+			cfg := GetDefaultMSMConfig()
+			stream, _ := cr.CreateStream()
+			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+				size := 1 << power
+				scalars := GenerateScalars(size)
+				points := GenerateAffinePoints(size)
+				
+				var p Projective
+				var out core.DeviceSlice
+				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+				cfg.Ctx.Stream = &stream
+				cfg.IsAsync = true
+				
+				e = Msm(scalars, points, &cfg, out)
+				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+				outHost := make(core.HostSlice[Projective], 1)
+				outHost.CopyFromDeviceAsync(&out, stream)
+				out.FreeAsync(stream)
+
+				cr.SynchronizeStream(&stream)
+				// Check with gnark-crypto
+				assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+			}
+		})
+	}
+	wg.Wait()
 }

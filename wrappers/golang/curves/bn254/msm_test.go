@@ -75,7 +75,7 @@ func TestMSM(t *testing.T) {
 		outHost := make(core.HostSlice[Projective], 1)
 		outHost.CopyFromDeviceAsync(&out, stream)
 		out.FreeAsync(stream)
-		
+
 		cr.SynchronizeStream(&stream)
 		// Check with gnark-crypto
 		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
@@ -168,13 +168,11 @@ func TestMSMMultiDevice(t *testing.T) {
 				
 				e = Msm(scalars, points, &cfg, out)
 				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
-				
 				outHost := make(core.HostSlice[Projective], 1)
-			
-				cr.SynchronizeStream(&stream)
-				outHost.CopyFromDevice(&out)
-				out.Free()
+				outHost.CopyFromDeviceAsync(&out, stream)
+				out.FreeAsync(stream)
 
+				cr.SynchronizeStream(&stream)
 				// Check with gnark-crypto
 				assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
 			}

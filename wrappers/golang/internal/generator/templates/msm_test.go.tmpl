@@ -5,8 +5,11 @@
 package {{.PackageName}}
 
 import (
-	"github.com/stretchr/testify/assert"
+	"fmt"
+	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
@@ -102,24 +105,27 @@ func testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars core.HostSlice[Scala
 
 func TestMSM{{if .IsG2}}G2{{end}}(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
+	stream, _ := cr.CreateStream()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
 		scalars := GenerateScalars(size)
 		points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(size)
 
-		stream, _ := cr.CreateStream()
 		var p {{if .IsG2}}G2{{end}}Projective
 		var out core.DeviceSlice
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
+		cfg.IsAsync = true
+
 		e = {{if .IsG2}}G2{{end}}Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[{{if .IsG2}}G2{{end}}Projective], 1)
-		outHost.CopyFromDevice(&out)
-		out.Free()
+		outHost.CopyFromDeviceAsync(&out, stream)
+		out.FreeAsync(stream)
 
+		cr.SynchronizeStream(&stream)
 		// Check with gnark-crypto
 		assert.True(t, testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars, points, outHost[0]))
 	}
@@ -184,4 +190,42 @@ func TestMSM{{if .IsG2}}G2{{end}}SkewedDistribution(t *testing.T) {
 		// Check with gnark-crypto
 		assert.True(t, testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars, points, outHost[0]))
 	}
+}
+
+func TestMSM{{if .IsG2}}G2{{end}}MultiDevice(t *testing.T) {
+	numDevices, _ := cr.GetDeviceCount()
+	fmt.Println("There are ", numDevices, " devices available")
+	wg := sync.WaitGroup{}
+	
+	for i := 0; i < numDevices; i++ {
+		wg.Add(1)
+		cr.RunOnDevice(i, func(args ...any) {
+			defer wg.Done()
+			cfg := GetDefaultMSMConfig()
+			stream, _ := cr.CreateStream()
+			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+				size := 1 << power
+				scalars := GenerateScalars(size)
+				points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(size)
+				
+				var p {{if .IsG2}}G2{{end}}Projective
+				var out core.DeviceSlice
+				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+				cfg.Ctx.Stream = &stream
+				cfg.IsAsync = true
+				
+				e = {{if .IsG2}}G2{{end}}Msm(scalars, points, &cfg, out)
+				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+				outHost := make(core.HostSlice[{{if .IsG2}}G2{{end}}Projective], 1)
+				outHost.CopyFromDeviceAsync(&out, stream)
+				out.FreeAsync(stream)
+
+				cr.SynchronizeStream(&stream)
+				// Check with gnark-crypto
+				assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+			}
+		})
+	}
+	wg.Wait()
 }
