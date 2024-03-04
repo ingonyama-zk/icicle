@@ -3,9 +3,7 @@
 #include <cuda.h>
 #include "utils/utils.h"
 
-#define projective_t  curve_config::projective_t // TODO: global to avoid lengthy texts
-#define affine_t      curve_config::affine_t
-#define point_field_t curve_config::point_field_t
+using namespace curve_config;
 
 extern "C" bool CONCAT_EXPAND(CURVE, Eq)(projective_t* point1, projective_t* point2)
 {
@@ -33,9 +31,7 @@ extern "C" void CONCAT_EXPAND(CURVE, GenerateAffinePoints)(affine_t* points, int
 
 #if defined(G2_DEFINED)
 
-#define g2_projective_t  curve_config::g2_projective_t
-#define g2_affine_t      curve_config::g2_affine_t
-#define g2_point_field_t curve_config::g2_point_field_t
+using namespace curve_config;
 
 extern "C" bool CONCAT_EXPAND(CURVE, G2Eq)(g2_projective_t* point1, g2_projective_t* point2)
 {
