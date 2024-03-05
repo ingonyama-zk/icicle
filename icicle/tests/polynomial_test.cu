@@ -128,6 +128,23 @@ TEST_F(PolynomialTest, addition)
   EXPECT_EQ(fx_plus_gx, s_x);
 }
 
+TEST_F(PolynomialTest, addition_inplace)
+{
+  const int size_0 = 2, size_1 = 2;
+  auto f = randomize_polynomial(size_0);
+  auto g = randomize_polynomial(size_1);
+
+  test_type x = test_type::rand_host();
+  auto f_x = f(x);
+  auto g_x = g(x);
+  auto fx_plus_gx = f_x + g_x;
+
+  f += g;
+  auto s_x = f(x);
+
+  EXPECT_EQ(fx_plus_gx, s_x);
+}
+
 TEST_F(PolynomialTest, cAPI)
 {
   const int size = 3;

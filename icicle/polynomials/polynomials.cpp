@@ -71,6 +71,22 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
+  Polynomial<C, D, I>& Polynomial<C, D, I>::operator+=(const Polynomial& rhs)
+  {
+    m_backend->add(*m_context.get(), *m_context.get(), *rhs.m_context);
+    return *this;
+  }
+
+  template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const I& v) const
+  {
+    Polynomial rhs = {};
+    // assuming types C==I. Alternatively can construct as 'v' at every point in evaluation form. (TODO Yuval)
+    rhs.m_context->init_from_coefficients(1 /*nof_coefficients*/, v);
+    return *this * rhs;
+  }
+
+  template <typename C, typename D, typename I>
   Polynomial<C, D, I>& Polynomial<C, D, I>::add_monomial_inplace(C monomial_coeff, uint64_t monomial)
   {
     m_backend->add_monomial_inplace(*m_context.get(), monomial_coeff, monomial);

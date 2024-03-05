@@ -24,37 +24,45 @@ namespace polynomials {
 
     static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
 
-    void allocate(uint64_t nof_elements, State init_state, bool memset_zeros) override
+    void allocate(uint64_t nof_elements, State init_state, bool is_memset_zeros) override
     {
-      release();
-
-      const uint64_t nof_elements_nearset_power_of_two = ceil_to_power_of_two(nof_elements);
-      const uint64_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
-      CHK_STICKY(cudaMallocAsync(&m_storage, mem_size, m_device_context.stream));
-      this->m_nof_elements = nof_elements_nearset_power_of_two;
+      const bool is_already_allocated = this->m_nof_elements >= nof_elements;
       this->set_state(init_state);
-      if (memset_zeros) {
-        CHK_STICKY(cudaMemsetAsync(m_storage, 0, mem_size, m_device_context.stream));
-      } else {
-        // if allocating more memory than requested, memset only the pad area to avoid higher invalid coefficients
-        const uint64_t pad_size = (nof_elements_nearset_power_of_two - nof_elements) * ElementSize;
-        if (pad_size > 0) {
-          const auto pad_offset = (void*)((uint64_t)m_storage + nof_elements * ElementSize);
-          CHK_STICKY(cudaMemsetAsync(pad_offset, 0, pad_size, m_device_context.stream));
-        }
+
+      if (is_already_allocated) {
+        // zero the extra elements, if exist
+        memset_zeros(this->m_storage, nof_elements, this->m_nof_elements);
+        return;
       }
+
+      release(); // in case allocated mem is too small and need to reallocate
+      this->m_nof_elements = allocate_mem(nof_elements, &this->m_storage, is_memset_zeros);
     }
 
-    void* allocate_mem(uint64_t nof_elements, bool is_set_zeros = true)
+    void memset_zeros(void* storage, uint64_t element_start_idx, uint64_t element_end_idx)
+    {
+      const uint64_t size = (element_end_idx - element_start_idx) * ElementSize;
+      if (0 == size) { return; }
+
+      const auto offset = (void*)((uint64_t)storage + element_start_idx * ElementSize);
+      CHK_STICKY(cudaMemsetAsync(offset, 0, size, m_device_context.stream));
+    }
+
+    uint64_t allocate_mem(uint64_t nof_elements, void** storage /*OUT*/, bool is_memset_zeros)
     {
       const uint64_t nof_elements_nearset_power_of_two = ceil_to_power_of_two(nof_elements);
-      const uint64_t new_mem_size = nof_elements_nearset_power_of_two * ElementSize;
+      const uint64_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
 
-      void* new_storage;
-      CHK_STICKY(cudaMallocAsync(&new_storage, new_mem_size, m_device_context.stream));
+      CHK_STICKY(cudaMallocAsync(storage, mem_size, m_device_context.stream));
 
-      if (is_set_zeros) { CHK_STICKY(cudaMemsetAsync(new_storage, 0, new_mem_size, m_device_context.stream)); }
-      return new_storage;
+      if (is_memset_zeros) {
+        memset_zeros(*storage, 0, nof_elements_nearset_power_of_two);
+      } else {
+        // if allocating more memory than requested, memset only the pad area to avoid higher invalid coefficients
+        memset_zeros(*storage, nof_elements, nof_elements_nearset_power_of_two);
+      }
+
+      return nof_elements_nearset_power_of_two;
     }
 
     void set_storage(void* storage, uint64_t nof_elements)
@@ -66,14 +74,14 @@ namespace polynomials {
 
     void extend_mem_and_pad(uint64_t nof_elements)
     {
-      const uint64_t nof_elements_nearset_power_of_two = ceil_to_power_of_two(nof_elements);
-      const uint64_t new_mem_size = nof_elements_nearset_power_of_two * ElementSize;
+      void* new_storage = nullptr;
+      const uint64_t new_nof_elements = allocate_mem(nof_elements, &new_storage, true /*=memset zeros*/);
       const uint64_t old_mem_size = this->m_nof_elements * ElementSize;
 
-      void* new_storage = allocate_mem(nof_elements);
       CHK_STICKY(
         cudaMemcpyAsync(new_storage, m_storage, old_mem_size, cudaMemcpyDeviceToDevice, m_device_context.stream));
-      set_storage(new_storage, nof_elements_nearset_power_of_two);
+
+      set_storage(new_storage, new_nof_elements);
     }
 
     void release() override
@@ -92,7 +100,8 @@ namespace polynomials {
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, host_coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
       }
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // protect agains host_coefficients being released too soon
+      CHK_STICKY(
+        cudaStreamSynchronize(m_device_context.stream)); // protect agains host_coefficients being released too soon
       return static_cast<C*>(m_storage);
     }
 
@@ -104,7 +113,8 @@ namespace polynomials {
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, host_evaluations, nof_evaluations * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
       }
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // protect agains host_evaluations being released too soon
+      CHK_STICKY(
+        cudaStreamSynchronize(m_device_context.stream)); // protect agains host_evaluations being released too soon
       return static_cast<I*>(m_storage);
     }
 
@@ -142,7 +152,8 @@ namespace polynomials {
       C* coeffs = static_cast<C*>(m_storage);
       const bool is_allocate_new_mem = nof_coefficients > this->m_nof_elements;
       if (is_allocate_new_mem) {
-        void* new_mem = allocate_mem(nof_coefficients);
+        void* new_mem = nullptr;
+        nof_coefficients = allocate_mem(nof_coefficients, &new_mem, true /*=memset zeros*/);
         coeffs = static_cast<C*>(new_mem);
       }
 
