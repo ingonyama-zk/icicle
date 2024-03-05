@@ -192,3 +192,9 @@ G2Msm(scalars, points, &cfg, out)
 ```
 
 `G2Msm` works the same way as normal MSM, the difference is that it uses G2 Points.
+
+Additionally when you are building your application make sure to use the g2 feature flag
+
+```bash
+go build -tags=g2
+```
