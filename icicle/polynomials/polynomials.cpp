@@ -26,7 +26,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::from_rou_evaluations(const I* evaluations, uint64_t nof_evaluations)
   {
     Polynomial P = {};
-    P.m_backend->init_from_rou_evaluations(nof_evaluations, evaluations);
+    P.m_context->init_from_rou_evaluations(nof_evaluations, evaluations);
     return P;
   }
 
