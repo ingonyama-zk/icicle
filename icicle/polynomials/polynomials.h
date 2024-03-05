@@ -4,26 +4,25 @@
 #include <memory>
 
 namespace polynomials {
-  template <typename CoefficientType, typename DomainType, typename ImageType, typename ECpoint>
+  template <typename CoeffType, typename DomainType, typename ImageType>
   class IPolynomialBackend;
 
-  template <typename CoefficientType, typename DomainType, typename ImageType>
+  template <typename CoeffType, typename DomainType, typename ImageType>
   class IPolynomialContext;
 
-  template <typename C, typename D, typename I, typename ECpoint>
+  template <typename C, typename D, typename I>
   class AbstractPolynomialFactory;
 
   /*============================== Polynomial API ==============================*/
   template <
-    typename CoefficientType = curve_config::scalar_t,
-    typename DomainType = CoefficientType,
-    typename ImageType = CoefficientType,
-    typename ECpoint = curve_config::affine_t>
+    typename CoeffType = curve_config::scalar_t,
+    typename DomainType = CoeffType,
+    typename ImageType = CoeffType>
   class Polynomial
   {
   public:
     // initialization
-    static Polynomial from_coefficients(const CoefficientType* coefficients, uint64_t nof_coefficients);
+    static Polynomial from_coefficients(const CoeffType* coefficients, uint64_t nof_coefficients);
     static Polynomial from_rou_evaluations(const ImageType* evaluations, uint64_t nof_evaluations);
     // static Polynomial from_evaluations(const DomainType* domain, const ImageType* evaluations, uint64_t size);
 
@@ -37,8 +36,8 @@ namespace polynomials {
     Polynomial divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const;
 
     // arithmetic ops with monomial
-    Polynomial& add_monomial_inplace(CoefficientType monomial_coeff, uint64_t monomial = 0);
-    Polynomial& sub_monomial_inplace(CoefficientType monomial_coeff, uint64_t monomial = 0);
+    Polynomial& add_monomial_inplace(CoeffType monomial_coeff, uint64_t monomial = 0);
+    Polynomial& sub_monomial_inplace(CoeffType monomial_coeff, uint64_t monomial = 0);
 
     // evaluation
     ImageType operator()(const DomainType& x) const;
@@ -48,10 +47,10 @@ namespace polynomials {
     // highest non-zero coefficient degree
     int32_t degree();
 
-    CoefficientType get_coefficient_on_host(uint64_t idx) const;
+    CoeffType get_coefficient_on_host(uint64_t idx) const;
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
     int64_t
-    get_coefficients_on_host(CoefficientType* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
+    get_coefficients_on_host(CoeffType* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
 
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
     {
@@ -60,20 +59,19 @@ namespace polynomials {
     }
 
     static void
-    initialize(std::unique_ptr<AbstractPolynomialFactory<CoefficientType, DomainType, ImageType, ECpoint>> factory)
+    initialize(std::unique_ptr<AbstractPolynomialFactory<CoeffType, DomainType, ImageType>> factory)
     {
       s_factory = std::move(factory);
     }
 
   private:
     // context is a wrapper for the polynomial state, including allocated memory, device context etc.
-    std::shared_ptr<IPolynomialContext<CoefficientType, DomainType, ImageType>> m_context = nullptr;
+    std::shared_ptr<IPolynomialContext<CoeffType, DomainType, ImageType>> m_context = nullptr;
     // backend is the actual API implementation
-    std::shared_ptr<IPolynomialBackend<CoefficientType, DomainType, ImageType, ECpoint>> m_backend = nullptr;
+    std::shared_ptr<IPolynomialBackend<CoeffType, DomainType, ImageType>> m_backend = nullptr;
 
     // factory is building the context and backend for polynomial objects
-    static inline std::unique_ptr<AbstractPolynomialFactory<CoefficientType, DomainType, ImageType, ECpoint>>
-      s_factory = nullptr;
+    static inline std::unique_ptr<AbstractPolynomialFactory<CoeffType, DomainType, ImageType>> s_factory = nullptr;
 
     Polynomial();
 
@@ -127,7 +125,7 @@ namespace polynomials {
   };
 
   /*============================== Polynomial Backend ==============================*/
-  template <typename C, typename D, typename I, typename ECpoint>
+  template <typename C, typename D, typename I>
   class IPolynomialBackend
   {
   public:
@@ -163,12 +161,12 @@ namespace polynomials {
   };
 
   /*============================== Polynomial Absract Factory ==============================*/
-  template <typename C, typename D, typename I, typename ECpoint>
+  template <typename C, typename D, typename I>
   class AbstractPolynomialFactory
   {
   public:
     virtual std::shared_ptr<IPolynomialContext<C, D, I>> create_context() = 0;
-    virtual std::shared_ptr<IPolynomialBackend<C, D, I, ECpoint>> create_backend() = 0;
+    virtual std::shared_ptr<IPolynomialBackend<C, D, I>> create_backend() = 0;
     virtual ~AbstractPolynomialFactory() = default;
   };
 

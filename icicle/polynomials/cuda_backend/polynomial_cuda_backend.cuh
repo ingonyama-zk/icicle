@@ -262,8 +262,8 @@ namespace polynomials {
 
   /*============================== Polynomial CUDA-backend ==============================*/
 
-  template <typename C, typename D, typename I, typename ECpoint>
-  class CUDAPolynomialBackend : public IPolynomialBackend<C, D, I, ECpoint>
+  template <typename C, typename D, typename I>
+  class CUDAPolynomialBackend : public IPolynomialBackend<C, D, I>
   {
     typedef IPolynomialContext<C, D, I> PolyContext;
     typedef typename IPolynomialContext<C, D, I>::State State;
@@ -568,8 +568,8 @@ namespace polynomials {
   };
 
   /*============================== Polynomial CUDA-factory ==============================*/
-  template <typename C = curve_config::scalar_t, typename D = C, typename I = C, typename EC = curve_config::affine_t>
-  class CUDAPolynomialFactory : public AbstractPolynomialFactory<C, D, I, EC>
+  template <typename C = curve_config::scalar_t, typename D = C, typename I = C>
+  class CUDAPolynomialFactory : public AbstractPolynomialFactory<C, D, I>
   {
     std::vector<DeviceContext> m_device_contexts; // device-id --> device context
     std::vector<cudaStream_t> m_device_streams;   // device-id --> device stream. Storing the streams here as workaround
@@ -607,11 +607,11 @@ namespace polynomials {
       CHK_STICKY(cudaGetDevice(&cuda_device_id));
       return std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_contexts[cuda_device_id]);
     }
-    std::shared_ptr<IPolynomialBackend<C, D, I, EC>> create_backend() override
+    std::shared_ptr<IPolynomialBackend<C, D, I>> create_backend() override
     {
       int cuda_device_id = -1;
       CHK_STICKY(cudaGetDevice(&cuda_device_id));
-      return std::make_shared<CUDAPolynomialBackend<C, D, I, EC>>(m_device_contexts[cuda_device_id]);
+      return std::make_shared<CUDAPolynomialBackend<C, D, I>>(m_device_contexts[cuda_device_id]);
     }
   };
 } // namespace polynomials
