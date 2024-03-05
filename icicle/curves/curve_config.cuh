@@ -7,6 +7,7 @@
 #define BLS12_377 3
 #define BW6_761   4
 #define GRUMPKIN  5
+#define STARK     6
 
 #include "primitives/field.cuh"
 #include "primitives/projective.cuh"
@@ -30,6 +31,9 @@ using namespace bw6_761;
 #elif CURVE_ID == GRUMPKIN
 #include "grumpkin_params.cuh"
 using namespace grumpkin;
+#elif CURVE_ID == STARK
+#include "stark_params.cuh"
+using namespace stark;
 #endif
 
 /**
