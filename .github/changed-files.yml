@@ -4,7 +4,7 @@ golang:
   - wrappers/golang/**/*.tmpl
   - go.mod
 rust:
-  - wrappers/rust
+  - wrappers/rust/**/*
 cpp:
   - icicle/**/*.cu
   - icicle/**/*.cuh
