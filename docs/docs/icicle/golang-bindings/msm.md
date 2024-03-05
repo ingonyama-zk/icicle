@@ -140,4 +140,55 @@ cfg.Ctx.IsBigTriangle = true
 
 ## How do I toggle between MSM modes?
 
+Toggling between MSM modes occurs automatically based on the number of results you are expecting from the `MSM` function.
+
+The number of results is interpreted from the size of `var out core.DeviceSlice`. Thus its important when allocating memory for `var out core.DeviceSlice` to make sure that you are allocating `<number of results> X <size of a single point>`.
+
+```go
+... 
+
+batchSize := 3
+var p G2Projective
+var out core.DeviceSlice
+out.Malloc(batchSize*p.Size(), p.Size())
+
+...
+```
+
 ## Support for G2 group
+
+To activate G2 support first you must make sure you are building the static libraries with G2 feature enabled.
+
+```bash
+./build.sh bls12_381 ON
+```
+
+Now when importing `goicicle`, you should have access to G2 features.
+
+```go
+import (
+    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+)
+```
+
+These features include `G2Projective` and `G2Affine` points as well as a `G2Msm` method.
+
+```go
+...
+
+cfg := GetDefaultMSMConfig()
+size := 1 << 12
+batchSize := 3
+totalSize := size * batchSize
+scalars := GenerateScalars(totalSize)
+points := G2GenerateAffinePoints(totalSize)
+
+var p G2Projective
+var out core.DeviceSlice
+out.Malloc(batchSize*p.Size(), p.Size())
+G2Msm(scalars, points, &cfg, out)
+
+...
+```
+
+`G2Msm` works the same way as normal MSM, the difference is that it uses G2 Points.

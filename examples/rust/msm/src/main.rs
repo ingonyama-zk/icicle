@@ -1,3 +1,4 @@
+use std::ops::IndexMut;
 use icicle_bn254::curve::{CurveCfg, G1Projective, G2CurveCfg, G2Projective, ScalarCfg};
 
 use icicle_bls12_377::curve::{
@@ -64,10 +65,12 @@ fn main() {
         // Setting bls12377 points and scalars
         // let points_bls12377 = &upper_points_bls12377[..size];
         let points_bls12377 = HostOrDeviceSlice::Host(upper_points_bls12377[..size].to_vec()); //  &upper_points_bls12377[..size];
-        let scalars_bls12377 = HostOrDeviceSlice::Host(upper_scalars_bls12377[..size].to_vec());
+        (upper_scalars_bls12377[..size].to_vec());
 
         println!("Configuring bn254 MSM...");
-        let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
+        let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(10).unwrap();
+        let sub_slice = msm_results.index_mut(3..7);
+        let new_slice = HostOrDeviceSlice::Device(sub_slice, 0);
         let mut g2_msm_results: HostOrDeviceSlice<'_, G2Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
         let stream = CudaStream::create().unwrap();
         let g2_stream = CudaStream::create().unwrap();
