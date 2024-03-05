@@ -34,6 +34,10 @@ namespace polynomials {
     std::pair<Polynomial, Polynomial> divide(const Polynomial& rhs) const; //  returns (Q(x), R(x))
     Polynomial divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const;
 
+    Polynomial& operator+=(const Polynomial& rhs);
+
+    Polynomial operator*(const ImageType& val) const;
+
     // arithmetic ops with monomial
     Polynomial& add_monomial_inplace(CoeffType monomial_coeff, uint64_t monomial = 0);
     Polynomial& sub_monomial_inplace(CoeffType monomial_coeff, uint64_t monomial = 0);
