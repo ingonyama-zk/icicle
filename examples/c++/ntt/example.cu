@@ -11,7 +11,7 @@ using namespace ntt;
 
 // Operate on scalars
 typedef scalar_t S;
-typedef scalar_t E;
+typedef projective_t E;
 
 void print_elements(const unsigned n, E* elements)
 {
@@ -24,13 +24,13 @@ void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, E* eleme
 {
   // Lowest Harmonics
   for (unsigned i = 0; i < ntt_size; i = i + 1) {
-    elements[i] = E::one();
+    elements[i] = E::zero();
   }
   // print_elements(ntt_size, elements );
   // Highest Harmonics
   for (unsigned i = 1 * ntt_size; i < 2 * ntt_size; i = i + 2) {
-    elements[i] = E::one();
-    elements[i + 1] = E::neg(scalar_t::one());
+    elements[i] = E::zero();
+    elements[i + 1] = E::neg(E::zero());
   }
   // print_elements(ntt_size, &elements[1*ntt_size] );
 }
@@ -38,7 +38,7 @@ void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, E* eleme
 int validate_output(const unsigned ntt_size, const unsigned nof_ntts, E* elements)
 {
   int nof_errors = 0;
-  E amplitude = E::from((uint32_t)ntt_size);
+  E amplitude = E::from_affine(affine_t::zero());
   // std::cout << "Amplitude: " << amplitude << std::endl;
   // Lowest Harmonics
   if (elements[0] != amplitude) {
@@ -66,9 +66,10 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
 
 int main(int argc, char* argv[])
 {
+#if defined(ECNTT_DEFINED)
   std::cout << "Icicle Examples: Number Theoretical Transform (NTT)" << std::endl;
   std::cout << "Example parameters" << std::endl;
-  const unsigned log_ntt_size = 20;
+  const unsigned log_ntt_size = 8;
   std::cout << "Log2(NTT size): " << log_ntt_size << std::endl;
   const unsigned ntt_size = 1 << log_ntt_size;
   std::cout << "NTT size: " << ntt_size << std::endl;
@@ -93,7 +94,7 @@ int main(int argc, char* argv[])
   config.ntt_algorithm = NttAlgorithm::MixedRadix; 
   config.batch_size = nof_ntts;
   START_TIMER(MixedRadix);
-  cudaError_t err = NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
+  cudaError_t err = ntt::ECNTT_(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(MixedRadix, "MixedRadix NTT");
   
   std::cout << "Validating output" << std::endl;
@@ -101,7 +102,7 @@ int main(int argc, char* argv[])
 
   config.ntt_algorithm = NttAlgorithm::Radix2; 
   START_TIMER(Radix2);
-  err = NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
+  err = ECNTT_(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(Radix2, "Radix2 NTT");
 
   std::cout << "Validating output" << std::endl;
@@ -110,5 +111,6 @@ int main(int argc, char* argv[])
   std::cout << "Cleaning-up memory" << std::endl;
   free(input);
   free(output);
+#endif
   return 0;
 }

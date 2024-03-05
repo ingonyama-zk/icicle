@@ -641,10 +641,11 @@ namespace ntt {
       h_coset.clear();
     }
 
-    const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
+    const bool is_radix2_algorithm = false; //is_choose_radix2_algorithm(logn, batch_size, config);
     const bool is_inverse = dir == NTTDir::kInverse;
 
     if (is_radix2_algorithm) {
+      printf("radix2\n");
       CHK_IF_RETURN(ntt::radix2_ntt(
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
         coset_index, stream));
@@ -661,6 +662,7 @@ namespace ntt {
                             ? (is_inverse ? domain.fast_basic_twiddles_inv : domain.fast_basic_twiddles)
                             : domain.basic_twiddles;
 
+      printf("mixed\n");
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
         d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
         is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
@@ -730,13 +732,14 @@ namespace ntt {
    *  - `E` is the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
+  extern "C" cudaError_t ECNTT_(
     curve_config::projective_t* input,
     int size,
     NTTDir dir,
     NTTConfig<curve_config::scalar_t>& config,
     curve_config::projective_t* output)
   {
+    printf("eccntt\n");
     return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, dir, config, output);
   }
 
