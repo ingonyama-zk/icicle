@@ -97,13 +97,13 @@ namespace polynomials {
       return static_cast<C*>(m_storage);
     }
 
-    I* init_from_rou_evaluations(uint64_t nof_evalutions, const I* host_evaluations) override
+    I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* host_evaluations) override
     {
       const bool is_memset_zeros = host_evaluations == nullptr;
-      allocate(nof_evalutions, State::EvaluationsOnRou_Natural, is_memset_zeros);
+      allocate(nof_evaluations, State::EvaluationsOnRou_Natural, is_memset_zeros);
       if (host_evaluations) {
         CHK_STICKY(cudaMemcpyAsync(
-          m_storage, host_evaluations, nof_evalutions * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
+          m_storage, host_evaluations, nof_evaluations * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
       }
       return static_cast<I*>(m_storage);
     }
@@ -508,7 +508,7 @@ namespace polynomials {
       const int NOF_THREADS = 32;
       const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
       // TODO Yuval: parallelize kernel
-      evalutePolynomialWithoutReduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      evaluatePolynomialWithoutReduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         domain_x, coeff, nof_coeff, d_tmp);
       dummyReduce<<<1, 1, 0, m_device_context.stream>>>(d_tmp, nof_coeff, d_evaluation);
 
