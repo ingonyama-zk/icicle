@@ -2,6 +2,8 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
+#include <vector>
+#include <list>
 
 #include "curves/curve_config.cuh"
 typedef curve_config::scalar_t test_type;
@@ -276,6 +278,92 @@ TEST_F(PolynomialTest, divideByVanishingPolynomial)
   auto h_div_by_vanishing = hv.divide_by_vanishing_polynomial(4);
   END_TIMER(poly_div_vanishing, "Polynomial division by vanishing (fast) took", MEASURE);
   assert_equal(h_div_by_vanishing, h);
+}
+
+// TODO Yuval: move to examples ??
+TEST_F(PolynomialTest, QAP)
+{
+  // this examples is randomizing N private numbers and proving that I know N numbers such that their product is equal
+  // to 'out'.
+  //
+  // Circuit:
+  //
+  // in0  in1
+  //  \   /
+  //   \ /  in2
+  //   (X)  /
+  //   t0\ /  in3
+  //     (X)  /
+  //     t1\ /
+  //       (X)
+  //        .
+  //        .
+  //        .
+  //        |
+  //       out
+  //
+  // simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
+
+  // (1) randomize N numbers and construct the witness as [1,out,...N inputs..., ... intermediate values...]
+  const int nof_inputs = 4;
+  const int nof_outputs = 1;
+  const int nof_intermediates = nof_inputs - 2; // same as #multiplication gates minus last one (which is the output)
+  const int witness_size =
+    1 + nof_outputs + nof_inputs + nof_intermediates; // witness = [1, out, inputs..., intermediates...]
+
+  const int input_offset = 1 + nof_outputs;
+  const int intermediate_offset = input_offset + nof_inputs;
+
+  std::vector<test_type> witness(witness_size, test_type::zero());
+  witness[0] = test_type::one();
+  random_samples(witness.data() + input_offset, nof_inputs); // randomize inputs
+  // compute intermediate values (based on the circuit above)
+  for (int i = 0; i < nof_intermediates; ++i) {
+    const auto& left_input = i == 0 ? witness[input_offset] : witness[intermediate_offset + i - 1];
+    const auto& right_input = witness[input_offset + i + 1];
+    witness[intermediate_offset + i] = left_input * right_input;
+  }
+  // compute output as last_input * last_intermediate
+  witness[1] = witness[input_offset + nof_inputs - 1] * witness[intermediate_offset + nof_intermediates - 1];
+
+  // (2) construt matrices A,B,C (based on the circuit)
+  const int nof_constraints = nof_inputs - 1;
+  // allocating such that columns are consecutive in memory for more efficient polynomial construction from consecutive
+  // evaluations
+  const int nof_cols = witness_size;
+  const int nof_rows = nof_constraints;
+  std::vector<test_type> L(nof_cols * nof_rows, test_type::zero());
+  std::vector<test_type> R(nof_cols * nof_rows, test_type::zero());
+  std::vector<test_type> O(nof_cols * nof_rows, test_type::zero());
+
+  test_type* L_data = L.data();
+  test_type* R_data = R.data();
+  test_type* O_data = O.data();
+
+  // filling the R1CS matrices where memory (where cols are consecutive, not rows)
+  for (int row = 0; row < nof_rows; ++row) {
+    const int L_col = row == 0 ? input_offset : intermediate_offset + row - 1;
+    *(L_data + L_col * nof_rows + row) = test_type::one();
+
+    const int R_col = input_offset + row + 1;
+    *(R_data + R_col * nof_rows + row) = test_type::one();
+
+    const int O_col = row == nof_rows - 1 ? 1 : intermediate_offset + row;
+    *(O_data + O_col * nof_rows + row) = test_type::one();
+  }
+
+  // (3) interpolate the columns of L,R,O to build the polynomials
+  std::list<Polynomial_t> L_QAP, R_QAP, O_QAP;
+  for (int col = 0; col < nof_cols; ++col) { // #polynomials is equal to witness_size
+    L_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(L_data + col * nof_rows, nof_cols)));
+    R_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(R_data + col * nof_rows, nof_cols)));
+    O_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(O_data + col * nof_rows, nof_cols)));
+  }
+  // (4) using the witness, compute L(x),R(x),O(x)
+
+  // (5) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
+
+  // (6) compute A,B,C via MSMs
 }
 
 int main(int argc, char** argv)
