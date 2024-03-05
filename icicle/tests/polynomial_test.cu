@@ -213,7 +213,7 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   nof_coeffs = h.get_coefficients_on_host(h_coeffs, 0, 2); // read the coefficients
   EXPECT_EQ(nof_coeffs, 3);                                // expecting 3 due to specified indices
 
-  test_type expected_h_coeffs[nof_coeffs] = {one, two, three, zero};
+  test_type expected_h_coeffs[nof_coeffs] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
     EXPECT_EQ(expected_h_coeffs[i], h_coeffs[i]);
   }

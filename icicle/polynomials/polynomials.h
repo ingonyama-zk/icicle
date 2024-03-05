@@ -24,7 +24,6 @@ namespace polynomials {
     // initialization
     static Polynomial from_coefficients(const CoeffType* coefficients, uint64_t nof_coefficients);
     static Polynomial from_rou_evaluations(const ImageType* evaluations, uint64_t nof_evaluations);
-    // static Polynomial from_evaluations(const DomainType* domain, const ImageType* evaluations, uint64_t size);
 
     // arithmetic ops (two polynomials)
     Polynomial operator+(const Polynomial& rhs) const;
@@ -47,6 +46,8 @@ namespace polynomials {
     // highest non-zero coefficient degree
     int32_t degree();
 
+    // Read coefficients. TODO Yuval: flag for Host/Device? For Device can return const reference to coeffs but cannot
+    // guarantee that polynomial remains in coeffs and even that it is not released. Copy?
     CoeffType get_coefficient_on_host(uint64_t idx) const;
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
     int64_t
@@ -58,8 +59,7 @@ namespace polynomials {
       return os;
     }
 
-    static void
-    initialize(std::unique_ptr<AbstractPolynomialFactory<CoeffType, DomainType, ImageType>> factory)
+    static void initialize(std::unique_ptr<AbstractPolynomialFactory<CoeffType, DomainType, ImageType>> factory)
     {
       s_factory = std::move(factory);
     }
@@ -97,10 +97,6 @@ namespace polynomials {
     IPolynomialContext() : m_id{s_id++}, m_nof_elements{0} {}
     virtual ~IPolynomialContext() = default;
 
-    virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients, bool memset_zeros = true) = 0;
-    virtual void release() = 0;
-    virtual void set_state(State state) = 0;
-
     virtual C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
     virtual I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* host_evaluations = nullptr) = 0;
 
@@ -110,12 +106,17 @@ namespace polynomials {
     virtual void transform_to_coefficients(uint64_t nof_coefficients = 0) = 0;
     virtual void transform_to_evaluations(uint64_t nof_evaluations = 0, bool is_reversed = 0) = 0;
 
+    virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients, bool memset_zeros = true) = 0;
+    virtual void release() = 0;
+
     State get_state() const { return m_state; }
     uint64_t get_nof_elements() const { return m_nof_elements; }
 
     virtual void print(std::ostream& os) = 0;
 
   protected:
+    void set_state(State state) { m_state = state; }
+
     State m_state;
     uint64_t m_nof_elements = 0;
 
