@@ -34,7 +34,7 @@ func Main() {
     var out core.DeviceSlice
     _, e := out.MallocAsync(p.Size(), p.Size(), stream)
 
-    if e != nil {
+    if e != cr.CudaSuccess {
         panic(e)
     }
     
@@ -45,7 +45,7 @@ func Main() {
     // Perform the MSM operation.
     e = Msm(scalars, points, &cfg, out)
     
-    if e != nil {
+    if e != cr.CudaSuccess {
         panic(e)
     }
     
