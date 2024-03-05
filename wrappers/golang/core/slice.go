@@ -43,6 +43,54 @@ func (d DeviceSlice) IsOnDevice() bool {
 	return true
 }
 
+func(d *DeviceSlice) SliceRange(start, end int, endInclusive bool) DeviceSlice {
+	if end >= start {
+		panic("Cannot have negative size slices")
+	}
+	var newSlice DeviceSlice
+	switch {
+	case start < 0:
+		panic("Negative value for start is not supported")
+	case start == 0:
+		newSlice = d.SliceTo(end, endInclusive)
+	case start > 0:
+		sizeOfElement := d.capacity/d.length
+		newSlice.inner = unsafe.Pointer(uintptr(d.inner) + uintptr(start)*uintptr(sizeOfElement))
+		newSlice.length = end-start
+		if endInclusive {
+			newSlice.length += 1
+		}
+		newSlice.capacity = newSlice.length*sizeOfElement
+	}
+	return newSlice
+}
+
+func(d *DeviceSlice) SliceTo(end int, inclusive bool) DeviceSlice {
+	if end <= 0 {
+		panic("Cannot have negative or zero size slices")
+	}
+	
+	var newSlice DeviceSlice
+	sizeOfElement := d.capacity/d.length
+	newSlice.length = end
+	if inclusive {
+		newSlice.length += 1
+	}
+	newSlice.capacity = newSlice.length*sizeOfElement
+	return newSlice
+}
+
+func(d *DeviceSlice) SliceFrom(start int) DeviceSlice {
+	var newSlice DeviceSlice
+	sizeOfElement := d.capacity/d.length
+
+	newSlice.inner = unsafe.Pointer(uintptr(d.inner) + uintptr(start)*uintptr(sizeOfElement))
+	newSlice.length = d.length - start
+	newSlice.capacity = d.capacity - start*sizeOfElement
+
+	return newSlice
+}
+
 // TODO: change signature to be Malloc(element, numElements)
 // calc size internally
 func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cr.CudaError) {
