@@ -96,7 +96,7 @@ public:
   const static inline auto minus_one = zero - one;
 };
 
-TEST_F(PolynomialTest, evalution)
+TEST_F(PolynomialTest, evaluation)
 {
   const test_type coeffs[3] = {one, two, three};
   auto f = Polynomial_t::from_coefficients(coeffs, 3);
@@ -137,7 +137,7 @@ TEST_F(PolynomialTest, cAPI)
   auto s = polynomial_add(f, g);
 
   test_type x = test_type::rand_host();
-  // TODO Yuval: use C-API for evalute too
+  // TODO Yuval: use C-API for evaluate too
   auto f_x = f->evaluate(x);
   auto g_x = g->evaluate(x);
   auto fx_plus_gx = f_x + g_x;
@@ -185,7 +185,7 @@ TEST_F(PolynomialTest, monomials)
 
   EXPECT_EQ(addmonom_f_x, expected_addmonmon_f_x);
 
-  f.sub_monomial_inplace(one); // subtract 1. equivalant to 'f-1'
+  f.sub_monomial_inplace(one); // subtract 1. equivalent to 'f-1'
   const auto expected_submonom_f_x = addmonom_f_x - one;
   const auto submonom_f_x = f(x);
 

@@ -40,10 +40,10 @@ namespace polynomials {
     Polynomial& add_monomial_inplace(CoefficientType monomial_coeff, uint64_t monomial = 0);
     Polynomial& sub_monomial_inplace(CoefficientType monomial_coeff, uint64_t monomial = 0);
 
-    // evaluation (caller is allocating output memory, for evalute(...))
+    // evaluation
     ImageType operator()(const DomainType& x) const;
     ImageType evaluate(const DomainType& x) const;
-    void evaluate(DomainType* x, uint64_t nof_points, ImageType* evals /*OUT*/) const;
+    void evaluate(DomainType* x, uint64_t nof_points, ImageType* evals /*OUT*/) const; // caller allocates memory
 
     // highest non-zero coefficient degree
     int32_t degree();
@@ -104,13 +104,13 @@ namespace polynomials {
     virtual void set_state(State state) = 0;
 
     virtual C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
-    virtual I* init_from_rou_evaluations(uint64_t nof_evalutions, const I* host_evaluations = nullptr) = 0;
+    virtual I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* host_evaluations = nullptr) = 0;
 
     virtual std::pair<C*, uint64_t> get_coefficients() = 0;
     virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
 
     virtual void transform_to_coefficients(uint64_t nof_coefficients = 0) = 0;
-    virtual void transform_to_evaluations(uint64_t nof_evalutions = 0, bool is_reversed = 0) = 0;
+    virtual void transform_to_evaluations(uint64_t nof_evaluations = 0, bool is_reversed = 0) = 0;
 
     State get_state() const { return m_state; }
     uint64_t get_nof_elements() const { return m_nof_elements; }
@@ -136,7 +136,7 @@ namespace polynomials {
 
     typedef IPolynomialContext<C, D, I> PolyContext;
 
-    // arithmetics
+    // arithmetic
     virtual void add(PolyContext& out, PolyContext& op_a, PolyContext& op_b) = 0;
     virtual void subtract(PolyContext& out, PolyContext& op_a, PolyContext& op_b) = 0;
     virtual void multiply(PolyContext& out, PolyContext& op_a, PolyContext& op_b) = 0;
