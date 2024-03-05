@@ -647,6 +647,11 @@ namespace ntt {
     const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
     const bool is_inverse = dir == NTTDir::kInverse;
 
+#if defined(ECNTT_DEFINED)
+      CHK_IF_RETURN(ntt::radix2_ntt(
+        d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
+        coset_index, stream));
+#else
     if (is_radix2_algorithm) {
       CHK_IF_RETURN(ntt::radix2_ntt(
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
@@ -668,6 +673,7 @@ namespace ntt {
         d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
         config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
     }
+#endif
 
     if (!are_outputs_on_device)
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
