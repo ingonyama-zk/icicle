@@ -24,7 +24,6 @@ fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: 
     points
 }
 
-// TODO: this should be INCORRECT for more than 1 device!! correct it
 pub fn check_msm<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,

@@ -303,7 +303,6 @@ where
     }
 }
 
-// TODO: currently INCORRECT for more than one device
 pub fn check_ntt_device_async<F: FieldImpl + ArkConvertible>()
 where
     F::ArkEquivalent: FftField,
