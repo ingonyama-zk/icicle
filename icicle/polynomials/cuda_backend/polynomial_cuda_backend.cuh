@@ -32,7 +32,7 @@ namespace polynomials {
       const uint64_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
       CHK_STICKY(cudaMallocAsync(&m_storage, mem_size, m_device_context.stream));
       this->m_nof_elements = nof_elements_nearset_power_of_two;
-      set_state(init_state);
+      this->set_state(init_state);
       if (memset_zeros) {
         CHK_STICKY(cudaMemsetAsync(m_storage, 0, mem_size, m_device_context.stream));
       } else {
@@ -83,8 +83,6 @@ namespace polynomials {
       m_storage = nullptr;
       this->m_nof_elements = 0;
     }
-
-    void set_state(State state) override { this->m_state = state; }
 
     C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients) override
     {
@@ -154,7 +152,7 @@ namespace polynomials {
       ntt_config.ordering =
         (this->m_state == State::EvaluationsOnRou_Natural) ? ntt::Ordering::kNN : ntt::Ordering::kRN;
       CHK_STICKY(ntt::NTT(evals, this->m_nof_elements, ntt::NTTDir::kInverse, ntt_config, coeffs));
-      set_state(State::Coefficients);
+      this->set_state(State::Coefficients);
 
       if (is_allocate_new_mem) { set_storage(coeffs, nof_coefficients); } // release old memory and use new
     }
@@ -202,7 +200,7 @@ namespace polynomials {
       }
 
       this->m_nof_elements = nof_evaluations;
-      set_state(is_reversed ? State::EvaluationsOnRou_Reversed : State::EvaluationsOnRou_Natural);
+      this->set_state(is_reversed ? State::EvaluationsOnRou_Reversed : State::EvaluationsOnRou_Natural);
     }
 
     void print(std::ostream& os) override
