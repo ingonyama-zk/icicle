@@ -1,7 +1,7 @@
 use crate::bindings::{
     cudaFree, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
 };
-use crate::device::check_device;
+use crate::device::{check_device, get_device_from_pointer};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
 use std::mem::{size_of, ManuallyDrop, MaybeUninit};
@@ -10,11 +10,12 @@ use std::ops::{
 };
 use std::os::raw::c_void;
 use std::slice::from_raw_parts_mut;
+use std::slice::SliceIndex;
 
 #[derive(Debug)]
 pub struct HostSlice<T>([T]);
-pub struct DeviceVec<T, const D_ID: usize = 0>(ManuallyDrop<Box<[T]>>);
-pub struct DeviceSlice<T, const D_ID: usize = 0>([T]);
+pub struct DeviceVec<T>(ManuallyDrop<Box<[T]>>);
+pub struct DeviceSlice<T>([T]);
 
 pub trait HostOrDeviceSlice<T> {
     fn is_on_device(&self) -> bool;
@@ -54,13 +55,16 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
     }
 }
 
-impl<T, const D_ID: usize> HostOrDeviceSlice<T> for DeviceSlice<T, D_ID> {
+impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
     fn is_on_device(&self) -> bool {
         true
     }
 
     fn device_id(&self) -> Option<usize> {
-        Some(D_ID)
+        Some(
+            get_device_from_pointer(unsafe { self.as_ptr() as *const ::std::os::raw::c_void })
+                .expect("Invalid pointer. Maybe host pointer was used here?"),
+        )
     }
 
     unsafe fn as_ptr(&self) -> *const T {
@@ -104,16 +108,18 @@ impl<T> HostSlice<T> {
         &mut self.0
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=&T> {
-        self.0.iter()
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.0
+            .iter()
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut T> {
-        self.0.iter_mut()
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.0
+            .iter_mut()
     }
 }
 
-impl<T, const D_ID: usize> DeviceSlice<T, D_ID> {
+impl<T> DeviceSlice<T> {
     pub unsafe fn from_slice(slice: &[T]) -> &Self {
         &*(slice as *const [T] as *const Self)
     }
@@ -126,6 +132,10 @@ impl<T, const D_ID: usize> DeviceSlice<T, D_ID> {
         assert!(
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
+        );
+        check_device(
+            self.device_id()
+                .unwrap(),
         );
         let size = size_of::<T>() * self.len();
         if size != 0 {
@@ -147,6 +157,10 @@ impl<T, const D_ID: usize> DeviceSlice<T, D_ID> {
             self.len() == val.len(),
             "In copy to host, destination and source slices have different lengths"
         );
+        check_device(
+            self.device_id()
+                .unwrap(),
+        );
         let size = size_of::<T>() * self.len();
         if size != 0 {
             unsafe {
@@ -166,6 +180,10 @@ impl<T, const D_ID: usize> DeviceSlice<T, D_ID> {
         assert!(
             self.len() == val.len(),
             "In copy from host async, destination and source slices have different lengths"
+        );
+        check_device(
+            self.device_id()
+                .unwrap(),
         );
         let size = size_of::<T>() * self.len();
         if size != 0 {
@@ -188,6 +206,10 @@ impl<T, const D_ID: usize> DeviceSlice<T, D_ID> {
             self.len() == val.len(),
             "In copy to host async, destination and source slices have different lengths"
         );
+        check_device(
+            self.device_id()
+                .unwrap(),
+        );
         let size = size_of::<T>() * self.len();
         if size != 0 {
             unsafe {
@@ -205,9 +227,8 @@ impl<T, const D_ID: usize> DeviceSlice<T, D_ID> {
     }
 }
 
-impl<T, const D_ID: usize> DeviceVec<T, D_ID> {
+impl<T> DeviceVec<T> {
     pub fn cuda_malloc(count: usize) -> CudaResult<Self> {
-        check_device(D_ID);
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
@@ -227,7 +248,6 @@ impl<T, const D_ID: usize> DeviceVec<T, D_ID> {
     }
 
     pub fn cuda_malloc_async(count: usize, stream: &CudaStream) -> CudaResult<Self> {
-        check_device(D_ID);
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
@@ -243,6 +263,16 @@ impl<T, const D_ID: usize> DeviceVec<T, D_ID> {
                 count,
             )))))
         }
+    }
+
+    pub fn cuda_malloc_for_device(count: usize, device_id: usize) -> CudaResult<Self> {
+        check_device(device_id);
+        Self::cuda_malloc(count)
+    }
+
+    pub fn cuda_malloc_async_for_device(count: usize, stream: &CudaStream, device_id: usize) -> CudaResult<Self> {
+        check_device(device_id);
+        Self::cuda_malloc_async(count, stream)
     }
 }
 
@@ -298,11 +328,11 @@ impl<T> IndexMut<usize> for HostSlice<T> {
     }
 }
 
-impl<Idx, T, const D_ID: usize> Index<Idx> for DeviceVec<T, D_ID>
+impl<Idx, T> Index<Idx> for DeviceVec<T>
 where
-    Idx: std::slice::SliceIndex<[T], Output = [T]>,
+    Idx: SliceIndex<[T], Output = [T]>,
 {
-    type Output = DeviceSlice<T, D_ID>;
+    type Output = DeviceSlice<T>;
 
     fn index(&self, index: Idx) -> &Self::Output {
         unsafe {
@@ -314,9 +344,9 @@ where
     }
 }
 
-impl<Idx, T, const D_ID: usize> IndexMut<Idx> for DeviceVec<T, D_ID>
+impl<Idx, T> IndexMut<Idx> for DeviceVec<T>
 where
-    Idx: std::slice::SliceIndex<[T], Output = [T]>,
+    Idx: SliceIndex<[T], Output = [T]>,
 {
     fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
         unsafe {
@@ -328,9 +358,9 @@ where
     }
 }
 
-impl<Idx, T, const D_ID: usize> Index<Idx> for DeviceSlice<T, D_ID>
+impl<Idx, T> Index<Idx> for DeviceSlice<T>
 where
-    Idx: std::slice::SliceIndex<[T], Output = [T]>,
+    Idx: SliceIndex<[T], Output = [T]>,
 {
     type Output = Self;
 
@@ -344,9 +374,9 @@ where
     }
 }
 
-impl<Idx, T, const D_ID: usize> IndexMut<Idx> for DeviceSlice<T, D_ID>
+impl<Idx, T> IndexMut<Idx> for DeviceSlice<T>
 where
-    Idx: std::slice::SliceIndex<[T], Output = [T]>,
+    Idx: SliceIndex<[T], Output = [T]>,
 {
     fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
         unsafe {
@@ -358,21 +388,21 @@ where
     }
 }
 
-impl<T, const D_ID: usize> Deref for DeviceVec<T, D_ID> {
-    type Target = DeviceSlice<T, D_ID>;
+impl<T> Deref for DeviceVec<T> {
+    type Target = DeviceSlice<T>;
 
     fn deref(&self) -> &Self::Target {
         &self[..]
     }
 }
 
-impl<T, const D_ID: usize> DerefMut for DeviceVec<T, D_ID> {
+impl<T> DerefMut for DeviceVec<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self[..]
     }
 }
 
-impl<T, const D_ID: usize> Drop for DeviceVec<T, D_ID> {
+impl<T> Drop for DeviceVec<T> {
     fn drop(&mut self) {
         if self
             .0

@@ -43,7 +43,7 @@ where
 
             set_device(device_id).unwrap();
             let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
-            let mut msm_results = DeviceVec::<Projective<C>>::cuda_malloc(1).unwrap();
+            let mut msm_results = DeviceVec::<Projective<C>>::cuda_malloc_for_device(1, device_id).unwrap();
             for test_size in test_sizes {
                 let points = generate_random_affine_points_with_zeroes(test_size, 2);
                 let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);

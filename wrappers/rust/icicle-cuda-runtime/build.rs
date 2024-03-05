@@ -77,6 +77,11 @@ fn main() {
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html
         .allowlist_function("cudaFreeAsync")
         .allowlist_function("cudaMallocAsync")
+        // Unified Addressing
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__UNIFIED.html
+        .rustified_enum("cudaMemoryType")
+        .allowlist_type("cudaPointerAttributes")
+        .allowlist_function("cudaPointerGetAttributes")
         //
         .generate()
         .expect("Unable to generate bindings");

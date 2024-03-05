@@ -97,21 +97,20 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
 }
 
 #[doc(hidden)]
-pub trait MontgomeryConvertibleField<'a, F: FieldImpl, const D_ID: usize = 0> {
-    fn to_mont(values: &mut DeviceSlice<F, D_ID>, ctx: &DeviceContext<'a>) -> CudaError;
-    fn from_mont(values: &mut DeviceSlice<F, D_ID>, ctx: &DeviceContext<'a>) -> CudaError;
+pub trait MontgomeryConvertibleField<'a, F: FieldImpl> {
+    fn to_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
+    fn from_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
 }
 
-impl<'a, const NUM_LIMBS: usize, F: FieldConfig, const D_ID: usize> MontgomeryConvertible<'a, D_ID>
-    for Field<NUM_LIMBS, F>
+impl<'a, const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible<'a> for Field<NUM_LIMBS, F>
 where
-    F: MontgomeryConvertibleField<'a, Self, D_ID>,
+    F: MontgomeryConvertibleField<'a, Self>,
 {
-    fn to_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
         F::to_mont(values, ctx)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
+    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
         F::from_mont(values, ctx)
     }
 }
@@ -203,20 +202,26 @@ macro_rules! impl_scalar_field {
             }
         }
 
-        impl<'a, const D_ID: usize> MontgomeryConvertibleField<'a, $field_name, D_ID> for $field_cfg {
-            fn to_mont(values: &mut DeviceSlice<$field_name, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
-                check_device(D_ID);
+        impl<'a> MontgomeryConvertibleField<'a, $field_name> for $field_cfg {
+            fn to_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
+                check_device(ctx.device_id);
                 assert_eq!(
-                    D_ID, ctx.device_id,
+                    values
+                        .device_id()
+                        .unwrap(),
+                    ctx.device_id,
                     "Device ids are different in slice and context"
                 );
                 $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
             }
 
-            fn from_mont(values: &mut DeviceSlice<$field_name, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
-                check_device(D_ID);
+            fn from_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
+                check_device(ctx.device_id);
                 assert_eq!(
-                    D_ID, ctx.device_id,
+                    values
+                        .device_id()
+                        .unwrap(),
+                    ctx.device_id,
                     "Device ids are different in slice and context"
                 );
                 $field_prefix_ident::convert_scalars_montgomery(

@@ -39,9 +39,9 @@ pub trait ArkConvertible {
     fn from_ark(ark: Self::ArkEquivalent) -> Self;
 }
 
-pub trait MontgomeryConvertible<'a, const D_ID: usize = 0>: Sized {
-    fn to_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError;
-    fn from_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError;
+pub trait MontgomeryConvertible<'a>: Sized {
+    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError;
+    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError;
 }
 
 pub trait IcicleResultWrap {

@@ -133,30 +133,54 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
     }
 }
 
-impl<'a, C: Curve, const D_ID: usize> MontgomeryConvertible<'a, D_ID> for Affine<C> {
-    fn to_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(D_ID);
-        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+impl<'a, C: Curve> MontgomeryConvertible<'a> for Affine<C> {
+    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(ctx.device_id);
+        assert_eq!(
+            values
+                .device_id()
+                .unwrap(),
+            ctx.device_id,
+            "Device ids are different in slice and context"
+        );
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(D_ID);
-        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(ctx.device_id);
+        assert_eq!(
+            values
+                .device_id()
+                .unwrap(),
+            ctx.device_id,
+            "Device ids are different in slice and context"
+        );
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, ctx)
     }
 }
 
-impl<'a, C: Curve, const D_ID: usize> MontgomeryConvertible<'a, D_ID> for Projective<C> {
-    fn to_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(D_ID);
-        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+impl<'a, C: Curve> MontgomeryConvertible<'a> for Projective<C> {
+    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(ctx.device_id);
+        assert_eq!(
+            values
+                .device_id()
+                .unwrap(),
+            ctx.device_id,
+            "Device ids are different in slice and context"
+        );
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self, D_ID>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(D_ID);
-        assert_eq!(D_ID, ctx.device_id, "Device ids are different in slice and context");
+    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
+        check_device(ctx.device_id);
+        assert_eq!(
+            values
+                .device_id()
+                .unwrap(),
+            ctx.device_id,
+            "Device ids are different in slice and context"
+        );
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, ctx)
     }
 }
