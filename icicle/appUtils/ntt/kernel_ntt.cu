@@ -222,6 +222,7 @@ template <typename E, typename S>
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t batch_size,
     uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -240,16 +241,20 @@ template <typename E, typename S>
 
     s_meta.th_stride = 4;
     s_meta.ntt_block_size = 32;
-    s_meta.ntt_block_id = (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
+    s_meta.ntt_block_id = batch_size? blockIdx.x / ((batch_size+15)/16) : (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 4) : (threadIdx.x & 0x3);
 
-    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
+    s_meta.batch_id = batch_size? (threadIdx.x & 0xf) + ((blockIdx.x % ((batch_size+15)/16)) << 4) : 0;
+    if (s_meta.ntt_block_id >= nof_ntt_blocks || (batch_size >0 && s_meta.batch_id >= batch_size)) return;
 
     if (fast_tw)
       engine.loadBasicTwiddles(basic_twiddles);
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
-    engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
+
+    if (batch_size) engine.loadGlobalDataBatched(in, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
+
     if (fast_tw)
       engine.loadInternalTwiddles32(internal_twiddles, strided);
     else
@@ -268,7 +273,8 @@ template <typename E, typename S>
           external_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    engine.storeGlobalData32(out, data_stride, log_data_stride, log_size, strided, s_meta);
+    if (batch_size) engine.storeGlobalData32Batched(out, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.storeGlobalData32(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
   template <typename E, typename S>
@@ -280,6 +286,7 @@ template <typename E, typename S>
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t batch_size,
     uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -298,16 +305,19 @@ template <typename E, typename S>
 
     s_meta.th_stride = 4;
     s_meta.ntt_block_size = 32;
-    s_meta.ntt_block_id = (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
+    s_meta.ntt_block_id = batch_size? blockIdx.x / ((batch_size+15)/16) : (blockIdx.x << 4) + (strided ? (threadIdx.x & 0xf) : (threadIdx.x >> 2));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 4) : (threadIdx.x & 0x3);
 
-    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
+    s_meta.batch_id = batch_size? (threadIdx.x & 0xf) + ((blockIdx.x % ((batch_size+15)/16)) << 4) : 0;
+    if (s_meta.ntt_block_id >= nof_ntt_blocks || (batch_size >0 && s_meta.batch_id >= batch_size)) return;
 
     if (fast_tw)
       engine.loadBasicTwiddles(basic_twiddles);
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
-    engine.loadGlobalData32(in, data_stride, log_data_stride, log_size, strided, s_meta);
+
+    if (batch_size) engine.loadGlobalData32Batched(in, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.loadGlobalData32(in, data_stride, log_data_stride, log_size, strided, s_meta);
     if (twiddle_stride) {
       if (fast_tw)
         engine.loadExternalTwiddles32(external_twiddles, twiddle_stride, log_data_stride, strided, s_meta);
@@ -326,7 +336,8 @@ template <typename E, typename S>
     engine.SharedData32Rows8(shmem, false, false, strided); // load
     engine.twiddlesInternal();
     engine.ntt8win();
-    engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
+    if (batch_size) engine.storeGlobalDataBatched(out, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
   template <typename E, typename S>
@@ -338,6 +349,7 @@ template <typename E, typename S>
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t batch_size,
     uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -356,16 +368,20 @@ template <typename E, typename S>
 
     s_meta.th_stride = 2;
     s_meta.ntt_block_size = 16;
-    s_meta.ntt_block_id = (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
+    s_meta.ntt_block_id = batch_size? blockIdx.x / ((batch_size+31)/32) : (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 5) : (threadIdx.x & 0x1);
 
-    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
+    s_meta.batch_id = batch_size? (threadIdx.x & 0x1f) + ((blockIdx.x % ((batch_size+31)/32)) << 5) : 0;
+    if (s_meta.ntt_block_id >= nof_ntt_blocks || (batch_size >0 && s_meta.batch_id >= batch_size)) return;
 
     if (fast_tw)
       engine.loadBasicTwiddles(basic_twiddles);
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
-    engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
+
+    if (batch_size) engine.loadGlobalDataBatched(in, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.loadGlobalData(in, data_stride, log_data_stride, log_size, strided, s_meta);
+
     if (fast_tw)
       engine.loadInternalTwiddles16(internal_twiddles, strided);
     else
@@ -384,7 +400,8 @@ template <typename E, typename S>
           external_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    engine.storeGlobalData16(out, data_stride, log_data_stride, log_size, strided, s_meta);
+    if (batch_size) engine.storeGlobalData16Batched(out, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.storeGlobalData16(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
   template <typename E, typename S>
@@ -396,6 +413,7 @@ template <typename E, typename S>
     S* basic_twiddles,
     uint32_t log_size,
     uint32_t tw_log_size,
+    uint32_t batch_size,
     uint32_t nof_ntt_blocks,
     uint32_t data_stride,
     uint32_t log_data_stride,
@@ -414,16 +432,20 @@ template <typename E, typename S>
 
     s_meta.th_stride = 2;
     s_meta.ntt_block_size = 16;
-    s_meta.ntt_block_id = (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
+    s_meta.ntt_block_id = batch_size? blockIdx.x / ((batch_size+31)/32) : (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
     s_meta.ntt_inp_id = strided ? (threadIdx.x >> 5) : (threadIdx.x & 0x1);
 
-    if (s_meta.ntt_block_id >= nof_ntt_blocks) return;
+    s_meta.batch_id = batch_size? (threadIdx.x & 0x1f) + ((blockIdx.x % ((batch_size+31)/32)) << 5) : 0;
+    if (s_meta.ntt_block_id >= nof_ntt_blocks || (batch_size >0 && s_meta.batch_id >= batch_size)) return;
 
     if (fast_tw)
       engine.loadBasicTwiddles(basic_twiddles);
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
-    engine.loadGlobalData16(in, data_stride, log_data_stride, log_size, strided, s_meta);
+
+    if (batch_size) engine.loadGlobalData16Batched(in, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.loadGlobalData16(in, data_stride, log_data_stride, log_size, strided, s_meta);
+
     if (twiddle_stride) {
       if (fast_tw)
         engine.loadExternalTwiddles16(external_twiddles, twiddle_stride, log_data_stride, strided, s_meta);
@@ -442,7 +464,8 @@ template <typename E, typename S>
     engine.SharedData16Rows8(shmem, false, false, strided); // load
     engine.twiddlesInternal();
     engine.ntt8win();
-    engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
+    if (batch_size) engine.storeGlobalDataBatched(out, data_stride, log_data_stride, s_meta, batch_size);
+    else engine.storeGlobalData(out, data_stride, log_data_stride, log_size, strided, s_meta);
   }
 
   template <typename E, typename S>
@@ -696,85 +719,73 @@ template <typename E, typename S>
     }
 
     if (log_size == 4) {
-      const int NOF_THREADS = min(64, 2 * batch_size);
-      const int NOF_BLOCKS = (2 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
-
+      const int NOF_THREADS = columns_batch? 64 : min(64, 2 * batch_size);
+      const int NOF_BLOCKS = columns_batch? ((batch_size+31)/32) : (2 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
       if (dit) {
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
-          false, 0, inv, dit, fast_tw);
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          columns_batch? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
       } else { // dif
         ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
-          false, 0, inv, dit, fast_tw);
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          columns_batch? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
       }
       if (normalize) normalize_kernel<<<batch_size, 16, 0, cuda_stream>>>(out, S::inv_log_size(4), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
     if (log_size == 5) {
-      const int NOF_THREADS = min(64, 4 * batch_size);
-      const int NOF_BLOCKS = (4 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
+      const int NOF_THREADS = columns_batch? 64 : min(64, 4 * batch_size);
+      const int NOF_BLOCKS = columns_batch? ((batch_size+15)/16) : (4 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
       if (dit) {
         ntt32dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
-          false, 0, inv, dit, fast_tw);
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          columns_batch? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
       } else { // dif
         ntt32<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1, 0, 0,
-          false, 0, inv, dit, fast_tw);
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          columns_batch? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
       }
       if (normalize) normalize_kernel<<<batch_size, 32, 0, cuda_stream>>>(out, S::inv_log_size(5), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
     if (log_size == 6) {
-      if (columns_batch){
-        const int NOF_THREADS = 64;
-        const int NOF_BLOCKS = (batch_size+7)/8;
-        ntt64<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1,
-        1 ,0, 0, true, 0, inv, dit, fast_tw);
-        cudaDeviceSynchronize();
-        printf("batched err %d\n", cudaGetLastError());
-        if (normalize) normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6), (1<<log_size)*batch_size);
-        return CHK_LAST();
-      }
-
-      const int NOF_THREADS = min(64, 8 * batch_size);
-      const int NOF_BLOCKS = (8 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
+      const int NOF_THREADS = columns_batch? 64 : min(64, 8 * batch_size);
+      const int NOF_BLOCKS = columns_batch? ((batch_size+7)/8) : ((8 * batch_size + NOF_THREADS - 1) / NOF_THREADS);
       ntt64<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, batch_size, 1,
-        1 ,0, 0, false, 0, inv, dit, fast_tw);
+        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+        columns_batch? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
       if (normalize) normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
     if (log_size == 8) {
       const int NOF_THREADS = 64;
-      const int NOF_BLOCKS = (32 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
+      const int NOF_BLOCKS = columns_batch? ((batch_size+31)/32 * 16): ((32 * batch_size + NOF_THREADS - 1) / NOF_THREADS);
       if (dit) {
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-          (1 << log_size - 4) * batch_size, 1, 0, 0, false, 0, inv, dit, fast_tw);
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch? 1 : batch_size), 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-          (1 << log_size - 4) * batch_size, 16, 4, 16, true, 1, inv, dit, fast_tw);
+          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch? 1 : batch_size), 16, 4, 16, true, 1, inv, dit, fast_tw);
       } else { // dif
         ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-          (1 << log_size - 4) * batch_size, 16, 4, 16, true, 1, inv, dit, fast_tw);
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch? 1 : batch_size), 16, 4, 16, true, 1, inv, dit, fast_tw);
         ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-          (1 << log_size - 4) * batch_size, 1, 0, 0, false, 0, inv, dit, fast_tw);
+          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch? 1 : batch_size), 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
       }
       if (normalize) normalize_kernel<<<batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(8), (1<<log_size)*batch_size);
       return CHK_LAST();
     }
 
     // general case:
-    uint32_t nof_blocks = (1 << (log_size - 9)) * (columns_batch? ((batch_size+7)/8) * 8 : batch_size);
+    uint32_t nof_blocks = (1 << (log_size - 9)) * (columns_batch? ((batch_size+31)/32) * 32 : batch_size);
     if (dit) {
+      printf("dit\n");
       for (int i = 0; i < 5; i++) {
         uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
         uint32_t stride_log = 0;
@@ -783,20 +794,21 @@ template <typename E, typename S>
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
-            (1 << log_size - 6) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit,
-            fast_tw);
+            (1 << log_size - 6) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
         else if (stage_size == 5)
           ntt32dit<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            (1 << log_size - 5) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit,
-            fast_tw);
+            i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+            (1 << log_size - 5) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
         else if (stage_size == 4)
           ntt16dit<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            (1 << log_size - 4) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit,
-            fast_tw);
+            i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+            (1 << log_size - 4) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
       }
     } else { // dif
+      printf("dif\n");
       bool first_run = false, prev_stage = false;
       for (int i = 4; i >= 0; i--) {
         uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
@@ -807,18 +819,18 @@ template <typename E, typename S>
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
-            (1 << log_size - 6) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit,
-            fast_tw);
+            (1 << log_size - 6) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
         else if (stage_size == 5)
           ntt32<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            (1 << log_size - 5) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit,
-            fast_tw);
+            first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+            (1 << log_size - 5) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
         else if (stage_size == 4)
           ntt16<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            (1 << log_size - 4) * batch_size, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i, i, inv, dit,
-            fast_tw);
+            first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size, columns_batch? batch_size : 0,
+            (1 << log_size - 4) * (columns_batch? 1 : batch_size), 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
         prev_stage = stage_size;
       }
     }

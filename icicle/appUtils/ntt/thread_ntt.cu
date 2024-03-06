@@ -271,6 +271,21 @@ public:
     }
   }
 
+  __device__ __forceinline__ void loadGlobalData32Batched(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+      data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t j = 0; j < 2; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 4; i++) {
+        X[4 * j + i] = data[(8 * i + j) * data_stride * batch_size];
+      }
+    }
+  }
+
   __device__ __forceinline__ void storeGlobalData32(
     E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
@@ -286,6 +301,21 @@ public:
 #pragma unroll
       for (uint32_t i = 0; i < 4; i++) {
         data[(8 * i + j) * data_stride] = X[4 * j + i];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void storeGlobalData32Batched(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
+            (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t j = 0; j < 2; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 4; i++) {
+        data[(8 * i + j) * data_stride * batch_size] = X[4 * j + i];
       }
     }
   }
@@ -309,6 +339,21 @@ public:
     }
   }
 
+  __device__ __forceinline__ void loadGlobalData16Batched(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+      data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;
+    
+#pragma unroll
+    for (uint32_t j = 0; j < 4; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 2; i++) {
+        X[2 * j + i] = data[(8 * i + j) * data_stride * batch_size];
+      }
+    }
+  }
+
   __device__ __forceinline__ void storeGlobalData16(
     E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
   {
@@ -324,6 +369,21 @@ public:
 #pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         data[(8 * i + j) * data_stride] = X[2 * j + i];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void storeGlobalData16Batched(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+      data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t j = 0; j < 4; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 2; i++) {
+        data[(8 * i + j) * data_stride * batch_size] = X[2 * j + i];
       }
     }
   }
