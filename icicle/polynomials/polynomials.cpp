@@ -113,7 +113,7 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
-  int32_t Polynomial<C, D, I>::degree()
+  int64_t Polynomial<C, D, I>::degree()
   {
     return m_backend->degree(*m_context.get());
   }

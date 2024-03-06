@@ -48,7 +48,7 @@ namespace polynomials {
     void evaluate(DomainType* x, uint64_t nof_points, ImageType* evals /*OUT*/) const; // caller allocates memory
 
     // highest non-zero coefficient degree
-    int32_t degree();
+    int64_t degree();
 
     // Read coefficients. TODO Yuval: flag for Host/Device? For Device can return const reference to coeffs but cannot
     // guarantee that polynomial remains in coeffs and even that it is not released. Copy?
@@ -154,7 +154,7 @@ namespace polynomials {
     virtual void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) = 0;
     virtual void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) = 0;
 
-    virtual int32_t degree(PolyContext& op) = 0;
+    virtual int64_t degree(PolyContext& op) = 0;
 
     virtual I evaluate(PolyContext& op, const D& domain_x) = 0;
     virtual void evaluate(PolyContext& op, const D* domain_x, uint64_t nof_domain_points, I* evaluations /*OUT*/) = 0;
