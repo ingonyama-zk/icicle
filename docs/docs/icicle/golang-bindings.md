@@ -67,7 +67,7 @@ import (
 
 ## Running tests
 
-To run all test, for all curves:
+To run all tests, for all curves:
 
 ```bash
 go test --tags=g2 ./... -count=1
