@@ -4,26 +4,24 @@
 #include <memory>
 
 namespace polynomials {
-  template <typename CoeffType, typename DomainType, typename ImageType>
+  template <typename Coeff, typename Domain, typename Image>
   class IPolynomialBackend;
 
-  template <typename CoeffType, typename DomainType, typename ImageType>
+  template <typename Coeff, typename Domain, typename Image>
   class IPolynomialContext;
 
   template <typename C, typename D, typename I>
   class AbstractPolynomialFactory;
 
   /*============================== Polynomial API ==============================*/
-  template <
-    typename CoeffType = curve_config::scalar_t,
-    typename DomainType = CoeffType,
-    typename ImageType = CoeffType>
+  template <typename Coeff = curve_config::scalar_t, typename Domain = Coeff, typename Image = Coeff>
   class Polynomial
   {
   public:
     // initialization
-    static Polynomial from_coefficients(const CoeffType* coefficients, uint64_t nof_coefficients);
-    static Polynomial from_rou_evaluations(const ImageType* evaluations, uint64_t nof_evaluations);
+    static Polynomial from_coefficients(const Coeff* coefficients, uint64_t nof_coefficients);
+    static Polynomial from_rou_evaluations(const Image* evaluations, uint64_t nof_evaluations);
+    // static Polynomial_t clone(const Polynomial& p);
 
     // arithmetic ops (two polynomials)
     Polynomial operator+(const Polynomial& rhs) const;
@@ -36,26 +34,27 @@ namespace polynomials {
 
     Polynomial& operator+=(const Polynomial& rhs);
 
-    Polynomial operator*(const ImageType& val) const;
+    Polynomial operator*(const Image& val) const;
+    template <typename C, typename D, typename I>
+    friend Polynomial<C, D, I> operator*(const I& val, const Polynomial<C, D, I>& lhs);
 
     // arithmetic ops with monomial
-    Polynomial& add_monomial_inplace(CoeffType monomial_coeff, uint64_t monomial = 0);
-    Polynomial& sub_monomial_inplace(CoeffType monomial_coeff, uint64_t monomial = 0);
+    Polynomial& add_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
+    Polynomial& sub_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
 
     // evaluation
-    ImageType operator()(const DomainType& x) const;
-    ImageType evaluate(const DomainType& x) const;
-    void evaluate(DomainType* x, uint64_t nof_points, ImageType* evals /*OUT*/) const; // caller allocates memory
+    Image operator()(const Domain& x) const;
+    Image evaluate(const Domain& x) const;
+    void evaluate(Domain* x, uint64_t nof_points, Image* evals /*OUT*/) const; // caller allocates memory
 
     // highest non-zero coefficient degree
     int64_t degree();
 
     // Read coefficients. TODO Yuval: flag for Host/Device? For Device can return const reference to coeffs but cannot
     // guarantee that polynomial remains in coeffs and even that it is not released. Copy?
-    CoeffType get_coefficient_on_host(uint64_t idx) const;
+    Coeff get_coefficient_on_host(uint64_t idx) const;
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
-    int64_t
-    get_coefficients_on_host(CoeffType* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
+    int64_t get_coefficients_on_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
 
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
     {
@@ -63,19 +62,19 @@ namespace polynomials {
       return os;
     }
 
-    static void initialize(std::unique_ptr<AbstractPolynomialFactory<CoeffType, DomainType, ImageType>> factory)
+    static void initialize(std::unique_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> factory)
     {
       s_factory = std::move(factory);
     }
 
   private:
     // context is a wrapper for the polynomial state, including allocated memory, device context etc.
-    std::shared_ptr<IPolynomialContext<CoeffType, DomainType, ImageType>> m_context = nullptr;
+    std::shared_ptr<IPolynomialContext<Coeff, Domain, Image>> m_context = nullptr;
     // backend is the actual API implementation
-    std::shared_ptr<IPolynomialBackend<CoeffType, DomainType, ImageType>> m_backend = nullptr;
+    std::shared_ptr<IPolynomialBackend<Coeff, Domain, Image>> m_backend = nullptr;
 
     // factory is building the context and backend for polynomial objects
-    static inline std::unique_ptr<AbstractPolynomialFactory<CoeffType, DomainType, ImageType>> s_factory = nullptr;
+    static inline std::unique_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> s_factory = nullptr;
 
     Polynomial();
 
