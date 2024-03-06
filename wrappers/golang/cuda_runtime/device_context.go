@@ -87,15 +87,15 @@ func GetDeviceFromPointer(ptr unsafe.Pointer) int {
 //					 		size := 1 << power
 //
 //					 		// This will always print "Inner goroutine device: 0"
-//	           // go func ()  {
-//					 		// 	device, _ := cr.GetDevice()
-//					 		// 	fmt.Println("Inner goroutine device: ", device)
-//					 		// }()
+//							// go func ()  {
+//							// 	device, _ := cr.GetDevice()
+//							// 	fmt.Println("Inner goroutine device: ", device)
+//							// }()
 //					 		// To force the above goroutine to same device as the wrapping function:
-//	           // RunOnDevice(i, func(arg ...any) {
-//					 		// 	device, _ := cr.GetDevice()
-//					 		// 	fmt.Println("Inner goroutine device: ", device)
-//					 		// })
+//							// RunOnDevice(i, func(arg ...any) {
+//							// 	device, _ := cr.GetDevice()
+//							// 	fmt.Println("Inner goroutine device: ", device)
+//							// })
 //
 //					 		scalars := GenerateScalars(size)
 //					 		points := GenerateAffinePoints(size)
