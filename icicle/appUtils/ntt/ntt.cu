@@ -645,12 +645,10 @@ namespace ntt {
     const bool is_inverse = dir == NTTDir::kInverse;
 
     if (is_radix2_algorithm) {
-      printf("radix2\n");
       CHK_IF_RETURN(ntt::radix2_ntt(
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
         coset_index, stream));
     } else {
-      printf("mixed\n");
       const bool is_on_coset = (coset_index != 0) || coset;
       const bool is_fast_twiddles_enabled = (domain.fast_external_twiddles != nullptr) && !is_on_coset;
       S* twiddles = is_fast_twiddles_enabled

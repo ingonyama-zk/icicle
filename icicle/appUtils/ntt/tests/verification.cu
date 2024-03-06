@@ -69,11 +69,11 @@ int main(int argc, char** argv)
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop, trans_start, trans_middle, trans_stop;
   float icicle_time, new_time, trans1_time, trans2_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 4;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 16;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
-  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1<<12;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 159;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
   int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 2;
   const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNN;
@@ -135,14 +135,6 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
-  // for (int i = 0; i < BATCH_SIZE; i++)
-  // {
-  //   for (int j = 0; j < NTT_SIZE; j++)
-  //   {
-  //     std::cout<< CpuScalars[j+i*NTT_SIZE] << "\n";
-  //   }
-  //   printf("\n");
-  // }
   CHK_IF_RETURN(cudaEventRecord(trans_start, ntt_config.ctx.stream));
   transpose_batch2<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuScalars, GpuOutputNew, NTT_SIZE, BATCH_SIZE);
   CHK_IF_RETURN(cudaEventRecord(trans_middle, ntt_config.ctx.stream));
@@ -154,19 +146,6 @@ int main(int argc, char** argv)
 
   if (COLUMNS_BATCH) {
     transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuScalars, GpuScalarsTransposed, NTT_SIZE, BATCH_SIZE);
-    // CHK_IF_RETURN(
-    //   cudaMemcpy(GpuScalars, GpuOutputNew, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
-
-    // CHK_IF_RETURN(
-    //   cudaMemcpy(CpuScalars.get(), GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
-    // for (int i = 0; i < BATCH_SIZE; i++)
-    // {
-    //   for (int j = 0; j < NTT_SIZE; j++)
-    //   {
-    //     std::cout<< CpuScalars[j*BATCH_SIZE+i] << "\n";
-    //   }
-    //   printf("\n");
-    // }
   }
 
   // inplace
@@ -185,8 +164,6 @@ int main(int argc, char** argv)
     ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
     for (size_t i = 0; i < iterations; i++) {
       CHK_IF_RETURN(ntt::NTT(
-        // INPLACE? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
-        // GpuOutputNew));
         INPLACE? GpuOutputNew : COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
         GpuOutputNew));
     }

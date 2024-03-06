@@ -119,7 +119,7 @@ public:
   }
 
   __device__ __forceinline__ void
-  loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -130,7 +130,7 @@ public:
   }
 
   __device__ __forceinline__ void
-  loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -144,7 +144,7 @@ public:
   }
 
   __device__ __forceinline__ void
-  loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -197,7 +197,7 @@ public:
   }
 
   __device__ __forceinline__ void loadGlobalData(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -225,7 +225,7 @@ public:
   }
 
   __device__ __forceinline__ void storeGlobalData(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -253,7 +253,7 @@ public:
   }
 
   __device__ __forceinline__ void loadGlobalData32(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -287,7 +287,7 @@ public:
   }
 
   __device__ __forceinline__ void storeGlobalData32(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -321,7 +321,7 @@ public:
   }
 
   __device__ __forceinline__ void loadGlobalData16(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -355,7 +355,7 @@ public:
   }
 
   __device__ __forceinline__ void storeGlobalData16(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
