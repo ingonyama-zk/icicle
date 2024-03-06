@@ -53,7 +53,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 
 ### Return Value
 
-- **IcicleError**: Returns an error code indicating the success or failure of the NTT operation.
+- **CudaError**: Returns a CUDA error code indicating the success or failure of the NTT operation.
 
 ## NTT Configuration (NTTConfig)
 
@@ -88,8 +88,6 @@ Use `GetDefaultNTTConfig` to obtain a default configuration, customizable as nee
 ```go
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T]
 ```
-
-## Advanced Usage
 
 ### Initializing the NTT Domain
 

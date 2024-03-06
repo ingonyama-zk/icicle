@@ -146,8 +146,6 @@ cfg.batch_size = 10 // your ntt using this config will run in batch mode.
 
 Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
 
-## Advanced Usage
-
 ### Initializing the NTT Domain
 
 Before performing NTT operations, its necessary to initialize the NTT domain, It only needs to be called once per GPU since the twiddles are cached.
