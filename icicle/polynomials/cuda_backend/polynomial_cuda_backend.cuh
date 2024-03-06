@@ -100,7 +100,7 @@ namespace polynomials {
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, host_coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
         CHK_STICKY(
-          cudaStreamSynchronize(m_device_context.stream)); // protect agains host_coefficients being released too soon
+          cudaStreamSynchronize(m_device_context.stream)); // protect against host_coefficients being released too soon
       }
       return static_cast<C*>(m_storage);
     }
@@ -113,7 +113,7 @@ namespace polynomials {
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, host_evaluations, nof_evaluations * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
         CHK_STICKY(
-          cudaStreamSynchronize(m_device_context.stream)); // protect agains host_evaluations being released too soon
+          cudaStreamSynchronize(m_device_context.stream)); // protect against host_evaluations being released too soon
       }
       return static_cast<I*>(m_storage);
     }
