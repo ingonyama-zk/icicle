@@ -81,7 +81,7 @@ namespace polynomials {
   template <typename T>
   __global__ void SchoolBookDivisionStep(T* r, T* q, T* b, int deg_r, int deg_b, T lc_b_inv)
   {
-    // computing one step 'r = r-sb' (for 'a = q*b+r') where s is a monomial such that 'r-sb' removes the higest degree
+    // computing one step 'r = r-sb' (for 'a = q*b+r') where s is a monomial such that 'r-sb' removes the highest degree
     // of r.
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int64_t monomial = deg_r - deg_b; // monomial=1 is 'x', monomial=2 is x^2 etc.

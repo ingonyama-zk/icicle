@@ -426,7 +426,7 @@ TEST_F(PolynomialTest, QAP)
   // compute output as last_input * last_intermediate
   witness[1] = witness[input_offset + nof_inputs - 1] * witness[intermediate_offset + nof_intermediates - 1];
 
-  // (2) construt matrices A,B,C (based on the circuit)
+  // (2) construct matrices A,B,C (based on the circuit)
   const int nof_constraints = nof_inputs - 1;
   // allocating such that columns are consecutive in memory for more efficient polynomial construction from consecutive
   // evaluations
