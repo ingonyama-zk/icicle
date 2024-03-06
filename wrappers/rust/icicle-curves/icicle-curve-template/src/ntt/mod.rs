@@ -4,8 +4,7 @@ use icicle_core::error::IcicleResult;
 use icicle_core::impl_ntt;
 use icicle_core::ntt::{NTTConfig, NTTDir, NTT};
 use icicle_core::traits::IcicleResultWrap;
-use icicle_cuda_runtime::device_context::DeviceContext;
-use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
+use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 

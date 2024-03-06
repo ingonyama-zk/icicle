@@ -14,7 +14,7 @@ Start by copying `bn254_params.cuh` contents in your params file. Params should 
  - **fq_config** - parameters of the Base field.
     - **limbs_count** - `ceil(field_byte_size / 4)`.
     - **modulus_bit_count** - bit-size of the modulus.
-    - **num_of_reductions** - the number of times to reduce in reduce function.
+    - **num_of_reductions** - the number of times to reduce in reduce function. Use 2 if not sure.
     - **modulus** - modulus of the field.
     - **modulus_2** - modulus * 2.
     - **modulus_4** - modulus * 4. 
@@ -26,8 +26,8 @@ Start by copying `bn254_params.cuh` contents in your params file. Params should 
     - **m** - value used in multiplication. Can be computed as `2**(2*modulus_bit_count) // modulus`. 
     - **one** - multiplicative identity. 
     - **zero** - additive identity. 
-    - **montgomery_r** - `2 ** 256 % modulus`
-    - **montgomery_r_inv** - `2 ** (-256) % modulus`
+    - **montgomery_r** - `2 ** M % modulus` where M is a closest (larger than) bitsize multiple of 32. E.g. 384 or 768 for bls and bw curves respectively
+    - **montgomery_r_inv** - `2 ** (-M) % modulus`
  - **fp_config** - parameters of the Scalar field.
     Same as fq_config, but with additional arguments:
     - **omegas_count** - [two-adicity](https://cryptologie.net/article/559/whats-two-adicity/) of the field. And thus the maximum size of NTT.
@@ -38,7 +38,15 @@ Start by copying `bn254_params.cuh` contents in your params file. Params should 
  - **Weierstrass b value** - base field element equal to value of `b` in the curve equation.
  - **Weierstrass b value G2** - base field element equal to value of `b` for the extension. Remove this if `G2` is not supported.
  
-Note: All the params are not in Montgomery form. To convert number values into `storage` type you can use this python function:
+ :::note
+
+ All the params are not in Montgomery form.
+ 
+ :::
+ 
+ :::note
+
+ To convert number values into `storage` type you can use the following python function
 
 ```python
 import struct
@@ -46,6 +54,8 @@ import struct
 def unpack(x, field_size):
     return ', '.join(["0x" + format(x, '08x') for x in struct.unpack('I' * (field_size) // 4, int(x).to_bytes(field_size, 'little'))])
 ```
+
+:::
 
 We also require some changes to [`curve_config.cuh`](https://github.com/ingonyama-zk/icicle/blob/main/icicle/curves/curve_config.cuh#L16-L29), we need to add a new curve id.
 
@@ -67,7 +77,7 @@ Make sure to modify the [rest of the file](https://github.com/ingonyama-zk/icicl
 Finally we must modify the [`make` file](https://github.com/ingonyama-zk/icicle/blob/main/icicle/CMakeLists.txt#L64) to make sure we can compile our new curve.
 
 ```
-set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;<curve_name>)
+set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin;<curve_name>)
 ```
 
 ### Adding Poseidon support
@@ -79,22 +89,22 @@ After you've generated the constants, add your curve in this [SUPPORTED_CURVES_W
 
 ## Bindings
 
-In order to support a new curves in the binding libraries you first must support it in ICICLE core.
+In order to support a new curve in the binding libraries you first must support it in ICICLE core.
 
 ### Rust
 
-Go to [rust wrappers folder](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-curves) and copy `icicle-curve-template` to a new folder named `icicle-<curve_name>`.
+Go to [rust curves folder](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-curves) and copy `icicle-curve-template` to a new folder named `icicle-<curve_name>`.
 
 Find all the occurrences of `<CURVE>` placeholder inside the crate. (You can use `Ctrl+Shift+F` in VS Code or `grep -nr "<CURVE>"` in bash). You will then need to replace each occurrence with your new curve name.
 
 #### Limbs
 
-Go to [curve file](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-curves/icicle-curve-template/src/curve.rs) and set `SCALAR_LIMBS`, `BASE_LIMBS` and `G2_BASE_LIMBS` (if G2 is needed) to a minimum number of `u64` required to store a single scalar field / base field element respectively.  
+Go to your curve's `curve.rs` file and set `SCALAR_LIMBS`, `BASE_LIMBS` and `G2_BASE_LIMBS` (if G2 is needed) to a minimum number of `u64` required to store a single scalar field / base field element respectively.  
 e.g. for bn254, scalar field is 254 bit so `SCALAR_LIMBS` is set to 4.
 
 #### Primitives
 
-If your curve doesn't support any of the primitives (ntt/msm/poseidon/merkle tree/), or you simply don't want to include it, just remove a corresponding module from `src` and then from `lib.rs`
+If your curve doesn't support some of the primitives (ntt/msm/poseidon/merkle tree/), or you simply don't want to include it, just remove a corresponding module from `src` and then from `lib.rs`
 
 #### G2
 
