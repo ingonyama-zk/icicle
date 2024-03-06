@@ -25,18 +25,19 @@ namespace polynomials {
 
     // arithmetic ops (two polynomials)
     Polynomial operator+(const Polynomial& rhs) const;
-    Polynomial operator-(const Polynomial& rhs) const;
-    Polynomial operator*(const Polynomial& rhs) const;
-    Polynomial operator/(const Polynomial& rhs) const; // returns Quotient Q(x) for A(x) = Q(x)B(x) + R(x)
-    Polynomial operator%(const Polynomial& rhs) const; // returns Remainder R(x) for A(x) = Q(x)B(x) + R(x)
-    std::pair<Polynomial, Polynomial> divide(const Polynomial& rhs) const; //  returns (Q(x), R(x))
-    Polynomial divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const;
-
     Polynomial& operator+=(const Polynomial& rhs);
 
-    Polynomial operator*(const Image& val) const;
+    Polynomial operator-(const Polynomial& rhs) const;
+
+    Polynomial operator*(const Polynomial& rhs) const;
+    Polynomial operator*(const Coeff& c) const; // syntax sugar for polynomial of degree 1 with coefficient c
     template <typename C, typename D, typename I>
-    friend Polynomial<C, D, I> operator*(const I& val, const Polynomial<C, D, I>& lhs);
+    friend Polynomial<C, D, I> operator*(const C& c, const Polynomial<C, D, I>& rhs);
+
+    std::pair<Polynomial, Polynomial> divide(const Polynomial& rhs) const; //  returns (Q(x), R(x))
+    Polynomial operator/(const Polynomial& rhs) const; // returns Quotient Q(x) for A(x) = Q(x)B(x) + R(x)
+    Polynomial operator%(const Polynomial& rhs) const; // returns Remainder R(x) for A(x) = Q(x)B(x) + R(x)
+    Polynomial divide_by_vanishing_polynomial(uint64_t degree) const;
 
     // arithmetic ops with monomial
     Polynomial& add_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
