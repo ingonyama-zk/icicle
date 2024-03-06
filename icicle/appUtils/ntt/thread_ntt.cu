@@ -214,7 +214,7 @@ public:
   }
 
   __device__ __forceinline__ void loadGlobalDataBatched(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta, uint32_t batch_size)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;
@@ -228,7 +228,7 @@ public:
   }
 
   __device__ __forceinline__ void storeGlobalDataBatched(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta, uint32_t batch_size)
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;

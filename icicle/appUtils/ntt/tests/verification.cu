@@ -71,12 +71,12 @@ int main(int argc, char** argv)
   int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 18;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : true;
-  int INV = (argc > 3) ? atoi(argv[3]) : true;
+  int INV = (argc > 3) ? atoi(argv[3]) : false;
   int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 150;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : true;
-  int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 0;
+  int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 2;
   const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNR;
-  bool FAST_TW = (argc > 8) ? atoi(argv[8]) : false;
+  bool FAST_TW = (argc > 8) ? atoi(argv[8]) : true;
 
   // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
