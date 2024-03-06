@@ -1,30 +1,30 @@
 [package]
-name = "icicle-bn254"
-version = "1.6.0"
+name = "icicle-<CURVE>"
+version = "1.4.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
-description = "Rust wrapper for the CUDA implementation of BN254 pairing friendly elliptic curve by Ingonyama"
+description = "Rust wrapper for the CUDA implementation of <CURVE> elliptic curve by Ingonyama"
 homepage = "https://www.ingonyama.com"
 repository = "https://github.com/ingonyama-zk/icicle"
 
 [dependencies]
 icicle-core = { path = "../../icicle-core" }
 icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
-ark-bn254 = { version = "0.4.0", optional = true }
+ark-<CURVE> = { version = "0.4.0", optional = true }
 
 [build-dependencies]
 cmake = "0.1.50"
 
 [dev-dependencies]
-ark-bn254 = "0.4.0"
+ark-<CURVE> = "0.4.0"
 ark-std = "0.4.0"
 ark-ff = "0.4.0"
 ark-ec = "0.4.0"
 ark-poly = "0.4.0"
 icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
-icicle-bn254 = { path = ".", features = ["arkworks"] }
+icicle-<CURVE> = { path = ".", features = ["arkworks"] }
 
 [features]
 default = []
 g2 = ["icicle-core/g2"]
-arkworks = ["ark-bn254", "icicle-core/arkworks"]
+arkworks = ["ark-<CURVE>", "icicle-core/arkworks"]

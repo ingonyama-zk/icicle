@@ -27,6 +27,11 @@ fn cuda_lib_path() -> &'static str {
 }
 
 fn main() {
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        panic!("Currently, ICICLE can only be built for Windows or Linux")
+    }
+
     let cuda_runtime_api_path = PathBuf::from(cuda_include_path())
         .join("cuda_runtime_api.h")
         .to_string_lossy()

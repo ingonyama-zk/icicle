@@ -1,6 +1,6 @@
 [package]
 name = "icicle-bw6-761"
-version = "1.4.0"
+version = "1.6.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
 description = "Rust wrapper for the CUDA implementation of BW6-761 pairing friendly elliptic curve by Ingonyama"
