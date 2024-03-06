@@ -82,8 +82,14 @@ namespace polynomials {
   {
     Polynomial rhs = {};
     // assuming types C==I. Alternatively can construct as 'v' at every point in evaluation form. (TODO Yuval)
-    rhs.m_context->init_from_coefficients(1 /*nof_coefficients*/, v);
+    rhs.m_context->init_from_coefficients(1 /*nof_coefficients*/, &v);
     return *this * rhs;
+  }
+
+  template <typename C, typename D, typename I>
+  Polynomial<C, D, I> operator*(const I& v, const Polynomial<C, D, I>& rhs)
+  {
+    return rhs * v;
   }
 
   template <typename C, typename D, typename I>
