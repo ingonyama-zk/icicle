@@ -25,10 +25,10 @@ namespace polynomials {
 
   /*============================== degree ==============================*/
   template <typename T>
-  __global__ void HighestNonZeroIdx(T* vec, int len, int32_t* idx)
+  __global__ void HighestNonZeroIdx(T* vec, int len, int64_t* idx)
   {
-    *idx = -1;
-    for (int i = len - 1; i >= 0; --i) {
+    *idx = -1; // zero polynomial is defined with degree -1
+    for (int64_t i = len - 1; i >= 0; --i) {
       if (vec[i] != T::zero()) {
         *idx = i;
         return;
@@ -79,18 +79,27 @@ namespace polynomials {
 
   /*============================== division ==============================*/
   template <typename T>
-  __global__ void SchoolBookDivisionStepOnR(T* r, T* b, int r_len, int b_len, uint64_t s_monomial, T s_coeff)
+  __global__ void SchoolBookDivisionStep(T* r, T* q, T* b, int deg_r, int deg_b, T lc_b_inv)
   {
-    // computing one step 'r = r-sb' (for 'a = q*b+r')
-    // s is the highest monomial in current step. This step is subtracting the highest monomial of r. It it repeated
-    // until deg(r)<deg(b)
+    // computing one step 'r = r-sb' (for 'a = q*b+r') where s is a monomial such that 'r-sb' removes the higest degree
+    // of r.
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= max(r_len, b_len)) return;
-    if ((tid < s_monomial)) return;
+    int64_t monomial = deg_r - deg_b; // monomial=1 is 'x', monomial=2 is x^2 etc.
+    if (tid > deg_r) return;
 
-    T b_coeff = b[tid - s_monomial];
-    r[tid] = r[tid] - s_coeff * b_coeff;
+    T lc_r = r[deg_r];
+    T monomial_coeff = lc_r * lc_b_inv; // lc_r / lc_b
+    if (tid == 0) {
+      // adding monomial s to q (q=q+s)
+      q[monomial] = monomial_coeff;
+    }
+
+    if (tid < monomial) return;
+
+    T b_coeff = b[tid - monomial];
+    r[tid] = r[tid] - monomial_coeff * b_coeff;
   }
+
   /*============================== division_by_vanishing_polynomial ==============================*/
   template <typename T>
   __global__ void DivElementWise(T* element_vec1, T* element_vec2, int n, T* result)

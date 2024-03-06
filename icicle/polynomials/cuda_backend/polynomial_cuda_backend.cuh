@@ -99,9 +99,9 @@ namespace polynomials {
       if (host_coefficients) {
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, host_coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
+        CHK_STICKY(
+          cudaStreamSynchronize(m_device_context.stream)); // protect agains host_coefficients being released too soon
       }
-      CHK_STICKY(
-        cudaStreamSynchronize(m_device_context.stream)); // protect agains host_coefficients being released too soon
       return static_cast<C*>(m_storage);
     }
 
@@ -112,9 +112,9 @@ namespace polynomials {
       if (host_evaluations) {
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, host_evaluations, nof_evaluations * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
+        CHK_STICKY(
+          cudaStreamSynchronize(m_device_context.stream)); // protect agains host_evaluations being released too soon
       }
-      CHK_STICKY(
-        cudaStreamSynchronize(m_device_context.stream)); // protect agains host_evaluations being released too soon
       return static_cast<I*>(m_storage);
     }
 
@@ -293,7 +293,7 @@ namespace polynomials {
       res.allocate(res_nof_coeff, State::Coefficients);
       auto [res_coeff_p, _] = res.get_coefficients();
 
-      const int NOF_THREADS = 32;
+      const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (res_nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
       AddSubKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         a_coeff_p, b_coeff_p, a_nof_coeff, b_nof_coeff, add1_sub0, res_coeff_p);
@@ -328,7 +328,7 @@ namespace polynomials {
       c.allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
       auto [c_evals_p, _] = c.get_rou_evaluations();
 
-      const int NOF_THREADS = 32;
+      const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (c_N + NOF_THREADS - 1) / NOF_THREADS;
       Mul<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
 
@@ -363,7 +363,7 @@ namespace polynomials {
       CHK_STICKY(ntt::NTT(b_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p)); // b_H1
 
       // (4) compute a_H1 * b_H1 inplace
-      const int NOF_THREADS = 32;
+      const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
       Mul<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
       // (5) transform a,b to evaluations
@@ -383,43 +383,37 @@ namespace polynomials {
       auto [a_coeffs, a_N] = a.get_coefficients();
       auto [b_coeffs, b_N] = b.get_coefficients();
 
-      const uint64_t deg_a = degree(a);
-      const uint64_t deg_b = degree(b);
-      if (deg_a < deg_b || deg_b == 0) {
+      const int64_t deg_a = degree(a);
+      const int64_t deg_b = degree(b);
+      if (deg_a < deg_b || deg_b < 0) {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "Polynomial division (CUDA backend): numerator degree must be "
                                           "greater-or-equal to denumerator degree and denumerator must not be zero");
       }
 
-      const uint64_t Q_N = deg_a - deg_b + 1;
-
-      Q.allocate(Q_N, State::Coefficients);
-      // TODO Yuval: Can do better in terms of memory allocation? deg(R) <= deg(b) by definition but it starts as a.
-      R.allocate(a_N, State::Coefficients, false /*= memset_zeros*/);
-
-      auto [R_coeffs, __] = R.get_coefficients();
       // init: Q=0, R=a
+      Q.allocate(deg_a - deg_b + 1, State::Coefficients, true /*=memset zeros*/);
+      auto [Q_coeffs, q_N] = Q.get_coefficients();
+
+      //    TODO Yuval: Can do better in terms of memory allocation? deg(R) <= deg(b) by definition but it starts as
+      R.allocate(a_N, State::Coefficients, false /*=memset_zeros*/);
+      auto [R_coeffs, r_N] = R.get_coefficients();
       CHK_STICKY(
         cudaMemcpyAsync(R_coeffs, a_coeffs, a_N * sizeof(C), cudaMemcpyDeviceToDevice, m_device_context.stream));
 
-      // TODO Yuval: divide on GPU! no need to copy to host and divide there
-      const C lc_b = get_coefficient_on_host(b, deg_b - 1); // largest coeff of b
+      const C& lc_b_inv = C::inverse(get_coefficient_on_host(b, deg_b)); // largest coeff of b
 
-      // divide and subtract until degree of r is smaller than degree of b
-      uint64_t deg_r = degree(R);
+      int64_t deg_r = degree(R);
       while (deg_r >= deg_b) {
-        C lc_r = get_coefficient_on_host(R, deg_r - 1);
-        C s_coeff = lc_r * C::inverse(lc_b); // lc_r / lc_b
-        uint64_t s_monomial =
-          deg_r - deg_b; // divide largest coeff. This is the coeff of 'deg_r-deg_b'. s_monomial=1 is 'x', 2 is x^2 etc.
-        add_monomial_inplace(Q, s_coeff, s_monomial); // q = q+x^(degr-degb)
-        // TODO Yuval: revisit (#blocks, #threads)
-        const int NOF_THREADS = 32;
-        const int NOF_BLOCKS = (deg_r + NOF_THREADS - 1) / NOF_THREADS;
-        SchoolBookDivisionStepOnR<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-          R_coeffs, b_coeffs, deg_r, deg_b, s_monomial, s_coeff); // r=r-sb
+        // each iteration is removing the largest monomial in r until deg(r)<deg(b)
+        const int NOF_THREADS = 128;
+        const int NOF_BLOCKS = ((deg_r + 1) + NOF_THREADS - 1) / NOF_THREADS; // 'deg_r+1' is number of elements in R
+        SchoolBookDivisionStep<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+          R_coeffs, Q_coeffs, b_coeffs, deg_r, deg_b, lc_b_inv);
+
         deg_r = degree(R);
       }
+
       CHK_LAST();
     }
 
@@ -462,8 +456,7 @@ namespace polynomials {
       CHK_STICKY(ntt::NTT(numerator_coeffs, N, ntt::NTTDir::kForward, ntt_config, numerator_coeffs));
 
       // (3) element wise division
-      // TODO Yuval: revisit (#threads,#blocks)
-      const int NOF_THREADS = 32;
+      const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
       DivElementWise<<<NOF_BLOCKS, NOF_THREADS>>>(numerator_coeffs, out_coeffs, N, out_coeffs);
 
@@ -489,22 +482,23 @@ namespace polynomials {
       add_monomial_inplace(poly, C::zero() - monomial_coeff, monomial);
     }
 
-    int32_t degree(PolyContext& p) override
+    int64_t degree(PolyContext& p) override
     {
       auto [coeff, nof_coeff] = p.get_coefficients();
 
-      int32_t* d_degree;
-      int32_t h_degree;
-      CHK_STICKY(cudaMallocAsync(&d_degree, sizeof(int32_t), m_device_context.stream));
-      CHK_STICKY(cudaMemsetAsync(d_degree, -1, sizeof(int32_t), m_device_context.stream));
+      int64_t* d_degree;
+      int64_t h_degree;
+      CHK_STICKY(cudaMallocAsync(&d_degree, sizeof(int64_t), m_device_context.stream));
+      // zero polynomial is defined with degree -1
+      CHK_STICKY(cudaMemsetAsync(d_degree, -1, sizeof(int64_t), m_device_context.stream));
       // TODO Yuval parallelize kernel
       HighestNonZeroIdx<<<1, 1, 0, m_device_context.stream>>>(coeff, nof_coeff, d_degree);
       CHK_STICKY(
-        cudaMemcpyAsync(&h_degree, d_degree, sizeof(int32_t), cudaMemcpyDeviceToHost, m_device_context.stream));
+        cudaMemcpyAsync(&h_degree, d_degree, sizeof(int64_t), cudaMemcpyDeviceToHost, m_device_context.stream));
       CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
       CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream));
 
-      return h_degree + 1;
+      return h_degree;
     }
 
     I evaluate(PolyContext& p, const D& domain_x) override
