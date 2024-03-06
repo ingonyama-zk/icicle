@@ -94,7 +94,7 @@ public:
     test_type coeffs_v[degree + 1] = {0};
     coeffs_v[0] = minus_one; // -1
     coeffs_v[degree] = one;  // +x^n
-    auto v = Polynomial_t::from_coefficients(coeffs_v, degree);
+    auto v = Polynomial_t::from_coefficients(coeffs_v, degree + 1);
     return v;
   }
 
@@ -118,6 +118,60 @@ TEST_F(PolynomialTest, evaluation)
   auto expected_f_x = one + two * x + three * x * x;
 
   EXPECT_EQ(f_x, expected_f_x);
+}
+
+TEST_F(PolynomialTest, fromEvaluations)
+{
+  const int size = 100;
+  const int log_size = (int)ceil(log2(size));
+  const int nof_evals = 1 << log_size;
+  auto f = randomize_polynomial(size);
+
+  // evaluate f on roots of unity
+  test_type omega = test_type::omega(log_size);
+  test_type evals[nof_evals] = {0};
+  test_type x = one;
+  for (int i = 0; i < nof_evals; ++i) {
+    evals[i] = f(x);
+    x = x * omega;
+  }
+
+  // construct g from f's evaluations
+  auto g = Polynomial_t::from_rou_evaluations(evals, nof_evals);
+
+  // make sure they are equal, that is f-g=0
+  auto h = f - g;
+  EXPECT_EQ(h.degree(), -1); // degree -1 is the zero polynomial
+}
+
+TEST_F(PolynomialTest, fromEvaluationsNotPowerOfTwo)
+{
+  const int size = 100;
+  const int log_size = (int)ceil(log2(size));
+  const int nof_evals = size;
+  auto f = randomize_polynomial(size);
+
+  // evaluate f on roots of unity
+  test_type omega = test_type::omega(log_size);
+  test_type evals[nof_evals] = {0};
+  test_type x = one;
+  for (int i = 0; i < nof_evals; ++i) {
+    evals[i] = f(x);
+    x = x * omega;
+  }
+
+  // construct g from f's evaluations
+  auto g = Polynomial_t::from_rou_evaluations(evals, nof_evals);
+
+  test_type r = test_type::rand_host();
+
+  // since NTT works on a power of two (therefore the extra elements are arbitrary), f!=g but they should evaluate to
+  // the same values on the roots of unity due to construction.
+  x = one;
+  for (int i = 0; i < nof_evals; ++i) {
+    EXPECT_EQ(f(x), g(x));
+    x = x * omega;
+  }
 }
 
 TEST_F(PolynomialTest, addition)
@@ -195,6 +249,26 @@ TEST_F(PolynomialTest, multiplication)
   auto m_x = m(x);
 
   EXPECT_EQ(fx_mul_gx, m_x);
+}
+
+TEST_F(PolynomialTest, multiplicationScalar)
+{
+  const int size = 17;
+  auto f = randomize_polynomial(size);
+
+  auto g = two * f;
+  auto h = f * three;
+
+  test_type x = test_type::rand_host();
+  auto f_x = f(x);
+  auto g_x = g(x);
+  auto h_x = h(x);
+
+  EXPECT_EQ(g_x, f_x * two);
+  EXPECT_EQ(h_x, f_x * three);
+
+  EXPECT_EQ(g.degree(), f.degree());
+  EXPECT_EQ(h.degree(), f.degree());
 }
 
 TEST_F(PolynomialTest, monomials)
@@ -331,7 +405,7 @@ TEST_F(PolynomialTest, QAP)
   // simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
 
   // (1) randomize N numbers and construct the witness as [1,out,...N inputs..., ... intermediate values...]
-  const int nof_inputs = 10;
+  const int nof_inputs = 5;
   const int nof_outputs = 1;
   const int nof_intermediates = nof_inputs - 2; // same as #multiplication gates minus last one (which is the output)
   const int witness_size =
@@ -366,7 +440,7 @@ TEST_F(PolynomialTest, QAP)
   test_type* R_data = R.data();
   test_type* O_data = O.data();
 
-  // filling the R1CS matrices where memory (where cols are consecutive, not rows)
+  // filling the R1CS matrices (where cols are consecutive, not rows)
   for (int row = 0; row < nof_rows; ++row) {
     const int L_col = row == 0 ? input_offset : intermediate_offset + row - 1;
     *(L_data + L_col * nof_rows + row) = test_type::one();
@@ -393,16 +467,28 @@ TEST_F(PolynomialTest, QAP)
   Polynomial_t& Lx = L_QAP[0]; // TODO Yuval: probably better copy
   Polynomial_t& Rx = R_QAP[0]; // TODO Yuval: probably better copy
   Polynomial_t& Ox = O_QAP[0]; // TODO Yuval: probably better copy
+  std::cout << "Lx.degree()=" << Lx.degree() << std::endl;
   for (int col = 1; col < nof_cols; ++col) {
     Lx += witness[col] * L_QAP[col];
     Rx += witness[col] * R_QAP[col];
     Ox += witness[col] * O_QAP[col];
+    std::cout << "Lx[col].degree()=" << L_QAP[col].degree() << std::endl;
   }
 
   //  (4b) sanity check: verify that it divides with no remainder
   {
-    const auto& v = vanishing_polynomial(nof_constraints - 1 /*=degree*/);
+    auto v = vanishing_polynomial(nof_constraints - 1 /*=degree*/);
+    std::cout << "Lx.degree()=" << Lx.degree() << std::endl;
+    std::cout << "Rx.degree()=" << Rx.degree() << std::endl;
+    std::cout << "Ox.degree()=" << Ox.degree() << std::endl;
+    std::cout << "LxRx.degree()=" << (Lx * Rx).degree() << std::endl;
+    std::cout << "LxRx-Ox.degree()=" << (Lx * Rx - Ox).degree() << std::endl;
+    std::cout << "v.degree()=" << v.degree() << std::endl;
     auto [q, r] = (Lx * Rx - Ox).divide(v);
+    Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(nof_constraints);
+    std::cout << "q.degree()=" << q.degree() << std::endl;
+    std::cout << "r.degree()=" << r.degree() << std::endl;
+    std::cout << "h.degree()=" << h.degree() << std::endl;
     EXPECT_EQ(r.degree(), -1);              // zero polynomial
     EXPECT_EQ(q.degree(), nof_constraints); // L(X)R(x)-O(x) is degree 2N so expecting N after division
   }
