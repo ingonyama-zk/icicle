@@ -56,8 +56,7 @@ type MSMConfig struct {
 }
 
 func GetDefaultMSMConfig() MSMConfig {
-	deviceId, _ := cr.GetDevice()
-	ctx := cr.GetDefaultDeviceContextForDevice(deviceId)
+	ctx, _ := cr.GetDefaultDeviceContext()
 	return MSMConfig{
 		ctx,   // Ctx
 		0,     // pointsSize

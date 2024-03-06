@@ -105,19 +105,19 @@ func testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars core.HostSlice[Scala
 
 func TestMSM{{if .IsG2}}G2{{end}}(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
-	stream, _ := cr.CreateStream()
+	cfg.IsAsync = true
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
 		scalars := GenerateScalars(size)
 		points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(size)
 
+		stream, _ := cr.CreateStream()
 		var p {{if .IsG2}}G2{{end}}Projective
 		var out core.DeviceSlice
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
-		cfg.IsAsync = true
 
 		e = {{if .IsG2}}G2{{end}}Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
@@ -202,18 +202,18 @@ func TestMSM{{if .IsG2}}G2{{end}}MultiDevice(t *testing.T) {
 		cr.RunOnDevice(i, func(args ...any) {
 			defer wg.Done()
 			cfg := GetDefaultMSMConfig()
-			stream, _ := cr.CreateStream()
+			cfg.IsAsync = true
 			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 				size := 1 << power
 				scalars := GenerateScalars(size)
 				points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(size)
 
+				stream, _ := cr.CreateStream()
 				var p {{if .IsG2}}G2{{end}}Projective
 				var out core.DeviceSlice
 				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 				cfg.Ctx.Stream = &stream
-				cfg.IsAsync = true
 
 				e = {{if .IsG2}}G2{{end}}Msm(scalars, points, &cfg, out)
 				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")

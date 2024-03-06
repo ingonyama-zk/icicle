@@ -18,26 +18,25 @@ type DeviceContext struct {
 	Stream *Stream // Assuming the type is provided by a CUDA binding crate
 
 	/// Index of the currently used GPU. Default value: 0.
-	DeviceId uint
+	deviceId uint
 
 	/// Mempool to use. Default value: 0.
 	Mempool MemPool // Assuming the type is provided by a CUDA binding crate
 }
 
 func GetDefaultDeviceContext() (DeviceContext, CudaError) {
-	defaultContext := GetDefaultDeviceContextForDevice(0)
-	return defaultContext, CudaSuccess
-}
-
-func GetDefaultDeviceContextForDevice(deviceId int) DeviceContext {
+	device, err := GetDevice()
+	if err != CudaSuccess {
+		panic("Could not get current device")
+	}
 	var defaultStream Stream
 	var defaultMempool MemPool
 
 	return DeviceContext{
 		&defaultStream,
-		uint(deviceId),
+		uint(device),
 		defaultMempool,
-	}
+	}, CudaSuccess
 }
 
 func SetDevice(device int) CudaError {
@@ -59,6 +58,15 @@ func GetDevice() (int, CudaError) {
 	cDevice := (*C.int)(unsafe.Pointer(&device))
 	err := C.cudaGetDevice(cDevice)
 	return device, (CudaError)(err)
+}
+
+func GetDeviceFromPointer(ptr unsafe.Pointer) int {
+	var cCudaPointerAttributes CudaPointerAttributes
+	err := C.cudaPointerGetAttributes(&cCudaPointerAttributes, ptr)
+	if (CudaError)(err) != CudaSuccess {
+		panic("Could not get attributes of pointer")
+	}
+	return int(cCudaPointerAttributes.device)
 }
 
 // RunOnDevice forces the provided function to run all GPU related calls within it

@@ -36,8 +36,7 @@ type VecOpsConfig struct {
  * @return Default value of [VecOpsConfig](@ref VecOpsConfig).
  */
 func DefaultVecOpsConfig() VecOpsConfig {
-	deviceId, _ := cr.GetDevice()
-	ctx := cr.GetDefaultDeviceContextForDevice(deviceId)
+	ctx, _ := cr.GetDefaultDeviceContext()
 	config := VecOpsConfig{
 		ctx,   // ctx
 		false, // isAOnDevice

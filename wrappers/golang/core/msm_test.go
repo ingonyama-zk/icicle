@@ -10,8 +10,7 @@ import (
 )
 
 func TestMSMDefaultConfig(t *testing.T) {
-	deviceId, _ := cr.GetDevice()
-	ctx := cr.GetDefaultDeviceContextForDevice(deviceId)
+	ctx, _ := cr.GetDefaultDeviceContext()
 	expected := MSMConfig{
 		ctx,   // Ctx
 		0,     // pointsSize

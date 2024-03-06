@@ -56,19 +56,19 @@ func testAgainstGnarkCryptoMsm(scalars core.HostSlice[ScalarField], points core.
 
 func TestMSM(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
-	stream, _ := cr.CreateStream()
+	cfg.IsAsync = true
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
 		scalars := GenerateScalars(size)
 		points := GenerateAffinePoints(size)
 
+		stream, _ := cr.CreateStream()
 		var p Projective
 		var out core.DeviceSlice
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
-		cfg.IsAsync = true
 
 		e = Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
@@ -153,18 +153,18 @@ func TestMSMMultiDevice(t *testing.T) {
 		cr.RunOnDevice(i, func(args ...any) {
 			defer wg.Done()
 			cfg := GetDefaultMSMConfig()
-			stream, _ := cr.CreateStream()
+			cfg.IsAsync = true
 			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 				size := 1 << power
 				scalars := GenerateScalars(size)
 				points := GenerateAffinePoints(size)
 
+				stream, _ := cr.CreateStream()
 				var p Projective
 				var out core.DeviceSlice
 				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 				cfg.Ctx.Stream = &stream
-				cfg.IsAsync = true
 
 				e = Msm(scalars, points, &cfg, out)
 				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")

@@ -17,3 +17,6 @@ type CudaEvent C.cudaEvent_t
 
 // CudaMemPool as declared in include/driver_types.h:2928
 type CudaMemPool C.cudaMemPool_t
+
+// CudaMemPool as declared in include/driver_types.h:2928
+type CudaPointerAttributes = C.struct_cudaPointerAttributes

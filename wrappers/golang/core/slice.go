@@ -21,8 +21,6 @@ type DeviceSlice struct {
 	capacity int
 	// length is the number of elements that have been written
 	length int
-	// deviceId represents the id of the device where the underlying data of this DeviceSlice lives
-	deviceId int
 }
 
 func (d DeviceSlice) Len() int {
@@ -46,11 +44,11 @@ func (d DeviceSlice) IsOnDevice() bool {
 }
 
 func (d DeviceSlice) GetDeviceId() int {
-	return d.deviceId
+	return cr.GetDeviceFromPointer(d.inner)
 }
 
 func (d DeviceSlice) CheckDevice() {
-	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.deviceId != currentDeviceId {
+	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
 		panic("Attempt to use DeviceSlice on a different device")
 	}
 }
@@ -60,7 +58,6 @@ func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cr.CudaError
 	d.inner = dp
 	d.capacity = size
 	d.length = size / sizeOfElement
-	d.deviceId, err = cr.GetDevice()
 	return *d, err
 }
 
@@ -69,7 +66,6 @@ func (d *DeviceSlice) MallocAsync(size, sizeOfElement int, stream cr.CudaStream)
 	d.inner = dp
 	d.capacity = size
 	d.length = size / sizeOfElement
-	d.deviceId, err = cr.GetDevice()
 	return *d, err
 }
 
@@ -77,7 +73,7 @@ func (d *DeviceSlice) Free() cr.CudaError {
 	d.CheckDevice()
 	err := cr.Free(d.inner)
 	if err == cr.CudaSuccess {
-		d.length, d.capacity, d.deviceId = 0, 0, 0
+		d.length, d.capacity = 0, 0
 		d.inner = nil
 	}
 	return err
@@ -87,7 +83,7 @@ func (d *DeviceSlice) FreeAsync(stream cr.Stream) cr.CudaError {
 	d.CheckDevice()
 	err := cr.FreeAsync(d.inner, stream)
 	if err == cr.CudaSuccess {
-		d.length, d.capacity, d.deviceId = 0, 0, 0
+		d.length, d.capacity = 0, 0
 		d.inner = nil
 	}
 	return err
