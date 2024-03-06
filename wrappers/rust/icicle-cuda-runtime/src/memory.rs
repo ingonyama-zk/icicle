@@ -1,15 +1,12 @@
 use crate::bindings::{
-    cudaFree, cudaFreeAsync, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy,
-    cudaMemcpyAsync, cudaMemcpyKind,
+    cudaFree, cudaFreeAsync, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
 };
 use crate::device::get_device;
 use crate::device_context::check_device;
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
 use std::mem::{size_of, MaybeUninit};
-use std::ops::{
-    Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
-};
+use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
 use std::os::raw::c_void;
 use std::slice::from_raw_parts_mut;
 
@@ -86,7 +83,9 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
     }
 
     pub fn cuda_malloc(count: usize) -> CudaResult<Self> {
-        let size = count.checked_mul(size_of::<T>()).unwrap_or(0);
+        let size = count
+            .checked_mul(size_of::<T>())
+            .unwrap_or(0);
         if size == 0 {
             return Err(CudaError::cudaErrorMemoryAllocation); //TODO: only CUDA backend should return CudaError
         }
@@ -102,19 +101,16 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
     }
 
     pub fn cuda_malloc_async(count: usize, stream: &CudaStream) -> CudaResult<Self> {
-        let size = count.checked_mul(size_of::<T>()).unwrap_or(0);
+        let size = count
+            .checked_mul(size_of::<T>())
+            .unwrap_or(0);
         if size == 0 {
             return Err(CudaError::cudaErrorMemoryAllocation);
         }
 
         let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
         unsafe {
-            cudaMallocAsync(
-                device_ptr.as_mut_ptr(),
-                size,
-                stream.handle as *mut _ as *mut _,
-            )
-            .wrap()?;
+            cudaMallocAsync(device_ptr.as_mut_ptr(), size, stream.handle as *mut _ as *mut _).wrap()?;
             Ok(Self::Device(
                 from_raw_parts_mut(device_ptr.assume_init() as *mut T, count),
                 get_device().unwrap() as i32,
@@ -127,11 +123,7 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
             check_device(*device_id);
             if !s.is_empty() {
                 unsafe {
-                    cudaFreeAsync(
-                        s.as_mut_ptr() as *mut c_void,
-                        stream.handle as *mut _ as *mut _,
-                    )
-                    .wrap()?;
+                    cudaFreeAsync(s.as_mut_ptr() as *mut c_void, stream.handle as *mut _ as *mut _).wrap()?;
                 }
             }
         }
@@ -283,7 +275,9 @@ impl<'a, T> Drop for HostOrDeviceSlice<'a, T> {
                 }
 
                 unsafe {
-                    cudaFree(s.as_mut_ptr() as *mut c_void).wrap().unwrap();
+                    cudaFree(s.as_mut_ptr() as *mut c_void)
+                        .wrap()
+                        .unwrap();
                 }
             }
             Self::Host(_) => {}
