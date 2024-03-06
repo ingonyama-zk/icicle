@@ -209,7 +209,6 @@ public:
 #pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       X[i] = data[s_meta.th_stride * i * data_stride];
-      // if (blockIdx.x == 0 && threadIdx.x == 0) printf("t %d b %d add %d\n", threadIdx.x, blockIdx.x, s_meta.th_stride * i * data_stride);
     }
   }
 
@@ -222,20 +221,6 @@ public:
 #pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       X[i] = data[s_meta.th_stride * i * data_stride * batch_size];
-      // if (blockIdx.x == 0 && threadIdx.x%8 == 1) printf("t %d b %d add %d\n", threadIdx.x, blockIdx.x,((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
-      //         (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id + s_meta.th_stride * i * data_stride * batch_size);
-    }
-  }
-
-  __device__ __forceinline__ void storeGlobalDataBatched(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
-  {
-    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
-              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;
-
-#pragma unroll
-    for (uint32_t i = 0; i < 8; i++) {
-      data[s_meta.th_stride * i * data_stride * batch_size] = X[i];
     }
   }
 
@@ -252,6 +237,18 @@ public:
 #pragma unroll
     for (uint32_t i = 0; i < 8; i++) {
       data[s_meta.th_stride * i * data_stride] = X[i];
+    }
+  }
+
+  __device__ __forceinline__ void storeGlobalDataBatched(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) * batch_size + s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t i = 0; i < 8; i++) {
+      data[s_meta.th_stride * i * data_stride * batch_size] = X[i];
     }
   }
 

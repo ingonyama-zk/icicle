@@ -70,10 +70,10 @@ int main(int argc, char** argv)
 
   int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 18;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
-  bool INPLACE = (argc > 2) ? atoi(argv[2]) : true;
+  bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
   int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 150;
-  bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : true;
+  bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
   int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 2;
   const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNR;
   bool FAST_TW = (argc > 8) ? atoi(argv[8]) : true;
@@ -217,7 +217,7 @@ int main(int argc, char** argv)
   };
 
   CHK_IF_RETURN(benchmark(false /*=print*/, 1)); // warmup
-  int count = INPLACE ? 1 : 1;
+  int count = INPLACE ? 1 : 10;
   if (INPLACE) {
     CHK_IF_RETURN(
       cudaMemcpy(GpuOutputNew, COLUMNS_BATCH? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
