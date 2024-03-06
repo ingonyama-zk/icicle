@@ -26,7 +26,6 @@ namespace msm {
 #define MAX_TH 256
 
     // #define SIGNED_DIG //WIP
-    // #define BIG_TRIANGLE
     // #define SSM_SUM  //WIP
 
     template <typename A, typename P>
@@ -169,37 +168,20 @@ namespace msm {
       unsigned c,
       unsigned precomputed_bms_stride)
     {
-      // constexpr unsigned sign_mask = 0x80000000;
-      // constexpr unsigned trash_bucket = 0x80000000;
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_scalars) return;
 
       unsigned bucket_index;
-      // unsigned bucket_index2;
       unsigned current_index;
       unsigned msm_index = tid / msm_size;
-      // unsigned borrow = 0;
       S& scalar = scalars[tid];
-      const unsigned precomputations_count = precomputed_bms_stride ? (nof_bms - 1) / precomputed_bms_stride + 1 : 1;
       for (unsigned bm = 0; bm < nof_bms; bm++) {
-        const unsigned precomputed_index = precomputed_bms_stride ? bm / precomputed_bms_stride : 0;
-        const unsigned target_bm = precomputed_bms_stride ? bm % precomputed_bms_stride : bm;
+        const unsigned precomputed_index = bm / precomputed_bms_stride;
+        const unsigned target_bm = bm % precomputed_bms_stride;
 
         bucket_index = scalar.get_scalar_digit(bm, c);
-#ifdef SIGNED_DIG
-        bucket_index += borrow;
-        borrow = 0;
-        unsigned sign = 0;
-        if (bucket_index > (1 << (c - 1))) {
-          bucket_index = (1 << c) - bucket_index;
-          borrow = 1;
-          sign = sign_mask;
-        }
-#endif
-        current_index = target_bm * precomputations_count * nof_scalars + precomputed_index * nof_scalars + tid;
-#ifdef SIGNED_DIG
-        point_indices[current_index] = sign | tid; // the point index is saved for later
-#else
+        current_index = bm * nof_scalars + tid;
+
         if (bucket_index != 0) {
           buckets_indices[current_index] =
             (msm_index << (c + bm_bitsize)) | (target_bm << c) |
@@ -209,7 +191,6 @@ namespace msm {
         }
         point_indices[current_index] =
           tid % points_size + points_size * precomputed_index; // the point index is saved for later
-#endif
       }
     }
 
@@ -244,19 +225,11 @@ namespace msm {
       const unsigned msm_idx_shift,
       const unsigned c)
     {
-      // constexpr unsigned sign_mask = 0x80000000;
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_buckets_to_compute) return;
-#ifdef SIGNED_DIG // todo - fix
-      const unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
-      const unsigned bm_index = (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1)) >> c;
-      const unsigned bucket_index =
-        msm_index * nof_buckets + bm_index * ((1 << (c - 1)) + 1) + (single_bucket_indices[tid] & ((1 << c) - 1));
-#else
       unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
       const unsigned single_bucket_index = (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
       unsigned bucket_index = msm_index * nof_buckets + single_bucket_index;
-#endif
       const unsigned bucket_offset = bucket_offsets[tid];
       const unsigned bucket_size = bucket_sizes[tid];
 
@@ -264,14 +237,7 @@ namespace msm {
       for (unsigned i = 0; i < bucket_size;
            i++) { // add the relevant points starting from the relevant offset up to the bucket size
         unsigned point_ind = point_indices[bucket_offset + i];
-#ifdef SIGNED_DIG
-        unsigned sign = point_ind & sign_mask;
-        point_ind &= ~sign_mask;
         A point = points[point_ind];
-        if (sign) point = A::neg(point);
-#else
-        A point = points[point_ind];
-#endif
         bucket =
           i ? (point == A::zero() ? bucket : bucket + point) : (point == A::zero() ? P::zero() : P::from_affine(point));
       }
@@ -338,11 +304,7 @@ namespace msm {
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_bms) return;
-#ifdef SIGNED_DIG
-      unsigned buckets_in_bm = (1 << c) + 1;
-#else
       unsigned buckets_in_bm = (1 << c);
-#endif
       P line_sum = buckets[(tid + 1) * buckets_in_bm - 1];
       final_sums[tid] = line_sum;
       for (unsigned i = buckets_in_bm - 2; i > 0; i--) {
@@ -449,10 +411,6 @@ namespace msm {
       unsigned nof_bms_per_msm = (total_bms_per_msm - 1) / precompute_factor + 1;
       unsigned input_indexes_count = nof_scalars * total_bms_per_msm;
 
-      std::cout << "total bms per msm: " << total_bms_per_msm << std::endl;
-      std::cout << "nof bms per msm: " << nof_bms_per_msm << std::endl;
-      std::cout << "input indexes count: " << input_indexes_count << std::endl;
-
       unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms_per_msm));
 
       unsigned* bucket_indices;
@@ -471,13 +429,6 @@ namespace msm {
       split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
         bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, total_bms_per_msm,
         bm_bitsize, c, nof_bms_per_msm);
-
-      // unsigned* h_bucket_indices = (unsigned *)malloc(sizeof(unsigned) * input_indexes_count);
-      // for (int i = 0; i < input_indexes_count; i++) {
-      //   if (i % 1000 == 0) {
-      //     std::cout << i << ": " << bucket_indices[i] << std::endl;
-      //   }
-      // }
 
       // sort indices - the indices are sorted from smallest to largest in order to group together the points that
       // belong to each bucket
@@ -502,15 +453,9 @@ namespace msm {
 
       // compute number of bucket modules and number of buckets in each module
       unsigned nof_bms_in_batch = nof_bms_per_msm * batch_size;
-#ifdef SIGNED_DIG
-      const unsigned nof_buckets = nof_bms_per_msm * ((1 << (c - 1)) + 1); // signed digits
-#else
       // minus nof_bms_per_msm because zero bucket is not included in each bucket module
       const unsigned nof_buckets = (nof_bms_per_msm << c) - nof_bms_per_msm;
-#endif
       const unsigned total_nof_buckets = nof_buckets * batch_size;
-
-      std::cout << "Total nof buckets: " << total_nof_buckets << std::endl;
 
       // find bucket_sizes
       unsigned* single_bucket_indices;
@@ -524,11 +469,11 @@ namespace msm {
       size_t encode_temp_storage_bytes = 0;
       CHK_IF_RETURN(cub::DeviceRunLengthEncode::Encode(
         encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
-        nof_buckets_to_compute, nof_bms_per_msm * nof_scalars, stream));
+        nof_buckets_to_compute, input_indexes_count, stream));
       CHK_IF_RETURN(cudaMallocAsync(&encode_temp_storage, encode_temp_storage_bytes, stream));
       CHK_IF_RETURN(cub::DeviceRunLengthEncode::Encode(
         encode_temp_storage, encode_temp_storage_bytes, sorted_bucket_indices, single_bucket_indices, bucket_sizes,
-        nof_buckets_to_compute, nof_bms_per_msm * nof_scalars, stream));
+        nof_buckets_to_compute, input_indexes_count, stream));
       CHK_IF_RETURN(cudaFreeAsync(encode_temp_storage, stream));
       CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_indices, stream));
 
@@ -759,21 +704,6 @@ namespace msm {
         CHK_IF_RETURN(cudaStreamDestroy(stream_large_buckets));
       }
 
-#ifdef SSM_SUM
-      // sum each bucket
-      NUM_THREADS = 1 << 10;
-      NUM_BLOCKS = (nof_buckets + NUM_THREADS - 1) / NUM_THREADS;
-      ssm_buckets_kernel<fake_point, fake_scalar>
-        <<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, single_bucket_indices, nof_buckets, c);
-
-      // sum each bucket module
-      P* final_results;
-      CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_per_msm, stream));
-      NUM_THREADS = 1 << c;
-      NUM_BLOCKS = nof_bms_per_msm;
-      sum_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results);
-#endif
-
       P* d_final_result;
       if (!are_results_on_device) CHK_IF_RETURN(cudaMallocAsync(&d_final_result, sizeof(P) * batch_size, stream));
 
@@ -784,15 +714,9 @@ namespace msm {
         // launch the bucket module sum kernel - a thread for each bucket module
         NUM_THREADS = 32;
         NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
-#ifdef SIGNED_DIG
-        big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-          buckets, final_results, nof_bms_in_batch, c - 1); // sighed digits
-#else
         big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms_in_batch, c);
-#endif
       } else {
         unsigned source_bits_count = c;
-        // bool odd_source_c = source_bits_count % 2;
         unsigned source_windows_count = nof_bms_per_msm;
         unsigned source_buckets_count = nof_buckets + nof_bms_per_msm;
         unsigned target_windows_count = 0;
@@ -837,7 +761,7 @@ namespace msm {
             // for example consider bitsize=253 and c=2. The reduction ends with 254 bms but the most significant one is
             // guaranteed to be zero since the scalars are 253b.
             nof_bms_per_msm = target_windows_count;
-            nof_empty_bms_per_batch = target_windows_count - bitsize;
+            nof_empty_bms_per_batch = target_windows_count > bitsize ? target_windows_count - bitsize : 0;
             nof_bms_in_batch = nof_bms_per_msm * batch_size;
 
             CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch, stream));
@@ -954,13 +878,11 @@ namespace msm {
     unsigned c = 16;
     unsigned total_nof_bms = (A::SCALAR_FF_NBITS - 1) / c + 1;
     unsigned shift = c * ((total_nof_bms - 1) / precompute_factor + 1);
-    std::cout << "Total nof bms: " << total_nof_bms << std::endl;
-    std::cout << "Shift value: " << shift << std::endl;
 
-    unsigned NUM_THREADS = 1 << 10;
+    unsigned NUM_THREADS = 1 << 8;
     unsigned NUM_BLOCKS = (bases_size + NUM_THREADS - 1) / NUM_THREADS;
     for (int i = 1; i < precompute_factor; i++) {
-      left_shift_kernel<A, P><<<NUM_THREADS, NUM_BLOCKS, 0, stream>>>(
+      left_shift_kernel<A, P><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
         &output_bases[(i - 1) * bases_size], shift, bases_size, &output_bases[i * bases_size]);
     }
 

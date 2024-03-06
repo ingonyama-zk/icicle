@@ -1,4 +1,4 @@
-#define CURVE_ID BLS12_377
+#define CURVE_ID BN254
 
 #include <chrono>
 #include <iostream>
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
   int batch_size = 1;
   unsigned log_size = argc > 2 ? atoi(argv[2]) : 15;
   unsigned msm_size = 1 << log_size;
-  unsigned precompute_factor = argc > 1 ? atoi(argv[1]) : 4;
+  unsigned precompute_factor = argc > 1 ? atoi(argv[1]) : 2;
   int N = batch_size * msm_size;
 
   device_context::DeviceContext ctx = device_context::get_default_device_context();
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
     precompute_factor, // precompute_factor
     0,                 // c
     0,                 // bitsize
-    0,                 // large_bucket_factor
+    10,                // large_bucket_factor
     1,                 // batch_size
     true,              // are_scalars_on_device
     false,             // are_scalars_montgomery_form
@@ -127,10 +127,12 @@ int main(int argc, char* argv[])
   printf("No Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
   std::cout << projective_t::to_affine(large_res[0]) << std::endl;
 
+  config.precompute_factor = 1;
   msm::MSM<scalar_t, affine_t, projective_t>(scalars_d, points_d, msm_size, config, large_res);
   printf("No Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
   std::cout << projective_t::to_affine(large_res[0]) << std::endl;
 
+  config.precompute_factor = precompute_factor;
   config.is_big_triangle = true;
   config.are_results_on_device = false;
   auto begin = std::chrono::high_resolution_clock::now();
