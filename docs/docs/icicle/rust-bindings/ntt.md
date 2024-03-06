@@ -2,7 +2,7 @@
 
 ### Supported curves
 
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
+`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
 
 ## Example 
 

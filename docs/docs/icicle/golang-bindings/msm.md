@@ -163,7 +163,7 @@ To activate G2 support first you must make sure you are building the static libr
 ./build.sh bls12_381 ON
 ```
 
-Now when importing `goicicle`, you should have access to G2 features.
+Now when importing `icicle`, you should have access to G2 features.
 
 ```go
 import (

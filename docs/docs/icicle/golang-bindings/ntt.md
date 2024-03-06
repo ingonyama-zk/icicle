@@ -76,7 +76,7 @@ type NTTConfig[T any] struct {
 - **Ctx**: Device context containing details like device ID and stream ID.
 - **CosetGen**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
 - **BatchSize**: The number of NTTs to compute in one operation, defaulting to 1.
-- **Ordering**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`), affecting how data is arranged.
+- **Ordering**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`, `KMN`, `KNM`), affecting how data is arranged.
 - **areInputsOnDevice**: Indicates if input scalars are located on the device.
 - **areOutputsOnDevice**: Indicates if results are stored on the device.
 - **IsAsync**: Controls whether the NTT operation runs asynchronously.

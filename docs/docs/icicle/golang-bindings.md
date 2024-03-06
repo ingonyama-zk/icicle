@@ -52,7 +52,7 @@ If you are interested in building a specific curve you would run:
 ./build.sh bls12_381 ON
 ```
 
-Now you can ICICLE into your project
+Now you can import ICICLE into your project
 
 ```golang
 import (
@@ -67,7 +67,7 @@ import (
 
 ## Running tests
 
-To run all test, for all curves:
+To run all tests, for all curves:
 
 ```bash
 go test --tags=g2 ./... -count=1
