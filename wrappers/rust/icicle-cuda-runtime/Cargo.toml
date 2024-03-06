@@ -1,11 +1,11 @@
 [package]
 name = "icicle-cuda-runtime"
-version = "1.6.0"
-edition = "2021"
-authors = [ "Ingonyama" ]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 description = "Ingonyama's Rust wrapper of CUDA runtime"
-homepage = "https://www.ingonyama.com"
-repository = "https://github.com/ingonyama-zk/icicle"
+homepage.workspace = true
+repository.workspace = true
 rust-version = "1.70.0"
 
 [dependencies]
