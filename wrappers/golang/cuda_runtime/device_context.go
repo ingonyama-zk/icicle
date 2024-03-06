@@ -24,6 +24,10 @@ type DeviceContext struct {
 	Mempool MemPool // Assuming the type is provided by a CUDA binding crate
 }
 
+func (d DeviceContext) GetDeviceId() int {
+	return int(d.deviceId)
+}
+
 func GetDefaultDeviceContext() (DeviceContext, CudaError) {
 	device, err := GetDevice()
 	if err != CudaSuccess {
