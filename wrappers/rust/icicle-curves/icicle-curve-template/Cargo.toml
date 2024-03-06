@@ -1,32 +1,30 @@
 [package]
-name = "icicle-bls12-377"
+name = "icicle-<CURVE>"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Rust wrapper for the CUDA implementation of BLS12-377 pairing friendly elliptic curve by Ingonyama"
+description = "Rust wrapper for the CUDA implementation of <CURVE> elliptic curve by Ingonyama"
 homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
 icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
-ark-bls12-377 = { version = "0.4.0", optional = true }
+ark-<CURVE> = { version = "0.4.0", optional = true }
 
 [build-dependencies]
 cmake = "0.1.50"
 
 [dev-dependencies]
-ark-bls12-377 = "0.4.0"
+ark-<CURVE> = "0.4.0"
 ark-std = "0.4.0"
 ark-ff = "0.4.0"
 ark-ec = "0.4.0"
 ark-poly = "0.4.0"
 icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
-icicle-bls12-377 = { path = ".", features = ["arkworks"] }
+icicle-<CURVE> = { path = ".", features = ["arkworks"] }
 
 [features]
 default = []
-bw6-761 = []
-bw6-761-g2 = ["bw6-761"]
 g2 = ["icicle-core/g2"]
-arkworks = ["ark-bls12-377", "icicle-core/arkworks"]
+arkworks = ["ark-<CURVE>", "icicle-core/arkworks"]
