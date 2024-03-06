@@ -89,6 +89,15 @@ public:
     ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(test_type)));
   }
 
+  static Polynomial_t vanishing_polynomial(int degree)
+  {
+    test_type coeffs_v[degree + 1] = {0};
+    coeffs_v[0] = minus_one; // -1
+    coeffs_v[degree] = one;  // +x^n
+    auto v = Polynomial_t::from_coefficients(coeffs_v, degree);
+    return v;
+  }
+
   const static inline auto zero = test_type::zero();
   const static inline auto one = test_type::one();
   const static inline auto two = test_type::from(2);
@@ -322,7 +331,7 @@ TEST_F(PolynomialTest, QAP)
   // simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
 
   // (1) randomize N numbers and construct the witness as [1,out,...N inputs..., ... intermediate values...]
-  const int nof_inputs = 4;
+  const int nof_inputs = 10;
   const int nof_outputs = 1;
   const int nof_intermediates = nof_inputs - 2; // same as #multiplication gates minus last one (which is the output)
   const int witness_size =
@@ -370,15 +379,36 @@ TEST_F(PolynomialTest, QAP)
   }
 
   // (3) interpolate the columns of L,R,O to build the polynomials
-  std::list<Polynomial_t> L_QAP, R_QAP, O_QAP;
+  std::vector<Polynomial_t> L_QAP, R_QAP, O_QAP;
+  L_QAP.reserve(nof_cols);
+  R_QAP.reserve(nof_cols);
+  O_QAP.reserve(nof_cols);
   for (int col = 0; col < nof_cols; ++col) { // #polynomials is equal to witness_size
-    L_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(L_data + col * nof_rows, nof_cols)));
-    R_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(R_data + col * nof_rows, nof_cols)));
-    O_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(O_data + col * nof_rows, nof_cols)));
+    L_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(L_data + col * nof_rows, nof_rows)));
+    R_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(R_data + col * nof_rows, nof_rows)));
+    O_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(O_data + col * nof_rows, nof_rows)));
   }
+
   // (4) using the witness, compute L(x),R(x),O(x)
+  Polynomial_t& Lx = L_QAP[0]; // TODO Yuval: probably better copy
+  Polynomial_t& Rx = R_QAP[0]; // TODO Yuval: probably better copy
+  Polynomial_t& Ox = O_QAP[0]; // TODO Yuval: probably better copy
+  for (int col = 1; col < nof_cols; ++col) {
+    Lx += witness[col] * L_QAP[col];
+    Rx += witness[col] * R_QAP[col];
+    Ox += witness[col] * O_QAP[col];
+  }
+
+  //  (4b) sanity check: verify that it divides with no remainder
+  {
+    const auto& v = vanishing_polynomial(nof_constraints - 1 /*=degree*/);
+    auto [q, r] = (Lx * Rx - Ox).divide(v);
+    EXPECT_EQ(r.degree(), -1);              // zero polynomial
+    EXPECT_EQ(q.degree(), nof_constraints); // L(X)R(x)-O(x) is degree 2N so expecting N after division
+  }
 
   // (5) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
+  Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(nof_constraints);
 
   // (6) compute A,B,C via MSMs
 }
