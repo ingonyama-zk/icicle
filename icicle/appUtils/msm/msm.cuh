@@ -4,12 +4,12 @@
 
 #include <cuda_runtime.h>
 
-#include "../../curves/curve_config.cuh"
-#include "../../primitives/affine.cuh"
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/device_context.cuh"
-#include "../../utils/error_handler.cuh"
+#include "curves/curve_config.cuh"
+#include "primitives/affine.cuh"
+#include "primitives/field.cuh"
+#include "primitives/projective.cuh"
+#include "utils/device_context.cuh"
+#include "utils/error_handler.cuh"
 
 /**
  * @namespace msm

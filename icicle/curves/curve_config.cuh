@@ -8,10 +8,10 @@
 #define BW6_761   4
 #define GRUMPKIN  5
 
-#include "../primitives/field.cuh"
-#include "../primitives/projective.cuh"
+#include "primitives/field.cuh"
+#include "primitives/projective.cuh"
 #if defined(G2_DEFINED)
-#include "../primitives/extension_field.cuh"
+#include "primitives/extension_field.cuh"
 #endif
 
 #if CURVE_ID == BN254

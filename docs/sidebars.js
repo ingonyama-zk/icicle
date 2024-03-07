@@ -25,9 +25,30 @@ module.exports = {
           id: "icicle/integrations"
         },
         {
-          type: "doc",
+          type: "category",
           label: "Golang bindings",
-          id: "icicle/golang-bindings",
+          link: {
+            type: `doc`,
+            id: "icicle/golang-bindings",
+          },
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              label: "MSM",
+              id: "icicle/golang-bindings/msm",
+            },
+            {
+              type: "doc",
+              label: "NTT",
+              id: "icicle/golang-bindings/ntt",
+            },
+            {
+              type: "doc",
+              label: "Vector operations",
+              id: "icicle/golang-bindings/vec-ops",
+            },
+          ]
         },
         {
           type: "category",
@@ -40,10 +61,25 @@ module.exports = {
           items: [
             {
               type: "doc",
+              label: "MSM",
+              id: "icicle/rust-bindings/msm",
+            },
+            {
+              type: "doc",
+              label: "NTT",
+              id: "icicle/rust-bindings/ntt",
+            },
+            {
+              type: "doc",
+              label: "Vector operations",
+              id: "icicle/rust-bindings/vec-ops",
+            },
+            {
+              type: "doc",
               label: "Multi GPU Support",
               id: "icicle/rust-bindings/multi-gpu",
-            }
-          ]
+            },
+          ],
         },
         {
           type: "category",
@@ -61,14 +97,14 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Poseidon Hash",
-              id: "icicle/primitives/poseidon",
+              label: "NTT",
+              id: "icicle/primitives/ntt",
             },
             {
               type: "doc",
-              label: "NTT",
-              id: "icicle/primitives/ntt",
-            }
+              label: "Poseidon Hash",
+              id: "icicle/primitives/poseidon",
+            },
           ],
         },
         {
