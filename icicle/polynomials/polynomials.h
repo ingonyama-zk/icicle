@@ -77,9 +77,8 @@ namespace polynomials {
     // factory is building the context and backend for polynomial objects
     static inline std::unique_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> s_factory = nullptr;
 
-    Polynomial();
-
   public:
+    Polynomial();
     ~Polynomial() = default;
     // make sure polynomials can be moved but not copied
     Polynomial(Polynomial&&) = default;
