@@ -31,6 +31,14 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::clone() const
+  {
+    Polynomial P = {};
+    P.m_context = m_context->clone();
+    return P;
+  }
+
+  template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::operator+(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> res = {};

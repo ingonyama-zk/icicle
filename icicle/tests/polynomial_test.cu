@@ -380,6 +380,24 @@ TEST_F(PolynomialTest, divideByVanishingPolynomial)
   assert_equal(h_div_by_vanishing, h);
 }
 
+TEST_F(PolynomialTest, clone)
+{
+  const int size = 1 << 10;
+  auto f = randomize_polynomial(size);
+
+  const auto x = test_type::rand_host();
+  const auto f_x = f(x);
+
+  Polynomial_t g;
+  g = f.clone(); // operator=(&&)
+  g += f;
+
+  auto h = g.clone(); // move constructor
+
+  ASSERT_EQ(g(x), two * f_x);
+  ASSERT_EQ(h(x), g(x));
+}
+
 // TODO Yuval: move to examples ??
 TEST_F(PolynomialTest, QAP)
 {
@@ -464,9 +482,9 @@ TEST_F(PolynomialTest, QAP)
   }
 
   // (4) using the witness, compute L(x),R(x),O(x)
-  Polynomial_t& Lx = L_QAP[0]; // TODO Yuval: probably better copy
-  Polynomial_t& Rx = R_QAP[0]; // TODO Yuval: probably better copy
-  Polynomial_t& Ox = O_QAP[0]; // TODO Yuval: probably better copy
+  Polynomial_t Lx = L_QAP[0].clone();
+  Polynomial_t Rx = R_QAP[0].clone();
+  Polynomial_t Ox = O_QAP[0].clone();
   std::cout << "Lx.degree()=" << Lx.degree() << std::endl;
   for (int col = 1; col < nof_cols; ++col) {
     Lx += witness[col] * L_QAP[col];

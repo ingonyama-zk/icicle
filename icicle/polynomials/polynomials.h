@@ -21,7 +21,7 @@ namespace polynomials {
     // initialization
     static Polynomial from_coefficients(const Coeff* coefficients, uint64_t nof_coefficients);
     static Polynomial from_rou_evaluations(const Image* evaluations, uint64_t nof_evaluations);
-    // static Polynomial_t clone(const Polynomial& p);
+    Polynomial clone() const;
 
     // arithmetic ops (two polynomials)
     Polynomial operator+(const Polynomial& rhs) const;
@@ -102,6 +102,7 @@ namespace polynomials {
 
     virtual C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
     virtual I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* host_evaluations = nullptr) = 0;
+    virtual std::shared_ptr<IPolynomialContext> clone() const = 0;
 
     virtual std::pair<C*, uint64_t> get_coefficients() = 0;
     virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
