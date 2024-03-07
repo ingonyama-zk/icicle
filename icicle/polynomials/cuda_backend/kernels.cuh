@@ -77,6 +77,13 @@ namespace polynomials {
     if (tid < n) { result[tid] = element_vec1[tid] * element_vec2[tid]; }
   }
 
+  template <typename T>
+  __global__ void MulScalar(T* element_vec, T* scalar, int n, T* result)
+  {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < n) { result[tid] = element_vec[tid] * (*scalar); }
+  }
+
   /*============================== division ==============================*/
   template <typename T>
   __global__ void SchoolBookDivisionStep(T* r, T* q, T* b, int deg_r, int deg_b, T lc_b_inv)

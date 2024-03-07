@@ -320,13 +320,41 @@ namespace polynomials {
 
     void multiply(PolyContext& c, PolyContext& a, PolyContext& b) override
     {
-      const bool is_multiply_with_cosets = true;
+      const bool is_a_scalar = a.get_nof_elements() == 1;
+      const bool is_b_scalar = b.get_nof_elements() == 1;
+
+      if (is_a_scalar) {
+        return multiply_with_scalar(c, b, a);
+      } else if (is_b_scalar) {
+        return multiply_with_scalar(c, a, b);
+      }
+
+      const bool is_multiply_with_cosets = true; // TODO  Yuval: check when faster to do so.
       if (is_multiply_with_cosets) { return multiply_with_cosets(c, a, b); }
       return multiply_with_padding(c, a, b);
     }
 
+    void multiply_with_scalar(PolyContext& out, PolyContext& p, PolyContext& s)
+    {
+      // element wise multiplication is similar both in coefficients and evaluations (regardless of order too)
+      const auto state = p.get_state();
+
+      auto [p_elements_p, N] = state == State::Coefficients ? p.get_coefficients() : p.get_rou_evaluations();
+      auto [s_elements_p, _] = state == State::Coefficients ? s.get_coefficients() : s.get_rou_evaluations();
+
+      out.allocate(N, state, false /*=memset zeros*/);
+      auto [out_evals_p, __] = state == State::Coefficients ? out.get_coefficients() : out.get_rou_evaluations();
+
+      const int NOF_THREADS = 128;
+      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
+      MulScalar<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(p_elements_p, s_elements_p, N, out_evals_p);
+
+      CHK_LAST();
+    }
+
     void multiply_with_padding(PolyContext& c, PolyContext& a, PolyContext& b)
     {
+      // TODO Yuval: by using the degree I can optimize the memory size and avoid redundant computations too
       const uint64_t a_N_orig = a.get_nof_elements();
       const uint64_t b_N_orig = b.get_nof_elements();
       const uint64_t N = max(a_N_orig, b_N_orig);
@@ -449,6 +477,11 @@ namespace polynomials {
     void
     divide_by_vanishing_polynomial(PolyContext& out, PolyContext& numerator, uint64_t vanishing_poly_degree) override
     {
+      // TODO Yuval: vanishing polynomial x^n-1 evaluates to zero on ROU
+      // Therefore constant to conset ((wu)^n-1 = w^n*u^n-1 = u^n-1)
+      // This is true for a coset of size n but if numerator is of size >n, then I need a larger coset and it doesn't
+      // hold. Need to use this fact to optimize division
+
       // (1) allocate vanishing polynomial in coefficients form
       auto [numerator_coeffs, N] = numerator.get_coefficients();
       if (vanishing_poly_degree > N) {

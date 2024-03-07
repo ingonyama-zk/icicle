@@ -253,7 +253,7 @@ TEST_F(PolynomialTest, multiplication)
 
 TEST_F(PolynomialTest, multiplicationScalar)
 {
-  const int size = 17;
+  const int size = 1 << 15;
   auto f = randomize_polynomial(size);
 
   auto g = two * f;
