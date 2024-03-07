@@ -279,9 +279,15 @@ namespace polynomials {
     typedef IPolynomialContext<C, D, I> PolyContext;
     typedef typename IPolynomialContext<C, D, I>::State State;
 
+    int64_t* d_degree = nullptr; // used to avoid alloc/relese everytime
+
   public:
     const DeviceContext& m_device_context;
-    CUDAPolynomialBackend(const DeviceContext& dev_context) : m_device_context{dev_context} {}
+    CUDAPolynomialBackend(const DeviceContext& dev_context) : m_device_context{dev_context}
+    {
+      CHK_STICKY(cudaMallocAsync(&d_degree, sizeof(int64_t), m_device_context.stream));
+    }
+    ~CUDAPolynomialBackend() { CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream)); }
 
     void add_sub(PolyContext& res, PolyContext& a, PolyContext& b, bool add1_sub0)
     {
@@ -403,7 +409,7 @@ namespace polynomials {
 
       const C& lc_b_inv = C::inverse(get_coefficient_on_host(b, deg_b)); // largest coeff of b
 
-      int64_t deg_r = degree(R);
+      int64_t deg_r = deg_a;
       while (deg_r >= deg_b) {
         // each iteration is removing the largest monomial in r until deg(r)<deg(b)
         const int NOF_THREADS = 128;
@@ -411,7 +417,8 @@ namespace polynomials {
         SchoolBookDivisionStep<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
           R_coeffs, Q_coeffs, b_coeffs, deg_r, deg_b, lc_b_inv);
 
-        deg_r = degree(R);
+        // faster than degree(R) based on the fact that degree is decreasing
+        deg_r = degree_internal(R, deg_r + 1 /*size of R*/);
       }
 
       CHK_LAST();
@@ -482,25 +489,26 @@ namespace polynomials {
       add_monomial_inplace(poly, C::zero() - monomial_coeff, monomial);
     }
 
-    int64_t degree(PolyContext& p) override
-    {
-      auto [coeff, nof_coeff] = p.get_coefficients();
+    int64_t degree(PolyContext& p) override { return degree_internal(p, p.get_nof_elements()); }
 
-      int64_t* d_degree;
+    // search degree starting from len, searching down (towards coeff0)
+    int64_t degree_internal(PolyContext& p, uint64_t len)
+    {
+      // TODO: parallelize kernel? Note that typically the largest coefficient is expected in the higher half since
+      // memory is allocate based on #coefficeints
+
+      auto [coeff, _] = p.get_coefficients();
+
       int64_t h_degree;
-      CHK_STICKY(cudaMallocAsync(&d_degree, sizeof(int64_t), m_device_context.stream));
-      // zero polynomial is defined with degree -1
-      CHK_STICKY(cudaMemsetAsync(d_degree, -1, sizeof(int64_t), m_device_context.stream));
-      // TODO Yuval parallelize kernel
-      HighestNonZeroIdx<<<1, 1, 0, m_device_context.stream>>>(coeff, nof_coeff, d_degree);
+      HighestNonZeroIdx<<<1, 1, 0, m_device_context.stream>>>(coeff, len, d_degree);
       CHK_STICKY(
         cudaMemcpyAsync(&h_degree, d_degree, sizeof(int64_t), cudaMemcpyDeviceToHost, m_device_context.stream));
       CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
-      CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream));
 
       return h_degree;
     }
 
+  public:
     I evaluate(PolyContext& p, const D& domain_x) override
     {
       auto [coeff, nof_coeff] = p.get_coefficients();
