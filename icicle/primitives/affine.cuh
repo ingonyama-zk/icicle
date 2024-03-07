@@ -6,7 +6,6 @@ template <class FF>
 class Affine
 {
 public:
-
   FF x;
   FF y;
 
