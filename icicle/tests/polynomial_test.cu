@@ -6,10 +6,33 @@
 #include <list>
 
 #include "curves/curve_config.cuh"
-typedef curve_config::scalar_t test_type;
+using curve_config::affine_t;
+using curve_config::projective_t;
+using curve_config::scalar_t;
 
 #include "polynomials/polynomials.h"
 #include "appUtils/ntt/ntt.cuh"
+#include "appUtils/msm/msm.cuh"
+
+// using the MSM C-API directly since msm::MSM() is hidden and I cannot understand why
+namespace msm {
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
+    curve_config::scalar_t* scalars,
+    curve_config::affine_t* points,
+    int msm_size,
+    MSMConfig& config,
+    curve_config::projective_t* out);
+
+  cudaError_t __MSM__(
+    curve_config::scalar_t* scalars,
+    curve_config::affine_t* points,
+    int msm_size,
+    MSMConfig& config,
+    curve_config::projective_t* out)
+  {
+    return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
+  }
+} // namespace msm
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -20,7 +43,7 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
 
 using namespace polynomials;
 
-typedef Polynomial<test_type> Polynomial_t;
+typedef Polynomial<scalar_t> Polynomial_t;
 
 class PolynomialTest : public ::testing::Test
 {
@@ -32,8 +55,8 @@ public:
   static void SetUpTestSuite()
   {
     // init NTT domain
-    auto ntt_config = ntt::DefaultNTTConfig<test_type>();
-    const test_type basic_root = test_type::omega(MAX_NTT_LOG_SIZE);
+    auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
+    const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
     ntt::InitDomain(basic_root, ntt_config.ctx);
     // initializing polynoimals factory for CUDA backend
     Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
@@ -53,7 +76,7 @@ public:
 
   static Polynomial_t randomize_polynomial(uint32_t size, bool random = true)
   {
-    auto coeff = std::make_unique<test_type[]>(size);
+    auto coeff = std::make_unique<scalar_t[]>(size);
     if (random) {
       random_samples(coeff.get(), size);
     } else {
@@ -62,16 +85,26 @@ public:
     return Polynomial_t::from_coefficients(coeff.get(), size);
   }
 
-  static void random_samples(test_type* res, uint32_t count)
+  static void random_samples(scalar_t* res, uint32_t count)
   {
     for (int i = 0; i < count; i++)
-      res[i] = test_type::rand_host();
+      res[i] = scalar_t::rand_host();
   }
 
-  static void incremental_values(test_type* res, uint32_t count)
+  static void incremental_values(scalar_t* res, uint32_t count)
   {
     for (int i = 0; i < count; i++) {
-      res[i] = i ? res[i - 1] + test_type::one() : test_type::one();
+      res[i] = i ? res[i - 1] + scalar_t::one() : scalar_t::one();
+    }
+  }
+
+  static void compute_powers_of_tau(projective_t g, scalar_t tau, affine_t* res, uint32_t count)
+  {
+    // no arithmetic on affine??
+    res[0] = projective_t::to_affine(g);
+    for (int i = 1; i < count; i++) {
+      g = g * tau;
+      res[i] = projective_t::to_affine(g);
     }
   }
 
@@ -81,37 +114,37 @@ public:
     const int deg_rhs = rhs.degree();
     ASSERT_EQ(deg_lhs, deg_rhs);
 
-    auto lhs_coeffs = std::make_unique<test_type[]>(deg_lhs);
-    auto rhs_coeffs = std::make_unique<test_type[]>(deg_rhs);
+    auto lhs_coeffs = std::make_unique<scalar_t[]>(deg_lhs);
+    auto rhs_coeffs = std::make_unique<scalar_t[]>(deg_rhs);
     lhs.get_coefficients_on_host(lhs_coeffs.get(), 1, deg_lhs - 1);
     rhs.get_coefficients_on_host(rhs_coeffs.get(), 1, deg_rhs - 1);
 
-    ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(test_type)));
+    ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(scalar_t)));
   }
 
   static Polynomial_t vanishing_polynomial(int degree)
   {
-    test_type coeffs_v[degree + 1] = {0};
+    scalar_t coeffs_v[degree + 1] = {0};
     coeffs_v[0] = minus_one; // -1
     coeffs_v[degree] = one;  // +x^n
     auto v = Polynomial_t::from_coefficients(coeffs_v, degree + 1);
     return v;
   }
 
-  const static inline auto zero = test_type::zero();
-  const static inline auto one = test_type::one();
-  const static inline auto two = test_type::from(2);
-  const static inline auto three = test_type::from(3);
-  const static inline auto four = test_type::from(4);
-  const static inline auto five = test_type::from(5);
+  const static inline auto zero = scalar_t::zero();
+  const static inline auto one = scalar_t::one();
+  const static inline auto two = scalar_t::from(2);
+  const static inline auto three = scalar_t::from(3);
+  const static inline auto four = scalar_t::from(4);
+  const static inline auto five = scalar_t::from(5);
   const static inline auto minus_one = zero - one;
 };
 
 TEST_F(PolynomialTest, evaluation)
 {
-  const test_type coeffs[3] = {one, two, three};
+  const scalar_t coeffs[3] = {one, two, three};
   auto f = Polynomial_t::from_coefficients(coeffs, 3);
-  test_type x = test_type::rand_host();
+  scalar_t x = scalar_t::rand_host();
 
   auto f_x = f(x); // evaluation
 
@@ -128,9 +161,9 @@ TEST_F(PolynomialTest, fromEvaluations)
   auto f = randomize_polynomial(size);
 
   // evaluate f on roots of unity
-  test_type omega = test_type::omega(log_size);
-  test_type evals[nof_evals] = {0};
-  test_type x = one;
+  scalar_t omega = scalar_t::omega(log_size);
+  scalar_t evals[nof_evals] = {0};
+  scalar_t x = one;
   for (int i = 0; i < nof_evals; ++i) {
     evals[i] = f(x);
     x = x * omega;
@@ -152,9 +185,9 @@ TEST_F(PolynomialTest, fromEvaluationsNotPowerOfTwo)
   auto f = randomize_polynomial(size);
 
   // evaluate f on roots of unity
-  test_type omega = test_type::omega(log_size);
-  test_type evals[nof_evals] = {0};
-  test_type x = one;
+  scalar_t omega = scalar_t::omega(log_size);
+  scalar_t evals[nof_evals] = {0};
+  scalar_t x = one;
   for (int i = 0; i < nof_evals; ++i) {
     evals[i] = f(x);
     x = x * omega;
@@ -163,7 +196,7 @@ TEST_F(PolynomialTest, fromEvaluationsNotPowerOfTwo)
   // construct g from f's evaluations
   auto g = Polynomial_t::from_rou_evaluations(evals, nof_evals);
 
-  test_type r = test_type::rand_host();
+  scalar_t r = scalar_t::rand_host();
 
   // since NTT works on a power of two (therefore the extra elements are arbitrary), f!=g but they should evaluate to
   // the same values on the roots of unity due to construction.
@@ -180,7 +213,7 @@ TEST_F(PolynomialTest, addition)
   auto f = randomize_polynomial(size_0);
   auto g = randomize_polynomial(size_1);
 
-  test_type x = test_type::rand_host();
+  scalar_t x = scalar_t::rand_host();
   auto f_x = f(x);
   auto g_x = g(x);
   auto fx_plus_gx = f_x + g_x;
@@ -197,7 +230,7 @@ TEST_F(PolynomialTest, addition_inplace)
   auto f = randomize_polynomial(size_0);
   auto g = randomize_polynomial(size_1);
 
-  test_type x = test_type::rand_host();
+  scalar_t x = scalar_t::rand_host();
   auto f_x = f(x);
   auto g_x = g(x);
   auto fx_plus_gx = f_x + g_x;
@@ -211,14 +244,14 @@ TEST_F(PolynomialTest, addition_inplace)
 TEST_F(PolynomialTest, cAPI)
 {
   const int size = 3;
-  auto coeff = std::make_unique<test_type[]>(size);
+  auto coeff = std::make_unique<scalar_t[]>(size);
   random_samples(coeff.get(), size);
 
   auto f = polynomial_create_from_coefficients(coeff.get(), size);
   auto g = polynomial_create_from_coefficients(coeff.get(), size);
   auto s = polynomial_add(f, g);
 
-  test_type x = test_type::rand_host();
+  scalar_t x = scalar_t::rand_host();
   // TODO Yuval: use C-API for evaluate too
   auto f_x = f->evaluate(x);
   auto g_x = g->evaluate(x);
@@ -237,7 +270,7 @@ TEST_F(PolynomialTest, multiplication)
   auto f = randomize_polynomial(size_0);
   auto g = randomize_polynomial(size_1);
 
-  test_type x = test_type::rand_host();
+  scalar_t x = scalar_t::rand_host();
   auto f_x = f(x);
   auto g_x = g(x);
   auto fx_mul_gx = f_x * g_x;
@@ -259,7 +292,7 @@ TEST_F(PolynomialTest, multiplicationScalar)
   auto g = two * f;
   auto h = f * three;
 
-  test_type x = test_type::rand_host();
+  scalar_t x = scalar_t::rand_host();
   auto f_x = f(x);
   auto g_x = g(x);
   auto h_x = h(x);
@@ -273,7 +306,7 @@ TEST_F(PolynomialTest, multiplicationScalar)
 
 TEST_F(PolynomialTest, monomials)
 {
-  const test_type coeffs[3] = {one, zero, two}; // 1+2x^2
+  const scalar_t coeffs[3] = {one, zero, two}; // 1+2x^2
   auto f = Polynomial_t::from_coefficients(coeffs, 3);
   const auto x = three;
   const auto expected_f_x = one + two * x * x;
@@ -296,9 +329,9 @@ TEST_F(PolynomialTest, monomials)
 
 TEST_F(PolynomialTest, ReadCoeffsToHost)
 {
-  const test_type coeffs_f[3] = {zero, one, two}; // x+2x^2
+  const scalar_t coeffs_f[3] = {zero, one, two}; // x+2x^2
   auto f = Polynomial_t::from_coefficients(coeffs_f, 3);
-  const test_type coeffs_g[3] = {one, one, one}; // 1+x+x^2
+  const scalar_t coeffs_g[3] = {one, one, one}; // 1+x+x^2
   auto g = Polynomial_t::from_coefficients(coeffs_g, 3);
 
   auto h = f + g; // 1+2x+3x^3
@@ -311,11 +344,11 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
 
   int64_t nof_coeffs = h.get_coefficients_on_host(nullptr); // query #coeffs
   EXPECT_GE(nof_coeffs, 3);                                 // can be larger due to padding to powers of two
-  test_type h_coeffs[3] = {0};
+  scalar_t h_coeffs[3] = {0};
   nof_coeffs = h.get_coefficients_on_host(h_coeffs, 0, 2); // read the coefficients
   EXPECT_EQ(nof_coeffs, 3);                                // expecting 3 due to specified indices
 
-  test_type expected_h_coeffs[nof_coeffs] = {one, two, three};
+  scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
     EXPECT_EQ(expected_h_coeffs[i], h_coeffs[i]);
   }
@@ -323,23 +356,23 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
 
 TEST_F(PolynomialTest, divisionSimple)
 {
-  const test_type coeffs_a[4] = {five, zero, four, three}; // 3x^3+4x^2+5
-  const test_type coeffs_b[3] = {minus_one, zero, one};    // x^2-1
+  const scalar_t coeffs_a[4] = {five, zero, four, three}; // 3x^3+4x^2+5
+  const scalar_t coeffs_b[3] = {minus_one, zero, one};    // x^2-1
   auto a = Polynomial_t::from_coefficients(coeffs_a, 4);
   auto b = Polynomial_t::from_coefficients(coeffs_b, 3);
 
   auto [q, r] = a.divide(b);
-  test_type q_coeffs[2] = {0}; // 3x+4
-  test_type r_coeffs[2] = {0}; // 3x+9
+  scalar_t q_coeffs[2] = {0}; // 3x+4
+  scalar_t r_coeffs[2] = {0}; // 3x+9
   const auto q_nof_coeffs = q.get_coefficients_on_host(q_coeffs, 0, 1);
   const auto r_nof_coeffs = r.get_coefficients_on_host(r_coeffs, 0, 1);
 
   ASSERT_EQ(q_nof_coeffs, 2);
   ASSERT_EQ(r_nof_coeffs, 2);
-  ASSERT_EQ(q_coeffs[0], test_type::from(4));
-  ASSERT_EQ(q_coeffs[1], test_type::from(3));
-  ASSERT_EQ(r_coeffs[0], test_type::from(9));
-  ASSERT_EQ(r_coeffs[1], test_type::from(3));
+  ASSERT_EQ(q_coeffs[0], scalar_t::from(4));
+  ASSERT_EQ(q_coeffs[1], scalar_t::from(3));
+  ASSERT_EQ(r_coeffs[0], scalar_t::from(9));
+  ASSERT_EQ(r_coeffs[1], scalar_t::from(3));
 }
 
 TEST_F(PolynomialTest, divisionLarge)
@@ -352,7 +385,7 @@ TEST_F(PolynomialTest, divisionLarge)
   auto [q, r] = a.divide(b);
   END_TIMER(poly_mult_start, "Polynomial division took", MEASURE);
 
-  test_type x = test_type::rand_host();
+  scalar_t x = scalar_t::rand_host();
   auto a_x = a(x);
   auto b_x = b(x);
   auto q_x = q(x);
@@ -364,7 +397,7 @@ TEST_F(PolynomialTest, divisionLarge)
 
 TEST_F(PolynomialTest, divideByVanishingPolynomial)
 {
-  const test_type coeffs_v[5] = {minus_one, zero, zero, zero, one}; // x^4-1 vanishes on 4th roots of unity
+  const scalar_t coeffs_v[5] = {minus_one, zero, zero, zero, one}; // x^4-1 vanishes on 4th roots of unity
   auto v = Polynomial_t::from_coefficients(coeffs_v, 5);
   auto h = randomize_polynomial(1 << 11, false);
   auto hv = h * v;
@@ -385,7 +418,7 @@ TEST_F(PolynomialTest, clone)
   const int size = 1 << 10;
   auto f = randomize_polynomial(size);
 
-  const auto x = test_type::rand_host();
+  const auto x = scalar_t::rand_host();
   const auto f_x = f(x);
 
   Polynomial_t g;
@@ -396,6 +429,27 @@ TEST_F(PolynomialTest, clone)
 
   ASSERT_EQ(g(x), two * f_x);
   ASSERT_EQ(h(x), g(x));
+}
+
+TEST_F(PolynomialTest, commitMSM)
+{
+  const int size = 1 << 6;
+  auto f = randomize_polynomial(size);
+
+  auto [d_coeff, N, device_id] = f.get_coefficients_on_device();
+  auto msm_config = msm::DefaultMSMConfig();
+  msm_config.are_scalars_on_device = true;
+
+  auto points = std::make_unique<affine_t[]>(size);
+  projective_t result;
+
+  auto tau = scalar_t::rand_host();
+  projective_t g = projective_t::rand_host();
+  compute_powers_of_tau(g, tau, points.get(), size);
+
+  msm::__MSM__(d_coeff, points.get(), size, msm_config, &result);
+
+  EXPECT_EQ(result, f(tau) * g);
 }
 
 // TODO Yuval: move to examples ??
@@ -432,8 +486,8 @@ TEST_F(PolynomialTest, QAP)
   const int input_offset = 1 + nof_outputs;
   const int intermediate_offset = input_offset + nof_inputs;
 
-  std::vector<test_type> witness(witness_size, test_type::zero());
-  witness[0] = test_type::one();
+  std::vector<scalar_t> witness(witness_size, scalar_t::zero());
+  witness[0] = scalar_t::one();
   random_samples(witness.data() + input_offset, nof_inputs); // randomize inputs
   // compute intermediate values (based on the circuit above)
   for (int i = 0; i < nof_intermediates; ++i) {
@@ -450,24 +504,24 @@ TEST_F(PolynomialTest, QAP)
   // evaluations
   const int nof_cols = witness_size;
   const int nof_rows = nof_constraints;
-  std::vector<test_type> L(nof_cols * nof_rows, test_type::zero());
-  std::vector<test_type> R(nof_cols * nof_rows, test_type::zero());
-  std::vector<test_type> O(nof_cols * nof_rows, test_type::zero());
+  std::vector<scalar_t> L(nof_cols * nof_rows, scalar_t::zero());
+  std::vector<scalar_t> R(nof_cols * nof_rows, scalar_t::zero());
+  std::vector<scalar_t> O(nof_cols * nof_rows, scalar_t::zero());
 
-  test_type* L_data = L.data();
-  test_type* R_data = R.data();
-  test_type* O_data = O.data();
+  scalar_t* L_data = L.data();
+  scalar_t* R_data = R.data();
+  scalar_t* O_data = O.data();
 
   // filling the R1CS matrices (where cols are consecutive, not rows)
   for (int row = 0; row < nof_rows; ++row) {
     const int L_col = row == 0 ? input_offset : intermediate_offset + row - 1;
-    *(L_data + L_col * nof_rows + row) = test_type::one();
+    *(L_data + L_col * nof_rows + row) = scalar_t::one();
 
     const int R_col = input_offset + row + 1;
-    *(R_data + R_col * nof_rows + row) = test_type::one();
+    *(R_data + R_col * nof_rows + row) = scalar_t::one();
 
     const int O_col = row == nof_rows - 1 ? 1 : intermediate_offset + row;
-    *(O_data + O_col * nof_rows + row) = test_type::one();
+    *(O_data + O_col * nof_rows + row) = scalar_t::one();
   }
 
   // (3) interpolate the columns of L,R,O to build the polynomials

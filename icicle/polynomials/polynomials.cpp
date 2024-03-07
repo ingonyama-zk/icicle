@@ -42,7 +42,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::operator+(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->add(*res.m_context.get(), *m_context.get(), *rhs.m_context);
+    m_backend->add(*res.m_context.get(), *m_context, *rhs.m_context);
     return res;
   }
 
@@ -50,7 +50,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::operator-(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->subtract(*res.m_context.get(), *m_context.get(), *rhs.m_context);
+    m_backend->subtract(*res.m_context.get(), *m_context, *rhs.m_context);
     return res;
   }
 
@@ -58,7 +58,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const Polynomial& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->multiply(*res.m_context.get(), *m_context.get(), *rhs.m_context);
+    m_backend->multiply(*res.m_context.get(), *m_context, *rhs.m_context);
     return res;
   }
 
@@ -66,7 +66,7 @@ namespace polynomials {
   std::pair<Polynomial<C, D, I>, Polynomial<C, D, I>> Polynomial<C, D, I>::divide(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> Q = {}, R = {};
-    m_backend->divide(*Q.m_context.get(), *R.m_context.get(), *m_context.get(), *rhs.m_context.get());
+    m_backend->divide(*Q.m_context.get(), *R.m_context.get(), *m_context, *rhs.m_context.get());
     return std::make_pair(std::move(Q), std::move(R));
   }
 
@@ -74,14 +74,14 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->divide_by_vanishing_polynomial(*res.m_context.get(), *m_context.get(), vanishing_polynomial_degree);
+    m_backend->divide_by_vanishing_polynomial(*res.m_context.get(), *m_context, vanishing_polynomial_degree);
     return res;
   }
 
   template <typename C, typename D, typename I>
   Polynomial<C, D, I>& Polynomial<C, D, I>::operator+=(const Polynomial& rhs)
   {
-    m_backend->add(*m_context.get(), *m_context.get(), *rhs.m_context);
+    m_backend->add(*m_context, *m_context, *rhs.m_context);
     return *this;
   }
 
@@ -102,14 +102,14 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   Polynomial<C, D, I>& Polynomial<C, D, I>::add_monomial_inplace(C monomial_coeff, uint64_t monomial)
   {
-    m_backend->add_monomial_inplace(*m_context.get(), monomial_coeff, monomial);
+    m_backend->add_monomial_inplace(*m_context, monomial_coeff, monomial);
     return *this;
   }
 
   template <typename C, typename D, typename I>
   Polynomial<C, D, I>& Polynomial<C, D, I>::sub_monomial_inplace(C monomial_coeff, uint64_t monomial)
   {
-    m_backend->sub_monomial_inplace(*m_context.get(), monomial_coeff, monomial);
+    m_backend->sub_monomial_inplace(*m_context, monomial_coeff, monomial);
     return *this;
   }
 
@@ -122,25 +122,31 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   I Polynomial<C, D, I>::evaluate(const D& x) const
   {
-    return m_backend->evaluate(*m_context.get(), x);
+    return m_backend->evaluate(*m_context, x);
   }
 
   template <typename C, typename D, typename I>
   int64_t Polynomial<C, D, I>::degree()
   {
-    return m_backend->degree(*m_context.get());
+    return m_backend->degree(*m_context);
   }
 
   template <typename C, typename D, typename I>
   C Polynomial<C, D, I>::get_coefficient_on_host(uint64_t idx) const
   {
-    return m_backend->get_coefficient_on_host(*m_context.get(), idx);
+    return m_backend->get_coefficient_on_host(*m_context, idx);
   }
 
   template <typename C, typename D, typename I>
   int64_t Polynomial<C, D, I>::get_coefficients_on_host(C* host_coeffs, int64_t start_idx, int64_t end_idx) const
   {
-    return m_backend->get_coefficients_on_host(*m_context.get(), host_coeffs, start_idx, end_idx);
+    return m_backend->get_coefficients_on_host(*m_context, host_coeffs, start_idx, end_idx);
+  }
+
+  template <typename C, typename D, typename I>
+  std::tuple<C*, uint64_t /*size*/, uint64_t /*device_id*/> Polynomial<C, D, I>::get_coefficients_on_device()
+  {
+    return m_backend->get_coefficients_on_device(*m_context);
   }
 
 } // namespace polynomials

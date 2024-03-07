@@ -830,7 +830,6 @@ namespace msm {
     }
   } // namespace
 
-  template <typename A>
   MSMConfig DefaultMSMConfig()
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
