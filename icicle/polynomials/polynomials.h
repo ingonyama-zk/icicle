@@ -43,6 +43,8 @@ namespace polynomials {
     Polynomial& add_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
     Polynomial& sub_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
 
+    // Following ops cannot be traced. Calling them requires to compute
+
     // evaluation
     Image operator()(const Domain& x) const;
     Image evaluate(const Domain& x) const;
@@ -51,11 +53,13 @@ namespace polynomials {
     // highest non-zero coefficient degree
     int64_t degree();
 
-    // Read coefficients. TODO Yuval: flag for Host/Device? For Device can return const reference to coeffs but cannot
-    // guarantee that polynomial remains in coeffs and even that it is not released. Copy?
+    // Read coefficients
     Coeff get_coefficient_on_host(uint64_t idx) const;
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
     int64_t get_coefficients_on_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
+    // caller is getting a pointer to device data. Data is volatile
+    // TODO Yuval: return wrapper around Coeff* that exposes const access and identifies invalidation of the data
+    std::tuple<Coeff*, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device();
 
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
     {
@@ -163,6 +167,8 @@ namespace polynomials {
     // if coefficients==nullptr, return nof_coefficients, without writing
     virtual int64_t
     get_coefficients_on_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
+
+    virtual std::tuple<C*, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device(PolyContext& p) = 0;
   };
 
   /*============================== Polynomial Absract Factory ==============================*/

@@ -638,6 +638,12 @@ namespace polynomials {
       get_coefficients_on_host(op, &host_coeff, coeff_idx, coeff_idx);
       return host_coeff;
     }
+
+    std::tuple<C*, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device(PolyContext& p) override
+    {
+      auto [coeffs, size] = p.get_coefficients();
+      return std::make_tuple(coeffs, size, m_device_context.device_id);
+    }
   };
 
   /*============================== Polynomial CUDA-factory ==============================*/
