@@ -8,6 +8,8 @@
 using device_context::DeviceContext;
 
 namespace polynomials {
+
+  static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
   /*============================== Polynomial CUDA-context ==============================*/
   template <typename C, typename D, typename I>
   class CUDAPolynomialContext : public IPolynomialContext<C, D, I>
@@ -21,8 +23,6 @@ namespace polynomials {
 
     CUDAPolynomialContext(const DeviceContext& dev_context) : m_device_context{dev_context} {}
     ~CUDAPolynomialContext() { release(); }
-
-    static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
 
     void allocate(uint64_t nof_elements, State init_state, bool is_memset_zeros) override
     {
@@ -140,6 +140,11 @@ namespace polynomials {
       const bool is_already_in_state = this->m_state == State::Coefficients && is_same_nof_coefficients;
       if (is_already_in_state) { return; }
 
+      if (nof_coefficients < this->m_nof_elements) {
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encounterd a bug");
+      }
+
       const bool is_already_in_coeffs = this->m_state == State::Coefficients;
       // case 1: already in coefficients. Need to allocate larger memory and zero pad
       if (is_already_in_coeffs) {
@@ -164,6 +169,8 @@ namespace polynomials {
 
       ntt_config.ordering =
         (this->m_state == State::EvaluationsOnRou_Natural) ? ntt::Ordering::kNN : ntt::Ordering::kRN;
+      // Note: it is important to do the NTT with old size because padding in evaluations form is computing another
+      // (higher order) polynomial
       CHK_STICKY(ntt::NTT(evals, this->m_nof_elements, ntt::NTTDir::kInverse, ntt_config, coeffs));
       this->set_state(State::Coefficients);
 
@@ -180,6 +187,11 @@ namespace polynomials {
       const bool is_already_in_state = is_same_nof_evaluations && is_same_order;
       if (is_already_in_state) { return; }
 
+      if (nof_evaluations < this->m_nof_elements) {
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encounterd a bug");
+      }
+
       // TODO Yuval: evaluations->evaluations with different ordering can be implemented via inplace reorder more
       // efficiently than it is now
 
@@ -188,31 +200,27 @@ namespace polynomials {
       //    (1a) same size -> NTT (NR or NN)
       //    (1b) different_size -> alloc new mem, copy coeffs and NTT inplace
       // (2) evaluations to evaluations (interpolation)
-      //     alloc memory, INTT to coeffs then NTT back to evals (NR or NN)
+      //     transform to coefficients, extend memory, then NTT back to evals (NR or NN)
 
+      const bool is_eval_to_eval = this->m_state != State::Coefficients;
+      // interpolating more points requires going back to coefficients first. Note that it muse be done with the
+      // original size. INTT after padding computes a higher degree polynomial
+      if (is_eval_to_eval) { transform_to_coefficients(); }
+
+      // reaching this point means polynomial is in coefficient form
       const bool is_allocate_new_mem = nof_evaluations > this->m_nof_elements;
       // allocate more memory and copy+pad
       if (is_allocate_new_mem) { extend_mem_and_pad(nof_evaluations); }
 
+      C* coeffs = static_cast<C*>(m_storage);
+      I* evals = static_cast<I*>(m_storage);
       auto ntt_config = ntt::DefaultNTTConfig<C>(m_device_context);
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
+      // already copied the coefficients with padding. Now computing evaluations.
+      ntt_config.ordering = is_reversed ? ntt::Ordering::kNR : ntt::Ordering::kNN;
+      CHK_STICKY(ntt::NTT(coeffs, nof_evaluations, ntt::NTTDir::kForward, ntt_config, evals));
 
-      C* coeffs = static_cast<C*>(m_storage);
-      I* evals = static_cast<I*>(m_storage);
-      const bool is_coeffs_to_evals = this->m_state == State::Coefficients;
-      if (is_coeffs_to_evals) {
-        // already copied the coefficients with padding. Now computing evaluations.
-        ntt_config.ordering = is_reversed ? ntt::Ordering::kNR : ntt::Ordering::kNN;
-        CHK_STICKY(ntt::NTT(coeffs, nof_evaluations, ntt::NTTDir::kForward, ntt_config, evals));
-      } else {
-        // interpolation: transform to coefficients and back
-        transform_to_coefficients();
-        ntt_config.ordering = is_reversed ? ntt::Ordering::kNR : ntt::Ordering::kNN;
-        CHK_STICKY(ntt::NTT(coeffs, nof_evaluations, ntt::NTTDir::kForward, ntt_config, evals));
-      }
-
-      this->m_nof_elements = nof_evaluations;
       this->set_state(is_reversed ? State::EvaluationsOnRou_Reversed : State::EvaluationsOnRou_Natural);
     }
 
