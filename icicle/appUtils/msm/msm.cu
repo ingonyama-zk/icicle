@@ -822,7 +822,6 @@ namespace msm {
     }
   } // namespace
 
-  template <typename A>
   MSMConfig DefaultMSMConfig()
   {
     device_context::DeviceContext ctx = device_context::get_default_device_context();
@@ -920,6 +919,13 @@ namespace msm {
     return PrecomputeMSMBases<curve_config::affine_t, curve_config::projective_t>(
       bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
   }
+  // explicit instantiation
+  template cudaError_t MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(
+    curve_config::scalar_t* scalars,
+    curve_config::affine_t* points,
+    int msm_size,
+    MSMConfig& config,
+    curve_config::projective_t* results);
 
   /**
    * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
