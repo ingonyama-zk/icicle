@@ -387,6 +387,11 @@ namespace msm {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
       }
+      if ((precompute_factor & (precompute_factor - 1)) != 0) {
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument,
+          "bucket_method_msm: precompute factors that are not powers of 2 currently unsupported");
+      }
 
       S* d_scalars;
       if (!are_scalars_on_device) {
@@ -783,7 +788,6 @@ namespace msm {
           temp_buckets1 = nullptr;
           temp_buckets2 = nullptr;
           source_bits_count = target_bits_count;
-          // odd_source_c = source_bits_count % 2;
           source_windows_count = target_windows_count;
           source_buckets_count = target_buckets_count;
         }
@@ -864,8 +868,8 @@ namespace msm {
     int bases_size,
     int precompute_factor,
     bool are_bases_on_device,
-    A* output_bases,
-    device_context::DeviceContext& ctx)
+    device_context::DeviceContext& ctx,
+    A* output_bases)
   {
     CHK_INIT_IF_RETURN();
 
@@ -900,11 +904,11 @@ namespace msm {
     int bases_size,
     int precompute_factor,
     bool are_bases_on_device,
-    curve_config::affine_t* output_bases,
-    device_context::DeviceContext& ctx)
+    device_context::DeviceContext& ctx,
+    curve_config::affine_t* output_bases)
   {
     return PrecomputeMSMBases<curve_config::affine_t, curve_config::projective_t>(
-      bases, bases_size, precompute_factor, are_bases_on_device, output_bases, ctx);
+      bases, bases_size, precompute_factor, are_bases_on_device, ctx, output_bases);
   }
 
   /**
@@ -926,12 +930,25 @@ namespace msm {
       scalars, points, msm_size, config, out);
   }
 
-  /**
-   * Extern "C" version of [DefaultMSMConfig](@ref DefaultMSMConfig) function.
-   */
-  extern "C" MSMConfig CONCAT_EXPAND(CURVE, DefaultMSMConfig)() { return DefaultMSMConfig<curve_config::affine_t>(); }
-
 #if defined(G2_DEFINED)
+
+  /**
+   * Extern "C" version of [PrecomputeMSMBases](@ref PrecomputeMSMBases) function with the following values of template
+   * parameters (where the curve is given by `-DCURVE` env variable during build):
+   *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2PrecomputeMSMBases)(
+    curve_config::g2_affine_t* bases,
+    int bases_size,
+    int precompute_factor,
+    bool are_bases_on_device,
+    device_context::DeviceContext& ctx,
+    curve_config::g2_affine_t* output_bases)
+  {
+    return PrecomputeMSMBases<curve_config::g2_affine_t, curve_config::g2_projective_t>(
+      bases, bases_size, precompute_factor, are_bases_on_device, ctx, output_bases);
+  }
 
   /**
    * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
@@ -950,15 +967,6 @@ namespace msm {
   {
     return MSM<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(
       scalars, points, msm_size, config, out);
-  }
-
-  /**
-   * Extern "C" version of [DefaultMSMConfig](@ref DefaultMSMConfig) function for the G2 curve
-   * (functionally no different than the default MSM config function for G1).
-   */
-  extern "C" MSMConfig CONCAT_EXPAND(CURVE, G2DefaultMSMConfig)()
-  {
-    return DefaultMSMConfig<curve_config::g2_affine_t>();
   }
 
 #endif

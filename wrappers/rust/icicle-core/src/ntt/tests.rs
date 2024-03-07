@@ -1,20 +1,17 @@
 use ark_ff::{FftField, Field as ArkField, One};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::{ops::Neg, test_rng, UniformRand};
-use icicle_cuda_runtime::device::get_device_count;
-use icicle_cuda_runtime::device::set_device;
+use icicle_cuda_runtime::device::{get_device_count, set_device};
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, NTTDir, NttAlgorithm, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
-use super::NTTConfig;
-use super::NTT;
+use super::{NTTConfig, NTT};
 
 pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
 where
