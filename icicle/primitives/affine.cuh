@@ -2,12 +2,10 @@
 
 #include "field.cuh"
 
-template <class FF, class SCALAR_FF>
+template <class FF>
 class Affine
 {
 public:
-  static constexpr unsigned SCALAR_FF_NBITS = SCALAR_FF::NBITS;
-  static constexpr unsigned FF_NBITS = FF::NBITS;
 
   FF x;
   FF y;

@@ -880,7 +880,7 @@ namespace msm {
       are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
 
     unsigned c = 16;
-    unsigned total_nof_bms = (A::SCALAR_FF_NBITS - 1) / c + 1;
+    unsigned total_nof_bms = (P::SCALAR_FF_NBITS - 1) / c + 1;
     unsigned shift = c * ((total_nof_bms - 1) / precompute_factor + 1);
 
     unsigned NUM_THREADS = 1 << 8;

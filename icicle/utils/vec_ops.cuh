@@ -95,9 +95,6 @@ namespace vec_ops {
    */
   template <typename E>
   cudaError_t Sub(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
-
-  template <typename A>
-  cudaError_t ShiftLeft(A* points, int n, device_context::DeviceContext ctx, A* result);
 } // namespace vec_ops
 
 #endif

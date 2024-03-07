@@ -101,13 +101,6 @@ namespace vec_ops {
     return VecOp<E, SubKernel>(vec_a, vec_b, n, config, result);
   }
 
-  template <typename A>
-  cudaError_t ShiftLeft(A* points, int n, device_context::DeviceContext ctx, A* result)
-  {
-    // TO-DO
-    return CHK_LAST();
-  }
-
   /**
    * Extern version of [Mul](@ref Mul) function with the template parameters
    * `S` and `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
