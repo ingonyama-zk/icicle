@@ -47,6 +47,7 @@ func (d DeviceSlice) GetDeviceId() int {
 	return cr.GetDeviceFromPointer(d.inner)
 }
 
+// CheckDevice is used to ensure that the DeviceSlice about to be used resides on the currently set device
 func (d DeviceSlice) CheckDevice() {
 	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
 		panic("Attempt to use DeviceSlice on a different device")

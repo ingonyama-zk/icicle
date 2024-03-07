@@ -9,6 +9,7 @@ package cuda_runtime
 */
 import "C"
 import (
+	"fmt"
 	"runtime"
 	"unsafe"
 )
@@ -31,7 +32,7 @@ func (d DeviceContext) GetDeviceId() int {
 func GetDefaultDeviceContext() (DeviceContext, CudaError) {
 	device, err := GetDevice()
 	if err != CudaSuccess {
-		panic("Could not get current device")
+		panic(fmt.Sprintf("Could not get current device due to %v", err))
 	}
 	var defaultStream Stream
 	var defaultMempool MemPool
