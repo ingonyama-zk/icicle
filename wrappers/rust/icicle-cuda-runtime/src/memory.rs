@@ -1,5 +1,5 @@
 use crate::bindings::{
-    cudaFree, cudaFreeAsync, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
+    cudaFree, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
 };
 use crate::device::get_device;
 use crate::device_context::check_device;
@@ -116,18 +116,6 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
                 get_device().unwrap() as i32,
             ))
         }
-    }
-
-    pub fn cuda_free_async(&mut self, stream: &CudaStream) -> CudaResult<()> {
-        if let Self::Device(s, device_id) = self {
-            check_device(*device_id);
-            if !s.is_empty() {
-                unsafe {
-                    cudaFreeAsync(s.as_mut_ptr() as *mut c_void, stream.handle as *mut _ as *mut _).wrap()?;
-                }
-            }
-        }
-        Ok(())
     }
 
     pub fn copy_from_host(&mut self, val: &[T]) -> CudaResult<()> {
