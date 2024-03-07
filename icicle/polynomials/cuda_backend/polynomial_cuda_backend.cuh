@@ -118,6 +118,25 @@ namespace polynomials {
       return static_cast<I*>(m_storage);
     }
 
+    std::shared_ptr<PolyContext> clone() const override
+    {
+      // TODO Yuval: maybe better to clone to current device? In that case can use cudaMemcpyPeerAsync()?
+      auto cloned_context = std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_context);
+
+      CHK_STICKY(cudaMallocAsync(
+        &cloned_context->m_storage, this->get_nof_elements() * ElementSize, cloned_context->m_device_context.stream));
+      CHK_STICKY(cudaMemcpyAsync(
+        cloned_context->m_storage, this->m_storage, this->get_nof_elements() * ElementSize, cudaMemcpyDeviceToDevice,
+        cloned_context->m_device_context.stream));
+
+      cloned_context->m_nof_elements = this->m_nof_elements;
+      cloned_context->m_state = this->m_state;
+
+      CHK_STICKY(cudaStreamSynchronize(cloned_context->m_device_context.stream));
+
+      return cloned_context;
+    }
+
     std::pair<C*, uint64_t> get_coefficients() override
     {
       transform_to_coefficients();
@@ -142,7 +161,7 @@ namespace polynomials {
 
       if (nof_coefficients < this->m_nof_elements) {
         THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encounterd a bug");
+          IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encountered a bug");
       }
 
       const bool is_already_in_coeffs = this->m_state == State::Coefficients;
@@ -189,7 +208,7 @@ namespace polynomials {
 
       if (nof_evaluations < this->m_nof_elements) {
         THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encounterd a bug");
+          IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encountered a bug");
       }
 
       // TODO Yuval: evaluations->evaluations with different ordering can be implemented via inplace reorder more
@@ -287,7 +306,7 @@ namespace polynomials {
     typedef IPolynomialContext<C, D, I> PolyContext;
     typedef typename IPolynomialContext<C, D, I>::State State;
 
-    int64_t* d_degree = nullptr; // used to avoid alloc/relese everytime
+    int64_t* d_degree = nullptr; // used to avoid alloc/release every time
 
   public:
     const DeviceContext& m_device_context;
@@ -536,7 +555,7 @@ namespace polynomials {
     int64_t degree_internal(PolyContext& p, uint64_t len)
     {
       // TODO: parallelize kernel? Note that typically the largest coefficient is expected in the higher half since
-      // memory is allocate based on #coefficeints
+      // memory is allocate based on #coefficients
 
       auto [coeff, _] = p.get_coefficients();
 
