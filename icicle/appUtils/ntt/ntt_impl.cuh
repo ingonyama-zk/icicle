@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "appUtils/ntt/ntt.cuh" // for enum Ordering
 
-namespace ntt {
+namespace mxntt {
 
   template <typename S>
   cudaError_t generate_external_twiddles_generic(
@@ -37,7 +37,7 @@ namespace ntt {
     int batch_size,
     bool is_inverse,
     bool fast_tw,
-    Ordering ordering,
+    ntt::Ordering ordering,
     S* arbitrary_coset,
     int coset_gen_index,
     cudaStream_t cuda_stream);

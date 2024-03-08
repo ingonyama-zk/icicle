@@ -2,9 +2,9 @@
 #include "appUtils/ntt/thread_ntt.cu"
 #include "curves/curve_config.cuh"
 #include "utils/sharedmem.cuh"
-#include "appUtils/ntt/ntt.cuh" // for Ordering
+#include "appUtils/ntt/ntt.cuh" // for ntt::Ordering
 
-namespace ntt {
+namespace mxntt {
 
   static inline __device__ uint32_t dig_rev(uint32_t num, uint32_t log_size, bool dit, bool fast_tw)
   {
@@ -812,7 +812,7 @@ namespace ntt {
     int batch_size,
     bool is_inverse,
     bool fast_tw,
-    Ordering ordering,
+    ntt::Ordering ordering,
     S* arbitrary_coset,
     int coset_gen_index,
     cudaStream_t cuda_stream)
@@ -830,30 +830,30 @@ namespace ntt {
     eRevType reverse_input = None, reverse_output = None, reverse_coset = None;
     bool dit = false;
     switch (ordering) {
-    case Ordering::kNN:
+    case ntt::Ordering::kNN:
       reverse_input = eRevType::NaturalToMixedRev;
       dit = true;
       break;
-    case Ordering::kRN:
+    case ntt::Ordering::kRN:
       reverse_input = eRevType::RevToMixedRev;
       dit = true;
       reverse_coset = is_inverse ? eRevType::None : eRevType::NaturalToRev;
       break;
-    case Ordering::kNR:
+    case ntt::Ordering::kNR:
       reverse_output = eRevType::MixedRevToRev;
       reverse_coset = is_inverse ? eRevType::NaturalToRev : eRevType::None;
       break;
-    case Ordering::kRR:
+    case ntt::Ordering::kRR:
       reverse_input = eRevType::RevToMixedRev;
       dit = true;
       reverse_output = eRevType::NaturalToRev;
       reverse_coset = eRevType::NaturalToRev;
       break;
-    case Ordering::kMN:
+    case ntt::Ordering::kMN:
       dit = true;
       reverse_coset = is_inverse ? None : eRevType::NaturalToMixedRev;
       break;
-    case Ordering::kNM:
+    case ntt::Ordering::kNM:
       reverse_coset = is_inverse ? eRevType::NaturalToMixedRev : eRevType::None;
       break;
     }
@@ -926,7 +926,7 @@ namespace ntt {
     int batch_size,
     bool is_inverse,
     bool fast_tw,
-    Ordering ordering,
+    ntt::Ordering ordering,
     curve_config::scalar_t* arbitrary_coset,
     int coset_gen_index,
     cudaStream_t cuda_stream);
@@ -943,7 +943,7 @@ namespace ntt {
     int batch_size,
     bool is_inverse,
     bool fast_tw,
-    Ordering ordering,
+    ntt::Ordering ordering,
     curve_config::scalar_t* arbitrary_coset,
     int coset_gen_index,
     cudaStream_t cuda_stream);
