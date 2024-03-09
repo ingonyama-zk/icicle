@@ -21,7 +21,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /icicle-example
 
 # Copy the content of the local directory to the working directory
-COPY . .
+COPY ./../../../ .
 
 # Specify the default command for the container
 CMD ["/bin/bash"]
