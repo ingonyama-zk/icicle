@@ -19,37 +19,14 @@ typedef curve_config::scalar_t test_data;
 void random_samples(test_data* res, uint32_t count)
 {
   for (int i = 0; i < count; i++)
-    // res[i] = i==0 ? test_scalar::one() : test_scalar::zero();
     res[i] = i < 1000 ? test_data::rand_host() : res[i - 1000];
 }
 
 void incremental_values(test_scalar* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
-    // res[i] = i%64 ? res[i - 1] + test_scalar::one() : test_scalar::zero();
     res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
   }
-}
-
-__global__ void copy_batch(test_scalar* in, test_scalar* out, int row_size, int column_size){
-  int tid = blockDim.x * blockIdx.x + threadIdx.x;
-  if (tid >= row_size * column_size) return;
-  out[tid] = in[tid];
-}
-
-__global__ void copy_batch2(test_scalar* in, test_scalar* out, int row_size, int column_size){
-  int tid = blockDim.x * blockIdx.x + threadIdx.x;
-  if (tid >= row_size * column_size / 4) return;
-  for (int i = 0; i < 4; i++)
-  {
-    out[(i + 4 * (tid / row_size)) * row_size + (tid % row_size)] = in[(i + 4 * (tid / row_size)) * row_size + (tid % row_size)];
-  }
-}
-
-__global__ void copy_batch3(test_scalar* in, test_scalar* out, int row_size, int column_size){
-  int tid = blockDim.x * blockIdx.x + threadIdx.x;
-  if (tid >= row_size * column_size) return;
-  out[(tid / row_size) * row_size + (tid % row_size)] = in[(tid / row_size) * row_size + (tid % row_size)];
 }
 
 __global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size, int column_size){
@@ -58,22 +35,17 @@ __global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size,
   out[(tid % row_size) * column_size + (tid / row_size)] = in[tid];
 }
 
-__global__ void transpose_batch2(test_scalar* in, test_scalar* out, int row_size, int column_size){
-  int tid = blockDim.x * blockIdx.x + threadIdx.x;
-  if (tid >= row_size * column_size) return;
-  out[tid] = in[(tid % column_size) * row_size + (tid / column_size)];
-}
 
 int main(int argc, char** argv)
 {
-  cudaEvent_t icicle_start, icicle_stop, new_start, new_stop, trans_start, trans_middle, trans_stop;
-  float icicle_time, new_time, trans1_time, trans2_time;
+  cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
+  float icicle_time, new_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 16;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
-  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 159;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 150;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
   int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 2;
   const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNN;
@@ -105,9 +77,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&icicle_stop));
   CHK_IF_RETURN(cudaEventCreate(&new_start));
   CHK_IF_RETURN(cudaEventCreate(&new_stop));
-  CHK_IF_RETURN(cudaEventCreate(&trans_start));
-  CHK_IF_RETURN(cudaEventCreate(&trans_middle));
-  CHK_IF_RETURN(cudaEventCreate(&trans_stop));
+
 
   auto start = std::chrono::high_resolution_clock::now();
   const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
@@ -135,15 +105,6 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
-  CHK_IF_RETURN(cudaEventRecord(trans_start, ntt_config.ctx.stream));
-  transpose_batch2<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuScalars, GpuOutputNew, NTT_SIZE, BATCH_SIZE);
-  CHK_IF_RETURN(cudaEventRecord(trans_middle, ntt_config.ctx.stream));
-  transpose_batch2<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuOutputNew, GpuScalars, BATCH_SIZE, NTT_SIZE);
-  CHK_IF_RETURN(cudaEventRecord(trans_stop, ntt_config.ctx.stream));
-  CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
-  CHK_IF_RETURN(cudaEventElapsedTime(&trans1_time, trans_start, trans_middle));
-  CHK_IF_RETURN(cudaEventElapsedTime(&trans2_time, trans_middle, trans_stop));
-
   if (COLUMNS_BATCH) {
     transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuScalars, GpuScalarsTransposed, NTT_SIZE, BATCH_SIZE);
   }
@@ -170,7 +131,6 @@ int main(int argc, char** argv)
     CHK_IF_RETURN(cudaEventRecord(new_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaEventElapsedTime(&new_time, new_start, new_stop));
-    if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
 
     // OLD
     CHK_IF_RETURN(cudaEventRecord(icicle_start, ntt_config.ctx.stream));
@@ -182,11 +142,8 @@ int main(int argc, char** argv)
     CHK_IF_RETURN(cudaEventRecord(icicle_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
-    if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
 
     if (is_print) {
-      printf("Transpose1 Runtime=%0.3f MS\n", trans1_time);
-      printf("Transpose2 Runtime=%0.3f MS\n", trans2_time);
       printf("Old Runtime=%0.3f MS\n", icicle_time / iterations);
       printf("New Runtime=%0.3f MS\n", new_time / iterations);
     }
@@ -204,12 +161,8 @@ int main(int argc, char** argv)
 
   if (COLUMNS_BATCH) {
     transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuOutputNew, GpuScalarsTransposed, BATCH_SIZE, NTT_SIZE);
-    cudaDeviceSynchronize();
-    printf("trans err %d\n", cudaGetLastError());
     CHK_IF_RETURN(
       cudaMemcpy(GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
-    cudaDeviceSynchronize();
-    printf("copy err %d\n", cudaGetLastError());
   }
 
   // verify
@@ -217,8 +170,6 @@ int main(int argc, char** argv)
     cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
   CHK_IF_RETURN(
     cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
-   cudaDeviceSynchronize();
-    printf("copy err %d\n", cudaGetLastError());
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
