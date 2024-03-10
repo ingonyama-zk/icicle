@@ -1,0 +1,31 @@
+use crate::curve::CurveCfg;
+#[cfg(feature = "g2")]
+use crate::curve::G2CurveCfg;
+use icicle_core::{
+    curve::{Affine, Curve, Projective},
+    error::IcicleResult,
+    impl_msm,
+    msm::{MSMConfig, MSM},
+    traits::IcicleResultWrap,
+};
+use icicle_cuda_runtime::{error::CudaError, memory::HostOrDeviceSlice};
+
+impl_msm!("<CURVE>", <CURVE>, CurveCfg);
+#[cfg(feature = "g2")]
+impl_msm!("<CURVE>G2", <CURVE>_g2, G2CurveCfg);
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use crate::curve::CurveCfg;
+    #[cfg(feature = "g2")]
+    use crate::curve::G2CurveCfg;
+    use icicle_core::impl_msm_tests;
+    use icicle_core::msm::tests::*;
+
+    impl_msm_tests!(CurveCfg);
+    #[cfg(feature = "g2")]
+    mod g2 {
+        use super::*;
+        impl_msm_tests!(G2CurveCfg);
+    }
+}

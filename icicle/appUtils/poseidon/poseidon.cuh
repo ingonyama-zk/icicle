@@ -20,7 +20,7 @@ namespace poseidon {
 
   /**
    * For most of the Poseidon configurations this is the case
-   * To-do: Add support for different full rounds numbers
+   * TODO: Add support for different full rounds numbers
    */
   const int FULL_ROUNDS_DEFAULT = 4;
 

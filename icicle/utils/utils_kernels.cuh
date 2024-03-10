@@ -2,17 +2,7 @@
 #ifndef UTILS_KERNELS_H
 #define UTILS_KERNELS_H
 
-#include "utils_kernels.cuh"
-
 namespace utils_internal {
-  // TODO: weird linking issue - only works in headers
-  // template <typename E, typename S>
-  // __global__ void NormalizeKernel(E* arr, S scalar, unsigned n)
-  // {
-  //   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  //   if (tid < n) { arr[tid] = scalar * arr[tid]; }
-  // }
-
   template <typename E, typename S>
   __global__ void NormalizeKernel(E* arr, S scalar, int n)
   {

@@ -6,7 +6,7 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	core "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 	"unsafe"
 )
@@ -85,12 +85,7 @@ func (f ScalarField) ToBytesLittleEndian() []byte {
 }
 
 func GenerateScalars(size int) core.HostSlice[ScalarField] {
-	scalars := make([]ScalarField, size)
-	for i := range scalars {
-		scalars[i] = ScalarField{}
-	}
-
-	scalarSlice := core.HostSliceFromElements[ScalarField](scalars)
+	scalarSlice := make(core.HostSlice[ScalarField], size)
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)

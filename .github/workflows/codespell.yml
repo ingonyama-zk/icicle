@@ -11,10 +11,10 @@ jobs:
     name: Check Spelling
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: codespell-project/actions-codespell@v2
         with:
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
-          skip: ./**/target,./**/build
+          skip: ./**/target,./**/build,./docs/*.js,./docs/*.json
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-ignore_words_file
           ignore_words_file: .codespellignore

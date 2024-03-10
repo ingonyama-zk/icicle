@@ -1,4 +1,3 @@
-// TODO: remove this file, seems working without it
 // based on https://leimao.github.io/blog/CUDA-Shared-Memory-Templated-Kernel/
 // may be outdated, but only worked like that
 
@@ -59,7 +58,7 @@
 #ifndef _SHAREDMEM_H_
 #define _SHAREDMEM_H_
 
-#include "../curves/curve_config.cuh"
+#include "curves/curve_config.cuh"
 
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
  *

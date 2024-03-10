@@ -47,14 +47,18 @@ impl<'a, T> HostOrDeviceSlice<'a, T> {
 
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         match self {
-            Self::Device(_, _) => panic!("Use copy_to_host and copy_to_host_async to move device data to a slice"),
+            Self::Device(_, _) => {
+                panic!("Use copy_to_host and copy_to_host_async to move device data to a slice")
+            }
             Self::Host(v) => v.as_mut_slice(),
         }
     }
 
     pub fn as_slice(&self) -> &[T] {
         match self {
-            Self::Device(_, _) => panic!("Use copy_to_host and copy_to_host_async to move device data to a slice"),
+            Self::Device(_, _) => {
+                panic!("Use copy_to_host and copy_to_host_async to move device data to a slice")
+            }
             Self::Host(v) => v.as_slice(),
         }
     }

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core/internal"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +14,7 @@ func TestNTTDefaultConfig(t *testing.T) {
 	cosetGenField.One()
 	var cosetGen [1]uint32
 	copy(cosetGen[:], cosetGenField.GetLimbs())
-	ctx, _ := cuda_runtime.GetDefaultDeviceContext()
+	ctx, _ := cr.GetDefaultDeviceContext()
 	expected := NTTConfig[[1]uint32]{
 		ctx,      // Ctx
 		cosetGen, // CosetGen
