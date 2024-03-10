@@ -516,7 +516,7 @@ namespace ntt {
   static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
     const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
-    if (!is_mixed_radix_alg_supported && config.columns_batch) 
+    if (!is_mixed_radix_alg_supported && config.columns_batch)
       throw IcicleError(IcicleError_t::InvalidArgument, "columns batch is not supported for given NTT size");
     const bool is_user_selected_radix2_alg = config.ntt_algorithm == NttAlgorithm::Radix2;
     const bool is_force_radix2 = !is_mixed_radix_alg_supported || is_user_selected_radix2_alg;
@@ -524,7 +524,7 @@ namespace ntt {
 
     const bool is_user_selected_mixed_radix_alg = config.ntt_algorithm == NttAlgorithm::MixedRadix;
     if (is_user_selected_mixed_radix_alg) return false;
-    if (config.columns_batch) return false; //radix2 does not currently support columns batch mode.
+    if (config.columns_batch) return false; // radix2 does not currently support columns batch mode.
 
     // Heuristic to automatically select an algorithm
     // Note that generally the decision depends on {logn, batch, ordering, inverse, coset, in-place, coeff-field} and
@@ -665,8 +665,8 @@ namespace ntt {
                             : domain.basic_twiddles;
 
       CHK_IF_RETURN(ntt::mixed_radix_ntt(
-        d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size, config.columns_batch,
-        is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
+        d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
+        config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
     }
 
     if (!are_outputs_on_device)

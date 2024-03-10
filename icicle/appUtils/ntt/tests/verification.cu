@@ -29,12 +29,12 @@ void incremental_values(test_scalar* res, uint32_t count)
   }
 }
 
-__global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size, int column_size){
+__global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size, int column_size)
+{
   int tid = blockDim.x * blockIdx.x + threadIdx.x;
   if (tid >= row_size * column_size) return;
   out[(tid % row_size) * column_size + (tid / row_size)] = in[tid];
 }
-
 
 int main(int argc, char** argv)
 {
@@ -60,8 +60,8 @@ int main(int argc, char** argv)
                                                               : "MN";
 
   printf(
-    "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, columns_batch=%d coset-idx=%d, ordering=%s, fast_tw=%d\n", NTT_LOG_SIZE,
-    INPLACE, INV, BATCH_SIZE, COLUMNS_BATCH, COSET_IDX, ordering_str, FAST_TW);
+    "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, columns_batch=%d coset-idx=%d, ordering=%s, fast_tw=%d\n",
+    NTT_LOG_SIZE, INPLACE, INV, BATCH_SIZE, COLUMNS_BATCH, COSET_IDX, ordering_str, FAST_TW);
 
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
@@ -78,7 +78,6 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&new_start));
   CHK_IF_RETURN(cudaEventCreate(&new_stop));
 
-
   auto start = std::chrono::high_resolution_clock::now();
   const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
   ntt::InitDomain(basic_root, ntt_config.ctx, FAST_TW);
@@ -93,7 +92,7 @@ int main(int argc, char** argv)
 
   // gpu allocation
   test_data *GpuScalars, *GpuOutputOld, *GpuOutputNew;
-  test_data *GpuScalarsTransposed;
+  test_data* GpuScalarsTransposed;
   CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
   CHK_IF_RETURN(cudaMalloc(&GpuScalarsTransposed, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
   CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
@@ -106,13 +105,15 @@ int main(int argc, char** argv)
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
   if (COLUMNS_BATCH) {
-    transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuScalars, GpuScalarsTransposed, NTT_SIZE, BATCH_SIZE);
+    transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
+      GpuScalars, GpuScalarsTransposed, NTT_SIZE, BATCH_SIZE);
   }
 
   // inplace
   if (INPLACE) {
-    CHK_IF_RETURN(
-      cudaMemcpy(GpuOutputNew, COLUMNS_BATCH? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+    CHK_IF_RETURN(cudaMemcpy(
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
+      cudaMemcpyDeviceToDevice));
   }
 
   for (int coset_idx = 0; coset_idx < COSET_IDX; ++coset_idx) {
@@ -125,8 +126,10 @@ int main(int argc, char** argv)
     ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
     for (size_t i = 0; i < iterations; i++) {
       CHK_IF_RETURN(ntt::NTT(
-        INPLACE? GpuOutputNew : COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
-        GpuOutputNew));
+        INPLACE         ? GpuOutputNew
+        : COLUMNS_BATCH ? GpuScalarsTransposed
+                        : GpuScalars,
+        NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputNew));
     }
     CHK_IF_RETURN(cudaEventRecord(new_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
@@ -154,15 +157,17 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(benchmark(false /*=print*/, 1)); // warmup
   int count = INPLACE ? 1 : 10;
   if (INPLACE) {
-    CHK_IF_RETURN(
-      cudaMemcpy(GpuOutputNew, COLUMNS_BATCH? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+    CHK_IF_RETURN(cudaMemcpy(
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
+      cudaMemcpyDeviceToDevice));
   }
   CHK_IF_RETURN(benchmark(true /*=print*/, count));
 
   if (COLUMNS_BATCH) {
-    transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1)/256,256>>>(GpuOutputNew, GpuScalarsTransposed, BATCH_SIZE, NTT_SIZE);
-    CHK_IF_RETURN(
-      cudaMemcpy(GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+    transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
+      GpuOutputNew, GpuScalarsTransposed, BATCH_SIZE, NTT_SIZE);
+    CHK_IF_RETURN(cudaMemcpy(
+      GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
   }
 
   // verify
