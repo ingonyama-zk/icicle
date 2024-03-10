@@ -1,7 +1,7 @@
 use crate::curve::{Affine, Curve, Projective};
 use crate::msm::{msm, precompute_bases, MSMConfig, MSM};
 use crate::traits::{FieldImpl, GenerateRandom};
-use icicle_cuda_runtime::device::{get_device_count, set_device};
+use icicle_cuda_runtime::device::{get_device_count, set_device, warmup};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use icicle_cuda_runtime::stream::CudaStream;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -114,6 +114,7 @@ where
     cfg.is_async = true;
     cfg.large_bucket_factor = 5;
     cfg.c = 4;
+    warmup(&stream).unwrap();
     for test_size in test_sizes {
         let precompute_factor = 8;
         let points = generate_random_affine_points_with_zeroes(test_size, 10);
