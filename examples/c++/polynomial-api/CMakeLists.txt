@@ -20,6 +20,9 @@ add_executable(
   example.cu
 )
 find_library(NVML_LIBRARY nvidia-ml PATHS /usr/local/cuda/targets/x86_64-linux/lib/stubs/ )
-target_link_libraries(example ${NVML_LIBRARY})
+find_library(ICICLE_LIBRARY ingo_bn254 PATHS ../../../icicle/build/ )
+
+
+target_link_libraries(example ${NVML_LIBRARY} ${ICICLE_LIBRARY})
 set_target_properties(example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
