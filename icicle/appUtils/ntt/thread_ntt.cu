@@ -212,7 +212,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadGlobalDataBatched(
+  __device__ __forceinline__ void loadGlobalDataColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -240,7 +240,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void storeGlobalDataBatched(
+  __device__ __forceinline__ void storeGlobalDataColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -271,7 +271,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadGlobalData32Batched(
+  __device__ __forceinline__ void loadGlobalData32ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
       data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -305,7 +305,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void storeGlobalData32Batched(
+  __device__ __forceinline__ void storeGlobalData32ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -339,7 +339,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadGlobalData16Batched(
+  __device__ __forceinline__ void loadGlobalData16ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
       data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -373,7 +373,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void storeGlobalData16Batched(
+  __device__ __forceinline__ void storeGlobalData16ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
       data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +

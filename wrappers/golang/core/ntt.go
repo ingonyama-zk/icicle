@@ -31,6 +31,8 @@ type NTTConfig[T any] struct {
 	CosetGen T
 	/// The number of NTTs to compute. Default value: 1.
 	BatchSize int32
+	/// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
+	ColumnsBatch bool
 	/// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
 	Ordering           Ordering
 	areInputsOnDevice  bool
@@ -46,6 +48,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
 		ctx,      // Ctx
 		cosetGen, // CosetGen
 		1,        // BatchSize
+		false,    // ColumnsBatch
 		KNN,      // Ordering
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice

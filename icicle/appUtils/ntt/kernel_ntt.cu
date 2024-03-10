@@ -171,7 +171,7 @@ template <typename E, typename S>
       engine.loadBasicTwiddles(basic_twiddles);
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
-    if (columns_batch_size) engine.loadGlobalDataBatched(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     if (twiddle_stride && dit) {
@@ -206,7 +206,7 @@ template <typename E, typename S>
           external_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    if (columns_batch_size) engine.storeGlobalDataBatched(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.storeGlobalDataColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
   }
 
@@ -249,7 +249,7 @@ template <typename E, typename S>
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
 
-    if (columns_batch_size) engine.loadGlobalDataBatched(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     if (fast_tw)
@@ -270,7 +270,7 @@ template <typename E, typename S>
           external_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    if (columns_batch_size) engine.storeGlobalData32Batched(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.storeGlobalData32ColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.storeGlobalData32(out, data_stride, log_data_stride, strided, s_meta);
   }
 
@@ -313,7 +313,7 @@ template <typename E, typename S>
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
 
-    if (columns_batch_size) engine.loadGlobalData32Batched(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.loadGlobalData32ColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.loadGlobalData32(in, data_stride, log_data_stride, strided, s_meta);
     if (twiddle_stride) {
       if (fast_tw)
@@ -333,7 +333,7 @@ template <typename E, typename S>
     engine.SharedData32Rows8(shmem, false, false, strided); // load
     engine.twiddlesInternal();
     engine.ntt8win();
-    if (columns_batch_size) engine.storeGlobalDataBatched(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.storeGlobalDataColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
   }
 
@@ -376,7 +376,7 @@ template <typename E, typename S>
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
 
-    if (columns_batch_size) engine.loadGlobalDataBatched(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     if (fast_tw)
@@ -397,7 +397,7 @@ template <typename E, typename S>
           external_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
       engine.twiddlesExternal();
     }
-    if (columns_batch_size) engine.storeGlobalData16Batched(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.storeGlobalData16ColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.storeGlobalData16(out, data_stride, log_data_stride, strided, s_meta);
   }
 
@@ -440,7 +440,7 @@ template <typename E, typename S>
     else
       engine.loadBasicTwiddlesGeneric(basic_twiddles, inv);
 
-    if (columns_batch_size) engine.loadGlobalData16Batched(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.loadGlobalData16ColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.loadGlobalData16(in, data_stride, log_data_stride, strided, s_meta);
 
     if (twiddle_stride) {
@@ -461,7 +461,7 @@ template <typename E, typename S>
     engine.SharedData16Rows8(shmem, false, false, strided); // load
     engine.twiddlesInternal();
     engine.ntt8win();
-    if (columns_batch_size) engine.storeGlobalDataBatched(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+    if (columns_batch_size) engine.storeGlobalDataColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
     else engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
   }
 

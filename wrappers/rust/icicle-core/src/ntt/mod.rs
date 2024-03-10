@@ -77,7 +77,7 @@ pub struct NTTConfig<'a, S> {
     pub coset_gen: S,
     /// The number of NTTs to compute. Default value: 1.
     pub batch_size: i32,
-    /// True if the NTTs are stored as the columns of a matrix and not as the rows.
+    /// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
     pub columns_batch: bool,
     /// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
     pub ordering: Ordering,
