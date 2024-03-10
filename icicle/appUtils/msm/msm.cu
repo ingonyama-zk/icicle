@@ -17,7 +17,6 @@
 #include "utils/error_handler.cuh"
 #include "utils/mont.cuh"
 #include "utils/utils.h"
-#include "utils/vec_ops.cuh"
 
 namespace msm {
 
@@ -435,6 +434,7 @@ namespace msm {
         bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, total_bms_per_msm,
         bm_bitsize, c, nof_bms_per_msm);
 
+      // ------------------------------ Sorting routines for scalars start here ----------------------------------
       // sort indices - the indices are sorted from smallest to largest in order to group together the points that
       // belong to each bucket
       unsigned* sort_indices_temp_storage{};
@@ -494,6 +494,7 @@ namespace msm {
         offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, total_nof_buckets + 1, stream));
       CHK_IF_RETURN(cudaFreeAsync(offsets_temp_storage, stream));
 
+      // ----------- Starting to upload points (if they were on host) in parallel to scalar sorting ----------------
       A* d_points;
       cudaStream_t stream_points;
       if (!are_points_on_device || are_points_montgomery_form) CHK_IF_RETURN(cudaStreamCreate(&stream_points));
@@ -608,7 +609,7 @@ namespace msm {
 
       cudaStream_t stream_large_buckets;
       cudaEvent_t event_large_buckets_accumulated;
-      // this is where handling of large buckets happens (if there are any)
+      // ---------------- This is where handling of large buckets happens (if there are any) -------------
       if (h_nof_large_buckets > 0 && bucket_th > 0) {
         CHK_IF_RETURN(cudaStreamCreate(&stream_large_buckets));
         CHK_IF_RETURN(cudaEventCreateWithFlags(&event_large_buckets_accumulated, cudaEventDisableTiming));
@@ -690,10 +691,11 @@ namespace msm {
         CHK_IF_RETURN(cudaEventRecord(event_large_buckets_accumulated, stream_large_buckets));
       }
 
-      // launch the accumulation kernel with maximum threads
+      // ------------------------- Accumulation of (non-large) buckets ---------------------------------
       if (h_nof_buckets_to_compute > h_nof_large_buckets) {
         NUM_THREADS = 1 << 8;
         NUM_BLOCKS = (h_nof_buckets_to_compute - h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
+        // launch the accumulation kernel with maximum threads
         accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
           buckets, sorted_bucket_offsets + h_nof_large_buckets, sorted_bucket_sizes + h_nof_large_buckets,
           sorted_single_bucket_indices + h_nof_large_buckets, sorted_point_indices, d_points,
@@ -712,6 +714,7 @@ namespace msm {
       P* d_final_result;
       if (!are_results_on_device) CHK_IF_RETURN(cudaMallocAsync(&d_final_result, sizeof(P) * batch_size, stream));
 
+      // --- Reduction of buckets happens here, after this we'll get a single sum for each bucket module/window ---
       unsigned nof_empty_bms_per_batch = 0; // for non-triangle accumluation this may be >0
       P* final_results;
       if (is_big_triangle || c == 1) {
@@ -793,9 +796,10 @@ namespace msm {
         }
       }
 
-      // launch the double and add kernel, a single thread per batch element
+      // ------- This is the final stage where bucket modules/window sums get added up with appropriate weights -------
       NUM_THREADS = 32;
       NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
+      // launch the double and add kernel, a single thread per batch element
       final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
         final_results, are_results_on_device ? final_result : d_final_result, batch_size, nof_bms_per_msm,
         nof_empty_bms_per_batch, c);
@@ -867,6 +871,7 @@ namespace msm {
     A* bases,
     int bases_size,
     int precompute_factor,
+    int _c,
     bool are_bases_on_device,
     device_context::DeviceContext& ctx,
     A* output_bases)
@@ -903,12 +908,13 @@ namespace msm {
     curve_config::affine_t* bases,
     int bases_size,
     int precompute_factor,
+    int _c,
     bool are_bases_on_device,
     device_context::DeviceContext& ctx,
     curve_config::affine_t* output_bases)
   {
     return PrecomputeMSMBases<curve_config::affine_t, curve_config::projective_t>(
-      bases, bases_size, precompute_factor, are_bases_on_device, ctx, output_bases);
+      bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
   }
 
   /**
@@ -942,12 +948,13 @@ namespace msm {
     curve_config::g2_affine_t* bases,
     int bases_size,
     int precompute_factor,
+    int _c,
     bool are_bases_on_device,
     device_context::DeviceContext& ctx,
     curve_config::g2_affine_t* output_bases)
   {
     return PrecomputeMSMBases<curve_config::g2_affine_t, curve_config::g2_projective_t>(
-      bases, bases_size, precompute_factor, are_bases_on_device, ctx, output_bases);
+      bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
   }
 
   /**

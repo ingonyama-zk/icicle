@@ -120,7 +120,14 @@ where
         let points = generate_random_affine_points_with_zeroes(test_size, 10);
         let points_h = HostOrDeviceSlice::on_host(points.clone());
         let mut precomputed_points_d = HostOrDeviceSlice::cuda_malloc(precompute_factor * test_size).unwrap();
-        precompute_bases(&points_h, precompute_factor as i32, &cfg.ctx, &mut precomputed_points_d).unwrap();
+        precompute_bases(
+            &points_h,
+            precompute_factor as i32,
+            0,
+            &cfg.ctx,
+            &mut precomputed_points_d,
+        )
+        .unwrap();
         for batch_size in batch_sizes {
             let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
             // a version of batched msm without using `cfg.points_size`, requires copying bases

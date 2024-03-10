@@ -16,14 +16,16 @@ pub struct MSMConfig<'a> {
 
     points_size: i32,
 
-    /// The number of extra points to pre-compute for each point. Larger values decrease the number of computations
+    /// The number of extra points to pre-compute for each point. See the `precompute_bases` function, `precompute_factor` passed
+    /// there needs to be equal to the one used here. Larger values decrease the number of computations
     /// to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute).
     pub precompute_factor: i32,
 
     /// `c` value, or "window bitsize" which is the main parameter of the "bucket method"
     /// that we use to solve the MSM problem. As a rule of thumb, larger value means more on-line memory
     /// footprint but also more parallelism and less computational complexity (up to a certain point).
-    /// Default value: 0 (the optimal value of `c` is chosen automatically).
+    /// Currently pre-computation is independent of `c`, however in the future value of `c` here and the one passed into the
+    /// `precompute_bases` function will need to be identical. Default value: 0 (the optimal value of `c` is chosen automatically).
     pub c: i32,
 
     /// Number of bits of the largest scalar. Typically equals the bitsize of scalar field, but if a different
@@ -98,6 +100,7 @@ pub trait MSM<C: Curve> {
     fn precompute_bases_unchecked(
         points: &HostOrDeviceSlice<Affine<C>>,
         precompute_factor: i32,
+        _c: i32,
         ctx: &DeviceContext,
         output_bases: &mut HostOrDeviceSlice<Affine<C>>,
     ) -> IcicleResult<()>;
@@ -117,7 +120,7 @@ pub trait MSM<C: Curve> {
 ///
 /// * `results` - buffer to write results into. Its length is equal to the batch size i.e. number of MSMs to compute.
 ///
-/// Returns `()` if no errors occurred or a `CudaError` otherwise.
+/// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
 pub fn msm<C: Curve + MSM<C>>(
     scalars: &HostOrDeviceSlice<C::ScalarField>,
     points: &HostOrDeviceSlice<Affine<C>>,
@@ -164,16 +167,21 @@ pub fn msm<C: Curve + MSM<C>>(
 ///
 /// * `bases` - Bases \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
 ///
-/// * `precompute_factor` - The number of total shifted sets of bases (including the original one).
+/// * `precompute_factor` - The number of total precomputed points for each base (including the base itself).
+///
+/// * `_c` - This is currently unused, but in the future precomputation will need to be aware of
+/// the `c` value used in MSM (see MSMConfig). So to avoid breaking your code with this
+/// upcoming change, make sure to use the same value of `c` in this function and in respective `MSMConfig`.
 ///
 /// * `ctx` - Device context specifying device id and stream to use.
 ///
-/// * `output_bases` - Device-allocated buffer of size bases_size * precompute_factor for the extended bases.
+/// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
 ///
-/// Returns `()` if no errors occurred or a `CudaError` otherwise.
+/// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &HostOrDeviceSlice<Affine<C>>,
     precompute_factor: i32,
+    _c: i32,
     ctx: &DeviceContext,
     output_bases: &mut HostOrDeviceSlice<Affine<C>>,
 ) -> IcicleResult<()> {
@@ -186,7 +194,7 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
     );
     assert!(output_bases.is_on_device());
 
-    C::precompute_bases_unchecked(points, precompute_factor, ctx, output_bases)
+    C::precompute_bases_unchecked(points, precompute_factor, _c, ctx, output_bases)
 }
 
 #[macro_export]
@@ -214,6 +222,7 @@ macro_rules! impl_msm {
                     points: *const Affine<$curve>,
                     bases_size: i32,
                     precompute_factor: i32,
+                    _c: i32,
                     are_bases_on_device: bool,
                     ctx: &DeviceContext,
                     output_bases: *mut Affine<$curve>,
@@ -243,6 +252,7 @@ macro_rules! impl_msm {
             fn precompute_bases_unchecked(
                 points: &HostOrDeviceSlice<Affine<$curve>>,
                 precompute_factor: i32,
+                _c: i32,
                 ctx: &DeviceContext,
                 output_bases: &mut HostOrDeviceSlice<Affine<$curve>>,
             ) -> IcicleResult<()> {
@@ -251,6 +261,7 @@ macro_rules! impl_msm {
                         points.as_ptr(),
                         points.len() as i32,
                         precompute_factor,
+                        _c,
                         points.is_on_device(),
                         ctx,
                         output_bases.as_mut_ptr(),
