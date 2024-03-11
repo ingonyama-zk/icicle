@@ -2,8 +2,8 @@ package core
 
 import (
 	"fmt"
-
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 type NTTDir int8
@@ -53,7 +53,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
 	}
 }
 
-func NttCheck[T any](input HostOrDeviceSlice, cfg *NTTConfig[T], output HostOrDeviceSlice) {
+func NttCheck[T any, A HostSliceInterface](input HostOrDeviceSlice, cfg *NTTConfig[T], output HostOrDeviceSlice) (unsafe.Pointer, unsafe.Pointer, int, unsafe.Pointer) {
 	inputLen, outputLen := input.Len(), output.Len()
 	if inputLen != outputLen {
 		errorString := fmt.Sprintf(
@@ -65,4 +65,23 @@ func NttCheck[T any](input HostOrDeviceSlice, cfg *NTTConfig[T], output HostOrDe
 	}
 	cfg.areInputsOnDevice = input.IsOnDevice()
 	cfg.areOutputsOnDevice = output.IsOnDevice()
+
+	var inputPointer unsafe.Pointer
+	if input.IsOnDevice() {
+		inputPointer = input.(DeviceSlice).AsPointer()
+	} else {
+		inputPointer = unsafe.Pointer(&input.(HostSlice[A])[0])
+	}
+
+	var outputPointer unsafe.Pointer
+	if output.IsOnDevice() {
+		outputPointer = output.(DeviceSlice).AsPointer()
+	} else {
+		outputPointer = unsafe.Pointer(&output.(HostSlice[A])[0])
+	}
+
+	size := input.Len() / int(cfg.BatchSize)
+	cfgPointer := unsafe.Pointer(cfg)
+
+	return inputPointer, outputPointer, size, cfgPointer
 }
