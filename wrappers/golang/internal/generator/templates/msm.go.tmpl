@@ -11,7 +11,6 @@ import "C"
 import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"unsafe"
 )
 
 func {{if .IsG2}}G2{{end}}GetDefaultMSMConfig() core.MSMConfig {
@@ -19,33 +18,12 @@ func {{if .IsG2}}G2{{end}}GetDefaultMSMConfig() core.MSMConfig {
 }
 
 func {{if .IsG2}}G2{{end}}Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
-	core.MsmCheck(scalars, points, cfg, results)
-	var scalarsPointer unsafe.Pointer
-	if scalars.IsOnDevice() {
-		scalarsPointer = scalars.(core.DeviceSlice).AsPointer()
-	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
-	}
-	cScalars := (*C.scalar_t)(scalarsPointer)
-
-	var pointsPointer unsafe.Pointer
-	if points.IsOnDevice() {
-		pointsPointer = points.(core.DeviceSlice).AsPointer()
-	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[{{if .IsG2}}G2{{end}}Affine])[0])
-	}
-	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(pointsPointer)
-
-	var resultsPointer unsafe.Pointer
-	if results.IsOnDevice() {
-		resultsPointer = results.(core.DeviceSlice).AsPointer()
-	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[{{if .IsG2}}G2{{end}}Projective])[0])
-	}
-	cResults := (*C.{{if .IsG2}}g2_{{end}}projective_t)(resultsPointer)
-
-	cSize := (C.int)(scalars.Len() / results.Len())
-	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
+	scalarsP, pointsP, cfgP, size, resultsP := core.MsmCheck[ScalarField, {{if .IsG2}}G2{{end}}Affine, {{if .IsG2}}G2{{end}}Projective](scalars, points, cfg, results)
+	cScalars := (*C.scalar_t)(scalarsP)
+	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(pointsP)
+	cCfg := (*C.MSMConfig)(cfgP)
+	cSize := (C.int)(size)
+	cResults := (*C.{{if .IsG2}}g2_{{end}}projective_t)(resultsP)
 
 	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
 	err := (cr.CudaError)(__ret)

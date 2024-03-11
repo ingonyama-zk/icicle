@@ -2,7 +2,7 @@ package core
 
 import (
 	"fmt"
-
+	"unsafe"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
@@ -49,7 +49,7 @@ func DefaultVecOpsConfig() VecOpsConfig {
 	return config
 }
 
-func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) {
+func VecOpCheck[S HostSliceInterface](a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {
 	aLen, bLen, outLen := a.Len(), b.Len(), out.Len()
 	if aLen != bLen {
 		errorString := fmt.Sprintf(
@@ -71,4 +71,28 @@ func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) {
 	cfg.isAOnDevice = a.IsOnDevice()
 	cfg.isBOnDevice = b.IsOnDevice()
 	cfg.isResultOnDevice = out.IsOnDevice()
+	
+	var aPointer, bPointer, outPointer unsafe.Pointer
+	if a.IsOnDevice() {
+		aPointer = a.(DeviceSlice).AsPointer()
+	} else {
+		aPointer = unsafe.Pointer(&a.(HostSlice[S])[0])
+	}
+
+	if b.IsOnDevice() {
+		bPointer = b.(DeviceSlice).AsPointer()
+	} else {
+		bPointer = unsafe.Pointer(&b.(HostSlice[S])[0])
+	}
+
+	if out.IsOnDevice() {
+		outPointer = out.(DeviceSlice).AsPointer()
+	} else {
+		outPointer = unsafe.Pointer(&out.(HostSlice[S])[0])
+	}
+
+	cfgPointer := unsafe.Pointer(cfg)
+	size := a.Len()
+
+	return aPointer, bPointer, outPointer, cfgPointer, size
 }

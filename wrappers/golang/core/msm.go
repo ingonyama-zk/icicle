@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"unsafe"
 
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
@@ -75,7 +76,12 @@ func GetDefaultMSMConfig() MSMConfig {
 	}
 }
 
-func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) {
+func MsmCheck[S HostSliceInterface, P HostSliceInterface, R HostSliceInterface](
+	scalars HostOrDeviceSlice,
+	points HostOrDeviceSlice,
+	cfg *MSMConfig,
+	results HostOrDeviceSlice,
+) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int, unsafe.Pointer) {
 	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len(), results.Len()
 	if scalarsLength%pointsLength != 0 {
 		errorString := fmt.Sprintf(
@@ -98,4 +104,30 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	cfg.areScalarsOnDevice = scalars.IsOnDevice()
 	cfg.arePointsOnDevice = points.IsOnDevice()
 	cfg.areResultsOnDevice = results.IsOnDevice()
+
+	var scalarsPointer unsafe.Pointer
+	if scalars.IsOnDevice() {
+		scalarsPointer = scalars.(DeviceSlice).AsPointer()
+	} else {
+		scalarsPointer = unsafe.Pointer(&scalars.(HostSlice[S])[0])
+	}
+
+	var pointsPointer unsafe.Pointer
+	if points.IsOnDevice() {
+		pointsPointer = points.(DeviceSlice).AsPointer()
+	} else {
+		pointsPointer = unsafe.Pointer(&points.(HostSlice[P])[0])
+	}
+
+	var resultsPointer unsafe.Pointer
+	if results.IsOnDevice() {
+		resultsPointer = results.(DeviceSlice).AsPointer()
+	} else {
+		resultsPointer = unsafe.Pointer(&results.(HostSlice[R])[0])
+	}
+
+	size := scalars.Len() / results.Len()
+	cfgP := unsafe.Pointer(cfg)
+
+	return scalarsPointer, pointsPointer, cfgP, size, resultsPointer
 }

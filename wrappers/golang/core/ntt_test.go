@@ -35,7 +35,7 @@ func TestNTTCheckHostScalars(t *testing.T) {
 
 	var cosetGen internal.MockField
 	cosetGen.FromLimbs(randLimbs)
-	cfg := GetDefaultNTTConfig(&cosetGen)
+	cfg := GetDefaultNTTConfig(cosetGen)
 
 	rawInput := make([]internal.MockField, 10)
 	var emptyField internal.MockField
@@ -47,7 +47,7 @@ func TestNTTCheckHostScalars(t *testing.T) {
 
 	input := HostSliceFromElements[internal.MockField](rawInput)
 	output := HostSliceFromElements[internal.MockField](rawInput)
-	assert.NotPanics(t, func() { NttCheck(input, &cfg, output) })
+	assert.NotPanics(t, func() { NttCheck[internal.MockField, internal.MockField](input, &cfg, output) })
 	assert.False(t, cfg.areInputsOnDevice)
 	assert.False(t, cfg.areOutputsOnDevice)
 
@@ -56,7 +56,7 @@ func TestNTTCheckHostScalars(t *testing.T) {
 		rawInputLarger[i] = emptyField
 	}
 	output2 := HostSliceFromElements[internal.MockField](rawInputLarger)
-	assert.Panics(t, func() { NttCheck(input, &cfg, output2) })
+	assert.Panics(t, func() { NttCheck[internal.MockField, internal.MockField](input, &cfg, output2) })
 }
 
 func TestNTTCheckDeviceScalars(t *testing.T) {
@@ -84,13 +84,13 @@ func TestNTTCheckDeviceScalars(t *testing.T) {
 	var output DeviceSlice
 	output.Malloc(numFields*fieldBytesSize, fieldBytesSize)
 
-	assert.NotPanics(t, func() { NttCheck(input, &cfg, output) })
+	assert.NotPanics(t, func() { NttCheck[internal.MockField, internal.MockField](input, &cfg, output) })
 	assert.True(t, cfg.areInputsOnDevice)
 	assert.True(t, cfg.areOutputsOnDevice)
 
 	var output2 DeviceSlice
 	output2.Malloc((numFields+1)*fieldBytesSize, fieldBytesSize)
-	assert.Panics(t, func() { NttCheck(input, &cfg, output2) })
+	assert.Panics(t, func() { NttCheck[internal.MockField, internal.MockField](input, &cfg, output2) })
 }
 
 // TODO add check for batches and batchSize
