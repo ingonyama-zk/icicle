@@ -99,3 +99,19 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	cfg.arePointsOnDevice = points.IsOnDevice()
 	cfg.areResultsOnDevice = results.IsOnDevice()
 }
+
+func PrecomputeBasesCheck(points HostOrDeviceSlice, precompute_factor int32, output_bases HostOrDeviceSlice) {
+	outputBasesLength, pointsLength := output_bases.Len(), points.Len()
+	if outputBasesLength != pointsLength*int(precompute_factor) {
+		errorString := fmt.Sprintf(
+			"Precompute factor is probably incorrect: expected %d but got %d",
+			outputBasesLength/pointsLength,
+			precompute_factor,
+		)
+		panic(errorString)
+	}
+
+	if !output_bases.IsOnDevice() {
+		panic("Output bases are not on device")
+	}
+}
