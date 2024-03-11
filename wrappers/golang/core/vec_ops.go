@@ -2,8 +2,8 @@ package core
 
 import (
 	"fmt"
-	"unsafe"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 type VecOps int
@@ -71,7 +71,7 @@ func VecOpCheck[S HostSliceInterface](a, b, out HostOrDeviceSlice, cfg *VecOpsCo
 	cfg.isAOnDevice = a.IsOnDevice()
 	cfg.isBOnDevice = b.IsOnDevice()
 	cfg.isResultOnDevice = out.IsOnDevice()
-	
+
 	var aPointer, bPointer, outPointer unsafe.Pointer
 	if a.IsOnDevice() {
 		aPointer = a.(DeviceSlice).AsPointer()

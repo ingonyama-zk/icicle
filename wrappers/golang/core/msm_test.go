@@ -56,14 +56,18 @@ func TestMSMCheckHostSlices(t *testing.T) {
 	points := HostSliceFromElements[internal.MockAffine](rawAffinePoints)
 
 	output := make(HostSlice[internal.MockProjective], 1)
-	assert.NotPanics(t, func() { MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalars, points, &cfg, output) })
+	assert.NotPanics(t, func() {
+		MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalars, points, &cfg, output)
+	})
 	assert.False(t, cfg.areScalarsOnDevice)
 	assert.False(t, cfg.arePointsOnDevice)
 	assert.False(t, cfg.areResultsOnDevice)
 	assert.Equal(t, int32(1), cfg.batchSize)
 
 	output2 := make(HostSlice[internal.MockProjective], 3)
-	assert.Panics(t, func() { MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalars, points, &cfg, output2) })
+	assert.Panics(t, func() {
+		MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalars, points, &cfg, output2)
+	})
 }
 
 func TestMSMCheckDeviceSlices(t *testing.T) {
@@ -93,14 +97,18 @@ func TestMSMCheckDeviceSlices(t *testing.T) {
 	points.CopyToDevice(&pointsOnDevice, true)
 
 	output := make(HostSlice[internal.MockProjective], 1)
-	assert.NotPanics(t, func() { MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalarsOnDevice, pointsOnDevice, &cfg, output) })
+	assert.NotPanics(t, func() {
+		MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalarsOnDevice, pointsOnDevice, &cfg, output)
+	})
 	assert.True(t, cfg.areScalarsOnDevice)
 	assert.True(t, cfg.arePointsOnDevice)
 	assert.False(t, cfg.areResultsOnDevice)
 	assert.Equal(t, int32(1), cfg.batchSize)
 
 	output2 := make(HostSlice[internal.MockProjective], 3)
-	assert.Panics(t, func() { MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalarsOnDevice, pointsOnDevice, &cfg, output2) })
+	assert.Panics(t, func() {
+		MsmCheck[internal.MockField, internal.MockAffine, internal.MockProjective](scalarsOnDevice, pointsOnDevice, &cfg, output2)
+	})
 }
 
 // TODO add check for batches and batchSize

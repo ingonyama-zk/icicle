@@ -2,8 +2,8 @@ package core
 
 import (
 	"fmt"
-	"unsafe"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 type NTTDir int8
