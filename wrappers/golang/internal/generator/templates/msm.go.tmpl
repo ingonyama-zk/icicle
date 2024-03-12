@@ -67,7 +67,7 @@ func {{if .IsG2}}G2{{end}}PrecomputeBases(points core.HostOrDeviceSlice, precomp
 	cPrecomputeFactor := (C.int)(precompute_factor)
 	c_C := (C.int)(_c)
 	cPointsIsOnDevice = (C._Bool)(points.IsOnDevice())
-	cCtx := (*C.MSMConfig)(unsafe.Pointer(ctx))
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
 
 	var outputBasesPointer unsafe.Pointer
 	if output_bases.IsOnDevice() {
