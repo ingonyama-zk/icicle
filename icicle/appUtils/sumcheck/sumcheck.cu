@@ -31,6 +31,7 @@ __global__ void sum_reduction(S *v, S *v_r) {
 	// Let the thread 0 for this block write it's result to main memory
 	// Result is inexed by this block
 	if (threadIdx.x == 0 || threadIdx.x == 1) {
+		printf("debug tid %d, val %d\n", threadIdx.x, partial_sum[threadIdx.x]);
 		v_r[2*blockIdx.x + threadIdx.x] = partial_sum[threadIdx.x];
 	}
 }
@@ -54,12 +55,17 @@ void accumulate(S* in, S* out, uint32_t log_size){
 		cudaDeviceSynchronize();
   	printf("cuda err %d\n", cudaGetLastError());
   }
-  if (last_step_size) sum_reduction<<<1, 1<<last_step_size>>>(out, out);
+  if (last_step_size) sum_reduction<<<1, 1<<last_step_size>>>(nof_steps? out : in, out);
 	cudaDeviceSynchronize();
   printf("cuda err last %d\n", cudaGetLastError());
 }
 
-
+template <typename S>
+__global__ void add_to_trace(S* trace, S* vals, int p){
+	  trace[2*p+1] = vals[0];
+    trace[2*p+2] = vals[1];
+		printf("%d  %d\n", vals[0], vals[1]);
+}
 
 template <typename S>
 S my_hash(){
@@ -68,7 +74,7 @@ S my_hash(){
 
 template <typename S>
 void sumcheck_alg1(S* evals, S* t, S* T, S C, int n){
-	S alpha;
+	S alpha = 1;
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
   for (int p = 0; p < n; p++)
@@ -77,8 +83,9 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n){
     // move update kernel here and unify
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
     accumulate(evals, t, n-p); //accumulation
-    T[2*p+1] = t[0];
-    T[2*p+2] = t[1];
+		add_to_trace<<<1,1>>>(T, t, p);
+    // T[2*p+1] = t[0];
+    // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
 		int NOF_THREADS = 256;
 		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;

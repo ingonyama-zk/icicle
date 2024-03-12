@@ -35,29 +35,31 @@ int main(){
   }
   
 
-  cudaMalloc(&d_evals, sizeof(int) * size);
+  // cudaMalloc(&d_evals, sizeof(int) * size);
+  // cudaMemcpy(d_evals, largEvals.get(), sizeof(int) * size, cudaMemcpyHostToDevice);
+  cudaMalloc(&d_evals, sizeof(int) * 8);
+  cudaMemcpy(d_evals, evals, sizeof(int) * 8, cudaMemcpyHostToDevice);
   cudaMalloc(&d_t, sizeof(int) * 8);
   cudaMalloc(&d_T, sizeof(int) * 8);
-  cudaMemcpy(d_evals, largEvals.get(), sizeof(int) * size, cudaMemcpyHostToDevice);
   cudaMemcpy(d_t, t, sizeof(int) * 8, cudaMemcpyHostToDevice);
   cudaMemcpy(d_T, T, sizeof(int) * 8, cudaMemcpyHostToDevice);
 
   for (int i = 0; i < 8; i++)
   {
-    std::cout << largEvals[i] <<std::endl;
+    std::cout << evals[i] <<std::endl;
   }
-  accumulate(d_evals, d_evals, log_size);
+  // accumulate(d_evals, d_evals, log_size);
   // cudaDeviceSynchronize();
   // printf("cuda err %d\n", cudaGetLastError());
-  cudaMemcpy(largEvals.get(), d_evals, sizeof(int) * size, cudaMemcpyDeviceToHost);
-  for (int i = 0; i < 8; i++)
-  {
-    std::cout << largEvals[i] <<std::endl;
-  }
+  // cudaMemcpy(largEvals.get(), d_evals, sizeof(int) * size, cudaMemcpyDeviceToHost);
+  // for (int i = 0; i < 8; i++)
+  // {
+  //   std::cout << largEvals[i] <<std::endl;
+  // }
 
 
-  // sumcheck_alg1(d_evals, t, T, C, n);
-  // sumcheck_alg1_ref(evals, t, T, C, n);
+  // sumcheck_alg1(d_evals, d_t, d_T, C, n);
+  sumcheck_alg1_ref(evals, t, T, C, n);
 
   // for (int i = 0; i < 8; i++)
   // {
@@ -66,10 +68,10 @@ int main(){
 
   // cudaMemcpy(T, d_T, sizeof(int) * 8, cudaMemcpyDeviceToHost);
 
-  // for (int i = 0; i < 8; i++)
-  // {
-  //   std::cout << T[i] <<std::endl;
-  // }
+  for (int i = 0; i < 8; i++)
+  {
+    std::cout << T[i] <<std::endl;
+  }
 
   return 0;
 }
