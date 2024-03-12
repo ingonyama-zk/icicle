@@ -19,9 +19,8 @@ void example1() {
   std::cout << "f(x) = " << f_x << std::endl;
 }
 
-void example2(int size) {
+void example_fromEvaluations(const int size) {
   std::cout << "Polynomial evaluation on roots of unity" << std::endl;
-  // const int size = 100;
   const int log_size = (int)ceil(log2(size));
   const int nof_evals = 1 << log_size;
   auto coeff = std::make_unique<scalar_t[]>(size);
@@ -41,38 +40,197 @@ void example2(int size) {
   auto fr = Polynomial_t::from_rou_evaluations(evals, nof_evals);
   // make sure they are equal, that is f-fr=0
   auto h = f - fr;
-  
-
   std::cout << "degree of f - fr = " << h.degree() << std::endl;
 }
 
+void example_fromEvaluations_NotPowerOfTwo(int size) {
+  // TODO: implement
+  std::cout << "TODO: fromEvaluations_NotPowerOfTwo" << std::endl;
+}
+
+static Polynomial_t randomize_polynomial(uint32_t size)
+  {
+    auto coeff = std::make_unique<scalar_t[]>(size);
+    for (int i = 0; i < size; i++)
+      coeff[i] = scalar_t::rand_host();
+    return Polynomial_t::from_coefficients(coeff.get(), size);
+  }
+
+void example_addition(const int size0, const int size1) {
+  std::cout << std::endl << "Example: Polynomial addition" << std::endl;
+  auto f = randomize_polynomial(size0);
+  auto g = randomize_polynomial(size1);
+  auto x = scalar_t::rand_host();
+  auto f_x = f(x);
+  auto g_x = g(x);
+  auto fx_plus_gx = f_x + g_x;
+  auto h = f + g;
+  auto h_x = h(x);
+  std::cout << "evaluate and add: " << fx_plus_gx << std::endl;
+  std::cout << "add and evaluate: " << h_x << std::endl;
+
+}
+
+
+void example_addition_inplace(const int size0, const int size1)
+{
+  std::cout << std::endl << "Example: Polynomial inplace addition" << std::endl;
+  auto f = randomize_polynomial(size0);
+  auto g = randomize_polynomial(size1);
+
+  auto x = scalar_t::rand_host();
+  auto f_x = f(x);
+  auto g_x = g(x);
+  auto fx_plus_gx = f_x + g_x;
+  f += g;
+  auto s_x = f(x);
+  std::cout << "evaluate and add: " << fx_plus_gx << std::endl;
+  std::cout << "add and evaluate: " << s_x << std::endl;
+}
+
+void example_multiplication(const int log0, const int log1)
+{
+  std::cout << std::endl << "Example: Polynomial multiplication" << std::endl;
+  const int size0 = 1 << log0, size1 = 1 << log1;
+  auto f = randomize_polynomial(size0);
+  auto g = randomize_polynomial(size1);
+
+  scalar_t x = scalar_t::rand_host();
+  auto fx = f(x);
+  auto gx = g(x);
+  auto fx_mul_gx = fx * gx;
+
+  auto m = f * g;
+
+  auto mx = m(x);
+  std::cout << "evaluate and multiply: " << fx_mul_gx << std::endl;
+  std::cout << "multiply and evaluate: " << mx << std::endl;
+
+}
+
+void example_multiplicationScalar(const int log0)
+{
+  std::cout << std::endl << "Example: Scalar by Polynomial multiplication" << std::endl;
+  const int size = 1 << log0;
+  auto f = randomize_polynomial(size);
+  auto s = scalar_t::from(2);
+  auto g = s * f;
+
+  auto x = scalar_t::rand_host();
+  auto fx = f(x);
+  auto fx2 = s*fx;
+  auto gx = g(x);
+
+  std::cout << "Compare (2*f)(x) and 2*f(x): " << std::endl;
+  std::cout << gx << std::endl; 
+  std::cout << fx2 << std::endl;
+}
+
+void example_monomials()
+{
+  std::cout << std::endl << "Example: Monomials" << std::endl;
+  const scalar_t zero = scalar_t::zero();
+  const scalar_t one = scalar_t::one();
+  const scalar_t two = scalar_t::from(2);
+  const scalar_t three = scalar_t::from(3);
+  const scalar_t coeffs[3] = {one, zero, two}; // 1+2x^2
+  auto f = Polynomial_t::from_coefficients(coeffs, 3);
+  const auto x = scalar_t::from(3);
+  auto f_x = f(x);
+  f.add_monomial_inplace(three, 1); // add 3x
+  const auto expected_addmonmon_f_x = f_x + three * x;
+  const auto addmonom_f_x = f(x);
+
+  std::cout << "Computed f'(x) = " << addmonom_f_x << std::endl;
+  std::cout << "Expected f'(x) = " << expected_addmonmon_f_x << std::endl;  
+}
+
+void example_ReadCoeffsToHost()
+{
+  std::cout << std::endl << "Example: Read coefficients to host" << std::endl;
+  const scalar_t zero = scalar_t::zero();
+  const scalar_t one = scalar_t::one();
+  const scalar_t two = scalar_t::from(2);
+  const scalar_t three = scalar_t::from(3);
+  const scalar_t coeffs_f[3] = {zero, one, two}; // 0+1x+2x^2
+  auto f = Polynomial_t::from_coefficients(coeffs_f, 3);
+  const scalar_t coeffs_g[3] = {one, one, one}; // 1+x+x^2
+  auto g = Polynomial_t::from_coefficients(coeffs_g, 3);
+
+  auto h = f + g; // 1+2x+3x^3
+  std::cout << "Get one coefficient of h() at a time: " << std::endl;
+  const auto h0 = h.get_coefficient_on_host(0);
+  const auto h1 = h.get_coefficient_on_host(1);
+  const auto h2 = h.get_coefficient_on_host(2);
+  std::cout << "Coefficients of h: " << std::endl;
+  std::cout << "0:" << h0 << " expected: " << one << std::endl;
+  std::cout << "1:" << h1 << " expected: " << two << std::endl; 
+  std::cout << "2:" << h2 << " expected: " << three << std::endl;
+
+  std::cout << "Get all coefficients of h() at a time: " << std::endl;
+  // fetch the number of coefficients, which is padded to powers of two
+  int64_t nof_coeffs = h.get_coefficients_on_host(nullptr);
+  scalar_t h_coeffs[3] = {0};
+  // fetch the coefficients for a given range
+  nof_coeffs = h.get_coefficients_on_host(h_coeffs, 0, 2);
+
+  scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
+  for (int i = 0; i < nof_coeffs; ++i) {
+    std::cout << i << ":" << h_coeffs[i] << " expected: " << expected_h_coeffs[i] << std::endl;
+  }
+}
+
+
+void example_divisionSimple()
+{
+  std::cout << std::endl << "Example: Polynomial division (simple)" << std::endl;
+  const scalar_t zero = scalar_t::zero();
+  const scalar_t one = scalar_t::one();
+  const scalar_t two = scalar_t::from(2);
+  const scalar_t three = scalar_t::from(3);
+  const scalar_t four = scalar_t::from(4);
+  const scalar_t five = scalar_t::from(5);
+  const scalar_t minus_one = zero - one;
+  const scalar_t coeffs_a[4] = {five, zero, four, three}; // 3x^3+4x^2+5
+  const scalar_t coeffs_b[3] = {minus_one, zero, one};    // x^2-1
+  auto a = Polynomial_t::from_coefficients(coeffs_a, 4);
+  auto b = Polynomial_t::from_coefficients(coeffs_b, 3);
+  auto [q, r] = a.divide(b);
+  scalar_t q_coeffs[2] = {0}; // 3x+4
+  scalar_t r_coeffs[2] = {0}; // 3x+9
+  const auto q_nof_coeffs = q.get_coefficients_on_host(q_coeffs, 0, 1);
+  const auto r_nof_coeffs = r.get_coefficients_on_host(r_coeffs, 0, 1);
+  std::cout << "Quotient: 0:" << q_coeffs[0] << " expected: " << scalar_t::from(4) << std::endl;
+  std::cout << "Quotient: 1:" << q_coeffs[1] << " expected: " << scalar_t::from(3) << std::endl;
+  std::cout << "Reminder: 0:" << r_coeffs[0] << " expected: " << scalar_t::from(9) << std::endl;
+  std::cout << "Reminder: 1:" << r_coeffs[1] << " expected: " << scalar_t::from(3) << std::endl;
+}
+
+
 int main(int argc, char** argv)
 {
-  // const static auto one = scalar_t::one();
-  // const static auto two = scalar_t::from(2);
-  // const static auto three = scalar_t::from(3);
   // init NTT domain: TODO: can we hide this in the library?
   static const int MAX_NTT_LOG_SIZE = 24;
   auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
   const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
   ntt::InitDomain(basic_root, ntt_config.ctx);
     
-  // initializing polynomimals factory for CUDA backend
+  // virtual factory design pattern: initializing polynomimals factory for CUDA backend
   Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
 
 
   example1();
-  // std::cout << "Polynomial evaluation on random value" << std::endl;
-  // const scalar_t coeffs[3] = {one, two, three};
-  // auto f = Polynomial_t::from_coefficients(coeffs, 3);
-  // std::cout << "f = " << f << std::endl;
-  // scalar_t x = scalar_t::rand_host();
-  // std::cout << "x = " << x << std::endl;
-  // auto f_x = f(x); // evaluation
-  // std::cout << "f(x) = " << f_x << std::endl;
 
   
-  example2(100);
+  example_fromEvaluations(100);
+  example_fromEvaluations_NotPowerOfTwo(100);
+  example_addition(12, 17);
+  example_addition_inplace(2, 2);
+  example_multiplication(15, 12);
+  example_multiplicationScalar(15);
+  example_monomials();
+  example_ReadCoeffsToHost();
+  example_divisionSimple();
 
   return 0;
 }
