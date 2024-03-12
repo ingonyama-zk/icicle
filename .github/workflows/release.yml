@@ -20,11 +20,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+      - name: Setup Cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('~/.cargo/bin/cargo-workspaces') }}
+      - name: Install cargo-workspaces
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-workspaces
       - name: Bump rust crate versions, commit, and tag
         working-directory: wrappers/rust
         # https://github.com/pksunkara/cargo-workspaces?tab=readme-ov-file#version
         run: |
-          cargo install cargo-workspaces
+          git config user.name release-bot
+          git config user.email release-bot@ingonyama.com
           cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags -m "Bump rust crates' version"
       - name: Create draft release
         env:
