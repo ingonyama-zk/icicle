@@ -66,7 +66,7 @@ func {{if .IsG2}}G2{{end}}PrecomputeBases(points core.HostOrDeviceSlice, precomp
 	cPointsLen := (C.int)(points.Len())
 	cPrecomputeFactor := (C.int)(precompute_factor)
 	c_C := (C.int)(_c)
-	cPointsIsOnDevice = (C._Bool)(points.IsOnDevice())
+	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
 
 	var outputBasesPointer unsafe.Pointer
@@ -75,7 +75,7 @@ func {{if .IsG2}}G2{{end}}PrecomputeBases(points core.HostOrDeviceSlice, precomp
 	} else {
 		outputBasesPointer = unsafe.Pointer(&output_bases.(core.HostSlice[{{if .IsG2}}G2{{end}}Projective])[0])
 	}
-	cOutputBases = (*C.{{if .IsG2}}g2_{{end}}projective_t)(outputBasesPointer)
+	cOutputBases := (*C.{{if .IsG2}}g2_{{end}}affine_t)(outputBasesPointer)
 
 	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, c_C, cPointsIsOnDevice, cCtx, cOutputBases)
 	err := (cr.CudaError)(__ret)

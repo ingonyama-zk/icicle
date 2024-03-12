@@ -49,3 +49,33 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 	err := (cr.CudaError)(__ret)
 	return err
 }
+
+func G2PrecomputeBases(points core.HostOrDeviceSlice, precompute_factor int32, _c int32, ctx *cr.DeviceContext, output_bases core.HostOrDeviceSlice) cr.CudaError {
+	core.PrecomputeBasesCheck(points, precompute_factor, output_bases)
+
+	var pointsPointer unsafe.Pointer
+	if points.IsOnDevice() {
+		pointsPointer = points.(core.DeviceSlice).AsPointer()
+	} else {
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[G2Affine])[0])
+	}
+	cPoints := (*C.g2_affine_t)(pointsPointer)
+
+	cPointsLen := (C.int)(points.Len())
+	cPrecomputeFactor := (C.int)(precompute_factor)
+	c_C := (C.int)(_c)
+	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
+
+	var outputBasesPointer unsafe.Pointer
+	if output_bases.IsOnDevice() {
+		outputBasesPointer = output_bases.(core.DeviceSlice).AsPointer()
+	} else {
+		outputBasesPointer = unsafe.Pointer(&output_bases.(core.HostSlice[G2Projective])[0])
+	}
+	cOutputBases := (*C.g2_affine_t)(outputBasesPointer)
+
+	__ret := C.bls12_377G2PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, c_C, cPointsIsOnDevice, cCtx, cOutputBases)
+	err := (cr.CudaError)(__ret)
+	return err
+}
