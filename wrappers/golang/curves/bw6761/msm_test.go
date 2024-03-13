@@ -149,7 +149,6 @@ func TestPrecomputeBase(t *testing.T) {
 	}
 }
 
-
 func TestMSMSkewedDistribution(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {

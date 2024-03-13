@@ -66,7 +66,7 @@ func G2PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c 
 	cC := (C.int)(c)
 	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
-	
+
 	outputBasesPointer := outputBases.AsPointer()
 	cOutputBases := (*C.g2_affine_t)(outputBasesPointer)
 
