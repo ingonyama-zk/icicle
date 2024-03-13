@@ -20,7 +20,9 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 	core.MsmCheck(scalars, points, cfg, results)
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
-		scalarsPointer = scalars.(core.DeviceSlice).AsPointer()
+		scalarsDevice := scalars.(core.DeviceSlice)
+		scalarsDevice.CheckDevice()
+		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
 		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
 	}
@@ -28,7 +30,9 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 
 	var pointsPointer unsafe.Pointer
 	if points.IsOnDevice() {
-		pointsPointer = points.(core.DeviceSlice).AsPointer()
+		pointsDevice := points.(core.DeviceSlice)
+		pointsDevice.CheckDevice()
+		pointsPointer = pointsDevice.AsPointer()
 	} else {
 		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[G2Affine])[0])
 	}
@@ -36,7 +40,9 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 
 	var resultsPointer unsafe.Pointer
 	if results.IsOnDevice() {
-		resultsPointer = results.(core.DeviceSlice).AsPointer()
+		resultsDevice := results.(core.DeviceSlice)
+		resultsDevice.CheckDevice()
+		resultsPointer = resultsDevice.AsPointer()
 	} else {
 		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[G2Projective])[0])
 	}

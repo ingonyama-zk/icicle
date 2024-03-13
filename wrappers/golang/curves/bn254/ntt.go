@@ -27,7 +27,9 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
-		scalarsPointer = scalars.(core.DeviceSlice).AsPointer()
+		scalarsDevice := scalars.(core.DeviceSlice)
+		scalarsDevice.CheckDevice()
+		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
 		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
 	}
@@ -38,7 +40,9 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 
 	var resultsPointer unsafe.Pointer
 	if results.IsOnDevice() {
-		resultsPointer = results.(core.DeviceSlice).AsPointer()
+		resultsDevice := results.(core.DeviceSlice)
+		resultsDevice.CheckDevice()
+		resultsPointer = resultsDevice.AsPointer()
 	} else {
 		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[ScalarField])[0])
 	}
