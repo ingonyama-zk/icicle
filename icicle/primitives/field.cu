@@ -2,7 +2,7 @@
 #include "field.cuh"
 #include "utils/utils.h"
 
-#define scalar_t curve_config::scalar_t
+using namespace curve_config;
 
 extern "C" void CONCAT_EXPAND(CURVE, GenerateScalars)(scalar_t* scalars, int size)
 {
