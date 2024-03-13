@@ -64,10 +64,8 @@ func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c in
 	cC := (C.int)(c)
 	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
-
-	var outputBasesPointer unsafe.Pointer
 	
-	outputBasesPointer = outputBases.AsPointer()
+	outputBasesPointer := outputBases.AsPointer()
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
 	__ret := C.bn254PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)

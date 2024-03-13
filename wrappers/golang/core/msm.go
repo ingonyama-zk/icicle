@@ -76,7 +76,7 @@ func GetDefaultMSMConfig() MSMConfig {
 }
 
 func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) {
-	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len(), results.Len()
+	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len()/int(cfg.PrecomputeFactor), results.Len()
 	if scalarsLength%pointsLength != 0 {
 		errorString := fmt.Sprintf(
 			"Number of points %d does not divide the number of scalars %d",
