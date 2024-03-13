@@ -109,6 +109,49 @@ func TestMSMG2Batch(t *testing.T) {
 	}
 }
 
+func TestPrecomputeBaseG2(t *testing.T) {
+	cfg := GetDefaultMSMConfig()
+	const precomputeFactor = 8
+	for _, power := range []int{10, 16} {
+		for _, batchSize := range []int{1, 3, 16} {
+			size := 1 << power
+			totalSize := size * batchSize
+			scalars := GenerateScalars(totalSize)
+			points := G2GenerateAffinePoints(totalSize)
+
+			var precomputeOut core.DeviceSlice
+			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+
+			e = G2PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
+
+			var p G2Projective
+			var out core.DeviceSlice
+			_, e = out.Malloc(batchSize*p.Size(), p.Size())
+			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+
+			cfg.PrecomputeFactor = precomputeFactor
+
+			e = G2Msm(scalars, precomputeOut, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			outHost := make(core.HostSlice[G2Projective], batchSize)
+			outHost.CopyFromDevice(&out)
+			out.Free()
+			precomputeOut.Free()
+
+			// Check with gnark-crypto
+			for i := 0; i < batchSize; i++ {
+				scalarsSlice := scalars[i*size : (i+1)*size]
+				pointsSlice := points[i*size : (i+1)*size]
+				out := outHost[i]
+				assert.True(t, testAgainstGnarkCryptoMsmG2(scalarsSlice, pointsSlice, out))
+			}
+		}
+	}
+}
+
+
 func TestMSMG2SkewedDistribution(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
