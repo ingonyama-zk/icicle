@@ -433,6 +433,7 @@ namespace msm {
       split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
         bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, total_bms_per_msm,
         bm_bitsize, c, nof_bms_per_msm);
+      nof_points *= precompute_factor;
 
       // ------------------------------ Sorting routines for scalars start here ----------------------------------
       // sort indices - the indices are sorted from smallest to largest in order to group together the points that
