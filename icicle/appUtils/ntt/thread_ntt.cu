@@ -9,6 +9,7 @@
 struct stage_metadata {
   uint32_t th_stride;
   uint32_t ntt_block_size;
+  uint32_t batch_id;
   uint32_t ntt_block_id;
   uint32_t ntt_inp_id;
 };
@@ -118,7 +119,7 @@ public:
   }
 
   __device__ __forceinline__ void
-  loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -129,7 +130,7 @@ public:
   }
 
   __device__ __forceinline__ void
-  loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -143,7 +144,7 @@ public:
   }
 
   __device__ __forceinline__ void
-  loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, bool strided, stage_metadata s_meta)
+  loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -195,8 +196,8 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadGlobalData(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+  __device__ __forceinline__ void
+  loadGlobalData(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -211,8 +212,22 @@ public:
     }
   }
 
-  __device__ __forceinline__ void storeGlobalData(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+  __device__ __forceinline__ void loadGlobalDataColumnBatch(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
+             (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
+              batch_size +
+            s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t i = 0; i < 8; i++) {
+      X[i] = data[s_meta.th_stride * i * data_stride * batch_size];
+    }
+  }
+
+  __device__ __forceinline__ void
+  storeGlobalData(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -227,8 +242,22 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadGlobalData32(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+  __device__ __forceinline__ void storeGlobalDataColumnBatch(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
+             (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
+              batch_size +
+            s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t i = 0; i < 8; i++) {
+      data[s_meta.th_stride * i * data_stride * batch_size] = X[i];
+    }
+  }
+
+  __device__ __forceinline__ void
+  loadGlobalData32(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -246,8 +275,25 @@ public:
     }
   }
 
-  __device__ __forceinline__ void storeGlobalData32(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+  __device__ __forceinline__ void loadGlobalData32ColumnBatch(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
+             (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
+              batch_size +
+            s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t j = 0; j < 2; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 4; i++) {
+        X[4 * j + i] = data[(8 * i + j) * data_stride * batch_size];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void
+  storeGlobalData32(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -265,8 +311,25 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadGlobalData16(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+  __device__ __forceinline__ void storeGlobalData32ColumnBatch(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
+             (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
+              batch_size +
+            s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t j = 0; j < 2; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 4; i++) {
+        data[(8 * i + j) * data_stride * batch_size] = X[4 * j + i];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void
+  loadGlobalData16(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -284,8 +347,25 @@ public:
     }
   }
 
-  __device__ __forceinline__ void storeGlobalData16(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, uint32_t log_size, bool strided, stage_metadata s_meta)
+  __device__ __forceinline__ void loadGlobalData16ColumnBatch(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
+             (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
+              batch_size +
+            s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t j = 0; j < 4; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 2; i++) {
+        X[2 * j + i] = data[(8 * i + j) * data_stride * batch_size];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void
+  storeGlobalData16(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -299,6 +379,23 @@ public:
 #pragma unroll
       for (uint32_t i = 0; i < 2; i++) {
         data[(8 * i + j) * data_stride] = X[2 * j + i];
+      }
+    }
+  }
+
+  __device__ __forceinline__ void storeGlobalData16ColumnBatch(
+    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  {
+    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
+             (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
+              batch_size +
+            s_meta.batch_id;
+
+#pragma unroll
+    for (uint32_t j = 0; j < 4; j++) {
+#pragma unroll
+      for (uint32_t i = 0; i < 2; i++) {
+        data[(8 * i + j) * data_stride * batch_size] = X[2 * j + i];
       }
     }
   }

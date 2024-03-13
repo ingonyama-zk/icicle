@@ -19,6 +19,7 @@ func TestNTTDefaultConfig(t *testing.T) {
 		ctx,      // Ctx
 		cosetGen, // CosetGen
 		1,        // BatchSize
+		false,    // ColumnsBatch
 		KNN,      // Ordering
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice
