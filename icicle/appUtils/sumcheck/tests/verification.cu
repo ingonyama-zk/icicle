@@ -58,15 +58,15 @@ int main(){
   // }
 
 
-  // sumcheck_alg1(d_evals, d_t, d_T, C, n);
-  sumcheck_alg1_ref(evals, t, T, C, n);
+  sumcheck_alg1(d_evals, d_t, d_T, C, n);
+  // sumcheck_alg1_ref(evals, t, T, C, n);
 
   // for (int i = 0; i < 8; i++)
   // {
   //   std::cout << T[i] <<std::endl;
   // }
 
-  // cudaMemcpy(T, d_T, sizeof(int) * 8, cudaMemcpyDeviceToHost);
+  cudaMemcpy(T, d_T, sizeof(int) * 8, cudaMemcpyDeviceToHost);
 
   for (int i = 0; i < 8; i++)
   {

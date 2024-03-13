@@ -77,7 +77,7 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n){
 	S alpha = 1;
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
-  for (int p = 0; p < n; p++)
+  for (int p = 0; p < n-1; p++)
   {
     int nof_threads = 1<<(n-1-p);
     // move update kernel here and unify
@@ -91,6 +91,7 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n){
 		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
     update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS>>>(evals, alpha); //phase 3
   }
+	add_to_trace<<<1,1>>>(T, evals, n-1);
 
 }
 
