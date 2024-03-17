@@ -13,6 +13,7 @@ using curve_config::scalar_t;
 #include "polynomials/polynomials.h"
 #include "appUtils/ntt/ntt.cuh"
 #include "appUtils/msm/msm.cuh"
+#include "utils/device_context.cuh"
 
 // using the MSM C-API directly since msm::MSM() is hidden and I cannot understand why
 namespace msm {
@@ -477,7 +478,7 @@ TEST_F(PolynomialTest, QAP)
   // simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
 
   // (1) randomize N numbers and construct the witness as [1,out,...N inputs..., ... intermediate values...]
-  const int nof_inputs = 5;
+  const int nof_inputs = 300;
   const int nof_outputs = 1;
   const int nof_intermediates = nof_inputs - 2; // same as #multiplication gates minus last one (which is the output)
   const int witness_size =
@@ -500,8 +501,8 @@ TEST_F(PolynomialTest, QAP)
 
   // (2) construct matrices A,B,C (based on the circuit)
   const int nof_constraints = nof_inputs - 1;
-  // allocating such that columns are consecutive in memory for more efficient polynomial construction from consecutive
-  // evaluations
+  // allocating such that columns are consecutive in memory for more efficient polynomial construction from
+  // consecutive evaluations
   const int nof_cols = witness_size;
   const int nof_rows = nof_constraints;
   std::vector<scalar_t> L(nof_cols * nof_rows, scalar_t::zero());
@@ -539,34 +540,32 @@ TEST_F(PolynomialTest, QAP)
   Polynomial_t Lx = L_QAP[0].clone();
   Polynomial_t Rx = R_QAP[0].clone();
   Polynomial_t Ox = O_QAP[0].clone();
-  std::cout << "Lx.degree()=" << Lx.degree() << std::endl;
   for (int col = 1; col < nof_cols; ++col) {
     Lx += witness[col] * L_QAP[col];
     Rx += witness[col] * R_QAP[col];
     Ox += witness[col] * O_QAP[col];
-    std::cout << "Lx[col].degree()=" << L_QAP[col].degree() << std::endl;
   }
 
-  //  (4b) sanity check: verify that it divides with no remainder
+  //  (4b) sanity check: verify AB=C at the evaluation points
   {
-    auto v = vanishing_polynomial(nof_constraints - 1 /*=degree*/);
-    std::cout << "Lx.degree()=" << Lx.degree() << std::endl;
-    std::cout << "Rx.degree()=" << Rx.degree() << std::endl;
-    std::cout << "Ox.degree()=" << Ox.degree() << std::endl;
-    std::cout << "LxRx.degree()=" << (Lx * Rx).degree() << std::endl;
-    std::cout << "LxRx-Ox.degree()=" << (Lx * Rx - Ox).degree() << std::endl;
-    std::cout << "v.degree()=" << v.degree() << std::endl;
-    auto [q, r] = (Lx * Rx - Ox).divide(v);
-    Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(nof_constraints);
-    std::cout << "q.degree()=" << q.degree() << std::endl;
-    std::cout << "r.degree()=" << r.degree() << std::endl;
-    std::cout << "h.degree()=" << h.degree() << std::endl;
-    EXPECT_EQ(r.degree(), -1);              // zero polynomial
-    EXPECT_EQ(q.degree(), nof_constraints); // L(X)R(x)-O(x) is degree 2N so expecting N after division
+    auto default_device_context = device_context::get_default_device_context();
+    const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
+    auto x = w;
+    for (int i = 0; i < nof_constraints; ++i) {
+      ASSERT_EQ(Lx(x) * Rx(x), Ox(x));
+      x = x * w;
+    }
   }
 
   // (5) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
-  Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(nof_constraints);
+  const int vanishing_poly_deg = ceil_to_power_of_two(nof_constraints);
+  Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(vanishing_poly_deg);
+  // (5a) sanity check: vanishing-polynomial divides LR-O
+  {
+    auto [h_long_div, r] = (Lx * Rx - Ox).divide(vanishing_polynomial(vanishing_poly_deg));
+    EXPECT_EQ(r.degree(), -1); // zero polynomial (expecting division without remainder)
+    assert_equal(h, h_long_div);
+  }
 
   // (6) compute A,B,C via MSMs
 }
