@@ -1,5 +1,11 @@
 # MSM Pre computation
 
+To understand the theory behind MSM pre computation technique refer to Niall Emmart's [talk](https://youtu.be/KAWlySN7Hm8?feature=shared&t=1734).
+
+### Supported curves
+
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
+
 ### `precompute_bases`
 
 Precomputes bases for the multi-scalar multiplication (MSM) by extending each base point with its multiples, facilitating more efficient MSM calculations.

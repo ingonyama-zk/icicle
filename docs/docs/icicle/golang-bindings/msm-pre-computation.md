@@ -1,5 +1,7 @@
 # MSM Pre computation
 
+To understand the theory behind MSM pre computation technique refer to Niall Emmart's [talk](https://youtu.be/KAWlySN7Hm8?feature=shared&t=1734).
+
 ### Supported curves
 
 `bls12-377`, `bls12-381`, `bn254`, `bw6-761`
@@ -24,9 +26,16 @@ func PrecomputeBasesCheck(points core.HostOrDeviceSlice, precomputeFactor int32,
 
 `PrecomputeBasesCheck` ensures that the length of `outputBases` matches the expected size given `points` and `precomputeFactor`. It panics if the size does not match, indicating a potential error in the precomputation setup.
 
-## MSM PrecomputeBases
+## MSM `PrecomputeBases`
 
 `PrecomputeBases` and `G2PrecomputeBases` exists for all supported curves. `PrecomputeBases` 
+
+
+#### Description
+
+This function extends each provided base point \(P\) with its multiples \(2^lP, 2^{2l}P, ..., 2^{(precompute_factor - 1) \cdot l}P\), where \(l\) is a level of precomputation determined by the `precompute_factor`. The extended set of points facilitates faster MSM computations by allowing the MSM algorithm to leverage precomputed multiples of base points, reducing the number of point additions required during the computation.
+
+The precomputation process is crucial for optimizing MSM operations, especially when dealing with large sets of points and scalars. By precomputing and storing multiples of the base points, the MSM function can more efficiently compute the scalar-point multiplications.
 
 #### `PrecomputeBases`
 
