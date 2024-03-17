@@ -1,11 +1,10 @@
 use crate::curve::{Affine, Curve, Projective};
-use crate::msm::{msm, MSMConfig, MSM};
+use crate::msm::{msm, precompute_bases, MSMConfig, MSM};
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::device::{get_device_count, set_device, warmup};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use icicle_cuda_runtime::stream::CudaStream;
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 #[cfg(feature = "arkworks")]
 use crate::traits::ArkConvertible;
@@ -109,17 +108,33 @@ where
     let test_sizes = [1000, 1 << 16];
     let batch_sizes = [1, 3, 1 << 4];
     let stream = CudaStream::create().unwrap();
+    let mut cfg = MSMConfig::default();
+    cfg.ctx
+        .stream = &stream;
+    cfg.is_async = true;
+    cfg.large_bucket_factor = 5;
+    cfg.c = 4;
     warmup(&stream).unwrap();
     for test_size in test_sizes {
+        let precompute_factor = 8;
+        let points = generate_random_affine_points_with_zeroes(test_size, 10);
+        let points_h = HostOrDeviceSlice::on_host(points.clone());
+        let mut precomputed_points_d = HostOrDeviceSlice::cuda_malloc(precompute_factor * test_size).unwrap();
+        precompute_bases(
+            &points_h,
+            precompute_factor as i32,
+            0,
+            &cfg.ctx,
+            &mut precomputed_points_d,
+        )
+        .unwrap();
         for batch_size in batch_sizes {
-            let points = generate_random_affine_points_with_zeroes(test_size, 10);
             let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
             // a version of batched msm without using `cfg.points_size`, requires copying bases
             let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
                 .take(batch_size)
                 .flatten()
                 .collect();
-            let points_h = HostOrDeviceSlice::on_host(points);
             let scalars_h = HostOrDeviceSlice::on_host(scalars);
 
             let mut msm_results_1 = HostOrDeviceSlice::cuda_malloc(batch_size).unwrap();
@@ -129,12 +144,9 @@ where
                 .copy_from_host_async(&points_cloned, &stream)
                 .unwrap();
 
-            let mut cfg = MSMConfig::default();
-            cfg.ctx
-                .stream = &stream;
-            cfg.is_async = true;
-            cfg.large_bucket_factor = 2;
-            msm(&scalars_h, &points_h, &cfg, &mut msm_results_1).unwrap();
+            cfg.precompute_factor = precompute_factor as i32;
+            msm(&scalars_h, &precomputed_points_d, &cfg, &mut msm_results_1).unwrap();
+            cfg.precompute_factor = 1;
             msm(&scalars_h, &points_d, &cfg, &mut msm_results_2).unwrap();
 
             let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
@@ -149,8 +161,7 @@ where
                 .synchronize()
                 .unwrap();
 
-            let points_ark: Vec<_> = points_h
-                .as_slice()
+            let points_ark: Vec<_> = points
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();

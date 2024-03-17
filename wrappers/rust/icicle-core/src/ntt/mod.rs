@@ -77,6 +77,8 @@ pub struct NTTConfig<'a, S> {
     pub coset_gen: S,
     /// The number of NTTs to compute. Default value: 1.
     pub batch_size: i32,
+    /// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
+    pub columns_batch: bool,
     /// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
     pub ordering: Ordering,
     are_inputs_on_device: bool,
@@ -101,6 +103,7 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
             ctx: DeviceContext::default_for_device(device_id),
             coset_gen: S::one(),
             batch_size: 1,
+            columns_batch: false,
             ordering: Ordering::kNN,
             are_inputs_on_device: false,
             are_outputs_on_device: false,

@@ -43,8 +43,17 @@ func (d DeviceSlice) IsOnDevice() bool {
 	return true
 }
 
-// TODO: change signature to be Malloc(element, numElements)
-// calc size internally
+func (d DeviceSlice) GetDeviceId() int {
+	return cr.GetDeviceFromPointer(d.inner)
+}
+
+// CheckDevice is used to ensure that the DeviceSlice about to be used resides on the currently set device
+func (d DeviceSlice) CheckDevice() {
+	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
+		panic("Attempt to use DeviceSlice on a different device")
+	}
+}
+
 func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cr.CudaError) {
 	dp, err := cr.Malloc(uint(size))
 	d.inner = dp
@@ -62,7 +71,18 @@ func (d *DeviceSlice) MallocAsync(size, sizeOfElement int, stream cr.CudaStream)
 }
 
 func (d *DeviceSlice) Free() cr.CudaError {
+	d.CheckDevice()
 	err := cr.Free(d.inner)
+	if err == cr.CudaSuccess {
+		d.length, d.capacity = 0, 0
+		d.inner = nil
+	}
+	return err
+}
+
+func (d *DeviceSlice) FreeAsync(stream cr.Stream) cr.CudaError {
+	d.CheckDevice()
+	err := cr.FreeAsync(d.inner, stream)
 	if err == cr.CudaSuccess {
 		d.length, d.capacity = 0, 0
 		d.inner = nil
@@ -117,6 +137,7 @@ func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *Devic
 	if shouldAllocate {
 		dst.Malloc(size, h.SizeOfElement())
 	}
+	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
@@ -133,6 +154,7 @@ func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, 
 	if shouldAllocate {
 		dst.MallocAsync(size, h.SizeOfElement(), stream)
 	}
+	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
@@ -144,6 +166,7 @@ func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, 
 }
 
 func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
+	src.CheckDevice()
 	if h.Len() != src.Len() {
 		panic("destination and source slices have different lengths")
 	}
@@ -152,6 +175,7 @@ func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
 }
 
 func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
+	src.CheckDevice()
 	if h.Len() != src.Len() {
 		panic("destination and source slices have different lengths")
 	}

@@ -8,6 +8,9 @@ class Projective
   friend Affine<FF>;
 
 public:
+  static constexpr unsigned SCALAR_FF_NBITS = SCALAR_FF::NBITS;
+  static constexpr unsigned FF_NBITS = FF::NBITS;
+
   FF x;
   FF y;
   FF z;
@@ -35,6 +38,34 @@ public:
   static HOST_DEVICE_INLINE Projective generator() { return {GENERATOR_X, GENERATOR_Y, FF::one()}; }
 
   static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
+
+  static HOST_DEVICE_INLINE Projective dbl(const Projective& point)
+  {
+    const FF X = point.x;
+    const FF Y = point.y;
+    const FF Z = point.z;
+
+    // TODO: Change to efficient dbl once implemented for field.cuh
+    FF t0 = FF::sqr(Y);                                                     // 1. t0 ← Y · Y
+    FF Z3 = t0 + t0;                                                        // 2. Z3 ← t0 + t0
+    Z3 = Z3 + Z3;                                                           // 3. Z3 ← Z3 + Z3
+    Z3 = Z3 + Z3;                                                           // 4. Z3 ← Z3 + Z3
+    FF t1 = Y * Z;                                                          // 5. t1 ← Y · Z
+    FF t2 = FF::sqr(Z);                                                     // 6. t2 ← Z · Z
+    t2 = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(t2)); // 7. t2 ← b3 · t2
+    FF X3 = t2 * Z3;                                                        // 8. X3 ← t2 · Z3
+    FF Y3 = t0 + t2;                                                        // 9. Y3 ← t0 + t2
+    Z3 = t1 * Z3;                                                           // 10. Z3 ← t1 · Z3
+    t1 = t2 + t2;                                                           // 11. t1 ← t2 + t2
+    t2 = t1 + t2;                                                           // 12. t2 ← t1 + t2
+    t0 = t0 - t2;                                                           // 13. t0 ← t0 − t2
+    Y3 = t0 * Y3;                                                           // 14. Y3 ← t0 · Y3
+    Y3 = X3 + Y3;                                                           // 15. Y3 ← X3 + Y3
+    t1 = X * Y;                                                             // 16. t1 ← X · Y
+    X3 = t0 * t1;                                                           // 17. X3 ← t0 · t1
+    X3 = X3 + X3;                                                           // 18. X3 ← X3 + X3
+    return {X3, Y3, Z3};
+  }
 
   friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2)
   {
