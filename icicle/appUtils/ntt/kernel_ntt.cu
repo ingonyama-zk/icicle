@@ -1041,6 +1041,7 @@ namespace mxntt {
     int ntt_size,
     int max_logn,
     int batch_size,
+    bool columns_batch,
     bool is_inverse,
     bool fast_tw,
     ntt::Ordering ordering,
