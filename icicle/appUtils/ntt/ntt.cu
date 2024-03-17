@@ -645,7 +645,6 @@ UNROLL
       h_coset.clear();
     }
 
-    const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
     const bool is_inverse = dir == NTTDir::kInverse;
 
 #if defined(ECNTT_DEFINED)
@@ -653,6 +652,8 @@ UNROLL
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
         coset_index, stream));
 #else
+    const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
+
     if (is_radix2_algorithm) {
       CHK_IF_RETURN(ntt::radix2_ntt(
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,

@@ -118,7 +118,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  DEVICE_INLINE void 
   loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_order - 1));
@@ -129,7 +129,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  DEVICE_INLINE void 
   loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_order - 1));
@@ -143,8 +143,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
-  loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
+  DEVICE_INLINE void loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -220,7 +219,7 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       X[i] = data[s_meta.th_stride * i * data_stride * batch_size];
     }
@@ -250,7 +249,7 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       data[s_meta.th_stride * i * data_stride * batch_size] = X[i];
     }
@@ -283,9 +282,9 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         X[4 * j + i] = data[(8 * i + j) * data_stride * batch_size];
       }
@@ -319,9 +318,9 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         data[(8 * i + j) * data_stride * batch_size] = X[4 * j + i];
       }
@@ -355,9 +354,9 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         X[2 * j + i] = data[(8 * i + j) * data_stride * batch_size];
       }
@@ -391,9 +390,9 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         data[(8 * i + j) * data_stride * batch_size] = X[2 * j + i];
       }

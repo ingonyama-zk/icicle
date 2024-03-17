@@ -11,10 +11,6 @@ fn main() {
         .define("CURVE", "grumpkin")
         .define("CMAKE_BUILD_TYPE", "Release");
 
-    // Optional Features
-    #[cfg(feature = "ec_ntt")]
-    config.define("ECNTT_DEFINED", "ON");
-
     #[cfg(feature = "devmode")]
     config.define("DEVMODE", "ON");
 
