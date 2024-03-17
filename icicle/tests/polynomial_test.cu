@@ -7,6 +7,7 @@
 
 #include "curves/curve_config.cuh"
 using curve_config::affine_t;
+using curve_config::g2_affine_t;
 using curve_config::projective_t;
 using curve_config::scalar_t;
 
@@ -453,100 +454,154 @@ TEST_F(PolynomialTest, commitMSM)
   EXPECT_EQ(result, f(tau) * g);
 }
 
-// TODO Yuval: move to examples ??
+// Following examples are randomizing N private numbers and proving that I know N numbers such that their product is
+// equal to 'out'.
+//
+// Circuit:
+//
+// in0  in1
+//  \   /
+//   \ /  in2
+//   (X)  /
+//   t0\ /  in3
+//     (X)  /
+//     t1\ /
+//       (X)
+//        .
+//        .
+//        .
+//        |
+//       out
+//
+// simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
+class Groth16Example
+{
+public:
+  struct G16proof {
+    affine_t A;
+    g2_affine_t B;
+    affine_t C;
+  };
+
+  // constructor
+  const int nof_inputs;
+  const int nof_outputs;
+  const int nof_intermediates;
+  const int witness_size;
+  const int input_offset;
+  const int intermediate_offset;
+  std::vector<Polynomial_t> L_QAP, R_QAP, O_QAP;
+
+  Groth16Example(int N)
+      : nof_inputs(N), nof_outputs(1), nof_intermediates(nof_inputs - 2),
+        witness_size(1 + nof_outputs + nof_inputs + nof_intermediates), input_offset(1 + nof_outputs),
+        intermediate_offset(input_offset + nof_inputs)
+  {
+    construct_QAP();
+  }
+
+public:
+  void setup() {}
+
+  void construct_QAP()
+  {
+    // (2) construct matrices A,B,C (based on the circuit)
+    const int nof_constraints = nof_inputs - 1;
+    // allocating such that columns are consecutive in memory for more efficient polynomial construction from
+    // consecutive evaluations
+    const int nof_cols = witness_size;
+    const int nof_rows = nof_constraints;
+    std::vector<scalar_t> L(nof_cols * nof_rows, scalar_t::zero());
+    std::vector<scalar_t> R(nof_cols * nof_rows, scalar_t::zero());
+    std::vector<scalar_t> O(nof_cols * nof_rows, scalar_t::zero());
+
+    scalar_t* L_data = L.data();
+    scalar_t* R_data = R.data();
+    scalar_t* O_data = O.data();
+
+    // filling the R1CS matrices (where cols are consecutive, not rows)
+    for (int row = 0; row < nof_rows; ++row) {
+      const int L_col = row == 0 ? input_offset : intermediate_offset + row - 1;
+      *(L_data + L_col * nof_rows + row) = scalar_t::one();
+
+      const int R_col = input_offset + row + 1;
+      *(R_data + R_col * nof_rows + row) = scalar_t::one();
+
+      const int O_col = row == nof_rows - 1 ? 1 : intermediate_offset + row;
+      *(O_data + O_col * nof_rows + row) = scalar_t::one();
+    }
+
+    // (3) interpolate the columns of L,R,O to build the polynomials
+    L_QAP.reserve(nof_cols);
+    R_QAP.reserve(nof_cols);
+    O_QAP.reserve(nof_cols);
+    for (int col = 0; col < nof_cols; ++col) { // #polynomials is equal to witness_size
+      L_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(L_data + col * nof_rows, nof_rows)));
+      R_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(R_data + col * nof_rows, nof_rows)));
+      O_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(O_data + col * nof_rows, nof_rows)));
+    }
+  }
+
+  std::vector<scalar_t> randomize_witness()
+  {
+    std::vector<scalar_t> witness(witness_size, scalar_t::zero());
+    witness[0] = scalar_t::one();
+    PolynomialTest::random_samples(witness.data() + input_offset, nof_inputs); // randomize inputs
+
+    return witness;
+  }
+
+  void compute_witness(std::vector<scalar_t>& witness)
+  {
+    // compute intermediate values (based on the circuit above)
+    for (int i = 0; i < nof_intermediates; ++i) {
+      const auto& left_input = i == 0 ? witness[input_offset] : witness[intermediate_offset + i - 1];
+      const auto& right_input = witness[input_offset + i + 1];
+      witness[intermediate_offset + i] = left_input * right_input;
+    }
+    // compute output as last_input * last_intermediate
+    witness[1] = witness[input_offset + nof_inputs - 1] * witness[intermediate_offset + nof_intermediates - 1];
+  }
+
+  G16proof prove(const std::vector<scalar_t>& witness) const
+  {
+    G16proof proof = {};
+    return proof;
+  }
+
+  bool verify(const G16proof& proof) const
+  {
+    throw std::runtime_error("pairing not implemented");
+    return false;
+  }
+
+private:
+};
+
 TEST_F(PolynomialTest, QAP)
 {
-  // this examples is randomizing N private numbers and proving that I know N numbers such that their product is equal
-  // to 'out'.
-  //
-  // Circuit:
-  //
-  // in0  in1
-  //  \   /
-  //   \ /  in2
-  //   (X)  /
-  //   t0\ /  in3
-  //     (X)  /
-  //     t1\ /
-  //       (X)
-  //        .
-  //        .
-  //        .
-  //        |
-  //       out
-  //
-  // simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
+  // QAP simple case based on the Groth16 circuit
+  Groth16Example QAP(300 /*=N*/); // constructor is computing R1CS and the QAP
 
-  // (1) randomize N numbers and construct the witness as [1,out,...N inputs..., ... intermediate values...]
-  const int nof_inputs = 300;
-  const int nof_outputs = 1;
-  const int nof_intermediates = nof_inputs - 2; // same as #multiplication gates minus last one (which is the output)
-  const int witness_size =
-    1 + nof_outputs + nof_inputs + nof_intermediates; // witness = [1, out, inputs..., intermediates...]
-
-  const int input_offset = 1 + nof_outputs;
-  const int intermediate_offset = input_offset + nof_inputs;
-
-  std::vector<scalar_t> witness(witness_size, scalar_t::zero());
-  witness[0] = scalar_t::one();
-  random_samples(witness.data() + input_offset, nof_inputs); // randomize inputs
-  // compute intermediate values (based on the circuit above)
-  for (int i = 0; i < nof_intermediates; ++i) {
-    const auto& left_input = i == 0 ? witness[input_offset] : witness[intermediate_offset + i - 1];
-    const auto& right_input = witness[input_offset + i + 1];
-    witness[intermediate_offset + i] = left_input * right_input;
-  }
-  // compute output as last_input * last_intermediate
-  witness[1] = witness[input_offset + nof_inputs - 1] * witness[intermediate_offset + nof_intermediates - 1];
+  // randomize a witness and compute witness=[1,out,...N inputs..., ... intermediate values...]
+  auto witness = QAP.randomize_witness();
+  QAP.compute_witness(witness);
 
   // (2) construct matrices A,B,C (based on the circuit)
-  const int nof_constraints = nof_inputs - 1;
-  // allocating such that columns are consecutive in memory for more efficient polynomial construction from
-  // consecutive evaluations
-  const int nof_cols = witness_size;
-  const int nof_rows = nof_constraints;
-  std::vector<scalar_t> L(nof_cols * nof_rows, scalar_t::zero());
-  std::vector<scalar_t> R(nof_cols * nof_rows, scalar_t::zero());
-  std::vector<scalar_t> O(nof_cols * nof_rows, scalar_t::zero());
+  const int nof_constraints = QAP.nof_inputs - 1; // multipying N numbers yields N-1 constraints
+  const int nof_cols = QAP.witness_size;
 
-  scalar_t* L_data = L.data();
-  scalar_t* R_data = R.data();
-  scalar_t* O_data = O.data();
-
-  // filling the R1CS matrices (where cols are consecutive, not rows)
-  for (int row = 0; row < nof_rows; ++row) {
-    const int L_col = row == 0 ? input_offset : intermediate_offset + row - 1;
-    *(L_data + L_col * nof_rows + row) = scalar_t::one();
-
-    const int R_col = input_offset + row + 1;
-    *(R_data + R_col * nof_rows + row) = scalar_t::one();
-
-    const int O_col = row == nof_rows - 1 ? 1 : intermediate_offset + row;
-    *(O_data + O_col * nof_rows + row) = scalar_t::one();
-  }
-
-  // (3) interpolate the columns of L,R,O to build the polynomials
-  std::vector<Polynomial_t> L_QAP, R_QAP, O_QAP;
-  L_QAP.reserve(nof_cols);
-  R_QAP.reserve(nof_cols);
-  O_QAP.reserve(nof_cols);
-  for (int col = 0; col < nof_cols; ++col) { // #polynomials is equal to witness_size
-    L_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(L_data + col * nof_rows, nof_rows)));
-    R_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(R_data + col * nof_rows, nof_rows)));
-    O_QAP.push_back(std::move(Polynomial_t::from_rou_evaluations(O_data + col * nof_rows, nof_rows)));
-  }
-
-  // (4) using the witness, compute L(x),R(x),O(x)
-  Polynomial_t Lx = L_QAP[0].clone();
-  Polynomial_t Rx = R_QAP[0].clone();
-  Polynomial_t Ox = O_QAP[0].clone();
+  // (3) compute L(x),R(x),O(x) using the witness
+  Polynomial_t Lx = QAP.L_QAP[0].clone();
+  Polynomial_t Rx = QAP.R_QAP[0].clone();
+  Polynomial_t Ox = QAP.O_QAP[0].clone();
   for (int col = 1; col < nof_cols; ++col) {
-    Lx += witness[col] * L_QAP[col];
-    Rx += witness[col] * R_QAP[col];
-    Ox += witness[col] * O_QAP[col];
+    Lx += witness[col] * QAP.L_QAP[col];
+    Rx += witness[col] * QAP.R_QAP[col];
+    Ox += witness[col] * QAP.O_QAP[col];
   }
 
-  //  (4b) sanity check: verify AB=C at the evaluation points
+  //  (4) sanity check: verify AB=C at the evaluation points
   {
     auto default_device_context = device_context::get_default_device_context();
     const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
@@ -560,14 +615,13 @@ TEST_F(PolynomialTest, QAP)
   // (5) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
   const int vanishing_poly_deg = ceil_to_power_of_two(nof_constraints);
   Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(vanishing_poly_deg);
-  // (5a) sanity check: vanishing-polynomial divides LR-O
+
+  // (6) sanity check: vanishing-polynomial divides (LR-O) without remainder
   {
     auto [h_long_div, r] = (Lx * Rx - Ox).divide(vanishing_polynomial(vanishing_poly_deg));
     EXPECT_EQ(r.degree(), -1); // zero polynomial (expecting division without remainder)
     assert_equal(h, h_long_div);
   }
-
-  // (6) compute A,B,C via MSMs
 }
 
 int main(int argc, char** argv)
