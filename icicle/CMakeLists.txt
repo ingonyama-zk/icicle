@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+# set(CMAKE_VERBOSE_MAKEFILE ON)
 
 if("$ENV{ICICLE_PIC}" STREQUAL "OFF" OR ICICLE_PIC STREQUAL "OFF")
   message(WARNING "Note that PIC (position-independent code) is disabled.")
@@ -61,7 +62,7 @@ endif()
 
 project(icicle LANGUAGES CUDA CXX)
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr --split-compile 0")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 include_directories("${CMAKE_SOURCE_DIR}")
@@ -113,7 +114,10 @@ if (NOT BUILD_TESTS)
     primitives/field.cu
     primitives/projective.cu
     appUtils/msm/msm.cu
-    ${ICICLE_SOURCES}
+    # appUtils/msm/msm1.cu
+    # appUtils/msm/msm2.cu
+    # appUtils/msm/msm3.cu
+    # ${ICICLE_SOURCES}
   )
   set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
   target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  

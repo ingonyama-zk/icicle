@@ -141,4 +141,90 @@ namespace msm {
 
 } // namespace msm
 
+
+namespace msm {
+  namespace {
+    template <typename S> __global__ void find_cutoff_kernel(unsigned* v, unsigned size, unsigned cutoff, unsigned run_length, unsigned* result);
+
+    template <typename P>
+    __global__ void initialize_large_bucket_indices(
+      unsigned* sorted_bucket_sizes_sum,
+      unsigned nof_pts_per_thread,
+      unsigned nof_large_buckets,
+      // log_nof_buckets_to_compute should be equal to ceil(log(nof_buckets_to_compute))
+      unsigned log_nof_large_buckets,
+      unsigned* bucket_indices);
+
+    template <typename E>
+    __global__ void normalize_kernel(E* inout, E factor, int n);
+
+    unsigned get_optimal_c(int bitsize);
+
+    template <typename A, typename P>
+    __global__ void left_shift_kernel(A* points, const unsigned shift, const unsigned count, A* points_out);
+
+    template <typename P>
+    __global__ void sum_reduction_variable_size_kernel(
+      P* v,
+      unsigned* bucket_sizes_sum,
+      unsigned* bucket_sizes,
+      unsigned* large_bucket_thread_indices,
+      unsigned num_of_threads);
+
+    template <typename P>
+    __global__ void single_stage_multi_reduction_kernel(
+      const P* v,
+      P* v_r,
+      unsigned block_size,
+      unsigned write_stride,
+      unsigned write_phase,
+      unsigned step,
+      unsigned num_of_threads);
+
+    template <typename P>
+    __global__ void initialize_buckets_kernel(P* buckets, unsigned N);
+
+    template <typename S>
+    __global__ void split_scalars_kernel(
+      unsigned* buckets_indices,
+      unsigned* point_indices,
+      S* scalars,
+      unsigned nof_scalars,
+      unsigned points_size,
+      unsigned msm_size,
+      unsigned nof_bms,
+      unsigned bm_bitsize,
+      unsigned c,
+      unsigned precomputed_bms_stride);
+
+      template <typename P, typename S>
+    __global__ void final_accumulation_kernel(
+      const P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned nof_empty_bms, unsigned c);
+
+      template <typename S, typename P, typename A>
+    cudaError_t bucket_method_msm(
+      unsigned bitsize,
+      unsigned c,
+      S* scalars,
+      A* points,
+      unsigned batch_size,      // number of MSMs to compute
+      unsigned single_msm_size, // number of elements per MSM (a.k.a N)
+      unsigned nof_points,      // number of EC points in 'points' array. Must be either (1) single_msm_size if MSMs are
+                                // sharing points or (2) single_msm_size*batch_size otherwise
+      P* final_result,
+      bool are_scalars_on_device,
+      bool are_scalars_montgomery_form,
+      bool are_points_on_device,
+      bool are_points_montgomery_form,
+      bool are_results_on_device,
+      bool is_big_triangle,
+      int large_bucket_factor,
+      int precompute_factor,
+      bool is_async,
+      cudaStream_t stream);
+
+  }
+  
+}
+
 #endif
