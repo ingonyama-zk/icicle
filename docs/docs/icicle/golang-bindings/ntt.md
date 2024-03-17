@@ -64,6 +64,7 @@ type NTTConfig[T any] struct {
     Ctx cr.DeviceContext
     CosetGen T
     BatchSize int32
+    ColumnsBatch bool
     Ordering Ordering
     areInputsOnDevice  bool
     areOutputsOnDevice bool
@@ -76,6 +77,7 @@ type NTTConfig[T any] struct {
 - **Ctx**: Device context containing details like device ID and stream ID.
 - **CosetGen**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
 - **BatchSize**: The number of NTTs to compute in one operation, defaulting to 1.
+- **ColumnsBatch**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
 - **Ordering**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`, `KMN`, `KNM`), affecting how data is arranged.
 - **areInputsOnDevice**: Indicates if input scalars are located on the device.
 - **areOutputsOnDevice**: Indicates if results are stored on the device.
