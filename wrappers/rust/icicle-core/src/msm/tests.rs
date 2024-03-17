@@ -1,7 +1,7 @@
 use crate::curve::{Affine, Curve, Projective};
 use crate::msm::{msm, MSMConfig, MSM};
 use crate::traits::{FieldImpl, GenerateRandom};
-use icicle_cuda_runtime::device::{get_device_count, set_device};
+use icicle_cuda_runtime::device::{get_device_count, set_device, warmup};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use icicle_cuda_runtime::stream::CudaStream;
 use rayon::iter::IntoParallelIterator;
@@ -108,6 +108,8 @@ where
 {
     let test_sizes = [1000, 1 << 16];
     let batch_sizes = [1, 3, 1 << 4];
+    let stream = CudaStream::create().unwrap();
+    warmup(&stream).unwrap();
     for test_size in test_sizes {
         for batch_size in batch_sizes {
             let points = generate_random_affine_points_with_zeroes(test_size, 10);
@@ -123,7 +125,6 @@ where
             let mut msm_results_1 = HostOrDeviceSlice::cuda_malloc(batch_size).unwrap();
             let mut msm_results_2 = HostOrDeviceSlice::cuda_malloc(batch_size).unwrap();
             let mut points_d = HostOrDeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
-            let stream = CudaStream::create().unwrap();
             points_d
                 .copy_from_host_async(&points_cloned, &stream)
                 .unwrap();
@@ -147,9 +148,6 @@ where
             stream
                 .synchronize()
                 .unwrap();
-            stream
-                .destroy()
-                .unwrap();
 
             let points_ark: Vec<_> = points_h
                 .as_slice()
@@ -172,6 +170,9 @@ where
             }
         }
     }
+    stream
+        .destroy()
+        .unwrap();
 }
 
 pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()

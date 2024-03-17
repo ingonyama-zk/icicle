@@ -28,93 +28,16 @@ NTT supports the following curves:
 
 `bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
 
+## Supported Bindings
+
+- [Golang](../golang-bindings/ntt.md)
+- [Rust](../rust-bindings/ntt.md)
 
 ### Examples
 
 - [Rust API examples](https://github.com/ingonyama-zk/icicle/blob/d84ffd2679a4cb8f8d1ac2ad2897bc0b95f4eeeb/examples/rust/ntt/src/main.rs#L1)
 
 - [C++ API examples](https://github.com/ingonyama-zk/icicle/blob/d84ffd2679a4cb8f8d1ac2ad2897bc0b95f4eeeb/examples/c%2B%2B/ntt/example.cu#L1)
-
-## NTT API overview
-
-```rust
-pub fn ntt<F>(
-    input: &HostOrDeviceSlice<F>,
-    dir: NTTDir,
-    cfg: &NTTConfig<F>,
-    output: &mut HostOrDeviceSlice<F>,
-) -> IcicleResult<()>
-```
-
-`ntt:ntt` expects:
-
-`input` - buffer to read the inputs of the NTT from. <br/>
-`dir` - whether to compute forward or inverse NTT. <br/>
-`cfg` - config used to specify extra arguments of the NTT. <br/>
-`output` - buffer to write the NTT outputs into. Must be of the same  size as input.
-
-The `input` and `output` buffers can be on device or on host. Being on host means that they will be transferred to device during runtime.
-
-### NTT Config
-
-```rust
-pub struct NTTConfig<'a, S> {
-    pub ctx: DeviceContext<'a>,
-    pub coset_gen: S,
-    pub batch_size: i32,
-    pub ordering: Ordering,
-    are_inputs_on_device: bool,    
-    are_outputs_on_device: bool,
-    pub is_async: bool,
-    pub ntt_algorithm: NttAlgorithm,
-}
-```
-
-The `NTTConfig` struct is a configuration object used to specify parameters for an NTT instance.
-
-#### Fields
-
-- **`ctx: DeviceContext<'a>`**: Specifies the device context, including the device ID and the stream ID.
-
-- **`coset_gen: S`**: Defines the coset generator used for coset (i)NTTs. By default, this is set to `S::one()`, indicating that no coset is being used.
-
-- **`batch_size: i32`**: Determines the number of NTTs to compute in a single batch. The default value is 1, meaning that operations are performed on individual inputs without batching. Batch processing can significantly improve performance by leveraging parallelism in GPU computations.
-
-- **`ordering: Ordering`**: Controls the ordering of inputs and outputs for the NTT operation. This field can be used to specify decimation strategies (in time or in frequency) and the type of butterfly algorithm (Cooley-Tukey or Gentleman-Sande). The ordering is crucial for compatibility with various algorithmic approaches and can impact the efficiency of the NTT.
-
-- **`are_inputs_on_device: bool`**: Indicates whether the input data has been preloaded on the device memory. If `false` inputs will be copied from host to device.
-
-- **`are_outputs_on_device: bool`**: Indicates whether the output data is preloaded in device memory. If `false` outputs will be copied from host to device. If the inputs and outputs are the same pointer NTT will be computed in place.
-
-- **`is_async: bool`**: Specifies whether the NTT operation should be performed asynchronously. When set to `true`, the NTT function will not block the CPU, allowing other operations to proceed concurrently. Asynchronous execution requires careful synchronization to ensure data integrity and correctness.
-
-- **`ntt_algorithm: NttAlgorithm`**: Can be one of `Auto`, `Radix2`, `MixedRadix`.
-`Auto` will select `Radix 2` or `Mixed Radix` algorithm based on heuristics.
-`Radix2` and `MixedRadix` will force the use of an algorithm regardless of the input size or other considerations. You should use one of these options when you know for sure that you want to 
-
-
-#### Usage
-
-Example initialization with default settings:
-
-```rust
-let default_config = NTTConfig::default();
-```
-
-Customizing the configuration:
-
-```rust
-let custom_config = NTTConfig {
-    ctx: custom_device_context,
-    coset_gen: my_coset_generator,
-    batch_size: 10,
-    ordering: Ordering::kRN,
-    are_inputs_on_device: true,
-    are_outputs_on_device: true,
-    is_async: false,
-    ntt_algorithm: NttAlgorithm::MixedRadix,
-};
-```
 
 ### Ordering
 
@@ -139,15 +62,6 @@ Choosing an algorithm is heavily dependent on your use case. For example Cooley-
 NTT also supports two different modes `Batch NTT` and `Single NTT`
 
 Batch NTT allows you to run many NTTs with a single API call, Single MSM will launch a single MSM computation.
-
-You may toggle between single and batch NTT by simply configure `batch_size` to be larger then 1 in your `NTTConfig`.
-
-```rust
-let mut cfg = ntt::get_default_ntt_config::<ScalarField>();
-cfg.batch_size = 10 // your ntt using this config will run in batch mode.
-```
-
-`batch_size=1` would keep our NTT in single NTT mode.
 
 Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
 
@@ -232,9 +146,11 @@ Mixed Radix can reduce the number of stages required to compute for large inputs
 
 ### Which algorithm should I choose ?
 
-Radix 2 is faster for small NTTs. A small NTT would be around logN = 16 and batch size 1. Its also more suited for inputs which are power of 2 (e.g., 256, 512, 1024). Radix 2 won't necessarily perform better for smaller `logn` with larger batches.
+Both work only on inputs of power of 2 (e.g., 256, 512, 1024).
 
-Mixed radix on the other hand better for larger NTTs with larger input sizes which are not necessarily power of 2.
+Radix 2 is faster for small NTTs. A small NTT would be around logN = 16 and batch size 1. Radix 2 won't necessarily perform better for smaller `logn` with larger batches.
+
+Mixed radix on the other hand works better for larger NTTs with larger input sizes.
 
 Performance really depends on logn size, batch size, ordering, inverse, coset, coeff-field and which GPU you are using.
 
