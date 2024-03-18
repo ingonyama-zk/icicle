@@ -1,5 +1,4 @@
 #include <iostream>
-#define CURVE_ID BN254
 #include "curves/curve_config.cuh"
 #include "polynomials/polynomials.h"
 #include "appUtils/ntt/ntt.cuh"
