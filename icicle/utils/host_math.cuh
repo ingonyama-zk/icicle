@@ -4,7 +4,7 @@
 
 #include <cstdint>
 #include <cuda_runtime.h>
-#include "../common.cuh"
+#include "common.cuh"
 namespace host_math {
 
   // return x + y with uint32_t operands
