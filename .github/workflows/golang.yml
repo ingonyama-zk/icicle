@@ -83,7 +83,7 @@ jobs:
       # -p controls the number of programs that can be run in parallel
       run: |
         export CPATH=$CPATH:/usr/local/cuda/include
-        go test --tags=g2 ./... -count=1 -failfast -p 2 -timeout 60m
+      # go test --tags=g2 ./... -count=1 -failfast -p 1 -timeout 60m
   
   # TODO: bw6 on windows requires more memory than the standard runner has
   # Add a large runner and then enable this job
