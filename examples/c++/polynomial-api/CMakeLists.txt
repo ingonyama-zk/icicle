@@ -9,8 +9,7 @@ else()
     set(CMAKE_CUDA_ARCHITECTURES native) # on 3.24+, on earlier it is ignored, and the target is not passed
 endif ()
 project(icicle LANGUAGES CUDA CXX)
-
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -DCURVE_ID=BN254")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 # change the path to your Icicle location
