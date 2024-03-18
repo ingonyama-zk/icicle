@@ -30,7 +30,7 @@ public:
     return os;
   }
 
-  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width)
+  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
   {
     return (x >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
   }
