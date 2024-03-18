@@ -3,12 +3,12 @@ package core
 import (
 	"fmt"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 type MSMConfig struct {
 	/// Details related to the device such as its id and stream.
-	Ctx cuda_runtime.DeviceContext
+	Ctx cr.DeviceContext
 
 	pointsSize int32
 
@@ -55,13 +55,8 @@ type MSMConfig struct {
 	IsAsync bool
 }
 
-// type MSM interface {
-// 	Msm(scalars, points *cuda_runtime.HostOrDeviceSlice, cfg *MSMConfig, results *cuda_runtime.HostOrDeviceSlice) cuda_runtime.CudaError
-// 	GetDefaultMSMConfig() MSMConfig
-// }
-
 func GetDefaultMSMConfig() MSMConfig {
-	ctx, _ := cuda_runtime.GetDefaultDeviceContext()
+	ctx, _ := cr.GetDefaultDeviceContext()
 	return MSMConfig{
 		ctx,   // Ctx
 		0,     // pointsSize
@@ -81,7 +76,7 @@ func GetDefaultMSMConfig() MSMConfig {
 }
 
 func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) {
-	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len(), results.Len()
+	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len()/int(cfg.PrecomputeFactor), results.Len()
 	if scalarsLength%pointsLength != 0 {
 		errorString := fmt.Sprintf(
 			"Number of points %d does not divide the number of scalars %d",
@@ -103,4 +98,16 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	cfg.areScalarsOnDevice = scalars.IsOnDevice()
 	cfg.arePointsOnDevice = points.IsOnDevice()
 	cfg.areResultsOnDevice = results.IsOnDevice()
+}
+
+func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outputBases DeviceSlice) {
+	outputBasesLength, pointsLength := outputBases.Len(), points.Len()
+	if outputBasesLength != pointsLength*int(precomputeFactor) {
+		errorString := fmt.Sprintf(
+			"Precompute factor is probably incorrect: expected %d but got %d",
+			outputBasesLength/pointsLength,
+			precomputeFactor,
+		)
+		panic(errorString)
+	}
 }

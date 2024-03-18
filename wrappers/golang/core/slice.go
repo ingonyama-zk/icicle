@@ -3,7 +3,7 @@ package core
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 type HostOrDeviceSlice interface {
@@ -43,27 +43,47 @@ func (d DeviceSlice) IsOnDevice() bool {
 	return true
 }
 
-// TODO: change signature to be Malloc(element, numElements)
-// calc size internally
-func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cuda_runtime.CudaError) {
-	dp, err := cuda_runtime.Malloc(uint(size))
+func (d DeviceSlice) GetDeviceId() int {
+	return cr.GetDeviceFromPointer(d.inner)
+}
+
+// CheckDevice is used to ensure that the DeviceSlice about to be used resides on the currently set device
+func (d DeviceSlice) CheckDevice() {
+	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
+		panic("Attempt to use DeviceSlice on a different device")
+	}
+}
+
+func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cr.CudaError) {
+	dp, err := cr.Malloc(uint(size))
 	d.inner = dp
 	d.capacity = size
 	d.length = size / sizeOfElement
 	return *d, err
 }
 
-func (d *DeviceSlice) MallocAsync(size, sizeOfElement int, stream cuda_runtime.CudaStream) (DeviceSlice, cuda_runtime.CudaError) {
-	dp, err := cuda_runtime.MallocAsync(uint(size), stream)
+func (d *DeviceSlice) MallocAsync(size, sizeOfElement int, stream cr.CudaStream) (DeviceSlice, cr.CudaError) {
+	dp, err := cr.MallocAsync(uint(size), stream)
 	d.inner = dp
 	d.capacity = size
 	d.length = size / sizeOfElement
 	return *d, err
 }
 
-func (d *DeviceSlice) Free() cuda_runtime.CudaError {
-	err := cuda_runtime.Free(d.inner)
-	if err == cuda_runtime.CudaSuccess {
+func (d *DeviceSlice) Free() cr.CudaError {
+	d.CheckDevice()
+	err := cr.Free(d.inner)
+	if err == cr.CudaSuccess {
+		d.length, d.capacity = 0, 0
+		d.inner = nil
+	}
+	return err
+}
+
+func (d *DeviceSlice) FreeAsync(stream cr.Stream) cr.CudaError {
+	d.CheckDevice()
+	err := cr.FreeAsync(d.inner, stream)
+	if err == cr.CudaSuccess {
 		d.length, d.capacity = 0, 0
 		d.inner = nil
 	}
@@ -117,44 +137,48 @@ func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *Devic
 	if shouldAllocate {
 		dst.Malloc(size, h.SizeOfElement())
 	}
+	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
 
 	// hostSrc := unsafe.Pointer(h.AsPointer())
 	hostSrc := unsafe.Pointer(&h[0])
-	cuda_runtime.CopyToDevice(dst.inner, hostSrc, uint(size))
+	cr.CopyToDevice(dst.inner, hostSrc, uint(size))
 	dst.length = h.Len()
 	return dst
 }
 
-func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cuda_runtime.CudaStream, shouldAllocate bool) *DeviceSlice {
+func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, shouldAllocate bool) *DeviceSlice {
 	size := h.Len() * h.SizeOfElement()
 	if shouldAllocate {
 		dst.MallocAsync(size, h.SizeOfElement(), stream)
 	}
+	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
 
 	hostSrc := unsafe.Pointer(&h[0])
-	cuda_runtime.CopyToDeviceAsync(dst.inner, hostSrc, uint(size), stream)
+	cr.CopyToDeviceAsync(dst.inner, hostSrc, uint(size), stream)
 	dst.length = h.Len()
 	return dst
 }
 
 func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
+	src.CheckDevice()
 	if h.Len() != src.Len() {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cuda_runtime.CopyFromDevice(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize))
+	cr.CopyFromDevice(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize))
 }
 
-func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cuda_runtime.Stream) {
+func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
+	src.CheckDevice()
 	if h.Len() != src.Len() {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cuda_runtime.CopyFromDeviceAsync(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize), stream)
+	cr.CopyFromDeviceAsync(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize), stream)
 }

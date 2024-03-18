@@ -29,6 +29,13 @@ void incremental_values(test_scalar* res, uint32_t count)
   }
 }
 
+__global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size, int column_size)
+{
+  int tid = blockDim.x * blockIdx.x + threadIdx.x;
+  if (tid >= row_size * column_size) return;
+  out[(tid % row_size) * column_size + (tid / row_size)] = in[tid];
+}
+
 int main(int argc, char** argv)
 {
   cudaEvent_t icicle_start, icicle_stop, new_start, new_stop;
@@ -37,11 +44,12 @@ int main(int argc, char** argv)
   int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 19;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
-  int INV = (argc > 3) ? atoi(argv[3]) : true;
-  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1;
-  int COSET_IDX = (argc > 5) ? atoi(argv[5]) : 0;
-  const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
-  bool FAST_TW = (argc > 7) ? atoi(argv[7]) : true;
+  int INV = (argc > 3) ? atoi(argv[3]) : false;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 150;
+  bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
+  int COSET_IDX = (argc > 6) ? atoi(argv[6]) : 2;
+  const ntt::Ordering ordering = (argc > 7) ? ntt::Ordering(atoi(argv[7])) : ntt::Ordering::kNN;
+  bool FAST_TW = (argc > 8) ? atoi(argv[8]) : true;
 
   // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -52,8 +60,8 @@ int main(int argc, char** argv)
                                                               : "MN";
 
   printf(
-    "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, coset-idx=%d, ordering=%s, fast_tw=%d\n", NTT_LOG_SIZE,
-    INPLACE, INV, BATCH_SIZE, COSET_IDX, ordering_str, FAST_TW);
+    "running ntt 2^%d, inplace=%d, inverse=%d, batch_size=%d, columns_batch=%d coset-idx=%d, ordering=%s, fast_tw=%d\n",
+    NTT_LOG_SIZE, INPLACE, INV, BATCH_SIZE, COLUMNS_BATCH, COSET_IDX, ordering_str, FAST_TW);
 
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
@@ -63,6 +71,7 @@ int main(int argc, char** argv)
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
   ntt_config.batch_size = BATCH_SIZE;
+  ntt_config.columns_batch = COLUMNS_BATCH;
 
   CHK_IF_RETURN(cudaEventCreate(&icicle_start));
   CHK_IF_RETURN(cudaEventCreate(&icicle_stop));
@@ -83,7 +92,9 @@ int main(int argc, char** argv)
 
   // gpu allocation
   test_data *GpuScalars, *GpuOutputOld, *GpuOutputNew;
+  test_data* GpuScalarsTransposed;
   CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuScalarsTransposed, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
   CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
   CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
 
@@ -93,10 +104,16 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
+  if (COLUMNS_BATCH) {
+    transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
+      GpuScalars, GpuScalarsTransposed, NTT_SIZE, BATCH_SIZE);
+  }
+
   // inplace
   if (INPLACE) {
-    CHK_IF_RETURN(
-      cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+    CHK_IF_RETURN(cudaMemcpy(
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
+      cudaMemcpyDeviceToDevice));
   }
 
   for (int coset_idx = 0; coset_idx < COSET_IDX; ++coset_idx) {
@@ -109,13 +126,14 @@ int main(int argc, char** argv)
     ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
     for (size_t i = 0; i < iterations; i++) {
       CHK_IF_RETURN(ntt::NTT(
-        INPLACE ? GpuOutputNew : GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config,
-        GpuOutputNew));
+        INPLACE         ? GpuOutputNew
+        : COLUMNS_BATCH ? GpuScalarsTransposed
+                        : GpuScalars,
+        NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputNew));
     }
     CHK_IF_RETURN(cudaEventRecord(new_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaEventElapsedTime(&new_time, new_start, new_stop));
-    if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
 
     // OLD
     CHK_IF_RETURN(cudaEventRecord(icicle_start, ntt_config.ctx.stream));
@@ -127,7 +145,6 @@ int main(int argc, char** argv)
     CHK_IF_RETURN(cudaEventRecord(icicle_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaEventElapsedTime(&icicle_time, icicle_start, icicle_stop));
-    if (is_print) { fprintf(stderr, "cuda err %d\n", cudaGetLastError()); }
 
     if (is_print) {
       printf("Old Runtime=%0.3f MS\n", icicle_time / iterations);
@@ -140,10 +157,18 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(benchmark(false /*=print*/, 1)); // warmup
   int count = INPLACE ? 1 : 10;
   if (INPLACE) {
-    CHK_IF_RETURN(
-      cudaMemcpy(GpuOutputNew, GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+    CHK_IF_RETURN(cudaMemcpy(
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
+      cudaMemcpyDeviceToDevice));
   }
   CHK_IF_RETURN(benchmark(true /*=print*/, count));
+
+  if (COLUMNS_BATCH) {
+    transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
+      GpuOutputNew, GpuScalarsTransposed, BATCH_SIZE, NTT_SIZE);
+    CHK_IF_RETURN(cudaMemcpy(
+      GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+  }
 
   // verify
   CHK_IF_RETURN(
@@ -153,10 +178,11 @@ int main(int argc, char** argv)
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
+    // if (i%64==0) printf("\n");
     if (CpuOutputNew[i] != CpuOutputOld[i]) {
       success = false;
       // std::cout << i << " ref " << CpuOutputOld[i] << " != " << CpuOutputNew[i] << std::endl;
-      break;
+      // break;
     } else {
       // std::cout << i << " ref " << CpuOutputOld[i] << " == " << CpuOutputNew[i] << std::endl;
       // break;

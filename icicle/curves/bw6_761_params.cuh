@@ -2,7 +2,7 @@
 #ifndef BW6_761_PARAMS_H
 #define BW6_761_PARAMS_H
 
-#include "../utils/storage.cuh"
+#include "utils/storage.cuh"
 
 namespace bw6_761 {
   struct fq_config {

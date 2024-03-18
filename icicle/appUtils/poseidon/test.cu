@@ -1,8 +1,8 @@
 // #define DEBUG
 
 #define CURVE_ID 2
-#include "../../curves/curve_config.cuh"
-#include "../../utils/device_context.cuh"
+#include "curves/curve_config.cuh"
+#include "utils/device_context.cuh"
 #include "poseidon.cu"
 
 #ifndef __CUDA_ARCH__

@@ -6,11 +6,10 @@
 #include <iostream>
 #include <vector>
 
-#include "../../curves/curve_config.cuh"
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/cuda_utils.cuh"
-#include "../../utils/device_context.cuh"
+#include "curves/curve_config.cuh"
+#include "primitives/field.cuh"
+#include "primitives/projective.cuh"
+#include "utils/device_context.cuh"
 
 class Dummy_Scalar
 {

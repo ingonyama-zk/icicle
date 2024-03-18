@@ -4,12 +4,12 @@
 
 #include <cuda_runtime.h>
 
-#include "../../curves/curve_config.cuh"
-#include "../../primitives/affine.cuh"
-#include "../../primitives/field.cuh"
-#include "../../primitives/projective.cuh"
-#include "../../utils/device_context.cuh"
-#include "../../utils/error_handler.cuh"
+#include "curves/curve_config.cuh"
+#include "primitives/affine.cuh"
+#include "primitives/field.cuh"
+#include "primitives/projective.cuh"
+#include "utils/device_context.cuh"
+#include "utils/error_handler.cuh"
 
 /**
  * @namespace msm
@@ -43,14 +43,18 @@ namespace msm {
                               *   variable is set equal to the MSM size. And if every MSM uses a distinct set of
                               *   points, it should be set to the product of MSM size and [batch_size](@ref
                               *   batch_size). Default value: 0 (meaning it's equal to the MSM size). */
-    int precompute_factor;   /**< The number of extra points to pre-compute for each point. Larger values decrease the
+    int precompute_factor;   /**< The number of extra points to pre-compute for each point. See the
+                              *   [PrecomputeMSMBases](@ref PrecomputeMSMBases) function, `precompute_factor` passed
+                              *   there needs to be equal to the one used here. Larger values decrease the
                               *   number of computations to make, on-line memory footprint, but increase the static
                               *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
     int c;                   /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket
                               *   method" that we use to solve the MSM problem. As a rule of thumb, larger value
                               *   means more on-line memory footprint but also more parallelism and less computational
-                              *   complexity (up to a certain point). Default value: 0 (the optimal value of \f$ c \f$
-                              *   is chosen automatically). */
+                              *   complexity (up to a certain point). Currently pre-computation is independent of
+                              *   \f$ c \f$, however in the future value of \f$ c \f$ here and the one passed into the
+                              *   [PrecomputeMSMBases](@ref PrecomputeMSMBases) function will need to be identical.
+                              *    Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically).  */
     int bitsize;             /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
                               *   but if a different (better) upper bound is known, it should be reflected in this
                               *   variable. Default value: 0 (set to the bitsize of scalar field). */
@@ -101,12 +105,39 @@ namespace msm {
    * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) point in our codebase.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    *
-   * **Note:** this function is still WIP and the following [MSMConfig](@ref MSMConfig) members do not yet have any
-   * effect: `precompute_factor` (always equals 1) and `ctx.device_id` (0 device is always used).
-   * Also, it's currently better to use `batch_size=1` in most cases (except with dealing with very many MSMs).
    */
   template <typename S, typename A, typename P>
   cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig& config, P* results);
+
+  /**
+   * A function that precomputes MSM bases by extending them with their shifted copies.
+   * e.g.:
+   * Original points: \f$ P_0, P_1, P_2, ... P_{size} \f$
+   * Extended points: \f$ P_0, P_1, P_2, ... P_{size}, 2^{l}P_0, 2^{l}P_1, ..., 2^{l}P_{size},
+   * 2^{2l}P_0, 2^{2l}P_1, ..., 2^{2cl}P_{size}, ... \f$
+   * @param bases Bases \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
+   * @param bases_size Number of bases.
+   * @param precompute_factor The number of total precomputed points for each base (including the base itself).
+   * @param _c This is currently unused, but in the future precomputation will need to be aware of
+   * the `c` value used in MSM (see [MSMConfig](@ref MSMConfig)). So to avoid breaking your code with this
+   * upcoming change, make sure to use the same value of `c` in this function and in respective MSMConfig.
+   * @param are_bases_on_device Whether the bases are on device.
+   * @param ctx Device context specifying device id and stream to use.
+   * @param output_bases Device-allocated buffer of size bases_size * precompute_factor for the extended bases.
+   * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine
+   * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   *
+   */
+  template <typename A, typename P>
+  cudaError_t PrecomputeMSMBases(
+    A* bases,
+    int bases_size,
+    int precompute_factor,
+    int _c,
+    bool are_bases_on_device,
+    device_context::DeviceContext& ctx,
+    A* output_bases);
 
 } // namespace msm
 

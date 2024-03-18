@@ -20,8 +20,9 @@ impl_poseidon!("bw6_761", bw6_761, BaseField, BaseCfg);
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::curve::ScalarField;
-    use icicle_core::impl_poseidon_tests;
     use icicle_core::poseidon::tests::*;
+    use icicle_core::{impl_poseidon_custom_config_test, impl_poseidon_tests};
 
-    impl_poseidon_tests!(ScalarField, 32, "bls12_377", 56);
+    impl_poseidon_tests!(ScalarField);
+    impl_poseidon_custom_config_test!(ScalarField, 32, "bls12_377", 56);
 }

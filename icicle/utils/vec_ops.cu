@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 #include "vec_ops.cuh"
-#include "../curves/curve_config.cuh"
+#include "curves/curve_config.cuh"
 #include "device_context.cuh"
 #include "utils/utils.h"
 

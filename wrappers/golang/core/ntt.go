@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 type NTTDir int8
@@ -26,11 +26,13 @@ const (
 
 type NTTConfig[T any] struct {
 	/// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
-	Ctx cuda_runtime.DeviceContext
+	Ctx cr.DeviceContext
 	/// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
 	CosetGen T
 	/// The number of NTTs to compute. Default value: 1.
 	BatchSize int32
+	/// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
+	ColumnsBatch bool
 	/// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
 	Ordering           Ordering
 	areInputsOnDevice  bool
@@ -41,11 +43,12 @@ type NTTConfig[T any] struct {
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
-	ctx, _ := cuda_runtime.GetDefaultDeviceContext()
+	ctx, _ := cr.GetDefaultDeviceContext()
 	return NTTConfig[T]{
 		ctx,      // Ctx
 		cosetGen, // CosetGen
 		1,        // BatchSize
+		false,    // ColumnsBatch
 		KNN,      // Ordering
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice

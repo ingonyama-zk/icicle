@@ -2,7 +2,7 @@
 #ifndef BLS12_381_PARAMS_H
 #define BLS12_381_PARAMS_H
 
-#include "../utils/storage.cuh"
+#include "utils/storage.cuh"
 
 namespace bls12_381 {
   struct fp_config {

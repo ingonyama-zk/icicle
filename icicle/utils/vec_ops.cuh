@@ -91,7 +91,6 @@ namespace vec_ops {
    */
   template <typename E>
   cudaError_t Sub(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
-
 } // namespace vec_ops
 
 #endif

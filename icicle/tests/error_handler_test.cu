@@ -1,4 +1,4 @@
-#include "../utils/error_handler.cuh" // Include your error handling header file
+#include "utils/error_handler.cuh" // Include your error handling header file
 #include <gtest/gtest.h>
 
 class IcicleErrorTest : public ::testing::Test
