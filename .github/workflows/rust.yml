@@ -46,7 +46,7 @@ jobs:
       working-directory: ./wrappers/rust
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # Building from the root workspace will build all members of the workspace by default
-      run: cargo build --release --verbose
+      run: cargo build --release --features=g2,ecntt,devmode --verbose
   
   test-linux:
     name: Test on Linux
@@ -60,7 +60,7 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # Running tests from the root workspace will run all workspace members' tests by default
       # We need to limit the number of threads to avoid running out of memory on weaker machines
-      run: cargo test --release --verbose --features=g2 -- --test-threads=2
+      run: cargo test --release --verbose --features=g2,devmode -- --test-threads=2
 
   build-windows:
     name: Build on Windows
@@ -69,7 +69,7 @@ jobs:
     steps:     
     - name: Checkout Repo
       uses: actions/checkout@v4
-    - name: Download and Install Cuda
+    - name: Download and Install Cuda #a bit painful step - takes so long each time :(
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       id: cuda-toolkit
       uses: Jimver/cuda-toolkit@v0.2.11
@@ -84,4 +84,4 @@ jobs:
       env:
         CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
       # Building from the root workspace will build all members of the workspace by default
-      run: cargo build --release --verbose
+      run: cargo build --release --verbose --features=devmode
