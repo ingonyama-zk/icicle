@@ -4,7 +4,7 @@ pub mod tests;
 use icicle_cuda_runtime::{
     device::check_device,
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
-    memory::{HostOrDeviceSlice, DeviceSlice},
+    memory::{DeviceSlice, HostOrDeviceSlice},
 };
 
 use crate::{error::IcicleResult, traits::FieldImpl};

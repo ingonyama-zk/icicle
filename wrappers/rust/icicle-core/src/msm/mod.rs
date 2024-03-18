@@ -2,7 +2,7 @@ use crate::curve::{Affine, Curve, Projective};
 use crate::error::IcicleResult;
 use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
-use icicle_cuda_runtime::memory::{HostOrDeviceSlice, DeviceSlice};
+use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]

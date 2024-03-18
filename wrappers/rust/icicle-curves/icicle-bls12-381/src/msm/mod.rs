@@ -8,7 +8,11 @@ use icicle_core::{
     msm::{MSMConfig, MSM},
     traits::IcicleResultWrap,
 };
-use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaError, memory::{HostOrDeviceSlice, DeviceSlice}};
+use icicle_cuda_runtime::{
+    device_context::DeviceContext,
+    error::CudaError,
+    memory::{DeviceSlice, HostOrDeviceSlice},
+};
 
 impl_msm!("bls12_381", bls12_381, CurveCfg);
 #[cfg(feature = "g2")]
