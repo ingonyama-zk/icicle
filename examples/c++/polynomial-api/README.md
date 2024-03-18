@@ -21,7 +21,7 @@ cmake --build build
 To run example, from project root directory:
 
 ```sh
-cd examples/c++/ppolynomial-api
+cd examples/c++/polynomial-api
 ./compile.sh
 ./run.sh
 ```
@@ -30,7 +30,7 @@ cd examples/c++/ppolynomial-api
 
 - `example_evaluate`: Make polynomial from coefficients and evalue it at random point.
 
-- `example_clone`: Make a separate copy of a polinomial.
+- `example_clone`: Make a separate copy of a polynomial.
 
 - `example_from_rou`: Reconstruct polynomial from values at the roots of unity. This operation is a cornerstone in the efficient implementation of zero-knowledge proofs, particularly in the areas of proof construction, verification, and polynomial arithmetic. By leveraging the algebraic structure and computational properties of roots of unity, ZKP protocols can achieve the scalability, efficiency, and privacy necessary for practical applications in blockchain, secure computation, and beyond.
 

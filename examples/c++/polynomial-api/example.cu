@@ -1,7 +1,7 @@
 #include <iostream>
 #define CURVE_ID BN254
 #include "curves/curve_config.cuh"
-#include "polynomials/polynomials.cpp"
+#include "polynomials/polynomials.h"
 #include "appUtils/ntt/ntt.cuh"
 using namespace curve_config;
 using namespace polynomials;
@@ -51,11 +51,6 @@ void example_from_rou(const int size) {
   // check for equality f-fr==0
   auto h = f - fr;
   std::cout << "degree of f - fr = " << h.degree() << std::endl;
-}
-
-void example_fromEvaluations_NotPowerOfTwo(int size) {
-  // TODO: implement
-  std::cout << "TODO: fromEvaluations_NotPowerOfTwo" << std::endl;
 }
 
 static Polynomial_t randomize_polynomial(uint32_t size)
@@ -271,7 +266,6 @@ int main(int argc, char** argv)
   example_evaluate();
   example_clone(10);
   example_from_rou(100);
-  // example_fromEvaluations_NotPowerOfTwo(100);
   example_addition(12, 17);
   example_addition_inplace(2, 2);
   example_multiplication(15, 12);
