@@ -144,7 +144,8 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
-  std::tuple<C*, uint64_t /*size*/, uint64_t /*device_id*/> Polynomial<C, D, I>::get_coefficients_on_device()
+  std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
+  Polynomial<C, D, I>::get_coefficients_on_device()
   {
     return m_backend->get_coefficients_on_device(*m_context);
   }

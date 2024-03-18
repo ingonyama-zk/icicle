@@ -21,7 +21,10 @@ namespace polynomials {
   public:
     const DeviceContext& m_device_context;
 
-    CUDAPolynomialContext(const DeviceContext& dev_context) : m_device_context{dev_context} {}
+    CUDAPolynomialContext(const DeviceContext& dev_context) : m_device_context{dev_context}
+    {
+      m_integrity_counter = std::make_shared<int>(0);
+    }
     ~CUDAPolynomialContext() { release(); }
 
     void allocate(uint64_t nof_elements, State init_state, bool is_memset_zeros) override
@@ -37,6 +40,8 @@ namespace polynomials {
 
       release(); // in case allocated mem is too small and need to reallocate
       this->m_nof_elements = allocate_mem(nof_elements, &this->m_storage, is_memset_zeros);
+
+      modified();
     }
 
     void memset_zeros(void* storage, uint64_t element_start_idx, uint64_t element_end_idx)
@@ -70,6 +75,8 @@ namespace polynomials {
       release();
       m_storage = storage;
       this->m_nof_elements = nof_elements;
+
+      modified();
     }
 
     void extend_mem_and_pad(uint64_t nof_elements)
@@ -90,6 +97,8 @@ namespace polynomials {
 
       m_storage = nullptr;
       this->m_nof_elements = 0;
+
+      modified();
     }
 
     C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients) override
@@ -140,13 +149,23 @@ namespace polynomials {
     std::pair<C*, uint64_t> get_coefficients() override
     {
       transform_to_coefficients();
+      modified(); // protect against backend modifying directly
       return std::make_pair(static_cast<C*>(m_storage), this->m_nof_elements);
+    }
+
+    std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_safe() override
+    {
+      auto [coeffs, N] = get_coefficients();
+      // when reading the pointer, if the counter was modified, the pointer is invalid
+      IntegrityPointer<C> integrity_pointer(coeffs, m_integrity_counter, *m_integrity_counter);
+      return {integrity_pointer, N};
     }
 
     std::pair<I*, uint64_t> get_rou_evaluations() override
     {
       const bool is_reversed = this->m_state == State::EvaluationsOnRou_Reversed;
       transform_to_evaluations(0, is_reversed);
+      modified(); // protect against backend modifying directly
       return std::make_pair(static_cast<I*>(m_storage), this->m_nof_elements);
     }
 
@@ -163,6 +182,8 @@ namespace polynomials {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encountered a bug");
       }
+
+      modified();
 
       const bool is_already_in_coeffs = this->m_state == State::Coefficients;
       // case 1: already in coefficients. Need to allocate larger memory and zero pad
@@ -210,6 +231,8 @@ namespace polynomials {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "polynomial shrinking not supported. Probably encountered a bug");
       }
+
+      modified();
 
       // TODO Yuval: evaluations->evaluations with different ordering can be implemented via inplace reorder more
       // efficiently than it is now
@@ -296,6 +319,9 @@ namespace polynomials {
   private:
     // Members
     void* m_storage = nullptr;
+    std::shared_ptr<int> m_integrity_counter; // used to implement integrity of coefficients pointer
+
+    void modified() { (*m_integrity_counter)++; }
   };
 
   /*============================== Polynomial CUDA-backend ==============================*/
@@ -639,10 +665,11 @@ namespace polynomials {
       return host_coeff;
     }
 
-    std::tuple<C*, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device(PolyContext& p) override
+    std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_coefficients_on_device(PolyContext& p) override
     {
-      auto [coeffs, size] = p.get_coefficients();
-      return std::make_tuple(coeffs, size, m_device_context.device_id);
+      auto [coeffs_safe, size] = p.get_coefficients_safe();
+      return std::make_tuple(coeffs_safe, size, m_device_context.device_id);
     }
   };
 

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include "utils/integrity_pointer.h"
 
 namespace polynomials {
   template <typename Coeff, typename Domain, typename Image>
@@ -57,9 +58,7 @@ namespace polynomials {
     Coeff get_coefficient_on_host(uint64_t idx) const;
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
     int64_t get_coefficients_on_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
-    // caller is getting a pointer to device data. Data is volatile
-    // TODO Yuval: return wrapper around Coeff* that exposes const access and identifies invalidation of the data
-    std::tuple<Coeff*, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device();
+    std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device();
 
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
     {
@@ -109,6 +108,7 @@ namespace polynomials {
     virtual std::shared_ptr<IPolynomialContext> clone() const = 0;
 
     virtual std::pair<C*, uint64_t> get_coefficients() = 0;
+    virtual std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_safe() = 0;
     virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
 
     virtual void transform_to_coefficients(uint64_t nof_coefficients = 0) = 0;
@@ -168,7 +168,8 @@ namespace polynomials {
     virtual int64_t
     get_coefficients_on_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
 
-    virtual std::tuple<C*, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device(PolyContext& p) = 0;
+    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_coefficients_on_device(PolyContext& p) = 0;
   };
 
   /*============================== Polynomial Absract Factory ==============================*/
