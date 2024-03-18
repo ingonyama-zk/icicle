@@ -514,11 +514,9 @@ namespace ntt {
     return CHK_LAST();
   }
 
-  template <typename S, typename E>
-  static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
+  template <typename S>
+  static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
-    if constexpr (std::is_same_v<E, curve_config::projective_t>) return true; // if is ECNTT
-
     const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
     if (!is_mixed_radix_alg_supported && config.columns_batch)
       throw IcicleError(IcicleError_t::InvalidArgument, "columns batch is not supported for given NTT size");
@@ -650,7 +648,9 @@ namespace ntt {
 
     const bool is_inverse = dir == NTTDir::kInverse;
 
-    const bool is_radix2_algorithm = is_choose_radix2_algorithm<S, E>(logn, batch_size, config);
+    const bool is_ecntt = std::is_same_v<E, curve_config::projective_t>;
+
+    const bool is_radix2_algorithm = is_ecntt || is_choosing_radix2_algorithm(logn, batch_size, config);
 
     if (is_radix2_algorithm) {
       CHK_IF_RETURN(ntt::radix2_ntt(
