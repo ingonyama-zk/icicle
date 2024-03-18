@@ -9,7 +9,7 @@
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
 #include "appUtils/ntt/ntt_impl.cuh"
-#include "appUtils/ntt/kernel_ntt.cu" // for ntt::Ordering
+#include "appUtils/ntt/ntt.cuh" // for ntt::Ordering
 
 #include <mutex>
 
