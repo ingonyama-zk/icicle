@@ -8,6 +8,7 @@
 #include "curves/curve_config.cuh"
 using curve_config::affine_t;
 using curve_config::g2_affine_t;
+using curve_config::g2_projective_t;
 using curve_config::projective_t;
 using curve_config::scalar_t;
 
@@ -16,25 +17,26 @@ using curve_config::scalar_t;
 #include "appUtils/msm/msm.cuh"
 #include "utils/device_context.cuh"
 
-// using the MSM C-API directly since msm::MSM() is hidden and I cannot understand why
+// using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
 namespace msm {
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
-    curve_config::scalar_t* scalars,
-    curve_config::affine_t* points,
-    int msm_size,
-    MSMConfig& config,
-    curve_config::projective_t* out);
+    scalar_t* scalars, affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
 
-  cudaError_t __MSM__(
-    curve_config::scalar_t* scalars,
-    curve_config::affine_t* points,
-    int msm_size,
-    MSMConfig& config,
-    curve_config::projective_t* out)
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
+    scalar_t* scalars, g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
+
+  cudaError_t _MSM(scalar_t* scalars, affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
   {
     return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
   }
+  cudaError_t _G2MSM(scalar_t* scalars, g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
+  {
+    return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
+  }
+
 } // namespace msm
+
+/*******************************************/
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -100,13 +102,14 @@ public:
     }
   }
 
-  static void compute_powers_of_tau(projective_t g, scalar_t tau, affine_t* res, uint32_t count)
+  template <typename P, typename A>
+  static void compute_powers_of_tau(P g, scalar_t tau, A* res, uint32_t count)
   {
     // no arithmetic on affine??
-    res[0] = projective_t::to_affine(g);
+    res[0] = P::to_affine(g);
     for (int i = 1; i < count; i++) {
       g = g * tau;
-      res[i] = projective_t::to_affine(g);
+      res[i] = P::to_affine(g);
     }
   }
 
@@ -439,7 +442,7 @@ TEST_F(PolynomialTest, commitMSM)
   auto f = randomize_polynomial(size);
 
   auto [d_coeff, N, device_id] = f.get_coefficients_on_device();
-  auto msm_config = msm::DefaultMSMConfig();
+  auto msm_config = msm::DefaultMSMConfig<scalar_t>();
   msm_config.are_scalars_on_device = true;
 
   auto points = std::make_unique<affine_t[]>(size);
@@ -449,7 +452,7 @@ TEST_F(PolynomialTest, commitMSM)
   projective_t g = projective_t::rand_host();
   compute_powers_of_tau(g, tau, points.get(), size);
 
-  msm::__MSM__(d_coeff, points.get(), size, msm_config, &result);
+  CHK_STICKY(msm::_MSM(d_coeff, points.get(), size, msm_config, &result));
 
   EXPECT_EQ(result, f(tau) * g);
 }
@@ -476,37 +479,21 @@ TEST_F(PolynomialTest, commitMSM)
 // simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
 class Groth16Example
 {
+  // based on https://www.rareskills.io/post/groth16
 public:
-  struct G16proof {
-    affine_t A;
-    g2_affine_t B;
-    affine_t C;
-  };
-
-  // constructor
-  const int nof_inputs;
-  const int nof_outputs;
-  const int nof_intermediates;
-  const int witness_size;
-  const int input_offset;
-  const int intermediate_offset;
-  std::vector<Polynomial_t> L_QAP, R_QAP, O_QAP;
+  /******** QAP construction *********/
 
   Groth16Example(int N)
       : nof_inputs(N), nof_outputs(1), nof_intermediates(nof_inputs - 2),
         witness_size(1 + nof_outputs + nof_inputs + nof_intermediates), input_offset(1 + nof_outputs),
-        intermediate_offset(input_offset + nof_inputs)
+        intermediate_offset(input_offset + nof_inputs), nof_constraints(nof_inputs - 1)
   {
     construct_QAP();
   }
 
-public:
-  void setup() {}
-
   void construct_QAP()
   {
-    // (2) construct matrices A,B,C (based on the circuit)
-    const int nof_constraints = nof_inputs - 1;
+    // (1) construct matrices A,B,C (based on the circuit)
     // allocating such that columns are consecutive in memory for more efficient polynomial construction from
     // consecutive evaluations
     const int nof_cols = witness_size;
@@ -531,7 +518,7 @@ public:
       *(O_data + O_col * nof_rows + row) = scalar_t::one();
     }
 
-    // (3) interpolate the columns of L,R,O to build the polynomials
+    // (2) interpolate the columns of L,R,O to build the polynomials
     L_QAP.reserve(nof_cols);
     R_QAP.reserve(nof_cols);
     O_QAP.reserve(nof_cols);
@@ -542,7 +529,7 @@ public:
     }
   }
 
-  std::vector<scalar_t> randomize_witness()
+  std::vector<scalar_t> random_witness_inputs()
   {
     std::vector<scalar_t> witness(witness_size, scalar_t::zero());
     witness[0] = scalar_t::one();
@@ -553,6 +540,7 @@ public:
 
   void compute_witness(std::vector<scalar_t>& witness)
   {
+    if (witness_size != witness.size()) { throw std::runtime_error("invalid witness size"); }
     // compute intermediate values (based on the circuit above)
     for (int i = 0; i < nof_intermediates; ++i) {
       const auto& left_input = i == 0 ? witness[input_offset] : witness[intermediate_offset + i - 1];
@@ -563,9 +551,181 @@ public:
     witness[1] = witness[input_offset + nof_inputs - 1] * witness[intermediate_offset + nof_intermediates - 1];
   }
 
-  G16proof prove(const std::vector<scalar_t>& witness) const
+  /******** SETUP *********/
+  // https://static.wixstatic.com/media/935a00_cd68860dafbb4ebe8f166de5cc8cc50c~mv2.png
+  struct ToxicWaste {
+    scalar_t alpha;
+    scalar_t beta;
+    scalar_t gamma;
+    scalar_t delta;
+    scalar_t tau;
+    scalar_t gamma_inv;
+    scalar_t delta_inv;
+
+    ToxicWaste()
+    {
+      alpha = scalar_t::rand_host();
+      beta = scalar_t::rand_host();
+      gamma = scalar_t::rand_host();
+      delta = scalar_t::rand_host();
+      tau = scalar_t::rand_host();
+      gamma_inv = scalar_t::inverse(gamma);
+      delta_inv = scalar_t::inverse(delta);
+    }
+  };
+
+  struct ProvingKey {
+    struct G1 {
+      affine_t alpha;
+      affine_t beta;
+      affine_t delta;
+      std::vector<affine_t> powers_of_tau;          // {X^i} @[0..n-1]
+      std::vector<affine_t> private_witness_points; // {(beta_Ui+alpha_Vi+Wi) / delta} @[l+1..m]
+      std::vector<affine_t> vanishing_poly_points;  // {x^it(x) / delta} @[0..,n-2]
+    };
+    struct G2 {
+      g2_affine_t beta;
+      g2_affine_t gamma;
+      g2_affine_t delta;
+      std::vector<g2_affine_t> powers_of_tau; // {X^i} @[0..n-1]
+    };
+
+    G1 g1;
+    G2 g2;
+  };
+
+  struct VerifyingKey {
+    // TODO
+  };
+
+  void setup()
+  {
+    // (1) randomize alpha, beta, gamma, delta, tau
+    ToxicWaste toxic_waste;
+    // (2) randomize generators G1, G2. TODO Yuval what are the generators used by the protocol?
+    projective_t G1 = projective_t::rand_host();
+    g2_projective_t G2 = g2_projective_t::rand_host();
+
+    // Note: n,m,l are from the groth16 paper
+    const int m = witness_size - 1;
+    const int l = nof_outputs; // public part of the witness
+    const int n = nof_constraints;
+
+    // (3) compute the proving and verifying keys
+    pk.g1.alpha = projective_t::to_affine(toxic_waste.alpha * G1);
+    pk.g1.beta = projective_t::to_affine(toxic_waste.beta * G1);
+    pk.g1.delta = projective_t::to_affine(toxic_waste.delta * G1);
+
+    pk.g1.powers_of_tau.resize(n, affine_t::zero());
+    PolynomialTest::compute_powers_of_tau(G1, toxic_waste.tau, pk.g1.powers_of_tau.data(), n);
+
+    // { (beta*Ui(tau) + alpha*Vi(tau) + Wi) / delta}
+    pk.g1.private_witness_points.reserve(m - l);
+    for (int i = l + 1; i <= m; ++i) {
+      auto p = toxic_waste.beta * L_QAP[i] + toxic_waste.alpha * R_QAP[i] + O_QAP[i];
+      p = p * toxic_waste.delta_inv;
+      pk.g1.private_witness_points.push_back(projective_t::to_affine(p(toxic_waste.tau) * G1));
+    }
+
+    // {tau^i(t(tau) / delta}
+    const int vanishing_poly_deg = ceil_to_power_of_two(n);
+    auto t = PolynomialTest::vanishing_polynomial(vanishing_poly_deg);
+    pk.g1.vanishing_poly_points.reserve(n - 1);
+    auto x = scalar_t::one();
+    for (int i = 0; i <= n - 2; ++i) {
+      pk.g1.vanishing_poly_points.push_back(
+        projective_t::to_affine(x * t(toxic_waste.tau) * toxic_waste.delta_inv * G1));
+      x = x * toxic_waste.tau;
+    }
+
+    pk.g2.beta = g2_projective_t::to_affine(toxic_waste.beta * G2);
+    pk.g2.gamma = g2_projective_t::to_affine(toxic_waste.gamma * G2);
+    pk.g2.delta = g2_projective_t::to_affine(toxic_waste.delta * G2);
+
+    pk.g2.powers_of_tau.resize(n, g2_affine_t::zero());
+    PolynomialTest::compute_powers_of_tau(G2, toxic_waste.tau, pk.g2.powers_of_tau.data(), n);
+  }
+
+  /******** PROVE *********/
+  // https://static.wixstatic.com/media/935a00_432ca182820540df8d67b5c3d5d0d3e1~mv2.png
+  struct G16proof {
+    affine_t A;
+    g2_affine_t B;
+    affine_t C;
+  };
+
+  // TODO Yuval: both witness and the method should be const but need to fix MSM to take const inputs first
+  G16proof prove(std::vector<scalar_t>& witness)
   {
     G16proof proof = {};
+    const auto r = scalar_t::rand_host();
+    const auto s = scalar_t::rand_host();
+
+    // Note: n,m,l are from the groth16 paper
+    const int m = witness_size - 1;
+    const int l = nof_outputs; // public part of the witness
+    const int n = nof_constraints;
+
+    auto U = L_QAP[0].clone();
+    auto V = R_QAP[0].clone();
+    for (int i = 1; i <= m; ++i) {
+      U += L_QAP[i] * witness[i];
+      V += R_QAP[i] * witness[i];
+    }
+
+    auto msm_config = msm::DefaultMSMConfig<scalar_t>();
+    msm_config.are_scalars_on_device = true;
+
+    // compute [A]1
+    {
+      projective_t U_commited;
+      auto [d_coeff, N, device_id] = U.get_coefficients_on_device();
+      CHK_STICKY(msm::_MSM(d_coeff, pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
+      proof.A = projective_t::to_affine(U_commited + pk.g1.alpha + r * projective_t::from_affine(pk.g1.delta));
+    }
+
+    // compute [B]2 and [B]1 (required to compute C)
+    projective_t B1;
+    {
+      g2_projective_t V_commited_g2;
+      auto [d_coeff, N, device_id] = V.get_coefficients_on_device();
+      CHK_STICKY(msm::_G2MSM(d_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
+      proof.B = g2_projective_t::to_affine(V_commited_g2 + pk.g2.beta + s * g2_projective_t::from_affine(pk.g2.delta));
+
+      projective_t V_commited_g1;
+      CHK_STICKY(msm::_MSM(d_coeff, pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
+      B1 = V_commited_g1 + pk.g1.beta + projective_t::from_affine(pk.g1.delta) * s;
+    }
+
+    // compute [C]1
+    {
+      // compute h. TODO Yuval: is this computation still valid even with the shifts (alpha, beta)?
+      Polynomial_t U = L_QAP[0].clone();
+      Polynomial_t V = R_QAP[0].clone();
+      Polynomial_t W = O_QAP[0].clone();
+      for (int col = 1; col <= m; ++col) {
+        U += witness[col] * L_QAP[col];
+        V += witness[col] * R_QAP[col];
+        W += witness[col] * O_QAP[col];
+      }
+
+      const int vanishing_poly_deg = ceil_to_power_of_two(n);
+      Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
+      auto [d_coeff, N, device_id] = h.get_coefficients_on_device();
+
+      projective_t HT_commited;
+      CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
+
+      projective_t private_inputs_commited;
+      msm_config.are_scalars_on_device = false;
+      CHK_STICKY(msm::_MSM(
+        witness.data() + l + 1, pk.g1.private_witness_points.data(), m - l, msm_config, &private_inputs_commited));
+
+      proof.C = projective_t::to_affine(
+        private_inputs_commited + HT_commited + projective_t::from_affine(proof.A) * s + B1 * r -
+        r * s * projective_t::from_affine(pk.g1.delta));
+    }
+
     return proof;
   }
 
@@ -575,23 +735,31 @@ public:
     return false;
   }
 
-private:
+  // constructor
+  const int nof_inputs;
+  const int nof_outputs;
+  const int nof_intermediates;
+  const int witness_size;
+  const int input_offset;
+  const int intermediate_offset;
+  const int nof_constraints;
+  std::vector<Polynomial_t> L_QAP, R_QAP, O_QAP;
+  ProvingKey pk;
+  VerifyingKey vk;
 };
 
 TEST_F(PolynomialTest, QAP)
 {
-  // QAP simple case based on the Groth16 circuit
-  Groth16Example QAP(300 /*=N*/); // constructor is computing R1CS and the QAP
+  // (1) construct R1CS and QAP for circuit with N inputs
+  Groth16Example QAP(300 /*=N*/);
 
-  // randomize a witness and compute witness=[1,out,...N inputs..., ... intermediate values...]
-  auto witness = QAP.randomize_witness();
+  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
+  auto witness = QAP.random_witness_inputs();
   QAP.compute_witness(witness);
 
-  // (2) construct matrices A,B,C (based on the circuit)
-  const int nof_constraints = QAP.nof_inputs - 1; // multipying N numbers yields N-1 constraints
+  // (3) compute L(x),R(x),O(x) using the witness
   const int nof_cols = QAP.witness_size;
 
-  // (3) compute L(x),R(x),O(x) using the witness
   Polynomial_t Lx = QAP.L_QAP[0].clone();
   Polynomial_t Rx = QAP.R_QAP[0].clone();
   Polynomial_t Ox = QAP.O_QAP[0].clone();
@@ -601,6 +769,8 @@ TEST_F(PolynomialTest, QAP)
     Ox += witness[col] * QAP.O_QAP[col];
   }
 
+  const int nof_constraints =
+    QAP.nof_inputs - 1; // multiplying N numbers yields N-1 constraints for this circuit construction
   //  (4) sanity check: verify AB=C at the evaluation points
   {
     auto default_device_context = device_context::get_default_device_context();
@@ -622,6 +792,20 @@ TEST_F(PolynomialTest, QAP)
     EXPECT_EQ(r.degree(), -1); // zero polynomial (expecting division without remainder)
     assert_equal(h, h_long_div);
   }
+}
+
+TEST_F(PolynomialTest, Groth16)
+{
+  // (1) construct R1CS and QAP for circuit with N inputs
+  Groth16Example groth16_example(30 /*=N*/);
+
+  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
+  auto witness = groth16_example.random_witness_inputs();
+  groth16_example.compute_witness(witness);
+
+  groth16_example.setup();
+  auto proof = groth16_example.prove(witness);
+  // groth16_example.verify(proof); // cannot implement without pairing
 }
 
 int main(int argc, char** argv)

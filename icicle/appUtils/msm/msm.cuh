@@ -86,6 +86,7 @@ namespace msm {
    * A function that returns the default value of [MSMConfig](@ref MSMConfig) for the [MSM](@ref MSM) function.
    * @return Default value of [MSMConfig](@ref MSMConfig).
    */
+  template <typename A>
   MSMConfig DefaultMSMConfig();
 
   /**
