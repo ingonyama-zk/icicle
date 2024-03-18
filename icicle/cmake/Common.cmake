@@ -59,6 +59,13 @@ function(set_gpu_env)
     endif()
     endif()
 
+    # Check CUDA version and, if possible, enable multi-threaded compilation 
+    if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "12.2")
+        message(STATUS "Using multi-threaded CUDA compilation.")
+        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --split-compile 0" PARENT_SCOPE)
+    else()
+        message(STATUS "Can't use multi-threaded CUDA compilation.")
+    endif()
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr" PARENT_SCOPE)
     set(CMAKE_CUDA_FLAGS_RELEASE "" PARENT_SCOPE)
     set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0" PARENT_SCOPE)
