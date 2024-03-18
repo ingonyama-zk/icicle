@@ -3,8 +3,11 @@
 #define BW6_761_PARAMS_H
 
 #include "utils/storage.cuh"
+#include "bls12_377_params.cuh"
 
 namespace bw6_761 {
+  typedef bls12_377::fq_config fp_config;
+
   struct fq_config {
     static constexpr unsigned limbs_count = 24;
     static constexpr unsigned modulus_bit_count = 761;
