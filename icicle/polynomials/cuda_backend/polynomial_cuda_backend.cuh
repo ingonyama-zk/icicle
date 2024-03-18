@@ -344,6 +344,8 @@ namespace polynomials {
 
     void add_sub(PolyContext& res, PolyContext& a, PolyContext& b, bool add1_sub0)
     {
+      assert_device_compatability(a, b);
+      assert_device_compatability(a, res);
       // TODO Yuval: can do it evaluations too if same #evaluations (on ROU)
       auto [a_coeff_p, a_nof_coeff] = a.get_coefficients();
       auto [b_coeff_p, b_nof_coeff] = b.get_coefficients();
@@ -365,6 +367,9 @@ namespace polynomials {
 
     void multiply(PolyContext& c, PolyContext& a, PolyContext& b) override
     {
+      assert_device_compatability(a, b);
+      assert_device_compatability(a, c);
+
       const bool is_a_scalar = a.get_nof_elements() == 1;
       const bool is_b_scalar = b.get_nof_elements() == 1;
 
@@ -467,6 +472,10 @@ namespace polynomials {
 
     void divide(PolyContext& Q /*OUT*/, PolyContext& R /*OUT*/, PolyContext& a, PolyContext& b) override
     {
+      assert_device_compatability(a, b);
+      assert_device_compatability(a, Q);
+      assert_device_compatability(a, R);
+
       auto [a_coeffs, a_N] = a.get_coefficients();
       auto [b_coeffs, b_N] = b.get_coefficients();
 
@@ -522,6 +531,8 @@ namespace polynomials {
     void
     divide_by_vanishing_polynomial(PolyContext& out, PolyContext& numerator, uint64_t vanishing_poly_degree) override
     {
+      assert_device_compatability(numerator, out);
+
       // TODO Yuval: vanishing polynomial x^n-1 evaluates to zero on ROU
       // Therefore constant to conset ((wu)^n-1 = w^n*u^n-1 = u^n-1)
       // This is true for a coset of size n but if numerator is of size >n, then I need a larger coset and it doesn't
@@ -670,6 +681,18 @@ namespace polynomials {
     {
       auto [coeffs_safe, size] = p.get_coefficients_safe();
       return std::make_tuple(coeffs_safe, size, m_device_context.device_id);
+    }
+
+    inline void assert_device_compatability(PolyContext& a, PolyContext& b) const
+    {
+      CUDAPolynomialContext<C, D, I>* a_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(&a);
+      CUDAPolynomialContext<C, D, I>* b_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(&b);
+
+      const bool is_same_device = a_cuda->m_device_context.device_id == b_cuda->m_device_context.device_id;
+      if (!is_same_device) {
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "CUDA backend: incompatible polynomials, on different devices");
+      }
     }
   };
 
