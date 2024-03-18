@@ -734,7 +734,8 @@ namespace ntt {
   /**
    * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+   *  - `S` is the [projective representation](@ref projective_t) of the curve (i.e. EC NTT is computed);
+   *  - `E` is the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
