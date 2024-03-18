@@ -60,7 +60,7 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # Running tests from the root workspace will run all workspace members' tests by default
       # We need to limit the number of threads to avoid running out of memory on weaker machines
-      run: cargo test --release --verbose --features=g2,devmode -- --test-threads=2
+      run: cargo test --release --verbose --features=g2,ec_ntt,devmode -- --test-threads=2
 
   build-windows:
     name: Build on Windows
