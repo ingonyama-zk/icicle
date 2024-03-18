@@ -22,6 +22,7 @@ const (
 	KRR Ordering = 3
 	KNM Ordering = 4
 	KMN Ordering = 5
+	temp
 )
 
 type NTTConfig[T any] struct {
