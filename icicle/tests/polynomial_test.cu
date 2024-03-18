@@ -452,9 +452,27 @@ TEST_F(PolynomialTest, commitMSM)
   projective_t g = projective_t::rand_host();
   compute_powers_of_tau(g, tau, points.get(), size);
 
-  CHK_STICKY(msm::_MSM(d_coeff, points.get(), size, msm_config, &result));
+  EXPECT_EQ(d_coeff.isValid(), true);
+  CHK_STICKY(msm::_MSM(d_coeff.get(), points.get(), size, msm_config, &result));
 
   EXPECT_EQ(result, f(tau) * g);
+
+  f += f; // this is invalidating the d_coeff integrity-pointer
+
+  EXPECT_EQ(d_coeff.isValid(), false);
+}
+
+TEST_F(PolynomialTest, integrityPointerInvalidation)
+{
+  const int size = 1 << 6;
+
+  auto f = new Polynomial_t(randomize_polynomial(size));
+  auto [d_coeff, N, device_id] = f->get_coefficients_on_device();
+
+  EXPECT_EQ(d_coeff.isValid(), true);
+
+  delete f; // f is destructed so the coefficients should be invalidated
+  EXPECT_EQ(d_coeff.isValid(), false);
 }
 
 // Following examples are randomizing N private numbers and proving that I know N numbers such that their product is
@@ -680,7 +698,7 @@ public:
     {
       projective_t U_commited;
       auto [d_coeff, N, device_id] = U.get_coefficients_on_device();
-      CHK_STICKY(msm::_MSM(d_coeff, pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
+      CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
       proof.A = projective_t::to_affine(U_commited + pk.g1.alpha + r * projective_t::from_affine(pk.g1.delta));
     }
 
@@ -693,7 +711,7 @@ public:
       proof.B = g2_projective_t::to_affine(V_commited_g2 + pk.g2.beta + s * g2_projective_t::from_affine(pk.g2.delta));
 
       projective_t V_commited_g1;
-      CHK_STICKY(msm::_MSM(d_coeff, pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
+      CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
       B1 = V_commited_g1 + pk.g1.beta + projective_t::from_affine(pk.g1.delta) * s;
     }
 
