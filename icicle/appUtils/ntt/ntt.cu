@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <type_traits>
 
 #include "curves/curve_config.cuh"
 #include "utils/sharedmem.cuh"
@@ -513,9 +514,11 @@ namespace ntt {
     return CHK_LAST();
   }
 
-  template <typename S>
+  template <typename S, typename E>
   static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
+    if constexpr (std::is_same_v<E, curve_config::projective_t>) return true; // if is ECNTT
+
     const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
     if (!is_mixed_radix_alg_supported && config.columns_batch)
       throw IcicleError(IcicleError_t::InvalidArgument, "columns batch is not supported for given NTT size");
@@ -647,12 +650,7 @@ namespace ntt {
 
     const bool is_inverse = dir == NTTDir::kInverse;
 
-#if defined(ECNTT_DEFINED)
-      CHK_IF_RETURN(ntt::radix2_ntt(
-        d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
-        coset_index, stream));
-#else
-    const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
+    const bool is_radix2_algorithm = is_choose_radix2_algorithm<S, E>(logn, batch_size, config);
 
     if (is_radix2_algorithm) {
       CHK_IF_RETURN(ntt::radix2_ntt(
@@ -675,7 +673,7 @@ namespace ntt {
         d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
         config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
     }
-#endif
+
     if (!are_outputs_on_device)
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
@@ -732,7 +730,7 @@ namespace ntt {
     return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, dir, config, output);
   }
 
-#if defined(ECNTT_DEFINED) &&  CURVE_ID != BW6_761
+#if defined(ECNTT_DEFINED)
   /**
    * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
