@@ -202,8 +202,7 @@ namespace mxntt {
       engine.loadInternalTwiddlesGeneric64(internal_twiddles, strided, inv);
 
 #pragma unroll 1
-    for (uint32_t phase = 0; phase < 2; phase++)
-    {
+    for (uint32_t phase = 0; phase < 2; phase++) {
       engine.ntt8win();
       if (phase == 0) {
         engine.SharedData64Columns8(shmem, true, false, strided); // store
@@ -1049,4 +1048,4 @@ namespace mxntt {
     int coset_gen_index,
     cudaStream_t cuda_stream);
 #endif // ECNTT_DEFINED
-} // namespace ntt
+} // namespace mxntt

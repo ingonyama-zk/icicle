@@ -43,7 +43,7 @@ fn main() {
 
         #[cfg(feature = "ec_ntt")]
         config.define("ECNTT_DEFINED", "OFF");
-    
+
         #[cfg(feature = "devmode")]
         config.define("DEVMODE", "ON");
 

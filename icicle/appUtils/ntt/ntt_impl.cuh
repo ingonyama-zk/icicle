@@ -43,5 +43,5 @@ namespace mxntt {
     int coset_gen_index,
     cudaStream_t cuda_stream);
 
-} // namespace ntt
+} // namespace mxntt
 #endif //_NTT_IMPL_H
