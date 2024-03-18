@@ -20,7 +20,7 @@
 
 #include "utils/error_handler.cuh"
 #include "utils/host_math.cuh"
-#include "utils/ptx.cuh"
+#include "ptx.cuh"
 #include "utils/storage.cuh"
 #include <iomanip>
 #include <iostream>

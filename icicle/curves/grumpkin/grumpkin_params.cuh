@@ -2,8 +2,8 @@
 #ifndef GRUMPKIN_PARAMS_H
 #define GRUMPKIN_PARAMS_H
 
-#include "utils/storage.cuh"
-#include "bn254_params.cuh"
+#include "fields/storage.cuh"
+#include "fields/bn254/bn254_params.cuh"
 
 namespace grumpkin {
   typedef bn254::fq_config fp_config;
