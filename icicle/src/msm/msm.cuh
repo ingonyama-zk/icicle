@@ -106,7 +106,7 @@ namespace msm {
    *
    */
   template <typename S, typename A, typename P>
-  cudaError_t MSM(S* scalars, A* points, int msm_size, MSMConfig& config, P* results);
+  cudaError_t MSM(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results);
 
   /**
    * A function that precomputes MSM bases by extending them with their shifted copies.

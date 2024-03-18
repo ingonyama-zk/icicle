@@ -35,8 +35,8 @@ namespace msm {
    *  - `P` is the [projective representation](@ref projective_t) of curve points.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t
-  CONCAT_EXPAND(CURVE, MSMCuda)(scalar_t* scalars, affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
+    const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
   {
     return MSM<scalar_t, affine_t, projective_t>(scalars, points, msm_size, config, out);
   }
