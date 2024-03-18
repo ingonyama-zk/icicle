@@ -1,16 +1,15 @@
 #[doc(hidden)]
 pub mod tests;
 
-use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::{
+    device::check_device,
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
-    memory::HostOrDeviceSlice,
+    memory::{HostOrDeviceSlice, DeviceSlice},
 };
 
 use crate::{error::IcicleResult, traits::FieldImpl};
 
 #[repr(C)]
-#[derive(Debug, Clone)]
 pub struct PoseidonConstants<'a, F: FieldImpl> {
     arity: u32,
 
@@ -19,10 +18,10 @@ pub struct PoseidonConstants<'a, F: FieldImpl> {
     full_rounds_half: u32,
 
     /// These should be pointers to data allocated on device
-    round_constants: &'a [F],
-    mds_matrix: &'a [F],
-    non_sparse_matrix: &'a [F],
-    sparse_matrices: &'a [F],
+    round_constants: &'a DeviceSlice<F>,
+    mds_matrix: &'a DeviceSlice<F>,
+    non_sparse_matrix: &'a DeviceSlice<F>,
+    sparse_matrices: &'a DeviceSlice<F>,
 
     /// Domain tag is the first element in the Poseidon state.
     /// For the Merkle tree mode it should equal 2^arity - 1

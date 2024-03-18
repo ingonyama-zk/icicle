@@ -124,10 +124,9 @@ where
     for test_size in test_sizes {
         let precompute_factor = 8;
         let points = generate_random_affine_points_with_zeroes(test_size, 10);
-        let points_h = HostOrDeviceSlice::on_host(points.clone());
-        let mut precomputed_points_d = HostOrDeviceSlice::cuda_malloc(precompute_factor * test_size).unwrap();
+        let mut precomputed_points_d = DeviceVec::cuda_malloc(precompute_factor * test_size).unwrap();
         precompute_bases(
-            &points_h,
+            HostSlice::from_slice(&points),
             precompute_factor as i32,
             0,
             &cfg.ctx,
@@ -141,7 +140,6 @@ where
                 .take(batch_size)
                 .flatten()
                 .collect();
-            let points_h = HostSlice::from_slice(&points);
             let scalars_h = HostSlice::from_slice(&scalars);
 
             let mut msm_results_1 = DeviceVec::<Projective<C>>::cuda_malloc(batch_size).unwrap();
@@ -152,7 +150,7 @@ where
                 .unwrap();
 
             cfg.precompute_factor = precompute_factor as i32;
-            msm(scalars_h, precomputed_points_d, &cfg, &mut msm_results_1[..]).unwrap();
+            msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
             cfg.precompute_factor = 1;
             msm(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
 
@@ -168,7 +166,7 @@ where
                 .synchronize()
                 .unwrap();
 
-            let points_ark: Vec<_> = points_h
+            let points_ark: Vec<_> = points
                 .iter()
                 .map(|x| x.to_ark())
                 .collect();

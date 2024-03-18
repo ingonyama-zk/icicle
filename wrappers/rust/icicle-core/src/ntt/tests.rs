@@ -277,11 +277,11 @@ where
                     ] {
                         config.coset_gen = coset_gen;
                         config.ordering = ordering;
-                        let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
+                        let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                             config.batch_size = batch_size as i32;
                             config.ntt_algorithm = alg;
-                            ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
+                            ntt(scalars, is_inverse, &config, HostSlice::from_mut_slice(&mut batch_ntt_result)).unwrap();
                             config.batch_size = 1;
                             let mut one_ntt_result = vec![F::one(); test_size];
                             for i in 0..batch_size {
@@ -302,11 +302,9 @@ where
                         // for now, columns batching only works with MixedRadix NTT
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
-                        let transposed_input =
-                            HostOrDeviceSlice::on_host(transpose_flattened_matrix(&scalars[..], batch_size));
-                        let mut col_batch_ntt_result =
-                            HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
-                        ntt(&transposed_input, is_inverse, &config, &mut col_batch_ntt_result).unwrap();
+                        let transposed_input = transpose_flattened_matrix(scalars.as_slice(), batch_size);
+                        let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
+                        ntt(HostSlice::from_slice(&transposed_input), is_inverse, &config, HostSlice::from_mut_slice(&mut col_batch_ntt_result)).unwrap();
                         assert_eq!(
                             batch_ntt_result[..],
                             transpose_flattened_matrix(&col_batch_ntt_result[..], test_size)

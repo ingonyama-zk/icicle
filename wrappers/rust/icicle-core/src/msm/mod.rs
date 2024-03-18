@@ -2,7 +2,7 @@ use crate::curve::{Affine, Curve, Projective};
 use crate::error::IcicleResult;
 use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::memory::{HostOrDeviceSlice, DeviceSlice};
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
@@ -99,11 +99,11 @@ pub trait MSM<C: Curve> {
     ) -> IcicleResult<()>;
 
     fn precompute_bases_unchecked(
-        points: &HostOrDeviceSlice<Affine<C>>,
+        points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         precompute_factor: i32,
         _c: i32,
         ctx: &DeviceContext,
-        output_bases: &mut HostOrDeviceSlice<Affine<C>>,
+        output_bases: &mut DeviceSlice<Affine<C>>,
     ) -> IcicleResult<()>;
 }
 
@@ -202,11 +202,11 @@ pub fn msm<C: Curve + MSM<C>>(
 ///
 /// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
 pub fn precompute_bases<C: Curve + MSM<C>>(
-    points: &HostOrDeviceSlice<Affine<C>>,
+    points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     precompute_factor: i32,
     _c: i32,
     ctx: &DeviceContext,
-    output_bases: &mut HostOrDeviceSlice<Affine<C>>,
+    output_bases: &mut DeviceSlice<Affine<C>>,
 ) -> IcicleResult<()> {
     assert_eq!(
         output_bases.len(),
@@ -273,11 +273,11 @@ macro_rules! impl_msm {
             }
 
             fn precompute_bases_unchecked(
-                points: &HostOrDeviceSlice<Affine<$curve>>,
+                points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
                 precompute_factor: i32,
                 _c: i32,
                 ctx: &DeviceContext,
-                output_bases: &mut HostOrDeviceSlice<Affine<$curve>>,
+                output_bases: &mut DeviceSlice<Affine<$curve>>,
             ) -> IcicleResult<()> {
                 unsafe {
                     $curve_prefix_indent::precompute_bases_cuda(
