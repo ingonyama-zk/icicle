@@ -24,6 +24,14 @@ const (
 	KMN Ordering = 5
 )
 
+type NttAlgorithm uint32
+
+const (
+	Auto       NttAlgorithm = iota
+	Radix2     NttAlgorithm = 1
+	MixedRadix NttAlgorithm = 2
+)
+
 type NTTConfig[T any] struct {
 	/// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
 	Ctx cr.DeviceContext
@@ -40,6 +48,9 @@ type NTTConfig[T any] struct {
 	/// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
 	/// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
 	IsAsync bool
+	/// Explicitly select the NTT algorithm.
+	/// Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
+	NttAlgorithm NttAlgorithm
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
@@ -53,6 +64,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice
 		false,    // IsAsync
+		Auto,     // NttAlgorithm
 	}
 }
 
