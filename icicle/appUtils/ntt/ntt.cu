@@ -488,25 +488,25 @@ namespace ntt {
 
     max_size = 0;
     max_log_size = 0;
-    cudaFreeAsync(twiddles, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(twiddles, ctx.stream));
     twiddles = nullptr;
-    cudaFreeAsync(internal_twiddles, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(internal_twiddles, ctx.stream));
     internal_twiddles = nullptr;
-    cudaFreeAsync(basic_twiddles, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(basic_twiddles, ctx.stream));
     basic_twiddles = nullptr;
     coset_index.clear();
 
-    cudaFreeAsync(fast_external_twiddles, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(fast_external_twiddles, ctx.stream));
     fast_external_twiddles = nullptr;
-    cudaFreeAsync(fast_internal_twiddles, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(fast_internal_twiddles, ctx.stream));
     fast_internal_twiddles = nullptr;
-    cudaFreeAsync(fast_basic_twiddles, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(fast_basic_twiddles, ctx.stream));
     fast_basic_twiddles = nullptr;
-    cudaFreeAsync(fast_external_twiddles_inv, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(fast_external_twiddles_inv, ctx.stream));
     fast_external_twiddles_inv = nullptr;
-    cudaFreeAsync(fast_internal_twiddles_inv, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(fast_internal_twiddles_inv, ctx.stream));
     fast_internal_twiddles_inv = nullptr;
-    cudaFreeAsync(fast_basic_twiddles_inv, ctx.stream);
+    CHK_IF_RETURN(cudaFreeAsync(fast_basic_twiddles_inv, ctx.stream));
     fast_basic_twiddles_inv = nullptr;
 
     return CHK_LAST();
