@@ -84,9 +84,9 @@ where
                 stream
                     .synchronize()
                     .unwrap();
-                stream
-                    .destroy()
-                    .unwrap();
+                // stream
+                //     .destroy()
+                //     .unwrap();
 
                 let msm_result_ark: ark_ec::models::short_weierstrass::Projective<C::ArkSWConfig> =
                     VariableBaseMSM::msm(&points_ark, &scalars_ark).unwrap();
@@ -181,9 +181,6 @@ where
             }
         }
     }
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()
