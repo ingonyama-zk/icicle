@@ -20,16 +20,17 @@ using curve_config::scalar_t;
 // using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
 namespace msm {
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
-    scalar_t* scalars, affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
+    const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
 
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
-    scalar_t* scalars, g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
+    const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
 
-  cudaError_t _MSM(scalar_t* scalars, affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
+  cudaError_t _MSM(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
   {
     return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
   }
-  cudaError_t _G2MSM(scalar_t* scalars, g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
+  cudaError_t
+  _G2MSM(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
   {
     return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
   }
