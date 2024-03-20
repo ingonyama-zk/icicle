@@ -673,7 +673,6 @@ namespace ntt {
           config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
       }
     }
-#endif
 
     if (!are_outputs_on_device)
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
