@@ -204,7 +204,6 @@ func TestPrecomputeBase{{if .IsG2}}G2{{end}}(t *testing.T) {
 	}
 }
 
-
 func TestMSM{{if .IsG2}}G2{{end}}SkewedDistribution(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
@@ -240,7 +239,6 @@ func TestMSM{{if .IsG2}}G2{{end}}MultiDevice(t *testing.T) {
 	fmt.Println("There are ", numDevices, " devices available")
 	orig_device, _ := cr.GetDevice()
 	wg := sync.WaitGroup{}
-
 
 	for i := 0; i < numDevices; i++ {
 		wg.Add(1)

@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 cudaError_t bw6_761NTTCuda(scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+cudaError_t bw6_761ECNTTCuda(projective_t* input, int size, int dir, NTTConfig* config, projective_t* output);
 cudaError_t bw6_761InitializeDomain(scalar_t* primitive_root, DeviceContext* ctx, bool fast_twiddles);
 
 #ifdef __cplusplus
