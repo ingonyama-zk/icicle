@@ -646,12 +646,11 @@ namespace ntt {
 
     const bool is_inverse = dir == NTTDir::kInverse;
 
-    if constexpr(std::is_same_v<E,curve_config::projective_t>) {
+    if constexpr (std::is_same_v<E, curve_config::projective_t>) {
       CHK_IF_RETURN(ntt::radix2_ntt(
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
         coset_index, stream));
-    }
-    else {
+    } else {
       const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
       if (is_radix2_algorithm) {
         CHK_IF_RETURN(ntt::radix2_ntt(
@@ -664,12 +663,12 @@ namespace ntt {
                         ? (is_inverse ? domain.fast_external_twiddles_inv : domain.fast_external_twiddles)
                         : domain.twiddles;
         S* internal_twiddles = is_fast_twiddles_enabled
-                                ? (is_inverse ? domain.fast_internal_twiddles_inv : domain.fast_internal_twiddles)
-                                : domain.internal_twiddles;
+                                 ? (is_inverse ? domain.fast_internal_twiddles_inv : domain.fast_internal_twiddles)
+                                 : domain.internal_twiddles;
         S* basic_twiddles = is_fast_twiddles_enabled
                               ? (is_inverse ? domain.fast_basic_twiddles_inv : domain.fast_basic_twiddles)
                               : domain.basic_twiddles;
-      CHK_IF_RETURN(ntt::mixed_radix_ntt(
+        CHK_IF_RETURN(ntt::mixed_radix_ntt(
           d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
           config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
       }

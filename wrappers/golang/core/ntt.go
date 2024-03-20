@@ -27,7 +27,7 @@ const (
 type NttAlgorithm uint32
 
 const (
-	Auto	NttAlgorithm = iota
+	Auto NttAlgorithm = iota
 	Radix2
 	MixedRadix
 )
@@ -55,9 +55,9 @@ type NTTConfig[T any] struct {
 	areOutputsOnDevice bool
 	/// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
 	/// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
-	IsAsync bool
+	IsAsync      bool
 	NttAlgorithm NttAlgorithm /**< Explicitly select the NTT algorithm. Default value: Auto (the implementation
-		selects radix-2 or mixed-radix algorithm based on heuristics). */
+	selects radix-2 or mixed-radix algorithm based on heuristics). */
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
