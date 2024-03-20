@@ -132,22 +132,22 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
-  C Polynomial<C, D, I>::get_coefficient_on_host(uint64_t idx) const
+  C Polynomial<C, D, I>::copy_coefficient_to_host(uint64_t idx) const
   {
-    return m_backend->get_coefficient_on_host(*m_context, idx);
+    return m_backend->copy_coefficient_to_host(*m_context, idx);
   }
 
   template <typename C, typename D, typename I>
-  int64_t Polynomial<C, D, I>::get_coefficients_on_host(C* host_coeffs, int64_t start_idx, int64_t end_idx) const
+  int64_t Polynomial<C, D, I>::copy_coefficients_to_host(C* host_coeffs, int64_t start_idx, int64_t end_idx) const
   {
-    return m_backend->get_coefficients_on_host(*m_context, host_coeffs, start_idx, end_idx);
+    return m_backend->copy_coefficients_to_host(*m_context, host_coeffs, start_idx, end_idx);
   }
 
   template <typename C, typename D, typename I>
   std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-  Polynomial<C, D, I>::get_coefficients_on_device()
+  Polynomial<C, D, I>::get_coefficients_view()
   {
-    return m_backend->get_coefficients_on_device(*m_context);
+    return m_backend->get_coefficients_view(*m_context);
   }
 
 } // namespace polynomials

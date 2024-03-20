@@ -55,10 +55,13 @@ namespace polynomials {
     int64_t degree();
 
     // Read coefficients
-    Coeff get_coefficient_on_host(uint64_t idx) const;
+    Coeff copy_coefficient_to_host(uint64_t idx) const;
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
-    int64_t get_coefficients_on_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
-    std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_on_device();
+    int64_t copy_coefficients_to_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
+
+    std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view();
+    // TODO Yuval: implement get_coefficients_ownership()
+    // TODO Yuval: same for evaluations
 
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
     {
@@ -108,7 +111,7 @@ namespace polynomials {
     virtual std::shared_ptr<IPolynomialContext> clone() const = 0;
 
     virtual std::pair<C*, uint64_t> get_coefficients() = 0;
-    virtual std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_safe() = 0;
+    virtual std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_view() = 0;
     virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
 
     virtual void transform_to_coefficients(uint64_t nof_coefficients = 0) = 0;
@@ -163,13 +166,13 @@ namespace polynomials {
     virtual I evaluate(PolyContext& op, const D& domain_x) = 0;
     virtual void evaluate(PolyContext& op, const D* domain_x, uint64_t nof_domain_points, I* evaluations /*OUT*/) = 0;
 
-    virtual C get_coefficient_on_host(PolyContext& op, uint64_t coeff_idx) = 0;
+    virtual C copy_coefficient_to_host(PolyContext& op, uint64_t coeff_idx) = 0;
     // if coefficients==nullptr, return nof_coefficients, without writing
     virtual int64_t
-    get_coefficients_on_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
+    copy_coefficients_to_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
 
     virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_coefficients_on_device(PolyContext& p) = 0;
+    get_coefficients_view(PolyContext& p) = 0;
   };
 
   /*============================== Polynomial Absract Factory ==============================*/
