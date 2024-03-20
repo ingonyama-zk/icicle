@@ -60,7 +60,13 @@ else()
 endif()
 
 project(icicle LANGUAGES CUDA CXX)
-
+# Check CUDA version and, if possible, enable multi-threaded compilation 
+if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "12.2")
+    message(STATUS "Using multi-threaded CUDA compilation.")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --split-compile 0")
+else()
+    message(STATUS "Can't use multi-threaded CUDA compilation.")
+endif()
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -lineinfo")
