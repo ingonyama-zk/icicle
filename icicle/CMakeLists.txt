@@ -110,6 +110,9 @@ if (NOT BUILD_TESTS)
   if (NOT CURVE IN_LIST SUPPORTED_CURVES_WITHOUT_NTT)
       list(APPEND ICICLE_SOURCES appUtils/ntt/ntt.cu)
       list(APPEND ICICLE_SOURCES appUtils/ntt/kernel_ntt.cu)
+      if(ECNTT_DEFINED STREQUAL "ON")
+        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DECNTT_DEFINED=ON")
+      endif()
   endif()
 
   add_library(
