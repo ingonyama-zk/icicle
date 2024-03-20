@@ -32,14 +32,6 @@ const (
 	MixedRadix
 )
 
-type NttAlgorithm uint32
-
-const (
-	Auto       NttAlgorithm = iota
-	Radix2     NttAlgorithm = 1
-	MixedRadix NttAlgorithm = 2
-)
-
 type NTTConfig[T any] struct {
 	/// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
 	Ctx cr.DeviceContext
