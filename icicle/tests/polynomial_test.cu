@@ -122,8 +122,8 @@ public:
 
     auto lhs_coeffs = std::make_unique<scalar_t[]>(deg_lhs);
     auto rhs_coeffs = std::make_unique<scalar_t[]>(deg_rhs);
-    lhs.get_coefficients_on_host(lhs_coeffs.get(), 1, deg_lhs - 1);
-    rhs.get_coefficients_on_host(rhs_coeffs.get(), 1, deg_rhs - 1);
+    lhs.copy_coefficients_to_host(lhs_coeffs.get(), 1, deg_lhs - 1);
+    rhs.copy_coefficients_to_host(rhs_coeffs.get(), 1, deg_rhs - 1);
 
     ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(scalar_t)));
   }
@@ -341,17 +341,17 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   auto g = Polynomial_t::from_coefficients(coeffs_g, 3);
 
   auto h = f + g; // 1+2x+3x^3
-  const auto h0 = h.get_coefficient_on_host(0);
-  const auto h1 = h.get_coefficient_on_host(1);
-  const auto h2 = h.get_coefficient_on_host(2);
+  const auto h0 = h.copy_coefficient_to_host(0);
+  const auto h1 = h.copy_coefficient_to_host(1);
+  const auto h2 = h.copy_coefficient_to_host(2);
   EXPECT_EQ(h0, one);
   EXPECT_EQ(h1, two);
   EXPECT_EQ(h2, three);
 
-  int64_t nof_coeffs = h.get_coefficients_on_host(nullptr); // query #coeffs
+  int64_t nof_coeffs = h.copy_coefficients_to_host(nullptr); // query #coeffs
   EXPECT_GE(nof_coeffs, 3);                                 // can be larger due to padding to powers of two
   scalar_t h_coeffs[3] = {0};
-  nof_coeffs = h.get_coefficients_on_host(h_coeffs, 0, 2); // read the coefficients
+  nof_coeffs = h.copy_coefficients_to_host(h_coeffs, 0, 2); // read the coefficients
   EXPECT_EQ(nof_coeffs, 3);                                // expecting 3 due to specified indices
 
   scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
@@ -370,8 +370,8 @@ TEST_F(PolynomialTest, divisionSimple)
   auto [q, r] = a.divide(b);
   scalar_t q_coeffs[2] = {0}; // 3x+4
   scalar_t r_coeffs[2] = {0}; // 3x+9
-  const auto q_nof_coeffs = q.get_coefficients_on_host(q_coeffs, 0, 1);
-  const auto r_nof_coeffs = r.get_coefficients_on_host(r_coeffs, 0, 1);
+  const auto q_nof_coeffs = q.copy_coefficients_to_host(q_coeffs, 0, 1);
+  const auto r_nof_coeffs = r.copy_coefficients_to_host(r_coeffs, 0, 1);
 
   ASSERT_EQ(q_nof_coeffs, 2);
   ASSERT_EQ(r_nof_coeffs, 2);
@@ -442,7 +442,7 @@ TEST_F(PolynomialTest, commitMSM)
   const int size = 1 << 6;
   auto f = randomize_polynomial(size);
 
-  auto [d_coeff, N, device_id] = f.get_coefficients_on_device();
+  auto [d_coeff, N, device_id] = f.get_coefficients_view();
   auto msm_config = msm::DefaultMSMConfig<scalar_t>();
   msm_config.are_scalars_on_device = true;
 
@@ -468,7 +468,7 @@ TEST_F(PolynomialTest, integrityPointerInvalidation)
   const int size = 1 << 6;
 
   auto f = new Polynomial_t(randomize_polynomial(size));
-  auto [d_coeff, N, device_id] = f->get_coefficients_on_device();
+  auto [d_coeff, N, device_id] = f->get_coefficients_view();
 
   EXPECT_EQ(d_coeff.isValid(), true);
 
@@ -698,7 +698,7 @@ public:
     // compute [A]1
     {
       projective_t U_commited;
-      auto [d_coeff, N, device_id] = U.get_coefficients_on_device();
+      auto [d_coeff, N, device_id] = U.get_coefficients_view();
       CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
       proof.A = projective_t::to_affine(U_commited + pk.g1.alpha + r * projective_t::from_affine(pk.g1.delta));
     }
@@ -707,7 +707,7 @@ public:
     projective_t B1;
     {
       g2_projective_t V_commited_g2;
-      auto [d_coeff, N, device_id] = V.get_coefficients_on_device();
+      auto [d_coeff, N, device_id] = V.get_coefficients_view();
       CHK_STICKY(msm::_G2MSM(d_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
       proof.B = g2_projective_t::to_affine(V_commited_g2 + pk.g2.beta + s * g2_projective_t::from_affine(pk.g2.delta));
 
@@ -730,7 +730,7 @@ public:
 
       const int vanishing_poly_deg = ceil_to_power_of_two(n);
       Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
-      auto [d_coeff, N, device_id] = h.get_coefficients_on_device();
+      auto [d_coeff, N, device_id] = h.get_coefficients_view();
 
       projective_t HT_commited;
       CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));

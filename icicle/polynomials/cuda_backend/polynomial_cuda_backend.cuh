@@ -153,7 +153,7 @@ namespace polynomials {
       return std::make_pair(static_cast<C*>(m_storage), this->m_nof_elements);
     }
 
-    std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_safe() override
+    std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_view() override
     {
       auto [coeffs, N] = get_coefficients();
       // when reading the pointer, if the counter was modified, the pointer is invalid
@@ -497,7 +497,7 @@ namespace polynomials {
       CHK_STICKY(
         cudaMemcpyAsync(R_coeffs, a_coeffs, a_N * sizeof(C), cudaMemcpyDeviceToDevice, m_device_context.stream));
 
-      const C& lc_b_inv = C::inverse(get_coefficient_on_host(b, deg_b)); // largest coeff of b
+      const C& lc_b_inv = C::inverse(copy_coefficient_to_host(b, deg_b)); // largest coeff of b
 
       int64_t deg_r = deg_a;
       while (deg_r >= deg_b) {
@@ -642,7 +642,7 @@ namespace polynomials {
     }
 
     int64_t
-    get_coefficients_on_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
+    copy_coefficients_to_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
     {
       const uint64_t nof_coeffs = op.get_nof_elements();
       if (nullptr == host_coeffs) { return nof_coeffs; } // no allocated memory
@@ -653,8 +653,8 @@ namespace polynomials {
       const bool is_valid_end_idx = end_idx < nof_coeffs && end_idx >= 0 && end_idx >= start_idx;
       const bool is_valid_indices = is_valid_start_idx && is_valid_end_idx;
       if (!is_valid_indices) {
-        // return -1 instead? I could but 'get_coefficient_on_host()' cannot with its current declaration
-        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "get_coefficients_on_host() invalid indices");
+        // return -1 instead? I could but 'copy_coefficient_to_host()' cannot with its current declaration
+        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "copy_coefficients_to_host() invalid indices");
       }
 
       op.transform_to_coefficients();
@@ -669,17 +669,17 @@ namespace polynomials {
     }
 
     // read coefficients to host
-    C get_coefficient_on_host(PolyContext& op, uint64_t coeff_idx) override
+    C copy_coefficient_to_host(PolyContext& op, uint64_t coeff_idx) override
     {
       C host_coeff;
-      get_coefficients_on_host(op, &host_coeff, coeff_idx, coeff_idx);
+      copy_coefficients_to_host(op, &host_coeff, coeff_idx, coeff_idx);
       return host_coeff;
     }
 
     std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_coefficients_on_device(PolyContext& p) override
+    get_coefficients_view(PolyContext& p) override
     {
-      auto [coeffs_safe, size] = p.get_coefficients_safe();
+      auto [coeffs_safe, size] = p.get_coefficients_view();
       return std::make_tuple(coeffs_safe, size, m_device_context.device_id);
     }
 
