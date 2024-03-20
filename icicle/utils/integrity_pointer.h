@@ -21,8 +21,6 @@
  * @tparam T The type of the pointed-to object.
  */
 
-// TODO Yuval: make it 'const T*' once MSM accepts const params
-
 template <typename T>
 class IntegrityPointer
 {
@@ -34,7 +32,7 @@ public:
    * @param counterWeakPtr A std::weak_ptr to an int counter, used for validation.
    * @param expectedCounterValue The expected value of the counter for the pointer to be considered valid.
    */
-  IntegrityPointer(T* ptr, std::weak_ptr<int> counterWeakPtr, int expectedCounterValue)
+  IntegrityPointer(const T* ptr, std::weak_ptr<int> counterWeakPtr, int expectedCounterValue)
       : m_ptr(ptr), m_counterWeakPtr(counterWeakPtr), m_expectedCounterValue(expectedCounterValue)
   {
   }
@@ -43,13 +41,13 @@ public:
    * Retrieves the raw pointer. Use with caution, as direct access bypasses validity checks.
    * @return T* The raw pointer to the data.
    */
-  T* get() const { return operator->(); }
+  const T* get() const { return operator->(); }
 
   /**
    * Dereferences the pointer. Throws std::runtime_error if the pointer is invalid.
    * @return A reference to the data pointed to by the raw pointer.
    */
-  T& operator*() const
+  const T& operator*() const
   {
     assertValid();
     return *m_ptr;
@@ -59,7 +57,7 @@ public:
    * Provides access to the member of the pointed-to object. Throws std::runtime_error if the pointer is invalid.
    * @return T* The raw pointer to the data.
    */
-  T* operator->() const
+  const T* operator->() const
   {
     assertValid();
     return m_ptr;
@@ -77,7 +75,7 @@ public:
   }
 
 private:
-  T* m_ptr;                            ///< The raw pointer to the data.
+  const T* m_ptr;                      ///< The raw pointer to the data.
   std::weak_ptr<int> m_counterWeakPtr; ///< A weak pointer to the counter used for validation.
   const int m_expectedCounterValue;    ///< The expected value of the counter for the pointer to be valid.
 
