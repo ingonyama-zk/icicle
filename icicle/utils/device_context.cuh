@@ -22,7 +22,7 @@ namespace device_context {
    */
   inline DeviceContext get_default_device_context() // TODO: naming convention ?
   {
-    static cudaStream_t default_stream = (cudaStream_t)0;
+    cudaStream_t default_stream = (cudaStream_t)0;
     return DeviceContext{
       (cudaStream_t&)default_stream, // stream
       0,                             // device_id

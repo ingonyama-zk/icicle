@@ -28,11 +28,14 @@ impl Default for DeviceContext<'_> {
 impl DeviceContext<'_> {
     /// Default for device_id
     pub fn default_for_device(device_id: usize) -> DeviceContext<'static> {
-        static default_stream: CudaStream = CudaStream {
+        let default_stream = Box::new(CudaStream {
             handle: std::ptr::null_mut(),
-        };
+        });
+
+        let leaked_stream = Box::leak(default_stream);
+
         DeviceContext {
-            stream: &default_stream,
+            stream: leaked_stream,
             device_id,
             mempool: std::ptr::null_mut(),
         }
