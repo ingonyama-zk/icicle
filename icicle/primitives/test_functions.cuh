@@ -68,28 +68,32 @@ int vec_mul(const F* x, const G* y, G* result, const unsigned count)
   return error ? error : cudaDeviceSynchronize();
 }
 
-__global__ void inv_field_elements_kernel(const scalar_t* x, scalar_t* result, const unsigned count)
+template <class F>
+__global__ void inv_field_elements_kernel(const F* x, F* result, const unsigned count)
 {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= count) return;
-  result[gid] = scalar_t::inverse(x[gid]);
+  result[gid] = F::inverse(x[gid]);
 }
 
-int field_vec_inv(const scalar_t* x, scalar_t* result, const unsigned count)
+template <class F>
+int field_vec_inv(const F* x, F* result, const unsigned count)
 {
   inv_field_elements_kernel<<<(count - 1) / 32 + 1, 32>>>(x, result, count);
   int error = cudaGetLastError();
   return error ? error : cudaDeviceSynchronize();
 }
 
-__global__ void sqr_field_elements_kernel(const scalar_t* x, scalar_t* result, const unsigned count)
+template <class F>
+__global__ void sqr_field_elements_kernel(const F* x, F* result, const unsigned count)
 {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= count) return;
-  result[gid] = scalar_t::sqr(x[gid]);
+  result[gid] = F::sqr(x[gid]);
 }
 
-int field_vec_sqr(const scalar_t* x, scalar_t* result, const unsigned count)
+template <class F>
+int field_vec_sqr(const F* x, F* result, const unsigned count)
 {
   sqr_field_elements_kernel<<<(count - 1) / 32 + 1, 32>>>(x, result, count);
   int error = cudaGetLastError();
@@ -110,4 +114,22 @@ int point_vec_to_affine(const P* x, A* result, const unsigned count)
   to_affine_points_kernel<P, A><<<(count - 1) / 32 + 1, 32>>>(x, result, count);
   int error = cudaGetLastError();
   return error ? error : cudaDeviceSynchronize();
+}
+
+template <class T>
+int device_populate_random(T* d_elements, unsigned n)
+{
+  T h_elements[n];
+  for (unsigned i = 0; i < n; i++)
+    h_elements[i] = T::rand_host();
+  return cudaMemcpy(d_elements, h_elements, sizeof(T) * n, cudaMemcpyHostToDevice);
+}
+
+template <class T>
+int device_set(T* d_elements, T el, unsigned n)
+{
+  T h_elements[n];
+  for (unsigned i = 0; i < n; i++)
+    h_elements[i] = el;
+  return cudaMemcpy(d_elements, h_elements, sizeof(T) * n, cudaMemcpyHostToDevice);
 }

@@ -248,10 +248,10 @@ public:
   add_sub_u32_device(const uint32_t* x, const uint32_t* y, uint32_t* r, size_t n = (TLC >> 1))
   {
     r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
-    for (unsigned i = 1; i < (CARRY_OUT ? n : n - 1); i++)
+    for (unsigned i = 1; i < n; i++)
       r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
     if (!CARRY_OUT) {
-      r[n - 1] = SUBTRACT ? ptx::subc(x[n - 1], y[n - 1]) : ptx::addc(x[n - 1], y[n - 1]);
+      ptx::addc(0, 0);
       return 0;
     }
     return SUBTRACT ? ptx::subc(0, 0) : ptx::addc(0, 0);
@@ -497,15 +497,17 @@ public:
   }
 
   /**
-   * A function that computes the low half of the fused multiply-and-add \f$ rs = as \cdot bs + cs \f$.
+   * A function that computes the low half of the fused multiply-and-add \f$ rs = as \cdot bs + cs \f$ where
+   * \f$ bs = 2^{32*nof_limbs} \f$.
    *
    * For efficiency, this method does not include terms that are too large. Namely, limb product \f$ a_i \cdot b_j \f$
    * is excluded if \f$ i + j > TLC - 1 \f$ and only the lower half is included if \f$ i + j = TLC - 1 \f$. All other
    * limb products are included.
    */
   static __device__ __forceinline__ void
-  multiply_and_add_lsb_raw_device(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
+  multiply_and_add_lsb_neg_modulus_raw_device(const ff_storage& as, ff_storage& cs, ff_storage& rs)
   {
+    ff_storage bs = get_neg_modulus();
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
     uint32_t* even = rs.limbs;
@@ -654,13 +656,13 @@ public:
   }
 
   static HOST_DEVICE_INLINE void
-  multiply_and_add_lsb_raw(const ff_storage& as, const ff_storage& bs, ff_storage& cs, ff_storage& rs)
+  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, ff_storage& cs, ff_storage& rs)
   {
 #ifdef __CUDA_ARCH__
-    return multiply_and_add_lsb_raw_device(as, bs, cs, rs);
+    return multiply_and_add_lsb_neg_modulus_raw_device(as, cs, rs);
 #else
     Wide r_wide = {};
-    multiply_raw_host(as, bs, r_wide.limbs_storage);
+    multiply_raw_host(as, get_neg_modulus(), r_wide.limbs_storage);
     Field r = Wide::get_lower(r_wide);
     add_limbs<false>(cs, r.limbs_storage, rs);
 #endif
@@ -791,7 +793,7 @@ public:
     Field xs_lo = Wide::get_lower(xs);
     // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
     // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
-    multiply_and_add_lsb_raw(l_hi.limbs_storage, get_neg_modulus(), xs_lo.limbs_storage, r.limbs_storage);
+    multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
     ff_storage r_reduced = {};
     uint32_t carry;
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
@@ -895,6 +897,7 @@ public:
     return rs;
   }
 
+  // Assumes the number is even!
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field div2(const Field& xs)
   {

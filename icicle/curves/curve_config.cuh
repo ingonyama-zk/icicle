@@ -7,11 +7,12 @@
 #define BLS12_377 3
 #define BW6_761   4
 #define GRUMPKIN  5
+#define BABY_BEAR 6
 
 #include "primitives/field.cuh"
 #include "primitives/projective.cuh"
 #if defined(G2_DEFINED)
-#include "primitives/extension_field.cuh"
+#include "primitives/quadratic_extension.cuh"
 #endif
 
 #if CURVE_ID == BN254
@@ -29,6 +30,9 @@ using namespace bw6_761;
 #elif CURVE_ID == GRUMPKIN
 #include "grumpkin_params.cuh"
 using namespace grumpkin;
+#elif CURVE_ID == BABY_BEAR
+#include "stark_fields/baby_bear.cuh"
+using namespace baby_bear;
 #endif
 
 /**
@@ -42,6 +46,8 @@ namespace curve_config {
    * Scalar field of the curve. Is always a prime field.
    */
   typedef Field<fp_config> scalar_t;
+
+  #if CURVE_ID != BABY_BEAR
   /**
    * Base field of G1 curve. Is always a prime field.
    */
@@ -82,6 +88,7 @@ namespace curve_config {
    * Affine representation of G1 curve.
    */
   typedef Affine<g2_point_field_t> g2_affine_t;
+#endif
 #endif
 
 } // namespace curve_config

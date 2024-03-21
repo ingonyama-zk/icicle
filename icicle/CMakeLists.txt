@@ -74,7 +74,7 @@ include_directories("${CMAKE_SOURCE_DIR}")
 
 
 # when adding a new curve/field, append its name to the end of this list
-set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin)
+set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin;baby_bear)
 set(SUPPORTED_CURVES_WITH_POSEIDON bn254;bls12_381;bls12_377;bw6_761;grumpkin)
 SET(SUPPORTED_CURVES_WITHOUT_NTT grumpkin)
 
