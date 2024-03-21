@@ -291,11 +291,11 @@ TEST_F(PolynomialTest, cAPI)
   auto s = CONCAT_EXPAND(CURVE, polynomial_add)(f, g);
 
   scalar_t x = scalar_t::rand_host();
-  // TODO Yuval: use C-API for evaluate too
-  auto f_x = f->evaluate(x);
-  auto g_x = g->evaluate(x);
+
+  auto f_x = CONCAT_EXPAND(CURVE, polynomial_evaluate)(f, x);
+  auto g_x = CONCAT_EXPAND(CURVE, polynomial_evaluate)(g, x);
   auto fx_plus_gx = f_x + g_x;
-  auto s_x = s->evaluate(x);
+  auto s_x = CONCAT_EXPAND(CURVE, polynomial_evaluate)(s, x);
   EXPECT_EQ(fx_plus_gx, s_x);
 
   CONCAT_EXPAND(CURVE, polynomial_delete)(f);
@@ -670,18 +670,18 @@ public:
 
   void setup()
   {
-    // (1) randomize alpha, beta, gamma, delta, tau
+    // randomize alpha, beta, gamma, delta, tau
     ToxicWaste toxic_waste;
-    // (2) randomize generators G1, G2. TODO Yuval what are the generators used by the protocol?
-    projective_t G1 = projective_t::rand_host();
-    g2_projective_t G2 = g2_projective_t::rand_host();
+
+    projective_t G1 = projective_t::generator();
+    g2_projective_t G2 = g2_projective_t::generator();
 
     // Note: n,m,l are from the groth16 paper
     const int m = witness_size - 1;
     const int l = nof_outputs; // public part of the witness
     const int n = nof_constraints;
 
-    // (3) compute the proving and verifying keys
+    // compute the proving and verifying keys
     pk.g1.alpha = projective_t::to_affine(toxic_waste.alpha * G1);
     pk.g1.beta = projective_t::to_affine(toxic_waste.beta * G1);
     pk.g1.delta = projective_t::to_affine(toxic_waste.delta * G1);
@@ -724,8 +724,7 @@ public:
     affine_t C;
   };
 
-  // TODO Yuval: both witness and the method should be const but need to fix MSM to take const inputs first
-  G16proof prove(std::vector<scalar_t>& witness)
+  G16proof prove(const std::vector<scalar_t>& witness) const
   {
     G16proof proof = {};
     const auto r = scalar_t::rand_host();
@@ -736,12 +735,19 @@ public:
     const int l = nof_outputs; // public part of the witness
     const int n = nof_constraints;
 
-    auto U = L_QAP[0].clone();
-    auto V = R_QAP[0].clone();
-    for (int i = 1; i <= m; ++i) {
-      U += L_QAP[i] * witness[i];
-      V += R_QAP[i] * witness[i];
+    // construct U,V,W from the QAP and witness
+    Polynomial_t U = L_QAP[0].clone();
+    Polynomial_t V = R_QAP[0].clone();
+    Polynomial_t W = O_QAP[0].clone();
+    for (int col = 1; col <= m; ++col) {
+      U += witness[col] * L_QAP[col];
+      V += witness[col] * R_QAP[col];
+      W += witness[col] * O_QAP[col];
     }
+
+    // compute h(x) = (U(x)*V(x)-W(x)) / t(x)
+    const int vanishing_poly_deg = ceil_to_power_of_two(n);
+    Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
     auto msm_config = msm::DefaultMSMConfig<scalar_t>();
     msm_config.are_scalars_on_device = true;
@@ -749,8 +755,8 @@ public:
     // compute [A]1
     {
       projective_t U_commited;
-      auto [d_coeff, N, device_id] = U.get_coefficients_view();
-      CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
+      auto [U_coeff, N, device_id] = U.get_coefficients_view();
+      CHK_STICKY(msm::_MSM(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
       proof.A = projective_t::to_affine(U_commited + pk.g1.alpha + r * projective_t::from_affine(pk.g1.delta));
     }
 
@@ -758,33 +764,21 @@ public:
     projective_t B1;
     {
       g2_projective_t V_commited_g2;
-      auto [d_coeff, N, device_id] = V.get_coefficients_view();
-      CHK_STICKY(msm::_G2MSM(d_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
+      auto [V_coeff, N, device_id] = V.get_coefficients_view();
+      CHK_STICKY(msm::_G2MSM(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
       proof.B = g2_projective_t::to_affine(V_commited_g2 + pk.g2.beta + s * g2_projective_t::from_affine(pk.g2.delta));
 
       projective_t V_commited_g1;
-      CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
+      CHK_STICKY(msm::_MSM(V_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
       B1 = V_commited_g1 + pk.g1.beta + projective_t::from_affine(pk.g1.delta) * s;
     }
 
     // compute [C]1
     {
-      // compute h. TODO Yuval: is this computation still valid even with the shifts (alpha, beta)?
-      Polynomial_t U = L_QAP[0].clone();
-      Polynomial_t V = R_QAP[0].clone();
-      Polynomial_t W = O_QAP[0].clone();
-      for (int col = 1; col <= m; ++col) {
-        U += witness[col] * L_QAP[col];
-        V += witness[col] * R_QAP[col];
-        W += witness[col] * O_QAP[col];
-      }
-
-      const int vanishing_poly_deg = ceil_to_power_of_two(n);
-      Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
-      auto [d_coeff, N, device_id] = h.get_coefficients_view();
+      auto [H_coeff, N, device_id] = h.get_coefficients_view();
 
       projective_t HT_commited;
-      CHK_STICKY(msm::_MSM(d_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
+      CHK_STICKY(msm::_MSM(H_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
 
       projective_t private_inputs_commited;
       msm_config.are_scalars_on_device = false;
