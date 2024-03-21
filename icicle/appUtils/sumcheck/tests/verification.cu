@@ -39,7 +39,7 @@ int main(){
   cudaEvent_t gpu_start, gpu_stop;
   float gpu_time;
 
-  int n = 26;
+  int n = 16;
   int size = 1 << n;
 
   cudaStream_t stream1, stream2;
@@ -93,7 +93,7 @@ int main(){
 
   //run reference
   auto cpu_start = std::chrono::high_resolution_clock::now();
-  // sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
+  sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
   auto cpu_stop = std::chrono::high_resolution_clock::now();
   auto cpu_time = std::chrono::duration_cast<std::chrono::microseconds>(cpu_stop - cpu_start).count();
 
