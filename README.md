@@ -11,8 +11,6 @@
   </a>
   <a href="https://twitter.com/intent/follow?screen_name=Ingo_zk">
     <img src="https://img.shields.io/twitter/follow/Ingo_zk?style=social&logo=twitter" alt="Follow us on Twitter">
-  </a>
-  <img src="https://img.shields.io/badge/Machines%20running%20ICICLE-544-lightblue" alt="Machines running ICICLE">
   <a href="https://github.com/ingonyama-zk/icicle/releases">
     <img src="https://img.shields.io/github/v/release/ingonyama-zk/icicle" alt="GitHub Release">
   </a>

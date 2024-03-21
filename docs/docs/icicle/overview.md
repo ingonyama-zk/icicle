@@ -2,7 +2,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
 
-![Static Badge](https://img.shields.io/badge/Machines%20running%20ICICLE-544-blue)
+
 
 
 
