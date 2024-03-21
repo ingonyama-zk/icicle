@@ -83,6 +83,22 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::operator/(const Polynomial& rhs) const
+  {
+    Polynomial<C, D, I> res = {};
+    m_backend->quotient(*res.m_context.get(), *m_context, *rhs.m_context);
+    return res;
+  }
+
+  template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::operator%(const Polynomial& rhs) const
+  {
+    Polynomial<C, D, I> res = {};
+    m_backend->remainder(*res.m_context.get(), *m_context, *rhs.m_context);
+    return res;
+  }
+
+  template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const
   {
     Polynomial<C, D, I> res = {};
@@ -121,6 +137,12 @@ namespace polynomials {
   I Polynomial<C, D, I>::evaluate(const D& x) const
   {
     return m_backend->evaluate(*m_context, x);
+  }
+
+  template <typename C, typename D, typename I>
+  void Polynomial<C, D, I>::evaluate_on_domain(D* domain, uint64_t size, I* evals /*OUT*/) const
+  {
+    return m_backend->evaluate_on_domain(*m_context, domain, size, evals);
   }
 
   template <typename C, typename D, typename I>

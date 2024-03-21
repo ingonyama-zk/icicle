@@ -181,7 +181,7 @@ namespace polynomials {
       auto [coeffs, N] = get_coefficients();
       // when reading the pointer, if the counter was modified, the pointer is invalid
       IntegrityPointer<C> integrity_pointer(coeffs, m_integrity_counter, *m_integrity_counter);
-      return {integrity_pointer, N, m_device_context.device_id};
+      return {std::move(integrity_pointer), N, m_device_context.device_id};
     }
 
     std::tuple<IntegrityPointer<I>, uint64_t, uint64_t>
@@ -191,7 +191,7 @@ namespace polynomials {
       auto [evals, N] = get_rou_evaluations();
       // when reading the pointer, if the counter was modified, the pointer is invalid
       IntegrityPointer<I> integrity_pointer(evals, m_integrity_counter, *m_integrity_counter);
-      return {integrity_pointer, N, m_device_context.device_id};
+      return {std::move(integrity_pointer), N, m_device_context.device_id};
     }
 
     std::pair<I*, uint64_t> get_rou_evaluations() override
@@ -666,11 +666,11 @@ namespace polynomials {
       return h_evaluation;
     }
 
-    void evaluate(PolyContext& p, const D* domain_x, uint64_t nof_domain_points, I* evaluations /*OUT*/) override
+    void evaluate_on_domain(PolyContext& p, const D* domain, uint64_t size, I* evaluations /*OUT*/) override
     {
-      // TODO Yuval: implement more efficiently
-      for (uint64_t i = 0; i < nof_domain_points; ++i) {
-        evaluations[i] = evaluate(p, domain_x[i]);
+      // TODO Yuval: implement more efficiently ??
+      for (uint64_t i = 0; i < size; ++i) {
+        evaluations[i] = evaluate(p, domain[i]);
       }
     }
 

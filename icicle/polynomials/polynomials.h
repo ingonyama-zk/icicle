@@ -52,7 +52,7 @@ namespace polynomials {
     // evaluation
     Image operator()(const Domain& x) const;
     Image evaluate(const Domain& x) const;
-    void evaluate(Domain* x, uint64_t nof_points, Image* evals /*OUT*/) const; // caller allocates memory
+    void evaluate_on_domain(Domain* domain, uint64_t size, Image* evals /*OUT*/) const; // caller allocates memory
 
     // highest non-zero coefficient degree
     int64_t degree();
@@ -177,7 +177,7 @@ namespace polynomials {
     virtual int64_t degree(PolyContext& op) = 0;
 
     virtual I evaluate(PolyContext& op, const D& domain_x) = 0;
-    virtual void evaluate(PolyContext& op, const D* domain_x, uint64_t nof_domain_points, I* evaluations /*OUT*/) = 0;
+    virtual void evaluate_on_domain(PolyContext& op, const D* domain, uint64_t size, I* evaluations /*OUT*/) = 0;
 
     virtual C copy_coefficient_to_host(PolyContext& op, uint64_t coeff_idx) = 0;
     // if coefficients==nullptr, return nof_coefficients, without writing
