@@ -56,12 +56,8 @@ namespace ntt {
    *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, NTTCuda)(
-    scalar_t* input,
-    int size,
-    NTTDir dir,
-    NTTConfig<scalar_t>& config,
-    scalar_t* output)
+  extern "C" cudaError_t
+  CONCAT_EXPAND(FIELD, NTTCuda)(scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)
   {
     return NTT<scalar_t, scalar_t>(input, size, dir, config, output);
   }
@@ -75,13 +71,9 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
-    projective_t* input,
-    int size,
-    NTTDir dir,
-    NTTConfig<scalar_t>& config,
-    projective_t* output)
+    projective_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, projective_t* output)
   {
     return NTT<scalar_t, projective_t>(input, size, dir, config, output);
   }
 #endif
-}
+} // namespace ntt

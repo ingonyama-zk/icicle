@@ -29,15 +29,10 @@ namespace msm {
    *  - `P` is the [projective representation](@ref projective_t) of curve points.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
-    scalar_t* scalars,
-    affine_t* points,
-    int msm_size,
-    MSMConfig& config,
-    projective_t* out)
+  extern "C" cudaError_t
+  CONCAT_EXPAND(CURVE, MSMCuda)(scalar_t* scalars, affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
   {
-    return MSM<scalar_t, affine_t, projective_t>(
-      scalars, points, msm_size, config, out);
+    return MSM<scalar_t, affine_t, projective_t>(scalars, points, msm_size, config, out);
   }
 
 #if defined(G2_DEFINED)
@@ -70,14 +65,9 @@ namespace msm {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
-    scalar_t* scalars,
-    g2_affine_t* points,
-    int msm_size,
-    MSMConfig& config,
-    g2_projective_t* out)
+    scalar_t* scalars, g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
   {
-    return MSM<scalar_t, g2_affine_t, g2_projective_t>(
-      scalars, points, msm_size, config, out);
+    return MSM<scalar_t, g2_affine_t, g2_projective_t>(scalars, points, msm_size, config, out);
   }
 #endif
-}
+} // namespace msm

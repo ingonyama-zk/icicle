@@ -8,7 +8,6 @@
 #include "fields/extension_field.cuh"
 #endif
 
-
 namespace bn254 {
   typedef Field<fp_config> scalar_t;
   typedef Field<fq_config> point_field_t;
