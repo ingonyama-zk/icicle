@@ -349,10 +349,10 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   EXPECT_EQ(h2, three);
 
   int64_t nof_coeffs = h.copy_coefficients_to_host(nullptr); // query #coeffs
-  EXPECT_GE(nof_coeffs, 3);                                 // can be larger due to padding to powers of two
+  EXPECT_GE(nof_coeffs, 3);                                  // can be larger due to padding to powers of two
   scalar_t h_coeffs[3] = {0};
   nof_coeffs = h.copy_coefficients_to_host(h_coeffs, 0, 2); // read the coefficients
-  EXPECT_EQ(nof_coeffs, 3);                                // expecting 3 due to specified indices
+  EXPECT_EQ(nof_coeffs, 3);                                 // expecting 3 due to specified indices
 
   scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
@@ -437,6 +437,19 @@ TEST_F(PolynomialTest, clone)
   ASSERT_EQ(h(x), g(x));
 }
 
+TEST_F(PolynomialTest, integrityPointerInvalidation)
+{
+  const int size = 1 << 6;
+
+  auto f = new Polynomial_t(randomize_polynomial(size));
+  auto [d_coeff, N, device_id] = f->get_coefficients_view();
+
+  EXPECT_EQ(d_coeff.isValid(), true);
+
+  delete f; // f is destructed so the coefficients should be invalidated
+  EXPECT_EQ(d_coeff.isValid(), false);
+}
+
 TEST_F(PolynomialTest, commitMSM)
 {
   const int size = 1 << 6;
@@ -463,17 +476,22 @@ TEST_F(PolynomialTest, commitMSM)
   EXPECT_EQ(d_coeff.isValid(), false);
 }
 
-TEST_F(PolynomialTest, integrityPointerInvalidation)
+TEST_F(PolynomialTest, interpolation)
 {
-  const int size = 1 << 6;
+  const int size = 1 << 4;
+  const int interpolation_size = 1 << 6;
 
-  auto f = new Polynomial_t(randomize_polynomial(size));
-  auto [d_coeff, N, device_id] = f->get_coefficients_view();
+  const auto x = scalar_t::rand_host();
 
-  EXPECT_EQ(d_coeff.isValid(), true);
+  auto f = randomize_polynomial(size);
+  auto [evals, N, device_id] = f.get_rou_evaluations_view(interpolation_size); // interpolate from 16 to 64 evaluations
 
-  delete f; // f is destructed so the coefficients should be invalidated
-  EXPECT_EQ(d_coeff.isValid(), false);
+  auto g = Polynomial_t::from_rou_evaluations(evals.get(), N); // note the evals is a view to f
+  const auto fx = f(x);
+  ASSERT_EQ(evals.isValid(), false); // invaidated since f(x) transforms f to coefficients
+
+  const auto gx = g(x); // evaluating g which was constructed from interpolation of f
+  ASSERT_EQ(fx, gx);
 }
 
 // Following examples are randomizing N private numbers and proving that I know N numbers such that their product is

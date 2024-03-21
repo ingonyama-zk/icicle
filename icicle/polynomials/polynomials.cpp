@@ -147,7 +147,14 @@ namespace polynomials {
   std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
   Polynomial<C, D, I>::get_coefficients_view()
   {
-    return m_backend->get_coefficients_view(*m_context);
+    return m_context->get_coefficients_view();
+  }
+
+  template <typename C, typename D, typename I>
+  std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
+  Polynomial<C, D, I>::get_rou_evaluations_view(uint64_t nof_evaluations, bool is_reversed)
+  {
+    return m_context->get_rou_evaluations_view(nof_evaluations, is_reversed);
   }
 
 } // namespace polynomials
