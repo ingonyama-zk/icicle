@@ -10,26 +10,26 @@ type NTTDir int8
 
 const (
 	KForward NTTDir = iota
-	KInverse NTTDir = 1
+	KInverse
 )
 
 type Ordering uint32
 
 const (
 	KNN Ordering = iota
-	KNR Ordering = 1
-	KRN Ordering = 2
-	KRR Ordering = 3
-	KNM Ordering = 4
-	KMN Ordering = 5
+	KNR
+	KRN
+	KRR
+	KNM
+	KMN
 )
 
 type NttAlgorithm uint32
 
 const (
-	Auto       NttAlgorithm = iota
-	Radix2     NttAlgorithm = 1
-	MixedRadix NttAlgorithm = 2
+	Auto NttAlgorithm = iota
+	Radix2
+	MixedRadix
 )
 
 type NTTConfig[T any] struct {
@@ -47,10 +47,9 @@ type NTTConfig[T any] struct {
 	areOutputsOnDevice bool
 	/// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
 	/// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
-	IsAsync bool
-	/// Explicitly select the NTT algorithm.
-	/// Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
-	NttAlgorithm NttAlgorithm
+	IsAsync      bool
+	NttAlgorithm NttAlgorithm /**< Explicitly select the NTT algorithm. Default value: Auto (the implementation
+	selects radix-2 or mixed-radix algorithm based on heuristics). */
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
@@ -64,7 +63,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice
 		false,    // IsAsync
-		Auto,     // NttAlgorithm
+		Auto,
 	}
 }
 
