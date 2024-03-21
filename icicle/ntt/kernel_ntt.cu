@@ -1,8 +1,7 @@
 
-#include "appUtils/ntt/thread_ntt.cu"
-#include "curves/curve_config.cuh"
-#include "utils/sharedmem.cuh"
-#include "appUtils/ntt/ntt.cuh" // for Ordering
+#include "ntt/thread_ntt.cu"
+#include "gpu-utils/sharedmem.cuh"
+#include "ntt/ntt.cuh" // for Ordering
 
 namespace ntt {
 
@@ -995,39 +994,4 @@ namespace ntt {
 
     return CHK_LAST();
   }
-
-  // Explicit instantiation for scalar type
-  template cudaError_t generate_external_twiddles_generic(
-    const curve_config::scalar_t& basic_root,
-    curve_config::scalar_t* external_twiddles,
-    curve_config::scalar_t*& internal_twiddles,
-    curve_config::scalar_t*& basic_twiddles,
-    uint32_t log_size,
-    cudaStream_t& stream);
-
-  template cudaError_t generate_external_twiddles_fast_twiddles_mode(
-    const curve_config::scalar_t& basic_root,
-    curve_config::scalar_t* external_twiddles,
-    curve_config::scalar_t*& internal_twiddles,
-    curve_config::scalar_t*& basic_twiddles,
-    uint32_t log_size,
-    cudaStream_t& stream);
-
-  template cudaError_t mixed_radix_ntt<curve_config::scalar_t, curve_config::scalar_t>(
-    curve_config::scalar_t* d_input,
-    curve_config::scalar_t* d_output,
-    curve_config::scalar_t* external_twiddles,
-    curve_config::scalar_t* internal_twiddles,
-    curve_config::scalar_t* basic_twiddles,
-    int ntt_size,
-    int max_logn,
-    int batch_size,
-    bool columns_batch,
-    bool is_inverse,
-    bool fast_tw,
-    Ordering ordering,
-    curve_config::scalar_t* arbitrary_coset,
-    int coset_gen_index,
-    cudaStream_t cuda_stream);
-
 } // namespace ntt

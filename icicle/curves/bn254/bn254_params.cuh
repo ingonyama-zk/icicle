@@ -3,7 +3,7 @@
 #define BN254_PARAMS_H
 
 #include "fields/storage.cuh"
-#include "fields/bn254/bn254_params.cuh"
+#include "fields/bn254/bn254.cuh"
 
 namespace bn254 {
   // G1 and G2 generators

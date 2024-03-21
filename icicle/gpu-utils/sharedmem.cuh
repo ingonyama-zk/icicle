@@ -58,8 +58,6 @@
 #ifndef _SHAREDMEM_H_
 #define _SHAREDMEM_H_
 
-#include "curves/curve_config.cuh"
-
 /** @brief Wrapper class for templatized dynamic shared memory arrays.
  *
  * This struct uses template specialization on the type \a T to declare
@@ -214,23 +212,23 @@ struct SharedMemory<uchar4> {
   }
 };
 
-template <>
-struct SharedMemory<curve_config::scalar_t> {
-  __device__ curve_config::scalar_t* getPointer()
-  {
-    extern __shared__ curve_config::scalar_t s_scalar_[];
-    return s_scalar_;
-  }
-};
+// template <>
+// struct SharedMemory<curve_config::scalar_t> {
+//   __device__ curve_config::scalar_t* getPointer()
+//   {
+//     extern __shared__ curve_config::scalar_t s_scalar_[];
+//     return s_scalar_;
+//   }
+// };
 
-template <>
-struct SharedMemory<curve_config::projective_t> {
-  __device__ curve_config::projective_t* getPointer()
-  {
-    extern __shared__ curve_config::projective_t s_projective_[];
-    return s_projective_;
-  }
-};
+// template <>
+// struct SharedMemory<curve_config::projective_t> {
+//   __device__ curve_config::projective_t* getPointer()
+//   {
+//     extern __shared__ curve_config::projective_t s_projective_[];
+//     return s_projective_;
+//   }
+// };
 
 #endif //_SHAREDMEM_H_
 

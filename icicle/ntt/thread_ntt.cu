@@ -4,7 +4,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include "curves/curve_config.cuh"
 
 struct stage_metadata {
   uint32_t th_stride;

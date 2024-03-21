@@ -4,10 +4,9 @@
 
 #include <cuda_runtime.h>
 
-#include "curves/curve_config.cuh"
-#include "utils/device_context.cuh"
-#include "utils/error_handler.cuh"
-#include "utils/sharedmem.cuh"
+#include "gpu-utils/device_context.cuh"
+#include "gpu-utils/error_handler.cuh"
+#include "gpu-utils/sharedmem.cuh"
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
 

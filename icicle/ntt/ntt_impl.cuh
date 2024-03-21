@@ -3,7 +3,7 @@
 #define _NTT_IMPL_H
 
 #include <stdint.h>
-#include "appUtils/ntt/ntt.cuh" // for enum Ordering
+#include "ntt/ntt.cuh" // for enum Ordering
 
 namespace ntt {
 

@@ -18,10 +18,11 @@
 
 #pragma once
 
-#include "utils/error_handler.cuh"
-#include "utils/host_math.cuh"
+#include "gpu-utils/error_handler.cuh"
+#include "host_math.cuh"
 #include "ptx.cuh"
-#include "utils/storage.cuh"
+#include "storage.cuh"
+
 #include <iomanip>
 #include <iostream>
 #include <random>

@@ -9,7 +9,6 @@ project(icicle LANGUAGES CUDA CXX)
 
 # when adding a new curve/field, append its name to the end of this list
 set(SUPPORTED_FIELDS bn254;bls12_381;bls12_377;bw6_761;grumpkin)
-SET(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
 
 set(IS_FIELD_SUPPORTED FALSE)
 set(I 0)
@@ -35,19 +34,8 @@ if (NOT BUILD_TESTS)
 
   message(STATUS "Building without tests.")
 
-  if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
-      list(APPEND ICICLE_SOURCES ../ntt/kernel_ntt.cu)
-      list(APPEND ICICLE_SOURCES ../ntt/ntt_impl.cu)
-      list(APPEND ICICLE_SOURCES ../ntt/field_ntt.cu)
-  endif()
-
-  add_library(
-    icicle
-    mont.cu
-    field.cu
-    ${ICICLE_SOURCES}
-  )
-  set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${FIELD}")
+  add_library(icicle ${FIELD}/extern.cu)
+  set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_field_${FIELD}")
   target_compile_definitions(icicle PRIVATE FIELD=${FIELD})  
 
 else()

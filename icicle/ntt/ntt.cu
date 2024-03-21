@@ -3,11 +3,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "curves/curve_config.cuh"
-#include "utils/sharedmem.cuh"
+#include "gpu-utils/sharedmem.cuh"
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
-#include "appUtils/ntt/ntt_impl.cuh"
+#include "ntt/ntt_impl.cuh"
 
 #include <mutex>
 
@@ -697,53 +696,4 @@ namespace ntt {
     };
     return config;
   }
-
-  /**
-   * Extern "C" version of [InitDomain](@ref InitDomain) function with the following
-   * value of template parameter (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitializeDomain)(
-    curve_config::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
-  {
-    return InitDomain(*primitive_root, ctx, fast_twiddles_mode);
-  }
-
-  /**
-   * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
-   * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, NTTCuda)(
-    curve_config::scalar_t* input,
-    int size,
-    NTTDir dir,
-    NTTConfig<curve_config::scalar_t>& config,
-    curve_config::scalar_t* output)
-  {
-    return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, dir, config, output);
-  }
-
-#if defined(ECNTT_DEFINED)
-
-  /**
-   * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
-   * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` is the [projective representation](@ref projective_t) of the curve (i.e. EC NTT is computed);
-   *  - `E` is the [scalar field](@ref scalar_t) of the curve;
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
-    curve_config::projective_t* input,
-    int size,
-    NTTDir dir,
-    NTTConfig<curve_config::scalar_t>& config,
-    curve_config::projective_t* output)
-  {
-    return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, dir, config, output);
-  }
-
-#endif
-
 } // namespace ntt

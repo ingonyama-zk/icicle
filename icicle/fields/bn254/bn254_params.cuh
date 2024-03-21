@@ -1,8 +1,8 @@
 #pragma once
-#ifndef BN254_PARAMS_H
-#define BN254_PARAMS_H
+#ifndef BN254_FIELDS_PARAMS_H
+#define BN254_FIELDS_PARAMS_H
 
-#include "utils/storage.cuh"
+#include "fields/storage.cuh"
 
 namespace bn254 {
   struct fp_config {

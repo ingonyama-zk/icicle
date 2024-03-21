@@ -2,7 +2,7 @@
 #ifndef LDE_H
 #define LDE_H
 
-#include "device_context.cuh"
+#include "gpu-utils/device_context.cuh"
 
 /**
  * @namespace vec_ops

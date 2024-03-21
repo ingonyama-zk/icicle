@@ -1,7 +1,5 @@
 #pragma once
 
-#include "field.cuh"
-
 template <class FF>
 class Affine
 {

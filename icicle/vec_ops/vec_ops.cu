@@ -2,10 +2,8 @@
 #include <stdexcept>
 
 #include "vec_ops.cuh"
-#include "curves/curve_config.cuh"
-#include "device_context.cuh"
-#include "mont.cuh"
-#include "utils/utils.h"
+#include "gpu-utils/device_context.cuh"
+#include "utils/mont.cuh"
 
 namespace vec_ops {
 
@@ -100,50 +98,4 @@ namespace vec_ops {
   {
     return VecOp<E, SubKernel>(vec_a, vec_b, n, config, result);
   }
-
-  /**
-   * Extern version of [Mul](@ref Mul) function with the template parameters
-   * `S` and `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MulCuda)(
-    curve_config::scalar_t* vec_a,
-    curve_config::scalar_t* vec_b,
-    int n,
-    VecOpsConfig<curve_config::scalar_t>& config,
-    curve_config::scalar_t* result)
-  {
-    return Mul<curve_config::scalar_t>(vec_a, vec_b, n, config, result);
-  }
-
-  /**
-   * Extern version of [Add](@ref Add) function with the template parameter
-   * `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, AddCuda)(
-    curve_config::scalar_t* vec_a,
-    curve_config::scalar_t* vec_b,
-    int n,
-    VecOpsConfig<curve_config::scalar_t>& config,
-    curve_config::scalar_t* result)
-  {
-    return Add<curve_config::scalar_t>(vec_a, vec_b, n, config, result);
-  }
-
-  /**
-   * Extern version of [Sub](@ref Sub) function with the template parameter
-   * `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, SubCuda)(
-    curve_config::scalar_t* vec_a,
-    curve_config::scalar_t* vec_b,
-    int n,
-    VecOpsConfig<curve_config::scalar_t>& config,
-    curve_config::scalar_t* result)
-  {
-    return Sub<curve_config::scalar_t>(vec_a, vec_b, n, config, result);
-  }
-
 } // namespace vec_ops

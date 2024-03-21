@@ -1,9 +1,6 @@
-#include "curves/curve_config.cuh"
 #include "projective.cuh"
 #include <cuda.h>
 #include "utils/utils.h"
-
-using namespace curve_config;
 
 extern "C" bool CONCAT_EXPAND(CURVE, Eq)(projective_t* point1, projective_t* point2)
 {

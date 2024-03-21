@@ -10,13 +10,11 @@
 #include <stdexcept>
 #include <vector>
 
-#include "curves/curve_config.cuh"
-#include "primitives/affine.cuh"
-#include "primitives/field.cuh"
-#include "primitives/projective.cuh"
-#include "utils/error_handler.cuh"
+#include "curves/affine.cuh"
+#include "curves/projective.cuh"
+#include "fields/field.cuh"
+#include "gpu-utils/error_handler.cuh"
 #include "utils/mont.cuh"
-#include "utils/utils.h"
 
 namespace msm {
 
@@ -898,85 +896,4 @@ namespace msm {
 
     return CHK_LAST();
   }
-
-  /**
-   * Extern "C" version of [PrecomputeMSMBases](@ref PrecomputeMSMBases) function with the following values of template
-   * parameters (where the curve is given by `-DCURVE` env variable during build):
-   *  - `A` is the [affine representation](@ref affine_t) of curve points;
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, PrecomputeMSMBases)(
-    curve_config::affine_t* bases,
-    int bases_size,
-    int precompute_factor,
-    int _c,
-    bool are_bases_on_device,
-    device_context::DeviceContext& ctx,
-    curve_config::affine_t* output_bases)
-  {
-    return PrecomputeMSMBases<curve_config::affine_t, curve_config::projective_t>(
-      bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
-  }
-
-  /**
-   * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
-   * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
-   *  - `A` is the [affine representation](@ref affine_t) of curve points;
-   *  - `P` is the [projective representation](@ref projective_t) of curve points.
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
-    curve_config::scalar_t* scalars,
-    curve_config::affine_t* points,
-    int msm_size,
-    MSMConfig& config,
-    curve_config::projective_t* out)
-  {
-    return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(
-      scalars, points, msm_size, config, out);
-  }
-
-#if defined(G2_DEFINED)
-
-  /**
-   * Extern "C" version of [PrecomputeMSMBases](@ref PrecomputeMSMBases) function with the following values of template
-   * parameters (where the curve is given by `-DCURVE` env variable during build):
-   *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2PrecomputeMSMBases)(
-    curve_config::g2_affine_t* bases,
-    int bases_size,
-    int precompute_factor,
-    int _c,
-    bool are_bases_on_device,
-    device_context::DeviceContext& ctx,
-    curve_config::g2_affine_t* output_bases)
-  {
-    return PrecomputeMSMBases<curve_config::g2_affine_t, curve_config::g2_projective_t>(
-      bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
-  }
-
-  /**
-   * Extern "C" version of [MSM](@ref MSM) function with the following values of template parameters
-   * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
-   *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
-   *  - `P` is the [projective representation](@ref g2_projective_t) of G2 curve points.
-   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
-   */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
-    curve_config::scalar_t* scalars,
-    curve_config::g2_affine_t* points,
-    int msm_size,
-    MSMConfig& config,
-    curve_config::g2_projective_t* out)
-  {
-    return MSM<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(
-      scalars, points, msm_size, config, out);
-  }
-
-#endif
-
 } // namespace msm
