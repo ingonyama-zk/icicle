@@ -164,6 +164,8 @@ TEST_F(PolynomialTest, evaluation)
   EXPECT_EQ(f_x, expected_f_x);
 }
 
+// TODO Yuval: evaluation on domain
+
 TEST_F(PolynomialTest, fromEvaluations)
 {
   const int size = 100;
@@ -258,9 +260,9 @@ TEST_F(PolynomialTest, cAPI)
   auto coeff = std::make_unique<scalar_t[]>(size);
   random_samples(coeff.get(), size);
 
-  auto f = polynomial_create_from_coefficients(coeff.get(), size);
-  auto g = polynomial_create_from_coefficients(coeff.get(), size);
-  auto s = polynomial_add(f, g);
+  auto f = CONCAT_EXPAND(CURVE, polynomial_create_from_coefficients)(coeff.get(), size);
+  auto g = CONCAT_EXPAND(CURVE, polynomial_create_from_coefficients)(coeff.get(), size);
+  auto s = CONCAT_EXPAND(CURVE, polynomial_add)(f, g);
 
   scalar_t x = scalar_t::rand_host();
   // TODO Yuval: use C-API for evaluate too
@@ -270,9 +272,9 @@ TEST_F(PolynomialTest, cAPI)
   auto s_x = s->evaluate(x);
   EXPECT_EQ(fx_plus_gx, s_x);
 
-  polynomial_delete(f);
-  polynomial_delete(g);
-  polynomial_delete(s);
+  CONCAT_EXPAND(CURVE, polynomial_delete)(f);
+  CONCAT_EXPAND(CURVE, polynomial_delete)(g);
+  CONCAT_EXPAND(CURVE, polynomial_delete)(s);
 }
 
 TEST_F(PolynomialTest, multiplication)

@@ -36,12 +36,14 @@ public:
       : m_ptr(ptr), m_counterWeakPtr(counterWeakPtr), m_expectedCounterValue(expectedCounterValue)
   {
   }
+  IntegrityPointer(const IntegrityPointer& other) = default;
+  IntegrityPointer(IntegrityPointer&& other) = default;
 
   /**
    * Retrieves the raw pointer. Use with caution, as direct access bypasses validity checks.
    * @return T* The raw pointer to the data.
    */
-  const T* get() const { return operator->(); }
+  const T* get() const { return isValid() ? m_ptr : nullptr; }
 
   /**
    * Dereferences the pointer. Throws std::runtime_error if the pointer is invalid.
