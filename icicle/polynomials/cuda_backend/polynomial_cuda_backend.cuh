@@ -101,28 +101,49 @@ namespace polynomials {
       modified();
     }
 
-    C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients) override
+    bool is_host_ptr(const void* p) const
     {
-      const bool is_memset_zeros = host_coefficients == nullptr;
+      // checking whether a pointer is on host or device and asserts device matches the polynmoial device
+      // Note: device memory can me managed or not. Host memory can be registerd or not. No distinction here.
+      cudaPointerAttributes attributes;
+      CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
+      const bool is_on_host = attributes.type == cudaMemoryTypeHost ||
+                              attributes.type == cudaMemoryTypeUnregistered; // unregistered is host memory
+      const bool is_on_cur_device = !is_on_host && attributes.device == m_device_context.device_id;
+      const bool is_valid_ptr = is_on_host || is_on_cur_device;
+      if (!is_valid_ptr) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid evaluations ptr"); }
+
+      return is_on_host;
+    }
+
+    C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients) override
+    {
+      const bool is_memset_zeros = coefficients == nullptr;
       allocate(nof_coefficients, State::Coefficients, is_memset_zeros);
-      if (host_coefficients) {
+      if (coefficients) {
+        const bool is_ptr_on_host = is_host_ptr(coefficients);
+
         CHK_STICKY(cudaMemcpyAsync(
-          m_storage, host_coefficients, nof_coefficients * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
+          m_storage, coefficients, nof_coefficients * sizeof(C),
+          is_ptr_on_host ? cudaMemcpyHostToDevice : cudaMemcpyDeviceToDevice, m_device_context.stream));
         CHK_STICKY(
-          cudaStreamSynchronize(m_device_context.stream)); // protect against host_coefficients being released too soon
+          cudaStreamSynchronize(m_device_context.stream)); // protect against coefficients being released too soon
       }
       return static_cast<C*>(m_storage);
     }
 
-    I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* host_evaluations) override
+    I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations) override
     {
-      const bool is_memset_zeros = host_evaluations == nullptr;
+      const bool is_memset_zeros = evaluations == nullptr;
       allocate(nof_evaluations, State::EvaluationsOnRou_Natural, is_memset_zeros);
-      if (host_evaluations) {
+      if (evaluations) {
+        const bool is_ptr_on_host = is_host_ptr(evaluations);
+
         CHK_STICKY(cudaMemcpyAsync(
-          m_storage, host_evaluations, nof_evaluations * sizeof(C), cudaMemcpyHostToDevice, m_device_context.stream));
+          m_storage, evaluations, nof_evaluations * sizeof(C),
+          is_ptr_on_host ? cudaMemcpyHostToDevice : cudaMemcpyDeviceToDevice, m_device_context.stream));
         CHK_STICKY(
-          cudaStreamSynchronize(m_device_context.stream)); // protect against host_evaluations being released too soon
+          cudaStreamSynchronize(m_device_context.stream)); // protect against evaluations being released too soon
       }
       return static_cast<I*>(m_storage);
     }
@@ -153,12 +174,22 @@ namespace polynomials {
       return std::make_pair(static_cast<C*>(m_storage), this->m_nof_elements);
     }
 
-    std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_view() override
+    std::tuple<IntegrityPointer<C>, uint64_t, uint64_t> get_coefficients_view() override
     {
       auto [coeffs, N] = get_coefficients();
       // when reading the pointer, if the counter was modified, the pointer is invalid
       IntegrityPointer<C> integrity_pointer(coeffs, m_integrity_counter, *m_integrity_counter);
-      return {integrity_pointer, N};
+      return {integrity_pointer, N, m_device_context.device_id};
+    }
+
+    std::tuple<IntegrityPointer<I>, uint64_t, uint64_t>
+    get_rou_evaluations_view(uint64_t nof_evaluations, bool is_reversed)
+    {
+      transform_to_evaluations(nof_evaluations, is_reversed);
+      auto [evals, N] = get_rou_evaluations();
+      // when reading the pointer, if the counter was modified, the pointer is invalid
+      IntegrityPointer<I> integrity_pointer(evals, m_integrity_counter, *m_integrity_counter);
+      return {integrity_pointer, N, m_device_context.device_id};
     }
 
     std::pair<I*, uint64_t> get_rou_evaluations() override
@@ -674,13 +705,6 @@ namespace polynomials {
       C host_coeff;
       copy_coefficients_to_host(op, &host_coeff, coeff_idx, coeff_idx);
       return host_coeff;
-    }
-
-    std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_coefficients_view(PolyContext& p) override
-    {
-      auto [coeffs_safe, size] = p.get_coefficients_view();
-      return std::make_tuple(coeffs_safe, size, m_device_context.device_id);
     }
 
     inline void assert_device_compatability(PolyContext& a, PolyContext& b) const

@@ -19,7 +19,7 @@ namespace polynomials {
   class Polynomial
   {
   public:
-    // initialization
+    // initialization (coefficients/evaluations can reside on host or device)
     static Polynomial from_coefficients(const Coeff* coefficients, uint64_t nof_coefficients);
     static Polynomial from_rou_evaluations(const Image* evaluations, uint64_t nof_evaluations);
     Polynomial clone() const;
@@ -54,14 +54,16 @@ namespace polynomials {
     // highest non-zero coefficient degree
     int64_t degree();
 
-    // Read coefficients
-    Coeff copy_coefficient_to_host(uint64_t idx) const;
+    // Copy coefficients to host memory
+    Coeff copy_coefficient_to_host(uint64_t idx) const; // single coefficient
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
     int64_t copy_coefficients_to_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
 
+    // Returns a self-invalidating view of coefficients/rou-evaluations. Once the polynomial is modified, the view
+    // identifies and invalidates itself.
     std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view();
-    // TODO Yuval: implement get_coefficients_ownership()
-    // TODO Yuval: same for evaluations
+    std::tuple<IntegrityPointer<Image>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_rou_evaluations_view(uint64_t nof_evaluations = 0, bool is_reversed = false);
 
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
     {
@@ -106,22 +108,26 @@ namespace polynomials {
     IPolynomialContext() : m_id{s_id++}, m_nof_elements{0} {}
     virtual ~IPolynomialContext() = default;
 
-    virtual C* init_from_coefficients(uint64_t nof_coefficients, const C* host_coefficients = nullptr) = 0;
-    virtual I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* host_evaluations = nullptr) = 0;
+    // coefficients/evaluations can reside on host or device
+    virtual C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients = nullptr) = 0;
+    virtual I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations = nullptr) = 0;
     virtual std::shared_ptr<IPolynomialContext> clone() const = 0;
-
-    virtual std::pair<C*, uint64_t> get_coefficients() = 0;
-    virtual std::pair<IntegrityPointer<C>, uint64_t> get_coefficients_view() = 0;
-    virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
-
-    virtual void transform_to_coefficients(uint64_t nof_coefficients = 0) = 0;
-    virtual void transform_to_evaluations(uint64_t nof_evaluations = 0, bool is_reversed = 0) = 0;
 
     virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients, bool memset_zeros = true) = 0;
     virtual void release() = 0;
 
+    virtual void transform_to_coefficients(uint64_t nof_coefficients = 0) = 0;
+    virtual void transform_to_evaluations(uint64_t nof_evaluations = 0, bool is_reversed = false) = 0;
+
     State get_state() const { return m_state; }
     uint64_t get_nof_elements() const { return m_nof_elements; }
+
+    virtual std::pair<C*, uint64_t> get_coefficients() = 0;
+    virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
+
+    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view() = 0;
+    virtual std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_rou_evaluations_view(uint64_t nof_evaluations = 0, bool is_reversed = false) = 0;
 
     virtual void print(std::ostream& os) = 0;
 
@@ -170,9 +176,6 @@ namespace polynomials {
     // if coefficients==nullptr, return nof_coefficients, without writing
     virtual int64_t
     copy_coefficients_to_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
-
-    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_coefficients_view(PolyContext& p) = 0;
   };
 
   /*============================== Polynomial Absract Factory ==============================*/
