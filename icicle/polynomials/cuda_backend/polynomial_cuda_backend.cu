@@ -106,7 +106,7 @@ namespace polynomials {
     bool is_host_ptr(const void* p) const
     {
       // checking whether a pointer is on host or device and asserts device matches the polynmoial device
-      // Note: device memory can me managed or not. Host memory can be registerd or not. No distinction here.
+      // Note: device memory can me managed or not. Host memory can be registered or not. No distinction here.
       cudaPointerAttributes attributes;
       CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
       const bool is_on_host = attributes.type == cudaMemoryTypeHost ||
@@ -567,7 +567,7 @@ namespace polynomials {
       assert_device_compatability(numerator, out);
 
       // TODO Yuval: vanishing polynomial x^n-1 evaluates to zero on ROU
-      // Therefore constant to conset ((wu)^n-1 = w^n*u^n-1 = u^n-1)
+      // Therefore constant on coset with u as coset generator ((wu)^n-1 = w^n*u^n-1 = u^n-1)
       // This is true for a coset of size n but if numerator is of size >n, then I need a larger coset and it doesn't
       // hold. Need to use this fact to optimize division
 
