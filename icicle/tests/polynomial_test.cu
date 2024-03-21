@@ -164,7 +164,33 @@ TEST_F(PolynomialTest, evaluation)
   EXPECT_EQ(f_x, expected_f_x);
 }
 
-// TODO Yuval: evaluation on domain
+TEST_F(PolynomialTest, evaluationOnDomain)
+{
+  int size = 1 << 5;
+  auto f = PolynomialTest::randomize_polynomial(size);
+
+  size *= 2; // evaluating on a larger domain
+  auto default_device_context = device_context::get_default_device_context();
+  const auto w = ntt::GetRootOfUnity<scalar_t>((int)log2(size), default_device_context);
+
+  // construct domain as rou
+  scalar_t x = one;
+  auto domain = std::make_unique<scalar_t[]>(size);
+  for (int i = 0; i < size; ++i) {
+    domain[i] = x;
+    x = x * w;
+  }
+
+  // evaluate f on the domain (equivalent to NTT)
+  auto evaluations = std::make_unique<scalar_t[]>(size);
+  f.evaluate_on_domain(domain.get(), size, evaluations.get());
+
+  // construct g from the evaluations of f
+  auto g = Polynomial_t::from_rou_evaluations(evaluations.get(), size);
+
+  // check that f==g
+  ASSERT_EQ((f - g).degree(), -1);
+}
 
 TEST_F(PolynomialTest, fromEvaluations)
 {
