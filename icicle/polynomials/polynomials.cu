@@ -1,5 +1,3 @@
-#pragma once // TODO Yuval: probably better compile it rather than include
-
 #include "polynomials.h"
 
 namespace polynomials {
@@ -63,6 +61,20 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const C& c) const
+  {
+    Polynomial rhs = {};
+    rhs.m_context->init_from_coefficients(1 /*nof_coefficients*/, &c);
+    return *this * rhs;
+  }
+
+  template <typename C, typename D, typename I>
+  Polynomial<C, D, I> operator*(const C& v, const Polynomial<C, D, I>& rhs)
+  {
+    return rhs * v;
+  }
+
+  template <typename C, typename D, typename I>
   std::pair<Polynomial<C, D, I>, Polynomial<C, D, I>> Polynomial<C, D, I>::divide(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> Q = {}, R = {};
@@ -83,20 +95,6 @@ namespace polynomials {
   {
     m_backend->add(*m_context, *m_context, *rhs.m_context);
     return *this;
-  }
-
-  template <typename C, typename D, typename I>
-  Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const C& c) const
-  {
-    Polynomial rhs = {};
-    rhs.m_context->init_from_coefficients(1 /*nof_coefficients*/, &c);
-    return *this * rhs;
-  }
-
-  template <typename C, typename D, typename I>
-  Polynomial<C, D, I> operator*(const C& v, const Polynomial<C, D, I>& rhs)
-  {
-    return rhs * v;
   }
 
   template <typename C, typename D, typename I>
@@ -156,5 +154,9 @@ namespace polynomials {
   {
     return m_context->get_rou_evaluations_view(nof_evaluations, is_reversed);
   }
+
+  // explicit instantiation for default type (scalar field)
+  template class Polynomial<>;
+  template Polynomial<> operator*(const scalar_t& c, const Polynomial<>& rhs);
 
 } // namespace polynomials

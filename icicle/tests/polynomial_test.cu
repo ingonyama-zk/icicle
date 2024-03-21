@@ -13,6 +13,9 @@ using curve_config::projective_t;
 using curve_config::scalar_t;
 
 #include "polynomials/polynomials.h"
+#include "polynomials/polynomials_c_api.h"
+#include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
+
 #include "appUtils/ntt/ntt.cuh"
 #include "appUtils/msm/msm.cuh"
 #include "utils/device_context.cuh"
@@ -49,6 +52,8 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
 using namespace polynomials;
 
 typedef Polynomial<scalar_t> Polynomial_t;
+
+static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
 
 class PolynomialTest : public ::testing::Test
 {

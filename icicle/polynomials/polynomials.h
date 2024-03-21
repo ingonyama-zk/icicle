@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include "utils/integrity_pointer.h"
+#include "curves/curve_config.cuh"
 
 namespace polynomials {
   template <typename Coeff, typename Domain, typename Image>
@@ -14,8 +15,10 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   class AbstractPolynomialFactory;
 
+  using curve_config::scalar_t;
+
   /*============================== Polynomial API ==============================*/
-  template <typename Coeff = curve_config::scalar_t, typename Domain = Coeff, typename Image = Coeff>
+  template <typename Coeff = scalar_t, typename Domain = Coeff, typename Image = Coeff>
   class Polynomial
   {
   public:
@@ -94,6 +97,10 @@ namespace polynomials {
     Polynomial(const Polynomial&) = delete;
     Polynomial& operator=(const Polynomial&) = delete;
   };
+
+  // allows multiplication c*Poly in addition to Poly*c
+  template <typename C = scalar_t, typename D = C, typename I = C>
+  Polynomial<C, D, I> operator*(const C& c, const Polynomial<C, D, I>& rhs);
   /*============================== Polynomial API END==============================*/
 
   /*============================== Polynomial Context ==============================*/
@@ -188,8 +195,6 @@ namespace polynomials {
     virtual ~AbstractPolynomialFactory() = default;
   };
 
-} // namespace polynomials
+  extern template class Polynomial<>;
 
-#include "cuda_backend/polynomial_cuda_backend.cuh"
-#include "polynomials.cpp" // TODO Yuval: avoid include with explicit instantiation?
-#include "polynomials_c_api.h"
+} // namespace polynomials
