@@ -18,6 +18,13 @@ void random_samples(test_scalar* res, uint32_t count)
     res[i] = i < 1000 ? test_scalar::rand_host() : res[i - 1000];
 }
 
+void incremental_values(test_scalar* res, uint32_t count)
+{
+  for (int i = 0; i < count; i++) {
+    res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
+  }
+}
+
 int main(){
 
   //decleration
@@ -56,7 +63,8 @@ int main(){
   cudaEventCreate(&gpu_stop);
 
   //input init
-  random_samples(h_evals.get(), size);
+  // random_samples(h_evals.get(), size);
+  incremental_values(h_evals.get(), size);
   C = test_scalar::rand_host();
   h_transcript[0] = test_scalar::rand_host();
   h_transcript_ref[0] = h_transcript[0];
@@ -64,14 +72,16 @@ int main(){
   //warm up run
   cudaMemcpy(d_evals, h_evals.get(), sizeof(test_scalar) * size, cudaMemcpyHostToDevice);
   cudaMemcpy(d_transcript, h_transcript.get(), sizeof(test_scalar), cudaMemcpyHostToDevice);
-  sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
+  sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaDeviceSynchronize();
   cudaMemcpy(d_evals, h_evals.get(), sizeof(test_scalar) * size, cudaMemcpyHostToDevice);
 
   //run
   cudaEventRecord(gpu_start, 0);
-  sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
+  sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaEventRecord(gpu_stop, 0);
   cudaDeviceSynchronize();
