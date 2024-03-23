@@ -24,6 +24,7 @@ func TestNTTDefaultConfig(t *testing.T) {
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice
 		false,    // IsAsync
+		Auto,     // NttAlgorithm
 	}
 
 	actual := GetDefaultNTTConfig(cosetGen)

@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-cudaError_t bls12_377MSMCuda(scalar_t* scalars, affine_t* points, int count, MSMConfig* config, projective_t* out);
+cudaError_t bls12_377MSMCuda(const scalar_t* scalars, const affine_t* points, int count, MSMConfig* config, projective_t* out);
 cudaError_t bls12_377PrecomputeMSMBases(affine_t* points, int bases_size, int precompute_factor, int _c, bool are_bases_on_device, DeviceContext* ctx, affine_t* output_bases);
 
 #ifdef __cplusplus

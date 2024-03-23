@@ -190,6 +190,7 @@ func TestMSMG2SkewedDistribution(t *testing.T) {
 func TestMSMG2MultiDevice(t *testing.T) {
 	numDevices, _ := cr.GetDeviceCount()
 	fmt.Println("There are ", numDevices, " devices available")
+	orig_device, _ := cr.GetDevice()
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < numDevices; i++ {
@@ -223,4 +224,5 @@ func TestMSMG2MultiDevice(t *testing.T) {
 		})
 	}
 	wg.Wait()
+	cr.SetDevice(orig_device)
 }
