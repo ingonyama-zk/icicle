@@ -4,7 +4,7 @@ To understand the theory behind MSM pre computation technique refer to Niall Emm
 
 ### Supported curves
 
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `Grumpkin`
 
 ### `precompute_bases`
 
@@ -35,7 +35,7 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
 
 #### Description
 
-This function extends each provided base point \(P\) with its multiples \(2^lP, 2^{2l}P, ..., 2^{(precompute_factor - 1) \cdot l}P\), where \(l\) is a level of precomputation determined by the `precompute_factor`. The extended set of points facilitates faster MSM computations by allowing the MSM algorithm to leverage precomputed multiples of base points, reducing the number of point additions required during the computation.
+This function extends each provided base point $(P)$ with its multiples $(2^lP, 2^{2l}P, ..., 2^{(precompute_factor - 1) \cdot l}P)$, where $(l)$ is a level of precomputation determined by the `precompute_factor`. The extended set of points facilitates faster MSM computations by allowing the MSM algorithm to leverage precomputed multiples of base points, reducing the number of point additions required during the computation.
 
 The precomputation process is crucial for optimizing MSM operations, especially when dealing with large sets of points and scalars. By precomputing and storing multiples of the base points, the MSM function can more efficiently compute the scalar-point multiplications.
 
@@ -53,7 +53,7 @@ precompute_bases(&points, precompute_factor, 0, &device_context, &mut extended_b
 
 ### Benchmarks
 
-Benchmarks where preformed on a Nvidia RTX 3090Ti.
+Benchmarks where performed on a Nvidia RTX 3090Ti.
 
 | Pre-computation factor | bn254 size `2^20` MSM, ms.  | bn254 size `2^12` MSM, size `2^10` batch, ms. | bls12-381 size `2^20` MSM, ms. | bls12-381 size `2^12` MSM, size `2^10` batch, ms. |
 | ------------- | ------------- | ------------- | ------------- | ------------- |

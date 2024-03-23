@@ -69,6 +69,7 @@ type NTTConfig[T any] struct {
     areInputsOnDevice  bool
     areOutputsOnDevice bool
     IsAsync bool
+    NttAlgorithm NttAlgorithm
 }
 ```
 
@@ -82,6 +83,7 @@ type NTTConfig[T any] struct {
 - **areInputsOnDevice**: Indicates if input scalars are located on the device.
 - **areOutputsOnDevice**: Indicates if results are stored on the device.
 - **IsAsync**: Controls whether the NTT operation runs asynchronously.
+- **NttAlgorithm**: Explicitly select the NTT algorithm. Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
 
 ### Default Configuration
 
