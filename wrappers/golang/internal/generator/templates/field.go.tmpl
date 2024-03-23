@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	{{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS int8 = {{if .IsScalar}}{{.ScalarLimbsNum}}{{else}}{{if .IsG2}}{{.G2BaseLimbsNum}}{{else}}{{.BaseLimbsNum}}{{end}}{{end}}
+	{{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS int = {{if .IsScalar}}{{.ScalarLimbsNum}}{{else}}{{if .IsG2}}{{.G2BaseLimbsNum}}{{else}}{{.BaseLimbsNum}}{{end}}{{end}}
 )
 
 type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field struct {
-	limbs [{{- if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS]uint32
+	limbs [{{- if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS]uint64
 }
 
 func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) Len() int {
@@ -27,18 +27,18 @@ func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{
 }
 
 func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) Size() int {
-	return int({{- if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS * 4)
+	return int({{- if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS * 8)
 }
 
-func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) GetLimbs() []uint32 {
+func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) GetLimbs() []uint64 {
 	return f.limbs[:]
 }
 
-func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) AsPointer() *uint32 {
+func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) AsPointer() *uint64 {
 	return &f.limbs[0]
 }
 
-func (f *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) FromLimbs(limbs []uint32) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field {
+func (f *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) FromLimbs(limbs []uint64) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field {
 	if len(limbs) != f.Len() {
 		panic("Called FromLimbs with limbs of different length than field")
 	}
@@ -67,21 +67,21 @@ func (f *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar
 }
 
 func (f *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) FromBytesLittleEndian(bytes []byte) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field {
-	if len(bytes)/4 != f.Len() {
-		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*4, len(bytes)))
+	if len(bytes)/8 != f.Len() {
+		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*8, len(bytes)))
 	}
 
 	for i := range f.limbs {
-		f.limbs[i] = binary.LittleEndian.Uint32(bytes[i*4 : i*4+4])
+		f.limbs[i] = binary.LittleEndian.Uint64(bytes[i*8 : i*8+8])
 	}
 
 	return *f
 }
 
 func (f {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{- if .IsScalar}}Scalar{{else}}Base{{end}}{{end}}Field) ToBytesLittleEndian() []byte {
-	bytes := make([]byte, f.Len()*4)
+	bytes := make([]byte, f.Len()*8)
 	for i, v := range f.limbs {
-		binary.LittleEndian.PutUint32(bytes[i*4:], v)
+		binary.LittleEndian.PutUint64(bytes[i*8:], v)
 	}
 
 	return bytes

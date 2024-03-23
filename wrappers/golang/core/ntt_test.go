@@ -1,7 +1,6 @@
 package core
 
 import (
-	// "unsafe"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core/internal"
@@ -12,10 +11,10 @@ import (
 func TestNTTDefaultConfig(t *testing.T) {
 	var cosetGenField internal.MockField
 	cosetGenField.One()
-	var cosetGen [1]uint32
+	var cosetGen [1]uint64
 	copy(cosetGen[:], cosetGenField.GetLimbs())
 	ctx, _ := cr.GetDefaultDeviceContext()
-	expected := NTTConfig[[1]uint32]{
+	expected := NTTConfig[[1]uint64]{
 		ctx,      // Ctx
 		cosetGen, // CosetGen
 		1,        // BatchSize
@@ -33,15 +32,13 @@ func TestNTTDefaultConfig(t *testing.T) {
 }
 
 func TestNTTCheckHostScalars(t *testing.T) {
-	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-
 	var cosetGen internal.MockField
-	cosetGen.FromLimbs(randLimbs)
+	cosetGen.One()
 	cfg := GetDefaultNTTConfig(&cosetGen)
 
 	rawInput := make([]internal.MockField, 10)
 	var emptyField internal.MockField
-	emptyField.FromLimbs(randLimbs)
+	emptyField.One()
 
 	for i := range rawInput {
 		rawInput[i] = emptyField
@@ -62,18 +59,15 @@ func TestNTTCheckHostScalars(t *testing.T) {
 }
 
 func TestNTTCheckDeviceScalars(t *testing.T) {
-	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-
 	var cosetGen internal.MockField
-	cosetGen.FromLimbs(randLimbs)
+	cosetGen.One()
 	cfg := GetDefaultNTTConfig(cosetGen)
 
-	fieldBytesSize := 16
 	numFields := 10
 	rawInput := make([]internal.MockField, numFields)
 	for i := range rawInput {
 		var emptyField internal.MockField
-		emptyField.FromLimbs(randLimbs)
+		emptyField.One()
 
 		rawInput[i] = emptyField
 	}
@@ -83,6 +77,7 @@ func TestNTTCheckDeviceScalars(t *testing.T) {
 	var input DeviceSlice
 	hostElements.CopyToDevice(&input, true)
 
+	fieldBytesSize := hostElements.SizeOfElement()
 	var output DeviceSlice
 	output.Malloc(numFields*fieldBytesSize, fieldBytesSize)
 

@@ -10,9 +10,9 @@ import (
 )
 
 func randomField(size int) internal.MockField {
-	limbs := make([]uint32, size)
+	limbs := make([]uint64, size)
 	for i := range limbs {
-		limbs[i] = rand.Uint32()
+		limbs[i] = rand.Uint64()
 	}
 
 	var field internal.MockField
@@ -67,8 +67,8 @@ func randomAffinePoints(numPoints, fieldSize int) []internal.MockAffine {
 const (
 	numPoints      = 4
 	numFields      = 4
-	fieldSize      = 8
-	fieldBytesSize = fieldSize * 4
+	fieldSize      = 4
+	fieldBytesSize = fieldSize * 8
 )
 
 func TestHostSlice(t *testing.T) {
@@ -101,7 +101,7 @@ func TestHostSliceIsOnDevice(t *testing.T) {
 func TestHostSliceSizeOf(t *testing.T) {
 	randFields := randomFields(numFields, fieldSize)
 	hostSlice := HostSliceFromElements(randFields)
-	assert.Equal(t, hostSlice.SizeOfElement(), fieldSize*4)
+	assert.Equal(t, hostSlice.SizeOfElement(), fieldSize*8)
 }
 
 func TestDeviceSlice(t *testing.T) {
