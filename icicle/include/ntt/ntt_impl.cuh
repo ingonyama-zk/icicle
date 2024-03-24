@@ -27,7 +27,7 @@ namespace ntt {
 
   template <typename E, typename S>
   cudaError_t mixed_radix_ntt(
-    E* d_input,
+    const E* d_input,
     E* d_output,
     S* external_twiddles,
     S* internal_twiddles,

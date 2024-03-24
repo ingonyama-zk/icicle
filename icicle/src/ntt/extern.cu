@@ -26,7 +26,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, NTTCuda)(scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)
+  CONCAT_EXPAND(FIELD, NTTCuda)(const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)
   {
     return NTT<scalar_t, scalar_t>(input, size, dir, config, output);
   }

@@ -20,7 +20,7 @@ namespace ntt {
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
     template <typename E>
-    __global__ void reverse_order_kernel(E* arr, E* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
+    __global__ void reverse_order_kernel(const E* arr, E* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
     {
       int threadId = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (threadId < n * batch_size) {
@@ -45,7 +45,8 @@ namespace ntt {
      * @param arr_out buffer of the same size as `arr_in` on the GPU to write the bit-permuted array into.
      */
     template <typename E>
-    void reverse_order_batch(E* arr_in, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream, E* arr_out)
+    void reverse_order_batch(
+      const E* arr_in, uint32_t n, uint32_t logn, uint32_t batch_size, cudaStream_t stream, E* arr_out)
     {
       int number_of_threads = MAX_THREADS_BATCH;
       int number_of_blocks = (n * batch_size + number_of_threads - 1) / number_of_threads;
@@ -62,7 +63,7 @@ namespace ntt {
      * @param arr_out buffer of the same size as `arr_in` on the GPU to write the bit-permuted array into.
      */
     template <typename E>
-    void reverse_order(E* arr_in, uint32_t n, uint32_t logn, cudaStream_t stream, E* arr_out)
+    void reverse_order(const E* arr_in, uint32_t n, uint32_t logn, cudaStream_t stream, E* arr_out)
     {
       reverse_order_batch(arr_in, n, logn, 1, stream, arr_out);
     }
@@ -80,7 +81,7 @@ namespace ntt {
      */
     template <typename E, typename S>
     __global__ void ntt_template_kernel_shared_rev(
-      E* __restrict__ arr_in,
+      const E* __restrict__ arr_in,
       int n,
       const S* __restrict__ r_twiddles,
       int n_twiddles,
@@ -152,7 +153,7 @@ namespace ntt {
      */
     template <typename E, typename S>
     __global__ void ntt_template_kernel_shared(
-      E* __restrict__ arr_in,
+      const E* __restrict__ arr_in,
       int n,
       const S* __restrict__ r_twiddles,
       int n_twiddles,
@@ -220,7 +221,7 @@ namespace ntt {
      */
     template <typename E, typename S>
     __global__ void
-    ntt_template_kernel(E* arr_in, int n, S* twiddles, int n_twiddles, int max_task, int s, bool rev, E* arr_out)
+    ntt_template_kernel(const E* arr_in, int n, S* twiddles, int n_twiddles, int max_task, int s, bool rev, E* arr_out)
     {
       int task = blockIdx.x;
       int chunks = n / (blockDim.x * 2);
@@ -272,7 +273,7 @@ namespace ntt {
      */
     template <typename E, typename S>
     cudaError_t ntt_inplace_batch_template(
-      E* d_input,
+      const E* d_input,
       int n,
       S* d_twiddles,
       int n_twiddles,
@@ -390,7 +391,7 @@ namespace ntt {
     cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
-    friend cudaError_t NTT<U, E>(E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
+    friend cudaError_t NTT<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
 
   template <typename S>
@@ -539,7 +540,7 @@ namespace ntt {
 
   template <typename S, typename E>
   cudaError_t radix2_ntt(
-    E* d_input,
+    const E* d_input,
     E* d_output,
     S* twiddles,
     int ntt_size,
@@ -585,7 +586,7 @@ namespace ntt {
   }
 
   template <typename S, typename E>
-  cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
+  cudaError_t NTT(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
 
@@ -612,18 +613,22 @@ namespace ntt {
     bool are_inputs_on_device = config.are_inputs_on_device;
     bool are_outputs_on_device = config.are_outputs_on_device;
 
-    E* d_input;
+    const E* d_input;
+    E* d_allocated_input = nullptr;
     if (are_inputs_on_device) {
       d_input = input;
     } else {
-      CHK_IF_RETURN(cudaMallocAsync(&d_input, input_size_bytes, stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_allocated_input, input_size_bytes, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input, input, input_size_bytes, cudaMemcpyHostToDevice, stream));
+      d_input = d_allocated_input;
     }
     E* d_output;
+    E* d_allocated_output = nullptr;
     if (are_outputs_on_device) {
       d_output = output;
     } else {
-      CHK_IF_RETURN(cudaMallocAsync(&d_output, input_size_bytes, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_allocated_output, input_size_bytes, stream));
+      d_output = d_allocated_output;
     }
 
     S* coset = nullptr;
@@ -677,8 +682,8 @@ namespace ntt {
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, input_size_bytes, cudaMemcpyDeviceToHost, stream));
 
     if (coset) CHK_IF_RETURN(cudaFreeAsync(coset, stream));
-    if (!are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_input, stream));
-    if (!are_outputs_on_device) CHK_IF_RETURN(cudaFreeAsync(d_output, stream));
+    if (d_allocated_input) CHK_IF_RETURN(cudaFreeAsync(d_allocated_input, stream));
+    if (d_allocated_output) CHK_IF_RETURN(cudaFreeAsync(d_allocated_output, stream));
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
 
     return CHK_LAST();

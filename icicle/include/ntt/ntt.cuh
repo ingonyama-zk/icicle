@@ -133,7 +133,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S, typename E>
-  cudaError_t NTT(E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
+  cudaError_t NTT(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
 
 } // namespace ntt
 

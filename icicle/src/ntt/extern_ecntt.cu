@@ -14,7 +14,7 @@ using namespace field_config;
  * @return `cudaSuccess` if the execution was successful and an error code otherwise.
  */
 extern "C" cudaError_t CONCAT_EXPAND(CURVE, ECNTTCuda)(
-  projective_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, projective_t* output)
+  const projective_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, projective_t* output)
 {
   return NTT<scalar_t, projective_t>(input, size, dir, config, output);
 }
