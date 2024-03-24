@@ -12,7 +12,7 @@ namespace utils_internal {
 
   template <typename E, typename S>
   __global__ void BatchMulKernel(
-    E* in_vec,
+    const E* in_vec,
     int n_elements,
     int batch_size,
     S* scalar_vec,

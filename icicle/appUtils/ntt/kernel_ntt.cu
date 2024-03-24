@@ -100,7 +100,7 @@ namespace ntt {
 
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void reorder_digits_and_normalize_kernel(
-    E* arr,
+    const E* arr,
     E* arr_reordered,
     uint32_t log_size,
     bool columns_batch,
@@ -122,7 +122,7 @@ namespace ntt {
 
   template <typename E, typename S>
   static __global__ void batch_elementwise_mul_with_reorder_kernel(
-    E* in_vec,
+    const E* in_vec,
     uint32_t size,
     bool columns_batch,
     uint32_t batch_size,
@@ -145,7 +145,7 @@ namespace ntt {
 
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt64(
-    E* in,
+    const E* in,
     E* out,
     S* external_twiddles,
     S* internal_twiddles,
@@ -228,7 +228,7 @@ namespace ntt {
 
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt32(
-    E* in,
+    const E* in,
     E* out,
     S* external_twiddles,
     S* internal_twiddles,
@@ -299,7 +299,7 @@ namespace ntt {
 
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt32dit(
-    E* in,
+    const E* in,
     E* out,
     S* external_twiddles,
     S* internal_twiddles,
@@ -369,7 +369,7 @@ namespace ntt {
 
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt16(
-    E* in,
+    const E* in,
     E* out,
     S* external_twiddles,
     S* internal_twiddles,
@@ -441,7 +441,7 @@ namespace ntt {
 
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt16dit(
-    E* in,
+    const E* in,
     E* out,
     S* external_twiddles,
     S* internal_twiddles,
@@ -740,7 +740,7 @@ namespace ntt {
 
   template <typename E, typename S>
   cudaError_t large_ntt(
-    E* in,
+    const E* in,
     E* out,
     S* external_twiddles,
     S* internal_twiddles,
@@ -896,7 +896,7 @@ namespace ntt {
 
   template <typename E, typename S>
   cudaError_t mixed_radix_ntt(
-    E* d_input,
+    const E* d_input,
     E* d_output,
     S* external_twiddles,
     S* internal_twiddles,
@@ -1014,7 +1014,7 @@ namespace ntt {
     cudaStream_t& stream);
 
   template cudaError_t mixed_radix_ntt<curve_config::scalar_t, curve_config::scalar_t>(
-    curve_config::scalar_t* d_input,
+    const curve_config::scalar_t* d_input,
     curve_config::scalar_t* d_output,
     curve_config::scalar_t* external_twiddles,
     curve_config::scalar_t* internal_twiddles,
