@@ -39,7 +39,7 @@ int main(){
   cudaEvent_t gpu_start, gpu_stop;
   float gpu_time;
 
-  int n = 16;
+  int n = 24;
   int size = 1 << n;
 
   cudaStream_t stream1, stream2;
