@@ -37,10 +37,29 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::slice(uint64_t offset, uint64_t stride, uint64_t size)
+  {
+    Polynomial res = {};
+    m_backend->slice(*res.m_context, *this->m_context, offset, stride, size);
+    return res;
+  }
+  template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::even()
+  {
+    const uint64_t size = (uint64_t)ceil(float(m_context->get_nof_elements()) / 2);
+    return slice(0, 2, size);
+  }
+  template <typename C, typename D, typename I>
+  Polynomial<C, D, I> Polynomial<C, D, I>::odd()
+  {
+    return slice(1, 2, this->m_context->get_nof_elements() / 2);
+  }
+
+  template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::operator+(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->add(*res.m_context.get(), *m_context, *rhs.m_context);
+    m_backend->add(*res.m_context, *m_context, *rhs.m_context);
     return res;
   }
 
@@ -48,7 +67,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::operator-(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->subtract(*res.m_context.get(), *m_context, *rhs.m_context);
+    m_backend->subtract(*res.m_context, *m_context, *rhs.m_context);
     return res;
   }
 
@@ -56,7 +75,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const Polynomial& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->multiply(*res.m_context.get(), *m_context, *rhs.m_context);
+    m_backend->multiply(*res.m_context, *m_context, *rhs.m_context);
     return res;
   }
 
@@ -78,7 +97,7 @@ namespace polynomials {
   std::pair<Polynomial<C, D, I>, Polynomial<C, D, I>> Polynomial<C, D, I>::divide(const Polynomial<C, D, I>& rhs) const
   {
     Polynomial<C, D, I> Q = {}, R = {};
-    m_backend->divide(*Q.m_context.get(), *R.m_context.get(), *m_context, *rhs.m_context.get());
+    m_backend->divide(*Q.m_context, *R.m_context, *m_context, *rhs.m_context);
     return std::make_pair(std::move(Q), std::move(R));
   }
 
@@ -86,7 +105,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::operator/(const Polynomial& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->quotient(*res.m_context.get(), *m_context, *rhs.m_context);
+    m_backend->quotient(*res.m_context, *m_context, *rhs.m_context);
     return res;
   }
 
@@ -94,7 +113,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::operator%(const Polynomial& rhs) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->remainder(*res.m_context.get(), *m_context, *rhs.m_context);
+    m_backend->remainder(*res.m_context, *m_context, *rhs.m_context);
     return res;
   }
 
@@ -102,7 +121,7 @@ namespace polynomials {
   Polynomial<C, D, I> Polynomial<C, D, I>::divide_by_vanishing_polynomial(uint64_t vanishing_polynomial_degree) const
   {
     Polynomial<C, D, I> res = {};
-    m_backend->divide_by_vanishing_polynomial(*res.m_context.get(), *m_context, vanishing_polynomial_degree);
+    m_backend->divide_by_vanishing_polynomial(*res.m_context, *m_context, vanishing_polynomial_degree);
     return res;
   }
 

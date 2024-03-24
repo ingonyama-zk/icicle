@@ -47,6 +47,9 @@ namespace polynomials {
     Polynomial& add_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
     Polynomial& sub_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
 
+    Polynomial slice(uint64_t offset, uint64_t stride, uint64_t size);
+    Polynomial even();
+    Polynomial odd();
     // Following ops cannot be traced. Calling them requires to compute
 
     // evaluation
@@ -173,6 +176,8 @@ namespace polynomials {
     // arithmetic with monomials
     virtual void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) = 0;
     virtual void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) = 0;
+
+    virtual void slice(PolyContext& out, PolyContext& in, uint64_t offset, uint64_t stride, uint64_t size) = 0;
 
     virtual int64_t degree(PolyContext& op) = 0;
 

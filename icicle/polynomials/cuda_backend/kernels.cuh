@@ -5,7 +5,7 @@ namespace polynomials {
 
   /*============================== add/sub ==============================*/
   template <typename T>
-  __global__ void AddSubKernel(T* a_vec, T* b_vec, int a_len, int b_len, bool add1_sub0, T* result)
+  __global__ void AddSubKernel(const T* a_vec, const T* b_vec, int a_len, int b_len, bool add1_sub0, T* result)
   {
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= max(a_len, b_len)) return;
@@ -25,7 +25,7 @@ namespace polynomials {
 
   /*============================== degree ==============================*/
   template <typename T>
-  __global__ void HighestNonZeroIdx(T* vec, int len, int64_t* idx)
+  __global__ void HighestNonZeroIdx(const T* vec, int len, int64_t* idx)
   {
     *idx = -1; // zero polynomial is defined with degree -1
     for (int64_t i = len - 1; i >= 0; --i) {
@@ -51,7 +51,7 @@ namespace polynomials {
 
   // TODO Yuval: implement efficient reduction and support batch evaluation
   template <typename T>
-  __global__ void dummyReduce(T* arr, int size, T* output)
+  __global__ void dummyReduce(const T* arr, int size, T* output)
   {
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid > 0) return;
@@ -63,7 +63,7 @@ namespace polynomials {
   }
 
   template <typename T>
-  __global__ void evaluatePolynomialWithoutReduction(T x, T* coeffs, int num_coeffs, T* tmp)
+  __global__ void evaluatePolynomialWithoutReduction(T x, const T* coeffs, int num_coeffs, T* tmp)
   {
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * pow(x, tid); }
@@ -71,14 +71,14 @@ namespace polynomials {
 
   /*============================== multiply ==============================*/
   template <typename T>
-  __global__ void Mul(T* element_vec1, T* element_vec2, int n, T* result)
+  __global__ void Mul(const T* element_vec1, const T* element_vec2, int n, T* result)
   {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < n) { result[tid] = element_vec1[tid] * element_vec2[tid]; }
   }
 
   template <typename T>
-  __global__ void MulScalar(T* element_vec, T* scalar, int n, T* result)
+  __global__ void MulScalar(const T* element_vec, const T* scalar, int n, T* result)
   {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < n) { result[tid] = element_vec[tid] * (*scalar); }
@@ -86,7 +86,7 @@ namespace polynomials {
 
   /*============================== division ==============================*/
   template <typename T>
-  __global__ void SchoolBookDivisionStep(T* r, T* q, T* b, int deg_r, int deg_b, T lc_b_inv)
+  __global__ void SchoolBookDivisionStep(T* r, T* q, const T* b, int deg_r, int deg_b, T lc_b_inv)
   {
     // computing one step 'r = r-sb' (for 'a = q*b+r') where s is a monomial such that 'r-sb' removes the highest degree
     // of r.
@@ -109,10 +109,18 @@ namespace polynomials {
 
   /*============================== division_by_vanishing_polynomial ==============================*/
   template <typename T>
-  __global__ void DivElementWise(T* element_vec1, T* element_vec2, int n, T* result)
+  __global__ void DivElementWise(const T* element_vec1, const T* element_vec2, int n, T* result)
   {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < n) { result[tid] = element_vec1[tid] * T::inverse(element_vec2[tid]); }
+  }
+
+  /*============================== division_by_vanishing_polynomial ==============================*/
+  template <typename T>
+  __global__ void Slice(const T* in, T* out, int offset, int stride, int size)
+  {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < size) { out[tid] = in[offset + tid * stride]; }
   }
 
 } // namespace polynomials

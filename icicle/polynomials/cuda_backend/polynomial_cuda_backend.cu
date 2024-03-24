@@ -375,6 +375,20 @@ namespace polynomials {
     }
     ~CUDAPolynomialBackend() { CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream)); }
 
+    void slice(PolyContext& out, PolyContext& in, uint64_t offset, uint64_t stride, uint64_t size) override
+    {
+      assert_device_compatability(out, in);
+      out.allocate(size, State::Coefficients, false /*=memset zeros*/);
+      auto [in_coeffs, _] = in.get_coefficients();
+      auto [out_coeffs, __] = out.get_coefficients();
+
+      const int NOF_THREADS = 128;
+      const int NOF_BLOCKS = (size + NOF_THREADS - 1) / NOF_THREADS;
+      Slice<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(in_coeffs, out_coeffs, offset, stride, size);
+
+      CHK_LAST();
+    }
+
     void add_sub(PolyContext& res, PolyContext& a, PolyContext& b, bool add1_sub0)
     {
       assert_device_compatability(a, b);
@@ -595,7 +609,8 @@ namespace polynomials {
       // (3) element wise division
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      DivElementWise<<<NOF_BLOCKS, NOF_THREADS>>>(numerator_coeffs, out_coeffs, N, out_coeffs);
+      DivElementWise<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        numerator_coeffs, out_coeffs, N, out_coeffs);
 
       // (4) INTT back both a and out
       ntt_config.ordering = ntt::Ordering::kMN;

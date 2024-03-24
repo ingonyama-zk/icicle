@@ -527,6 +527,38 @@ TEST_F(PolynomialTest, interpolation)
   ASSERT_EQ(fx, gx);
 }
 
+TEST_F(PolynomialTest, slicing)
+{
+  auto body = [](int size) {
+    const bool is_odd_size = size % 2 == 1;
+    auto f = randomize_polynomial(size);
+    const auto x = scalar_t::rand_host();
+
+    // computing e(x) and o(x) directly
+    auto expected_even = scalar_t::zero();
+    auto expected_odd = scalar_t::zero();
+    for (int i = size - 1; i >= 0; --i) {
+      if (i % 2 == 0)
+        expected_even = expected_even * x + f.copy_coefficient_to_host(i);
+      else
+        expected_odd = expected_odd * x + f.copy_coefficient_to_host(i);
+    }
+
+    auto e = f.even();
+    auto o = f.odd();
+
+    ASSERT_EQ(o.degree(), size / 2 - 1);
+    ASSERT_EQ(e.degree(), is_odd_size ? size / 2 : size / 2 - 1);
+
+    // compute even and odd polynomials and compute them at x
+    ASSERT_EQ(f.even()(x), expected_even);
+    ASSERT_EQ(f.odd()(x), expected_odd);
+  };
+
+  body(1 << 10);       // test even size
+  body((1 << 10) - 1); // test odd size
+}
+
 // Following examples are randomizing N private numbers and proving that I know N numbers such that their product is
 // equal to 'out'.
 //
