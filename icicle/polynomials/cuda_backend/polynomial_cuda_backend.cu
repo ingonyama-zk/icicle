@@ -42,7 +42,6 @@ namespace polynomials {
 
       release(); // in case allocated mem is too small and need to reallocate
       this->m_nof_elements = allocate_mem(nof_elements, &this->m_storage, is_memset_zeros);
-
       modified();
     }
 
@@ -50,6 +49,8 @@ namespace polynomials {
     {
       const uint64_t size = (element_end_idx - element_start_idx) * ElementSize;
       if (0 == size) { return; }
+
+      modified();
 
       const auto offset = (void*)((uint64_t)storage + element_start_idx * ElementSize);
       CHK_STICKY(cudaMemsetAsync(offset, 0, size, m_device_context.stream));
@@ -79,6 +80,15 @@ namespace polynomials {
       this->m_nof_elements = nof_elements;
 
       modified();
+    }
+
+    // Note: this is protected and only backend can call
+    void* get_storage_mutable() override
+    {
+      // since giving access to internal memory, cannot know if modified or not
+      // backend should not take it mutable if not mutating
+      modified();
+      return m_storage;
     }
 
     void extend_mem_and_pad(uint64_t nof_elements)
@@ -118,7 +128,7 @@ namespace polynomials {
       return is_on_host;
     }
 
-    C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients) override
+    const C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients) override
     {
       const bool is_memset_zeros = coefficients == nullptr;
       allocate(nof_coefficients, State::Coefficients, is_memset_zeros);
@@ -131,10 +141,10 @@ namespace polynomials {
         CHK_STICKY(
           cudaStreamSynchronize(m_device_context.stream)); // protect against coefficients being released too soon
       }
-      return static_cast<C*>(m_storage);
+      return static_cast<const C*>(m_storage);
     }
 
-    I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations) override
+    const I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations) override
     {
       const bool is_memset_zeros = evaluations == nullptr;
       allocate(nof_evaluations, State::EvaluationsOnRou_Natural, is_memset_zeros);
@@ -147,7 +157,7 @@ namespace polynomials {
         CHK_STICKY(
           cudaStreamSynchronize(m_device_context.stream)); // protect against evaluations being released too soon
       }
-      return static_cast<I*>(m_storage);
+      return static_cast<const I*>(m_storage);
     }
 
     std::shared_ptr<PolyContext> clone() const override
@@ -169,11 +179,10 @@ namespace polynomials {
       return cloned_context;
     }
 
-    std::pair<C*, uint64_t> get_coefficients() override
+    std::pair<const C*, uint64_t> get_coefficients() override
     {
       transform_to_coefficients();
-      modified(); // protect against backend modifying directly
-      return std::make_pair(static_cast<C*>(m_storage), this->m_nof_elements);
+      return std::make_pair(static_cast<const C*>(m_storage), this->m_nof_elements);
     }
 
     std::tuple<IntegrityPointer<C>, uint64_t, uint64_t> get_coefficients_view() override
@@ -194,12 +203,11 @@ namespace polynomials {
       return {std::move(integrity_pointer), N, m_device_context.device_id};
     }
 
-    std::pair<I*, uint64_t> get_rou_evaluations() override
+    std::pair<const I*, uint64_t> get_rou_evaluations() override
     {
       const bool is_reversed = this->m_state == State::EvaluationsOnRou_Reversed;
       transform_to_evaluations(0, is_reversed);
-      modified(); // protect against backend modifying directly
-      return std::make_pair(static_cast<I*>(m_storage), this->m_nof_elements);
+      return std::make_pair(static_cast<const I*>(m_storage), this->m_nof_elements);
     }
 
     void transform_to_coefficients(uint64_t nof_coefficients = 0) override
@@ -375,12 +383,18 @@ namespace polynomials {
     }
     ~CUDAPolynomialBackend() { CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream)); }
 
+    template <typename T = C>
+    T* get_context_storage_mutable(PolyContext& p)
+    {
+      return static_cast<T*>(IPolynomialBackend<C, D, I>::get_context_storage_mutable(p));
+    }
+
     void slice(PolyContext& out, PolyContext& in, uint64_t offset, uint64_t stride, uint64_t size) override
     {
       assert_device_compatability(out, in);
       out.allocate(size, State::Coefficients, false /*=memset zeros*/);
       auto [in_coeffs, _] = in.get_coefficients();
-      auto [out_coeffs, __] = out.get_coefficients();
+      auto out_coeffs = get_context_storage_mutable(out);
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (size + NOF_THREADS - 1) / NOF_THREADS;
@@ -399,7 +413,7 @@ namespace polynomials {
 
       const auto res_nof_coeff = max(a_nof_coeff, b_nof_coeff);
       res.allocate(res_nof_coeff, State::Coefficients);
-      auto [res_coeff_p, _] = res.get_coefficients();
+      auto res_coeff_p = get_context_storage_mutable(res);
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (res_nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
@@ -440,7 +454,8 @@ namespace polynomials {
       auto [s_elements_p, _] = state == State::Coefficients ? s.get_coefficients() : s.get_rou_evaluations();
 
       out.allocate(N, state, false /*=memset zeros*/);
-      auto [out_evals_p, __] = state == State::Coefficients ? out.get_coefficients() : out.get_rou_evaluations();
+      auto out_evals_p =
+        state == State::Coefficients ? get_context_storage_mutable<C>(out) : get_context_storage_mutable<I>(out);
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
@@ -465,7 +480,7 @@ namespace polynomials {
 
       // (2) allocate c (c=a*b) and compute element-wise multiplication on evaluations
       c.allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
-      auto [c_evals_p, _] = c.get_rou_evaluations();
+      auto c_evals_p = get_context_storage_mutable<I>(c);
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (c_N + NOF_THREADS - 1) / NOF_THREADS;
@@ -488,7 +503,7 @@ namespace polynomials {
       // (2) allocate c (c=a*b)
       const uint64_t c_N = 2 * N;
       c.allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
-      auto [c_evals_low_p, ___] = c.get_rou_evaluations();
+      auto c_evals_low_p = get_context_storage_mutable<I>(c);
       I* c_evals_high_p = c_evals_low_p + N;
 
       // (3) compute NTT of a,b on coset and write to c
@@ -536,11 +551,11 @@ namespace polynomials {
 
       // init: Q=0, R=a
       Q.allocate(deg_a - deg_b + 1, State::Coefficients, true /*=memset zeros*/);
-      auto [Q_coeffs, q_N] = Q.get_coefficients();
+      auto Q_coeffs = get_context_storage_mutable(Q);
 
       //    TODO Yuval: Can do better in terms of memory allocation? deg(R) <= deg(b) by definition but it starts as
       R.allocate(a_N, State::Coefficients, false /*=memset_zeros*/);
-      auto [R_coeffs, r_N] = R.get_coefficients();
+      auto R_coeffs = get_context_storage_mutable(R);
       CHK_STICKY(
         cudaMemcpyAsync(R_coeffs, a_coeffs, a_N * sizeof(C), cudaMemcpyDeviceToDevice, m_device_context.stream));
 
@@ -586,7 +601,10 @@ namespace polynomials {
       // hold. Need to use this fact to optimize division
 
       // (1) allocate vanishing polynomial in coefficients form
-      auto [numerator_coeffs, N] = numerator.get_coefficients();
+      // TODO Yuval: maybe instead of taking numerator memory and modiyfing it diretcly add a state for evaluations on
+      // coset of rou. In that case I can remain in this state and also won't need to access input memory directly
+      auto numerator_coeffs = get_context_storage_mutable(numerator);
+      const auto N = numerator.get_nof_elements();
       if (vanishing_poly_degree > N) {
         THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "divide_by_vanishing_polynomial(): degree is too large");
       }
@@ -596,7 +614,7 @@ namespace polynomials {
 
       // (2) NTT on coset. Note that NTT on ROU evaluates to zeros for vanihsing polynomials by definition. Therefore
       // evaluation on coset is required to compute non-zero evaluations, which make element-wise division possible
-      auto [out_coeffs, _] = out.get_coefficients();
+      auto out_coeffs = get_context_storage_mutable(out);
       auto ntt_config = ntt::DefaultNTTConfig<C>(m_device_context);
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
@@ -623,7 +641,7 @@ namespace polynomials {
     {
       const uint64_t new_nof_elements = max(poly.get_nof_elements(), monomial + 1);
       poly.transform_to_coefficients(new_nof_elements);
-      auto [coeffs, _] = poly.get_coefficients();
+      auto coeffs = get_context_storage_mutable(poly);
       AddSingleElementInplace<<<1, 1, 0, m_device_context.stream>>>(coeffs + monomial, monomial_coeff);
 
       CHK_LAST();

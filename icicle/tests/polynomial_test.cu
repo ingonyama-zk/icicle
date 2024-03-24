@@ -470,16 +470,20 @@ TEST_F(PolynomialTest, clone)
   ASSERT_EQ(h(x), g(x));
 }
 
-TEST_F(PolynomialTest, integrityPointerInvalidation)
+TEST_F(PolynomialTest, View)
 {
   const int size = 1 << 6;
 
-  auto f = new Polynomial_t(randomize_polynomial(size));
-  auto [d_coeff, N, device_id] = f->get_coefficients_view();
+  auto f = randomize_polynomial(size);
+  auto [d_coeff, N, device_id] = f.get_coefficients_view();
 
   EXPECT_EQ(d_coeff.isValid(), true);
+  auto g = f + f;
+  // expecting the view to remain valid in that case
+  EXPECT_EQ(d_coeff.isValid(), true);
 
-  delete f; // f is destructed so the coefficients should be invalidated
+  f += f;
+  // expecting view to be invalidated since f is modified
   EXPECT_EQ(d_coeff.isValid(), false);
 }
 

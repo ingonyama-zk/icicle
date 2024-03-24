@@ -112,6 +112,8 @@ namespace polynomials {
   class IPolynomialContext
   {
   public:
+    friend class IPolynomialBackend<C, D, I>;
+
     enum State { Coefficients, EvaluationsOnRou_Natural, EvaluationsOnRou_Reversed };
     static constexpr size_t ElementSize = std::max(sizeof(C), sizeof(I));
 
@@ -119,8 +121,8 @@ namespace polynomials {
     virtual ~IPolynomialContext() = default;
 
     // coefficients/evaluations can reside on host or device
-    virtual C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients = nullptr) = 0;
-    virtual I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations = nullptr) = 0;
+    virtual const C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients = nullptr) = 0;
+    virtual const I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations = nullptr) = 0;
     virtual std::shared_ptr<IPolynomialContext> clone() const = 0;
 
     virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients, bool memset_zeros = true) = 0;
@@ -132,8 +134,8 @@ namespace polynomials {
     State get_state() const { return m_state; }
     uint64_t get_nof_elements() const { return m_nof_elements; }
 
-    virtual std::pair<C*, uint64_t> get_coefficients() = 0;
-    virtual std::pair<I*, uint64_t> get_rou_evaluations() = 0;
+    virtual std::pair<const C*, uint64_t> get_coefficients() = 0;
+    virtual std::pair<const I*, uint64_t> get_rou_evaluations() = 0;
 
     virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view() = 0;
     virtual std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
@@ -143,6 +145,7 @@ namespace polynomials {
 
   protected:
     void set_state(State state) { m_state = state; }
+    virtual void* get_storage_mutable() = 0; // for backend access when computing
 
     State m_state;
     uint64_t m_nof_elements = 0;
@@ -180,6 +183,8 @@ namespace polynomials {
     virtual void slice(PolyContext& out, PolyContext& in, uint64_t offset, uint64_t stride, uint64_t size) = 0;
 
     virtual int64_t degree(PolyContext& op) = 0;
+
+    void* get_context_storage_mutable(PolyContext& ctxt) { return ctxt.get_storage_mutable(); }
 
     virtual I evaluate(PolyContext& op, const D& domain_x) = 0;
     virtual void evaluate_on_domain(PolyContext& op, const D* domain, uint64_t size, I* evaluations /*OUT*/) = 0;
