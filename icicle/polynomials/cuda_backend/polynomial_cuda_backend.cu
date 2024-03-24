@@ -459,7 +459,8 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      MulScalar<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(p_elements_p, s_elements_p, N, out_evals_p);
+      MulScalarKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        p_elements_p, s_elements_p, N, out_evals_p);
 
       CHK_LAST();
     }
@@ -484,7 +485,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (c_N + NOF_THREADS - 1) / NOF_THREADS;
-      Mul<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
+      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
 
       CHK_LAST();
     }
@@ -519,7 +520,8 @@ namespace polynomials {
       // (4) compute a_H1 * b_H1 inplace
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      Mul<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
+      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
       // (5) transform a,b to evaluations
       a.transform_to_evaluations(N, true /*=reversed*/);
       b.transform_to_evaluations(N, true /*=reversed*/);
@@ -527,7 +529,7 @@ namespace polynomials {
       auto [b_evals_p, b_nof_evals] = b.get_rou_evaluations();
 
       // (6) compute a_H0 * b_H0
-      Mul<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
+      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
 
       CHK_LAST();
     }
@@ -627,7 +629,7 @@ namespace polynomials {
       // (3) element wise division
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      DivElementWise<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      DivElementWiseKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         numerator_coeffs, out_coeffs, N, out_coeffs);
 
       // (4) INTT back both a and out
@@ -674,6 +676,9 @@ namespace polynomials {
   public:
     I evaluate(PolyContext& p, const D& domain_x) override
     {
+      // TODO Yuval: maybe use Horner's rule and just evaluate each domain point per thread. Alternatively Need to
+      // reduce in parallel.
+
       auto [coeff, nof_coeff] = p.get_coefficients();
       I *d_evaluation, *d_domain_x;
       I* d_tmp;
@@ -779,7 +784,7 @@ namespace polynomials {
   CUDAPolynomialFactory<C, D, I>::~CUDAPolynomialFactory()
   {
     for (auto stream_it : m_device_streams) {
-      // CHK_STICKY(cudaStreamDestroy(stream_it)); // TODO Yuval: why does it fail?
+      CHK_STICKY(cudaStreamDestroy(stream_it)); // TODO Yuval: why does it fail?
     }
   }
 

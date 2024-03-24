@@ -79,8 +79,10 @@ namespace polynomials {
 
     static void initialize(std::unique_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> factory)
     {
+      std::atexit(cleanup);
       s_factory = std::move(factory);
     }
+    static void cleanup() { s_factory = nullptr; }
 
   private:
     // context is a wrapper for the polynomial state, including allocated memory, device context etc.

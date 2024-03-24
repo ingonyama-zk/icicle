@@ -64,7 +64,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E, typename S>
-  cudaError_t Mul(S* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+  cudaError_t Mul(const S* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result);
 
   /**
    * A function that adds two vectors element-wise.
@@ -79,7 +79,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E>
-  cudaError_t Add(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+  cudaError_t Add(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result);
 
   /**
    * A function that subtracts two vectors element-wise.
@@ -94,7 +94,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E>
-  cudaError_t Sub(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+  cudaError_t Sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result);
 } // namespace vec_ops
 
 #endif

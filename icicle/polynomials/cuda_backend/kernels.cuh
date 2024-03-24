@@ -1,7 +1,9 @@
 #pragma once
 #include "stdint.h"
+#include "utils/vec_ops.cu"
 
 namespace polynomials {
+  using namespace vec_ops;
 
   /*============================== add/sub ==============================*/
   template <typename T>
@@ -15,11 +17,10 @@ namespace polynomials {
     result[tid] = add1_sub0 ? a + b : a - b;
   }
 
+  // Note: must be called with 1 block, 1 thread
   template <typename T>
   __global__ void AddSingleElementInplace(T* self, T v)
   {
-    const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid > 0) return;
     *self = *self + v;
   }
 
@@ -69,21 +70,6 @@ namespace polynomials {
     if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * pow(x, tid); }
   }
 
-  /*============================== multiply ==============================*/
-  template <typename T>
-  __global__ void Mul(const T* element_vec1, const T* element_vec2, int n, T* result)
-  {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < n) { result[tid] = element_vec1[tid] * element_vec2[tid]; }
-  }
-
-  template <typename T>
-  __global__ void MulScalar(const T* element_vec, const T* scalar, int n, T* result)
-  {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < n) { result[tid] = element_vec[tid] * (*scalar); }
-  }
-
   /*============================== division ==============================*/
   template <typename T>
   __global__ void SchoolBookDivisionStep(T* r, T* q, const T* b, int deg_r, int deg_b, T lc_b_inv)
@@ -107,15 +93,7 @@ namespace polynomials {
     r[tid] = r[tid] - monomial_coeff * b_coeff;
   }
 
-  /*============================== division_by_vanishing_polynomial ==============================*/
-  template <typename T>
-  __global__ void DivElementWise(const T* element_vec1, const T* element_vec2, int n, T* result)
-  {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < n) { result[tid] = element_vec1[tid] * T::inverse(element_vec2[tid]); }
-  }
-
-  /*============================== division_by_vanishing_polynomial ==============================*/
+  /*============================== Slice ==============================*/
   template <typename T>
   __global__ void Slice(const T* in, T* out, int offset, int stride, int size)
   {
