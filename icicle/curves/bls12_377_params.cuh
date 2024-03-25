@@ -521,10 +521,10 @@ namespace bls12_377 {
        {0xfffdebde, 0x0ff7ffff, 0x0fffa3d3, 0x8e4c751f, 0x6bcccc32, 0xb7275e5b, 0xdc08ab03, 0x0321276d, 0x28f6304f,
         0xdd22a6ac, 0x17c50a31, 0x01ae3a46}}};
 
-    // i^2, the square of the imaginary unit for the extension field
-    static constexpr uint32_t i_squared = 5;
-    // true if i^2 is negative
-    static constexpr bool i_squared_is_negative = true;
+    // nonresidue to generate the extension field
+    static constexpr uint32_t nonresidue = 5;
+    // true if nonresidue is negative
+    static constexpr bool nonresidue_is_negative = true;
   };
 
   // G1 and G2 generators

@@ -192,10 +192,10 @@ namespace bls12_381 {
     static constexpr storage<limbs_count> montgomery_r_inv = {0x380b4820, 0xf4d38259, 0xd898fafb, 0x7fe11274,
                                                               0x14956dc8, 0x343ea979, 0x58a88de9, 0x1797ab14,
                                                               0x3c4f538b, 0xed5e6427, 0xe8fb0ce9, 0x14fec701};
-    // i^2, the square of the imaginary unit for the extension field
-    static constexpr uint32_t i_squared = 1;
-    // true if i^2 is negative
-    static constexpr bool i_squared_is_negative = true;
+    // nonresidue to generate the extension field
+    static constexpr uint32_t nonresidue = 1;
+    // true if nonresidue is negative
+    static constexpr bool nonresidue_is_negative = true;
   };
 
   // G1 and G2 generators

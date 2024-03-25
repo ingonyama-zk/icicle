@@ -72,7 +72,7 @@ namespace curve_config {
   static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{g2_gen_y};
   static constexpr g2_point_field_t g2_b = g2_point_field_t{g2_weierstrass_b};
 #else
-  typedef ExtensionField<fq_config> g2_point_field_t;
+  typedef Extension2Field<fq_config> g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x =
     g2_point_field_t{point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}};
   static constexpr g2_point_field_t g2_generator_y =
