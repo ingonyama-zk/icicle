@@ -34,9 +34,20 @@ module.exports = {
           collapsed: true,
           items: [
             {
-              type: "doc",
+              type: "category",
               label: "MSM",
-              id: "icicle/golang-bindings/msm",
+              link: {
+                type: `doc`,
+                id: "icicle/golang-bindings/msm",
+              },
+              collapsed: true,
+              items: [
+                {
+                  type: "doc",
+                  label: "MSM pre computation",
+                  id: "icicle/golang-bindings/msm-pre-computation",
+                }
+              ]
             },
             {
               type: "doc",
@@ -60,9 +71,20 @@ module.exports = {
           collapsed: true,
           items: [
             {
-              type: "doc",
+              type: "category",
               label: "MSM",
-              id: "icicle/rust-bindings/msm",
+              link: {
+                type: `doc`,
+                id: "icicle/rust-bindings/msm",
+              },
+              collapsed: true,
+              items: [
+                {
+                  type: "doc",
+                  label: "MSM pre computation",
+                  id: "icicle/rust-bindings/msm-pre-computation",
+                }
+              ]
             },
             {
               type: "doc",
