@@ -76,6 +76,7 @@ pub struct NTTConfig<'a, S> {
     pub ctx: DeviceContext<'a>,
     pub coset_gen: S,
     pub batch_size: i32,
+    pub columns_batch: bool,
     pub ordering: Ordering,
     are_inputs_on_device: bool,    
     are_outputs_on_device: bool,
@@ -93,6 +94,8 @@ The `NTTConfig` struct is a configuration object used to specify parameters for 
 - **`coset_gen: S`**: Defines the coset generator used for coset (i)NTTs. By default, this is set to `S::one()`, indicating that no coset is being used.
 
 - **`batch_size: i32`**: Determines the number of NTTs to compute in a single batch. The default value is 1, meaning that operations are performed on individual inputs without batching. Batch processing can significantly improve performance by leveraging parallelism in GPU computations.
+
+- **`columns_batch`**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
 
 - **`ordering: Ordering`**: Controls the ordering of inputs and outputs for the NTT operation. This field can be used to specify decimation strategies (in time or in frequency) and the type of butterfly algorithm (Cooley-Tukey or Gentleman-Sande). The ordering is crucial for compatibility with various algorithmic approaches and can impact the efficiency of the NTT.
 
@@ -122,6 +125,7 @@ let custom_config = NTTConfig {
     ctx: custom_device_context,
     coset_gen: my_coset_generator,
     batch_size: 10,
+    columns_batch: false,
     ordering: Ordering::kRN,
     are_inputs_on_device: true,
     are_outputs_on_device: true,
