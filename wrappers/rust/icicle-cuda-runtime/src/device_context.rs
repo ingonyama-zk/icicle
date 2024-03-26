@@ -42,17 +42,17 @@ impl DeviceContext<'_> {
     }
 }
 
-impl Drop for DeviceContext<'_> {
-    fn drop(&mut self) {
-        unsafe {
-            // SAFETY: This is safe only if we're sure that self.stream is valid
-            // and not used after being dropped.
-            let raw_stream_pointer = self.stream as *const _ as *mut CudaStream;
-            let _ = Box::from_raw(raw_stream_pointer); // Reconstruct the Box to drop it
-        }
-        // After this block, the Box goes out of scope and its destructor is run, freeing the memory.
-    }
-}
+// impl Drop for DeviceContext<'_> {
+//     fn drop(&mut self) {
+//         unsafe {
+//             // SAFETY: This is safe only if we're sure that self.stream is valid
+//             // and not used after being dropped.
+//             let raw_stream_pointer = self.stream as *const _ as *mut CudaStream;
+//             let _ = Box::from_raw(raw_stream_pointer); // Reconstruct the Box to drop it
+//         }
+//         // After this block, the Box goes out of scope and its destructor is run, freeing the memory.
+//     }
+// }
 
 pub fn check_device(device_id: i32) {
     match device_id == get_device().unwrap() as i32 {
