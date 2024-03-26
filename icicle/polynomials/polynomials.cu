@@ -197,7 +197,7 @@ namespace polynomials {
   }
 
   // explicit instantiation for default type (scalar field)
-  template class Polynomial<>;
-  template Polynomial<> operator*(const scalar_t& c, const Polynomial<>& rhs);
+  template class Polynomial<scalar_t>;
+  template Polynomial<scalar_t> operator*(const scalar_t& c, const Polynomial<scalar_t>& rhs);
 
 } // namespace polynomials
