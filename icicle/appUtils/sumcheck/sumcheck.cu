@@ -3,6 +3,16 @@
 #define SHMEM_SIZE 64
 #define MAX_SHMEM_LOG_SIZE 6
 
+#include "../ntt/kernel_ntt.cu"
+// static inline __device__ uint32_t bit_rev(uint32_t num, uint32_t log_size) { return __brev(num) >> (32 - log_size); }
+
+// template <typename S>
+// __global__ void inplace_rbo(S* arr, int size){
+// 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+// 	S temp = arr[tid];
+// 	arr[tid] = arr[bit_rev(tid)];
+// 	arr[bit_rev(tid)] = temp;
+// }
 
 template <typename S>
 __global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results) {
@@ -92,7 +102,7 @@ __global__ void update_evals_kernel(S* evals, S alpha, int poly_size){
 	int eval_id = tid % poly_size;
   // evals[tid] = (S::one() - alpha) * evals[2*tid] + alpha * evals[2*tid+1];
   // evals[tid] =  evals[2*tid] + (evals[2*tid+1] - evals[2*tid]);
-  evals[tid] =  evals[poly_id*poly_size+2*eval_id] + alpha * (evals[poly_id*poly_size+2*eval_id+1] - evals[poly_id*poly_size+2*eval_id]);
+  evals[tid] =  evals[poly_id*poly_size*2+2*eval_id] + alpha * (evals[poly_id*poly_size*2+2*eval_id+1] - evals[poly_id*poly_size*2+2*eval_id]);
   // evals[tid] = (1 - alpha) * evals[2*tid] + alpha * evals[2*tid+1];
 }
 
@@ -149,31 +159,40 @@ template <typename S>
 // __global__ void combinations_kernel(S* in, S* out, S (*combine_func)()){
 __global__ void combinations_kernel3(S* in, S* out, int poly_size){
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
-	S rp[3] = {S::one, S::one, S::one, S::one};
+	S rp[4] = {S::one(), S::one(), S::one(), S::one()};
 	S e1, e2;
 	#pragma unroll
 	for (int l = 0; l < 3; l++)
 	{
-		rp[0] *= in[l*poly_size + 2*tid];
+	  e1 = in[l*poly_size + 2*tid];
+	  e2 = in[l*poly_size + 2*tid + 1];
+		rp[0] = l? rp[0]*e1 : e1; //k=0
+		rp[1] = l? rp[1]*e2 : e2; //k=1
+		rp[2] = l? rp[2]*(e2 + e2 - e1) : (e2 + e2 - e1); //k=2
+		rp[3] = l? rp[3]*(e1 + e1 - e2) : (e1 + e1 - e2); //k=-1
+		// rp[3] = l? rp[3]*(e2 + e2 + e2 - e1 - e1) : (e2 + e2 + e2 - e1 - e1); //k=3
 	}
+	out[4*tid] = rp[0];
+	out[4*tid+1] = rp[1];
+	out[4*tid+2] = rp[2];
+	out[4*tid+3] = rp[3];
+}
+
+template <typename S>
+// __global__ void combinations_kernel(S* in, S* out, S (*combine_func)()){
+__global__ void mult_and_combine3(S* in, S* out, int poly_size, S alpha){
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	S rp[4] = {S::one(), S::one(), S::one(), S::one()};
+	S e1, e2;
 	#pragma unroll
 	for (int l = 0; l < 3; l++)
 	{
-		rp[1] *= in[l*poly_size + 2*tid + 1];
-	}
-	#pragma unroll
-	for (int l = 0; l < 3; l++)
-	{
-		e1 = in[l*poly_size + 2*tid];
-		e2 = in[l*poly_size + 2*tid + 1];
-		rp[2] *= e2 + e2 - e1;
-	}
-	#pragma unroll
-	for (int l = 0; l < 3; l++)
-	{
-		e1 = in[l*poly_size + 2*tid];
-		e2 = in[l*poly_size + 2*tid + 1];
-		rp[3] *= e2 + e2 + e2 - e1 - e1;
+		e1 = in[l*poly_size + 4*tid] + alpha * (in[l*poly_size + 4*tid + 1] - in[l*poly_size + 4*tid]);
+		e2 = in[l*poly_size + 4*tid + 2] + alpha * (in[l*poly_size + 4*tid + 3] - in[l*poly_size + 4*tid + 2]);
+		rp[0] = rp[0]*e1;
+		rp[1] = rp[1]*e2;
+		rp[2] = rp[2]*(e2 + e2 - e1);
+		rp[3] = rp[3]*(e2 + e2 + e2 - e1 - e1);
 	}
 	out[4*tid] = rp[0];
 	out[4*tid+1] = rp[1];
@@ -204,13 +223,18 @@ __global__ void combinations_kernel3(S* in, S* out, int poly_size){
 
 template <typename S>
 S my_hash(){
-	return 1;
+	S val = S::one() + S::one();
+	val = val + val;
+	val = val + val; 
+	return val + S::one() + S::one();
 }
 
 template <typename S>
 void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
+	reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
 	// S alpha = 1;
-	S alpha = S::one();
+	// S alpha = S::one();
+	S alpha = my_hash<S>();
 	// S alpha = S::rand_host();
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
@@ -234,8 +258,10 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
 
 template <typename S>
 void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
+	reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
 	// S alpha = 1;
-	S alpha = S::one();
+	// S alpha = S::one();
+	S alpha = my_hash<S>();
 	// S alpha = S::rand_host();
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
@@ -262,27 +288,56 @@ void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, cudaStream_t stream
 template <typename S>
 void sumcheck_alg3_poly3(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
 	// S alpha = 1;
-	S alpha = S::one();
+	// S alpha = S::one();
+	S alpha = my_hash<S>();
 	// S alpha = S::rand_host();
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
   for (int p = 0; p < n-1; p++)
   {
     int nof_threads = 1<<(n-1-p);
+		int NOF_THREADS = 64;
+		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
 		// printf("nof threads %d\n", nof_threads);
     // move update kernel here and unify
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
-		combinations_kernel3(evals, t, 1<<n);
-		accumulate(t, t, n-p, stream);
+		combinations_kernel3<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<n);
+		accumulate(t, t, n-p, 4, stream);
 		add_to_trace<<<1,1,0,stream>>>(T, t, p, 3);
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
-		int NOF_THREADS = 256;
-		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
     update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
   }
 	// update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha);
+	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 3);
+}
+
+template <typename S>
+void sumcheck_alg3_poly3_unified(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
+	// S alpha = 1;
+	// S alpha = S::one();
+	// S alpha = S::rand_host();
+  S alpha = my_hash<S>();
+  // S rp_even, rp_odd;
+  for (int p = 0; p < n-1; p++)
+  {
+    int nof_threads = 1<<(n-1-p);
+		int NOF_THREADS = 64;
+		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
+		// printf("nof threads %d\n", nof_threads);
+    // move update kernel here and unify
+    // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
+		if (p) mult_and_combine3<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<n, alpha);
+		else combinations_kernel3<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<n);
+		accumulate(t, t, n-p, 4, stream);
+		add_to_trace<<<1,1,0,stream>>>(T, t, p, 3);
+    // T[2*p+1] = t[0];
+    // T[2*p+2] = t[1];
+    // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
+    // update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
+  }
+	update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 2);
 	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 3);
 }
 
@@ -291,7 +346,8 @@ template <typename S>
 void sumcheck_alg1_ref(S* evals, S* t, S* T, S C, int n){
   // S alpha = my_hash(/*T, C*/);
 	// S alpha = 1;
-	S alpha = S::one();
+	// S alpha = S::one();
+	S alpha = my_hash<S>();
   S rp_even, rp_odd;
   for (int p = 0; p < n; p++)
   {
@@ -312,7 +368,7 @@ void sumcheck_alg1_ref(S* evals, S* t, S* T, S C, int n){
     T[2*p+2] = rp_odd;
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
 		// alpha = 1;
-		alpha = S::one();
+		// alpha = S::one();
 		for (int i = 0; i < 1<<(n-1-p); i++)
 		{
 			t[i] = (S::one() - alpha) * evals[2*i] + alpha * evals[2*i+1];

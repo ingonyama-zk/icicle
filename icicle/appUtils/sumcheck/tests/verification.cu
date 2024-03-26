@@ -10,6 +10,8 @@
 #include "sumcheck/sumcheck.cu"
 #include <memory>
 
+#include "test_vecs_381.cuh"
+
 typedef curve_config::scalar_t test_scalar;
 
 void random_samples(test_scalar* res, uint32_t count)
@@ -39,8 +41,9 @@ int main(){
   cudaEvent_t gpu_start, gpu_stop;
   float gpu_time;
 
-  int n = 24;
+  int n = 3;
   int size = 1 << n;
+  // int size = 3 << n;
 
   cudaStream_t stream1, stream2;
   cudaStreamCreate(&stream1);
@@ -64,16 +67,38 @@ int main(){
 
   //input init
   // random_samples(h_evals.get(), size);
-  incremental_values(h_evals.get(), size);
-  C = test_scalar::rand_host();
-  h_transcript[0] = test_scalar::rand_host();
-  h_transcript_ref[0] = h_transcript[0];
+  // incremental_values(h_evals.get(), size);
+  // C = test_scalar::rand_host();
+  // h_transcript[0] = test_scalar::rand_host();
+  // h_transcript_ref[0] = h_transcript[0];
 
+  if (n==3){
+  for (int i = 0; i < size; i++) {
+    h_evals[i] = test_scalar{input3.storages[i]};  
+  }
+  for (int i = 0; i < 2*n+1; i++) {
+    h_transcript_ref[i] = test_scalar{trans3.storages[i]};  
+  }
+  C = test_scalar{c3};
+  h_transcript[0] = h_transcript_ref[0];
+  }
+  if (n==18){
+  for (int i = 0; i < size; i++) {
+    h_evals[i] = test_scalar{input18.storages[i]};  
+  }
+  for (int i = 0; i < 2*n+1; i++) {
+    h_transcript_ref[i] = test_scalar{trans18.storages[i]};  
+  }
+  C = test_scalar{c18};
+  h_transcript[0] = h_transcript_ref[0];
+  }
   //warm up run
   cudaMemcpy(d_evals, h_evals.get(), sizeof(test_scalar) * size, cudaMemcpyHostToDevice);
   cudaMemcpy(d_transcript, h_transcript.get(), sizeof(test_scalar), cudaMemcpyHostToDevice);
   // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
   sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaDeviceSynchronize();
   cudaMemcpy(d_evals, h_evals.get(), sizeof(test_scalar) * size, cudaMemcpyHostToDevice);
@@ -82,6 +107,8 @@ int main(){
   cudaEventRecord(gpu_start, 0);
   // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
   sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaEventRecord(gpu_stop, 0);
   cudaDeviceSynchronize();
@@ -93,7 +120,7 @@ int main(){
 
   //run reference
   auto cpu_start = std::chrono::high_resolution_clock::now();
-  sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
+  // sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
   auto cpu_stop = std::chrono::high_resolution_clock::now();
   auto cpu_time = std::chrono::duration_cast<std::chrono::microseconds>(cpu_stop - cpu_start).count();
 
