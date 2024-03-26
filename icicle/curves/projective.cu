@@ -2,6 +2,15 @@
 #include <cuda.h>
 #include "utils/utils.h"
 
+template <>
+struct SharedMemory<projective_t> {
+  __device__ projective_t* getPointer()
+  {
+    extern __shared__ projective_t s_projective_[];
+    return s_projective_;
+  }
+};
+
 extern "C" bool CONCAT_EXPAND(CURVE, Eq)(projective_t* point1, projective_t* point2)
 {
   return (*point1 == *point2) &&

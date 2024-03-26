@@ -2,6 +2,8 @@
 #ifndef BN254_H
 #define BN254_H
 
+#define CURVE bn254
+
 #include "curves/projective.cuh"
 #if defined(G2_DEFINED)
 #include "fields/extension_field.cuh"

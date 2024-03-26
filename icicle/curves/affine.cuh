@@ -1,5 +1,8 @@
 #pragma once
 
+#include "gpu-utils/modifiers.cuh"
+#include <iostream>
+
 template <class FF>
 class Affine
 {

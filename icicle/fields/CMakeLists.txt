@@ -33,10 +33,12 @@ option(BUILD_TESTS "Build tests" OFF)
 if (NOT BUILD_TESTS)
 
   message(STATUS "Building without tests.")
+  set(FIELD_LIB_NAME icicle_${FIELD}_field)
 
-  add_library(icicle ${FIELD}/extern.cu)
-  set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_field_${FIELD}")
-  target_compile_definitions(icicle PRIVATE FIELD=${FIELD})  
+  include_directories(../)
+  add_subdirectory(${FIELD})
+  set_target_properties(${FIELD_LIB_NAME} PROPERTIES OUTPUT_NAME "ingo_field_${FIELD}")
+  target_compile_definitions(${FIELD_LIB_NAME} PRIVATE FIELD=${FIELD})  
 
 else()
 

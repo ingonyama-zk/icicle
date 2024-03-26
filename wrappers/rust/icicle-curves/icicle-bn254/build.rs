@@ -5,7 +5,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../../../../icicle");
 
     // Base config
-    let mut config = Config::new("../../../../icicle");
+    let mut config = Config::new("../../../../icicle/curves");
     config
         .define("BUILD_TESTS", "OFF")
         .define("CURVE", "bn254")
@@ -17,10 +17,10 @@ fn main() {
 
     // Build
     let out_dir = config
-        .build_target("icicle")
+        .build_target("icicle_bn254")
         .build();
 
-    println!("cargo:rustc-link-search={}/build", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/bn254", out_dir.display());
 
     println!("cargo:rustc-link-lib=ingo_bn254");
     println!("cargo:rustc-link-lib=stdc++");

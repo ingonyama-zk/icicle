@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-include(Common.cmake)
+include(../Common.cmake)
 
 set_env()
 set_gpu_env()
@@ -34,9 +34,22 @@ if (NOT BUILD_TESTS)
 
   message(STATUS "Building without tests.")
 
-  add_library(icicle curves/${CURVE}/extern.cu)
-  set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_field_${CURVE}")
-  target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  
+  set(FIELD ${CURVE})
+  # set(COMBINED_LIB_NAME icicle_${CURVE})
+  set(CURVE_LIB_NAME icicle_${CURVE})
+  set(FIELDS_LIB_NAME icicle_${FIELD}_field)
+
+  include_directories(../)
+
+  add_subdirectory(../fields/ ../../fields/build)
+
+  add_subdirectory(${CURVE})
+
+  target_link_libraries(${CURVE_LIB_NAME} PUBLIC ${FIELDS_LIB_NAME})
+  # target_link_libraries(${COMBINED_LIB_NAME} PUBLIC ${CURVE_LIB_NAME} ${FIELDS_LIB_NAME})
+  set_target_properties(${CURVE_LIB_NAME} PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
+  # set_target_properties(${COMBINED_LIB_NAME} PROPERTIES OUTPUT_NAME "ingo_combined_${CURVE}")
+  target_compile_definitions(${CURVE_LIB_NAME} PRIVATE CURVE=${CURVE})
 
 else()
 

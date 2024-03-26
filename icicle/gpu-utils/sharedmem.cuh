@@ -75,8 +75,8 @@ struct SharedMemory {
   //! @returns Pointer to runtime-sized shared memory array
   __device__ T* getPointer()
   {
-    extern __device__ void Error_UnsupportedType(); // Ensure that we won't compile any un-specialized types
-    Error_UnsupportedType();
+    // extern __device__ void Error_UnsupportedType(); // Ensure that we won't compile any un-specialized types
+    // Error_UnsupportedType();
     return (T*)0;
   }
   // TODO: Use operator overloading to make this class look like a regular array
@@ -211,24 +211,6 @@ struct SharedMemory<uchar4> {
     return s_uchar4;
   }
 };
-
-// template <>
-// struct SharedMemory<curve_config::scalar_t> {
-//   __device__ curve_config::scalar_t* getPointer()
-//   {
-//     extern __shared__ curve_config::scalar_t s_scalar_[];
-//     return s_scalar_;
-//   }
-// };
-
-// template <>
-// struct SharedMemory<curve_config::projective_t> {
-//   __device__ curve_config::projective_t* getPointer()
-//   {
-//     extern __shared__ curve_config::projective_t s_projective_[];
-//     return s_projective_;
-//   }
-// };
 
 #endif //_SHAREDMEM_H_
 

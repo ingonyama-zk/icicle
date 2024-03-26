@@ -19,6 +19,7 @@
 #pragma once
 
 #include "gpu-utils/error_handler.cuh"
+#include "gpu-utils/modifiers.cuh"
 #include "host_math.cuh"
 #include "ptx.cuh"
 #include "storage.cuh"
@@ -28,10 +29,6 @@
 #include <random>
 #include <sstream>
 #include <string>
-
-#define HOST_INLINE        __host__ __forceinline__
-#define DEVICE_INLINE      __device__ __forceinline__
-#define HOST_DEVICE_INLINE __host__ __device__ __forceinline__
 
 template <class CONFIG>
 class Field
@@ -681,7 +678,7 @@ public:
 
   HOST_DEVICE_INLINE uint32_t* export_limbs() { return (uint32_t*)limbs_storage.limbs; }
 
-  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width)
+  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
   {
     const uint32_t limb_lsb_idx = (digit_num * digit_width) / 32;
     const uint32_t shift_bits = (digit_num * digit_width) % 32;

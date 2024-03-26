@@ -2,6 +2,8 @@
 #ifndef BN254_FIELDS_H
 #define BN254_FIELDS_H
 
+#define FIELD bn254
+
 #include "bn254_params.cuh"
 #include "fields/field.cuh"
 #if defined(EXT_DEFINED)
