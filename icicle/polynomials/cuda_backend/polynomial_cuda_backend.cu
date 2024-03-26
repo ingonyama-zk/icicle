@@ -128,7 +128,7 @@ namespace polynomials {
       return is_on_host;
     }
 
-    const C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients) override
+    void from_coefficients(uint64_t nof_coefficients, const C* coefficients) override
     {
       const bool is_memset_zeros = coefficients == nullptr;
       allocate(nof_coefficients, State::Coefficients, is_memset_zeros);
@@ -141,10 +141,9 @@ namespace polynomials {
         CHK_STICKY(
           cudaStreamSynchronize(m_device_context.stream)); // protect against coefficients being released too soon
       }
-      return static_cast<const C*>(m_storage);
     }
 
-    const I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations) override
+    void from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations) override
     {
       const bool is_memset_zeros = evaluations == nullptr;
       allocate(nof_evaluations, State::EvaluationsOnRou_Natural, is_memset_zeros);
@@ -157,26 +156,24 @@ namespace polynomials {
         CHK_STICKY(
           cudaStreamSynchronize(m_device_context.stream)); // protect against evaluations being released too soon
       }
-      return static_cast<const I*>(m_storage);
     }
 
-    std::shared_ptr<PolyContext> clone() const override
+    void clone(IPolynomialContext<C, D, I>& from) override
     {
-      // TODO Yuval: maybe better to clone to current device? In that case can use cudaMemcpyPeerAsync()?
-      auto cloned_context = std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_context);
+      switch (from.get_state()) {
+      case State::Coefficients: {
+        auto [coeffs, N_coeffs] = from.get_coefficients();
+        from_coefficients(N_coeffs, coeffs);
+      } break;
+      case State::EvaluationsOnRou_Natural: {
+        auto [evals, N_evals] = from.get_rou_evaluations();
+        from_rou_evaluations(N_evals, evals);
+      } break;
+      default:
+        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "clone() from non implemented state");
+      }
 
-      CHK_STICKY(cudaMallocAsync(
-        &cloned_context->m_storage, this->get_nof_elements() * ElementSize, cloned_context->m_device_context.stream));
-      CHK_STICKY(cudaMemcpyAsync(
-        cloned_context->m_storage, this->m_storage, this->get_nof_elements() * ElementSize, cudaMemcpyDeviceToDevice,
-        cloned_context->m_device_context.stream));
-
-      cloned_context->m_nof_elements = this->m_nof_elements;
-      cloned_context->m_state = this->m_state;
-
-      CHK_STICKY(cudaStreamSynchronize(cloned_context->m_device_context.stream));
-
-      return cloned_context;
+      this->set_state(from.get_state()); // to handle both reversed evaluations case
     }
 
     std::pair<const C*, uint64_t> get_coefficients() override
@@ -382,6 +379,18 @@ namespace polynomials {
       CHK_STICKY(cudaMallocAsync(&d_degree, sizeof(int64_t), m_device_context.stream));
     }
     ~CUDAPolynomialBackend() { CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream)); }
+
+    void from_coefficients(PolyContext& p, uint64_t nof_coefficients, const C* coefficients) override
+    {
+      p.from_coefficients(nof_coefficients, coefficients);
+    }
+
+    void from_rou_evaluations(PolyContext& p, uint64_t nof_evaluations, const I* evaluations) override
+    {
+      p.from_rou_evaluations(nof_evaluations, evaluations);
+    }
+
+    void clone(PolyContext& out, PolyContext& in) override { out.clone(in); }
 
     template <typename T = C>
     T* get_context_storage_mutable(PolyContext& p)
@@ -745,6 +754,18 @@ namespace polynomials {
       C host_coeff;
       copy_coefficients_to_host(op, &host_coeff, coeff_idx, coeff_idx);
       return host_coeff;
+    }
+
+    std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_coefficients_view(PolyContext& p) override
+    {
+      return p.get_coefficients_view();
+    }
+
+    std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_rou_evaluations_view(PolyContext& p, uint64_t nof_evaluations, bool is_reversed) override
+    {
+      return p.get_rou_evaluations_view(nof_evaluations, is_reversed);
     }
 
     inline void assert_device_compatability(PolyContext& a, PolyContext& b) const

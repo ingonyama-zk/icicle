@@ -15,24 +15,24 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::from_coefficients(const C* coefficients, uint64_t nof_coefficients)
   {
-    Polynomial P = {};
-    P.m_context->init_from_coefficients(nof_coefficients, coefficients);
+    Polynomial<C, D, I> P = {};
+    P.m_backend->from_coefficients(*P.m_context, nof_coefficients, coefficients);
     return P;
   }
 
   template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::from_rou_evaluations(const I* evaluations, uint64_t nof_evaluations)
   {
-    Polynomial P = {};
-    P.m_context->init_from_rou_evaluations(nof_evaluations, evaluations);
+    Polynomial<C, D, I> P = {};
+    P.m_backend->from_rou_evaluations(*P.m_context, nof_evaluations, evaluations);
     return P;
   }
 
   template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::clone() const
   {
-    Polynomial P = {};
-    P.m_context = m_context->clone();
+    Polynomial<C, D, I> P = {};
+    m_backend->clone(*P.m_context, *m_context);
     return P;
   }
 
@@ -82,8 +82,8 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const C& c) const
   {
-    Polynomial rhs = {};
-    rhs.m_context->init_from_coefficients(1 /*nof_coefficients*/, &c);
+    Polynomial<C, D, I> rhs = {};
+    rhs.m_backend->from_coefficients(*rhs.m_context, 1 /*nof_coefficients*/, &c);
     return *this * rhs;
   }
 
@@ -186,14 +186,14 @@ namespace polynomials {
   std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
   Polynomial<C, D, I>::get_coefficients_view()
   {
-    return m_context->get_coefficients_view();
+    return m_backend->get_coefficients_view(*m_context);
   }
 
   template <typename C, typename D, typename I>
   std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
   Polynomial<C, D, I>::get_rou_evaluations_view(uint64_t nof_evaluations, bool is_reversed)
   {
-    return m_context->get_rou_evaluations_view(nof_evaluations, is_reversed);
+    return m_backend->get_rou_evaluations_view(*m_context, nof_evaluations, is_reversed);
   }
 
   // explicit instantiation for default type (scalar field)

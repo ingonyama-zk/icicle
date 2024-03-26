@@ -123,9 +123,9 @@ namespace polynomials {
     virtual ~IPolynomialContext() = default;
 
     // coefficients/evaluations can reside on host or device
-    virtual const C* init_from_coefficients(uint64_t nof_coefficients, const C* coefficients = nullptr) = 0;
-    virtual const I* init_from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations = nullptr) = 0;
-    virtual std::shared_ptr<IPolynomialContext> clone() const = 0;
+    virtual void from_coefficients(uint64_t nof_coefficients, const C* coefficients = nullptr) = 0;
+    virtual void from_rou_evaluations(uint64_t nof_evaluations, const I* evaluations = nullptr) = 0;
+    virtual void clone(IPolynomialContext& from) = 0;
 
     virtual void allocate(uint64_t nof_elements, State init_state = State::Coefficients, bool memset_zeros = true) = 0;
     virtual void release() = 0;
@@ -167,6 +167,11 @@ namespace polynomials {
 
     typedef IPolynomialContext<C, D, I> PolyContext;
 
+    // init
+    virtual void from_coefficients(PolyContext& p, uint64_t nof_coefficients, const C* coefficients = nullptr) = 0;
+    virtual void from_rou_evaluations(PolyContext& p, uint64_t nof_evaluations, const I* evaluations = nullptr) = 0;
+    virtual void clone(PolyContext& out, PolyContext& in) = 0;
+
     // arithmetic
     virtual void add(PolyContext& out, PolyContext& op_a, PolyContext& op_b) = 0;
     virtual void subtract(PolyContext& out, PolyContext& op_a, PolyContext& op_b) = 0;
@@ -195,6 +200,11 @@ namespace polynomials {
     // if coefficients==nullptr, return nof_coefficients, without writing
     virtual int64_t
     copy_coefficients_to_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
+
+    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_coefficients_view(PolyContext& p) = 0;
+    virtual std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
+    get_rou_evaluations_view(PolyContext& p, uint64_t nof_evaluations = 0, bool is_reversed = false) = 0;
   };
 
   /*============================== Polynomial Absract Factory ==============================*/
