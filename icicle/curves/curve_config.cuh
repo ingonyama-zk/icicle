@@ -24,7 +24,6 @@ using namespace bls12_381;
 #include "bls12_377_params.cuh"
 using namespace bls12_377;
 #elif CURVE_ID == BW6_761
-#include "bls12_377_params.cuh"
 #include "bw6_761_params.cuh"
 using namespace bw6_761;
 #elif CURVE_ID == GRUMPKIN
@@ -39,10 +38,6 @@ using namespace grumpkin;
  * with the `-DCURVE` env variable passed during build.
  */
 namespace curve_config {
-
-#if CURVE_ID == BW6_761
-  typedef bls12_377::fq_config fp_config;
-#endif
   /**
    * Scalar field of the curve. Is always a prime field.
    */
