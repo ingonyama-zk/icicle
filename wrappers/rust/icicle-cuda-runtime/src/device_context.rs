@@ -42,6 +42,7 @@ impl DeviceContext<'_> {
     }
 }
 
+// TODO: implement drop in a way so that it doesn't drop the stream that wasn't created with the creation of the device context
 // impl Drop for DeviceContext<'_> {
 //     fn drop(&mut self) {
 //         unsafe {
