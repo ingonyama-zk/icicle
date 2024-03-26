@@ -16,7 +16,7 @@
 namespace ntt {
 
   namespace {
-
+    // TODO: Set MAX THREADS based on GPU arch
     const uint32_t MAX_NUM_THREADS = 512; // TODO: hotfix - should be 1024, currently limits shared memory size
     const uint32_t MAX_THREADS_BATCH = 512;
     const uint32_t MAX_THREADS_BATCH_ECNTT =
