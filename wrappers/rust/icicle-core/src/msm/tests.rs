@@ -181,6 +181,9 @@ where
             }
         }
     }
+    stream
+        .destroy()
+        .unwrap();
 }
 
 pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()
