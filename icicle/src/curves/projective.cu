@@ -1,4 +1,4 @@
-#include "projective.cuh"
+#include "curves/projective.cuh"
 #include <cuda.h>
 #include "utils/utils.h"
 
@@ -35,7 +35,7 @@ extern "C" void CONCAT_EXPAND(CURVE, GenerateAffinePoints)(affine_t* points, int
   projective_t::RandHostManyAffine(points, size);
 }
 
-#if defined(G2_DEFINED)
+#if defined(G2)
 
 using namespace curve_config;
 

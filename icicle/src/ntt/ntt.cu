@@ -1,4 +1,4 @@
-#include "ntt.cuh"
+#include "ntt/ntt.cuh"
 
 #include <unordered_map>
 #include <vector>

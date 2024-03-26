@@ -5,7 +5,7 @@
 #define CURVE bn254
 
 #include "curves/projective.cuh"
-#if defined(G2_DEFINED)
+#if defined(G2)
 #include "fields/extension_field.cuh"
 #endif
 
@@ -26,7 +26,7 @@ namespace bn254 {
    */
   typedef Affine<point_field_t> affine_t;
 
-#if defined(G2_DEFINED)
+#if defined(G2)
   static constexpr g2_point_field_t g2_generator_x =
     g2_point_field_t{point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}};
   static constexpr g2_point_field_t g2_generator_y =

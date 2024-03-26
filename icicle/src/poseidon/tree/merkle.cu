@@ -1,4 +1,4 @@
-#include "merkle.cuh"
+#include "poseidon/tree/merkle.cuh"
 
 namespace merkle {
   /// Flattens the tree digests and sum them up to get
@@ -255,23 +255,23 @@ namespace merkle {
     return CHK_LAST();
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, BuildPoseidonMerkleTree)(
-    const curve_config::scalar_t* leaves,
-    curve_config::scalar_t* digests,
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, BuildPoseidonMerkleTree)(
+    const scalar_t* leaves,
+    scalar_t* digests,
     uint32_t height,
     int arity,
-    PoseidonConstants<curve_config::scalar_t>& constants,
+    PoseidonConstants<scalar_t>& constants,
     TreeBuilderConfig& config)
   {
     switch (arity) {
     case 2:
-      return build_merkle_tree<curve_config::scalar_t, 3>(leaves, digests, height, constants, config);
+      return build_merkle_tree<scalar_t, 3>(leaves, digests, height, constants, config);
     case 4:
-      return build_merkle_tree<curve_config::scalar_t, 5>(leaves, digests, height, constants, config);
+      return build_merkle_tree<scalar_t, 5>(leaves, digests, height, constants, config);
     case 8:
-      return build_merkle_tree<curve_config::scalar_t, 9>(leaves, digests, height, constants, config);
+      return build_merkle_tree<scalar_t, 9>(leaves, digests, height, constants, config);
     case 11:
-      return build_merkle_tree<curve_config::scalar_t, 12>(leaves, digests, height, constants, config);
+      return build_merkle_tree<scalar_t, 12>(leaves, digests, height, constants, config);
     default:
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "BuildPoseidonMerkleTree: #arity must be one of [2, 4, 8, 11]");
     }

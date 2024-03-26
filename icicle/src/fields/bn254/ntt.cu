@@ -1,4 +1,4 @@
-#include "bn254.cuh"
+#include "fields/bn254/bn254.cuh"
 using namespace bn254;
 
 #include "ntt/extern.cu"

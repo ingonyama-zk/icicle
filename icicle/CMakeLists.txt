@@ -1,85 +1,29 @@
 cmake_minimum_required(VERSION 3.18)
 
-include(../Common.cmake)
+include(Common.cmake)
 
 set_env()
 set_gpu_env()
 
 project(icicle LANGUAGES CUDA CXX)
 
-# when adding a new curve/field, append its name to the end of this list
-set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin)
-
-set(IS_CURVE_SUPPORTED FALSE)
-set(I 0)
-foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
-  math(EXPR I "${I} + 1")
-  if (CURVE STREQUAL SUPPORTED_CURVE)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DCURVE_ID=${I}")
-    set(IS_CURVE_SUPPORTED TRUE)
-  endif ()
-endforeach()
-
-if (NOT IS_CURVE_SUPPORTED)
-  message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported fields: ${SUPPORTED_CURVES}" )
-endif ()
-
-if (G2_DEFINED STREQUAL "ON")
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2_DEFINED=ON")
-endif ()
-
 option(BUILD_TESTS "Build tests" OFF)
 
-if (NOT BUILD_TESTS)
+if((DEFINED CURVE) AND (DEFINED FIELD))
+  message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
+endif ()
 
-  message(STATUS "Building without tests.")
+if(DEFINED FIELD)
+  add_subdirectory(src/fields)
+endif ()
 
+if(DEFINED CURVE)
   set(FIELD ${CURVE})
-  # set(COMBINED_LIB_NAME icicle_${CURVE})
-  set(CURVE_LIB_NAME icicle_${CURVE})
-  set(FIELDS_LIB_NAME icicle_${FIELD}_field)
+  add_subdirectory(src/fields)
+  add_subdirectory(src/curves)
+endif ()
 
-  include_directories(../)
-
-  add_subdirectory(../fields/ ../../fields/build)
-
-  add_subdirectory(${CURVE})
-
-  target_link_libraries(${CURVE_LIB_NAME} PUBLIC ${FIELDS_LIB_NAME})
-  # target_link_libraries(${COMBINED_LIB_NAME} PUBLIC ${CURVE_LIB_NAME} ${FIELDS_LIB_NAME})
-  set_target_properties(${CURVE_LIB_NAME} PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
-  # set_target_properties(${COMBINED_LIB_NAME} PROPERTIES OUTPUT_NAME "ingo_combined_${CURVE}")
-  target_compile_definitions(${CURVE_LIB_NAME} PRIVATE CURVE=${CURVE})
-
-else()
-
-  message(STATUS "Building tests.")
-
-  include(FetchContent)
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
-  )
-  # For Windows: Prevent overriding the parent project's compiler/linker settings
-
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(googletest)
-
-  enable_testing()
-
-  add_executable(
-    runner
-    tests/runner.cu
-  )
-
-  target_link_libraries(
-    runner
-    GTest::gtest_main
-  )
-
-  include(GoogleTest)
-  set_target_properties(runner PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-  gtest_discover_tests(runner)
-
+option(BUILD_HASH "Build hash functions" ON)
+if(BUILD_HASH)
+  add_subdirectory(src/hash)
 endif ()

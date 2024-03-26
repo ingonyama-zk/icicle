@@ -1,4 +1,4 @@
-#include "poseidon.cuh"
+#include "poseidon/poseidon.cuh"
 
 namespace poseidon {
   template <typename S, int T>

@@ -1,6 +1,6 @@
 
-#include "curves/bn254/bn254.cuh"
-using namespace bn254;
+#include "curves/grumpkin/grumpkin.cuh"
+using namespace grumpkin;
 
 #include "gpu-utils/sharedmem.cuh"
 #include "curves/projective.cu"

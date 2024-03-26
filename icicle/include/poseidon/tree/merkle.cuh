@@ -2,10 +2,10 @@
 #ifndef MERKLE_H
 #define MERKLE_H
 
-#include "utils/device_context.cuh"
-#include "utils/error_handler.cuh"
+#include "gpu-utils/device_context.cuh"
+#include "gpu-utils/error_handler.cuh"
 #include "utils/utils.h"
-#include "appUtils/poseidon/poseidon.cuh"
+#include "poseidon/poseidon.cuh"
 
 #include <iostream>
 #include <math.h>

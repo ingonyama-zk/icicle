@@ -23,7 +23,7 @@ namespace mont {
     }
   }
 
-#if defined(G2_DEFINED)
+#if defined(G2)
 
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2AffineConvertMontgomery)(
     g2_affine_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)

@@ -4,9 +4,8 @@
 
 #include <cstdint>
 #include <stdexcept>
-#include "utils/device_context.cuh"
-#include "curves/curve_config.cuh"
-#include "utils/error_handler.cuh"
+#include "gpu-utils/device_context.cuh"
+#include "gpu-utils/error_handler.cuh"
 #include "utils/utils.h"
 
 /**

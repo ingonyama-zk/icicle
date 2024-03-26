@@ -1,4 +1,4 @@
-#include "keccak.cuh"
+#include "hash/keccak/keccak.cuh"
 
 namespace keccak {
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))

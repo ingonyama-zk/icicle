@@ -1,7 +1,7 @@
 #include <cuda.h>
 #include <stdexcept>
 
-#include "vec_ops.cuh"
+#include "vec_ops/vec_ops.cuh"
 #include "gpu-utils/device_context.cuh"
 #include "utils/mont.cuh"
 

@@ -5,7 +5,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../../../../icicle");
 
     // Base config
-    let mut config = Config::new("../../../../icicle/curves");
+    let mut config = Config::new("../../../../icicle/");
     config
         .define("BUILD_TESTS", "OFF")
         .define("CURVE", "bn254")
@@ -17,12 +17,14 @@ fn main() {
 
     // Build
     let out_dir = config
-        .build_target("icicle_bn254")
+        .build_target("icicle_curve_bn254")
         .build();
 
-    println!("cargo:rustc-link-search={}/build/bn254", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
 
-    println!("cargo:rustc-link-lib=ingo_bn254");
+    println!("cargo:rustc-link-lib=ingo_field_bn254");
+    println!("cargo:rustc-link-lib=ingo_curve_bn254");
     println!("cargo:rustc-link-lib=stdc++");
     println!("cargo:rustc-link-lib=cudart");
 }
