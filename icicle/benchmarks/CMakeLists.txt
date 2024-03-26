@@ -1,0 +1,87 @@
+cmake_minimum_required(VERSION 3.18)
+
+# GoogleTest requires at least C++14
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+if("$ENV{ICICLE_PIC}" STREQUAL "OFF" OR ICICLE_PIC STREQUAL "OFF")
+  message(WARNING "Note that PIC (position-independent code) is disabled.")
+else()
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# add the target cuda architectures
+# each additional architecture increases the compilation time and output file size
+if(${CMAKE_VERSION} VERSION_LESS "3.24.0")
+  set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
+else()
+  find_program(_nvidia_smi "nvidia-smi")
+
+  if(_nvidia_smi)
+    set(DETECT_GPU_COUNT_NVIDIA_SMI 0)
+
+    # execute nvidia-smi -L to get a short list of GPUs available
+    exec_program(${_nvidia_smi_path} ARGS -L
+      OUTPUT_VARIABLE _nvidia_smi_out
+      RETURN_VALUE _nvidia_smi_ret)
+
+    # process the stdout of nvidia-smi
+    if(_nvidia_smi_ret EQUAL 0)
+      # convert string with newlines to list of strings
+      string(REGEX REPLACE "\n" ";" _nvidia_smi_out "${_nvidia_smi_out}")
+
+      foreach(_line ${_nvidia_smi_out})
+        if(_line MATCHES "^GPU [0-9]+:")
+          math(EXPR DETECT_GPU_COUNT_NVIDIA_SMI "${DETECT_GPU_COUNT_NVIDIA_SMI}+1")
+
+          # the UUID is not very useful for the user, remove it
+          string(REGEX REPLACE " \\(UUID:.*\\)" "" _gpu_info "${_line}")
+
+          if(NOT _gpu_info STREQUAL "")
+            list(APPEND DETECT_GPU_INFO "${_gpu_info}")
+          endif()
+        endif()
+      endforeach()
+
+      check_num_gpu_info(${DETECT_GPU_COUNT_NVIDIA_SMI} DETECT_GPU_INFO)
+      set(DETECT_GPU_COUNT ${DETECT_GPU_COUNT_NVIDIA_SMI})
+    endif()
+  endif()
+
+  # ##
+  if(DETECT_GPU_COUNT GREATER 0)
+    set(CMAKE_CUDA_ARCHITECTURES native) # do native
+  else()
+    # no GPUs found, like on Github CI runners
+    set(CMAKE_CUDA_ARCHITECTURES 50) # some safe value
+  endif()
+endif()
+
+project(icicle LANGUAGES CUDA CXX)
+
+set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin;baby_bear)
+
+set(IS_CURVE_SUPPORTED FALSE)
+set(I 0)
+foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
+  math(EXPR I "${I} + 1")
+  if (CURVE STREQUAL SUPPORTED_CURVE)
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DCURVE_ID=${I}")
+    set(IS_CURVE_SUPPORTED TRUE)
+  endif ()
+endforeach()
+
+if (NOT IS_CURVE_SUPPORTED)
+  message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported curves: ${SUPPORTED_CURVES}" )
+endif ()
+
+add_executable(
+  benches
+  benches.cu
+)
+
+target_link_libraries(benches benchmark::benchmark)
+
+find_package(benchmark REQUIRED)
