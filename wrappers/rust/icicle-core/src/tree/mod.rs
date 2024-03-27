@@ -1,3 +1,4 @@
+use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::{
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
     memory::HostOrDeviceSlice,
@@ -54,7 +55,7 @@ pub fn merkle_tree_digests_len(height: u32, arity: u32) -> usize {
 
 pub trait TreeBuilder<F: FieldImpl> {
     fn build_poseidon_tree_unchecked(
-        leaves: &mut HostOrDeviceSlice<F>,
+        leaves: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         digests: &mut [F],
         height: u32,
         arity: u32,
@@ -75,7 +76,7 @@ pub trait TreeBuilder<F: FieldImpl> {
 ///
 /// * `config` - config used to specify extra arguments of the Tree builder.
 pub fn build_poseidon_merkle_tree<F>(
-    leaves: &mut HostOrDeviceSlice<F>,
+    leaves: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     digests: &mut [F],
     height: u32,
     arity: u32,
@@ -100,6 +101,16 @@ where
         );
     }
 
+    let ctx_device_id = config
+        .ctx
+        .device_id;
+    if let Some(device_id) = leaves.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in leaves and context are different"
+        );
+    }
+    check_device(ctx_device_id);
     let mut local_cfg = config.clone();
     local_cfg.are_inputs_on_device = leaves.is_on_device();
 
@@ -135,7 +146,7 @@ macro_rules! impl_tree_builder {
 
         impl TreeBuilder<$field> for $field_config {
             fn build_poseidon_tree_unchecked(
-                leaves: &mut HostOrDeviceSlice<$field>,
+                leaves: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 digests: &mut [$field],
                 height: u32,
                 arity: u32,

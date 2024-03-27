@@ -1,3 +1,4 @@
+use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
@@ -87,7 +88,7 @@ pub struct NTTConfig<'a, S> {
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
     /// Explicitly select the NTT algorithm. Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based
-    /// on heuristics
+    /// on heuristics).
     pub ntt_algorithm: NttAlgorithm,
 }
 
@@ -116,10 +117,10 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
 #[doc(hidden)]
 pub trait NTT<F: FieldImpl> {
     fn ntt_unchecked(
-        input: &HostOrDeviceSlice<F>,
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<F>,
-        output: &mut HostOrDeviceSlice<F>,
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn initialize_domain_fast_twiddles_mode(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
@@ -137,10 +138,10 @@ pub trait NTT<F: FieldImpl> {
 ///
 /// * `output` - buffer to write the NTT outputs into. Must be of the same size as `input`.
 pub fn ntt<F>(
-    input: &HostOrDeviceSlice<F>,
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<F>,
-    output: &mut HostOrDeviceSlice<F>,
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
 ) -> IcicleResult<()>
 where
     F: FieldImpl,
@@ -153,6 +154,22 @@ where
             output.len()
         );
     }
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+    if let Some(device_id) = input.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in input and context are different"
+        );
+    }
+    if let Some(device_id) = output.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in output and context are different"
+        );
+    }
+    check_device(ctx_device_id);
     let mut local_cfg = cfg.clone();
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
@@ -176,6 +193,7 @@ where
 {
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
 }
+
 pub fn initialize_domain_fast_twiddles_mode<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
 where
     F: FieldImpl,
@@ -216,10 +234,10 @@ macro_rules! impl_ntt {
 
         impl NTT<$field> for $field_config {
             fn ntt_unchecked(
-                input: &HostOrDeviceSlice<$field>,
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 dir: NTTDir,
                 cfg: &NTTConfig<$field>,
-                output: &mut HostOrDeviceSlice<$field>,
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
             ) -> IcicleResult<()> {
                 unsafe {
                     $field_prefix_ident::ntt_cuda(

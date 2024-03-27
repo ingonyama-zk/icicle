@@ -4,7 +4,10 @@ use icicle_bls12_377::curve::{
     CurveCfg as BLS12377CurveCfg, G1Projective as BLS12377G1Projective, ScalarCfg as BLS12377ScalarCfg,
 };
 
-use icicle_cuda_runtime::{memory::HostOrDeviceSlice, stream::CudaStream};
+use icicle_cuda_runtime::{
+    memory::{DeviceVec, HostSlice},
+    stream::CudaStream,
+};
 
 use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
 
@@ -57,18 +60,18 @@ fn main() {
             log_size, size
         );
         // Setting Bn254 points and scalars
-        let points = HostOrDeviceSlice::Host(upper_points[..size].to_vec());
-        let g2_points = HostOrDeviceSlice::Host(g2_upper_points[..size].to_vec());
-        let scalars = HostOrDeviceSlice::Host(upper_scalars[..size].to_vec());
+        let points = HostSlice::from_slice(&upper_points[..size]);
+        let g2_points = HostSlice::from_slice(&g2_upper_points[..size]);
+        let scalars = HostSlice::from_slice(&upper_scalars[..size]);
 
         // Setting bls12377 points and scalars
         // let points_bls12377 = &upper_points_bls12377[..size];
-        let points_bls12377 = HostOrDeviceSlice::Host(upper_points_bls12377[..size].to_vec()); //  &upper_points_bls12377[..size];
-        let scalars_bls12377 = HostOrDeviceSlice::Host(upper_scalars_bls12377[..size].to_vec());
+        let points_bls12377 = HostSlice::from_slice(&upper_points_bls12377[..size]); //  &upper_points_bls12377[..size];
+        let scalars_bls12377 = HostSlice::from_slice(&upper_scalars_bls12377[..size]);
 
         println!("Configuring bn254 MSM...");
-        let mut msm_results: HostOrDeviceSlice<'_, G1Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
-        let mut g2_msm_results: HostOrDeviceSlice<'_, G2Projective> = HostOrDeviceSlice::cuda_malloc(1).unwrap();
+        let mut msm_results = DeviceVec::<G1Projective>::cuda_malloc(1).unwrap();
+        let mut g2_msm_results = DeviceVec::<G2Projective>::cuda_malloc(1).unwrap();
         let stream = CudaStream::create().unwrap();
         let g2_stream = CudaStream::create().unwrap();
         let mut cfg = msm::MSMConfig::default();
@@ -82,8 +85,7 @@ fn main() {
         g2_cfg.is_async = true;
 
         println!("Configuring bls12377 MSM...");
-        let mut msm_results_bls12377: HostOrDeviceSlice<'_, BLS12377G1Projective> =
-            HostOrDeviceSlice::cuda_malloc(1).unwrap();
+        let mut msm_results_bls12377 = DeviceVec::<BLS12377G1Projective>::cuda_malloc(1).unwrap();
         let stream_bls12377 = CudaStream::create().unwrap();
         let mut cfg_bls12377 = msm::MSMConfig::default();
         cfg_bls12377
@@ -94,7 +96,7 @@ fn main() {
         println!("Executing bn254 MSM on device...");
         #[cfg(feature = "profile")]
         let start = Instant::now();
-        msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
+        msm::msm(scalars, points, &cfg, &mut msm_results[..]).unwrap();
         #[cfg(feature = "profile")]
         println!(
             "ICICLE BN254 MSM on size 2^{log_size} took: {} ms",
@@ -102,16 +104,16 @@ fn main() {
                 .elapsed()
                 .as_millis()
         );
-        msm::msm(&scalars, &g2_points, &g2_cfg, &mut g2_msm_results).unwrap();
+        msm::msm(scalars, g2_points, &g2_cfg, &mut g2_msm_results[..]).unwrap();
 
         println!("Executing bls12377 MSM on device...");
         #[cfg(feature = "profile")]
         let start = Instant::now();
         msm::msm(
-            &scalars_bls12377,
-            &points_bls12377,
+            scalars_bls12377,
+            points_bls12377,
             &cfg_bls12377,
-            &mut msm_results_bls12377,
+            &mut msm_results_bls12377[..],
         )
         .unwrap();
         #[cfg(feature = "profile")]
@@ -134,10 +136,10 @@ fn main() {
             .synchronize()
             .unwrap();
         msm_results
-            .copy_to_host(&mut msm_host_result[..])
+            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
             .unwrap();
         g2_msm_results
-            .copy_to_host(&mut g2_msm_host_result[..])
+            .copy_to_host(HostSlice::from_mut_slice(&mut g2_msm_host_result[..]))
             .unwrap();
         println!("bn254 result: {:#?}", msm_host_result);
         println!("G2 bn254 result: {:#?}", g2_msm_host_result);
@@ -146,7 +148,7 @@ fn main() {
             .synchronize()
             .unwrap();
         msm_results_bls12377
-            .copy_to_host(&mut msm_host_result_bls12377[..])
+            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result_bls12377[..]))
             .unwrap();
         println!("bls12377 result: {:#?}", msm_host_result_bls12377);
 
@@ -154,23 +156,19 @@ fn main() {
         {
             println!("Checking against arkworks...");
             let ark_points: Vec<Bn254G1Affine> = points
-                .as_slice()
                 .iter()
                 .map(|&point| point.to_ark())
                 .collect();
             let ark_scalars: Vec<Bn254Fr> = scalars
-                .as_slice()
                 .iter()
                 .map(|scalar| scalar.to_ark())
                 .collect();
 
             let ark_points_bls12377: Vec<Bls12377G1Affine> = points_bls12377
-                .as_slice()
                 .iter()
                 .map(|point| point.to_ark())
                 .collect();
             let ark_scalars_bls12377: Vec<Bls12377Fr> = scalars_bls12377
-                .as_slice()
                 .iter()
                 .map(|scalar| scalar.to_ark())
                 .collect();

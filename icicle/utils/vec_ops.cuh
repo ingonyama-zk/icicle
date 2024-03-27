@@ -24,9 +24,6 @@ namespace vec_ops {
 
     bool is_result_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
 
-    bool is_result_montgomery_form; /**< True if `result` vector should be in Montgomery form and false otherwise.
-                                     *   Default value: false. */
-
     bool is_async; /**< Whether to run the vector operations asynchronously. If set to `true`, the function will be
                     *   non-blocking and you'd need to synchronize it explicitly by running
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
@@ -46,7 +43,6 @@ namespace vec_ops {
       false, // is_a_on_device
       false, // is_b_on_device
       false, // is_result_on_device
-      false, // is_result_montgomery_form
       false, // is_async
     };
     return config;

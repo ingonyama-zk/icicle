@@ -1,6 +1,6 @@
 use crate::traits::FieldImpl;
 use icicle_cuda_runtime::device_context::DeviceContext;
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
 use std::io::Read;
 use std::path::PathBuf;
@@ -26,16 +26,16 @@ where
 {
     let test_size = 1 << 10;
     let arity = 2u32;
-    let inputs = vec![F::one(); test_size * arity as usize];
-    let outputs = vec![F::zero(); test_size];
+    let mut inputs = vec![F::one(); test_size * arity as usize];
+    let mut outputs = vec![F::zero(); test_size];
 
-    let mut input_slice = HostOrDeviceSlice::on_host(inputs);
-    let mut output_slice = HostOrDeviceSlice::on_host(outputs);
+    let input_slice = HostSlice::from_mut_slice(&mut inputs);
+    let output_slice = HostSlice::from_mut_slice(&mut outputs);
 
     let config = PoseidonConfig::default();
     poseidon_hash_many::<F>(
-        &mut input_slice,
-        &mut output_slice,
+        input_slice,
+        output_slice,
         test_size as u32,
         arity as u32,
         &constants,
@@ -43,8 +43,8 @@ where
     )
     .unwrap();
 
-    let a1 = output_slice[0..1][0];
-    let a2 = output_slice[output_slice.len() - 2..output_slice.len() - 1][0];
+    let a1 = output_slice[0];
+    let a2 = output_slice[output_slice.len() - 2];
 
     println!("first: {:?}, last: {:?}", a1, a2);
     assert_eq!(a1, a2);

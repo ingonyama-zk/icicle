@@ -7,7 +7,11 @@ use crate::{
 };
 #[cfg(feature = "arkworks")]
 use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective};
-use icicle_cuda_runtime::{error::CudaResultWrap, memory::HostOrDeviceSlice};
+use icicle_cuda_runtime::{
+    device_context::DeviceContext,
+    error::CudaResultWrap,
+    memory::{DeviceVec, HostSlice},
+};
 
 pub fn check_scalar_equality<F: FieldImpl>() {
     let left = F::zero();
@@ -79,27 +83,28 @@ where
 
 pub fn check_field_convert_montgomery<F>()
 where
-    F: FieldImpl + MontgomeryConvertible,
+    F: FieldImpl + MontgomeryConvertible<'static>,
     F::Config: GenerateRandom<F>,
 {
     let size = 1 << 10;
     let scalars = F::Config::generate_random(size);
+    let device_ctx = DeviceContext::default();
 
-    let mut d_scalars = HostOrDeviceSlice::cuda_malloc(size).unwrap();
+    let mut d_scalars = DeviceVec::cuda_malloc(size).unwrap();
     d_scalars
-        .copy_from_host(&scalars)
+        .copy_from_host(HostSlice::from_slice(&scalars))
         .unwrap();
 
-    F::to_mont(&mut d_scalars)
+    F::to_mont(&mut d_scalars, &device_ctx)
         .wrap()
         .unwrap();
-    F::from_mont(&mut d_scalars)
+    F::from_mont(&mut d_scalars, &device_ctx)
         .wrap()
         .unwrap();
 
     let mut scalars_copy = vec![F::zero(); size];
     d_scalars
-        .copy_to_host(&mut scalars_copy)
+        .copy_to_host(HostSlice::from_mut_slice(&mut scalars_copy))
         .unwrap();
 
     for (s1, s2) in scalars
@@ -112,27 +117,28 @@ where
 
 pub fn check_points_convert_montgomery<C: Curve>()
 where
-    Affine<C>: MontgomeryConvertible,
-    Projective<C>: MontgomeryConvertible,
+    Affine<C>: MontgomeryConvertible<'static>,
+    Projective<C>: MontgomeryConvertible<'static>,
 {
     let size = 1 << 10;
+    let device_ctx = DeviceContext::default();
 
     let affine_points = C::generate_random_affine_points(size);
-    let mut d_affine = HostOrDeviceSlice::cuda_malloc(size).unwrap();
+    let mut d_affine = DeviceVec::cuda_malloc(size).unwrap();
     d_affine
-        .copy_from_host(&affine_points)
+        .copy_from_host(HostSlice::from_slice(&affine_points))
         .unwrap();
 
-    Affine::<C>::to_mont(&mut d_affine)
+    Affine::<C>::to_mont(&mut d_affine, &device_ctx)
         .wrap()
         .unwrap();
-    Affine::<C>::from_mont(&mut d_affine)
+    Affine::<C>::from_mont(&mut d_affine, &device_ctx)
         .wrap()
         .unwrap();
 
     let mut affine_copy = vec![Affine::<C>::zero(); size];
     d_affine
-        .copy_to_host(&mut affine_copy)
+        .copy_to_host(HostSlice::from_mut_slice(&mut affine_copy))
         .unwrap();
 
     for (p1, p2) in affine_points
@@ -143,21 +149,21 @@ where
     }
 
     let proj_points = C::generate_random_projective_points(size);
-    let mut d_proj = HostOrDeviceSlice::cuda_malloc(size).unwrap();
+    let mut d_proj = DeviceVec::cuda_malloc(size).unwrap();
     d_proj
-        .copy_from_host(&proj_points)
+        .copy_from_host(HostSlice::from_slice(&proj_points))
         .unwrap();
 
-    Projective::<C>::to_mont(&mut d_proj)
+    Projective::<C>::to_mont(&mut d_proj, &device_ctx)
         .wrap()
         .unwrap();
-    Projective::<C>::from_mont(&mut d_proj)
+    Projective::<C>::from_mont(&mut d_proj, &device_ctx)
         .wrap()
         .unwrap();
 
     let mut projective_copy = vec![Projective::<C>::zero(); size];
     d_proj
-        .copy_to_host(&mut projective_copy)
+        .copy_to_host(HostSlice::from_mut_slice(&mut projective_copy))
         .unwrap();
 
     for (p1, p2) in proj_points
