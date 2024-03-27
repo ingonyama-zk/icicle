@@ -35,7 +35,7 @@ namespace msm {
     return MSM<scalar_t, affine_t, projective_t>(scalars, points, msm_size, config, out);
   }
 
-#if defined(G2_DEFINED)
+#if defined(G2)
 
   /**
    * Extern "C" version of [PrecomputeMSMBases](@ref PrecomputeMSMBases) function with the following values of template

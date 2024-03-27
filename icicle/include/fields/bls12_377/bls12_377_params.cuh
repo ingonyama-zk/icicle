@@ -1,6 +1,6 @@
 #pragma once
-#ifndef BLS12_377_PARAMS_H
-#define BLS12_377_PARAMS_H
+#ifndef BLS12_377_FIELDS_PARAMS_H
+#define BLS12_377_FIELDS_PARAMS_H
 
 #include "fields/storage.cuh"
 

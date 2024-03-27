@@ -1,8 +1,8 @@
 #pragma once
-#ifndef BLS12_381_PARAMS_H
-#define BLS12_381_PARAMS_H
+#ifndef BLS12_381_FIELDS_PARAMS_H
+#define BLS12_381_FIELDS_PARAMS_H
 
-#include "utils/storage.cuh"
+#include "fields/storage.cuh"
 
 namespace bls12_381 {
   struct fp_config {

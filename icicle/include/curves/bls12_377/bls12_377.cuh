@@ -1,15 +1,15 @@
 #pragma once
-#ifndef BN254_H
-#define BN254_H
+#ifndef BLS12_377_H
+#define BLS12_377_H
 
 #include "curves/projective.cuh"
 #if defined(G2)
 #include "fields/extension_field.cuh"
 #endif
 
-#include "bn254_params.cuh"
+#include "bls12_377_params.cuh"
 
-namespace bn254 {
+namespace bls12_377 {
   static constexpr point_field_t generator_x = point_field_t{g1_gen_x};
   static constexpr point_field_t generator_y = point_field_t{g1_gen_y};
   static constexpr point_field_t b = point_field_t{weierstrass_b};
@@ -40,6 +40,6 @@ namespace bn254 {
    */
   typedef Affine<g2_point_field_t> g2_affine_t;
 #endif
-} // namespace bn254
+} // namespace bls12_377
 
 #endif

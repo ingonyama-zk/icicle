@@ -2,7 +2,8 @@
 #ifndef BW6_761_PARAMS_H
 #define BW6_761_PARAMS_H
 
-#include "utils/storage.cuh"
+#include "fields/storage.cuh"
+#include "fields/bw6_761/bw6_761.cuh"
 
 namespace bw6_761 {
   // G1 and G2 generators

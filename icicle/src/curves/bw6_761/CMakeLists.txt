@@ -1,0 +1,4 @@
+set (CURVE_SOURCE bw6_761/curve.cu)
+list (APPEND CURVE_SOURCE bw6_761/msm.cu)
+
+set (CURVE_SOURCE ${CURVE_SOURCE} PARENT_SCOPE)

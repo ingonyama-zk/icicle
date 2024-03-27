@@ -3,7 +3,7 @@
 #define BLS12_381_PARAMS_H
 
 #include "fields/storage.cuh"
-#include "fields/bls12_381/bls12_381_params.cuh"
+#include "fields/bls12_381/bls12_381.cuh"
 
 namespace bls12_381 {
   // G1 and G2 generators
