@@ -29,5 +29,5 @@ mkdir -p build
 for CURVE in "${BUILD_CURVES[@]}"
 do
   cmake -DCURVE=$CURVE -DG2_DEFINED=$G2_DEFINED -DECNTT_DEFINED=$ECNTT_DEFINED  -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build -j8
+  cmake --build build -j
 done

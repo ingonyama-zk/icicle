@@ -831,9 +831,8 @@ namespace msm {
   } // namespace
 
   template <typename A>
-  MSMConfig DefaultMSMConfig()
+  MSMConfig DefaultMSMConfig(const device_context::DeviceContext& ctx)
   {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
     MSMConfig config = {
       ctx,   // ctx
       0,     // points_size
@@ -852,6 +851,9 @@ namespace msm {
     };
     return config;
   }
+
+  // explicit instantiation to avoid having to include this file
+  template MSMConfig DefaultMSMConfig<curve_config::scalar_t>(const device_context::DeviceContext& ctx);
 
   template <typename S, typename A, typename P>
   cudaError_t MSM(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results)
