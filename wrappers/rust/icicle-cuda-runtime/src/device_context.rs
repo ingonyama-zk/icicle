@@ -28,16 +28,32 @@ impl Default for DeviceContext<'_> {
 impl DeviceContext<'_> {
     /// Default for device_id
     pub fn default_for_device(device_id: usize) -> DeviceContext<'static> {
-        static default_stream: CudaStream = CudaStream {
+        let default_stream = Box::new(CudaStream {
             handle: std::ptr::null_mut(),
-        };
+        });
+
+        let leaked_stream = Box::leak(default_stream);
+
         DeviceContext {
-            stream: &default_stream,
+            stream: leaked_stream,
             device_id,
             mempool: std::ptr::null_mut(),
         }
     }
 }
+
+// TODO: implement drop in a way so that it doesn't drop the stream that wasn't created with the creation of the device context
+// impl Drop for DeviceContext<'_> {
+//     fn drop(&mut self) {
+//         unsafe {
+//             // SAFETY: This is safe only if we're sure that self.stream is valid
+//             // and not used after being dropped.
+//             let raw_stream_pointer = self.stream as *const _ as *mut CudaStream;
+//             let _ = Box::from_raw(raw_stream_pointer); // Reconstruct the Box to drop it
+//         }
+//         // After this block, the Box goes out of scope and its destructor is run, freeing the memory.
+//     }
+// }
 
 pub fn check_device(device_id: i32) {
     match device_id == get_device().unwrap() as i32 {
