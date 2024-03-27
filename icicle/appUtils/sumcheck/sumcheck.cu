@@ -30,7 +30,7 @@ __global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results, int jump
 	// partial_sum[threadIdx.x] = v[i] + v[i + blockDim.x];
 	// partial_sum[threadIdx.x] = (S::one() - alpha) * v[2*i] + alpha * v[2*i+1] + (S::one() - alpha) * v[2*(i + blockDim.x)] + alpha * v[2*(i + blockDim.x)+1];
 	S e1 = v[i] + alpha * (v[i+jump_size] - v[i]);
-	S e2 = v[(i + blockDim.x)] + alpha * (v[(i + blockDim.x)+jump_size] - v[2*(i + blockDim.x)]);
+	S e2 = v[(i + blockDim.x)] + alpha * (v[(i + blockDim.x)+jump_size] - v[i + blockDim.x]);
 	// S e1 = v[2*i] + (v[2*i+1] - v[2*i]);
 	// S e2 = v[2*(i + blockDim.x)] + (v[2*(i + blockDim.x)+1] - v[2*(i + blockDim.x)]);
 	// partial_sum[threadIdx.x] = v[2*i] + v[2*(i + blockDim.x)] + alpha * (v[2*i+1] - v[2*i] + v[2*(i + blockDim.x)+1] - v[2*(i + blockDim.x)]);
@@ -46,7 +46,8 @@ __global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results, int jump
 	__syncthreads();
 
 	// Start at 1/2 block stride and divide by two each iteration
-	for (int s = blockDim.x / 2; s > 1; s >>= 1) {
+	for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+	// for (int s = blockDim.x / 2; s > 1; s >>= 1) {
 		// Each thread does work unless it is further than the stride
 		if (threadIdx.x < s) {
 			partial_sum[threadIdx.x] = partial_sum[threadIdx.x] + partial_sum[threadIdx.x + s];
@@ -56,9 +57,11 @@ __global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results, int jump
 
 	// Let the thread 0 for this block write it's result to main memory
 	// Result is inexed by this block
-	if (threadIdx.x < nof_results) {
+	// if (threadIdx.x < nof_results) {
+	if (threadIdx.x == 0) {
 		// printf("debug tid %d, val %d\n", threadIdx.x, partial_sum[threadIdx.x]);
-		v_r[nof_results*blockIdx.x + threadIdx.x] = partial_sum[threadIdx.x];
+		// v_r[nof_results*blockIdx.x + threadIdx.x] = partial_sum[threadIdx.x];
+		v_r[blockIdx.x] = partial_sum[0];
 	}
 }
 
@@ -80,7 +83,8 @@ __global__ void sum_reduction(S *v, S *v_r, int nof_results) {
 	__syncthreads();
 
 	// Start at 1/2 block stride and divide by two each iteration
-	for (int s = blockDim.x / 2; s > 1; s >>= 1) {
+	for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+	// for (int s = blockDim.x / 2; s > 1; s >>= 1) {
 		// Each thread does work unless it is further than the stride
 		if (threadIdx.x < s) {
 			partial_sum[threadIdx.x] = partial_sum[threadIdx.x] + partial_sum[threadIdx.x + s];
@@ -90,23 +94,27 @@ __global__ void sum_reduction(S *v, S *v_r, int nof_results) {
 
 	// Let the thread 0 for this block write it's result to main memory
 	// Result is inexed by this block
-	if (threadIdx.x < nof_results) {
+	// if (threadIdx.x < nof_results) {
+	if (threadIdx.x == 0) {
 		// printf("debug tid %d, val %d\n", threadIdx.x, partial_sum[threadIdx.x]);
-		v_r[nof_results*blockIdx.x + threadIdx.x] = partial_sum[threadIdx.x];
+		v_r[blockIdx.x] = partial_sum[0];
+		// v_r[nof_results*blockIdx.x + threadIdx.x] = partial_sum[threadIdx.x];
 	}
 }
 
 template <typename S>
-__global__ void update_evals_kernel(S* evals, S alpha, int poly_size){
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-	int poly_id = tid / poly_size;
-	int eval_id = tid % poly_size;
+__global__ void update_evals_kernel(S* evals, S alpha, int poly_size, int nof_ploys){
+  int threads_per_poly = poly_size/2;
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	if (tid >= threads_per_poly*nof_ploys) return;
+	int poly_id = tid / threads_per_poly;
+	int eval_id = tid % threads_per_poly;
   // evals[tid] = (S::one() - alpha) * evals[2*tid] + alpha * evals[2*tid+1];
   // evals[tid] =  evals[2*tid] + (evals[2*tid+1] - evals[2*tid]);
-	if (tid==0) printf("%d, %d, %d, %d, %d\n", poly_size, poly_id, eval_id, poly_id*poly_size*2+eval_id, poly_id*poly_size*2+eval_id+poly_size);
-	if (tid==0) printf("what12 %d %d\n",evals[poly_id*poly_size*2 + eval_id], evals[poly_id*poly_size*2 + eval_id+poly_size]);
-  evals[poly_id*poly_size*2 + eval_id] =  evals[poly_id*poly_size*2+eval_id] + alpha * (evals[poly_id*poly_size*2+eval_id+poly_size] - evals[poly_id*poly_size*2+eval_id]);
-	if (tid==0) printf("what %d\n",evals[poly_id*poly_size*2 + eval_id]);
+	// if (tid==0) printf("%d, %d, %d, %d, %d\n", poly_size, poly_id, eval_id, poly_id*poly_size*2+eval_id, poly_id*poly_size*2+eval_id+poly_size);
+	// if (tid==0) printf("what12 %d %d\n",evals[poly_id*poly_size*2 + eval_id], evals[poly_id*poly_size*2 + eval_id+poly_size]);
+  evals[poly_id*poly_size + eval_id] =  evals[poly_id*poly_size+eval_id] + alpha * (evals[poly_id*poly_size+eval_id+threads_per_poly] - evals[poly_id*poly_size+eval_id]);
+	// if (tid==0) printf("what %d\n",evals[poly_id*poly_size*2 + eval_id]);
   // evals[tid] = (1 - alpha) * evals[2*tid] + alpha * evals[2*tid+1];
 }
 
@@ -114,15 +122,15 @@ template <typename S>
 void accumulate(S* in, S* out, int log_size, int nof_results, cudaStream_t stream){
   int nof_steps = (log_size - 1) / MAX_SHMEM_LOG_SIZE;
   int last_step_size = (log_size - 1) % MAX_SHMEM_LOG_SIZE;
-	printf("a nof steps %d last size %d\n", nof_steps, last_step_size);
+	// printf("a nof steps %d last size %d\n", nof_steps, last_step_size);
   for (int i = 0; i < nof_steps; i++)
   {
-    sum_reduction<<<1<<(log_size - 1 -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE,0,stream>>>(i? out : in, out, nof_results);
-		printf("a nof blocks %d\n", 1<<(log_size - 1 -(MAX_SHMEM_LOG_SIZE)*(i+1)));
+    sum_reduction<<<1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE/2,0,stream>>>(i? out : in, out, 1);
+		// printf("a nof blocks %d\n", 1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)));
 		// cudaDeviceSynchronize();
   	// printf("cuda err %d\n", cudaGetLastError());
   }
-  if (last_step_size) sum_reduction<<<1, 1<<last_step_size, 0,stream>>>(nof_steps? out : in, out, nof_results);
+  if (last_step_size) sum_reduction<<<2, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, 1);
 	// cudaDeviceSynchronize();
   // printf("cuda err last %d\n", cudaGetLastError());
 }
@@ -131,34 +139,35 @@ template <typename S>
 void mult_and_accumulate(S* in, S* out, int log_size, S alpha, int nof_results, cudaStream_t stream){
   int nof_steps = (log_size - 1) / MAX_SHMEM_LOG_SIZE;
   int last_step_size = (log_size - 1) % MAX_SHMEM_LOG_SIZE;
-	printf("m nof steps %d last size %d\n", nof_steps, last_step_size);
+	// printf("m nof steps %d last size %d\n", nof_steps, last_step_size);
   for (int i = 0; i < nof_steps; i++)
   {
-		if (i) sum_reduction<<<1<<(log_size - 1 -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE,0,stream>>>(i? out : in, out, nof_results);
-    else mult_and_reduce<<<1<<(log_size - 1 -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE,0,stream>>>(i? out : in, out, alpha, nof_results, 1<<(log_size-1));
-		if (i) printf("r nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)-1));
-		else printf("m nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)-1));
+		if (i) sum_reduction<<<1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE/2,0,stream>>>(i? out : in, out, nof_results);
+    else mult_and_reduce<<<1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE/2,0,stream>>>(i? out : in, out, alpha, nof_results, 1<<log_size);
+		// if (i) printf("r nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)));
+		// else printf("m nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)));
 		// cudaDeviceSynchronize();
   	// printf("cuda err %d\n", cudaGetLastError());
   }
   if (last_step_size) {
-		if (nof_steps) sum_reduction<<<1, 1<<last_step_size, 0,stream>>>(nof_steps? out : in, out, nof_results);
-		else mult_and_reduce<<<1, 1<<last_step_size, 0,stream>>>(nof_steps? out : in, out, alpha, nof_results, 1<<last_step_size);
-		if (nof_steps) printf("r last");
-		else printf("m last");
+		if (nof_steps) sum_reduction<<<2, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, nof_results);
+		else mult_and_reduce<<<2, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, alpha, nof_results, 1<<(last_step_size+1));
+		// if (nof_steps) printf("r last");
+		// else printf("m last");
 	} 
 	// cudaDeviceSynchronize();
   // printf("cuda err last %d\n", cudaGetLastError());
 }
 
 template <typename S>
-__global__ void add_to_trace(S* trace, S* vals, int p, int m){
-	for (int i = 0; i < m+1; i++)
-	{
-		trace[2*p+1+i] = vals[i];
-	}
-	  // trace[2*p+1] = vals[0];
-    // trace[2*p+2] = vals[1];
+ __launch_bounds__(1)
+__global__ void add_to_trace(S* trace, S* vals, int n, int round_num, int nof_polys){
+	// for (int i = 0; i < nof_polys+1; i++)
+	// {
+	// 	trace[2*round_num+1+i] = vals[i];
+	// }
+	  trace[2*round_num+1] = vals[0];
+    trace[2*round_num+2] = vals[1];
 		// printf("%d  %d\n", vals[0], vals[1]);
 }
 
@@ -245,54 +254,66 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStream_t 
 	// S alpha = S::rand_host();
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
-  // for (int p = 0; p < n-1; p++)
-  for (int p = 0; p < 1; p++)
+  for (int p = 0; p < n-1; p++)
   {
     int nof_threads = 1<<(n-1-p);
 		printf("reg nof threads %d\n", nof_threads);
     // move update kernel here and unify
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
     accumulate(evals, t, n-p, 2, stream); //accumulation
-		add_to_trace<<<1,1,0,stream>>>(T, t, p, 1);
+		// cudaDeviceSynchronize();
+		// printf("cuda a err %d\n", cudaGetLastError());
+		add_to_trace<<<1,1,0,stream>>>(T, t, n, p, 1);
+		// cudaDeviceSynchronize();
+		// printf("cuda t err %d\n", cudaGetLastError());
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
 		int NOF_THREADS = min(256,nof_threads);
 		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
-    update_evals_kernel<<<NOF_BLOCKS, 1,0, stream>>>(evals, alpha, nof_threads); //phase 3
+    update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, 1<<(n-p), 1); //phase 3
+		// cudaDeviceSynchronize();
+		// printf("cuda err u %d\n", cudaGetLastError());
+		#ifdef DEBUG
+		break;
+		#endif
   }
-	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 1);
-
+	add_to_trace<<<1,1,0,stream>>>(T, evals, n, n-1, 1);
 }
 
 template <typename S>
 void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStream_t stream){
 	if (reorder) reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
 	// S alpha = 1;
-	S alpha = S::one() + S::one();
-	// S alpha = my_hash<S>();
+	// S alpha = S::one() + S::one();
+	S alpha = my_hash<S>();
 	// S alpha = S::rand_host();
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
-  // for (int p = 0; p < n-1; p++)
-  for (int p = 0; p < 2; p++)
+  for (int p = 0; p < n-1; p++)
+  // for (int p = 0; p < 2; p++)
   {
     int nof_threads = 1<<(n-1-p);
-		printf("nof threads %d\n", nof_threads);
+		// printf("nof threads %d\n", nof_threads);
     // move update kernel here and unify
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
     if (p) mult_and_accumulate(evals, t, n-p, alpha, 2, stream); //accumulation
 		else accumulate(evals, t, n-p, 2, stream);
-		add_to_trace<<<1,1,0,stream>>>(T, t, p, 1);
+		add_to_trace<<<1,1,0,stream>>>(T, t, n, p, 1);
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
 		// int NOF_THREADS = 256;
 		// int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
     // update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha); //phase 3
+		#ifdef DEBUG
+		if (p) break;
+		#endif
   }
-	// update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 2);
-	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 1);
+	#ifndef DEBUG
+	update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 4, 1);
+	#endif
+	add_to_trace<<<1,1,0,stream>>>(T, evals, n, n-1, 1);
 }
 
 template <typename S>
@@ -357,13 +378,13 @@ template <typename S>
 void sumcheck_alg1_ref(S* evals, S* t, S* T, S C, int n){
   // S alpha = my_hash(/*T, C*/);
 	// S alpha = 1;
-	S alpha = S::one() + S::one();
-	// S alpha = my_hash<S>();
-  S rp_even, rp_odd;
+	// S alpha = S::one() + S::one();
+	S alpha = my_hash<S>();
+  S rp_bottom, rp_top;
   for (int p = 0; p < n; p++)
   {
 		// rp_even = 0; rp_odd = 0;
-		rp_even = S::zero(); rp_odd = S::zero();
+		rp_bottom = S::zero(); rp_top = S::zero();
 		// printf("evals\n");
 		// for (int i = 0; i < 1<<(n-p); i++)
 		// {
@@ -372,17 +393,17 @@ void sumcheck_alg1_ref(S* evals, S* t, S* T, S C, int n){
 		// printf("\n");
 		for (int i = 0; i < 1<<(n-1-p); i++)
 		{
-			rp_even = rp_even + evals[2*i];
-			rp_odd = rp_odd + evals[2*i+1];
+			rp_bottom = rp_bottom + evals[i];
+			rp_top = rp_top + evals[i+(1<<(n-1-p))];
 		}
-    T[2*p+1] = rp_even;
-    T[2*p+2] = rp_odd;
+    T[2*p+1] = rp_bottom;
+    T[2*p+2] = rp_top;
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
 		// alpha = 1;
 		// alpha = S::one();
 		for (int i = 0; i < 1<<(n-1-p); i++)
 		{
-			t[i] = (S::one() - alpha) * evals[2*i] + alpha * evals[2*i+1];
+			t[i] = (S::one() - alpha) * evals[i] + alpha * evals[i+(1<<(n-1-p))];
 			// t[i] = (1-alpha)*evals[2*i] + alpha*evals[2*i+1];
 		}
 		for (int i = 0; i < 1<<(n-1-p); i++)
