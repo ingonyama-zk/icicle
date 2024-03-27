@@ -716,6 +716,7 @@ namespace ntt {
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitializeDomain)(
     curve_config::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
+    ctx.stream = cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return InitDomain(*primitive_root, ctx, fast_twiddles_mode);
   }
 
@@ -732,6 +733,8 @@ namespace ntt {
     NTTConfig<curve_config::scalar_t>& config,
     curve_config::scalar_t* output)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, dir, config, output);
   }
 

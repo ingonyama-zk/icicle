@@ -5,7 +5,7 @@
 namespace poseidon {
   template <typename S, int T>
   cudaError_t
-  permute_many(S* states, size_t number_of_states, const PoseidonConstants<S>& constants, cudaStream_t& stream)
+  permute_many(S* states, size_t number_of_states, const PoseidonConstants<S>& constants, const cudaStream_t& stream)
   {
     size_t rc_offset = 0;
 
@@ -32,7 +32,7 @@ namespace poseidon {
     S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config)
   {
     CHK_INIT_IF_RETURN();
-    cudaStream_t& stream = config.ctx.stream;
+    const cudaStream_t& stream = config.ctx.stream;
     S* states;
     if (config.input_is_a_state) {
       states = input;

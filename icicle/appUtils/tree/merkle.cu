@@ -62,7 +62,7 @@ namespace merkle {
     size_t start_segment_offset,
     int keep_rows,
     const PoseidonConstants<S>& poseidon,
-    cudaStream_t& stream)
+    const cudaStream_t& stream)
   {
     int arity = T - 1;
 
@@ -107,7 +107,7 @@ namespace merkle {
     const TreeBuilderConfig& config)
   {
     CHK_INIT_IF_RETURN();
-    cudaStream_t& stream = config.ctx.stream;
+    const cudaStream_t& stream = config.ctx.stream;
 
     int arity = T - 1;
     uint32_t number_of_leaves = pow(arity, (height - 1));

@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
   int N = batch_size * msm_size;
 
   std::cout << "Part I: use G1 points" << std::endl;
-  
+
   std::cout << "Generating random inputs on-host" << std::endl;
   scalar_t* scalars = new scalar_t[N];
   affine_t* points = new affine_t[N];
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     false, // is_async
   };
   config.batch_size = batch_size;
-  
+
   std::cout << "Running MSM kernel with on-host inputs" << std::endl;
   // Create two events to time the MSM kernel
   cudaStream_t stream = config.ctx.stream;
@@ -175,6 +175,5 @@ int main(int argc, char* argv[])
   cudaFree(g2_result_d);
   delete[] g2_points;
   delete[] scalars;
-  cudaStreamDestroy(stream);
   return 0;
 }
