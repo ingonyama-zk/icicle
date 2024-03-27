@@ -106,6 +106,7 @@ namespace poseidon {
     device_context::DeviceContext& ctx,
     PoseidonConstants<curve_config::scalar_t>* poseidon_constants)
   {
+    ctx.stream = cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return create_optimized_poseidon_constants<curve_config::scalar_t>(
       arity, full_rounds_half, partial_rounds, constants, ctx, poseidon_constants);
   }
@@ -113,6 +114,7 @@ namespace poseidon {
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, InitOptimizedPoseidonConstants)(
     int arity, device_context::DeviceContext& ctx, PoseidonConstants<curve_config::scalar_t>* constants)
   {
+    ctx.stream = cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return init_optimized_poseidon_constants<curve_config::scalar_t>(arity, ctx, constants);
   }
 } // namespace poseidon

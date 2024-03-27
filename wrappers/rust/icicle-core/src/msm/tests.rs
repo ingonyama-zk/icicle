@@ -61,7 +61,8 @@ where
                 let mut scalars_d = HostOrDeviceSlice::cuda_malloc(test_size).unwrap();
                 let stream = CudaStream::create().unwrap();
                 scalars_d
-                    .copy_from_host_async(&scalars_mont, &stream)
+                    // .copy_from_host_async(&scalars_mont, &stream)
+                    .copy_from_host(&scalars_mont)
                     .unwrap();
 
                 let mut cfg = MSMConfig::default_for_device(device_id);
@@ -73,7 +74,8 @@ where
                 // need to make sure that scalars_d weren't mutated by the previous call
                 let mut scalars_mont_after = vec![C::ScalarField::zero(); test_size];
                 scalars_d
-                    .copy_to_host_async(&mut scalars_mont_after, &stream)
+                    // .copy_to_host_async(&mut scalars_mont_after, &stream)
+                    .copy_to_host(&mut scalars_mont_after)
                     .unwrap();
                 assert_eq!(scalars_mont, scalars_mont_after);
 
@@ -141,7 +143,8 @@ where
             let mut msm_results_2 = HostOrDeviceSlice::cuda_malloc(batch_size).unwrap();
             let mut points_d = HostOrDeviceSlice::cuda_malloc(test_size * batch_size).unwrap();
             points_d
-                .copy_from_host_async(&points_cloned, &stream)
+                // .copy_from_host_async(&points_cloned, &stream)
+                .copy_from_host(&points_cloned)
                 .unwrap();
 
             cfg.precompute_factor = precompute_factor as i32;
@@ -152,10 +155,12 @@ where
             let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
             let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
             msm_results_1
-                .copy_to_host_async(&mut msm_host_result_1[..], &stream)
+                // .copy_to_host_async(&mut msm_host_result_1[..], &stream)
+                .copy_to_host(&mut msm_host_result_1[..])
                 .unwrap();
             msm_results_2
-                .copy_to_host_async(&mut msm_host_result_2[..], &stream)
+                // .copy_to_host_async(&mut msm_host_result_2[..], &stream)
+                .copy_to_host(&mut msm_host_result_2[..])
                 .unwrap();
             stream
                 .synchronize()

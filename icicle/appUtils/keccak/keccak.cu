@@ -264,12 +264,16 @@ namespace keccak {
   extern "C" cudaError_t
   Keccak256(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return keccak_hash<512, 256>(input, input_block_size, number_of_blocks, output, config);
   }
 
   extern "C" cudaError_t
   Keccak512(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return keccak_hash<1024, 512>(input, input_block_size, number_of_blocks, output, config);
   }
 } // namespace keccak

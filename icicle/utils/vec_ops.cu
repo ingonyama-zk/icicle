@@ -113,6 +113,8 @@ namespace vec_ops {
     VecOpsConfig<curve_config::scalar_t>& config,
     curve_config::scalar_t* result)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return Mul<curve_config::scalar_t>(vec_a, vec_b, n, config, result);
   }
 
@@ -128,6 +130,8 @@ namespace vec_ops {
     VecOpsConfig<curve_config::scalar_t>& config,
     curve_config::scalar_t* result)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return Add<curve_config::scalar_t>(vec_a, vec_b, n, config, result);
   }
 
@@ -143,6 +147,8 @@ namespace vec_ops {
     VecOpsConfig<curve_config::scalar_t>& config,
     curve_config::scalar_t* result)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return Sub<curve_config::scalar_t>(vec_a, vec_b, n, config, result);
   }
 

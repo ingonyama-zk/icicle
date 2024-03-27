@@ -93,6 +93,8 @@ namespace poseidon {
     const PoseidonConstants<curve_config::scalar_t>& constants,
     PoseidonConfig& config)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     switch (arity) {
     case 2:
       return poseidon_hash<curve_config::scalar_t, 3>(input, output, number_of_states, constants, config);

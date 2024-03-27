@@ -922,6 +922,7 @@ namespace msm {
     device_context::DeviceContext& ctx,
     curve_config::affine_t* output_bases)
   {
+    ctx.stream = cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return PrecomputeMSMBases<curve_config::affine_t, curve_config::projective_t>(
       bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
   }
@@ -941,6 +942,8 @@ namespace msm {
     MSMConfig& config,
     curve_config::projective_t* out)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return MSM<curve_config::scalar_t, curve_config::affine_t, curve_config::projective_t>(
       scalars, points, msm_size, config, out);
   }
@@ -962,6 +965,7 @@ namespace msm {
     device_context::DeviceContext& ctx,
     curve_config::g2_affine_t* output_bases)
   {
+    ctx.stream = cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return PrecomputeMSMBases<curve_config::g2_affine_t, curve_config::g2_projective_t>(
       bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
   }
@@ -981,6 +985,8 @@ namespace msm {
     MSMConfig& config,
     curve_config::g2_projective_t* out)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return MSM<curve_config::scalar_t, curve_config::g2_affine_t, curve_config::g2_projective_t>(
       scalars, points, msm_size, config, out);
   }

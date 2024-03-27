@@ -139,7 +139,7 @@ namespace merkle {
     // We can effectively parallelize memory copy with streams
     // as long as they don't operate on more than `STREAM_CHUNK_SIZE` bytes
     const size_t number_of_streams = std::min((uint32_t)(available_memory / STREAM_CHUNK_SIZE), number_of_subtrees);
-    cudaStream_t* streams = static_cast<cudaStream_t*>(malloc(sizeof(cudaStream_t) * number_of_streams));
+    std::vector<cudaStream_t> streams(number_of_streams);
     for (size_t i = 0; i < number_of_streams; i++) {
       CHK_IF_RETURN(cudaStreamCreate(&streams[i]));
     }
@@ -251,7 +251,6 @@ namespace merkle {
       CHK_IF_RETURN(cudaStreamSynchronize(streams[i]));
       CHK_IF_RETURN(cudaStreamDestroy(streams[i]));
     }
-    free(streams);
     return CHK_LAST();
   }
 
@@ -263,6 +262,8 @@ namespace merkle {
     PoseidonConstants<curve_config::scalar_t>& constants,
     TreeBuilderConfig& config)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     switch (arity) {
     case 2:
       return build_merkle_tree<curve_config::scalar_t, 3>(leaves, digests, height, constants, config);

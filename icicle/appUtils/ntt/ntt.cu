@@ -754,6 +754,8 @@ namespace ntt {
     NTTConfig<curve_config::scalar_t>& config,
     curve_config::projective_t* output)
   {
+    config.ctx.stream =
+      cudaStreamPerThread; // TODO Yuval: remove this line when rust is passing device-context correctly
     return NTT<curve_config::scalar_t, curve_config::projective_t>(input, size, dir, config, output);
   }
 
