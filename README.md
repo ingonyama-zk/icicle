@@ -115,8 +115,10 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 
 - [Robik](https://github.com/robik75), for his ongoing support and mentorship
 - [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
-- [gkigiermo](https://github.com/gkigiermo), for making it intuitive to use ICICLE in Google Colab.
+- [gkigiermo](https://github.com/gkigiermo), for making it intuitive to use ICICLE in Google Colab
 - [nonam3e](https://github.com/nonam3e), for adding Grumpkin curve support into ICICLE
+- [alxiong](https://github.com/alxiong), for adding warmup for CudaStream
+- [cyl19970726](https://github.com/cyl19970726), for updating go install source in Dockerfile
 
 ## Help & Support
 
