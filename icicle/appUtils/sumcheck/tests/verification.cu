@@ -23,7 +23,9 @@ void random_samples(test_scalar* res, uint32_t count)
 void incremental_values(test_scalar* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
-    res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
+    // res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
+    // res[i] = i%2? test_scalar::one() : test_scalar::one()+test_scalar::one();
+    res[i] = i%2? res[i - 1] : i? res[i - 1] + test_scalar::one() + test_scalar::one() : test_scalar::one() + test_scalar::one();
   }
 }
 
@@ -41,9 +43,11 @@ int main(){
   cudaEvent_t gpu_start, gpu_stop;
   float gpu_time;
 
-  int n = 3;
-  int size = 1 << n;
-  // int size = 3 << n;
+  int n = 4;
+  int polys = 1;
+  int size = polys << n;
+  int trans_size = (polys+1)*n +1;
+  bool reorder = false;
 
   cudaStream_t stream1, stream2;
   cudaStreamCreate(&stream1);
@@ -51,14 +55,16 @@ int main(){
 
   //allocation
   auto h_evals = std::make_unique<test_scalar[]>(size);
+  auto h_evals_debug_ref = std::make_unique<test_scalar[]>(size);
+  auto h_evals_debug_unif = std::make_unique<test_scalar[]>(size);
   auto h_temp = std::make_unique<test_scalar[]>(size);
-  auto h_transcript = std::make_unique<test_scalar[]>(2*n+1);
-  auto h_transcript_ref = std::make_unique<test_scalar[]>(2*n+1);
+  auto h_transcript = std::make_unique<test_scalar[]>(trans_size);
+  auto h_transcript_ref = std::make_unique<test_scalar[]>(trans_size);
   
-  cudaMalloc(&d_transcript, sizeof(test_scalar) * (2*n+1));
+  cudaMalloc(&d_transcript, sizeof(test_scalar) * (trans_size));
   cudaMalloc(&d_evals, sizeof(test_scalar) * size);
   cudaMalloc(&d_temp, sizeof(test_scalar) * size);
-  cudaMalloc(&d_transcript2, sizeof(test_scalar) * (2*n+1));
+  cudaMalloc(&d_transcript2, sizeof(test_scalar) * (trans_size));
   cudaMalloc(&d_evals2, sizeof(test_scalar) * size);
   cudaMalloc(&d_temp2, sizeof(test_scalar) * size);
   
@@ -67,37 +73,51 @@ int main(){
 
   //input init
   // random_samples(h_evals.get(), size);
-  // incremental_values(h_evals.get(), size);
-  // C = test_scalar::rand_host();
-  // h_transcript[0] = test_scalar::rand_host();
-  // h_transcript_ref[0] = h_transcript[0];
+  incremental_values(h_evals.get(), size);
+  C = test_scalar::rand_host();
+  h_transcript[0] = test_scalar::rand_host();
+  h_transcript_ref[0] = h_transcript[0];
 
-  if (n==3){
-  for (int i = 0; i < size; i++) {
-    h_evals[i] = test_scalar{input3.storages[i]};  
-  }
-  for (int i = 0; i < 2*n+1; i++) {
-    h_transcript_ref[i] = test_scalar{trans3.storages[i]};  
-  }
-  C = test_scalar{c3};
-  h_transcript[0] = h_transcript_ref[0];
-  }
-  if (n==18){
-  for (int i = 0; i < size; i++) {
-    h_evals[i] = test_scalar{input18.storages[i]};  
-  }
-  for (int i = 0; i < 2*n+1; i++) {
-    h_transcript_ref[i] = test_scalar{trans18.storages[i]};  
-  }
-  C = test_scalar{c18};
-  h_transcript[0] = h_transcript_ref[0];
-  }
+  // if (n==3){
+  // reorder=true;
+  // for (int i = 0; i < size; i++) {
+  //   h_evals[i] = test_scalar{input3.storages[i]};  
+  // }
+  // for (int i = 0; i < trans_size; i++) {
+  //   h_transcript_ref[i] = test_scalar{trans3.storages[i]};  
+  // }
+  // C = test_scalar{c3};
+  // h_transcript[0] = h_transcript_ref[0];
+  // }
+  // if (n==18){
+  // reorder=true;
+  // for (int i = 0; i < size; i++) {
+  //   h_evals[i] = test_scalar{input18.storages[i]};  
+  // }
+  // for (int i = 0; i < trans_size; i++) {
+  //   h_transcript_ref[i] = test_scalar{trans18.storages[i]};  
+  // }
+  // C = test_scalar{c18};
+  // h_transcript[0] = h_transcript_ref[0];
+  // }
+
+  // reorder=true;
+  // for (int i = 0; i < size; i++) {
+  //   h_evals[i] = test_scalar{input3poly3.storages[i]};  
+  // }
+  // for (int i = 0; i < 4*n+1; i++) {
+  //   h_transcript_ref[i] = test_scalar{trans3poly3.storages[i]};  
+  // }
+  // C = test_scalar{c3poly3};
+  // h_transcript[0] = h_transcript_ref[0];
+
   //warm up run
   cudaMemcpy(d_evals, h_evals.get(), sizeof(test_scalar) * size, cudaMemcpyHostToDevice);
   cudaMemcpy(d_transcript, h_transcript.get(), sizeof(test_scalar), cudaMemcpyHostToDevice);
-  // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
-  sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, stream1);
-  // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, stream1);
+  sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  cudaMemcpy(h_evals_debug_ref.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
+  // sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaDeviceSynchronize();
@@ -105,9 +125,10 @@ int main(){
 
   //run
   cudaEventRecord(gpu_start, 0);
-  // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, stream1);
-  sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, stream1);
-  // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  cudaMemcpy(h_evals_debug_unif.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
+  // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaEventRecord(gpu_stop, 0);
@@ -120,20 +141,24 @@ int main(){
 
   //run reference
   auto cpu_start = std::chrono::high_resolution_clock::now();
-  // sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
+  if (n!=3 && n!=18) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
   auto cpu_stop = std::chrono::high_resolution_clock::now();
   auto cpu_time = std::chrono::duration_cast<std::chrono::microseconds>(cpu_stop - cpu_start).count();
 
   //verify
-  cudaMemcpy(h_transcript.get(), d_transcript, sizeof(test_scalar) * (2*n+1), cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_transcript.get(), d_transcript, sizeof(test_scalar) * (trans_size), cudaMemcpyDeviceToHost);
   
   bool success = true;
-  for (int i = 0; i < 2*n+1; i++) {
-    if (h_transcript[i] != h_transcript_ref[i]) {
+  // for (int i = 0; i < trans_size; i++) {
+  for (int i = 0; i < size; i++) {
+    if (h_evals_debug_ref[i] != h_evals_debug_unif[i]) {
+    // if (h_transcript[i] != h_transcript_ref[i]) {
       success = false;
-      std::cout << i << " ref " << h_transcript_ref[i] << " != " << h_transcript[i] << std::endl;
+      // std::cout << i << " ref " << h_transcript_ref[i] << " != " << h_transcript[i] << std::endl;
+      std::cout << i << " ref " << h_evals_debug_ref[i] << " != " << h_evals_debug_unif[i] << std::endl;
     } else {
-      std::cout << i << " ref " << h_transcript_ref[i] << " == " << h_transcript[i] << std::endl;
+      // std::cout << i << " ref " << h_transcript_ref[i] << " == " << h_transcript[i] << std::endl;
+      std::cout << i << " ref " << h_evals_debug_ref[i] << " == " << h_evals_debug_unif[i] << std::endl;
     }
   }
   const char* success_str = success ? "SUCCESS!" : "FAIL!";

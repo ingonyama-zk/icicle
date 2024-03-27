@@ -15,7 +15,7 @@
 // }
 
 template <typename S>
-__global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results) {
+__global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results, int jump_size) {
 	// Allocate shared memory
 	__shared__ S partial_sum[SHMEM_SIZE];
 
@@ -29,12 +29,13 @@ __global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results) {
 	// Store first partial result instead of just the elements
 	// partial_sum[threadIdx.x] = v[i] + v[i + blockDim.x];
 	// partial_sum[threadIdx.x] = (S::one() - alpha) * v[2*i] + alpha * v[2*i+1] + (S::one() - alpha) * v[2*(i + blockDim.x)] + alpha * v[2*(i + blockDim.x)+1];
-	S e1 = v[2*i] + alpha * (v[2*i+1] - v[2*i]);
-	S e2 = v[2*(i + blockDim.x)] + alpha * (v[2*(i + blockDim.x)+1] - v[2*(i + blockDim.x)]);
+	S e1 = v[i] + alpha * (v[i+jump_size] - v[i]);
+	S e2 = v[(i + blockDim.x)] + alpha * (v[(i + blockDim.x)+jump_size] - v[2*(i + blockDim.x)]);
 	// S e1 = v[2*i] + (v[2*i+1] - v[2*i]);
 	// S e2 = v[2*(i + blockDim.x)] + (v[2*(i + blockDim.x)+1] - v[2*(i + blockDim.x)]);
 	// partial_sum[threadIdx.x] = v[2*i] + v[2*(i + blockDim.x)] + alpha * (v[2*i+1] - v[2*i] + v[2*(i + blockDim.x)+1] - v[2*(i + blockDim.x)]);
 	partial_sum[threadIdx.x] = e1 + e2;
+	// __syncthreads();
 	v[i] = e1;
 	v[i + blockDim.x] = e2;
 	// for (int j = 0; j < 2; j++)
@@ -102,14 +103,17 @@ __global__ void update_evals_kernel(S* evals, S alpha, int poly_size){
 	int eval_id = tid % poly_size;
   // evals[tid] = (S::one() - alpha) * evals[2*tid] + alpha * evals[2*tid+1];
   // evals[tid] =  evals[2*tid] + (evals[2*tid+1] - evals[2*tid]);
-  evals[tid] =  evals[poly_id*poly_size*2+2*eval_id] + alpha * (evals[poly_id*poly_size*2+2*eval_id+1] - evals[poly_id*poly_size*2+2*eval_id]);
+	if (tid==0) printf("%d, %d, %d, %d, %d\n", poly_size, poly_id, eval_id, poly_id*poly_size*2+eval_id, poly_id*poly_size*2+eval_id+poly_size);
+	if (tid==0) printf("what12 %d %d\n",evals[poly_id*poly_size*2 + eval_id], evals[poly_id*poly_size*2 + eval_id+poly_size]);
+  evals[poly_id*poly_size*2 + eval_id] =  evals[poly_id*poly_size*2+eval_id] + alpha * (evals[poly_id*poly_size*2+eval_id+poly_size] - evals[poly_id*poly_size*2+eval_id]);
+	if (tid==0) printf("what %d\n",evals[poly_id*poly_size*2 + eval_id]);
   // evals[tid] = (1 - alpha) * evals[2*tid] + alpha * evals[2*tid+1];
 }
 
 template <typename S>
-void accumulate(S* in, S* out, uint32_t log_size, int nof_results, cudaStream_t stream){
-  uint32_t nof_steps = (log_size - 1) / MAX_SHMEM_LOG_SIZE;
-  uint32_t last_step_size = (log_size - 1) % MAX_SHMEM_LOG_SIZE;
+void accumulate(S* in, S* out, int log_size, int nof_results, cudaStream_t stream){
+  int nof_steps = (log_size - 1) / MAX_SHMEM_LOG_SIZE;
+  int last_step_size = (log_size - 1) % MAX_SHMEM_LOG_SIZE;
 	printf("a nof steps %d last size %d\n", nof_steps, last_step_size);
   for (int i = 0; i < nof_steps; i++)
   {
@@ -124,21 +128,24 @@ void accumulate(S* in, S* out, uint32_t log_size, int nof_results, cudaStream_t 
 }
 
 template <typename S>
-void mult_and_accumulate(S* in, S* out, uint32_t log_size, S alpha, int nof_results, cudaStream_t stream){
-  uint32_t nof_steps = (log_size - 1) / MAX_SHMEM_LOG_SIZE;
-  uint32_t last_step_size = (log_size - 1) % MAX_SHMEM_LOG_SIZE;
+void mult_and_accumulate(S* in, S* out, int log_size, S alpha, int nof_results, cudaStream_t stream){
+  int nof_steps = (log_size - 1) / MAX_SHMEM_LOG_SIZE;
+  int last_step_size = (log_size - 1) % MAX_SHMEM_LOG_SIZE;
 	printf("m nof steps %d last size %d\n", nof_steps, last_step_size);
   for (int i = 0; i < nof_steps; i++)
   {
 		if (i) sum_reduction<<<1<<(log_size - 1 -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE,0,stream>>>(i? out : in, out, nof_results);
-    else mult_and_reduce<<<1<<(log_size - 1 -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE,0,stream>>>(i? out : in, out, alpha, nof_results);
-		printf("m nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)-1));
+    else mult_and_reduce<<<1<<(log_size - 1 -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE,0,stream>>>(i? out : in, out, alpha, nof_results, 1<<(log_size-1));
+		if (i) printf("r nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)-1));
+		else printf("m nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)-1));
 		// cudaDeviceSynchronize();
   	// printf("cuda err %d\n", cudaGetLastError());
   }
   if (last_step_size) {
 		if (nof_steps) sum_reduction<<<1, 1<<last_step_size, 0,stream>>>(nof_steps? out : in, out, nof_results);
-		else mult_and_reduce<<<1, 1<<last_step_size, 0,stream>>>(nof_steps? out : in, out, alpha, nof_results);
+		else mult_and_reduce<<<1, 1<<last_step_size, 0,stream>>>(nof_steps? out : in, out, alpha, nof_results, 1<<last_step_size);
+		if (nof_steps) printf("r last");
+		else printf("m last");
 	} 
 	// cudaDeviceSynchronize();
   // printf("cuda err last %d\n", cudaGetLastError());
@@ -230,17 +237,19 @@ S my_hash(){
 }
 
 template <typename S>
-void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
-	reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
+void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStream_t stream){
+	if (reorder) reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
 	// S alpha = 1;
 	// S alpha = S::one();
 	S alpha = my_hash<S>();
 	// S alpha = S::rand_host();
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
-  for (int p = 0; p < n-1; p++)
+  // for (int p = 0; p < n-1; p++)
+  for (int p = 0; p < 1; p++)
   {
     int nof_threads = 1<<(n-1-p);
+		printf("reg nof threads %d\n", nof_threads);
     // move update kernel here and unify
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
     accumulate(evals, t, n-p, 2, stream); //accumulation
@@ -248,24 +257,25 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
-		int NOF_THREADS = 256;
+		int NOF_THREADS = min(256,nof_threads);
 		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
-    update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
+    update_evals_kernel<<<NOF_BLOCKS, 1,0, stream>>>(evals, alpha, nof_threads); //phase 3
   }
 	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 1);
 
 }
 
 template <typename S>
-void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
-	reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
+void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStream_t stream){
+	if (reorder) reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
 	// S alpha = 1;
-	// S alpha = S::one();
-	S alpha = my_hash<S>();
+	S alpha = S::one() + S::one();
+	// S alpha = my_hash<S>();
 	// S alpha = S::rand_host();
   // S alpha = my_hash(/*T, C*/);
   // S rp_even, rp_odd;
-  for (int p = 0; p < n-1; p++)
+  // for (int p = 0; p < n-1; p++)
+  for (int p = 0; p < 2; p++)
   {
     int nof_threads = 1<<(n-1-p);
 		printf("nof threads %d\n", nof_threads);
@@ -281,12 +291,13 @@ void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, cudaStream_t stream
 		// int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
     // update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha); //phase 3
   }
-	update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 2);
+	// update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 2);
 	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 1);
 }
 
 template <typename S>
-void sumcheck_alg3_poly3(S* evals, S* t, S* T, S C, int n, cudaStream_t stream){
+void sumcheck_alg3_poly3(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStream_t stream){
+	if (reorder) reorder_digits_inplace_and_normalize_kernel<<<1<<(max(n-6,0)),64,0,stream>>>(evals, n, false, ntt::eRevType::NaturalToRev, false, S::one());
 	// S alpha = 1;
 	// S alpha = S::one();
 	S alpha = my_hash<S>();
@@ -346,8 +357,8 @@ template <typename S>
 void sumcheck_alg1_ref(S* evals, S* t, S* T, S C, int n){
   // S alpha = my_hash(/*T, C*/);
 	// S alpha = 1;
-	// S alpha = S::one();
-	S alpha = my_hash<S>();
+	S alpha = S::one() + S::one();
+	// S alpha = my_hash<S>();
   S rp_even, rp_odd;
   for (int p = 0; p < n; p++)
   {
