@@ -5,6 +5,8 @@
 #include <iostream>  // for std::ostream
 #include <algorithm> // for std::max
 #include <cstdint>   // for uint64_t, etc.
+#include <vector>
+#include "polynomials/tracing/ops.h"
 
 namespace polynomials {
 
@@ -90,5 +92,10 @@ namespace polynomials {
     // Static and instance variables for debug id management.
     static inline uint64_t s_id = 0; // Global id counter.
     const uint64_t m_id;
+
+    // Tracing
+  public:
+    Op m_op; // the operation that created the polynomial
+    std::vector<std::shared_ptr<IPolynomialContext>> m_args;
   };
 } // namespace polynomials
