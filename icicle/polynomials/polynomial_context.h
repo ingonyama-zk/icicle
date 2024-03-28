@@ -82,9 +82,6 @@ namespace polynomials {
     // Method for printing the context state to an output stream.
     virtual void print(std::ostream& os) = 0;
 
-    // Accepts a visitor, allowing it to perform operations on this instance.
-    virtual void accept(IContextVisitor<C, D, I>* visitor) { visitor->visit(this); }
-
   protected:
     // Protected method to set the internal state.
     void set_state(State state) { m_state = state; }
@@ -97,12 +94,15 @@ namespace polynomials {
 
     // Static and instance variables for debug id management.
     static inline uint64_t s_id = 0; // Global id counter.
-    const uint64_t m_id;
 
-    // Tracing
   public:
+    const uint64_t m_id;
+    // Tracing
     Op m_op; // the operation that created the polynomial
     std::vector<std::shared_ptr<IPolynomialContext>> m_args;
+
+    // Accepts a visitor, allowing it to perform operations on this instance.
+    virtual void accept(IContextVisitor<C, D, I>* visitor) { visitor->visit(this); }
   };
 
   /**

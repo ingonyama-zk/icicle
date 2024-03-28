@@ -97,6 +97,8 @@ namespace polynomials {
     // Cleanup method for releasing factory resources.
     static void cleanup() { s_factory = nullptr; }
 
+    IPolynomialContext<Coeff, Domain, Image>* get_context() { return m_context.get(); }
+
   private:
     // The context of the polynomial, encapsulating its state.
     std::shared_ptr<IPolynomialContext<Coeff, Domain, Image>> m_context = nullptr;

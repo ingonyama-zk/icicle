@@ -23,7 +23,30 @@ namespace polynomials {
     SLICE,
 
     INVALID,
+    NOF_OPCODES,
   };
+
+  static const char* OpcodeToStr(eOpcode opcode)
+  {
+    static const char* s_op_str[eOpcode::NOF_OPCODES] = {
+      "FROM_COEFFS",
+      "FROM_ROU_EVALS",
+      "CLONE",
+      "ADD",
+      "SUB",
+      "MUL",
+      "DIV",
+      "QUOTIENT",
+      "REMAINDER",
+      "DIV_BY_VANISHING",
+      "ADD_MONOMIAL_INPLACE",
+      "SUB_MONOMIAL_INPLACE",
+      "SLICE",
+      "INVALID",
+    };
+
+    return s_op_str[opcode];
+  }
 
   // Class for storing and managing attributes associated with polynomial operations.
   // Supported types are int and std::string
@@ -54,6 +77,6 @@ namespace polynomials {
     Attributes attributes;    // Attributes providing additional information or parameters for the operation.
   };
 
-  #define OP_ATTR_DEGREE "degree"
+#define OP_ATTR_DEGREE "degree"
 
 } // namespace polynomials

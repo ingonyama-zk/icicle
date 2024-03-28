@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <list>
+#include <fstream>
 
 #include "curves/curve_config.cuh"
 using curve_config::affine_t;
@@ -16,6 +17,7 @@ using curve_config::scalar_t;
 #include "polynomials/polynomials_c_api.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "polynomials/tracing/polynomial_tracing_backend.cuh"
+#include "polynomials/tracing/graph_visualizer_visitor.h"
 
 #include "appUtils/ntt/ntt.cuh"
 #include "appUtils/msm/msm.cuh"
@@ -579,7 +581,12 @@ TEST_F(PolynomialTest, tracingBase)
   auto g = randomize_polynomial(size_1);
   auto h = randomize_polynomial(size_1);
 
-  auto res = f + g - h;
+  auto res = f + g - h + f;
+
+  // print res trace to file
+  std::ofstream out_file("trace.gv");
+  GraphvizVisualizer visualizer{out_file};
+  visualizer.run(res);
 }
 
 // Following examples are randomizing N private numbers and proving that I know N numbers such that their product is
