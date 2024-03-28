@@ -13,6 +13,8 @@ namespace polynomials {
 
   template <typename Coeff, typename Domain, typename Image>
   class IPolynomialBackend;
+  template <typename Coeff, typename Domain, typename Image>
+  class IContextVisitor;
 
   /**
    * @brief Interface for polynomial context, encapsulating state, memory, and device context.
@@ -80,6 +82,9 @@ namespace polynomials {
     // Method for printing the context state to an output stream.
     virtual void print(std::ostream& os) = 0;
 
+    // Accepts a visitor, allowing it to perform operations on this instance.
+    virtual void accept(IContextVisitor<C, D, I>* visitor) { visitor->visit(this); }
+
   protected:
     // Protected method to set the internal state.
     void set_state(State state) { m_state = state; }
@@ -98,5 +103,26 @@ namespace polynomials {
   public:
     Op m_op; // the operation that created the polynomial
     std::vector<std::shared_ptr<IPolynomialContext>> m_args;
+  };
+
+  /**
+   * @brief The base class for visitors in the Visitor design pattern.
+   *
+   * This class defines the interface for visitors that perform operations
+   * on elements of an object structure. It declares one or more visit methods,
+   * each designed to handle objects of a different type within the structure.
+   * Concrete visitors inherit from this class and implement these methods to
+   * perform specific actions on the elements.
+   *
+   * @tparam C Type of the coefficients.
+   * @tparam D Domain type, representing the input space of the polynomial.
+   * @tparam I Image type, representing the output space of the polynomial.
+   */
+
+  template <typename C, typename D, typename I>
+  class IContextVisitor
+  {
+  public:
+    virtual void visit(IPolynomialContext<C, D, I>* context) = 0;
   };
 } // namespace polynomials
