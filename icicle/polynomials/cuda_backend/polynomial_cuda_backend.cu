@@ -367,7 +367,7 @@ namespace polynomials {
   template <typename C = scalar_t, typename D = C, typename I = C>
   class CUDAPolynomialBackend : public IPolynomialBackend<C, D, I>
   {
-    typedef IPolynomialContext<C, D, I> PolyContext;
+    typedef std::shared_ptr<IPolynomialContext<C, D, I>> PolyContext;
     typedef typename IPolynomialContext<C, D, I>::State State;
 
     int64_t* d_degree = nullptr; // used to avoid alloc/release every time
@@ -380,29 +380,29 @@ namespace polynomials {
     }
     ~CUDAPolynomialBackend() { CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream)); }
 
-    void from_coefficients(PolyContext& p, uint64_t nof_coefficients, const C* coefficients) override
+    void from_coefficients(PolyContext p, uint64_t nof_coefficients, const C* coefficients) override
     {
-      p.from_coefficients(nof_coefficients, coefficients);
+      p->from_coefficients(nof_coefficients, coefficients);
     }
 
-    void from_rou_evaluations(PolyContext& p, uint64_t nof_evaluations, const I* evaluations) override
+    void from_rou_evaluations(PolyContext p, uint64_t nof_evaluations, const I* evaluations) override
     {
-      p.from_rou_evaluations(nof_evaluations, evaluations);
+      p->from_rou_evaluations(nof_evaluations, evaluations);
     }
 
-    void clone(PolyContext& out, PolyContext& in) override { out.clone(in); }
+    void clone(PolyContext out, PolyContext in) override { out->clone(*in); }
 
     template <typename T = C>
-    T* get_context_storage_mutable(PolyContext& p)
+    T* get_context_storage_mutable(PolyContext p)
     {
       return static_cast<T*>(IPolynomialBackend<C, D, I>::get_context_storage_mutable(p));
     }
 
-    void slice(PolyContext& out, PolyContext& in, uint64_t offset, uint64_t stride, uint64_t size) override
+    void slice(PolyContext out, PolyContext in, uint64_t offset, uint64_t stride, uint64_t size) override
     {
       assert_device_compatability(out, in);
-      out.allocate(size, State::Coefficients, false /*=memset zeros*/);
-      auto [in_coeffs, _] = in.get_coefficients();
+      out->allocate(size, State::Coefficients, false /*=memset zeros*/);
+      auto [in_coeffs, _] = in->get_coefficients();
       auto out_coeffs = get_context_storage_mutable(out);
 
       const int NOF_THREADS = 128;
@@ -412,16 +412,16 @@ namespace polynomials {
       CHK_LAST();
     }
 
-    void add_sub(PolyContext& res, PolyContext& a, PolyContext& b, bool add1_sub0)
+    void add_sub(PolyContext res, PolyContext a, PolyContext b, bool add1_sub0)
     {
       assert_device_compatability(a, b);
       assert_device_compatability(a, res);
       // TODO Yuval: can do it evaluations too if same #evaluations (on ROU)
-      auto [a_coeff_p, a_nof_coeff] = a.get_coefficients();
-      auto [b_coeff_p, b_nof_coeff] = b.get_coefficients();
+      auto [a_coeff_p, a_nof_coeff] = a->get_coefficients();
+      auto [b_coeff_p, b_nof_coeff] = b->get_coefficients();
 
       const auto res_nof_coeff = max(a_nof_coeff, b_nof_coeff);
-      res.allocate(res_nof_coeff, State::Coefficients);
+      res->allocate(res_nof_coeff, State::Coefficients);
       auto res_coeff_p = get_context_storage_mutable(res);
 
       const int NOF_THREADS = 128;
@@ -432,16 +432,16 @@ namespace polynomials {
       CHK_LAST();
     }
 
-    void add(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, true /*=add*/); }
-    void subtract(PolyContext& res, PolyContext& a, PolyContext& b) override { add_sub(res, a, b, false /*=sub*/); }
+    void add(PolyContext res, PolyContext a, PolyContext b) override { add_sub(res, a, b, true /*=add*/); }
+    void subtract(PolyContext res, PolyContext a, PolyContext b) override { add_sub(res, a, b, false /*=sub*/); }
 
-    void multiply(PolyContext& c, PolyContext& a, PolyContext& b) override
+    void multiply(PolyContext c, PolyContext a, PolyContext b) override
     {
       assert_device_compatability(a, b);
       assert_device_compatability(a, c);
 
-      const bool is_a_scalar = a.get_nof_elements() == 1;
-      const bool is_b_scalar = b.get_nof_elements() == 1;
+      const bool is_a_scalar = a->get_nof_elements() == 1;
+      const bool is_b_scalar = b->get_nof_elements() == 1;
 
       if (is_a_scalar) {
         return multiply_with_scalar(c, b, a);
@@ -454,15 +454,15 @@ namespace polynomials {
       return multiply_with_padding(c, a, b);
     }
 
-    void multiply_with_scalar(PolyContext& out, PolyContext& p, PolyContext& s)
+    void multiply_with_scalar(PolyContext out, PolyContext p, PolyContext s)
     {
       // element wise multiplication is similar both in coefficients and evaluations (regardless of order too)
-      const auto state = p.get_state();
+      const auto state = p->get_state();
 
-      auto [p_elements_p, N] = state == State::Coefficients ? p.get_coefficients() : p.get_rou_evaluations();
-      auto [s_elements_p, _] = state == State::Coefficients ? s.get_coefficients() : s.get_rou_evaluations();
+      auto [p_elements_p, N] = state == State::Coefficients ? p->get_coefficients() : p->get_rou_evaluations();
+      auto [s_elements_p, _] = state == State::Coefficients ? s->get_coefficients() : s->get_rou_evaluations();
 
-      out.allocate(N, state, false /*=memset zeros*/);
+      out->allocate(N, state, false /*=memset zeros*/);
       auto out_evals_p =
         state == State::Coefficients ? get_context_storage_mutable<C>(out) : get_context_storage_mutable<I>(out);
 
@@ -474,22 +474,22 @@ namespace polynomials {
       CHK_LAST();
     }
 
-    void multiply_with_padding(PolyContext& c, PolyContext& a, PolyContext& b)
+    void multiply_with_padding(PolyContext c, PolyContext a, PolyContext b)
     {
       // TODO Yuval: by using the degree I can optimize the memory size and avoid redundant computations too
-      const uint64_t a_N_orig = a.get_nof_elements();
-      const uint64_t b_N_orig = b.get_nof_elements();
+      const uint64_t a_N_orig = a->get_nof_elements();
+      const uint64_t b_N_orig = b->get_nof_elements();
       const uint64_t N = max(a_N_orig, b_N_orig);
       const uint64_t c_N = 2 * N;
 
       // (1) transform a,b to 2N evaluations
-      a.transform_to_evaluations(c_N, true /*=reversed*/);
-      b.transform_to_evaluations(c_N, true /*=reversed*/);
-      auto [a_evals_p, a_N] = a.get_rou_evaluations();
-      auto [b_evals_p, b_N] = b.get_rou_evaluations();
+      a->transform_to_evaluations(c_N, true /*=reversed*/);
+      b->transform_to_evaluations(c_N, true /*=reversed*/);
+      auto [a_evals_p, a_N] = a->get_rou_evaluations();
+      auto [b_evals_p, b_N] = b->get_rou_evaluations();
 
       // (2) allocate c (c=a*b) and compute element-wise multiplication on evaluations
-      c.allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
+      c->allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
       auto c_evals_p = get_context_storage_mutable<I>(c);
 
       const int NOF_THREADS = 128;
@@ -499,20 +499,20 @@ namespace polynomials {
       CHK_LAST();
     }
 
-    void multiply_with_cosets(PolyContext& c, PolyContext& a, PolyContext& b)
+    void multiply_with_cosets(PolyContext c, PolyContext a, PolyContext b)
     {
-      const uint64_t a_N = a.get_nof_elements();
-      const uint64_t b_N = b.get_nof_elements();
+      const uint64_t a_N = a->get_nof_elements();
+      const uint64_t b_N = b->get_nof_elements();
       const uint64_t N = max(a_N, b_N);
 
       // (1) transform a,b to coefficients such that both have N coefficients
-      a.transform_to_coefficients(N);
-      b.transform_to_coefficients(N);
-      auto [a_coeff_p, _] = a.get_coefficients();
-      auto [b_coeff_p, __] = b.get_coefficients();
+      a->transform_to_coefficients(N);
+      b->transform_to_coefficients(N);
+      auto [a_coeff_p, _] = a->get_coefficients();
+      auto [b_coeff_p, __] = b->get_coefficients();
       // (2) allocate c (c=a*b)
       const uint64_t c_N = 2 * N;
-      c.allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
+      c->allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
       auto c_evals_low_p = get_context_storage_mutable<I>(c);
       I* c_evals_high_p = c_evals_low_p + N;
 
@@ -532,10 +532,10 @@ namespace polynomials {
       MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
       // (5) transform a,b to evaluations
-      a.transform_to_evaluations(N, true /*=reversed*/);
-      b.transform_to_evaluations(N, true /*=reversed*/);
-      auto [a_evals_p, a_nof_evals] = a.get_rou_evaluations();
-      auto [b_evals_p, b_nof_evals] = b.get_rou_evaluations();
+      a->transform_to_evaluations(N, true /*=reversed*/);
+      b->transform_to_evaluations(N, true /*=reversed*/);
+      auto [a_evals_p, a_nof_evals] = a->get_rou_evaluations();
+      auto [b_evals_p, b_nof_evals] = b->get_rou_evaluations();
 
       // (6) compute a_H0 * b_H0
       MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
@@ -543,14 +543,14 @@ namespace polynomials {
       CHK_LAST();
     }
 
-    void divide(PolyContext& Q /*OUT*/, PolyContext& R /*OUT*/, PolyContext& a, PolyContext& b) override
+    void divide(PolyContext Q /*OUT*/, PolyContext R /*OUT*/, PolyContext a, PolyContext b) override
     {
       assert_device_compatability(a, b);
       assert_device_compatability(a, Q);
       assert_device_compatability(a, R);
 
-      auto [a_coeffs, a_N] = a.get_coefficients();
-      auto [b_coeffs, b_N] = b.get_coefficients();
+      auto [a_coeffs, a_N] = a->get_coefficients();
+      auto [b_coeffs, b_N] = b->get_coefficients();
 
       const int64_t deg_a = degree(a);
       const int64_t deg_b = degree(b);
@@ -561,11 +561,11 @@ namespace polynomials {
       }
 
       // init: Q=0, R=a
-      Q.allocate(deg_a - deg_b + 1, State::Coefficients, true /*=memset zeros*/);
+      Q->allocate(deg_a - deg_b + 1, State::Coefficients, true /*=memset zeros*/);
       auto Q_coeffs = get_context_storage_mutable(Q);
 
       //    TODO Yuval: Can do better in terms of memory allocation? deg(R) <= deg(b) by definition but it starts as
-      R.allocate(a_N, State::Coefficients, false /*=memset_zeros*/);
+      R->allocate(a_N, State::Coefficients, false /*=memset_zeros*/);
       auto R_coeffs = get_context_storage_mutable(R);
       CHK_STICKY(
         cudaMemcpyAsync(R_coeffs, a_coeffs, a_N * sizeof(C), cudaMemcpyDeviceToDevice, m_device_context.stream));
@@ -587,22 +587,21 @@ namespace polynomials {
       CHK_LAST();
     }
 
-    void quotient(PolyContext& Q, PolyContext& op_a, PolyContext& op_b) override
+    void quotient(PolyContext Q, PolyContext op_a, PolyContext op_b) override
     {
       // TODO: can implement more efficiently?
-      CUDAPolynomialContext<C, D, I> R = {m_device_context};
+      auto R = std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_context);
       divide(Q, R, op_a, op_b);
     }
 
-    void remainder(PolyContext& R, PolyContext& op_a, PolyContext& op_b) override
+    void remainder(PolyContext R, PolyContext op_a, PolyContext op_b) override
     {
       // TODO: can implement more efficiently?
-      CUDAPolynomialContext<C, D, I> Q = {m_device_context};
+      auto Q = std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_context);
       divide(Q, R, op_a, op_b);
     }
 
-    void
-    divide_by_vanishing_polynomial(PolyContext& out, PolyContext& numerator, uint64_t vanishing_poly_degree) override
+    void divide_by_vanishing_polynomial(PolyContext out, PolyContext numerator, uint64_t vanishing_poly_degree) override
     {
       assert_device_compatability(numerator, out);
 
@@ -615,11 +614,11 @@ namespace polynomials {
       // TODO Yuval: maybe instead of taking numerator memory and modiyfing it diretcly add a state for evaluations on
       // coset of rou. In that case I can remain in this state and also won't need to access input memory directly
       auto numerator_coeffs = get_context_storage_mutable(numerator);
-      const auto N = numerator.get_nof_elements();
+      const auto N = numerator->get_nof_elements();
       if (vanishing_poly_degree > N) {
         THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "divide_by_vanishing_polynomial(): degree is too large");
       }
-      out.allocate(N, State::Coefficients, true /*=set zeros*/);
+      out->allocate(N, State::Coefficients, true /*=set zeros*/);
       add_monomial_inplace(out, C::zero() - C::one(), 0);         //-1
       add_monomial_inplace(out, C::one(), vanishing_poly_degree); //+x^n
 
@@ -648,30 +647,30 @@ namespace polynomials {
     }
 
     // arithmetic with monomials
-    void add_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) override
+    void add_monomial_inplace(PolyContext poly, C monomial_coeff, uint64_t monomial) override
     {
-      const uint64_t new_nof_elements = max(poly.get_nof_elements(), monomial + 1);
-      poly.transform_to_coefficients(new_nof_elements);
+      const uint64_t new_nof_elements = max(poly->get_nof_elements(), monomial + 1);
+      poly->transform_to_coefficients(new_nof_elements);
       auto coeffs = get_context_storage_mutable(poly);
       AddSingleElementInplace<<<1, 1, 0, m_device_context.stream>>>(coeffs + monomial, monomial_coeff);
 
       CHK_LAST();
     }
 
-    void sub_monomial_inplace(PolyContext& poly, C monomial_coeff, uint64_t monomial) override
+    void sub_monomial_inplace(PolyContext poly, C monomial_coeff, uint64_t monomial) override
     {
       add_monomial_inplace(poly, C::zero() - monomial_coeff, monomial);
     }
 
-    int64_t degree(PolyContext& p) override { return degree_internal(p, p.get_nof_elements()); }
+    int64_t degree(PolyContext p) override { return degree_internal(p, p->get_nof_elements()); }
 
     // search degree starting from len, searching down (towards coeff0)
-    int64_t degree_internal(PolyContext& p, uint64_t len)
+    int64_t degree_internal(PolyContext p, uint64_t len)
     {
       // TODO: parallelize kernel? Note that typically the largest coefficient is expected in the higher half since
       // memory is allocate based on #coefficients
 
-      auto [coeff, _] = p.get_coefficients();
+      auto [coeff, _] = p->get_coefficients();
 
       int64_t h_degree;
       HighestNonZeroIdx<<<1, 1, 0, m_device_context.stream>>>(coeff, len, d_degree);
@@ -683,12 +682,12 @@ namespace polynomials {
     }
 
   public:
-    I evaluate(PolyContext& p, const D& domain_x) override
+    I evaluate(PolyContext p, const D& domain_x) override
     {
       // TODO Yuval: maybe use Horner's rule and just evaluate each domain point per thread. Alternatively Need to
       // reduce in parallel.
 
-      auto [coeff, nof_coeff] = p.get_coefficients();
+      auto [coeff, nof_coeff] = p->get_coefficients();
       I *d_evaluation, *d_domain_x;
       I* d_tmp;
       CHK_STICKY(cudaMallocAsync(&d_evaluation, sizeof(I), m_device_context.stream));
@@ -713,7 +712,7 @@ namespace polynomials {
       return h_evaluation;
     }
 
-    void evaluate_on_domain(PolyContext& p, const D* domain, uint64_t size, I* evaluations /*OUT*/) override
+    void evaluate_on_domain(PolyContext p, const D* domain, uint64_t size, I* evaluations /*OUT*/) override
     {
       // TODO Yuval: implement more efficiently ??
       for (uint64_t i = 0; i < size; ++i) {
@@ -722,9 +721,9 @@ namespace polynomials {
     }
 
     int64_t
-    copy_coefficients_to_host(PolyContext& op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
+    copy_coefficients_to_host(PolyContext op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
     {
-      const uint64_t nof_coeffs = op.get_nof_elements();
+      const uint64_t nof_coeffs = op->get_nof_elements();
       if (nullptr == host_coeffs) { return nof_coeffs; } // no allocated memory
 
       end_idx = (end_idx == -1) ? nof_coeffs - 1 : end_idx;
@@ -737,8 +736,8 @@ namespace polynomials {
         THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "copy_coefficients_to_host() invalid indices");
       }
 
-      op.transform_to_coefficients();
-      auto [device_coeffs, _] = op.get_coefficients();
+      op->transform_to_coefficients();
+      auto [device_coeffs, _] = op->get_coefficients();
       const size_t nof_coeffs_to_copy = end_idx - start_idx + 1;
       CHK_STICKY(cudaMemcpyAsync(
         host_coeffs, device_coeffs + start_idx, nof_coeffs_to_copy * sizeof(C), cudaMemcpyDeviceToHost,
@@ -749,7 +748,7 @@ namespace polynomials {
     }
 
     // read coefficients to host
-    C copy_coefficient_to_host(PolyContext& op, uint64_t coeff_idx) override
+    C copy_coefficient_to_host(PolyContext op, uint64_t coeff_idx) override
     {
       C host_coeff;
       copy_coefficients_to_host(op, &host_coeff, coeff_idx, coeff_idx);
@@ -757,21 +756,21 @@ namespace polynomials {
     }
 
     std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_coefficients_view(PolyContext& p) override
+    get_coefficients_view(PolyContext p) override
     {
-      return p.get_coefficients_view();
+      return p->get_coefficients_view();
     }
 
     std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_rou_evaluations_view(PolyContext& p, uint64_t nof_evaluations, bool is_reversed) override
+    get_rou_evaluations_view(PolyContext p, uint64_t nof_evaluations, bool is_reversed) override
     {
-      return p.get_rou_evaluations_view(nof_evaluations, is_reversed);
+      return p->get_rou_evaluations_view(nof_evaluations, is_reversed);
     }
 
-    inline void assert_device_compatability(PolyContext& a, PolyContext& b) const
+    inline void assert_device_compatability(PolyContext a, PolyContext b) const
     {
-      CUDAPolynomialContext<C, D, I>* a_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(&a);
-      CUDAPolynomialContext<C, D, I>* b_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(&b);
+      CUDAPolynomialContext<C, D, I>* a_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(a.get());
+      CUDAPolynomialContext<C, D, I>* b_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(b.get());
 
       const bool is_same_device = a_cuda->m_device_context.device_id == b_cuda->m_device_context.device_id;
       if (!is_same_device) {
