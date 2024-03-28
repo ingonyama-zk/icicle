@@ -125,6 +125,7 @@ add_library(
   ${ICICLE_SOURCES}
   polynomials/polynomials.cu 
   polynomials/cuda_backend/polynomial_cuda_backend.cu
+  polynomials/tracing/polynomial_tracing_backend.cu
 )
 set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
 target_compile_definitions(icicle PUBLIC CURVE=${CURVE})  

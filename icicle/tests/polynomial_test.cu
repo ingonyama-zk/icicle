@@ -15,6 +15,7 @@ using curve_config::scalar_t;
 #include "polynomials/polynomials.h"
 #include "polynomials/polynomials_c_api.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
+#include "polynomials/tracing/polynomial_tracing_backend.cuh"
 
 #include "appUtils/ntt/ntt.cuh"
 #include "appUtils/msm/msm.cuh"
@@ -60,6 +61,7 @@ class PolynomialTest : public ::testing::Test
 public:
   static inline const int MAX_NTT_LOG_SIZE = 24;
   static inline const bool MEASURE = true;
+  static inline const bool TRACING = true;
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
@@ -68,8 +70,15 @@ public:
     auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
     const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
     ntt::InitDomain(basic_root, ntt_config.ctx);
-    // initializing polynoimals factory for CUDA backend
-    Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
+
+    // initializing polynoimals factory for CUDA backend, or tracing backend
+    auto cuda_backend = std::make_shared<CUDAPolynomialFactory<>>();
+    if (TRACING) {
+      auto tracing_backend = std::make_shared<TracingPolynomialFactory<>>(cuda_backend);
+      Polynomial_t::initialize(tracing_backend);
+    } else {
+      Polynomial_t::initialize(cuda_backend);
+    }
   }
 
   static void TearDownTestSuite() {}
@@ -561,6 +570,16 @@ TEST_F(PolynomialTest, slicing)
 
   body(1 << 10);       // test even size
   body((1 << 10) - 1); // test odd size
+}
+
+TEST_F(PolynomialTest, tracingBase)
+{
+  const int size_0 = 12, size_1 = 17;
+  auto f = randomize_polynomial(size_0);
+  auto g = randomize_polynomial(size_1);
+  auto h = randomize_polynomial(size_1);
+
+  auto res = f + g - h;
 }
 
 // Following examples are randomizing N private numbers and proving that I know N numbers such that their product is

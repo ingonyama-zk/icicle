@@ -21,6 +21,8 @@ namespace polynomials {
     ADD_MONOMIAL_INPLACE,
     SUB_MONOMIAL_INPLACE,
     SLICE,
+
+    INVALID,
   };
 
   // Class for storing and managing attributes associated with polynomial operations.
@@ -48,8 +50,10 @@ namespace polynomials {
 
   // Struct representing a polynomial operation with an opcode and associated attributes.
   struct Op {
-    eOpcode opcode;        // Opcode indicating the type of operation.
-    Attributes attributes; // Attributes providing additional information or parameters for the operation.
+    eOpcode opcode = INVALID; // Opcode indicating the type of operation.
+    Attributes attributes;    // Attributes providing additional information or parameters for the operation.
   };
+
+  #define OP_ATTR_DEGREE "degree"
 
 } // namespace polynomials

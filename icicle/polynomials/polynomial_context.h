@@ -6,7 +6,8 @@
 #include <algorithm> // for std::max
 #include <cstdint>   // for uint64_t, etc.
 #include <vector>
-#include "polynomials/tracing/ops.h"
+#include "utils/integrity_pointer.h"
+#include "polynomials/tracing/polynomial_ops.h"
 
 namespace polynomials {
 

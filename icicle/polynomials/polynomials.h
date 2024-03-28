@@ -88,10 +88,10 @@ namespace polynomials {
     }
 
     // Static method to initialize the polynomial class with a factory for context and backend creation.
-    static void initialize(std::unique_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> factory)
+    static void initialize(std::shared_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> factory)
     {
       std::atexit(cleanup);
-      s_factory = std::move(factory);
+      s_factory = factory;
     }
 
     // Cleanup method for releasing factory resources.
@@ -104,7 +104,7 @@ namespace polynomials {
     std::shared_ptr<IPolynomialBackend<Coeff, Domain, Image>> m_backend = nullptr;
 
     // Factory for constructing the context and backend instances.
-    static inline std::unique_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> s_factory = nullptr;
+    static inline std::shared_ptr<AbstractPolynomialFactory<Coeff, Domain, Image>> s_factory = nullptr;
 
   public:
     Polynomial();
