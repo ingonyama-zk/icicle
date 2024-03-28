@@ -12,8 +12,14 @@
 #include "ntt/ntt_impl.cuh"
 #include <memory>
 
+#ifdef ECNTT_DEFINED
+typedef curve_config::scalar_t test_scalar;
+typedef curve_config::projective_t test_data;
+#else
 typedef curve_config::scalar_t test_scalar;
 typedef curve_config::scalar_t test_data;
+#endif
+
 #include "kernel_ntt.cu"
 
 void random_samples(test_data* res, uint32_t count)

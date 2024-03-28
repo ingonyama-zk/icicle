@@ -31,7 +31,7 @@ namespace poseidon {
   }
 
   template <typename S>
-  __device__ __forceinline__ S sbox_alpha_five(S element)
+  DEVICE_INLINE S sbox_alpha_five(S element)
   {
     S result = S::sqr(element);
     result = S::sqr(result);
@@ -46,7 +46,7 @@ namespace poseidon {
     __syncthreads();
 
     typename S::Wide element_wide = S::mul_wide(shared_states[vec_number * T], matrix[element_number]);
-#pragma unroll
+    UNROLL
     for (int i = 1; i < T; i++) {
       element_wide = element_wide + S::mul_wide(shared_states[vec_number * T + i], matrix[i * T + element_number]);
     }
@@ -117,14 +117,14 @@ namespace poseidon {
 
     typename S::Wide state_0_wide = S::mul_wide(element, sparse_matrix[0]);
 
-#pragma unroll
+    UNROLL
     for (int i = 1; i < T; i++) {
       state_0_wide = state_0_wide + S::mul_wide(state[i], sparse_matrix[i]);
     }
 
     state[0] = S::reduce(state_0_wide);
 
-#pragma unroll
+    UNROLL
     for (int i = 1; i < T; i++) {
       state[i] = state[i] + (element * sparse_matrix[T + i - 1]);
     }
@@ -138,7 +138,7 @@ namespace poseidon {
     if (idx >= number_of_states) { return; }
 
     S state[T];
-#pragma unroll
+    UNROLL
     for (int i = 0; i < T; i++) {
       state[i] = states[idx * T + i];
     }
@@ -148,7 +148,7 @@ namespace poseidon {
       rc_offset++;
     }
 
-#pragma unroll
+    UNROLL
     for (int i = 0; i < T; i++) {
       states[idx * T + i] = state[i];
     }

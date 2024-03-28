@@ -23,5 +23,5 @@ rayon = "1.8.1"
 default = []
 arkworks = ["ark-ff", "ark-ec", "ark-poly", "ark-std"]
 g2 = []
-# TODO: impl EC NTT
 ec_ntt = []
+devmode = []

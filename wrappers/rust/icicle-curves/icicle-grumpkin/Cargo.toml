@@ -25,4 +25,6 @@ icicle-grumpkin = { path = ".", features = ["arkworks"] }
 
 [features]
 default = []
+ec_ntt = ["icicle-core/ec_ntt"]
+devmode = ["icicle-core/devmode"]
 arkworks = ["ark-grumpkin-test", "icicle-core/arkworks"]
