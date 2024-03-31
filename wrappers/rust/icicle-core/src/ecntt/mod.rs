@@ -1,15 +1,11 @@
-use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-use crate::curve::{Curve, Projective};
-use crate::ntt::{NTTConfig, NTTDir};
-use crate::traits::FieldImpl;
-use crate::error::IcicleResult;
+use crate::{
+    curve::Curve,
+    ntt::{FieldImpl, IcicleResult, NTTConfig, NTTDir},
+};
 
-#[cfg(feature = "arkworks")]
-use crate::traits::ArkConvertible;
-#[cfg(feature = "arkworks")]
-use ark_ec::models::CurveConfig as ArkCurveConfig;
+pub use crate::curve::Projective;
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
@@ -23,8 +19,8 @@ pub trait ECNTT<C: Curve> {
         cfg: &NTTConfig<C::ScalarField>,
         output: &mut HostOrDeviceSlice<Projective<C>>,
     ) -> IcicleResult<()>;
-    fn initialize_domain(primitive_root: C::ScalarField, ctx: &DeviceContext) -> IcicleResult<()>;
-    fn initialize_domain_fast_twiddles_mode(primitive_root: C::ScalarField, ctx: &DeviceContext) -> IcicleResult<()>;
+    // fn initialize_domain(primitive_root: C::ScalarField, ctx: &DeviceContext) -> IcicleResult<()>;
+    // fn initialize_domain_fast_twiddles_mode(primitive_root: C::ScalarField, ctx: &DeviceContext) -> IcicleResult<()>;
 }
 
 /// Computes the ECNTT, or a batch of several ECNTTs.
@@ -45,7 +41,7 @@ pub fn ecntt<C: Curve>(
     output: &mut HostOrDeviceSlice<Projective<C>>,
 ) -> IcicleResult<()>
 where
-<C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    <C::BaseField as FieldImpl>::Config: ECNTT<C>,
 {
     if input.len() != output.len() {
         panic!(
@@ -57,9 +53,7 @@ where
     let mut local_cfg = cfg.clone();
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
-    //<<F as FieldImpl>::Config as NTT<F>>::ntt_unchecked(input, dir, &local_cfg, output)
-    // <<C as Curve>::ArkSWConfig as ECNTT<C>>::ecntt_unchecked(input, dir, &local_cfg, output)
-    <C::ScalarField as FieldImpl>::Config::ecntt_unchecked(input, dir, &local_cfg, output)
+    <C::BaseField as FieldImpl>::Config::ecntt_unchecked(input, dir, &local_cfg, output)
 }
 
 #[macro_export]
@@ -69,27 +63,28 @@ macro_rules! impl_ecntt {
         $field_prefix_ident:ident,
         $field:ident,
         $field_config:ident,
-//
-        // $curve_prefix:literal,
-        // $curve_prefix_indent:ident,
+        $base_field:ident,
         $curve:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID};
+            use crate::ecntt::Projective;
+            use crate::ecntt::{
+                $field, $field_config, $curve, $base_field, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID,
+            };
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "ECNTTCuda")]
                 pub(crate) fn ecntt_cuda(
-                    input: *const $field,
+                    input: *const Projective<$curve>,
                     size: i32,
                     dir: NTTDir,
                     config: &NTTConfig<$field>,
-                    output: *mut $field,
+                    output: *mut Projective<$curve>,
                 ) -> CudaError;
             }
         }
         //<C::ScalarField as FieldImpl>::Config
-        impl ECNTT<$curve> for $field_config {
+        impl ECNTT<$curve> for $base_field {
             fn ecntt_unchecked(
                 input: &HostOrDeviceSlice<Projective<$curve>>,
                 dir: NTTDir,
@@ -108,12 +103,12 @@ macro_rules! impl_ecntt {
                 }
             }
 
-            fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, false).wrap() }
-            }
-            fn initialize_domain_fast_twiddles_mode(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, true).wrap() }
-            }
+            // fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
+            //     unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, false).wrap() }
+            // }
+            // fn initialize_domain_fast_twiddles_mode(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
+            //     unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, true).wrap() }
+            // }
         }
     };
 }
@@ -122,11 +117,11 @@ macro_rules! impl_ecntt {
 macro_rules! impl_ecntt_tests {
     (
       $field:ident,
-      $curve_prefix:literal,
-      $curve_prefix_indent:ident,
+      $base_field:ident,
       $curve:ident
-
     ) => {
+        use icicle_core::ntt::tests::init_domain;
+        use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
         const MAX_SIZE: u64 = 1 << 18;
         static INIT: OnceLock<()> = OnceLock::new();
         const FAST_TWIDDLES_MODE: bool = false;
@@ -134,7 +129,7 @@ macro_rules! impl_ecntt_tests {
         #[test]
         fn test_ecntt() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-            check_ecntt::<$field, $curve:ident>()
+            check_ecntt::<$field, $base_field, $curve>()
         }
 
         // #[test]

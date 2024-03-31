@@ -1,7 +1,7 @@
-use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+pub use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
+pub use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-use crate::{error::IcicleResult, traits::FieldImpl};
+pub use crate::{error::IcicleResult, traits::FieldImpl};
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]

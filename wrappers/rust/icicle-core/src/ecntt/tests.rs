@@ -19,12 +19,11 @@ use crate::ntt::{NTTConfig, NTT};
 
 use super::ECNTT;
 
-pub fn check_ecntt<F: FieldImpl + ArkConvertible, C: Curve + ArkConvertible>()
+pub fn check_ecntt<F: FieldImpl + ArkConvertible, B: FieldImpl + ArkConvertible, C: Curve>()
 where
     F::ArkEquivalent: FftField,
-    <C::BaseField as FieldImpl>::Config: ECNTT<C> + GenerateRandom<F>,
+    <C::BaseField as FieldImpl>::Config: ECNTT<C>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
-    <<C as Curve>::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
     let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
@@ -39,7 +38,7 @@ where
         let points_mont = unsafe { &*(&ark_points[..] as *const _ as *const [_]) };
         let points_mont_h = HostOrDeviceSlice::on_host(points_mont.to_vec());
 
-        let mut config = NTTConfig::default();
+        let config = NTTConfig::default();
 
         let mut ecntt_result = HostOrDeviceSlice::on_host(vec![Projective::<C>::zero(); test_size]);
         ecntt(&points_mont_h, NTTDir::kForward, &config, &mut ecntt_result).unwrap();
