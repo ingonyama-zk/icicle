@@ -148,8 +148,8 @@ int main(){
   //run
   cudaEventRecord(gpu_start, 0);
   if (verify_cpu) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
-  // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
-  if (polys == 1) sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  // if (polys == 1) sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // cudaMemcpy(h_evals_debug_unif.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
   if (polys == 3) sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
