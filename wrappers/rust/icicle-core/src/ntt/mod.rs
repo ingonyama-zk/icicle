@@ -81,8 +81,8 @@ pub struct NTTConfig<'a, S> {
     pub columns_batch: bool,
     /// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
     pub ordering: Ordering,
-    pub are_inputs_on_device: bool,
-    pub are_outputs_on_device: bool,
+    are_inputs_on_device: bool,
+    are_outputs_on_device: bool,
     /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
