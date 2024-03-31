@@ -125,12 +125,12 @@ void accumulate(S* in, S* out, int log_size, int nof_results, cudaStream_t strea
 	// printf("a nof steps %d last size %d\n", nof_steps, last_step_size);
   for (int i = 0; i < nof_steps; i++)
   {
-    sum_reduction<<<1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE/2,0,stream>>>(i? out : in, out, 1);
+    sum_reduction<<<(1<<(log_size - 1 - (MAX_SHMEM_LOG_SIZE)*(i+1))) * nof_results, SHMEM_SIZE/2,0,stream>>>(i? out : in, out, 1);
 		// printf("a nof blocks %d\n", 1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)));
 		// cudaDeviceSynchronize();
   	// printf("cuda err %d\n", cudaGetLastError());
   }
-  if (last_step_size) sum_reduction<<<2, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, 1);
+  if (last_step_size) sum_reduction<<<nof_results, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, 1);
 	// cudaDeviceSynchronize();
   // printf("cuda err last %d\n", cudaGetLastError());
 }
@@ -161,13 +161,13 @@ void mult_and_accumulate(S* in, S* out, int log_size, S alpha, int nof_results, 
 
 template <typename S>
  __launch_bounds__(1)
-__global__ void add_to_trace(S* trace, S* vals, int n, int round_num, int nof_polys){
-	// for (int i = 0; i < nof_polys+1; i++)
-	// {
-	// 	trace[2*round_num+1+i] = vals[i];
-	// }
-	  trace[2*round_num+1] = vals[0];
-    trace[2*round_num+2] = vals[1];
+__global__ void add_to_trace(S* trace, S* vals, int n, int round_num, int nof_results){
+	for (int i = 0; i < nof_results; i++)
+	{
+		trace[nof_results*round_num+1+i] = vals[i];
+	}
+	  // trace[2*round_num+1] = vals[0];
+    // trace[2*round_num+2] = vals[1];
 		// printf("%d  %d\n", vals[0], vals[1]);
 }
 
@@ -175,23 +175,24 @@ template <typename S>
 // __global__ void combinations_kernel(S* in, S* out, S (*combine_func)()){
 __global__ void combinations_kernel3(S* in, S* out, int poly_size){
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	if (tid >= poly_size/2) return;
 	S rp[4] = {S::one(), S::one(), S::one(), S::one()};
 	S e1, e2;
 	#pragma unroll
 	for (int l = 0; l < 3; l++)
 	{
-	  e1 = in[l*poly_size + 2*tid];
-	  e2 = in[l*poly_size + 2*tid + 1];
+	  e1 = in[l*poly_size + tid];
+	  e2 = in[l*poly_size + tid + poly_size/2];
 		rp[0] = l? rp[0]*e1 : e1; //k=0
 		rp[1] = l? rp[1]*e2 : e2; //k=1
 		rp[2] = l? rp[2]*(e2 + e2 - e1) : (e2 + e2 - e1); //k=2
-		rp[3] = l? rp[3]*(e1 + e1 - e2) : (e1 + e1 - e2); //k=-1
-		// rp[3] = l? rp[3]*(e2 + e2 + e2 - e1 - e1) : (e2 + e2 + e2 - e1 - e1); //k=3
+		// rp[3] = l? rp[3]*(e1 + e1 - e2) : (e1 + e1 - e2); //k=-1
+		rp[3] = l? rp[3]*(e2 + e2 + e2 - e1 - e1) : (e2 + e2 + e2 - e1 - e1); //k=3
 	}
-	out[4*tid] = rp[0];
-	out[4*tid+1] = rp[1];
-	out[4*tid+2] = rp[2];
-	out[4*tid+3] = rp[3];
+	out[tid] = rp[0];
+	out[tid + 1*poly_size/2] = rp[1];
+	out[tid + 2*poly_size/2] = rp[2];
+	out[tid + 3*poly_size/2] = rp[3];
 }
 
 template <typename S>
@@ -263,7 +264,7 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStream_t 
     accumulate(evals, t, n-p, 2, stream); //accumulation
 		// cudaDeviceSynchronize();
 		// printf("cuda a err %d\n", cudaGetLastError());
-		add_to_trace<<<1,1,0,stream>>>(T, t, n, p, 1);
+		add_to_trace<<<1,1,0,stream>>>(T, t, n, p, 2);
 		// cudaDeviceSynchronize();
 		// printf("cuda t err %d\n", cudaGetLastError());
     // T[2*p+1] = t[0];
@@ -278,7 +279,7 @@ void sumcheck_alg1(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStream_t 
 		break;
 		#endif
   }
-	add_to_trace<<<1,1,0,stream>>>(T, evals, n, n-1, 1);
+	add_to_trace<<<1,1,0,stream>>>(T, evals, n, n-1, 2);
 }
 
 template <typename S>
@@ -299,7 +300,7 @@ void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, bool reorder, cudaS
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
     if (p) mult_and_accumulate(evals, t, n-p, alpha, 2, stream); //accumulation
 		else accumulate(evals, t, n-p, 2, stream);
-		add_to_trace<<<1,1,0,stream>>>(T, t, n, p, 1);
+		add_to_trace<<<1,1,0,stream>>>(T, t, n, p, 2);
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
@@ -313,7 +314,7 @@ void sumcheck_alg1_unified(S* evals, S* t, S* T, S C, int n, bool reorder, cudaS
 	#ifndef DEBUG
 	update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 4, 1);
 	#endif
-	add_to_trace<<<1,1,0,stream>>>(T, evals, n, n-1, 1);
+	add_to_trace<<<1,1,0,stream>>>(T, evals, n, n-1, 2);
 }
 
 template <typename S>
@@ -334,15 +335,21 @@ void sumcheck_alg3_poly3(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStr
     // move update kernel here and unify
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
 		combinations_kernel3<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<n);
+		cudaDeviceSynchronize();
+		printf("cuda err u %d\n", cudaGetLastError());
 		accumulate(t, t, n-p, 4, stream);
-		add_to_trace<<<1,1,0,stream>>>(T, t, p, 3);
+		add_to_trace<<<1,1,0,stream>>>(T, t, n, p, 4);
+		cudaDeviceSynchronize();
+		printf("cuda err u %d\n", cudaGetLastError());
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
-    update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
+    update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, 1<<(n-p), 3); //phase 3
+		cudaDeviceSynchronize();
+		printf("cuda err u %d\n", cudaGetLastError());
   }
 	// update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha);
-	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 3);
+	add_to_trace<<<1,1,0,stream>>>(T, evals, n, n-1, 4);
 }
 
 template <typename S>
@@ -363,14 +370,14 @@ void sumcheck_alg3_poly3_unified(S* evals, S* t, S* T, S C, int n, cudaStream_t 
 		if (p) mult_and_combine3<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<n, alpha);
 		else combinations_kernel3<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<n);
 		accumulate(t, t, n-p, 4, stream);
-		add_to_trace<<<1,1,0,stream>>>(T, t, p, 3);
+		add_to_trace<<<1,1,0,stream>>>(T, t, p, 4);
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
     // update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
   }
 	update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 2);
-	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 3);
+	add_to_trace<<<1,1,0,stream>>>(T, evals, n-1, 4);
 }
 
 
