@@ -126,18 +126,6 @@ macro_rules! impl_ecntt_tests {
         }
 
         // #[test]
-        // fn test_ntt_coset_from_subgroup() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_ntt_coset_from_subgroup::<$field>()
-        // }
-
-        // #[test]
-        // fn test_ntt_arbitrary_coset() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_ntt_arbitrary_coset::<$field>()
-        // }
-
-        // #[test]
         // fn test_ntt_batch() {
         //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
         //     check_ntt_batch::<$field>()
