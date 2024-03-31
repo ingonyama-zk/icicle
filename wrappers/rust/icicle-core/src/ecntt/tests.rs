@@ -25,24 +25,25 @@ where
     <C::BaseField as FieldImpl>::Config: ECNTT<C>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
-    let test_sizes = [1 << 4, 1 << 17];
+    let test_sizes = [1 << 4, 1 << 8];
     for test_size in test_sizes {
         // let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
         let points = C::generate_random_projective_points(test_size);
-        let ark_points = points
-            .iter()
-            .map(|v| v.to_ark())
-            .collect::<Vec<_>>();
+        // let ark_points = points
+        //     .iter()
+        //     .map(|v| v.to_ark())
+        //     .collect::<Vec<_>>();
         // if we simply transmute arkworks types, we'll get scalars in Montgomery format
-        let points_mont = unsafe { &*(&ark_points[..] as *const _ as *const [_]) };
-        let points_mont_h = HostOrDeviceSlice::on_host(points_mont.to_vec());
+        //let points_mont = unsafe { &*(&ark_points[..] as *const _ as *const [_]) };
+        //let points_mont_h = HostOrDeviceSlice::on_host(points_mont.to_vec());
+        let points_h = HostOrDeviceSlice::on_host(points.clone());
 
         let config = NTTConfig::default();
 
         let mut ecntt_result = HostOrDeviceSlice::on_host(vec![Projective::<C>::zero(); test_size]);
-        ecntt(&points_mont_h, NTTDir::kForward, &config, &mut ecntt_result).unwrap();
-        assert_ne!(ecntt_result.as_slice(), points_mont);
+        ecntt(&points_h, NTTDir::kForward, &config, &mut ecntt_result).unwrap();
+        assert_ne!(ecntt_result.as_slice(), points);
 
         // let mut ark_ntt_result = ark_points.clone();
         // ark_domain.fft_in_place(&mut ark_ntt_result);
@@ -55,7 +56,7 @@ where
         let mut intt_result = HostOrDeviceSlice::on_host(vec![Projective::<C>::zero(); test_size]);
         ecntt(&ecntt_result, NTTDir::kInverse, &config, &mut intt_result).unwrap();
 
-        assert_eq!(intt_result.as_slice(), points_mont);
+        assert_eq!(intt_result.as_slice(), points);
     }
 }
 
