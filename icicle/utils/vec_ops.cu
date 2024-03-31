@@ -30,6 +30,7 @@ namespace vec_ops {
     template <typename E>
     __global__ void DivElementWiseKernel(const E* element_vec1, const E* element_vec2, int n, E* result)
     {
+      // TODO:implement better based on https://eprint.iacr.org/2008/199
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid < n) { result[tid] = element_vec1[tid] * E::inverse(element_vec2[tid]); }
     }
@@ -154,7 +155,7 @@ namespace vec_ops {
    */
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, SubCuda)(
     const curve_config::scalar_t* vec_a,
-    const curve_config ::scalar_t* vec_b,
+    const curve_config::scalar_t* vec_b,
     int n,
     VecOpsConfig<curve_config::scalar_t>& config,
     curve_config::scalar_t* result)

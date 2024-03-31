@@ -81,7 +81,7 @@ public:
 
   void TearDown() override
   {
-    // code that executes before each test
+    // code that executes after each test
   }
 
   static Polynomial_t randomize_polynomial(uint32_t size, bool random = true)
@@ -111,7 +111,6 @@ public:
   template <typename P, typename A>
   static void compute_powers_of_tau(P g, scalar_t tau, A* res, uint32_t count)
   {
-    // no arithmetic on affine??
     res[0] = P::to_affine(g);
     for (int i = 1; i < count; i++) {
       g = g * tau;
@@ -234,8 +233,6 @@ TEST_F(PolynomialTest, fromEvaluationsNotPowerOfTwo)
 
   // construct g from f's evaluations
   auto g = Polynomial_t::from_rou_evaluations(evals, nof_evals);
-
-  scalar_t r = scalar_t::rand_host();
 
   // since NTT works on a power of two (therefore the extra elements are arbitrary), f!=g but they should evaluate to
   // the same values on the roots of unity due to construction.

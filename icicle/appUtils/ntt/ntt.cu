@@ -494,7 +494,7 @@ namespace ntt {
           << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n";
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
     }
-    const size_t twiddles_idx = (size_t)pow(2, domain.max_log_size - logn);
+    const size_t twiddles_idx = 1ULL << (domain.max_log_size - logn);
     return domain.twiddles[twiddles_idx];
   }
   // explicit instantiation to avoid having to include this file
