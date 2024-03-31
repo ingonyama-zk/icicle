@@ -10,6 +10,7 @@ pub mod tests;
 pub mod traits;
 pub mod tree;
 pub mod vec_ops;
+mod ecntt;
 
 pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
 where
