@@ -102,13 +102,6 @@ macro_rules! impl_ecntt {
                     .wrap()
                 }
             }
-
-            // fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-            //     unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, false).wrap() }
-            // }
-            // fn initialize_domain_fast_twiddles_mode(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-            //     unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, true).wrap() }
-            // }
         }
     };
 }
