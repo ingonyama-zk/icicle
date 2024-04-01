@@ -26,9 +26,11 @@ void random_samples(test_scalar* res, uint32_t count)
 void incremental_values(test_scalar* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
-    // res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
+    res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::one();
+    // res[i] = i ? i%8==0? res[i - 1] + test_scalar::one() : res[i-1] : test_scalar::one();
     // res[i] = i%2? test_scalar::one() : test_scalar::one()+test_scalar::one();
-    res[i] = i%2? res[i - 1] : i? res[i - 1] + test_scalar::one() + test_scalar::one() : test_scalar::one() + test_scalar::one();
+    // res[i] = i%2? res[i - 1] : i? res[i - 1] + test_scalar::one() + test_scalar::one() : test_scalar::one() + test_scalar::one();
+    // res[i] = test_scalar::one();
   }
 }
 
@@ -48,9 +50,9 @@ int main(){
 
   
   bool verify_cpu = false;
-  bool use_test_vecs = verify_cpu? true : true;
+  bool use_test_vecs = verify_cpu? true : false;
 
-  int n = 3;
+  int n = 18;
   int polys = 3;
   int size = polys << n;
   int trans_size = (polys+1)*n +1;
@@ -120,14 +122,23 @@ int main(){
 
   
   if (polys == 3){
-    for (int i = 0; i < size; i++) {
-      h_evals[i] = test_scalar{input3poly3.storages[i]};  
+    if (use_test_vecs){
+      for (int i = 0; i < size; i++) {
+        h_evals[i] = test_scalar{input3poly3.storages[i]};  
+      }
+      for (int i = 0; i < trans_size; i++) {
+        h_transcript_ref[i] = test_scalar{trans3poly3.storages[i]};  
+      }
+      C = test_scalar{c3poly3};
+      h_transcript[0] = h_transcript_ref[0];
     }
-    for (int i = 0; i < trans_size; i++) {
-      h_transcript_ref[i] = test_scalar{trans3poly3.storages[i]};  
+    else {
+      // random_samples(h_evals.get(), size);
+      incremental_values(h_evals.get(), size);
+      C = test_scalar::rand_host();
+      h_transcript[0] = test_scalar::rand_host();
+      h_transcript_ref[0] = h_transcript[0];
     }
-    C = test_scalar{c3poly3};
-    h_transcript[0] = h_transcript_ref[0];
   }
 
   cudaMemcpy(d_evals, h_evals.get(), sizeof(test_scalar) * size, cudaMemcpyHostToDevice);
@@ -147,8 +158,9 @@ int main(){
 
   //run
   cudaEventRecord(gpu_start, 0);
-  if (verify_cpu) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
-  sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  if (verify_cpu && polys == 1) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
+  if (verify_cpu && polys == 3) sumcheck_alg3_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
+  // if (polys == 1) sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // if (polys == 1) sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // cudaMemcpy(h_evals_debug_unif.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
   if (polys == 3) sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
@@ -164,7 +176,8 @@ int main(){
 
   //run reference
   auto cpu_start = std::chrono::high_resolution_clock::now();
-  if (!use_test_vecs) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
+  if (!use_test_vecs && polys == 1) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
+  if (!use_test_vecs && polys == 3) sumcheck_alg3_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
   auto cpu_stop = std::chrono::high_resolution_clock::now();
   auto cpu_time = std::chrono::duration_cast<std::chrono::microseconds>(cpu_stop - cpu_start).count();
 
