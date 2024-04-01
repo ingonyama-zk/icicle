@@ -69,7 +69,8 @@ macro_rules! impl_ecntt {
         mod $field_prefix_ident {
             use crate::ecntt::Projective;
             use crate::ecntt::{
-                $field, $field_config, $curve, $base_field, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID,
+                $base_field, $curve, $field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir,
+                DEFAULT_DEVICE_ID,
             };
 
             extern "C" {
@@ -136,5 +137,101 @@ macro_rules! impl_ecntt_tests {
         //     // init_domain is in this test is performed per-device
         //     check_ntt_device_async::<$field>()
         // }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_ecntt_bench {
+    (
+      $field:ident,
+      $base_field:ident,
+      $curve:ident
+    ) => {
+        #[cfg(feature = "arkworks")]
+        use ark_ff::FftField;
+
+        use criterion::{black_box, criterion_group, criterion_main, Criterion};
+        use icicle_core::{
+            traits::ArkConvertible,
+            curve::Curve,
+            ecntt::{ecntt, Projective},
+            ntt::{FieldImpl, HostOrDeviceSlice, NTTConfig, NTTDir, NttAlgorithm, Ordering},
+        };
+
+        use icicle_core::ecntt::ECNTT;
+        use icicle_core::ntt::NTT;
+
+        fn ecntt_for_bench<F: FieldImpl + ArkConvertible, C: Curve>(
+            points: &HostOrDeviceSlice<Projective<C>>,
+            mut batch_ntt_result: &mut HostOrDeviceSlice<Projective<C>>,
+            test_sizes: usize,
+            batch_size: usize,
+            is_inverse: NTTDir,
+            ordering: Ordering,
+            config: &mut NTTConfig<C::ScalarField>,
+            _seed: u32,
+        ) where
+            <C::BaseField as FieldImpl>::Config: ECNTT<C>,
+        {
+            ecntt(&points, is_inverse, config, &mut batch_ntt_result).unwrap();
+        }
+
+        static INIT: OnceLock<()> = OnceLock::new();
+
+        fn benchmark_ecntt<F: FieldImpl + ArkConvertible, C: Curve>(c: &mut Criterion)
+        where
+            F::ArkEquivalent: FftField,
+            <F as FieldImpl>::Config: NTT<F>,
+            <C::BaseField as FieldImpl>::Config: ECNTT<C>,
+        {
+            use icicle_core::ntt::tests::init_domain;
+            use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
+            const MAX_SIZE: u64 = 1 << 18;
+            const FAST_TWIDDLES_MODE: bool = false;
+            INIT.get_or_init(move || init_domain::<F>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
+
+            let test_sizes = [1 << 4, 1 << 8];
+            let batch_sizes = [1, 1 << 4, 128];
+            for test_size in test_sizes {
+                for batch_size in batch_sizes {
+                    let points = HostOrDeviceSlice::on_host(C::generate_random_projective_points(test_size * batch_size));
+                    let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![Projective::zero(); batch_size * test_size]);
+                    let mut config = NTTConfig::default();
+                    for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
+                        for ordering in [
+                            Ordering::kNN,
+                            Ordering::kNR,
+                            Ordering::kRN,
+                            Ordering::kRR,
+                            // Ordering::kNM, // no mixed radix ecntt
+                            // Ordering::kMN,
+                        ] {
+                            config.ordering = ordering;
+                            for alg in [NttAlgorithm::Radix2] {
+                                config.batch_size = batch_size as i32;
+                                config.ntt_algorithm = alg;
+                                c.bench_function("ecntt", |b| {
+                                    b.iter(|| {
+                                        ecntt_for_bench::<F, C>(
+                                            &points,
+                                            &mut batch_ntt_result,
+                                            test_size,
+                                            batch_size,
+                                            is_inverse,
+                                            ordering,
+                                            &mut config,
+                                            black_box(1),
+                                        )
+                                    })
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        criterion_group!(benches, benchmark_ecntt<$field, $curve>);
+        criterion_main!(benches);
     };
 }

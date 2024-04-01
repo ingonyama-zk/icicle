@@ -11,11 +11,13 @@ repository.workspace = true
 icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
 ark-bls12-381 = { version = "0.4.0", optional = true }
+criterion = "0.3"
 
 [build-dependencies]
 cmake = "0.1.50"
 
 [dev-dependencies]
+criterion = "0.3"
 ark-bls12-381 = "0.4.0"
 ark-std = "0.4.0"
 ark-ff = "0.4.0"
@@ -24,9 +26,14 @@ ark-poly = "0.4.0"
 icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
 icicle-bls12-381 = { path = ".", features = ["arkworks"] }
 
+
 [features]
 default = []
 g2 = ["icicle-core/g2"]
 ec_ntt = ["icicle-core/ec_ntt"]
 devmode = ["icicle-core/devmode"]
 arkworks = ["ark-bls12-381", "icicle-core/arkworks"]
+
+[[bench]]
+name = "ecntt"
+harness = false # This tells Cargo to not use the default test harness since Criterion provides its own
