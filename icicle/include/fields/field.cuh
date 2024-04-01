@@ -20,6 +20,7 @@
 
 #include "gpu-utils/error_handler.cuh"
 #include "gpu-utils/modifiers.cuh"
+#include "gpu-utils/sharedmem.cuh"
 #include "host_math.cuh"
 #include "ptx.cuh"
 #include "storage.cuh"
@@ -966,5 +967,14 @@ struct std::hash<Field<CONFIG>> {
     for (int i = 0; i < CONFIG::limbs_count; i++)
       hash ^= std::hash<uint32_t>()(key.limbs_storage.limbs[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
     return hash;
+  }
+};
+
+template <class CONFIG>
+struct SharedMemory<Field<CONFIG>> {
+  __device__ Field<CONFIG>* getPointer()
+  {
+    extern __shared__ Field<CONFIG> s_scalar_[];
+    return s_scalar_;
   }
 };

@@ -1,20 +1,19 @@
 
-#define CURVE_ID BLS12_381
+#define CURVE_ID 1
 
-#include "primitives/field.cuh"
-#include "primitives/projective.cuh"
+#include "curves/bn254/bn254.cuh"
+#include "fields/field.cuh"
+#include "curves/projective.cuh"
 #include <chrono>
 #include <iostream>
 #include <vector>
 
-#include "curves/curve_config.cuh"
 #include "ntt/ntt.cu"
-#include "ntt/ntt_impl.cuh"
+#include "kernel_ntt.cu"
 #include <memory>
 
-typedef curve_config::scalar_t test_scalar;
-typedef curve_config::scalar_t test_data;
-#include "kernel_ntt.cu"
+typedef bn254::scalar_t test_scalar;
+typedef bn254::scalar_t test_data;
 
 void random_samples(test_data* res, uint32_t count)
 {
