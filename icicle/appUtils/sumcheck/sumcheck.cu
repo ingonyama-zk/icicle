@@ -15,7 +15,7 @@
 // }
 
 template <typename S>
-__global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results, int jump_size) {
+__global__ void mult_and_reduce(S *v, S *v_r, S alpha, int stride, int jump_size) {
 	// Allocate shared memory
 	__shared__ S partial_sum[SHMEM_SIZE];
 
@@ -29,15 +29,15 @@ __global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results, int jump
 	// Store first partial result instead of just the elements
 	// partial_sum[threadIdx.x] = v[i] + v[i + blockDim.x];
 	// partial_sum[threadIdx.x] = (S::one() - alpha) * v[2*i] + alpha * v[2*i+1] + (S::one() - alpha) * v[2*(i + blockDim.x)] + alpha * v[2*(i + blockDim.x)+1];
-	S e1 = v[i] + alpha * (v[i+jump_size] - v[i]);
-	S e2 = v[(i + blockDim.x)] + alpha * (v[(i + blockDim.x)+jump_size] - v[i + blockDim.x]);
+	S e1 = v[i*stride] + alpha * (v[(i+jump_size)*stride] - v[i*stride]);
+	S e2 = v[(i + blockDim.x)*stride] + alpha * (v[(i + blockDim.x+jump_size)*stride] - v[(i + blockDim.x)*stride]);
 	// S e1 = v[2*i] + (v[2*i+1] - v[2*i]);
 	// S e2 = v[2*(i + blockDim.x)] + (v[2*(i + blockDim.x)+1] - v[2*(i + blockDim.x)]);
 	// partial_sum[threadIdx.x] = v[2*i] + v[2*(i + blockDim.x)] + alpha * (v[2*i+1] - v[2*i] + v[2*(i + blockDim.x)+1] - v[2*(i + blockDim.x)]);
 	partial_sum[threadIdx.x] = e1 + e2;
 	// __syncthreads();
-	v[i] = e1;
-	v[i + blockDim.x] = e2;
+	v[i*stride] = e1;
+	v[(i + blockDim.x)*stride] = e2;
 	// for (int j = 0; j < 2; j++)
 	// {
 	// 	partial_sum[threadIdx.x] = partial_sum[threadIdx.x] * partial_sum[threadIdx.x];
@@ -61,7 +61,7 @@ __global__ void mult_and_reduce(S *v, S *v_r, S alpha, int nof_results, int jump
 	if (threadIdx.x == 0) {
 		// printf("debug tid %d, val %d\n", threadIdx.x, partial_sum[threadIdx.x]);
 		// v_r[nof_results*blockIdx.x + threadIdx.x] = partial_sum[threadIdx.x];
-		v_r[blockIdx.x] = partial_sum[0];
+		v_r[i*stride] = partial_sum[0];
 	}
 }
 
@@ -136,22 +136,6 @@ void accumulate(S* in, S* out, int log_size, int nof_results, cudaStream_t strea
   // printf("cuda err last %d\n", cudaGetLastError());
 }
 
-// template <typename S>
-// void accumulate(S* in, S* out, int log_size, int nof_results, cudaStream_t stream){
-//   int nof_steps = (log_size - 1) / MAX_SHMEM_LOG_SIZE;
-//   int last_step_size = (log_size - 1) % MAX_SHMEM_LOG_SIZE;
-// 	// printf("a nof steps %d last size %d\n", nof_steps, last_step_size);
-//   for (int i = 0; i < nof_steps; i++)
-//   {
-//     sum_reduction<<<(1<<(log_size - 1 - (MAX_SHMEM_LOG_SIZE)*(i+1))) * nof_results, SHMEM_SIZE/2,0,stream>>>(i? out : in, out, 1);
-// 		// printf("a nof blocks %d\n", 1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)));
-// 		// cudaDeviceSynchronize();
-//   	// printf("cuda err %d\n", cudaGetLastError());
-//   }
-//   if (last_step_size) sum_reduction<<<nof_results, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, 1);
-// 	// cudaDeviceSynchronize();
-//   // printf("cuda err last %d\n", cudaGetLastError());
-// }
 
 template <typename S>
 void mult_and_accumulate(S* in, S* out, int log_size, S alpha, int nof_results, cudaStream_t stream){
@@ -160,16 +144,16 @@ void mult_and_accumulate(S* in, S* out, int log_size, S alpha, int nof_results, 
 	// printf("m nof steps %d last size %d\n", nof_steps, last_step_size);
   for (int i = 0; i < nof_steps; i++)
   {
-		if (i) sum_reduction<<<1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE/2,0,stream>>>(i? out : in, out, nof_results);
-    else mult_and_reduce<<<1<<(log_size -(MAX_SHMEM_LOG_SIZE)*(i+1)), SHMEM_SIZE/2,0,stream>>>(i? out : in, out, alpha, nof_results, 1<<log_size);
+		if (i) sum_reduction<<<(1<<(log_size - 1 - (MAX_SHMEM_LOG_SIZE)*(i+1))) * nof_results, SHMEM_SIZE/2,0,stream>>>(i? out : in, out, 1<<(MAX_SHMEM_LOG_SIZE*i));
+    else mult_and_reduce<<<(1<<(log_size - 1 - (MAX_SHMEM_LOG_SIZE)*(i+1))) * nof_results, SHMEM_SIZE/2,0,stream>>>(i? out : in, out, alpha, 1<<(MAX_SHMEM_LOG_SIZE*i), 1<<log_size);
 		// if (i) printf("r nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)));
 		// else printf("m nof blocks %d\n", 1<<(log_size-(MAX_SHMEM_LOG_SIZE)*(i+1)));
 		// cudaDeviceSynchronize();
   	// printf("cuda err %d\n", cudaGetLastError());
   }
   if (last_step_size) {
-		if (nof_steps) sum_reduction<<<2, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, nof_results);
-		else mult_and_reduce<<<2, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, alpha, nof_results, 1<<(last_step_size+1));
+		if (nof_steps) sum_reduction<<<nof_results, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, 1<<(MAX_SHMEM_LOG_SIZE*nof_steps));
+		else mult_and_reduce<<<nof_results, 1<<(last_step_size-1), 0,stream>>>(nof_steps? out : in, out, alpha, 1<<(MAX_SHMEM_LOG_SIZE*nof_steps), 1<<(last_step_size+1));
 		// if (nof_steps) printf("r last");
 		// else printf("m last");
 	} 
