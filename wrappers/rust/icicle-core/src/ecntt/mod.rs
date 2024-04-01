@@ -125,11 +125,11 @@ macro_rules! impl_ecntt_tests {
             check_ecntt::<$field, $base_field, $curve>()
         }
 
-        // #[test]
-        // fn test_ntt_batch() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_ntt_batch::<$field>()
-        // }
+        #[test]
+        fn test_ecntt_batch() {
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
+            check_ecntt_batch::<$field, $base_field, $curve>()
+        }
 
         // #[test]
         // fn test_ntt_device_async() {

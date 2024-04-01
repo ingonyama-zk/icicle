@@ -60,65 +60,50 @@ where
     }
 }
 
-pub fn check_ecntt_batch<F: FieldImpl>()
+pub fn check_ecntt_batch<F: FieldImpl + ArkConvertible, B: FieldImpl + ArkConvertible, C: Curve>()
 where
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    F::ArkEquivalent: FftField,
+    <C::BaseField as FieldImpl>::Config: ECNTT<C>,
+    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
-    let test_sizes = [1 << 4, 1 << 12];
-    let batch_sizes = [1, 1 << 4, 100];
+    let test_sizes = [1 << 4, 1 << 8];
+    let batch_sizes = [1, 1 << 4, 21];
     for test_size in test_sizes {
-        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+        // let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
         let mut config = NTTConfig::default();
         for batch_size in batch_sizes {
-            let scalars = HostOrDeviceSlice::on_host(F::Config::generate_random(test_size * batch_size));
+            let points = HostOrDeviceSlice::on_host(C::generate_random_projective_points(test_size * batch_size));
 
-            for coset_gen in coset_generators {
-                for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
-                    for ordering in [
-                        Ordering::kNN,
-                        Ordering::kNR,
-                        Ordering::kRN,
-                        Ordering::kRR,
-                        Ordering::kNM,
-                        Ordering::kMN,
-                    ] {
-                        config.coset_gen = coset_gen;
-                        config.ordering = ordering;
-                        let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
-                        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-                            config.batch_size = batch_size as i32;
-                            config.ntt_algorithm = alg;
-                            ntt(&scalars, is_inverse, &config, &mut batch_ntt_result).unwrap();
-                            config.batch_size = 1;
-                            let mut one_ntt_result = HostOrDeviceSlice::on_host(vec![F::one(); test_size]);
-                            for i in 0..batch_size {
-                                ntt(
-                                    &HostOrDeviceSlice::on_host(scalars[i * test_size..(i + 1) * test_size].to_vec()),
-                                    is_inverse,
-                                    &config,
-                                    &mut one_ntt_result,
-                                )
-                                .unwrap();
-                                assert_eq!(
-                                    batch_ntt_result[i * test_size..(i + 1) * test_size],
-                                    *one_ntt_result.as_slice()
-                                );
-                            }
-                        }
-
-                        // for now, columns batching only works with MixedRadix NTT
+            for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
+                for ordering in [
+                    Ordering::kNN,
+                    Ordering::kNR,
+                    Ordering::kRN,
+                    Ordering::kRR,
+                    // Ordering::kNM, // no mixed radix ecntt
+                    // Ordering::kMN,
+                ] {
+                    config.ordering = ordering;
+                    let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![Projective::zero(); batch_size * test_size]);
+                    for alg in [NttAlgorithm::Radix2] {
                         config.batch_size = batch_size as i32;
-                        config.columns_batch = true;
-                        let transposed_input =
-                            HostOrDeviceSlice::on_host(transpose_flattened_matrix(&scalars[..], batch_size));
-                        let mut col_batch_ntt_result =
-                            HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
-                        ntt(&transposed_input, is_inverse, &config, &mut col_batch_ntt_result).unwrap();
-                        assert_eq!(
-                            batch_ntt_result[..],
-                            transpose_flattened_matrix(&col_batch_ntt_result[..], test_size)
-                        );
-                        config.columns_batch = false;
+                        config.ntt_algorithm = alg;
+                        ecntt(&points, is_inverse, &config, &mut batch_ntt_result).unwrap();
+                        config.batch_size = 1;
+                        let mut one_ntt_result = HostOrDeviceSlice::on_host(vec![Projective::zero(); test_size]);
+                        for i in 0..batch_size {
+                            ecntt(
+                                &HostOrDeviceSlice::on_host(points[i * test_size..(i + 1) * test_size].to_vec()),
+                                is_inverse,
+                                &config,
+                                &mut one_ntt_result,
+                            )
+                            .unwrap();
+                            assert_eq!(
+                                batch_ntt_result[i * test_size..(i + 1) * test_size],
+                                *one_ntt_result.as_slice()
+                            );
+                        }
                     }
                 }
             }
