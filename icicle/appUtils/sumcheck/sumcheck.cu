@@ -357,12 +357,12 @@ void sumcheck_alg3_poly3(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStr
     // move update kernel here and unify
     // reduction_kernel<<<nof_threads>>>(evals, t, n-p); //accumulation
 		combinations_kernel3<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<(n-p), 1<<n);
-		cudaDeviceSynchronize();
-		printf("cuda err u %d\n", cudaGetLastError());
+		// cudaDeviceSynchronize();
+		// printf("cuda err u %d\n", cudaGetLastError());
 		if (p != n-1) accumulate(t, t, n-p, 4, stream);
 		add_to_trace<<<1,1,0,stream>>>(T, t, 1<<(n-1-p), p, 4);
-		cudaDeviceSynchronize();
-		printf("cuda err u %d\n", cudaGetLastError());
+		// cudaDeviceSynchronize();
+		// printf("cuda err u %d\n", cudaGetLastError());
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
@@ -370,10 +370,10 @@ void sumcheck_alg3_poly3(S* evals, S* t, S* T, S C, int n, bool reorder, cudaStr
 		NOF_THREADS = 64;
 		NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
     if (p != n-1) update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, 1<<(n-p), 1<<n, 3); //phase 3
-		cudaDeviceSynchronize();
-		printf("cuda err u %d\n", cudaGetLastError());
-		S h_evals_temp[64*3];
-		cudaMemcpy(h_evals_temp, evals, sizeof(S) * (64*3), cudaMemcpyDeviceToHost);
+		// cudaDeviceSynchronize();
+		// printf("cuda err u %d\n", cudaGetLastError());
+		// S h_evals_temp[64*3];
+		// cudaMemcpy(h_evals_temp, evals, sizeof(S) * (64*3), cudaMemcpyDeviceToHost);
 		// if (p){
 		// printf("round %d evals:\n",p);
 		// for (int i = 0; i < 64*3; i++)

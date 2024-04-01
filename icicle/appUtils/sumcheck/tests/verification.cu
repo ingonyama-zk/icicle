@@ -7,7 +7,7 @@
 #include <vector>
 
 // #define DEBUG
-// #define WARMUP
+#define WARMUP
 
 #include "curves/curve_config.cuh"
 #include "sumcheck/sumcheck.cu"
@@ -50,9 +50,9 @@ int main(){
 
   
   bool verify_cpu = false;
-  bool use_test_vecs = verify_cpu? true : false;
+  bool use_test_vecs = verify_cpu? true : true;
 
-  int n = 18;
+  int n = 10;
   int polys = 3;
   int size = polys << n;
   int trans_size = (polys+1)*n +1;
@@ -123,14 +123,32 @@ int main(){
   
   if (polys == 3){
     if (use_test_vecs){
-      for (int i = 0; i < size; i++) {
-        h_evals[i] = test_scalar{input3poly3.storages[i]};  
+      if (n==3){
+        // reorder=true;
+        for (int i = 0; i < size; i++) {
+          h_evals[i] = test_scalar{input3poly3.storages[i]};  
+        }
+        for (int i = 0; i < trans_size; i++) {
+          h_transcript_ref[i] = test_scalar{trans3poly3.storages[i]};  
+        }
+        C = test_scalar{c3poly3};
+        h_transcript[0] = h_transcript_ref[0];
       }
-      for (int i = 0; i < trans_size; i++) {
-        h_transcript_ref[i] = test_scalar{trans3poly3.storages[i]};  
+      else if (n==10){
+        // reorder=true;
+        for (int i = 0; i < size; i++) {
+          h_evals[i] = test_scalar{input10poly3.storages[i]};  
+        }
+        for (int i = 0; i < trans_size; i++) {
+          h_transcript_ref[i] = test_scalar{trans10poly3.storages[i]};  
+        }
+        C = test_scalar{c10poly3};
+        h_transcript[0] = h_transcript_ref[0];
       }
-      C = test_scalar{c3poly3};
-      h_transcript[0] = h_transcript_ref[0];
+      else{
+        printf("size not supported in test vecs\n");
+        return 1;
+      }
     }
     else {
       // random_samples(h_evals.get(), size);
@@ -146,10 +164,10 @@ int main(){
 
 #ifdef WARMUP
   //warm up run
-  sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // cudaMemcpy(h_evals_debug_ref.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
   // sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
-  // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaDeviceSynchronize();
