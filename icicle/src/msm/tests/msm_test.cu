@@ -6,10 +6,12 @@
 #include <iostream>
 #include <vector>
 
-#include "curves/curve_config.cuh"
-#include "primitives/field.cuh"
-#include "primitives/projective.cuh"
-#include "utils/device_context.cuh"
+#include "curves/bn254/bn254.cuh"
+#include "fields/field.cuh"
+#include "curves/projective.cuh"
+#include "gpu-utils/device_context.cuh"
+
+using namespace bn254;
 
 class Dummy_Scalar
 {
@@ -111,9 +113,9 @@ public:
 
 // switch between dummy and real:
 
-typedef curve_config::scalar_t test_scalar;
-typedef curve_config::projective_t test_projective;
-typedef curve_config::affine_t test_affine;
+typedef scalar_t test_scalar;
+typedef projective_t test_projective;
+typedef affine_t test_affine;
 
 // typedef Dummy_Scalar test_scalar;
 // typedef Dummy_Projective test_projective;
@@ -136,7 +138,7 @@ int main()
 
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
   // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
-  test_projective large_res[batch_size];
+  test_projective large_res[2];
   // test_projective batched_large_res[batch_size];
   // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
   // fake_point batched_large_res[256];
@@ -195,7 +197,8 @@ int main()
   printf("No Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
   config.is_big_triangle = true;
   config.are_results_on_device = false;
-  std::cout << test_projective::to_affine(large_res[0]) << std::endl;
+  cudaMemcpy(&large_res[1], large_res_d, sizeof(test_projective), cudaMemcpyDeviceToHost);
+  std::cout << test_projective::to_affine(large_res[1]) << " " << test_projective::is_on_curve(large_res[1]) << std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
   msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res);
   // test_reduce_triangle(scalars);
@@ -207,10 +210,6 @@ int main()
   printf("Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
   cudaStreamSynchronize(stream);
   cudaStreamDestroy(stream);
-
-  std::cout << test_projective::to_affine(large_res[0]) << std::endl;
-
-  cudaMemcpy(&large_res[1], large_res_d, sizeof(test_projective), cudaMemcpyDeviceToHost);
 
   //   reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
