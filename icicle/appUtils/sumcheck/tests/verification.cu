@@ -52,8 +52,8 @@ int main(){
   bool verify_cpu = false;
   bool use_test_vecs = verify_cpu? true : false;
 
-  int n = 10;
-  int polys = 3;
+  int n = 26;
+  int polys = 1;
   int size = polys << n;
   int trans_size = (polys+1)*n +1;
   bool reorder = false;
@@ -166,9 +166,9 @@ int main(){
   //warm up run
   // sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // cudaMemcpy(h_evals_debug_ref.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
-  // sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
-  sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
+  // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaDeviceSynchronize();
   cudaMemcpy(d_evals, h_evals.get(), sizeof(test_scalar) * size, cudaMemcpyHostToDevice);
@@ -176,13 +176,14 @@ int main(){
 
   //run
   cudaEventRecord(gpu_start, 0);
-  if (verify_cpu && polys == 1) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
-  if (verify_cpu && polys == 3) sumcheck_alg3_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
+  // if (verify_cpu && polys == 1) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
+  // if (verify_cpu && polys == 3) sumcheck_alg3_ref(h_evals.get(), h_temp.get(), h_transcript.get(), C, n);
   // if (polys == 1) sumcheck_alg1(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
-  if (polys == 1) sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
+  // if (polys == 1) sumcheck_alg1_unified(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // cudaMemcpy(h_evals_debug_unif.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
   // if (polys == 3) sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
-  if (polys == 3) sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
+  // if (polys == 3) sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
+  sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaEventRecord(gpu_stop, 0);
   cudaDeviceSynchronize();
@@ -194,8 +195,8 @@ int main(){
 
   //run reference
   auto cpu_start = std::chrono::high_resolution_clock::now();
-  if (!use_test_vecs && polys == 1) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
-  if (!use_test_vecs && polys == 3) sumcheck_alg3_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
+  // if (!use_test_vecs && polys == 1) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
+  // if (!use_test_vecs && polys == 3) sumcheck_alg3_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
   auto cpu_stop = std::chrono::high_resolution_clock::now();
   auto cpu_time = std::chrono::duration_cast<std::chrono::microseconds>(cpu_stop - cpu_start).count();
 
