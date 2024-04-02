@@ -438,15 +438,15 @@ TEST_F(PolynomialTest, divideByVanishingPolynomial)
   auto h = randomize_polynomial(1 << 11, false);
   auto hv = h * v;
 
-  START_TIMER(poly_div_long);
-  auto [h_div, R] = hv.divide(v);
-  END_TIMER(poly_div_long, "Polynomial division by vanishing (long division) took", MEASURE);
-  assert_equal(h_div, h);
-
   START_TIMER(poly_div_vanishing);
   auto h_div_by_vanishing = hv.divide_by_vanishing_polynomial(4);
   END_TIMER(poly_div_vanishing, "Polynomial division by vanishing (fast) took", MEASURE);
   assert_equal(h_div_by_vanishing, h);
+
+  START_TIMER(poly_div_long);
+  auto [h_div, R] = hv.divide(v);
+  END_TIMER(poly_div_long, "Polynomial division by vanishing (long division) took", MEASURE);
+  assert_equal(h_div, h);
 }
 
 TEST_F(PolynomialTest, clone)

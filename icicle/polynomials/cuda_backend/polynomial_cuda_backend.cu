@@ -614,6 +614,7 @@ namespace polynomials {
       // (1) allocate vanishing polynomial in coefficients form
       // TODO Yuval: maybe instead of taking numerator memory and modiyfing it diretcly add a state for evaluations on
       // coset of rou. In that case I can remain in this state and also won't need to access input memory directly
+      numerator.transform_to_coefficients();
       auto numerator_coeffs = get_context_storage_mutable(numerator);
       const auto N = numerator.get_nof_elements();
       if (vanishing_poly_degree > N) {
