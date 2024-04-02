@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-include(Common.cmake)
+include(cmake/Common.cmake)
 
 set_env()
 set_gpu_env()
