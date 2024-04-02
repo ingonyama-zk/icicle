@@ -6,21 +6,31 @@
 #include "polynomials/polynomials_c_api.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "appUtils/ntt/ntt.cuh"
+#include "appUtils/poseidon/poseidon.cu"
+#include "appUtils/tree/merkle.cu"
 using namespace curve_config;
 using namespace polynomials;
+using namespace poseidon;
+using namespace merkle;
 
 // define the polynomial type
 typedef scalar_t T;
 typedef Polynomial<T> Polynomial_t;
 
+// Merkle tree arity
+#define A 2
+#define T (A + 1)
+
 int main(int argc, char** argv)
 {
 
-  int logn=3;
-  int n = 1 << logn;
+  const int logn=3;
+  const int n = 1 << logn;
 
-  // FRI blow-up factor
-  int blowup = 2;
+  // FRI blow-up factor: 2
+
+  // int logblowup = 1;
+  // int blowup = 1 << logblowup;
 
   // Finite field indexing: function omega() gives the root of unity for the given size
 
@@ -38,6 +48,12 @@ int main(int argc, char** argv)
 
   // Virtual factory design pattern: initializing polynomimals factory for CUDA backend
   Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
+
+
+  // Initialize Poseidon
+  device_context::DeviceContext ctx = device_context::get_default_device_context();
+  PoseidonConstants<scalar_t> constants;
+  init_optimized_poseidon_constants<scalar_t>(A, ctx, &constants);
 
   std::cout << "Generate message (trace column)" << std::endl;
   scalar_t* trace = new scalar_t[n];
@@ -60,6 +76,7 @@ int main(int argc, char** argv)
   auto omega2 = w2;
   for (int i = 0; i < 2*n; ++i) {
     codeword[i] = f(x2);
+    std::cout << i << " : " << codeword[i] << std::endl;
     x2 = x2 * omega2;
   }
   std::cout << std::endl << "Reconstruct polynomial for the codeword" << std::endl;
@@ -73,27 +90,49 @@ int main(int argc, char** argv)
   auto d3 = f3.degree();
   std::cout << "Degree: " << d3 << " was: " << d2 << std::endl;
 
-  std::cout << std::endl << "FRI Protocol (Commit Phase)" << std::endl;
 
+  std::cout << std::endl << "Commitment to the trace polynomial" << std::endl;
+  scalar_t* commitment = new scalar_t[2*n];
+  std::cout << "Evaluate on larger domain with a shift: " << std::endl;
+  const int shift = 1; // next power of 2 for the rou
+  scalar_t xs = scalar_t::omega(shift + 1 + logn);
+  
+  for (int i = 0; i < 2*n; ++i) {
+    commitment[i] = f(xs);
+    std::cout << i << " : " << commitment[i] << std::endl;
+    xs = xs * omega2;
+  }
+  uint32_t tree_height = (logn + 1) + 1; // extra +1 for larger domain
+  size_t digests_len = get_digests_len<scalar_t>(tree_height, A);
+  std::cout << "Digests length: " << digests_len << std::endl;
+  scalar_t* digests = new scalar_t[digests_len];
+  TreeBuilderConfig config = default_merkle_config<scalar_t>();
+  build_merkle_tree<scalar_t, T>(commitment, digests, tree_height, constants, config);
+  std::cout << "Root: " << digests[0] << std::endl;
+
+  std::cout << std::endl << "FRI Protocol (Commit Phase)" << std::endl;
+  const int m = 2*n;
   std::cout << std::endl << "Split" << std::endl;
-  scalar_t f0_coeffs[n] = {0};
-  scalar_t f0even_coeffs[n/2] = {0};
-  scalar_t f0odd_coeffs[n/2] = {0};
-  // fetch the coefficients for a given range
-  auto f0 = f.clone();
+  scalar_t f0_coeffs[m] = {0};
+  scalar_t f0even_coeffs[m/2] = {0};
+  scalar_t f0odd_coeffs[m/2] = {0};
+  auto f0 = f2.clone();
+
+  
+
   auto cc = f0.copy_coefficients_to_host(f0_coeffs, 0, -1);
   std::cout << "Coefficients: " << cc << std::endl;
-  for (int i = 0; i < n; ++i) {
+  for (int i = 0; i < m; ++i) {
     std::cout << i << ": " << f0_coeffs[i] << std::endl;
   }
-  for (int i = 0; i < n/2; ++i) {
+  for (int i = 0; i < m/2; ++i) {
     f0even_coeffs[i] = f0_coeffs[2*i];
     f0odd_coeffs[i] = f0_coeffs[2*i+1];
     std::cout << i << ": even: " << f0even_coeffs[i] << std::endl;
     std::cout << i << ": odd:  " << f0odd_coeffs[i] << std::endl;
   }
-  auto f0even = Polynomial_t::from_coefficients(f0even_coeffs, n/2);
-  auto f0odd = Polynomial_t::from_coefficients(f0odd_coeffs, n/2);
+  auto f0even = Polynomial_t::from_coefficients(f0even_coeffs, m/2);
+  auto f0odd = Polynomial_t::from_coefficients(f0odd_coeffs, m/2);
   // verifier-provided randomness 
   auto r1 = scalar_t::rand_host();
   // Round 1 polynomial
@@ -110,5 +149,8 @@ int main(int argc, char** argv)
   } else {
     std::cout << "Evaluations are consistent" << std::endl;
   }
+  auto d1 = f1.degree();
+  auto d0 = f0.degree();
+  std::cout << "Degree before: " << d1 << " degree before: " << d0 << std::endl;
   return 0;
 }
