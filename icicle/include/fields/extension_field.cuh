@@ -1,6 +1,6 @@
 #pragma once
 
-#include "field.cuh"
+#include "fields/field.cuh"
 
 #define HOST_INLINE        __host__ __forceinline__
 #define DEVICE_INLINE      __device__ __forceinline__

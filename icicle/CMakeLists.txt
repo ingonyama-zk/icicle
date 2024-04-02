@@ -8,6 +8,8 @@ set_gpu_env()
 project(icicle LANGUAGES CUDA CXX)
 
 option(BUILD_TESTS "Build tests" OFF)
+option(G2 "Build G2" OFF)
+option(EXT_FIELD "Build extension field" OFF)
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
   message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
@@ -19,6 +21,7 @@ endif ()
 
 if(DEFINED CURVE)
   set(FIELD ${CURVE})
+  set(EXT_FIELD ${G2})
   add_subdirectory(src/fields)
   add_subdirectory(src/curves)
 endif ()

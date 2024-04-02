@@ -14,9 +14,8 @@ if (NOT IS_CURVE_SUPPORTED)
   message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported fields: ${SUPPORTED_CURVES}" )
 endif ()
 
-option(G2 "Build G2" OFF)
 if (G2)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2 -DEXT_FIELD")
 endif ()
 
 set(TARGET icicle_curve_${CURVE})

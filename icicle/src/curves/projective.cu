@@ -37,8 +37,6 @@ extern "C" void CONCAT_EXPAND(CURVE, GenerateAffinePoints)(affine_t* points, int
 
 #if defined(G2)
 
-using namespace curve_config;
-
 extern "C" bool CONCAT_EXPAND(CURVE, G2Eq)(g2_projective_t* point1, g2_projective_t* point2)
 {
   return (*point1 == *point2) &&

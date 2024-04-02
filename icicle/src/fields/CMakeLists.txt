@@ -14,7 +14,6 @@ if (NOT IS_FIELD_SUPPORTED)
   message( FATAL_ERROR "The value of FIELD variable: ${FIELD} is not one of the supported fields: ${SUPPORTED_FIELD}" )
 endif ()
 
-option(EXT_FIELD "Build extension field" OFF)
 if (EXT_FIELD)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DEXT_FIELD")
 endif ()
