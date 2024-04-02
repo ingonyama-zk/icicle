@@ -1,3 +1,7 @@
+#include "fields/field_config.cuh"
+
+using namespace field_config;
+
 #include "poseidon/poseidon.cuh"
 #include "constants.cu"
 #include "kernels.cu"

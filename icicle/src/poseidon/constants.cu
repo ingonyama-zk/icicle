@@ -1,5 +1,24 @@
 #include "poseidon/poseidon.cuh"
 
+/// These are pre-calculated constants for different curves
+#include "fields/id.h"
+#if FIELD_ID == BN254_FIELDS
+#include "poseidon/constants/bn254_poseidon.h"
+using namespace poseidon_constants_bn254;
+#elif FIELD_ID == BLS12_381_FIELDS
+#include "poseidon/constants/bls12_381_poseidon.h"
+using namespace poseidon_constants_bls12_381;
+#elif FIELD_ID == BLS12_377_FIELDS
+#include "poseidon/constants/bls12_377_poseidon.h"
+using namespace poseidon_constants_bls12_377;
+#elif FIELD_ID == BW6_761_FIELDS
+#include "poseidon/constants/bw6_761_poseidon.h"
+using namespace poseidon_constants_bw6_761;
+#elif FIELD_ID == GRUMPKIN_FIELDS
+#include "poseidon/constants/grumpkin_poseidon.h"
+using namespace poseidon_constants_grumpkin;
+#endif
+
 namespace poseidon {
   template <typename S>
   cudaError_t create_optimized_poseidon_constants(

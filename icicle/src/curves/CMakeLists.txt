@@ -18,10 +18,26 @@ if (G2)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2 -DEXT_FIELD")
 endif ()
 
+if (BUILD_BASE_FIELD)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DBASE_FIELD")
+endif ()
+
 set(TARGET icicle_curve_${CURVE})
 set(FIELD_TARGET icicle_field_${FIELD})
 
-add_subdirectory(${CURVE})
+set(SRC ${CMAKE_SOURCE_DIR}/src)
+
+set(CURVE_SOURCE ${SRC}/curves/projective.cu)
+list(APPEND CURVE_SOURCE ${SRC}/curves/mont.cu)
+list(APPEND CURVE_SOURCE ${SRC}/msm/extern.cu)
+if(G2)
+  list(APPEND CURVE_SOURCE ${SRC}/msm/extern_g2.cu)
+endif()
+if(ECNTT)
+  list(APPEND CURVE_SOURCE ${SRC}/ntt/extern_ecntt.cu)
+  list(APPEND CURVE_SOURCE ${SRC}/ntt/kernel_ntt.cu)
+endif()
+
 add_library(${TARGET} STATIC ${CURVE_SOURCE})
 target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/include/)
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "ingo_curve_${CURVE}")

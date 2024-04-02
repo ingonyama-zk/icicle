@@ -1,5 +1,8 @@
+#include "fields/field_config.cuh"
 
-#include "ntt/thread_ntt.cu"
+using namespace field_config;
+
+#include "thread_ntt.cu"
 #include "gpu-utils/sharedmem.cuh"
 #include "ntt/ntt.cuh" // for Ordering
 
@@ -994,4 +997,38 @@ namespace ntt {
 
     return CHK_LAST();
   }
+
+  // Explicit instantiation for scalar type
+  template cudaError_t generate_external_twiddles_generic(
+    const scalar_t& basic_root,
+    scalar_t* external_twiddles,
+    scalar_t*& internal_twiddles,
+    scalar_t*& basic_twiddles,
+    uint32_t log_size,
+    cudaStream_t& stream);
+
+  template cudaError_t generate_external_twiddles_fast_twiddles_mode(
+    const scalar_t& basic_root,
+    scalar_t* external_twiddles,
+    scalar_t*& internal_twiddles,
+    scalar_t*& basic_twiddles,
+    uint32_t log_size,
+    cudaStream_t& stream);
+
+  template cudaError_t mixed_radix_ntt<scalar_t, scalar_t>(
+    scalar_t* d_input,
+    scalar_t* d_output,
+    scalar_t* external_twiddles,
+    scalar_t* internal_twiddles,
+    scalar_t* basic_twiddles,
+    int ntt_size,
+    int max_logn,
+    int batch_size,
+    bool columns_batch,
+    bool is_inverse,
+    bool fast_tw,
+    Ordering ordering,
+    scalar_t* arbitrary_coset,
+    int coset_gen_index,
+    cudaStream_t cuda_stream);
 } // namespace ntt

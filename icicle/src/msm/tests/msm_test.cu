@@ -198,7 +198,8 @@ int main()
   config.is_big_triangle = true;
   config.are_results_on_device = false;
   cudaMemcpy(&large_res[1], large_res_d, sizeof(test_projective), cudaMemcpyDeviceToHost);
-  std::cout << test_projective::to_affine(large_res[1]) << " " << test_projective::is_on_curve(large_res[1]) << std::endl;
+  std::cout << test_projective::to_affine(large_res[1]) << " " << test_projective::is_on_curve(large_res[1])
+            << std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
   msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res);
   // test_reduce_triangle(scalars);

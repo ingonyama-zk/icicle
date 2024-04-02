@@ -1,4 +1,0 @@
-set (CURVE_SOURCE bn254/curve.cu)
-list (APPEND CURVE_SOURCE bn254/msm.cu)
-
-set (CURVE_SOURCE ${CURVE_SOURCE} PARENT_SCOPE)

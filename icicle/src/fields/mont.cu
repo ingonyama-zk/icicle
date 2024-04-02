@@ -1,3 +1,7 @@
+#include "fields/field_config.cuh"
+
+using namespace field_config;
+
 #include "utils/mont.cuh"
 #include "gpu-utils/device_context.cuh"
 #include "utils/utils.h"

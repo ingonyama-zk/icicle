@@ -1,3 +1,7 @@
+#include "fields/field_config.cuh"
+
+using namespace field_config;
+
 #include "utils/utils.h"
 #include "vec_ops.cu"
 

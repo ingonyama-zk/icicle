@@ -1,6 +1,0 @@
-set(FIELD_SOURCE bls12_381/field.cu)
-list(APPEND FIELD_SOURCE bls12_381/ntt.cu)
-list(APPEND FIELD_SOURCE bls12_381/vec_ops.cu)
-list(APPEND FIELD_SOURCE bls12_381/poseidon.cu)
-
-set(FIELD_SOURCE ${FIELD_SOURCE} PARENT_SCOPE)

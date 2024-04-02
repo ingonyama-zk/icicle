@@ -1,3 +1,7 @@
+#include "curves/curve_config.cuh"
+
+using namespace curve_config;
+
 #include "gpu-utils/device_context.cuh"
 #include "utils/mont.cuh"
 #include "utils/utils.h"
