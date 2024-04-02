@@ -247,7 +247,7 @@ namespace keccak {
 
     int number_of_threads = 1024;
     int number_of_gpu_blocks = (number_of_blocks - 1) / number_of_threads + 1;
-    keccak_hash_blocks<C, D><<<number_of_threads, number_of_gpu_blocks, 0, stream>>>(
+    keccak_hash_blocks<C, D><<<number_of_gpu_blocks, number_of_threads, 0, stream>>>(
       input_device, input_block_size, number_of_blocks, output_device);
 
     if (!config.are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(input_device, stream));
