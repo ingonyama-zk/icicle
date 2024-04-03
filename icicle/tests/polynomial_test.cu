@@ -981,7 +981,7 @@ TEST_F(PolynomialTest, DummyGroth16)
 
   groth16_example.setup();
   auto proof = groth16_example.prove(witness);
-  assert(groth16_example.dummy_verify(proof, witness));
+  ASSERT_EQ(groth16_example.dummy_verify(proof, witness), true);
 }
 
 int main(int argc, char** argv)
