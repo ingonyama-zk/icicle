@@ -33,9 +33,14 @@ namespace ntt {
         int batch_idx = threadId / n;
         int idx_reversed = __brev(idx) >> (32 - logn);
 
-        E val = arr[batch_idx * n + idx];
-        if (arr == arr_reversed) { __syncthreads(); } // for in-place (when pointers arr==arr_reversed)
-        arr_reversed[batch_idx * n + idx_reversed] = val;
+        if (arr == arr_reversed) { // for in-place (when pointers arr==arr_reversed)
+          if (idx < idx_reversed) {
+            E val = arr[batch_idx * n + idx];
+            arr_reversed[batch_idx * n + idx] = arr[batch_idx * n + idx_reversed];
+            arr_reversed[batch_idx * n + idx_reversed] = val;
+          }
+        } else
+          arr_reversed[batch_idx * n + idx_reversed] = arr[batch_idx * n + idx];
       }
     }
 
