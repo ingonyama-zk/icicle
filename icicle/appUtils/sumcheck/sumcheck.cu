@@ -625,3 +625,63 @@ void sumcheck_alg3_ref(S* evals, S* t, S* T, S C, int n){
 		}
   }
 }
+
+template <typename S>
+void sumcheck_generic_ref(S* evals, S* t, S* T, S C, int n, int nof_polys){
+  // S alpha = my_hash(/*T, C*/);
+	// S alpha = 1;
+	// S alpha = S::one() + S::one();
+	S alpha = my_hash<S>();
+  
+  for (int p = 0; p < n; p++)
+  {
+
+		// rp_even = 0; rp_odd = 0;
+		// printf("evals\n");
+		// for (int i = 0; i < 1<<(n-p); i++)
+		// {
+		// 	printf("%d, ",evals[i]);
+		// }
+		// printf("\n");
+		for (int i = 0; i < 1<<(n-1-p); i++)
+		{
+			S rp[5] = {S::one(), S::one(), S::one(), S::one(), S::one()};
+			for (int l = 0; l < nof_polys; l++)
+			{
+				S e1 = evals[(l<<(n-p)) + i];
+				S e2 = evals[(l<<(n-p)) + i + (1<<(n-1-p))];
+				rp[0] = l? rp[0]*e1 : e1; //k=0
+				rp[1] = l? rp[1]*e2 : e2; //k=1
+				if (nof_polys > 1) rp[2] = l? rp[2]*(e2 + e2 - e1) : (e2 + e2 - e1); //k=2
+				if (nof_polys > 2) rp[3] = l? rp[3]*(e2 + e2 + e2 - e1 - e1) : (e2 + e2 + e2 - e1 - e1); //k=3
+				if (nof_polys > 3) rp[4] = l? rp[4]*(e2 + e2 + e2 + e2 - e1 - e1 - e1) : (e2 + e2 + e2 + e2 - e1 - e1 - e1); //k=4
+			}
+			T[(nof_polys+1)*p+1] = T[(nof_polys+1)*p+1] + rp[0];
+			T[(nof_polys+1)*p+2] = T[(nof_polys+1)*p+2] + rp[1];
+			if (nof_polys > 1) T[(nof_polys+1)*p+3] = T[(nof_polys+1)*p+3] + rp[2];
+			if (nof_polys > 2) T[(nof_polys+1)*p+4] = T[(nof_polys+1)*p+4] + rp[3];
+			if (nof_polys > 3) T[(nof_polys+1)*p+5] = T[(nof_polys+1)*p+5] + rp[4];
+		}
+    // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
+		// alpha = 1;
+		// alpha = S::one();
+		for (int l = 0; l < nof_polys; l++)
+		{
+			for (int i = 0; i < 1<<(n-1-p); i++)
+			{
+				t[(l<<(n-1-p)) + i] = (S::one() - alpha) * evals[(l<<(n-p)) + i] + alpha * evals[(l<<(n-p)) + i + (1<<(n-1-p))];
+				// t[i] = (1-alpha)*evals[2*i] + alpha*evals[2*i+1];
+			}
+		}
+// 		if (1)
+// {		printf("ref round %d evals:\n",p);
+// 		for (int i = 0; i < 3<<(n-p); i++)
+// 		{
+// 			std::cout << i << " " << evals[i] << std::endl;
+// 		}}
+		for (int i = 0; i < nof_polys<<(n-1-p); i++)
+		{
+			evals[i] = t[i];
+		}
+  }
+}
