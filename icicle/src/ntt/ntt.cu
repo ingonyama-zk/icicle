@@ -1,3 +1,7 @@
+#include "fields/field_config.cuh"
+
+using namespace field_config;
+
 #include "ntt/ntt.cuh"
 
 #include <unordered_map>
@@ -10,7 +14,14 @@
 
 #include <mutex>
 
-#define IS_ECNTT std::is_same_v<E, curve_config::projective_t>
+#ifdef CURVE_ID
+#include "curves/curve_config.cuh"
+using namespace curve_config;
+#define IS_ECNTT std::is_same_v<E, projective_t>
+#endif
+#ifndef CURVE_ID
+#define IS_ECNTT false
+#endif
 
 namespace ntt {
 

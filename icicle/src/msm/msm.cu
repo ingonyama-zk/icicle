@@ -1,4 +1,4 @@
-#include "msm.cuh"
+#include "msm/msm.cuh"
 
 #include <cooperative_groups.h>
 #include <cub/device/device_radix_sort.cuh>
