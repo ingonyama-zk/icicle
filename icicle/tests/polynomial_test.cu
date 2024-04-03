@@ -20,6 +20,27 @@ using curve_config::scalar_t;
 #include "appUtils/msm/msm.cuh"
 #include "utils/device_context.cuh"
 
+class dummy_g2_t: public scalar_t {
+public:
+  static constexpr __host__ __device__ dummy_g2_t to_affine(const dummy_g2_t& point) { return point; }
+
+  static constexpr __host__ __device__ dummy_g2_t from_affine(const dummy_g2_t& point) { return point; }
+
+  static constexpr __host__ __device__ dummy_g2_t generator() { return dummy_g2_t { scalar_t::one() }; }
+
+  static __host__ __device__ dummy_g2_t zero() { return dummy_g2_t { scalar_t::zero() }; }
+
+  friend __host__ __device__ dummy_g2_t operator*(const scalar_t& xs, const dummy_g2_t& ys) {
+    return dummy_g2_t { scalar_t::reduce(scalar_t::mul_wide(xs, ys)) };
+  }
+
+  friend __host__ __device__ dummy_g2_t operator+(const dummy_g2_t& xs, const dummy_g2_t& ys) {
+    scalar_t rs = {};
+    scalar_t::add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+    return dummy_g2_t { scalar_t::sub_modulus<1>(rs) };
+  }
+};
+
 // using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
 namespace msm {
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
@@ -38,6 +59,16 @@ namespace msm {
     return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
   }
 
+  cudaError_t
+  _G2MSM(const scalar_t* scalars, const dummy_g2_t* points, int msm_size, MSMConfig& config, dummy_g2_t* out)
+  {
+    scalar_t* scalars_host = static_cast<scalar_t*>(malloc(msm_size * sizeof(scalar_t)));
+    cudaMemcpyAsync(scalars_host, scalars, msm_size * sizeof(scalar_t), cudaMemcpyDeviceToHost, config.ctx.stream);
+    *out = dummy_g2_t::zero();
+    for (int i = 0; i < msm_size; i++)
+      *out = *out + scalars_host[i] * points[i];
+    return cudaSuccess;
+  }
 } // namespace msm
 
 /*******************************************/
@@ -113,7 +144,7 @@ public:
   {
     res[0] = P::to_affine(g);
     for (int i = 1; i < count; i++) {
-      g = g * tau;
+      g = tau * g;
       res[i] = P::to_affine(g);
     }
   }
@@ -580,6 +611,7 @@ TEST_F(PolynomialTest, slicing)
 //       out
 //
 // simple construction: t0=in0*in1, t1=t0*in2, t2=t1*in3 and so on to simplify the example
+template <class S, class G1A, class G1P, class G2A, class G2P>
 class Groth16Example
 {
   // based on https://www.rareskills.io/post/groth16
@@ -600,25 +632,25 @@ public:
     // allocating such that columns are consecutive in memory for more efficient polynomial construction from
     // consecutive evaluations
     const int nof_cols = witness_size;
-    const int nof_rows = nof_constraints;
-    std::vector<scalar_t> L(nof_cols * nof_rows, scalar_t::zero());
-    std::vector<scalar_t> R(nof_cols * nof_rows, scalar_t::zero());
-    std::vector<scalar_t> O(nof_cols * nof_rows, scalar_t::zero());
+    const int nof_rows = ceil_to_power_of_two(nof_constraints);
+    std::vector<S> L(nof_cols * nof_rows, S::zero());
+    std::vector<S> R(nof_cols * nof_rows, S::zero());
+    std::vector<S> O(nof_cols * nof_rows, S::zero());
 
-    scalar_t* L_data = L.data();
-    scalar_t* R_data = R.data();
-    scalar_t* O_data = O.data();
+    S* L_data = L.data();
+    S* R_data = R.data();
+    S* O_data = O.data();
 
     // filling the R1CS matrices (where cols are consecutive, not rows)
-    for (int row = 0; row < nof_rows; ++row) {
+    for (int row = 0; row < nof_constraints; ++row) {
       const int L_col = row == 0 ? input_offset : intermediate_offset + row - 1;
-      *(L_data + L_col * nof_rows + row) = scalar_t::one();
+      *(L_data + L_col * nof_rows + row) = S::one();
 
       const int R_col = input_offset + row + 1;
-      *(R_data + R_col * nof_rows + row) = scalar_t::one();
+      *(R_data + R_col * nof_rows + row) = S::one();
 
-      const int O_col = row == nof_rows - 1 ? 1 : intermediate_offset + row;
-      *(O_data + O_col * nof_rows + row) = scalar_t::one();
+      const int O_col = row == nof_constraints - 1 ? 1 : intermediate_offset + row;
+      *(O_data + O_col * nof_rows + row) = S::one();
     }
 
     // (2) interpolate the columns of L,R,O to build the polynomials
@@ -632,16 +664,16 @@ public:
     }
   }
 
-  std::vector<scalar_t> random_witness_inputs()
+  std::vector<S> random_witness_inputs()
   {
-    std::vector<scalar_t> witness(witness_size, scalar_t::zero());
-    witness[0] = scalar_t::one();
+    std::vector<S> witness(witness_size, S::zero());
+    witness[0] = S::one();
     PolynomialTest::random_samples(witness.data() + input_offset, nof_inputs); // randomize inputs
 
     return witness;
   }
 
-  void compute_witness(std::vector<scalar_t>& witness)
+  void compute_witness(std::vector<S>& witness)
   {
     if (witness_size != witness.size()) { throw std::runtime_error("invalid witness size"); }
     // compute intermediate values (based on the circuit above)
@@ -657,40 +689,40 @@ public:
   /******** SETUP *********/
   // https://static.wixstatic.com/media/935a00_cd68860dafbb4ebe8f166de5cc8cc50c~mv2.png
   struct ToxicWaste {
-    scalar_t alpha;
-    scalar_t beta;
-    scalar_t gamma;
-    scalar_t delta;
-    scalar_t tau;
-    scalar_t gamma_inv;
-    scalar_t delta_inv;
+    S alpha;
+    S beta;
+    S gamma;
+    S delta;
+    S tau;
+    S gamma_inv;
+    S delta_inv;
 
     ToxicWaste()
     {
-      alpha = scalar_t::rand_host();
-      beta = scalar_t::rand_host();
-      gamma = scalar_t::rand_host();
-      delta = scalar_t::rand_host();
-      tau = scalar_t::rand_host();
-      gamma_inv = scalar_t::inverse(gamma);
-      delta_inv = scalar_t::inverse(delta);
+      alpha = S::rand_host();
+      beta = S::rand_host();
+      gamma = S::rand_host();
+      delta = S::rand_host();
+      tau = S::rand_host();
+      gamma_inv = S::inverse(gamma);
+      delta_inv = S::inverse(delta);
     }
   };
 
   struct ProvingKey {
     struct G1 {
-      affine_t alpha;
-      affine_t beta;
-      affine_t delta;
-      std::vector<affine_t> powers_of_tau;          // {X^i} @[0..n-1]
-      std::vector<affine_t> private_witness_points; // {(beta_Ui+alpha_Vi+Wi) / delta} @[l+1..m]
-      std::vector<affine_t> vanishing_poly_points;  // {x^it(x) / delta} @[0..,n-2]
+      G1A alpha;
+      G1A beta;
+      G1A delta;
+      std::vector<G1A> powers_of_tau;          // {X^i} @[0..n-1]
+      std::vector<G1A> private_witness_points; // {(beta_Ui+alpha_Vi+Wi) / delta} @[l+1..m]
+      std::vector<G1A> vanishing_poly_points;  // {x^it(x) / delta} @[0..,n-2]
     };
     struct G2 {
-      g2_affine_t beta;
-      g2_affine_t gamma;
-      g2_affine_t delta;
-      std::vector<g2_affine_t> powers_of_tau; // {X^i} @[0..n-1]
+      G2A beta;
+      G2A gamma;
+      G2A delta;
+      std::vector<G2A> powers_of_tau; // {X^i} @[0..n-1]
     };
 
     G1 g1;
@@ -698,7 +730,18 @@ public:
   };
 
   struct VerifyingKey {
-    // TODO
+    struct G1 {
+      G1A alpha;
+      std::vector<G1A> public_witness_points;  // {(beta_Ui+alpha_Vi+Wi) / delta} @[0..l]
+    };
+    struct G2 {
+      G2A beta;
+      G2A gamma;
+      G2A delta;
+    };
+
+    G1 g1;
+    G2 g2;
   };
 
   void setup()
@@ -706,67 +749,75 @@ public:
     // randomize alpha, beta, gamma, delta, tau
     ToxicWaste toxic_waste;
 
-    projective_t G1 = projective_t::generator();
-    g2_projective_t G2 = g2_projective_t::generator();
+    G1P G1 = G1P::generator();
+    G2P G2 = G2P::generator();
 
     // Note: n,m,l are from the groth16 paper
     const int m = witness_size - 1;
     const int l = nof_outputs; // public part of the witness
-    const int n = nof_constraints;
+    const int n = ceil_to_power_of_two(nof_constraints);
 
     // compute the proving and verifying keys
-    pk.g1.alpha = projective_t::to_affine(toxic_waste.alpha * G1);
-    pk.g1.beta = projective_t::to_affine(toxic_waste.beta * G1);
-    pk.g1.delta = projective_t::to_affine(toxic_waste.delta * G1);
+    pk.g1.alpha = G1P::to_affine(toxic_waste.alpha * G1);
+    vk.g1.alpha = pk.g1.alpha;
+    pk.g1.beta = G1P::to_affine(toxic_waste.beta * G1);
+    pk.g1.delta = G1P::to_affine(toxic_waste.delta * G1);
 
-    pk.g1.powers_of_tau.resize(n, affine_t::zero());
+    pk.g1.powers_of_tau.resize(n, G1A::zero());
     PolynomialTest::compute_powers_of_tau(G1, toxic_waste.tau, pk.g1.powers_of_tau.data(), n);
 
     // { (beta*Ui(tau) + alpha*Vi(tau) + Wi) / delta}
     pk.g1.private_witness_points.reserve(m - l);
-    for (int i = l + 1; i <= m; ++i) {
+    vk.g1.public_witness_points.reserve(l + 1);
+    for (int i = 0; i <= m; ++i) {
       auto p = toxic_waste.beta * L_QAP[i] + toxic_waste.alpha * R_QAP[i] + O_QAP[i];
-      p = p * toxic_waste.delta_inv;
-      pk.g1.private_witness_points.push_back(projective_t::to_affine(p(toxic_waste.tau) * G1));
+      p = p * (i < l + 1 ? toxic_waste.gamma_inv : toxic_waste.delta_inv);
+      if (i < l + 1)
+        vk.g1.public_witness_points.push_back(G1P::to_affine(p(toxic_waste.tau) * G1));
+      else
+        pk.g1.private_witness_points.push_back(G1P::to_affine(p(toxic_waste.tau) * G1));
     }
 
     // {tau^i(t(tau) / delta}
-    const int vanishing_poly_deg = ceil_to_power_of_two(n);
+    const int vanishing_poly_deg = n;
     auto t = PolynomialTest::vanishing_polynomial(vanishing_poly_deg);
     pk.g1.vanishing_poly_points.reserve(n - 1);
-    auto x = scalar_t::one();
+    auto x = S::one();
     for (int i = 0; i <= n - 2; ++i) {
       pk.g1.vanishing_poly_points.push_back(
-        projective_t::to_affine(x * t(toxic_waste.tau) * toxic_waste.delta_inv * G1));
+        G1P::to_affine(x * t(toxic_waste.tau) * toxic_waste.delta_inv * G1));
       x = x * toxic_waste.tau;
     }
 
-    pk.g2.beta = g2_projective_t::to_affine(toxic_waste.beta * G2);
-    pk.g2.gamma = g2_projective_t::to_affine(toxic_waste.gamma * G2);
-    pk.g2.delta = g2_projective_t::to_affine(toxic_waste.delta * G2);
+    pk.g2.beta = G2P::to_affine(toxic_waste.beta * G2);
+    vk.g2.beta = pk.g2.beta;
+    pk.g2.gamma = G2P::to_affine(toxic_waste.gamma * G2);
+    vk.g2.gamma = pk.g2.gamma;
+    pk.g2.delta = G2P::to_affine(toxic_waste.delta * G2);
+    vk.g2.delta = pk.g2.delta;
 
-    pk.g2.powers_of_tau.resize(n, g2_affine_t::zero());
+    pk.g2.powers_of_tau.resize(n, G2A::zero());
     PolynomialTest::compute_powers_of_tau(G2, toxic_waste.tau, pk.g2.powers_of_tau.data(), n);
   }
 
   /******** PROVE *********/
   // https://static.wixstatic.com/media/935a00_432ca182820540df8d67b5c3d5d0d3e1~mv2.png
   struct G16proof {
-    affine_t A;
-    g2_affine_t B;
-    affine_t C;
+    G1A A;
+    G2A B;
+    G1A C;
   };
 
-  G16proof prove(const std::vector<scalar_t>& witness) const
+  G16proof prove(const std::vector<S>& witness) const
   {
     G16proof proof = {};
-    const auto r = scalar_t::rand_host();
-    const auto s = scalar_t::rand_host();
+    const auto r = S::rand_host();
+    const auto s = S::rand_host();
 
     // Note: n,m,l are from the groth16 paper
     const int m = witness_size - 1;
     const int l = nof_outputs; // public part of the witness
-    const int n = nof_constraints;
+    const int n = ceil_to_power_of_two(nof_constraints);
 
     // construct U,V,W from the QAP and witness
     Polynomial_t U = L_QAP[0].clone();
@@ -779,57 +830,69 @@ public:
     }
 
     // compute h(x) = (U(x)*V(x)-W(x)) / t(x)
-    const int vanishing_poly_deg = ceil_to_power_of_two(n);
+    const int vanishing_poly_deg = n;
     Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
-    auto msm_config = msm::DefaultMSMConfig<scalar_t>();
+    auto msm_config = msm::DefaultMSMConfig<S>();
     msm_config.are_scalars_on_device = true;
 
     // compute [A]1
     {
-      projective_t U_commited;
+      G1P U_commited;
       auto [U_coeff, N, device_id] = U.get_coefficients_view();
       CHK_STICKY(msm::_MSM(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
-      proof.A = projective_t::to_affine(U_commited + pk.g1.alpha + r * projective_t::from_affine(pk.g1.delta));
+      proof.A = G1P::to_affine(U_commited + G1P::from_affine(pk.g1.alpha) + r * G1P::from_affine(pk.g1.delta));
     }
 
     // compute [B]2 and [B]1 (required to compute C)
-    projective_t B1;
+    G1P B1;
     {
-      g2_projective_t V_commited_g2;
+      G2P V_commited_g2;
       auto [V_coeff, N, device_id] = V.get_coefficients_view();
       CHK_STICKY(msm::_G2MSM(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
-      proof.B = g2_projective_t::to_affine(V_commited_g2 + pk.g2.beta + s * g2_projective_t::from_affine(pk.g2.delta));
+      proof.B = G2P::to_affine(V_commited_g2 + pk.g2.beta + s * G2P::from_affine(pk.g2.delta));
 
-      projective_t V_commited_g1;
+      G1P V_commited_g1;
       CHK_STICKY(msm::_MSM(V_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
-      B1 = V_commited_g1 + pk.g1.beta + projective_t::from_affine(pk.g1.delta) * s;
+      B1 = V_commited_g1 + pk.g1.beta + G1P::from_affine(pk.g1.delta) * s;
     }
 
     // compute [C]1
     {
       auto [H_coeff, N, device_id] = h.get_coefficients_view();
 
-      projective_t HT_commited;
+      G1P HT_commited;
       CHK_STICKY(msm::_MSM(H_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
 
-      projective_t private_inputs_commited;
+      G1P private_inputs_commited;
       msm_config.are_scalars_on_device = false;
       CHK_STICKY(msm::_MSM(
         witness.data() + l + 1, pk.g1.private_witness_points.data(), m - l, msm_config, &private_inputs_commited));
 
-      proof.C = projective_t::to_affine(
-        private_inputs_commited + HT_commited + projective_t::from_affine(proof.A) * s + B1 * r -
-        r * s * projective_t::from_affine(pk.g1.delta));
+      proof.C = G1P::to_affine(
+        private_inputs_commited + HT_commited + G1P::from_affine(proof.A) * s + B1 * r -
+        r * s * G1P::from_affine(pk.g1.delta));
     }
 
     return proof;
   }
 
-  bool verify(const G16proof& proof) const
+  bool verify(const G16proof& proof, const std::vector<S>& public_witness) const
   {
     throw std::runtime_error("pairing not implemented");
     return false;
+  }
+
+  // Dummy verification function where pairings are changed to scalar mutliplications
+  // Suitable for verifying correctness with G1 and/or G2 swapped for scalar types
+  bool dummy_verify(const G16proof& proof, const std::vector<S>& public_witness) const
+  {
+    G1P lhs = proof.B * G1P::from_affine(proof.A);
+    G1P rhs = G1P::zero();
+    for (int i = 0; i <= nof_outputs; ++i)
+      rhs = rhs + public_witness.data()[i] * G1P::from_affine(vk.g1.public_witness_points[i]);
+    rhs = vk.g2.gamma * rhs + vk.g2.beta * G1P::from_affine(vk.g1.alpha) + vk.g2.delta * G1P::from_affine(proof.C);
+    return (rhs == lhs);
   }
 
   // constructor
@@ -848,7 +911,7 @@ public:
 TEST_F(PolynomialTest, QAP)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
-  Groth16Example QAP(300 /*=N*/);
+  Groth16Example<scalar_t, affine_t, projective_t, g2_affine_t, g2_projective_t> QAP(300 /*=N*/);
 
   // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
   auto witness = QAP.random_witness_inputs();
@@ -868,19 +931,19 @@ TEST_F(PolynomialTest, QAP)
 
   const int nof_constraints =
     QAP.nof_inputs - 1; // multiplying N numbers yields N-1 constraints for this circuit construction
+  const int vanishing_poly_deg = ceil_to_power_of_two(nof_constraints);
   //  (4) sanity check: verify AB=C at the evaluation points
   {
     auto default_device_context = device_context::get_default_device_context();
     const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
-    auto x = w;
-    for (int i = 0; i < nof_constraints; ++i) {
+    auto x = scalar_t::one();
+    for (int i = 0; i < vanishing_poly_deg; ++i) {
       ASSERT_EQ(Lx(x) * Rx(x), Ox(x));
       x = x * w;
     }
   }
 
   // (5) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
-  const int vanishing_poly_deg = ceil_to_power_of_two(nof_constraints);
   Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
   // (6) sanity check: vanishing-polynomial divides (LR-O) without remainder
@@ -894,7 +957,7 @@ TEST_F(PolynomialTest, QAP)
 TEST_F(PolynomialTest, Groth16)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
-  Groth16Example groth16_example(30 /*=N*/);
+  Groth16Example<scalar_t, affine_t, projective_t, g2_affine_t, g2_projective_t> groth16_example(30 /*=N*/);
 
   // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
   auto witness = groth16_example.random_witness_inputs();
@@ -903,6 +966,21 @@ TEST_F(PolynomialTest, Groth16)
   groth16_example.setup();
   auto proof = groth16_example.prove(witness);
   // groth16_example.verify(proof); // cannot implement without pairing
+}
+
+
+TEST_F(PolynomialTest, DummyGroth16)
+{
+  // (1) construct R1CS and QAP for circuit with N inputs
+  Groth16Example<scalar_t, affine_t, projective_t, dummy_g2_t, dummy_g2_t> groth16_example(30 /*=N*/);
+
+  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
+  auto witness = groth16_example.random_witness_inputs();
+  groth16_example.compute_witness(witness);
+
+  groth16_example.setup();
+  auto proof = groth16_example.prove(witness);
+  assert(groth16_example.dummy_verify(proof, witness));
 }
 
 int main(int argc, char** argv)

@@ -23,7 +23,10 @@ public:
     return {point.x * denom, point.y * denom};
   }
 
-  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point) { return {point.x, point.y, FF::one()}; }
+  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point)
+  {
+    return point == Affine<FF>::zero() ? zero() : Projective {point.x, point.y, FF::one()};
+  }
 
   static HOST_DEVICE_INLINE Projective ToMontgomery(const Projective& point)
   {
