@@ -39,6 +39,6 @@ if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
 endif()
 
 add_library(${TARGET} STATIC ${FIELD_SOURCE})
-target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/include/ ${CMAKE_SOURCE_DIR}/src/)
+target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/include/)
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "ingo_field_${FIELD}")
 target_compile_definitions(${TARGET} PRIVATE FIELD=${FIELD})
