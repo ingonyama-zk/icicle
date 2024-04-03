@@ -394,7 +394,8 @@ namespace ntt {
     template <typename U>
     friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
 
-    cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
+    template <typename U>
+    friend cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
     friend cudaError_t NTT<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
@@ -488,35 +489,39 @@ namespace ntt {
   }
 
   template <typename S>
-  cudaError_t Domain<S>::ReleaseDomain(device_context::DeviceContext& ctx)
+  cudaError_t ReleaseDomain(device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
 
-    max_size = 0;
-    max_log_size = 0;
-    cudaFreeAsync(twiddles, ctx.stream);
-    twiddles = nullptr;
-    cudaFreeAsync(internal_twiddles, ctx.stream);
-    internal_twiddles = nullptr;
-    cudaFreeAsync(basic_twiddles, ctx.stream);
-    basic_twiddles = nullptr;
-    coset_index.clear();
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
 
-    cudaFreeAsync(fast_external_twiddles, ctx.stream);
-    fast_external_twiddles = nullptr;
-    cudaFreeAsync(fast_internal_twiddles, ctx.stream);
-    fast_internal_twiddles = nullptr;
-    cudaFreeAsync(fast_basic_twiddles, ctx.stream);
-    fast_basic_twiddles = nullptr;
-    cudaFreeAsync(fast_external_twiddles_inv, ctx.stream);
-    fast_external_twiddles_inv = nullptr;
-    cudaFreeAsync(fast_internal_twiddles_inv, ctx.stream);
-    fast_internal_twiddles_inv = nullptr;
-    cudaFreeAsync(fast_basic_twiddles_inv, ctx.stream);
-    fast_basic_twiddles_inv = nullptr;
+    domain.max_size = 0;
+    domain.max_log_size = 0;
+    CHK_IF_RETURN(cudaFreeAsync(domain.twiddles, ctx.stream));
+    domain.twiddles = nullptr;
+    CHK_IF_RETURN(cudaFreeAsync(domain.internal_twiddles, ctx.stream));
+    domain.internal_twiddles = nullptr;
+    CHK_IF_RETURN(cudaFreeAsync(domain.basic_twiddles, ctx.stream));
+    domain.basic_twiddles = nullptr;
+    domain.coset_index.clear();
+
+    CHK_IF_RETURN(cudaFreeAsync(domain.fast_external_twiddles, ctx.stream));
+    domain.fast_external_twiddles = nullptr;
+    CHK_IF_RETURN(cudaFreeAsync(domain.fast_internal_twiddles, ctx.stream));
+    domain.fast_internal_twiddles = nullptr;
+    CHK_IF_RETURN(cudaFreeAsync(domain.fast_basic_twiddles, ctx.stream));
+    domain.fast_basic_twiddles = nullptr;
+    CHK_IF_RETURN(cudaFreeAsync(domain.fast_external_twiddles_inv, ctx.stream));
+    domain.fast_external_twiddles_inv = nullptr;
+    CHK_IF_RETURN(cudaFreeAsync(domain.fast_internal_twiddles_inv, ctx.stream));
+    domain.fast_internal_twiddles_inv = nullptr;
+    CHK_IF_RETURN(cudaFreeAsync(domain.fast_basic_twiddles_inv, ctx.stream));
+    domain.fast_basic_twiddles_inv = nullptr;
 
     return CHK_LAST();
   }
+
+  // template cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
   template <typename S>
   static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
