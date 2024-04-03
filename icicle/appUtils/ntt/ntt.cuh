@@ -41,6 +41,22 @@ namespace ntt {
   cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
 
   /**
+   * Releases and deallocates resources associated with the domain initialized for performing NTTs.
+   * This function should be called to clean up resources once they are no longer needed.
+   * It's important to note that after calling this function, any operation that relies on the released domain will
+   * fail unless InitDomain is called again to reinitialize the resources. Therefore, ensure that ReleaseDomain is
+   * only called when the operations requiring the NTT domain are completely finished and the domain is no longer
+   * needed.
+   * Also note that it is releasing the domain associated to the specific device.
+   * @param ctx Details related to the device context such as its id and stream id.
+   * @return `cudaSuccess` if the resource release was successful, indicating that the domain and its associated
+   * resources have been properly deallocated. Returns an error code otherwise, indicating failure to release
+   * the resources. The error code can be used to diagnose the problem.
+   * */
+  template <typename S>
+  cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
+
+  /**
    * @enum NTTDir
    * Whether to perform normal forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
    * evaluations from coefficients while inverse NTT computes coefficients from evaluations.
