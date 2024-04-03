@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
@@ -20,24 +19,27 @@ using curve_config::scalar_t;
 #include "appUtils/msm/msm.cuh"
 #include "utils/device_context.cuh"
 
-class dummy_g2_t: public scalar_t {
+class dummy_g2_t : public scalar_t
+{
 public:
   static constexpr __host__ __device__ dummy_g2_t to_affine(const dummy_g2_t& point) { return point; }
 
   static constexpr __host__ __device__ dummy_g2_t from_affine(const dummy_g2_t& point) { return point; }
 
-  static constexpr __host__ __device__ dummy_g2_t generator() { return dummy_g2_t { scalar_t::one() }; }
+  static constexpr __host__ __device__ dummy_g2_t generator() { return dummy_g2_t{scalar_t::one()}; }
 
-  static __host__ __device__ dummy_g2_t zero() { return dummy_g2_t { scalar_t::zero() }; }
+  static __host__ __device__ dummy_g2_t zero() { return dummy_g2_t{scalar_t::zero()}; }
 
-  friend __host__ __device__ dummy_g2_t operator*(const scalar_t& xs, const dummy_g2_t& ys) {
-    return dummy_g2_t { scalar_t::reduce(scalar_t::mul_wide(xs, ys)) };
+  friend __host__ __device__ dummy_g2_t operator*(const scalar_t& xs, const dummy_g2_t& ys)
+  {
+    return dummy_g2_t{scalar_t::reduce(scalar_t::mul_wide(xs, ys))};
   }
 
-  friend __host__ __device__ dummy_g2_t operator+(const dummy_g2_t& xs, const dummy_g2_t& ys) {
+  friend __host__ __device__ dummy_g2_t operator+(const dummy_g2_t& xs, const dummy_g2_t& ys)
+  {
     scalar_t rs = {};
     scalar_t::add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-    return dummy_g2_t { scalar_t::sub_modulus<1>(rs) };
+    return dummy_g2_t{scalar_t::sub_modulus<1>(rs)};
   }
 };
 
@@ -67,6 +69,7 @@ namespace msm {
     *out = dummy_g2_t::zero();
     for (int i = 0; i < msm_size; i++)
       *out = *out + scalars_host[i] * points[i];
+    free(scalars_host);
     return cudaSuccess;
   }
 } // namespace msm
@@ -732,7 +735,7 @@ public:
   struct VerifyingKey {
     struct G1 {
       G1A alpha;
-      std::vector<G1A> public_witness_points;  // {(beta_Ui+alpha_Vi+Wi) / delta} @[0..l]
+      std::vector<G1A> public_witness_points; // {(beta_Ui+alpha_Vi+Wi) / delta} @[0..l]
     };
     struct G2 {
       G2A beta;
@@ -784,8 +787,7 @@ public:
     pk.g1.vanishing_poly_points.reserve(n - 1);
     auto x = S::one();
     for (int i = 0; i <= n - 2; ++i) {
-      pk.g1.vanishing_poly_points.push_back(
-        G1P::to_affine(x * t(toxic_waste.tau) * toxic_waste.delta_inv * G1));
+      pk.g1.vanishing_poly_points.push_back(G1P::to_affine(x * t(toxic_waste.tau) * toxic_waste.delta_inv * G1));
       x = x * toxic_waste.tau;
     }
 
@@ -967,7 +969,6 @@ TEST_F(PolynomialTest, Groth16)
   auto proof = groth16_example.prove(witness);
   // groth16_example.verify(proof); // cannot implement without pairing
 }
-
 
 TEST_F(PolynomialTest, DummyGroth16)
 {
