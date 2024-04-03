@@ -121,11 +121,7 @@ pub trait NTT<F: FieldImpl> {
         cfg: &NTTConfig<F>,
         output: &mut HostOrDeviceSlice<F>,
     ) -> IcicleResult<()>;
-    fn ntt_inplace_unchecked(
-        inout: &mut HostOrDeviceSlice<F>,
-        dir: NTTDir,
-        cfg: &NTTConfig<F>,
-    ) -> IcicleResult<()>;
+    fn ntt_inplace_unchecked(inout: &mut HostOrDeviceSlice<F>, dir: NTTDir, cfg: &NTTConfig<F>) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn initialize_domain_fast_twiddles_mode(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
 }
@@ -174,11 +170,7 @@ where
 /// * `dir` - whether to compute forward of inverse NTT.
 ///
 /// * `cfg` - config used to specify extra arguments of the NTT.
-pub fn ntt_inplace<F>(
-    inout: &mut HostOrDeviceSlice<F>,
-    dir: NTTDir,
-    cfg: &NTTConfig<F>,
-) -> IcicleResult<()>
+pub fn ntt_inplace<F>(inout: &mut HostOrDeviceSlice<F>, dir: NTTDir, cfg: &NTTConfig<F>) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>,
