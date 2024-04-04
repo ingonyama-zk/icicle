@@ -25,7 +25,7 @@ where
     <C::BaseField as FieldImpl>::Config: ECNTT<C>,
     C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
 {
-    let test_sizes = [1 << 4, 1 << 8];
+    let test_sizes = [1 << 4, 1 << 12];
     for test_size in test_sizes {
         // let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
 
