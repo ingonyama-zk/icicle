@@ -37,22 +37,6 @@ namespace field_config {
    * Scalar field. Is always a prime field.
    */
   typedef Field<fp_config> scalar_t;
-
-#if defined(BASE_FIELD)
-  /**
-   * Base field of G1 curve. Is always a prime field.
-   */
-  typedef Field<fq_config> point_field_t;
-#endif
-
-#if defined(EXT_FIELD)
-#if FIELD_ID == BW6_761_FIELDS
-  typedef point_field_t g2_point_field_t;
-#else
-  typedef ExtensionField<fq_config> g2_point_field_t;
-#endif
-#endif
-
 } // namespace field_config
 
 #endif

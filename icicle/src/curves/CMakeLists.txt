@@ -18,10 +18,6 @@ if (G2)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2 -DEXT_FIELD")
 endif ()
 
-if (BUILD_BASE_FIELD)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DBASE_FIELD")
-endif ()
-
 set(TARGET icicle_curve)
 set(FIELD_TARGET icicle_field_${FIELD})
 

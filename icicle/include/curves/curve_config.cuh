@@ -12,6 +12,10 @@
 #include "fields/id.h"
 #include "curves/projective.cuh"
 
+#if defined(G2)
+#include "fields/extension_field.cuh"
+#endif
+
 #if CURVE_ID == BN254
 #define FIELD_ID BN254_FIELDS
 #include "curves/params/bn254.cuh"
@@ -48,6 +52,11 @@ using namespace field_config;
  * with the `-DCURVE` env variable passed during build.
  */
 namespace curve_config {
+  /**
+   * Base field of G1 curve. Is always a prime field.
+   */
+  typedef Field<fq_config> point_field_t;
+
   static constexpr point_field_t generator_x = point_field_t{g1_gen_x};
   static constexpr point_field_t generator_y = point_field_t{g1_gen_y};
   static constexpr point_field_t b = point_field_t{weierstrass_b};
@@ -63,10 +72,12 @@ namespace curve_config {
 
 #if defined(G2)
 #if CURVE_ID == BW6_761
+  typedef point_field_t g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x = g2_point_field_t{g2_gen_x};
   static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{g2_gen_y};
   static constexpr g2_point_field_t g2_b = g2_point_field_t{g2_weierstrass_b};
 #else
+  typedef ExtensionField<fq_config> g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x =
     g2_point_field_t{point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}};
   static constexpr g2_point_field_t g2_generator_y =
