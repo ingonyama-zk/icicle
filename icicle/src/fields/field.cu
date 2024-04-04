@@ -1,6 +1,11 @@
+#ifdef CURVE_ID
+#include "curves/curve_config.cuh"
+using namespace curve_config;
+#endif
+#ifndef CURVE_ID
 #include "fields/field_config.cuh"
-
 using namespace field_config;
+#endif
 
 #include "fields/field.cuh"
 #include "utils/utils.h"

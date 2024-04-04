@@ -9,41 +9,33 @@
 #define GRUMPKIN  5
 
 #include "gpu-utils/sharedmem.cuh"
-#include "fields/id.h"
 #include "curves/projective.cuh"
+#include "fields/field.cuh"
 
 #if defined(G2)
 #include "fields/extension_field.cuh"
 #endif
 
 #if CURVE_ID == BN254
-#define FIELD_ID BN254_FIELDS
 #include "curves/params/bn254.cuh"
 using namespace bn254;
 
 #elif CURVE_ID == BLS12_381
-#define FIELD_ID BLS12_381_FIELDS
 #include "curves/params/bls12_381.cuh"
 using namespace bls12_381;
 
 #elif CURVE_ID == BLS12_377
-#define FIELD_ID BLS12_377_FIELDS
 #include "curves/params/bls12_377.cuh"
 using namespace bls12_377;
 
 #elif CURVE_ID == BW6_761
-#define FIELD_ID BW6_761_FIELDS
 #include "curves/params/bw6_761.cuh"
 using namespace bw6_761;
 
 #elif CURVE_ID == GRUMPKIN
-#define FIELD_ID GRUMPKIN_FIELDS
 #include "curves/params/grumpkin.cuh"
 using namespace grumpkin;
 #endif
-
-#include "fields/field_config.cuh"
-using namespace field_config;
 
 /**
  * @namespace curve_config
@@ -52,6 +44,11 @@ using namespace field_config;
  * with the `-DCURVE` env variable passed during build.
  */
 namespace curve_config {
+  /**
+   * Scalar field of the curve. Is always a prime field.
+   */
+  typedef Field<fp_config> scalar_t;
+
   /**
    * Base field of G1 curve. Is always a prime field.
    */

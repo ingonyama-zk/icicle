@@ -1,5 +1,4 @@
-set(SUPPORTED_FIELDS bn254;bls12_381;bls12_377;bw6_761;grumpkin;babybear;goldilocks;mersenne31)
-SET(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
+set(SUPPORTED_FIELDS babybear;goldilocks;mersenne31)
 
 set(IS_FIELD_SUPPORTED FALSE)
 set(I 0)

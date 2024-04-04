@@ -1,8 +1,5 @@
 #include "curves/curve_config.cuh"
-#include "fields/field_config.cuh"
-
 using namespace curve_config;
-using namespace field_config;
 
 #include "msm.cu"
 #include "utils/utils.h"
