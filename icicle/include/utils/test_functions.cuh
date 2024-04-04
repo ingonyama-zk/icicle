@@ -57,10 +57,10 @@ __global__ void mul_elements_kernel(const F* x, const G* y, G* result, const uns
 {
   const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= count) return;
-  G res = x[gid];
-  G y_gid = y[gid];
+  F x_gid = x[gid];
+  G res = y[gid];
   for (int i = 0; i < N_REP; i++)
-    res = res * y_gid;
+    res = res * x_gid;
   result[gid] = res;
 }
 

@@ -3,7 +3,7 @@
 #define BW6_761_FIELDS_PARAMS_H
 
 #include "fields/storage.cuh"
-#include "fields/params/bls12_377_fields.cuh"
+#include "fields/snark_fields/bls12_377_fields.cuh"
 
 namespace bw6_761 {
   typedef bls12_377::fq_config fp_config;

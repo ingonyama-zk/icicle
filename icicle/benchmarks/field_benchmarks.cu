@@ -1,8 +1,8 @@
 #include <benchmark/benchmark.h>
-#include "primitives/test_functions.cuh"
-#include "curves/curve_config.cuh"
+#include "utils/test_functions.cuh"
+#include "fields/field_config.cuh"
 
-using namespace curve_config;
+using namespace field_config;
 
 static void BM_FieldMul(benchmark::State& state) {
   constexpr int N = 128;

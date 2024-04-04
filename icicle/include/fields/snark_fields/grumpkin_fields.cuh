@@ -2,7 +2,7 @@
 #ifndef GRUMPKIN_FIELDS_PARAMS_H
 #define GRUMPKIN_FIELDS_PARAMS_H
 
-#include "fields/params/bn254_fields.cuh"
+#include "fields/snark_fields/bn254_fields.cuh"
 
 namespace grumpkin {
   typedef bn254::fq_config fp_config;

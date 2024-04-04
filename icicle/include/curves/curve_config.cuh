@@ -2,14 +2,6 @@
 #ifndef CURVE_CONFIG_H
 #define CURVE_CONFIG_H
 
-#define BN254     1
-#define BLS12_381 2
-#define BLS12_377 3
-#define BW6_761   4
-#define GRUMPKIN  5
-#define BABY_BEAR 6
-
-#include "gpu-utils/sharedmem.cuh"
 #include "fields/id.h"
 #include "curves/projective.cuh"
 
@@ -18,36 +10,28 @@
 #endif
 
 #if CURVE_ID == BN254
-#define FIELD_ID BN254_FIELDS
 #include "curves/params/bn254.cuh"
 using namespace bn254;
 
 #elif CURVE_ID == BLS12_381
-#define FIELD_ID BLS12_381_FIELDS
 #include "curves/params/bls12_381.cuh"
 using namespace bls12_381;
 
 #elif CURVE_ID == BLS12_377
-#define FIELD_ID BLS12_377_FIELDS
 #include "curves/params/bls12_377.cuh"
 using namespace bls12_377;
 
 #elif CURVE_ID == BW6_761
-#define FIELD_ID BW6_761_FIELDS
 #include "curves/params/bw6_761.cuh"
 using namespace bw6_761;
 
 #elif CURVE_ID == GRUMPKIN
-#define FIELD_ID GRUMPKIN_FIELDS
 #include "curves/params/grumpkin.cuh"
 using namespace grumpkin;
-#elif CURVE_ID == BABY_BEAR
-#include "stark_fields/baby_bear.cuh"
-using namespace baby_bear;
 #endif
 
 #include "fields/field_config.cuh"
-using namespace field_config;
+using field_config::scalar_t;
 
 /**
  * @namespace curve_config

@@ -7,8 +7,6 @@ set_gpu_env()
 
 project(icicle LANGUAGES CUDA CXX)
 
-option(BUILD_TESTS "Build tests" OFF)
-
 if((DEFINED CURVE) AND (DEFINED FIELD))
   message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
 endif ()

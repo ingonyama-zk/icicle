@@ -1,5 +1,5 @@
 #include "field_benchmarks.cu"
-#if CURVE_ID != BABY_BEAR
+#ifdef CURVE_ID
 #include "curve_benchmarks.cu"
 #endif
 

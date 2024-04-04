@@ -1,21 +1,9 @@
-set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin)
+include(cmake/CurvesCommon.cmake)
 
-set(IS_CURVE_SUPPORTED FALSE)
-set(I 0)
-foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
-  math(EXPR I "${I} + 1")
-  if (CURVE STREQUAL SUPPORTED_CURVE)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DCURVE_ID=${I}")
-    set(IS_CURVE_SUPPORTED TRUE)
-  endif ()
-endforeach()
-
-if (NOT IS_CURVE_SUPPORTED)
-  message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported fields: ${SUPPORTED_CURVES}" )
-endif ()
+check_curve()
 
 if (G2)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2 -DEXT_FIELD")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2")
 endif ()
 
 set(TARGET icicle_curve)

@@ -1,4 +1,4 @@
-#include "primitives/test_functions.cuh"
+#include "utils/test_functions.cuh"
 #include "curves/curve_config.cuh"
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>

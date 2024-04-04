@@ -1,10 +1,10 @@
-#include "primitives/test_functions.cuh"
-#include "curves/curve_config.cuh"
+#include "utils/test_functions.cuh"
+#include "fields/field_config.cuh"
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
 #include <iostream>
 
-using namespace curve_config;
+using namespace field_config;
 
 class FieldTest : public ::testing::Test
 {
