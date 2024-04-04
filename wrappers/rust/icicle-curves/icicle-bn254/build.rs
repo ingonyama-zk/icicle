@@ -17,7 +17,7 @@ fn main() {
 
     // Build
     let out_dir = config
-        .build_target("icicle_curve_bn254")
+        .build_target("icicle_curve")
         .build();
 
     println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());

@@ -23,7 +23,7 @@ if (BUILD_BASE_FIELD)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DBASE_FIELD")
 endif ()
 
-set(TARGET icicle_field_${FIELD})
+set(TARGET icicle_field)
 
 set(SRC ${CMAKE_SOURCE_DIR}/src)
 

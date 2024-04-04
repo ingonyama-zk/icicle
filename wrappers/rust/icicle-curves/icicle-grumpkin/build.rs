@@ -8,7 +8,7 @@ fn main() {
                 .define("BUILD_TESTS", "OFF") //TODO: feature
                 .define("CURVE", "grumpkin")
                 .define("CMAKE_BUILD_TYPE", "Release")
-                .build_target("icicle_curve_grumpkin")
+                .build_target("icicle_curve")
                 .build();
 
     println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
