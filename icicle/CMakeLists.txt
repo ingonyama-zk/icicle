@@ -13,7 +13,7 @@ if((DEFINED CURVE) AND (DEFINED FIELD))
   message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
 endif ()
 
-option(EXT_FIELD "Build extension field" OFF)
+option(EXT_FIELD "Build extension field" ON)
 if(DEFINED FIELD)
   add_subdirectory(src/fields)
 endif ()
