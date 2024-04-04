@@ -1,5 +1,5 @@
 #include <benchmark/benchmark.h>
-#include "primitives/test_functions.cuh"
+#include "tests/test_functions.cuh"
 #include "curves/curve_config.cuh"
 
 using namespace curve_config;

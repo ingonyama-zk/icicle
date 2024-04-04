@@ -7,11 +7,9 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, NTTDir, NttAlgorithm, Ordering},
+    ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, NTTDir, NttAlgorithm, Ordering, NTTConfig, NTT},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
-
-use super::{NTTConfig, NTT};
 
 pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
 where
