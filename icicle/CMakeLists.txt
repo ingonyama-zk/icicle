@@ -21,6 +21,7 @@ endif ()
 option(G2 "Build G2" OFF)
 option(ECNTT "Build ECNTT" OFF)
 if(DEFINED CURVE)
+  set(FIELD ${CURVE})
   add_subdirectory(src/curves)
 endif ()
 

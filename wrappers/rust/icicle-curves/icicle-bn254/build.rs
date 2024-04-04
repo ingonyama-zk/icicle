@@ -21,10 +21,8 @@ fn main() {
         .build();
 
     println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
-    println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
-
-    println!("cargo:rustc-link-lib=ingo_field_bn254");
     println!("cargo:rustc-link-lib=ingo_curve_bn254");
+
     println!("cargo:rustc-link-lib=stdc++");
     println!("cargo:rustc-link-lib=cudart");
 }

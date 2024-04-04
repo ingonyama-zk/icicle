@@ -21,9 +21,6 @@ fn main() {
         .build();
 
     println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
-    println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
-
-    println!("cargo:rustc-link-lib=ingo_field_bls12_377");
     println!("cargo:rustc-link-lib=ingo_curve_bls12_377");
 
     if cfg!(feature = "bw6-761") {
@@ -44,9 +41,6 @@ fn main() {
             .build();
 
         println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
-        println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
-
-        println!("cargo:rustc-link-lib=ingo_field_bw6_761");
         println!("cargo:rustc-link-lib=ingo_curve_bw6_761");
     }
 

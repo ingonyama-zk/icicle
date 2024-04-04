@@ -1,12 +1,4 @@
-#ifdef CURVE_ID
-#include "curves/curve_config.cuh"
-using namespace curve_config;
-#endif
-#ifndef CURVE_ID
-#include "fields/field_config.cuh"
-using namespace field_config;
-#endif
-
+#include "curve_or_field.cuh"
 #include "thread_ntt.cu"
 #include "gpu-utils/sharedmem.cuh"
 #include "ntt/ntt.cuh" // for Ordering
