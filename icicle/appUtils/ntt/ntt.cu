@@ -22,7 +22,7 @@ namespace ntt {
     const uint32_t MAX_NUM_THREADS = 512; // TODO: hotfix - should be 1024, currently limits shared memory size
     const uint32_t MAX_THREADS_BATCH = 512;
     const uint32_t MAX_THREADS_BATCH_ECNTT =
-      256; // TODO: hardcodded - allows (2^18 x 64) ECNTT for sm86, decrease this to allow larger batch or ecntt length
+      128; // TODO: hardcodded - allows (2^18 x 64) ECNTT for sm86, decrease this to allow larger batch or ecntt length
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
 
