@@ -120,6 +120,7 @@ func TestECNtt(t *testing.T) {
 
 func TestNttDeviceAsync(t *testing.T) {
 	cfg := GetDefaultNttConfig()
+	initDomain(largestTestSize, cfg)
 	scalars := GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{1, 10, largestTestSize} {
