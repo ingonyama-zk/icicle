@@ -10,23 +10,23 @@
 #endif
 
 #if FIELD_ID == BN254
-#include "fields/snark_fields/bn254_fields.cuh"
-using namespace bn254;
+#include "fields/snark_fields/bn254_scalar.cuh"
+using bn254::fp_config;
 #elif FIELD_ID == BLS12_381
-#include "fields/snark_fields/bls12_381_fields.cuh"
-using namespace bls12_381;
+#include "fields/snark_fields/bls12_381_scalar.cuh"
+using bls12_381::fp_config;
 #elif FIELD_ID == BLS12_377
-#include "fields/snark_fields/bls12_377_fields.cuh"
-using namespace bls12_377;
+#include "fields/snark_fields/bls12_377_scalar.cuh"
+using bls12_377::fp_config;
 #elif FIELD_ID == BW6_761
-#include "fields/snark_fields/bw6_761_fields.cuh"
-using namespace bw6_761;
+#include "fields/snark_fields/bls12_377_base.cuh"
+typedef bls12_377::fq_config fp_config;
 #elif FIELD_ID == GRUMPKIN
-#include "fields/snark_fields/grumpkin_fields.cuh"
-using namespace grumpkin;
+#include "fields/snark_fields/bn254_base.cuh"
+typedef bn254::fq_config fp_config;
 #elif FIELD_ID == BABY_BEAR
 #include "fields/stark_fields/baby_bear.cuh"
-using namespace baby_bear;
+using baby_bear::fp_config;
 #endif
 
 /**

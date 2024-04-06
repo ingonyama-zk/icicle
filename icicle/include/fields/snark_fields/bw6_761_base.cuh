@@ -1,13 +1,10 @@
 #pragma once
-#ifndef BW6_761_FIELDS_PARAMS_H
-#define BW6_761_FIELDS_PARAMS_H
+#ifndef BW6_761_BASE_BASE_H
+#define BW6_761_BASE_BASE_H
 
 #include "fields/storage.cuh"
-#include "fields/snark_fields/bls12_377_fields.cuh"
 
 namespace bw6_761 {
-  typedef bls12_377::fq_config fp_config;
-
   struct fq_config {
     static constexpr unsigned limbs_count = 24;
     static constexpr unsigned modulus_bit_count = 761;

@@ -3,7 +3,7 @@
 #define BW6_761_PARAMS_H
 
 #include "fields/storage.cuh"
-#include "fields/snark_fields/bw6_761_fields.cuh"
+#include "fields/snark_fields/bw6_761_base.cuh"
 
 namespace bw6_761 {
   // G1 and G2 generators

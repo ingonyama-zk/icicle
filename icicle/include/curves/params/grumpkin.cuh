@@ -3,9 +3,10 @@
 #define GRUMPKIN_PARAMS_H
 
 #include "fields/storage.cuh"
-#include "fields/snark_fields/grumpkin_fields.cuh"
+#include "fields/snark_fields/bn254_scalar.cuh"
 
 namespace grumpkin {
+  typedef bn254::fp_config fq_config;
   // G1 generator
   static constexpr storage<fq_config::limbs_count> g1_gen_x = {0x00000001, 0x00000000, 0x00000000, 0x00000000,
                                                                0x00000000, 0x00000000, 0x00000000, 0x00000000};
