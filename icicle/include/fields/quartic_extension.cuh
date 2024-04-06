@@ -2,10 +2,6 @@
 
 #include "field.cuh"
 
-#define HOST_INLINE        __host__ __forceinline__
-#define DEVICE_INLINE      __device__ __forceinline__
-#define HOST_DEVICE_INLINE __host__ __device__ __forceinline__
-
 template <typename CONFIG>
 class Extension4Field
 {
@@ -142,22 +138,6 @@ public:
   {
     return !(xs == ys);
   }
-
-  // template <const Extension4Field& multiplier>
-  // static HOST_DEVICE_INLINE Extension4Field mul_const(const Extension4Field& xs)
-  // {
-  //   // static constexpr FF mul_real = multiplier.real;
-  //   // static constexpr FF mul_imaginary = multiplier.imaginary;
-  //   // const FF xs_real = xs.real;
-  //   // const FF xs_imaginary = xs.imaginary;
-  //   // FF real_prod = FF::template mul_const<mul_real>(xs_real);
-  //   // FF imaginary_prod = FF::template mul_const<mul_imaginary>(xs_imaginary);
-  //   // FF re_im = FF::template mul_const<mul_real>(xs_imaginary);
-  //   // FF im_re = FF::template mul_const<mul_imaginary>(xs_real);
-  //   // FF i_sq_times_im = FF::template mul_unsigned<CONFIG::i_squared>(imaginary_prod);
-  //   // i_sq_times_im = CONFIG::i_squared_is_negative ? FF::neg(i_sq_times_im) : i_sq_times_im;
-  //   // return Extension4Field{real_prod + i_sq_times_im, re_im + im_re};
-  // }
 
   template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE Extension4Field mul_unsigned(const Extension4Field& xs)

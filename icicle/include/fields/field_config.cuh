@@ -3,9 +3,9 @@
 #define FIELD_CONFIG_H
 
 #include "fields/id.h"
-
 #include "fields/field.cuh"
-#if defined(EXT_FIELD)
+
+#ifdef EXT_FIELD
 #include "fields/extension_field.cuh"
 #endif
 

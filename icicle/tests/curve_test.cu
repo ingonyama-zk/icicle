@@ -13,60 +13,69 @@ protected:
 
   projective_t* points1{};
   projective_t* points2{};
-  g2_projective_t* g2_points1{};
-  g2_projective_t* g2_points2{};
   scalar_t* scalars1{};
   scalar_t* scalars2{};
   projective_t* zero_points{};
-  g2_projective_t* g2_zero_points{};
   scalar_t* one_scalars{};
   affine_t* aff_points{};
-  g2_affine_t* g2_aff_points{};
   projective_t* res_points1{};
   projective_t* res_points2{};
-  g2_projective_t* g2_res_points1{};
-  g2_projective_t* g2_res_points2{};
   scalar_t* res_scalars{};
 
+#ifdef G2
+  g2_projective_t* g2_points1{};
+  g2_projective_t* g2_points2{};
+  g2_projective_t* g2_zero_points{};
+  g2_affine_t* g2_aff_points{};
+  g2_projective_t* g2_res_points1{};
+  g2_projective_t* g2_res_points2{};
+#endif
+  
   CurveTest()
   {
     assert(!cudaDeviceReset());
     assert(!cudaMallocManaged(&points1, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&points2, n * sizeof(projective_t)));
-    assert(!cudaMallocManaged(&g2_points1, n * sizeof(g2_projective_t)));
-    assert(!cudaMallocManaged(&g2_points2, n * sizeof(g2_projective_t)));
     assert(!cudaMallocManaged(&scalars1, n * sizeof(scalar_t)));
     assert(!cudaMallocManaged(&scalars2, n * sizeof(scalar_t)));
     assert(!cudaMallocManaged(&zero_points, n * sizeof(projective_t)));
-    assert(!cudaMallocManaged(&g2_zero_points, n * sizeof(g2_projective_t)));
     assert(!cudaMallocManaged(&one_scalars, n * sizeof(scalar_t)));
     assert(!cudaMallocManaged(&aff_points, n * sizeof(affine_t)));
-    assert(!cudaMallocManaged(&g2_aff_points, n * sizeof(g2_affine_t)));
     assert(!cudaMallocManaged(&res_points1, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&res_points2, n * sizeof(projective_t)));
+    assert(!cudaMallocManaged(&res_scalars, n * sizeof(scalar_t)));
+  
+#ifdef G2
+    assert(!cudaMallocManaged(&g2_points1, n * sizeof(g2_projective_t)));
+    assert(!cudaMallocManaged(&g2_points2, n * sizeof(g2_projective_t)));
+    assert(!cudaMallocManaged(&g2_zero_points, n * sizeof(g2_projective_t)));
+    assert(!cudaMallocManaged(&g2_aff_points, n * sizeof(g2_affine_t)));
     assert(!cudaMallocManaged(&g2_res_points1, n * sizeof(g2_projective_t)));
     assert(!cudaMallocManaged(&g2_res_points2, n * sizeof(g2_projective_t)));
-    assert(!cudaMallocManaged(&res_scalars, n * sizeof(scalar_t)));
+#endif
   }
 
   ~CurveTest() override
   {
     cudaFree(points1);
     cudaFree(points2);
-    cudaFree(g2_points1);
-    cudaFree(g2_points2);
     cudaFree(scalars1);
     cudaFree(scalars2);
     cudaFree(zero_points);
-    cudaFree(g2_zero_points);
     cudaFree(one_scalars);
     cudaFree(aff_points);
-    cudaFree(g2_aff_points);
     cudaFree(res_points1);
     cudaFree(res_points2);
+    cudaFree(res_scalars);
+
+#ifdef G2
+    cudaFree(g2_points1);
+    cudaFree(g2_points2);
+    cudaFree(g2_zero_points);
+    cudaFree(g2_aff_points);
     cudaFree(g2_res_points1);
     cudaFree(g2_res_points2);
-    cudaFree(res_scalars);
+#endif
 
     cudaDeviceReset();
   }
@@ -75,20 +84,23 @@ protected:
   {
     ASSERT_EQ(device_populate_random<projective_t>(points1, n), cudaSuccess);
     ASSERT_EQ(device_populate_random<projective_t>(points2, n), cudaSuccess);
-    ASSERT_EQ(device_populate_random<g2_projective_t>(g2_points1, n), cudaSuccess);
-    ASSERT_EQ(device_populate_random<g2_projective_t>(g2_points2, n), cudaSuccess);
     ASSERT_EQ(device_populate_random<scalar_t>(scalars1, n), cudaSuccess);
     ASSERT_EQ(device_populate_random<scalar_t>(scalars2, n), cudaSuccess);
     ASSERT_EQ(device_set<projective_t>(zero_points, projective_t::zero(), n), cudaSuccess);
-    ASSERT_EQ(device_set<g2_projective_t>(g2_zero_points, g2_projective_t::zero(), n), cudaSuccess);
     ASSERT_EQ(device_set<scalar_t>(one_scalars, scalar_t::one(), n), cudaSuccess);
     ASSERT_EQ(cudaMemset(aff_points, 0, n * sizeof(affine_t)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(g2_aff_points, 0, n * sizeof(g2_affine_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_points1, 0, n * sizeof(projective_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(res_points2, 0, n * sizeof(projective_t)), cudaSuccess);
+    ASSERT_EQ(cudaMemset(res_scalars, 0, n * sizeof(scalar_t)), cudaSuccess);
+
+#ifdef G2
+    ASSERT_EQ(device_populate_random<g2_projective_t>(g2_points1, n), cudaSuccess);
+    ASSERT_EQ(device_populate_random<g2_projective_t>(g2_points2, n), cudaSuccess);
+    ASSERT_EQ(device_set<g2_projective_t>(g2_zero_points, g2_projective_t::zero(), n), cudaSuccess);
+    ASSERT_EQ(cudaMemset(g2_aff_points, 0, n * sizeof(g2_affine_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(g2_res_points1, 0, n * sizeof(g2_projective_t)), cudaSuccess);
     ASSERT_EQ(cudaMemset(g2_res_points2, 0, n * sizeof(g2_projective_t)), cudaSuccess);
-    ASSERT_EQ(cudaMemset(res_scalars, 0, n * sizeof(scalar_t)), cudaSuccess);
+#endif
   }
 };
 
@@ -204,6 +216,7 @@ TEST_F(CurveTest, ECMixedAdditionOfNegatedPointEqSubtraction)
     ASSERT_EQ(res_points1[i], points1[i] + res_points2[i]);
 }
 
+#ifdef G2
 TEST_F(CurveTest, G2ECRandomPointsAreOnCurve)
 {
   for (unsigned i = 0; i < n; i++)
@@ -315,3 +328,4 @@ TEST_F(CurveTest, G2ECMixedAdditionOfNegatedPointEqSubtraction)
   for (unsigned i = 0; i < n; i++)
     ASSERT_EQ(g2_res_points1[i], g2_points1[i] + g2_res_points2[i]);
 }
+#endif

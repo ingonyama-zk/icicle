@@ -7,7 +7,11 @@ include(../cmake/FieldsCommon.cmake)
 set_env()
 set_gpu_env()
 
-project(icicle_benchmarks LANGUAGES CUDA CXX)
+project(icicle_tests LANGUAGES CUDA CXX)
+
+if (G2)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2")
+endif ()
 
 if(DEFINED CURVE)
   if(DEFINED FIELD)
@@ -17,8 +21,6 @@ if(DEFINED CURVE)
 elseif(DEFINED FIELD)
   check_field()
 endif ()
-
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2=ON")
 
 include(FetchContent)
 FetchContent_Declare(
