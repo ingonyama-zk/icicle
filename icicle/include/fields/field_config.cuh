@@ -5,10 +5,6 @@
 #include "fields/id.h"
 #include "fields/field.cuh"
 
-#ifdef EXT_FIELD
-#include "fields/extension_field.cuh"
-#endif
-
 #if FIELD_ID == BN254
 #include "fields/snark_fields/bn254_scalar.cuh"
 using bn254::fp_config;
@@ -24,9 +20,13 @@ typedef bls12_377::fq_config fp_config;
 #elif FIELD_ID == GRUMPKIN
 #include "fields/snark_fields/bn254_base.cuh"
 typedef bn254::fq_config fp_config;
+
 #elif FIELD_ID == BABY_BEAR
 #include "fields/stark_fields/baby_bear.cuh"
 using baby_bear::fp_config;
+#ifdef EXT_FIELD
+#include "fields/quartic_extension.cuh"
+#endif
 #endif
 
 /**
@@ -39,6 +39,13 @@ namespace field_config {
    * Scalar field. Is always a prime field.
    */
   typedef Field<fp_config> scalar_t;
+
+#ifdef EXT_FIELD
+  /**
+   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef ExtensionField<fp_config> extension_t;
+#endif
 } // namespace field_config
 
 #endif

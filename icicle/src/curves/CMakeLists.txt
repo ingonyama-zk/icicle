@@ -1,7 +1,3 @@
-include(cmake/CurvesCommon.cmake)
-
-check_curve()
-
 if (G2)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2")
 endif ()
