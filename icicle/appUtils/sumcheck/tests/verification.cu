@@ -7,8 +7,8 @@
 #include <vector>
 
 // #define DEBUG
-// #define WARMUP
-// #define ONLY_BENCH
+#define WARMUP
+#define ONLY_BENCH
 
 #include "curves/curve_config.cuh"
 #include "sumcheck/sumcheck.cu"
@@ -36,7 +36,7 @@ void incremental_values(test_scalar* res, uint32_t count)
   }
 }
 
-#define POLYS 2
+#define POLYS 1
 
 int main(){
 
@@ -56,13 +56,14 @@ int main(){
   bool verify_cpu = false;
   bool use_test_vecs = verify_cpu? true : false;
 
-  int n = 4;
+  int n = 24;
   int polys = POLYS;
+  bool double_round = true;
   int size = polys << n;
-  int trans_size = max((polys+1)*(polys+1)*n/2,(polys+1)*n) +1;
+  int trans_size = double_round? (polys+1)*(polys+1)*n/2 + 1 : (polys+1)*n +1;
   bool reorder = false;
 
-  printf("Running %d polys of log2 size %d\n", polys, n);
+  printf("Running %d polys of log2 size %d double round = %d\n", polys, n, double_round);
 
   cudaStream_t stream1, stream2;
   cudaStreamCreate(&stream1);
@@ -118,8 +119,8 @@ int main(){
       }
     }
     else{
-      // random_samples(h_evals.get(), size);
-      incremental_values(h_evals.get(), size);
+      random_samples(h_evals.get(), size);
+      // incremental_values(h_evals.get(), size);
       C = test_scalar::rand_host();
       h_transcript[0] = test_scalar::rand_host();
       h_transcript_ref[0] = h_transcript[0];
@@ -184,7 +185,8 @@ int main(){
   // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
-  sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  else sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
   cudaDeviceSynchronize();
@@ -200,7 +202,8 @@ int main(){
   // cudaMemcpy(h_evals_debug_unif.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
   // if (polys == 3) sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // if (polys == 3) sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
-  sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  else sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaEventRecord(gpu_stop, 0);
@@ -216,8 +219,8 @@ int main(){
   auto cpu_start = std::chrono::high_resolution_clock::now();
   // if (!use_test_vecs && polys == 1) sumcheck_alg1_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
   // if (!use_test_vecs && polys == 3) sumcheck_alg3_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n);
-  // sumcheck_generic_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n, polys);
-  sumcheck_double_round_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n, polys);
+  if (double_round) sumcheck_double_round_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n, polys);
+  else sumcheck_generic_ref(h_evals.get(), h_temp.get(), h_transcript_ref.get(), C, n, polys);
   auto cpu_stop = std::chrono::high_resolution_clock::now();
   auto cpu_time = std::chrono::duration_cast<std::chrono::microseconds>(cpu_stop - cpu_start).count();
 
