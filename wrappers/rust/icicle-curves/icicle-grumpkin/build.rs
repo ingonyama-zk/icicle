@@ -5,10 +5,10 @@ fn main() {
     println!("cargo:rerun-if-changed=../../../../icicle");
 
     let out_dir = Config::new("../../../../icicle")
-                .define("CURVE", "grumpkin")
-                .define("CMAKE_BUILD_TYPE", "Release")
-                .build_target("icicle_curve")
-                .build();
+        .define("CURVE", "grumpkin")
+        .define("CMAKE_BUILD_TYPE", "Release")
+        .build_target("icicle_curve")
+        .build();
 
     println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
     println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
