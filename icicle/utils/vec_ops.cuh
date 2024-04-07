@@ -105,7 +105,7 @@ namespace vec_ops {
    * @param row_size size of rows.
    * @param column_size size of columns.
    * @param ctx Device context.
-   * @param on_device wether the input and output are on device.
+   * @param on_device Whether the input and output are on device.
    * @tparam E The type of elements `mat_in' and `mat_out`.
    */
   template <typename E>
