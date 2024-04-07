@@ -18,12 +18,3 @@ struct SharedMemory<scalar_t> {
     return s_scalar_;
   }
 };
-
-template <>
-struct SharedMemory<point_field_t> {
-  __device__ point_field_t* getPointer()
-  {
-    extern __shared__ point_field_t s_point_field_[];
-    return s_point_field_;
-  }
-};

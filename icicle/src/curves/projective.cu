@@ -41,7 +41,7 @@ extern "C" void CONCAT_EXPAND(CURVE, GenerateAffinePoints)(affine_t* points, int
   projective_t::RandHostManyAffine(points, size);
 }
 
-#if defined(G2)
+#ifdef G2
 
 extern "C" bool CONCAT_EXPAND(CURVE, G2Eq)(g2_projective_t* point1, g2_projective_t* point2)
 {

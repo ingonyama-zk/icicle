@@ -2,48 +2,32 @@
 #ifndef CURVE_CONFIG_H
 #define CURVE_CONFIG_H
 
-#define BN254     1
-#define BLS12_381 2
-#define BLS12_377 3
-#define BW6_761   4
-#define GRUMPKIN  5
-
-#include "gpu-utils/sharedmem.cuh"
 #include "fields/id.h"
 #include "curves/projective.cuh"
 
-#if defined(G2)
-#include "fields/extension_field.cuh"
-#endif
-
 #if CURVE_ID == BN254
-#define FIELD_ID BN254_FIELDS
 #include "curves/params/bn254.cuh"
 using namespace bn254;
 
 #elif CURVE_ID == BLS12_381
-#define FIELD_ID BLS12_381_FIELDS
 #include "curves/params/bls12_381.cuh"
 using namespace bls12_381;
 
 #elif CURVE_ID == BLS12_377
-#define FIELD_ID BLS12_377_FIELDS
 #include "curves/params/bls12_377.cuh"
 using namespace bls12_377;
 
 #elif CURVE_ID == BW6_761
-#define FIELD_ID BW6_761_FIELDS
 #include "curves/params/bw6_761.cuh"
 using namespace bw6_761;
 
 #elif CURVE_ID == GRUMPKIN
-#define FIELD_ID GRUMPKIN_FIELDS
 #include "curves/params/grumpkin.cuh"
 using namespace grumpkin;
 #endif
 
 #include "fields/field_config.cuh"
-using namespace field_config;
+using field_config::scalar_t;
 
 /**
  * @namespace curve_config
@@ -70,13 +54,15 @@ namespace curve_config {
    */
   typedef Affine<point_field_t> affine_t;
 
-#if defined(G2)
+#ifdef G2
 #if CURVE_ID == BW6_761
   typedef point_field_t g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x = g2_point_field_t{g2_gen_x};
   static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{g2_gen_y};
   static constexpr g2_point_field_t g2_b = g2_point_field_t{g2_weierstrass_b};
 #else
+  #include "fields/quadratic_extension.cuh"
+
   typedef ExtensionField<fq_config> g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x =
     g2_point_field_t{point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}};
@@ -85,6 +71,7 @@ namespace curve_config {
   static constexpr g2_point_field_t g2_b =
     g2_point_field_t{point_field_t{weierstrass_b_g2_re}, point_field_t{weierstrass_b_g2_im}};
 #endif
+
   /**
    * [Projective representation](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) of G2 curve.
    */
