@@ -8,6 +8,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, NTTDir, NttAlgorithm, Ordering},
+    vec_ops::{transpose_matrix, VecOps},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
