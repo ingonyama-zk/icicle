@@ -237,7 +237,7 @@ where
 
 pub fn check_ntt_batch<F: FieldImpl>()
 where
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+<F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>, <F as FieldImpl>::Config: VecOps<F>
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
