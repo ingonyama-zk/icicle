@@ -13,6 +13,10 @@ if (G2)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2")
 endif ()
 
+if (EXT_FIELD)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DEXT_FIELD")
+endif ()
+
 if(DEFINED CURVE)
   if(DEFINED FIELD)
     message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
