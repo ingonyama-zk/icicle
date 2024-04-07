@@ -47,8 +47,8 @@ public:
   static constexpr HOST_DEVICE_INLINE ExtensionField ToMontgomery(const ExtensionField& xs)
   {
     return ExtensionField{
-      xs.real * FF{CONFIG::montgomery_r}, xs.im1 * FF{CONFIG::montgomery_r},
-      xs.im2 * FF{CONFIG::montgomery_r}, xs.im3 * FF{CONFIG::montgomery_r}};
+      xs.real * FF{CONFIG::montgomery_r}, xs.im1 * FF{CONFIG::montgomery_r}, xs.im2 * FF{CONFIG::montgomery_r},
+      xs.im3 * FF{CONFIG::montgomery_r}};
   }
 
   static constexpr HOST_DEVICE_INLINE ExtensionField FromMontgomery(const ExtensionField& xs)
@@ -134,10 +134,7 @@ public:
     return (xs.real == ys.real) && (xs.im1 == ys.im1) && (xs.im2 == ys.im2) && (xs.im3 == ys.im3);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const ExtensionField& xs, const ExtensionField& ys)
-  {
-    return !(xs == ys);
-  }
+  friend HOST_DEVICE_INLINE bool operator!=(const ExtensionField& xs, const ExtensionField& ys) { return !(xs == ys); }
 
   template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField mul_unsigned(const ExtensionField& xs)
@@ -172,20 +169,35 @@ public:
   {
     FF x, x0, x2;
     if (CONFIG::nonresidue_is_negative) {
-      x0 = FF::reduce(FF::sqr_wide(xs.real) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im1, xs.im3 + xs.im3) - FF::sqr_wide(xs.im2)));
-      x2 = FF::reduce(FF::mul_wide(xs.real, xs.im2 + xs.im2) - FF::sqr_wide(xs.im1) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.im3)));
+      x0 = FF::reduce(
+        FF::sqr_wide(xs.real) +
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im1, xs.im3 + xs.im3) - FF::sqr_wide(xs.im2)));
+      x2 = FF::reduce(
+        FF::mul_wide(xs.real, xs.im2 + xs.im2) - FF::sqr_wide(xs.im1) +
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.im3)));
       x = FF::reduce(FF::sqr_wide(x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(x2)));
     } else {
-      x0 = FF::reduce(FF::sqr_wide(xs.real) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im1, xs.im3 + xs.im3) - FF::sqr_wide(xs.im2)));
-      x2 = FF::reduce(FF::mul_wide(xs.real, xs.im2 + xs.im2) - FF::sqr_wide(xs.im1) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.im3)));
+      x0 = FF::reduce(
+        FF::sqr_wide(xs.real) -
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im1, xs.im3 + xs.im3) - FF::sqr_wide(xs.im2)));
+      x2 = FF::reduce(
+        FF::mul_wide(xs.real, xs.im2 + xs.im2) - FF::sqr_wide(xs.im1) -
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.im3)));
       x = FF::reduce(FF::sqr_wide(x0) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(x2)));
     }
     FF x_inv = FF::inverse(x);
     x0 = x0 * x_inv;
     x2 = x2 * x_inv;
     return {
-      FF::reduce((CONFIG::nonresidue_is_negative ? (FF::mul_wide(xs.real, x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2))) : (FF::mul_wide(xs.real, x0)) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))),
-      FF::reduce((CONFIG::nonresidue_is_negative ? FWide::neg(FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2))) : FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2))) - FF::mul_wide(xs.im1, x0)),
+      FF::reduce(
+        (CONFIG::nonresidue_is_negative
+           ? (FF::mul_wide(xs.real, x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))
+           : (FF::mul_wide(xs.real, x0)) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))),
+      FF::reduce(
+        (CONFIG::nonresidue_is_negative
+           ? FWide::neg(FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2)))
+           : FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2))) -
+        FF::mul_wide(xs.im1, x0)),
       FF::reduce(FF::mul_wide(xs.im2, x0) - FF::mul_wide(xs.real, x2)),
       FF::reduce(FF::mul_wide(xs.im1, x2) - FF::mul_wide(xs.im3, x0)),
     };

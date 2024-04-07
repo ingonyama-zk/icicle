@@ -4,7 +4,8 @@
 
 using namespace field_config;
 
-static void BM_FieldAdd(benchmark::State& state) {
+static void BM_FieldAdd(benchmark::State& state)
+{
   constexpr int N = 256;
   int n = state.range(0) / N;
   scalar_t* scalars1;
@@ -33,7 +34,8 @@ static void BM_FieldAdd(benchmark::State& state) {
   cudaFree(scalars2);
 }
 
-static void BM_FieldMul(benchmark::State& state) {
+static void BM_FieldMul(benchmark::State& state)
+{
   constexpr int N = 128;
   int n = state.range(0) / N;
   scalar_t* scalars1;
@@ -62,7 +64,8 @@ static void BM_FieldMul(benchmark::State& state) {
   cudaFree(scalars2);
 }
 
-static void BM_FieldSqr(benchmark::State& state) {
+static void BM_FieldSqr(benchmark::State& state)
+{
   constexpr int N = 128;
   int n = state.range(0) / N;
   scalar_t* scalars;
@@ -87,6 +90,6 @@ static void BM_FieldSqr(benchmark::State& state) {
   cudaFree(scalars);
 }
 
-BENCHMARK(BM_FieldAdd)->Range(1<<28, 1<<28)->Unit(benchmark::kMicrosecond);
-BENCHMARK(BM_FieldMul)->Range(1<<27, 1<<27)->Unit(benchmark::kMicrosecond);
-BENCHMARK(BM_FieldSqr)->Range(1<<27, 1<<27)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_FieldAdd)->Range(1 << 28, 1 << 28)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_FieldMul)->Range(1 << 27, 1 << 27)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_FieldSqr)->Range(1 << 27, 1 << 27)->Unit(benchmark::kMicrosecond);

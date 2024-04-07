@@ -30,7 +30,7 @@ protected:
   g2_projective_t* g2_res_points1{};
   g2_projective_t* g2_res_points2{};
 #endif
-  
+
   CurveTest()
   {
     assert(!cudaDeviceReset());
@@ -44,7 +44,7 @@ protected:
     assert(!cudaMallocManaged(&res_points1, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&res_points2, n * sizeof(projective_t)));
     assert(!cudaMallocManaged(&res_scalars, n * sizeof(scalar_t)));
-  
+
 #ifdef G2
     assert(!cudaMallocManaged(&g2_points1, n * sizeof(g2_projective_t)));
     assert(!cudaMallocManaged(&g2_points2, n * sizeof(g2_projective_t)));

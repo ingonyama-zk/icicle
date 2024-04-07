@@ -4,7 +4,8 @@
 
 using namespace curve_config;
 
-static void BM_MixedECAdd(benchmark::State& state) {
+static void BM_MixedECAdd(benchmark::State& state)
+{
   constexpr int N = 128;
   int n = state.range(0) / N;
   projective_t* points1;
@@ -37,7 +38,8 @@ static void BM_MixedECAdd(benchmark::State& state) {
   cudaFree(points2);
 }
 
-static void BM_FullECAdd(benchmark::State& state) {
+static void BM_FullECAdd(benchmark::State& state)
+{
   constexpr int N = 128;
   int n = state.range(0) / N;
   projective_t* points1;
@@ -70,5 +72,5 @@ static void BM_FullECAdd(benchmark::State& state) {
   cudaFree(points2);
 }
 
-BENCHMARK(BM_FullECAdd)->Range(1<<27, 1<<27)->Unit(benchmark::kMillisecond);
-BENCHMARK(BM_MixedECAdd)->Range(1<<27, 1<<27)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_FullECAdd)->Range(1 << 27, 1 << 27)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_MixedECAdd)->Range(1 << 27, 1 << 27)->Unit(benchmark::kMillisecond);

@@ -12,7 +12,7 @@ set(FIELD_SOURCE ${SRC}/fields/field.cu)
 list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern.cu)
 list(APPEND FIELD_SOURCE ${SRC}/fields/mont.cu)
 
-# TODO: impl poseidon for small fields. note that it needs to be defined for the extesion field!
+# TODO: impl poseidon for small fields. note that it needs to be defined for the extension field!
 if (DEFINED CURVE)
   list(APPEND FIELD_SOURCE ${SRC}/poseidon/poseidon.cu)
   list(APPEND FIELD_SOURCE ${SRC}/poseidon/tree/merkle.cu)

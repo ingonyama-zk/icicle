@@ -515,7 +515,7 @@ public:
     const uint32_t* b = bs.limbs;
     uint32_t* c = cs.limbs;
     uint32_t* even = rs.limbs;
-    
+
     if constexpr (TLC > 2) {
       __align__(16) uint32_t odd[TLC - 1];
       size_t i;

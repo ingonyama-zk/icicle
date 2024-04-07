@@ -61,7 +61,7 @@ namespace curve_config {
   static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{g2_gen_y};
   static constexpr g2_point_field_t g2_b = g2_point_field_t{g2_weierstrass_b};
 #else
-  #include "fields/quadratic_extension.cuh"
+#include "fields/quadratic_extension.cuh"
 
   typedef ExtensionField<fq_config> g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x =

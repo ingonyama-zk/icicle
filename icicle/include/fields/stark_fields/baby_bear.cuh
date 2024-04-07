@@ -42,7 +42,7 @@ namespace baby_bear {
        {0x77880001}, {0x77c40001}, {0x77e20001}, {0x77f10001}, {0x77f88001}, {0x77fc4001}, {0x77fe2001},
        {0x77ff1001}, {0x77ff8801}, {0x77ffc401}, {0x77ffe201}, {0x77fff101}, {0x77fff881}, {0x77fffc41},
        {0x77fffe21}, {0x77ffff11}, {0x77ffff89}, {0x77ffffc5}, {0x77ffffe3}, {0x77fffff2}}};
-    
+
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 11;
     // true if nonresidue is negative.
