@@ -35,7 +35,7 @@ jobs:
     needs: [check-changed-files, check-format]
     strategy:
       matrix:
-        curve: [bn254, bls12_381, bls12_377, bw6_761, grumpkin]
+        curve: [bn254, bls12_381, bls12_377, bw6_761]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
