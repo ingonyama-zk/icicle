@@ -3,7 +3,7 @@ if (G2)
 endif ()
 
 set(TARGET icicle_curve)
-set(FIELD_TARGET icicle_field_${FIELD})
+set(FIELD_TARGET icicle_field)
 
 set(SRC ${CMAKE_SOURCE_DIR}/src)
 

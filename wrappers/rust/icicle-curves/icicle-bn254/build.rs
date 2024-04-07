@@ -7,7 +7,6 @@ fn main() {
     // Base config
     let mut config = Config::new("../../../../icicle/");
     config
-        .define("BUILD_TESTS", "OFF")
         .define("CURVE", "bn254")
         .define("CMAKE_BUILD_TYPE", "Release");
 
