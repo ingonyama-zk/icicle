@@ -157,8 +157,9 @@ void mult_and_accumulate(S* in, S* out, int log_size, S alpha, int nof_results, 
 		// if (nof_steps) printf("r last");
 		// else printf("m last");
 	} 
-	// cudaDeviceSynchronize();
-  // printf("cuda err last %d\n", cudaGetLastError());
+	cudaDeviceSynchronize();
+	printf("nof res %d last_step_size %d\n", nof_results, last_step_size);
+  printf("cuda err last %d\n", cudaGetLastError());
 }
 
 template <typename S>
@@ -485,36 +486,44 @@ void sumcheck_generic_unified(S* evals, S* t, S* T, S C, int n, int nof_polys, c
 	// S alpha = 1;
 	// S alpha = S::one();
 	// S alpha = S::rand_host();
-  S alpha = my_hash<S>();
+  // S alpha = my_hash<S>();
+  S alpha = S::zero();
   // S rp_even, rp_odd;
   for (int p = 0; p < n; p++)
   {
+		alpha = p%2? S::zero() : S::one();
     int nof_threads = 1<<(n-1-p);
 		int NOF_THREADS = 64;
 		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
 		if (nof_polys == 1){
 		  if (p) mult_and_accumulate(evals, t, n-p, alpha, 2, stream); //accumulation
 			else accumulate(evals, t, n-p, 2, stream);
+			cudaDeviceSynchronize();
+			printf("cuda err a %d\n", cudaGetLastError());
 			if (p == n-1) break;
 		}
 		else {
 			if (p) mult_and_combine<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<(n-p), 1<<n, nof_polys, alpha);
 			else combinations_kernel<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<(n-p), 1<<n, nof_polys);
+			cudaDeviceSynchronize();
+			printf("cuda err b %d\n", cudaGetLastError());
 			accumulate(t, t, n-p, nof_polys+1, stream);
+			cudaDeviceSynchronize();
+			printf("cuda err c %d\n", cudaGetLastError());
 		}
 		add_to_trace<<<1,1,0,stream>>>(T, t, 1<<(n-1-p), p, nof_polys+1);
-		// cudaDeviceSynchronize();
-		// printf("cuda err u %d\n", cudaGetLastError());
-		// S h_evals_temp[8*3];
-		// cudaMemcpy(h_evals_temp, evals, sizeof(S) * (8*3), cudaMemcpyDeviceToHost);
-		// if (1){
-		// printf("round %d evals:\n",p);
-		// for (int i = 0; i < 8*3; i++)
-		// {
-		// 	if (i % 8 == 0) printf("\n");
-		// 	std::cout << i << " " << h_evals_temp[i] << std::endl;
-		// }
-		// }
+		cudaDeviceSynchronize();
+		printf("cuda err d %d\n", cudaGetLastError());
+		S h_evals_temp[16*2];
+		cudaMemcpy(h_evals_temp, evals, sizeof(S) * 16*2, cudaMemcpyDeviceToHost);
+		if (1){
+		printf("round %d evals:\n",p);
+		for (int i = 0; i < 16*2; i++)
+		{
+			if (i % 16 == 0) printf("\n");
+			std::cout << i << " " << h_evals_temp[i] << std::endl;
+		}
+		}
     // T[2*p+1] = t[0];
     // T[2*p+2] = t[1];
     // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
@@ -680,6 +689,92 @@ void sumcheck_generic_ref(S* evals, S* t, S* T, S C, int n, int nof_polys){
 // 			std::cout << i << " " << evals[i] << std::endl;
 // 		}}
 		for (int i = 0; i < nof_polys<<(n-1-p); i++)
+		{
+			evals[i] = t[i];
+		}
+  }
+}
+
+template <typename S>
+void sumcheck_double_round_ref(S* evals, S* t, S* T, S C, int n, int nof_polys){
+  // S alpha = my_hash(/*T, C*/);
+	// S alpha = 1;
+	// S alpha = S::one() + S::one();
+	// S alpha = my_hash<S>();
+	S alpha1 = S::one();
+	S alpha2 = S::zero();
+  
+  for (int p = 0; p < n/2; p++)
+  {
+
+		// rp_even = 0; rp_odd = 0;
+		// printf("evals\n");
+		// for (int i = 0; i < 1<<(n-p); i++)
+		// {
+		// 	printf("%d, ",evals[i]);
+		// }
+		// printf("\n");
+		for (int i = 0; i < 1<<(n-2-2*p); i++)
+		{
+			S rp[9] = {S::one(), S::one(), S::one(), S::one(), S::one(), S::one(), S::one(), S::one(), S::one()};
+			for (int l = 0; l < nof_polys; l++)
+			{
+				S e1 = evals[(l<<(n-2*p)) + i];
+				S e2 = evals[(l<<(n-2*p)) + i + (1<<(n-1-2*p))];
+				S e3 = evals[(l<<(n-2*p)) + i + (1<<(n-2-2*p))];
+				S e4 = evals[(l<<(n-2*p)) + i + (1<<(n-1-2*p)) + (1<<(n-2-2*p))];
+				//e1 + k1 * (e3 - e1) + k2 * (e2 - e1) + k1 * k2 * (e1 + e4 - e2 - e3);
+				rp[0] = l? rp[0]*e1 : e1; //k=0,0
+				rp[1] = l? rp[1]*e2 : e2; //k=0,1
+				rp[2] = l? rp[2]*e3 : e3; //k=1,0
+				rp[3] = l? rp[3]*e4 : e4; //k=1,1
+				if (nof_polys == 1) continue;
+				rp[4] = l? rp[4]*(e2+e2-e1) : (e2+e2-e1); //k=0,2
+				rp[5] = l? rp[5]*(e3+e3-e1) : (e3+e3-e1); //k=2,0
+				rp[6] = l? rp[6]*(e4+e4-e3) : (e4+e4-e3); //k=1,2
+				rp[7] = l? rp[7]*(e4+e4-e2) : (e4+e4-e2); //k=2,1
+				rp[8] = l? rp[8]*(e4+e4+e4+e4+e1-e2-e2-e3-e3) : (e4+e4+e4+e4+e1-e2-e2-e3-e3); //k=2,2
+				// if (nof_polys > 1) rp[2] = l? rp[2]*(e2 + e2 - e1) : (e2 + e2 - e1); //k=2
+				// if (nof_polys > 2) rp[3] = l? rp[3]*(e2 + e2 + e2 - e1 - e1) : (e2 + e2 + e2 - e1 - e1); //k=3
+				// if (nof_polys > 3) rp[4] = l? rp[4]*(e2 + e2 + e2 + e2 - e1 - e1 - e1) : (e2 + e2 + e2 + e2 - e1 - e1 - e1); //k=4
+			}
+			T[(nof_polys+1)*(nof_polys+1)*p+1] = T[(nof_polys+1)*(nof_polys+1)*p+1] + rp[0];
+			T[(nof_polys+1)*(nof_polys+1)*p+2] = T[(nof_polys+1)*(nof_polys+1)*p+2] + rp[1];
+			T[(nof_polys+1)*(nof_polys+1)*p+3] = T[(nof_polys+1)*(nof_polys+1)*p+3] + rp[2];
+			T[(nof_polys+1)*(nof_polys+1)*p+4] = T[(nof_polys+1)*(nof_polys+1)*p+4] + rp[3];
+			if (nof_polys > 1) {
+				T[(nof_polys+1)*(nof_polys+1)*p+5] = T[(nof_polys+1)*(nof_polys+1)*p+5] + rp[4];
+				T[(nof_polys+1)*(nof_polys+1)*p+6] = T[(nof_polys+1)*(nof_polys+1)*p+6] + rp[5];
+				T[(nof_polys+1)*(nof_polys+1)*p+7] = T[(nof_polys+1)*(nof_polys+1)*p+7] + rp[6];
+				T[(nof_polys+1)*(nof_polys+1)*p+8] = T[(nof_polys+1)*(nof_polys+1)*p+8] + rp[7];
+				T[(nof_polys+1)*(nof_polys+1)*p+9] = T[(nof_polys+1)*(nof_polys+1)*p+9] + rp[8];
+			}
+			// if (nof_polys > 1) T[(nof_polys+1)*p+3] = T[(nof_polys+1)*p+3] + rp[2];
+			// if (nof_polys > 2) T[(nof_polys+1)*p+4] = T[(nof_polys+1)*p+4] + rp[3];
+			// if (nof_polys > 3) T[(nof_polys+1)*p+5] = T[(nof_polys+1)*p+5] + rp[4];
+		}
+    // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
+		// alpha = 1;
+		// alpha = S::one();
+		for (int l = 0; l < nof_polys; l++)
+		{
+			for (int i = 0; i < 1<<(n-2-2*p); i++)
+			{
+				S e1 = evals[(l<<(n-2*p)) + i];
+				S e2 = evals[(l<<(n-2*p)) + i + (1<<(n-1-2*p))];
+				S e3 = evals[(l<<(n-2*p)) + i + (1<<(n-2-2*p))];
+				S e4 = evals[(l<<(n-2*p)) + i + (1<<(n-1-2*p)) + (1<<(n-2-2*p))];
+				t[(l<<(n-2-2*p)) + i] = e1 + alpha1 * (e3 - e1) + alpha2 * (e2 - e1) + alpha1 * alpha2 * (e1 + e4 - e2 - e3);
+				// t[i] = (1-alpha)*evals[2*i] + alpha*evals[2*i+1];
+			}
+		}
+		if (1)
+{		printf("ref round %d evals:\n",p);
+		for (int i = 0; i < nof_polys<<(n-2*p); i++)
+		{
+			std::cout << i << " " << evals[i] << std::endl;
+		}}
+		for (int i = 0; i < nof_polys<<(n-2-2*p); i++)
 		{
 			evals[i] = t[i];
 		}
