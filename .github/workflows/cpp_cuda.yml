@@ -44,7 +44,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build
-        cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=${{ matrix.curve }} -DG2 -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=${{ matrix.curve }} -DG2=ON -S . -B build
         cmake --build build
     - name: Run C++ curve Tests
       working-directory: ./icicle/tests/build
@@ -66,7 +66,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build
-        cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=${{ matrix.field }} -DEXT_FIELD -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=${{ matrix.field }} -DEXT_FIELD=ON -S . -B build
         cmake --build build
     - name: Run C++ field Tests
       working-directory: ./icicle/tests/build
