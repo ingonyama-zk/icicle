@@ -41,7 +41,9 @@ enable_testing()
 add_executable(
     runner
     runner.cu
-)
+) 
+
+target_include_directories(runner PUBLIC ${CMAKE_SOURCE_DIR}/../include/)
 
 target_link_libraries(
     runner
