@@ -1,34 +1,32 @@
+#include "fields/id.h"
+#define FIELD_ID BN254
 
-#define CURVE_ID 1
-
-#include "curves/bn254/bn254.cuh"
 #include "fields/field.cuh"
 #include "curves/projective.cuh"
 #include <chrono>
 #include <iostream>
 #include <vector>
 
-#include "ntt/ntt.cu"
+#include "ntt.cu"
 #include "kernel_ntt.cu"
 #include <memory>
 
-typedef bn254::scalar_t test_scalar;
-typedef bn254::scalar_t test_data;
+#include "fields/field_config.cuh"
 
-void random_samples(test_data* res, uint32_t count)
+void random_samples(scalar_t* res, uint32_t count)
 {
   for (int i = 0; i < count; i++)
-    res[i] = i < 1000 ? test_data::rand_host() : res[i - 1000];
+    res[i] = i < 1000 ? scalar_t::rand_host() : res[i - 1000];
 }
 
-void incremental_values(test_scalar* res, uint32_t count)
+void incremental_values(scalar_t* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
-    res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
+    res[i] = i ? res[i - 1] + scalar_t::one() : scalar_t::zero();
   }
 }
 
-__global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size, int column_size)
+__global__ void transpose_batch(scalar_t* in, scalar_t* out, int row_size, int column_size)
 {
   int tid = blockDim.x * blockIdx.x + threadIdx.x;
   if (tid >= row_size * column_size) return;
@@ -65,7 +63,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
   // init domain
-  auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
+  auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
   ntt_config.ordering = ordering;
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
@@ -78,30 +76,30 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&new_stop));
 
   auto start = std::chrono::high_resolution_clock::now();
-  const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
+  const scalar_t basic_root = scalar_t::omega(NTT_LOG_SIZE);
   ntt::InitDomain(basic_root, ntt_config.ctx, FAST_TW);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
 
   // cpu allocation
-  auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
-  auto CpuOutputOld = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
-  auto CpuOutputNew = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuScalars = std::make_unique<scalar_t[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuOutputOld = std::make_unique<scalar_t[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuOutputNew = std::make_unique<scalar_t[]>(NTT_SIZE * BATCH_SIZE);
 
   // gpu allocation
-  test_data *GpuScalars, *GpuOutputOld, *GpuOutputNew;
-  test_data* GpuScalarsTransposed;
-  CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuScalarsTransposed, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  scalar_t *GpuScalars, *GpuOutputOld, *GpuOutputNew;
+  scalar_t* GpuScalarsTransposed;
+  CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuScalarsTransposed, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
 
   // init inputs
   // incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
   random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
   CHK_IF_RETURN(
-    cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
+    cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyHostToDevice));
 
   if (COLUMNS_BATCH) {
     transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
@@ -111,7 +109,7 @@ int main(int argc, char** argv)
   // inplace
   if (INPLACE) {
     CHK_IF_RETURN(cudaMemcpy(
-      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t),
       cudaMemcpyDeviceToDevice));
   }
 
@@ -157,7 +155,7 @@ int main(int argc, char** argv)
   int count = INPLACE ? 1 : 10;
   if (INPLACE) {
     CHK_IF_RETURN(cudaMemcpy(
-      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t),
       cudaMemcpyDeviceToDevice));
   }
   CHK_IF_RETURN(benchmark(true /*=print*/, count));
@@ -166,14 +164,14 @@ int main(int argc, char** argv)
     transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
       GpuOutputNew, GpuScalarsTransposed, BATCH_SIZE, NTT_SIZE);
     CHK_IF_RETURN(cudaMemcpy(
-      GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
+      GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyDeviceToDevice));
   }
 
   // verify
   CHK_IF_RETURN(
-    cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+    cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyDeviceToHost));
   CHK_IF_RETURN(
-    cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+    cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyDeviceToHost));
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
