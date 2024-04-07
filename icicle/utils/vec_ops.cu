@@ -33,6 +33,14 @@ namespace vec_ops {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid < n) { result[tid] = element_vec1[tid] - element_vec2[tid]; }
     }
+
+    template <typename E>
+    __global__ void transpose_kernel(E* in, E* out, uint32_t row_size, uint32_t column_size)
+    {
+      int tid = blockDim.x * blockIdx.x + threadIdx.x;
+      if (tid >= row_size * column_size) return;
+      out[(tid % row_size) * column_size + (tid / row_size)] = in[tid];
+    }
   } // namespace
 
   template <typename E, void (*Kernel)(E*, E*, int, E*)>
@@ -101,6 +109,35 @@ namespace vec_ops {
     return VecOp<E, SubKernel>(vec_a, vec_b, n, config, result);
   }
 
+  template <typename E>
+  cudaError_t transpose_batch(
+  E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx, bool on_device)
+  {
+    int number_of_threads = MAX_THREADS_PER_BLOCK;
+    int number_of_blocks = (row_size * column_size + number_of_threads - 1) / number_of_threads;
+    cudaStream_t stream = ctx.stream;
+
+    E *d_mat_in, *d_mat_out;
+    if (!on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_mat_in, row_size * column_size * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_mat_in, mat_in, row_size * column_size * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+
+      CHK_IF_RETURN(cudaMallocAsync(&d_mat_out, row_size * column_size * sizeof(E), ctx.stream));
+    } else {
+      d_mat_in = mat_in;
+      d_mat_out = mat_out;
+    }
+
+    transpose_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(d_mat_in, d_mat_out, row_size, column_size);
+
+    if (!on_device) {
+      CHK_IF_RETURN(cudaMemcpyAsync(mat_out, d_mat_out, row_size * column_size * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_mat_out, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_mat_in, ctx.stream));
+    }
+    return CHK_LAST();
+  }
+
   /**
    * Extern version of [Mul](@ref Mul) function with the template parameters
    * `S` and `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
@@ -144,6 +181,22 @@ namespace vec_ops {
     curve_config::scalar_t* result)
   {
     return Sub<curve_config::scalar_t>(vec_a, vec_b, n, config, result);
+  }
+
+  /**
+   * Extern version of transpose_batch function with the template parameter
+   * `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, TransposeBatch)(
+  curve_config::scalar_t* input,
+  uint32_t row_size,
+  uint32_t column_size,
+  curve_config::scalar_t* output,
+  device_context::DeviceContext& ctx,
+  bool on_device)
+  {
+    return transpose_batch<curve_config::scalar_t>(input, output, row_size, column_size, ctx, on_device);
   }
 
 } // namespace vec_ops
