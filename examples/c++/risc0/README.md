@@ -4,7 +4,7 @@
 
 [RISC0 Protocol](https://www.risczero.com/) creates computational integrity proofs (a.k.a. Zero Knowledge Proofs) for programs executing on RISC-V architecture.
 The proofs are created for sequences of values in RISC-V registers, called execution traces.
-This approach is tranparent to developers and enables the use of general purpose languages.
+This approach is transparent to developers and enables the use of general purpose languages.
 
 Our [analysis of RISC0 protocol](https://www.ingonyama.com/blog/risc-zero-prover-protocol-analysis) shows that the most computationally-intensive part of the protocol is Fast Reed-Solomon Interactive Oracle Proof (FRI).
 Our example will focus on FRI.
