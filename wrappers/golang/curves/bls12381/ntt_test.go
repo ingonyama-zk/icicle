@@ -16,6 +16,11 @@ const (
 	largestTestSize = 17
 )
 
+func init() {
+	cfg := GetDefaultNttConfig()
+	initDomain(largestTestSize, cfg)
+}
+
 func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) {
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
@@ -73,6 +78,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 }
 
 func TestInitDomain(t *testing.T) {
+	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the init() function")
 	cfg := GetDefaultNttConfig()
 	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
 }
@@ -100,7 +106,6 @@ func TestNtt(t *testing.T) {
 
 func TestECNtt(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	initDomain(largestTestSize, cfg)
 	points := GenerateProjectivePoints(1 << largestTestSize)
 
 	for _, size := range []int{4, 5, 6, 7, 8} {
