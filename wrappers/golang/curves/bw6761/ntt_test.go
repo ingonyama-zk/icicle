@@ -77,6 +77,12 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 	assert.ElementsMatch(t, cosetGenField.GetLimbs(), actual.CosetGen)
 }
 
+func TestInitDomain(t *testing.T) {
+	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the init() function")
+	cfg := GetDefaultNttConfig()
+	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
+}
+
 func TestNtt(t *testing.T) {
 	cfg := GetDefaultNttConfig()
 	scalars := GenerateScalars(1 << largestTestSize)
