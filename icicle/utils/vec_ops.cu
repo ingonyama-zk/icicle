@@ -35,7 +35,7 @@ namespace vec_ops {
     }
 
     template <typename E>
-    __global__ void transpose_kernel(E* in, E* out, uint32_t row_size, uint32_t column_size)
+    __global__ void transpose_kernel(const E* in, E* out, uint32_t row_size, uint32_t column_size)
     {
       int tid = blockDim.x * blockIdx.x + threadIdx.x;
       if (tid >= row_size * column_size) return;
@@ -110,20 +110,23 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t transpose_batch(
-    E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx, bool on_device)
+  cudaError_t transpose_matrix(
+    const E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx, bool on_device, bool is_async)
   {
     int number_of_threads = MAX_THREADS_PER_BLOCK;
     int number_of_blocks = (row_size * column_size + number_of_threads - 1) / number_of_threads;
     cudaStream_t stream = ctx.stream;
 
-    E *d_mat_in, *d_mat_out;
+    const E *d_mat_in;
+    E *d_allocated_input = nullptr;
+    E *d_mat_out;
     if (!on_device) {
-      CHK_IF_RETURN(cudaMallocAsync(&d_mat_in, row_size * column_size * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_allocated_input, row_size * column_size * sizeof(E), ctx.stream));
       CHK_IF_RETURN(
-        cudaMemcpyAsync(d_mat_in, mat_in, row_size * column_size * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+        cudaMemcpyAsync(d_allocated_input, mat_in, row_size * column_size * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
 
       CHK_IF_RETURN(cudaMallocAsync(&d_mat_out, row_size * column_size * sizeof(E), ctx.stream));
+      d_mat_in = d_allocated_input;
     } else {
       d_mat_in = mat_in;
       d_mat_out = mat_out;
@@ -135,8 +138,10 @@ namespace vec_ops {
       CHK_IF_RETURN(
         cudaMemcpyAsync(mat_out, d_mat_out, row_size * column_size * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(d_mat_out, ctx.stream));
-      CHK_IF_RETURN(cudaFreeAsync(d_mat_in, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_allocated_input, ctx.stream));
     }
+    if (!is_async) return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
+
     return CHK_LAST();
   }
 
@@ -190,15 +195,16 @@ namespace vec_ops {
    * `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, TransposeBatch)(
-    curve_config::scalar_t* input,
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, TransposeMatrix)(
+    const curve_config::scalar_t* input,
     uint32_t row_size,
     uint32_t column_size,
     curve_config::scalar_t* output,
     device_context::DeviceContext& ctx,
-    bool on_device)
+    bool on_device,
+    bool is_async)
   {
-    return transpose_batch<curve_config::scalar_t>(input, output, row_size, column_size, ctx, on_device);
+    return transpose_matrix<curve_config::scalar_t>(input, output, row_size, column_size, ctx, on_device, is_async);
   }
 
 } // namespace vec_ops

@@ -71,6 +71,7 @@ pub trait VecOps<F> {
         output: &mut HostOrDeviceSlice<F>,
         ctx: &DeviceContext,
         on_device: bool,
+        is_async: bool,
     ) -> IcicleResult<()>;
 }
 
@@ -134,12 +135,13 @@ pub fn transpose_matrix<F>(
     output: &mut HostOrDeviceSlice<F>,
     ctx: &DeviceContext,
     on_device: bool,
+    is_async: bool,
 ) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, row_size, column_size, output, ctx, on_device)
+    <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, row_size, column_size, output, ctx, on_device, is_async)
 }
 
 #[macro_export]
@@ -182,7 +184,7 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "TransposeBatch")]
+                #[link_name = concat!($field_prefix, "TransposeMatrix")]
                 pub(crate) fn transpose_cuda(
                     input: *const $field,
                     row_size: u32,
@@ -190,6 +192,7 @@ macro_rules! impl_vec_ops_field {
                     output: *mut $field,
                     ctx: *const DeviceContext,
                     on_device: bool,
+                    is_async: bool,
                 ) -> CudaError;
             }
         }
@@ -256,6 +259,7 @@ macro_rules! impl_vec_ops_field {
                 output: &mut HostOrDeviceSlice<$field>,
                 ctx: &DeviceContext,
                 on_device: bool,
+                is_async: bool,
             ) -> IcicleResult<()> {
                 unsafe {
                     $field_prefix_ident::transpose_cuda(
@@ -265,6 +269,7 @@ macro_rules! impl_vec_ops_field {
                         output.as_mut_ptr(),
                         ctx as *const _ as *const DeviceContext,
                         on_device,
+                        is_async,
                     )
                     .wrap()
                 }

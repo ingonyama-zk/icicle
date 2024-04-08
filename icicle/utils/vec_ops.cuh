@@ -106,11 +106,13 @@ namespace vec_ops {
    * @param column_size size of columns.
    * @param ctx Device context.
    * @param on_device Whether the input and output are on device.
+   * @param is_async Whether to run the vector operations asynchronously.
    * @tparam E The type of elements `mat_in' and `mat_out`.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E>
   cudaError_t
-  transpose_batch(E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx);
+  transpose_batch(const E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx, bool on_device, bool is_async);
 } // namespace vec_ops
 
 #endif

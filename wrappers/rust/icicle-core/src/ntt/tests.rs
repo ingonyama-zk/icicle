@@ -285,6 +285,7 @@ where
                         let row_size = test_size as u32;
                         let column_size = batch_size as u32;
                         let on_device = false;
+                        let is_async = false;
                         // for now, columns batching only works with MixedRadix NTT
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
@@ -296,6 +297,7 @@ where
                             &mut transposed_input,
                             &config.ctx,
                             on_device,
+                            is_async,
                         )
                         .unwrap();
                         let mut col_batch_ntt_result =
@@ -308,6 +310,7 @@ where
                             &mut transposed_input,
                             &config.ctx,
                             on_device,
+                            is_async,
                         )
                         .unwrap();
                         assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
