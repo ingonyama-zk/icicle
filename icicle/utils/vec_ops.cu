@@ -111,19 +111,25 @@ namespace vec_ops {
 
   template <typename E>
   cudaError_t transpose_matrix(
-    const E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx, bool on_device, bool is_async)
+    const E* mat_in,
+    E* mat_out,
+    uint32_t row_size,
+    uint32_t column_size,
+    device_context::DeviceContext& ctx,
+    bool on_device,
+    bool is_async)
   {
     int number_of_threads = MAX_THREADS_PER_BLOCK;
     int number_of_blocks = (row_size * column_size + number_of_threads - 1) / number_of_threads;
     cudaStream_t stream = ctx.stream;
 
-    const E *d_mat_in;
-    E *d_allocated_input = nullptr;
-    E *d_mat_out;
+    const E* d_mat_in;
+    E* d_allocated_input = nullptr;
+    E* d_mat_out;
     if (!on_device) {
       CHK_IF_RETURN(cudaMallocAsync(&d_allocated_input, row_size * column_size * sizeof(E), ctx.stream));
-      CHK_IF_RETURN(
-        cudaMemcpyAsync(d_allocated_input, mat_in, row_size * column_size * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(
+        d_allocated_input, mat_in, row_size * column_size * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
 
       CHK_IF_RETURN(cudaMallocAsync(&d_mat_out, row_size * column_size * sizeof(E), ctx.stream));
       d_mat_in = d_allocated_input;
