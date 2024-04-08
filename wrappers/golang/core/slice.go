@@ -59,10 +59,6 @@ func (d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {
 		panic("Cannot have negative or zero size slices")
 	}
 
-	if end >= d.length {
-		panic("Cannot increase slice size from Range")
-	}
-
 	var newSlice DeviceSlice
 	switch {
 	case start < 0:
@@ -99,6 +95,10 @@ func (d *DeviceSlice) RangeTo(end int, inclusive bool) DeviceSlice {
 func (d *DeviceSlice) RangeFrom(start int) DeviceSlice {
 	if start >= d.length {
 		panic("Cannot have negative or zero size slices")
+	}
+
+	if start < 0 {
+		panic("Negative value for start is not supported")
 	}
 
 	var newSlice DeviceSlice
