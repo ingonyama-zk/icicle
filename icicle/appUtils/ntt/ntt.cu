@@ -746,15 +746,14 @@ namespace ntt {
   {
     return NTT<curve_config::scalar_t, curve_config::scalar_t>(input, size, dir, config, output);
   }
-  
+
   /**
    * Extern "C" version of [ReleaseDomain](@ref ReleaseDomain) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
    *  - `S` is the [scalar field](@ref scalar_t) of the curve;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-    extern "C" cudaError_t CONCAT_EXPAND(CURVE, ReleaseDomain)(
-    device_context::DeviceContext& ctx)
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, ReleaseDomain)(device_context::DeviceContext& ctx)
   {
     return ReleaseDomain<curve_config::scalar_t>(ctx);
   }
