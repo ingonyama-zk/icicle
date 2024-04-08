@@ -1029,7 +1029,7 @@ namespace mxntt {
     curve_config::scalar_t* arbitrary_coset,
     int coset_gen_index,
     cudaStream_t cuda_stream);
-  // TODO: we may reintroduce mixed-radix ECNTT based on upcomming benching PR 
+  // TODO: we may reintroduce mixed-radix ECNTT based on upcoming benching PR 
   // #if defined(ECNTT_DEFINED)
   //   template cudaError_t mixed_radix_ntt<curve_config::projective_t, curve_config::scalar_t>(
   //     curve_config::projective_t* d_input,
