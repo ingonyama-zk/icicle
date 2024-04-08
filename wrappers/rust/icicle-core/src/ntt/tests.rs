@@ -7,7 +7,7 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, NTTDir, NttAlgorithm, Ordering},
+    ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, NTTDir, NttAlgorithm, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
 };
 
@@ -206,13 +206,11 @@ where
             for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                 config.ordering = Ordering::kNR;
                 config.ntt_algorithm = alg;
-                let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
-                ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
-                assert_ne!(scalars.as_slice(), ntt_result.as_slice());
+                ntt_inplace(&mut scalars, NTTDir::kForward, &config).unwrap();
 
                 let ark_scalars_copy = ark_scalars.clone();
                 ark_domain.fft_in_place(&mut ark_scalars);
-                let ntt_result_as_ark = ntt_result
+                let ntt_result_as_ark = scalars
                     .as_slice()
                     .iter()
                     .map(|p| p.to_ark())
@@ -222,7 +220,7 @@ where
                 assert_eq!(ark_scalars, ark_scalars_copy);
 
                 config.ordering = Ordering::kRN;
-                ntt(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
+                ntt_inplace(&mut scalars, NTTDir::kInverse, &config).unwrap();
                 let ntt_result_as_ark = scalars
                     .as_slice()
                     .iter()
@@ -331,7 +329,6 @@ where
                     scalars_d
                         .copy_from_host(&scalars_h)
                         .unwrap();
-                    let mut ntt_out_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
 
                     for coset_gen in coset_generators {
                         for ordering in [Ordering::kNN, Ordering::kRR] {
@@ -344,23 +341,22 @@ where
                                 .stream = &stream;
                             for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                                 config.ntt_algorithm = alg;
-                                ntt(&scalars_d, NTTDir::kForward, &config, &mut ntt_out_d).unwrap();
-                                ntt(&ntt_out_d, NTTDir::kInverse, &config, &mut scalars_d).unwrap();
-                                let mut intt_result_h = vec![F::zero(); test_size * batch_size];
-                                scalars_d
-                                    .copy_to_host_async(&mut intt_result_h, &stream)
-                                    .unwrap();
-                                stream
-                                    .synchronize()
-                                    .unwrap();
-                                assert_eq!(scalars_h, intt_result_h);
+                                let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
+                                ntt_inplace(&mut scalars_d, NTTDir::kForward, &config).unwrap();
                                 if coset_gen == F::one() {
-                                    let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                                    ntt_out_d
+                                    scalars_d
                                         .copy_to_host(&mut ntt_result_h)
                                         .unwrap();
                                     assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
                                 }
+                                ntt_inplace(&mut scalars_d, NTTDir::kInverse, &config).unwrap();
+                                scalars_d
+                                    .copy_to_host_async(&mut ntt_result_h, &stream)
+                                    .unwrap();
+                                stream
+                                    .synchronize()
+                                    .unwrap();
+                                assert_eq!(scalars_h, ntt_result_h);
                             }
                         }
                     }
