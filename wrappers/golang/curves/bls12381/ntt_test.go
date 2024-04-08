@@ -16,6 +16,11 @@ const (
 	largestTestSize = 17
 )
 
+func init() {
+	cfg := GetDefaultNttConfig()
+	initDomain(largestTestSize, cfg)
+}
+
 func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) {
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
@@ -72,11 +77,6 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 	assert.ElementsMatch(t, cosetGenField.GetLimbs(), actual.CosetGen)
 }
 
-func TestInitDomain(t *testing.T) {
-	cfg := GetDefaultNttConfig()
-	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
-}
-
 func TestNtt(t *testing.T) {
 	cfg := GetDefaultNttConfig()
 	scalars := GenerateScalars(1 << largestTestSize)
@@ -100,7 +100,6 @@ func TestNtt(t *testing.T) {
 
 func TestECNtt(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	initDomain(largestTestSize, cfg)
 	points := GenerateProjectivePoints(1 << largestTestSize)
 
 	for _, size := range []int{4, 5, 6, 7, 8} {
@@ -120,7 +119,6 @@ func TestECNtt(t *testing.T) {
 
 func TestNttDeviceAsync(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	initDomain(largestTestSize, cfg)
 	scalars := GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{1, 10, largestTestSize} {
