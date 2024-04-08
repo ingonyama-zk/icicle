@@ -66,8 +66,8 @@ pub trait VecOps<F> {
 
     fn transpose(
         input: &HostOrDeviceSlice<F>,
-        row_size:u32,
-        column_size:u32,
+        row_size: u32,
+        column_size: u32,
         output: &mut HostOrDeviceSlice<F>,
         ctx: &DeviceContext,
         on_device: bool,
@@ -129,8 +129,8 @@ where
 
 pub fn transpose_matrix<F>(
     input: &HostOrDeviceSlice<F>,
-    row_size:u32,
-    column_size:u32,
+    row_size: u32,
+    column_size: u32,
     output: &mut HostOrDeviceSlice<F>,
     ctx: &DeviceContext,
     on_device: bool,
@@ -251,8 +251,8 @@ macro_rules! impl_vec_ops_field {
 
             fn transpose(
                 input: &HostOrDeviceSlice<$field>,
-                row_size:u32,
-                column_size:u32,
+                row_size: u32,
+                column_size: u32,
                 output: &mut HostOrDeviceSlice<$field>,
                 ctx: &DeviceContext,
                 on_device: bool,

@@ -109,7 +109,8 @@ namespace vec_ops {
    * @tparam E The type of elements `mat_in' and `mat_out`.
    */
   template <typename E>
-  cudaError_t transpose_batch(E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx);
+  cudaError_t
+  transpose_batch(E* mat_in, E* mat_out, uint32_t row_size, uint32_t column_size, device_context::DeviceContext& ctx);
 } // namespace vec_ops
 
 #endif
