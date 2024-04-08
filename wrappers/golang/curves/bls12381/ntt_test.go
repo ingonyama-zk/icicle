@@ -201,6 +201,11 @@ func TestNttBatch(t *testing.T) {
 	}
 }
 
+func TestReleaseDomain(t *testing.T) {
+	cfg := GetDefaultNttConfig()
+	ReleaseDomain(cfg.Ctx)
+}
+
 // func TestNttArbitraryCoset(t *testing.T) {
 // 	for _, size := range []int{20} {
 // 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
