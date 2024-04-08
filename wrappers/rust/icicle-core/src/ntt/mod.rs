@@ -121,6 +121,7 @@ pub trait NTT<F: FieldImpl> {
         cfg: &NTTConfig<F>,
         output: &mut HostOrDeviceSlice<F>,
     ) -> IcicleResult<()>;
+    fn ntt_inplace_unchecked(inout: &mut HostOrDeviceSlice<F>, dir: NTTDir, cfg: &NTTConfig<F>) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn initialize_domain_fast_twiddles_mode(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
 }
@@ -158,6 +159,27 @@ where
     local_cfg.are_outputs_on_device = output.is_on_device();
 
     <<F as FieldImpl>::Config as NTT<F>>::ntt_unchecked(input, dir, &local_cfg, output)
+}
+
+/// Computes the NTT, or a batch of several NTTs inplace.
+///
+/// # Arguments
+///
+/// * `inout` - buffer with inputs to also write the NTT outputs into.
+///
+/// * `dir` - whether to compute forward of inverse NTT.
+///
+/// * `cfg` - config used to specify extra arguments of the NTT.
+pub fn ntt_inplace<F>(inout: &mut HostOrDeviceSlice<F>, dir: NTTDir, cfg: &NTTConfig<F>) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
+{
+    let mut local_cfg = cfg.clone();
+    local_cfg.are_inputs_on_device = inout.is_on_device();
+    local_cfg.are_outputs_on_device = inout.is_on_device();
+
+    <<F as FieldImpl>::Config as NTT<F>>::ntt_inplace_unchecked(inout, dir, &local_cfg)
 }
 
 /// Generates twiddle factors which will be used to compute NTTs.
@@ -228,6 +250,23 @@ macro_rules! impl_ntt {
                         dir,
                         cfg,
                         output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn ntt_inplace_unchecked(
+                inout: &mut HostOrDeviceSlice<$field>,
+                dir: NTTDir,
+                cfg: &NTTConfig<$field>,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::ntt_cuda(
+                        inout.as_ptr(),
+                        (inout.len() / (cfg.batch_size as usize)) as i32,
+                        dir,
+                        cfg,
+                        inout.as_mut_ptr(),
                     )
                     .wrap()
                 }
