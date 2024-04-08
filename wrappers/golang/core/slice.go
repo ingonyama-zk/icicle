@@ -54,11 +54,11 @@ func (d DeviceSlice) CheckDevice() {
 	}
 }
 
-func(d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {
+func (d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {
 	if end <= start {
 		panic("Cannot have negative or zero size slices")
 	}
-	
+
 	if end >= d.length {
 		panic("Cannot increase slice size from Range")
 	}
@@ -76,7 +76,7 @@ func(d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {
 	return newSlice
 }
 
-func(d *DeviceSlice) RangeTo(end int, inclusive bool) DeviceSlice {
+func (d *DeviceSlice) RangeTo(end int, inclusive bool) DeviceSlice {
 	if end <= 0 {
 		panic("Cannot have negative or zero size slices")
 	}
@@ -84,25 +84,25 @@ func(d *DeviceSlice) RangeTo(end int, inclusive bool) DeviceSlice {
 	if end >= d.length {
 		panic("Cannot increase slice size from Range")
 	}
-	
+
 	var newSlice DeviceSlice
-	sizeOfElement := d.capacity/d.length
+	sizeOfElement := d.capacity / d.length
 	newSlice.length = end
 	if inclusive {
 		newSlice.length += 1
 	}
-	newSlice.capacity = newSlice.length*sizeOfElement
+	newSlice.capacity = newSlice.length * sizeOfElement
 	newSlice.inner = d.inner
 	return newSlice
 }
 
-func(d *DeviceSlice) RangeFrom(start int) DeviceSlice {
+func (d *DeviceSlice) RangeFrom(start int) DeviceSlice {
 	if start >= d.length {
 		panic("Cannot have negative or zero size slices")
 	}
-	
+
 	var newSlice DeviceSlice
-	sizeOfElement := d.capacity/d.length
+	sizeOfElement := d.capacity / d.length
 
 	newSlice.inner = unsafe.Pointer(uintptr(d.inner) + uintptr(start)*uintptr(sizeOfElement))
 	newSlice.length = d.length - start

@@ -215,7 +215,7 @@ func TestSliceRanges(t *testing.T) {
 	deviceSliceRangeTo := deviceSlice.RangeTo(numPoints-3, true)
 	hostSliceRet.CopyFromDevice(&deviceSliceRangeTo)
 	assert.Equal(t, hostSlice[:6], hostSliceRet)
-	
+
 	// Range
 	hostSliceRange := HostSliceWithValue[internal.MockProjective](zeroProj, numPoints-4)
 	deviceSliceRange := deviceSlice.Range(2, numPoints-3, true)
