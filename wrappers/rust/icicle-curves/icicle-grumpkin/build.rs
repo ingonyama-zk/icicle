@@ -4,9 +4,15 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=../../../../icicle");
 
-    let out_dir = Config::new("../../../../icicle")
+    let mut config = Config::new("../../../../icicle");
+    config
         .define("CURVE", "grumpkin")
-        .define("CMAKE_BUILD_TYPE", "Release")
+        .define("CMAKE_BUILD_TYPE", "Release");
+
+    #[cfg(feature = "devmode")]
+    config.define("DEVMODE", "ON");
+
+    let out_dir = config
         .build_target("icicle_curve")
         .build();
 

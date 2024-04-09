@@ -27,4 +27,6 @@ icicle-bls12-381 = { path = ".", features = ["arkworks"] }
 [features]
 default = []
 g2 = ["icicle-core/g2"]
+ec_ntt = ["icicle-core/ec_ntt"]
+devmode = ["icicle-core/devmode"]
 arkworks = ["ark-bls12-381", "icicle-core/arkworks"]

@@ -4,7 +4,7 @@
 
 #include <cstdint>
 #include <cuda_runtime.h>
-
+#include "gpu-utils/modifiers.cuh"
 namespace host_math {
 
   // return x + y with uint32_t operands
@@ -67,9 +67,9 @@ namespace host_math {
   struct carry_chain {
     unsigned index;
 
-    constexpr __host__ __forceinline__ carry_chain() : index(0) {}
+    constexpr HOST_INLINE carry_chain() : index(0) {}
 
-    __host__ __forceinline__ uint32_t add(const uint32_t x, const uint32_t y, uint32_t& carry)
+    HOST_INLINE uint32_t add(const uint32_t x, const uint32_t y, uint32_t& carry)
     {
       index++;
       if (index == 1 && OPS_COUNT == 1 && !CARRY_IN && !CARRY_OUT)
@@ -82,7 +82,7 @@ namespace host_math {
         return host_math::addc(x, y, carry);
     }
 
-    __host__ __forceinline__ uint32_t sub(const uint32_t x, const uint32_t y, uint32_t& carry)
+    HOST_INLINE uint32_t sub(const uint32_t x, const uint32_t y, uint32_t& carry)
     {
       index++;
       if (index == 1 && OPS_COUNT == 1 && !CARRY_IN && !CARRY_OUT)
