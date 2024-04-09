@@ -56,7 +56,9 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       with:
         name: icicle-builds-${{ matrix.curve }}-${{ github.workflow }}-${{ github.sha }}
-        path: icicle/build/libingo_${{ matrix.curve }}.a
+        path: |
+          icicle/build/src/curves/libingo_curve_${{ matrix.curve }}.a
+          icicle/build/src/fields/libingo_field_${{ matrix.curve }}.a
         retention-days: 1
   
   test-linux:
