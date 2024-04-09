@@ -20,8 +20,7 @@ using namespace field_config;
 #include "curves/curve_config.cuh"
 using namespace curve_config;
 #define IS_ECNTT std::is_same_v<E, projective_t>
-#endif
-#ifndef CURVE_ID
+#else
 #define IS_ECNTT false
 #endif
 
