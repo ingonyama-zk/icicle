@@ -88,6 +88,26 @@ public:
     return ExtensionField{xs.real - ys.real, xs.im1 - ys.im1, xs.im2 - ys.im2, xs.im3 - ys.im3};
   }
 
+  friend HOST_DEVICE_INLINE ExtensionField operator+(FF xs, const ExtensionField& ys)
+  {
+    return ExtensionField{xs + ys.real, ys.im1, ys.im2, ys.im3};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator-(FF xs, const ExtensionField& ys)
+  {
+    return ExtensionField{xs - ys.real, FF::neg(ys.im1), FF::neg(ys.im2), FF::neg(ys.im3)};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator+(ExtensionField xs, const FF& ys)
+  {
+    return ExtensionField{xs.real + ys, xs.im1, xs.im2, xs.im3};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator-(ExtensionField xs, const FF& ys)
+  {
+    return ExtensionField{xs.real - ys, xs.im1, xs.im2, xs.im3};
+  }
+
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ExtensionField& xs, const ExtensionField& ys)
   {
@@ -116,6 +136,18 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ExtensionField& xs, const FF& ys)
+  {
+    return ExtensionWide{FF::mul_wide(xs.real, ys), FF::mul_wide(xs.im1, ys), FF::mul_wide(xs.im2, ys), FF::mul_wide(xs.im3, ys)};
+  }
+
+  template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const ExtensionField& ys)
+  {
+    return ExtensionWide{FF::mul_wide(xs, ys.real), FF::mul_wide(xs, ys.im1), FF::mul_wide(xs, ys.im2), FF::mul_wide(xs, ys.im3)};
+  }
+
+  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField reduce(const ExtensionWide& xs)
   {
     return ExtensionField{
@@ -123,7 +155,8 @@ public:
       FF::template reduce<MODULUS_MULTIPLE>(xs.im2), FF::template reduce<MODULUS_MULTIPLE>(xs.im3)};
   }
 
-  friend HOST_DEVICE_INLINE ExtensionField operator*(const ExtensionField& xs, const ExtensionField& ys)
+  template <class T1, class T2>
+  friend HOST_DEVICE_INLINE ExtensionField operator*(const T1& xs, const T2& ys)
   {
     ExtensionWide xy = mul_wide(xs, ys);
     return reduce(xy);

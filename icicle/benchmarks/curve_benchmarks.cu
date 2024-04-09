@@ -3,8 +3,9 @@
 #include "curves/curve_config.cuh"
 
 using namespace curve_config;
+using namespace benchmark;
 
-static void BM_MixedECAdd(benchmark::State& state)
+static void BM_MixedECAdd(State& state)
 {
   constexpr int N = 128;
   int n = state.range(0) / N;
@@ -34,6 +35,7 @@ static void BM_MixedECAdd(benchmark::State& state)
 
     state.SetIterationTime((double)(milliseconds / 1000));
   }
+  state.counters["Throughput"] = Counter(state.range(0), Counter::kIsRate | Counter::kIsIterationInvariant);
   cudaFree(points1);
   cudaFree(points2);
 }
@@ -68,6 +70,7 @@ static void BM_FullECAdd(benchmark::State& state)
 
     state.SetIterationTime((double)(milliseconds / 1000));
   }
+  state.counters["Throughput"] = Counter(state.range(0), Counter::kIsRate | Counter::kIsIterationInvariant);
   cudaFree(points1);
   cudaFree(points2);
 }
