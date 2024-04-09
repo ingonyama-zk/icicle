@@ -88,3 +88,10 @@ func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext, fastTwiddles bo
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }
+
+func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError {
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
+	__ret := C.{{.Curve}}ReleaseDomain(cCtx)
+	err := (cr.CudaError)(__ret)
+	return core.FromCudaError(err)
+}

@@ -9,7 +9,6 @@ use icicle_core::traits::FieldConfig;
 use icicle_core::{impl_curve, impl_field};
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 pub(crate) const BASE_LIMBS: usize = 12;
 
