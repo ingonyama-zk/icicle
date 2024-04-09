@@ -62,6 +62,16 @@ pub trait VecOps<F> {
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
+
+    fn transpose(
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        row_size: u32,
+        column_size: u32,
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        ctx: &DeviceContext,
+        on_device: bool,
+        is_async: bool,
+    ) -> IcicleResult<()>;
 }
 
 fn check_vec_ops_args<'a, F>(
@@ -144,6 +154,22 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
 }
 
+pub fn transpose_matrix<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    row_size: u32,
+    column_size: u32,
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    ctx: &DeviceContext,
+    on_device: bool,
+    is_async: bool,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, row_size, column_size, output, ctx, on_device, is_async)
+}
+
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -182,6 +208,17 @@ macro_rules! impl_vec_ops_field {
                     size: u32,
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "TransposeMatrix")]
+                pub(crate) fn transpose_cuda(
+                    input: *const $field,
+                    row_size: u32,
+                    column_size: u32,
+                    output: *mut $field,
+                    ctx: *const DeviceContext,
+                    on_device: bool,
+                    is_async: bool,
                 ) -> CudaError;
             }
         }
@@ -236,6 +273,29 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn transpose(
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                row_size: u32,
+                column_size: u32,
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                ctx: &DeviceContext,
+                on_device: bool,
+                is_async: bool,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::transpose_cuda(
+                        input.as_ptr(),
+                        row_size,
+                        column_size,
+                        output.as_mut_ptr(),
+                        ctx as *const _ as *const DeviceContext,
+                        on_device,
+                        is_async,
                     )
                     .wrap()
                 }

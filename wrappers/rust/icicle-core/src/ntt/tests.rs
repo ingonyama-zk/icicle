@@ -8,9 +8,11 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     ntt::{
-        initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, NTTConfig, NTTDir, NttAlgorithm, Ordering, NTT,
+        initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, NTTConfig, NTTDir, NttAlgorithm,
+        Ordering, NTT,
     },
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
+    vec_ops::{transpose_matrix, VecOps},
 };
 
 pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
@@ -39,14 +41,6 @@ pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
         .rev()
         .collect::<String>();
     u32::from_str_radix(&reversed, 2).unwrap()
-}
-
-pub fn transpose_flattened_matrix<T: Copy>(m: &[T], nrows: usize) -> Vec<T> {
-    let ncols = m.len() / nrows;
-    assert!(nrows * ncols == m.len());
-    (0..m.len())
-        .map(|i| m[(i % nrows) * ncols + i / nrows])
-        .collect()
 }
 
 pub fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
@@ -253,6 +247,7 @@ where
 pub fn check_ntt_batch<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: VecOps<F>,
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
@@ -303,10 +298,24 @@ where
                             }
                         }
 
+                        let row_size = test_size as u32;
+                        let column_size = batch_size as u32;
+                        let on_device = false;
+                        let is_async = false;
                         // for now, columns batching only works with MixedRadix NTT
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
-                        let transposed_input = transpose_flattened_matrix(scalars.as_slice(), batch_size);
+                        let mut transposed_input = vec![F::zero(); batch_size * test_size];
+                        transpose_matrix(
+                            scalars,
+                            row_size,
+                            column_size,
+                            HostSlice::from_mut_slice(&mut transposed_input),
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
                         let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
                         ntt(
                             HostSlice::from_slice(&transposed_input),
@@ -315,10 +324,17 @@ where
                             HostSlice::from_mut_slice(&mut col_batch_ntt_result),
                         )
                         .unwrap();
-                        assert_eq!(
-                            batch_ntt_result[..],
-                            transpose_flattened_matrix(&col_batch_ntt_result[..], test_size)
-                        );
+                        transpose_matrix(
+                            HostSlice::from_slice(&col_batch_ntt_result),
+                            column_size,
+                            row_size,
+                            HostSlice::from_mut_slice(&mut transposed_input),
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
+                        assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
                         config.columns_batch = false;
                     }
                 }

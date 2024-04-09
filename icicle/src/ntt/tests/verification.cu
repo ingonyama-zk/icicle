@@ -22,7 +22,6 @@ typedef field_config::scalar_t test_data;
 #include "kernel_ntt.cu"
 #include <memory>
 
-
 void random_samples(test_data* res, uint32_t count)
 {
   for (int i = 0; i < count; i++)

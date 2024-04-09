@@ -122,7 +122,11 @@ pub trait NTT<F: FieldImpl> {
         cfg: &NTTConfig<F>,
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> IcicleResult<()>;
-    fn ntt_inplace_unchecked(inout: &mut (impl HostOrDeviceSlice<F> + ?Sized), dir: NTTDir, cfg: &NTTConfig<F>) -> IcicleResult<()>;
+    fn ntt_inplace_unchecked(
+        inout: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<F>,
+    ) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn initialize_domain_fast_twiddles_mode(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
 }
@@ -190,7 +194,7 @@ where
 pub fn ntt_inplace<F>(
     inout: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     dir: NTTDir,
-    cfg: &NTTConfig<F>
+    cfg: &NTTConfig<F>,
 ) -> IcicleResult<()>
 where
     F: FieldImpl,

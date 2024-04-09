@@ -479,7 +479,7 @@ public:
       odd[TLC - 2] = ptx::mul_lo(a[TLC - 1], b[0]);
       odd[TLC - 1] = ptx::mul_hi(a[TLC - 1], b[0]);
       size_t i;
-UNROLL
+      UNROLL
       for (i = 2; i < TLC - 1; i += 2) {
         mad_row_msb<true>(&even[TLC - 2], &odd[TLC - 2], &a[TLC - i - 1], b[i - 1], i + 1);
         mad_row_msb<false>(&odd[TLC - 2], &even[TLC - 2], &a[TLC - i - 2], b[i], i + 2);
@@ -528,7 +528,7 @@ UNROLL
         mul_n(odd, a + 1, b[0], TLC - 1);
       }
       mad_row_lsb(&even[2], &odd[0], a, b[1], TLC - 1);
-UNROLL
+      UNROLL
       for (i = 2; i < TLC - 1; i += 2) {
         mad_row_lsb(&odd[i], &even[i], a, b[i], TLC - i);
         mad_row_lsb(&even[i + 2], &odd[i], a, b[i + 1], TLC - i - 1);
@@ -935,7 +935,7 @@ public:
     uint32_t* r = rs.limbs_storage.limbs;
     if constexpr (TLC > 1) {
 #ifdef __CUDA_ARCH__
-    UNROLL
+      UNROLL
 #endif
       for (unsigned i = 0; i < TLC - 1; i++) {
 #ifdef __CUDA_ARCH__
