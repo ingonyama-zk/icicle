@@ -22,4 +22,4 @@ namespace ntt {
   {
     return NTT<scalar_t, projective_t>(input, size, dir, config, output);
   }
-}
+} // namespace ntt
