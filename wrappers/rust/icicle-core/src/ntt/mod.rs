@@ -304,6 +304,7 @@ macro_rules! impl_ntt_tests {
     ) => {
         const MAX_SIZE: u64 = 1 << 17;
         static INIT: OnceLock<()> = OnceLock::new();
+        static RELEASE: OnceLock<()> = OnceLock::new(); // for release domain test
         const FAST_TWIDDLES_MODE: bool = false;
 
         #[test]
@@ -334,6 +335,13 @@ macro_rules! impl_ntt_tests {
         fn test_ntt_device_async() {
             // init_domain is in this test is performed per-device
             check_ntt_device_async::<$field>()
+        }
+
+        #[test]
+        fn test_ntt_release_domain() {
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
+            check_release_domain::<$field>();
+            *RELEASE.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE))
         }
     };
 }

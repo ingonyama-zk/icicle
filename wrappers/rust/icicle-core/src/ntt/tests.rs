@@ -321,12 +321,11 @@ where
             set_device(device_id).unwrap();
             // if have more than one device, it will use fast-twiddles-mode (note that domain is reused per device if not released)
             init_domain::<F>(1 << 16, device_id, true /*=fast twiddles mode*/); // init domain per device
-            let config: NTTConfig<'static, F> = NTTConfig::default_for_device(device_id);
+            let mut config: NTTConfig<'static, F> = NTTConfig::default_for_device(device_id);
             let test_sizes = [1 << 4, 1 << 12];
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-                let mut config = NTTConfig::default_for_device(device_id);
                 let stream = config
                     .ctx
                     .stream;
@@ -373,6 +372,14 @@ where
                     }
                 }
             }
-            rel_domain::<F>(&config.ctx);
         });
+}
+
+pub fn check_release_domain<F: FieldImpl + ArkConvertible>()
+where
+    F::ArkEquivalent: FftField,
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+{
+    let config: NTTConfig<'static, F> = NTTConfig::default();
+    rel_domain::<F>(&config.ctx);
 }
