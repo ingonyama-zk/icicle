@@ -3,10 +3,13 @@
 #include <memory>
 #include <vector>
 #include <list>
+#include <fstream>
 
 #include "polynomials/polynomials.h"
 #include "polynomials/polynomials_c_api.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
+#include "polynomials/tracing/polynomial_tracing_backend.cuh"
+#include "polynomials/tracing/graph_visualizer_visitor.h"
 
 #include "ntt/ntt.cuh"
 #include "gpu-utils/device_context.cuh"
@@ -17,8 +20,7 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg, enable)                                                                                  \
   if (enable)                                                                                                          \
-    printf(                                                                                                            \
-      "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
+    printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 using namespace polynomials;
 
@@ -31,6 +33,7 @@ class PolynomialTest : public ::testing::Test
 public:
   static inline const int MAX_NTT_LOG_SIZE = 24;
   static inline const bool MEASURE = true;
+  static inline const bool TRACING = true;
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
@@ -41,6 +44,15 @@ public:
     ntt::InitDomain(basic_root, ntt_config.ctx);
     // initializing polynoimals factory for CUDA backend
     Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
+
+    // initializing polynoimals factory for CUDA backend, or tracing backend
+    auto cuda_factory = std::make_shared<CUDAPolynomialFactory<>>();
+    if (TRACING) {
+      auto tracing_backend = std::make_shared<TracingPolynomialFactory<>>(cuda_factory);
+      Polynomial_t::initialize(tracing_backend);
+    } else {
+      Polynomial_t::initialize(cuda_factory);
+    }
   }
 
   static void TearDownTestSuite() {}
@@ -243,9 +255,17 @@ TEST_F(PolynomialTest, addition_inplace)
   auto fx_plus_gx = f_x + g_x;
 
   f += g;
+  auto h = f + g;
+
+  std::ofstream out_file("trace.gv");
+  GraphvizVisualizer visualizer{out_file};
+  visualizer.run(h);
+
   auto s_x = f(x);
+  auto h_x = h(x);
 
   EXPECT_EQ(fx_plus_gx, s_x);
+  EXPECT_EQ(h_x, s_x + g_x);
 }
 
 TEST_F(PolynomialTest, cAPI)
@@ -451,6 +471,11 @@ TEST_F(PolynomialTest, View)
   EXPECT_EQ(d_coeff.isValid(), true);
 
   f += f;
+  if (TRACING) {
+    // force tracing backend to evalute. Otherwise d_coeff is still valid since f is not computed
+    auto x = scalar_t::rand_host();
+    f(x);
+  }
   // expecting view to be invalidated since f is modified
   EXPECT_EQ(d_coeff.isValid(), false);
 }
@@ -503,6 +528,75 @@ TEST_F(PolynomialTest, slicing)
 
   body(1 << 10);       // test even size
   body((1 << 10) - 1); // test odd size
+}
+
+TEST_F(PolynomialTest, tracingBase)
+{
+  const int size_0 = 12, size_1 = 17;
+  auto f = randomize_polynomial(size_0);
+  auto g = randomize_polynomial(size_1);
+  auto h = randomize_polynomial(size_1);
+
+  auto res = f + g - h + f;
+  // print res trace to file
+  std::ofstream out_file("trace.gv");
+  GraphvizVisualizer visualizer{out_file};
+  visualizer.run(res);
+
+  auto x = scalar_t::rand_host();
+  res(x); // implicitly evaluetes to poly
+}
+
+TEST_F(PolynomialTest, tracingInplace)
+{
+  const int size_0 = 12, size_1 = 17;
+  auto f = randomize_polynomial(size_0);
+  auto g = randomize_polynomial(size_1);
+  auto h = randomize_polynomial(size_1);
+
+  auto res = f + g;
+  res += h;
+  res.add_monomial_inplace(two, 4);
+
+  // print res trace to file
+  std::ofstream out_file("trace.gv");
+  GraphvizVisualizer visualizer{out_file};
+  visualizer.run(res);
+}
+
+TEST_F(PolynomialTest, tracingComplex)
+{
+  const int size_0 = 12, size_1 = 17;
+  auto f = randomize_polynomial(size_0);
+  auto g = randomize_polynomial(size_1);
+  auto h = randomize_polynomial(size_1);
+
+  auto t0 = (f + g - h + f * two) * g;
+  auto [t1, t2] = t0.divide(f);
+  auto t3 = (t1 + t2).divide_by_vanishing_polynomial(size_0);
+  auto t4 = t3.slice(1, 2, 8);
+  auto res = two * t4;
+  // print res trace to file
+  std::ofstream out_file("trace.gv");
+  GraphvizVisualizer visualizer{out_file};
+  visualizer.run(res);
+}
+
+TEST_F(PolynomialTest, tracingRequestConflict)
+{
+  const int size = 16;
+  auto a = randomize_polynomial(size);
+  auto b = randomize_polynomial(size);
+
+  auto add = a + b;
+  auto slice = add.even();
+  auto mul = add * b;
+  auto add2 = slice + mul;
+
+  // print res trace to file
+  std::ofstream out_file("trace.gv");
+  GraphvizVisualizer visualizer{out_file};
+  visualizer.run(add2);
 }
 
 #ifdef CURVE
@@ -890,7 +984,8 @@ public:
 TEST_F(PolynomialTest, QAP)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
-  Groth16Example QAP(300 /*=N*/);
+  const int N = 1000;
+  Groth16Example QAP(N);
 
   // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
   auto witness = QAP.random_witness_inputs();
@@ -912,7 +1007,7 @@ TEST_F(PolynomialTest, QAP)
     QAP.nof_inputs - 1; // multiplying N numbers yields N-1 constraints for this circuit construction
   const int vanishing_poly_deg = ceil_to_power_of_two(nof_constraints);
   //  (4) sanity check: verify AB=C at the evaluation points
-  {
+  if (!TRACING) { // for tracing don't want to evalute the expression yet
     auto default_device_context = device_context::get_default_device_context();
     const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
     auto x = scalar_t::one();
@@ -925,6 +1020,11 @@ TEST_F(PolynomialTest, QAP)
   // (5) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
   Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
+  if (!TRACING && N <= 10) { // only draw small graphs
+    std::ofstream out_file("trace.gv");
+    GraphvizVisualizer visualizer{out_file};
+    visualizer.run(h);
+  }
   // (6) sanity check: vanishing-polynomial divides (LR-O) without remainder
   {
     auto [h_long_div, r] = (Lx * Rx - Ox).divide(vanishing_polynomial(vanishing_poly_deg));
@@ -955,9 +1055,10 @@ TEST_F(PolynomialTest, commitMSM)
 
   EXPECT_EQ(result, f(tau) * g);
 
-  f += f; // this is invalidating the d_coeff integrity-pointer
-
-  EXPECT_EQ(d_coeff.isValid(), false);
+  if (!TRACING) {
+    f += f; // this is invalidating the d_coeff integrity-pointer
+    EXPECT_EQ(d_coeff.isValid(), false);
+  }
 }
 
 TEST_F(PolynomialTest, Groth16)
@@ -980,7 +1081,8 @@ TEST_F(PolynomialTest, DummyGroth16)
   // (1) construct R1CS and QAP for circuit with N inputs
   Groth16Example<scalar_t, affine_t, projective_t, dummy_g2_t, dummy_g2_t> groth16_example(30 /*=N*/);
 
-  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
+  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate
+  // values...]
   auto witness = groth16_example.random_witness_inputs();
   groth16_example.compute_witness(witness);
 
