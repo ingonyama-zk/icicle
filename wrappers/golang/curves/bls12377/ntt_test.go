@@ -203,7 +203,8 @@ func TestNttBatch(t *testing.T) {
 
 func TestReleaseDomain(t *testing.T) {
 	cfg := GetDefaultNttConfig()
-	ReleaseDomain(cfg.Ctx)
+	e := ReleaseDomain(cfg.Ctx)
+	assert.Equal(t, core.IcicleErrorCode(0), e.IcicleErrorCode, "ReleasDomain failed")
 }
 
 // func TestNttArbitraryCoset(t *testing.T) {
