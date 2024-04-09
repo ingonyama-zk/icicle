@@ -9,6 +9,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use crate::{
     ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, NTTDir, NttAlgorithm, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
+    vec_ops::{transpose_matrix, VecOps},
 };
 
 use super::{NTTConfig, NTT};
@@ -235,6 +236,7 @@ where
 pub fn check_ntt_batch<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: VecOps<F>,
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
@@ -278,18 +280,38 @@ where
                             }
                         }
 
+                        let row_size = test_size as u32;
+                        let column_size = batch_size as u32;
+                        let on_device = false;
+                        let is_async = false;
                         // for now, columns batching only works with MixedRadix NTT
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
-                        let transposed_input =
-                            HostOrDeviceSlice::on_host(transpose_flattened_matrix(&scalars[..], batch_size));
+                        let mut transposed_input = HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
+                        transpose_matrix(
+                            &scalars,
+                            row_size,
+                            column_size,
+                            &mut transposed_input,
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
                         let mut col_batch_ntt_result =
                             HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
                         ntt(&transposed_input, is_inverse, &config, &mut col_batch_ntt_result).unwrap();
-                        assert_eq!(
-                            batch_ntt_result[..],
-                            transpose_flattened_matrix(&col_batch_ntt_result[..], test_size)
-                        );
+                        transpose_matrix(
+                            &col_batch_ntt_result,
+                            column_size,
+                            row_size,
+                            &mut transposed_input,
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
+                        assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
                         config.columns_batch = false;
                     }
                 }
