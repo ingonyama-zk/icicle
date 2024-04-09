@@ -1,31 +1,5 @@
-cmake_minimum_required(VERSION 3.18)
 
-include(../cmake/Common.cmake)
-include(../cmake/CurvesCommon.cmake)
-include(../cmake/FieldsCommon.cmake)
-
-set_env()
-set_gpu_env()
-
-project(icicle_tests LANGUAGES CUDA CXX)
-
-if (G2)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2")
-endif ()
-
-if (EXT_FIELD)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DEXT_FIELD")
-endif ()
-
-if(DEFINED CURVE)
-  if(DEFINED FIELD)
-    message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
-  endif ()
-  check_curve()
-elseif(DEFINED FIELD)
-  check_field()
-endif ()
-
+include(GoogleTest)
 include(FetchContent)
 FetchContent_Declare(
     googletest
@@ -36,21 +10,12 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-enable_testing()
 
-add_executable(
-    runner
-    runner.cu
-) 
-
-target_include_directories(runner PUBLIC ${CMAKE_SOURCE_DIR}/../include/)
-
-target_link_libraries(
-    runner
-    GTest::gtest_main
-)
-
-include(GoogleTest)
+add_executable(runner runner.cu) # TODO link to icicle rather than including source files
+target_include_directories(runner PUBLIC ${CMAKE_SOURCE_DIR}/include/)
+target_link_libraries(runner GTest::gtest_main)
 set_target_properties(runner PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+enable_testing()
 
 gtest_discover_tests(runner)
