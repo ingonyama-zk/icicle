@@ -476,10 +476,11 @@ namespace polynomials {
       const bool is_a_scalar = a->get_nof_elements() == 1;
       const bool is_b_scalar = b->get_nof_elements() == 1;
 
+      // TODO: can add kernel that takes the scalar as device memory
       if (is_a_scalar) {
-        return multiply_with_scalar(c, b, a);
+        return multiply(c, b, copy_coefficient_to_host(a, 0));
       } else if (is_b_scalar) {
-        return multiply_with_scalar(c, a, b);
+        return multiply(c, a, copy_coefficient_to_host(b, 0));
       }
 
       const bool is_multiply_with_cosets = true; // TODO  Yuval: check when faster to do so.
@@ -487,13 +488,16 @@ namespace polynomials {
       return multiply_with_padding(c, a, b);
     }
 
-    void multiply_with_scalar(PolyContext out, PolyContext p, PolyContext s)
+    void multiply(PolyContext out, PolyContext p, D scalar) override
     {
+      assert_device_compatability(out, p);
+
       // element wise multiplication is similar both in coefficients and evaluations (regardless of order too)
       const auto state = p->get_state();
+      const auto N = p->get_nof_elements();
 
-      auto [p_elements_p, N] = state == State::Coefficients ? p->get_coefficients() : p->get_rou_evaluations();
-      auto [s_elements_p, _] = state == State::Coefficients ? s->get_coefficients() : s->get_rou_evaluations();
+      auto p_elements_p =
+        state == State::Coefficients ? get_context_storage_immutable<C>(p) : get_context_storage_immutable<I>(p);
 
       out->allocate(N, state, false /*=memset zeros*/);
       auto out_evals_p =
@@ -501,8 +505,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      MulScalarKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-        p_elements_p, s_elements_p, N, out_evals_p);
+      MulScalarKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(p_elements_p, scalar, N, out_evals_p);
 
       CHK_LAST();
     }

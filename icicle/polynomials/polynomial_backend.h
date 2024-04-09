@@ -35,6 +35,7 @@ namespace polynomials {
     virtual void add(PolyContext& out, PolyContext op_a, PolyContext op_b) = 0;
     virtual void subtract(PolyContext out, PolyContext op_a, PolyContext op_b) = 0;
     virtual void multiply(PolyContext out, PolyContext op_a, PolyContext op_b) = 0;
+    virtual void multiply(PolyContext out, PolyContext p, D scalar) = 0; // scalar multiplication
     virtual void divide(PolyContext Quotient_out, PolyContext Remainder_out, PolyContext op_a, PolyContext op_b) = 0;
     virtual void quotient(PolyContext out, PolyContext op_a, PolyContext op_b) = 0;
     virtual void remainder(PolyContext out, PolyContext op_a, PolyContext op_b) = 0;

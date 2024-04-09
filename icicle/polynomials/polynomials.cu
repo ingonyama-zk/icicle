@@ -79,17 +79,17 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
-  Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const C& c) const
+  Polynomial<C, D, I> Polynomial<C, D, I>::operator*(const D& scalar) const
   {
-    Polynomial<C, D, I> rhs = {};
-    rhs.m_backend->from_coefficients(rhs.m_context, 1 /*nof_coefficients*/, &c);
-    return *this * rhs;
+    Polynomial<C, D, I> res = {};
+    m_backend->multiply(res.m_context, m_context, scalar);
+    return res;
   }
 
   template <typename C, typename D, typename I>
-  Polynomial<C, D, I> operator*(const C& v, const Polynomial<C, D, I>& rhs)
+  Polynomial<C, D, I> operator*(const D& scalar, const Polynomial<C, D, I>& rhs)
   {
-    return rhs * v;
+    return rhs * scalar;
   }
 
   template <typename C, typename D, typename I>

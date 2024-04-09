@@ -20,11 +20,11 @@ namespace vec_ops {
       if (tid < n) { result[tid] = scalar_vec[tid] * element_vec[tid]; }
     }
 
-    template <typename E>
-    __global__ void MulScalarKernel(const E* element_vec, const E* scalar, int n, E* result)
+    template <typename E, typename S>
+    __global__ void MulScalarKernel(const E* element_vec, const S scalar, int n, E* result)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
-      if (tid < n) { result[tid] = element_vec[tid] * (*scalar); }
+      if (tid < n) { result[tid] = element_vec[tid] * (scalar); }
     }
 
     template <typename E>
