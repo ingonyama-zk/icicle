@@ -1,6 +1,6 @@
 #if defined(DEVMODE) || defined(DEBUG)
 #define INLINE_MACRO
-#define UNROLL // #pragma unroll
+#define UNROLL
 #else
 #define INLINE_MACRO __forceinline__
 #define UNROLL       #pragma unroll

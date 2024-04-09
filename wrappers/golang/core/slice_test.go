@@ -81,6 +81,10 @@ func TestHostSlice(t *testing.T) {
 	hostSlice := HostSliceFromElements(randFields)
 	assert.Equal(t, hostSlice.Len(), 4)
 	assert.Equal(t, hostSlice.Cap(), 4)
+
+	hostSliceCasted := (HostSlice[internal.MockField])(randFields)
+	assert.Equal(t, hostSliceCasted.Len(), 4)
+	assert.Equal(t, hostSliceCasted.Cap(), 4)
 }
 
 func TestHostSliceIsEmpty(t *testing.T) {
@@ -189,4 +193,32 @@ func TestCopyToFromHostDeviceProjectivePoints(t *testing.T) {
 	hostSlice2.CopyFromDevice(&emptyDeviceSlice)
 
 	assert.Equal(t, hostSlice, hostSlice2)
+}
+
+func TestSliceRanges(t *testing.T) {
+	var deviceSlice DeviceSlice
+
+	numPoints := 1 << 3
+	randProjectives := randomProjectivePoints(numPoints, fieldSize)
+	hostSlice := (HostSlice[internal.MockProjective])(randProjectives)
+	hostSlice.CopyToDevice(&deviceSlice, true)
+
+	// RangeFrom
+	var zeroProj internal.MockProjective
+	hostSliceRet := HostSliceWithValue[internal.MockProjective](zeroProj, numPoints-2)
+
+	deviceSliceRangeFrom := deviceSlice.RangeFrom(2)
+	hostSliceRet.CopyFromDevice(&deviceSliceRangeFrom)
+	assert.Equal(t, hostSlice[2:], hostSliceRet)
+
+	// RangeTo
+	deviceSliceRangeTo := deviceSlice.RangeTo(numPoints-3, true)
+	hostSliceRet.CopyFromDevice(&deviceSliceRangeTo)
+	assert.Equal(t, hostSlice[:6], hostSliceRet)
+
+	// Range
+	hostSliceRange := HostSliceWithValue[internal.MockProjective](zeroProj, numPoints-4)
+	deviceSliceRange := deviceSlice.Range(2, numPoints-3, true)
+	hostSliceRange.CopyFromDevice(&deviceSliceRange)
+	assert.Equal(t, hostSlice[2:6], hostSliceRange)
 }

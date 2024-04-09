@@ -7,8 +7,9 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, NTTDir, NttAlgorithm, Ordering},
+    ntt::{initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, NTTDir, NttAlgorithm, Ordering},
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
+    vec_ops::{transpose_matrix, VecOps},
 };
 
 use super::{NTTConfig, NTT};
@@ -206,13 +207,11 @@ where
             for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                 config.ordering = Ordering::kNR;
                 config.ntt_algorithm = alg;
-                let mut ntt_result = HostOrDeviceSlice::on_host(vec![F::zero(); test_size]);
-                ntt(&scalars, NTTDir::kForward, &config, &mut ntt_result).unwrap();
-                assert_ne!(scalars.as_slice(), ntt_result.as_slice());
+                ntt_inplace(&mut scalars, NTTDir::kForward, &config).unwrap();
 
                 let ark_scalars_copy = ark_scalars.clone();
                 ark_domain.fft_in_place(&mut ark_scalars);
-                let ntt_result_as_ark = ntt_result
+                let ntt_result_as_ark = scalars
                     .as_slice()
                     .iter()
                     .map(|p| p.to_ark())
@@ -222,7 +221,7 @@ where
                 assert_eq!(ark_scalars, ark_scalars_copy);
 
                 config.ordering = Ordering::kRN;
-                ntt(&ntt_result, NTTDir::kInverse, &config, &mut scalars).unwrap();
+                ntt_inplace(&mut scalars, NTTDir::kInverse, &config).unwrap();
                 let ntt_result_as_ark = scalars
                     .as_slice()
                     .iter()
@@ -237,6 +236,7 @@ where
 pub fn check_ntt_batch<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: VecOps<F>,
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
@@ -280,18 +280,38 @@ where
                             }
                         }
 
+                        let row_size = test_size as u32;
+                        let column_size = batch_size as u32;
+                        let on_device = false;
+                        let is_async = false;
                         // for now, columns batching only works with MixedRadix NTT
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
-                        let transposed_input =
-                            HostOrDeviceSlice::on_host(transpose_flattened_matrix(&scalars[..], batch_size));
+                        let mut transposed_input = HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
+                        transpose_matrix(
+                            &scalars,
+                            row_size,
+                            column_size,
+                            &mut transposed_input,
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
                         let mut col_batch_ntt_result =
                             HostOrDeviceSlice::on_host(vec![F::zero(); batch_size * test_size]);
                         ntt(&transposed_input, is_inverse, &config, &mut col_batch_ntt_result).unwrap();
-                        assert_eq!(
-                            batch_ntt_result[..],
-                            transpose_flattened_matrix(&col_batch_ntt_result[..], test_size)
-                        );
+                        transpose_matrix(
+                            &col_batch_ntt_result,
+                            column_size,
+                            row_size,
+                            &mut transposed_input,
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
+                        assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
                         config.columns_batch = false;
                     }
                 }
@@ -331,7 +351,6 @@ where
                     scalars_d
                         .copy_from_host(&scalars_h)
                         .unwrap();
-                    let mut ntt_out_d = HostOrDeviceSlice::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
 
                     for coset_gen in coset_generators {
                         for ordering in [Ordering::kNN, Ordering::kRR] {
@@ -344,23 +363,22 @@ where
                                 .stream = &stream;
                             for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                                 config.ntt_algorithm = alg;
-                                ntt(&scalars_d, NTTDir::kForward, &config, &mut ntt_out_d).unwrap();
-                                ntt(&ntt_out_d, NTTDir::kInverse, &config, &mut scalars_d).unwrap();
-                                let mut intt_result_h = vec![F::zero(); test_size * batch_size];
-                                scalars_d
-                                    .copy_to_host_async(&mut intt_result_h, &stream)
-                                    .unwrap();
-                                stream
-                                    .synchronize()
-                                    .unwrap();
-                                assert_eq!(scalars_h, intt_result_h);
+                                let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
+                                ntt_inplace(&mut scalars_d, NTTDir::kForward, &config).unwrap();
                                 if coset_gen == F::one() {
-                                    let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                                    ntt_out_d
+                                    scalars_d
                                         .copy_to_host(&mut ntt_result_h)
                                         .unwrap();
                                     assert_eq!(sum_of_coeffs, ntt_result_h[0].to_ark());
                                 }
+                                ntt_inplace(&mut scalars_d, NTTDir::kInverse, &config).unwrap();
+                                scalars_d
+                                    .copy_to_host_async(&mut ntt_result_h, &stream)
+                                    .unwrap();
+                                stream
+                                    .synchronize()
+                                    .unwrap();
+                                assert_eq!(scalars_h, ntt_result_h);
                             }
                         }
                     }

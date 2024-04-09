@@ -201,5 +201,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(GpuOutputOld));
   CHK_IF_RETURN(cudaFree(GpuOutputNew));
 
+  ntt::ReleaseDomain<test_scalar>(ntt_config.ctx);
+
   return CHK_LAST();
 }
