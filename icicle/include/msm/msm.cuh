@@ -86,7 +86,7 @@ namespace msm {
    * @return Default value of [MSMConfig](@ref MSMConfig).
    */
   template <typename A>
-  MSMConfig DefaultMSMConfig();
+  MSMConfig DefaultMSMConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context());
 
   /**
    * A function that computes MSM: \f$ MSM(s_i, P_i) = \sum_{i=1}^N s_i \cdot P_i \f$.
