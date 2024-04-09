@@ -41,6 +41,11 @@ func testAgainstGnarkCryptoMsm(scalars core.HostSlice[ScalarField], points core.
 	for i, v := range points {
 		pointsFp[i] = projectiveToGnarkAffine(v.ToProjective())
 	}
+
+	return testAgainstGnarkCryptoMsmGnarkCryptoTypes(scalarsFr, pointsFp, out)
+}
+
+func testAgainstGnarkCryptoMsmGnarkCryptoTypes(scalarsFr core.HostSlice[fr.Element], pointsFp core.HostSlice[bls12381.G1Affine], out Projective) bool {
 	var msmRes bls12381.G1Jac
 	msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
 
@@ -49,6 +54,23 @@ func testAgainstGnarkCryptoMsm(scalars core.HostSlice[ScalarField], points core.
 	icicleResAsJac.FromAffine(&proj)
 
 	return msmRes.Equal(&icicleResAsJac)
+}
+
+func convertIcicleAffineToG1Affine(iciclePoints []Affine) []bls12381.G1Affine {
+	points := make([]bls12381.G1Affine, len(iciclePoints))
+	for index, iciclePoint := range iciclePoints {
+		xBytes := ([fp.Bytes]byte)(iciclePoint.X.ToBytesLittleEndian())
+		fpXElem, _ := fp.LittleEndian.Element(&xBytes)
+
+		yBytes := ([fp.Bytes]byte)(iciclePoint.Y.ToBytesLittleEndian())
+		fpYElem, _ := fp.LittleEndian.Element(&yBytes)
+		points[index] = bls12381.G1Affine{
+			X: fpXElem,
+			Y: fpYElem,
+		}
+	}
+
+	return points
 }
 
 func TestMSM(t *testing.T) {
@@ -65,7 +87,7 @@ func TestMSM(t *testing.T) {
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
-		e = Msm(scalars, points, &cfg, out)
+		e = Msm[ScalarField, Affine](scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[Projective], 1)
 		outHost.CopyFromDevice(&out)
@@ -73,6 +95,40 @@ func TestMSM(t *testing.T) {
 
 		// Check with gnark-crypto
 		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+	}
+}
+
+func TestMSMGnarkCryptoTypes(t *testing.T) {
+	cfg := GetDefaultMSMConfig()
+	for _, power := range []int{3} {
+		size := 1 << power
+
+		scalars := make([]fr.Element, size)
+		var x fr.Element
+		for i := 0; i < size; i++ {
+			x.SetRandom()
+			scalars[i] = x
+		}
+		scalarsHost := (core.HostSlice[fr.Element])(scalars)
+		points := GenerateAffinePoints(size)
+		pointsGnark := convertIcicleAffineToG1Affine(points)
+		pointsHost := (core.HostSlice[bls12381.G1Affine])(pointsGnark)
+
+		var p Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		cfg.ArePointsMontgomeryForm = true
+		cfg.AreScalarsMontgomeryForm = true
+
+		e = Msm[fr.Element, bls12381.G1Affine](scalarsHost, pointsHost, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+		outHost := make(core.HostSlice[Projective], 1)
+		outHost.CopyFromDevice(&out)
+		out.Free()
+
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsmGnarkCryptoTypes(scalarsHost, pointsHost, outHost[0]))
 	}
 }
 
@@ -90,7 +146,7 @@ func TestMSMBatch(t *testing.T) {
 			_, e := out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-			e = Msm(scalars, points, &cfg, out)
+			e = Msm[ScalarField, Affine](scalars, points, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 			outHost := make(core.HostSlice[Projective], batchSize)
 			outHost.CopyFromDevice(&out)
@@ -126,7 +182,7 @@ func TestMSMSkewedDistribution(t *testing.T) {
 		_, e := out.Malloc(p.Size(), p.Size())
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-		e = Msm(scalars, points, &cfg, out)
+		e = Msm[ScalarField, Affine](scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[Projective], 1)
 		outHost.CopyFromDevice(&out)

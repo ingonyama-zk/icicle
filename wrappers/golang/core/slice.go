@@ -70,20 +70,13 @@ func (d *DeviceSlice) Free() cr.CudaError {
 	return err
 }
 
-type HostSliceInterface interface {
-	Size() int
+type HostSlice[T any] []T
+
+func HostSliceFromElements[T any](elements []T) HostSlice[T] {
+	return elements
 }
 
-type HostSlice[T HostSliceInterface] []T
-
-func HostSliceFromElements[T HostSliceInterface](elements []T) HostSlice[T] {
-	slice := make(HostSlice[T], len(elements))
-	copy(slice, elements)
-
-	return slice
-}
-
-func HostSliceWithValue[T HostSliceInterface](underlyingValue T, size int) HostSlice[T] {
+func HostSliceWithValue[T any](underlyingValue T, size int) HostSlice[T] {
 	slice := make(HostSlice[T], size)
 	for i := range slice {
 		slice[i] = underlyingValue
@@ -109,7 +102,7 @@ func (h HostSlice[T]) IsOnDevice() bool {
 }
 
 func (h HostSlice[T]) SizeOfElement() int {
-	return h[0].Size()
+	return int(unsafe.Sizeof(h[0]))
 }
 
 func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *DeviceSlice {
@@ -121,7 +114,6 @@ func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *Devic
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	// hostSrc := unsafe.Pointer(h.AsPointer())
 	hostSrc := unsafe.Pointer(&h[0])
 	cr.CopyToDevice(dst.inner, hostSrc, uint(size))
 	dst.length = h.Len()
