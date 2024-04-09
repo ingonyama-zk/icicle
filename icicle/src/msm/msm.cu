@@ -36,7 +36,7 @@ namespace msm {
       points_out[tid] = P::to_affine(point);
     }
 
-    unsigned get_optimal_c(int bitsize) { return max((unsigned)ceil(log2(bitsize)) - 4, 1U); }
+    unsigned get_optimal_c(int bitsize) { return max((unsigned)ceil(std::log2(bitsize)) - 4, 1U); }
 
     template <typename E>
     __global__ void normalize_kernel(E* inout, E factor, int n)
@@ -416,7 +416,7 @@ namespace msm {
       unsigned nof_bms_per_msm = (total_bms_per_msm - 1) / precompute_factor + 1;
       unsigned input_indexes_count = nof_scalars * total_bms_per_msm;
 
-      unsigned bm_bitsize = (unsigned)ceil(log2(nof_bms_per_msm));
+      unsigned bm_bitsize = (unsigned)ceil(std::log2(nof_bms_per_msm));
 
       unsigned* bucket_indices;
       unsigned* point_indices;
@@ -648,7 +648,7 @@ namespace msm {
         // buckets
         unsigned large_buckets_nof_threads =
           (h_nof_pts_in_large_buckets + average_bucket_size - 1) / average_bucket_size + h_nof_large_buckets;
-        unsigned log_nof_large_buckets = (unsigned)ceil(log2(h_nof_large_buckets));
+        unsigned log_nof_large_buckets = (unsigned)ceil(std::log2(h_nof_large_buckets));
         unsigned* large_bucket_indices;
         CHK_IF_RETURN(cudaMallocAsync(&large_bucket_indices, sizeof(unsigned) * large_buckets_nof_threads, stream));
         NUM_THREADS = min(1 << 8, h_nof_large_buckets);
