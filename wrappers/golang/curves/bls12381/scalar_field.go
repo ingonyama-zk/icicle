@@ -106,9 +106,11 @@ func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaErr
 }
 
 func ToMontgomery(scalars *core.DeviceSlice) cr.CudaError {
+	scalars.CheckDevice()
 	return convertScalarsMontgomery(scalars, true)
 }
 
 func FromMontgomery(scalars *core.DeviceSlice) cr.CudaError {
+	scalars.CheckDevice()
 	return convertScalarsMontgomery(scalars, false)
 }

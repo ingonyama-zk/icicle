@@ -27,7 +27,9 @@ func Ntt[S any, T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *cor
 
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
-		scalarsPointer = scalars.(core.DeviceSlice).AsPointer()
+		scalarsDevice := scalars.(core.DeviceSlice)
+		scalarsDevice.CheckDevice()
+		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
 		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[S])[0])
 	}
@@ -38,7 +40,9 @@ func Ntt[S any, T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *cor
 
 	var resultsPointer unsafe.Pointer
 	if results.IsOnDevice() {
-		resultsPointer = results.(core.DeviceSlice).AsPointer()
+		resultsDevice := results.(core.DeviceSlice)
+		resultsDevice.CheckDevice()
+		resultsPointer = resultsDevice.AsPointer()
 	} else {
 		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[S])[0])
 	}
@@ -49,11 +53,45 @@ func Ntt[S any, T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *cor
 	return core.FromCudaError(err)
 }
 
+func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+	core.NttCheck[T](points, cfg, results)
+
+	var pointsPointer unsafe.Pointer
+	if points.IsOnDevice() {
+		pointsPointer = points.(core.DeviceSlice).AsPointer()
+	} else {
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Projective])[0])
+	}
+	cPoints := (*C.projective_t)(pointsPointer)
+	cSize := (C.int)(points.Len() / int(cfg.BatchSize))
+	cDir := (C.int)(dir)
+	cCfg := (*C.NTTConfig)(unsafe.Pointer(cfg))
+
+	var resultsPointer unsafe.Pointer
+	if results.IsOnDevice() {
+		resultsPointer = results.(core.DeviceSlice).AsPointer()
+	} else {
+		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[Projective])[0])
+	}
+	cResults := (*C.projective_t)(resultsPointer)
+
+	__ret := C.bls12_381ECNTTCuda(cPoints, cSize, cDir, cCfg, cResults)
+	err := (cr.CudaError)(__ret)
+	return core.FromCudaError(err)
+}
+
 func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError {
 	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
 	cFastTwiddles := (C._Bool)(fastTwiddles)
 	__ret := C.bls12_381InitializeDomain(cPrimitiveRoot, cCtx, cFastTwiddles)
+	err := (cr.CudaError)(__ret)
+	return core.FromCudaError(err)
+}
+
+func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError {
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
+	__ret := C.bls12_381ReleaseDomain(cCtx)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

@@ -4,11 +4,11 @@ on:
   pull_request:
     branches:
       - main
-      - dev
+      - V2
   push:
     branches:
       - main
-      - dev
+      - V2
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,6 +25,10 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
     - name: Check gofmt
       if: needs.check-changed-files.outputs.golang == 'true'
       run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
@@ -39,10 +43,14 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
     - name: Build
       working-directory: ./wrappers/golang
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ./build.sh ${{ matrix.curve }} ON # builds a single curve with G2 enabled
+      run: ./build.sh ${{ matrix.curve }} ON ON # builds a single curve with G2 and ECNTT enabled
     - name: Upload ICICLE lib artifacts
       uses: actions/upload-artifact@v4
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
@@ -58,6 +66,10 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
     - name: Download ICICLE lib artifacts
       uses: actions/download-artifact@v4
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
@@ -85,6 +97,10 @@ jobs:
   #   steps:     
   #   - name: Checkout Repo
   #     uses: actions/checkout@v4
+  #   - name: Setup go
+  #     uses: actions/setup-go@v5
+  #     with:
+  #       go-version: '1.20.0'
   #   - name: Download and Install Cuda
   #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
   #     id: cuda-toolkit

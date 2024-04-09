@@ -4,11 +4,11 @@ on:
   pull_request:
     branches:
       - main
-      - dev
+      - V2
   push:
     branches:
       - main
-      - dev
+      - V2
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,7 +33,7 @@ jobs:
       # before building the project.
       # e.g. icicle-cuda-runtime/src/bindings.rs is generated and icicle-cuda-runtime/src/lib.rs includes that module
       # causing rustfmt to fail.
-      run: if [[ $(find . -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
+      run: if [[ $(find . -path ./icicle-curves/icicle-curve-template -prune -o -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
 
   build-linux:
     name: Build on Linux

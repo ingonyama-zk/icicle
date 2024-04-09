@@ -84,16 +84,14 @@ int main(int argc, char** argv)
 
       // (4) multiply A,B
       CHK_IF_RETURN(cudaMallocAsync(&MulGpu, sizeof(test_data) * NTT_SIZE, ntt_config.ctx.stream));
-      vec_ops::VecOpsConfig<test_data> config {
+      vec_ops::VecOpsConfig<test_data> config{
         ntt_config.ctx,
         true,  // is_a_on_device
         true,  // is_b_on_device
         true,  // is_result_on_device
-        false, // is_montgomery
         false  // is_async
       };
-      CHK_IF_RETURN(
-        vec_ops::Mul(GpuA, GpuB, NTT_SIZE, config, MulGpu));
+      CHK_IF_RETURN(vec_ops::Mul(GpuA, GpuB, NTT_SIZE, config, MulGpu));
 
       // (5) INTT (in place)
       ntt_config.are_inputs_on_device = true;
@@ -118,6 +116,7 @@ int main(int argc, char** argv)
   benchmark(false); // warmup
   benchmark(true, 20);
 
+  ntt::ReleaseDomain<test_scalar>(ntt_config.ctx);
   CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
 
   return 0;

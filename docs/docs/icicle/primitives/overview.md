@@ -6,5 +6,6 @@ This section of the documentation is dedicated to the ICICLE primitives, we will
 ## Supported primitives
 
 
-- [MSM](./msm)
+- [MSM](./msm.md)
+- [NTT](./ntt.md)
 - [Poseidon Hash](./poseidon.md)

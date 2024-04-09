@@ -10,18 +10,26 @@ type NTTDir int8
 
 const (
 	KForward NTTDir = iota
-	KInverse NTTDir = 1
+	KInverse
 )
 
 type Ordering uint32
 
 const (
 	KNN Ordering = iota
-	KNR Ordering = 1
-	KRN Ordering = 2
-	KRR Ordering = 3
-	KNM Ordering = 4
-	KMN Ordering = 5
+	KNR
+	KRN
+	KRR
+	KNM
+	KMN
+)
+
+type NttAlgorithm uint32
+
+const (
+	Auto NttAlgorithm = iota
+	Radix2
+	MixedRadix
 )
 
 type NTTConfig[T any] struct {
@@ -31,13 +39,17 @@ type NTTConfig[T any] struct {
 	CosetGen T
 	/// The number of NTTs to compute. Default value: 1.
 	BatchSize int32
+	/// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
+	ColumnsBatch bool
 	/// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
 	Ordering           Ordering
 	areInputsOnDevice  bool
 	areOutputsOnDevice bool
 	/// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
 	/// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
-	IsAsync bool
+	IsAsync      bool
+	NttAlgorithm NttAlgorithm /**< Explicitly select the NTT algorithm. Default value: Auto (the implementation
+	selects radix-2 or mixed-radix algorithm based on heuristics). */
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
@@ -46,10 +58,12 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
 		ctx,      // Ctx
 		cosetGen, // CosetGen
 		1,        // BatchSize
+		false,    // ColumnsBatch
 		KNN,      // Ordering
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice
 		false,    // IsAsync
+		Auto,
 	}
 }
 

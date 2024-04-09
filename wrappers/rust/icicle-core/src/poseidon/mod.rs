@@ -2,14 +2,14 @@
 pub mod tests;
 
 use icicle_cuda_runtime::{
+    device::check_device,
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
-    memory::HostOrDeviceSlice,
+    memory::{DeviceSlice, HostOrDeviceSlice},
 };
 
 use crate::{error::IcicleResult, traits::FieldImpl};
 
 #[repr(C)]
-#[derive(Debug, Clone)]
 pub struct PoseidonConstants<'a, F: FieldImpl> {
     arity: u32,
 
@@ -18,10 +18,10 @@ pub struct PoseidonConstants<'a, F: FieldImpl> {
     full_rounds_half: u32,
 
     /// These should be pointers to data allocated on device
-    round_constants: &'a [F],
-    mds_matrix: &'a [F],
-    non_sparse_matrix: &'a [F],
-    sparse_matrices: &'a [F],
+    round_constants: &'a DeviceSlice<F>,
+    mds_matrix: &'a DeviceSlice<F>,
+    non_sparse_matrix: &'a DeviceSlice<F>,
+    sparse_matrices: &'a DeviceSlice<F>,
 
     /// Domain tag is the first element in the Poseidon state.
     /// For the Merkle tree mode it should equal 2^arity - 1
@@ -88,8 +88,8 @@ pub trait Poseidon<F: FieldImpl> {
     ) -> IcicleResult<PoseidonConstants<'a, F>>;
     fn load_optimized_constants<'a>(arity: u32, ctx: &DeviceContext) -> IcicleResult<PoseidonConstants<'a, F>>;
     fn poseidon_unchecked(
-        input: &mut HostOrDeviceSlice<F>,
-        output: &mut HostOrDeviceSlice<F>,
+        input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         number_of_states: u32,
         arity: u32,
         constants: &PoseidonConstants<F>,
@@ -146,8 +146,8 @@ where
 ///
 /// * `config` - config used to specify extra arguments of the Poseidon.
 pub fn poseidon_hash_many<F>(
-    input: &mut HostOrDeviceSlice<F>,
-    output: &mut HostOrDeviceSlice<F>,
+    input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     number_of_states: u32,
     arity: u32,
     constants: &PoseidonConstants<F>,
@@ -179,6 +179,22 @@ where
         );
     }
 
+    let ctx_device_id = config
+        .ctx
+        .device_id;
+    if let Some(device_id) = input.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in input and context are different"
+        );
+    }
+    if let Some(device_id) = output.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in output and context are different"
+        );
+    }
+    check_device(ctx_device_id);
     let mut local_cfg = config.clone();
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
@@ -268,8 +284,8 @@ macro_rules! impl_poseidon {
             }
 
             fn poseidon_unchecked(
-                input: &mut HostOrDeviceSlice<$field>,
-                output: &mut HostOrDeviceSlice<$field>,
+                input: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 number_of_states: u32,
                 arity: u32,
                 constants: &PoseidonConstants<$field>,
@@ -294,16 +310,23 @@ macro_rules! impl_poseidon {
 #[macro_export]
 macro_rules! impl_poseidon_tests {
     (
-      $field:ident,
-      $field_bytes:literal,
-      $field_prefix:literal,
-      $partial_rounds:literal
+      $field:ident
     ) => {
         #[test]
         fn test_poseidon_hash_many() {
             check_poseidon_hash_many::<$field>()
         }
+    };
+}
 
+#[macro_export]
+macro_rules! impl_poseidon_custom_config_test {
+    (
+      $field:ident,
+      $field_bytes:literal,
+      $field_prefix:literal,
+      $partial_rounds:literal
+    ) => {
         #[test]
         fn test_poseidon_custom_config() {
             check_poseidon_custom_config::<$field>($field_bytes, $field_prefix, $partial_rounds)

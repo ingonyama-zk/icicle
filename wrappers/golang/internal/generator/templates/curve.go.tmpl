@@ -150,10 +150,12 @@ func convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points *core.DeviceSlice
 }
 
 func {{if .IsG2}}G2{{end}}AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points, true)
 }
 
 func {{if .IsG2}}G2{{end}}AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points, false)
 }
 
@@ -169,10 +171,12 @@ func convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points *core.DeviceS
 }
 
 func {{if .IsG2}}G2{{end}}ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points, true)
 }
 
 func {{if .IsG2}}G2{{end}}ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points, false)
 }
 {{end}}

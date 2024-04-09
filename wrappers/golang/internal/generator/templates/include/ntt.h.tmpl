@@ -9,8 +9,10 @@
 extern "C" {
 #endif
 
-cudaError_t {{.Curve}}NTTCuda(scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+cudaError_t {{.Curve}}NTTCuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+cudaError_t {{.Curve}}ECNTTCuda(const projective_t* input, int size, int dir, NTTConfig* config, projective_t* output);
 cudaError_t {{.Curve}}InitializeDomain(scalar_t* primitive_root, DeviceContext* ctx, bool fast_twiddles);
+cudaError_t {{.Curve}}ReleaseDomain(DeviceContext* ctx);
 
 #ifdef __cplusplus
 }

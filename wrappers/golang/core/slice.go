@@ -43,6 +43,78 @@ func (d DeviceSlice) IsOnDevice() bool {
 	return true
 }
 
+func (d DeviceSlice) GetDeviceId() int {
+	return cr.GetDeviceFromPointer(d.inner)
+}
+
+// CheckDevice is used to ensure that the DeviceSlice about to be used resides on the currently set device
+func (d DeviceSlice) CheckDevice() {
+	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
+		panic("Attempt to use DeviceSlice on a different device")
+	}
+}
+
+func (d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {
+	if end <= start {
+		panic("Cannot have negative or zero size slices")
+	}
+
+	if end >= d.length {
+		panic("Cannot increase slice size from Range")
+	}
+
+	var newSlice DeviceSlice
+	switch {
+	case start < 0:
+		panic("Negative value for start is not supported")
+	case start == 0:
+		newSlice = d.RangeTo(end, endInclusive)
+	case start > 0:
+		tempSlice := d.RangeFrom(start)
+		newSlice = tempSlice.RangeTo(end-start, endInclusive)
+	}
+	return newSlice
+}
+
+func (d *DeviceSlice) RangeTo(end int, inclusive bool) DeviceSlice {
+	if end <= 0 {
+		panic("Cannot have negative or zero size slices")
+	}
+
+	if end >= d.length {
+		panic("Cannot increase slice size from Range")
+	}
+
+	var newSlice DeviceSlice
+	sizeOfElement := d.capacity / d.length
+	newSlice.length = end
+	if inclusive {
+		newSlice.length += 1
+	}
+	newSlice.capacity = newSlice.length * sizeOfElement
+	newSlice.inner = d.inner
+	return newSlice
+}
+
+func (d *DeviceSlice) RangeFrom(start int) DeviceSlice {
+	if start >= d.length {
+		panic("Cannot have negative or zero size slices")
+	}
+
+	if start < 0 {
+		panic("Negative value for start is not supported")
+	}
+
+	var newSlice DeviceSlice
+	sizeOfElement := d.capacity / d.length
+
+	newSlice.inner = unsafe.Pointer(uintptr(d.inner) + uintptr(start)*uintptr(sizeOfElement))
+	newSlice.length = d.length - start
+	newSlice.capacity = d.capacity - start*sizeOfElement
+
+	return newSlice
+}
+
 // TODO: change signature to be Malloc(element, numElements)
 // calc size internally
 func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cr.CudaError) {
@@ -62,7 +134,18 @@ func (d *DeviceSlice) MallocAsync(size, sizeOfElement int, stream cr.CudaStream)
 }
 
 func (d *DeviceSlice) Free() cr.CudaError {
+	d.CheckDevice()
 	err := cr.Free(d.inner)
+	if err == cr.CudaSuccess {
+		d.length, d.capacity = 0, 0
+		d.inner = nil
+	}
+	return err
+}
+
+func (d *DeviceSlice) FreeAsync(stream cr.Stream) cr.CudaError {
+	d.CheckDevice()
+	err := cr.FreeAsync(d.inner, stream)
 	if err == cr.CudaSuccess {
 		d.length, d.capacity = 0, 0
 		d.inner = nil
@@ -110,6 +193,7 @@ func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *Devic
 	if shouldAllocate {
 		dst.Malloc(size, h.SizeOfElement())
 	}
+	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
@@ -125,6 +209,7 @@ func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, 
 	if shouldAllocate {
 		dst.MallocAsync(size, h.SizeOfElement(), stream)
 	}
+	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
@@ -136,6 +221,7 @@ func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, 
 }
 
 func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
+	src.CheckDevice()
 	if h.Len() != src.Len() {
 		panic("destination and source slices have different lengths")
 	}
@@ -144,6 +230,7 @@ func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
 }
 
 func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
+	src.CheckDevice()
 	if h.Len() != src.Len() {
 		panic("destination and source slices have different lengths")
 	}

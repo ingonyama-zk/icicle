@@ -1,15 +1,15 @@
 [package]
 name = "icicle-bls12-377"
-version = "1.4.0"
-edition = "2021"
-authors = [ "Ingonyama" ]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 description = "Rust wrapper for the CUDA implementation of BLS12-377 pairing friendly elliptic curve by Ingonyama"
-homepage = "https://www.ingonyama.com"
-repository = "https://github.com/ingonyama-zk/icicle"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-icicle-core = { path = "../../icicle-core" }
-icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
+icicle-core = { workspace = true }
+icicle-cuda-runtime = { workspace = true }
 ark-bls12-377 = { version = "0.4.0", optional = true }
 
 [build-dependencies]
@@ -29,4 +29,6 @@ default = []
 bw6-761 = []
 bw6-761-g2 = ["bw6-761"]
 g2 = ["icicle-core/g2"]
+ec_ntt = ["icicle-core/ec_ntt"]
+devmode = ["icicle-core/devmode"]
 arkworks = ["ark-bls12-377", "icicle-core/arkworks"]

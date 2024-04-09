@@ -148,10 +148,12 @@ func convertG2AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.C
 }
 
 func G2AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convertG2AffinePointsMontgomery(points, true)
 }
 
 func G2AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convertG2AffinePointsMontgomery(points, false)
 }
 
@@ -167,9 +169,11 @@ func convertG2ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) 
 }
 
 func G2ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convertG2ProjectivePointsMontgomery(points, true)
 }
 
 func G2ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
 	return convertG2ProjectivePointsMontgomery(points, false)
 }

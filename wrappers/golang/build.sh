@@ -1,10 +1,16 @@
 #!/bin/bash
 
 G2_DEFINED=OFF
+ECNTT_DEFINED=OFF
 
-if [[ $2 ]]
+if [[ $2 == "ON" ]]
 then
   G2_DEFINED=ON
+fi
+
+if [[ $3 == "ON" ]]
+then
+  ECNTT_DEFINED=ON
 fi
 
 BUILD_DIR=$(realpath "$PWD/../../icicle/build")
@@ -22,6 +28,6 @@ mkdir -p build
 
 for CURVE in "${BUILD_CURVES[@]}"
 do
-  cmake -DCURVE=$CURVE -DG2_DEFINED=$G2_DEFINED -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build
+  cmake -DCURVE=$CURVE -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED  -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake --build build -j8
 done

@@ -1,15 +1,15 @@
 [package]
 name = "icicle-bw6-761"
-version = "1.4.0"
-edition = "2021"
-authors = [ "Ingonyama" ]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 description = "Rust wrapper for the CUDA implementation of BW6-761 pairing friendly elliptic curve by Ingonyama"
-homepage = "https://www.ingonyama.com"
-repository = "https://github.com/ingonyama-zk/icicle"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-icicle-core = { path = "../../icicle-core" }
-icicle-cuda-runtime = { path = "../../icicle-cuda-runtime" }
+icicle-core = { workspace = true }
+icicle-cuda-runtime = { workspace = true }
 icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"] }
 ark-bw6-761 = { version = "0.4.0", optional = true }
 
@@ -28,4 +28,5 @@ icicle-bw6-761 = { path = ".", features = ["arkworks"] }
 [features]
 default = []
 g2 = ["icicle-bls12-377/bw6-761-g2"]
+devmode = ["icicle-core/devmode"]
 arkworks = ["ark-bw6-761", "icicle-core/arkworks", "icicle-bls12-377/arkworks"]

@@ -25,9 +25,46 @@ module.exports = {
           id: "icicle/integrations"
         },
         {
-          type: "doc",
+          type: "category",
           label: "Golang bindings",
-          id: "icicle/golang-bindings",
+          link: {
+            type: `doc`,
+            id: "icicle/golang-bindings",
+          },
+          collapsed: true,
+          items: [
+            {
+              type: "category",
+              label: "MSM",
+              link: {
+                type: `doc`,
+                id: "icicle/golang-bindings/msm",
+              },
+              collapsed: true,
+              items: [
+                {
+                  type: "doc",
+                  label: "MSM pre computation",
+                  id: "icicle/golang-bindings/msm-pre-computation",
+                }
+              ]
+            },
+            {
+              type: "doc",
+              label: "NTT",
+              id: "icicle/golang-bindings/ntt",
+            },
+            {
+              type: "doc",
+              label: "Vector operations",
+              id: "icicle/golang-bindings/vec-ops",
+            },
+            {
+            type: "doc",
+            label: "Multi GPU Support",
+            id: "icicle/golang-bindings/multi-gpu",
+            },
+          ]
         },
         {
           type: "category",
@@ -39,11 +76,37 @@ module.exports = {
           collapsed: true,
           items: [
             {
+              type: "category",
+              label: "MSM",
+              link: {
+                type: `doc`,
+                id: "icicle/rust-bindings/msm",
+              },
+              collapsed: true,
+              items: [
+                {
+                  type: "doc",
+                  label: "MSM pre computation",
+                  id: "icicle/rust-bindings/msm-pre-computation",
+                }
+              ]
+            },
+            {
+              type: "doc",
+              label: "NTT",
+              id: "icicle/rust-bindings/ntt",
+            },
+            {
+              type: "doc",
+              label: "Vector operations",
+              id: "icicle/rust-bindings/vec-ops",
+            },
+            {
               type: "doc",
               label: "Multi GPU Support",
               id: "icicle/rust-bindings/multi-gpu",
-            }
-          ]
+            },
+          ],
         },
         {
           type: "category",
@@ -61,14 +124,14 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Poseidon Hash",
-              id: "icicle/primitives/poseidon",
+              label: "NTT",
+              id: "icicle/primitives/ntt",
             },
             {
               type: "doc",
-              label: "NTT",
-              id: "icicle/primitives/ntt",
-            }
+              label: "Poseidon Hash",
+              id: "icicle/primitives/poseidon",
+            },
           ],
         },
         {

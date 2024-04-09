@@ -12,6 +12,8 @@ import (
 	"unsafe"
 )
 
+type MemPool = CudaMemPool
+
 func Malloc(size uint) (unsafe.Pointer, CudaError) {
 	if size == 0 {
 		return nil, CudaErrorMemoryAllocation

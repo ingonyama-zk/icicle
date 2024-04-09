@@ -1,6 +1,7 @@
 package bw6761
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -16,13 +17,19 @@ const (
 	largestTestSize = 17
 )
 
-func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) {
+func init() {
+	cfg := GetDefaultNttConfig()
+	initDomain(largestTestSize, cfg)
+}
+
+func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
 	rouIcicle := ScalarField{}
 
 	rouIcicle.FromLimbs(rou[:])
-	InitDomain(rouIcicle, cfg.Ctx, false)
+	e := InitDomain(rouIcicle, cfg.Ctx, false)
+	return e
 }
 
 func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[ScalarField], output core.HostSlice[ScalarField], order core.Ordering, direction core.NTTDir) bool {
@@ -76,6 +83,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 }
 
 func TestInitDomain(t *testing.T) {
+	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
 	cfg := GetDefaultNttConfig()
 	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
 }
@@ -123,6 +131,25 @@ func TestNttFrElement(t *testing.T) {
 
 			// Compare with gnark-crypto
 			assert.True(t, testAgainstGnarkCryptoNttGnarkTypes(testSize, scalarsCopy, output, v, core.KForward))
+		}
+	}
+}
+
+func TestECNtt(t *testing.T) {
+	cfg := GetDefaultNttConfig()
+	points := GenerateProjectivePoints(1 << largestTestSize)
+
+	for _, size := range []int{4, 5, 6, 7, 8} {
+		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+			testSize := 1 << size
+
+			pointsCopy := core.HostSliceFromElements[Projective](points[:testSize])
+			cfg.Ordering = v
+			cfg.NttAlgorithm = core.Radix2
+
+			output := make(core.HostSlice[Projective], testSize)
+			e := ECNtt(pointsCopy, core.KForward, &cfg, output)
+			assert.Equal(t, core.IcicleErrorCode(0), e.IcicleErrorCode, "ECNtt failed")
 		}
 	}
 }
@@ -202,6 +229,31 @@ func TestNttBatch(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestReleaseDomain(t *testing.T) {
+	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
+	cfg := GetDefaultNttConfig()
+	e := ReleaseDomain(cfg.Ctx)
+	assert.Equal(t, core.IcicleErrorCode(0), e.IcicleErrorCode, "ReleasDomain failed")
+}
+
+func TestMain(m *testing.M) {
+	// setup domain
+	cfg := GetDefaultNttConfig()
+	e := initDomain(largestTestSize, cfg)
+	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
+		panic("initDomain failed")
+	}
+
+	// execute tests
+	os.Exit(m.Run())
+
+	// release domain
+	e = ReleaseDomain(cfg.Ctx)
+	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
+		panic("ReleaseDomain failed")
 	}
 }
 
