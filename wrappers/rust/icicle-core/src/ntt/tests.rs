@@ -34,7 +34,6 @@ pub fn rel_domain<F: FieldImpl>(ctx: &DeviceContext)
 where
     <F as FieldImpl>::Config: NTT<F>,
 {
-    // let ctx = DeviceContext::default_for_device(device_id);
     release_domain::<F>(&ctx).unwrap();
 }
 
@@ -322,7 +321,7 @@ where
             set_device(device_id).unwrap();
             // if have more than one device, it will use fast-twiddles-mode (note that domain is reused per device if not released)
             init_domain::<F>(1 << 16, device_id, true /*=fast twiddles mode*/); // init domain per device
-            let mut config: NTTConfig<'static, F> = NTTConfig::default_for_device(device_id);
+            let config: NTTConfig<'static, F> = NTTConfig::default_for_device(device_id);
             let test_sizes = [1 << 4, 1 << 12];
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
@@ -374,6 +373,7 @@ where
                     }
                 }
             }
-            rel_domain::<F>(&config.ctx);
-        });
+        }
+        rel_domain::<F>(&config.ctx);
+    );
 }
