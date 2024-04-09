@@ -59,6 +59,7 @@ int main(){
   int n = 24;
   int polys = POLYS;
   bool double_round = true;
+  bool unified = true;
   int size = polys << n;
   int temp_size = size/(double_round? 4 : 2) * (polys+1) * (double_round? (polys+1) : 1);
   int trans_size = double_round? (polys+1)*(polys+1)*n/2 + 1 : (polys+1)*n +1;
@@ -186,8 +187,10 @@ int main(){
   // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
-  if (double_round) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
-  else sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round && !unified) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round && unified) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (!double_round && unified)  sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  // if (!double_round && !unified)  sumcheck_generic_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
   cudaDeviceSynchronize();
@@ -203,8 +206,10 @@ int main(){
   // cudaMemcpy(h_evals_debug_unif.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
   // if (polys == 3) sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // if (polys == 3) sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
-  if (double_round) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
-  else sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round && !unified) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round && unified) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (!double_round && unified)  sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  // if (!double_round && !unified)  sumcheck_generic_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaEventRecord(gpu_stop, 0);
