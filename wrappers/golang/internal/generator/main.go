@@ -107,6 +107,8 @@ func generateFiles() {
 		"vec_ops_test.go.tmpl",
 		"vec_ops.go.tmpl",
 		"helpers_test.go.tmpl",
+		"ecntt.go.tmpl",
+		"ecntt_test.go.tmpl",
 	}
 
 	for _, tmplName := range templateFiles {
