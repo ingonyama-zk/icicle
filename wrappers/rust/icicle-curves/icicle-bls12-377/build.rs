@@ -15,6 +15,12 @@ fn main() {
     #[cfg(feature = "g2")]
     config.define("G2_DEFINED", "ON");
 
+    #[cfg(feature = "ec_ntt")]
+    config.define("ECNTT_DEFINED", "ON");
+
+    #[cfg(feature = "devmode")]
+    config.define("DEVMODE", "ON");
+
     // Build
     let out_dir = config
         .build_target("icicle")
@@ -34,6 +40,12 @@ fn main() {
         // Optional Features
         #[cfg(feature = "bw6-761-g2")]
         config.define("G2_DEFINED", "ON");
+
+        #[cfg(feature = "ec_ntt")]
+        config.define("ECNTT_DEFINED", "OFF");
+
+        #[cfg(feature = "devmode")]
+        config.define("DEVMODE", "ON");
 
         // Build
         let out_dir = config

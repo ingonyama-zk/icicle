@@ -4,12 +4,20 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed=../../../../icicle");
 
-    let out_dir = Config::new("../../../../icicle")
-                .define("BUILD_TESTS", "OFF") //TODO: feature
-                .define("CURVE", "grumpkin")
-                .define("CMAKE_BUILD_TYPE", "Release")
-                .build_target("icicle")
-                .build();
+    // Base config
+    let mut config = Config::new("../../../../icicle");
+    config
+        .define("BUILD_TESTS", "OFF")
+        .define("CURVE", "grumpkin")
+        .define("CMAKE_BUILD_TYPE", "Release");
+
+    #[cfg(feature = "devmode")]
+    config.define("DEVMODE", "ON");
+
+    // Build
+    let out_dir = config
+        .build_target("icicle")
+        .build();
 
     println!("cargo:rustc-link-search={}/build", out_dir.display());
 
