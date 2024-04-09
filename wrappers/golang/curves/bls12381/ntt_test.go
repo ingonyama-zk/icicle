@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -21,14 +22,15 @@ func init() {
 	initDomain(largestTestSize, cfg)
 }
 
-func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) {
+func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
 	rouIcicle := ScalarField{}
 	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
 
 	rouIcicle.FromLimbs(limbs)
-	InitDomain(rouIcicle, cfg.Ctx, false)
+	e := InitDomain(rouIcicle, cfg.Ctx, false)
+	return e
 }
 
 func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[ScalarField], output core.HostSlice[ScalarField], order core.Ordering, direction core.NTTDir) bool {
@@ -78,7 +80,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 }
 
 func TestInitDomain(t *testing.T) {
-	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the init() function")
+	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
 	cfg := GetDefaultNttConfig()
 	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
 }
@@ -202,8 +204,28 @@ func TestNttBatch(t *testing.T) {
 }
 
 func TestReleaseDomain(t *testing.T) {
+	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
 	cfg := GetDefaultNttConfig()
-	ReleaseDomain(cfg.Ctx)
+	e := ReleaseDomain(cfg.Ctx)
+	assert.Equal(t, core.IcicleErrorCode(0), e.IcicleErrorCode, "ReleasDomain failed")
+}
+
+func TestMain(m *testing.M) {
+	// setup domain
+	cfg := GetDefaultNttConfig()
+	e := initDomain(largestTestSize, cfg)
+	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
+		panic("initDomain failed")
+	}
+
+	// execute tests
+	os.Exit(m.Run())
+
+	// release domain
+	e = ReleaseDomain(cfg.Ctx)
+	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
+		panic("ReleaseDomain failed")
+	}
 }
 
 // func TestNttArbitraryCoset(t *testing.T) {
