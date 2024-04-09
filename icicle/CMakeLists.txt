@@ -12,6 +12,45 @@ else()
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
+# Check for configuration file and apply config from it
+if (EXISTS "build_config.txt")
+  message(STATUS "build_config.txt exists")
+
+  # Initialize variables
+  set(CURVE "")
+  set(ECNTT_DEFINED "")
+  set(G2_DEFINED "")
+  # Read variables from the file
+  file(READ "build_config.txt" FILE_CONTENT)
+  # Split the file content into lines
+  string(REPLACE "\n" ";" LINES "${FILE_CONTENT}")
+  # Parse each line to extract the variables
+  foreach(LINE ${LINES})
+  
+    string(REGEX MATCH "CURVE=([^;]+)" CURVE_MATCH "${LINE}")
+    if (CURVE_MATCH)
+      set(CURVE ${CMAKE_MATCH_1})
+    endif()
+    
+    string(REGEX MATCH "ECNTT_DEFINED=([^;]+)" ECNTT_DEFINED_MATCH "${LINE}")
+    if (ECNTT_DEFINED_MATCH)
+      set(ECNTT_DEFINED ${CMAKE_MATCH_1})
+    endif()
+    
+    string(REGEX MATCH "G2_DEFINED=([^;]+)" G2_DEFINED_MATCH "${LINE}")
+    if (G2_DEFINED_MATCH)
+      set(G2_DEFINED ${CMAKE_MATCH_1})
+    endif()
+    string(REGEX MATCH "DEVMODE=([^;]+)" DEVMODE_MATCH "${LINE}")
+    if (DEVMODE_MATCH)
+      set(DEVMODE ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
+
+else()
+    message(STATUS "build_config.txt does not exist")
+endif() 
+
 # add the target cuda architectures
 # each additional architecture increases the compilation time and output file size
 if(${CMAKE_VERSION} VERSION_LESS "3.24.0")
@@ -60,6 +99,15 @@ else()
 endif()
 
 project(icicle LANGUAGES CUDA CXX)
+
+# Logging build configuration
+message(STATUS "build configuration:")
+message(STATUS "Cuda version: ${CMAKE_CUDA_COMPILER_VERSION}")
+message(STATUS "CURVE: ${CURVE}")
+message(STATUS "G2: ${G2_DEFINED}")
+message(STATUS "ECNTT: ${ECNTT_DEFINED}")
+message(STATUS "Dev Mode: ${DEVMODE}")
+
 # Check CUDA version and, if possible, enable multi-threaded compilation 
 if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "12.2")
     message(STATUS "Using multi-threaded CUDA compilation.")
@@ -98,10 +146,6 @@ endif ()
 
 if (G2_DEFINED STREQUAL "ON")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2_DEFINED=ON")
-endif ()
-
-if (ECNTT_DEFINED STREQUAL "ON")
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DECNTT_DEFINED=ON")
 endif ()
 
 option(BUILD_TESTS "Build tests" OFF)

@@ -25,14 +25,17 @@ do
             cuda_version=$(echo "$arg" | cut -d'=' -f2)
             CUDA_COMPILER_PATH=/usr/local/cuda-$cuda_version/bin/nvcc
             ;;
-        -ecntt=*)
-            ECNTT_DEFINED=$(echo "$arg" | cut -d'=' -f2)
+        -ecntt*)
+            # ECNTT_DEFINED=$(echo "$arg" | cut -d'=' -f2)
+            ECNTT_DEFINED=ON
             ;;
-        -g2=*)
-            G2_DEFINED=$(echo "$arg" | cut -d'=' -f2)
+        -g2*)
+            # G2_DEFINED=$(echo "$arg" | cut -d'=' -f2)
+            G2_DEFINED=ON
             ;;
-        -devmode=*)
-            DEVMODE=$(echo "$arg" | cut -d'=' -f2)
+        -devmode*)
+            # DEVMODE=$(echo "$arg" | cut -d'=' -f2)
+            DEVMODE=ON
             ;;
         *)
             echo "Unknown argument: $arg"
@@ -53,6 +56,5 @@ do
   echo "G2_DEFINED=${G2_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCURVE=$CURVE -DG2_DEFINED=$G2_DEFINED -DECNTT_DEFINED=$ECNTT_DEFINED -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build -j8
-  rm build_config.txt
+  cmake --build build -j8 && rm build_config.txt
 done
