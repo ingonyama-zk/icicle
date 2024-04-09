@@ -2,12 +2,14 @@
 
 #include <unordered_map>
 #include <vector>
+#include <type_traits>
 
 #include "curves/curve_config.cuh"
 #include "utils/sharedmem.cuh"
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
 #include "appUtils/ntt/ntt_impl.cuh"
+#include "appUtils/ntt/ntt.cuh" // for ntt::Ordering
 
 #include <mutex>
 
@@ -112,7 +114,7 @@ namespace ntt {
         uint32_t l = threadIdx.x;
 
         if (l < loop_limit) {
-#pragma unroll
+          UNROLL
           for (; ss < logn; ss++) {
             int s = logn - ss - 1;
             bool is_beginning = ss == 0;
@@ -184,7 +186,7 @@ namespace ntt {
         uint32_t l = threadIdx.x;
 
         if (l < loop_limit) {
-#pragma unroll
+          UNROLL
           for (; s < logn; s++) // TODO: this loop also can be unrolled
           {
             uint32_t ntw_i = task % chunks;
@@ -448,7 +450,7 @@ namespace ntt {
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
       // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
       CHK_IF_RETURN(cudaMallocManaged(&domain.twiddles, (domain.max_size + 1) * sizeof(S)));
-      CHK_IF_RETURN(generate_external_twiddles_generic(
+      CHK_IF_RETURN(mxntt::generate_external_twiddles_generic(
         primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
         ctx.stream));
 
@@ -458,7 +460,7 @@ namespace ntt {
         CHK_IF_RETURN(cudaMallocAsync(&domain.fast_external_twiddles_inv, domain.max_size * sizeof(S) * 2, ctx.stream));
 
         // fast-twiddles forward NTT
-        CHK_IF_RETURN(generate_external_twiddles_fast_twiddles_mode(
+        CHK_IF_RETURN(mxntt::generate_external_twiddles_fast_twiddles_mode(
           primitive_root, domain.fast_external_twiddles, domain.fast_internal_twiddles, domain.fast_basic_twiddles,
           domain.max_log_size, ctx.stream));
 
@@ -466,7 +468,7 @@ namespace ntt {
         S primitive_root_inv;
         CHK_IF_RETURN(cudaMemcpyAsync(
           &primitive_root_inv, &domain.twiddles[domain.max_size - 1], sizeof(S), cudaMemcpyDeviceToHost, ctx.stream));
-        CHK_IF_RETURN(generate_external_twiddles_fast_twiddles_mode(
+        CHK_IF_RETURN(mxntt::generate_external_twiddles_fast_twiddles_mode(
           primitive_root_inv, domain.fast_external_twiddles_inv, domain.fast_internal_twiddles_inv,
           domain.fast_basic_twiddles_inv, domain.max_log_size, ctx.stream));
       }
@@ -528,7 +530,7 @@ namespace ntt {
   // template cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
   template <typename S>
-  static bool is_choose_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
+  static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
     const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
     if (!is_mixed_radix_alg_supported && config.columns_batch)
@@ -670,7 +672,7 @@ namespace ntt {
         d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
         coset_index, stream));
     } else {
-      const bool is_radix2_algorithm = is_choose_radix2_algorithm(logn, batch_size, config);
+      const bool is_radix2_algorithm = is_choosing_radix2_algorithm(logn, batch_size, config);
       if (is_radix2_algorithm) {
         CHK_IF_RETURN(ntt::radix2_ntt(
           d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
@@ -687,7 +689,7 @@ namespace ntt {
         S* basic_twiddles = is_fast_twiddles_enabled
                               ? (is_inverse ? domain.fast_basic_twiddles_inv : domain.fast_basic_twiddles)
                               : domain.basic_twiddles;
-        CHK_IF_RETURN(ntt::mixed_radix_ntt(
+        CHK_IF_RETURN(mxntt::mixed_radix_ntt(
           d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
           config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
       }
@@ -750,7 +752,6 @@ namespace ntt {
   }
 
 #if defined(ECNTT_DEFINED)
-
   /**
    * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
