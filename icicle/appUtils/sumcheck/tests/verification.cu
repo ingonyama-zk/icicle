@@ -36,7 +36,7 @@ void incremental_values(test_scalar* res, uint32_t count)
   }
 }
 
-#define POLYS 1
+#define POLYS 2
 
 int main(){
 
@@ -60,6 +60,7 @@ int main(){
   int polys = POLYS;
   bool double_round = true;
   int size = polys << n;
+  int temp_size = size/(double_round? 4 : 2) * (polys+1) * (double_round? (polys+1) : 1);
   int trans_size = double_round? (polys+1)*(polys+1)*n/2 + 1 : (polys+1)*n +1;
   bool reorder = false;
 
@@ -73,16 +74,16 @@ int main(){
   auto h_evals = std::make_unique<test_scalar[]>(size);
   auto h_evals_debug_ref = std::make_unique<test_scalar[]>(size);
   auto h_evals_debug_unif = std::make_unique<test_scalar[]>(size);
-  auto h_temp = std::make_unique<test_scalar[]>(size);
+  auto h_temp = std::make_unique<test_scalar[]>(temp_size);
   auto h_transcript = std::make_unique<test_scalar[]>(trans_size);
   auto h_transcript_ref = std::make_unique<test_scalar[]>(trans_size);
   
   cudaMalloc(&d_transcript, sizeof(test_scalar) * (trans_size));
   cudaMalloc(&d_evals, sizeof(test_scalar) * size);
-  cudaMalloc(&d_temp, sizeof(test_scalar) * size);
+  cudaMalloc(&d_temp, sizeof(test_scalar) * temp_size);
   cudaMalloc(&d_transcript2, sizeof(test_scalar) * (trans_size));
   cudaMalloc(&d_evals2, sizeof(test_scalar) * size);
-  cudaMalloc(&d_temp2, sizeof(test_scalar) * size);
+  cudaMalloc(&d_temp2, sizeof(test_scalar) * temp_size);
   
   cudaEventCreate(&gpu_start);
   cudaEventCreate(&gpu_stop);
@@ -158,8 +159,8 @@ int main(){
       }
     }
     else {
-      // random_samples(h_evals.get(), size);
-      incremental_values(h_evals.get(), size);
+      random_samples(h_evals.get(), size);
+      // incremental_values(h_evals.get(), size);
       C = test_scalar::rand_host();
       h_transcript[0] = test_scalar::rand_host();
       h_transcript_ref[0] = h_transcript[0];
@@ -167,8 +168,8 @@ int main(){
   }
 
   if (polys == 2 || polys == 4){
-    // random_samples(h_evals.get(), size);
-    incremental_values(h_evals.get(), size);
+    random_samples(h_evals.get(), size);
+    // incremental_values(h_evals.get(), size);
     C = test_scalar::rand_host();
     h_transcript[0] = test_scalar::rand_host();
     h_transcript_ref[0] = h_transcript[0];
@@ -185,7 +186,7 @@ int main(){
   // sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
-  if (double_round) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   else sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
@@ -202,7 +203,7 @@ int main(){
   // cudaMemcpy(h_evals_debug_unif.get(), d_evals, sizeof(test_scalar) * (size), cudaMemcpyDeviceToHost);
   // if (polys == 3) sumcheck_alg3_poly3(d_evals, d_temp, d_transcript, C, n, reorder, stream1);
   // if (polys == 3) sumcheck_alg3_poly3_unified(d_evals, d_temp, d_transcript, C, n, stream1);
-  if (double_round) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (double_round) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   else sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
