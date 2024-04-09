@@ -373,7 +373,6 @@ where
                     }
                 }
             }
-        }
-        rel_domain::<F>(&config.ctx);
-    );
+            rel_domain::<F>(&config.ctx);
+        });
 }
