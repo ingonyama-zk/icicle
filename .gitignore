@@ -16,6 +16,6 @@
 **/Cargo.lock
 **/icicle/build/
 **/wrappers/rust/icicle-cuda-runtime/src/bindings.rs
-**/build
+**/build*
 **/icicle/appUtils/large_ntt/work
 icicle/appUtils/large_ntt/work/test_ntt
