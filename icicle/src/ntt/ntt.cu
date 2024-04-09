@@ -533,6 +533,7 @@ namespace ntt {
     domain.fast_internal_twiddles_inv = nullptr;
     CHK_IF_RETURN(cudaFreeAsync(domain.fast_basic_twiddles_inv, ctx.stream));
     domain.fast_basic_twiddles_inv = nullptr;
+    domain.initialized = false;
 
     return CHK_LAST();
   }
