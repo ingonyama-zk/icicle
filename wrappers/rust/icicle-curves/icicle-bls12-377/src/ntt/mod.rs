@@ -21,8 +21,8 @@ pub(crate) mod tests {
     use crate::ntt::DEFAULT_DEVICE_ID;
     use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
+    use serial_test::{parallel, serial};
     use std::sync::OnceLock;
-    use serial_test::{serial, parallel};
 
     impl_ntt_tests!(ScalarField);
 }
