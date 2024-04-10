@@ -1,14 +1,13 @@
-//go:build ecntt
-
-package {{.PackageName}}
+package ecntt
 
 // #cgo CFLAGS: -I./include/
-// #include "ntt.h"
+// #include "ecntt.h"
 import "C"
 
 import (
 	"unsafe"
 
+	. "github.com/ingonyama-zk/icicle/wrappers/golang/curves/{{.PackageName}}"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )

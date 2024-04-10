@@ -1,4 +1,8 @@
+{{if .IsG2 -}}
+package g2
+{{- else -}}
 package {{.PackageName}}
+{{- end}}
 
 import (
 	"math/rand"

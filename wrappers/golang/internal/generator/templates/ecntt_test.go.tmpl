@@ -1,13 +1,16 @@
-//go:build ecntt
-
-package {{.PackageName}}
+package ecntt
 
 import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	. "github.com/ingonyama-zk/icicle/wrappers/golang/curves/{{.PackageName}}"
 
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	largestTestSize = 17
 )
 
 func TestECNtt(t *testing.T) {

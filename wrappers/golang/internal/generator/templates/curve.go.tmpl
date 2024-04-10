@@ -1,9 +1,10 @@
 {{if .IsG2 -}}
-//go:build g2
-
-{{end -}}
+package g2
+{{- else -}}
 package {{.PackageName}}
-{{if not .IsMock}}
+{{- end}}
+
+{{if not .IsMock -}}
 // #cgo CFLAGS: -I./include/
 // #include "{{if .IsG2 -}}g2_{{end}}curve.h"
 import "C"
