@@ -8,11 +8,14 @@ set(TARGET icicle_field)
 
 set(SRC ${CMAKE_SOURCE_DIR}/src)
 
-set(FIELD_SOURCE ${SRC}/fields/field.cu)
+set(FIELD_SOURCE ${SRC}/fields/extern.cu)
 list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern.cu)
-list(APPEND FIELD_SOURCE ${SRC}/fields/mont.cu)
+if(EXT_FIELD)
+  list(APPEND CURVE_SOURCE ${SRC}/fields/extern_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/ntt/extern_extension.cu)
+endif()
 
-# TODO: impl poseidon for small fields. note that it needs to be defined for the extension field!
+# TODO: impl poseidon for small fields. note that it needs to be defined over the extension field!
 if (DEFINED CURVE)
   list(APPEND FIELD_SOURCE ${SRC}/poseidon/poseidon.cu)
   list(APPEND FIELD_SOURCE ${SRC}/poseidon/tree/merkle.cu)
