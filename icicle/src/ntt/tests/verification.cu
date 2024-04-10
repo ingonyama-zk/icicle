@@ -1,6 +1,17 @@
 #include "fields/id.h"
 #define FIELD_ID BN254
 
+#ifdef ECNTT
+#define CURVE_ID BN254
+#include "curves/curve_config.cuh"
+typedef field_config::scalar_t test_scalar;
+typedef curve_config::projective_t test_data;
+#else
+#include "fields/field_config.cuh"
+typedef field_config::scalar_t test_scalar;
+typedef field_config::scalar_t test_data;
+#endif
+
 #include "fields/field.cuh"
 #include "curves/projective.cuh"
 #include <chrono>
@@ -10,8 +21,6 @@
 #include "ntt.cu"
 #include "kernel_ntt.cu"
 #include <memory>
-
-#include "fields/field_config.cuh"
 
 void random_samples(scalar_t* res, uint32_t count)
 {
@@ -76,7 +85,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&new_stop));
 
   auto start = std::chrono::high_resolution_clock::now();
-  const scalar_t basic_root = scalar_t::omega(NTT_LOG_SIZE);
+  const scalar_t basic_root = test_scalar::omega(NTT_LOG_SIZE);
   ntt::InitDomain(basic_root, ntt_config.ctx, FAST_TW);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
@@ -90,10 +99,10 @@ int main(int argc, char** argv)
   // gpu allocation
   scalar_t *GpuScalars, *GpuOutputOld, *GpuOutputNew;
   scalar_t* GpuScalarsTransposed;
-  CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuScalarsTransposed, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(scalar_t) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuScalarsTransposed, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutputNew, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
 
   // init inputs
   // incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
@@ -191,6 +200,8 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(GpuScalars));
   CHK_IF_RETURN(cudaFree(GpuOutputOld));
   CHK_IF_RETURN(cudaFree(GpuOutputNew));
+
+  ntt::ReleaseDomain<test_scalar>(ntt_config.ctx);
 
   return CHK_LAST();
 }

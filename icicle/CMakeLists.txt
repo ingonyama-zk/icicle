@@ -9,6 +9,11 @@ set_gpu_env()
 
 project(icicle LANGUAGES CUDA CXX)
 
+option(DEVMODE "Enable development mode" OFF)
+if (DEVMODE)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O0 --ptxas-options=-O0 --ptxas-options=-allow-expensive-optimizations=false -DDEVMODE=ON")
+endif ()
+
 if((DEFINED CURVE) AND (DEFINED FIELD))
   message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
 endif ()

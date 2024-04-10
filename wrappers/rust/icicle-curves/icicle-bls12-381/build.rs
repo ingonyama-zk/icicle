@@ -14,6 +14,12 @@ fn main() {
     #[cfg(feature = "g2")]
     config.define("G2", "ON");
 
+    #[cfg(feature = "ec_ntt")]
+    config.define("ECNTT", "ON");
+
+    #[cfg(feature = "devmode")]
+    config.define("DEVMODE", "ON");
+
     // Build
     let out_dir = config
         .build_target("icicle_curve")

@@ -8,9 +8,11 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     ntt::{
-        initialize_domain, initialize_domain_fast_twiddles_mode, ntt, NTTConfig, NTTDir, NttAlgorithm, Ordering, NTT,
+        initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, release_domain, NTTConfig, NTTDir,
+        NttAlgorithm, Ordering, NTT,
     },
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
+    vec_ops::{transpose_matrix, VecOps},
 };
 
 pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
@@ -27,6 +29,13 @@ where
     }
 }
 
+pub fn rel_domain<F: FieldImpl>(ctx: &DeviceContext)
+where
+    <F as FieldImpl>::Config: NTT<F>,
+{
+    release_domain::<F>(&ctx).unwrap();
+}
+
 pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
     fn is_power_of_two(n: u32) -> bool {
         n != 0 && n & (n - 1) == 0
@@ -39,14 +48,6 @@ pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
         .rev()
         .collect::<String>();
     u32::from_str_radix(&reversed, 2).unwrap()
-}
-
-pub fn transpose_flattened_matrix<T: Copy>(m: &[T], nrows: usize) -> Vec<T> {
-    let ncols = m.len() / nrows;
-    assert!(nrows * ncols == m.len());
-    (0..m.len())
-        .map(|i| m[(i % nrows) * ncols + i / nrows])
-        .collect()
 }
 
 pub fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
@@ -225,14 +226,12 @@ where
             for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                 config.ordering = Ordering::kNR;
                 config.ntt_algorithm = alg;
-                let mut ntt_result = vec![F::zero(); test_size];
-                let ntt_result = HostSlice::from_mut_slice(&mut ntt_result);
-                ntt(scalars, NTTDir::kForward, &config, ntt_result).unwrap();
-                assert_ne!(scalars.as_slice(), ntt_result.as_slice());
+                ntt_inplace(scalars, NTTDir::kForward, &config).unwrap();
 
                 let ark_scalars_copy = ark_scalars.clone();
                 ark_domain.fft_in_place(&mut ark_scalars);
-                let ntt_result_as_ark = ntt_result
+                let ntt_result_as_ark = scalars
+                    .as_slice()
                     .iter()
                     .map(|p| p.to_ark())
                     .collect::<Vec<F::ArkEquivalent>>();
@@ -241,7 +240,7 @@ where
                 assert_eq!(ark_scalars, ark_scalars_copy);
 
                 config.ordering = Ordering::kRN;
-                ntt(ntt_result, NTTDir::kInverse, &config, scalars).unwrap();
+                ntt_inplace(scalars, NTTDir::kInverse, &config).unwrap();
                 let ntt_result_as_ark = scalars
                     .iter()
                     .map(|p| p.to_ark())
@@ -255,6 +254,7 @@ where
 pub fn check_ntt_batch<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: VecOps<F>,
 {
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
@@ -305,10 +305,24 @@ where
                             }
                         }
 
+                        let row_size = test_size as u32;
+                        let column_size = batch_size as u32;
+                        let on_device = false;
+                        let is_async = false;
                         // for now, columns batching only works with MixedRadix NTT
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
-                        let transposed_input = transpose_flattened_matrix(scalars.as_slice(), batch_size);
+                        let mut transposed_input = vec![F::zero(); batch_size * test_size];
+                        transpose_matrix(
+                            scalars,
+                            row_size,
+                            column_size,
+                            HostSlice::from_mut_slice(&mut transposed_input),
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
                         let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
                         ntt(
                             HostSlice::from_slice(&transposed_input),
@@ -317,10 +331,17 @@ where
                             HostSlice::from_mut_slice(&mut col_batch_ntt_result),
                         )
                         .unwrap();
-                        assert_eq!(
-                            batch_ntt_result[..],
-                            transpose_flattened_matrix(&col_batch_ntt_result[..], test_size)
-                        );
+                        transpose_matrix(
+                            HostSlice::from_slice(&col_batch_ntt_result),
+                            column_size,
+                            row_size,
+                            HostSlice::from_mut_slice(&mut transposed_input),
+                            &config.ctx,
+                            on_device,
+                            is_async,
+                        )
+                        .unwrap();
+                        assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
                         config.columns_batch = false;
                     }
                 }
@@ -342,11 +363,11 @@ where
             set_device(device_id).unwrap();
             // if have more than one device, it will use fast-twiddles-mode (note that domain is reused per device if not released)
             init_domain::<F>(1 << 16, device_id, true /*=fast twiddles mode*/); // init domain per device
+            let mut config: NTTConfig<'static, F> = NTTConfig::default_for_device(device_id);
             let test_sizes = [1 << 4, 1 << 12];
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
                 let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
-                let mut config = NTTConfig::default_for_device(device_id);
                 let stream = config
                     .ctx
                     .stream;
@@ -360,7 +381,6 @@ where
                     scalars_d
                         .copy_from_host(HostSlice::from_slice(&scalars))
                         .unwrap();
-                    let mut ntt_out_d = DeviceVec::<F>::cuda_malloc_async(test_size * batch_size, &stream).unwrap();
 
                     for coset_gen in coset_generators {
                         for ordering in [Ordering::kNN, Ordering::kRR] {
@@ -373,27 +393,36 @@ where
                                 .stream = &stream;
                             for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
                                 config.ntt_algorithm = alg;
-                                ntt(&scalars_d[..], NTTDir::kForward, &config, &mut ntt_out_d[..]).unwrap();
-                                ntt(&ntt_out_d[..], NTTDir::kInverse, &config, &mut scalars_d[..]).unwrap();
-                                let mut intt_result = vec![F::zero(); test_size * batch_size];
+                                let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
+                                let mut ntt_result_slice = HostSlice::from_mut_slice(&mut ntt_result_h);
+                                ntt_inplace(&mut *scalars_d, NTTDir::kForward, &config).unwrap();
+                                if coset_gen == F::one() {
+                                    scalars_d
+                                        .copy_to_host(ntt_result_slice)
+                                        .unwrap();
+                                    assert_eq!(sum_of_coeffs, ntt_result_slice[0].to_ark());
+                                }
+                                ntt_inplace(&mut *scalars_d, NTTDir::kInverse, &config).unwrap();
                                 scalars_d
-                                    .copy_to_host_async(HostSlice::from_mut_slice(&mut intt_result), &stream)
+                                    .copy_to_host_async(&mut ntt_result_slice, &stream)
                                     .unwrap();
                                 stream
                                     .synchronize()
                                     .unwrap();
-                                assert_eq!(scalars, intt_result);
-                                if coset_gen == F::one() {
-                                    let mut ntt_result = vec![F::zero(); test_size * batch_size];
-                                    ntt_out_d
-                                        .copy_to_host(HostSlice::from_mut_slice(&mut ntt_result))
-                                        .unwrap();
-                                    assert_eq!(sum_of_coeffs, ntt_result[0].to_ark());
-                                }
+                                assert_eq!(scalars, *ntt_result_h.as_slice());
                             }
                         }
                     }
                 }
             }
         });
+}
+
+pub fn check_release_domain<F: FieldImpl + ArkConvertible>()
+where
+    F::ArkEquivalent: FftField,
+    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+{
+    let config: NTTConfig<'static, F> = NTTConfig::default();
+    rel_domain::<F>(&config.ctx);
 }

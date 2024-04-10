@@ -1,6 +1,7 @@
 #pragma once
 
 #include "field.cuh"
+#include "gpu-utils/modifiers.cuh"
 
 template <typename CONFIG>
 class ExtensionField

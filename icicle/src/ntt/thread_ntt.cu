@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include "gpu-utils/modifiers.cuh"
 
 struct stage_metadata {
   uint32_t th_stride;
@@ -50,116 +51,113 @@ public:
   S WI[7];
   S WE[8];
 
-  __device__ __forceinline__ void loadBasicTwiddles(S* basic_twiddles)
+  DEVICE_INLINE void loadBasicTwiddles(S* basic_twiddles)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 3; i++) {
       WB[i] = basic_twiddles[i];
     }
   }
 
-  __device__ __forceinline__ void loadBasicTwiddlesGeneric(S* basic_twiddles, bool inv)
+  DEVICE_INLINE void loadBasicTwiddlesGeneric(S* basic_twiddles, bool inv)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 3; i++) {
       WB[i] = basic_twiddles[inv ? i + 3 : i];
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles64(S* data, bool stride)
+  DEVICE_INLINE void loadInternalTwiddles64(S* data, bool stride)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 7; i++) {
       WI[i] = data[((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1)];
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles32(S* data, bool stride)
+  DEVICE_INLINE void loadInternalTwiddles32(S* data, bool stride)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 7; i++) {
       WI[i] = data[2 * ((stride ? (threadIdx.x >> 4) : (threadIdx.x)) & 0x3) * (i + 1)];
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddles16(S* data, bool stride)
+  DEVICE_INLINE void loadInternalTwiddles16(S* data, bool stride)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 7; i++) {
       WI[i] = data[4 * ((stride ? (threadIdx.x >> 5) : (threadIdx.x)) & 0x1) * (i + 1)];
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddlesGeneric64(S* data, bool stride, bool inv)
+  DEVICE_INLINE void loadInternalTwiddlesGeneric64(S* data, bool stride, bool inv)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 7; i++) {
       uint32_t exp = ((stride ? (threadIdx.x >> 3) : (threadIdx.x)) & 0x7) * (i + 1);
       WI[i] = data[(inv && exp) ? 64 - exp : exp]; // if exp = 0 we also take exp and not 64-exp
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddlesGeneric32(S* data, bool stride, bool inv)
+  DEVICE_INLINE void loadInternalTwiddlesGeneric32(S* data, bool stride, bool inv)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 7; i++) {
       uint32_t exp = 2 * ((stride ? (threadIdx.x >> 4) : (threadIdx.x)) & 0x3) * (i + 1);
       WI[i] = data[(inv && exp) ? 64 - exp : exp];
     }
   }
 
-  __device__ __forceinline__ void loadInternalTwiddlesGeneric16(S* data, bool stride, bool inv)
+  DEVICE_INLINE void loadInternalTwiddlesGeneric16(S* data, bool stride, bool inv)
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 7; i++) {
       uint32_t exp = 4 * ((stride ? (threadIdx.x >> 5) : (threadIdx.x)) & 0x1) * (i + 1);
       WI[i] = data[(inv && exp) ? 64 - exp : exp];
     }
   }
 
-  __device__ __forceinline__ void
-  loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
+  DEVICE_INLINE void loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_order - 1));
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       WE[i] = data[8 * i * tw_order + (1 << tw_log_order + 6) - 1];
     }
   }
 
-  __device__ __forceinline__ void
-  loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
+  DEVICE_INLINE void loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_order - 1));
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         WE[4 * j + i] = data[(8 * i + j) * tw_order + (1 << tw_log_order + 5) - 1];
       }
     }
   }
 
-  __device__ __forceinline__ void
-  loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
+  DEVICE_INLINE void loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_order - 1));
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         WE[2 * j + i] = data[(8 * i + j) * tw_order + (1 << tw_log_order + 4) - 1];
       }
     }
   }
 
-  __device__ __forceinline__ void loadExternalTwiddlesGeneric64(
+  DEVICE_INLINE void loadExternalTwiddlesGeneric64(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       uint32_t exp = (s_meta.ntt_inp_id + 8 * i) * (s_meta.ntt_block_id & (tw_order - 1))
                      << (tw_log_size - tw_log_order - 6);
@@ -167,12 +165,12 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadExternalTwiddlesGeneric32(
+  DEVICE_INLINE void loadExternalTwiddlesGeneric32(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         uint32_t exp = (s_meta.ntt_inp_id * 2 + 8 * i + j) * (s_meta.ntt_block_id & (tw_order - 1))
                        << (tw_log_size - tw_log_order - 5);
@@ -181,12 +179,12 @@ public:
     }
   }
 
-  __device__ __forceinline__ void loadExternalTwiddlesGeneric16(
+  DEVICE_INLINE void loadExternalTwiddlesGeneric16(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         uint32_t exp = (s_meta.ntt_inp_id * 4 + 8 * i + j) * (s_meta.ntt_block_id & (tw_order - 1))
                        << (tw_log_size - tw_log_order - 4);
@@ -195,7 +193,7 @@ public:
     }
   }
 
-  __device__ __forceinline__ void
+  DEVICE_INLINE void
   loadGlobalData(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -205,13 +203,13 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
     }
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       X[i] = data[s_meta.th_stride * i * data_stride];
     }
   }
 
-  __device__ __forceinline__ void loadGlobalDataColumnBatch(
+  DEVICE_INLINE void loadGlobalDataColumnBatch(
     const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -219,13 +217,13 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       X[i] = data[s_meta.th_stride * i * data_stride * batch_size];
     }
   }
 
-  __device__ __forceinline__ void
+  DEVICE_INLINE void
   storeGlobalData(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -235,13 +233,13 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
     }
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       data[s_meta.th_stride * i * data_stride] = X[i];
     }
   }
 
-  __device__ __forceinline__ void storeGlobalDataColumnBatch(
+  DEVICE_INLINE void storeGlobalDataColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -249,13 +247,13 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       data[s_meta.th_stride * i * data_stride * batch_size] = X[i];
     }
   }
 
-  __device__ __forceinline__ void
+  DEVICE_INLINE void
   loadGlobalData32(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -265,16 +263,16 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 2;
     }
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         X[4 * j + i] = data[(8 * i + j) * data_stride];
       }
     }
   }
 
-  __device__ __forceinline__ void loadGlobalData32ColumnBatch(
+  DEVICE_INLINE void loadGlobalData32ColumnBatch(
     const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -282,16 +280,16 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         X[4 * j + i] = data[(8 * i + j) * data_stride * batch_size];
       }
     }
   }
 
-  __device__ __forceinline__ void
+  DEVICE_INLINE void
   storeGlobalData32(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -301,16 +299,16 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 2;
     }
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         data[(8 * i + j) * data_stride] = X[4 * j + i];
       }
     }
   }
 
-  __device__ __forceinline__ void storeGlobalData32ColumnBatch(
+  DEVICE_INLINE void storeGlobalData32ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -318,16 +316,16 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         data[(8 * i + j) * data_stride * batch_size] = X[4 * j + i];
       }
     }
   }
 
-  __device__ __forceinline__ void
+  DEVICE_INLINE void
   loadGlobalData16(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -337,16 +335,16 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 4;
     }
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         X[2 * j + i] = data[(8 * i + j) * data_stride];
       }
     }
   }
 
-  __device__ __forceinline__ void loadGlobalData16ColumnBatch(
+  DEVICE_INLINE void loadGlobalData16ColumnBatch(
     const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -354,16 +352,16 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         X[2 * j + i] = data[(8 * i + j) * data_stride * batch_size];
       }
     }
   }
 
-  __device__ __forceinline__ void
+  DEVICE_INLINE void
   storeGlobalData16(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -373,16 +371,16 @@ public:
       data += s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 4;
     }
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         data[(8 * i + j) * data_stride] = X[2 * j + i];
       }
     }
   }
 
-  __device__ __forceinline__ void storeGlobalData16ColumnBatch(
+  DEVICE_INLINE void storeGlobalData16ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -390,32 +388,32 @@ public:
               batch_size +
             s_meta.batch_id;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         data[(8 * i + j) * data_stride * batch_size] = X[2 * j + i];
       }
     }
   }
 
-  __device__ __forceinline__ void ntt4_2()
+  DEVICE_INLINE void ntt4_2()
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 2; i++) {
       ntt4(X[4 * i], X[4 * i + 1], X[4 * i + 2], X[4 * i + 3]);
     }
   }
 
-  __device__ __forceinline__ void ntt2_4()
+  DEVICE_INLINE void ntt2_4()
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 4; i++) {
       ntt2(X[2 * i], X[2 * i + 1]);
     }
   }
 
-  __device__ __forceinline__ void ntt2(E& X0, E& X1)
+  DEVICE_INLINE void ntt2(E& X0, E& X1)
   {
     E T;
 
@@ -424,7 +422,7 @@ public:
     X0 = T;
   }
 
-  __device__ __forceinline__ void ntt4(E& X0, E& X1, E& X2, E& X3)
+  DEVICE_INLINE void ntt4(E& X0, E& X1, E& X2, E& X3)
   {
     E T;
 
@@ -442,7 +440,7 @@ public:
   }
 
   // rbo version
-  __device__ __forceinline__ void ntt4rbo(E& X0, E& X1, E& X2, E& X3)
+  DEVICE_INLINE void ntt4rbo(E& X0, E& X1, E& X2, E& X3)
   {
     E T;
 
@@ -459,7 +457,7 @@ public:
     X3 = T - X3;
   }
 
-  __device__ __forceinline__ void ntt8(E& X0, E& X1, E& X2, E& X3, E& X4, E& X5, E& X6, E& X7)
+  DEVICE_INLINE void ntt8(E& X0, E& X1, E& X2, E& X3, E& X4, E& X5, E& X6, E& X7)
   {
     E T;
 
@@ -499,7 +497,7 @@ public:
     X4 = X4 - T;
   }
 
-  __device__ __forceinline__ void ntt8win()
+  DEVICE_INLINE void ntt8win()
   {
     E T;
 
@@ -541,12 +539,12 @@ public:
     X[4] = X[4] - T;
   }
 
-  __device__ __forceinline__ void SharedData64Columns8(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData64Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t column_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 64 + i * 8 + column_id] = X[i];
@@ -556,12 +554,12 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData64Rows8(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData64Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t row_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 64 + row_id * 8 + i] = X[i];
@@ -571,12 +569,12 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData32Columns8(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData32Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 32 + i * 4 + column_id] = X[i];
@@ -586,12 +584,12 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData32Rows8(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData32Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 32 + row_id * 8 + i] = X[i];
@@ -601,14 +599,14 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData32Columns4_2(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData32Columns4_2(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         if (store) {
           shmem[ntt_id * 32 + i * 8 + column_id + j] = X[4 * j + i];
@@ -619,14 +617,14 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData32Rows4_2(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData32Rows4_2(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 2; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         if (store) {
           shmem[ntt_id * 32 + row_id * 4 + 4 * j + i] = X[4 * j + i];
@@ -637,12 +635,12 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData16Columns8(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData16Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 16 + i * 2 + column_id] = X[i];
@@ -652,12 +650,12 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData16Rows8(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData16Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
 
-#pragma unroll
+    UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       if (store) {
         shmem[ntt_id * 16 + row_id * 8 + i] = X[i];
@@ -667,14 +665,14 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData16Columns2_4(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData16Columns2_4(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         if (store) {
           shmem[ntt_id * 16 + i * 8 + column_id + j] = X[2 * j + i];
@@ -685,14 +683,14 @@ public:
     }
   }
 
-  __device__ __forceinline__ void SharedData16Rows2_4(E* shmem, bool store, bool high_bits, bool stride)
+  DEVICE_INLINE void SharedData16Rows2_4(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
 
-#pragma unroll
+    UNROLL
     for (uint32_t j = 0; j < 4; j++) {
-#pragma unroll
+      UNROLL
       for (uint32_t i = 0; i < 2; i++) {
         if (store) {
           shmem[ntt_id * 16 + row_id * 2 + 2 * j + i] = X[2 * j + i];
@@ -703,17 +701,17 @@ public:
     }
   }
 
-  __device__ __forceinline__ void twiddlesInternal()
+  DEVICE_INLINE void twiddlesInternal()
   {
-#pragma unroll
+    UNROLL
     for (int i = 1; i < 8; i++) {
       X[i] = X[i] * WI[i - 1];
     }
   }
 
-  __device__ __forceinline__ void twiddlesExternal()
+  DEVICE_INLINE void twiddlesExternal()
   {
-#pragma unroll
+    UNROLL
     for (int i = 0; i < 8; i++) {
       X[i] = X[i] * WE[i];
     }

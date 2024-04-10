@@ -6,7 +6,7 @@
 
 using namespace curve_config;
 
-template<class P>
+template <class P>
 class CurveTest : public ::testing::Test
 {
 protected:

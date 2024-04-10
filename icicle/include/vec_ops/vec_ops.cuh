@@ -91,6 +91,30 @@ namespace vec_ops {
    */
   template <typename E>
   cudaError_t Sub(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+
+  /**
+   * Transposes an input matrix out-of-place inside GPU.
+   * for example: for ([a[0],a[1],a[2],a[3]], 2, 2) it returns
+   * [a[0],a[2],a[1],a[3]].
+   * @param mat_in array of some object of type E of size row_size * column_size.
+   * @param arr_out buffer of the same size as `mat_in` to write the transpose matrix into.
+   * @param row_size size of rows.
+   * @param column_size size of columns.
+   * @param ctx Device context.
+   * @param on_device Whether the input and output are on device.
+   * @param is_async Whether to run the vector operations asynchronously.
+   * @tparam E The type of elements `mat_in' and `mat_out`.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  template <typename E>
+  cudaError_t transpose_batch(
+    const E* mat_in,
+    E* mat_out,
+    uint32_t row_size,
+    uint32_t column_size,
+    device_context::DeviceContext& ctx,
+    bool on_device,
+    bool is_async);
 } // namespace vec_ops
 
 #endif

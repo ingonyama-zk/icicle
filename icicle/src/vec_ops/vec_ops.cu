@@ -31,6 +31,14 @@ namespace vec_ops {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid < n) { result[tid] = element_vec1[tid] - element_vec2[tid]; }
     }
+
+    template <typename E>
+    __global__ void transpose_kernel(const E* in, E* out, uint32_t row_size, uint32_t column_size)
+    {
+      int tid = blockDim.x * blockIdx.x + threadIdx.x;
+      if (tid >= row_size * column_size) return;
+      out[(tid % row_size) * column_size + (tid / row_size)] = in[tid];
+    }
   } // namespace
 
   template <typename E, void (*Kernel)(E*, E*, int, E*)>
@@ -96,5 +104,47 @@ namespace vec_ops {
   cudaError_t Sub(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result)
   {
     return VecOp<E, SubKernel>(vec_a, vec_b, n, config, result);
+  }
+
+  template <typename E>
+  cudaError_t transpose_matrix(
+    const E* mat_in,
+    E* mat_out,
+    uint32_t row_size,
+    uint32_t column_size,
+    device_context::DeviceContext& ctx,
+    bool on_device,
+    bool is_async)
+  {
+    int number_of_threads = MAX_THREADS_PER_BLOCK;
+    int number_of_blocks = (row_size * column_size + number_of_threads - 1) / number_of_threads;
+    cudaStream_t stream = ctx.stream;
+
+    const E* d_mat_in;
+    E* d_allocated_input = nullptr;
+    E* d_mat_out;
+    if (!on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_allocated_input, row_size * column_size * sizeof(E), ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(
+        d_allocated_input, mat_in, row_size * column_size * sizeof(E), cudaMemcpyHostToDevice, ctx.stream));
+
+      CHK_IF_RETURN(cudaMallocAsync(&d_mat_out, row_size * column_size * sizeof(E), ctx.stream));
+      d_mat_in = d_allocated_input;
+    } else {
+      d_mat_in = mat_in;
+      d_mat_out = mat_out;
+    }
+
+    transpose_kernel<<<number_of_blocks, number_of_threads, 0, stream>>>(d_mat_in, d_mat_out, row_size, column_size);
+
+    if (!on_device) {
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(mat_out, d_mat_out, row_size * column_size * sizeof(E), cudaMemcpyDeviceToHost, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_mat_out, ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_allocated_input, ctx.stream));
+    }
+    if (!is_async) return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
+
+    return CHK_LAST();
   }
 } // namespace vec_ops
