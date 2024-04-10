@@ -169,7 +169,7 @@ macro_rules! impl_scalar_field {
         impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
 
         mod $field_prefix_ident {
-            use crate::curve::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
+            use super::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "GenerateScalars")]
@@ -243,6 +243,11 @@ macro_rules! impl_field_tests {
         #[test]
         fn test_field_convert_montgomery() {
             check_field_convert_montgomery::<$field_name>()
+        }
+
+        #[test]
+        fn test_field_equality() {
+            check_field_equality::<$field_name>()
         }
     };
 }

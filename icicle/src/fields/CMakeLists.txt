@@ -11,7 +11,7 @@ set(SRC ${CMAKE_SOURCE_DIR}/src)
 set(FIELD_SOURCE ${SRC}/fields/extern.cu)
 list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern.cu)
 if(EXT_FIELD)
-  list(APPEND CURVE_SOURCE ${SRC}/fields/extern_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/fields/extern_extension.cu)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/extern_extension.cu)
 endif()
 

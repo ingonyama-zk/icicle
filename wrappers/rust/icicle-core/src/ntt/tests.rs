@@ -418,10 +418,9 @@ where
         });
 }
 
-pub fn check_release_domain<F: FieldImpl + ArkConvertible>()
+pub fn check_release_domain<F: FieldImpl>()
 where
-    F::ArkEquivalent: FftField,
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: NTT<F>,
 {
     let config: NTTConfig<'static, F> = NTTConfig::default();
     rel_domain::<F>(&config.ctx);

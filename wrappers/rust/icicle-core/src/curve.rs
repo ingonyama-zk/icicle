@@ -368,11 +368,6 @@ macro_rules! impl_curve_tests {
         $curve:ident
     ) => {
         #[test]
-        fn test_scalar_equality() {
-            check_scalar_equality::<<$curve as Curve>::ScalarField>()
-        }
-
-        #[test]
         fn test_affine_projective_convert() {
             check_affine_projective_convert::<$curve>()
         }
