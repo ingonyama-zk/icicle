@@ -22,20 +22,20 @@ typedef field_config::scalar_t test_data;
 #include "kernel_ntt.cu"
 #include <memory>
 
-void random_samples(scalar_t* res, uint32_t count)
+void random_samples(test_data* res, uint32_t count)
 {
   for (int i = 0; i < count; i++)
-    res[i] = i < 1000 ? scalar_t::rand_host() : res[i - 1000];
+    res[i] = i < 1000 ? test_data::rand_host() : res[i - 1000];
 }
 
-void incremental_values(scalar_t* res, uint32_t count)
+void incremental_values(test_scalar* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
-    res[i] = i ? res[i - 1] + scalar_t::one() : scalar_t::zero();
+    res[i] = i ? res[i - 1] + test_scalar::one() : test_scalar::zero();
   }
 }
 
-__global__ void transpose_batch(scalar_t* in, scalar_t* out, int row_size, int column_size)
+__global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size, int column_size)
 {
   int tid = blockDim.x * blockIdx.x + threadIdx.x;
   if (tid >= row_size * column_size) return;
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
   // init domain
-  auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
+  auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
   ntt_config.ordering = ordering;
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
@@ -92,9 +92,9 @@ int main(int argc, char** argv)
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
 
   // cpu allocation
-  auto CpuScalars = std::make_unique<scalar_t[]>(NTT_SIZE * BATCH_SIZE);
-  auto CpuOutputOld = std::make_unique<scalar_t[]>(NTT_SIZE * BATCH_SIZE);
-  auto CpuOutputNew = std::make_unique<scalar_t[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuOutputOld = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuOutputNew = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
 
   // gpu allocation
   scalar_t *GpuScalars, *GpuOutputOld, *GpuOutputNew;
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
   // incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
   random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
   CHK_IF_RETURN(
-    cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyHostToDevice));
+    cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
   if (COLUMNS_BATCH) {
     transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
@@ -118,7 +118,7 @@ int main(int argc, char** argv)
   // inplace
   if (INPLACE) {
     CHK_IF_RETURN(cudaMemcpy(
-      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t),
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
       cudaMemcpyDeviceToDevice));
   }
 
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
   int count = INPLACE ? 1 : 10;
   if (INPLACE) {
     CHK_IF_RETURN(cudaMemcpy(
-      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t),
+      GpuOutputNew, COLUMNS_BATCH ? GpuScalarsTransposed : GpuScalars, NTT_SIZE * BATCH_SIZE * sizeof(test_data),
       cudaMemcpyDeviceToDevice));
   }
   CHK_IF_RETURN(benchmark(true /*=print*/, count));
@@ -173,14 +173,14 @@ int main(int argc, char** argv)
     transpose_batch<<<(NTT_SIZE * BATCH_SIZE + 256 - 1) / 256, 256>>>(
       GpuOutputNew, GpuScalarsTransposed, BATCH_SIZE, NTT_SIZE);
     CHK_IF_RETURN(cudaMemcpy(
-      GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyDeviceToDevice));
+      GpuOutputNew, GpuScalarsTransposed, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToDevice));
   }
 
   // verify
   CHK_IF_RETURN(
-    cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyDeviceToHost));
+    cudaMemcpy(CpuOutputNew.get(), GpuOutputNew, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
   CHK_IF_RETURN(
-    cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * BATCH_SIZE * sizeof(scalar_t), cudaMemcpyDeviceToHost));
+    cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
   bool success = true;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
