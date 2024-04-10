@@ -1,6 +1,6 @@
 [package]
 name = "icicle-core"
-version = "1.4.0"
+version = "1.5.1"
 edition = "2021"
 authors = ["Ingonyama"]
 description = "A library for GPU ZK acceleration by Ingonyama"
