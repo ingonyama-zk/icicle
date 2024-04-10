@@ -26,7 +26,6 @@ ark-poly = "0.4.0"
 icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
 icicle-bls12-381 = { path = ".", features = ["arkworks"] }
 
-
 [features]
 default = []
 g2 = ["icicle-core/g2"]
@@ -36,4 +35,4 @@ arkworks = ["ark-bls12-381", "icicle-core/arkworks"]
 
 [[bench]]
 name = "ecntt"
-harness = false # This tells Cargo to not use the default test harness since Criterion provides its own
+harness = false # Criterion provides own harness

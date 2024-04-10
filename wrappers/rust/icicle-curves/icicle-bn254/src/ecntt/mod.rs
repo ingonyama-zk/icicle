@@ -11,7 +11,7 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 use crate::curve::{BaseCfg, CurveCfg, ScalarCfg, ScalarField};
 use icicle_core::ecntt::Projective;
 
-impl_ecntt!("bls12_381", bls12_381, ScalarField, ScalarCfg, BaseCfg, CurveCfg);
+impl_ecntt!("bn254", bn254, ScalarField, ScalarCfg, BaseCfg, CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

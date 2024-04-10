@@ -1,7 +1,5 @@
-
-use icicle_bls12_381::curve::{CurveCfg, BaseField, ScalarField};
+use icicle_bls12_381::curve::{BaseField, CurveCfg, ScalarField};
 
 use icicle_core::impl_ecntt_bench;
-use std::sync::OnceLock;
 
-impl_ecntt_bench!(ScalarField, BaseField, CurveCfg);
+impl_ecntt_bench!("BLS12_381", ScalarField, BaseField, CurveCfg);

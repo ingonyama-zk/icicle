@@ -143,10 +143,13 @@ macro_rules! impl_ecntt_tests {
 #[macro_export]
 macro_rules! impl_ecntt_bench {
     (
+      $field_prefix:literal,
       $field:ident,
       $base_field:ident,
       $curve:ident
     ) => {
+        use std::sync::OnceLock;
+
         #[cfg(feature = "arkworks")]
         use ark_ff::FftField;
 
@@ -186,6 +189,13 @@ macro_rules! impl_ecntt_bench {
         {
             use icicle_core::ntt::tests::init_domain;
             use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
+            use criterion::SamplingMode;
+
+            let group_id = format!("{} EC NTT", $field_prefix);
+            let mut group = c.benchmark_group(&group_id);
+            group.sampling_mode(SamplingMode::Flat);
+            group.sample_size(10);
+
             const MAX_SIZE: u64 = 1 << 18;
             const FAST_TWIDDLES_MODE: bool = false;
             INIT.get_or_init(move || init_domain::<F>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
@@ -200,9 +210,9 @@ macro_rules! impl_ecntt_bench {
                     for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
                         for ordering in [
                             Ordering::kNN,
-                            Ordering::kNR,
-                            Ordering::kRN,
-                            Ordering::kRR,
+                            // Ordering::kNR, // times are ~ same as kNN
+                            // Ordering::kRN,
+                            // Ordering::kRR,
                             // Ordering::kNM, // no mixed radix ecntt
                             // Ordering::kMN,
                         ] {
@@ -210,7 +220,8 @@ macro_rules! impl_ecntt_bench {
                             for alg in [NttAlgorithm::Radix2] {
                                 config.batch_size = batch_size as i32;
                                 config.ntt_algorithm = alg;
-                                c.bench_function("ecntt", |b| {
+                                let bench_descr = format!("{:?} {:?} {:?} {} x {}", alg, ordering, is_inverse, test_size, batch_size);
+                                group.bench_function(&bench_descr, |b| {
                                     b.iter(|| {
                                         ecntt_for_bench::<F, C>(
                                             &points,
@@ -229,6 +240,8 @@ macro_rules! impl_ecntt_bench {
                     }
                 }
             }
+
+            group.finish();
         }
 
         criterion_group!(benches, benchmark_ecntt<$field, $curve>);

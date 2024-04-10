@@ -84,7 +84,8 @@ where
                     // Ordering::kMN,
                 ] {
                     config.ordering = ordering;
-                    let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![Projective::zero(); batch_size * test_size]);
+                    let mut batch_ntt_result =
+                        HostOrDeviceSlice::on_host(vec![Projective::zero(); batch_size * test_size]);
                     for alg in [NttAlgorithm::Radix2] {
                         config.batch_size = batch_size as i32;
                         config.ntt_algorithm = alg;

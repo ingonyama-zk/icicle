@@ -28,3 +28,7 @@ icicle-<CURVE> = { path = ".", features = ["arkworks"] }
 default = []
 g2 = ["icicle-core/g2"]
 arkworks = ["ark-<CURVE>", "icicle-core/arkworks"]
+
+[[bench]]
+name = "ecntt"
+harness = false # Criterion provides own harness
