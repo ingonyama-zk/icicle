@@ -124,6 +124,7 @@ pub trait NTT<F: FieldImpl> {
     fn ntt_inplace_unchecked(inout: &mut HostOrDeviceSlice<F>, dir: NTTDir, cfg: &NTTConfig<F>) -> IcicleResult<()>;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
     fn initialize_domain_fast_twiddles_mode(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
+    fn release_domain(ctx: &DeviceContext) -> IcicleResult<()>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -206,6 +207,14 @@ where
     <<F as FieldImpl>::Config as NTT<F>>::initialize_domain_fast_twiddles_mode(primitive_root, ctx)
 }
 
+pub fn release_domain<F>(ctx: &DeviceContext) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>,
+{
+    <<F as FieldImpl>::Config as NTT<F>>::release_domain(ctx)
+}
+
 #[macro_export]
 macro_rules! impl_ntt {
     (
@@ -233,6 +242,9 @@ macro_rules! impl_ntt {
                     ctx: &DeviceContext,
                     fast_twiddles_mode: bool,
                 ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "ReleaseDomain")]
+                pub(crate) fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
             }
         }
 
@@ -278,6 +290,9 @@ macro_rules! impl_ntt {
             fn initialize_domain_fast_twiddles_mode(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
                 unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, true).wrap() }
             }
+            fn release_domain(ctx: &DeviceContext) -> IcicleResult<()> {
+                unsafe { $field_prefix_ident::release_ntt_domain(ctx).wrap() }
+            }
         }
     };
 }
@@ -289,6 +304,7 @@ macro_rules! impl_ntt_tests {
     ) => {
         const MAX_SIZE: u64 = 1 << 17;
         static INIT: OnceLock<()> = OnceLock::new();
+        static RELEASE: OnceLock<()> = OnceLock::new(); // for release domain test
         const FAST_TWIDDLES_MODE: bool = false;
 
         #[test]
@@ -319,6 +335,13 @@ macro_rules! impl_ntt_tests {
         fn test_ntt_device_async() {
             // init_domain is in this test is performed per-device
             check_ntt_device_async::<$field>()
+        }
+
+        #[test]
+        fn test_ntt_release_domain() {
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
+            check_release_domain::<$field>();
+            *RELEASE.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE))
         }
     };
 }
