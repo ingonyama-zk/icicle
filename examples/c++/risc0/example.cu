@@ -76,7 +76,45 @@ void compute_fib_constraint(
   return;
 }
 
-        
+void compute_recursion_constraint(
+  scalar_t * da, 
+  scalar_t * db, 
+  scalar_t * c, 
+  scalar_t *constraint,
+  int n, 
+  int dn) 
+{
+  // constrain data transfers between registers (two columns of the trace)
+  // dn = 1 for trace_columns, dn = 4 for trace_zkcommitment and trace_reedsolomonexpansion
+  // # We check that the ith term in trace[0] matches the "previous" term in trace[1].
+  // # We use "previous" to mean "one computational step before."
+  // # i.e., for trace_columns, we're checking trace[0][i] against trace[0][i-1], while
+  // # for trace_zkcommitment and trace_reedsolomonexpansion, we're checking trace[0][i] vs. trace[1][i-4]
+  // # We express this length-dependent step-size as len(trace[0])//8
+  // # We also use "previous" in a cyclical sense, wrapping around to the end of the trace.
+  // # Putting this together, the relation we are checking is:
+  // #   trace[0][i] - trace[1][i - len(trace[0])//8 % len(trace[0])
+  // # trace[4] is the associated indicator column; trace[4][i] = 0 when this rule isn't enforced.
+  for (int i = 0; i < n; ++i) {
+    constraint[i] = (da[i] - db[i - dn % n]) * c[i];
+  }
+}
+
+void mix(scalar_t* in[], scalar_t * out, size_t nmix, size_t n, scalar_t mix_parameter) {
+  scalar_t * a;
+  scalar_t factor = scalar_t::one();
+  for (size_t i = 0; i < n; ++i) {
+    out[i] = scalar_t::zero();
+  }
+  for (size_t i = 0; i < nmix; ++i) {
+    a = in[i];
+    for (size_t j = 0; j < n; ++j) {
+      out[j] = out[j] + a[j] * factor;
+    }
+    factor = factor * mix_parameter;
+  }
+}
+
 int main(int argc, char** argv)
 {
 
@@ -315,11 +353,114 @@ int main(int argc, char** argv)
   std::cout << "ZK Commitment Termination constraint gives no 0s" << std::endl;
   print_vector(termination_constraint_zkcommitment, 4*n);
 
-  // termination_constraint_columns = termination_constraint(trace_data)
-  // termination_constraint_reedsolomonexpansion = termination_constraint(
-  //     trace_reedsolomonexpansion
-  // )
-  // termination_constraint_zkcommitment = termination_constraint(trace_zkcommitment)
+  scalar_t recursion_constraint1[n];
+  compute_recursion_constraint(d1_trace, d2_trace, c2_trace, recursion_constraint1, n, 1);
+  std::cout << "Original Recursion constraint gives 0s" << std::endl;
+  print_vector(recursion_constraint1, n);
+
+  scalar_t recursion_constraint1_rs[4*n];
+  compute_recursion_constraint(d1_trace_rs, d2_trace_rs, c2_trace_rs, recursion_constraint1_rs, 4*n, 4);
+  std::cout << "Reed-Solomon expansion Recursion constraint gives 0s in every 4th row" << std::endl;
+  print_vector(recursion_constraint1_rs, 4*n);
+
+  scalar_t recursion_constraint1_zkcommitment[4*n];
+  compute_recursion_constraint(d1_zkcommitment, d2_zkcommitment, c2_zkcommitment, recursion_constraint1_zkcommitment, 4*n, 4);
+  std::cout << "ZK Commitment Recursion constraint gives no 0s" << std::endl;
+  print_vector(recursion_constraint1_zkcommitment, 4*n);
+
+  scalar_t recursion_constraint2[n];
+  compute_recursion_constraint(d2_trace, d3_trace, c2_trace, recursion_constraint2, n, 1);
+  std::cout << "Original Recursion constraint gives 0s" << std::endl;
+  print_vector(recursion_constraint2, n);
+
+  scalar_t recursion_constraint2_rs[4*n];
+  compute_recursion_constraint(d2_trace_rs, d3_trace_rs, c2_trace_rs, recursion_constraint2_rs, 4*n, 4);
+  std::cout << "Reed-Solomon expansion Recursion constraint gives 0s in every 4th row" << std::endl;
+  print_vector(recursion_constraint2_rs, 4*n);
+
+  scalar_t recursion_constraint2_zkcommitment[4*n];
+  compute_recursion_constraint(d2_zkcommitment, d3_zkcommitment, c2_zkcommitment, recursion_constraint2_zkcommitment, 4*n, 4);
+  std::cout << "ZK Commitment Recursion constraint gives no 0s" << std::endl;
+  print_vector(recursion_constraint2_zkcommitment, 4*n);
+
+  std::cout << std::endl << "Lesson 7: Mixing Constraint Polynomials" << std::endl;
+
+  // scalar_t* all_constraints[] = {fib_constraint, init1_constraint, init2_constraint, termination_constraint, recursion_constraint1, recursion_constraint2};
+  scalar_t* all_constraints[] = {fib_constraint, init1_constraint, init2_constraint, termination_constraint};
+  size_t nmix = sizeof(all_constraints) / sizeof(all_constraints[0]);
+  scalar_t mixed_constraint[n];
+  mix(all_constraints, mixed_constraint, nmix, n, scalar_t::from(5));
+  std::cout << "Mixed constraint gives 0s" << std::endl;
+  print_vector(mixed_constraint, n);
+
+  
+
+  // scalar_t* all_constraints_rs[] = {fib_constraint_rs, init1_constraint_rs, init2_constraint_rs, termination_constraint_rs, recursion_constraint1_rs, recursion_constraint2_rs};
+  scalar_t* all_constraints_rs[] = {fib_constraint_rs, init1_constraint_rs, init2_constraint_rs, termination_constraint_rs};
+  scalar_t mixed_constraint_rs[4*n];
+  mix(all_constraints_rs, mixed_constraint_rs, nmix, 4*n, scalar_t::from(5));
+  std::cout << "Mixed constraint gives 0s in every 4th row" << std::endl;
+  print_vector(mixed_constraint_rs, 4*n);
+
+  // scalar_t* all_constraints_zkcommitment[] = {fib_constraint_zkcommitment, init1_constraint_zkcommitment, init2_constraint_zkcommitment, termination_constraint_zkcommitment, recursion_constraint1_zkcommitment, recursion_constraint2_zkcommitment};
+  scalar_t* all_constraints_zkcommitment[] = {fib_constraint_zkcommitment, init1_constraint_zkcommitment, init2_constraint_zkcommitment, termination_constraint_zkcommitment};
+  scalar_t mixed_constraint_zkcommitment[4*n];
+  mix(all_constraints_zkcommitment, mixed_constraint_zkcommitment, nmix, 4*n, scalar_t::from(5));
+  std::cout << "Mixed constraint gives no 0s" << std::endl;
+  print_vector(mixed_constraint_zkcommitment, 4*n);
+
+  // Issue: recursive constraints have large degree. Is this an issue?
+  for( int i = 0; i < nmix; ++i) {
+    auto poly_rs = Polynomial_t::from_rou_evaluations(all_constraints_rs[i], 4*n);  
+    std::cout << i << ": " << poly_rs.degree() << std::endl;
+  }
+  // auto poly_rs = Polynomial_t::from_rou_evaluations(fib_constraint_zkcommitment, 4*n);
+  // std::cout << "degree of poly_rs = " << poly_rs.degree() << std::endl;
+
+
+  std::cout << "Lesson 8: The Core of the RISC Zero STARK" << std::endl;
+
+  std::cout << "Reed-Solomon domain" << std::endl;
+  auto p_mixed_constraint_rs = Polynomial_t::from_rou_evaluations(mixed_constraint_rs, 4*n);
+  std::cout << "Degree of the mixed constraint polynomial: " << p_mixed_constraint_rs.degree() << std::endl;
+  auto p_validity_rs = p_mixed_constraint_rs.divide_by_vanishing_polynomial(n);
+  std::cout << "Degree of the validity polynomial: " << p_validity_rs.degree() << std::endl;
+
+  std::cout << "ZK Commitment domain" << std::endl;
+  // I can't use from_rou_evaluations() since the domain is shifted (coset). I'll wait for corresponding API.
+  // auto p_mixed_constraint_zkcommitment = Polynomial_t::from_rou_evaluations(mixed_constraint_zkcommitment, 4*n);
+  // std::cout << "Degree of the mixed constraint polynomial: " << p_mixed_constraint_zkcommitment.degree() << std::endl;
+  // auto p_validity_zkcommitment = p_mixed_constraint_zkcommitment.divide_by_vanishing_polynomial(n);
+  // std::cout << "Degree of the validity polynomial: " << p_validity_zkcommitment.degree() << std::endl;
+
+  std::cout << "Evaluations of Validity Polynomial on zk-commitment domain" << std::endl;
+  xzk = basic_root;
+  for (int i = 0; i < 4*n; ++i) {
+    std::cout << i << ": " << p_validity_rs(xzk) << std::endl;
+    xzk = xzk * omega_rs;
+  }
+
+  std::cout << "The Virifier should provide the Merke commitment for the above" << std::endl;
+
+  std::cout << "Lesson 9: The DEEP Technique" << std::endl;
+  std::cout << "The DEEP technique improves the security of a single query by sampling outside of the commitment domain."  << std::endl;
+  
+  // In the original STARK protocol, the Verifier tests validity polynomial at a number of test points; 
+  // the soundness of the protocol depends on the number of tests. 
+  // The DEEP-ALI technique allows us to achieve a high degree of soundness with a single test. 
+  // The details of DEEP are described in the following lesson.
+
+  auto DEEP_point = scalar_t::from(93);
+  std::cout << "The prover convinces the verifier that V=C/Z at the DEEP_test_point, " << DEEP_point << std::endl;
+  // recursive constraints need the point corresponding to the previous state (clock cycle)
+  auto DEEP_prev_point = DEEP_point*scalar_t::inverse(omega);
+  const scalar_t coeffs[2] = {scalar_t::zero()-DEEP_point, scalar_t::one()};
+  auto denom_DEEP = Polynomial_t::from_coefficients(coeffs, 2);
+  auto d1_poly_tmp = d1_poly.clone();
+  d1_poly_tmp.sub_monomial_inplace(d1_poly(DEEP_point)) ;
+  auto [d1_poly_DEEP, r] = d1_poly_tmp.divide(denom_DEEP);
+  std::cout << "The DEEP degree is: " << d1_poly_DEEP.degree() << std::endl;
+
 
   // uint32_t tree_height = (logn + 1) + 1; // extra +1 for larger domain
   // size_t digests_len = get_digests_len<scalar_t>(tree_height, A);
