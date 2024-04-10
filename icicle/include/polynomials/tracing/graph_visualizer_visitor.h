@@ -16,7 +16,7 @@ namespace polynomials {
     std::ostream& m_out_stream;
     std::set<uint64_t> m_visited;
 
-    void visit(std::shared_ptr<TracingPolynomialContext<C, D, I>> context);
+    void visit(TracingPolynomialContext<C, D, I>* context);
 
   public:
     GraphvizVisualizer(std::ostream& stream) : m_out_stream{stream} {}

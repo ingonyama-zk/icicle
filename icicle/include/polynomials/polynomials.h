@@ -110,7 +110,7 @@ namespace polynomials {
 
   public:
     Polynomial();
-    ~Polynomial() = default;
+    virtual ~Polynomial();
 
     // Ensures polynomials can be moved but not copied, to manage resources efficiently.
     Polynomial(Polynomial&&) = default;
@@ -118,7 +118,7 @@ namespace polynomials {
     Polynomial(const Polynomial&) = delete;
     Polynomial& operator=(const Polynomial&) = delete;
 
-    std::shared_ptr<IPolynomialContext<Coeff, Domain, Image>> get_context() { return m_context; }
+    IPolynomialContext<Coeff, Domain, Image>* get_context() { return m_context.get(); }
   };
 
   // explicit instantiation

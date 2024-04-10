@@ -65,7 +65,7 @@ namespace polynomials {
       auto trace_ctxt = as_tracing_context(res);
       if (is_inplace) {
         // create new trace node and share the memory context
-        auto new_trace_ctxt = std::make_shared<TracingPolynomialContext<C, D, I>>(trace_ctxt->m_memory_context);
+        auto new_trace_ctxt = TracingPolynomialContext<C, D, I>::create(trace_ctxt->m_memory_context);
         trace_ctxt = new_trace_ctxt;
         res = trace_ctxt;
       }
@@ -122,7 +122,7 @@ namespace polynomials {
     void add_monomial_inplace(PolyContext& p, C monomial_coeff, uint64_t monomial) override
     {
       auto inplace_modified_context =
-        std::make_shared<TracingPolynomialContext<C, D, I>>(as_tracing_context(p)->m_memory_context);
+        TracingPolynomialContext<C, D, I>::create(as_tracing_context(p)->m_memory_context);
       inplace_modified_context->m_opcode = eOpcode::ADD_MONOMIAL_INPLACE;
       inplace_modified_context->m_attrs.setAttribute("monomial_coeff", monomial_coeff);
       inplace_modified_context->m_attrs.setAttribute("monomial", monomial);
@@ -133,7 +133,7 @@ namespace polynomials {
     void sub_monomial_inplace(PolyContext& p, C monomial_coeff, uint64_t monomial) override
     {
       auto inplace_modified_context =
-        std::make_shared<TracingPolynomialContext<C, D, I>>(as_tracing_context(p)->m_memory_context);
+        TracingPolynomialContext<C, D, I>::create(as_tracing_context(p)->m_memory_context);
       inplace_modified_context->m_opcode = eOpcode::SUB_MONOMIAL_INPLACE;
       inplace_modified_context->m_attrs.setAttribute("monomial_coeff", monomial_coeff);
       inplace_modified_context->m_attrs.setAttribute("monomial", monomial);
@@ -204,22 +204,53 @@ namespace polynomials {
 
   /*============================== Polynomial Tracing-context ==============================*/
   template <typename C, typename D, typename I>
+  void TracingPolynomialContext<C, D, I>::bind()
+  {
+    m_bound = true;
+  }
+  template <typename C, typename D, typename I>
+  void TracingPolynomialContext<C, D, I>::unbind()
+  {
+    m_bound = false;
+  }
+  template <typename C, typename D, typename I>
+  bool TracingPolynomialContext<C, D, I>::is_bound() const
+  {
+    return m_bound;
+  }
+
+  template <typename C, typename D, typename I>
   void TracingPolynomialContext<C, D, I>::set_memory_context(std::shared_ptr<IPolynomialContext<C, D, I>>)
   {
   }
 
   template <typename C, typename D, typename I>
-  void
-  TracingPolynomialContext<C, D, I>::set_operands(std::vector<std::shared_ptr<TracingPolynomialContext>>&& operands)
+  void TracingPolynomialContext<C, D, I>::set_operands(std::vector<SharedTracingContext>&& operands)
   {
     m_operands = std::move(operands);
+    WeakTracingContext weak_this = TracingPolynomialContext<C, D, I>::shared_from_this();
+    for (auto& op : m_operands) {
+      op->m_dependents.insert(weak_this);
+    }
   }
 
   template <typename C, typename D, typename I>
   void TracingPolynomialContext<C, D, I>::clear_operands()
   {
+    WeakTracingContext weak_this = TracingPolynomialContext<C, D, I>::shared_from_this();
+    for (auto& op : m_operands) {
+      op->m_dependents.erase(weak_this);
+    }
     m_operands.clear();
-    // TODO remove self from dependents
+  }
+
+  template <typename C, typename D, typename I>
+  const std::set<
+    std::weak_ptr<TracingPolynomialContext<C, D, I>>,
+    std::owner_less<std::weak_ptr<TracingPolynomialContext<C, D, I>>>>&
+  TracingPolynomialContext<C, D, I>::get_dependents() const
+  {
+    return m_dependents;
   }
 
   template <typename C, typename D, typename I>
@@ -359,7 +390,7 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   std::shared_ptr<IPolynomialContext<C, D, I>> TracingPolynomialFactory<C, D, I>::create_context()
   {
-    auto tracing_context = std::make_shared<TracingPolynomialContext<C, D, I>>(m_base_factory->create_context());
+    auto tracing_context = TracingPolynomialContext<C, D, I>::create(m_base_factory->create_context());
     return tracing_context;
   }
 

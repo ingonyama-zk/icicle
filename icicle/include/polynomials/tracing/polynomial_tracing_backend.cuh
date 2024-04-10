@@ -13,41 +13,59 @@ namespace polynomials {
   // TracingPolynomialContext: A class template that adds tracing capabilities to polynomial operations.
   // It decorates an existing IPolynomialContext with additional functionalities like operation tracking.
   template <typename C = scalar_t, typename D = C, typename I = C>
-  class TracingPolynomialContext : public IPolynomialContext<C, D, I>
+  class TracingPolynomialContext : public IPolynomialContext<C, D, I>,
+                                   public std::enable_shared_from_this<TracingPolynomialContext<C, D, I>>
   {
     using typename IPolynomialContext<C, D, I>::State;
+    typedef std::shared_ptr<TracingPolynomialContext> SharedTracingContext;
+    typedef std::weak_ptr<TracingPolynomialContext> WeakTracingContext;
+    typedef std::shared_ptr<IPolynomialContext<C, D, I>> MemoryContext;
 
   public:
-    TracingPolynomialContext(std::shared_ptr<IPolynomialContext<C, D, I>> memory_context)
-        : m_memory_context(memory_context)
+    static SharedTracingContext create(MemoryContext memory_context)
     {
+      return std::shared_ptr<TracingPolynomialContext>(new TracingPolynomialContext(memory_context));
     }
-
     ~TracingPolynomialContext() = default;
 
+  private:
+    // constructor accessed via create() to manage shared/weak ptrs correctly
+    TracingPolynomialContext(MemoryContext memory_context) : m_memory_context(memory_context), m_bound(false) {}
+
+  public:
     // Operation code indicating the polynomial operation being traced.
     eOpcode m_opcode = eOpcode::INVALID;
     // The underlying memory context, typically representing a device-context like CUDA or ZPU
-    std::shared_ptr<IPolynomialContext<C, D, I>> m_memory_context;
+    MemoryContext m_memory_context;
 
   private: // members that should be modified carefully
     // A vector of arguments to the operation, represented as shared pointers to other TracingPolynomialContexts,
     // facilitating the construction of a computational graph.
-    std::vector<std::shared_ptr<TracingPolynomialContext>> m_operands;
+    std::vector<SharedTracingContext> m_operands;
 
     // Set of nodes that have this node as operand
-    std::set<std::weak_ptr<TracingPolynomialContext>> m_dependents;
+    std::set<WeakTracingContext, std::owner_less<WeakTracingContext>> m_dependents;
 
   public:
     // Additional attributes providing more information about the operation, enhancing traceability.
     Attributes m_attrs;
 
-    void set_memory_context(std::shared_ptr<IPolynomialContext<C, D, I>>);
-    void set_operands(std::vector<std::shared_ptr<TracingPolynomialContext>>&& operands);
+    // Binding
+  protected:
+    bool m_bound;
+
+  public:
+    void bind() override;
+    void unbind() override;
+    bool is_bound() const;
+
+    void set_memory_context(MemoryContext);
+    void set_operands(std::vector<SharedTracingContext>&& operands);
     void clear_operands();
-    std::shared_ptr<TracingPolynomialContext> get_operand(unsigned idx);
-    std::shared_ptr<IPolynomialContext<C, D, I>> get_op_mem_ctxt(unsigned idx);
-    const std::vector<std::shared_ptr<TracingPolynomialContext>>& get_operands();
+    SharedTracingContext get_operand(unsigned idx);
+    MemoryContext get_op_mem_ctxt(unsigned idx);
+    const std::vector<SharedTracingContext>& get_operands();
+    const std::set<WeakTracingContext, std::owner_less<WeakTracingContext>>& get_dependents() const;
     bool is_evaluated() const;
 
     // Decorator methods overriding IPolynomialContext methods, potentially incorporating tracing logic.

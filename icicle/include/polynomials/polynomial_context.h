@@ -79,6 +79,10 @@ namespace polynomials {
     // Method for printing the context state to an output stream.
     virtual void print(std::ostream& os) = 0;
 
+    // Methods to notify the context it is bound/unbound from a polyonmial
+    virtual void bind() {}
+    virtual void unbind() {}
+
   protected:
     // Provides mutable access to the underlying storage for backend computations.
     virtual void* get_storage_mutable() = 0;

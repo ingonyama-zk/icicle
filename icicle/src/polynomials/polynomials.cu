@@ -9,7 +9,13 @@ namespace polynomials {
       throw std::runtime_error("Polynomial factory not initialized. Must call Polynomial::initialize(factory)");
     }
     m_context = s_factory->create_context();
+    m_context->bind();
     m_backend = s_factory->create_backend();
+  }
+  template <typename C, typename D, typename I>
+  Polynomial<C, D, I>::~Polynomial()
+  {
+    if (m_context) { m_context->unbind(); }
   }
 
   template <typename C, typename D, typename I>

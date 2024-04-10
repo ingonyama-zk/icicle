@@ -35,6 +35,9 @@ public:
   static inline const bool MEASURE = true;
   static inline const bool TRACING = true;
 
+  static inline std::shared_ptr<CUDAPolynomialFactory<>> m_cuda_factory = nullptr;
+  static inline std::shared_ptr<TracingPolynomialFactory<>> m_tracing_factory = nullptr;
+
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
@@ -42,20 +45,24 @@ public:
     auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
     const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
     ntt::InitDomain(basic_root, ntt_config.ctx);
-    // initializing polynoimals factory for CUDA backend
-    Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
 
     // initializing polynoimals factory for CUDA backend, or tracing backend
-    auto cuda_factory = std::make_shared<CUDAPolynomialFactory<>>();
+    m_cuda_factory = std::make_shared<CUDAPolynomialFactory<>>();
+    m_tracing_factory = std::make_shared<TracingPolynomialFactory<>>(m_cuda_factory);
     if (TRACING) {
-      auto tracing_backend = std::make_shared<TracingPolynomialFactory<>>(cuda_factory);
-      Polynomial_t::initialize(tracing_backend);
+      enable_cuda_tracing();
     } else {
-      Polynomial_t::initialize(cuda_factory);
+      enable_cuda_eager();
     }
   }
+  static void enable_cuda_tracing() { Polynomial_t::initialize(m_tracing_factory); }
+  static void enable_cuda_eager() { Polynomial_t::initialize(m_cuda_factory); }
 
-  static void TearDownTestSuite() {}
+  static void TearDownTestSuite()
+  {
+    m_tracing_factory = nullptr;
+    m_cuda_factory = nullptr;
+  }
 
   void SetUp() override
   {
@@ -549,19 +556,49 @@ TEST_F(PolynomialTest, tracingBase)
 
 TEST_F(PolynomialTest, tracingInplace)
 {
-  const int size_0 = 12, size_1 = 17;
-  auto f = randomize_polynomial(size_0);
-  auto g = randomize_polynomial(size_1);
-  auto h = randomize_polynomial(size_1);
+  const int size_0 = 1 << 16, size_1 = 1 << 16;
+  auto x = scalar_t::rand_host();
+  const bool visualize = false;
 
-  auto res = f + g;
-  res += h;
-  res.add_monomial_inplace(two, 4);
+  auto computation = [&](bool tracing, bool measure = true) {
+    if (tracing) {
+      enable_cuda_tracing();
+    } else {
+      enable_cuda_eager();
+    }
+    auto f = randomize_polynomial(size_0, false);
+    auto g = randomize_polynomial(size_1, false);
+    auto h = randomize_polynomial(size_1, false);
 
-  // print res trace to file
-  std::ofstream out_file("trace.gv");
-  GraphvizVisualizer visualizer{out_file};
-  visualizer.run(res);
+    START_TIMER(timer);
+
+    auto t0 = f + g;
+    auto t1 = t0 * two;
+    auto t2 = t1 - h;
+    t1 += h;
+    h += g;
+    auto res = t1 + t2 + h;
+
+    if (visualize && tracing) {
+      // print res trace to file
+      std::ofstream out_file("trace.gv");
+      GraphvizVisualizer visualizer{out_file};
+      visualizer.run(res);
+    }
+
+    auto eval = res(x);
+
+    END_TIMER(timer, tracing ? "tracing" : "eager", MEASURE && measure);
+    return std::make_tuple(std::move(res), res(x));
+  };
+
+  // warmup
+  computation(false /*=tracing*/, false /*=measure*/);
+
+  auto [p_eager, eager_result] = computation(false /*=tracing*/);
+  auto [p_trace, trace_result] = computation(true /*=tracing*/);
+
+  ASSERT_EQ(eager_result, trace_result);
 }
 
 TEST_F(PolynomialTest, tracingComplex)
@@ -1006,18 +1043,7 @@ TEST_F(PolynomialTest, QAP)
   const int nof_constraints =
     QAP.nof_inputs - 1; // multiplying N numbers yields N-1 constraints for this circuit construction
   const int vanishing_poly_deg = ceil_to_power_of_two(nof_constraints);
-  //  (4) sanity check: verify AB=C at the evaluation points
-  if (!TRACING) { // for tracing don't want to evalute the expression yet
-    auto default_device_context = device_context::get_default_device_context();
-    const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
-    auto x = scalar_t::one();
-    for (int i = 0; i < vanishing_poly_deg; ++i) {
-      ASSERT_EQ(Lx(x) * Rx(x), Ox(x));
-      x = x * w;
-    }
-  }
-
-  // (5) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
+  // (4) compute h(x) as '(L(x)R(x)-O(x)) / t(x)'
   Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
   if (!TRACING && N <= 10) { // only draw small graphs
@@ -1025,11 +1051,20 @@ TEST_F(PolynomialTest, QAP)
     GraphvizVisualizer visualizer{out_file};
     visualizer.run(h);
   }
-  // (6) sanity check: vanishing-polynomial divides (LR-O) without remainder
+  // (5) sanity check: vanishing-polynomial divides (LR-O) without remainder
   {
     auto [h_long_div, r] = (Lx * Rx - Ox).divide(vanishing_polynomial(vanishing_poly_deg));
     EXPECT_EQ(r.degree(), -1); // zero polynomial (expecting division without remainder)
     assert_equal(h, h_long_div);
+  }
+
+  //  (6) sanity check: verify AB=C at the evaluation points
+  auto default_device_context = device_context::get_default_device_context();
+  const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
+  auto x = scalar_t::one();
+  for (int i = 0; i < vanishing_poly_deg; ++i) {
+    ASSERT_EQ(Lx(x) * Rx(x), Ox(x));
+    x = x * w;
   }
 }
 

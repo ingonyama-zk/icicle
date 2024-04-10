@@ -4,7 +4,7 @@
 namespace polynomials {
 
   template <typename C, typename D, typename I>
-  void GraphvizVisualizer<C, D, I>::visit(std::shared_ptr<TracingPolynomialContext<C, D, I>> context)
+  void GraphvizVisualizer<C, D, I>::visit(TracingPolynomialContext<C, D, I>* context)
   {
     if (m_visited.find(context->m_id) != m_visited.end()) return;
     m_visited.insert(context->m_id);
@@ -16,7 +16,7 @@ namespace polynomials {
                  << ", memid=" << memid << ")\n"
                  << context->m_attrs.to_string() << "\"];\n";
     for (auto& op : context->get_operands()) {
-      visit(op);
+      visit(op.get());
       m_out_stream << op->m_id << " -> " << context->m_id << "\n";
     }
   }
@@ -24,7 +24,7 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   void GraphvizVisualizer<C, D, I>::run(Polynomial<C, D, I>& p)
   {
-    auto trace_ctxt = std::dynamic_pointer_cast<TracingPolynomialContext<C, D, I>>(p.get_context());
+    auto trace_ctxt = dynamic_cast<TracingPolynomialContext<C, D, I>*>(p.get_context());
     if (!trace_ctxt) {
       std::cerr << "[WARNING] Graph visualizer expecting TracingPolynomialContext. draw skipped.\n";
       return;

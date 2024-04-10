@@ -6,18 +6,51 @@
 namespace polynomials {
 
   template <typename C, typename D, typename I>
-  void Interpreter<C, D, I>::visit(std::shared_ptr<TracingPolynomialContext<C, D, I>> context)
+  bool Interpreter<C, D, I>::visited(std::shared_ptr<TracingPolynomialContext<C, D, I>> node, bool set_visited)
+  {
+    const bool is_visited = m_visited.find(node->m_id) != m_visited.end();
+    if (set_visited) m_visited.insert(node->m_id);
+    return is_visited;
+  }
+
+  template <typename C, typename D, typename I>
+  void Interpreter<C, D, I>::evaluate(std::shared_ptr<TracingPolynomialContext<C, D, I>> node)
+  {
+    const bool is_visited = visited(node, true /*=set_visited*/);
+    if (is_visited || node->is_evaluated()) return;
+
+    std::shared_ptr<TracingPolynomialContext<C, D, I>> inplace_operand = nullptr;
+    for (auto& op : node->get_operands()) {
+      evaluate(op);
+      // if node is computed inplace, reusing parent memory, must compute siblings first
+      const bool is_inplace_parent = op->m_memory_context == node->m_memory_context;
+
+      if (!is_inplace_parent) continue;
+      if (inplace_operand && op != inplace_operand) {
+        THROW_ICICLE_ERR(IcicleError_t::UndefinedError, "Cannot have multiple inplace parents");
+      }
+      inplace_operand = op;
+    }
+
+    // visit siblings that share my inplace father to compute them before me
+    if (inplace_operand) {
+      auto siblings = inplace_operand->get_dependents();
+      for (auto& weak_sibling : siblings) {
+        if (auto shared_sibling = weak_sibling.lock()) evaluate(shared_sibling);
+      }
+    }
+    evaluate_single_node(node);
+  }
+
+  template <typename C, typename D, typename I>
+  void Interpreter<C, D, I>::evaluate_single_node(std::shared_ptr<TracingPolynomialContext<C, D, I>> context)
   {
     if (context->is_evaluated()) return;
 
-    for (auto& arg : context->get_operands()) {
-      visit(arg);
-    }
-
     Attributes& attrs = context->m_attrs;
 
-    // Note: can pass the context directly rather than the memory context but some backends assume they know the context
-    // and cast it (e.g. CUDA backend want to check device-id)
+    // Note: can pass the context directly rather than the memory context but some backends assume they know the
+    // context and cast it (e.g. CUDA backend want to check device-id)
 
     switch (context->m_opcode) {
     case eOpcode::CLONE:
@@ -72,7 +105,8 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   void Interpreter<C, D, I>::run(std::shared_ptr<TracingPolynomialContext<C, D, I>> context)
   {
-    visit(context);
+    m_visited.clear();
+    evaluate(context);
   }
 
   template class Interpreter<>;
