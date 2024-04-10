@@ -381,6 +381,65 @@ __global__ void combinations_double_kernel(S* in, S* out, int poly_size, int pol
 	out[tid + 8*poly_size/4] = rp[8];
 }
 
+
+template <typename S>
+__global__ void combinations_double_test(S* in, S* out){
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	S rp[4] = {S::one(), S::one(), S::one(), S::one()};
+	rp[0] = in[tid];
+	rp[1] = in[tid+1];
+	rp[2] = in[tid+2];
+	rp[3] = in[tid+3];
+	out[tid] = rp[0] * rp[1];
+	out[tid+1] = rp[2] * rp[3];
+	out[tid+2] = rp[2] * rp[1];
+	out[tid+3] = rp[0] * rp[3];
+	out[tid+4] = rp[0] * rp[2];
+	out[tid+5] = rp[0] * rp[0];
+	out[tid+6] = rp[1] * rp[1];
+	out[tid+7] = rp[1] * rp[3];
+	out[tid+8] = rp[2] * rp[2];
+}
+ /*
+ 	S T1, T2;
+	T1 = in[tid];
+	T2 = in[tid+1];
+	out[tid] = T1;
+	out[tid+1] = T2;
+	T1 = in[tid+2];
+	T2 = in[tid+3];
+	out[tid+2] = T1;
+	out[tid+3] = T2;*/
+	// if (tid >= poly_size/4) return;
+	// S rp[9] = {S::one(), S::one(), S::one(), S::one(), S::one(), S::one(), S::one(), S::one(), S::one()}; //TODO: generalize - make template version
+	// rp[0] = in[tid + 0];
+	// rp[2] = in[tid + 2];
+	// rp[1] = in[tid + 1];
+	// rp[3] = in[tid + 3];
+	// rp[4] = in[tid + 4];
+	// rp[5] = in[tid + 5];
+	// rp[6] = in[tid + 6];
+	// rp[7] = in[tid + 7];
+	// rp[8] = in[tid + 8];
+	// rp[0] = rp[2];
+	// rp[2] = rp[3];
+	// rp[1] = rp[4];
+	// rp[3] = rp[5];
+	// rp[4] = rp[6];
+	// rp[5] = rp[7];
+	// rp[6] = rp[8];
+	// rp[7] = rp[0];
+	// rp[8] = rp[1];
+	// out[tid] = rp[0];
+	// out[tid + 1] = rp[2];
+	// out[tid + 2] = rp[1];
+	// out[tid + 3] = rp[3];
+	// out[tid + 4] = rp[4];
+	// out[tid + 5] = rp[5];
+	// out[tid + 6] = rp[6];
+	// out[tid + 7] = rp[7];
+	// out[tid + 8] = rp[8];
+
 template <typename S>
 // __global__ void combinations_kernel(S* in, S* out, S (*combine_func)()){
 __global__ void mult_and_combine_double(S* in, S* out, int poly_size, int poly_shift, int nof_polys, S alpha1, S alpha2){
@@ -831,6 +890,7 @@ void sumcheck_double_round_separate(S* evals, S* t, S* T, S C, int n, int nof_po
 		}
 		else {
 			combinations_double_kernel<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<(n-2*p), 1<<n, nof_polys);
+			// combinations_double_test<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t);
 			// cudaDeviceSynchronize();
 			// printf("cuda err b %d\n", cudaGetLastError());
 			accumulate(t, t, n-2*p, (nof_polys+1)*(nof_polys+1), 2, stream);
@@ -876,6 +936,74 @@ void sumcheck_double_round_separate(S* evals, S* t, S* T, S C, int n, int nof_po
 	}
 }
 
+template <typename S>
+void sumcheck_generic_separate(S* evals, S* t, S* T, S C, int n, int nof_polys, cudaStream_t stream){
+	// S alpha = 1;
+	// S alpha = S::one();
+	// S alpha = S::rand_host();
+	S alpha = my_hash<S>();
+	// S alpha1 = S::zero();
+	// S alpha2 = S::zero();
+  // S alpha = S::zero();
+  // S rp_even, rp_odd;
+  for (int p = 0; p < n; p++)
+  {
+		// alpha = p%2? S::zero() : S::one();
+    int nof_threads = 1<<(n-1-p);
+		int NOF_THREADS = 64;
+		int NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
+		if (nof_polys == 1){
+			accumulate(evals, t, n-p, 2, 1, stream);
+			// cudaDeviceSynchronize();
+			// printf("cuda err a %d\n", cudaGetLastError());
+			if (p == n-1) break;
+		}
+		else {
+			combinations_kernel<<<NOF_BLOCKS, NOF_THREADS,0,stream>>>(evals, t, 1<<(n-p), 1<<n, nof_polys);
+			// cudaDeviceSynchronize();
+			// printf("cuda err b %d\n", cudaGetLastError());
+			accumulate(t, t, n-p, nof_polys+1, 1, stream);
+			// cudaDeviceSynchronize();
+			// printf("cuda err c %d\n", cudaGetLastError());
+		}
+		add_to_trace<<<1,1,0,stream>>>(T, t, 1<<(n-1-p), p, nof_polys+1);
+
+		nof_threads = nof_polys<<(n-1-p);
+		NOF_THREADS = 64;
+		NOF_BLOCKS = (nof_threads + NOF_THREADS - 1) / NOF_THREADS;
+    if (p != n-1) update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, 1<<(n-p), 1<<n, nof_polys); //phase 3
+		// cudaDeviceSynchronize();
+		// printf("cuda err d %d\n", cudaGetLastError());
+		// S h_evals_temp[16*2];
+		// cudaMemcpy(h_evals_temp, evals, sizeof(S) * 16*2, cudaMemcpyDeviceToHost);
+		// if (1){
+		// printf("round %d evals:\n",p);
+		// for (int i = 0; i < 16*2; i++)
+		// {
+		// 	if (i % 16 == 0) printf("\n");
+		// 	std::cout << i << " " << h_evals_temp[i] << std::endl;
+		// }
+		// }
+    // T[2*p+1] = t[0];
+    // T[2*p+2] = t[1];
+    // alpha = my_hash(/*alpha, t[0], t[1]*/); //phase 2
+    // update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
+  }
+	if (nof_polys == 1){
+		// update_evals_double_kernel<<<1, 4,0, stream>>>(evals, alpha1, alpha2, 16, 0, 1);
+		add_to_trace<<<1,1,0,stream>>>(T, evals, 1, n-1, 2);
+		// S h_evals_temp[16];
+		// cudaMemcpy(h_evals_temp, evals, sizeof(S) * 16, cudaMemcpyDeviceToHost);
+		// if (1){
+		// printf("round %d evals:\n",n/2-1);
+		// for (int i = 0; i < 16; i++)
+		// {
+		// 	if (i % 16 == 0) printf("\n");
+		// 	std::cout << i << " " << h_evals_temp[i] << std::endl;
+		// }
+		// }
+	}
+}
 
 template <typename S>
 void sumcheck_alg1_ref(S* evals, S* t, S* T, S C, int n){

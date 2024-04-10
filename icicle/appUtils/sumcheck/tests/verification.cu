@@ -8,7 +8,7 @@
 
 // #define DEBUG
 #define WARMUP
-#define ONLY_BENCH
+// #define ONLY_BENCH
 
 #include "curves/curve_config.cuh"
 #include "sumcheck/sumcheck.cu"
@@ -36,7 +36,7 @@ void incremental_values(test_scalar* res, uint32_t count)
   }
 }
 
-#define POLYS 2
+#define POLYS 1
 
 int main(){
 
@@ -56,10 +56,10 @@ int main(){
   bool verify_cpu = false;
   bool use_test_vecs = verify_cpu? true : false;
 
-  int n = 24;
+  int n = 19;
   int polys = POLYS;
-  bool double_round = true;
-  bool unified = true;
+  bool double_round = false;
+  bool unified = false;
   int size = polys << n;
   int temp_size = size/(double_round? 4 : 2) * (polys+1) * (double_round? (polys+1) : 1);
   int trans_size = double_round? (polys+1)*(polys+1)*n/2 + 1 : (polys+1)*n +1;
@@ -190,7 +190,7 @@ int main(){
   if (double_round && !unified) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   if (double_round && unified) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   if (!double_round && unified)  sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
-  // if (!double_round && !unified)  sumcheck_generic_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (!double_round && !unified)  sumcheck_generic_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
   cudaDeviceSynchronize();
@@ -209,7 +209,7 @@ int main(){
   if (double_round && !unified) sumcheck_double_round_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   if (double_round && unified) sumcheck_double_round_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   if (!double_round && unified)  sumcheck_generic_unified(d_evals, d_temp, d_transcript, C, n, polys, stream1);
-  // if (!double_round && !unified)  sumcheck_generic_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
+  if (!double_round && !unified)  sumcheck_generic_separate(d_evals, d_temp, d_transcript, C, n, polys, stream1);
   // sumcheck_generic_unified<test_scalar,POLYS>(d_evals, d_temp, d_transcript, C, n, stream1);
   // sumcheck_alg1(d_evals2, d_temp2, d_transcript2, C, n, stream2);
   cudaEventRecord(gpu_stop, 0);
