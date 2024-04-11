@@ -15,7 +15,7 @@ func GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
-func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+func Msm[S any, P any](scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
@@ -23,7 +23,7 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 		scalarsDevice.CheckDevice()
 		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
+		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[S])[0])
 	}
 	cScalars := (*C.scalar_t)(scalarsPointer)
 
@@ -33,7 +33,7 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 		pointsDevice.CheckDevice()
 		pointsPointer = pointsDevice.AsPointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Affine])[0])
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[P])[0])
 	}
 	cPoints := (*C.affine_t)(pointsPointer)
 

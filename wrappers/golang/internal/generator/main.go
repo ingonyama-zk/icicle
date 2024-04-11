@@ -46,33 +46,33 @@ var bn254 = CurveData{
 	PackageName:    "bn254",
 	Curve:          "bn254",
 	GnarkImport:    "bn254",
-	ScalarLimbsNum: 8,
-	BaseLimbsNum:   8,
-	G2BaseLimbsNum: 16,
+	ScalarLimbsNum: 4,
+	BaseLimbsNum:   4,
+	G2BaseLimbsNum: 8,
 }
 var bls12381 = CurveData{
 	PackageName:    "bls12381",
 	Curve:          "bls12_381",
 	GnarkImport:    "bls12-381",
-	ScalarLimbsNum: 8,
-	BaseLimbsNum:   12,
-	G2BaseLimbsNum: 24,
+	ScalarLimbsNum: 4,
+	BaseLimbsNum:   6,
+	G2BaseLimbsNum: 12,
 }
 var bls12377 = CurveData{
 	PackageName:    "bls12377",
 	Curve:          "bls12_377",
 	GnarkImport:    "bls12-377",
-	ScalarLimbsNum: 8,
-	BaseLimbsNum:   12,
-	G2BaseLimbsNum: 24,
+	ScalarLimbsNum: 4,
+	BaseLimbsNum:   6,
+	G2BaseLimbsNum: 12,
 }
 var bw6761 = CurveData{
 	PackageName:    "bw6761",
 	Curve:          "bw6_761",
 	GnarkImport:    "bw6-761",
-	ScalarLimbsNum: 12,
-	BaseLimbsNum:   24,
-	G2BaseLimbsNum: 24,
+	ScalarLimbsNum: 6,
+	BaseLimbsNum:   12,
+	G2BaseLimbsNum: 12,
 }
 
 type Entry struct {
@@ -246,7 +246,7 @@ func generateFiles() {
 			IsScalar     bool
 		}{
 			"internal",
-			8,
+			4,
 			true,
 			false,
 			false,

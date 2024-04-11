@@ -2,7 +2,7 @@ package g2
 
 import (
 	"testing"
-
+  
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +39,7 @@ func TestG2BaseFieldOne(t *testing.T) {
 func TestG2BaseFieldZero(t *testing.T) {
 	var emptyField G2BaseField
 	emptyField.Zero()
-	limbsZero := make([]uint32, G2_BASE_LIMBS)
+	limbsZero := make([]uint64, G2_BASE_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
@@ -54,7 +54,7 @@ func TestG2BaseFieldSize(t *testing.T) {
 	randLimbs := generateRandomLimb(int(G2_BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	assert.Equal(t, len(randLimbs)*8, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
 func TestG2BaseFieldAsPointer(t *testing.T) {

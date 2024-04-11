@@ -19,7 +19,7 @@ func (p G2Projective) Size() int {
 	return p.X.Size() * 3
 }
 
-func (p G2Projective) AsPointer() *uint32 {
+func (p G2Projective) AsPointer() *uint64 {
 	return p.X.AsPointer()
 }
 
@@ -31,7 +31,7 @@ func (p *G2Projective) Zero() G2Projective {
 	return *p
 }
 
-func (p *G2Projective) FromLimbs(x, y, z []uint32) G2Projective {
+func (p *G2Projective) FromLimbs(x, y, z []uint64) G2Projective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
 	p.Z.FromLimbs(z)
@@ -88,7 +88,7 @@ func (a G2Affine) Size() int {
 	return a.X.Size() * 2
 }
 
-func (a G2Affine) AsPointer() *uint32 {
+func (a G2Affine) AsPointer() *uint64 {
 	return a.X.AsPointer()
 }
 
@@ -99,7 +99,7 @@ func (a *G2Affine) Zero() G2Affine {
 	return *a
 }
 
-func (a *G2Affine) FromLimbs(x, y []uint32) G2Affine {
+func (a *G2Affine) FromLimbs(x, y []uint64) G2Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
 

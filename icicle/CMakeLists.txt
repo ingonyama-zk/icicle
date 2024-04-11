@@ -33,7 +33,7 @@ if(DEFINED CURVE)
   add_subdirectory(src/curves)
 endif ()
 
-option(BUILD_HASH "Build hash functions" ON)
+option(BUILD_HASH "Build hash functions" OFF)
 if(BUILD_HASH)
   add_subdirectory(src/hash)
 endif ()

@@ -22,12 +22,12 @@ func TestVecOps(t *testing.T) {
 
 	cfg := core.DefaultVecOpsConfig()
 
-	VecOp(a, b, out, cfg, core.Add)
-	VecOp(out, b, out2, cfg, core.Sub)
+	VecOp[ScalarField](a, b, out, cfg, core.Add)
+	VecOp[ScalarField](out, b, out2, cfg, core.Sub)
 
 	assert.Equal(t, a, out2)
 
-	VecOp(a, ones, out3, cfg, core.Mul)
+	VecOp[ScalarField](a, ones, out3, cfg, core.Mul)
 
 	assert.Equal(t, a, out3)
 }

@@ -24,6 +24,7 @@ ark-ec = "0.4.0"
 ark-poly = "0.4.0"
 icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
 icicle-bw6-761 = { path = ".", features = ["arkworks"] }
+serial_test = "3.0.0"
 
 [features]
 default = []

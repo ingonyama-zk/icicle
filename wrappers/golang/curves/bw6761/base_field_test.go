@@ -2,7 +2,7 @@ package bw6761
 
 import (
 	"testing"
-
+  
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +39,7 @@ func TestBaseFieldOne(t *testing.T) {
 func TestBaseFieldZero(t *testing.T) {
 	var emptyField BaseField
 	emptyField.Zero()
-	limbsZero := make([]uint32, BASE_LIMBS)
+	limbsZero := make([]uint64, BASE_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
@@ -54,7 +54,7 @@ func TestBaseFieldSize(t *testing.T) {
 	randLimbs := generateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	assert.Equal(t, len(randLimbs)*8, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
 func TestBaseFieldAsPointer(t *testing.T) {

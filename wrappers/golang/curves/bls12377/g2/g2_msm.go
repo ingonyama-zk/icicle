@@ -9,14 +9,13 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	icicle_bls12377 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377"
 )
 
 func G2GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
-func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+func G2Msm[S any, P any](scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
@@ -24,7 +23,7 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 		scalarsDevice.CheckDevice()
 		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[icicle_bls12377.ScalarField])[0])
+		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[S])[0])
 	}
 	cScalars := (*C.scalar_t)(scalarsPointer)
 
@@ -34,7 +33,7 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 		pointsDevice.CheckDevice()
 		pointsPointer = pointsDevice.AsPointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[G2Affine])[0])
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[P])[0])
 	}
 	cPoints := (*C.g2_affine_t)(pointsPointer)
 

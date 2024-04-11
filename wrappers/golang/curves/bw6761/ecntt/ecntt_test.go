@@ -23,9 +23,8 @@ func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleEr
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
 	rouIcicle := icicle_bw6761.ScalarField{}
-	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
 
-	rouIcicle.FromLimbs(limbs)
+	rouIcicle.FromLimbs(rou[:])
 	e := icicle_bw6761.InitDomain(rouIcicle, cfg.Ctx, false)
 	return e
 }
