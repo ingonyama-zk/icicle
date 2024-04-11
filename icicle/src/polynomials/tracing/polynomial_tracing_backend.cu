@@ -97,6 +97,14 @@ namespace polynomials {
       trace_ctxt->m_attrs.setAttribute(OP_ATTR_SCALAR, scalar);
     }
 
+    void mac(PolyContext res, PolyContext a, PolyContext b, D scalar) override
+    {
+      auto trace_ctxt = as_tracing_context(res);
+      trace_ctxt->m_opcode = eOpcode::MAC;
+      trace_ctxt->set_operands({as_tracing_context(a), as_tracing_context(b)});
+      trace_ctxt->m_attrs.setAttribute(OP_ATTR_SCALAR, scalar);
+    }
+
     void quotient(PolyContext Q, PolyContext a, PolyContext b) override
     {
       auto trace_ctxt = as_tracing_context(Q);
@@ -200,7 +208,7 @@ namespace polynomials {
     {
       auto tracing_ctxt = as_tracing_context(p);
 
-      Optimizer optimizer{};
+      Optimizer optimizer;
       Interpreter interpreter{m_compute_backend};
 
       optimizer.run(tracing_ctxt);

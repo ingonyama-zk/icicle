@@ -61,6 +61,11 @@ namespace polynomials {
       const auto& scalar = attrs.getAttribute<D>(OP_ATTR_SCALAR);
       m_compute_backend->multiply(context->m_memory_context, context->get_op_mem_ctxt(0), scalar);
     } break;
+    case eOpcode::MAC: {
+      const auto& scalar = attrs.getAttribute<D>(OP_ATTR_SCALAR);
+      m_compute_backend->mac(
+        context->m_memory_context, context->get_op_mem_ctxt(0), context->get_op_mem_ctxt(1), scalar);
+    } break;
     case eOpcode::QUOTIENT:
       m_compute_backend->quotient(context->m_memory_context, context->get_op_mem_ctxt(0), context->get_op_mem_ctxt(1));
       break;

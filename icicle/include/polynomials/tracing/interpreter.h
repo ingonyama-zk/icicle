@@ -22,6 +22,16 @@ namespace polynomials {
   public:
     Interpreter(std::shared_ptr<IPolynomialBackend<C, D, I>> compute_backend) : m_compute_backend(compute_backend) {}
     void run(std::shared_ptr<TracingPolynomialContext<C, D, I>>& context) override;
+    void run(Polynomial<C, D, I>& p)
+    {
+      auto trace_ctxt = dynamic_cast<TracingPolynomialContext<C, D, I>*>(p.get_context());
+      if (!trace_ctxt) {
+        std::cerr << "[WARNING] Graph visualizer expecting TracingPolynomialContext. draw skipped.\n";
+        return;
+      }
+      auto shared_tract_ctxt = trace_ctxt->getptr();
+      run(shared_tract_ctxt);
+    }
   };
 
   extern template class Interpreter<>;

@@ -3,7 +3,12 @@
 #include "fields/field_config.cuh"
 #include "polynomials/polynomials.h"
 #include "polynomials/tracing/polynomial_tracing_backend.cuh"
+#include "polynomials/tracing/pass.h"
 #include "polynomials/tracing/memory_management.h"
+#include "polynomials/tracing/fuse_mac.h"
+
+#include <list>
+#include <memory>
 
 namespace polynomials {
 
@@ -11,12 +16,19 @@ namespace polynomials {
   class Optimizer
   {
   private:
+    std::list<std::unique_ptr<Pass<C, D, I>>> m_passes;
+
   public:
-    Optimizer() = default;
+    Optimizer()
+    {
+      m_passes.push_back(std::move(std::make_unique<FuseMac<C, D, I>>()));
+      m_passes.push_back(std::move(std::make_unique<MemoryManagement<C, D, I>>()));
+    }
     void run(std::shared_ptr<TracingPolynomialContext<C, D, I>> context)
     {
-      MemoryManagement mm{};
-      mm.run(context);
+      for (auto& pass : m_passes) {
+        pass->run(context);
+      }
     }
     void run(Polynomial<C, D, I>& p)
     {

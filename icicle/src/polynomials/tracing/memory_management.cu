@@ -40,7 +40,8 @@ namespace polynomials {
       if (is_compatible(op)) { node->m_memory_context = op->m_memory_context; }
     } break;
     case eOpcode::ADD:
-    case eOpcode::SUB: {
+    case eOpcode::SUB:
+    case eOpcode::MAC: {
       auto op0 = node->get_operand(0);
       auto op1 = node->get_operand(1);
       if (is_compatible(op0)) {

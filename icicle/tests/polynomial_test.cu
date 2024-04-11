@@ -11,6 +11,7 @@
 #include "polynomials/tracing/polynomial_tracing_backend.cuh"
 #include "polynomials/tracing/graph_visualizer_visitor.h"
 #include "polynomials/tracing/optimizer.h"
+#include "polynomials/tracing/interpreter.h"
 
 #include "ntt/ntt.cuh"
 #include "gpu-utils/device_context.cuh"
@@ -142,6 +143,20 @@ public:
     std::ofstream out_file("trace.gv");
     GraphvizVisualizer visualizer{out_file};
     visualizer.run(p);
+  }
+
+  static void optimize_trace(Polynomial_t& p)
+  {
+    Optimizer optimizer{};
+    optimizer.run(p);
+  }
+
+  static void eval_trace(Polynomial_t& p, bool optimize = false)
+  {
+    if (optimize) { optimize_trace(p); }
+
+    Interpreter interpreter{m_cuda_factory->create_backend()};
+    interpreter.run(p);
   }
 
   const static inline auto zero = scalar_t::zero();
@@ -610,20 +625,71 @@ TEST_F(PolynomialTest, tracingMemoryReuse)
     for (int i = 0; i < nof_polys; ++i) {
       polys.push_back(randomize_polynomial(size, false));
     }
+    auto res = randomize_polynomial(size, false);
 
     START_TIMER(timer);
 
-    auto res = randomize_polynomial(size, false);
     for (auto& p : polys) {
       res = res + p;
     }
 
-    if (visualize && tracing) { draw(res, true /*=optimize*/); }
+    if (tracing) {
+      if (visualize) draw(res, true /*=optimize*/);
+      eval_trace(res, true);
+    }
+    END_TIMER(timer, tracing ? "tracing" : "eager", MEASURE && measure);
 
     auto eval = res(x);
 
-    END_TIMER(timer, tracing ? "tracing" : "eager", MEASURE && measure);
     return std::make_tuple(std::move(res), res(x));
+  };
+
+  // warmup
+  computation(false /*=tracing*/, false /*=measure*/);
+
+  auto [p_eager, eager_result] = computation(false /*=tracing*/);
+  auto [p_trace, trace_result] = computation(true /*=tracing*/);
+
+  ASSERT_EQ(eager_result, trace_result);
+}
+
+TEST_F(PolynomialTest, MAC)
+{
+  const int size = 1 << 18;
+  const int nof_polys = 1000;
+  auto x = scalar_t::rand_host();
+  const bool visualize = false;
+
+  auto computation = [&](bool tracing, bool measure = true) {
+    if (tracing) {
+      enable_cuda_tracing();
+    } else {
+      enable_cuda_eager();
+    }
+    std::vector<Polynomial_t> polys;
+    for (int i = 0; i < nof_polys; ++i) {
+      polys.push_back(randomize_polynomial(size, false));
+    }
+    auto res = randomize_polynomial(size, false);
+
+    START_TIMER(build);
+    for (auto& p : polys) {
+      res = res + x * p;
+    }
+    END_TIMER(build, tracing ? "build-trace" : "eager-execution", MEASURE && measure);
+    if (tracing) {
+      if (visualize) draw(res, true /*=optimize*/);
+      START_TIMER(optimize);
+      optimize_trace(res);
+      END_TIMER(optimize, "optimize-trace", MEASURE && measure);
+      START_TIMER(eval);
+      eval_trace(res, true);
+      END_TIMER(eval, "eval-optimized-trace", MEASURE && measure);
+    }
+
+    auto eval = res(x);
+
+    return std::make_tuple(std::move(res), eval);
   };
 
   // warmup
@@ -1020,7 +1086,7 @@ public:
 TEST_F(PolynomialTest, QAP)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
-  const int N = 1000;
+  const int N = 3000;
   Groth16Example QAP(N);
 
   // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]

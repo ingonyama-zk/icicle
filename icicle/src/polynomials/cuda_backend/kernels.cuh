@@ -17,6 +17,18 @@ namespace polynomials {
     result[tid] = add1_sub0 ? a + b : a - b;
   }
 
+  /*============================== mac ==============================*/
+  template <typename T, typename S>
+  __global__ void MacKernel(const T* a_vec, const T* b_vec, S scalar, int a_len, int b_len, T* result)
+  {
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= max(a_len, b_len)) return;
+
+    T a = tid >= a_len ? T::zero() : a_vec[tid];
+    T b = tid >= b_len ? T::zero() : b_vec[tid];
+    result[tid] = a + b * scalar;
+  }
+
   // Note: must be called with 1 block, 1 thread
   template <typename T>
   __global__ void AddSingleElementInplace(T* self, T v)

@@ -510,6 +510,40 @@ namespace polynomials {
       CHK_LAST();
     }
 
+    void mac(PolyContext res, PolyContext a, PolyContext b, D scalar) override
+    {
+      // TODO Yuval: this is almost identical to add_sub so make them one function
+      assert_device_compatability(a, b);
+      assert_device_compatability(a, res);
+
+      // add/sub can be done in both coefficients or evaluations, but operands must be in the same state.
+      // For evaluations, same state also means same number of evaluations (and on same domain).
+      // If not same state, compute in coefficients since computing in evaluations may require to interpolate a large
+      // size. Consider a+b where a is degree 128 and b degree 4. In coefficients b has 4 elements but in evaluations
+      // need 128.
+      const bool is_same_size = a->get_nof_elements() == b->get_nof_elements();
+      const bool is_same_state = a->get_state() == b->get_state();
+      const auto output_state = (is_same_size && is_same_state) ? a->get_state() : State::Coefficients;
+      const auto output_size = max(a->get_nof_elements(), b->get_nof_elements());
+
+      if (State::Coefficients == output_state) {
+        a->transform_to_coefficients();
+        b->transform_to_coefficients();
+      }
+      const auto a_mem_p = get_context_storage_immutable(a);
+      const auto b_mem_p = get_context_storage_immutable(b);
+
+      res->allocate(output_size, output_state);
+      auto res_mem_p = get_context_storage_mutable(res);
+
+      const int NOF_THREADS = 128;
+      const int NOF_BLOCKS = (output_size + NOF_THREADS - 1) / NOF_THREADS;
+      MacKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        a_mem_p, b_mem_p, scalar, a->get_nof_elements(), b->get_nof_elements(), res_mem_p);
+
+      CHK_LAST();
+    }
+
     void multiply_with_padding(PolyContext c, PolyContext a, PolyContext b)
     {
       // TODO Yuval: by using the degree I can optimize the memory size and avoid redundant computations too
