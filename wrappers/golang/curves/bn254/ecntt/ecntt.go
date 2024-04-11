@@ -9,7 +9,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	. "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
+	icicle_bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
 )
 
 func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
@@ -19,7 +19,7 @@ func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTC
 	if points.IsOnDevice() {
 		pointsPointer = points.(core.DeviceSlice).AsPointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Projective])[0])
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[icicle_bn254.Projective])[0])
 	}
 	cPoints := (*C.projective_t)(pointsPointer)
 	cSize := (C.int)(points.Len() / int(cfg.BatchSize))
@@ -30,7 +30,7 @@ func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTC
 	if results.IsOnDevice() {
 		resultsPointer = results.(core.DeviceSlice).AsPointer()
 	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[Projective])[0])
+		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[icicle_bn254.Projective])[0])
 	}
 	cResults := (*C.projective_t)(resultsPointer)
 

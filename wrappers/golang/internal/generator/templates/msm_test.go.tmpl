@@ -14,7 +14,7 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 	{{- if .IsG2}}
-	. "github.com/ingonyama-zk/icicle/wrappers/golang/curves/{{.PackageName}}"
+	icicle_{{.PackageName}} "github.com/ingonyama-zk/icicle/wrappers/golang/curves/{{.PackageName}}"
 	{{- end}}
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -85,7 +85,7 @@ func projectiveToGnarkAffineG2(p G2Projective) {{toPackage .GnarkImport}}.G2Affi
 	return *g2Affine.FromJacobian(&g2Jac)
 }
 {{end}}
-func testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars core.HostSlice[ScalarField], points core.HostSlice[{{if .IsG2}}G2{{end}}Affine], out {{if .IsG2}}G2{{end}}Projective) bool {
+func testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars core.HostSlice[{{if .IsG2}}icicle_{{.PackageName}}.{{end}}ScalarField], points core.HostSlice[{{if .IsG2}}G2{{end}}Affine], out {{if .IsG2}}G2{{end}}Projective) bool {
 	scalarsFr := make([]fr.Element, len(scalars))
 	for i, v := range scalars {
 		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
@@ -107,12 +107,12 @@ func testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars core.HostSlice[Scala
 }
 
 func TestMSM{{if .IsG2}}G2{{end}}(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GetDefaultMSMConfig()
 	cfg.IsAsync = true
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
-		scalars := GenerateScalars(size)
+		scalars := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GenerateScalars(size)
 		points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(size)
 
 		stream, _ := cr.CreateStream()
@@ -135,12 +135,12 @@ func TestMSM{{if .IsG2}}G2{{end}}(t *testing.T) {
 }
 
 func TestMSM{{if .IsG2}}G2{{end}}Batch(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GetDefaultMSMConfig()
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
 			totalSize := size * batchSize
-			scalars := GenerateScalars(totalSize)
+			scalars := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GenerateScalars(totalSize)
 			points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(totalSize)
 
 			var p {{if .IsG2}}G2{{end}}Projective
@@ -166,13 +166,13 @@ func TestMSM{{if .IsG2}}G2{{end}}Batch(t *testing.T) {
 }
 
 func TestPrecomputeBase{{if .IsG2}}G2{{end}}(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GetDefaultMSMConfig()
 	const precomputeFactor = 8
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
 			totalSize := size * batchSize
-			scalars := GenerateScalars(totalSize)
+			scalars := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GenerateScalars(totalSize)
 			points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(totalSize)
 
 			var precomputeOut core.DeviceSlice
@@ -208,11 +208,11 @@ func TestPrecomputeBase{{if .IsG2}}G2{{end}}(t *testing.T) {
 }
 
 func TestMSM{{if .IsG2}}G2{{end}}SkewedDistribution(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
-		scalars := GenerateScalars(size)
+		scalars := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GenerateScalars(size)
 		for i := size / 4; i < size; i++ {
 			scalars[i].One()
 		}
@@ -248,11 +248,11 @@ func TestMSM{{if .IsG2}}G2{{end}}MultiDevice(t *testing.T) {
 		wg.Add(1)
 		cr.RunOnDevice(i, func(args ...any) {
 			defer wg.Done()
-			cfg := GetDefaultMSMConfig()
+			cfg := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GetDefaultMSMConfig()
 			cfg.IsAsync = true
 			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 				size := 1 << power
-				scalars := GenerateScalars(size)
+				scalars := {{if .IsG2}}icicle_{{.PackageName}}.{{end}}GenerateScalars(size)
 				points := {{if .IsG2}}G2{{end}}GenerateAffinePoints(size)
 
 				stream, _ := cr.CreateStream()

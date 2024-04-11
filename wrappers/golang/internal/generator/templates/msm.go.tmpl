@@ -9,12 +9,13 @@ package {{.PackageName}}
 import "C"
 
 import (
-	{{- if .IsG2}}
-	. "github.com/ingonyama-zk/icicle/wrappers/golang/curves/{{.PackageName}}"
-	{{end}}
+	"unsafe"
+
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"unsafe"
+	{{- if .IsG2}}
+	icicle_{{.PackageName}} "github.com/ingonyama-zk/icicle/wrappers/golang/curves/{{.PackageName}}"
+	{{- end}}
 )
 
 func {{if .IsG2}}G2{{end}}GetDefaultMSMConfig() core.MSMConfig {
@@ -29,7 +30,7 @@ func {{if .IsG2}}G2{{end}}Msm(scalars core.HostOrDeviceSlice, points core.HostOr
 		scalarsDevice.CheckDevice()
 		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
+		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[{{if .IsG2}}icicle_{{.PackageName}}.{{end}}ScalarField])[0])
 	}
 	cScalars := (*C.scalar_t)(scalarsPointer)
 

@@ -1,6 +1,5 @@
 #include <cuda_runtime.h>
 #include "../../../include/types.h"
-#include <stdbool.h>
 
 #ifndef _BW6_761_ECNTT_H
 #define _BW6_761_ECNTT_H

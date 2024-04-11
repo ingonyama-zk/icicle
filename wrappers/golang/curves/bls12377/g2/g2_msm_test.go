@@ -9,7 +9,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	. "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377"
+	icicle_bls12377 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bls12-377"
@@ -61,7 +61,7 @@ func projectiveToGnarkAffineG2(p G2Projective) bls12377.G2Affine {
 	return *g2Affine.FromJacobian(&g2Jac)
 }
 
-func testAgainstGnarkCryptoMsmG2(scalars core.HostSlice[ScalarField], points core.HostSlice[G2Affine], out G2Projective) bool {
+func testAgainstGnarkCryptoMsmG2(scalars core.HostSlice[icicle_bls12377.ScalarField], points core.HostSlice[G2Affine], out G2Projective) bool {
 	scalarsFr := make([]fr.Element, len(scalars))
 	for i, v := range scalars {
 		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
@@ -83,12 +83,12 @@ func testAgainstGnarkCryptoMsmG2(scalars core.HostSlice[ScalarField], points cor
 }
 
 func TestMSMG2(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := icicle_bls12377.GetDefaultMSMConfig()
 	cfg.IsAsync = true
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
-		scalars := GenerateScalars(size)
+		scalars := icicle_bls12377.GenerateScalars(size)
 		points := G2GenerateAffinePoints(size)
 
 		stream, _ := cr.CreateStream()
@@ -111,12 +111,12 @@ func TestMSMG2(t *testing.T) {
 }
 
 func TestMSMG2Batch(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := icicle_bls12377.GetDefaultMSMConfig()
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
 			totalSize := size * batchSize
-			scalars := GenerateScalars(totalSize)
+			scalars := icicle_bls12377.GenerateScalars(totalSize)
 			points := G2GenerateAffinePoints(totalSize)
 
 			var p G2Projective
@@ -142,13 +142,13 @@ func TestMSMG2Batch(t *testing.T) {
 }
 
 func TestPrecomputeBaseG2(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := icicle_bls12377.GetDefaultMSMConfig()
 	const precomputeFactor = 8
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
 			totalSize := size * batchSize
-			scalars := GenerateScalars(totalSize)
+			scalars := icicle_bls12377.GenerateScalars(totalSize)
 			points := G2GenerateAffinePoints(totalSize)
 
 			var precomputeOut core.DeviceSlice
@@ -184,11 +184,11 @@ func TestPrecomputeBaseG2(t *testing.T) {
 }
 
 func TestMSMG2SkewedDistribution(t *testing.T) {
-	cfg := GetDefaultMSMConfig()
+	cfg := icicle_bls12377.GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
-		scalars := GenerateScalars(size)
+		scalars := icicle_bls12377.GenerateScalars(size)
 		for i := size / 4; i < size; i++ {
 			scalars[i].One()
 		}
@@ -224,11 +224,11 @@ func TestMSMG2MultiDevice(t *testing.T) {
 		wg.Add(1)
 		cr.RunOnDevice(i, func(args ...any) {
 			defer wg.Done()
-			cfg := GetDefaultMSMConfig()
+			cfg := icicle_bls12377.GetDefaultMSMConfig()
 			cfg.IsAsync = true
 			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 				size := 1 << power
-				scalars := GenerateScalars(size)
+				scalars := icicle_bls12377.GenerateScalars(size)
 				points := G2GenerateAffinePoints(size)
 
 				stream, _ := cr.CreateStream()

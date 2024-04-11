@@ -5,9 +5,10 @@ package bw6761
 import "C"
 
 import (
+	"unsafe"
+
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"unsafe"
 )
 
 func GetDefaultMSMConfig() core.MSMConfig {

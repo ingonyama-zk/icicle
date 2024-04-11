@@ -25,15 +25,15 @@ do
             cuda_version=$(echo "$arg" | cut -d'=' -f2)
             CUDA_COMPILER_PATH=/usr/local/cuda-$cuda_version/bin/nvcc
             ;;
-        -ecntt*)
+        -ecntt)
             # ECNTT_DEFINED=$(echo "$arg" | cut -d'=' -f2)
             ECNTT_DEFINED=ON
             ;;
-        -g2*)
+        -g2)
             # G2_DEFINED=$(echo "$arg" | cut -d'=' -f2)
             G2_DEFINED=ON
             ;;
-        -devmode*)
+        -devmode)
             # DEVMODE=$(echo "$arg" | cut -d'=' -f2)
             DEVMODE=ON
             ;;

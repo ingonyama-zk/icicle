@@ -5,11 +5,11 @@ package g2
 import "C"
 
 import (
-	. "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
+	"unsafe"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"unsafe"
+	icicle_bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
 )
 
 func G2GetDefaultMSMConfig() core.MSMConfig {
@@ -24,7 +24,7 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 		scalarsDevice.CheckDevice()
 		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
+		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[icicle_bn254.ScalarField])[0])
 	}
 	cScalars := (*C.scalar_t)(scalarsPointer)
 

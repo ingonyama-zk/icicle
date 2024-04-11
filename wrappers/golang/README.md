@@ -8,9 +8,9 @@ Build script USAGE
 ./build <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
 
 curve - The name of the curve to build or "all" to build all curves
--g2 - Optional - To build with G2 enabled 
--ecntt - Optional - To build with ECNTT enabled
--devmode - Optional - To build in devmode
+-g2 - Optional - build with G2 enabled 
+-ecntt - Optional - build with ECNTT enabled
+-devmode - Optional - build in devmode
 ```
 
 To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
