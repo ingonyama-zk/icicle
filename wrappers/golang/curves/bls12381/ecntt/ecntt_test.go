@@ -3,7 +3,7 @@ package ecntt
 import (
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	icicle_bls12381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
 
