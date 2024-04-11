@@ -2,7 +2,7 @@ package bls12377
 
 import (
 	"testing"
-  
+
 	"github.com/stretchr/testify/assert"
 )
 

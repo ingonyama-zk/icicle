@@ -7,8 +7,8 @@ package {{.PackageName}}
 import (
 	"testing"
   {{- if .IsScalar}}
-  {{- template "scalar_field_tests_imports" . -}}{{end}}
-  
+  {{- template "scalar_field_tests_imports" . -}}{{- end}}
+
 	"github.com/stretchr/testify/assert"
 )
 
