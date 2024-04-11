@@ -17,7 +17,8 @@ set(POLYNOMIAL_SOURCE_FILES
     ${SRC}/polynomials/cuda_backend/polynomial_cuda_backend.cu           
     ${SRC}/polynomials/tracing/polynomial_tracing_backend.cu
     ${SRC}/polynomials/tracing/graph_visualizer_visitor.cu
-    ${SRC}/polynomials/tracing/interpreter.cu)
+    ${SRC}/polynomials/tracing/interpreter.cu
+    ${SRC}/polynomials/tracing/memory_management.cu)
 
 list(APPEND FIELD_SOURCE ${POLYNOMIAL_SOURCE_FILES})
 

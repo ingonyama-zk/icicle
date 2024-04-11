@@ -19,6 +19,20 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
+  Polynomial<C, D, I>& Polynomial<C, D, I>::operator=(Polynomial<C, D, I>&& other)
+  {
+    m_context->unbind(); // unbind old context since it's not bound to me anymore
+
+    m_context = other.m_context;
+    m_backend = other.m_backend;
+
+    other.m_context = nullptr;
+    other.m_backend = nullptr;
+
+    return *this;
+  }
+
+  template <typename C, typename D, typename I>
   Polynomial<C, D, I> Polynomial<C, D, I>::from_coefficients(const C* coefficients, uint64_t nof_coefficients)
   {
     Polynomial<C, D, I> P = {};

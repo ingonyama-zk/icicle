@@ -26,6 +26,7 @@ namespace polynomials {
     {
       return std::shared_ptr<TracingPolynomialContext>(new TracingPolynomialContext(memory_context));
     }
+    SharedTracingContext getptr() { return TracingPolynomialContext<C, D, I>::shared_from_this(); }
     ~TracingPolynomialContext() = default;
 
   private:
@@ -37,6 +38,8 @@ namespace polynomials {
     eOpcode m_opcode = eOpcode::INVALID;
     // The underlying memory context, typically representing a device-context like CUDA or ZPU
     MemoryContext m_memory_context;
+    // Additional attributes providing more information about the operation, enhancing traceability.
+    Attributes m_attrs;
 
   private: // members that should be modified carefully
     // A vector of arguments to the operation, represented as shared pointers to other TracingPolynomialContexts,
@@ -46,12 +49,7 @@ namespace polynomials {
     // Set of nodes that have this node as operand
     std::set<WeakTracingContext, std::owner_less<WeakTracingContext>> m_dependents;
 
-  public:
-    // Additional attributes providing more information about the operation, enhancing traceability.
-    Attributes m_attrs;
-
-    // Binding
-  protected:
+    // Bound to a polynomial. Temporary values are not bound and can be optimized in terms of memory
     bool m_bound;
 
   public:

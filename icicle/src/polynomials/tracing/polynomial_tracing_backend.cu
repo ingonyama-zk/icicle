@@ -3,6 +3,7 @@
 #include "polynomials/polynomial_backend.h"
 #include "polynomials/tracing/polynomial_tracing_backend.cuh"
 #include "polynomials/tracing/interpreter.h"
+#include "polynomials/tracing/optimizer.h"
 
 namespace polynomials {
 
@@ -197,8 +198,13 @@ namespace polynomials {
 
     void evaluate_expression(PolyContext p)
     {
+      auto tracing_ctxt = as_tracing_context(p);
+
+      Optimizer optimizer{};
       Interpreter interpreter{m_compute_backend};
-      interpreter.run(as_tracing_context(p));
+
+      optimizer.run(tracing_ctxt);
+      interpreter.run(tracing_ctxt);
     }
   };
 

@@ -114,7 +114,7 @@ namespace polynomials {
 
     // Ensures polynomials can be moved but not copied, to manage resources efficiently.
     Polynomial(Polynomial&&) = default;
-    Polynomial& operator=(Polynomial&&) = default;
+    Polynomial& operator=(Polynomial&&);
     Polynomial(const Polynomial&) = delete;
     Polynomial& operator=(const Polynomial&) = delete;
 

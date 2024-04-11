@@ -10,6 +10,7 @@
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "polynomials/tracing/polynomial_tracing_backend.cuh"
 #include "polynomials/tracing/graph_visualizer_visitor.h"
+#include "polynomials/tracing/optimizer.h"
 
 #include "ntt/ntt.cuh"
 #include "gpu-utils/device_context.cuh"
@@ -129,6 +130,18 @@ public:
     coeffs_v[degree] = one;  // +x^n
     auto v = Polynomial_t::from_coefficients(coeffs_v, degree + 1);
     return v;
+  }
+
+  static void draw(Polynomial_t& p, bool optimize = false)
+  {
+    if (optimize) {
+      Optimizer optimizer{};
+      optimizer.run(p);
+    }
+
+    std::ofstream out_file("trace.gv");
+    GraphvizVisualizer visualizer{out_file};
+    visualizer.run(p);
   }
 
   const static inline auto zero = scalar_t::zero();
@@ -264,9 +277,7 @@ TEST_F(PolynomialTest, addition_inplace)
   f += g;
   auto h = f + g;
 
-  std::ofstream out_file("trace.gv");
-  GraphvizVisualizer visualizer{out_file};
-  visualizer.run(h);
+  draw(h);
 
   auto s_x = f(x);
   auto h_x = h(x);
@@ -537,23 +548,6 @@ TEST_F(PolynomialTest, slicing)
   body((1 << 10) - 1); // test odd size
 }
 
-TEST_F(PolynomialTest, tracingBase)
-{
-  const int size_0 = 12, size_1 = 17;
-  auto f = randomize_polynomial(size_0);
-  auto g = randomize_polynomial(size_1);
-  auto h = randomize_polynomial(size_1);
-
-  auto res = f + g - h + f;
-  // print res trace to file
-  std::ofstream out_file("trace.gv");
-  GraphvizVisualizer visualizer{out_file};
-  visualizer.run(res);
-
-  auto x = scalar_t::rand_host();
-  res(x); // implicitly evaluetes to poly
-}
-
 TEST_F(PolynomialTest, tracingInplace)
 {
   const int size_0 = 1 << 16, size_1 = 1 << 16;
@@ -581,9 +575,7 @@ TEST_F(PolynomialTest, tracingInplace)
 
     if (visualize && tracing) {
       // print res trace to file
-      std::ofstream out_file("trace.gv");
-      GraphvizVisualizer visualizer{out_file};
-      visualizer.run(res);
+      draw(res);
     }
 
     auto eval = res(x);
@@ -601,39 +593,46 @@ TEST_F(PolynomialTest, tracingInplace)
   ASSERT_EQ(eager_result, trace_result);
 }
 
-TEST_F(PolynomialTest, tracingComplex)
+TEST_F(PolynomialTest, tracingMemoryReuse)
 {
-  const int size_0 = 12, size_1 = 17;
-  auto f = randomize_polynomial(size_0);
-  auto g = randomize_polynomial(size_1);
-  auto h = randomize_polynomial(size_1);
+  const int size = 1 << 10;
+  const int nof_polys = 5;
+  auto x = scalar_t::rand_host();
+  const bool visualize = false;
 
-  auto t0 = (f + g - h + f * two) * g;
-  auto [t1, t2] = t0.divide(f);
-  auto t3 = (t1 + t2).divide_by_vanishing_polynomial(size_0);
-  auto t4 = t3.slice(1, 2, 8);
-  auto res = two * t4;
-  // print res trace to file
-  std::ofstream out_file("trace.gv");
-  GraphvizVisualizer visualizer{out_file};
-  visualizer.run(res);
-}
+  auto computation = [&](bool tracing, bool measure = true) {
+    if (tracing) {
+      enable_cuda_tracing();
+    } else {
+      enable_cuda_eager();
+    }
+    std::vector<Polynomial_t> polys;
+    for (int i = 0; i < nof_polys; ++i) {
+      polys.push_back(randomize_polynomial(size, false));
+    }
 
-TEST_F(PolynomialTest, tracingRequestConflict)
-{
-  const int size = 16;
-  auto a = randomize_polynomial(size);
-  auto b = randomize_polynomial(size);
+    START_TIMER(timer);
 
-  auto add = a + b;
-  auto slice = add.even();
-  auto mul = add * b;
-  auto add2 = slice + mul;
+    auto res = randomize_polynomial(size, false);
+    for (auto& p : polys) {
+      res = res + p;
+    }
 
-  // print res trace to file
-  std::ofstream out_file("trace.gv");
-  GraphvizVisualizer visualizer{out_file};
-  visualizer.run(add2);
+    if (visualize && tracing) { draw(res, true /*=optimize*/); }
+
+    auto eval = res(x);
+
+    END_TIMER(timer, tracing ? "tracing" : "eager", MEASURE && measure);
+    return std::make_tuple(std::move(res), res(x));
+  };
+
+  // warmup
+  computation(false /*=tracing*/, false /*=measure*/);
+
+  auto [p_eager, eager_result] = computation(false /*=tracing*/);
+  auto [p_trace, trace_result] = computation(true /*=tracing*/);
+
+  ASSERT_EQ(eager_result, trace_result);
 }
 
 #ifdef CURVE
@@ -1047,9 +1046,7 @@ TEST_F(PolynomialTest, QAP)
   Polynomial_t h = (Lx * Rx - Ox).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
   if (!TRACING && N <= 10) { // only draw small graphs
-    std::ofstream out_file("trace.gv");
-    GraphvizVisualizer visualizer{out_file};
-    visualizer.run(h);
+    draw(h);
   }
   // (5) sanity check: vanishing-polynomial divides (LR-O) without remainder
   {
