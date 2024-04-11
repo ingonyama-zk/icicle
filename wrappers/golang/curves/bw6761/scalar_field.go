@@ -6,9 +6,10 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
+	"unsafe"
+
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"unsafe"
 )
 
 const (

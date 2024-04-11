@@ -5,8 +5,9 @@ package {{.PackageName}}
 {{- end}}
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}AffineZero(t *testing.T) {

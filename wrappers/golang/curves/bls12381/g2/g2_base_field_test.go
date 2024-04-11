@@ -1,8 +1,9 @@
 package g2
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+  
+	"github.com/stretchr/testify/assert"
 )
 
 func TestG2BaseFieldFromLimbs(t *testing.T) {
