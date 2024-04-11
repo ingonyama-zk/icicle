@@ -39,7 +39,7 @@ func TestScalarFieldOne(t *testing.T) {
 func TestScalarFieldZero(t *testing.T) {
 	var emptyField ScalarField
 	emptyField.Zero()
-	limbsZero := make([]uint32, SCALAR_LIMBS)
+	limbsZero := make([]uint64, SCALAR_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
@@ -54,7 +54,7 @@ func TestScalarFieldSize(t *testing.T) {
 	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	assert.Equal(t, len(randLimbs)*8, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
 func TestScalarFieldAsPointer(t *testing.T) {

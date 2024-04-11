@@ -44,7 +44,7 @@ func Test{{if .IsMock}}Mock{{else}}{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{
 func Test{{if .IsMock}}Mock{{else}}{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}{{end}}FieldZero(t *testing.T) {
 	var emptyField {{if .IsMock}}Mock{{else}}{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}{{end}}Field
 	emptyField.Zero()
-	limbsZero := make([]uint32, {{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS)
+	limbsZero := make([]uint64, {{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
@@ -59,7 +59,7 @@ func Test{{if .IsMock}}Mock{{else}}{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{
 	randLimbs := generateRandomLimb(int({{if .IsScalar}}SCALAR{{else}}{{if .IsG2}}G2_{{end}}BASE{{end}}_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	assert.Equal(t, len(randLimbs)*8, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
 func Test{{if .IsMock}}Mock{{else}}{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}{{end}}FieldAsPointer(t *testing.T) {

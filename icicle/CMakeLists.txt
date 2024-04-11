@@ -13,7 +13,7 @@ option(DEVMODE "Enable development mode" OFF)
 option(EXT_FIELD "Build extension field" OFF)
 option(G2 "Build G2" OFF)
 option(ECNTT "Build ECNTT" OFF)
-option(BUILD_HASH "Build hash functions" ON)
+option(BUILD_HASH "Build hash functions" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 # add options here

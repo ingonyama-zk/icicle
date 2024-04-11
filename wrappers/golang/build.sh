@@ -8,7 +8,7 @@ then
   G2_DEFINED=ON
 fi
 
-if [[ $3 ]]
+if [[ $3 == "ON" ]]
 then
   ECNTT_DEFINED=ON
 fi
@@ -28,6 +28,6 @@ mkdir -p build
 
 for CURVE in "${BUILD_CURVES[@]}"
 do
-  cmake -DCURVE=$CURVE -DG2_DEFINED=$G2_DEFINED -DECNTT_DEFINED=$ECNTT_DEFINED  -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCURVE=$CURVE -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED  -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build -j
 done
