@@ -1,5 +1,6 @@
 #pragma once
 #include "stdint.h"
+#include "../../../src/vec_ops/vec_ops.cu" // TODO Yuval: avoid this
 
 namespace polynomials {
   using namespace vec_ops;
@@ -21,14 +22,6 @@ namespace polynomials {
   __global__ void AddSingleElementInplace(T* self, T v)
   {
     *self = *self + v;
-  }
-
-  /*============================== multiplication ======================*/
-  template <typename E, typename S>
-  __global__ void MulScalarKernel(const E* element_vec, const S scalar, int n, E* result)
-  {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < n) { result[tid] = element_vec[tid] * (scalar); }
   }
 
   /*============================== degree ==============================*/
