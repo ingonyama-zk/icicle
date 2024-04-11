@@ -4,14 +4,6 @@
 namespace polynomials {
 
   template <typename C, typename D, typename I>
-  bool MemoryManagement<C, D, I>::visited(std::shared_ptr<TracingPolynomialContext<C, D, I>>& node, bool set_visited)
-  {
-    const bool is_visited = m_visited.find(node->m_id) != m_visited.end();
-    if (set_visited) m_visited.insert(node->m_id);
-    return is_visited;
-  }
-
-  template <typename C, typename D, typename I>
   bool
   MemoryManagement<C, D, I>::is_compatible(std::shared_ptr<TracingPolynomialContext<C, D, I>>& node, uint64_t min_size)
   {
@@ -31,7 +23,7 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   void MemoryManagement<C, D, I>::visit(std::shared_ptr<TracingPolynomialContext<C, D, I>>& node)
   {
-    if (visited(node, true /*=set_visited*/) || node->is_evaluated()) return;
+    if (this->visited(node, true /*=set_visited*/) || node->is_evaluated()) return;
 
     for (auto op : node->get_operands()) {
       visit(op);
@@ -57,8 +49,8 @@ namespace polynomials {
         node->m_memory_context = op1->m_memory_context;
       }
     } break;
-    case eOpcode::DIV_BY_VANISHING: {      
-      // TODO Yuval: can do this if the computation is 
+    case eOpcode::DIV_BY_VANISHING: {
+      // TODO Yuval: can do this if the computation is
     } break;
     case eOpcode::MUL: {
       // Check if the division can be done inplace and have a compatible operand
@@ -72,7 +64,7 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   void MemoryManagement<C, D, I>::run(std::shared_ptr<TracingPolynomialContext<C, D, I>>& node)
   {
-    m_visited.clear();
+    this->m_visited.clear();
     visit(node);
   }
 

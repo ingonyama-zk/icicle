@@ -6,21 +6,13 @@
 namespace polynomials {
 
   template <typename C, typename D, typename I>
-  bool Interpreter<C, D, I>::visited(std::shared_ptr<TracingPolynomialContext<C, D, I>> node, bool set_visited)
+  void Interpreter<C, D, I>::evaluate(std::shared_ptr<TracingPolynomialContext<C, D, I>>& node)
   {
-    const bool is_visited = m_visited.find(node->m_id) != m_visited.end();
-    if (set_visited) m_visited.insert(node->m_id);
-    return is_visited;
-  }
-
-  template <typename C, typename D, typename I>
-  void Interpreter<C, D, I>::evaluate(std::shared_ptr<TracingPolynomialContext<C, D, I>> node)
-  {
-    const bool is_visited = visited(node, true /*=set_visited*/);
+    const bool is_visited = this->visited(node, true /*=set_visited*/);
     if (is_visited || node->is_evaluated()) return;
 
     std::shared_ptr<TracingPolynomialContext<C, D, I>> inplace_operand = nullptr;
-    for (auto& op : node->get_operands()) {
+    for (auto op : node->get_operands()) {
       evaluate(op);
       // if node is computed inplace, reusing parent memory, must compute siblings first
       const bool is_inplace_parent = op->m_memory_context == node->m_memory_context;
@@ -103,9 +95,9 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
-  void Interpreter<C, D, I>::run(std::shared_ptr<TracingPolynomialContext<C, D, I>> context)
+  void Interpreter<C, D, I>::run(std::shared_ptr<TracingPolynomialContext<C, D, I>>& context)
   {
-    m_visited.clear();
+    this->m_visited.clear();
     evaluate(context);
   }
 

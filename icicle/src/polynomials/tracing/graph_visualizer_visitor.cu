@@ -4,20 +4,19 @@
 namespace polynomials {
 
   template <typename C, typename D, typename I>
-  void GraphvizVisualizer<C, D, I>::visit(TracingPolynomialContext<C, D, I>* context)
+  void GraphvizVisualizer<C, D, I>::visit(std::shared_ptr<TracingPolynomialContext<C, D, I>>& node)
   {
-    if (m_visited.find(context->m_id) != m_visited.end()) return;
-    m_visited.insert(context->m_id);
+    if (this->visited(node, true /*=set_visited*/)) return;
 
-    auto id = context->m_id;
-    auto memid = context->m_memory_context->m_id;
+    auto id = node->m_id;
+    auto memid = node->m_memory_context->m_id;
 
-    m_out_stream << context->m_id << " [label=\"" << OpcodeToStr(context->m_opcode) << " (id=" << context->m_id
+    m_out_stream << node->m_id << " [label=\"" << OpcodeToStr(node->m_opcode) << " (id=" << node->m_id
                  << ", memid=" << memid << ")\n"
-                 << context->m_attrs.to_string() << "\"];\n";
-    for (auto& op : context->get_operands()) {
-      visit(op.get());
-      m_out_stream << op->m_id << " -> " << context->m_id << "\n";
+                 << node->m_attrs.to_string() << "\"];\n";
+    for (auto op : node->get_operands()) {
+      visit(op);
+      m_out_stream << op->m_id << " -> " << node->m_id << "\n";
     }
   }
 
@@ -30,10 +29,17 @@ namespace polynomials {
       return;
     }
 
+    auto trace_ctxt_shared = trace_ctxt->getptr();
+    run(trace_ctxt_shared);
+  }
+
+  template <typename C, typename D, typename I>
+  void GraphvizVisualizer<C, D, I>::run(std::shared_ptr<TracingPolynomialContext<C, D, I>>& context)
+  {
     m_out_stream.clear();
-    m_visited.clear();
+    this->m_visited.clear();
     m_out_stream << "digraph G {\n";
-    visit(trace_ctxt);
+    visit(context);
     m_out_stream << "}";
   }
 
