@@ -12,6 +12,6 @@ pub mod vec_ops;
 
 pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
 where
-    <Self::ScalarField as traits::FieldImpl>::Config: ntt::NTT<Self::ScalarField>,
+    <Self::ScalarField as traits::FieldImpl>::Config: ntt::NTT<Self::ScalarField, Self::ScalarField>,
 {
 }

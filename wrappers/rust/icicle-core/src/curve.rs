@@ -89,6 +89,9 @@ impl<C: Curve> Affine<C> {
 
 impl<C: Curve> From<Affine<C>> for Projective<C> {
     fn from(item: Affine<C>) -> Self {
+        if item == (Affine::<C>::zero()) {
+            return Self::zero();
+        }
         Self {
             x: item.x,
             y: item.y,
