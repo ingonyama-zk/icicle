@@ -7,6 +7,7 @@ fn main() {
     // Base config
     let mut config = Config::new("../../../icicle/");
     config.define("CMAKE_BUILD_TYPE", "Release");
+    config.define("BUILD_HASH", "ON");
 
     // Build
     let out_dir = config

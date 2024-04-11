@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	BASE_LIMBS int8 = 8
+	BASE_LIMBS int = 4
 )
 
 type BaseField struct {
-	limbs [BASE_LIMBS]uint32
+	limbs [BASE_LIMBS]uint64
 }
 
 func (f BaseField) Len() int {
@@ -18,18 +18,18 @@ func (f BaseField) Len() int {
 }
 
 func (f BaseField) Size() int {
-	return int(BASE_LIMBS * 4)
+	return int(BASE_LIMBS * 8)
 }
 
-func (f BaseField) GetLimbs() []uint32 {
+func (f BaseField) GetLimbs() []uint64 {
 	return f.limbs[:]
 }
 
-func (f BaseField) AsPointer() *uint32 {
+func (f BaseField) AsPointer() *uint64 {
 	return &f.limbs[0]
 }
 
-func (f *BaseField) FromLimbs(limbs []uint32) BaseField {
+func (f *BaseField) FromLimbs(limbs []uint64) BaseField {
 	if len(limbs) != f.Len() {
 		panic("Called FromLimbs with limbs of different length than field")
 	}
@@ -58,21 +58,21 @@ func (f *BaseField) One() BaseField {
 }
 
 func (f *BaseField) FromBytesLittleEndian(bytes []byte) BaseField {
-	if len(bytes)/4 != f.Len() {
-		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*4, len(bytes)))
+	if len(bytes)/8 != f.Len() {
+		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*8, len(bytes)))
 	}
 
 	for i := range f.limbs {
-		f.limbs[i] = binary.LittleEndian.Uint32(bytes[i*4 : i*4+4])
+		f.limbs[i] = binary.LittleEndian.Uint64(bytes[i*8 : i*8+8])
 	}
 
 	return *f
 }
 
 func (f BaseField) ToBytesLittleEndian() []byte {
-	bytes := make([]byte, f.Len()*4)
+	bytes := make([]byte, f.Len()*8)
 	for i, v := range f.limbs {
-		binary.LittleEndian.PutUint32(bytes[i*4:], v)
+		binary.LittleEndian.PutUint64(bytes[i*8:], v)
 	}
 
 	return bytes
