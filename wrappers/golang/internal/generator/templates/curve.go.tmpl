@@ -4,7 +4,8 @@ package g2
 package {{.PackageName}}
 {{- end}}
 
-{{if not .IsMock -}}
+{{- if not .IsMock}}
+
 // #cgo CFLAGS: -I./include/
 // #include "{{if .IsG2 -}}g2_{{end}}curve.h"
 import "C"
@@ -15,7 +16,8 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
-{{end}}
+{{- end}}
+
 type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective struct {
 	X, Y, Z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 }

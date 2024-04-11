@@ -1,6 +1,5 @@
 package internal
 
-
 type MockProjective struct {
 	X, Y, Z MockField
 }
