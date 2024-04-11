@@ -1,8 +1,8 @@
 {{if .IsG2 -}}
-//go:build g2
-
-{{end -}}
+package g2
+{{- else -}}
 package {{.PackageName}}
+{{- end}}
 {{if .IsScalar}}
 {{- template "scalar_field_c_imports" . -}}
 {{end}}

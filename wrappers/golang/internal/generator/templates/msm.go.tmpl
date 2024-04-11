@@ -1,17 +1,18 @@
 {{if .IsG2 -}}
-//go:build g2
-
-{{end -}}
+package g2
+{{- else -}}
 package {{.PackageName}}
+{{- end}}
 
 // #cgo CFLAGS: -I./include/
 // #include "{{if .IsG2 -}}g2_{{end}}msm.h"
 import "C"
 
 import (
+	"unsafe"
+
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"unsafe"
 )
 
 func {{if .IsG2}}G2{{end}}GetDefaultMSMConfig() core.MSMConfig {
