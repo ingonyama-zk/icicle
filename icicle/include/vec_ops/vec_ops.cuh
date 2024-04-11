@@ -93,6 +93,21 @@ namespace vec_ops {
   cudaError_t Sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result);
 
   /**
+   * A function that divides two vectors element-wise.
+   * @param vec_a First input vector.
+   * @param vec_b Second input vector.
+   * @param n Size of vectors `vec_a` and `vec_b`.
+   * @param config Configuration of the operation.
+   * @param result Resulting vector - element-wise division of `vec_a` and `vec_b`, can be the same pointer as `vec_a`
+   * or `vec_b`. If inputs are in Montgomery form, the result is too, and vice versa: non-Montgomery inputs produce
+   * non-Montgomery result.
+   * @tparam E The type of elements `vec_a`, `vec_b` and `result`.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  template <typename E>
+  cudaError_t Div(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+
+  /**
    * Transposes an input matrix out-of-place inside GPU.
    * for example: for ([a[0],a[1],a[2],a[3]], 2, 2) it returns
    * [a[0],a[2],a[1],a[3]].

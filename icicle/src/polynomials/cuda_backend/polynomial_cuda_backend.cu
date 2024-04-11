@@ -5,6 +5,7 @@
 #include "gpu-utils/device_context.cuh"
 #include "cuda_runtime.h"
 #include "ntt/ntt.cuh"
+#include "vec_ops/vec_ops.cuh"
 #include "kernels.cuh"
 
 using device_context::DeviceContext;
@@ -528,9 +529,8 @@ namespace polynomials {
       c->allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
       auto c_evals_p = get_context_storage_mutable<I>(c);
 
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (c_N + NOF_THREADS - 1) / NOF_THREADS;
-      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
+      vec_ops::VecOpsConfig<scalar_t> vec_op_config = {m_device_context, true, true, true, true};
+      CHK_STICKY(vec_ops::Mul(a_evals_p, b_evals_p, c_N, vec_op_config, c_evals_p));
 
       CHK_LAST();
     }
@@ -564,10 +564,9 @@ namespace polynomials {
       CHK_STICKY(ntt::NTT(b_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p)); // b_H1
 
       // (4) compute a_H1 * b_H1 inplace
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-        c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
+      vec_ops::VecOpsConfig<scalar_t> vec_op_config = {m_device_context, true, true, true, true};
+      CHK_STICKY(vec_ops::Mul(c_evals_low_p, c_evals_high_p, N, vec_op_config, c_evals_high_p));
+
       // (5) transform a,b to evaluations
       a->transform_to_evaluations(N, true /*=reversed*/);
       b->transform_to_evaluations(N, true /*=reversed*/);
@@ -575,7 +574,7 @@ namespace polynomials {
       auto [b_evals_p, b_nof_evals] = b->get_rou_evaluations();
 
       // (6) compute a_H0 * b_H0
-      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
+      CHK_STICKY(vec_ops::Mul(a_evals_p, b_evals_p, N, vec_op_config, c_evals_low_p));
 
       CHK_LAST();
     }
@@ -676,10 +675,8 @@ namespace polynomials {
       CHK_STICKY(ntt::NTT(numerator_coeffs, N, ntt::NTTDir::kForward, ntt_config, numerator_coeffs));
 
       // (3) element wise division
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      DivElementWiseKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-        numerator_coeffs, out_coeffs, N, out_coeffs);
+      vec_ops::VecOpsConfig<scalar_t> vec_op_config = {m_device_context, true, true, true, true};
+      CHK_STICKY(vec_ops::Div(numerator_coeffs, out_coeffs, N, vec_op_config, out_coeffs));
 
       // (4) INTT back both a and out
       ntt_config.ordering = ntt::Ordering::kMN;
