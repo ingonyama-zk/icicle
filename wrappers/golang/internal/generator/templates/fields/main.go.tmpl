@@ -1,0 +1,4 @@
+package {{.FieldData.PackageName}}
+
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/src/fields -lingo_field_{{.FieldData.Field}} -lstdc++ -lm
+import "C"
