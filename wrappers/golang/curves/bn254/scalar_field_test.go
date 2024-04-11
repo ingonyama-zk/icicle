@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-  
+
 	"github.com/stretchr/testify/assert"
 )
 

@@ -2,7 +2,7 @@ package bn254
 
 import (
 	"testing"
-  
+
 	"github.com/stretchr/testify/assert"
 )
 

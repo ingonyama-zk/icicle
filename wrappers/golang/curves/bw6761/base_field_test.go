@@ -2,7 +2,7 @@ package bw6761
 
 import (
 	"testing"
-  
+
 	"github.com/stretchr/testify/assert"
 )
 

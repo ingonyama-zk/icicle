@@ -2,7 +2,7 @@ package g2
 
 import (
 	"testing"
-  
+
 	"github.com/stretchr/testify/assert"
 )
 
