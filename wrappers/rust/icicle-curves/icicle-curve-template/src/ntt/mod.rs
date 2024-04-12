@@ -17,6 +17,7 @@ pub(crate) mod tests {
     use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
     use std::sync::OnceLock;
+    use serial_test::{serial, parallel};
 
     impl_ntt_tests!(ScalarField);
 }
