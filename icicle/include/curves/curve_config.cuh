@@ -29,6 +29,10 @@ using namespace grumpkin;
 #include "fields/field_config.cuh"
 using field_config::scalar_t;
 
+#ifdef G2
+#include "fields/quadratic_extension.cuh"
+#endif
+
 /**
  * @namespace curve_config
  * Namespace with type definitions for short Weierstrass pairing-friendly [elliptic
@@ -61,8 +65,6 @@ namespace curve_config {
   static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{g2_gen_y};
   static constexpr g2_point_field_t g2_b = g2_point_field_t{g2_weierstrass_b};
 #else
-#include "fields/quadratic_extension.cuh"
-
   typedef ExtensionField<fq_config> g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x =
     g2_point_field_t{point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}};
