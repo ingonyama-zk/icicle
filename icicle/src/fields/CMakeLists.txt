@@ -13,6 +13,7 @@ list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern.cu)
 if(EXT_FIELD)
   list(APPEND FIELD_SOURCE ${SRC}/fields/extern_extension.cu)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/extern_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_extension.cu)
 endif()
 
 # TODO: impl poseidon for small fields. note that it needs to be defined over the extension field!

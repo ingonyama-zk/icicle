@@ -596,7 +596,6 @@ namespace ntt {
       break;
     case Ordering::kRN:
     case Ordering::kMN:
-      dit = true;
       reverse_input = false;
     }
 

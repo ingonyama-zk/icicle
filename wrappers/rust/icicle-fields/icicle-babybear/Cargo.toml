@@ -17,6 +17,7 @@ cmake = "0.1.50"
 [dev-dependencies]
 risc0-core = "0.21.0"
 risc0-zkp = "0.21.0"
+#icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
 
 [features]
 default = []

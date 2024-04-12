@@ -2,6 +2,7 @@
 
 #include "field.cuh"
 #include "gpu-utils/modifiers.cuh"
+#include "gpu-utils/sharedmem.cuh"
 
 template <typename CONFIG>
 class ExtensionField
@@ -192,5 +193,14 @@ public:
     // TODO: wide here
     FF xs_norm_squared = FF::sqr(xs.real) - nonresidue_times_im;
     return xs_conjugate * ExtensionField{FF::inverse(xs_norm_squared), FF::zero()};
+  }
+};
+
+template <class CONFIG>
+struct SharedMemory<ExtensionField<CONFIG>> {
+  __device__ ExtensionField<CONFIG>* getPointer()
+  {
+    extern __shared__ ExtensionField<CONFIG> s_ext2_scalar_[];
+    return s_ext2_scalar_;
   }
 };
