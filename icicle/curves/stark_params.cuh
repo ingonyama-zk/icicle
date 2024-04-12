@@ -5,44 +5,41 @@
 #include "utils/storage.cuh"
 
 namespace stark {
+  // Scalar Field Config
+  // modulus = 3618502788666131213697322783095070105526743751716087489154079457884512865583
   struct fp_config {
     static constexpr unsigned limbs_count = 8;
-    static constexpr unsigned omegas_count = 192;
+    static constexpr unsigned omegas_count = 1;
     static constexpr unsigned modulus_bit_count = 252;
     static constexpr unsigned num_of_reductions = 1;
 
-    static constexpr storage<limbs_count> modulus = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000011, 0x08000000};
-    static constexpr storage<limbs_count> modulus_2 = {0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000022, 0x10000000};
-    static constexpr storage<limbs_count> modulus_4 = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000044, 0x20000000};
-    static constexpr storage<limbs_count> neg_modulus = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffee, 0xf7ffffff};
-    static constexpr storage<2 * limbs_count> modulus_wide = {
-      0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000011, 0x08000000,
-      0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr storage<2 * limbs_count> modulus_squared = {0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000022, 0x10000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000121, 0x10000000, 0x00000001, 0x00400000};
-    static constexpr storage<2 * limbs_count> modulus_squared_2 = {0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000044, 0x20000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000242, 0x20000000, 0x00000002, 0x00800000};
-    static constexpr storage<2 * limbs_count> modulus_squared_4 = {0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000088, 0x40000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000484, 0x40000000, 0x00000004, 0x01000000};
-    static constexpr storage<limbs_count> m = {0x8c81fffb, 0x00000002, 0xfeccf000, 0xffffffff, 0x0000907f, 0x00000000, 0xffffffbc, 0x1fffffff};
+    static constexpr storage<limbs_count> modulus = {0xadc64d2f, 0x1e66a241, 0xcae7b232, 0xb781126d, 0xffffffff, 0xffffffff, 0x00000010, 0x08000000};
+    static constexpr storage<limbs_count> modulus_2 = {0x5b8c9a5e, 0x3ccd4483, 0x95cf6464, 0x6f0224db, 0xffffffff, 0xffffffff, 0x00000021, 0x10000000};
+    static constexpr storage<limbs_count> modulus_4 = {0xb71934bc, 0x799a8906, 0x2b9ec8c8, 0xde0449b7, 0xfffffffe, 0xffffffff, 0x00000043, 0x20000000};
+    static constexpr storage<limbs_count> neg_modulus = {0x5239b2d1, 0xe1995dbe, 0x35184dcd, 0x487eed92, 0x00000000, 0x00000000, 0xffffffef, 0xf7ffffff};
+    static constexpr storage<2 * limbs_count> modulus_wide = {0xadc64d2f, 0x1e66a241, 0xcae7b232, 0xb781126d, 0xffffffff, 0xffffffff, 0x00000010, 0x08000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+    static constexpr storage<2 * limbs_count> modulus_squared = {0x01f94ea1, 0x33cc4bcb, 0x3385a741, 0xef31d230, 0x8dc40391, 0x005b5cc4, 0x0a9839be, 0x0e29314a, 0x0da20f7b, 0x810adcb9, 0xdcae7b19, 0xfb781126, 0x00000120, 0x10000000, 0x00000001, 0x00400000};
+    static constexpr storage<2 * limbs_count> modulus_squared_2 = {0x03f29d42, 0x67989796, 0x670b4e82, 0xde63a460, 0x1b880723, 0x00b6b989, 0x1530737c, 0x1c526294, 0x1b441ef6, 0x0215b972, 0xb95cf633, 0xf6f0224d, 0x00000241, 0x20000000, 0x00000002, 0x00800000};
+    static constexpr storage<2 * limbs_count> modulus_squared_4 = {0x07e53a84, 0xcf312f2c, 0xce169d04, 0xbcc748c0, 0x37100e47, 0x016d7312, 0x2a60e6f8, 0x38a4c528, 0x36883dec, 0x042b72e4, 0x72b9ec66, 0xede0449b, 0x00000483, 0x40000000, 0x00000004, 0x01000000};
+    static constexpr storage<limbs_count> m = {0x384d77b0, 0x189ec175, 0xd32e2267, 0x21fbb648, 0x00009081, 0x00000000, 0xffffffbc, 0x1fffffff};
     static constexpr storage<limbs_count> one = {0x00000001, 0x00000000, 0x00000000, 0x00000000,
                                                  0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> zero = {0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                   0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr storage<limbs_count> montgomery_r = {0xffffffe1, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffdf0, 0x07ffffff};
-    static constexpr storage<limbs_count> montgomery_r_inv = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000121, 0x10000000, 0x00000001, 0x00400000};
+    static constexpr storage<limbs_count> montgomery_r = {0xf4fca74f, 0x51925a0b, 0x6df16bee, 0xc75ec4b4, 0x00000008, 0x00000000, 0xfffffdf1, 0x07ffffff};
+    static constexpr storage<limbs_count> montgomery_r_inv = {0x8b91307b, 0x81f69041, 0x65485708, 0xc0708974, 0x090c0159, 0xa541174a, 0xd6190374, 0x012bead2};
 
     static constexpr storage_array<omegas_count, limbs_count> omega = {
-      {{0x42f8ef94, 0x6070024f, 0xe11a6161, 0xad187148, 0x9c8b0fa5, 0x3f046451, 0x87529cfa, 0x005282db},
-       }};
-
-    static constexpr storage_array<omegas_count, limbs_count> omega_inv = {
-      {{0xf0000000, 0x43e1f593, 0x79b97091, 0x2833e848, 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72},
+      {{0xadc64d2e, 0x1e66a241, 0xcae7b232, 0xb781126d, 0xffffffff, 0xffffffff, 0x00000010, 0x08000000},
        }};
 
     static constexpr storage_array<omegas_count, limbs_count> inv = {
-      {{0xf8000001, 0xa1f0fac9, 0x3cdcb848, 0x9419f424, 0x40c0ac2e, 0xdc2822db, 0x7098d014, 0x18322739},
+      {{0xd6e32698, 0x0f335120, 0xe573d919, 0xdbc08936, 0xffffffff, 0x7fffffff, 0x00000008, 0x04000000},
        }};
   };
 
-// Fp in Gnark
+// BaseField Config
+// modulus = 3618502788666131213697322783095070105623107215331596699973092056135872020481 (2^251+17*2^192+1)
   struct fq_config {
     static constexpr unsigned limbs_count = 8;
     static constexpr unsigned modulus_bit_count = 252;
@@ -64,10 +61,6 @@ namespace stark {
                                                   0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr storage<limbs_count> montgomery_r = {0xffffffe1, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffdf0, 0x07ffffff};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000121, 0x10000000, 0x00000001, 0x00400000};
-    // i^2, the square of the imaginary unit for the extension field
-    static constexpr uint32_t i_squared = 1;
-    // true if i^2 is negative
-    static constexpr bool i_squared_is_negative = true;
   };
 
   // G1 generators
