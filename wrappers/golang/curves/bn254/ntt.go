@@ -22,30 +22,17 @@ func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint64] {
 	return core.GetDefaultNTTConfig(cosetGen)
 }
 
-func Ntt[S any, T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
-	core.NttCheck[T](scalars, cfg, results)
+func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+	core.NttCheck(scalars, cfg, results)
 
-	var scalarsPointer unsafe.Pointer
-	if scalars.IsOnDevice() {
-		scalarsDevice := scalars.(core.DeviceSlice)
-		scalarsDevice.CheckDevice()
-		scalarsPointer = scalarsDevice.AsPointer()
-	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[S])[0])
-	}
+	scalarsPointer := scalars.GetPointerSafe()
 	cScalars := (*C.scalar_t)(scalarsPointer)
+
 	cSize := (C.int)(scalars.Len() / int(cfg.BatchSize))
 	cDir := (C.int)(dir)
 	cCfg := (*C.NTTConfig)(unsafe.Pointer(cfg))
 
-	var resultsPointer unsafe.Pointer
-	if results.IsOnDevice() {
-		resultsDevice := results.(core.DeviceSlice)
-		resultsDevice.CheckDevice()
-		resultsPointer = resultsDevice.AsPointer()
-	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[S])[0])
-	}
+	resultsPointer := results.GetPointerSafe()
 	cResults := (*C.scalar_t)(resultsPointer)
 
 	__ret := C.bn254NTTCuda(cScalars, cSize, cDir, cCfg, cResults)

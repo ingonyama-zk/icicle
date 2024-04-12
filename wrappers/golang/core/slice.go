@@ -11,6 +11,7 @@ type HostOrDeviceSlice interface {
 	Cap() int
 	IsEmpty() bool
 	IsOnDevice() bool
+	GetPointerSafe() unsafe.Pointer
 }
 
 type DevicePointer = unsafe.Pointer
@@ -52,6 +53,11 @@ func (d DeviceSlice) CheckDevice() {
 	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
 		panic("Attempt to use DeviceSlice on a different device")
 	}
+}
+
+func (d DeviceSlice) GetPointerSafe() unsafe.Pointer {
+	d.CheckDevice()
+	return d.AsPointer()
 }
 
 func (d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {
@@ -188,6 +194,14 @@ func (h HostSlice[T]) SizeOfElement() int {
 	return int(unsafe.Sizeof(h[0]))
 }
 
+func (h HostSlice[T]) AsPointer() unsafe.Pointer {
+	return unsafe.Pointer(&h[0])
+}
+
+func (h HostSlice[T]) GetPointerSafe() unsafe.Pointer {
+	return h.AsPointer()
+}
+
 func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *DeviceSlice {
 	size := h.Len() * h.SizeOfElement()
 	if shouldAllocate {
@@ -198,7 +212,7 @@ func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *Devic
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	hostSrc := unsafe.Pointer(&h[0])
+	hostSrc := h.AsPointer()
 	cr.CopyToDevice(dst.inner, hostSrc, uint(size))
 	dst.length = h.Len()
 	return dst
@@ -214,7 +228,7 @@ func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, 
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	hostSrc := unsafe.Pointer(&h[0])
+	hostSrc := h.AsPointer()
 	cr.CopyToDeviceAsync(dst.inner, hostSrc, uint(size), stream)
 	dst.length = h.Len()
 	return dst
@@ -226,7 +240,7 @@ func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cr.CopyFromDevice(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize))
+	cr.CopyFromDevice(h.AsPointer(), src.inner, uint(bytesSize))
 }
 
 func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
@@ -235,5 +249,5 @@ func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cr.CopyFromDeviceAsync(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize), stream)
+	cr.CopyFromDeviceAsync(h.AsPointer(), src.inner, uint(bytesSize), stream)
 }
