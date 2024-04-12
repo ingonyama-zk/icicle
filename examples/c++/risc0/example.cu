@@ -100,6 +100,7 @@ void compute_recursion_constraint(
   }
 }
 
+// mix polynomial evaluations
 void mix(scalar_t* in[], scalar_t * out, size_t nmix, size_t n, scalar_t mix_parameter) {
   scalar_t * a;
   scalar_t factor = scalar_t::one();
@@ -113,6 +114,26 @@ void mix(scalar_t* in[], scalar_t * out, size_t nmix, size_t n, scalar_t mix_par
     }
     factor = factor * mix_parameter;
   }
+}
+
+// mix polynomials (c.f. mix polynomial evaluations)
+void p_mix(Polynomial_t* in[], Polynomial_t * out, size_t nmix, scalar_t mix_parameter) {
+  Polynomial_t * a;
+  scalar_t factor = scalar_t::one();
+  // polynomial_multiply_by_coeff
+  for (size_t i = 0; i < nmix; ++i) {
+    a = in[i];
+    
+    // out = out + Polynomial_t::polynomial_multiply_by_coeff(in, factor); 
+    out = out + a * factor;
+    
+    factor = factor * mix_parameter;
+  }
+}
+
+void solve_linear(scalar_t xa, scalar_t ya, scalar_t xb, scalar_t yb, scalar_t * coeffs) {
+  coeffs[1] = (ya - yb) * scalar_t::inverse(xa - xb);
+  coeffs[0] = ya - coeffs[1] * xa;
 }
 
 int main(int argc, char** argv)
@@ -207,7 +228,7 @@ int main(int argc, char** argv)
   auto c2_poly = Polynomial_t::from_rou_evaluations(c2_trace, n);
   auto c3_poly = Polynomial_t::from_rou_evaluations(c3_trace, n);
 
-  // Evaluating Trace Polynomials over the powers of 5^12 would return the original trace data
+  // Evaluating Trace Polynomials over rou powers would return the original trace data
   
 
   auto d1_degree = d1_poly.degree();
@@ -222,10 +243,6 @@ int main(int argc, char** argv)
   std::cout << std::endl << "4. Generate Reed-Solomon traces" << std::endl;
   // Evaluating Trace Polynomials over the "expanded domain" gives a "trace block."
 
-  scalar_t* codeword = new scalar_t[2*n];
-  auto x2 = scalar_t::one();
-  auto omega2 = scalar_t::omega(1+logn);
-
   scalar_t d1_trace_rs[4*n], d2_trace_rs[4*n], d3_trace_rs[4*n];
   scalar_t c1_trace_rs[4*n], c2_trace_rs[4*n], c3_trace_rs[4*n];
 
@@ -233,9 +250,6 @@ int main(int argc, char** argv)
   auto x_rs = scalar_t::one();
 
   for (int i = 0; i < 4*n; ++i) {
-    // codeword[i] = f(x2);
-    // std::cout << i << " : " << codeword[i] << std::endl;
-    // x2 = x2 * omega2;
     d1_trace_rs[i] = d1_poly(x_rs);
     d2_trace_rs[i] = d2_poly(x_rs);
     d3_trace_rs[i] = d3_poly(x_rs);
@@ -252,7 +266,7 @@ int main(int argc, char** argv)
   std::cout << "This is a degree 4 Reed Solomon expansion of the original trace." << std::endl;
 
   std::cout << "Lesson 5: ZK Commitments of the Trace Data" << std::endl;
-  std::cout << 'To maintain a zero-knowledge protocol, the trace polynomials are evaluated over a "zk commitment domain", {5^1, 5^4, ..., 5^94}.' << std::endl;
+  std::cout << "To maintain a zero-knowledge protocol, the trace polynomials are evaluated over a zk commitment domain" << std::endl;
   std::cout << std::endl << "5. Reconstruct polynomial for the codeword" << std::endl;
 
   scalar_t d1_zkcommitment[4*n], d2_zkcommitment[4*n], d3_zkcommitment[4*n];
@@ -260,7 +274,6 @@ int main(int argc, char** argv)
 
   
   std::cout << std::endl << "6. Commit to the codeword polynomial" << std::endl;
-  // scalar_t* commitment = new scalar_t[2*n];
   std::cout << "Evaluate with a shift " << std::endl;
   scalar_t xzk = basic_root;
   
@@ -271,7 +284,6 @@ int main(int argc, char** argv)
     c1_zkcommitment[i] = c1_poly(xzk);
     c2_zkcommitment[i] = c2_poly(xzk);
     c3_zkcommitment[i] = c3_poly(xzk);
-    // std::cout << i << " : " << commitment[i] << std::endl;
     xzk = xzk * omega_rs;
   }
 
@@ -452,14 +464,62 @@ int main(int argc, char** argv)
 
   auto DEEP_point = scalar_t::from(93);
   std::cout << "The prover convinces the verifier that V=C/Z at the DEEP_test_point, " << DEEP_point << std::endl;
-  // recursive constraints need the point corresponding to the previous state (clock cycle)
-  auto DEEP_prev_point = DEEP_point*scalar_t::inverse(omega);
-  const scalar_t coeffs[2] = {scalar_t::zero()-DEEP_point, scalar_t::one()};
-  auto denom_DEEP = Polynomial_t::from_coefficients(coeffs, 2);
+  
+  const scalar_t coeffs1[2] = {scalar_t::zero()-DEEP_point, scalar_t::one()};
+  auto denom_DEEP1 = Polynomial_t::from_coefficients(coeffs1, 2);
   auto d1_poly_tmp = d1_poly.clone();
   d1_poly_tmp.sub_monomial_inplace(d1_poly(DEEP_point)) ;
-  auto [d1_poly_DEEP, r] = d1_poly_tmp.divide(denom_DEEP);
-  std::cout << "The DEEP degree is: " << d1_poly_DEEP.degree() << std::endl;
+  auto [d1_poly_DEEP, r] = d1_poly_tmp.divide(denom_DEEP1);
+  std::cout << "The DEEP d1 degree is: " << d1_poly_DEEP.degree() << std::endl;
+
+  // d2, d3 use recursion constraints and need the point corresponding to the previous state (clock cycle)
+  auto DEEP_prev_point = DEEP_point*scalar_t::inverse(omega);
+  const scalar_t coeffs2[2] = {scalar_t::zero()-DEEP_prev_point, scalar_t::one()};
+  auto denom_DEEP2 = Polynomial_t::from_coefficients(coeffs2, 2);
+  
+  scalar_t coeffs_d2bar[2];
+  solve_linear(DEEP_point, d2_poly(DEEP_point), DEEP_prev_point, d2_poly(DEEP_prev_point), coeffs_d2bar);
+  auto d2bar = Polynomial_t::from_coefficients(coeffs_d2bar, 2);
+  auto [d2_poly_DEEP, r2] = (d2_poly - d2bar).divide(denom_DEEP1*denom_DEEP2);
+  std::cout << "The DEEP d2 degree is: " << d2_poly_DEEP.degree() << std::endl;
+
+  scalar_t coeffs_d3bar[2];
+  solve_linear(DEEP_point, d3_poly(DEEP_point), DEEP_prev_point, d3_poly(DEEP_prev_point), coeffs_d3bar);
+  auto d3bar = Polynomial_t::from_coefficients(coeffs_d3bar, 2);
+  auto [d3_poly_DEEP, r3] = (d3_poly - d3bar).divide(denom_DEEP1*denom_DEEP2);
+  std::cout << "The DEEP d3 degree is: " << d3_poly_DEEP.degree() << std::endl;
+
+
+  // DEEP c{1,2,3} polynomials
+
+  const scalar_t coeffs_c1bar[1] = {c1_poly(DEEP_point)};
+  auto c1bar = Polynomial_t::from_coefficients(coeffs_c1bar, 1);
+  auto [c1_poly_DEEP, r_c1] = (c1_poly - c1bar).divide(denom_DEEP1);
+  std::cout << "The DEEP c1 degree is: " << c1_poly_DEEP.degree() << std::endl;
+
+  const scalar_t coeffs_c2bar[1] = {c2_poly(DEEP_point)};
+  auto c2bar = Polynomial_t::from_coefficients(coeffs_c2bar, 1);
+  auto [c2_poly_DEEP, r_c2] = (c2_poly - c2bar).divide(denom_DEEP1);
+  std::cout << "The DEEP c2 degree is: " << c2_poly_DEEP.degree() << std::endl;
+
+  const scalar_t coeffs_c3bar[1] = {c3_poly(DEEP_point)};
+  auto c3bar = Polynomial_t::from_coefficients(coeffs_c3bar, 1);
+  auto [c3_poly_DEEP, r_c3] = (c3_poly - c3bar).divide(denom_DEEP1);
+  std::cout << "The DEEP c3 degree is: " << c3_poly_DEEP.degree() << std::endl;
+
+  // DEEP validity polynomial
+  const scalar_t coeffs_vbar[1] = {p_validity_rs(DEEP_point)};
+  auto vbar = Polynomial_t::from_coefficients(coeffs_vbar, 1);
+  auto [v_DEEP, r_v] = (p_validity_rs - vbar).divide(denom_DEEP1);
+  std::cout << "The DEEP validity polynomial degree is: " << v_DEEP.degree() << std::endl;
+
+  std::cout << "The Prover sends DEEP polynomials to the Verifier" << std::endl;
+
+  std::cout << "Lesson 10: Mixing (Batching) for FRI" << std::endl;
+  std::cout << "The initial FRI polynomial is the mix of the 7 DEEP polynomials." << std::endl;
+
+  
+
 
 
   // uint32_t tree_height = (logn + 1) + 1; // extra +1 for larger domain
