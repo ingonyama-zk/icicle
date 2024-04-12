@@ -5,7 +5,7 @@ In order to build the underlying ICICLE libraries you should run the build scrip
 Build script USAGE
 
 ```
-./build <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+./build.sh <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
 
 curve - The name of the curve to build or "all" to build all curves
 -g2 - Optional - build with G2 enabled 
@@ -49,13 +49,13 @@ go test ./... -count=1
 
 The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
 
-1. These libraries (named `libingo_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
+1. These libraries (named `libingo_curve_<curve>.a` and `libingo_field_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
 
 2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 
 ```go
 /*
-#cgo LDFLAGS: -L/path/to/shared/libs -lingo_bn254
+#cgo LDFLAGS: -L$/path/to/shared/libs/curves -L$/path/to/shared/libs/fields -lingo_curve_bn254 -lingo_field_bn254 -lstdc++ -lm
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"
