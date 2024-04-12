@@ -6,6 +6,7 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
+use crate::error::IcicleResult;
 use crate::{
     ntt::{
         initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, release_domain, NTTConfig, NTTDir,
@@ -29,11 +30,11 @@ where
     }
 }
 
-pub fn rel_domain<F: FieldImpl>(ctx: &DeviceContext)
+pub fn rel_domain<F: FieldImpl>(ctx: &DeviceContext) -> IcicleResult<()>
 where
     <F as FieldImpl>::Config: NTT<F>,
 {
-    release_domain::<F>(&ctx).unwrap();
+    release_domain::<F>(&ctx)
 }
 
 pub fn reverse_bit_order(n: u32, order: u32) -> u32 {
@@ -424,5 +425,6 @@ where
     <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
 {
     let config: NTTConfig<'static, F> = NTTConfig::default();
-    rel_domain::<F>(&config.ctx);
+    let err = rel_domain::<F>(&config.ctx);
+    assert!(err.is_ok())
 }

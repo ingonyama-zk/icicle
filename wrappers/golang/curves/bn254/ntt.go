@@ -11,10 +11,10 @@ import (
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
-func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint32] {
+func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint64] {
 	cosetGenField := ScalarField{}
 	cosetGenField.One()
-	var cosetGen [SCALAR_LIMBS]uint32
+	var cosetGen [SCALAR_LIMBS]uint64
 	for i, v := range cosetGenField.GetLimbs() {
 		cosetGen[i] = v
 	}
@@ -22,7 +22,7 @@ func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint32] {
 	return core.GetDefaultNTTConfig(cosetGen)
 }
 
-func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+func Ntt[S any, T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
 	core.NttCheck[T](scalars, cfg, results)
 
 	var scalarsPointer unsafe.Pointer
@@ -31,7 +31,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 		scalarsDevice.CheckDevice()
 		scalarsPointer = scalarsDevice.AsPointer()
 	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[ScalarField])[0])
+		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[S])[0])
 	}
 	cScalars := (*C.scalar_t)(scalarsPointer)
 	cSize := (C.int)(scalars.Len() / int(cfg.BatchSize))
@@ -44,38 +44,11 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 		resultsDevice.CheckDevice()
 		resultsPointer = resultsDevice.AsPointer()
 	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[ScalarField])[0])
+		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[S])[0])
 	}
 	cResults := (*C.scalar_t)(resultsPointer)
 
 	__ret := C.bn254NTTCuda(cScalars, cSize, cDir, cCfg, cResults)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
-}
-
-func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
-	core.NttCheck[T](points, cfg, results)
-
-	var pointsPointer unsafe.Pointer
-	if points.IsOnDevice() {
-		pointsPointer = points.(core.DeviceSlice).AsPointer()
-	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Projective])[0])
-	}
-	cPoints := (*C.projective_t)(pointsPointer)
-	cSize := (C.int)(points.Len() / int(cfg.BatchSize))
-	cDir := (C.int)(dir)
-	cCfg := (*C.NTTConfig)(unsafe.Pointer(cfg))
-
-	var resultsPointer unsafe.Pointer
-	if results.IsOnDevice() {
-		resultsPointer = results.(core.DeviceSlice).AsPointer()
-	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[Projective])[0])
-	}
-	cResults := (*C.projective_t)(resultsPointer)
-
-	__ret := C.bn254ECNTTCuda(cPoints, cSize, cDir, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }
