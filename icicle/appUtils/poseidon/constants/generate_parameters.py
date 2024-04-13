@@ -9,12 +9,13 @@ from poseidon import round_constants as rc, round_numbers as rn
 
 # Modify these
 arity = 11
-p = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47 # grumpkin
+p = 0x800000000000010ffffffffffffffffb781126dcae7b2321e66a241adc64d2f # stark
+# p = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47 # grumpkin
 # p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001 # bls12-381
 # p = 0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001 # bls12-377
 # p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001 # bn254
 # p = 0x1ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d44300000008508c00000000001 # bw6-761
-prime_bit_len = 255
+prime_bit_len = 252
 field_bytes = 32
 
 # leave set to -1 if not sure
@@ -36,7 +37,8 @@ security_level = 128
 # primitive_element = 22 # bls12-377
 # primitive_element = 5 # bn254
 # primitive_element = 15 # bw6-761
-primitive_element = 3 # grumpkin
+# primitive_element = 3 # grumpkin
+primitive_element = 3 # stark
 
 # currently we only support alpha 5, if you need alpha other than 5 - feal free to reach out
 alpha = 5
