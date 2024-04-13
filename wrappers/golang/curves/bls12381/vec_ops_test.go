@@ -30,7 +30,7 @@ func TestVecOps(t *testing.T) {
 
 	VecOp(a, ones, out3, cfg, core.Mul)
 
-	assert.Equal(t, ones, out3)
+	assert.Equal(t, a, out3)
 }
 
 
