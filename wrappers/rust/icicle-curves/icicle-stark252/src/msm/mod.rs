@@ -8,7 +8,7 @@ use icicle_core::{
 };
 use icicle_cuda_runtime::{error::CudaError, memory::HostOrDeviceSlice};
 
-impl_msm!("stark252", <CURVE>, CurveCfg);
+impl_msm!("stark252", stark252, CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

@@ -16,6 +16,9 @@ using namespace poseidon_constants_bw6_761;
 #elif CURVE_ID == GRUMPKIN
 #include "appUtils/poseidon/constants/grumpkin_poseidon.h"
 using namespace poseidon_constants_grumpkin;
+#elif CURVE_ID == STARK252
+#include "appUtils/poseidon/constants/stark252_poseidon.h"
+using namespace poseidon_constants_stark252;
 #endif
 
 namespace poseidon {

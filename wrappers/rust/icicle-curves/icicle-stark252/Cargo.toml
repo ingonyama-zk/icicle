@@ -1,30 +1,26 @@
 [package]
-name = "icicle-<CURVE>"
+name = "icicle-stark252"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Rust wrapper for the CUDA implementation of <CURVE> elliptic curve by Ingonyama"
+description = "Rust wrapper for the CUDA implementation of stark252 elliptic curve by Ingonyama"
 homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
 icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
-ark-<CURVE> = { version = "0.4.0", optional = true }
 
 [build-dependencies]
 cmake = "0.1.50"
 
 [dev-dependencies]
-ark-<CURVE> = "0.4.0"
 ark-std = "0.4.0"
 ark-ff = "0.4.0"
 ark-ec = "0.4.0"
 ark-poly = "0.4.0"
 icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
-icicle-<CURVE> = { path = ".", features = ["arkworks"] }
+icicle-stark252 = { path = "." }
 
 [features]
 default = []
-g2 = ["icicle-core/g2"]
-arkworks = ["ark-<CURVE>", "icicle-core/arkworks"]

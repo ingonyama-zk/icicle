@@ -1,8 +1,8 @@
 #pragma once
-#ifndef CURVE_POSEIDON_H
-#define CURVE_POSEIDON_H
+#ifndef STARK252_POSEIDON_H
+#define STARK252_POSEIDON_H
 
-namespace poseidon_constants_curve {
+namespace poseidon_constants_stark252 {
   /**
    * This inner namespace contains optimized constants for running Poseidon.
    * These constants were generated using an algorithm defined at

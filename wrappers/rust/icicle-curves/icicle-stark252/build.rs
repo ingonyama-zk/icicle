@@ -8,12 +8,8 @@ fn main() {
     let mut config = Config::new("../../../../icicle");
     config
         .define("BUILD_TESTS", "OFF")
-        .define("CURVE", "<CURVE>")
+        .define("CURVE", "stark252")
         .define("CMAKE_BUILD_TYPE", "Release");
-
-    // Optional Features
-    #[cfg(feature = "g2")]
-    config.define("G2_DEFINED", "ON");
 
     // Build
     let out_dir = config
@@ -22,7 +18,7 @@ fn main() {
 
     println!("cargo:rustc-link-search={}/build", out_dir.display());
 
-    println!("cargo:rustc-link-lib=ingo_<CURVE>");
+    println!("cargo:rustc-link-lib=ingo_stark252");
     println!("cargo:rustc-link-lib=stdc++");
     println!("cargo:rustc-link-lib=cudart");
 }

@@ -8,6 +8,7 @@ members = [
   "icicle-curves/icicle-bls12-381",
   "icicle-curves/icicle-bn254",
   "icicle-curves/icicle-grumpkin",
+  "icicle-curves/icicle-stark252",
 ]
 exclude = [
   "icicle-curves/icicle-curve-template",
