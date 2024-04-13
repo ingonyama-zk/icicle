@@ -53,3 +53,26 @@ func VecOp[S any](a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op
 
 	return ret
 }
+
+func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError){
+
+	var inPointer, outPointer unsafe.Pointer
+	if onDevice {
+		inPointer = in.(core.DeviceSlice).AsPointer()
+		outPointer = out.(core.DeviceSlice).AsPointer()
+	} else {
+		inPointer = unsafe.Pointer(&in.(core.HostSlice[ScalarField])[0])
+		outPointer = unsafe.Pointer(&out.(core.HostSlice[ScalarField])[0])
+	}
+	cIn := (*C.scalar_t)(inPointer)
+	cOut := (*C.scalar_t)(outPointer)
+
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
+	cRowSize := (C.int)(rowSize)
+	cColumnSize := (C.int)(columnSize)
+	cOnDevice := (C._Bool)(onDevice)
+	cIsAsync := (C._Bool)(isAsync)
+
+	err := (cr.CudaError)(C.bls12_377TransposeMatrix( cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
+	return core.FromCudaError(err)
+} 
