@@ -1,10 +1,10 @@
 #pragma once
-#ifndef STARK_PARAMS_H
-#define STARK_PARAMS_H
+#ifndef STARK_252_PARAMS_H
+#define STARK_252_PARAMS_H
 
 #include "utils/storage.cuh"
 
-namespace stark {
+namespace stark252 {
   // Scalar Field Config
   // modulus = 3618502788666131213697322783095070105526743751716087489154079457884512865583
   struct fp_config {
