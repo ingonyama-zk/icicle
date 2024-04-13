@@ -8,6 +8,9 @@ class Projective
   friend Affine<FF>;
 
 public:
+  typedef Affine<FF> Aff;
+  typedef SCALAR_FF Scalar;
+
   static constexpr unsigned SCALAR_FF_NBITS = SCALAR_FF::NBITS;
   static constexpr unsigned FF_NBITS = FF::NBITS;
 
