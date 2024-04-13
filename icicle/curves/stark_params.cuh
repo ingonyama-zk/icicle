@@ -5,7 +5,6 @@
 #include "utils/storage.cuh"
 
 namespace stark252 {
-  // Scalar Field Config
   // modulus = 3618502788666131213697322783095070105526743751716087489154079457884512865583
   struct fp_config {
     static constexpr unsigned limbs_count = 8;
@@ -38,7 +37,6 @@ namespace stark252 {
        }};
   };
 
-// BaseField Config
 // modulus = 3618502788666131213697322783095070105623107215331596699973092056135872020481 (2^251+17*2^192+1)
   struct fq_config {
     static constexpr unsigned limbs_count = 8;
