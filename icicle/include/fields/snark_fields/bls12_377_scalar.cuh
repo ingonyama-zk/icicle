@@ -3,6 +3,7 @@
 #define BLS12_377_SCALAR_PARAMS_H
 
 #include "fields/storage.cuh"
+#include "fields/field.cuh"
 
 namespace bls12_377 {
   struct fp_config {
@@ -190,6 +191,18 @@ namespace bls12_377 {
        {0xfffbd7bb, 0x2e163fff, 0x0ffa9957, 0x25310620, 0xc6de2d30, 0xcb39e46b, 0x9a2c5aa8, 0x12ab655e},
        {0xfffdebde, 0x1c13dfff, 0x6ffd4cac, 0xbf6dbe8f, 0x118aee98, 0x95f718c5, 0x9a2c7fff, 0x12ab655e}}};
   };
+
+  /**
+   * Scalar field. Is always a prime field.
+   */
+  typedef Field<fp_config> scalar_t;
+
+#ifdef EXT_FIELD
+  /**
+   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef ExtensionField<fp_config> extension_t;
+#endif
 } // namespace bls12_377
 
 #endif

@@ -3,6 +3,10 @@
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
 
+#ifdef EXT_FIELD
+#include "fields/quartic_extension.cuh"
+#endif
+
 namespace baby_bear {
   struct fp_config {
     static constexpr unsigned limbs_count = 1;
@@ -49,4 +53,16 @@ namespace baby_bear {
     // TODO: we're very confused by plonky3 and risc0 having different nonresidues: 11 and -11 respectively
     static constexpr bool nonresidue_is_negative = true;
   };
+
+  /**
+   * Scalar field. Is always a prime field.
+   */
+  typedef Field<fp_config> scalar_t;
+
+#ifdef EXT_FIELD
+  /**
+   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef ExtensionField<fp_config> extension_t;
+#endif
 } // namespace baby_bear

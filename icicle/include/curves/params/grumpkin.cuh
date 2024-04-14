@@ -3,7 +3,15 @@
 #define GRUMPKIN_PARAMS_H
 
 #include "fields/storage.cuh"
-#include "fields/snark_fields/bn254_scalar.cuh"
+
+#include "curves/macro.h"
+#include "curves/projective.cuh"
+#include "fields/snark_fields/grumpkin_base.cuh"
+#include "fields/snark_fields/grumpkin_scalar.cuh"
+
+#ifdef G2
+#include "fields/quadratic_extension.cuh"
+#endif
 
 namespace grumpkin {
   typedef bn254::fp_config fq_config;
@@ -15,6 +23,8 @@ namespace grumpkin {
 
   static constexpr storage<fq_config::limbs_count> weierstrass_b = {0xeffffff0, 0x43e1f593, 0x79b97091, 0x2833e848,
                                                                     0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
+
+  CURVE_DEFINITIONS
 } // namespace grumpkin
 
 #endif

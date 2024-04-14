@@ -3,6 +3,7 @@
 #define BN254_SCALAR_PARAMS_H
 
 #include "fields/storage.cuh"
+#include "fields/field.cuh"
 
 namespace bn254 {
   struct fp_config {
@@ -133,6 +134,18 @@ namespace bn254 {
        {0x73c14d83, 0x0cb3e36b, 0x733c6782, 0xf808dca3, 0x7778a18c, 0x921c407f, 0xd4a7d1cd, 0x30644e6c},
        {0xb1e0a6c2, 0xa84aec7f, 0xf67aec09, 0x101e6275, 0xfc7cfcf5, 0xa536431a, 0xdaecb8fb, 0x30644e6f}}};
   };
+
+  /**
+   * Scalar field. Is always a prime field.
+   */
+  typedef Field<fp_config> scalar_t;
+
+#ifdef EXT_FIELD
+  /**
+   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef ExtensionField<fp_config> extension_t;
+#endif
 } // namespace bn254
 
 #endif

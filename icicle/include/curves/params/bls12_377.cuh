@@ -3,7 +3,15 @@
 #define BLS12_377_PARAMS_H
 
 #include "fields/storage.cuh"
+
+#include "curves/macro.h"
+#include "curves/projective.cuh"
 #include "fields/snark_fields/bls12_377_base.cuh"
+#include "fields/snark_fields/bls12_377_scalar.cuh"
+
+#ifdef G2
+#include "fields/quadratic_extension.cuh"
+#endif
 
 namespace bls12_377 {
   // G1 and G2 generators
@@ -35,6 +43,11 @@ namespace bls12_377 {
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {
     0x9999999a, 0x1c9ed999, 0x1ccccccd, 0x0dd39e5c, 0x3c6bf800, 0x129207b6,
     0xcd5fd889, 0xdc7b4f91, 0x7460c589, 0x43bd0373, 0xdb0fd6f3, 0x010222f6};
+
+  CURVE_DEFINITIONS
+#ifdef G2
+  G2_CURVE_DEFINITIONS
+#endif
 } // namespace bls12_377
 
 #endif

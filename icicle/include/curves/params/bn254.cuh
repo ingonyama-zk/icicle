@@ -3,7 +3,15 @@
 #define BN254_PARAMS_H
 
 #include "fields/storage.cuh"
+
+#include "curves/macro.h"
+#include "curves/projective.cuh"
 #include "fields/snark_fields/bn254_base.cuh"
+#include "fields/snark_fields/bn254_scalar.cuh"
+
+#ifdef G2
+#include "fields/quadratic_extension.cuh"
+#endif
 
 namespace bn254 {
   // G1 and G2 generators
@@ -26,6 +34,11 @@ namespace bn254 {
     0x24a138e5, 0x3267e6dc, 0x59dbefa3, 0xb5b4c5e5, 0x1be06ac3, 0x81be1899, 0xceb8aaae, 0x2b149d40};
   static constexpr storage<fq_config::limbs_count> weierstrass_b_g2_im = {
     0x85c315d2, 0xe4a2bd06, 0xe52d1852, 0xa74fa084, 0xeed8fdf4, 0xcd2cafad, 0x3af0fed4, 0x009713b0};
+
+  CURVE_DEFINITIONS
+#ifdef G2
+  G2_CURVE_DEFINITIONS
+#endif
 } // namespace bn254
 
 #endif
