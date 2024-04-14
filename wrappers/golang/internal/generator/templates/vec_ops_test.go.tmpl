@@ -39,7 +39,7 @@ func TestTranspose(t *testing.T) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 	onDevice := false
-	isAsync := true
+	isAsync := false
 
 	matrix := GenerateScalars(rowSize * columnSize)
 
