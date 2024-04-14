@@ -44,12 +44,35 @@ func toPackage(s string) string {
 	return strings.ReplaceAll(s, "-", "")
 }
 
+func toCName(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToLower(s) + "_"
+}
+
+func toConst(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToUpper(s) + "_"
+}
+func capitalize(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
 var templateFuncs = template.FuncMap{
-	"log":       fmt.Println,
-	"toLower":   strings.ToLower,
-	"toUpper":   strings.ToUpper,
-	"toPackage": toPackage,
-} 
+	"log":        fmt.Println,
+	"toLower":    strings.ToLower,
+	"toUpper":    strings.ToUpper,
+	"toPackage":  toPackage,
+	"toCName":    toCName,
+	"toConst":    toConst,
+	"capitalize": capitalize,
+}
 
 func generateFiles() {
 	parseTemplateFile := func(tmplPath string) Entry {
@@ -63,25 +86,25 @@ func generateFiles() {
 		if !ok {
 			panic(".tmpl suffix not found")
 		}
-		
+
 		return Entry{outputName: fileName, parsedTemplate: tmplParsed}
 	}
 
 	fmt.Println("Generating files")
-	
-	// generate fields
+
+	// Field template
 	fieldTemplates := []string{
 		"field.go.tmpl",
 		"field_test.go.tmpl",
 	}
 
+	// Templates specific to field operations that are always supported
 	fieldOperationsTemplates := []string{
-		"ntt.go.tmpl",
-		"ntt_test.go.tmpl",
 		"vec_ops_test.go.tmpl",
 		"vec_ops.go.tmpl",
 	}
 
+	// Other templates for fields
 	fieldGeneralTemplates := []string{
 		"helpers_test.go.tmpl",
 		"main.go.tmpl",
@@ -89,68 +112,39 @@ func generateFiles() {
 
 	for _, field := range config.Fields {
 		fieldsDir := filepath.Join(baseDir, "fields", field.PackageName)
+		templates := append(fieldTemplates, append(fieldOperationsTemplates, fieldGeneralTemplates...)...)
 
-		for _, fieldTemplate := range fieldTemplates {
+		if field.SupportsNTT {
+			templates = append(templates, "ntt.go.tmpl", "ntt_test.go.tmpl")
+		}
+
+		for _, fieldTemplate := range templates {
 			entry := parseTemplateFile("fields/" + fieldTemplate)
-			fileName := entry.outputName
-			outFile := filepath.Join(fieldsDir, fileName)
-
-			var buf bytes.Buffer
-			data := struct {
-				FieldData config.FieldData
-				FieldPrefix string
-				IsScalar bool
-				NUM_LIMBS int
-			}{
-				field,
-				"",
-				true,
-				field.LimbsNum,
-			}
-			entry.parsedTemplate.Execute(&buf, data)
-			create(outFile, &buf)
-		}
-
-		for _, fieldOperation := range fieldOperationsTemplates {
-			entry := parseTemplateFile("fields/" + fieldOperation)
-			fileName := entry.outputName
-			outFile := filepath.Join(fieldsDir, fileName)
-
-			var buf bytes.Buffer
-			data := struct {
-				FieldData config.FieldData
-				FieldPrefix string
-			}{
-				field,
-				"",
-			}
-			entry.parsedTemplate.Execute(&buf, data)
-			create(outFile, &buf)
-		}
-		
-		for _, fieldGeneral := range fieldGeneralTemplates {
-			entry := parseTemplateFile("fields/" + fieldGeneral)
 			fileName := strings.Replace(entry.outputName, "main", field.Field, 1)
 			outFile := filepath.Join(fieldsDir, fileName)
 
 			var buf bytes.Buffer
 			data := struct {
-				FieldData config.FieldData
+				PackageName string
+				Field       string
+				GnarkImport string
+				FieldPrefix string
+				IsScalar    bool
+				NUM_LIMBS   int
 			}{
-				field,
+				field.PackageName,
+				field.Field,
+				field.GnarkImport,
+				"",
+				false,
+				field.LimbsNum,
 			}
-			if strings.Contains(fileName, "ecntt") {
-				outFile = filepath.Join(outFile, "ecntt")
-			}
-			if data.IsG2 {
-				outFile = filepath.Join(outFile, "g2")
-			}
-			outFile = filepath.Join(outFile, fileName)
 			entry.parsedTemplate.Execute(&buf, data)
 			create(outFile, &buf)
 		}
 	}
 
+	// Templates specific to curve and g2 operations
 	curveTemplateFiles := []string{
 		"msm.go.tmpl",
 		"msm_test.go.tmpl",
@@ -158,6 +152,7 @@ func generateFiles() {
 		"curve.go.tmpl",
 	}
 
+	// Other templates for curves
 	curveGeneralTemplates := []string{
 		"helpers_test.go.tmpl",
 		"main.go.tmpl",
@@ -166,149 +161,158 @@ func generateFiles() {
 	for _, curve := range config.Curves {
 		curvesDir := filepath.Join(baseDir, "curves", curve.PackageName)
 
-		for _, curveTemplate := range curveTemplateFiles {
+		for _, curveTemplate := range append(curveTemplateFiles, curveGeneralTemplates...) {
 			entry := parseTemplateFile("curves/" + curveTemplate)
-			fileName := entry.outputName
-			
-			for _, isG2 := range []bool{false, true} {
-				fileNamePrefix := ""
-				if isG2 { 
-					fileNamePrefix = "g2/g2_"
-				}
-				outFile := filepath.Join(curvesDir, fileNamePrefix + fileName)
+			fileName := strings.Replace(entry.outputName, "main", curve.Curve, 1)
+
+			outFile := filepath.Join(curvesDir, fileName)
+			var buf bytes.Buffer
+			data := struct {
+				PackageName string
+				Curve       string
+				GnarkImport string
+				CurvePrefix string
+			}{
+				curve.PackageName,
+				curve.Curve,
+				curve.GnarkImport,
+				"",
+			}
+			entry.parsedTemplate.Execute(&buf, data)
+			create(outFile, &buf)
+		}
+
+		// G2 Field
+		if curve.SupportsG2 {
+			fieldPrefix := "G2"
+			for _, curveTemplate := range curveTemplateFiles {
+				entry := parseTemplateFile("curves/" + curveTemplate)
+				fileName := entry.outputName
+				outFile := filepath.Join(curvesDir, "g2/g2_"+fileName)
 				var buf bytes.Buffer
 				data := struct {
-					CurveData config.CurveData
-					IsG2 bool
-					IsMock bool
+					PackageName string
+					CurvePrefix string
 				}{
-					curve,
-					isG2,
+					curve.PackageName,
+					fieldPrefix,
+				}
+				entry.parsedTemplate.Execute(&buf, data)
+				create(outFile, &buf)
+			}
+			for _, curveTemplate := range fieldTemplates {
+				entry := parseTemplateFile("fields/" + curveTemplate)
+				fileName := entry.outputName
+				outFile := filepath.Join(curvesDir, "g2/g2_"+fileName)
+				var buf bytes.Buffer
+				data := struct {
+					PackageName string
+					Field       string
+					GnarkImport string
+					FieldPrefix string
+					IsScalar    bool
+					NUM_LIMBS   int
+				}{
+					"g2",
+					curve.Curve,
+					curve.GnarkImport,
+					fieldPrefix,
 					false,
+					curve.G2FieldNumLimbs,
 				}
 				entry.parsedTemplate.Execute(&buf, data)
 				create(outFile, &buf)
 			}
 		}
 
-		for _, curveGeneral := range curveGeneralTemplates {
-			entry := parseTemplateFile("curves/" + curveGeneral)
-			fileName := strings.Replace(entry.outputName, "main", curve.Curve, 1)
+		if curve.SupportsECNTT {
+			for _, curveTemplate := range []string{"ecntt.go.tmpl", "ecntt_test.go.tmpl"} {
+				entry := parseTemplateFile("curves/" + curveTemplate)
+				fileName := entry.outputName
+				outFile := filepath.Join(curvesDir, "ecntt/ecntt_"+fileName)
+				var buf bytes.Buffer
+				data := struct {
+					Curve string
+				}{
+					curve.Curve,
+				}
+				entry.parsedTemplate.Execute(&buf, data)
+				create(outFile, &buf)
+			}
+		}
+
+		if curve.SupportsPoseidon {
+
+		}
+
+		// Field operations for curve
+		fieldGeneralTemplates := fieldOperationsTemplates
+		if curve.SupportsNTT {
+			fieldGeneralTemplates = append(fieldGeneralTemplates, "ntt.go.tmpl", "ntt_test.go.tmpl")
+		}
+
+		for _, fieldTemplate := range fieldGeneralTemplates {
+			entry := parseTemplateFile("fields/" + fieldTemplate)
+			fileName := entry.outputName
 			outFile := filepath.Join(curvesDir, fileName)
 
 			var buf bytes.Buffer
 			data := struct {
-				CurveData config.CurveData
+				PackageName string
+				Field       string
+				GnarkImport string
 				FieldPrefix string
 			}{
-				curve,
-				"",
+				curve.PackageName,
+				curve.Curve,
+				curve.GnarkImport,
+				"Scalar",
 			}
 			entry.parsedTemplate.Execute(&buf, data)
 			create(outFile, &buf)
 		}
+
+		// Scalar + Base Fields for curve
+		for _, isScalar := range []bool{false, true} {
+			for _, fieldTemplate := range fieldTemplates {
+				entry := parseTemplateFile("fields/" + fieldTemplate)
+				fileName := entry.outputName
+				fieldPrefix := "base"
+				numLimbs := curve.BaseFieldNumLimbs
+				if isScalar {
+					fieldPrefix = "scalar"
+					numLimbs = curve.ScalarFieldNumLimbs
+				}
+				outFile := filepath.Join(curvesDir, fieldPrefix+"_"+fileName)
+
+				var buf bytes.Buffer
+				data := struct {
+					PackageName string
+					Field       string
+					GnarkImport string
+					FieldPrefix string
+					IsScalar    bool
+					NUM_LIMBS   int
+				}{
+					curve.PackageName,
+					curve.Curve,
+					curve.GnarkImport,
+					capitalize(fieldPrefix),
+					isScalar,
+					numLimbs,
+				}
+				entry.parsedTemplate.Execute(&buf, data)
+				create(outFile, &buf)
+			}
+		}
 	}
-	// 	for _, entry := range curveEntries {
-	// 		fileName := strings.Replace(entry.outputName, "main", curve.Curve, 1)
-	// 		curveDir := filepath.Join(baseDir, "curves", curve.PackageName)
-	// 		if (strings.Contains(fileName, "msm") || strings.Contains(fileName, "curve")) && curve.G2LimbsNum > 0 {
-				
-	// 		}
-	// 		outFile := filepath.Join(curveDir, fileName)
-			
-	// 		var buf bytes.Buffer
-	// 		data := struct {
-	// 			config.CurveData
-	// 			IsScalar bool
-	// 			IsG2     bool
-	// 			IsMock   bool
-	// 		}{
-	// 			curve,
-	// 			strings.Contains(fileName, "scalar_field"),
-	// 			strings.Contains(fileName, "g2"),
-	// 			false,
-	// 		}
-	// 		entry.parsedTemplate.Execute(&buf, data)
-	// 		create(outFile, &buf)
-	// 	}
-	// }
 
+	// TODO: add helpers_test.go to each package including ecntt and g2
+	// TODO: header files
+	// TODO: mock field and curves
+	// TODO: Babybear
+	// TODO: update templates for correct code including transpose and removal of generics
 
-
-
-	// ---------
-
-
-
-
-
-	// templateFiles := []string{
-	// 	"main.go.tmpl",
-	// 	"msm.go.tmpl",
-	// 	"msm_test.go.tmpl",
-	// 	"ntt.go.tmpl",
-	// 	"ntt_test.go.tmpl",
-	// 	"curve_test.go.tmpl",
-	// 	"curve.go.tmpl",
-	// 	"vec_ops_test.go.tmpl",
-	// 	"vec_ops.go.tmpl",
-	// 	"helpers_test.go.tmpl",
-	// }
-
-	// for _, tmplName := range templateFiles {
-	// 	tmpl := template.New(tmplName).Funcs(funcs)
-	// 	tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	fileName, ok := strings.CutSuffix(tmplName, ".tmpl")
-	// 	if !ok {
-	// 		panic(err)
-	// 	}
-	// 	entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
-	// }
-
-	// templateG2Files := []string{
-	// 	"msm.go.tmpl",
-	// 	"msm_test.go.tmpl",
-	// 	"curve_test.go.tmpl",
-	// 	"curve.go.tmpl",
-	// }
-
-	// for _, tmplName := range templateG2Files {
-	// 	tmpl := template.New(tmplName).Funcs(funcs)
-	// 	tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	rawFileName, _ := strings.CutSuffix(tmplName, ".tmpl")
-	// 	fileName := fmt.Sprintf("g2_%s", rawFileName)
-	// 	entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
-	// }
-
-	// templateFieldFiles := []string{
-	// 	"field.go.tmpl",
-	// 	"field_test.go.tmpl",
-	// }
-
-	// fieldFilePrefixes := []string{
-	// 	"base",
-	// 	"g2_base",
-	// 	"scalar",
-	// }
-
-	// for _, tmplName := range templateFieldFiles {
-	// 	tmpl := template.New(tmplName).Funcs(funcs)
-	// 	tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName), "templates/scalar_field.go.tmpl", "templates/scalar_field_test.go.tmpl")
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	fieldFile, _ := strings.CutSuffix(tmplName, ".tmpl")
-	// 	for _, fieldPrefix := range fieldFilePrefixes {
-	// 		fileName := strings.Join([]string{fieldPrefix, fieldFile}, "_")
-	// 		entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
-	// 	}
-	// }
 
 	// // Header files
 	// templateIncludeFiles := []string{

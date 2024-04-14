@@ -1,4 +1,4 @@
-package {{.FieldData.PackageName}}
+package {{.PackageName}}
 {{if .IsScalar -}}
 // #cgo CFLAGS: -I./include/
 // #include "scalar_field.h"
@@ -15,19 +15,19 @@ import (
 )
 
 const (
-	{{toUpper .FieldPrefix}}LIMBS int8 = {{.NUM_LIMBS}}
+	{{toConst .FieldPrefix}}LIMBS int8 = {{.NUM_LIMBS}}
 )
 
 type {{.FieldPrefix}}Field struct {
-	limbs [{{toUpper .FieldPrefix}}LIMBS]uint32
+	limbs [{{toConst .FieldPrefix}}LIMBS]uint32
 }
 
 func (f {{.FieldPrefix}}Field) Len() int {
-	return int({{toUpper .FieldPrefix}}LIMBS)
+	return int({{toConst .FieldPrefix}}LIMBS)
 }
 
 func (f {{.FieldPrefix}}Field) Size() int {
-	return int({{toUpper .FieldPrefix}}LIMBS * 4)
+	return int({{toConst .FieldPrefix}}LIMBS * 4)
 }
 
 func (f {{.FieldPrefix}}Field) GetLimbs() []uint32 {
@@ -92,7 +92,7 @@ func GenerateScalars(size int) core.HostSlice[{{.FieldPrefix}}Field] {
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)
-	C.{{.FieldData.Field}}GenerateScalars(cScalars, cSize)
+	C.{{.Field}}GenerateScalars(cScalars, cSize)
 
 	return scalarSlice
 }
@@ -103,7 +103,7 @@ func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaErr
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.{{.FieldData.Field}}ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.{{.Field}}ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }

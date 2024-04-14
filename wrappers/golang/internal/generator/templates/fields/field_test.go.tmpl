@@ -1,4 +1,4 @@
-package {{.FieldData.PackageName}}
+package {{.PackageName}}
 
 import (
   {{- if .IsScalar}}
@@ -9,7 +9,7 @@ import (
 
 func Test{{.FieldPrefix}}FieldFromLimbs(t *testing.T) {
 	emptyField := {{.FieldPrefix}}Field{}
-	randLimbs := generateRandomLimb(int({{toUpper .FieldPrefix}}LIMBS))
+	randLimbs := generateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the {{.FieldPrefix}}Field's limbs")
 	randLimbs[0] = 100
@@ -18,7 +18,7 @@ func Test{{.FieldPrefix}}FieldFromLimbs(t *testing.T) {
 
 func Test{{.FieldPrefix}}FieldGetLimbs(t *testing.T) {
 	emptyField := {{.FieldPrefix}}Field{}
-	randLimbs := generateRandomLimb(int({{toUpper .FieldPrefix}}LIMBS))
+	randLimbs := generateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the {{.FieldPrefix}}Field's limbs")
@@ -27,10 +27,10 @@ func Test{{.FieldPrefix}}FieldGetLimbs(t *testing.T) {
 func Test{{.FieldPrefix}}FieldOne(t *testing.T) {
 	var emptyField {{.FieldPrefix}}Field
 	emptyField.One()
-	limbOne := generateLimbOne(int({{toUpper .FieldPrefix}}LIMBS))
+	limbOne := generateLimbOne(int({{toConst .FieldPrefix}}LIMBS))
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
 
-	randLimbs := generateRandomLimb(int({{toUpper .FieldPrefix}}LIMBS))
+	randLimbs := generateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
@@ -40,10 +40,10 @@ func Test{{.FieldPrefix}}FieldOne(t *testing.T) {
 func Test{{.FieldPrefix}}FieldZero(t *testing.T) {
 	var emptyField {{.FieldPrefix}}Field
 	emptyField.Zero()
-	limbsZero := make([]uint32, {{toUpper .FieldPrefix}}LIMBS)
+	limbsZero := make([]uint32, {{toConst .FieldPrefix}}LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
-	randLimbs := generateRandomLimb(int({{toUpper .FieldPrefix}}LIMBS))
+	randLimbs := generateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
@@ -52,7 +52,7 @@ func Test{{.FieldPrefix}}FieldZero(t *testing.T) {
 
 func Test{{.FieldPrefix}}FieldSize(t *testing.T) {
 	var emptyField {{.FieldPrefix}}Field
-	randLimbs := generateRandomLimb(int({{toUpper .FieldPrefix}}LIMBS))
+	randLimbs := generateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
@@ -60,7 +60,7 @@ func Test{{.FieldPrefix}}FieldSize(t *testing.T) {
 
 func Test{{.FieldPrefix}}FieldAsPointer(t *testing.T) {
 	var emptyField {{.FieldPrefix}}Field
-	randLimbs := generateRandomLimb(int({{toUpper .FieldPrefix}}LIMBS))
+	randLimbs := generateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
@@ -68,7 +68,7 @@ func Test{{.FieldPrefix}}FieldAsPointer(t *testing.T) {
 
 func Test{{.FieldPrefix}}FieldFromBytes(t *testing.T) {
 	var emptyField {{.FieldPrefix}}Field
-	bytes, expected := generateBytesArray(int({{toUpper .FieldPrefix}}LIMBS))
+	bytes, expected := generateBytesArray(int({{toConst .FieldPrefix}}LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
 
@@ -77,7 +77,7 @@ func Test{{.FieldPrefix}}FieldFromBytes(t *testing.T) {
 
 func Test{{.FieldPrefix}}FieldToBytes(t *testing.T) {
 	var emptyField {{.FieldPrefix}}Field
-	expected, limbs := generateBytesArray(int({{toUpper .FieldPrefix}}LIMBS))
+	expected, limbs := generateBytesArray(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(limbs)
 
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")

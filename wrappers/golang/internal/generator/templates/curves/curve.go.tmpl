@@ -1,4 +1,4 @@
-package {{.CurveData.PackageName}}
+package {{.PackageName}}
 {{if not .IsMock}}
 // #cgo CFLAGS: -I./include/
 // #include "{{if .IsG2 -}}g2_{{end}}curve.h"
@@ -11,19 +11,19 @@ import (
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 {{end}}
-type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective struct {
-	X, Y, Z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+type {{.CurvePrefix}}Projective struct {
+	X, Y, Z {{.CurvePrefix}}BaseField
 }
 
-func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Size() int {
+func (p {{.CurvePrefix}}Projective) Size() int {
 	return p.X.Size() * 3
 }
 
-func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) AsPointer() *uint32 {
+func (p {{.CurvePrefix}}Projective) AsPointer() *uint32 {
 	return p.X.AsPointer()
 }
 
-func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Zero() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+func (p *{{.CurvePrefix}}Projective) Zero() {{.CurvePrefix}}Projective {
 	p.X.Zero()
 	p.Y.One()
 	p.Z.Zero()
@@ -31,7 +31,7 @@ func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Zero(
 	return *p
 }
 
-func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromLimbs(x, y, z []uint32) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+func (p *{{.CurvePrefix}}Projective) FromLimbs(x, y, z []uint32) {{.CurvePrefix}}Projective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
 	p.Z.FromLimbs(z)
@@ -39,8 +39,8 @@ func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromL
 	return *p
 }
 
-func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromAffine(a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
-	z := {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
+func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.CurvePrefix}}Projective {
+	z := {{.CurvePrefix}}BaseField{}
 	z.One()
 
 	p.X = a.X
@@ -50,129 +50,129 @@ func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromA
 	return *p
 }
 {{if not .IsMock}}
-func (p {{if .IsG2}}G2{{end}}Projective) ProjectiveEq(p2 *{{if .IsG2}}G2{{end}}Projective) bool {
+func (p {{.CurvePrefix}}Projective) ProjectiveEq(p2 *{{.CurvePrefix}}Projective) bool {
 	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p))
 	cP2 := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p2))
-	__ret := C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}Eq(cP, cP2)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}Eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 
-func (p *{{if .IsG2}}G2{{end}}Projective) ProjectiveToAffine() {{if .IsG2}}G2{{end}}Affine {
-	var a {{if .IsG2}}G2{{end}}Affine
+func (p *{{.CurvePrefix}}Projective) ProjectiveToAffine() {{.CurvePrefix}}Affine {
+	var a {{.CurvePrefix}}Affine
 
 	cA := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(&a))
 	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p))
-	C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}ToAffine(cP, cA)
+	C.{{.Curve}}{{.CurvePrefix}}ToAffine(cP, cA)
 	return a
 }
 
-func {{if .IsG2}}G2{{end}}GenerateProjectivePoints(size int) core.HostSlice[{{if .IsG2}}G2{{end}}Projective] {
-	points := make([]{{if .IsG2}}G2{{end}}Projective, size)
+func {{.CurvePrefix}}GenerateProjectivePoints(size int) core.HostSlice[{{.CurvePrefix}}Projective] {
+	points := make([]{{.CurvePrefix}}Projective, size)
 	for i := range points {
-		points[i] = {{if .IsG2}}G2{{end}}Projective{}
+		points[i] = {{.CurvePrefix}}Projective{}
 	}
 
-	pointsSlice := core.HostSliceFromElements[{{if .IsG2}}G2{{end}}Projective](points)
+	pointsSlice := core.HostSliceFromElements[{{.CurvePrefix}}Projective](points)
 	pPoints := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}GenerateProjectivePoints(pPoints, cSize)
+	C.{{.Curve}}{{.CurvePrefix}}GenerateProjectivePoints(pPoints, cSize)
 
 	return pointsSlice
 }
 {{end}}
-type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine struct {
-	X, Y {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+type {{.CurvePrefix}}Affine struct {
+	X, Y {{.CurvePrefix}}BaseField
 }
 
-func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Size() int {
+func (a {{.CurvePrefix}}Affine) Size() int {
 	return a.X.Size() * 2
 }
 
-func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) AsPointer() *uint32 {
+func (a {{.CurvePrefix}}Affine) AsPointer() *uint32 {
 	return a.X.AsPointer()
 }
 
-func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Zero() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
+func (a *{{.CurvePrefix}}Affine) Zero() {{.CurvePrefix}}Affine {
 	a.X.Zero()
 	a.Y.Zero()
 
 	return *a
 }
 
-func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) FromLimbs(x, y []uint32) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
+func (a *{{.CurvePrefix}}Affine) FromLimbs(x, y []uint32) {{.CurvePrefix}}Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
 
 	return *a
 }
 
-func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) ToProjective() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
-	var z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+func (a {{.CurvePrefix}}Affine) ToProjective() {{.CurvePrefix}}Projective {
+	var z {{.CurvePrefix}}BaseField
 
-	return {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective{
+	return {{.CurvePrefix}}Projective{
 		X: a.X,
 		Y: a.Y,
 		Z: z.One(),
 	}
 }
 {{if not .IsMock}}
-func {{if .IsG2}}G2{{end}}AffineFromProjective(p *{{if .IsG2}}G2{{end}}Projective) {{if .IsG2}}G2{{end}}Affine {
+func {{.CurvePrefix}}AffineFromProjective(p *{{.CurvePrefix}}Projective) {{.CurvePrefix}}Affine {
 	return p.ProjectiveToAffine()
 }
 
-func {{if .IsG2}}G2{{end}}GenerateAffinePoints(size int) core.HostSlice[{{if .IsG2}}G2{{end}}Affine] {
-	points := make([]{{if .IsG2}}G2{{end}}Affine, size)
+func {{.CurvePrefix}}GenerateAffinePoints(size int) core.HostSlice[{{.CurvePrefix}}Affine] {
+	points := make([]{{.CurvePrefix}}Affine, size)
 	for i := range points {
-		points[i] = {{if .IsG2}}G2{{end}}Affine{}
+		points[i] = {{.CurvePrefix}}Affine{}
 	}
 
-	pointsSlice := core.HostSliceFromElements[{{if .IsG2}}G2{{end}}Affine](points)
+	pointsSlice := core.HostSliceFromElements[{{.CurvePrefix}}Affine](points)
 	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}GenerateAffinePoints(cPoints, cSize)
+	C.{{.Curve}}{{.CurvePrefix}}GenerateAffinePoints(cPoints, cSize)
 
 	return pointsSlice
 }
 
-func convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+func convert{{.CurvePrefix}}AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
 	cValues := (*C.{{if .IsG2}}g2_{{end}}affine_t)(points.AsPointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
 
-func {{if .IsG2}}G2{{end}}AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
+func {{.CurvePrefix}}AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points, true)
+	return convert{{.CurvePrefix}}AffinePointsMontgomery(points, true)
 }
 
-func {{if .IsG2}}G2{{end}}AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+func {{.CurvePrefix}}AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points, false)
+	return convert{{.CurvePrefix}}AffinePointsMontgomery(points, false)
 }
 
-func convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+func convert{{.CurvePrefix}}ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
 	cValues := (*C.{{if .IsG2}}g2_{{end}}projective_t)(points.AsPointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
 
-func {{if .IsG2}}G2{{end}}ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
+func {{.CurvePrefix}}ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points, true)
+	return convert{{.CurvePrefix}}ProjectivePointsMontgomery(points, true)
 }
 
-func {{if .IsG2}}G2{{end}}ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+func {{.CurvePrefix}}ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points, false)
+	return convert{{.CurvePrefix}}ProjectivePointsMontgomery(points, false)
 }
 {{end}}

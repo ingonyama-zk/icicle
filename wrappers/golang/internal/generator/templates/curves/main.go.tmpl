@@ -1,10 +1,5 @@
-package {{.CurveData.PackageName}}
+package {{.PackageName}}
 
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/src/curves -lingo_curve_{{.CurveData.Curve}} -lstdc++ -lm
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/src/curves -lingo_curve_{{.Curve}} -lstdc++ -lm
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/src/fields -lingo_field_{{.Curve}}
 import "C"
-import (
-	{{.CurveData.Curve}}Fields "github.com/ingonyama-zk/icicle/wrappers/golang/temp_golang_structure/fields/{{.CurveData.Curve}}"
-)
-
-type ScalarField = {{.CurveData.Curve}}Fields.ScalarField
-type BaseField = {{.CurveData.Curve}}Fields.BaseField

@@ -1,4 +1,4 @@
-package {{.FieldData.PackageName}}
+package {{.PackageName}}
 
 import (
 	"os"
@@ -8,8 +8,8 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
-	"github.com/consensys/gnark-crypto/ecc/{{.FieldData.GnarkImport}}/fr"
-	"github.com/consensys/gnark-crypto/ecc/{{.FieldData.GnarkImport}}/fr/fft"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +71,7 @@ func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[ScalarField], ou
 
 func TestNTTGetDefaultConfig(t *testing.T) {
 	actual := GetDefaultNttConfig()
-	expected := generateLimbOne(int(SCALAR_LIMBS))
+	expected := generateLimbOne(int({{.toConst .FieldPrefix}}LIMBS))
 	assert.Equal(t, expected, actual.CosetGen[:])
 
 	cosetGenField := ScalarField{}

@@ -4,11 +4,11 @@ type FieldData struct {
 	PackageName string
 	Field string
 	LimbsNum int
+	GnarkImport string
 	SupportsExtension bool
 	ExtensionLimbsNum int
 	SupportsNTT bool
 	SupportsPoseidon bool
-	GnarkImport string
 }
 
 type HashData struct {
@@ -16,14 +16,18 @@ type HashData struct {
 	Hash string
 }
 
+// Maybe just put limbs in CurveData and no need for individual Field objects
 type CurveData struct {
 	PackageName    string
 	Curve          string
 	GnarkImport    string
+	SupportsPoseidon bool
+	SupportsNTT bool
 	SupportsECNTT bool
-	ScalarFieldData FieldData
-	BaseFieldData FieldData
-	G2LimbsNum int
+	SupportsG2 bool
+	ScalarFieldNumLimbs int
+	BaseFieldNumLimbs int
+	G2FieldNumLimbs int
 }
 
 var Curves []CurveData

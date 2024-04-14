@@ -1,4 +1,4 @@
-package {{.FieldData.PackageName}}
+package {{.PackageName}}
 
 import (
 	"testing"
@@ -12,13 +12,13 @@ func TestVecOps(t *testing.T) {
 
 	a := GenerateScalars(testSize)
 	b := GenerateScalars(testSize)
-	var scalar ScalarField
+	var scalar {{.FieldPrefix}}Field
 	scalar.One()
 	ones := core.HostSliceWithValue(scalar, testSize)
 
-	out := make(core.HostSlice[ScalarField], testSize)
-	out2 := make(core.HostSlice[ScalarField], testSize)
-	out3 := make(core.HostSlice[ScalarField], testSize)
+	out := make(core.HostSlice[{{.FieldPrefix}}Field], testSize)
+	out2 := make(core.HostSlice[{{.FieldPrefix}}Field], testSize)
+	out3 := make(core.HostSlice[{{.FieldPrefix}}Field], testSize)
 
 	cfg := core.DefaultVecOpsConfig()
 

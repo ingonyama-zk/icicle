@@ -1,7 +1,7 @@
-package {{.CurveData.PackageName}}
+package {{.PackageName}}
 
 // #cgo CFLAGS: -I./include/
-// #include "{{if .IsG2 -}}g2_{{end}}msm.h"
+// #include "{{toCName .CurvePrefix}}msm.h"
 import "C"
 
 import (
@@ -10,11 +10,11 @@ import (
 	"unsafe"
 )
 
-func {{if .IsG2}}G2{{end}}GetDefaultMSMConfig() core.MSMConfig {
+func {{.CurvePrefix}}GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
-func {{if .IsG2}}G2{{end}}Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+func {{.CurvePrefix}}Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
@@ -32,9 +32,9 @@ func {{if .IsG2}}G2{{end}}Msm(scalars core.HostOrDeviceSlice, points core.HostOr
 		pointsDevice.CheckDevice()
 		pointsPointer = pointsDevice.AsPointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[{{if .IsG2}}G2{{end}}Affine])[0])
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[{{.CurvePrefix}}Affine])[0])
 	}
-	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(pointsPointer)
+	cPoints := (*C.{{toCName .CurvePrefix}}affine_t)(pointsPointer)
 
 	var resultsPointer unsafe.Pointer
 	if results.IsOnDevice() {
@@ -42,28 +42,28 @@ func {{if .IsG2}}G2{{end}}Msm(scalars core.HostOrDeviceSlice, points core.HostOr
 		resultsDevice.CheckDevice()
 		resultsPointer = resultsDevice.AsPointer()
 	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[{{if .IsG2}}G2{{end}}Projective])[0])
+		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[{{.CurvePrefix}}Projective])[0])
 	}
-	cResults := (*C.{{if .IsG2}}g2_{{end}}projective_t)(resultsPointer)
+	cResults := (*C.{{toCName .CurvePrefix}}projective_t)(resultsPointer)
 
 	cSize := (C.int)(scalars.Len() / results.Len())
 	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 
-	__ret := C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return err
 }
 
-func {{if .IsG2}}G2{{end}}PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
+func {{.CurvePrefix}}PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
 	core.PrecomputeBasesCheck(points, precomputeFactor, outputBases)
 
 	var pointsPointer unsafe.Pointer
 	if points.IsOnDevice() {
 		pointsPointer = points.(core.DeviceSlice).AsPointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[{{if .IsG2}}G2{{end}}Affine])[0])
+		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[{{.CurvePrefix}}Affine])[0])
 	}
-	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(pointsPointer)
+	cPoints := (*C.{{toCName .CurvePrefix}}affine_t)(pointsPointer)
 
 	cPointsLen := (C.int)(points.Len())
 	cPrecomputeFactor := (C.int)(precomputeFactor)
@@ -72,9 +72,9 @@ func {{if .IsG2}}G2{{end}}PrecomputeBases(points core.HostOrDeviceSlice, precomp
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
 
 	outputBasesPointer := outputBases.AsPointer()
-	cOutputBases := (*C.{{if .IsG2}}g2_{{end}}affine_t)(outputBasesPointer)
+	cOutputBases := (*C.{{toCName .CurvePrefix}}affine_t)(outputBasesPointer)
 
-	__ret := C.{{.CurveData.Curve}}{{if .IsG2}}G2{{end}}PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
 	err := (cr.CudaError)(__ret)
 	return err
 }

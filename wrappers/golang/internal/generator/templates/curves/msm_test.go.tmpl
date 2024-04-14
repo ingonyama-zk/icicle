@@ -1,4 +1,4 @@
-package {{.CurveData.PackageName}}
+package {{.PackageName}}
 
 import (
 	"fmt"
@@ -11,12 +11,12 @@ import (
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/ecc/{{.CurveData.GnarkImport}}"
-	"github.com/consensys/gnark-crypto/ecc/{{.CurveData.GnarkImport}}/fp"
-	"github.com/consensys/gnark-crypto/ecc/{{.CurveData.GnarkImport}}/fr"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fp"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr"
 )
-{{$isBW6 := eq .CurveData.Curve "bw6_761"}}{{$isG1 := not .IsG2}}{{if or $isBW6 $isG1}}
-func projectiveToGnarkAffine{{if and $isBW6 .IsG2}}G2{{end}}(p {{if and $isBW6 .IsG2}}G2{{end}}Projective) {{toPackage .CurveData.GnarkImport}}.{{if and $isBW6 .IsG2}}G2{{else}}G1{{end}}Affine {
+{{$isBW6 := eq .Curve "bw6_761"}}{{$isG1 := not .IsG2}}{{if or $isBW6 $isG1}}
+func projectiveToGnarkAffine{{if and $isBW6 .IsG2}}G2{{end}}(p {{if and $isBW6 .IsG2}}G2{{end}}Projective) {{toPackage .GnarkImport}}.{{if and $isBW6 .IsG2}}G2{{else}}G1{{end}}Affine {
 	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
 	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
 	pz, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Z).ToBytesLittleEndian()))
@@ -30,15 +30,15 @@ func projectiveToGnarkAffine{{if and $isBW6 .IsG2}}G2{{end}}(p {{if and $isBW6 .
 	x.Mul(&px, zInv)
 	y.Mul(&py, zInv)
 
-	return {{toPackage .CurveData.GnarkImport}}.{{if and $isBW6 .IsG2}}G2{{else}}G1{{end}}Affine{X: *x, Y: *y}
+	return {{toPackage .GnarkImport}}.{{if and $isBW6 .IsG2}}G2{{else}}G1{{end}}Affine{X: *x, Y: *y}
 }
 {{end}}
-{{- $isNotBW6 := ne .CurveData.Curve "bw6_761"}}{{if and $isNotBW6 .IsG2 }}
-func projectiveToGnarkAffineG2(p G2Projective) {{toPackage .CurveData.GnarkImport}}.G2Affine {
+{{- $isNotBW6 := ne .Curve "bw6_761"}}{{if and $isNotBW6 .IsG2 }}
+func projectiveToGnarkAffineG2(p G2Projective) {{toPackage .GnarkImport}}.G2Affine {
 	pxBytes := p.X.ToBytesLittleEndian()
 	pxA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[:fp.Bytes]))
 	pxA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[fp.Bytes:]))
-	x := {{toPackage .CurveData.GnarkImport}}.E2{
+	x := {{toPackage .GnarkImport}}.E2{
 		A0: pxA0,
 		A1: pxA1,
 	}
@@ -46,7 +46,7 @@ func projectiveToGnarkAffineG2(p G2Projective) {{toPackage .CurveData.GnarkImpor
 	pyBytes := p.Y.ToBytesLittleEndian()
 	pyA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[:fp.Bytes]))
 	pyA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[fp.Bytes:]))
-	y := {{toPackage .CurveData.GnarkImport}}.E2{
+	y := {{toPackage .GnarkImport}}.E2{
 		A0: pyA0,
 		A1: pyA1,
 	}
@@ -54,27 +54,27 @@ func projectiveToGnarkAffineG2(p G2Projective) {{toPackage .CurveData.GnarkImpor
 	pzBytes := p.Z.ToBytesLittleEndian()
 	pzA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[:fp.Bytes]))
 	pzA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[fp.Bytes:]))
-	z := {{toPackage .CurveData.GnarkImport}}.E2{
+	z := {{toPackage .GnarkImport}}.E2{
 		A0: pzA0,
 		A1: pzA1,
 	}
 
-	var zSquared {{toPackage .CurveData.GnarkImport}}.E2
+	var zSquared {{toPackage .GnarkImport}}.E2
 	zSquared.Mul(&z, &z)
 
-	var X {{toPackage .CurveData.GnarkImport}}.E2
+	var X {{toPackage .GnarkImport}}.E2
 	X.Mul(&x, &z)
 
-	var Y {{toPackage .CurveData.GnarkImport}}.E2
+	var Y {{toPackage .GnarkImport}}.E2
 	Y.Mul(&y, &zSquared)
 
-	g2Jac := {{toPackage .CurveData.GnarkImport}}.G2Jac{
+	g2Jac := {{toPackage .GnarkImport}}.G2Jac{
 		X: X,
 		Y: Y,
 		Z: z,
 	}
 
-	var g2Affine {{toPackage .CurveData.GnarkImport}}.G2Affine
+	var g2Affine {{toPackage .GnarkImport}}.G2Affine
 	return *g2Affine.FromJacobian(&g2Jac)
 }
 {{end}}
@@ -85,14 +85,14 @@ func testAgainstGnarkCryptoMsm{{if .IsG2}}G2{{end}}(scalars core.HostSlice[Scala
 		scalarsFr[i] = slice64
 	}
 
-	pointsFp := make([]{{toPackage .CurveData.GnarkImport}}.{{if .IsG2}}G2{{else}}G1{{end}}Affine, len(points))
+	pointsFp := make([]{{toPackage .GnarkImport}}.{{if .IsG2}}G2{{else}}G1{{end}}Affine, len(points))
 	for i, v := range points {
 		pointsFp[i] = projectiveToGnarkAffine{{if .IsG2}}G2{{end}}(v.ToProjective())
 	}
-	var msmRes {{toPackage .CurveData.GnarkImport}}.{{if .IsG2}}G2{{else}}G1{{end}}Jac
+	var msmRes {{toPackage .GnarkImport}}.{{if .IsG2}}G2{{else}}G1{{end}}Jac
 	msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
 
-	var icicleResAsJac {{toPackage .CurveData.GnarkImport}}.{{if .IsG2}}G2{{else}}G1{{end}}Jac
+	var icicleResAsJac {{toPackage .GnarkImport}}.{{if .IsG2}}G2{{else}}G1{{end}}Jac
 	proj := projectiveToGnarkAffine{{if .IsG2}}G2{{end}}(out)
 	icicleResAsJac.FromAffine(&proj)
 
