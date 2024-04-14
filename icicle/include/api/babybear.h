@@ -14,16 +14,16 @@
 #include "vec_ops/vec_ops.cuh"
 
 extern "C" cudaError_t babybearExtensionNTTCuda(
-  const babybear::extension_t* input, int size, NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
+  const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
 
 extern "C" cudaError_t babybearMulCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
 
 extern "C" cudaError_t babybearAddCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
 
 extern "C" cudaError_t babybearSubCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
 
 extern "C" cudaError_t babybearTransposeMatrix(
   const babybear::scalar_t* input,
@@ -43,7 +43,7 @@ extern "C" cudaError_t babybearInitializeDomain(
   babybear::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
 
 extern "C" cudaError_t babybearNTTCuda(
-  const babybear::scalar_t* input, int size, NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::scalar_t* output);
+  const babybear::scalar_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::scalar_t* output);
 
 extern "C" cudaError_t babybearReleaseDomain(device_context::DeviceContext& ctx);
 

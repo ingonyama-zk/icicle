@@ -10,4 +10,4 @@ extern "C" cudaError_t ${CURVE}AffineConvertMontgomery(
   ${CURVE}::affine_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t ${CURVE}ProjectiveConvertMontgomery(
-  ${CURVE}::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
+  ${CURVE}::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);

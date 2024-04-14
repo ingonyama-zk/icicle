@@ -39,9 +39,9 @@ extern "C" cudaError_t grumpkinAffineConvertMontgomery(
   grumpkin::affine_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t grumpkinProjectiveConvertMontgomery(
-  grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
+  grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t grumpkin::PoseidonHash(
+extern "C" cudaError_t grumpkinPoseidonHash(
   grumpkin::scalar_t* input,
   grumpkin::scalar_t* output,
   int number_of_states,
@@ -49,7 +49,7 @@ extern "C" cudaError_t grumpkin::PoseidonHash(
   const poseidon::PoseidonConstants<grumpkin::scalar_t>& constants,
   poseidon::PoseidonConfig& config);
 
-extern "C" cudaError_t grumpkin::BuildPoseidonMerkleTree(
+extern "C" cudaError_t grumpkinBuildPoseidonMerkleTree(
   const grumpkin::scalar_t* leaves,
   grumpkin::scalar_t* digests,
   uint32_t height,
@@ -58,13 +58,13 @@ extern "C" cudaError_t grumpkin::BuildPoseidonMerkleTree(
   merkle::TreeBuilderConfig& config);
 
 extern "C" cudaError_t grumpkinMulCuda(
-  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, VecOpsConfig<grumpkin::scalar_t>& config, grumpkin::scalar_t* result);
+  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<grumpkin::scalar_t>& config, grumpkin::scalar_t* result);
 
 extern "C" cudaError_t grumpkinAddCuda(
-  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, VecOpsConfig<grumpkin::scalar_t>& config, grumpkin::scalar_t* result);
+  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<grumpkin::scalar_t>& config, grumpkin::scalar_t* result);
 
 extern "C" cudaError_t grumpkinSubCuda(
-  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, VecOpsConfig<grumpkin::scalar_t>& config, grumpkin::scalar_t* result);
+  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<grumpkin::scalar_t>& config, grumpkin::scalar_t* result);
 
 extern "C" cudaError_t grumpkinTransposeMatrix(
   const grumpkin::scalar_t* input,

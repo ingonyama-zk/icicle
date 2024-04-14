@@ -1,4 +1,4 @@
-extern "C" cudaError_t ${FIELD}::PoseidonHash(
+extern "C" cudaError_t ${FIELD}PoseidonHash(
   ${FIELD}::scalar_t* input,
   ${FIELD}::scalar_t* output,
   int number_of_states,
@@ -6,7 +6,7 @@ extern "C" cudaError_t ${FIELD}::PoseidonHash(
   const poseidon::PoseidonConstants<${FIELD}::scalar_t>& constants,
   poseidon::PoseidonConfig& config);
 
-extern "C" cudaError_t ${FIELD}::BuildPoseidonMerkleTree(
+extern "C" cudaError_t ${FIELD}BuildPoseidonMerkleTree(
   const ${FIELD}::scalar_t* leaves,
   ${FIELD}::scalar_t* digests,
   uint32_t height,
