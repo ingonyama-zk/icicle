@@ -1,6 +1,7 @@
 #pragma once
 
 #include "affine.cuh"
+#include "gpu-utils/sharedmem.cuh"
 
 template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
 class Projective
@@ -222,5 +223,14 @@ public:
   {
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];
+  }
+};
+
+template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
+struct SharedMemory<Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y>> {
+  __device__ Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y>* getPointer()
+  {
+    extern __shared__ Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y> s_projective_[];
+    return s_projective_;
   }
 };

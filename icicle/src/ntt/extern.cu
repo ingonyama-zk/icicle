@@ -10,8 +10,9 @@ using namespace field_config;
 namespace ntt {
   /**
    * Extern "C" version of [InitDomain](@ref InitDomain) function with the following
-   * value of template parameter (where the curve is given by `-DFIELD` env variable during build):
-   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+   * value of template parameter (where the field is given by `-DFIELD` env variable during build):
+   *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
+   * stand-alone "STARK field";
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, InitializeDomain)(
     scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
@@ -21,8 +22,9 @@ namespace ntt {
 
   /**
    * Extern "C" version of [NTT](@ref NTT) function with the following values of template parameters
-   * (where the curve is given by `-DFIELD` env variable during build):
-   *  - `S` and `E` are both the [scalar field](@ref scalar_t) of the curve;
+   * (where the field is given by `-DFIELD` env variable during build):
+   *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
+   * stand-alone "STARK field";
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, NTTCuda)(
@@ -33,8 +35,9 @@ namespace ntt {
 
   /**
    * Extern "C" version of [ReleaseDomain](@ref ReleaseDomain) function with the following values of template parameters
-   * (where the curve is given by `-DCURVE` env variable during build):
-   *  - `S` is the [scalar field](@ref scalar_t) of the curve;
+   * (where the field is given by `-DFIELD` env variable during build):
+   *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
+   * stand-alone "STARK field";
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, ReleaseDomain)(device_context::DeviceContext& ctx)

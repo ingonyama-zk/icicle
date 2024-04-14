@@ -1032,6 +1032,25 @@ namespace mxntt {
     int coset_gen_index,
     cudaStream_t cuda_stream);
 
+#if defined(EXT_FIELD)
+  template cudaError_t mixed_radix_ntt<extension_t, scalar_t>(
+    const extension_t* d_input,
+    extension_t* d_output,
+    scalar_t* external_twiddles,
+    scalar_t* internal_twiddles,
+    scalar_t* basic_twiddles,
+    int ntt_size,
+    int max_logn,
+    int batch_size,
+    bool columns_batch,
+    bool is_inverse,
+    bool fast_tw,
+    ntt::Ordering ordering,
+    scalar_t* arbitrary_coset,
+    int coset_gen_index,
+    cudaStream_t cuda_stream);
+#endif
+
   // TODO: we may reintroduce mixed-radix ECNTT based on upcoming benching PR
   // #if defined(ECNTT)
   //   template cudaError_t mixed_radix_ntt<projective_t, scalar_t>(

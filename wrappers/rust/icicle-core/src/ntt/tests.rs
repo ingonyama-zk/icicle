@@ -9,8 +9,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use crate::error::IcicleResult;
 use crate::{
     ntt::{
-        initialize_domain, initialize_domain_fast_twiddles_mode, ntt, ntt_inplace, release_domain, NTTConfig, NTTDir,
-        NttAlgorithm, Ordering, NTT,
+        initialize_domain, ntt, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTDomain, NttAlgorithm, Ordering, NTT,
     },
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
     vec_ops::{transpose_matrix, VecOps},
@@ -19,20 +18,16 @@ use crate::{
 pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
 where
     F::ArkEquivalent: FftField,
-    <F as FieldImpl>::Config: NTT<F>,
+    <F as FieldImpl>::Config: NTTDomain<F>,
 {
     let ctx = DeviceContext::default_for_device(device_id);
     let ark_rou = F::ArkEquivalent::get_root_of_unity(max_size).unwrap();
-    if fast_twiddles_mode {
-        initialize_domain_fast_twiddles_mode(F::from_ark(ark_rou), &ctx).unwrap();
-    } else {
-        initialize_domain(F::from_ark(ark_rou), &ctx).unwrap();
-    }
+    initialize_domain(F::from_ark(ark_rou), &ctx, fast_twiddles_mode).unwrap();
 }
 
 pub fn rel_domain<F: FieldImpl>(ctx: &DeviceContext) -> IcicleResult<()>
 where
-    <F as FieldImpl>::Config: NTT<F>,
+    <F as FieldImpl>::Config: NTTDomain<F>,
 {
     release_domain::<F>(&ctx)
 }
@@ -61,7 +56,7 @@ pub fn list_to_reverse_bit_order<T: Copy>(l: &[T]) -> Vec<T> {
 pub fn check_ntt<F: FieldImpl + ArkConvertible>()
 where
     F::ArkEquivalent: FftField,
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
 {
     let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
@@ -76,7 +71,7 @@ where
         let scalars_mont = unsafe { &*(&ark_scalars[..] as *const _ as *const [F]) };
         let scalars_mont_h = HostSlice::from_slice(&scalars_mont);
 
-        let mut config = NTTConfig::default();
+        let mut config: NTTConfig<'_, F> = NTTConfig::default();
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
             config.ntt_algorithm = alg;
             let mut ntt_result = vec![F::zero(); test_size];
@@ -109,7 +104,7 @@ where
 pub fn check_ntt_coset_from_subgroup<F: FieldImpl + ArkConvertible>()
 where
     F::ArkEquivalent: FftField,
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
 {
     let test_sizes = [1 << 4, 1 << 16];
     for test_size in test_sizes {
@@ -198,7 +193,7 @@ where
 pub fn check_ntt_arbitrary_coset<F: FieldImpl + ArkConvertible>()
 where
     F::ArkEquivalent: FftField + ArkField,
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
 {
     let mut seed = test_rng();
     let test_sizes = [1 << 4, 1 << 17];
@@ -254,7 +249,7 @@ where
 
 pub fn check_ntt_batch<F: FieldImpl>()
 where
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
     <F as FieldImpl>::Config: VecOps<F>,
 {
     let test_sizes = [1 << 4, 1 << 12];
@@ -354,7 +349,7 @@ where
 pub fn check_ntt_device_async<F: FieldImpl + ArkConvertible>()
 where
     F::ArkEquivalent: FftField,
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
 {
     let device_count = get_device_count().unwrap();
 
@@ -419,10 +414,9 @@ where
         });
 }
 
-pub fn check_release_domain<F: FieldImpl + ArkConvertible>()
+pub fn check_release_domain<F: FieldImpl>()
 where
-    F::ArkEquivalent: FftField,
-    <F as FieldImpl>::Config: NTT<F> + GenerateRandom<F>,
+    <F as FieldImpl>::Config: NTTDomain<F>,
 {
     let config: NTTConfig<'static, F> = NTTConfig::default();
     let err = rel_domain::<F>(&config.ctx);

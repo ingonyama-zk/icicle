@@ -9,8 +9,8 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
 
-pub(crate) const SCALAR_LIMBS: usize = 4;
-pub(crate) const BASE_LIMBS: usize = 4;
+pub(crate) const SCALAR_LIMBS: usize = 8;
+pub(crate) const BASE_LIMBS: usize = 8;
 
 impl_scalar_field!("grumpkin", grumpkin_sf, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
 impl_field!(BASE_LIMBS, BaseField, BaseCfg, Fq);

@@ -4,7 +4,6 @@ pub mod field;
 pub mod msm;
 pub mod ntt;
 pub mod poseidon;
-#[cfg(feature = "arkworks")]
 #[doc(hidden)]
 pub mod tests;
 pub mod traits;
@@ -13,6 +12,6 @@ pub mod vec_ops;
 
 pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
 where
-    <Self::ScalarField as traits::FieldImpl>::Config: ntt::NTT<Self::ScalarField>,
+    <Self::ScalarField as traits::FieldImpl>::Config: ntt::NTT<Self::ScalarField, Self::ScalarField>,
 {
 }
