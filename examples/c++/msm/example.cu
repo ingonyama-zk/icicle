@@ -2,11 +2,9 @@
 #include <iostream>
 #include <iomanip>
 
-#define G2_DEFINED
-#define CURVE_ID 1
-// include MSM template
-#include "appUtils/msm/msm.cu"
-using namespace curve_config;
+#include "curves/params/bn254.cuh"
+#include "api/bn254.h"
+using namespace bn254;
 
 int main(int argc, char* argv[])
 {
@@ -28,7 +26,6 @@ int main(int argc, char* argv[])
   projective_t::RandHostManyAffine(points, N);
 
   std::cout << "Using default MSM configuration with on-host inputs" << std::endl;
-  // auto config = msm::DefaultMSMConfig();
   device_context::DeviceContext ctx = device_context::get_default_device_context();
   msm::MSMConfig config = {
     ctx,   // ctx
@@ -49,28 +46,9 @@ int main(int argc, char* argv[])
   config.batch_size = batch_size;
   
   std::cout << "Running MSM kernel with on-host inputs" << std::endl;
-  // Create two events to time the MSM kernel
   cudaStream_t stream = config.ctx.stream;
-  cudaEvent_t start, stop;
-  float time;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  // Record the start event on the stream
-  cudaEventRecord(start, stream);
   // Execute the MSM kernel
-  msm::MSM<scalar_t, affine_t, projective_t>(scalars, points, msm_size, config, &result);
-  // Record the stop event on the stream
-  cudaEventRecord(stop, stream);
-  // Wait for the stop event to complete
-  cudaEventSynchronize(stop);
-  // Calculate the elapsed time between the start and stop events
-  cudaEventElapsedTime(&time, start, stop);
-  // Destroy the events
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  // Print the elapsed time
-  std::cout << "Kernel runtime: " << std::fixed << std::setprecision(3) << time * 1e-3 << " sec." << std::endl;
-  // Print the result
+  bn254MSMCuda(scalars, points, msm_size, config, &result);
   std::cout << projective_t::to_affine(result) << std::endl;
 
   std::cout << "Copying inputs on-device" << std::endl;
@@ -89,24 +67,9 @@ int main(int argc, char* argv[])
   config.are_points_on_device = true;
 
   std::cout << "Running MSM kernel with on-device inputs" << std::endl;
-  // Create two events to time the MSM kernel
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  // Record the start event on the stream
-  cudaEventRecord(start, stream);
   // Execute the MSM kernel
-  msm::MSM<scalar_t, affine_t, projective_t>(scalars_d, points_d, msm_size, config, result_d);
-  // Record the stop event on the stream
-  cudaEventRecord(stop, stream);
-  // Wait for the stop event to complete
-  cudaEventSynchronize(stop);
-  // Calculate the elapsed time between the start and stop events
-  cudaEventElapsedTime(&time, start, stop);
-  // Destroy the events
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  // Print the elapsed time
-  std::cout << "Kernel runtime: " << std::fixed << std::setprecision(3) << time * 1e-3 << " sec." << std::endl;
+  bn254MSMCuda(scalars_d, points_d, msm_size, config, result_d);
+
   // Copy the result back to the host
   cudaMemcpy(&result, result_d, sizeof(projective_t), cudaMemcpyDeviceToHost);
   // Print the result
@@ -130,16 +93,7 @@ int main(int argc, char* argv[])
   config.are_scalars_on_device = false;
   config.are_points_on_device = false;
   g2_projective_t g2_result;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start, stream);
-  msm::MSM<scalar_t, g2_affine_t, g2_projective_t>(scalars, g2_points, msm_size, config, &g2_result);
-  cudaEventRecord(stop, stream);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  std::cout << "Kernel runtime: " << std::fixed << std::setprecision(3) << time * 1e-3 << " sec." << std::endl;
+  bn254G2MSMCuda(scalars, g2_points, msm_size, config, &g2_result);
   std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
 
   std::cout << "Copying inputs on-device" << std::endl;
@@ -157,16 +111,7 @@ int main(int argc, char* argv[])
   config.are_points_on_device = true;
 
   std::cout << "Running MSM kernel with on-device inputs" << std::endl;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start, stream);
-  msm::MSM<scalar_t, g2_affine_t, g2_projective_t>(scalars_d, g2_points_d, msm_size, config, g2_result_d);
-  cudaEventRecord(stop, stream);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&time, start, stop);
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  std::cout << "Kernel runtime: " << std::fixed << std::setprecision(3) << time * 1e-3 << " sec." << std::endl;
+  bn254G2MSMCuda(scalars_d, g2_points_d, msm_size, config, g2_result_d);
   cudaMemcpy(&g2_result, g2_result_d, sizeof(g2_projective_t), cudaMemcpyDeviceToHost);
   std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
 
