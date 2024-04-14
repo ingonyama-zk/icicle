@@ -41,6 +41,17 @@ extern "C" cudaError_t grumpkinAffineConvertMontgomery(
 extern "C" cudaError_t grumpkinProjectiveConvertMontgomery(
   grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
+extern "C" cudaError_t grumpkinCreateOptimizedPoseidonConstants(
+  int arity,
+  int full_rounds_half,
+  int partial_rounds,
+  const grumpkin::scalar_t* constants,
+  device_context::DeviceContext& ctx,
+  poseidon::PoseidonConstants<grumpkin::scalar_t>* poseidon_constants);
+
+extern "C" cudaError_t grumpkinInitOptimizedPoseidonConstants(
+  int arity, device_context::DeviceContext& ctx, poseidon::PoseidonConstants<grumpkin::scalar_t>* constants);
+
 extern "C" cudaError_t grumpkinPoseidonHash(
   grumpkin::scalar_t* input,
   grumpkin::scalar_t* output,

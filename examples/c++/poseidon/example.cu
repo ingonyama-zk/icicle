@@ -2,14 +2,12 @@
 #include <fstream>
 #include <iostream>
 
-// select the curve
-#define CURVE_ID 2
-// include Poseidon template
-#include "appUtils/poseidon/poseidon.cu"
+#include "api/bn254.h"
+#include "curves/params/bn254.cuh"
 using namespace poseidon;
-using namespace curve_config;
+using namespace bn254;
 
-device_context::DeviceContext ctx= device_context::get_default_device_context();
+device_context::DeviceContext ctx = device_context::get_default_device_context();
 
 // location of a tree node in the array for a given level and offset
 inline uint32_t tree_index(uint32_t level, uint32_t offset) { return (1 << level) - 1 + offset; }
@@ -21,8 +19,7 @@ void build_tree(
   for (uint32_t level = tree_height - 1; level > 0; level--) {
     const uint32_t next_level = level - 1;
     const uint32_t next_level_width = 1 << next_level;
-    poseidon_hash<scalar_t, 2+1>(
-      &tree[tree_index(level, 0)], &tree[tree_index(next_level, 0)], next_level_width, *constants, config);
+    bn254PoseidonHash(&tree[tree_index(level, 0)], &tree[tree_index(next_level, 0)], next_level_width, 2, *constants, config);
   }
 }
 
@@ -85,7 +82,7 @@ uint32_t validate_proof(
       hashes_in[1] = level_hash;
     }
     // next level hash
-    poseidon_hash<scalar_t, 2+1>(hashes_in, hash_out, 1, *constants, config);
+    bn254PoseidonHash(hashes_in, hash_out, 1, 2, *constants, config);
     level_hash = hash_out[0];
   }
   return proof_hash[0] == level_hash;
@@ -116,13 +113,13 @@ int main(int argc, char* argv[])
   }
   std::cout << "Hashing blocks into tree leaves..." << std::endl;
   PoseidonConstants<scalar_t> constants;
-  init_optimized_poseidon_constants<scalar_t>(data_arity, ctx, &constants);
+  bn254InitOptimizedPoseidonConstants(data_arity, ctx, &constants);
   PoseidonConfig config = default_poseidon_config<scalar_t>(data_arity+1); 
-  poseidon_hash<curve_config::scalar_t, data_arity+1>(data, &tree[tree_index(leaf_level, 0)], tree_width, constants, config);
+  bn254PoseidonHash(data, &tree[tree_index(leaf_level, 0)], tree_width, 4, constants, config);
 
   std::cout << "3. Building Merkle tree" << std::endl;
   PoseidonConstants<scalar_t> tree_constants;
-  init_optimized_poseidon_constants<scalar_t>(tree_arity, ctx, &tree_constants);
+  bn254InitOptimizedPoseidonConstants(tree_arity, ctx, &tree_constants);
   PoseidonConfig tree_config = default_poseidon_config<scalar_t>(tree_arity+1);
   build_tree(tree_height, tree, &tree_constants, tree_config);
 

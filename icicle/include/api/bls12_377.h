@@ -74,6 +74,17 @@ extern "C" cudaError_t bls12_377ProjectiveConvertMontgomery(
 extern "C" cudaError_t bls12_377ExtensionNTTCuda(
   const bls12_377::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<bls12_377::scalar_t>& config, bls12_377::extension_t* output);
 
+extern "C" cudaError_t bls12_377CreateOptimizedPoseidonConstants(
+  int arity,
+  int full_rounds_half,
+  int partial_rounds,
+  const bls12_377::scalar_t* constants,
+  device_context::DeviceContext& ctx,
+  poseidon::PoseidonConstants<bls12_377::scalar_t>* poseidon_constants);
+
+extern "C" cudaError_t bls12_377InitOptimizedPoseidonConstants(
+  int arity, device_context::DeviceContext& ctx, poseidon::PoseidonConstants<bls12_377::scalar_t>* constants);
+
 extern "C" cudaError_t bls12_377PoseidonHash(
   bls12_377::scalar_t* input,
   bls12_377::scalar_t* output,
