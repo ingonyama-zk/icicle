@@ -47,6 +47,15 @@ namespace bw6_761 {
   static constexpr g2_point_field_t g2_generator_x = g2_point_field_t{g2_gen_x};
   static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{g2_gen_y};
   static constexpr g2_point_field_t g2_b = g2_point_field_t{g2_weierstrass_b};
+
+  /**
+   * [Projective representation](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) of G2 curve.
+   */
+  typedef Projective<g2_point_field_t, scalar_t, g2_b, g2_generator_x, g2_generator_y> g2_projective_t;
+  /**
+   * Affine representation of G1 curve.
+   */
+  typedef Affine<g2_point_field_t> g2_affine_t;
 #endif
 } // namespace bw6_761
 
