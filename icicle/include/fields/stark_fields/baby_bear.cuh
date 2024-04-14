@@ -7,7 +7,7 @@
 #include "fields/quartic_extension.cuh"
 #endif
 
-namespace baby_bear {
+namespace babybear {
   struct fp_config {
     static constexpr unsigned limbs_count = 1;
     static constexpr unsigned omegas_count = 28;
@@ -65,4 +65,4 @@ namespace baby_bear {
    */
   typedef ExtensionField<fp_config> extension_t;
 #endif
-} // namespace baby_bear
+} // namespace babybear

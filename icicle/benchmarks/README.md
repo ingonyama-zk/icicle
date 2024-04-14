@@ -8,7 +8,7 @@ To run benchmarks, make sure you have everything installed to run ICICLE (see to
 export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:<path-to-google-benchmarks-build-folder>
 ```
 
-Then to benchmark field arithmetic, say, on `baby_bear` field, run:
+Then to benchmark field arithmetic, say, on `babybear` field, run:
 
 ```
 cmake -UCURVE -UFIELD -UG2 -UEXT_FIELD -DFIELD=babybear -DEXT_FIELD=ON -S . -B build;
