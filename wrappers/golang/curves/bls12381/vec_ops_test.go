@@ -38,7 +38,7 @@ func TestTranspose(t *testing.T) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 	onDevice := false
-	isAsync := true
+	isAsync := false
 
 	matrix := GenerateScalars(rowSize * columnSize)
 
@@ -46,6 +46,8 @@ func TestTranspose(t *testing.T) {
 	out2 := make(core.HostSlice[ScalarField], rowSize*columnSize)
 
 	ctx, _ := cr.GetDefaultDeviceContext()
+	stream, _ := cr.CreateStream()
+	ctx.Stream = &stream
 
 	TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
 	TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)

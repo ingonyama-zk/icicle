@@ -55,7 +55,7 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 }
 
 func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError) {
-
+	core.TransposeCheck(in, out, onDevice)
 	var inPointer, outPointer unsafe.Pointer
 	if onDevice {
 		inPointer = in.(core.DeviceSlice).AsPointer()
