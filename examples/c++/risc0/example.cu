@@ -539,54 +539,30 @@ int main(int argc, char** argv)
   std::cout << "Lesson 11: FRI Protocol (Commit Phase)" << std::endl;
   std::cout << "The prover provides information to convince the verifier that the DEEP polynomials are low-degree." << std::endl;
 
-  // uint32_t tree_height = (logn + 1) + 1; // extra +1 for larger domain
-  // size_t digests_len = get_digests_len<scalar_t>(tree_height, A);
-  // // std::cout << "Digests length: " << digests_len << std::endl;
-  // scalar_t* digests = new scalar_t[digests_len];
-  // TreeBuilderConfig config = default_merkle_config<scalar_t>();
-  // build_merkle_tree<scalar_t, T>(commitment, digests, tree_height, constants, config);
-  // std::cout << "Root: " << digests[0] << std::endl;
+  int nof_rounds = 3;
+  Polynomial_t feven[nof_rounds], fodd[nof_rounds], fri[nof_rounds+1];
+  scalar_t rfri[nof_rounds];
 
-  // std::cout << std::endl << "7. FRI Protocol (Commit Phase)" << std::endl;
-  // const int m = 2*n;
-  // std::cout << "Split" << std::endl;
-  // scalar_t f0_coeffs[m] = {0};
-  // scalar_t f0even_coeffs[m/2] = {0};
-  // scalar_t f0odd_coeffs[m/2] = {0};
-  // auto f0 = f2.clone();
+  fri[0] = fri_input.clone();
+  for (int i = 0; i < nof_rounds; ++i) {
+    feven[i] = fri[i].even();
+    fodd[i] = fri[i].odd();
+    rfri[i] = scalar_t::rand_host();  
+    fri[i+1] = feven[i] + rfri[i]*fodd[i];
+    std::cout << "The degree of the Round " << i << " polynomial is: " << fri[i+1].degree() << std::endl;
+  }
 
-  // auto cc = f0.copy_coefficients_to_host(f0_coeffs, 0, -1);
-  // std::cout << "Coefficients: " << cc << std::endl;
-  // for (int i = 0; i < m; ++i) {
-  //   std::cout << i << ": " << f0_coeffs[i] << std::endl;
-  // }
-  // std::cout << "Merge" << std::endl;
-  // for (int i = 0; i < m/2; ++i) {
-  //   f0even_coeffs[i] = f0_coeffs[2*i];
-  //   f0odd_coeffs[i] = f0_coeffs[2*i+1];
-  //   // std::cout << i << ": even: " << f0even_coeffs[i] << std::endl;
-  //   // std::cout << i << ": odd:  " << f0odd_coeffs[i] << std::endl;
-  // }
-  // auto f0even = Polynomial_t::from_coefficients(f0even_coeffs, m/2);
-  // auto f0odd = Polynomial_t::from_coefficients(f0odd_coeffs, m/2);
-  // verifier-provided randomness 
-  // auto r1 = scalar_t::rand_host();
-  // Round 1 polynomial
-  // auto f1 = f0even + r1 * f0odd;
-  // std::cout << std::endl << "8. FRI Protocol (Query Phase)" << std::endl;
-  // std::cout << "Check for consistency" << std::endl;
-  // scalar_t xp = scalar_t::rand_host();
-  // scalar_t xm = scalar_t::zero() - xp;
-  // auto rhs = (r1+xp)*f0(xp)*scalar_t::inverse(scalar_t::from(2)*xp) + (r1+xm)*f0(xm)*scalar_t::inverse(scalar_t::from(2)*xm);
-  // auto lhs = f1(xp*xp);
-  // std::cout << "rhs: " << rhs << std::endl << "lhs: " << lhs << std::endl;
-  // if (lhs != rhs) {
-  //   std::cout << "Error: Evaluations are not consistent" << std::endl;
-  // } else {
-  //   std::cout << "Evaluations are consistent" << std::endl;
-  // }
-  // auto d1 = f1.degree();
-  // auto d0 = f0.degree();
-  // std::cout << "Degree: " << d1 << ", degree before: " << d0 << std::endl;
+  std::cout << "Lesson 12: FRI Protocol (Query Phase)" << std::endl;
+  // We use Polynomial API to evaluate the FRI polynomials
+  // In practice, verifier will use Merkle commitments
+  auto xp = scalar_t::rand_host();
+  auto xm = scalar_t::zero() - xp;
+  scalar_t lhs[nof_rounds], rhs[nof_rounds];
+  for (int i = 0; i < nof_rounds; ++i) {
+    rhs[i] = (rfri[i]+xp)*fri[i](xp)*scalar_t::inverse(scalar_t::from(2)*xp) + (rfri[i]+xm)*fri[i](xm)*scalar_t::inverse(scalar_t::from(2)*xm);
+    lhs[i] = fri[i+1](xp*xp);
+    std::cout << "Round " << i << std::endl << "rhs: " << rhs[i] << std::endl << "lhs: " << lhs[i] << std::endl;
+  }
+
   return 0;
 }
