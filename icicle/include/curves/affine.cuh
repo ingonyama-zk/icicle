@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu-utils/sharedmem.cuh"
 #include "gpu-utils/modifiers.cuh"
 #include <iostream>
 
@@ -33,5 +34,14 @@ public:
   {
     os << "x: " << point.x << "; y: " << point.y;
     return os;
+  }
+};
+
+template <class FF>
+struct SharedMemory<Affine<FF>> {
+  __device__ Affine<FF>* getPointer()
+  {
+    extern __shared__ Affine<FF> s_affine_[];
+    return s_affine_;
   }
 };

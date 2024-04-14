@@ -7,10 +7,10 @@ set(FIELD_TARGET icicle_field)
 
 set(SRC ${CMAKE_SOURCE_DIR}/src)
 
-set(CURVE_SOURCE ${SRC}/curves/projective.cu)
-list(APPEND CURVE_SOURCE ${SRC}/curves/mont.cu)
+set(CURVE_SOURCE ${SRC}/curves/extern.cu)
 list(APPEND CURVE_SOURCE ${SRC}/msm/extern.cu)
 if(G2)
+  list(APPEND CURVE_SOURCE ${SRC}/curves/extern_g2.cu)
   list(APPEND CURVE_SOURCE ${SRC}/msm/extern_g2.cu)
 endif()
 if(ECNTT)

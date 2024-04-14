@@ -1,6 +1,8 @@
 #pragma once
 
 #include "field.cuh"
+#include "gpu-utils/modifiers.cuh"
+#include "gpu-utils/sharedmem.cuh"
 
 template <typename CONFIG>
 class ExtensionField
@@ -61,6 +63,12 @@ public:
   static HOST_INLINE ExtensionField rand_host()
   {
     return ExtensionField{FF::rand_host(), FF::rand_host(), FF::rand_host(), FF::rand_host()};
+  }
+
+  static void RandHostMany(ExtensionField* out, int size)
+  {
+    for (int i = 0; i < size; i++)
+      out[i] = rand_host();
   }
 
   template <unsigned REDUCTION_SIZE = 1>
@@ -236,5 +244,14 @@ public:
       FF::reduce(FF::mul_wide(xs.im2, x0) - FF::mul_wide(xs.real, x2)),
       FF::reduce(FF::mul_wide(xs.im1, x2) - FF::mul_wide(xs.im3, x0)),
     };
+  }
+};
+
+template <class CONFIG>
+struct SharedMemory<ExtensionField<CONFIG>> {
+  __device__ ExtensionField<CONFIG>* getPointer()
+  {
+    extern __shared__ ExtensionField<CONFIG> s_ext4_scalar_[];
+    return s_ext4_scalar_;
   }
 };

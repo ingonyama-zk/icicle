@@ -13,7 +13,7 @@ use icicle_cuda_runtime::{
     memory::{DeviceVec, HostSlice},
 };
 
-pub fn check_scalar_equality<F: FieldImpl>() {
+pub fn check_field_equality<F: FieldImpl>() {
     let left = F::zero();
     let right = F::one();
     assert_ne!(left, right);
@@ -52,6 +52,7 @@ where
     assert_eq!(left, right);
 }
 
+#[cfg(feature = "arkworks")]
 pub fn check_ark_scalar_convert<F: FieldImpl + ArkConvertible>()
 where
     F::Config: GenerateRandom<F>,
@@ -64,6 +65,7 @@ where
     }
 }
 
+#[cfg(feature = "arkworks")]
 pub fn check_ark_point_convert<C: Curve>()
 where
     Affine<C>: ArkConvertible<ArkEquivalent = ArkAffine<C::ArkSWConfig>>,
