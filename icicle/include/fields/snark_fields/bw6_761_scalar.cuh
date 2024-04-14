@@ -4,6 +4,7 @@
 
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
+#include "fields/quadratic_extension.cuh"
 #include "fields/snark_fields/bls12_377_base.cuh"
 
 namespace bw6_761 {
@@ -14,12 +15,10 @@ namespace bw6_761 {
    */
   typedef Field<fp_config> scalar_t;
 
-#ifdef EXT_FIELD
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef ExtensionField<fp_config> extension_t;
-#endif
 } // namespace bw6_761
 
 #endif

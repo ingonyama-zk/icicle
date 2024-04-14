@@ -2,10 +2,7 @@
 
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
-
-#ifdef EXT_FIELD
 #include "fields/quartic_extension.cuh"
-#endif
 
 namespace babybear {
   struct fp_config {
@@ -59,10 +56,8 @@ namespace babybear {
    */
   typedef Field<fp_config> scalar_t;
 
-#ifdef EXT_FIELD
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef ExtensionField<fp_config> extension_t;
-#endif
 } // namespace babybear

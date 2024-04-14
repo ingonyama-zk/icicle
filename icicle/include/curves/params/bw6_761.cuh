@@ -8,10 +8,7 @@
 #include "curves/projective.cuh"
 #include "fields/snark_fields/bw6_761_base.cuh"
 #include "fields/snark_fields/bw6_761_scalar.cuh"
-
-#ifdef G2
 #include "fields/quadratic_extension.cuh"
-#endif
 
 namespace bw6_761 {
   // G1 and G2 generators
@@ -42,7 +39,7 @@ namespace bw6_761 {
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 
   CURVE_DEFINITIONS
-#ifdef G2
+
   typedef point_field_t g2_point_field_t;
   static constexpr g2_point_field_t g2_generator_x = g2_point_field_t{g2_gen_x};
   static constexpr g2_point_field_t g2_generator_y = g2_point_field_t{g2_gen_y};
@@ -56,7 +53,6 @@ namespace bw6_761 {
    * Affine representation of G1 curve.
    */
   typedef Affine<g2_point_field_t> g2_affine_t;
-#endif
 } // namespace bw6_761
 
 #endif

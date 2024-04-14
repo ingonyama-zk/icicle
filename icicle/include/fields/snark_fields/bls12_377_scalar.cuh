@@ -4,6 +4,7 @@
 
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
+#include "fields/quadratic_extension.cuh"
 
 namespace bls12_377 {
   struct fp_config {
@@ -197,12 +198,10 @@ namespace bls12_377 {
    */
   typedef Field<fp_config> scalar_t;
 
-#ifdef EXT_FIELD
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef ExtensionField<fp_config> extension_t;
-#endif
 } // namespace bls12_377
 
 #endif

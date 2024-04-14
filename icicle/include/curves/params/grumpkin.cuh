@@ -9,10 +9,6 @@
 #include "fields/snark_fields/grumpkin_base.cuh"
 #include "fields/snark_fields/grumpkin_scalar.cuh"
 
-#ifdef G2
-#include "fields/quadratic_extension.cuh"
-#endif
-
 namespace grumpkin {
   typedef bn254::fp_config fq_config;
   // G1 generator
