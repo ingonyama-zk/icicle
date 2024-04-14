@@ -793,7 +793,7 @@ void sumcheck_generic_unified(S* evals, S* t, S* T, S C, int n, int nof_polys, c
     // update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
   }
 	if (nof_polys == 1){
-		update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 4, 0, 1);
+		if (n>1) update_evals_kernel<<<1, 2,0, stream>>>(evals, alpha, 4, 0, 1);
 		add_to_trace<<<1,1,0,stream>>>(T, evals, 1, n-1, 2);
 	}
 }
@@ -850,7 +850,7 @@ void sumcheck_double_round_unified(S* evals, S* t, S* T, S C, int n, int nof_pol
     // update_evals_kernel<<<NOF_BLOCKS, NOF_THREADS,0, stream>>>(evals, alpha, nof_threads); //phase 3
   }
 	if (nof_polys == 1){
-		update_evals_double_kernel<<<1, 4,0, stream>>>(evals, alpha1, alpha2, 16, 0, 1);
+		if (n>2) update_evals_double_kernel<<<1, 4,0, stream>>>(evals, alpha1, alpha2, 16, 0, 1);
 		add_to_trace<<<1,1,0,stream>>>(T, evals, 1, n/2-1, 4);
 		// S h_evals_temp[16];
 		// cudaMemcpy(h_evals_temp, evals, sizeof(S) * 16, cudaMemcpyDeviceToHost);

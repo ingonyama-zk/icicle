@@ -56,10 +56,10 @@ int main(){
   bool verify_cpu = false;
   bool use_test_vecs = verify_cpu? true : false;
 
-  int n = 19;
+  int n = 2;
   int polys = POLYS;
-  bool double_round = false;
-  bool unified = false;
+  bool double_round = true;
+  bool unified = true;
   int size = polys << n;
   int temp_size = size/(double_round? 4 : 2) * (polys+1) * (double_round? (polys+1) : 1);
   int trans_size = double_round? (polys+1)*(polys+1)*n/2 + 1 : (polys+1)*n +1;
