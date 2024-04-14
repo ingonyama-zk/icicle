@@ -9,7 +9,9 @@ repository.workspace = true
 
 [dependencies]
 icicle-core = { workspace = true }
-icicle-cuda-runtime = { workspace = true }
+icicle-cuda-runtime = { workspace = true}
+ark-ff = {version = "0.4.0", optional = true }
+ark-ec = {version = "0.4.0", optional = true }
 
 [build-dependencies]
 cmake = "0.1.50"
@@ -20,7 +22,8 @@ ark-ff = "0.4.0"
 ark-ec = "0.4.0"
 ark-poly = "0.4.0"
 icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
-icicle-stark252 = { path = "." }
+icicle-stark252 = { path = ".", features = ["arkworks"]}
 
 [features]
 default = []
+arkworks = ["ark-ff", "ark-ec", "icicle-core/arkworks"]

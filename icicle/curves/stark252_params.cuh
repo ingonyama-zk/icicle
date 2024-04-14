@@ -66,6 +66,6 @@ namespace stark252 {
   static constexpr storage<fq_config::limbs_count> g1_gen_y = {0x36e8dc1f, 0x2873000c, 0x1abe43a3, 0xde53ecd1, 0xdf46ec62, 0xb7be4801, 0x0aa49730, 0x00566806};
 
   static constexpr storage<fq_config::limbs_count> weierstrass_b = {0x9cee9e89, 0xf4cdfcb9, 0x15c915c1, 0x609ad26c, 0x72f7a8c5, 0x150e596d, 0xefbe40de, 0x06f21413};
-} // namespace bn254
+} // namespace stark252
 
 #endif
