@@ -40,14 +40,14 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Build curve
-      working-directory: ./icicle/tests
+      working-directory: ./icicle
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
-        mkdir -p build
-        cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=${{ matrix.curve }} -DG2=ON -S . -B build
-        cmake --build build
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve }} -DG2=ON -S . -B build
+        cmake --build build -j
     - name: Run C++ curve Tests
-      working-directory: ./icicle/tests/build
+      working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: ctest
 
@@ -62,13 +62,13 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Build field
-      working-directory: ./icicle/tests
+      working-directory: ./icicle
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
-        mkdir -p build
-        cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=${{ matrix.field }} -DEXT_FIELD=ON -S . -B build
-        cmake --build build
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field }} -DEXT_FIELD=ON -S . -B build
+        cmake --build build -j
     - name: Run C++ field Tests
-      working-directory: ./icicle/tests/build
+      working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: ctest
