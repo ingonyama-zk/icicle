@@ -8,7 +8,8 @@ using namespace field_config;
 namespace vec_ops {
   /**
    * Extern version of [Mul](@ref Mul) function with the template parameters
-   * `S` and `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
+   * `S` and `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
+   * or standalone "STARK field" given by `-DFIELD`).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, MulCuda)(
@@ -19,7 +20,8 @@ namespace vec_ops {
 
   /**
    * Extern version of [Add](@ref Add) function with the template parameter
-   * `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
+   * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
+   * or standalone "STARK field" given by `-DFIELD`).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, AddCuda)(
@@ -30,7 +32,8 @@ namespace vec_ops {
 
   /**
    * Extern version of [Sub](@ref Sub) function with the template parameter
-   * `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
+   * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
+   * or standalone "STARK field" given by `-DFIELD`).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, SubCuda)(
@@ -41,7 +44,8 @@ namespace vec_ops {
 
   /**
    * Extern version of transpose_batch function with the template parameter
-   * `E` being the [scalar field](@ref scalar_t) of the curve given by `-DCURVE` env variable during build.
+   * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
+   * or standalone "STARK field" given by `-DFIELD`).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, TransposeMatrix)(

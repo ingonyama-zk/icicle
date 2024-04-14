@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
 pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
-    limbs: [u64; NUM_LIMBS],
+    limbs: [u32; NUM_LIMBS],
     p: PhantomData<F>,
 }
 
@@ -27,7 +27,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
             .iter()
             .rev()
         {
-            write!(f, "{:016x}", b)?;
+            write!(f, "{:08x}", b)?;
         }
         Ok(())
     }
@@ -39,21 +39,21 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Debug for Field<NUM_LIMBS, F> {
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
-    fn into(self) -> [u64; NUM_LIMBS] {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u32; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn into(self) -> [u32; NUM_LIMBS] {
         self.limbs
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
-    fn from(limbs: [u64; NUM_LIMBS]) -> Self {
+impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u32; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn from(limbs: [u32; NUM_LIMBS]) -> Self {
         Self { limbs, p: PhantomData }
     }
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     type Config = F;
-    type Repr = [u64; NUM_LIMBS];
+    type Repr = [u32; NUM_LIMBS];
 
     fn to_bytes_le(&self) -> Vec<u8> {
         self.limbs
@@ -69,28 +69,28 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     // please note that this function zero-pads if there are not enough bytes
     // and only takes the first bytes in there are too many of them
     fn from_bytes_le(bytes: &[u8]) -> Self {
-        let mut limbs: [u64; NUM_LIMBS] = [0; NUM_LIMBS];
+        let mut limbs: [u32; NUM_LIMBS] = [0; NUM_LIMBS];
         for (i, chunk) in bytes
-            .chunks(8)
+            .chunks(4)
             .take(NUM_LIMBS)
             .enumerate()
         {
-            let mut chunk_array: [u8; 8] = [0; 8];
+            let mut chunk_array: [u8; 4] = [0; 4];
             chunk_array[..chunk.len()].clone_from_slice(chunk);
-            limbs[i] = u64::from_le_bytes(chunk_array);
+            limbs[i] = u32::from_le_bytes(chunk_array);
         }
         Self::from(limbs)
     }
 
     fn zero() -> Self {
         Field {
-            limbs: [0u64; NUM_LIMBS],
+            limbs: [0u32; NUM_LIMBS],
             p: PhantomData,
         }
     }
 
     fn one() -> Self {
-        let mut limbs = [0u64; NUM_LIMBS];
+        let mut limbs = [0u32; NUM_LIMBS];
         limbs[0] = 1;
         Field { limbs, p: PhantomData }
     }
@@ -169,7 +169,7 @@ macro_rules! impl_scalar_field {
         impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
 
         mod $field_prefix_ident {
-            use crate::curve::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
+            use super::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "GenerateScalars")]
@@ -243,6 +243,11 @@ macro_rules! impl_field_tests {
         #[test]
         fn test_field_convert_montgomery() {
             check_field_convert_montgomery::<$field_name>()
+        }
+
+        #[test]
+        fn test_field_equality() {
+            check_field_equality::<$field_name>()
         }
     };
 }

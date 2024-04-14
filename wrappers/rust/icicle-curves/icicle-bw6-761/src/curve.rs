@@ -10,7 +10,7 @@ use icicle_core::{impl_curve, impl_field};
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 
-pub(crate) const BASE_LIMBS: usize = 12;
+pub(crate) const BASE_LIMBS: usize = 24;
 
 impl_field!(BASE_LIMBS, BaseField, BaseCfg, Fq);
 pub type ScalarField = bls12_377BaseField;
