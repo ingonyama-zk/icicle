@@ -1,8 +1,9 @@
 package bls12381
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBaseFieldFromLimbs(t *testing.T) {

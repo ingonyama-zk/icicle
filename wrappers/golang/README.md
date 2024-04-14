@@ -5,19 +5,21 @@ In order to build the underlying ICICLE libraries you should run the build scrip
 Build script USAGE
 
 ```
-./build <curve> [G2_enabled]
+./build <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
 
 curve - The name of the curve to build or "all" to build all curves
-G2_enabled - Optional - To build with G2 enabled 
+-g2 - Optional - build with G2 enabled 
+-ecntt - Optional - build with ECNTT enabled
+-devmode - Optional - build in devmode
 ```
 
-To build ICICLE libraries for all supported curves with G2 enabled.
+To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
 ```
-./build.sh all ON
+./build.sh all -g2 -ecntt
 ```
 
-If you wish to build for a specific curve, for example bn254, without G2 enabled.
+If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
 
 ```
 ./build.sh bn254
@@ -27,8 +29,7 @@ If you wish to build for a specific curve, for example bn254, without G2 enabled
 >Current supported curves are `bn254`, `bls12_381`, `bls12_377` and `bw6_671`
 
 >[!NOTE]
->G2 is enabled by building your golang project with the build tag `g2`
->Make sure to add it to your build tags if you want it enabled
+>G2 and ECNTT are located in nested packages
 
 ## Running golang tests
 
@@ -41,7 +42,7 @@ go test ./wrappers/golang/curves/bn254 -count=1
 To run all the tests in the golang bindings
 
 ```
-go test --tags=g2 ./... -count=1
+go test ./... -count=1
 ```
 
 ## How do Golang bindings work?

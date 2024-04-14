@@ -1,14 +1,15 @@
 {{if .IsG2 -}}
-//go:build g2
-
-{{end -}}
+package g2
+{{- else -}}
 package {{.PackageName}}
+{{- end}}
 
 import (
-  {{- if .IsScalar}}
-  {{- template "scalar_field_tests_imports" . -}}{{end}}
-	"github.com/stretchr/testify/assert"
 	"testing"
+  {{- if .IsScalar}}
+  {{- template "scalar_field_tests_imports" . -}}{{- end}}
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test{{if .IsMock}}Mock{{else}}{{if .IsScalar}}Scalar{{else}}{{if .IsG2}}G2{{end}}Base{{end}}{{end}}FieldFromLimbs(t *testing.T) {

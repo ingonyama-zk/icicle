@@ -12,7 +12,6 @@ using namespace field_config;
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
 #include "ntt/ntt_impl.cuh"
-#include "ntt/ntt.cuh" // for ntt::Ordering
 
 #include <mutex>
 

@@ -1,9 +1,11 @@
 package bls12377
 
 import (
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestScalarFieldFromLimbs(t *testing.T) {

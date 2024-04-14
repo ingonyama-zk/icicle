@@ -107,6 +107,8 @@ func generateFiles() {
 		"vec_ops_test.go.tmpl",
 		"vec_ops.go.tmpl",
 		"helpers_test.go.tmpl",
+		"ecntt.go.tmpl",
+		"ecntt_test.go.tmpl",
 	}
 
 	for _, tmplName := range templateFiles {
@@ -117,7 +119,7 @@ func generateFiles() {
 		}
 		fileName, ok := strings.CutSuffix(tmplName, ".tmpl")
 		if !ok {
-			panic(err)
+			panic(".tmpl suffix not found")
 		}
 		entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
 	}
@@ -127,6 +129,7 @@ func generateFiles() {
 		"msm_test.go.tmpl",
 		"curve_test.go.tmpl",
 		"curve.go.tmpl",
+		"helpers_test.go.tmpl",
 	}
 
 	for _, tmplName := range templateG2Files {
@@ -173,6 +176,7 @@ func generateFiles() {
 		"g2_msm.h.tmpl",
 		"ntt.h.tmpl",
 		"vec_ops.h.tmpl",
+		"ecntt.h.tmpl",
 	}
 
 	for _, includeFile := range templateIncludeFiles {
@@ -188,10 +192,9 @@ func generateFiles() {
 	for _, curveData := range curvesData {
 		for _, entry := range entries {
 			fileName := entry.outputName
-			if strings.Contains(fileName, "main") {
-				fileName = strings.Replace(fileName, "main", curveData.Curve, 1)
-			}
-			outFile := filepath.Join(baseDir, curveData.PackageName, fileName)
+			fileName = strings.Replace(fileName, "main", curveData.Curve, 1)
+
+			outFile := filepath.Join(baseDir, curveData.PackageName)
 			var buf bytes.Buffer
 			data := struct {
 				CurveData
@@ -204,6 +207,13 @@ func generateFiles() {
 				strings.Contains(fileName, "g2"),
 				false,
 			}
+			if strings.Contains(fileName, "ecntt") {
+				outFile = filepath.Join(outFile, "ecntt")
+			}
+			if data.IsG2 {
+				outFile = filepath.Join(outFile, "g2")
+			}
+			outFile = filepath.Join(outFile, fileName)
 			entry.parsedTemplate.Execute(&buf, data)
 			create(outFile, &buf)
 		}

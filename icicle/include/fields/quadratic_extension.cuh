@@ -7,6 +7,8 @@ template <typename CONFIG>
 class ExtensionField
 {
 private:
+  friend Field<CONFIG>;
+
   typedef typename Field<CONFIG>::Wide FWide;
 
   struct ExtensionWide {
@@ -69,6 +71,26 @@ public:
     return ExtensionField{xs.real - ys.real, xs.imaginary - ys.imaginary};
   }
 
+  friend HOST_DEVICE_INLINE ExtensionField operator+(FF xs, const ExtensionField& ys)
+  {
+    return ExtensionField{xs + ys.real, ys.imaginary};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator-(FF xs, const ExtensionField& ys)
+  {
+    return ExtensionField{xs - ys.real, FF::neg(ys.imaginary)};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator+(ExtensionField xs, const FF& ys)
+  {
+    return ExtensionField{xs.real + ys, xs.imaginary};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator-(ExtensionField xs, const FF& ys)
+  {
+    return ExtensionField{xs.real - ys, xs.imaginary};
+  }
+
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ExtensionField& xs, const ExtensionField& ys)
   {
@@ -81,13 +103,26 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ExtensionField& xs, const FF& ys)
+  {
+    return ExtensionWide{FF::mul_wide(xs.real, ys), FF::mul_wide(xs.imaginary, ys)};
+  }
+
+  template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const ExtensionField& ys)
+  {
+    return mul_wide(ys, xs);
+  }
+
+  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField reduce(const ExtensionWide& xs)
   {
     return ExtensionField{
       FF::template reduce<MODULUS_MULTIPLE>(xs.real), FF::template reduce<MODULUS_MULTIPLE>(xs.imaginary)};
   }
 
-  friend HOST_DEVICE_INLINE ExtensionField operator*(const ExtensionField& xs, const ExtensionField& ys)
+  template <class T1, class T2>
+  friend HOST_DEVICE_INLINE ExtensionField operator*(const T1& xs, const T2& ys)
   {
     ExtensionWide xy = mul_wide(xs, ys);
     return reduce(xy);
