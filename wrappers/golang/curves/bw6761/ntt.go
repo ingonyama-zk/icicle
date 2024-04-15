@@ -25,14 +25,14 @@ func GetDefaultNttConfig() core.NTTConfig[[SCALAR_LIMBS]uint64] {
 func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
 	core.NttCheck(scalars, cfg, results)
 
-	scalarsPointer := scalars.GetPointerSafe()
+	scalarsPointer := scalars.AsUnsafePointer()
 	cScalars := (*C.scalar_t)(scalarsPointer)
 
 	cSize := (C.int)(scalars.Len() / int(cfg.BatchSize))
 	cDir := (C.int)(dir)
 	cCfg := (*C.NTTConfig)(unsafe.Pointer(cfg))
 
-	resultsPointer := results.GetPointerSafe()
+	resultsPointer := results.AsUnsafePointer()
 	cResults := (*C.scalar_t)(resultsPointer)
 
 	__ret := C.bw6_761NTTCuda(cScalars, cSize, cDir, cCfg, cResults)

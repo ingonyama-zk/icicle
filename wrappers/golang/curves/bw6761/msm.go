@@ -18,13 +18,13 @@ func GetDefaultMSMConfig() core.MSMConfig {
 func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
 
-	scalarsPointer := scalars.GetPointerSafe()
+	scalarsPointer := scalars.AsUnsafePointer()
 	cScalars := (*C.scalar_t)(scalarsPointer)
 
-	pointsPointer := points.GetPointerSafe()
+	pointsPointer := points.AsUnsafePointer()
 	cPoints := (*C.affine_t)(pointsPointer)
 
-	resultsPointer := results.GetPointerSafe()
+	resultsPointer := results.AsUnsafePointer()
 	cResults := (*C.projective_t)(resultsPointer)
 
 	cSize := (C.int)(scalars.Len() / results.Len())
@@ -38,7 +38,7 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
 	core.PrecomputeBasesCheck(points, precomputeFactor, outputBases)
 
-	pointsPointer := points.GetPointerSafe()
+	pointsPointer := points.AsUnsafePointer()
 	cPoints := (*C.affine_t)(pointsPointer)
 
 	cPointsLen := (C.int)(points.Len())
@@ -47,7 +47,7 @@ func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c in
 	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
 
-	outputBasesPointer := outputBases.AsPointer()
+	outputBasesPointer := outputBases.AsUnsafePointer()
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
 	__ret := C.bw6_761PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
