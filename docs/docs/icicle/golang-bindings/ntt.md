@@ -10,31 +10,49 @@
 package main
 
 import (
-    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
-    cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
+
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 )
 
-func Main() {
-    // Obtain the default NTT configuration with a predefined coset generator.
-    cfg := GetDefaultNttConfig()
-    
-    // Define the size of the input scalars.
-    size := 1 << 18
+func init() {
+	cfg := bn254.GetDefaultNttConfig()
+	initDomain(18, cfg)
+}
 
-    // Generate scalars for the NTT operation.
-    scalars := GenerateScalars(size)
+func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
+	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
+	rou := rouMont.Bits()
+	rouIcicle := bn254.ScalarField{}
 
-    // Set the direction of the NTT (forward or inverse).
-    dir := core.KForward
+	rouIcicle.FromLimbs(rou[:])
+	e := bn254.InitDomain(rouIcicle, cfg.Ctx, false)
+	return e
+}
 
-    // Allocate memory for the results of the NTT operation.
-    results := make(core.HostSlice[ScalarField], size)
+func main() {
+	// Obtain the default NTT configuration with a predefined coset generator.
+	cfg := bn254.GetDefaultNttConfig()
 
-    // Perform the NTT operation.
-    err := Ntt(scalars, dir, &cfg, results)
-    if err != cr.CudaSuccess {
-        panic("NTT operation failed")
-    }
+	// Define the size of the input scalars.
+	size := 1 << 18
+
+	// Generate scalars for the NTT operation.
+	scalars := bn254.GenerateScalars(size)
+
+	// Set the direction of the NTT (forward or inverse).
+	dir := core.KForward
+
+	// Allocate memory for the results of the NTT operation.
+	results := make(core.HostSlice[bn254.ScalarField], size)
+
+	// Perform the NTT operation.
+	err := bn254.Ntt(scalars, dir, &cfg, results)
+	if err.CudaErrorCode != cr.CudaSuccess {
+		panic("NTT operation failed")
+	}
 }
 ```
 

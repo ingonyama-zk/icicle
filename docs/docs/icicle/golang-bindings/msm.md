@@ -3,7 +3,7 @@
 
 ### Supported curves
 
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `grumpkin`
 
 ## MSM Example
 
@@ -11,52 +11,54 @@
 package main
 
 import (
-    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
-    cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
 )
 
-func Main() {
-    // Obtain the default MSM configuration.
-    cfg := GetDefaultMSMConfig()
-    
-    // Define the size of the problem, here 2^18.
-    size := 1 << 18
+func main() {
+	// Obtain the default MSM configuration.
+	cfg := bn254.GetDefaultMSMConfig()
 
-    // Generate scalars and points for the MSM operation.
-    scalars := GenerateScalars(size)
-    points := GenerateAffinePoints(size)
+	// Define the size of the problem, here 2^18.
+	size := 1 << 18
 
-    // Create a CUDA stream for asynchronous operations.
-    stream, _ := cr.CreateStream()
-    var p Projective
-    
-    // Allocate memory on the device for the result of the MSM operation.
-    var out core.DeviceSlice
-    _, e := out.MallocAsync(p.Size(), p.Size(), stream)
+	// Generate scalars and points for the MSM operation.
+	scalars := bn254.GenerateScalars(size)
+	points := bn254.GenerateAffinePoints(size)
 
-    if e != cr.CudaSuccess {
-        panic(e)
-    }
-    
-    // Set the CUDA stream in the MSM configuration.
-    cfg.Ctx.Stream = &stream
-    cfg.IsAsync = true
-    
-    // Perform the MSM operation.
-    e = Msm(scalars, points, &cfg, out)
-    
-    if e != cr.CudaSuccess {
-        panic(e)
-    }
-    
-    // Allocate host memory for the results and copy the results from the device.
-    outHost := make(core.HostSlice[Projective], 1)
-    cr.SynchronizeStream(&stream)
-    outHost.CopyFromDevice(&out)
-    
-    // Free the device memory allocated for the results.
-    out.Free()
+	// Create a CUDA stream for asynchronous operations.
+	stream, _ := cr.CreateStream()
+	var p bn254.Projective
+
+	// Allocate memory on the device for the result of the MSM operation.
+	var out core.DeviceSlice
+	_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+
+	if e != cr.CudaSuccess {
+		panic(e)
+	}
+
+	// Set the CUDA stream in the MSM configuration.
+	cfg.Ctx.Stream = &stream
+	cfg.IsAsync = true
+
+	// Perform the MSM operation.
+	e = bn254.Msm(scalars, points, &cfg, out)
+
+	if e != cr.CudaSuccess {
+		panic(e)
+	}
+
+	// Allocate host memory for the results and copy the results from the device.
+	outHost := make(core.HostSlice[bn254.Projective], 1)
+	cr.SynchronizeStream(&stream)
+	outHost.CopyFromDevice(&out)
+
+	// Free the device memory allocated for the results.
+	out.Free()
 }
+
 ```
 
 ## MSM Method
@@ -160,41 +162,42 @@ out.Malloc(batchSize*p.Size(), p.Size())
 To activate G2 support first you must make sure you are building the static libraries with G2 feature enabled.
 
 ```bash
-./build.sh bls12_381 ON
+./build.sh bn254 -g2
 ```
 
-Now when importing `icicle`, you should have access to G2 features.
+Now you may import `g2` package of the specified curve
 
 ```go
 import (
-    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
+    "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls254/g2"
 )
 ```
 
-These features include `G2Projective` and `G2Affine` points as well as a `G2Msm` method.
+These packages include `G2Projective` and `G2Affine` points as well as a `G2Msm` method.
 
 ```go
-...
+package main
 
-cfg := GetDefaultMSMConfig()
-size := 1 << 12
-batchSize := 3
-totalSize := size * batchSize
-scalars := GenerateScalars(totalSize)
-points := G2GenerateAffinePoints(totalSize)
+import (
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
+	g2 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254/g2"
+)
 
-var p G2Projective
-var out core.DeviceSlice
-out.Malloc(batchSize*p.Size(), p.Size())
-G2Msm(scalars, points, &cfg, out)
+func main() {
+	cfg := bn254.GetDefaultMSMConfig()
+	size := 1 << 12
+	batchSize := 3
+	totalSize := size * batchSize
+	scalars := bn254.GenerateScalars(totalSize)
+	points := g2.G2GenerateAffinePoints(totalSize)
 
-...
+	var p g2.G2Projective
+	var out core.DeviceSlice
+	out.Malloc(batchSize*p.Size(), p.Size())
+	g2.G2Msm(scalars, points, &cfg, out)
+}
+
 ```
 
 `G2Msm` works the same way as normal MSM, the difference is that it uses G2 Points.
-
-Additionally when you are building your application make sure to use the g2 feature flag
-
-```bash
-go build -tags=g2
-```
