@@ -1,15 +1,20 @@
-#pragma once
-
-#include "polynomials.h"
+#include "polynomials/polynomials.h"
 #include "fields/field_config.cuh"
 #include "utils/utils.h"
 #include "utils/integrity_pointer.h"
+#include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 
 namespace polynomials {
   extern "C" {
 
   // Defines a polynomial instance based on the scalar type from the FIELD configuration.
   typedef Polynomial<scalar_t> PolynomialInst;
+
+  bool CONCAT_EXPAND(FIELD, init_cuda_backend)()
+  {
+    auto cuda_factory = std::make_shared<CUDAPolynomialFactory<scalar_t>>();
+    PolynomialInst::initialize(cuda_factory);
+  }
 
   // Constructs a polynomial from a set of coefficients.
   // coeffs: Array of coefficients.
@@ -44,6 +49,9 @@ namespace polynomials {
   // instance: Pointer to the polynomial instance to delete.
   void CONCAT_EXPAND(FIELD, polynomial_delete)(PolynomialInst* instance) { delete instance; }
 
+  // Prints a polynomial to stdout
+  void CONCAT_EXPAND(FIELD, polynomial_print(PolynomialInst* p)) { std::cout << *p << std::endl; }
+
   // Adds two polynomials.
   // a, b: Pointers to the polynomial instances to add.
   // Returns a pointer to the resulting polynomial instance.
@@ -77,13 +85,13 @@ namespace polynomials {
     return result;
   }
 
-  // Multiplies a polynomial by a scalar coefficient.
+  // Multiplies a polynomial by scalar.
   // a: Pointer to the polynomial instance.
-  // coeff: Scalar coefficient to multiply by.
+  // scalar: Scalar to multiply by.
   // Returns a pointer to the resulting polynomial instance.
-  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_multiply_by_coeff)(const PolynomialInst* a, const scalar_t* coeff)
+  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_multiply_by_scalar)(const PolynomialInst* a, const scalar_t& scalar)
   {
-    auto result = new PolynomialInst(std::move(*a * *coeff));
+    auto result = new PolynomialInst(std::move(*a * scalar));
     return result;
   }
 
@@ -134,9 +142,9 @@ namespace polynomials {
   // monomial_coeff: Coefficient of the monomial to add.
   // monomial: Degree of the monomial to add.
   void CONCAT_EXPAND(FIELD, polynomial_add_monomial_inplace)(
-    PolynomialInst* p, const scalar_t* monomial_coeff, uint64_t monomial)
+    PolynomialInst* p, const scalar_t& monomial_coeff, uint64_t monomial)
   {
-    p->add_monomial_inplace(*monomial_coeff, monomial);
+    p->add_monomial_inplace(monomial_coeff, monomial);
   }
 
   // Subtracts a monomial from a polynomial in place.
@@ -144,9 +152,9 @@ namespace polynomials {
   // monomial_coeff: Coefficient of the monomial to subtract.
   // monomial: Degree of the monomial to subtract.
   void CONCAT_EXPAND(FIELD, polynomial_sub_monomial_inplace)(
-    PolynomialInst* p, const scalar_t* monomial_coeff, uint64_t monomial)
+    PolynomialInst* p, const scalar_t& monomial_coeff, uint64_t monomial)
   {
-    p->sub_monomial_inplace(*monomial_coeff, monomial);
+    p->sub_monomial_inplace(monomial_coeff, monomial);
   }
 
   // Evaluates a polynomial at a given point.
@@ -189,7 +197,7 @@ namespace polynomials {
   // start_idx: Start index of the range to copy.
   // end_idx: End index of the range to copy.
   // Returns the number of coefficients copied. if host_memory is NULL, returns number of coefficients.
-  int64_t CONCAT_EXPAND(FIELD, polynomial_coeffs_to_host)(
+  int64_t CONCAT_EXPAND(FIELD, polynomial_copy_coeffs_range_to_host)(
     PolynomialInst* p, scalar_t* host_memory, uint64_t start_idx, uint64_t end_idx)
   {
     return p->copy_coefficients_to_host(host_memory, start_idx, end_idx);

@@ -83,15 +83,16 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 
     fn zero() -> Self {
-        Field {
-            limbs: [0u32; NUM_LIMBS],
-            p: PhantomData,
-        }
+        FieldImpl::from_u32(0)
     }
 
     fn one() -> Self {
+        FieldImpl::from_u32(1)
+    }
+
+    fn from_u32(val: u32) -> Self {
         let mut limbs = [0u32; NUM_LIMBS];
-        limbs[0] = 1;
+        limbs[0] = val;
         Field { limbs, p: PhantomData }
     }
 }
