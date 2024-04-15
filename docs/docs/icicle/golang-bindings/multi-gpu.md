@@ -15,41 +15,52 @@ In this example we will display how you can
 
 
 ```go
+package main
+
+import (
+	"fmt"
+	"sync"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
+)
+
 func main() {
-	numDevices, _ := cuda_runtime.GetDeviceCount()
+	numDevices, _ := cr.GetDeviceCount()
 	fmt.Println("There are ", numDevices, " devices available")
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < numDevices; i++ {
 		wg.Add(1)
-        // RunOnDevice makes sure each MSM runs on a single thread
-		cuda_runtime.RunOnDevice(i, func(args ...any) {
+		// RunOnDevice makes sure each MSM runs on a single thread
+		cr.RunOnDevice(i, func(args ...any) {
 			defer wg.Done()
-			cfg := GetDefaultMSMConfig()
+			cfg := bn254.GetDefaultMSMConfig()
 			cfg.IsAsync = true
 			for _, power := range []int{10, 18} {
 				size := 1 << power // 2^pwr
 
-                // generate random scalars
-				scalars := GenerateScalars(size)
-				points := GenerateAffinePoints(size)
+				// generate random scalars
+				scalars := bn254.GenerateScalars(size)
+				points := bn254.GenerateAffinePoints(size)
 
-                // create a stream and allocate result pointer
-				stream, _ := cuda_runtime.CreateStream()
-				var p Projective
+				// create a stream and allocate result pointer
+				stream, _ := cr.CreateStream()
+				var p bn254.Projective
 				var out core.DeviceSlice
-				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
-                // assign stream to device context
+				out.MallocAsync(p.Size(), p.Size(), stream)
+				// assign stream to device context
 				cfg.Ctx.Stream = &stream
 
-                // execute MSM
-				e = Msm(scalars, points, &cfg, out)
-                // read result from device
-				outHost := make(core.HostSlice[Projective], 1)
+				// execute MSM
+				bn254.Msm(scalars, points, &cfg, out)
+				// read result from device
+				outHost := make(core.HostSlice[bn254.Projective], 1)
 				outHost.CopyFromDeviceAsync(&out, stream)
 				out.FreeAsync(stream)
 
-                // sync the stream
+				// sync the stream
 				cr.SynchronizeStream(&stream)
 			}
 		})

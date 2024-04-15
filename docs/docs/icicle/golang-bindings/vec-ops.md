@@ -12,22 +12,23 @@ The VecOps API provides efficient vector operations such as addition, subtractio
 package main
 
 import (
-    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
-    cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
 )
 
 func main() {
-    testSize := 1 << 12
-    a := GenerateScalars(testSize)
-    b := GenerateScalars(testSize)
-    out := make(core.HostSlice[ScalarField], testSize)
-    cfg := core.DefaultVecOpsConfig()
+	testSize := 1 << 12
+	a := bn254.GenerateScalars(testSize)
+	b := bn254.GenerateScalars(testSize)
+	out := make(core.HostSlice[bn254.ScalarField], testSize)
+	cfg := core.DefaultVecOpsConfig()
 
-    // Perform vector addition
-    err := VecOp(a, b, out, cfg, core.Add)
-    if err != cr.CudaSuccess {
-        panic("Vector addition failed")
-    }
+	// Perform vector multiplication
+	err := bn254.VecOp(a, b, out, cfg, core.Add)
+	if err != cr.CudaSuccess {
+		panic("Vector addition failed")
+	}
 }
 ```
 
@@ -37,22 +38,23 @@ func main() {
 package main
 
 import (
-    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
-    cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
 )
 
 func main() {
-    testSize := 1 << 12
-    a := GenerateScalars(testSize)
-    b := GenerateScalars(testSize)
-    out := make(core.HostSlice[ScalarField], testSize)
-    cfg := core.DefaultVecOpsConfig()
+	testSize := 1 << 12
+	a := bn254.GenerateScalars(testSize)
+	b := bn254.GenerateScalars(testSize)
+	out := make(core.HostSlice[bn254.ScalarField], testSize)
+	cfg := core.DefaultVecOpsConfig()
 
-    // Perform vector subtraction
-    err := VecOp(a, b, out, cfg, core.Sub)
-    if err != cr.CudaSuccess {
-        panic("Vector subtraction failed")
-    }
+	// Perform vector multiplication
+	err := bn254.VecOp(a, b, out, cfg, core.Sub)
+	if err != cr.CudaSuccess {
+		panic("Vector subtraction failed")
+	}
 }
 ```
 
@@ -62,22 +64,23 @@ func main() {
 package main
 
 import (
-    "github.com/ingonyama-zk/icicle/wrappers/golang/core"
-    cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
 )
 
 func main() {
-    testSize := 1 << 12
-    a := GenerateScalars(testSize)
-    b := GenerateScalars(testSize)
-    out := make(core.HostSlice[ScalarField], testSize)
-    cfg := core.DefaultVecOpsConfig()
+	testSize := 1 << 12
+	a := bn254.GenerateScalars(testSize)
+	b := bn254.GenerateScalars(testSize)
+	out := make(core.HostSlice[bn254.ScalarField], testSize)
+	cfg := core.DefaultVecOpsConfig()
 
-    // Perform vector multiplication
-    err := VecOp(a, b, out, cfg, core.Mul)
-    if err != cr.CudaSuccess {
-        panic("Vector multiplication failed")
-    }
+	// Perform vector multiplication
+	err := bn254.VecOp(a, b, out, cfg, core.Mul)
+	if err != cr.CudaSuccess {
+		panic("Vector multiplication failed")
+	}
 }
 ```
 
