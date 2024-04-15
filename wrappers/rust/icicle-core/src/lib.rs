@@ -3,6 +3,7 @@ pub mod error;
 pub mod field;
 pub mod msm;
 pub mod ntt;
+pub mod polynomials;
 pub mod poseidon;
 #[doc(hidden)]
 pub mod tests;

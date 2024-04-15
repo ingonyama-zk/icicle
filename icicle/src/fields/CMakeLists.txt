@@ -18,7 +18,8 @@ endif()
 
 set(POLYNOMIAL_SOURCE_FILES 
     ${SRC}/polynomials/polynomials.cu
-    ${SRC}/polynomials/cuda_backend/polynomial_cuda_backend.cu)
+    ${SRC}/polynomials/cuda_backend/polynomial_cuda_backend.cu
+    ${SRC}/polynomials/polynomials_c_api.cu)
 
 list(APPEND FIELD_SOURCE ${POLYNOMIAL_SOURCE_FILES})
 
