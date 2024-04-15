@@ -8,6 +8,7 @@ macro_rules! impl_polynomial_api {
         mod $field_prefix_ident {
             use crate::polynomials::*;
             use icicle_core::traits::FieldImpl;
+            use icicle_cuda_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
             use std::ops::Add;
             use std::ops::AddAssign;
@@ -101,7 +102,7 @@ macro_rules! impl_polynomial_api {
                     unsafe { init_cuda_backend() }
                 }
 
-                pub fn from_coeffs(coeffs: &[$field], size: usize) -> Self {
+                pub fn from_coeffs(coeffs: &(impl HostOrDeviceSlice<$field> + ?Sized), size: usize) -> Self {
                     unsafe {
                         Polynomial {
                             handle: create_from_coeffs(coeffs.as_ptr(), size),
@@ -109,7 +110,7 @@ macro_rules! impl_polynomial_api {
                     }
                 }
 
-                pub fn from_rou_evals(evals: &[$field], size: usize) -> Self {
+                pub fn from_rou_evals(evals: &(impl HostOrDeviceSlice<$field> + ?Sized), size: usize) -> Self {
                     unsafe {
                         Polynomial {
                             handle: create_from_rou_evals(evals.as_ptr(), size),
@@ -157,37 +158,53 @@ macro_rules! impl_polynomial_api {
                     unsafe { eval(self.handle, x) }
                 }
 
-                pub fn eval_on_domain(&self, domain: &[$field]) -> Vec<$field> {
-                    let domain_size = domain.len();
-                    let mut evals = vec![$field::zero(); domain_size];
+                pub fn eval_on_domain(
+                    &self,
+                    domain: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                    evals: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                ) {
+                    assert!(
+                        domain.len() <= evals.len(),
+                        "eval_on_domain(): eval size must not be smaller then domain"
+                    );
                     unsafe {
                         eval_on_domain(
                             self.handle,
                             domain.as_ptr(),
-                            domain_size as u64,
+                            domain.len() as u64,
                             evals.as_mut_ptr(),
                         );
                     }
-                    evals
                 }
 
-                pub fn copy_single_coefficient_to_host(&self, idx: u64) -> $field {
+                pub fn read_single_coeff(&self, idx: u64) -> $field {
                     unsafe { copy_single_coefficient_to_host(self.handle, idx) }
                 }
 
-                pub fn copy_coefficient_range_to_host(&self, start_idx: u64, end_idx: u64) -> Vec<$field> {
+                pub fn copy_coefficient_range(
+                    &self,
+                    start_idx: u64,
+                    end_idx: u64,
+                    coeffs: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                ) {
                     assert!(
                         end_idx >= start_idx,
-                        "copy_coefficient_range_to_host(): End index {} should not be less than start index {}",
+                        "copy_coefficient_range(): End index {} should not be less than start index {}",
                         start_idx,
                         end_idx
                     );
-                    let coeffs_size = end_idx - start_idx + 1;
-                    let mut host_coeffs = vec![$field::zero(); coeffs_size as usize];
+                    let nof_coeffs_to_copy = (end_idx - start_idx + 1) as usize;
+                    let coeffs_len = coeffs.len();
+                    assert!(
+                        coeffs_len >= nof_coeffs_to_copy,
+                        "copy_coefficient_range(): size mismatch. Request to copy {} coeffs to memory of len {}",
+                        nof_coeffs_to_copy,
+                        coeffs_len
+                    );
+
                     unsafe {
-                        copy_coefficient_range_to_host(self.handle, host_coeffs.as_mut_ptr(), start_idx, end_idx);
+                        copy_coefficient_range_to_host(self.handle, coeffs.as_mut_ptr(), start_idx, end_idx);
                     }
-                    host_coeffs
                 }
 
                 pub fn degree(&self) -> i64 {

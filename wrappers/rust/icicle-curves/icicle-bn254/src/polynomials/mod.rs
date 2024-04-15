@@ -10,6 +10,7 @@ mod tests {
     use icicle_core::ntt::{initialize_domain, release_domain, NTTDomain};
     use icicle_core::traits::ArkConvertible;
     use icicle_cuda_runtime::device_context::DeviceContext;
+    use icicle_cuda_runtime::memory::{HostSlice};
 
     use icicle_core::traits::FieldImpl;
 
@@ -40,12 +41,13 @@ mod tests {
 
         bn254::Polynomial::init_cuda_backend();
 
+        let size: usize = 2;
         let coeffs = [ScalarField::zero(), ScalarField::one()];
         let evals = [ScalarField::one(), ScalarField::one()];
-        let size: usize = 2;
 
-        let mut f = bn254::Polynomial::from_coeffs(&coeffs, size);
-        let g = bn254::Polynomial::from_rou_evals(&evals, size);
+        let mut f = bn254::Polynomial::from_coeffs(HostSlice::from_slice(&coeffs), size);     
+        let g = bn254::Polynomial::from_rou_evals(HostSlice::from_slice(&evals), size);
+
         let h = f.clone();
         f.print();
         g.print();
@@ -94,13 +96,16 @@ mod tests {
             ScalarField::from_u32(3),
         ];
 
-        let evals = new_mul_scalar.eval_on_domain(&domain);
+        let mut evals = vec!(ScalarField::zero(); domain.len());
+        new_mul_scalar.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut evals));
         println!("evals on domain: {:?}", &evals);
         println!("degree = {}", new_mul_scalar.degree());
 
-        println!("coeff[2] = {}", new_mul_scalar.copy_single_coefficient_to_host(1));
-        let coeffs = new_mul_scalar.copy_coefficient_range_to_host(0, 2);
-        println!("coeffs = {:?}", coeffs);
+        println!("coeff[2] = {}", new_mul_scalar.read_single_coeff(1));
+
+        let mut coeffs_read = vec!(ScalarField::zero(); 3 as usize);
+        new_mul_scalar.copy_coefficient_range(0, 2, HostSlice::from_mut_slice(&mut coeffs_read));
+        println!("coeffs = {:?}", coeffs_read);
 
         rel_domain::<ScalarField>(device_id);
     }
