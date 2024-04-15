@@ -72,3 +72,29 @@ func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) {
 	cfg.isBOnDevice = b.IsOnDevice()
 	cfg.isResultOnDevice = out.IsOnDevice()
 }
+
+func TransposeCheck(in, out HostOrDeviceSlice, onDevice bool) {
+	inLen, outLen := in.Len(), out.Len()
+
+	if inLen != outLen {
+		errorString := fmt.Sprintf(
+			"in and out vector lengths %d; %d are not equal",
+			inLen,
+			outLen,
+		)
+		panic(errorString)
+	}
+	if (onDevice != in.IsOnDevice()) || (onDevice != out.IsOnDevice()) {
+		errorString := fmt.Sprintf(
+			"onDevice is set to %t, but in.IsOnDevice():%t and out.IsOnDevice():%t",
+			onDevice,
+			in.IsOnDevice(),
+			out.IsOnDevice(),
+		)
+		panic(errorString)
+	}
+	if onDevice {
+		in.(DeviceSlice).CheckDevice()
+		out.(DeviceSlice).CheckDevice()
+	}
+}
