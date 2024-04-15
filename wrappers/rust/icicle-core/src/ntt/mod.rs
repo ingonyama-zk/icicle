@@ -72,7 +72,7 @@ pub enum NttAlgorithm {
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct NTTConfig<'a, S> {
-    /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
+    /// Details related to the device such as its id and stream id. See [DeviceContext](DeviceContext).
     pub ctx: DeviceContext<'a>,
     /// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
     pub coset_gen: S,
@@ -80,7 +80,7 @@ pub struct NTTConfig<'a, S> {
     pub batch_size: i32,
     /// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
     pub columns_batch: bool,
-    /// Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value: `Ordering::kNN`.
+    /// Ordering of inputs and outputs. See [Ordering](Ordering). Default value: `Ordering::kNN`.
     pub ordering: Ordering,
     are_inputs_on_device: bool,
     are_outputs_on_device: bool,
@@ -115,21 +115,24 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
 }
 
 #[doc(hidden)]
-pub trait NTT<F: FieldImpl> {
+pub trait NTTDomain<F: FieldImpl> {
+    fn initialize_domain(primitive_root: F, ctx: &DeviceContext, fast_twiddles: bool) -> IcicleResult<()>;
+    fn release_domain(ctx: &DeviceContext) -> IcicleResult<()>;
+}
+
+#[doc(hidden)]
+pub trait NTT<T, F: FieldImpl>: NTTDomain<F> {
     fn ntt_unchecked(
-        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<F>,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> IcicleResult<()>;
     fn ntt_inplace_unchecked(
-        inout: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<F>,
     ) -> IcicleResult<()>;
-    fn initialize_domain(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
-    fn initialize_domain_fast_twiddles_mode(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>;
-    fn release_domain(ctx: &DeviceContext) -> IcicleResult<()>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -143,15 +146,15 @@ pub trait NTT<F: FieldImpl> {
 /// * `cfg` - config used to specify extra arguments of the NTT.
 ///
 /// * `output` - buffer to write the NTT outputs into. Must be of the same size as `input`.
-pub fn ntt<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+pub fn ntt<T, F>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<F>,
-    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> IcicleResult<()>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
+    <F as FieldImpl>::Config: NTT<T, F>,
 {
     if input.len() != output.len() {
         panic!(
@@ -180,7 +183,7 @@ where
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
 
-    <<F as FieldImpl>::Config as NTT<F>>::ntt_unchecked(input, dir, &local_cfg, output)
+    <<F as FieldImpl>::Config as NTT<T, F>>::ntt_unchecked(input, dir, &local_cfg, output)
 }
 
 /// Computes the NTT, or a batch of several NTTs inplace.
@@ -192,20 +195,20 @@ where
 /// * `dir` - whether to compute forward of inverse NTT.
 ///
 /// * `cfg` - config used to specify extra arguments of the NTT.
-pub fn ntt_inplace<F>(
-    inout: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn ntt_inplace<T, F>(
+    inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<F>,
 ) -> IcicleResult<()>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
+    <F as FieldImpl>::Config: NTT<T, F>,
 {
     let mut local_cfg = cfg.clone();
     local_cfg.are_inputs_on_device = inout.is_on_device();
     local_cfg.are_outputs_on_device = inout.is_on_device();
 
-    <<F as FieldImpl>::Config as NTT<F>>::ntt_inplace_unchecked(inout, dir, &local_cfg)
+    <<F as FieldImpl>::Config as NTT<T, F>>::ntt_inplace_unchecked(inout, dir, &local_cfg)
 }
 
 /// Generates twiddle factors which will be used to compute NTTs.
@@ -217,72 +220,50 @@ where
 /// This function will panic if the order of `primitive_root` is not a power of two.
 ///
 /// * `ctx` - GPU index and stream to perform the computation.
-pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext, fast_twiddles: bool) -> IcicleResult<()>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
+    <F as FieldImpl>::Config: NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTT<F>>::initialize_domain(primitive_root, ctx)
-}
-
-pub fn initialize_domain_fast_twiddles_mode<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
-{
-    <<F as FieldImpl>::Config as NTT<F>>::initialize_domain_fast_twiddles_mode(primitive_root, ctx)
+    <<F as FieldImpl>::Config as NTTDomain<F>>::initialize_domain(primitive_root, ctx, fast_twiddles)
 }
 
 pub fn release_domain<F>(ctx: &DeviceContext) -> IcicleResult<()>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>,
+    <F as FieldImpl>::Config: NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTT<F>>::release_domain(ctx)
+    <<F as FieldImpl>::Config as NTTDomain<F>>::release_domain(ctx)
 }
 
 #[macro_export]
-macro_rules! impl_ntt {
+macro_rules! impl_ntt_without_domain {
     (
       $field_prefix:literal,
-      $field_prefix_ident:ident,
-      $field:ident,
-      $field_config:ident
+      $inout_field:ident,
+      $domain_field:ident,
+      $domain_config:ident
     ) => {
-        mod $field_prefix_ident {
-            use crate::ntt::{$field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID};
-
-            extern "C" {
-                #[link_name = concat!($field_prefix, "NTTCuda")]
-                pub(crate) fn ntt_cuda(
-                    input: *const $field,
-                    size: i32,
-                    dir: NTTDir,
-                    config: &NTTConfig<$field>,
-                    output: *mut $field,
-                ) -> CudaError;
-
-                #[link_name = concat!($field_prefix, "InitializeDomain")]
-                pub(crate) fn initialize_ntt_domain(
-                    primitive_root: &$field,
-                    ctx: &DeviceContext,
-                    fast_twiddles_mode: bool,
-                ) -> CudaError;
-
-                #[link_name = concat!($field_prefix, "ReleaseDomain")]
-                pub(crate) fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
-            }
+        extern "C" {
+            #[link_name = concat!($field_prefix, "NTTCuda")]
+            fn ntt_cuda(
+                input: *const $inout_field,
+                size: i32,
+                dir: NTTDir,
+                config: &NTTConfig<$domain_field>,
+                output: *mut $inout_field,
+            ) -> CudaError;
         }
 
-        impl NTT<$field> for $field_config {
+        impl NTT<$inout_field, $domain_field> for $domain_config {
             fn ntt_unchecked(
-                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                input: &(impl HostOrDeviceSlice<$inout_field> + ?Sized),
                 dir: NTTDir,
-                cfg: &NTTConfig<$field>,
-                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &NTTConfig<$domain_field>,
+                output: &mut (impl HostOrDeviceSlice<$inout_field> + ?Sized),
             ) -> IcicleResult<()> {
                 unsafe {
-                    $field_prefix_ident::ntt_cuda(
+                    ntt_cuda(
                         input.as_ptr(),
                         (input.len() / (cfg.batch_size as usize)) as i32,
                         dir,
@@ -294,12 +275,12 @@ macro_rules! impl_ntt {
             }
 
             fn ntt_inplace_unchecked(
-                inout: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                inout: &mut (impl HostOrDeviceSlice<$inout_field> + ?Sized),
                 dir: NTTDir,
-                cfg: &NTTConfig<$field>,
+                cfg: &NTTConfig<$domain_field>,
             ) -> IcicleResult<()> {
                 unsafe {
-                    $field_prefix_ident::ntt_cuda(
+                    ntt_cuda(
                         inout.as_mut_ptr(),
                         (inout.len() / (cfg.batch_size as usize)) as i32,
                         dir,
@@ -309,16 +290,48 @@ macro_rules! impl_ntt {
                     .wrap()
                 }
             }
+        }
+    };
+}
 
-            fn initialize_domain(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, false).wrap() }
+#[macro_export]
+macro_rules! impl_ntt {
+    (
+      $field_prefix:literal,
+      $field_prefix_ident:ident,
+      $field:ident,
+      $field_config:ident
+    ) => {
+        mod $field_prefix_ident {
+            use crate::ntt::*;
+
+            extern "C" {
+                #[link_name = concat!($field_prefix, "InitializeDomain")]
+                fn initialize_ntt_domain(
+                    primitive_root: &$field,
+                    ctx: &DeviceContext,
+                    fast_twiddles_mode: bool,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "ReleaseDomain")]
+                fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
             }
-            fn initialize_domain_fast_twiddles_mode(primitive_root: $field, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::initialize_ntt_domain(&primitive_root, ctx, true).wrap() }
+
+            impl NTTDomain<$field> for $field_config {
+                fn initialize_domain(
+                    primitive_root: $field,
+                    ctx: &DeviceContext,
+                    fast_twiddles: bool,
+                ) -> IcicleResult<()> {
+                    unsafe { initialize_ntt_domain(&primitive_root, ctx, fast_twiddles).wrap() }
+                }
+
+                fn release_domain(ctx: &DeviceContext) -> IcicleResult<()> {
+                    unsafe { release_ntt_domain(ctx).wrap() }
+                }
             }
-            fn release_domain(ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::release_ntt_domain(ctx).wrap() }
-            }
+
+            impl_ntt_without_domain!($field_prefix, $field, $field, $field_config);
         }
     };
 }

@@ -12,7 +12,6 @@ using namespace field_config;
 #include "utils/utils_kernels.cuh"
 #include "utils/utils.h"
 #include "ntt/ntt_impl.cuh"
-#include "ntt/ntt.cuh" // for ntt::Ordering
 
 #include <mutex>
 
@@ -413,6 +412,9 @@ namespace ntt {
     template <typename U>
     friend cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
+    template <typename U>
+    friend U GetRootOfUnity<U>(uint64_t logn, device_context::DeviceContext& ctx);
+
     template <typename U, typename E>
     friend cudaError_t NTT<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
@@ -538,6 +540,22 @@ namespace ntt {
   }
 
   template <typename S>
+  S GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx)
+  {
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+    if (logn > domain.max_log_size) {
+      std::ostringstream oss;
+      oss << "NTT log_size=" << logn
+          << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
+    }
+    const size_t twiddles_idx = 1ULL << (domain.max_log_size - logn);
+    return domain.twiddles[twiddles_idx];
+  }
+  // explicit instantiation to avoid having to include this file
+  template scalar_t GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx);
+
+  template <typename S>
   static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
     const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
@@ -597,7 +615,6 @@ namespace ntt {
       break;
     case Ordering::kRN:
     case Ordering::kMN:
-      dit = true;
       reverse_input = false;
     }
 
@@ -715,9 +732,8 @@ namespace ntt {
   }
 
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig()
+  NTTConfig<S> DefaultNTTConfig(const device_context::DeviceContext& ctx)
   {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
     NTTConfig<S> config = {
       ctx,                // ctx
       S::one(),           // coset_gen
@@ -731,4 +747,6 @@ namespace ntt {
     };
     return config;
   }
+  // explicit instantiation to avoid having to include this file
+  template NTTConfig<scalar_t> DefaultNTTConfig(const device_context::DeviceContext& ctx);
 } // namespace ntt

@@ -89,6 +89,9 @@ impl<C: Curve> Affine<C> {
 
 impl<C: Curve> From<Affine<C>> for Projective<C> {
     fn from(item: Affine<C>) -> Self {
+        if item == (Affine::<C>::zero()) {
+            return Self::zero();
+        }
         Self {
             x: item.x,
             y: item.y,
@@ -367,11 +370,6 @@ macro_rules! impl_curve_tests {
         $base_limbs:ident,
         $curve:ident
     ) => {
-        #[test]
-        fn test_scalar_equality() {
-            check_scalar_equality::<<$curve as Curve>::ScalarField>()
-        }
-
         #[test]
         fn test_affine_projective_convert() {
             check_affine_projective_convert::<$curve>()

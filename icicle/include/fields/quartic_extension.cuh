@@ -1,6 +1,8 @@
 #pragma once
 
 #include "field.cuh"
+#include "gpu-utils/modifiers.cuh"
+#include "gpu-utils/sharedmem.cuh"
 
 template <typename CONFIG>
 class ExtensionField
@@ -63,6 +65,12 @@ public:
     return ExtensionField{FF::rand_host(), FF::rand_host(), FF::rand_host(), FF::rand_host()};
   }
 
+  static void RandHostMany(ExtensionField* out, int size)
+  {
+    for (int i = 0; i < size; i++)
+      out[i] = rand_host();
+  }
+
   template <unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField sub_modulus(const ExtensionField& xs)
   {
@@ -86,6 +94,26 @@ public:
   friend HOST_DEVICE_INLINE ExtensionField operator-(ExtensionField xs, const ExtensionField& ys)
   {
     return ExtensionField{xs.real - ys.real, xs.im1 - ys.im1, xs.im2 - ys.im2, xs.im3 - ys.im3};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator+(FF xs, const ExtensionField& ys)
+  {
+    return ExtensionField{xs + ys.real, ys.im1, ys.im2, ys.im3};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator-(FF xs, const ExtensionField& ys)
+  {
+    return ExtensionField{xs - ys.real, FF::neg(ys.im1), FF::neg(ys.im2), FF::neg(ys.im3)};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator+(ExtensionField xs, const FF& ys)
+  {
+    return ExtensionField{xs.real + ys, xs.im1, xs.im2, xs.im3};
+  }
+
+  friend HOST_DEVICE_INLINE ExtensionField operator-(ExtensionField xs, const FF& ys)
+  {
+    return ExtensionField{xs.real - ys, xs.im1, xs.im2, xs.im3};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
@@ -116,6 +144,20 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ExtensionField& xs, const FF& ys)
+  {
+    return ExtensionWide{
+      FF::mul_wide(xs.real, ys), FF::mul_wide(xs.im1, ys), FF::mul_wide(xs.im2, ys), FF::mul_wide(xs.im3, ys)};
+  }
+
+  template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const ExtensionField& ys)
+  {
+    return ExtensionWide{
+      FF::mul_wide(xs, ys.real), FF::mul_wide(xs, ys.im1), FF::mul_wide(xs, ys.im2), FF::mul_wide(xs, ys.im3)};
+  }
+
+  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionField reduce(const ExtensionWide& xs)
   {
     return ExtensionField{
@@ -123,7 +165,8 @@ public:
       FF::template reduce<MODULUS_MULTIPLE>(xs.im2), FF::template reduce<MODULUS_MULTIPLE>(xs.im3)};
   }
 
-  friend HOST_DEVICE_INLINE ExtensionField operator*(const ExtensionField& xs, const ExtensionField& ys)
+  template <class T1, class T2>
+  friend HOST_DEVICE_INLINE ExtensionField operator*(const T1& xs, const T2& ys)
   {
     ExtensionWide xy = mul_wide(xs, ys);
     return reduce(xy);
@@ -201,5 +244,14 @@ public:
       FF::reduce(FF::mul_wide(xs.im2, x0) - FF::mul_wide(xs.real, x2)),
       FF::reduce(FF::mul_wide(xs.im1, x2) - FF::mul_wide(xs.im3, x0)),
     };
+  }
+};
+
+template <class CONFIG>
+struct SharedMemory<ExtensionField<CONFIG>> {
+  __device__ ExtensionField<CONFIG>* getPointer()
+  {
+    extern __shared__ ExtensionField<CONFIG> s_ext4_scalar_[];
+    return s_ext4_scalar_;
   }
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "affine.cuh"
+#include "gpu-utils/sharedmem.cuh"
 
 template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
 class Projective
@@ -8,6 +9,9 @@ class Projective
   friend Affine<FF>;
 
 public:
+  typedef Affine<FF> Aff;
+  typedef SCALAR_FF Scalar;
+
   static constexpr unsigned SCALAR_FF_NBITS = SCALAR_FF::NBITS;
   static constexpr unsigned FF_NBITS = FF::NBITS;
 
@@ -23,7 +27,10 @@ public:
     return {point.x * denom, point.y * denom};
   }
 
-  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point) { return {point.x, point.y, FF::one()}; }
+  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point)
+  {
+    return point == Affine<FF>::zero() ? zero() : Projective{point.x, point.y, FF::one()};
+  }
 
   static HOST_DEVICE_INLINE Projective ToMontgomery(const Projective& point)
   {
@@ -219,5 +226,14 @@ public:
   {
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];
+  }
+};
+
+template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
+struct SharedMemory<Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y>> {
+  __device__ Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y>* getPointer()
+  {
+    extern __shared__ Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y> s_projective_[];
+    return s_projective_;
   }
 };

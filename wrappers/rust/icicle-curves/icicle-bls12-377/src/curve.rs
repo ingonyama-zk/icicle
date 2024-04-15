@@ -11,10 +11,10 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
 
-pub(crate) const SCALAR_LIMBS: usize = 4;
-pub(crate) const BASE_LIMBS: usize = 6;
+pub(crate) const SCALAR_LIMBS: usize = 8;
+pub(crate) const BASE_LIMBS: usize = 12;
 #[cfg(feature = "g2")]
-pub(crate) const G2_BASE_LIMBS: usize = 12;
+pub(crate) const G2_BASE_LIMBS: usize = 24;
 
 impl_scalar_field!("bls12_377", bls12_377_sf, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
 #[cfg(feature = "bw6-761")]
