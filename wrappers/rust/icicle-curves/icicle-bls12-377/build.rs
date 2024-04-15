@@ -13,35 +13,52 @@ fn main() {
 
     // Optional Features
     #[cfg(feature = "g2")]
-    config.define("G2_DEFINED", "ON");
+    config.define("G2", "ON");
+
+    #[cfg(feature = "ec_ntt")]
+    config.define("ECNTT", "ON");
+
+    #[cfg(feature = "devmode")]
+    config.define("DEVMODE", "ON");
 
     // Build
     let out_dir = config
-        .build_target("icicle")
+        .build_target("icicle_curve")
         .build();
 
-    println!("cargo:rustc-link-search={}/build", out_dir.display());
-    println!("cargo:rustc-link-lib=ingo_bls12_377");
+    println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
+
+    println!("cargo:rustc-link-lib=ingo_field_bls12_377");
+    println!("cargo:rustc-link-lib=ingo_curve_bls12_377");
 
     if cfg!(feature = "bw6-761") {
         // Base config
         let mut config = Config::new("../../../../icicle");
         config
-            .define("BUILD_TESTS", "OFF")
             .define("CURVE", "bw6_761")
             .define("CMAKE_BUILD_TYPE", "Release");
 
         // Optional Features
         #[cfg(feature = "bw6-761-g2")]
-        config.define("G2_DEFINED", "ON");
+        config.define("G2", "ON");
+
+        #[cfg(feature = "ec_ntt")]
+        config.define("ECNTT", "OFF");
+
+        #[cfg(feature = "devmode")]
+        config.define("DEVMODE", "ON");
 
         // Build
         let out_dir = config
-            .build_target("icicle")
+            .build_target("icicle_curve")
             .build();
 
-        println!("cargo:rustc-link-search={}/build", out_dir.display());
-        println!("cargo:rustc-link-lib=ingo_bw6_761");
+        println!("cargo:rustc-link-search={}/build/src/curves/", out_dir.display());
+        println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
+
+        println!("cargo:rustc-link-lib=ingo_field_bw6_761");
+        println!("cargo:rustc-link-lib=ingo_curve_bw6_761");
     }
 
     println!("cargo:rustc-link-lib=stdc++");

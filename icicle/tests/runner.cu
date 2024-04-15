@@ -4,7 +4,10 @@
 
 // include list of test files
 // Ensure the device_error_test.cu is last to prevent aborting mid-test run
-#include "primitives_test.cu"
+#include "field_test.cu"
+#ifdef CURVE_ID
+#include "curve_test.cu"
+#endif
 #include "error_handler_test.cu"
 #include "device_error_test.cu"
 

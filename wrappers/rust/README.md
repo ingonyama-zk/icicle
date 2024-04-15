@@ -31,7 +31,5 @@ cargo bench
 To run test
 
 ```sh
-cargo test -- --test-threads=1
+cargo test
 ```
-
-The flag `--test-threads=1` is needed because currently some tests might interfere with one another inside the GPU.

@@ -1,0 +1,185 @@
+{{if .IsG2 -}}
+package g2
+{{- else -}}
+package {{.PackageName}}
+{{- end}}
+
+{{- if not .IsMock}}
+
+// #cgo CFLAGS: -I./include/
+// #include "{{if .IsG2 -}}g2_{{end}}curve.h"
+import "C"
+
+import (
+	"unsafe"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+)
+{{- end}}
+
+type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective struct {
+	X, Y, Z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+}
+
+func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Size() int {
+	return p.X.Size() * 3
+}
+
+func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) AsPointer() *uint64 {
+	return p.X.AsPointer()
+}
+
+func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Zero() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+	p.X.Zero()
+	p.Y.One()
+	p.Z.Zero()
+
+	return *p
+}
+
+func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromLimbs(x, y, z []uint64) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+	p.X.FromLimbs(x)
+	p.Y.FromLimbs(y)
+	p.Z.FromLimbs(z)
+
+	return *p
+}
+
+func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromAffine(a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+	z := {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field{}
+	z.One()
+
+	p.X = a.X
+	p.Y = a.Y
+	p.Z = z
+
+	return *p
+}
+{{if not .IsMock}}
+func (p {{if .IsG2}}G2{{end}}Projective) ProjectiveEq(p2 *{{if .IsG2}}G2{{end}}Projective) bool {
+	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p2))
+	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}Eq(cP, cP2)
+	return __ret == (C._Bool)(true)
+}
+
+func (p *{{if .IsG2}}G2{{end}}Projective) ProjectiveToAffine() {{if .IsG2}}G2{{end}}Affine {
+	var a {{if .IsG2}}G2{{end}}Affine
+
+	cA := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(&a))
+	cP := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&p))
+	C.{{.Curve}}{{if .IsG2}}G2{{end}}ToAffine(cP, cA)
+	return a
+}
+
+func {{if .IsG2}}G2{{end}}GenerateProjectivePoints(size int) core.HostSlice[{{if .IsG2}}G2{{end}}Projective] {
+	points := make([]{{if .IsG2}}G2{{end}}Projective, size)
+	for i := range points {
+		points[i] = {{if .IsG2}}G2{{end}}Projective{}
+	}
+
+	pointsSlice := core.HostSliceFromElements[{{if .IsG2}}G2{{end}}Projective](points)
+	pPoints := (*C.{{if .IsG2}}g2_{{end}}projective_t)(unsafe.Pointer(&pointsSlice[0]))
+	cSize := (C.int)(size)
+	C.{{.Curve}}{{if .IsG2}}G2{{end}}GenerateProjectivePoints(pPoints, cSize)
+
+	return pointsSlice
+}
+{{end}}
+type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine struct {
+	X, Y {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+}
+
+func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Size() int {
+	return a.X.Size() * 2
+}
+
+func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) AsPointer() *uint64 {
+	return a.X.AsPointer()
+}
+
+func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Zero() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
+	a.X.Zero()
+	a.Y.Zero()
+
+	return *a
+}
+
+func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) FromLimbs(x, y []uint64) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
+	a.X.FromLimbs(x)
+	a.Y.FromLimbs(y)
+
+	return *a
+}
+
+func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) ToProjective() {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+	var z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
+
+	return {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective{
+		X: a.X,
+		Y: a.Y,
+		Z: z.One(),
+	}
+}
+{{if not .IsMock}}
+func {{if .IsG2}}G2{{end}}AffineFromProjective(p *{{if .IsG2}}G2{{end}}Projective) {{if .IsG2}}G2{{end}}Affine {
+	return p.ProjectiveToAffine()
+}
+
+func {{if .IsG2}}G2{{end}}GenerateAffinePoints(size int) core.HostSlice[{{if .IsG2}}G2{{end}}Affine] {
+	points := make([]{{if .IsG2}}G2{{end}}Affine, size)
+	for i := range points {
+		points[i] = {{if .IsG2}}G2{{end}}Affine{}
+	}
+
+	pointsSlice := core.HostSliceFromElements[{{if .IsG2}}G2{{end}}Affine](points)
+	cPoints := (*C.{{if .IsG2}}g2_{{end}}affine_t)(unsafe.Pointer(&pointsSlice[0]))
+	cSize := (C.int)(size)
+	C.{{.Curve}}{{if .IsG2}}G2{{end}}GenerateAffinePoints(cPoints, cSize)
+
+	return pointsSlice
+}
+
+func convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C.{{if .IsG2}}g2_{{end}}affine_t)(points.AsPointer())
+	cSize := (C.size_t)(points.Len())
+	cIsInto := (C._Bool)(isInto)
+	defaultCtx, _ := cr.GetDefaultDeviceContext()
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
+	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func {{if .IsG2}}G2{{end}}AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points, true)
+}
+
+func {{if .IsG2}}G2{{end}}AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{if .IsG2}}G2{{end}}AffinePointsMontgomery(points, false)
+}
+
+func convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C.{{if .IsG2}}g2_{{end}}projective_t)(points.AsPointer())
+	cSize := (C.size_t)(points.Len())
+	cIsInto := (C._Bool)(isInto)
+	defaultCtx, _ := cr.GetDefaultDeviceContext()
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
+	__ret := C.{{.Curve}}{{if .IsG2}}G2{{end}}ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func {{if .IsG2}}G2{{end}}ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points, true)
+}
+
+func {{if .IsG2}}G2{{end}}ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{if .IsG2}}G2{{end}}ProjectivePointsMontgomery(points, false)
+}
+{{end}}

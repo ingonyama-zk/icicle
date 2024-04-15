@@ -1,6 +1,6 @@
 # ICICLE
 
-**<div align="center">ICICLE is a library for ZK acceleration using CUDA-enabled GPUs.</div>**
+<div align="center">ICICLE is a library for ZK acceleration using CUDA-enabled GPUs.</div>
 
 <p align="center">
   <img alt="ICICLE" width="300" height="300" src="https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png"/>
@@ -11,9 +11,11 @@
   </a>
   <a href="https://twitter.com/intent/follow?screen_name=Ingo_zk">
     <img src="https://img.shields.io/twitter/follow/Ingo_zk?style=social&logo=twitter" alt="Follow us on Twitter">
+  <a href="https://github.com/ingonyama-zk/icicle/releases">
+    <img src="https://img.shields.io/github/v/release/ingonyama-zk/icicle" alt="GitHub Release">
   </a>
-  <img src="https://img.shields.io/badge/Machines%20running%20ICICLE-544-lightblue" alt="Machines running ICICLE">
 </p>
+
 
 ## Background
 
@@ -32,6 +34,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP.
 
 > [!NOTE]
 > Developers: We highly recommend reading our [documentation]
+
 > [!TIP]
 > Try out ICICLE by running some [examples] using ICICLE in C++ and our Rust bindings 
 
@@ -47,7 +50,7 @@ ICICLE is a CUDA implementation of general functions widely used in ZKP.
 
 ### Accessing Hardware
 
-If you don't have access to a Nvidia GPU we have some options for you. 
+If you don't have access to an Nvidia GPU we have some options for you. 
 
 Checkout [Google Colab](https://colab.google/). Google Colab offers a free [T4 GPU](https://www.nvidia.com/en-us/data-center/tesla-t4/) instance and ICICLE can be used with it, reference this guide for setting up your [Google Colab workplace][GOOGLE-COLAB-ICICLE].
 
@@ -70,7 +73,7 @@ Running ICICLE via Rust bindings is highly recommended and simple:
 - Clone this repo
   - go to our [Rust bindings][ICICLE-RUST]
   - Enter a [curve](./wrappers/rust/icicle-curves) implementation
-  - run `cargo build --release` to build or `cargo test -- --test-threads=1` to build and execute tests
+  - run `cargo build --release` to build or `cargo test` to build and execute tests
 
 In any case you would want to compile and run core icicle c++ tests, just follow these setps:
 - Clone this repo
@@ -112,7 +115,10 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 
 - [Robik](https://github.com/robik75), for his ongoing support and mentorship
 - [liuxiao](https://github.com/liuxiaobleach), for being a top notch bug smasher
-- [gkigiermo](https://github.com/gkigiermo), for making it intuitive to use ICICLE in Google Colab.
+- [gkigiermo](https://github.com/gkigiermo), for making it intuitive to use ICICLE in Google Colab
+- [nonam3e](https://github.com/nonam3e), for adding Grumpkin curve support into ICICLE
+- [alxiong](https://github.com/alxiong), for adding warmup for CudaStream
+- [cyl19970726](https://github.com/cyl19970726), for updating go install source in Dockerfile
 
 ## Help & Support
 
@@ -141,10 +147,10 @@ See [LICENSE-MIT][LMIT] for details.
 [GRANT_PROGRAM]: https://medium.com/@ingonyama/icicle-for-researchers-grants-challenges-9be1f040998e
 [ICICLE-CORE]: ./icicle/
 [ICICLE-RUST]: ./wrappers/rust/
-[ICICLE-GO]: ./goicicle/
+[ICICLE-GO]: ./wrappers/golang/
 [ICICLE-CORE-README]: ./icicle/README.md
 [ICICLE-RUST-README]: ./wrappers/rust/README.md
-[ICICLE-GO-README]: ./goicicle/README.md
+[ICICLE-GO-README]: ./wrappers/golang/README.md
 [documentation]: https://dev.ingonyama.com/icicle/overview
 [examples]: ./examples/
 

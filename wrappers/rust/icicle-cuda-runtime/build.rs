@@ -27,6 +27,11 @@ fn cuda_lib_path() -> &'static str {
 }
 
 fn main() {
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        panic!("Currently, ICICLE can only be built for Windows or Linux")
+    }
+
     let cuda_runtime_api_path = PathBuf::from(cuda_include_path())
         .join("cuda_runtime_api.h")
         .to_string_lossy()
@@ -72,11 +77,17 @@ fn main() {
         .allowlist_function("cudaMemset")
         .allowlist_function("cudaMemsetAsync")
         .allowlist_function("cudaDeviceGetDefaultMemPool")
+        .allowlist_function("cudaMemGetInfo")
         .rustified_enum("cudaMemcpyKind")
         // Stream Ordered Memory Allocator
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html
         .allowlist_function("cudaFreeAsync")
         .allowlist_function("cudaMallocAsync")
+        // Unified Addressing
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__UNIFIED.html
+        .rustified_enum("cudaMemoryType")
+        .allowlist_type("cudaPointerAttributes")
+        .allowlist_function("cudaPointerGetAttributes")
         //
         .generate()
         .expect("Unable to generate bindings");

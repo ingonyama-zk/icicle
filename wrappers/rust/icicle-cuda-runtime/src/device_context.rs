@@ -3,8 +3,6 @@ use crate::stream::CudaStream;
 
 pub const DEFAULT_DEVICE_ID: usize = 0;
 
-use crate::device::get_device;
-
 /// Properties of the device used in Icicle functions.
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -36,12 +34,5 @@ impl DeviceContext<'_> {
             device_id,
             mempool: std::ptr::null_mut(),
         }
-    }
-}
-
-pub fn check_device(device_id: i32) {
-    match device_id == get_device().unwrap() as i32 {
-        true => (),
-        false => panic!("Attempt to use on a different device"),
     }
 }
