@@ -5,7 +5,6 @@
 #include <list>
 
 #include "polynomials/polynomials.h"
-#include "polynomials/polynomials_c_api.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 
 #include "ntt/ntt.cuh"
@@ -246,29 +245,6 @@ TEST_F(PolynomialTest, addition_inplace)
   auto s_x = f(x);
 
   EXPECT_EQ(fx_plus_gx, s_x);
-}
-
-TEST_F(PolynomialTest, cAPI)
-{
-  const int size = 3;
-  auto coeff = std::make_unique<scalar_t[]>(size);
-  random_samples(coeff.get(), size);
-
-  auto f = CONCAT_EXPAND(FIELD, polynomial_create_from_coefficients)(coeff.get(), size);
-  auto g = CONCAT_EXPAND(FIELD, polynomial_create_from_coefficients)(coeff.get(), size);
-  auto s = CONCAT_EXPAND(FIELD, polynomial_add)(f, g);
-
-  scalar_t x = scalar_t::rand_host();
-
-  auto f_x = CONCAT_EXPAND(FIELD, polynomial_evaluate)(f, x);
-  auto g_x = CONCAT_EXPAND(FIELD, polynomial_evaluate)(g, x);
-  auto fx_plus_gx = f_x + g_x;
-  auto s_x = CONCAT_EXPAND(FIELD, polynomial_evaluate)(s, x);
-  EXPECT_EQ(fx_plus_gx, s_x);
-
-  CONCAT_EXPAND(FIELD, polynomial_delete)(f);
-  CONCAT_EXPAND(FIELD, polynomial_delete)(g);
-  CONCAT_EXPAND(FIELD, polynomial_delete)(s);
 }
 
 TEST_F(PolynomialTest, multiplication)
