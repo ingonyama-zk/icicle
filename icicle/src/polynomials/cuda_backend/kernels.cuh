@@ -64,10 +64,10 @@ namespace polynomials {
   }
 
   template <typename T>
-  __global__ void evaluatePolynomialWithoutReduction(T x, const T* coeffs, int num_coeffs, T* tmp)
+  __global__ void evaluatePolynomialWithoutReduction(const T* x, const T* coeffs, int num_coeffs, T* tmp)
   {
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * pow(x, tid); }
+    if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * pow(*x, tid); }
   }
 
   /*============================== division ==============================*/

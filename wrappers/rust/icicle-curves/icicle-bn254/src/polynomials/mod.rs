@@ -98,8 +98,16 @@ mod tests {
 
         let mut evals = vec![ScalarField::zero(); domain.len()];
         new_mul_scalar.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut evals));
-        println!("evals on domain: {:?}", &evals);
         println!("degree = {}", new_mul_scalar.degree());
+
+        let mut device_evals = DeviceVec::<ScalarField>::cuda_malloc(domain.len()).unwrap();
+        new_mul_scalar.eval_on_domain(HostSlice::from_slice(&domain), &mut device_evals[..]);
+        let mut host_evals_from_device = vec![ScalarField::zero(); domain.len()];
+        device_evals
+            .copy_to_host(HostSlice::from_mut_slice(&mut host_evals_from_device))
+            .unwrap();
+        println!("evals on domain: {:?}", &evals);
+        println!("(from device) evals on domain = {:?}", host_evals_from_device);
 
         println!("coeff[2] = {}", new_mul_scalar.get_coeff(1));
 

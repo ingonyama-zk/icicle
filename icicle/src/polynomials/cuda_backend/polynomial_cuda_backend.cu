@@ -724,41 +724,49 @@ namespace polynomials {
     }
 
   public:
-    I evaluate(PolyContext p, const D& domain_x) override
+    void evaluate(PolyContext p, const D* x, I* eval) override
     {
       // TODO Yuval: maybe use Horner's rule and just evaluate each domain point per thread. Alternatively Need to
       // reduce in parallel.
 
       auto [coeff, nof_coeff] = p->get_coefficients();
-      I *d_evaluation, *d_domain_x;
-      I* d_tmp;
-      CHK_STICKY(cudaMallocAsync(&d_evaluation, sizeof(I), m_device_context.stream));
-      CHK_STICKY(cudaMallocAsync(&d_domain_x, sizeof(I), m_device_context.stream));
-      CHK_STICKY(cudaMemcpyAsync(d_domain_x, &domain_x, sizeof(I), cudaMemcpyHostToDevice, m_device_context.stream));
+
+      const bool is_x_on_host = is_host_ptr(x, m_device_context.device_id);
+      const bool is_eval_on_host = is_host_ptr(eval, m_device_context.device_id);
+
+      const D* d_x = x;
+      D* allocated_x = nullptr;
+      if (is_x_on_host) {
+        CHK_STICKY(cudaMallocAsync(&allocated_x, sizeof(I), m_device_context.stream));
+        CHK_STICKY(cudaMemcpyAsync(allocated_x, x, sizeof(I), cudaMemcpyHostToDevice, m_device_context.stream));
+        d_x = allocated_x;
+      }
+      I* d_eval = eval;
+      if (is_eval_on_host) { CHK_STICKY(cudaMallocAsync(&d_eval, sizeof(I), m_device_context.stream)); }
+
+      // TODO Yuval: other methods can avoid this allocation. Also for eval_on_domain() no need to reallocate every time
+      I* d_tmp = nullptr;
       CHK_STICKY(cudaMallocAsync(&d_tmp, sizeof(I) * nof_coeff, m_device_context.stream));
       const int NOF_THREADS = 32;
       const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
-      // TODO Yuval: parallelize kernel
       evaluatePolynomialWithoutReduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-        domain_x, coeff, nof_coeff, d_tmp);
-      dummyReduce<<<1, 1, 0, m_device_context.stream>>>(d_tmp, nof_coeff, d_evaluation);
+        d_x, coeff, nof_coeff, d_tmp); // TODO Yuval: parallelize kernel
+      dummyReduce<<<1, 1, 0, m_device_context.stream>>>(d_tmp, nof_coeff, d_eval);
 
-      I h_evaluation;
-      CHK_STICKY(
-        cudaMemcpyAsync(&h_evaluation, d_evaluation, sizeof(I), cudaMemcpyDeviceToHost, m_device_context.stream));
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
-      CHK_STICKY(cudaFreeAsync(d_evaluation, m_device_context.stream));
-      CHK_STICKY(cudaFreeAsync(d_domain_x, m_device_context.stream));
+      if (is_eval_on_host) {
+        CHK_STICKY(cudaMemcpyAsync(eval, d_eval, sizeof(I), cudaMemcpyDeviceToHost, m_device_context.stream));
+        CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
+        CHK_STICKY(cudaFreeAsync(d_eval, m_device_context.stream));
+      }
+      if (allocated_x) { CHK_STICKY(cudaFreeAsync(allocated_x, m_device_context.stream)); }
       CHK_STICKY(cudaFreeAsync(d_tmp, m_device_context.stream));
-
-      return h_evaluation;
     }
 
     void evaluate_on_domain(PolyContext p, const D* domain, uint64_t size, I* evaluations /*OUT*/) override
     {
       // TODO Yuval: implement more efficiently ??
       for (uint64_t i = 0; i < size; ++i) {
-        evaluations[i] = evaluate(p, domain[i]);
+        evaluate(p, &domain[i], &evaluations[i]);
       }
     }
 
