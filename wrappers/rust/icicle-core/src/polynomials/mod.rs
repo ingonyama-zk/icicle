@@ -315,13 +315,17 @@ macro_rules! impl_polynomial_tests {
         $field:ident
     ) => {
         use super::*;
-        use ark_ff::FftField;
+        use ark_ff::{FftField, Field as ArkField, One};
+        use ark_std::{ops::Neg, test_rng, UniformRand};
         use icicle_core::ntt::{initialize_domain, release_domain, NTTDomain};
         use icicle_core::traits::ArkConvertible;
         use icicle_cuda_runtime::device_context::DeviceContext;
         use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
+        use std::sync::Once;
 
-        use icicle_core::traits::FieldImpl;
+        use icicle_core::traits::{FieldImpl, GenerateRandom};
+
+        type Poly = $field_prefix_ident::Polynomial;
 
         fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
         where
@@ -341,100 +345,282 @@ macro_rules! impl_polynomial_tests {
             release_domain::<F>(&ctx).unwrap()
         }
 
+        fn rand_ark<F: FieldImpl + ArkConvertible>() -> F::ArkEquivalent
+        where
+            F::ArkEquivalent: FftField,
+            <F as FieldImpl>::Config: NTTDomain<F>,
+        {
+            let mut seed = test_rng();
+            F::ArkEquivalent::rand(&mut seed)
+        }
+
+        // implementing field ops via ark since they are not implemented
+        fn rand() -> $field {
+            let r = rand_ark::<$field>();
+            $field::from_ark(r)
+        }
+
+        fn add(a: &$field, b: &$field) -> $field {
+            let a_ark = $field::to_ark(a);
+            let b_ark = $field::to_ark(b);
+            let add_ark = a_ark + b_ark;
+            $field::from_ark(add_ark)
+        }
+
+        fn sub(a: &$field, b: &$field) -> $field {
+            let a_ark = $field::to_ark(a);
+            let b_ark = $field::to_ark(b);
+            let add_ark = a_ark - b_ark;
+            $field::from_ark(add_ark)
+        }
+
+        fn mul(a: &$field, b: &$field) -> $field {
+            let a_ark = $field::to_ark(a);
+            let b_ark = $field::to_ark(b);
+            let add_ark = a_ark * b_ark;
+            $field::from_ark(add_ark)
+        }
+
+        fn randomize_coeffs<F: FieldImpl>(size: usize) -> Vec<F>
+        where
+            <F as FieldImpl>::Config: GenerateRandom<F>,
+        {
+            let coeffs = F::Config::generate_random(size);
+            coeffs
+        }
+
+        fn randomize_poly(size: usize) -> Poly {
+            let coeffs = randomize_coeffs::<$field>(size);
+            let p = Poly::from_coeffs(HostSlice::from_slice(&coeffs), size);
+            p
+        }
+
+        static INIT: Once = Once::new();
+        pub fn setup() -> () {
+            INIT.call_once(|| {
+                let device_id: usize = 0;
+                let domain_max_size: u64 = 1 << 16;
+                init_domain::<ScalarField>(domain_max_size, device_id, false /*=fast twiddle */);
+
+                Poly::init_cuda_backend();
+            });
+        }
+
+        // Note: there is no add/mul for field elements so computing over integers instead
+
         #[test]
-        fn test_new_polynomial() {
-            let device_id: usize = 0;
-            let domain_max_size: u64 = 1 << 16;
-            init_domain::<ScalarField>(domain_max_size, device_id, false /*=fast twiddle */);
+        fn test_poly_eval() {
+            setup();
 
-            $field_prefix_ident::Polynomial::init_cuda_backend();
+            // testing correct evaluation of f(8) for f(x)=4x^2+2x+5
+            let coeffs = [$field::from_u32(5), $field::from_u32(2), $field::from_u32(4)];
+            let f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let x = $field::from_u32(8);
+            let f_x = f.eval(&x);
+            assert_eq!(f_x, $field::from_u32(277));
+        }
 
-            let size: usize = 2;
-            let coeffs = [ScalarField::zero(), ScalarField::one()];
-            let evals = [ScalarField::one(), ScalarField::one()];
+        #[test]
+        fn test_poly_clone() {
+            setup();
 
-            let mut f = $field_prefix_ident::Polynomial::from_coeffs(HostSlice::from_slice(&coeffs), size);
-            let g = $field_prefix_ident::Polynomial::from_rou_evals(HostSlice::from_slice(&evals), size);
+            // testing that the clone g(x) is independent of f(x) and cloned correctly
+            let mut f = randomize_poly(8);
+            let x = rand();
+            let fx = f.eval(&x);
 
-            let h = f.clone();
-            f.print();
-            g.print();
-            h.print();
-            let sum = &(&h + &g) + &f;
-            h.print();
-            sum.print();
-            f += &sum;
-            f.print();
-            sum.print();
-            let sub = &f - &g;
-            sub.print();
-            let mul = &sum * &h;
-            mul.print();
-            let two = ScalarField::from_u32(2);
-            let three = ScalarField::from_u32(3);
-            let mul_scalar = &(&(&two * &f) * &three) * &two;
-            f.print();
-            mul_scalar.print();
+            let g = f.clone();
+            f += &g;
 
-            let q = &mul_scalar / &sum;
-            let r = &mul_scalar % &sum;
-            q.print();
-            r.print();
+            let gx = g.eval(&x);
+            let new_fx = f.eval(&x);
 
-            let (q2, r2) = mul_scalar.divide(&sum);
-            q2.print();
-            r2.print();
+            assert_eq!(fx, gx); // cloned correctly
+            assert_eq!(add(&fx, &gx), new_fx);
+        }
 
-            let mut new_mul_scalar = &(&q * &sum) + &r;
-            new_mul_scalar.print();
+        #[test]
+        fn test_poly_add_sub_mul() {
+            setup();
 
-            let div_by_v = new_mul_scalar.div_by_vanishing(2);
-            div_by_v.print();
+            // testing add/sub operations
+            let size = 1 << 10;
+            let mut f = randomize_poly(size);
+            let mut g = randomize_poly(size);
 
-            new_mul_scalar.add_monomial_inplace(&two, 2);
-            new_mul_scalar.print();
-            new_mul_scalar.sub_monomial_inplace(&three, 1);
-            new_mul_scalar.print();
+            let x = rand();
+            let fx = f.eval(&x);
+            let gx = g.eval(&x);
 
-            println!("new_mul_scalar(2) = {}", new_mul_scalar.eval(&two));
+            let poly_add = &f + &g;
+            let poly_sub = &f - &g;
+            let poly_mul = &f * &g;
 
-            let domain = [
-                ScalarField::from_u32(1),
-                ScalarField::from_u32(2),
-                ScalarField::from_u32(3),
-            ];
+            assert_eq!(poly_add.eval(&x), add(&fx, &gx));
+            assert_eq!(poly_sub.eval(&x), sub(&fx, &gx));
+            assert_eq!(poly_mul.eval(&x), mul(&fx, &gx));
 
-            let mut evals = vec![ScalarField::zero(); domain.len()];
-            new_mul_scalar.eval_on_domain(
+            // test scalar multiplication
+            let s1 = rand();
+            let s2 = rand();
+            let poly_mul_s1 = &f * &s1;
+            let poly_mul_s2 = &s2 * &f;
+            assert_eq!(poly_mul_s1.eval(&x), mul(&fx, &s1));
+            assert_eq!(poly_mul_s2.eval(&x), mul(&fx, &s2));
+
+            // test inplace add
+            f += &g;
+            assert_eq!(f.eval(&x), add(&fx, &gx));
+        }
+
+        #[test]
+        fn test_poly_monomials() {
+            setup();
+
+            // testing add/sub monomials inplace
+            let zero = $field::from_u32(0);
+            let one = $field::from_u32(1);
+            let two = $field::from_u32(2);
+            let three = $field::from_u32(3);
+
+            // f(x) = 1+2x^2
+            let coeffs = [one, zero, two];
+            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let x = rand();
+            let fx = f.eval(&x);
+
+            f.add_monomial_inplace(&three, 1); // +3x
+            let fx_add = f.eval(&x);
+            assert_eq!(fx_add, add(&fx, &mul(&three, &x)));
+
+            f.sub_monomial_inplace(&one, 0); // -1
+            let fx_sub = f.eval(&x);
+            assert_eq!(fx_sub, sub(&fx_add, &one));
+        }
+
+        #[test]
+        fn test_poly_read_coeffs() {
+            setup();
+
+            let zero = $field::from_u32(0);
+            let one = $field::from_u32(1);
+            let two = $field::from_u32(2);
+            let three = $field::from_u32(3);
+            let four = $field::from_u32(4);
+
+            let coeffs = [one, two, three, four];
+            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+
+            // read coeffs to host memory
+            let mut host_mem = vec![$field::zero(); coeffs.len()];
+            f.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_mem));
+            assert_eq!(host_mem, coeffs);
+
+            // read coeffs to device memory
+            let mut device_mem = DeviceVec::<$field>::cuda_malloc(coeffs.len()).unwrap();
+            f.copy_coeffs(0, &mut device_mem[..]);
+            let mut host_coeffs_from_dev = vec![ScalarField::zero(); coeffs.len() as usize];
+            device_mem
+                .copy_to_host(HostSlice::from_mut_slice(&mut host_coeffs_from_dev))
+                .unwrap();
+
+            assert_eq!(host_mem, host_coeffs_from_dev);
+
+            // multiply by two and read single coeff
+            f = &f * &two;
+            // read single coeff
+            let x_squared_coeff = f.get_coeff(2);
+            assert_eq!(x_squared_coeff, mul(&two, &three));
+        }
+
+        #[test]
+        fn test_poly_division() {
+            setup();
+
+            // divide f(x)/g(x), compute q(x), r(x) and check f(x)=q(x)*g(x)+r(x)
+
+            let f = randomize_poly(1 << 12);
+            let g = randomize_poly(1 << 4);
+
+            let (q, r) = f.divide(&g);
+
+            let f_reconstructed = &(&q * &g) + &r;
+            let x = rand();
+
+            assert_eq!(f.eval(&x), f_reconstructed.eval(&x));
+        }
+
+        #[test]
+        fn test_poly_divide_by_vanishing() {
+            setup();
+
+            let zero = $field::from_u32(0);
+            let one = $field::from_u32(1);
+            let minus_one = sub(&zero, &one);
+            // compute random f(x) and compute f(x)*v(x) for v(x) vanishing poly
+            // divide by vanishing and check that f(x) is reconstrcuted
+
+            let f = randomize_poly(1 << 12);
+            let v_coeffs = [minus_one, zero, zero, zero, one]; // x^4-1
+            let v = Poly::from_coeffs(HostSlice::from_slice(&v_coeffs), v_coeffs.len());
+
+            let fv = &f * &v;
+            let deg_f = f.degree();
+            let deg_fv = fv.degree();
+            assert_eq!(deg_f + 4, deg_fv);
+
+            let f_reconstructed = fv.div_by_vanishing(4);
+            assert_eq!(deg_f, f_reconstructed.degree());
+
+            let x = rand();
+            assert_eq!(f.eval(&x), f_reconstructed.eval(&x));
+        }
+
+        #[test]
+        fn test_poly_eval_on_domain() {
+            setup();
+
+            let one = $field::from_u32(1);
+            let two = $field::from_u32(2);
+            let three = $field::from_u32(3);
+
+            let f = randomize_poly(1 << 12);
+            let domain = [one, two, three];
+
+            // evaluate to host memory
+            let mut host_evals = vec![ScalarField::zero(); domain.len()];
+            f.eval_on_domain(
                 HostSlice::from_slice(&domain),
-                HostSlice::from_mut_slice(&mut evals),
+                HostSlice::from_mut_slice(&mut host_evals),
             );
-            println!("degree = {}", new_mul_scalar.degree());
 
+            // check eval on domain agrees with eval() method
+            assert_eq!(f.eval(&one), host_evals[0]);
+            assert_eq!(f.eval(&two), host_evals[1]);
+            assert_eq!(f.eval(&three), host_evals[2]);
+
+            // evaluate to device memory
             let mut device_evals = DeviceVec::<ScalarField>::cuda_malloc(domain.len()).unwrap();
-            new_mul_scalar.eval_on_domain(HostSlice::from_slice(&domain), &mut device_evals[..]);
+            f.eval_on_domain(HostSlice::from_slice(&domain), &mut device_evals[..]);
             let mut host_evals_from_device = vec![ScalarField::zero(); domain.len()];
             device_evals
                 .copy_to_host(HostSlice::from_mut_slice(&mut host_evals_from_device))
                 .unwrap();
-            println!("evals on domain: {:?}", &evals);
-            println!("(from device) evals on domain = {:?}", host_evals_from_device);
 
-            println!("coeff[2] = {}", new_mul_scalar.get_coeff(1));
+            // check that evaluation to device memory is equivalent
+            assert_eq!(host_evals, host_evals_from_device);
 
-            let mut host_coeffs = vec![ScalarField::zero(); 3 as usize];
-            new_mul_scalar.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_coeffs));
-            println!("coeffs = {:?}", host_coeffs);
+            // use evals as domain (on device) and evaluate from device to host
+            f.eval_on_domain(&mut device_evals[..], HostSlice::from_mut_slice(&mut host_evals));
+            // check that the evaluations are correct
+            assert_eq!(f.eval(&host_evals_from_device[0]), host_evals[0]);
+            assert_eq!(f.eval(&host_evals_from_device[1]), host_evals[1]);
+            assert_eq!(f.eval(&host_evals_from_device[2]), host_evals[2]);
+        }
 
-            let mut device_coeffs = DeviceVec::<ScalarField>::cuda_malloc(3).unwrap();
-            new_mul_scalar.copy_coeffs(0, &mut device_coeffs[..]);
-            let mut host_coeffs_from_dev = vec![ScalarField::zero(); 3 as usize];
-            device_coeffs
-                .copy_to_host(HostSlice::from_mut_slice(&mut host_coeffs_from_dev))
-                .unwrap();
-            println!("coeffs_from_dev = {:?}", host_coeffs_from_dev);
-
-            rel_domain::<ScalarField>(device_id);
+        #[test]
+        fn test_slicing() {
+            // TODO Yuval
         }
     };
 }
