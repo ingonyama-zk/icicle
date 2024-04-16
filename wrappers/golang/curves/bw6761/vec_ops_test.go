@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	"github.com/stretchr/testify/assert"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestVecOps(t *testing.T) {
@@ -33,7 +33,6 @@ func TestVecOps(t *testing.T) {
 	assert.Equal(t, a, out3)
 }
 
-
 func TestTranspose(t *testing.T) {
 
 	rowSize := 1 << 6
@@ -52,7 +51,7 @@ func TestTranspose(t *testing.T) {
 
 	TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
 	TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)
-	
+
 	assert.Equal(t, matrix, out2)
 
 	var d_matrix, d_out, d_out2 core.DeviceSlice
