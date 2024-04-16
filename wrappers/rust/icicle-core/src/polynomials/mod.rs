@@ -9,6 +9,7 @@ macro_rules! impl_polynomial_api {
             use crate::polynomials::*;
             use icicle_core::traits::FieldImpl;
             use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+            use std::clone;
             use std::cmp;
             use std::ffi::c_void;
             use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
@@ -108,13 +109,6 @@ macro_rules! impl_polynomial_api {
                         }
                     }
                 }
-                pub fn clone(&self) -> Polynomial {
-                    unsafe {
-                        Polynomial {
-                            handle: clone(self.handle),
-                        }
-                    }
-                }
 
                 pub fn divide(&self, denominator: &Polynomial) -> (Polynomial, Polynomial) {
                     let mut q_handle: PolynomialHandle = std::ptr::null_mut();
@@ -206,6 +200,16 @@ macro_rules! impl_polynomial_api {
                 fn drop(&mut self) {
                     unsafe {
                         delete(self.handle);
+                    }
+                }
+            }
+
+            impl Clone for Polynomial {
+                fn clone(&self) -> Self {
+                    unsafe {
+                        Polynomial {
+                            handle: clone(self.handle),
+                        }
                     }
                 }
             }
