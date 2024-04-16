@@ -16,7 +16,7 @@ fn main() {
         .build_target("icicle_field")
         .build();
 
-    println!("cargo:rustc-link-search={}/build/src/fields/", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/lib", out_dir.display());
 
     println!("cargo:rustc-link-lib=ingo_field_babybear");
     println!("cargo:rustc-link-lib=stdc++");

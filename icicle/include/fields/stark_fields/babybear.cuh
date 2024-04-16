@@ -2,8 +2,9 @@
 
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
+#include "fields/quartic_extension.cuh"
 
-namespace baby_bear {
+namespace babybear {
   struct fp_config {
     static constexpr unsigned limbs_count = 1;
     static constexpr unsigned omegas_count = 28;
@@ -49,4 +50,14 @@ namespace baby_bear {
     // TODO: we're very confused by plonky3 and risc0 having different nonresidues: 11 and -11 respectively
     static constexpr bool nonresidue_is_negative = true;
   };
-} // namespace baby_bear
+
+  /**
+   * Scalar field. Is always a prime field.
+   */
+  typedef Field<fp_config> scalar_t;
+
+  /**
+   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef ExtensionField<fp_config> extension_t;
+} // namespace babybear

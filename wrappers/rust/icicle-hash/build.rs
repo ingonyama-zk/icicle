@@ -14,7 +14,7 @@ fn main() {
         .build_target("icicle_hash")
         .build();
 
-    println!("cargo:rustc-link-search={}/build/src/hash/", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/lib", out_dir.display());
     println!("cargo:rustc-link-lib=ingo_hash");
     println!("cargo:rustc-link-lib=stdc++");
     println!("cargo:rustc-link-lib=cudart");
