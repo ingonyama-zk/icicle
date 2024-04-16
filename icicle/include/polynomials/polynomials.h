@@ -73,9 +73,9 @@ namespace polynomials {
     int64_t degree();
 
     // Methods for copying coefficients to host memory.
-    Coeff copy_coefficient_to_host(uint64_t idx) const; // single coefficient
+    Coeff get_coeff(uint64_t idx) const; // single coefficient
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
-    int64_t copy_coefficients_to_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
+    int64_t copy_coeffs(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
 
     // Methods for obtaining a view of the coefficients or evaluations
     std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view();

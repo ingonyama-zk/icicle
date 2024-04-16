@@ -10,7 +10,7 @@ mod tests {
     use icicle_core::ntt::{initialize_domain, release_domain, NTTDomain};
     use icicle_core::traits::ArkConvertible;
     use icicle_cuda_runtime::device_context::DeviceContext;
-    use icicle_cuda_runtime::memory::HostSlice;
+    use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
 
     use icicle_core::traits::FieldImpl;
 
@@ -101,11 +101,19 @@ mod tests {
         println!("evals on domain: {:?}", &evals);
         println!("degree = {}", new_mul_scalar.degree());
 
-        println!("coeff[2] = {}", new_mul_scalar.read_single_coeff(1));
+        println!("coeff[2] = {}", new_mul_scalar.get_coeff(1));
 
-        let mut coeffs_read = vec![ScalarField::zero(); 3 as usize];
-        new_mul_scalar.copy_coefficient_range(0, 2, HostSlice::from_mut_slice(&mut coeffs_read));
-        println!("coeffs = {:?}", coeffs_read);
+        let mut host_coeffs = vec![ScalarField::zero(); 3 as usize];
+        new_mul_scalar.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_coeffs));
+        println!("coeffs = {:?}", host_coeffs);
+
+        let mut device_coeffs = DeviceVec::<ScalarField>::cuda_malloc(3).unwrap();
+        new_mul_scalar.copy_coeffs(0, &mut device_coeffs[..]);
+        let mut host_coeffs_from_dev = vec![ScalarField::zero(); 3 as usize];
+        device_coeffs
+            .copy_to_host(HostSlice::from_mut_slice(&mut host_coeffs_from_dev))
+            .unwrap();
+        println!("coeffs_from_dev = {:?}", host_coeffs_from_dev);
 
         rel_domain::<ScalarField>(device_id);
     }

@@ -170,15 +170,15 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
-  C Polynomial<C, D, I>::copy_coefficient_to_host(uint64_t idx) const
+  C Polynomial<C, D, I>::get_coeff(uint64_t idx) const
   {
-    return m_backend->copy_coefficient_to_host(m_context, idx);
+    return m_backend->get_coeff(m_context, idx);
   }
 
   template <typename C, typename D, typename I>
-  int64_t Polynomial<C, D, I>::copy_coefficients_to_host(C* host_coeffs, int64_t start_idx, int64_t end_idx) const
+  int64_t Polynomial<C, D, I>::copy_coeffs(C* host_coeffs, int64_t start_idx, int64_t end_idx) const
   {
-    return m_backend->copy_coefficients_to_host(m_context, host_coeffs, start_idx, end_idx);
+    return m_backend->copy_coeffs(m_context, host_coeffs, start_idx, end_idx);
   }
 
   template <typename C, typename D, typename I>
