@@ -13,6 +13,22 @@ namespace polynomials {
 
   static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
   /*============================== Polynomial CUDA-context ==============================*/
+
+  // checking whether a pointer is on host or device and asserts device matches the polynmoial device
+  static bool is_host_ptr(const void* p, int device_id)
+  {
+    // Note: device memory can me managed or not. Host memory can be registered or not. No distinction here.
+    cudaPointerAttributes attributes;
+    CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
+    const bool is_on_host = attributes.type == cudaMemoryTypeHost ||
+                            attributes.type == cudaMemoryTypeUnregistered; // unregistered is host memory
+    const bool is_on_cur_device = !is_on_host && attributes.device == device_id;
+    const bool is_valid_ptr = is_on_host || is_on_cur_device;
+    if (!is_valid_ptr) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid ptr for polynomial"); }
+
+    return is_on_host;
+  }
+
   template <typename C = scalar_t, typename D = C, typename I = C>
   class CUDAPolynomialContext : public IPolynomialContext<C, D, I>
   {
@@ -122,27 +138,12 @@ namespace polynomials {
     void set_state(State state) { m_state = state; }
     uint64_t get_nof_elements() const override { return m_nof_elements; }
 
-    bool is_host_ptr(const void* p) const
-    {
-      // checking whether a pointer is on host or device and asserts device matches the polynmoial device
-      // Note: device memory can me managed or not. Host memory can be registered or not. No distinction here.
-      cudaPointerAttributes attributes;
-      CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
-      const bool is_on_host = attributes.type == cudaMemoryTypeHost ||
-                              attributes.type == cudaMemoryTypeUnregistered; // unregistered is host memory
-      const bool is_on_cur_device = !is_on_host && attributes.device == m_device_context.device_id;
-      const bool is_valid_ptr = is_on_host || is_on_cur_device;
-      if (!is_valid_ptr) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid evaluations ptr"); }
-
-      return is_on_host;
-    }
-
     void from_coefficients(uint64_t nof_coefficients, const C* coefficients) override
     {
       const bool is_memset_zeros = coefficients == nullptr;
       allocate(nof_coefficients, State::Coefficients, is_memset_zeros);
       if (coefficients) {
-        const bool is_ptr_on_host = is_host_ptr(coefficients);
+        const bool is_ptr_on_host = is_host_ptr(coefficients, m_device_context.device_id);
 
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, coefficients, nof_coefficients * sizeof(C),
@@ -157,7 +158,7 @@ namespace polynomials {
       const bool is_memset_zeros = evaluations == nullptr;
       allocate(nof_evaluations, State::EvaluationsOnRou_Natural, is_memset_zeros);
       if (evaluations) {
-        const bool is_ptr_on_host = is_host_ptr(evaluations);
+        const bool is_ptr_on_host = is_host_ptr(evaluations, m_device_context.device_id);
 
         CHK_STICKY(cudaMemcpyAsync(
           m_storage, evaluations, nof_evaluations * sizeof(C),
@@ -478,9 +479,9 @@ namespace polynomials {
 
       // TODO: can add kernel that takes the scalar as device memory
       if (is_a_scalar) {
-        return multiply(c, b, copy_coefficient_to_host(a, 0));
+        return multiply(c, b, get_coeff(a, 0));
       } else if (is_b_scalar) {
-        return multiply(c, a, copy_coefficient_to_host(b, 0));
+        return multiply(c, a, get_coeff(b, 0));
       }
 
       const bool is_multiply_with_cosets = true; // TODO  Yuval: check when faster to do so.
@@ -607,7 +608,7 @@ namespace polynomials {
       CHK_STICKY(
         cudaMemcpyAsync(R_coeffs, a_coeffs, a_N * sizeof(C), cudaMemcpyDeviceToDevice, m_device_context.stream));
 
-      const C& lc_b_inv = C::inverse(copy_coefficient_to_host(b, deg_b)); // largest coeff of b
+      const C& lc_b_inv = C::inverse(get_coeff(b, deg_b)); // largest coeff of b
 
       int64_t deg_r = deg_a;
       while (deg_r >= deg_b) {
@@ -761,11 +762,10 @@ namespace polynomials {
       }
     }
 
-    int64_t
-    copy_coefficients_to_host(PolyContext op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
+    int64_t copy_coeffs(PolyContext op, C* out_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
     {
       const uint64_t nof_coeffs = op->get_nof_elements();
-      if (nullptr == host_coeffs) { return nof_coeffs; } // no allocated memory
+      if (nullptr == out_coeffs) { return nof_coeffs; } // no allocated memory
 
       end_idx = (end_idx == -1) ? nof_coeffs - 1 : end_idx;
 
@@ -773,26 +773,27 @@ namespace polynomials {
       const bool is_valid_end_idx = end_idx < nof_coeffs && end_idx >= 0 && end_idx >= start_idx;
       const bool is_valid_indices = is_valid_start_idx && is_valid_end_idx;
       if (!is_valid_indices) {
-        // return -1 instead? I could but 'copy_coefficient_to_host()' cannot with its current declaration
-        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "copy_coefficients_to_host() invalid indices");
+        // return -1 instead? I could but 'get_coeff()' cannot with its current declaration
+        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "copy_coeffs() invalid indices");
       }
 
       op->transform_to_coefficients();
       auto [device_coeffs, _] = op->get_coefficients();
       const size_t nof_coeffs_to_copy = end_idx - start_idx + 1;
+      const bool is_copy_to_host = is_host_ptr(out_coeffs, m_device_context.device_id);
       CHK_STICKY(cudaMemcpyAsync(
-        host_coeffs, device_coeffs + start_idx, nof_coeffs_to_copy * sizeof(C), cudaMemcpyDeviceToHost,
-        m_device_context.stream));
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
+        out_coeffs, device_coeffs + start_idx, nof_coeffs_to_copy * sizeof(C),
+        is_copy_to_host ? cudaMemcpyDeviceToHost : cudaMemcpyDeviceToDevice, m_device_context.stream));
+      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied
 
       return nof_coeffs_to_copy;
     }
 
     // read coefficients to host
-    C copy_coefficient_to_host(PolyContext op, uint64_t coeff_idx) override
+    C get_coeff(PolyContext op, uint64_t coeff_idx) override
     {
       C host_coeff;
-      copy_coefficients_to_host(op, &host_coeff, coeff_idx, coeff_idx);
+      copy_coeffs(op, &host_coeff, coeff_idx, coeff_idx);
       return host_coeff;
     }
 

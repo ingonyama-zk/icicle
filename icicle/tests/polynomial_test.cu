@@ -96,8 +96,8 @@ public:
 
     auto lhs_coeffs = std::make_unique<scalar_t[]>(deg_lhs);
     auto rhs_coeffs = std::make_unique<scalar_t[]>(deg_rhs);
-    lhs.copy_coefficients_to_host(lhs_coeffs.get(), 1, deg_lhs - 1);
-    rhs.copy_coefficients_to_host(rhs_coeffs.get(), 1, deg_rhs - 1);
+    lhs.copy_coeffs(lhs_coeffs.get(), 1, deg_lhs - 1);
+    rhs.copy_coeffs(rhs_coeffs.get(), 1, deg_rhs - 1);
 
     ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(scalar_t)));
   }
@@ -318,18 +318,18 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   auto g = Polynomial_t::from_coefficients(coeffs_g, 3);
 
   auto h = f + g; // 1+2x+3x^3
-  const auto h0 = h.copy_coefficient_to_host(0);
-  const auto h1 = h.copy_coefficient_to_host(1);
-  const auto h2 = h.copy_coefficient_to_host(2);
+  const auto h0 = h.get_coeff(0);
+  const auto h1 = h.get_coeff(1);
+  const auto h2 = h.get_coeff(2);
   EXPECT_EQ(h0, one);
   EXPECT_EQ(h1, two);
   EXPECT_EQ(h2, three);
 
-  int64_t nof_coeffs = h.copy_coefficients_to_host(nullptr); // query #coeffs
-  EXPECT_GE(nof_coeffs, 3);                                  // can be larger due to padding to powers of two
+  int64_t nof_coeffs = h.copy_coeffs(nullptr); // query #coeffs
+  EXPECT_GE(nof_coeffs, 3);                    // can be larger due to padding to powers of two
   scalar_t h_coeffs[3] = {0};
-  nof_coeffs = h.copy_coefficients_to_host(h_coeffs, 0, 2); // read the coefficients
-  EXPECT_EQ(nof_coeffs, 3);                                 // expecting 3 due to specified indices
+  nof_coeffs = h.copy_coeffs(h_coeffs, 0, 2); // read the coefficients
+  EXPECT_EQ(nof_coeffs, 3);                   // expecting 3 due to specified indices
 
   scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
@@ -347,8 +347,8 @@ TEST_F(PolynomialTest, divisionSimple)
   auto [q, r] = a.divide(b);
   scalar_t q_coeffs[2] = {0}; // 3x+4
   scalar_t r_coeffs[2] = {0}; // 3x+9
-  const auto q_nof_coeffs = q.copy_coefficients_to_host(q_coeffs, 0, 1);
-  const auto r_nof_coeffs = r.copy_coefficients_to_host(r_coeffs, 0, 1);
+  const auto q_nof_coeffs = q.copy_coeffs(q_coeffs, 0, 1);
+  const auto r_nof_coeffs = r.copy_coeffs(r_coeffs, 0, 1);
 
   ASSERT_EQ(q_nof_coeffs, 2);
   ASSERT_EQ(r_nof_coeffs, 2);
@@ -461,9 +461,9 @@ TEST_F(PolynomialTest, slicing)
     auto expected_odd = scalar_t::zero();
     for (int i = size - 1; i >= 0; --i) {
       if (i % 2 == 0)
-        expected_even = expected_even * x + f.copy_coefficient_to_host(i);
+        expected_even = expected_even * x + f.get_coeff(i);
       else
-        expected_odd = expected_odd * x + f.copy_coefficient_to_host(i);
+        expected_odd = expected_odd * x + f.get_coeff(i);
     }
 
     auto e = f.even();

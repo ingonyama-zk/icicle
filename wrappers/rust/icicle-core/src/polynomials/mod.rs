@@ -9,6 +9,7 @@ macro_rules! impl_polynomial_api {
             use crate::polynomials::*;
             use icicle_core::traits::FieldImpl;
             use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+            use std::cmp;
             use std::ffi::c_void;
             use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
 
@@ -75,16 +76,11 @@ macro_rules! impl_polynomial_api {
                 #[link_name = concat!($field_prefix, "polynomial_degree")]
                 fn degree(a: PolynomialHandle) -> i64;
 
-                #[link_name = concat!($field_prefix, "polynomial_copy_single_coeff_to_host")]
-                fn copy_single_coefficient_to_host(a: PolynomialHandle, idx: u64) -> $field;
+                #[link_name = concat!($field_prefix, "polynomial_get_coeff")]
+                fn get_coeff(a: PolynomialHandle, idx: u64) -> $field;
 
-                #[link_name = concat!($field_prefix, "polynomial_copy_coeffs_range_to_host")]
-                fn copy_coefficient_range_to_host(
-                    a: PolynomialHandle,
-                    host_coeffs: *mut $field,
-                    start_idx: u64,
-                    end_idx: u64,
-                );
+                #[link_name = concat!($field_prefix, "polynomial_copy_coeffs_range")]
+                fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: i64, end_idx: i64) -> i64;
 
             }
 
@@ -168,33 +164,25 @@ macro_rules! impl_polynomial_api {
                     }
                 }
 
-                pub fn read_single_coeff(&self, idx: u64) -> $field {
-                    unsafe { copy_single_coefficient_to_host(self.handle, idx) }
+                pub fn get_nof_coeffs(&self) -> u64 {
+                    unsafe {
+                        // returns total #coeffs. Not copying when null
+                        let nof_coeffs = copy_coeffs(self.handle, std::ptr::null_mut(), 0, 0);
+                        nof_coeffs as u64
+                    }
                 }
 
-                pub fn copy_coefficient_range<S: HostOrDeviceSlice<$field> + ?Sized>(
-                    &self,
-                    start_idx: u64,
-                    end_idx: u64,
-                    coeffs: &mut S,
-                ) {
-                    assert!(
-                        end_idx >= start_idx,
-                        "copy_coefficient_range(): End index {} should not be less than start index {}",
-                        start_idx,
-                        end_idx
-                    );
-                    let nof_coeffs_to_copy = (end_idx - start_idx + 1) as usize;
-                    let coeffs_len = coeffs.len();
-                    assert!(
-                        coeffs_len >= nof_coeffs_to_copy,
-                        "copy_coefficient_range(): size mismatch. Request to copy {} coeffs to memory of len {}",
-                        nof_coeffs_to_copy,
-                        coeffs_len
-                    );
+                pub fn get_coeff(&self, idx: u64) -> $field {
+                    unsafe { get_coeff(self.handle, idx) }
+                }
+
+                pub fn copy_coeffs<S: HostOrDeviceSlice<$field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
+                    let coeffs_len = coeffs.len() as u64;
+                    let nof_coeffs = self.get_nof_coeffs();
+                    let end_idx = cmp::min(nof_coeffs, start_idx + coeffs_len - 1);
 
                     unsafe {
-                        copy_coefficient_range_to_host(self.handle, coeffs.as_mut_ptr(), start_idx, end_idx);
+                        copy_coeffs(self.handle, coeffs.as_mut_ptr(), start_idx as i64, end_idx as i64);
                     }
                 }
 

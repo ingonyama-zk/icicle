@@ -187,21 +187,18 @@ namespace polynomials {
   // p: Pointer to the polynomial instance.
   // idx: Index of the coefficient to copy.
   // Returns the coefficient value.
-  scalar_t CONCAT_EXPAND(FIELD, polynomial_copy_single_coeff_to_host)(PolynomialInst* p, uint64_t idx)
-  {
-    return p->copy_coefficient_to_host(idx);
-  }
+  scalar_t CONCAT_EXPAND(FIELD, polynomial_get_coeff)(PolynomialInst* p, uint64_t idx) { return p->get_coeff(idx); }
 
-  // Copies a range of polynomial coefficients to host memory.
+  // Copies a range of polynomial coefficients to host/device memory.
   // p: Pointer to the polynomial instance.
   // host_memory: Array to copy the coefficients into. If NULL, not copying.
   // start_idx: Start index of the range to copy.
   // end_idx: End index of the range to copy.
-  // Returns the number of coefficients copied. if host_memory is NULL, returns number of coefficients.
-  int64_t CONCAT_EXPAND(FIELD, polynomial_copy_coeffs_range_to_host)(
-    PolynomialInst* p, scalar_t* host_memory, uint64_t start_idx, uint64_t end_idx)
+  // Returns the number of coefficients copied. if memory is NULL, returns number of coefficients.
+  int64_t CONCAT_EXPAND(FIELD, polynomial_copy_coeffs_range)(
+    PolynomialInst* p, scalar_t* memory, int64_t start_idx, int64_t end_idx)
   {
-    return p->copy_coefficients_to_host(host_memory, start_idx, end_idx);
+    return p->copy_coeffs(memory, start_idx, end_idx);
   }
 
   // Retrieves a device-memory view of the polynomial coefficients.

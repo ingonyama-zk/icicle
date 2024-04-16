@@ -58,9 +58,8 @@ namespace polynomials {
     virtual void evaluate_on_domain(PolyContext op, const D* domain, uint64_t size, I* evaluations /*OUT*/) = 0;
 
     // Methods to copy coefficients to host memory
-    virtual C copy_coefficient_to_host(PolyContext op, uint64_t coeff_idx) = 0;
-    virtual int64_t
-    copy_coefficients_to_host(PolyContext op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
+    virtual C get_coeff(PolyContext op, uint64_t coeff_idx) = 0;
+    virtual int64_t copy_coeffs(PolyContext op, C* coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
 
     // Methods to get views of coefficients and evaluations, including device id
     virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
