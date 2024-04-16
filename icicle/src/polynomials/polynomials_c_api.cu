@@ -12,7 +12,7 @@ namespace polynomials {
 
   bool CONCAT_EXPAND(FIELD, init_cuda_backend)()
   {
-    auto cuda_factory = std::make_shared<CUDAPolynomialFactory<scalar_t>>();
+    static auto cuda_factory = std::make_shared<CUDAPolynomialFactory<scalar_t>>();
     PolynomialInst::initialize(cuda_factory);
     return cuda_factory != nullptr;
   }
