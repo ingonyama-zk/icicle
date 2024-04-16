@@ -148,13 +148,15 @@ namespace polynomials {
   template <typename C, typename D, typename I>
   I Polynomial<C, D, I>::operator()(const D& x) const
   {
-    return evaluate(x);
+    I eval = {};
+    evaluate(&x, &eval);
+    return eval;
   }
 
   template <typename C, typename D, typename I>
-  I Polynomial<C, D, I>::evaluate(const D& x) const
+  void Polynomial<C, D, I>::evaluate(const D* x, I* eval) const
   {
-    return m_backend->evaluate(m_context, x);
+    m_backend->evaluate(m_context, x, eval);
   }
 
   template <typename C, typename D, typename I>

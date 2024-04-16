@@ -149,7 +149,11 @@ macro_rules! impl_polynomial_api {
                     unsafe { eval(self.handle, x) }
                 }
 
-                pub fn eval_on_domain<S: HostOrDeviceSlice<$field> + ?Sized>(&self, domain: &S, evals: &mut S) {
+                pub fn eval_on_domain<D: HostOrDeviceSlice<$field> + ?Sized, E: HostOrDeviceSlice<$field> + ?Sized>(
+                    &self,
+                    domain: &D,
+                    evals: &mut E,
+                ) {
                     assert!(
                         domain.len() <= evals.len(),
                         "eval_on_domain(): eval size must not be smaller then domain"

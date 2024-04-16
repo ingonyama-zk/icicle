@@ -164,7 +164,9 @@ namespace polynomials {
   // Returns the evaluation result.
   scalar_t CONCAT_EXPAND(FIELD, polynomial_evaluate)(const PolynomialInst* p, const scalar_t& x)
   {
-    return p->evaluate(x);
+    scalar_t eval = {};
+    p->evaluate(&x, &eval);
+    return eval;
   }
 
   // Evaluates a polynomial on a domain of points.

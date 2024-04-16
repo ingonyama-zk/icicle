@@ -54,7 +54,7 @@ namespace polynomials {
     const void* get_context_storage_immutable(PolyContext ctxt) { return ctxt->get_storage_immutable(); }
 
     // Evaluation methods
-    virtual I evaluate(PolyContext op, const D& domain_x) = 0;
+    virtual void evaluate(PolyContext op, const D* domain_x, I* eval /*OUT*/) = 0;
     virtual void evaluate_on_domain(PolyContext op, const D* domain, uint64_t size, I* evaluations /*OUT*/) = 0;
 
     // Methods to copy coefficients to host memory
