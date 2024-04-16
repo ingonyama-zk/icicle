@@ -14,14 +14,28 @@ import (
 func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
 	core.NttCheck(points, cfg, results)
 
-	pointsPointer := points.AsUnsafePointer()
+	var pointsPointer unsafe.Pointer
+	if points.IsOnDevice() {
+		pointsDevice := points.(core.DeviceSlice)
+		pointsDevice.CheckDevice()
+		pointsPointer = pointsDevice.AsUnsafePointer()
+	} else {
+		pointsPointer = points.AsUnsafePointer()
+	}
 	cPoints := (*C.projective_t)(pointsPointer)
 
 	cSize := (C.int)(points.Len() / int(cfg.BatchSize))
 	cDir := (C.int)(dir)
 	cCfg := (*C.NTTConfig)(unsafe.Pointer(cfg))
 
-	resultsPointer := results.AsUnsafePointer()
+	var resultsPointer unsafe.Pointer
+	if results.IsOnDevice() {
+		resultsDevice := results.(core.DeviceSlice)
+		resultsDevice.CheckDevice()
+		resultsPointer = resultsDevice.AsUnsafePointer()
+	} else {
+		resultsPointer = results.AsUnsafePointer()
+	}
 	cResults := (*C.projective_t)(resultsPointer)
 
 	__ret := C.bw6_761ECNTTCuda(cPoints, cSize, cDir, cCfg, cResults)

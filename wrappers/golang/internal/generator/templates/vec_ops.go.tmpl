@@ -18,25 +18,25 @@ func VecOp[S any](a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op
 	if a.IsOnDevice() {
 		aDevice := a.(core.DeviceSlice)
 		aDevice.CheckDevice()
-		cA = (*C.scalar_t)(aDevice.AsPointer())
+		cA = (*C.scalar_t)(aDevice.AsUnsafePointer())
 	} else {
-		cA = (*C.scalar_t)(unsafe.Pointer(&a.(core.HostSlice[S])[0]))
+		cA = (*C.scalar_t)(a.AsUnsafePointer())
 	}
 
 	if b.IsOnDevice() {
 		bDevice := b.(core.DeviceSlice)
 		bDevice.CheckDevice()
-		cB = (*C.scalar_t)(bDevice.AsPointer())
+		cB = (*C.scalar_t)(bDevice.AsUnsafePointer())
 	} else {
-		cB = (*C.scalar_t)(unsafe.Pointer(&b.(core.HostSlice[S])[0]))
+		cB = (*C.scalar_t)(b.AsUnsafePointer())
 	}
 
 	if out.IsOnDevice() {
 		outDevice := out.(core.DeviceSlice)
 		outDevice.CheckDevice()
-		cOut = (*C.scalar_t)(outDevice.AsPointer())
+		cOut = (*C.scalar_t)(outDevice.AsUnsafePointer())
 	} else {
-		cOut = (*C.scalar_t)(unsafe.Pointer(&out.(core.HostSlice[S])[0]))
+		cOut = (*C.scalar_t)(out.AsUnsafePointer())
 	}
 
 	cConfig := (*C.VecOpsConfig)(unsafe.Pointer(&config))
@@ -56,14 +56,9 @@ func VecOp[S any](a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op
 
 func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError){
 	core.TransposeCheck(in, out, onDevice)
-	var inPointer, outPointer unsafe.Pointer
-	if onDevice {
-		inPointer = in.(core.DeviceSlice).AsPointer()
-		outPointer = out.(core.DeviceSlice).AsPointer()
-	} else {
-		inPointer = unsafe.Pointer(&in.(core.HostSlice[ScalarField])[0])
-		outPointer = unsafe.Pointer(&out.(core.HostSlice[ScalarField])[0])
-	}
+	inPointer := in.AsUnsafePointer()
+	outPointer := out.AsUnsafePointer()
+
 	cIn := (*C.scalar_t)(inPointer)
 	cOut := (*C.scalar_t)(outPointer)
 

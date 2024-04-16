@@ -36,7 +36,7 @@ func (d DeviceSlice) IsEmpty() bool {
 	return d.length == 0
 }
 
-func (d DeviceSlice) AsPointer() unsafe.Pointer {
+func (d DeviceSlice) AsUnsafePointer() unsafe.Pointer {
 	return d.inner
 }
 
@@ -53,11 +53,6 @@ func (d DeviceSlice) CheckDevice() {
 	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
 		panic("Attempt to use DeviceSlice on a different device")
 	}
-}
-
-func (d DeviceSlice) AsUnsafePointer() unsafe.Pointer {
-	d.CheckDevice()
-	return d.AsPointer()
 }
 
 func (d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {

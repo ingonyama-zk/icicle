@@ -18,13 +18,34 @@ func G2GetDefaultMSMConfig() core.MSMConfig {
 func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
 
-	scalarsPointer := scalars.AsUnsafePointer()
+	var scalarsPointer unsafe.Pointer
+	if scalars.IsOnDevice() {
+		scalarsDevice := scalars.(core.DeviceSlice)
+		scalarsDevice.CheckDevice()
+		scalarsPointer = scalarsDevice.AsUnsafePointer()
+	} else {
+		scalarsPointer = scalars.AsUnsafePointer()
+	}
 	cScalars := (*C.scalar_t)(scalarsPointer)
 
-	pointsPointer := points.AsUnsafePointer()
+	var pointsPointer unsafe.Pointer
+	if points.IsOnDevice() {
+		pointsDevice := points.(core.DeviceSlice)
+		pointsDevice.CheckDevice()
+		pointsPointer = pointsDevice.AsUnsafePointer()
+	} else {
+		pointsPointer = points.AsUnsafePointer()
+	}
 	cPoints := (*C.g2_affine_t)(pointsPointer)
 
-	resultsPointer := results.AsUnsafePointer()
+	var resultsPointer unsafe.Pointer
+	if results.IsOnDevice() {
+		resultsDevice := results.(core.DeviceSlice)
+		resultsDevice.CheckDevice()
+		resultsPointer = resultsDevice.AsUnsafePointer()
+	} else {
+		resultsPointer = results.AsUnsafePointer()
+	}
 	cResults := (*C.g2_projective_t)(resultsPointer)
 
 	cSize := (C.int)(scalars.Len() / results.Len())
@@ -38,7 +59,14 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 func G2PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
 	core.PrecomputeBasesCheck(points, precomputeFactor, outputBases)
 
-	pointsPointer := points.AsUnsafePointer()
+	var pointsPointer unsafe.Pointer
+	if points.IsOnDevice() {
+		pointsDevice := points.(core.DeviceSlice)
+		pointsDevice.CheckDevice()
+		pointsPointer = pointsDevice.AsUnsafePointer()
+	} else {
+		pointsPointer = points.AsUnsafePointer()
+	}
 	cPoints := (*C.g2_affine_t)(pointsPointer)
 
 	cPointsLen := (C.int)(points.Len())
