@@ -9,6 +9,8 @@ include(cmake/CurvesCommon.cmake)
 set_env()
 set_gpu_env()
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 option(DEVMODE "Enable development mode" OFF)
 option(EXT_FIELD "Build extension field" OFF)
 option(G2 "Build G2" OFF)
