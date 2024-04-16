@@ -10,12 +10,7 @@ macro_rules! impl_polynomial_api {
             use icicle_core::traits::FieldImpl;
             use icicle_cuda_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
-            use std::ops::Add;
-            use std::ops::AddAssign;
-            use std::ops::Div;
-            use std::ops::Mul;
-            use std::ops::Rem;
-            use std::ops::Sub;
+            use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
 
             type PolynomialHandle = *const c_void;
 
@@ -102,7 +97,7 @@ macro_rules! impl_polynomial_api {
                     unsafe { init_cuda_backend() }
                 }
 
-                pub fn from_coeffs(coeffs: &(impl HostOrDeviceSlice<$field> + ?Sized), size: usize) -> Self {
+                pub fn from_coeffs<S: HostOrDeviceSlice<$field> + ?Sized>(coeffs: &S, size: usize) -> Self {
                     unsafe {
                         Polynomial {
                             handle: create_from_coeffs(coeffs.as_ptr(), size),
@@ -110,7 +105,7 @@ macro_rules! impl_polynomial_api {
                     }
                 }
 
-                pub fn from_rou_evals(evals: &(impl HostOrDeviceSlice<$field> + ?Sized), size: usize) -> Self {
+                pub fn from_rou_evals<S: HostOrDeviceSlice<$field> + ?Sized>(evals: &S, size: usize) -> Self {
                     unsafe {
                         Polynomial {
                             handle: create_from_rou_evals(evals.as_ptr(), size),
@@ -142,13 +137,13 @@ macro_rules! impl_polynomial_api {
                     }
                 }
 
-                pub fn add_monomial_inplace(&self, monomial_coeff: &$field, monomial: u64) {
+                pub fn add_monomial_inplace(&mut self, monomial_coeff: &$field, monomial: u64) {
                     unsafe {
                         add_monomial_inplace(self.handle, monomial_coeff, monomial);
                     }
                 }
 
-                pub fn sub_monomial_inplace(&self, monomial_coeff: &$field, monomial: u64) {
+                pub fn sub_monomial_inplace(&mut self, monomial_coeff: &$field, monomial: u64) {
                     unsafe {
                         sub_monomial_inplace(self.handle, monomial_coeff, monomial);
                     }
@@ -158,11 +153,7 @@ macro_rules! impl_polynomial_api {
                     unsafe { eval(self.handle, x) }
                 }
 
-                pub fn eval_on_domain(
-                    &self,
-                    domain: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                    evals: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-                ) {
+                pub fn eval_on_domain<S: HostOrDeviceSlice<$field> + ?Sized>(&self, domain: &S, evals: &mut S) {
                     assert!(
                         domain.len() <= evals.len(),
                         "eval_on_domain(): eval size must not be smaller then domain"
@@ -181,11 +172,11 @@ macro_rules! impl_polynomial_api {
                     unsafe { copy_single_coefficient_to_host(self.handle, idx) }
                 }
 
-                pub fn copy_coefficient_range(
+                pub fn copy_coefficient_range<S: HostOrDeviceSlice<$field> + ?Sized>(
                     &self,
                     start_idx: u64,
                     end_idx: u64,
-                    coeffs: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                    coeffs: &mut S,
                 ) {
                     assert!(
                         end_idx >= start_idx,
