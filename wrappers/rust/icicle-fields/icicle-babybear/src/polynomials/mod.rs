@@ -1,7 +1,7 @@
 use crate::field::ScalarField;
-use icicle_core::impl_polynomial_api;
+use icicle_core::impl_univariate_polynomial_api;
 
-impl_polynomial_api!("babybear", babybear, ScalarField);
+impl_univariate_polynomial_api!("babybear", babybear, ScalarField);
 
 #[cfg(test)]
 mod tests {
