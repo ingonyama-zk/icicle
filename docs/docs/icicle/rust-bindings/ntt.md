@@ -197,3 +197,23 @@ where
 #### Returns
 
 - **`IcicleResult<()>`**: Will return an error if the operation fails.
+
+### Releaseing the domain
+
+The `release_domain` function is responsible for releasing the resources associated with a specific domain in the CUDA device context.
+
+```rust
+pub fn release_domain<F>(ctx: &DeviceContext) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>
+```
+
+#### Parameters
+
+- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
+
+#### Returns
+
+The function returns an `IcicleResult<()>`, which represents the result of the operation. If the operation is successful, the function returns `Ok(())`, otherwise it returns an error.
+

@@ -102,3 +102,36 @@ func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext, fastTwiddles bo
 ```
 
 This function initializes the domain with a given primitive root, optionally using fast twiddle factors to optimize the computation.
+
+### Releasing the domain
+
+The `ReleaseDomain` function is responsible for releasing the resources associated with a specific domain in the CUDA device context.
+
+```go
+func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError
+```
+
+### Parameters
+
+- **`ctx`**: a reference to the `DeviceContext` object, which represents the CUDA device context.
+
+### Return Value
+
+The function returns a `core.IcicleError`, which represents the result of the operation. If the operation is successful, the function returns `core.IcicleErrorCode(0)`.
+
+### Example
+
+```go
+import (
+    "github.com/icicle-crypto/icicle-core/cr"
+    "github.com/icicle-crypto/icicle-core/core"
+)
+
+func example() {
+    cfg := GetDefaultNttConfig()
+	err := ReleaseDomain(cfg.Ctx)
+    if err != nil {
+        // Handle the error
+    }
+}
+```
