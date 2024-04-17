@@ -9,6 +9,7 @@ type FieldData struct {
 	ExtensionLimbsNum int
 	SupportsNTT bool
 	SupportsPoseidon bool
+	ROU int
 }
 
 type HashData struct {

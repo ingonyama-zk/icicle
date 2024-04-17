@@ -9,6 +9,7 @@ func init() {
 		ExtensionLimbsNum: 4,
 		SupportsNTT: true,
 		SupportsPoseidon: false,
+		ROU: 1461624142,
 	}
 	
 	addField(babybear)

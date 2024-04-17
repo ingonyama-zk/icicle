@@ -1,9 +1,9 @@
 package bn254
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
+	"testing"
 )
 
 func TestAffineZero(t *testing.T) {
@@ -13,8 +13,8 @@ func TestAffineZero(t *testing.T) {
 	assert.Equal(t, affineZero.X, fieldZero)
 	assert.Equal(t, affineZero.Y, fieldZero)
 
-	x := generateRandomLimb(int(BASE_LIMBS))
-	y := generateRandomLimb(int(BASE_LIMBS))
+	x := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
+	y := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var affine Affine
 	affine.FromLimbs(x, y)
 
@@ -24,8 +24,8 @@ func TestAffineZero(t *testing.T) {
 }
 
 func TestAffineFromLimbs(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
+	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 
 	var affine Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
@@ -35,8 +35,8 @@ func TestAffineFromLimbs(t *testing.T) {
 }
 
 func TestAffineToProjective(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
+	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var fieldOne BaseField
 	fieldOne.One()
 
@@ -61,7 +61,7 @@ func TestProjectiveZero(t *testing.T) {
 	assert.Equal(t, projectiveZero.Y, fieldOne)
 	assert.Equal(t, projectiveZero.Z, fieldZero)
 
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var projective Projective
 	projective.FromLimbs(randLimbs, randLimbs, randLimbs)
 
@@ -72,9 +72,9 @@ func TestProjectiveZero(t *testing.T) {
 }
 
 func TestProjectiveFromLimbs(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs3 := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
+	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
+	randLimbs3 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 
 	var projective Projective
 	projective.FromLimbs(randLimbs, randLimbs2, randLimbs3)
@@ -85,8 +85,8 @@ func TestProjectiveFromLimbs(t *testing.T) {
 }
 
 func TestProjectiveFromAffine(t *testing.T) {
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
-	randLimbs2 := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
+	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var fieldOne BaseField
 	fieldOne.One()
 

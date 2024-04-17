@@ -1,0 +1,178 @@
+package {{.PackageName}}
+{{if ne .CurvePrefix "Mock"}}
+// #cgo CFLAGS: -I./include/
+// #include "curve.h"
+import "C"
+
+import (
+	"unsafe"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+)
+{{end}}
+type {{.CurvePrefix}}Projective struct {
+	X, Y, Z {{.CurvePrefix}}BaseField
+}
+
+func (p {{.CurvePrefix}}Projective) Size() int {
+	return p.X.Size() * 3
+}
+
+func (p {{.CurvePrefix}}Projective) AsPointer() *uint32 {
+	return p.X.AsPointer()
+}
+
+func (p *{{.CurvePrefix}}Projective) Zero() {{.CurvePrefix}}Projective {
+	p.X.Zero()
+	p.Y.One()
+	p.Z.Zero()
+
+	return *p
+}
+
+func (p *{{.CurvePrefix}}Projective) FromLimbs(x, y, z []uint32) {{.CurvePrefix}}Projective {
+	p.X.FromLimbs(x)
+	p.Y.FromLimbs(y)
+	p.Z.FromLimbs(z)
+
+	return *p
+}
+
+func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.CurvePrefix}}Projective {
+	z := {{.CurvePrefix}}BaseField{}
+	z.One()
+
+	p.X = a.X
+	p.Y = a.Y
+	p.Z = z
+
+	return *p
+}
+{{if ne .CurvePrefix "Mock"}}
+func (p {{.CurvePrefix}}Projective) ProjectiveEq(p2 *{{.CurvePrefix}}Projective) bool {
+	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p2))
+	__ret := C.{{.Curve}}{{.CurvePrefix}}Eq(cP, cP2)
+	return __ret == (C._Bool)(true)
+}
+
+func (p *{{.CurvePrefix}}Projective) ProjectiveToAffine() {{.CurvePrefix}}Affine {
+	var a {{.CurvePrefix}}Affine
+
+	cA := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&a))
+	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
+	C.{{.Curve}}{{.CurvePrefix}}ToAffine(cP, cA)
+	return a
+}
+
+func {{.CurvePrefix}}GenerateProjectivePoints(size int) core.HostSlice[{{.CurvePrefix}}Projective] {
+	points := make([]{{.CurvePrefix}}Projective, size)
+	for i := range points {
+		points[i] = {{.CurvePrefix}}Projective{}
+	}
+
+	pointsSlice := core.HostSliceFromElements[{{.CurvePrefix}}Projective](points)
+	pPoints := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&pointsSlice[0]))
+	cSize := (C.int)(size)
+	C.{{.Curve}}{{.CurvePrefix}}GenerateProjectivePoints(pPoints, cSize)
+
+	return pointsSlice
+}
+{{end}}
+type {{.CurvePrefix}}Affine struct {
+	X, Y {{.CurvePrefix}}BaseField
+}
+
+func (a {{.CurvePrefix}}Affine) Size() int {
+	return a.X.Size() * 2
+}
+
+func (a {{.CurvePrefix}}Affine) AsPointer() *uint32 {
+	return a.X.AsPointer()
+}
+
+func (a *{{.CurvePrefix}}Affine) Zero() {{.CurvePrefix}}Affine {
+	a.X.Zero()
+	a.Y.Zero()
+
+	return *a
+}
+
+func (a *{{.CurvePrefix}}Affine) FromLimbs(x, y []uint32) {{.CurvePrefix}}Affine {
+	a.X.FromLimbs(x)
+	a.Y.FromLimbs(y)
+
+	return *a
+}
+
+func (a {{.CurvePrefix}}Affine) ToProjective() {{.CurvePrefix}}Projective {
+	var z {{.CurvePrefix}}BaseField
+
+	return {{.CurvePrefix}}Projective{
+		X: a.X,
+		Y: a.Y,
+		Z: z.One(),
+	}
+}
+{{if ne .CurvePrefix "Mock"}}
+func {{.CurvePrefix}}AffineFromProjective(p *{{.CurvePrefix}}Projective) {{.CurvePrefix}}Affine {
+	return p.ProjectiveToAffine()
+}
+
+func {{.CurvePrefix}}GenerateAffinePoints(size int) core.HostSlice[{{.CurvePrefix}}Affine] {
+	points := make([]{{.CurvePrefix}}Affine, size)
+	for i := range points {
+		points[i] = {{.CurvePrefix}}Affine{}
+	}
+
+	pointsSlice := core.HostSliceFromElements[{{.CurvePrefix}}Affine](points)
+	cPoints := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&pointsSlice[0]))
+	cSize := (C.int)(size)
+	C.{{.Curve}}{{.CurvePrefix}}GenerateAffinePoints(cPoints, cSize)
+
+	return pointsSlice
+}
+
+func convert{{.CurvePrefix}}AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C.{{toCName .CurvePrefix}}affine_t)(points.AsPointer())
+	cSize := (C.size_t)(points.Len())
+	cIsInto := (C._Bool)(isInto)
+	defaultCtx, _ := cr.GetDefaultDeviceContext()
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
+	__ret := C.{{.Curve}}{{.CurvePrefix}}AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func {{.CurvePrefix}}AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{.CurvePrefix}}AffinePointsMontgomery(points, true)
+}
+
+func {{.CurvePrefix}}AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{.CurvePrefix}}AffinePointsMontgomery(points, false)
+}
+
+func convert{{.CurvePrefix}}ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C.{{toCName .CurvePrefix}}projective_t)(points.AsPointer())
+	cSize := (C.size_t)(points.Len())
+	cIsInto := (C._Bool)(isInto)
+	defaultCtx, _ := cr.GetDefaultDeviceContext()
+	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
+	__ret := C.{{.Curve}}{{.CurvePrefix}}ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func {{.CurvePrefix}}ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{.CurvePrefix}}ProjectivePointsMontgomery(points, true)
+}
+
+func {{.CurvePrefix}}ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+	points.CheckDevice()
+	return convert{{.CurvePrefix}}ProjectivePointsMontgomery(points, false)
+}
+{{end}}

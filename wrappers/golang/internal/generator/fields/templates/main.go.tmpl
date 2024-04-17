@@ -1,0 +1,4 @@
+package {{.PackageName}}
+
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../{{.UpDirs}}icicle/build/lib -lingo_field_{{.Field}} -lstdc++ -lm
+import "C"

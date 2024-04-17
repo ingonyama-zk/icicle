@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"unsafe"
 
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
@@ -75,7 +76,7 @@ func GetDefaultMSMConfig() MSMConfig {
 	}
 }
 
-func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) {
+func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int, unsafe.Pointer) {
 	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len()/int(cfg.PrecomputeFactor), results.Len()
 	if scalarsLength%pointsLength != 0 {
 		errorString := fmt.Sprintf(
@@ -98,9 +99,24 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	cfg.areScalarsOnDevice = scalars.IsOnDevice()
 	cfg.arePointsOnDevice = points.IsOnDevice()
 	cfg.areResultsOnDevice = results.IsOnDevice()
+
+	if scalars.IsOnDevice() {
+		scalars.(DeviceSlice).CheckDevice()
+	}
+	
+	if points.IsOnDevice() {
+		points.(DeviceSlice).CheckDevice()
+	}
+
+	if results.IsOnDevice() {
+		results.(DeviceSlice).CheckDevice()
+	}
+	
+	size := scalars.Len() / results.Len()
+	return scalars.AsUnsafePointer(), points.AsUnsafePointer(), results.AsUnsafePointer(), size, unsafe.Pointer(cfg)
 }
 
-func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outputBases DeviceSlice) {
+func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outputBases DeviceSlice) (unsafe.Pointer, unsafe.Pointer) {
 	outputBasesLength, pointsLength := outputBases.Len(), points.Len()
 	if outputBasesLength != pointsLength*int(precomputeFactor) {
 		errorString := fmt.Sprintf(
@@ -110,4 +126,10 @@ func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outp
 		)
 		panic(errorString)
 	}
+
+	if points.IsOnDevice() {
+		points.(DeviceSlice).CheckDevice()
+	}
+
+	return points.AsUnsafePointer(), outputBases.AsUnsafePointer()
 }

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"unsafe"
 
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
@@ -49,7 +50,7 @@ func DefaultVecOpsConfig() VecOpsConfig {
 	return config
 }
 
-func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) {
+func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {
 	aLen, bLen, outLen := a.Len(), b.Len(), out.Len()
 	if aLen != bLen {
 		errorString := fmt.Sprintf(
@@ -68,9 +69,21 @@ func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) {
 		panic(errorString)
 	}
 
+	if a.IsOnDevice() {
+		a.(DeviceSlice).CheckDevice()
+	}
+	if b.IsOnDevice() {
+		b.(DeviceSlice).CheckDevice()
+	}
+	if out.IsOnDevice() {
+		out.(DeviceSlice).CheckDevice()
+	}
+
 	cfg.isAOnDevice = a.IsOnDevice()
 	cfg.isBOnDevice = b.IsOnDevice()
 	cfg.isResultOnDevice = out.IsOnDevice()
+
+	return a.AsUnsafePointer(), b.AsUnsafePointer(), out.AsUnsafePointer(), unsafe.Pointer(cfg), a.Len()
 }
 
 func TransposeCheck(in, out HostOrDeviceSlice, onDevice bool) {
