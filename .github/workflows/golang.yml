@@ -67,7 +67,7 @@ jobs:
     needs: [check-changed-files, check-format]
     strategy:
       matrix:
-        feild: [babybear]
+        field: [babybear]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
