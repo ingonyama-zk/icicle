@@ -68,6 +68,15 @@ macro_rules! impl_polynomial_api {
                 #[link_name = concat!($field_prefix, "polynomial_sub_monomial_inplace")]
                 fn sub_monomial_inplace(a: PolynomialHandle, monomial_coeff: &$field, monomial: u64) -> c_void;
 
+                #[link_name = concat!($field_prefix, "polynomial_slice")]
+                fn slice(a: PolynomialHandle, offset: u64, stride: u64, size: u64) -> PolynomialHandle;
+
+                #[link_name = concat!($field_prefix, "polynomial_even")]
+                fn even(a: PolynomialHandle) -> PolynomialHandle;
+
+                #[link_name = concat!($field_prefix, "polynomial_odd")]
+                fn odd(a: PolynomialHandle) -> PolynomialHandle;
+
                 #[link_name = concat!($field_prefix, "polynomial_evaluate")]
                 fn eval(a: PolynomialHandle, x: &$field) -> $field;
 
@@ -136,6 +145,30 @@ macro_rules! impl_polynomial_api {
                 pub fn sub_monomial_inplace(&mut self, monomial_coeff: &$field, monomial: u64) {
                     unsafe {
                         sub_monomial_inplace(self.handle, monomial_coeff, monomial);
+                    }
+                }
+
+                pub fn slice(&self, offset: u64, stride: u64, size: u64) -> Polynomial {
+                    unsafe {
+                        Polynomial {
+                            handle: slice(self.handle, offset, stride, size),
+                        }
+                    }
+                }
+
+                pub fn even(&self) -> Polynomial {
+                    unsafe {
+                        Polynomial {
+                            handle: even(self.handle),
+                        }
+                    }
+                }
+
+                pub fn odd(&self) -> Polynomial {
+                    unsafe {
+                        Polynomial {
+                            handle: odd(self.handle),
+                        }
                     }
                 }
 
@@ -620,7 +653,37 @@ macro_rules! impl_polynomial_tests {
 
         #[test]
         fn test_slicing() {
-            // TODO Yuval
+            setup();
+            let size = (1 << 10) - 3;
+            // slicing even and odd parts and checking
+            let f = randomize_poly(size);
+            let x = rand();
+
+            let even = f.even();
+            let odd = f.odd();
+            assert_eq!(f.degree(), even.degree() + odd.degree() + 1);
+
+            // computing even(x) and odd(x) directly
+            let expected_even = (0..=f.degree())
+                .filter(|&i| i % 2 == 0)
+                .rev()
+                .fold($field::zero(), |acc, i| {
+                    add(&mul(&acc, &x), &f.get_coeff(i as u64))
+                });
+
+            let expected_odd = (0..=f.degree())
+                .filter(|&i| i % 2 != 0)
+                .rev()
+                .fold($field::zero(), |acc, i| {
+                    add(&mul(&acc, &x), &f.get_coeff(i as u64))
+                });
+
+            // check that even(x) and odd(x) compute correctly
+
+            let evenx = even.eval(&x);
+            let oddx = odd.eval(&x);
+            assert_eq!(expected_even, evenx);
+            assert_eq!(expected_odd, oddx);
         }
     };
 }

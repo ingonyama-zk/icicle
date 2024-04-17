@@ -158,6 +158,37 @@ namespace polynomials {
     p->sub_monomial_inplace(monomial_coeff, monomial);
   }
 
+  // Creates a new polynomial instance by slicing an existing polynomial.
+  // p: Pointer to the original polynomial instance to be sliced.
+  // offset: Starting index for the slice.
+  // stride: Interval between elements in the slice.
+  // size: Number of elements in the slice.
+  // Returns: Pointer to the new polynomial instance containing the slice.
+  PolynomialInst*
+  CONCAT_EXPAND(FIELD, polynomial_slice)(PolynomialInst* p, uint64_t offset, uint64_t stride, uint64_t size)
+  {
+    auto result = new PolynomialInst(std::move(p->slice(offset, stride, size)));
+    return result;
+  }
+
+  // Creates a new polynomial instance containing only the even-powered terms of the original polynomial.
+  // p: Pointer to the original polynomial instance.
+  // Returns: Pointer to the new polynomial instance containing only even-powered terms.
+  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_even)(PolynomialInst* p)
+  {
+    auto result = new PolynomialInst(std::move(p->even()));
+    return result;
+  }
+
+  // Creates a new polynomial instance containing only the odd-powered terms of the original polynomial.
+  // p: Pointer to the original polynomial instance.
+  // Returns: Pointer to the new polynomial instance containing only odd-powered terms.
+  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_odd)(PolynomialInst* p)
+  {
+    auto result = new PolynomialInst(std::move(p->odd()));
+    return result;
+  }
+
   // Evaluates a polynomial at a given point.
   // p: Pointer to the polynomial instance.
   // x: Point at which to evaluate the polynomial.
