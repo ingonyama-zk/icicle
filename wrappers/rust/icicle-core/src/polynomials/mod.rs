@@ -558,7 +558,7 @@ macro_rules! impl_polynomial_tests {
             let one = $field::from_u32(1);
             let minus_one = sub(&zero, &one);
             // compute random f(x) and compute f(x)*v(x) for v(x) vanishing poly
-            // divide by vanishing and check that f(x) is reconstrcuted
+            // divide by vanishing and check that f(x) is reconstructed
 
             let f = randomize_poly(1 << 12);
             let v_coeffs = [minus_one, zero, zero, zero, one]; // x^4-1
