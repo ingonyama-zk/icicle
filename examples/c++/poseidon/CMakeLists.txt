@@ -18,6 +18,6 @@ add_executable(
   example
   example.cu
 )
-target_include_directories(example PUBLIC "../../../icicle/include")
-target_link_libraries(example ${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_field_bn254.a)
+target_include_directories(example PRIVATE "../../../icicle/include")
+target_link_libraries(example ${CMAKE_SOURCE_DIR}/../../../icicle/build/lib/libingo_field_bn254.a)
 set_target_properties(example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
