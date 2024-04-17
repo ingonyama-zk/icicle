@@ -56,6 +56,11 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "EC-NTT",
+              id: "icicle/golang-bindings/ecntt",
+            },
+            {
+              type: "doc",
               label: "Vector operations",
               id: "icicle/golang-bindings/vec-ops",
             },
