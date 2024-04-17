@@ -559,7 +559,7 @@ namespace polynomials {
       ntt_config.are_outputs_on_device = true;
       ntt_config.is_async = true;
       ntt_config.ordering = ntt::Ordering::kNR;
-      ntt_config.coset_gen = ntt::GetRootOfUnity<C>((uint64_t)log2(c_N), ntt_config.ctx);
+      ntt_config.coset_gen = ntt::GetRootOfUnityFromDomain<C>((uint64_t)log2(c_N), ntt_config.ctx);
 
       CHK_STICKY(ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_low_p));  // a_H1
       CHK_STICKY(ntt::NTT(b_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p)); // b_H1
@@ -671,7 +671,7 @@ namespace polynomials {
       ntt_config.are_outputs_on_device = true;
       ntt_config.is_async = true;
       ntt_config.ordering = ntt::Ordering::kNM;
-      ntt_config.coset_gen = ntt::GetRootOfUnity<C>((uint64_t)log2(2 * N), ntt_config.ctx);
+      ntt_config.coset_gen = ntt::GetRootOfUnityFromDomain<C>((uint64_t)log2(2 * N), ntt_config.ctx);
 
       CHK_STICKY(ntt::NTT(out_coeffs, N, ntt::NTTDir::kForward, ntt_config, out_coeffs));
       CHK_STICKY(ntt::NTT(numerator_coeffs, N, ntt::NTTDir::kForward, ntt_config, numerator_coeffs));
