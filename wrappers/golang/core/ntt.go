@@ -84,11 +84,11 @@ func NttCheck[T any](input HostOrDeviceSlice, cfg *NTTConfig[T], output HostOrDe
 	if input.IsOnDevice() {
 		input.(DeviceSlice).CheckDevice()
 	}
-	
+
 	if output.IsOnDevice() {
 		output.(DeviceSlice).CheckDevice()
 	}
-	
+
 	size := input.Len() / int(cfg.BatchSize)
 	cfgPointer := unsafe.Pointer(cfg)
 

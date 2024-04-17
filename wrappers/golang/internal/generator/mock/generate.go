@@ -1,8 +1,8 @@
 package fields
 
 import (
-	"strings"
 	generator "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/generator_utils"
+	"strings"
 )
 
 var mockTemplates = map[string]string{
@@ -13,10 +13,10 @@ var mockTemplates = map[string]string{
 func Generate(baseDir, packageName, field, fieldPrefix string, isScalar bool, numLimbs int) {
 	fieldData := struct {
 		PackageName string
-		Field string
+		Field       string
 		FieldPrefix string
-		IsScalar bool
-		NUM_LIMBS int
+		IsScalar    bool
+		NUM_LIMBS   int
 	}{
 		packageName,
 		field,

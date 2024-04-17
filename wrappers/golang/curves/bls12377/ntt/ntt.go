@@ -5,11 +5,10 @@ package ntt
 import "C"
 
 import (
-	bls12_377 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bls12_377 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377"
 )
-
 
 import (
 	"unsafe"

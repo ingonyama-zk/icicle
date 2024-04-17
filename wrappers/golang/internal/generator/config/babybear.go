@@ -1,16 +1,16 @@
 package config
 
 func init() {
-	var babybear = FieldData {
-		PackageName: "babybear",
-		Field: "babybear",
-		LimbsNum: 1,
+	var babybear = FieldData{
+		PackageName:       "babybear",
+		Field:             "babybear",
+		LimbsNum:          1,
 		SupportsExtension: true,
 		ExtensionLimbsNum: 4,
-		SupportsNTT: true,
-		SupportsPoseidon: false,
-		ROU: 1461624142,
+		SupportsNTT:       true,
+		SupportsPoseidon:  false,
+		ROU:               1461624142,
 	}
-	
+
 	addField(babybear)
 }

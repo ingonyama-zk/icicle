@@ -1,8 +1,8 @@
 package babybear
 
 import (
-  "github.com/ingonyama-zk/icicle/wrappers/golang/core"
-  "github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

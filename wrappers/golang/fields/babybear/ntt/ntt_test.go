@@ -6,8 +6,8 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	babybear "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,7 +57,7 @@ func TestNtt(t *testing.T) {
 			output := make(core.HostSlice[babybear.ScalarField], testSize)
 			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
-			}
+		}
 	}
 }
 
@@ -88,7 +88,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				cr.SynchronizeStream(&stream)
-				}
+			}
 		}
 	}
 }
@@ -111,7 +111,7 @@ func TestNttBatch(t *testing.T) {
 			output := make(core.HostSlice[babybear.ScalarField], totalSize)
 			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
-			}
+		}
 	}
 }
 

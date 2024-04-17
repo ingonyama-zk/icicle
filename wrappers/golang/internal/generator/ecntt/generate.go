@@ -14,9 +14,9 @@ var ecnttTemplates = map[string]string{
 
 func Generate(baseDir, curve, gnarkImport string) {
 	data := struct {
-		Curve       string
+		Curve          string
 		BaseImportPath string
-		GnarkImport string
+		GnarkImport    string
 	}{
 		curve,
 		baseDir,

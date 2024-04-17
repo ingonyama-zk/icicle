@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381/ntt"
-	bls12_381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	bls12_381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
+	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381/ntt"
 	"github.com/stretchr/testify/assert"
 )
 

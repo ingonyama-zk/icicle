@@ -1,13 +1,14 @@
 package bls12381
+
 // #cgo CFLAGS: -I./include/
 // #include "scalar_field.h"
 import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	"unsafe"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 const (
@@ -35,7 +36,7 @@ func (f ScalarField) AsPointer() *uint32 {
 }
 
 func (f *ScalarField) FromUint32(v uint32) ScalarField {
-	f.limbs[SCALAR_LIMBS - 1] = v
+	f.limbs[SCALAR_LIMBS-1] = v
 	return *f
 }
 

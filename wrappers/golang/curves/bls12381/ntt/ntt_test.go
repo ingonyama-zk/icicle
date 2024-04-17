@@ -5,12 +5,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
-	bls12_381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bls12_381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +45,7 @@ func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[bls12_381.Scalar
 		outputAsFr[i] = slice64
 	}
 
-		return testAgainstGnarkCryptoNttGnarkTypes(size, scalarsFr, outputAsFr, order, direction)
+	return testAgainstGnarkCryptoNttGnarkTypes(size, scalarsFr, outputAsFr, order, direction)
 }
 
 func testAgainstGnarkCryptoNttGnarkTypes(size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) bool {
@@ -105,7 +105,7 @@ func TestNtt(t *testing.T) {
 
 			// Compare with gnark-crypto
 			assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, core.KForward))
-			}
+		}
 	}
 }
 func TestNttFrElement(t *testing.T) {
@@ -163,7 +163,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				cr.SynchronizeStream(&stream)
 				// Compare with gnark-crypto
 				assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, direction))
-				}
+			}
 		}
 	}
 }
@@ -207,7 +207,7 @@ func TestNttBatch(t *testing.T) {
 					t.FailNow()
 				}
 			}
-			}
+		}
 	}
 }
 

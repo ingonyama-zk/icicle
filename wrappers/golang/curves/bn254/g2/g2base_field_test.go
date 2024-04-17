@@ -1,7 +1,7 @@
 package g2
 
 import (
-  "github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -81,4 +81,3 @@ func TestG2BaseFieldToBytes(t *testing.T) {
 
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
-

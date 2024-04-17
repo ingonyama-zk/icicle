@@ -7,18 +7,18 @@ import (
 )
 
 var msmTemplates = map[string]string{
-	"src": "msm/templates/msm.go.tmpl",
-	"test": "msm/templates/msm_test.go.tmpl",
+	"src":    "msm/templates/msm.go.tmpl",
+	"test":   "msm/templates/msm_test.go.tmpl",
 	"header": "msm/templates/msm.h.tmpl",
 }
 
 func Generate(baseDir, packageName, curve, curvePrefix, gnarkImport string) {
 	data := struct {
-		PackageName string
-		Curve string
-		CurvePrefix string
+		PackageName    string
+		Curve          string
+		CurvePrefix    string
 		BaseImportPath string
-		GnarkImport string
+		GnarkImport    string
 	}{
 		packageName,
 		curve,

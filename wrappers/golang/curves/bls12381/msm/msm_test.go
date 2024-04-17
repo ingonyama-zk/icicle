@@ -7,14 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	icicleBls12_381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fp"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	icicleBls12_381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
 )
 
 func projectiveToGnarkAffine(p icicleBls12_381.Projective) bls12381.G1Affine {
@@ -77,7 +76,6 @@ func convertIcicleAffineToG1Affine(iciclePoints []icicleBls12_381.Affine) []bls1
 	return points
 }
 
-
 func TestMSM(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 	cfg.IsAsync = true
@@ -103,7 +101,7 @@ func TestMSM(t *testing.T) {
 		cr.SynchronizeStream(&stream)
 		// Check with gnark-crypto
 		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
-		
+
 	}
 }
 func TestMSMGnarkCryptoTypes(t *testing.T) {

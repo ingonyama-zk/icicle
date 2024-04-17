@@ -30,7 +30,7 @@ func (f MockBaseField) AsPointer() *uint32 {
 }
 
 func (f *MockBaseField) FromUint32(v uint32) MockBaseField {
-	f.limbs[MOCKBASE_LIMBS - 1] = v
+	f.limbs[MOCKBASE_LIMBS-1] = v
 	return *f
 }
 
@@ -82,4 +82,3 @@ func (f MockBaseField) ToBytesLittleEndian() []byte {
 
 	return bytes
 }
-

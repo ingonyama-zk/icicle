@@ -1,7 +1,7 @@
 package bls12377
 
 import (
-  "github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -81,4 +81,3 @@ func TestBaseFieldToBytes(t *testing.T) {
 
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
-

@@ -30,7 +30,7 @@ func (f G2BaseField) AsPointer() *uint32 {
 }
 
 func (f *G2BaseField) FromUint32(v uint32) G2BaseField {
-	f.limbs[G2BASE_LIMBS - 1] = v
+	f.limbs[G2BASE_LIMBS-1] = v
 	return *f
 }
 
@@ -82,4 +82,3 @@ func (f G2BaseField) ToBytesLittleEndian() []byte {
 
 	return bytes
 }
-

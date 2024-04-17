@@ -15,7 +15,7 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 	aPointer, bPointer, outPointer, cfgPointer, size := core.VecOpCheck(a, b, out, &config)
 
 	cA := (*C.scalar_t)(aPointer)
-	cB := (*C.scalar_t)(bPointer)	
+	cB := (*C.scalar_t)(bPointer)
 	cOut := (*C.scalar_t)(outPointer)
 	cConfig := (*C.VecOpsConfig)(cfgPointer)
 	cSize := (C.int)(size)
@@ -32,9 +32,9 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 	return ret
 }
 
-func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError){
+func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError) {
 	core.TransposeCheck(in, out, onDevice)
-	
+
 	cIn := (*C.scalar_t)(in.AsUnsafePointer())
 	cOut := (*C.scalar_t)(out.AsUnsafePointer())
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
@@ -43,6 +43,6 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ct
 	cOnDevice := (C._Bool)(onDevice)
 	cIsAsync := (C._Bool)(isAsync)
 
-	err := (cr.CudaError)(C.bls12_377TransposeMatrix( cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
+	err := (cr.CudaError)(C.bls12_377TransposeMatrix(cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
 	return core.FromCudaError(err)
-} 
+}

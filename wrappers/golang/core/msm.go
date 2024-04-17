@@ -103,7 +103,7 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	if scalars.IsOnDevice() {
 		scalars.(DeviceSlice).CheckDevice()
 	}
-	
+
 	if points.IsOnDevice() {
 		points.(DeviceSlice).CheckDevice()
 	}
@@ -111,7 +111,7 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	if results.IsOnDevice() {
 		results.(DeviceSlice).CheckDevice()
 	}
-	
+
 	size := scalars.Len() / results.Len()
 	return scalars.AsUnsafePointer(), points.AsUnsafePointer(), results.AsUnsafePointer(), size, unsafe.Pointer(cfg)
 }

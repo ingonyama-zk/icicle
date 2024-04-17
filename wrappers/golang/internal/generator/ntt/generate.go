@@ -7,10 +7,10 @@ import (
 )
 
 var nttTemplates = map[string]string{
-	"src":    "ntt/templates/ntt.go.tmpl",
-	"test":   "ntt/templates/ntt_test.go.tmpl",
-	"testNoDomain":   "ntt/templates/ntt_no_domain_test.go.tmpl",
-	"header": "ntt/templates/ntt.h.tmpl",
+	"src":          "ntt/templates/ntt.go.tmpl",
+	"test":         "ntt/templates/ntt_test.go.tmpl",
+	"testNoDomain": "ntt/templates/ntt_no_domain_test.go.tmpl",
+	"header":       "ntt/templates/ntt.h.tmpl",
 }
 
 var ecnttTemplates = map[string]string{
@@ -26,15 +26,15 @@ func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string
 	}
 
 	data := struct {
-		PackageName string
-		Field       string
-		FieldPrefix string
-		WithDomain  bool
-		BaseImportPath string
-		GnarkImport string
-		ROU int
-		FieldNoDomain string
-		FieldNoDomainPrefix string
+		PackageName            string
+		Field                  string
+		FieldPrefix            string
+		WithDomain             bool
+		BaseImportPath         string
+		GnarkImport            string
+		ROU                    int
+		FieldNoDomain          string
+		FieldNoDomainPrefix    string
 		BaseImportPathNoDomain string
 	}{
 		"ntt",

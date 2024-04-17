@@ -10,9 +10,7 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 	icicleGrumpkin "github.com/ingonyama-zk/icicle/wrappers/golang/curves/grumpkin"
-	
 )
-
 
 func TestMSM(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
@@ -37,7 +35,7 @@ func TestMSM(t *testing.T) {
 		out.FreeAsync(stream)
 
 		cr.SynchronizeStream(&stream)
-		
+
 	}
 }
 
@@ -60,7 +58,7 @@ func TestMSMBatch(t *testing.T) {
 			outHost := make(core.HostSlice[icicleGrumpkin.Projective], batchSize)
 			outHost.CopyFromDevice(&out)
 			out.Free()
-			
+
 		}
 	}
 }
@@ -95,7 +93,7 @@ func TestPrecomputeBase(t *testing.T) {
 			outHost.CopyFromDevice(&out)
 			out.Free()
 			precomputeOut.Free()
-			
+
 		}
 	}
 }
@@ -124,7 +122,7 @@ func TestMSMSkewedDistribution(t *testing.T) {
 		outHost := make(core.HostSlice[icicleGrumpkin.Projective], 1)
 		outHost.CopyFromDevice(&out)
 		out.Free()
-		
+
 	}
 }
 
@@ -160,7 +158,7 @@ func TestMSMMultiDevice(t *testing.T) {
 				out.FreeAsync(stream)
 
 				cr.SynchronizeStream(&stream)
-				
+
 			}
 		})
 	}

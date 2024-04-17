@@ -7,16 +7,16 @@ import (
 )
 
 var vecOpsTemplates = map[string]string{
-	"src": "vecOps/templates/vec_ops.go.tmpl",
-	"test": "vecOps/templates/vec_ops_test.go.tmpl",
+	"src":    "vecOps/templates/vec_ops.go.tmpl",
+	"test":   "vecOps/templates/vec_ops_test.go.tmpl",
 	"header": "vecOps/templates/vec_ops.h.tmpl",
 }
 
 func Generate(baseDir, field, fieldPrefix string) {
 	data := struct {
-		PackageName string
-		Field string
-		FieldPrefix string
+		PackageName    string
+		Field          string
+		FieldPrefix    string
 		BaseImportPath string
 	}{
 		"vecOps",

@@ -1,8 +1,8 @@
 package bls12381
 
 import (
-	"github.com/stretchr/testify/assert"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 

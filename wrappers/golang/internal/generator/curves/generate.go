@@ -7,15 +7,15 @@ import (
 )
 
 var curveTemplates = map[string]string{
-	"src": "curves/templates/curve.go.tmpl",
-	"test": "curves/templates/curve_test.go.tmpl",
+	"src":    "curves/templates/curve.go.tmpl",
+	"test":   "curves/templates/curve_test.go.tmpl",
 	"header": "curves/templates/curve.h.tmpl",
 }
 
 func Generate(baseDir, packageName, curve, curvePrefix string) {
 	data := struct {
 		PackageName string
-		Curve string
+		Curve       string
 		CurvePrefix string
 	}{
 		packageName,

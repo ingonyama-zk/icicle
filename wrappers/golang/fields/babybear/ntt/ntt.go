@@ -5,11 +5,10 @@ package ntt
 import "C"
 
 import (
-	babybear "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	babybear "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
 )
-
 
 import (
 	"unsafe"

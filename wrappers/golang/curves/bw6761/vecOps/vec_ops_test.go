@@ -3,9 +3,9 @@ package vecOps
 import (
 	"testing"
 
-	bw6_761 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bw6_761 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,7 +49,7 @@ func TestTranspose(t *testing.T) {
 
 	TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
 	TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)
-	
+
 	assert.Equal(t, matrix, out2)
 
 	var dMatrix, dOut, dOut2 core.DeviceSlice

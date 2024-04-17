@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"path"
 
 	config "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/config"
 	curves "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/curves"
 	ecntt "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/ecntt"
 	fields "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/fields"
-	msm "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/msm"
-	mock "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/mock"
 	lib_linker "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/lib_linker"
+	mock "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/mock"
+	msm "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/msm"
 	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/ntt"
 	vecops "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/vecOps"
 )
@@ -26,15 +28,15 @@ func generateFiles() {
 		curves.Generate(curveDir, curve.PackageName, curve.Curve, "")
 		vecops.Generate(curveDir, curve.Curve, scalarFieldPrefix)
 		lib_linker.Generate(curveDir, curve.PackageName, curve.Curve, lib_linker.CURVE, 0)
-		
+
 		if curve.SupportsNTT {
 			ntt.Generate(curveDir, "", curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, true, "", "")
 		}
-		
+
 		if curve.SupportsECNTT {
 			ecntt.Generate(curveDir, curve.Curve, curve.GnarkImport)
 		}
-		
+
 		msm.Generate(curveDir, "msm", curve.Curve, "", curve.GnarkImport)
 		if curve.SupportsG2 {
 			g2BaseDir := path.Join(curveDir, "g2")
@@ -71,4 +73,14 @@ func generateFiles() {
 //go:generate go run main.go
 func main() {
 	generateFiles()
+
+	cmd := exec.Command("gofmt", "-w", "../../")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("\n%s\n", err.Error())
+		os.Exit(-1)
+	}
 }

@@ -1,18 +1,18 @@
 package generator_utils
 
-import (	
-	"text/template"
-	"strings"
-	"fmt"
+import (
 	"bytes"
-	"os"
+	"fmt"
 	"io"
-	"path/filepath"
+	"os"
 	"path"
+	"path/filepath"
+	"strings"
+	"text/template"
 )
 
 const (
-	// Since path.Join joins from the cwd we only need to go up two directories 
+	// Since path.Join joins from the cwd we only need to go up two directories
 	// from wrappers/golang/internal/generator/main.go to get to wrappers/golang
 	GOLANG_WRAPPER_ROOT_DIR = "../../"
 )
@@ -94,6 +94,6 @@ func GenerateFile(templateFilePath, baseDir, fileNamePrefix, fileNameSuffix stri
 	entry := parseTemplateFile(templateFilePath)
 	var buf bytes.Buffer
 	entry.parsedTemplate.Execute(&buf, data)
-	outFile := path.Join(GOLANG_WRAPPER_ROOT_DIR, baseDir, fileNamePrefix + entry.outputName + fileNameSuffix) 
+	outFile := path.Join(GOLANG_WRAPPER_ROOT_DIR, baseDir, fileNamePrefix+entry.outputName+fileNameSuffix)
 	create(outFile, &buf)
 }

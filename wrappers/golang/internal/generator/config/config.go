@@ -1,34 +1,34 @@
 package config
 
 type FieldData struct {
-	PackageName string
-	Field string
-	LimbsNum int
-	GnarkImport string
+	PackageName       string
+	Field             string
+	LimbsNum          int
+	GnarkImport       string
 	SupportsExtension bool
 	ExtensionLimbsNum int
-	SupportsNTT bool
-	SupportsPoseidon bool
-	ROU int
+	SupportsNTT       bool
+	SupportsPoseidon  bool
+	ROU               int
 }
 
 type HashData struct {
 	PackageName string
-	Hash string
+	Hash        string
 }
 
 // Maybe just put limbs in CurveData and no need for individual Field objects
 type CurveData struct {
-	PackageName    string
-	Curve          string
-	GnarkImport    string
-	SupportsPoseidon bool
-	SupportsNTT bool
-	SupportsECNTT bool
-	SupportsG2 bool
+	PackageName         string
+	Curve               string
+	GnarkImport         string
+	SupportsPoseidon    bool
+	SupportsNTT         bool
+	SupportsECNTT       bool
+	SupportsG2          bool
 	ScalarFieldNumLimbs int
-	BaseFieldNumLimbs int
-	G2FieldNumLimbs int
+	BaseFieldNumLimbs   int
+	G2FieldNumLimbs     int
 }
 
 var Curves []CurveData
