@@ -140,7 +140,7 @@ TEST_F(PolynomialTest, evaluationOnDomain)
 
   size *= 2; // evaluating on a larger domain
   auto default_device_context = device_context::get_default_device_context();
-  const auto w = ntt::GetRootOfUnity<scalar_t>((int)log2(size), default_device_context);
+  const auto w = ntt::GetRootOfUnityFromDomain<scalar_t>((int)log2(size), default_device_context);
 
   // construct domain as rou
   scalar_t x = one;
@@ -890,7 +890,7 @@ TEST_F(PolynomialTest, QAP)
   //  (4) sanity check: verify AB=C at the evaluation points
   {
     auto default_device_context = device_context::get_default_device_context();
-    const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
+    const auto w = ntt::GetRootOfUnityFromDomain<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
     auto x = scalar_t::one();
     for (int i = 0; i < vanishing_poly_deg; ++i) {
       ASSERT_EQ(Lx(x) * Rx(x), Ox(x));

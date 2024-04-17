@@ -116,6 +116,7 @@ impl<'a, S: FieldImpl> NTTConfig<'a, S> {
 
 #[doc(hidden)]
 pub trait NTTDomain<F: FieldImpl> {
+    fn get_root_of_unity(max_size: u64) -> F;
     fn initialize_domain(primitive_root: F, ctx: &DeviceContext, fast_twiddles: bool) -> IcicleResult<()>;
     fn release_domain(ctx: &DeviceContext) -> IcicleResult<()>;
 }
@@ -236,6 +237,14 @@ where
     <<F as FieldImpl>::Config as NTTDomain<F>>::release_domain(ctx)
 }
 
+pub fn get_root_of_unity<F>(max_size: u64) -> F
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTTDomain<F>,
+{
+    <<F as FieldImpl>::Config as NTTDomain<F>>::get_root_of_unity(max_size)
+}
+
 #[macro_export]
 macro_rules! impl_ntt_without_domain {
     (
@@ -315,6 +324,9 @@ macro_rules! impl_ntt {
 
                 #[link_name = concat!($field_prefix, "ReleaseDomain")]
                 fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "GetRootOfUnity")]
+                fn get_root_of_unity(max_size: u64) -> $field;
             }
 
             impl NTTDomain<$field> for $field_config {
@@ -328,6 +340,10 @@ macro_rules! impl_ntt {
 
                 fn release_domain(ctx: &DeviceContext) -> IcicleResult<()> {
                     unsafe { release_ntt_domain(ctx).wrap() }
+                }
+
+                fn get_root_of_unity(max_size: u64) -> $field {
+                    unsafe { get_root_of_unity(max_size) }
                 }
             }
 
