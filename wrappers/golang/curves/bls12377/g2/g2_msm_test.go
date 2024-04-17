@@ -132,7 +132,7 @@ func TestMSMG2(t *testing.T) {
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
-		e = G2Msm[icicle_bls12377.ScalarField, G2Affine](scalars, points, &cfg, out)
+		e = G2Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[G2Projective], 1)
 		outHost.CopyFromDeviceAsync(&out, stream)
@@ -167,7 +167,7 @@ func TestMSMG2GnarkCryptoTypes(t *testing.T) {
 		cfg.ArePointsMontgomeryForm = true
 		cfg.AreScalarsMontgomeryForm = true
 
-		e = G2Msm[fr.Element, bls12377.G2Affine](scalarsHost, pointsHost, &cfg, out)
+		e = G2Msm(scalarsHost, pointsHost, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[G2Projective], 1)
 		outHost.CopyFromDevice(&out)
@@ -192,7 +192,7 @@ func TestMSMG2Batch(t *testing.T) {
 			_, e := out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-			e = G2Msm[icicle_bls12377.ScalarField, G2Affine](scalars, points, &cfg, out)
+			e = G2Msm(scalars, points, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 			outHost := make(core.HostSlice[G2Projective], batchSize)
 			outHost.CopyFromDevice(&out)
@@ -233,7 +233,7 @@ func TestPrecomputeBaseG2(t *testing.T) {
 
 			cfg.PrecomputeFactor = precomputeFactor
 
-			e = G2Msm[icicle_bls12377.ScalarField, G2Affine](scalars, precomputeOut, &cfg, out)
+			e = G2Msm(scalars, precomputeOut, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 			outHost := make(core.HostSlice[G2Projective], batchSize)
 			outHost.CopyFromDevice(&out)
@@ -270,7 +270,7 @@ func TestMSMG2SkewedDistribution(t *testing.T) {
 		_, e := out.Malloc(p.Size(), p.Size())
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-		e = G2Msm[icicle_bls12377.ScalarField, G2Affine](scalars, points, &cfg, out)
+		e = G2Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[G2Projective], 1)
 		outHost.CopyFromDevice(&out)
@@ -306,7 +306,7 @@ func TestMSMG2MultiDevice(t *testing.T) {
 				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 				cfg.Ctx.Stream = &stream
 
-				e = G2Msm[icicle_bls12377.ScalarField, G2Affine](scalars, points, &cfg, out)
+				e = G2Msm(scalars, points, &cfg, out)
 				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 				outHost := make(core.HostSlice[G2Projective], 1)
 				outHost.CopyFromDeviceAsync(&out, stream)

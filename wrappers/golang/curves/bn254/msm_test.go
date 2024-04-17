@@ -91,7 +91,7 @@ func TestMSM(t *testing.T) {
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
-		e = Msm[ScalarField, Affine](scalars, points, &cfg, out)
+		e = Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[Projective], 1)
 		outHost.CopyFromDeviceAsync(&out, stream)
@@ -126,7 +126,7 @@ func TestMSMGnarkCryptoTypes(t *testing.T) {
 		cfg.ArePointsMontgomeryForm = true
 		cfg.AreScalarsMontgomeryForm = true
 
-		e = Msm[fr.Element, bn254.G1Affine](scalarsHost, pointsHost, &cfg, out)
+		e = Msm(scalarsHost, pointsHost, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[Projective], 1)
 		outHost.CopyFromDevice(&out)
@@ -151,7 +151,7 @@ func TestMSMBatch(t *testing.T) {
 			_, e := out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-			e = Msm[ScalarField, Affine](scalars, points, &cfg, out)
+			e = Msm(scalars, points, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 			outHost := make(core.HostSlice[Projective], batchSize)
 			outHost.CopyFromDevice(&out)
@@ -192,7 +192,7 @@ func TestPrecomputeBase(t *testing.T) {
 
 			cfg.PrecomputeFactor = precomputeFactor
 
-			e = Msm[ScalarField, Affine](scalars, precomputeOut, &cfg, out)
+			e = Msm(scalars, precomputeOut, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 			outHost := make(core.HostSlice[Projective], batchSize)
 			outHost.CopyFromDevice(&out)
@@ -229,7 +229,7 @@ func TestMSMSkewedDistribution(t *testing.T) {
 		_, e := out.Malloc(p.Size(), p.Size())
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-		e = Msm[ScalarField, Affine](scalars, points, &cfg, out)
+		e = Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[Projective], 1)
 		outHost.CopyFromDevice(&out)
@@ -265,7 +265,7 @@ func TestMSMMultiDevice(t *testing.T) {
 				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 				cfg.Ctx.Stream = &stream
 
-				e = Msm[ScalarField, Affine](scalars, points, &cfg, out)
+				e = Msm(scalars, points, &cfg, out)
 				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 				outHost := make(core.HostSlice[Projective], 1)
 				outHost.CopyFromDeviceAsync(&out, stream)
