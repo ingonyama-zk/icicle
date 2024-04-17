@@ -850,9 +850,6 @@ namespace msm {
     return config;
   }
 
-  // explicit instantiation to avoid having to include this file
-  template MSMConfig DefaultMSMConfig<scalar_t>(const device_context::DeviceContext& ctx);
-
   template <typename S, typename A, typename P>
   cudaError_t MSM(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results)
   {

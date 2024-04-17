@@ -1,12 +1,10 @@
-#define CURVE_ID 1
-
 #include "msm.cu"
 
 #include <chrono>
 #include <iostream>
 #include <vector>
 
-#include "curves/bn254/bn254.cuh"
+#include "curves/params/bn254.cuh"
 #include "fields/field.cuh"
 #include "curves/projective.cuh"
 #include "gpu-utils/device_context.cuh"
