@@ -3,12 +3,11 @@
 #include <chrono>
 #include <nvml.h>
 
-#define CURVE_ID 1
-#include "curves/curve_config.cuh"
-#include "utils/device_context.cuh"
-#include "utils/vec_ops.cu"
+#include "api/bn254.h"
+#include "vec_ops/vec_ops.cuh"
 
-using namespace curve_config;
+using namespace vec_ops;
+using namespace bn254;
 
 typedef scalar_t T;
 
@@ -18,7 +17,7 @@ int vector_mult(T* vec_b, T* vec_a, T* vec_result, size_t n_elments, device_cont
   config.is_a_on_device = true;
   config.is_b_on_device = true;
   config.is_result_on_device = true;
-  cudaError_t err =  vec_ops::Mul<T>(vec_a, vec_b, n_elments, config, vec_result);
+  cudaError_t err =  bn254MulCuda(vec_a, vec_b, n_elments, config, vec_result);
   if (err != cudaSuccess) {
     std::cerr << "Failed to multiply vectors - " << cudaGetErrorString(err) << std::endl;
     return 0;

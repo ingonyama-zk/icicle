@@ -3,7 +3,7 @@
 # Exit immediately on error
 set -e
 
-mkdir -p build/
+mkdir -p build
 
 # Configure and build Icicle
 cmake -S ../../../icicle/ -B ../../../icicle/build -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254

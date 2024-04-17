@@ -2,7 +2,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "curves/params/bn254.cuh"
 #include "api/bn254.h"
 using namespace bn254;
 

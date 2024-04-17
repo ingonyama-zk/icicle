@@ -4,9 +4,9 @@
 #include <cassert>
 #include <nvml.h>
 
-#define CURVE_ID BN254
-#include "appUtils/msm/msm.cu"
-using namespace curve_config;
+#include "api/bn254.h"
+#include "msm/msm.cuh"
+using namespace bn254;
 
 typedef point_field_t T;
 
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
   std::cout << "Executing MSM" << std::endl;
   auto config = msm::DefaultMSMConfig<scalar_t>();
   START_TIMER(msm);
-  msm::MSM<scalar_t, affine_t, projective_t>(scalars, points, N+1, config, &result);
+  bn254MSMCuda(scalars, points, N+1, config, &result);
   END_TIMER(msm, "Time to execute MSM");
 
   std::cout << "Computed commitment: " << result << std::endl;
