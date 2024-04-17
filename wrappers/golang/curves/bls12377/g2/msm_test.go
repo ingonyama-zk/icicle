@@ -133,6 +133,7 @@ func TestMSMG2(t *testing.T) {
 		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 		cfg.Ctx.Stream = &stream
+
 		e = G2Msm(scalars, points, &cfg, out)
 		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 		outHost := make(core.HostSlice[G2Projective], 1)

@@ -34,7 +34,6 @@ func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleEr
 	return e
 }
 func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[bls12_381.ScalarField], output core.HostSlice[bls12_381.ScalarField], order core.Ordering, direction core.NTTDir) bool {
-	domainWithPrecompute := fft.NewDomain(uint64(size))
 	scalarsFr := make([]fr.Element, size)
 	for i, v := range scalars {
 		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
@@ -46,6 +45,11 @@ func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[bls12_381.Scalar
 		outputAsFr[i] = slice64
 	}
 
+		return testAgainstGnarkCryptoNttGnarkTypes(size, scalarsFr, outputAsFr, order, direction)
+}
+
+func testAgainstGnarkCryptoNttGnarkTypes(size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) bool {
+	domainWithPrecompute := fft.NewDomain(uint64(size))
 	// DIT + BitReverse == Ordering.kRR
 	// DIT == Ordering.kRN
 	// DIF + BitReverse == Ordering.kNN
@@ -102,6 +106,31 @@ func TestNtt(t *testing.T) {
 			// Compare with gnark-crypto
 			assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, core.KForward))
 			}
+	}
+}
+func TestNttFrElement(t *testing.T) {
+	cfg := GetDefaultNttConfig()
+	scalars := make([]fr.Element, 4)
+	var x fr.Element
+	for i := 0; i < 4; i++ {
+		x.SetRandom()
+		scalars[i] = x
+	}
+
+	for _, size := range []int{4} {
+		for _, v := range [1]core.Ordering{core.KNN} {
+			testSize := size
+
+			scalarsCopy := (core.HostSlice[fr.Element])(scalars[:testSize])
+			cfg.Ordering = v
+
+			// run ntt
+			output := make(core.HostSlice[fr.Element], testSize)
+			Ntt(scalarsCopy, core.KForward, &cfg, output)
+
+			// Compare with gnark-crypto
+			assert.True(t, testAgainstGnarkCryptoNttGnarkTypes(testSize, scalarsCopy, output, v, core.KForward))
+		}
 	}
 }
 

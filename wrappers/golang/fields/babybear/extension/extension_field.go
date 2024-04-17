@@ -99,7 +99,7 @@ func GenerateScalars(size int) core.HostSlice[ExtensionField] {
 }
 
 func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.scalar_t)(scalars.AsPointer())
+	cValues := (*C.scalar_t)(scalars.AsUnsafePointer())
 	cSize := (C.size_t)(scalars.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
