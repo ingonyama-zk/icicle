@@ -11,6 +11,7 @@ type HostOrDeviceSlice interface {
 	Cap() int
 	IsEmpty() bool
 	IsOnDevice() bool
+	AsUnsafePointer() unsafe.Pointer
 }
 
 type DevicePointer = unsafe.Pointer
@@ -35,7 +36,7 @@ func (d DeviceSlice) IsEmpty() bool {
 	return d.length == 0
 }
 
-func (d DeviceSlice) AsPointer() unsafe.Pointer {
+func (d DeviceSlice) AsUnsafePointer() unsafe.Pointer {
 	return d.inner
 }
 
@@ -188,6 +189,14 @@ func (h HostSlice[T]) SizeOfElement() int {
 	return int(unsafe.Sizeof(h[0]))
 }
 
+func (h HostSlice[T]) AsPointer() *T {
+	return &h[0]
+}
+
+func (h HostSlice[T]) AsUnsafePointer() unsafe.Pointer {
+	return unsafe.Pointer(h.AsPointer())
+}
+
 func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *DeviceSlice {
 	size := h.Len() * h.SizeOfElement()
 	if shouldAllocate {
@@ -198,7 +207,7 @@ func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *Devic
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	hostSrc := unsafe.Pointer(&h[0])
+	hostSrc := h.AsUnsafePointer()
 	cr.CopyToDevice(dst.inner, hostSrc, uint(size))
 	dst.length = h.Len()
 	return dst
@@ -214,7 +223,7 @@ func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, 
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	hostSrc := unsafe.Pointer(&h[0])
+	hostSrc := h.AsUnsafePointer()
 	cr.CopyToDeviceAsync(dst.inner, hostSrc, uint(size), stream)
 	dst.length = h.Len()
 	return dst
@@ -226,7 +235,7 @@ func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cr.CopyFromDevice(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize))
+	cr.CopyFromDevice(h.AsUnsafePointer(), src.inner, uint(bytesSize))
 }
 
 func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
@@ -235,5 +244,5 @@ func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cr.CopyFromDeviceAsync(unsafe.Pointer(&h[0]), src.inner, uint(bytesSize), stream)
+	cr.CopyFromDeviceAsync(h.AsUnsafePointer(), src.inner, uint(bytesSize), stream)
 }
