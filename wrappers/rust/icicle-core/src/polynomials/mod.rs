@@ -393,7 +393,7 @@ macro_rules! impl_polynomial_tests {
         fn add(a: &$field, b: &$field) -> $field {
             let a = [a.clone()];
             let b = [b.clone()];
-            let mut result = vec![$field::zero(); 1];
+            let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
             add_scalars(
@@ -409,7 +409,7 @@ macro_rules! impl_polynomial_tests {
         fn sub(a: &$field, b: &$field) -> $field {
             let a = [a.clone()];
             let b = [b.clone()];
-            let mut result = vec![$field::zero(); 1];
+            let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
             sub_scalars(
@@ -425,7 +425,7 @@ macro_rules! impl_polynomial_tests {
         fn mul(a: &$field, b: &$field) -> $field {
             let a = [a.clone()];
             let b = [b.clone()];
-            let mut result = vec![$field::zero(); 1];
+            let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
             mul_scalars(
@@ -448,7 +448,9 @@ macro_rules! impl_polynomial_tests {
         pub fn setup() -> () {
             INIT.call_once(|| {
                 let device_id: usize = 0;
-                let domain_max_size: u64 = 1 << 16;
+                // using logn=20 since babybear NTT tests is using it and I don't want order of tests to be a problem
+                let domain_max_size: u64 = 1 << 20; //
+                                                    // TODO Yuval: how to consolidate this with NTT tests and avoid releaseDomain being called too early???
                 init_domain::<ScalarField>(domain_max_size, device_id, false /*=fast twiddle */);
 
                 Poly::init_cuda_backend();
