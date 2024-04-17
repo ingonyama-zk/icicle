@@ -348,10 +348,8 @@ macro_rules! impl_polynomial_tests {
         $field:ident
     ) => {
         use super::*;
-        use ark_ff::{FftField, Field as ArkField, One};
-        use ark_std::{ops::Neg, test_rng, UniformRand};
-        use icicle_core::ntt::{initialize_domain, release_domain, NTTDomain};
-        use icicle_core::traits::ArkConvertible;
+        use icicle_core::ntt::{get_root_of_unity, initialize_domain, release_domain, NTTDomain};
+        use icicle_core::vec_ops::{add_scalars, mul_scalars, sub_scalars, VecOps, VecOpsConfig};
         use icicle_cuda_runtime::device_context::DeviceContext;
         use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
         use std::sync::Once;
@@ -360,14 +358,13 @@ macro_rules! impl_polynomial_tests {
 
         type Poly = $field_prefix_ident::Polynomial;
 
-        fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
+        fn init_domain<F: FieldImpl>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
         where
-            F::ArkEquivalent: FftField,
             <F as FieldImpl>::Config: NTTDomain<F>,
         {
             let ctx = DeviceContext::default_for_device(device_id);
-            let ark_rou = F::ArkEquivalent::get_root_of_unity(max_size).unwrap();
-            initialize_domain(F::from_ark(ark_rou), &ctx, fast_twiddles_mode).unwrap();
+            let rou: F = get_root_of_unity(max_size);
+            initialize_domain(rou, &ctx, fast_twiddles_mode).unwrap();
         }
 
         fn rel_domain<F: FieldImpl>(device_id: usize)
@@ -378,48 +375,67 @@ macro_rules! impl_polynomial_tests {
             release_domain::<F>(&ctx).unwrap()
         }
 
-        fn rand_ark<F: FieldImpl + ArkConvertible>() -> F::ArkEquivalent
-        where
-            F::ArkEquivalent: FftField,
-            <F as FieldImpl>::Config: NTTDomain<F>,
-        {
-            let mut seed = test_rng();
-            F::ArkEquivalent::rand(&mut seed)
-        }
-
-        // implementing field ops via ark since they are not implemented
-        fn rand() -> $field {
-            let r = rand_ark::<$field>();
-            $field::from_ark(r)
-        }
-
-        fn add(a: &$field, b: &$field) -> $field {
-            let a_ark = $field::to_ark(a);
-            let b_ark = $field::to_ark(b);
-            let add_ark = a_ark + b_ark;
-            $field::from_ark(add_ark)
-        }
-
-        fn sub(a: &$field, b: &$field) -> $field {
-            let a_ark = $field::to_ark(a);
-            let b_ark = $field::to_ark(b);
-            let add_ark = a_ark - b_ark;
-            $field::from_ark(add_ark)
-        }
-
-        fn mul(a: &$field, b: &$field) -> $field {
-            let a_ark = $field::to_ark(a);
-            let b_ark = $field::to_ark(b);
-            let add_ark = a_ark * b_ark;
-            $field::from_ark(add_ark)
-        }
-
         fn randomize_coeffs<F: FieldImpl>(size: usize) -> Vec<F>
         where
             <F as FieldImpl>::Config: GenerateRandom<F>,
         {
             let coeffs = F::Config::generate_random(size);
             coeffs
+        }
+
+        fn rand() -> $field {
+            let r = randomize_coeffs::<$field>(1);
+            // let coeffs = $field::Config::generate_random(1);
+            r[0]
+        }
+
+        // Note: implementing field arithmetic (+,-,*) for fields via vec_ops since they are not implemented on host
+        fn add(a: &$field, b: &$field) -> $field {
+            let a = [a.clone()];
+            let b = [b.clone()];
+            let mut result = vec![$field::zero(); 1];
+
+            let cfg = VecOpsConfig::default();
+            add_scalars(
+                HostSlice::from_slice(&a),
+                HostSlice::from_slice(&b),
+                HostSlice::from_mut_slice(&mut result),
+                &cfg,
+            )
+            .unwrap();
+            result[0]
+        }
+
+        fn sub(a: &$field, b: &$field) -> $field {
+            let a = [a.clone()];
+            let b = [b.clone()];
+            let mut result = vec![$field::zero(); 1];
+
+            let cfg = VecOpsConfig::default();
+            sub_scalars(
+                HostSlice::from_slice(&a),
+                HostSlice::from_slice(&b),
+                HostSlice::from_mut_slice(&mut result),
+                &cfg,
+            )
+            .unwrap();
+            result[0]
+        }
+
+        fn mul(a: &$field, b: &$field) -> $field {
+            let a = [a.clone()];
+            let b = [b.clone()];
+            let mut result = vec![$field::zero(); 1];
+
+            let cfg = VecOpsConfig::default();
+            mul_scalars(
+                HostSlice::from_slice(&a),
+                HostSlice::from_slice(&b),
+                HostSlice::from_mut_slice(&mut result),
+                &cfg,
+            )
+            .unwrap();
+            result[0]
         }
 
         fn randomize_poly(size: usize) -> Poly {
