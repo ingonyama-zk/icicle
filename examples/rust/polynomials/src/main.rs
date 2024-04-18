@@ -68,7 +68,7 @@ fn main() {
     let f_babybear = randomize_poly::<PolynomialBabyBear>(poly_size, true /*from random coeffs*/);
     let g_babybear = randomize_poly::<PolynomialBabyBear>(poly_size / 2, true /*from random coeffs*/);
 
-    // Arithmetics
+    // Arithmetic
     let t0 = &f + &g;
     let t1 = &f * &h;
     let (q, r) = t1.divide(&t0); // computes q,r for t1(x)=q(x)*t0(x)+r(x)
