@@ -497,9 +497,11 @@ macro_rules! impl_polynomial_tests {
             });
         }
 
-        // Note: there is no add/mul for field elements so computing over integers instead
+        // Note: tests are marked with #[ignore] since they conflict with NTT tests domain. This is a (hopefully temporary) workaround.
+        //       The poly tests are executed via 'cargo test -- --ignored' as an additional step
 
         #[test]
+        #[ignore]
         fn test_poly_eval() {
             setup();
 
@@ -512,6 +514,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_poly_clone() {
             setup();
 
@@ -531,6 +534,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_poly_add_sub_mul() {
             setup();
 
@@ -565,6 +569,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_poly_monomials() {
             setup();
 
@@ -590,6 +595,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_poly_read_coeffs() {
             setup();
 
@@ -625,6 +631,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_poly_division() {
             setup();
 
@@ -642,6 +649,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_poly_divide_by_vanishing() {
             setup();
 
@@ -668,6 +676,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_poly_eval_on_domain() {
             setup();
 
@@ -710,6 +719,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
+        #[ignore]
         fn test_slicing() {
             setup();
             let size = (1 << 10) - 3;
