@@ -101,7 +101,7 @@ func TestNtt(t *testing.T) {
 
 			// run ntt
 			output := make(core.HostSlice[ScalarField], testSize)
-			Ntt[ScalarField](scalarsCopy, core.KForward, &cfg, output)
+			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
 			assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, core.KForward))
@@ -127,7 +127,7 @@ func TestNttFrElement(t *testing.T) {
 
 			// run ntt
 			output := make(core.HostSlice[fr.Element], testSize)
-			Ntt[fr.Element](scalarsCopy, core.KForward, &cfg, output)
+			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
 			assert.True(t, testAgainstGnarkCryptoNttGnarkTypes(testSize, scalarsCopy, output, v, core.KForward))
@@ -157,7 +157,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
 
 				// run ntt
-				Ntt[ScalarField](deviceInput, direction, &cfg, deviceOutput)
+				Ntt(deviceInput, direction, &cfg, deviceOutput)
 				output := make(core.HostSlice[ScalarField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
@@ -186,7 +186,7 @@ func TestNttBatch(t *testing.T) {
 			cfg.BatchSize = int32(batchSize)
 			// run ntt
 			output := make(core.HostSlice[ScalarField], totalSize)
-			Ntt[ScalarField](scalarsCopy, core.KForward, &cfg, output)
+			Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
 			domainWithPrecompute := fft.NewDomain(uint64(testSize))
