@@ -1,6 +1,6 @@
-// use icicle_babybear::polynomials::UnivariatePolynomial as PolynomialBabyBear;
-use icicle_bn254::curve::{ScalarCfg, ScalarField};
-use icicle_bn254::polynomials::UnivariatePolynomial as PolynomialBn254;
+use icicle_babybear::polynomials::DensePolynomial as PolynomialBabyBear;
+use icicle_bn254::curve::ScalarField;
+use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 
 use icicle_cuda_runtime::{
     device_context::DeviceContext,
@@ -9,6 +9,7 @@ use icicle_cuda_runtime::{
 
 use icicle_core::{
     ntt::{get_root_of_unity, initialize_domain},
+    polynomials::UnivariatePolynomial,
     traits::{FieldImpl, GenerateRandom},
 };
 
@@ -33,16 +34,22 @@ fn init(max_ntt_size: u64) {
     initialize_domain(rou, &ctx, false /*=fast twiddles mode*/).unwrap();
 
     // initialize the cuda backend for polynomials
+    // make sure to initialize it per field
     PolynomialBn254::init_cuda_backend();
-    // PolynomialBabyBear::init_cuda_backend();
+    PolynomialBabyBear::init_cuda_backend();
 }
 
-fn randomize_poly(size: usize, from_coeffs: bool) -> PolynomialBn254 {
-    let coeffs_or_evals = ScalarCfg::generate_random(size);
+fn randomize_poly<P>(size: usize, from_coeffs: bool) -> P
+where
+    P: UnivariatePolynomial,
+    P::Field: FieldImpl,
+    P::FieldConfig: GenerateRandom<P::Field>,
+{
+    let coeffs_or_evals = P::FieldConfig::generate_random(size);
     let p = if from_coeffs {
-        PolynomialBn254::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
+        P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
     } else {
-        PolynomialBn254::from_rou_evals(HostSlice::from_slice(&coeffs_or_evals), size)
+        P::from_rou_evals(HostSlice::from_slice(&coeffs_or_evals), size)
     };
     p
 }
@@ -51,16 +58,22 @@ fn main() {
     let args = Args::parse();
     init(1 << args.max_ntt_log_size);
 
-    // randomize three polynomials f,g,h and
+    // randomize three polynomials f,g,h over bn254 scalar field
     let poly_size = 1 << args.poly_log_size;
-    let f = randomize_poly(poly_size, true /*from random coeffs*/);
-    let g = randomize_poly(poly_size / 2, true /*from random coeffs*/);
-    let h = randomize_poly(poly_size / 4, false /*from random evaluations on rou*/);
+    let f = randomize_poly::<PolynomialBn254>(poly_size, true /*from random coeffs*/);
+    let g = randomize_poly::<PolynomialBn254>(poly_size / 2, true /*from random coeffs*/);
+    let h = randomize_poly::<PolynomialBn254>(poly_size / 4, false /*from random evaluations on rou*/);
+
+    // randomize two polynomials over babybear field
+    let f_babybear = randomize_poly::<PolynomialBabyBear>(poly_size, true /*from random coeffs*/);
+    let g_babybear = randomize_poly::<PolynomialBabyBear>(poly_size / 2, true /*from random coeffs*/);
 
     // Arithmetics
     let t0 = &f + &g;
     let t1 = &f * &h;
     let (q, r) = t1.divide(&t0); // computes q,r for t1(x)=q(x)*t0(x)+r(x)
+
+    let _r_babybear = &f_babybear - &g_babybear;
 
     // check degree
     let _r_degree = r.degree();

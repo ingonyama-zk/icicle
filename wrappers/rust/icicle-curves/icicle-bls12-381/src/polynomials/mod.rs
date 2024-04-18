@@ -1,7 +1,7 @@
-use crate::curve::ScalarField;
+use crate::curve::{ScalarCfg, ScalarField};
 use icicle_core::impl_univariate_polynomial_api;
 
-impl_univariate_polynomial_api!("bls12_381", bls12_381, ScalarField);
+impl_univariate_polynomial_api!("bls12_381", bls12_381, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 mod tests {

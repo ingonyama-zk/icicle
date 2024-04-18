@@ -1,11 +1,46 @@
+use crate::traits::{FieldConfig, FieldImpl};
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+
+pub trait UnivariatePolynomial
+where
+    Self::Field: FieldImpl,
+    Self::FieldConfig: FieldConfig,
+{
+    type Field;
+    type FieldConfig;
+
+    fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self;
+    fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self;
+    fn divide(&self, denominator: &Self) -> (Self, Self)
+    where
+        Self: Sized;
+    fn div_by_vanishing(&self, degree: u64) -> Self;
+    fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
+    fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
+    fn slice(&self, offset: u64, stride: u64, size: u64) -> Self;
+    fn even(&self) -> Self;
+    fn odd(&self) -> Self;
+    fn eval(&self, x: &Self::Field) -> Self::Field;
+    fn degree(&self) -> i64;
+    fn eval_on_domain<D: HostOrDeviceSlice<Self::Field> + ?Sized, E: HostOrDeviceSlice<Self::Field> + ?Sized>(
+        &self,
+        domain: &D,
+        evals: &mut E,
+    );
+    fn get_nof_coeffs(&self) -> u64;
+    fn get_coeff(&self, idx: u64) -> Self::Field;
+    fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
+}
+
 #[macro_export]
 macro_rules! impl_univariate_polynomial_api {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident
+        $field:ident,
+        $field_cfg:ident
     ) => {
-        use icicle_core::traits::FieldImpl;
+        use icicle_core::{polynomials::UnivariatePolynomial, traits::FieldImpl};
         use icicle_cuda_runtime::memory::HostOrDeviceSlice;
         use std::clone;
         use std::cmp;
@@ -92,92 +127,104 @@ macro_rules! impl_univariate_polynomial_api {
 
         }
 
-        pub struct UnivariatePolynomial {
+        pub struct DensePolynomial {
             handle: PolynomialHandle,
         }
 
-        impl UnivariatePolynomial {
+        impl DensePolynomial {
             pub fn init_cuda_backend() -> bool {
                 unsafe { init_cuda_backend() }
             }
 
-            pub fn from_coeffs<S: HostOrDeviceSlice<$field> + ?Sized>(coeffs: &S, size: usize) -> Self {
+            // TODO Yuval: implement Display trait
+            pub fn print(&self) {
                 unsafe {
-                    UnivariatePolynomial {
+                    print(self.handle);
+                }
+            }
+        }
+
+        impl UnivariatePolynomial for DensePolynomial {
+            type Field = $field;
+            type FieldConfig = $field_cfg;
+
+            fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self {
+                unsafe {
+                    DensePolynomial {
                         handle: create_from_coeffs(coeffs.as_ptr(), size),
                     }
                 }
             }
 
-            pub fn from_rou_evals<S: HostOrDeviceSlice<$field> + ?Sized>(evals: &S, size: usize) -> Self {
+            fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self {
                 unsafe {
-                    UnivariatePolynomial {
+                    Self {
                         handle: create_from_rou_evals(evals.as_ptr(), size),
                     }
                 }
             }
 
-            pub fn divide(&self, denominator: &UnivariatePolynomial) -> (UnivariatePolynomial, UnivariatePolynomial) {
+            fn divide(&self, denominator: &Self) -> (Self, Self) {
                 let mut q_handle: PolynomialHandle = std::ptr::null_mut();
                 let mut r_handle: PolynomialHandle = std::ptr::null_mut();
                 unsafe {
                     divide(self.handle, denominator.handle, &mut q_handle, &mut r_handle);
                 }
-                (
-                    UnivariatePolynomial { handle: q_handle },
-                    UnivariatePolynomial { handle: r_handle },
-                )
+                (Self { handle: q_handle }, Self { handle: r_handle })
             }
 
-            pub fn div_by_vanishing(&self, degree: u64) -> UnivariatePolynomial {
+            fn div_by_vanishing(&self, degree: u64) -> Self {
                 unsafe {
-                    UnivariatePolynomial {
+                    Self {
                         handle: div_by_vanishing(self.handle, degree),
                     }
                 }
             }
 
-            pub fn add_monomial_inplace(&mut self, monomial_coeff: &$field, monomial: u64) {
+            fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64) {
                 unsafe {
                     add_monomial_inplace(self.handle, monomial_coeff, monomial);
                 }
             }
 
-            pub fn sub_monomial_inplace(&mut self, monomial_coeff: &$field, monomial: u64) {
+            fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64) {
                 unsafe {
                     sub_monomial_inplace(self.handle, monomial_coeff, monomial);
                 }
             }
 
-            pub fn slice(&self, offset: u64, stride: u64, size: u64) -> UnivariatePolynomial {
+            fn slice(&self, offset: u64, stride: u64, size: u64) -> Self {
                 unsafe {
-                    UnivariatePolynomial {
+                    Self {
                         handle: slice(self.handle, offset, stride, size),
                     }
                 }
             }
 
-            pub fn even(&self) -> UnivariatePolynomial {
+            fn even(&self) -> Self {
                 unsafe {
-                    UnivariatePolynomial {
+                    Self {
                         handle: even(self.handle),
                     }
                 }
             }
 
-            pub fn odd(&self) -> UnivariatePolynomial {
+            fn odd(&self) -> Self {
                 unsafe {
-                    UnivariatePolynomial {
+                    Self {
                         handle: odd(self.handle),
                     }
                 }
             }
 
-            pub fn eval(&self, x: &$field) -> $field {
+            fn eval(&self, x: &Self::Field) -> Self::Field {
                 unsafe { eval(self.handle, x) }
             }
 
-            pub fn eval_on_domain<D: HostOrDeviceSlice<$field> + ?Sized, E: HostOrDeviceSlice<$field> + ?Sized>(
+            fn eval_on_domain<
+                D: HostOrDeviceSlice<Self::Field> + ?Sized,
+                E: HostOrDeviceSlice<Self::Field> + ?Sized,
+            >(
                 &self,
                 domain: &D,
                 evals: &mut E,
@@ -196,7 +243,7 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            pub fn get_nof_coeffs(&self) -> u64 {
+            fn get_nof_coeffs(&self) -> u64 {
                 unsafe {
                     // returns total #coeffs. Not copying when null
                     let nof_coeffs = copy_coeffs(self.handle, std::ptr::null_mut(), 0, 0);
@@ -204,11 +251,11 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            pub fn get_coeff(&self, idx: u64) -> $field {
+            fn get_coeff(&self, idx: u64) -> Self::Field {
                 unsafe { get_coeff(self.handle, idx) }
             }
 
-            pub fn copy_coeffs<S: HostOrDeviceSlice<$field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
+            fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
                 let coeffs_len = coeffs.len() as u64;
                 let nof_coeffs = self.get_nof_coeffs();
                 let end_idx = cmp::min(nof_coeffs, start_idx + coeffs_len - 1);
@@ -218,19 +265,12 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            pub fn degree(&self) -> i64 {
+            fn degree(&self) -> i64 {
                 unsafe { degree(self.handle) }
-            }
-
-            // TODO Yuval: implement Display trait
-            pub fn print(&self) {
-                unsafe {
-                    print(self.handle);
-                }
             }
         }
 
-        impl Drop for UnivariatePolynomial {
+        impl Drop for DensePolynomial {
             fn drop(&mut self) {
                 unsafe {
                     delete(self.handle);
@@ -238,52 +278,52 @@ macro_rules! impl_univariate_polynomial_api {
             }
         }
 
-        impl Clone for UnivariatePolynomial {
+        impl Clone for DensePolynomial {
             fn clone(&self) -> Self {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: clone(self.handle),
                     }
                 }
             }
         }
 
-        impl Add for &UnivariatePolynomial {
-            type Output = UnivariatePolynomial;
+        impl Add for &DensePolynomial {
+            type Output = DensePolynomial;
 
             fn add(self: Self, rhs: Self) -> Self::Output {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: add(self.handle, rhs.handle),
                     }
                 }
             }
         }
 
-        impl AddAssign<&UnivariatePolynomial> for UnivariatePolynomial {
-            fn add_assign(&mut self, other: &UnivariatePolynomial) {
+        impl AddAssign<&DensePolynomial> for DensePolynomial {
+            fn add_assign(&mut self, other: &DensePolynomial) {
                 unsafe { add_inplace(self.handle, other.handle) };
             }
         }
 
-        impl Sub for &UnivariatePolynomial {
-            type Output = UnivariatePolynomial;
+        impl Sub for &DensePolynomial {
+            type Output = DensePolynomial;
 
             fn sub(self: Self, rhs: Self) -> Self::Output {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: subtract(self.handle, rhs.handle),
                     }
                 }
             }
         }
 
-        impl Mul for &UnivariatePolynomial {
-            type Output = UnivariatePolynomial;
+        impl Mul for &DensePolynomial {
+            type Output = DensePolynomial;
 
             fn mul(self: Self, rhs: Self) -> Self::Output {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: multiply(self.handle, rhs.handle),
                     }
                 }
@@ -291,48 +331,48 @@ macro_rules! impl_univariate_polynomial_api {
         }
 
         // poly * scalar
-        impl Mul<&$field> for &UnivariatePolynomial {
-            type Output = UnivariatePolynomial;
+        impl Mul<&$field> for &DensePolynomial {
+            type Output = DensePolynomial;
 
             fn mul(self: Self, rhs: &$field) -> Self::Output {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: multiply_by_scalar(self.handle, rhs),
                     }
                 }
             }
         }
         // scalar * poly
-        impl Mul<&UnivariatePolynomial> for &$field {
-            type Output = UnivariatePolynomial;
+        impl Mul<&DensePolynomial> for &$field {
+            type Output = DensePolynomial;
 
-            fn mul(self, rhs: &UnivariatePolynomial) -> Self::Output {
+            fn mul(self, rhs: &DensePolynomial) -> Self::Output {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: multiply_by_scalar(rhs.handle, self),
                     }
                 }
             }
         }
 
-        impl Div for &UnivariatePolynomial {
-            type Output = UnivariatePolynomial;
+        impl Div for &DensePolynomial {
+            type Output = DensePolynomial;
 
             fn div(self: Self, rhs: Self) -> Self::Output {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: quotient(self.handle, rhs.handle),
                     }
                 }
             }
         }
 
-        impl Rem for &UnivariatePolynomial {
-            type Output = UnivariatePolynomial;
+        impl Rem for &DensePolynomial {
+            type Output = DensePolynomial;
 
             fn rem(self: Self, rhs: Self) -> Self::Output {
                 unsafe {
-                    UnivariatePolynomial {
+                    DensePolynomial {
                         handle: remainder(self.handle, rhs.handle),
                     }
                 }
@@ -356,7 +396,7 @@ macro_rules! impl_polynomial_tests {
 
         use icicle_core::traits::{FieldImpl, GenerateRandom};
 
-        type Poly = UnivariatePolynomial;
+        type Poly = DensePolynomial;
 
         fn init_domain<F: FieldImpl>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
         where
