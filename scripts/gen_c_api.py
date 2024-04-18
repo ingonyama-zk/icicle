@@ -15,10 +15,26 @@ Defines a set of curves to generate API for.
 A set corresponding to each curve contains headers that shouldn't be included.
 """
 CURVES_CONFIG = {
-    "bn254": [],
-    "bls12_381": [],
-    "bls12_377": [],
-    "bw6_761": [],
+    "bn254": [
+        "field_ext.h",
+        "vec_ops_ext.h",
+        "ntt_ext.h",
+    ],
+    "bls12_381": [
+        "field_ext.h",
+        "vec_ops_ext.h",
+        "ntt_ext.h",
+    ],
+    "bls12_377": [
+        "field_ext.h",
+        "vec_ops_ext.h",
+        "ntt_ext.h",
+    ],
+    "bw6_761": [
+        "field_ext.h",
+        "vec_ops_ext.h",
+        "ntt_ext.h",
+    ],
     "grumpkin": {
         "curve_g2.h",
         "msm_g2.h",

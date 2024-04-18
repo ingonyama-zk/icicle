@@ -1,8 +1,9 @@
 // #define DEBUG
 
-#define CURVE_ID 2
 #include "curves/curve_config.cuh"
-#include "utils/device_context.cuh"
+using namespace curve_config;
+
+#include "gpu-utils/device_context.cuh"
 #include "poseidon.cu"
 
 #ifndef __CUDA_ARCH__
@@ -12,7 +13,6 @@
 #include <iostream>
 
 using namespace poseidon;
-using namespace curve_config;
 
 #define A 2
 #define T (A + 1)

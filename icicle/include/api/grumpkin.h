@@ -15,6 +15,18 @@
 #include "poseidon/poseidon.cuh"
 #include "poseidon/tree/merkle.cuh"
 
+extern "C" cudaError_t grumpkinPrecomputeMSMBases(
+  grumpkin::affine_t* bases,
+  int bases_size,
+  int precompute_factor,
+  int _c,
+  bool are_bases_on_device,
+  device_context::DeviceContext& ctx,
+  grumpkin::affine_t* output_bases);
+
+extern "C" cudaError_t grumpkinMSMCuda(
+  const grumpkin::scalar_t* scalars, const grumpkin::affine_t* points, int msm_size, msm::MSMConfig& config, grumpkin::projective_t* out);
+
 extern "C" bool grumpkinEq(grumpkin::projective_t* point1, grumpkin::projective_t* point2);
 
 extern "C" void grumpkinToAffine(grumpkin::projective_t* point, grumpkin::affine_t* point_out);
@@ -28,18 +40,6 @@ extern "C" cudaError_t grumpkinAffineConvertMontgomery(
 
 extern "C" cudaError_t grumpkinProjectiveConvertMontgomery(
   grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
-
-extern "C" cudaError_t grumpkinPrecomputeMSMBases(
-  grumpkin::affine_t* bases,
-  int bases_size,
-  int precompute_factor,
-  int _c,
-  bool are_bases_on_device,
-  device_context::DeviceContext& ctx,
-  grumpkin::affine_t* output_bases);
-
-extern "C" cudaError_t grumpkinMSMCuda(
-  const grumpkin::scalar_t* scalars, const grumpkin::affine_t* points, int msm_size, msm::MSMConfig& config, grumpkin::projective_t* out);
 
 extern "C" cudaError_t grumpkinCreateOptimizedPoseidonConstants(
   int arity,
@@ -68,11 +68,6 @@ extern "C" cudaError_t grumpkinBuildPoseidonMerkleTree(
   poseidon::PoseidonConstants<grumpkin::scalar_t>& constants,
   merkle::TreeBuilderConfig& config);
 
-extern "C" void grumpkinGenerateScalars(grumpkin::scalar_t* scalars, int size);
-
-extern "C" cudaError_t grumpkinScalarConvertMontgomery(
-  grumpkin::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
-
 extern "C" cudaError_t grumpkinMulCuda(
   grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
 
@@ -90,5 +85,10 @@ extern "C" cudaError_t grumpkinTransposeMatrix(
   device_context::DeviceContext& ctx,
   bool on_device,
   bool is_async);
+
+extern "C" void grumpkinGenerateScalars(grumpkin::scalar_t* scalars, int size);
+
+extern "C" cudaError_t grumpkinScalarConvertMontgomery(
+  grumpkin::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 #endif

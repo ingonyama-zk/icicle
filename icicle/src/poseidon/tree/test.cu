@@ -1,9 +1,8 @@
 // #define DEBUG
 #define MERKLE_DEBUG
 
-#define CURVE_ID 2
 #include "curves/curve_config.cuh"
-#include "appUtils/poseidon/poseidon.cu"
+#include "../poseidon.cu"
 #include "merkle.cu"
 
 #ifndef __CUDA_ARCH__

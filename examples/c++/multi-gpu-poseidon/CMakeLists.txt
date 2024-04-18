@@ -19,8 +19,8 @@ add_executable(
   example.cu
 )
 target_include_directories(example PRIVATE "../../../icicle/include")
-target_link_libraries(example ${CMAKE_SOURCE_DIR}/../../../icicle/build/lib/libingo_curve_bn254.a)
-target_link_libraries(example ${CMAKE_SOURCE_DIR}/../../../icicle/build/lib/libingo_field_bn254.a)
+target_link_libraries(example ${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_curve_bn254.a)
+target_link_libraries(example ${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_field_bn254.a)
 find_library(NVML_LIBRARY nvidia-ml PATHS /usr/local/cuda/targets/x86_64-linux/lib/stubs/ )
 target_link_libraries(example ${NVML_LIBRARY})
 set_target_properties(example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
