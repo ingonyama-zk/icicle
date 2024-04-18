@@ -9,20 +9,20 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use crate::error::IcicleResult;
 use crate::{
     ntt::{
-        get_root_of_unity, initialize_domain, ntt, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTDomain,
-        NttAlgorithm, Ordering, NTT,
+        initialize_domain, ntt, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTDomain, NttAlgorithm, Ordering, NTT,
     },
     traits::{ArkConvertible, FieldImpl, GenerateRandom},
     vec_ops::{transpose_matrix, VecOps},
 };
 
-pub fn init_domain<F: FieldImpl>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
+pub fn init_domain<F: FieldImpl + ArkConvertible>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
 where
+    F::ArkEquivalent: FftField,
     <F as FieldImpl>::Config: NTTDomain<F>,
 {
     let ctx = DeviceContext::default_for_device(device_id);
-    let rou: F = get_root_of_unity(max_size);
-    initialize_domain(rou, &ctx, fast_twiddles_mode).unwrap();
+    let ark_rou = F::ArkEquivalent::get_root_of_unity(max_size).unwrap();
+    initialize_domain(F::from_ark(ark_rou), &ctx, fast_twiddles_mode).unwrap();
 }
 
 pub fn rel_domain<F: FieldImpl>(ctx: &DeviceContext) -> IcicleResult<()>
