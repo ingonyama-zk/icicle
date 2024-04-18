@@ -68,7 +68,9 @@ jobs:
     - name: Run baby bear tests
       working-directory: ./wrappers/rust/icicle-fields/icicle-babybear
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: cargo test --release --verbose
+      run: |
+        cargo test --release --verbose -- --ignored
+        cargo test --release --verbose
 
   build-windows:
     name: Build on Windows
