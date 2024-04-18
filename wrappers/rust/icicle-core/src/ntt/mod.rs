@@ -401,7 +401,7 @@ macro_rules! impl_ntt_tests {
         #[serial]
         fn test_ntt_release_domain() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-            // check_release_domain::<$field>()
+            check_release_domain::<$field>()
         }
     };
 }
