@@ -1,5 +1,6 @@
+use icicle_babybear::field::ScalarField as babybearScalar;
 use icicle_babybear::polynomials::DensePolynomial as PolynomialBabyBear;
-use icicle_bn254::curve::ScalarField;
+use icicle_bn254::curve::ScalarField as bn254Scalar;
 use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 
 use icicle_cuda_runtime::{
@@ -28,10 +29,13 @@ struct Args {
 }
 
 fn init(max_ntt_size: u64) {
-    // initialize NTT domain. Polynomials ops relies on NTT.
-    let rou: ScalarField = get_root_of_unity(max_ntt_size);
+    // initialize NTT domain for all fields!. Polynomials ops relies on NTT.
+    let rou_bn254: bn254Scalar = get_root_of_unity(max_ntt_size);
     let ctx = DeviceContext::default();
-    initialize_domain(rou, &ctx, false /*=fast twiddles mode*/).unwrap();
+    initialize_domain(rou_bn254, &ctx, false /*=fast twiddles mode*/).unwrap();
+
+    let rou_babybear: babybearScalar = get_root_of_unity(max_ntt_size);
+    initialize_domain(rou_babybear, &ctx, false /*=fast twiddles mode*/).unwrap();
 
     // initialize the cuda backend for polynomials
     // make sure to initialize it per field
@@ -73,19 +77,19 @@ fn main() {
     let t1 = &f * &h;
     let (q, r) = t1.divide(&t0); // computes q,r for t1(x)=q(x)*t0(x)+r(x)
 
-    let _r_babybear = &f_babybear - &g_babybear;
+    let _r_babybear = &f_babybear * &g_babybear;
 
     // check degree
     let _r_degree = r.degree();
 
     // evaluate in single domain point
-    let five = ScalarField::from_u32(5);
+    let five = bn254Scalar::from_u32(5);
     let q_at_five = q.eval(&five);
 
     // evaluate on domain. Note: domain and image can be either Host or Device slice.
     // in this example domain in on host and evals on device.
-    let host_domain = [five, ScalarField::from_u32(30)];
-    let mut device_image = DeviceVec::<ScalarField>::cuda_malloc(host_domain.len()).unwrap();
+    let host_domain = [five, bn254Scalar::from_u32(30)];
+    let mut device_image = DeviceVec::<bn254Scalar>::cuda_malloc(host_domain.len()).unwrap();
     t1.eval_on_domain(HostSlice::from_slice(&host_domain), &mut device_image[..]);
 
     // slicing
