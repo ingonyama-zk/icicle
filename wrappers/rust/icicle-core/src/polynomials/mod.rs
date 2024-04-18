@@ -42,15 +42,16 @@ macro_rules! impl_univariate_polynomial_api {
     ) => {
         use icicle_core::{polynomials::UnivariatePolynomial, traits::FieldImpl};
         use icicle_cuda_runtime::memory::HostOrDeviceSlice;
-        use std::clone;
-        use std::cmp;
-        use std::ffi::c_void;
-        use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
+        use std::{
+            clone, cmp,
+            ffi::c_void,
+            ops::{Add, AddAssign, Div, Mul, Rem, Sub},
+        };
 
         type PolynomialHandle = *const c_void;
 
         extern "C" {
-            #[link_name = concat!($field_prefix, "init_cuda_backend")]
+            #[link_name = concat!($field_prefix, "polynomial_init_cuda_backend")]
             fn init_cuda_backend() -> bool;
 
             #[link_name = concat!($field_prefix, "polynomial_create_from_coefficients")]
@@ -118,9 +119,6 @@ macro_rules! impl_univariate_polynomial_api {
 
             #[link_name = concat!($field_prefix, "polynomial_degree")]
             fn degree(a: PolynomialHandle) -> i64;
-
-            #[link_name = concat!($field_prefix, "polynomial_get_coeff")]
-            fn get_coeff(a: PolynomialHandle, idx: u64) -> $field;
 
             #[link_name = concat!($field_prefix, "polynomial_copy_coeffs_range")]
             fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: i64, end_idx: i64) -> i64;
@@ -252,7 +250,9 @@ macro_rules! impl_univariate_polynomial_api {
             }
 
             fn get_coeff(&self, idx: u64) -> Self::Field {
-                unsafe { get_coeff(self.handle, idx) }
+                let mut coeff: Self::Field = Self::Field::zero();
+                unsafe { copy_coeffs(self.handle, &mut coeff, idx as i64, idx as i64) };
+                coeff
             }
 
             fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
@@ -342,6 +342,7 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
         }
+
         // scalar * poly
         impl Mul<&DensePolynomial> for &$field {
             type Output = DensePolynomial;
@@ -398,20 +399,18 @@ macro_rules! impl_polynomial_tests {
 
         type Poly = DensePolynomial;
 
-        fn init_domain<F: FieldImpl>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
+        fn init_domain<F: FieldImpl>(max_size: u64, ctx: &DeviceContext, fast_twiddles_mode: bool)
         where
             <F as FieldImpl>::Config: NTTDomain<F>,
         {
-            let ctx = DeviceContext::default_for_device(device_id);
             let rou: F = get_root_of_unity(max_size);
             initialize_domain(rou, &ctx, fast_twiddles_mode).unwrap();
         }
 
-        fn rel_domain<F: FieldImpl>(device_id: usize)
+        fn rel_domain<F: FieldImpl>(ctx: &DeviceContext)
         where
             <F as FieldImpl>::Config: NTTDomain<F>,
         {
-            let ctx = DeviceContext::default_for_device(device_id);
             release_domain::<F>(&ctx).unwrap()
         }
 
@@ -491,7 +490,8 @@ macro_rules! impl_polynomial_tests {
                 // using logn=20 since babybear NTT tests is using it and I don't want order of tests to be a problem
                 let domain_max_size: u64 = 1 << 20; //
                                                     // TODO Yuval: how to consolidate this with NTT tests and avoid releaseDomain being called too early???
-                init_domain::<ScalarField>(domain_max_size, device_id, false /*=fast twiddle */);
+                let ctx = DeviceContext::default_for_device(device_id);
+                init_domain::<ScalarField>(domain_max_size, &ctx, false /*=fast twiddle */);
 
                 Poly::init_cuda_backend();
             });

@@ -10,7 +10,7 @@ namespace polynomials {
   // Defines a polynomial instance based on the scalar type from the FIELD configuration.
   typedef Polynomial<scalar_t> PolynomialInst;
 
-  bool CONCAT_EXPAND(FIELD, init_cuda_backend)()
+  bool CONCAT_EXPAND(FIELD, polynomial_init_cuda_backend)()
   {
     static auto cuda_factory = std::make_shared<CUDAPolynomialFactory<scalar_t>>();
     PolynomialInst::initialize(cuda_factory);
@@ -215,12 +215,6 @@ namespace polynomials {
   // p: Pointer to the polynomial instance.
   // Returns the degree of the polynomial.
   int64_t CONCAT_EXPAND(FIELD, polynomial_degree)(PolynomialInst* p) { return p->degree(); }
-
-  // Copies a single coefficient of a polynomial to host memory.
-  // p: Pointer to the polynomial instance.
-  // idx: Index of the coefficient to copy.
-  // Returns the coefficient value.
-  scalar_t CONCAT_EXPAND(FIELD, polynomial_get_coeff)(PolynomialInst* p, uint64_t idx) { return p->get_coeff(idx); }
 
   // Copies a range of polynomial coefficients to host/device memory.
   // p: Pointer to the polynomial instance.
