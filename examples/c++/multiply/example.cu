@@ -13,7 +13,7 @@ typedef scalar_t T;
 
 int vector_mult(T* vec_b, T* vec_a, T* vec_result, size_t n_elments, device_context::DeviceContext ctx)
 {
-  vec_ops::VecOpsConfig<scalar_t> config = vec_ops::DefaultVecOpsConfig<scalar_t>();
+  vec_ops::VecOpsConfig config = vec_ops::DefaultVecOpsConfig();
   config.is_a_on_device = true;
   config.is_b_on_device = true;
   config.is_result_on_device = true;

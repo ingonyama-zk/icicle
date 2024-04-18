@@ -114,13 +114,13 @@ int main(int argc, char* argv[])
   std::cout << "Hashing blocks into tree leaves..." << std::endl;
   PoseidonConstants<scalar_t> constants;
   bn254InitOptimizedPoseidonConstants(data_arity, ctx, &constants);
-  PoseidonConfig config = default_poseidon_config<scalar_t>(data_arity+1); 
+  PoseidonConfig config = default_poseidon_config(data_arity+1); 
   bn254PoseidonHash(data, &tree[tree_index(leaf_level, 0)], tree_width, 4, constants, config);
 
   std::cout << "3. Building Merkle tree" << std::endl;
   PoseidonConstants<scalar_t> tree_constants;
   bn254InitOptimizedPoseidonConstants(tree_arity, ctx, &tree_constants);
-  PoseidonConfig tree_config = default_poseidon_config<scalar_t>(tree_arity+1);
+  PoseidonConfig tree_config = default_poseidon_config(tree_arity+1);
   build_tree(tree_height, tree, &tree_constants, tree_config);
 
   std::cout << "4. Generate membership proof" << std::endl;

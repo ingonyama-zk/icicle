@@ -13,31 +13,36 @@
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
 
+extern "C" void babybearExtensionGenerateScalars(babybear::extension_t* scalars, int size);
+
+extern "C" cudaError_t babybearExtensionScalarConvertMontgomery(
+  babybear::extension_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
+
 extern "C" cudaError_t babybearExtensionNTTCuda(
   const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
-
-extern "C" cudaError_t babybearMulCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
-
-extern "C" cudaError_t babybearAddCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
-
-extern "C" cudaError_t babybearSubCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
-
-extern "C" cudaError_t babybearTransposeMatrix(
-  const babybear::scalar_t* input,
-  uint32_t row_size,
-  uint32_t column_size,
-  babybear::scalar_t* output,
-  device_context::DeviceContext& ctx,
-  bool on_device,
-  bool is_async);
 
 extern "C" void babybearGenerateScalars(babybear::scalar_t* scalars, int size);
 
 extern "C" cudaError_t babybearScalarConvertMontgomery(
   babybear::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t babybearExtensionMulCuda(
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
+
+extern "C" cudaError_t babybearExtensionAddCuda(
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
+
+extern "C" cudaError_t babybearExtensionSubCuda(
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
+
+extern "C" cudaError_t babybearExtensionTransposeMatrix(
+  const babybear::extension_t* input,
+  uint32_t row_size,
+  uint32_t column_size,
+  babybear::extension_t* output,
+  device_context::DeviceContext& ctx,
+  bool on_device,
+  bool is_async);
 
 extern "C" cudaError_t babybearInitializeDomain(
   babybear::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
@@ -47,25 +52,20 @@ extern "C" cudaError_t babybearNTTCuda(
 
 extern "C" cudaError_t babybearReleaseDomain(device_context::DeviceContext& ctx);
 
-extern "C" void babybearExtensionGenerateScalars(babybear::extension_t* scalars, int size);
+extern "C" cudaError_t babybearMulCuda(
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
-extern "C" cudaError_t babybearExtensionScalarConvertMontgomery(
-  babybear::extension_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
+extern "C" cudaError_t babybearAddCuda(
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
-extern "C" cudaError_t babybearExtensionMulCuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::extension_t>& config, babybear::extension_t* result);
+extern "C" cudaError_t babybearSubCuda(
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
-extern "C" cudaError_t babybearExtensionAddCuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::extension_t>& config, babybear::extension_t* result);
-
-extern "C" cudaError_t babybearExtensionSubCuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::extension_t>& config, babybear::extension_t* result);
-
-extern "C" cudaError_t babybearExtensionTransposeMatrix(
-  const babybear::extension_t* input,
+extern "C" cudaError_t babybearTransposeMatrix(
+  const babybear::scalar_t* input,
   uint32_t row_size,
   uint32_t column_size,
-  babybear::extension_t* output,
+  babybear::scalar_t* output,
   device_context::DeviceContext& ctx,
   bool on_device,
   bool is_async);

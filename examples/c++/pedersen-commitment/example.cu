@@ -144,7 +144,7 @@ int main(int argc, char** argv)
   scalars[N] = scalar_t::rand_host();
 
   std::cout << "Executing MSM" << std::endl;
-  auto config = msm::DefaultMSMConfig<scalar_t>();
+  auto config = msm::DefaultMSMConfig();
   START_TIMER(msm);
   bn254MSMCuda(scalars, points, N+1, config, &result);
   END_TIMER(msm, "Time to execute MSM");

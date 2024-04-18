@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
   scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
   START_TIMER(poseidon_timer);
-  PoseidonConfig config = default_poseidon_config<scalar_t>(T);
+  PoseidonConfig config = default_poseidon_config(T);
   poseidon_hash<curve_config::scalar_t, T>(in_ptr, out_ptr, number_of_blocks, constants, config);
   END_TIMER(poseidon_timer, "Poseidon")
 

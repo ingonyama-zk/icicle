@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 
       // (4) multiply A,B
       CHK_IF_RETURN(cudaMallocAsync(&MulGpu, sizeof(test_data) * NTT_SIZE, ntt_config.ctx.stream));
-      vec_ops::VecOpsConfig<test_data> config{
+      vec_ops::VecOpsConfig config{
         ntt_config.ctx,
         true,  // is_a_on_device
         true,  // is_b_on_device

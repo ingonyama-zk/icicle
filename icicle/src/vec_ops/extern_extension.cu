@@ -13,7 +13,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, ExtensionMulCuda)(
-    extension_t* vec_a, extension_t* vec_b, int n, VecOpsConfig<extension_t>& config, extension_t* result)
+    extension_t* vec_a, extension_t* vec_b, int n, VecOpsConfig& config, extension_t* result)
   {
     return Mul<extension_t>(vec_a, vec_b, n, config, result);
   }
@@ -24,7 +24,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, ExtensionAddCuda)(
-    extension_t* vec_a, extension_t* vec_b, int n, VecOpsConfig<extension_t>& config, extension_t* result)
+    extension_t* vec_a, extension_t* vec_b, int n, VecOpsConfig& config, extension_t* result)
   {
     return Add<extension_t>(vec_a, vec_b, n, config, result);
   }
@@ -35,7 +35,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, ExtensionSubCuda)(
-    extension_t* vec_a, extension_t* vec_b, int n, VecOpsConfig<extension_t>& config, extension_t* result)
+    extension_t* vec_a, extension_t* vec_b, int n, VecOpsConfig& config, extension_t* result)
   {
     return Sub<extension_t>(vec_a, vec_b, n, config, result);
   }
