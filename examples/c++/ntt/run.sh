@@ -1,2 +1,2 @@
 #!/bin/bash
-./build/example
+./build/example/example

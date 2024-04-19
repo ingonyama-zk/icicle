@@ -1,9 +1,8 @@
 // #define DEBUG
 #define MERKLE_DEBUG
 
-#define CURVE_ID 2
 #include "curves/curve_config.cuh"
-#include "appUtils/poseidon/poseidon.cu"
+#include "../poseidon.cu"
 #include "merkle.cu"
 
 #ifndef __CUDA_ARCH__
@@ -70,7 +69,7 @@ int main(int argc, char* argv[])
   std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
             << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
 
-  TreeBuilderConfig config = default_merkle_config<scalar_t>();
+  TreeBuilderConfig config = default_merkle_config();
   config.keep_rows = keep_rows;
   START_TIMER(timer_merkle);
   build_merkle_tree<scalar_t, T>(leaves, digests, tree_height, constants, config);

@@ -57,7 +57,7 @@ namespace vec_ops {
   } // namespace
 
   template <typename E, void (*Kernel)(const E*, const E*, int, E*)>
-  cudaError_t VecOp(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result)
+  cudaError_t VecOp(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     CHK_INIT_IF_RETURN();
 
@@ -106,19 +106,19 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t Mul(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result)
+  cudaError_t Mul(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     return VecOp<E, MulKernel>(vec_a, vec_b, n, config, result);
   }
 
   template <typename E>
-  cudaError_t Add(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result)
+  cudaError_t Add(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     return VecOp<E, AddKernel>(vec_a, vec_b, n, config, result);
   }
 
   template <typename E>
-  cudaError_t Sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig<E>& config, E* result)
+  cudaError_t Sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     return VecOp<E, SubKernel>(vec_a, vec_b, n, config, result);
   }

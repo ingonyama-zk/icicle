@@ -70,7 +70,7 @@ namespace merkle {
   {
     int arity = T - 1;
 
-    PoseidonConfig config = default_poseidon_config<S>(T);
+    PoseidonConfig config = default_poseidon_config(T);
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
     config.input_is_a_state = true;

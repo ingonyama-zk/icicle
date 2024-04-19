@@ -36,7 +36,7 @@ namespace msm {
       points_out[tid] = P::to_affine(point);
     }
 
-    unsigned get_optimal_c(int bitsize) { return max((unsigned)ceil(std::log2(bitsize)) - 4, 1U); }
+    unsigned get_optimal_c(int bitsize) { return (unsigned)max(ceil(std::log2(bitsize)) - 4.0, 1.0); }
 
     template <typename E>
     __global__ void normalize_kernel(E* inout, E factor, int n)
@@ -651,7 +651,7 @@ namespace msm {
         unsigned log_nof_large_buckets = (unsigned)ceil(std::log2(h_nof_large_buckets));
         unsigned* large_bucket_indices;
         CHK_IF_RETURN(cudaMallocAsync(&large_bucket_indices, sizeof(unsigned) * large_buckets_nof_threads, stream));
-        NUM_THREADS = min(1 << 8, h_nof_large_buckets);
+        NUM_THREADS = max(1, min(1 << 8, h_nof_large_buckets));
         NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
         initialize_large_bucket_indices<P><<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           sorted_bucket_sizes_sum, average_bucket_size, h_nof_large_buckets, log_nof_large_buckets,
@@ -660,24 +660,24 @@ namespace msm {
         P* large_buckets;
         CHK_IF_RETURN(cudaMallocAsync(&large_buckets, sizeof(P) * large_buckets_nof_threads, stream_large_buckets));
 
-        NUM_THREADS = min(1 << 8, large_buckets_nof_threads);
+        NUM_THREADS = max(1, min(1 << 8, large_buckets_nof_threads));
         NUM_BLOCKS = (large_buckets_nof_threads + NUM_THREADS - 1) / NUM_THREADS;
         accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           large_buckets, sorted_bucket_offsets, sorted_bucket_sizes, large_bucket_indices, sorted_point_indices,
           d_points, h_nof_large_buckets, c, average_bucket_size, log_nof_large_buckets, large_buckets_nof_threads);
 
-        NUM_THREADS = min(MAX_TH, h_nof_large_buckets);
+        NUM_THREADS = max(1, min(MAX_TH, h_nof_large_buckets));
         NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
         // normalization is needed to update buckets sizes and offsets due to reduction that already took place
         normalize_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           sorted_bucket_sizes_sum, average_bucket_size, h_nof_large_buckets);
         // reduce
         for (int s = h_largest_bucket; s > 1; s = ((s + 1) >> 1)) {
-          NUM_THREADS = min(MAX_TH, h_nof_large_buckets);
+          NUM_THREADS = max(1, min(MAX_TH, h_nof_large_buckets));
           NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
           normalize_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
             sorted_bucket_sizes, s == h_largest_bucket ? average_bucket_size : 2, h_nof_large_buckets);
-          NUM_THREADS = min(MAX_TH, large_buckets_nof_threads);
+          NUM_THREADS = max(1, min(MAX_TH, large_buckets_nof_threads));
           NUM_BLOCKS = (large_buckets_nof_threads + NUM_THREADS - 1) / NUM_THREADS;
           sum_reduction_variable_size_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
             large_buckets, sorted_bucket_sizes_sum, sorted_bucket_sizes, large_bucket_indices,
@@ -686,7 +686,7 @@ namespace msm {
         CHK_IF_RETURN(cudaFreeAsync(large_bucket_indices, stream_large_buckets));
 
         // distribute
-        NUM_THREADS = min(MAX_TH, h_nof_large_buckets);
+        NUM_THREADS = max(1, min(MAX_TH, h_nof_large_buckets));
         NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
         distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           large_buckets, buckets, sorted_bucket_sizes_sum, sorted_single_bucket_indices, h_nof_large_buckets,
@@ -757,7 +757,7 @@ namespace msm {
               const bool is_last_iter = (j == target_bits_count - 1);
               unsigned nof_threads =
                 (((target_buckets_count - target_windows_count) >> 1) << (target_bits_count - 1 - j)) * batch_size;
-              NUM_THREADS = min(MAX_TH, nof_threads);
+              NUM_THREADS = max(1, min(MAX_TH, nof_threads));
               NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter ? source_buckets : temp_buckets1, is_last_iter ? target_buckets : temp_buckets1,
@@ -827,28 +827,6 @@ namespace msm {
       return CHK_LAST();
     }
   } // namespace
-
-  template <typename A>
-  MSMConfig DefaultMSMConfig(const device_context::DeviceContext& ctx)
-  {
-    MSMConfig config = {
-      ctx,   // ctx
-      0,     // points_size
-      1,     // precompute_factor
-      0,     // c
-      0,     // bitsize
-      10,    // large_bucket_factor
-      1,     // batch_size
-      false, // are_scalars_on_device
-      false, // are_scalars_montgomery_form
-      false, // are_points_on_device
-      false, // are_points_montgomery_form
-      false, // are_results_on_device
-      false, // is_big_triangle
-      false, // is_async
-    };
-    return config;
-  }
 
   template <typename S, typename A, typename P>
   cudaError_t MSM(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results)
