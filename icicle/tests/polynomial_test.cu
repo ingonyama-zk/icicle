@@ -820,7 +820,7 @@ public:
     const int vanishing_poly_deg = n;
     Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
-    auto msm_config = msm::DefaultMSMConfig<S>();
+    auto msm_config = msm::DefaultMSMConfig();
     msm_config.are_scalars_on_device = true;
 
     // compute [A]1
@@ -940,7 +940,7 @@ TEST_F(PolynomialTest, commitMSM)
   auto f = randomize_polynomial(size);
 
   auto [d_coeff, N, device_id] = f.get_coefficients_view();
-  auto msm_config = msm::DefaultMSMConfig<scalar_t>();
+  auto msm_config = msm::DefaultMSMConfig();
   msm_config.are_scalars_on_device = true;
 
   auto points = std::make_unique<affine_t[]>(size);

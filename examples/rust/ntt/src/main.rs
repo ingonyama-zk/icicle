@@ -9,7 +9,7 @@ use icicle_cuda_runtime::{
 };
 
 use icicle_core::{
-    ntt::{self, NTT},
+    ntt::{self, initialize_domain},
     traits::{FieldImpl, GenerateRandom},
 };
 
@@ -60,11 +60,11 @@ fn main() {
     )
     .unwrap();
     let ctx = DeviceContext::default();
-    ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
+    initialize_domain(ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
 
     println!("Configuring bn254 NTT...");
     let stream = CudaStream::create().unwrap();
-    let mut cfg = ntt::NTTConfig::default();
+    let mut cfg = ntt::NTTConfig::<'_, ScalarField>::default();
     cfg.ctx
         .stream = &stream;
     cfg.is_async = true;
@@ -76,11 +76,11 @@ fn main() {
     )
     .unwrap();
     // reusing ctx from above
-    BLS12377ScalarCfg::initialize_domain(BLS12377ScalarField::from_ark(icicle_omega), &ctx).unwrap();
+    initialize_domain(BLS12377ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
 
     println!("Configuring bls12377 NTT...");
     let stream_bls12377 = CudaStream::create().unwrap();
-    let mut cfg_bls12377 = ntt::NTTConfig::default();
+    let mut cfg_bls12377 = ntt::NTTConfig::<'_, BLS12377ScalarField>::default();
     cfg_bls12377
         .ctx
         .stream = &stream_bls12377;

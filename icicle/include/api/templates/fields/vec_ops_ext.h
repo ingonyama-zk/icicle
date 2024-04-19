@@ -1,11 +1,11 @@
 extern "C" cudaError_t ${FIELD}ExtensionMulCuda(
-  ${FIELD}::extension_t* vec_a, ${FIELD}::extension_t* vec_b, int n, vec_ops::VecOpsConfig<${FIELD}::extension_t>& config, ${FIELD}::extension_t* result);
+  ${FIELD}::extension_t* vec_a, ${FIELD}::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::extension_t* result);
 
 extern "C" cudaError_t ${FIELD}ExtensionAddCuda(
-  ${FIELD}::extension_t* vec_a, ${FIELD}::extension_t* vec_b, int n, vec_ops::VecOpsConfig<${FIELD}::extension_t>& config, ${FIELD}::extension_t* result);
+  ${FIELD}::extension_t* vec_a, ${FIELD}::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::extension_t* result);
 
 extern "C" cudaError_t ${FIELD}ExtensionSubCuda(
-  ${FIELD}::extension_t* vec_a, ${FIELD}::extension_t* vec_b, int n, vec_ops::VecOpsConfig<${FIELD}::extension_t>& config, ${FIELD}::extension_t* result);
+  ${FIELD}::extension_t* vec_a, ${FIELD}::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::extension_t* result);
 
 extern "C" cudaError_t ${FIELD}ExtensionTransposeMatrix(
   const ${FIELD}::extension_t* input,

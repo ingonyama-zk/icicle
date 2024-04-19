@@ -17,13 +17,13 @@ extern "C" cudaError_t babybearExtensionNTTCuda(
   const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
 
 extern "C" cudaError_t babybearMulCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
 extern "C" cudaError_t babybearAddCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
 extern "C" cudaError_t babybearSubCuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::scalar_t>& config, babybear::scalar_t* result);
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
 extern "C" cudaError_t babybearTransposeMatrix(
   const babybear::scalar_t* input,
@@ -53,13 +53,13 @@ extern "C" cudaError_t babybearExtensionScalarConvertMontgomery(
   babybear::extension_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t babybearExtensionMulCuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::extension_t>& config, babybear::extension_t* result);
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
 
 extern "C" cudaError_t babybearExtensionAddCuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::extension_t>& config, babybear::extension_t* result);
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
 
 extern "C" cudaError_t babybearExtensionSubCuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig<babybear::extension_t>& config, babybear::extension_t* result);
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
 
 extern "C" cudaError_t babybearExtensionTransposeMatrix(
   const babybear::extension_t* input,

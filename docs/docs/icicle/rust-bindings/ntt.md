@@ -29,7 +29,7 @@ fn main() {
     // Create a CUDA stream
     let stream = CudaStream::create().expect("Failed to create CUDA stream");
     let ctx = DeviceContext::default(); // Assuming default device context
-    ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
+    ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
 
     // Configure NTT
     let mut cfg = ntt::NTTConfig::default();
@@ -155,13 +155,13 @@ Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your 
 Before performing NTT operations, its necessary to initialize the NTT domain, It only needs to be called once per GPU since the twiddles are cached.
 
 ```rust
-ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
+ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
 ```
 
 ### `initialize_domain`
 
 ```rust
-pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext, fast_twiddles: bool) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>;
@@ -176,17 +176,6 @@ where
 #### Returns
 
 - **`IcicleResult<()>`**: Will return an error if the operation fails.
-
-### `initialize_domain_fast_twiddles_mode`
-
-Similar to `initialize_domain`, `initialize_domain_fast_twiddles_mode` is a faster implementation and can be used for larger NTTs.
-
-```rust
-pub fn initialize_domain_fast_twiddles_mode<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>;
-```
 
 #### Parameters
 

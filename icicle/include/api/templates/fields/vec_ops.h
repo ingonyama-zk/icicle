@@ -1,11 +1,11 @@
 extern "C" cudaError_t ${FIELD}MulCuda(
-  ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<${FIELD}::scalar_t>& config, ${FIELD}::scalar_t* result);
+  ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 
 extern "C" cudaError_t ${FIELD}AddCuda(
-  ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<${FIELD}::scalar_t>& config, ${FIELD}::scalar_t* result);
+  ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 
 extern "C" cudaError_t ${FIELD}SubCuda(
-  ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig<${FIELD}::scalar_t>& config, ${FIELD}::scalar_t* result);
+  ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 
 extern "C" cudaError_t ${FIELD}TransposeMatrix(
   const ${FIELD}::scalar_t* input,

@@ -1,3 +1,14 @@
+extern "C" cudaError_t ${FIELD}CreateOptimizedPoseidonConstants(
+  int arity,
+  int full_rounds_half,
+  int partial_rounds,
+  const ${FIELD}::scalar_t* constants,
+  device_context::DeviceContext& ctx,
+  poseidon::PoseidonConstants<${FIELD}::scalar_t>* poseidon_constants);
+
+extern "C" cudaError_t ${FIELD}InitOptimizedPoseidonConstants(
+  int arity, device_context::DeviceContext& ctx, poseidon::PoseidonConstants<${FIELD}::scalar_t>* constants);
+
 extern "C" cudaError_t ${FIELD}PoseidonHash(
   ${FIELD}::scalar_t* input,
   ${FIELD}::scalar_t* output,

@@ -140,11 +140,6 @@ namespace bn254 {
    * Scalar field. Is always a prime field.
    */
   typedef Field<fp_config> scalar_t;
-
-  /**
-   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
-   */
-  typedef ExtensionField<fp_config> extension_t;
 } // namespace bn254
 
 #endif
