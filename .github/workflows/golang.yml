@@ -57,8 +57,8 @@ jobs:
       with:
         name: icicle-builds-${{ matrix.curve }}-${{ github.workflow }}-${{ github.sha }}
         path: |
-          icicle/build/src/curves/libingo_curve_${{ matrix.curve }}.a
-          icicle/build/src/fields/libingo_field_${{ matrix.curve }}.a
+          icicle/build/lib/libingo_curve_${{ matrix.curve }}.a
+          icicle/build/lib/libingo_field_${{ matrix.curve }}.a
         retention-days: 1
   
   test-linux:
@@ -76,7 +76,7 @@ jobs:
       uses: actions/download-artifact@v4
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       with:
-        path: ./icicle/build/src
+        path: ./icicle/build/lib
         merge-multiple: true
     - name: Run Tests
       working-directory: ./wrappers/golang

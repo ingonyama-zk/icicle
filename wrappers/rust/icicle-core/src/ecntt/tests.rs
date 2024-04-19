@@ -1,4 +1,3 @@
-use ark_ff::FftField;
 use icicle_cuda_runtime::memory::HostSlice;
 
 use crate::curve::Curve;
@@ -6,7 +5,7 @@ use crate::curve::*;
 use crate::{
     ecntt::*,
     ntt::{NTTDir, NttAlgorithm, Ordering},
-    traits::{ArkConvertible, FieldImpl},
+    traits::FieldImpl,
 };
 
 use crate::ntt::NTTConfig;

@@ -20,7 +20,7 @@ fn main() {
         .build_target("icicle")
         .build();
 
-    println!("cargo:rustc-link-search={}/build", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/lib", out_dir.display());
 
     println!("cargo:rustc-link-lib=ingo_<CURVE>");
     println!("cargo:rustc-link-lib=stdc++");

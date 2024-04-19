@@ -37,10 +37,9 @@ namespace merkle {
                     *   function will block the current CPU thread. */
   };
 
-  template <typename S>
-  TreeBuilderConfig default_merkle_config()
+  static TreeBuilderConfig
+  default_merkle_config(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
   {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
     TreeBuilderConfig config = {
       ctx,   // ctx
       0,     // keep_rows

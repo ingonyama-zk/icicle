@@ -2,7 +2,6 @@ use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-use crate::traits::FieldConfig;
 pub use crate::{error::IcicleResult, traits::FieldImpl};
 
 #[cfg(feature = "arkworks")]

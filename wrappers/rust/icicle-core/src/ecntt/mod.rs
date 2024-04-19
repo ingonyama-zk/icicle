@@ -6,7 +6,6 @@ use crate::{
 };
 
 pub use crate::curve::Projective;
-use crate::ntt::NTT;
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]

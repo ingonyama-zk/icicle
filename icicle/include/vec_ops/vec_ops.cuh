@@ -14,7 +14,6 @@ namespace vec_ops {
    * @struct VecOpsConfig
    * Struct that encodes NTT parameters to be passed into the [NTT](@ref NTT) function.
    */
-  template <typename S>
   struct VecOpsConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream. */
 
@@ -34,11 +33,10 @@ namespace vec_ops {
    * A function that returns the default value of [VecOpsConfig](@ref VecOpsConfig).
    * @return Default value of [VecOpsConfig](@ref VecOpsConfig).
    */
-  template <typename S>
-  VecOpsConfig<S> DefaultVecOpsConfig()
+  static VecOpsConfig
+  DefaultVecOpsConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
   {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
-    VecOpsConfig<S> config = {
+    VecOpsConfig config = {
       ctx,   // ctx
       false, // is_a_on_device
       false, // is_b_on_device
@@ -60,7 +58,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E, typename S>
-  cudaError_t Mul(S* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+  cudaError_t Mul(const S* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result);
 
   /**
    * A function that adds two vectors element-wise.
@@ -75,7 +73,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E>
-  cudaError_t Add(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+  cudaError_t Add(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result);
 
   /**
    * A function that subtracts two vectors element-wise.
@@ -90,7 +88,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E>
-  cudaError_t Sub(E* vec_a, E* vec_b, int n, VecOpsConfig<E>& config, E* result);
+  cudaError_t Sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result);
 
   /**
    * Transposes an input matrix out-of-place inside GPU.

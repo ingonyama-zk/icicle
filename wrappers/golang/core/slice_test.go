@@ -112,17 +112,17 @@ func TestDeviceSlice(t *testing.T) {
 	var emptyDeviceSlice DeviceSlice
 	assert.Equal(t, 0, emptyDeviceSlice.Len())
 	assert.Equal(t, 0, emptyDeviceSlice.Cap())
-	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())
+	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
 
 	emptyDeviceSlice.Malloc(numFields*fieldBytesSize, fieldBytesSize)
 	assert.Equal(t, numFields, emptyDeviceSlice.Len())
 	assert.Equal(t, numFields*fieldBytesSize, emptyDeviceSlice.Cap())
-	assert.NotEqual(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())
+	assert.NotEqual(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
 
 	emptyDeviceSlice.Free()
 	assert.Equal(t, 0, emptyDeviceSlice.Len())
 	assert.Equal(t, 0, emptyDeviceSlice.Cap())
-	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())
+	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
 }
 
 func TestDeviceSliceIsEmpty(t *testing.T) {

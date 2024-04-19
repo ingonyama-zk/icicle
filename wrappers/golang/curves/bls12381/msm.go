@@ -15,15 +15,16 @@ func GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
-func Msm[S any, P any](scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
 	core.MsmCheck(scalars, points, cfg, results)
+
 	var scalarsPointer unsafe.Pointer
 	if scalars.IsOnDevice() {
 		scalarsDevice := scalars.(core.DeviceSlice)
 		scalarsDevice.CheckDevice()
-		scalarsPointer = scalarsDevice.AsPointer()
+		scalarsPointer = scalarsDevice.AsUnsafePointer()
 	} else {
-		scalarsPointer = unsafe.Pointer(&scalars.(core.HostSlice[S])[0])
+		scalarsPointer = scalars.AsUnsafePointer()
 	}
 	cScalars := (*C.scalar_t)(scalarsPointer)
 
@@ -31,9 +32,9 @@ func Msm[S any, P any](scalars core.HostOrDeviceSlice, points core.HostOrDeviceS
 	if points.IsOnDevice() {
 		pointsDevice := points.(core.DeviceSlice)
 		pointsDevice.CheckDevice()
-		pointsPointer = pointsDevice.AsPointer()
+		pointsPointer = pointsDevice.AsUnsafePointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[P])[0])
+		pointsPointer = points.AsUnsafePointer()
 	}
 	cPoints := (*C.affine_t)(pointsPointer)
 
@@ -41,9 +42,9 @@ func Msm[S any, P any](scalars core.HostOrDeviceSlice, points core.HostOrDeviceS
 	if results.IsOnDevice() {
 		resultsDevice := results.(core.DeviceSlice)
 		resultsDevice.CheckDevice()
-		resultsPointer = resultsDevice.AsPointer()
+		resultsPointer = resultsDevice.AsUnsafePointer()
 	} else {
-		resultsPointer = unsafe.Pointer(&results.(core.HostSlice[Projective])[0])
+		resultsPointer = results.AsUnsafePointer()
 	}
 	cResults := (*C.projective_t)(resultsPointer)
 
@@ -60,9 +61,11 @@ func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c in
 
 	var pointsPointer unsafe.Pointer
 	if points.IsOnDevice() {
-		pointsPointer = points.(core.DeviceSlice).AsPointer()
+		pointsDevice := points.(core.DeviceSlice)
+		pointsDevice.CheckDevice()
+		pointsPointer = pointsDevice.AsUnsafePointer()
 	} else {
-		pointsPointer = unsafe.Pointer(&points.(core.HostSlice[Affine])[0])
+		pointsPointer = points.AsUnsafePointer()
 	}
 	cPoints := (*C.affine_t)(pointsPointer)
 
@@ -72,7 +75,7 @@ func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c in
 	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
 
-	outputBasesPointer := outputBases.AsPointer()
+	outputBasesPointer := outputBases.AsUnsafePointer()
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
 	__ret := C.bls12_381PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
