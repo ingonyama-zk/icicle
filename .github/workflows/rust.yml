@@ -4,11 +4,11 @@ on:
   pull_request:
     branches:
       - main
-      - dev
+      - V2
   push:
     branches:
       - main
-      - dev
+      - V2
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -60,7 +60,11 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # Running tests from the root workspace will run all workspace members' tests by default
       # We need to limit the number of threads to avoid running out of memory on weaker machines
-      run: cargo test --release --verbose --features=g2 -- --test-threads=2
+      run: cargo test --workspace --exclude icicle-babybear --release --verbose --features=g2 -- --test-threads=2
+    - name: Run baby bear tests
+      working-directory: ./wrappers/rust/icicle-fields/icicle-babybear
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      run: cargo test --release --verbose
 
   build-windows:
     name: Build on Windows

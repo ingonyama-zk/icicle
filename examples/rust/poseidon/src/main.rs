@@ -4,7 +4,7 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 
 use icicle_core::poseidon::{load_optimized_poseidon_constants, poseidon_hash_many, PoseidonConfig};
 use icicle_core::traits::FieldImpl;
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::memory::HostSlice;
 
 #[cfg(feature = "profile")]
 use std::time::Instant;
@@ -25,23 +25,29 @@ fn main() {
 
     println!("Running Icicle Examples: Rust Poseidon Hash");
     let arity = 2u32;
-    println!("---------------------- Loading optimized Poseidon constants for arity={} ------------------------", arity);
+    println!(
+        "---------------------- Loading optimized Poseidon constants for arity={} ------------------------",
+        arity
+    );
     let ctx = DeviceContext::default();
     let constants = load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap();
     let config = PoseidonConfig::default();
 
-    println!("---------------------- Input size 2^{}={} ------------------------", size, test_size);
-    let inputs = vec![F::one(); test_size * arity as usize];
-    let outputs = vec![F::zero(); test_size];
-    let mut input_slice = HostOrDeviceSlice::on_host(inputs);
-    let mut output_slice = HostOrDeviceSlice::on_host(outputs);
+    println!(
+        "---------------------- Input size 2^{}={} ------------------------",
+        size, test_size
+    );
+    let mut inputs = vec![F::one(); test_size * arity as usize];
+    let mut outputs = vec![F::zero(); test_size];
+    let input_slice = HostSlice::from_mut_slice(&mut inputs);
+    let output_slice = HostSlice::from_mut_slice(&mut outputs);
 
     println!("Executing BLS12-381 Poseidon Hash on device...");
     #[cfg(feature = "profile")]
     let start = Instant::now();
     poseidon_hash_many::<F>(
-        &mut input_slice,
-        &mut output_slice,
+        input_slice,
+        output_slice,
         test_size as u32,
         arity as u32,
         &constants,
@@ -49,5 +55,10 @@ fn main() {
     )
     .unwrap();
     #[cfg(feature = "profile")]
-    println!("ICICLE BLS12-381 Poseidon Hash on size 2^{size} took: {} μs", start.elapsed().as_micros());
+    println!(
+        "ICICLE BLS12-381 Poseidon Hash on size 2^{size} took: {} μs",
+        start
+            .elapsed()
+            .as_micros()
+    );
 }

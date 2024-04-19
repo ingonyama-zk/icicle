@@ -1,9 +1,11 @@
 {{if .IsG2 -}}
-//go:build g2
-
-{{end -}}
+package g2
+{{- else -}}
 package {{.PackageName}}
-{{if not .IsMock}}
+{{- end}}
+
+{{- if not .IsMock}}
+
 // #cgo CFLAGS: -I./include/
 // #include "{{if .IsG2 -}}g2_{{end}}curve.h"
 import "C"
@@ -14,7 +16,8 @@ import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
-{{end}}
+{{- end}}
+
 type {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective struct {
 	X, Y, Z {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}Base{{end}}Field
 }
@@ -23,7 +26,7 @@ func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Size()
 	return p.X.Size() * 3
 }
 
-func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) AsPointer() *uint32 {
+func (p {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) AsPointer() *uint64 {
 	return p.X.AsPointer()
 }
 
@@ -35,7 +38,7 @@ func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) Zero(
 	return *p
 }
 
-func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromLimbs(x, y, z []uint32) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
+func (p *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective) FromLimbs(x, y, z []uint64) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Projective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
 	p.Z.FromLimbs(z)
@@ -92,7 +95,7 @@ func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Size() int
 	return a.X.Size() * 2
 }
 
-func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) AsPointer() *uint32 {
+func (a {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) AsPointer() *uint64 {
 	return a.X.AsPointer()
 }
 
@@ -103,7 +106,7 @@ func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) Zero() {{
 	return *a
 }
 
-func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) FromLimbs(x, y []uint32) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
+func (a *{{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine) FromLimbs(x, y []uint64) {{if .IsMock}}Mock{{else}}{{if .IsG2}}G2{{end}}{{end}}Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
 

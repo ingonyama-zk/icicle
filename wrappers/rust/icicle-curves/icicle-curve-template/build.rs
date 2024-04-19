@@ -13,7 +13,7 @@ fn main() {
 
     // Optional Features
     #[cfg(feature = "g2")]
-    config.define("G2_DEFINED", "ON");
+    config.define("G2", "ON");
 
     // Build
     let out_dir = config

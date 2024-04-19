@@ -6,54 +6,28 @@ use crate::{
 };
 
 pub use crate::curve::Projective;
+use crate::ntt::NTT;
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
 pub mod tests;
 
 #[doc(hidden)]
-pub trait ECNTT<C: Curve> {
-    fn ecntt_unchecked(
-        input: &HostOrDeviceSlice<Projective<C>>,
-        dir: NTTDir,
-        cfg: &NTTConfig<C::ScalarField>,
-        output: &mut HostOrDeviceSlice<Projective<C>>,
-    ) -> IcicleResult<()>;
-    // fn initialize_domain(primitive_root: C::ScalarField, ctx: &DeviceContext) -> IcicleResult<()>;
-    // fn initialize_domain_fast_twiddles_mode(primitive_root: C::ScalarField, ctx: &DeviceContext) -> IcicleResult<()>;
-}
+pub trait ECNTTC<C: Curve>: ECNTT<Projective<C>, C::ScalarField> {}
 
-/// Computes the ECNTT, or a batch of several ECNTTs.
-///
-/// # Arguments
-///
-/// * `input` - inputs of the ECNTT.
-///
-/// * `dir` - whether to compute forward of inverse ECNTT.
-///
-/// * `cfg` - config used to specify extra arguments of the ECNTT.
-///
-/// * `output` - buffer to write the ECNTT outputs into. Must be of the same size as `input`.
-pub fn ecntt<C: Curve>(
-    input: &HostOrDeviceSlice<Projective<C>>,
-    dir: NTTDir,
-    cfg: &NTTConfig<C::ScalarField>,
-    output: &mut HostOrDeviceSlice<Projective<C>>,
-) -> IcicleResult<()>
-where
-    <C::BaseField as FieldImpl>::Config: ECNTT<C>,
-{
-    if input.len() != output.len() {
-        panic!(
-            "input and output lengths {}; {} do not match",
-            input.len(),
-            output.len()
-        );
-    }
-    let mut local_cfg = cfg.clone();
-    local_cfg.are_inputs_on_device = input.is_on_device();
-    local_cfg.are_outputs_on_device = output.is_on_device();
-    <C::BaseField as FieldImpl>::Config::ecntt_unchecked(input, dir, &local_cfg, output)
+pub trait ECNTT<T, F: FieldImpl> {
+    fn ntt_unchecked(
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<F>,
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    ) -> IcicleResult<()>;
+
+    fn ntt_inplace_unchecked(
+        inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<F>,
+    ) -> IcicleResult<()>;
 }
 
 #[macro_export]
@@ -63,55 +37,102 @@ macro_rules! impl_ecntt {
         $field_prefix_ident:ident,
         $field:ident,
         $field_config:ident,
-        $base_field:ident,
         $curve:ident
     ) => {
         mod $field_prefix_ident {
+
+            use crate::curve;
+            use crate::curve::BaseCfg;
+            use crate::ecntt::IcicleResult;
             use crate::ecntt::Projective;
             use crate::ecntt::{
-                $base_field, $curve, $field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir,
-                DEFAULT_DEVICE_ID,
+                $curve, $field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID,
             };
+            use icicle_core::ecntt::ECNTT;
+            use icicle_core::ecntt::ECNTTC;
+            use icicle_core::impl_ntt_without_domain;
+            use icicle_core::ntt::NTT;
+            use icicle_core::traits::IcicleResultWrap;
+            use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-            extern "C" {
-                #[link_name = concat!($field_prefix, "ECNTTCuda")]
-                pub(crate) fn ecntt_cuda(
-                    input: *const Projective<$curve>,
-                    size: i32,
-                    dir: NTTDir,
-                    config: &NTTConfig<$field>,
-                    output: *mut Projective<$curve>,
-                ) -> CudaError;
-            }
-        }
-        //<C::ScalarField as FieldImpl>::Config
-        impl ECNTT<$curve> for $base_field {
-            fn ecntt_unchecked(
-                input: &HostOrDeviceSlice<Projective<$curve>>,
+            pub type ProjectiveC = Projective<$curve>;
+            impl_ntt_without_domain!($field_prefix, $field, $field_config, ECNTT, "ECNTT", ProjectiveC);
+
+            fn ntt_unchecked(
+                input: &(impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
                 dir: NTTDir,
                 cfg: &NTTConfig<$field>,
-                output: &mut HostOrDeviceSlice<Projective<$curve>>,
+                output: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
             ) -> IcicleResult<()> {
-                unsafe {
-                    $field_prefix_ident::ecntt_cuda(
-                        input.as_ptr(),
-                        (input.len() / (cfg.batch_size as usize)) as i32,
-                        dir,
-                        cfg,
-                        output.as_mut_ptr(),
-                    )
-                    .wrap()
-                }
+                <curve::ScalarCfg as ECNTT<Projective<$curve>, $field>>::ntt_unchecked(input, dir, cfg, output)
             }
+
+            fn ntt_inplace_unchecked(
+                inout: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
+                dir: NTTDir,
+                cfg: &NTTConfig<$field>,
+            ) -> IcicleResult<()> {
+                <curve::ScalarCfg as ECNTT<Projective<$curve>, $field>>::ntt_inplace_unchecked(inout, dir, cfg)
+            }
+
+            impl ECNTTC<$curve> for $field_config {}
         }
     };
+}
+
+/// Computes the ECNTT, or a batch of several NTTs.
+///
+/// # Arguments
+///
+/// * `input` - inputs of the NTT.
+///
+/// * `dir` - whether to compute forward of inverse NTT.
+///
+/// * `cfg` - config used to specify extra arguments of the NTT.
+///
+/// * `output` - buffer to write the NTT outputs into. Must be of the same size as `input`.
+pub fn ecntta<C: Curve>(
+    input: &(impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+    dir: NTTDir,
+    cfg: &NTTConfig<C::ScalarField>,
+    output: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+) -> IcicleResult<()>
+where
+    C::ScalarField: FieldImpl,
+    <C::ScalarField as FieldImpl>::Config: ECNTTC<C>,
+{
+    <<C::ScalarField as FieldImpl>::Config as ECNTT<Projective<C>, C::ScalarField>>::ntt_unchecked(
+        input, dir, &cfg, output,
+    )
+}
+
+/// Computes the ECNTT, or a batch of several NTTs inplace.
+///
+/// # Arguments
+///
+/// * `inout` - buffer with inputs to also write the NTT outputs into.
+///
+/// * `dir` - whether to compute forward of inverse NTT.
+///
+/// * `cfg` - config used to specify extra arguments of the NTT.
+pub fn ecntt_inplace<C: Curve>(
+    inout: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+    dir: NTTDir,
+    cfg: &NTTConfig<C::ScalarField>,
+) -> IcicleResult<()>
+where
+    C::ScalarField: FieldImpl,
+    <C::ScalarField as FieldImpl>::Config: ECNTTC<C>,
+{
+    <<C::ScalarField as FieldImpl>::Config as ECNTT<Projective<C>, C::ScalarField>>::ntt_inplace_unchecked(
+        inout, dir, &cfg,
+    )
 }
 
 #[macro_export]
 macro_rules! impl_ecntt_tests {
     (
       $field:ident,
-      $base_field:ident,
       $curve:ident
     ) => {
         use icicle_core::ntt::tests::init_domain;
@@ -123,13 +144,13 @@ macro_rules! impl_ecntt_tests {
         #[test]
         fn test_ecntt() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-            check_ecntt::<$field, $base_field, $curve>()
+            check_ecntt::<$curve>()
         }
 
         #[test]
         fn test_ecntt_batch() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-            check_ecntt_batch::<$field, $base_field, $curve>()
+            check_ecntt_batch::<$curve>()
         }
 
         // #[test]
@@ -174,9 +195,9 @@ macro_rules! impl_ecntt_bench {
             config: &mut NTTConfig<C::ScalarField>,
             _seed: u32,
         ) where
-            <C::BaseField as FieldImpl>::Config: ECNTT<C>,
+            <C::BaseField as FieldImpl>::Config: NTT<Projective<C>, F>,
         {
-            ecntt(&points, is_inverse, config, &mut batch_ntt_result).unwrap();
+            ntt(&points, is_inverse, config, &mut batch_ntt_result).unwrap();
         }
 
         static INIT: OnceLock<()> = OnceLock::new();
@@ -184,8 +205,8 @@ macro_rules! impl_ecntt_bench {
         fn benchmark_ecntt<F: FieldImpl + ArkConvertible, C: Curve>(c: &mut Criterion)
         where
             F::ArkEquivalent: FftField,
-            <F as FieldImpl>::Config: NTT<F>,
-            <C::BaseField as FieldImpl>::Config: ECNTT<C>,
+            <F as FieldImpl>::Config: NTT<Projective<C>, F>,
+            <F as FieldImpl>::Config: NTTDomain<F>
         {
             use icicle_core::ntt::tests::init_domain;
             use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;

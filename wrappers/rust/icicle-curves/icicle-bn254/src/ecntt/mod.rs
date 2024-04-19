@@ -21,5 +21,5 @@ pub(crate) mod tests {
     use icicle_core::impl_ecntt_tests;
     use std::sync::OnceLock;
 
-    impl_ecntt_tests!(ScalarField, BaseField, CurveCfg);
+    impl_ecntt_tests!(ScalarField, CurveCfg);
 }
