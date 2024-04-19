@@ -29,3 +29,7 @@ serial_test = "3.0.0"
 default = []
 g2 = ["icicle-core/g2"]
 arkworks = ["ark-<CURVE>", "icicle-core/arkworks"]
+
+[[bench]]
+name = "ecntt"
+harness = false # Criterion provides own harness
