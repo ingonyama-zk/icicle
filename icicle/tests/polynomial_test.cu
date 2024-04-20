@@ -963,15 +963,26 @@ TEST_F(PolynomialTest, commitMSM)
 TEST_F(PolynomialTest, Groth16)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
-  Groth16Example<scalar_t, affine_t, projective_t, g2_affine_t, g2_projective_t> groth16_example(30 /*=N*/);
+  int N = 1<<15;
+  std::cout << "Groth16 example with " << N << " inputs" << std::endl;
+  START_TIMER(groth16_example_construction);
+  Groth16Example<scalar_t, affine_t, projective_t, g2_affine_t, g2_projective_t> groth16_example(N);
+  END_TIMER(groth16_example_construction, "Groth16 example construction took", MEASURE);
 
   // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate
   // values...]
   auto witness = groth16_example.random_witness_inputs();
+  START_TIMER(groth16_compute_witness);
   groth16_example.compute_witness(witness);
+  END_TIMER(groth16_compute_witness, "Groth16 compute witness took", MEASURE);
 
+  START_TIMER(groth16_setup);
   groth16_example.setup();
+  END_TIMER(groth16_setup, "Groth16 setup took", MEASURE);
+
+  START_TIMER(groth16_prove);
   auto proof = groth16_example.prove(witness);
+  END_TIMER(groth16_prove, "Groth16 prove took", MEASURE);
   // groth16_example.verify(proof); // cannot implement without pairing
 }
 
