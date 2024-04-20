@@ -41,11 +41,12 @@ macro_rules! impl_univariate_polynomial_api {
         $field_cfg:ident
     ) => {
         use icicle_core::{polynomials::UnivariatePolynomial, traits::FieldImpl};
-        use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+        use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
         use std::{
             clone, cmp,
             ffi::c_void,
             ops::{Add, AddAssign, Div, Mul, Rem, Sub},
+            ptr, slice,
         };
 
         type PolynomialHandle = *const c_void;
@@ -123,6 +124,8 @@ macro_rules! impl_univariate_polynomial_api {
             #[link_name = concat!($field_prefix, "polynomial_copy_coeffs_range")]
             fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: i64, end_idx: i64) -> i64;
 
+            #[link_name = concat!($field_prefix, "polynomial_get_coeffs_raw_ptr")]
+            fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64, device_id: *mut u64) -> *mut $field;
         }
 
         pub struct DensePolynomial {
@@ -138,6 +141,16 @@ macro_rules! impl_univariate_polynomial_api {
             pub fn print(&self) {
                 unsafe {
                     print(self.handle);
+                }
+            }
+
+            pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<$field> {
+                unsafe {
+                    let mut len: u64 = 0;
+                    let mut device_id: u64 = 0;
+                    let mut coeffs_mut = get_coeffs_ptr(self.handle, &mut len, &mut device_id);
+                    let s = slice::from_raw_parts_mut(coeffs_mut, len as usize);
+                    DeviceSlice::from_mut_slice(s)
                 }
             }
         }
@@ -720,7 +733,7 @@ macro_rules! impl_polynomial_tests {
 
         #[test]
         #[ignore]
-        fn test_slicing() {
+        fn test_odd_even_slicing() {
             setup();
             let size = (1 << 10) - 3;
             // slicing even and odd parts and checking
@@ -752,6 +765,49 @@ macro_rules! impl_polynomial_tests {
             let oddx = odd.eval(&x);
             assert_eq!(expected_even, evenx);
             assert_eq!(expected_odd, oddx);
+        }
+
+        use icicle_core::ntt::{ntt, ntt_inplace, NTTConfig, NTTDir, Ordering};
+
+        #[test]
+        #[ignore]
+        fn test_coeffs_slice() {
+            setup();
+
+            let size = 4;
+            let coeffs = randomize_coeffs::<$field>(size);
+            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), size);
+
+            // take a mutable coeffs slice as a DeviceSlice
+            let coeffs_slice_dev = f.coeffs_mut_slice();
+            assert_eq!(coeffs_slice_dev.len(), size);
+            assert!(coeffs_slice_dev.is_on_device());
+
+            // let g = &f + &f; // cannot borrow here since s is a mutable slice of f
+
+            // copy to host and check equality
+            let mut coeffs_copied_from_slice = vec![ScalarField::zero(); coeffs_slice_dev.len()];
+            coeffs_slice_dev
+                .copy_to_host(HostSlice::from_mut_slice(&mut coeffs_copied_from_slice))
+                .unwrap();
+            assert_eq!(coeffs_copied_from_slice, coeffs);
+
+            // or can use the memory directly
+            let mut config: NTTConfig<'_, $field> = NTTConfig::default();
+            let mut ntt_result = vec![$field::zero(); coeffs_slice_dev.len()];
+            ntt(
+                coeffs_slice_dev,
+                NTTDir::kForward,
+                &config,
+                HostSlice::from_mut_slice(&mut ntt_result),
+            )
+            .unwrap();
+            // ntt[0] is f(one) because it's the sum of coeffs
+            assert_eq!(ntt_result[0], f.eval(&$field::one()));
+
+            // after last use of coeffs_slice_dev, can borrow f again
+            let g = &f * &f;
+            assert_eq!(mul(&ntt_result[0], &ntt_result[0]), g.eval(&$field::one()));
         }
     };
 }

@@ -228,6 +228,20 @@ namespace polynomials {
     return p->copy_coeffs(memory, start_idx, end_idx);
   }
 
+  // Retrieves a device-memory raw-ptr of the polynomial coefficients.
+  // p: Pointer to the polynomial instance.
+  // size: Output parameter for the size of the view.
+  // device_id: Output parameter for the device ID.
+  // Returns a raw mutable pointer to the coefficients.
+  scalar_t* CONCAT_EXPAND(FIELD, polynomial_get_coeffs_raw_ptr)(
+    PolynomialInst* p, uint64_t* size /*OUT*/, uint64_t* device_id /*OUT*/)
+  {
+    auto [coeffs, _size, _device_id] = p->get_coefficients_view();
+    *size = _size;
+    *device_id = _device_id;
+    return const_cast<scalar_t*>(coeffs.get());
+  }
+
   // Retrieves a device-memory view of the polynomial coefficients.
   // p: Pointer to the polynomial instance.
   // size: Output parameter for the size of the view.
