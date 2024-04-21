@@ -52,6 +52,13 @@ func toCName(s string) string {
 	return strings.ToLower(s) + "_"
 }
 
+func toCNameBackwards(s string) string {
+	if s == "" {
+		return ""
+	}
+	return "_" + strings.ToLower(s)
+}
+
 func toConst(s string) string {
 	if s == "" {
 		return ""
@@ -66,13 +73,14 @@ func capitalize(s string) string {
 }
 
 var templateFuncs = template.FuncMap{
-	"log":        fmt.Println,
-	"toLower":    strings.ToLower,
-	"toUpper":    strings.ToUpper,
-	"toPackage":  toPackage,
-	"toCName":    toCName,
-	"toConst":    toConst,
-	"capitalize": capitalize,
+	"log":              fmt.Println,
+	"toLower":          strings.ToLower,
+	"toUpper":          strings.ToUpper,
+	"toPackage":        toPackage,
+	"toCName":          toCName,
+	"toCNameBackwards": toCNameBackwards,
+	"toConst":          toConst,
+	"capitalize":       capitalize,
 }
 
 func parseTemplateFile(tmplPath string) entry {

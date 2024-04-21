@@ -42,8 +42,8 @@ func generateFiles() {
 			g2BaseDir := path.Join(curveDir, "g2")
 			packageName := "g2"
 			fields.Generate(g2BaseDir, packageName, curve.Curve, "G2Base", false, curve.G2FieldNumLimbs)
-			curves.Generate(g2BaseDir, packageName, curve.Curve, "_g2")
-			msm.Generate(curveDir, "g2", curve.Curve, "_g2", curve.GnarkImport)
+			curves.Generate(g2BaseDir, packageName, curve.Curve, "G2")
+			msm.Generate(curveDir, "g2", curve.Curve, "g2", curve.GnarkImport)
 		}
 	}
 
