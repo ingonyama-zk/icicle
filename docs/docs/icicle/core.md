@@ -38,7 +38,8 @@ cmake -DFIELD=<FIELD> -S . -B build
 cmake --build build -j
 ```
 
-Where `<FIELD>` can only be `babybear` for now.
+Icicle Supports the following `<FIELD>` FIELDS:
+- `babybear`
 
 This command will output `libingo_field_<FIELD>.a` into `build/lib`.
 
