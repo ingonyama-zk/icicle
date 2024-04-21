@@ -102,17 +102,43 @@ Default: `OFF`
 
 Usage: `-DECNTT=ON`
 
+#### MSM
+
+Used only in a [curve mode](#compiling-for-a-curve) to add MSM function into a build. As MSM takes a lot of time to build, you can disable it with this option to reduce compilation time.
+
+Default: `ON`
+
+Usage: `-DMSM=OFF`
+
 #### BUILD_HASH
 
-Whether 
+Can be used in any mode to build a hash library. Currently it only includes Keccak hash function, but more are coming.
+
+Default: `OFF`
+
+Usage: `-DBUILD_HASH=ON`
 
 #### BUILD_TESTS
 
+Can be used in any mode to include tests runner binary.
+
+Default: `OFF`
+
+USAGE: `-DBUILD_TESTS=ON`
+
 ### BUILD_BENCHMARKS
 
-#### DEVMODE
+Can be used in any mode to include benchmarks runner binary.
+
+Default: `OFF`
+
+USAGE: `-DBUILD_BENCHMARKS=ON`
 
 ## Linking
+
+To link ICICLE with your project you first need to compile ICICLE with options of your choice. After that you can use CMake `target_link_libraries` to link with the generated static libraries and `target_include_directories` to include ICICLE headers (located in `icicle/include`).
+
+Refer to our [c++ examples](https://github.com/ingonyama-zk/icicle/tree/main/examples/c%2B%2B) for more info. Take a look at this [CMakeLists.txt](https://github.com/ingonyama-zk/icicle/blob/main/examples/c%2B%2B/msm/CMakeLists.txt#L22)
 
 
 ## Writing new bindings for ICICLE
