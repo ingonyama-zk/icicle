@@ -9,8 +9,8 @@ using namespace field_config;
 
 namespace msm {
   /**
-   * Extern "C" version of [precompute_msm_bases](@ref precompute_msm_bases) function with the following values of template
-   * parameters (where the curve is given by `-DCURVE` env variable during build):
+   * Extern "C" version of [precompute_msm_bases](@ref precompute_msm_bases) function with the following values of
+   * template parameters (where the curve is given by `-DCURVE` env variable during build):
    *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */

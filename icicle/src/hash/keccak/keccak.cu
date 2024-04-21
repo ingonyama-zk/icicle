@@ -262,13 +262,13 @@ namespace keccak {
   }
 
   extern "C" cudaError_t
-  keccak256(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
+  keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
   {
     return keccak_hash<512, 256>(input, input_block_size, number_of_blocks, output, config);
   }
 
   extern "C" cudaError_t
-  keccak512(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
+  keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
   {
     return keccak_hash<1024, 512>(input, input_block_size, number_of_blocks, output, config);
   }

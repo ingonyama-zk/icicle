@@ -34,8 +34,8 @@ namespace ntt {
   }
 
   /**
-   * Extern "C" version of [release_domain](@ref release_domain) function with the following values of template parameters
-   * (where the field is given by `-DFIELD` env variable during build):
+   * Extern "C" version of [release_domain](@ref release_domain) function with the following values of template
+   * parameters (where the field is given by `-DFIELD` env variable during build):
    *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
    * stand-alone "STARK field";
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
@@ -51,5 +51,8 @@ namespace ntt {
    *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
    * stand-alone "STARK field";
    */
-  extern "C" scalar_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn) { return get_root_of_unity<scalar_t>(logn); }
+  extern "C" scalar_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn)
+  {
+    return get_root_of_unity<scalar_t>(logn);
+  }
 } // namespace ntt

@@ -433,7 +433,8 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (out_size + NOF_THREADS - 1) / NOF_THREADS;
-      slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(in_coeffs, out_coeffs, offset, stride, out_size);
+      slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        in_coeffs, out_coeffs, offset, stride, out_size);
 
       CHK_LAST();
     }
