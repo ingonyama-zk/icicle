@@ -5,9 +5,11 @@ In order to build the underlying ICICLE libraries you should run the build scrip
 Build script USAGE
 
 ```bash
-./build.sh <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+./build.sh [-curve=<curve> | -field=<field>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+```
 
 curve - The name of the curve to build or "all" to build all curves
+field - The name of the field to build or "all" to build all fields
 -g2 - Optional - build with G2 enabled 
 -ecntt - Optional - build with ECNTT enabled
 -devmode - Optional - build in devmode
@@ -27,6 +29,7 @@ If you wish to build for a specific curve, for example bn254, without G2 or ECNT
 
 >[!NOTE]
 >Current supported curves are `bn254`, `bls12_381`, `bls12_377`, `bw6_671` and `grumpkin`
+>Current supported fields are `babybear`
 
 >[!NOTE]
 >G2 and ECNTT are located in nested packages

@@ -34,13 +34,14 @@ go get github.com/ingonyama-zk/icicle@<commit_id>
 To build the shared libraries you can run this script:
 
 ```bash
-./build.sh <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+./build.sh [-curve=<curve> | -field=<field>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
 ```
 - **`curve`** - The name of the curve to build or "all" to build all curves
+- **`field`** - The name of the field to build or "all" to build all fields
 - **`g2`** - Optional - build with G2 enabled 
 - **`ecntt`** - Optional - build with ECNTT enabled
 - **`devmode`** - Optional - build in devmode
-
+- Usage can be displayed with the flag `-help`
 
 To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
