@@ -173,10 +173,10 @@ macro_rules! impl_scalar_field {
             use super::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "GenerateScalars")]
+                #[link_name = concat!($field_prefix, "_generate_scalars")]
                 pub(crate) fn generate_scalars(scalars: *mut $field_name, size: usize);
 
-                #[link_name = concat!($field_prefix, "ScalarConvertMontgomery")]
+                #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
                 fn _convert_scalars_montgomery(
                     scalars: *mut $field_name,
                     size: usize,

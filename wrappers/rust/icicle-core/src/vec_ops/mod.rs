@@ -183,7 +183,7 @@ macro_rules! impl_vec_ops_field {
             use icicle_core::vec_ops::VecOpsConfig;
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "AddCuda")]
+                #[link_name = concat!($field_prefix, "_add_cuda")]
                 pub(crate) fn add_scalars_cuda(
                     a: *const $field,
                     b: *const $field,
@@ -192,7 +192,7 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "SubCuda")]
+                #[link_name = concat!($field_prefix, "_sub_cuda")]
                 pub(crate) fn sub_scalars_cuda(
                     a: *const $field,
                     b: *const $field,
@@ -201,7 +201,7 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "MulCuda")]
+                #[link_name = concat!($field_prefix, "_mul_cuda")]
                 pub(crate) fn mul_scalars_cuda(
                     a: *const $field,
                     b: *const $field,
@@ -210,7 +210,7 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "TransposeMatrix")]
+                #[link_name = concat!($field_prefix, "_transpose_matrix_cuda")]
                 pub(crate) fn transpose_cuda(
                     input: *const $field,
                     row_size: u32,

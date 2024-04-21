@@ -220,7 +220,7 @@ macro_rules! impl_poseidon {
         mod $field_prefix_ident {
             use crate::poseidon::{$field, $field_config, CudaError, DeviceContext, PoseidonConfig, PoseidonConstants};
             extern "C" {
-                #[link_name = concat!($field_prefix, "CreateOptimizedPoseidonConstants")]
+                #[link_name = concat!($field_prefix, "_create_optimized_poseidon_constants_cuda")]
                 pub(crate) fn _create_optimized_constants(
                     arity: u32,
                     full_rounds_half: u32,
@@ -230,14 +230,14 @@ macro_rules! impl_poseidon {
                     poseidon_constants: *mut PoseidonConstants<$field>,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "InitOptimizedPoseidonConstants")]
+                #[link_name = concat!($field_prefix, "_init_optimized_poseidon_constants_cuda")]
                 pub(crate) fn _load_optimized_constants(
                     arity: u32,
                     ctx: &DeviceContext,
                     constants: *mut PoseidonConstants<$field>,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "PoseidonHash")]
+                #[link_name = concat!($field_prefix, "_poseidon_hash_cuda")]
                 pub(crate) fn hash_many(
                     input: *mut $field,
                     output: *mut $field,

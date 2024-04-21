@@ -275,22 +275,22 @@ macro_rules! impl_curve {
             use super::{$affine_type, $projective_type, CudaError, DeviceContext};
 
             extern "C" {
-                #[link_name = concat!($curve_prefix, "Eq")]
+                #[link_name = concat!($curve_prefix, "_eq")]
                 pub(crate) fn eq(point1: *const $projective_type, point2: *const $projective_type) -> bool;
-                #[link_name = concat!($curve_prefix, "ToAffine")]
+                #[link_name = concat!($curve_prefix, "_to_affine")]
                 pub(crate) fn proj_to_affine(point: *const $projective_type, point_out: *mut $affine_type);
-                #[link_name = concat!($curve_prefix, "GenerateProjectivePoints")]
+                #[link_name = concat!($curve_prefix, "_generate_projective_points")]
                 pub(crate) fn generate_projective_points(points: *mut $projective_type, size: usize);
-                #[link_name = concat!($curve_prefix, "GenerateAffinePoints")]
+                #[link_name = concat!($curve_prefix, "_generate_affine_points")]
                 pub(crate) fn generate_affine_points(points: *mut $affine_type, size: usize);
-                #[link_name = concat!($curve_prefix, "AffineConvertMontgomery")]
+                #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
                     points: *mut $affine_type,
                     size: usize,
                     is_into: bool,
                     ctx: *const DeviceContext,
                 ) -> CudaError;
-                #[link_name = concat!($curve_prefix, "ProjectiveConvertMontgomery")]
+                #[link_name = concat!($curve_prefix, "_projective_convert_montgomery")]
                 pub(crate) fn _convert_projective_montgomery(
                     points: *mut $projective_type,
                     size: usize,

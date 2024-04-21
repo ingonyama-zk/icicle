@@ -52,76 +52,76 @@ macro_rules! impl_univariate_polynomial_api {
         type PolynomialHandle = *const c_void;
 
         extern "C" {
-            #[link_name = concat!($field_prefix, "polynomial_init_cuda_backend")]
+            #[link_name = concat!($field_prefix, "_polynomial_init_cuda_backend")]
             fn init_cuda_backend() -> bool;
 
-            #[link_name = concat!($field_prefix, "polynomial_create_from_coefficients")]
+            #[link_name = concat!($field_prefix, "_polynomial_create_from_coefficients")]
             fn create_from_coeffs(coeffs: *const $field, size: usize) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_create_from_rou_evaluations")]
+            #[link_name = concat!($field_prefix, "_polynomial_create_from_rou_evaluations")]
             fn create_from_rou_evals(coeffs: *const $field, size: usize) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_clone")]
+            #[link_name = concat!($field_prefix, "_polynomial_clone")]
             fn clone(p: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_delete")]
+            #[link_name = concat!($field_prefix, "_polynomial_delete")]
             fn delete(ptr: PolynomialHandle);
 
-            #[link_name = concat!($field_prefix, "polynomial_print")]
+            #[link_name = concat!($field_prefix, "_polynomial_print")]
             fn print(ptr: PolynomialHandle);
 
-            #[link_name = concat!($field_prefix, "polynomial_add")]
+            #[link_name = concat!($field_prefix, "_polynomial_add")]
             fn add(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_add_inplace")]
+            #[link_name = concat!($field_prefix, "_polynomial_add_inplace")]
             fn add_inplace(a: PolynomialHandle, b: PolynomialHandle) -> c_void;
 
-            #[link_name = concat!($field_prefix, "polynomial_subtract")]
+            #[link_name = concat!($field_prefix, "_polynomial_subtract")]
             fn subtract(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_multiply")]
+            #[link_name = concat!($field_prefix, "_polynomial_multiply")]
             fn multiply(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_multiply_by_scalar")]
+            #[link_name = concat!($field_prefix, "_polynomial_multiply_by_scalar")]
             fn multiply_by_scalar(a: PolynomialHandle, b: &$field) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_quotient")]
+            #[link_name = concat!($field_prefix, "_polynomial_quotient")]
             fn quotient(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_remainder")]
+            #[link_name = concat!($field_prefix, "_polynomial_remainder")]
             fn remainder(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_division")]
+            #[link_name = concat!($field_prefix, "_polynomial_division")]
             fn divide(a: PolynomialHandle, b: PolynomialHandle, q: *mut PolynomialHandle, r: *mut PolynomialHandle);
 
-            #[link_name = concat!($field_prefix, "polynomial_divide_by_vanishing")]
+            #[link_name = concat!($field_prefix, "_polynomial_divide_by_vanishing")]
             fn div_by_vanishing(a: PolynomialHandle, deg: u64) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_add_monomial_inplace")]
+            #[link_name = concat!($field_prefix, "_polynomial_add_monomial_inplace")]
             fn add_monomial_inplace(a: PolynomialHandle, monomial_coeff: &$field, monomial: u64) -> c_void;
 
-            #[link_name = concat!($field_prefix, "polynomial_sub_monomial_inplace")]
+            #[link_name = concat!($field_prefix, "_polynomial_sub_monomial_inplace")]
             fn sub_monomial_inplace(a: PolynomialHandle, monomial_coeff: &$field, monomial: u64) -> c_void;
 
-            #[link_name = concat!($field_prefix, "polynomial_slice")]
+            #[link_name = concat!($field_prefix, "_polynomial_slice")]
             fn slice(a: PolynomialHandle, offset: u64, stride: u64, size: u64) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_even")]
+            #[link_name = concat!($field_prefix, "_polynomial_even")]
             fn even(a: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_odd")]
+            #[link_name = concat!($field_prefix, "_polynomial_odd")]
             fn odd(a: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_evaluate_on_domain")]
+            #[link_name = concat!($field_prefix, "_polynomial_evaluate_on_domain")]
             fn eval_on_domain(a: PolynomialHandle, domain: *const $field, domain_size: u64, evals: *mut $field);
 
-            #[link_name = concat!($field_prefix, "polynomial_degree")]
+            #[link_name = concat!($field_prefix, "_polynomial_degree")]
             fn degree(a: PolynomialHandle) -> i64;
 
-            #[link_name = concat!($field_prefix, "polynomial_copy_coeffs_range")]
+            #[link_name = concat!($field_prefix, "_polynomial_copy_coeffs_range")]
             fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: u64, end_idx: u64) -> u64;
 
-            #[link_name = concat!($field_prefix, "polynomial_get_coeffs_raw_ptr")]
+            #[link_name = concat!($field_prefix, "_polynomial_get_coeffs_raw_ptr")]
             fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64, device_id: *mut u64) -> *mut $field;
         }
 
