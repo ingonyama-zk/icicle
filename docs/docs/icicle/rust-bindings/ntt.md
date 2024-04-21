@@ -61,10 +61,10 @@ pub fn ntt<F>(
 
 `ntt:ntt` expects:
 
-`input` - buffer to read the inputs of the NTT from. <br/>
-`dir` - whether to compute forward or inverse NTT. <br/>
-`cfg` - config used to specify extra arguments of the NTT. <br/>
-`output` - buffer to write the NTT outputs into. Must be of the same  size as input.
+- **`input`** - buffer to read the inputs of the NTT from. <br/>
+- **`dir`** - whether to compute forward or inverse NTT. <br/>
+- **`cfg`** - config used to specify extra arguments of the NTT. <br/>
+- **`output`** - buffer to write the NTT outputs into. Must be of the same  size as input.
 
 The `input` and `output` buffers can be on device or on host. Being on host means that they will be transferred to device during runtime.
 

@@ -92,15 +92,15 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 
 #### Parameters
 
-- **a**: The first input vector.
-- **b**: The second input vector.
-- **out**: The output vector where the result of the operation will be stored.
-- **config**: A `VecOpsConfig` object containing various configuration options for the vector operations.
-- **op**: The operation to perform, specified as one of the constants (`Sub`, `Add`, `Mul`) from the `VecOps` type.
+- **`a`**: The first input vector.
+- **`b`**: The second input vector.
+- **`out`**: The output vector where the result of the operation will be stored.
+- **`config`**: A `VecOpsConfig` object containing various configuration options for the vector operations.
+- **`op`**: The operation to perform, specified as one of the constants (`Sub`, `Add`, `Mul`) from the `VecOps` type.
 
 #### Return Value
 
-- **CudaError**: Returns a CUDA error code indicating the success or failure of the vector operation.
+- **`CudaError`**: Returns a CUDA error code indicating the success or failure of the vector operation.
 
 ### VecOpsConfig
 
@@ -119,12 +119,12 @@ type VecOpsConfig struct {
 
 #### Fields
 
-- **Ctx**: Device context containing details like device ID and stream ID.
-- **isAOnDevice**: Indicates if vector `a` is located on the device.
-- **isBOnDevice**: Indicates if vector `b` is located on the device.
-- **isResultOnDevice**: Specifies where the result vector should be stored (device or host memory).
-- **IsResultMontgomeryForm**: Determines if the result vector should be in Montgomery form.
-- **IsAsync**: Controls whether the vector operation runs asynchronously.
+- **`Ctx`**: Device context containing details like device ID and stream ID.
+- **`isAOnDevice`**: Indicates if vector `a` is located on the device.
+- **`isBOnDevice`**: Indicates if vector `b` is located on the device.
+- **`isResultOnDevice`**: Specifies where the result vector should be stored (device or host memory).
+- **`IsResultMontgomeryForm`**: Determines if the result vector should be in Montgomery form.
+- **`IsAsync`**: Controls whether the vector operation runs asynchronously.
 
 #### Default Configuration
 
@@ -140,33 +140,7 @@ This section describes the functionality of the `TransposeMatrix` function used 
 
 The function takes a matrix represented as a 1D slice and transposes it, storing the result in another 1D slice.
 
-### Function:
-
-```go
-TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError)
-```
-
-### Parameters:
-
-* `in`: The input matrix as a `core.HostOrDeviceSlice`. This can be either a host slice or a device slice depending on the location of the data.
-* `out`: The output matrix as a `core.HostOrDeviceSlice`. Similar to `in`, this can be a host or device slice.
-* `columnSize`: An integer representing the number of columns in the input matrix.
-* `rowSize`: An integer representing the number of rows in the input matrix.
-* `ctx`: A `cr.DeviceContext` object representing the device context to be used for the operation (if applicable).
-* `onDevice`: A boolean flag indicating whether the operation should be performed on the device (e.g., GPU) or on the host (CPU).
-* `isAsync`: A boolean flag indicating whether the operation should be performed asynchronously. A value of `true` indicates asynchronous execution, while `false` indicates synchronous execution.
-
-### Return Value: 
-
-* `ret`: A `core.IcicleError` object. This object will be empty if the operation is successful. Otherwise, it will contain details about any errors that occurred during the matrix transposition.
-
-
-
-# MatrixTranspose
-
-The `MatrixTranspose` function is used to transpose a matrix stored in a 1D slice.
-
-## Syntax
+### Function
 
 ```go
 func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError)
@@ -174,13 +148,13 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ct
 
 ## Parameters
 
-- `in` (`core.HostOrDeviceSlice`): The input matrix, stored as a 1D slice.
-- `out` (`core.HostOrDeviceSlice`): The output matrix, which will be the transpose of the input matrix, stored as a 1D slice.
-- `columnSize` (`int`): The number of columns in the input matrix.
-- `rowSize` (`int`): The number of rows in the input matrix.
-- `ctx` (`cr.DeviceContext`): The device context to be used for the matrix transpose operation.
-- `onDevice` (`bool`): Indicates whether the input and output slices are stored on the device (GPU) or the host (CPU).
-- `isAsync` (`bool`): Indicates whether the matrix transpose operation should be executed asynchronously.
+- **`in`**: The input matrix is a `core.HostOrDeviceSlice`, stored as a 1D slice.
+- **`out`**: The output matrix is a `core.HostOrDeviceSlice`, which will be the transpose of the input matrix, stored as a 1D slice.
+- **`columnSize`**: The number of columns in the input matrix.
+- **`rowSize`**: The number of rows in the input matrix.
+- **`ctx`**: The device context `cr.DeviceContext` to be used for the matrix transpose operation.
+- **`onDevice`**: Indicates whether the input and output slices are stored on the device (GPU) or the host (CPU).
+- **`isAsync`**: Indicates whether the matrix transpose operation should be executed asynchronously.
 
 ## Return Value
 

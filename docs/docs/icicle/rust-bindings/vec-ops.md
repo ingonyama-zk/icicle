@@ -184,13 +184,13 @@ where
 
 ### Parameters
 
-- `input`: A slice representing the input matrix. The slice can be stored on either the host or the device.
-- `row_size`: The number of rows in the input matrix.
-- `column_size`: The number of columns in the input matrix.
-- `output`: A mutable slice to store the transposed matrix. The slice can be stored on either the host or the device.
-- `ctx`: A reference to the `DeviceContext`, which provides information about the device where the operation will be performed.
-- `on_device`: A boolean flag indicating whether the inputs and outputs are on the device. 
-- `is_async`: A boolean flag indicating whether the operation should be performed asynchronously. 
+- **`input`**: A slice representing the input matrix. The slice can be stored on either the host or the device.
+- **`row_size`**: The number of rows in the input matrix.
+- **`column_size`**: The number of columns in the input matrix.
+- **`output`**: A mutable slice to store the transposed matrix. The slice can be stored on either the host or the device.
+- **`ctx`**: A reference to the `DeviceContext`, which provides information about the device where the operation will be performed.
+- **`on_device`**: A boolean flag indicating whether the inputs and outputs are on the device. 
+- **`is_async`**: A boolean flag indicating whether the operation should be performed asynchronously. 
 
 ### Return Value
 
@@ -208,7 +208,7 @@ let input: HostOrDeviceSlice<i32> = // ...;
 let mut output: HostOrDeviceSlice<i32> = // ...;
 let ctx: DeviceContext = // ...;
 
-transpose_matrix(&input, 4, 4, &mut output, &ctx, true, false)
+transpose_matrix(&input, 5, 4, &mut output, &ctx, true, false)
     .expect("Failed to transpose matrix");
 ```
 

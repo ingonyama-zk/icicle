@@ -14,15 +14,15 @@ func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTC
 
 ### Parameters:
 
-- **points**: A slice of elliptic curve points (in projective coordinates) that will be transformed. The slice can be stored on the host or the device, as indicated by the `core.HostOrDeviceSlice` type.
-- **dir**: The direction of the EC-NTT transform, either `core.KForward` or `core.KInverse`.
-- **cfg**: A pointer to an `NTTConfig` object, containing configuration options for the NTT operation.
-- **results**: A slice that will store the transformed elliptic curve points (in projective coordinates). The slice can be stored on the host or the device, as indicated by the `core.HostOrDeviceSlice` type.
+- **`points`**: A slice of elliptic curve points (in projective coordinates) that will be transformed. The slice can be stored on the host or the device, as indicated by the `core.HostOrDeviceSlice` type.
+- **`dir`**: The direction of the EC-NTT transform, either `core.KForward` or `core.KInverse`.
+- **`cfg`**: A pointer to an `NTTConfig` object, containing configuration options for the NTT operation.
+- **`results`**: A slice that will store the transformed elliptic curve points (in projective coordinates). The slice can be stored on the host or the device, as indicated by the `core.HostOrDeviceSlice` type.
 
 
 ### Return Value
 
-- **CudaError**: A `core.IcicleError` value, which will be `core.IcicleErrorCode(0)` if the EC-NTT operation was successful, or an error if something went wrong.
+- **`CudaError`**: A `core.IcicleError` value, which will be `core.IcicleErrorCode(0)` if the EC-NTT operation was successful, or an error if something went wrong.
 
 ## NTT Configuration (NTTConfig)
 
@@ -44,15 +44,15 @@ type NTTConfig[T any] struct {
 
 ### Fields
 
-- **Ctx**: Device context containing details like device ID and stream ID.
-- **CosetGen**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
-- **BatchSize**: The number of NTTs to compute in one operation, defaulting to 1.
-- **ColumnsBatch**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
-- **Ordering**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`), affecting how data is arranged.
-- **areInputsOnDevice**: Indicates if input scalars are located on the device.
-- **areOutputsOnDevice**: Indicates if results are stored on the device.
-- **IsAsync**: Controls whether the NTT operation runs asynchronously.
-- **NttAlgorithm**: Explicitly select the NTT algorithm. ECNTT supports running on `Radix2` algoruithm.
+- **`Ctx`**: Device context containing details like device ID and stream ID.
+- **`CosetGen`**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
+- **`BatchSize`**: The number of NTTs to compute in one operation, defaulting to 1.
+- **`ColumnsBatch`**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
+- **`Ordering`**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`), affecting how data is arranged.
+- **`areInputsOnDevice`**: Indicates if input scalars are located on the device.
+- **`areOutputsOnDevice`**: Indicates if results are stored on the device.
+- **`IsAsync`**: Controls whether the NTT operation runs asynchronously.
+- **`NttAlgorithm`**: Explicitly select the NTT algorithm. ECNTT supports running on `Radix2` algoruithm.
 
 ### Default Configuration
 

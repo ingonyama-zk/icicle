@@ -46,14 +46,14 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 
 ### Parameters
 
-- **scalars**: A slice containing the input scalars for the transform. It can reside either in host memory or device memory.
-- **dir**: The direction of the NTT operation (`KForward` or `KInverse`).
-- **cfg**: A pointer to an `NTTConfig` object, containing configuration options for the NTT operation.
-- **results**: A slice where the results of the NTT operation will be stored. This slice can be in host or device memory.
+- **`scalars`**: A slice containing the input scalars for the transform. It can reside either in host memory or device memory.
+- **`dir`**: The direction of the NTT operation (`KForward` or `KInverse`).
+- **`cfg`**: A pointer to an `NTTConfig` object, containing configuration options for the NTT operation.
+- **`results`**: A slice where the results of the NTT operation will be stored. This slice can be in host or device memory.
 
 ### Return Value
 
-- **CudaError**: Returns a CUDA error code indicating the success or failure of the NTT operation.
+- **`CudaError`**: Returns a CUDA error code indicating the success or failure of the NTT operation.
 
 ## NTT Configuration (NTTConfig)
 
@@ -75,15 +75,15 @@ type NTTConfig[T any] struct {
 
 ### Fields
 
-- **Ctx**: Device context containing details like device ID and stream ID.
-- **CosetGen**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
-- **BatchSize**: The number of NTTs to compute in one operation, defaulting to 1.
-- **ColumnsBatch**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
-- **Ordering**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`, `KMN`, `KNM`), affecting how data is arranged.
-- **areInputsOnDevice**: Indicates if input scalars are located on the device.
-- **areOutputsOnDevice**: Indicates if results are stored on the device.
-- **IsAsync**: Controls whether the NTT operation runs asynchronously.
-- **NttAlgorithm**: Explicitly select the NTT algorithm. Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
+- **`Ctx`**: Device context containing details like device ID and stream ID.
+- **`CosetGen`**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
+- **`BatchSize`**: The number of NTTs to compute in one operation, defaulting to 1.
+- **`ColumnsBatch`**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
+- **`Ordering`**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`, `KMN`, `KNM`), affecting how data is arranged.
+- **`areInputsOnDevice`**: Indicates if input scalars are located on the device.
+- **`areOutputsOnDevice`**: Indicates if results are stored on the device.
+- **`IsAsync`**: Controls whether the NTT operation runs asynchronously.
+- **`NttAlgorithm`**: Explicitly select the NTT algorithm. Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
 
 ### Default Configuration
 
