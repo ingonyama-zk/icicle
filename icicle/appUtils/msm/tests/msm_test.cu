@@ -157,10 +157,12 @@ int main(int argc, char** argv)
 
   test_scalar* scalars_d;
   test_affine* points_d;
+  test_affine* precomp_points_d;
   test_projective* large_res_d;
 
   cudaMalloc(&scalars_d, sizeof(test_scalar) * msm_size);
   cudaMalloc(&points_d, sizeof(test_affine) * msm_size);
+  cudaMalloc(&precomp_points_d, sizeof(test_affine) * msm_size * precomp_factor);
   cudaMalloc(&large_res_d, sizeof(test_projective));
   cudaMemcpy(scalars_d, scalars, sizeof(test_scalar) * msm_size, cudaMemcpyHostToDevice);
   cudaMemcpy(points_d, points, sizeof(test_affine) * msm_size, cudaMemcpyHostToDevice);
@@ -198,13 +200,13 @@ int main(int argc, char** argv)
   cudaEventCreate(&stop);
 
   //warm up
-  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, large_res_d);
-  cudaDeviceSynchronize();
+  // msm::MSM<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, large_res_d);
+  // cudaDeviceSynchronize();
 
   // auto begin1 = std::chrono::high_resolution_clock::now();
-  // if (precomp_factor > 1) msm::PrecomputeMSMBases<test_affine, test_projective>(points, msm_size, precomp_factor, 16, false, ctx, precomp_points);
+  if (precomp_factor > 1) msm::PrecomputeMSMBases<test_affine, test_projective>(points_d, msm_size, precomp_factor, 16, false, ctx, precomp_points_d);
   cudaEventRecord(start, stream);
-  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, large_res_d);
+  msm::MSM<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, large_res_d);
   cudaEventRecord(stop, stream);
   cudaStreamSynchronize(stream);
   cudaEventElapsedTime(&msm_time, start, stop);
