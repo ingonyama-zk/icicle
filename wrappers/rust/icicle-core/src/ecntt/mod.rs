@@ -39,7 +39,6 @@ macro_rules! impl_ecntt {
         $curve:ident
     ) => {
         mod $field_prefix_ident {
-
             use crate::curve;
             use crate::curve::BaseCfg;
             use crate::ecntt::IcicleResult;
@@ -47,32 +46,22 @@ macro_rules! impl_ecntt {
             use crate::ecntt::{
                 $curve, $field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID,
             };
-            use icicle_core::ecntt::ECNTT;
             use icicle_core::ecntt::ECNTTUnchecked;
+            use icicle_core::ecntt::ECNTT;
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::NTT;
             use icicle_core::traits::IcicleResultWrap;
             use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
             pub type ProjectiveC = Projective<$curve>;
-            impl_ntt_without_domain!($field_prefix, $field, $field_config, ECNTTUnchecked, "ECNTT", ProjectiveC);
-
-            fn ntt_unchecked(
-                input: &(impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
-                dir: NTTDir,
-                cfg: &NTTConfig<$field>,
-                output: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
-            ) -> IcicleResult<()> {
-                <curve::ScalarCfg as ECNTTUnchecked<Projective<$curve>, $field>>::ntt_unchecked(input, dir, cfg, output)
-            }
-
-            fn ntt_inplace_unchecked(
-                inout: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
-                dir: NTTDir,
-                cfg: &NTTConfig<$field>,
-            ) -> IcicleResult<()> {
-                <curve::ScalarCfg as ECNTTUnchecked<Projective<$curve>, $field>>::ntt_inplace_unchecked(inout, dir, cfg)
-            }
+            impl_ntt_without_domain!(
+                $field_prefix,
+                $field,
+                $field_config,
+                ECNTTUnchecked,
+                "ECNTT",
+                ProjectiveC
+            );
 
             impl ECNTT<$curve> for $field_config {}
         }
@@ -152,10 +141,10 @@ macro_rules! impl_ecntt_tests {
             check_ecntt_batch::<$curve>()
         }
 
-        // #[test]
+        // #[test] //TODO: multi-device test
         // fn test_ntt_device_async() {
         //     // init_domain is in this test is performed per-device
-        //     check_ntt_device_async::<$field>()
+        //     check_ecntt_device_async::<$field>()
         // }
     };
 }

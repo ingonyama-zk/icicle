@@ -16,16 +16,8 @@ where
 {
     let test_sizes = [1 << 4];
     for test_size in test_sizes {
-        // let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
-
         let points = C::generate_random_projective_points(test_size);
-        // let ark_points = points
-        //     .iter()
-        //     .map(|v| v.to_ark())
-        //     .collect::<Vec<_>>();
-        // if we simply transmute arkworks types, we'll get scalars in Montgomery format
-        //let points_mont = unsafe { &*(&ark_points[..] as *const _ as *const [_]) };
-        //let points_mont_h = HostSlice::from_slice(points_mont.to_vec());
+
         let slice = &points.clone();
         let config: NTTConfig<'_, C::ScalarField> = NTTConfig::default();
         let mut out_p = vec![Projective::<C>::zero(); test_size];
@@ -33,14 +25,6 @@ where
         let input = HostSlice::from_slice(slice);
         ecntt(input, NTTDir::kForward, &config, ecntt_result).unwrap();
         assert_ne!(ecntt_result.as_slice(), points);
-
-        // let mut ark_ntt_result = ark_points.clone();
-        // ark_domain.fft_in_place(&mut ark_ntt_result);
-        // assert_ne!(ark_ntt_result, ark_points);
-
-        // let ntt_result_as_ark =
-        //     unsafe { &*(ecntt_result.as_slice() as *const _ as *const [<F as ArkConvertible>::ArkEquivalent]) };
-        // assert_eq!(ark_ntt_result, ntt_result_as_ark);
 
         let mut slice = vec![Projective::<C>::zero(); test_size];
         let iecntt_result = HostSlice::from_mut_slice(&mut slice);
