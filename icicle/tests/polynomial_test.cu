@@ -5,7 +5,6 @@
 #include <list>
 
 #include "polynomials/polynomials.h"
-#include "polynomials/polynomials_c_api.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 
 #include "ntt/ntt.cuh"
@@ -97,8 +96,8 @@ public:
 
     auto lhs_coeffs = std::make_unique<scalar_t[]>(deg_lhs);
     auto rhs_coeffs = std::make_unique<scalar_t[]>(deg_rhs);
-    lhs.copy_coefficients_to_host(lhs_coeffs.get(), 1, deg_lhs - 1);
-    rhs.copy_coefficients_to_host(rhs_coeffs.get(), 1, deg_rhs - 1);
+    lhs.copy_coeffs(lhs_coeffs.get(), 1, deg_lhs - 1);
+    rhs.copy_coeffs(rhs_coeffs.get(), 1, deg_rhs - 1);
 
     ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(scalar_t)));
   }
@@ -141,7 +140,7 @@ TEST_F(PolynomialTest, evaluationOnDomain)
 
   size *= 2; // evaluating on a larger domain
   auto default_device_context = device_context::get_default_device_context();
-  const auto w = ntt::GetRootOfUnity<scalar_t>((int)log2(size), default_device_context);
+  const auto w = ntt::GetRootOfUnityFromDomain<scalar_t>((int)log2(size), default_device_context);
 
   // construct domain as rou
   scalar_t x = one;
@@ -248,29 +247,6 @@ TEST_F(PolynomialTest, addition_inplace)
   EXPECT_EQ(fx_plus_gx, s_x);
 }
 
-TEST_F(PolynomialTest, cAPI)
-{
-  const int size = 3;
-  auto coeff = std::make_unique<scalar_t[]>(size);
-  random_samples(coeff.get(), size);
-
-  auto f = CONCAT_EXPAND(FIELD, polynomial_create_from_coefficients)(coeff.get(), size);
-  auto g = CONCAT_EXPAND(FIELD, polynomial_create_from_coefficients)(coeff.get(), size);
-  auto s = CONCAT_EXPAND(FIELD, polynomial_add)(f, g);
-
-  scalar_t x = scalar_t::rand_host();
-
-  auto f_x = CONCAT_EXPAND(FIELD, polynomial_evaluate)(f, x);
-  auto g_x = CONCAT_EXPAND(FIELD, polynomial_evaluate)(g, x);
-  auto fx_plus_gx = f_x + g_x;
-  auto s_x = CONCAT_EXPAND(FIELD, polynomial_evaluate)(s, x);
-  EXPECT_EQ(fx_plus_gx, s_x);
-
-  CONCAT_EXPAND(FIELD, polynomial_delete)(f);
-  CONCAT_EXPAND(FIELD, polynomial_delete)(g);
-  CONCAT_EXPAND(FIELD, polynomial_delete)(s);
-}
-
 TEST_F(PolynomialTest, multiplication)
 {
   const int size_0 = 1 << 15, size_1 = 1 << 12;
@@ -342,18 +318,16 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   auto g = Polynomial_t::from_coefficients(coeffs_g, 3);
 
   auto h = f + g; // 1+2x+3x^3
-  const auto h0 = h.copy_coefficient_to_host(0);
-  const auto h1 = h.copy_coefficient_to_host(1);
-  const auto h2 = h.copy_coefficient_to_host(2);
+  const auto h0 = h.get_coeff(0);
+  const auto h1 = h.get_coeff(1);
+  const auto h2 = h.get_coeff(2);
   EXPECT_EQ(h0, one);
   EXPECT_EQ(h1, two);
   EXPECT_EQ(h2, three);
 
-  int64_t nof_coeffs = h.copy_coefficients_to_host(nullptr); // query #coeffs
-  EXPECT_GE(nof_coeffs, 3);                                  // can be larger due to padding to powers of two
   scalar_t h_coeffs[3] = {0};
-  nof_coeffs = h.copy_coefficients_to_host(h_coeffs, 0, 2); // read the coefficients
-  EXPECT_EQ(nof_coeffs, 3);                                 // expecting 3 due to specified indices
+  auto nof_coeffs = h.copy_coeffs(h_coeffs, 0, 2); // read the coefficients
+  EXPECT_EQ(nof_coeffs, 3);                        // expecting 3 due to specified indices
 
   scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
@@ -371,8 +345,8 @@ TEST_F(PolynomialTest, divisionSimple)
   auto [q, r] = a.divide(b);
   scalar_t q_coeffs[2] = {0}; // 3x+4
   scalar_t r_coeffs[2] = {0}; // 3x+9
-  const auto q_nof_coeffs = q.copy_coefficients_to_host(q_coeffs, 0, 1);
-  const auto r_nof_coeffs = r.copy_coefficients_to_host(r_coeffs, 0, 1);
+  const auto q_nof_coeffs = q.copy_coeffs(q_coeffs, 0, 1);
+  const auto r_nof_coeffs = r.copy_coeffs(r_coeffs, 0, 1);
 
   ASSERT_EQ(q_nof_coeffs, 2);
   ASSERT_EQ(r_nof_coeffs, 2);
@@ -485,9 +459,9 @@ TEST_F(PolynomialTest, slicing)
     auto expected_odd = scalar_t::zero();
     for (int i = size - 1; i >= 0; --i) {
       if (i % 2 == 0)
-        expected_even = expected_even * x + f.copy_coefficient_to_host(i);
+        expected_even = expected_even * x + f.get_coeff(i);
       else
-        expected_odd = expected_odd * x + f.copy_coefficient_to_host(i);
+        expected_odd = expected_odd * x + f.get_coeff(i);
     }
 
     auto e = f.even();
@@ -509,9 +483,34 @@ TEST_F(PolynomialTest, slicing)
 #include "msm/msm.cuh"
 #include "curves/curve_config.cuh"
 using curve_config::affine_t;
+using curve_config::projective_t;
+
+// using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
+namespace msm {
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
+    const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
+  cudaError_t _MSM(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
+  {
+    return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
+  }
+} // namespace msm
+
+#ifdef G2
 using curve_config::g2_affine_t;
 using curve_config::g2_projective_t;
-using curve_config::projective_t;
+
+namespace msm {
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
+    const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
+
+  cudaError_t
+  _G2MSM(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
+  {
+    return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
+  }
+} // namespace msm
+#endif // G2
+
 class dummy_g2_t : public scalar_t
 {
 public:
@@ -535,25 +534,7 @@ public:
     return dummy_g2_t{scalar_t::sub_modulus<1>(rs)};
   }
 };
-
-// using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
 namespace msm {
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
-    const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
-
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
-    const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
-
-  cudaError_t _MSM(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
-  {
-    return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
-  }
-  cudaError_t
-  _G2MSM(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
-  {
-    return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
-  }
-
   cudaError_t
   _G2MSM(const scalar_t* scalars, const dummy_g2_t* points, int msm_size, MSMConfig& config, dummy_g2_t* out)
   {
@@ -914,7 +895,7 @@ TEST_F(PolynomialTest, QAP)
   //  (4) sanity check: verify AB=C at the evaluation points
   {
     auto default_device_context = device_context::get_default_device_context();
-    const auto w = ntt::GetRootOfUnity<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
+    const auto w = ntt::GetRootOfUnityFromDomain<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
     auto x = scalar_t::one();
     for (int i = 0; i < vanishing_poly_deg; ++i) {
       ASSERT_EQ(Lx(x) * Rx(x), Ox(x));
@@ -960,6 +941,21 @@ TEST_F(PolynomialTest, commitMSM)
   EXPECT_EQ(d_coeff.isValid(), false);
 }
 
+TEST_F(PolynomialTest, DummyGroth16)
+{
+  // (1) construct R1CS and QAP for circuit with N inputs
+  Groth16Example<scalar_t, affine_t, projective_t, dummy_g2_t, dummy_g2_t> groth16_example(30 /*=N*/);
+
+  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
+  auto witness = groth16_example.random_witness_inputs();
+  groth16_example.compute_witness(witness);
+
+  groth16_example.setup();
+  auto proof = groth16_example.prove(witness);
+  ASSERT_EQ(groth16_example.dummy_verify(proof, witness), true);
+}
+
+#ifdef G2
 TEST_F(PolynomialTest, Groth16)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
@@ -974,20 +970,8 @@ TEST_F(PolynomialTest, Groth16)
   auto proof = groth16_example.prove(witness);
   // groth16_example.verify(proof); // cannot implement without pairing
 }
+#endif // G2
 
-TEST_F(PolynomialTest, DummyGroth16)
-{
-  // (1) construct R1CS and QAP for circuit with N inputs
-  Groth16Example<scalar_t, affine_t, projective_t, dummy_g2_t, dummy_g2_t> groth16_example(30 /*=N*/);
-
-  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
-  auto witness = groth16_example.random_witness_inputs();
-  groth16_example.compute_witness(witness);
-
-  groth16_example.setup();
-  auto proof = groth16_example.prove(witness);
-  ASSERT_EQ(groth16_example.dummy_verify(proof, witness), true);
-}
 #endif // CURVE
 
 int main(int argc, char** argv)
