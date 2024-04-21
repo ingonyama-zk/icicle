@@ -1,3 +1,4 @@
+#![cfg(feature = "ec_ntt")]
 use icicle_core::error::IcicleResult;
 use icicle_core::impl_ecntt;
 use icicle_core::ntt::{NTTConfig, NTTDir};

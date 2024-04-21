@@ -1,3 +1,4 @@
+#![cfg(feature = "ec_ntt")]
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::{
