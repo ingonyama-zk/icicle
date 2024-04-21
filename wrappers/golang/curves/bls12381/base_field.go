@@ -30,7 +30,7 @@ func (f BaseField) AsPointer() *uint32 {
 }
 
 func (f *BaseField) FromUint32(v uint32) BaseField {
-	f.limbs[BASE_LIMBS-1] = v
+	f.limbs[0] = v
 	return *f
 }
 

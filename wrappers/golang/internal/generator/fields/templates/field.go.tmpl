@@ -39,7 +39,7 @@ func (f {{.FieldPrefix}}Field) AsPointer() *uint32 {
 }
 
 func (f *{{.FieldPrefix}}Field) FromUint32(v uint32) {{.FieldPrefix}}Field {
-	f.limbs[{{toConst .FieldPrefix}}LIMBS - 1] = v
+	f.limbs[0] = v
 	return *f
 }
 

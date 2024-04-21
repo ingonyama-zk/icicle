@@ -5,7 +5,7 @@ func init() {
 		PackageName:         "bls12377",
 		Curve:               "bls12_377",
 		GnarkImport:         "bls12-377",
-		SupportsPoseidon:    true,
+		SupportsPoly:        true,
 		SupportsNTT:         true,
 		SupportsECNTT:       true,
 		SupportsG2:          true,

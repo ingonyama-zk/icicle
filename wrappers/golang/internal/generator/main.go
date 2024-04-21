@@ -14,6 +14,7 @@ import (
 	mock "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/mock"
 	msm "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/msm"
 	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/ntt"
+	poly "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/polynomial"
 	vecops "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/vecOps"
 )
 
@@ -27,6 +28,9 @@ func generateFiles() {
 		fields.Generate(curveDir, curve.PackageName, curve.Curve, "Base", false, curve.BaseFieldNumLimbs)
 		curves.Generate(curveDir, curve.PackageName, curve.Curve, "")
 		vecops.Generate(curveDir, curve.Curve, scalarFieldPrefix)
+		if curve.SupportsPoly {
+			poly.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport)
+		}
 		lib_linker.Generate(curveDir, curve.PackageName, curve.Curve, lib_linker.CURVE, 0)
 
 		if curve.SupportsNTT {
@@ -52,6 +56,9 @@ func generateFiles() {
 		scalarFieldPrefix := "Scalar"
 		fields.Generate(fieldDir, field.PackageName, field.Field, scalarFieldPrefix, true, field.LimbsNum)
 		vecops.Generate(fieldDir, field.Field, scalarFieldPrefix)
+		if field.SupportsPoly {
+			poly.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport)
+		}
 		ntt.Generate(fieldDir, "", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, true, "", "")
 		lib_linker.Generate(fieldDir, field.PackageName, field.Field, lib_linker.FIELD, 0)
 

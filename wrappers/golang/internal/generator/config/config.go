@@ -9,6 +9,7 @@ type FieldData struct {
 	ExtensionLimbsNum int
 	SupportsNTT       bool
 	SupportsPoseidon  bool
+	SupportsPoly      bool
 	ROU               int
 }
 
@@ -22,6 +23,7 @@ type CurveData struct {
 	PackageName         string
 	Curve               string
 	GnarkImport         string
+	SupportsPoly        bool
 	SupportsPoseidon    bool
 	SupportsNTT         bool
 	SupportsECNTT       bool
