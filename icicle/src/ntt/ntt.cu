@@ -569,6 +569,7 @@ namespace ntt {
   template scalar_t get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx);
 
   template <typename S>
+  static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
     const bool is_user_selected_radix2_alg = config.ntt_algorithm == NttAlgorithm::Radix2;
     const bool is_force_radix2 = !is_mixed_radix_alg_supported || is_user_selected_radix2_alg;
