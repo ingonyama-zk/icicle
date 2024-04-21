@@ -378,6 +378,7 @@ namespace msm {
       bool is_async,
       cudaStream_t stream)
     {
+      printf("c value = %d\n", c);
       CHK_INIT_IF_RETURN();
 
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
