@@ -6,17 +6,17 @@ using namespace field_config;
 #include "utils/utils.h"
 #include "gpu-utils/device_context.cuh"
 
-extern "C" void CONCAT_EXPAND(FIELD, GenerateScalars)(scalar_t* scalars, int size)
+extern "C" void CONCAT_EXPAND(FIELD, generate_scalars)(scalar_t* scalars, int size)
 {
-  scalar_t::RandHostMany(scalars, size);
+  scalar_t::rand_host_many(scalars, size);
 }
 
-extern "C" cudaError_t CONCAT_EXPAND(FIELD, ScalarConvertMontgomery)(
+extern "C" cudaError_t CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(
   scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx)
 {
   if (is_into) {
-    return mont::ToMontgomery(d_inout, n, ctx.stream, d_inout);
+    return mont::to_montgomery(d_inout, n, ctx.stream, d_inout);
   } else {
-    return mont::FromMontgomery(d_inout, n, ctx.stream, d_inout);
+    return mont::from_montgomery(d_inout, n, ctx.stream, d_inout);
   }
 }

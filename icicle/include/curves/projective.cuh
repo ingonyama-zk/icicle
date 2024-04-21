@@ -32,14 +32,14 @@ public:
     return point == Affine<FF>::zero() ? zero() : Projective{point.x, point.y, FF::one()};
   }
 
-  static HOST_DEVICE_INLINE Projective ToMontgomery(const Projective& point)
+  static HOST_DEVICE_INLINE Projective to_montgomery(const Projective& point)
   {
-    return {FF::ToMontgomery(point.x), FF::ToMontgomery(point.y), FF::ToMontgomery(point.z)};
+    return {FF::to_montgomery(point.x), FF::to_montgomery(point.y), FF::to_montgomery(point.z)};
   }
 
-  static HOST_DEVICE_INLINE Projective FromMontgomery(const Projective& point)
+  static HOST_DEVICE_INLINE Projective from_montgomery(const Projective& point)
   {
-    return {FF::FromMontgomery(point.x), FF::FromMontgomery(point.y), FF::FromMontgomery(point.z)};
+    return {FF::from_montgomery(point.x), FF::from_montgomery(point.y), FF::from_montgomery(point.z)};
   }
 
   static HOST_DEVICE_INLINE Projective generator() { return {GENERATOR_X, GENERATOR_Y, FF::one()}; }
@@ -216,13 +216,13 @@ public:
     return rand_scalar * generator();
   }
 
-  static void RandHostMany(Projective* out, int size)
+  static void rand_host_many(Projective* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? rand_host() : out[i - 100];
   }
 
-  static void RandHostManyAffine(Affine<FF>* out, int size)
+  static void rand_host_many_affine(Affine<FF>* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];

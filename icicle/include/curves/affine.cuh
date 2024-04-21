@@ -15,14 +15,14 @@ public:
 
   static HOST_DEVICE_INLINE Affine zero() { return {FF::zero(), FF::zero()}; }
 
-  static HOST_DEVICE_INLINE Affine ToMontgomery(const Affine& point)
+  static HOST_DEVICE_INLINE Affine to_montgomery(const Affine& point)
   {
-    return {FF::ToMontgomery(point.x), FF::ToMontgomery(point.y)};
+    return {FF::to_montgomery(point.x), FF::to_montgomery(point.y)};
   }
 
-  static HOST_DEVICE_INLINE Affine FromMontgomery(const Affine& point)
+  static HOST_DEVICE_INLINE Affine from_montgomery(const Affine& point)
   {
-    return {FF::FromMontgomery(point.x), FF::FromMontgomery(point.y)};
+    return {FF::from_montgomery(point.x), FF::from_montgomery(point.y)};
   }
 
   friend HOST_DEVICE_INLINE bool operator==(const Affine& xs, const Affine& ys)

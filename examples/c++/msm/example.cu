@@ -21,8 +21,8 @@ int main(int argc, char* argv[])
   scalar_t* scalars = new scalar_t[N];
   affine_t* points = new affine_t[N];
   projective_t result;
-  scalar_t::RandHostMany(scalars, N);
-  projective_t::RandHostManyAffine(points, N);
+  scalar_t::rand_host_many(scalars, N);
+  projective_t::rand_host_many_affine(points, N);
 
   std::cout << "Using default MSM configuration with on-host inputs" << std::endl;
   device_context::DeviceContext ctx = device_context::get_default_device_context();
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
   std::cout << "Generating random inputs on-host" << std::endl;
   // use the same scalars
   g2_affine_t* g2_points = new g2_affine_t[N];
-  g2_projective_t::RandHostManyAffine(g2_points, N);
+  g2_projective_t::rand_host_many_affine(g2_points, N);
 
   std::cout << "Reconfiguring MSM to use on-host inputs" << std::endl;
   config.are_results_on_device = false;

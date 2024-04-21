@@ -37,13 +37,13 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S>
-  cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
+  cudaError_t init_domain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
 
   /**
    * Releases and deallocates resources associated with the domain initialized for performing NTTs.
    * This function should be called to clean up resources once they are no longer needed.
    * It's important to note that after calling this function, any operation that relies on the released domain will
-   * fail unless InitDomain is called again to reinitialize the resources. Therefore, ensure that ReleaseDomain is
+   * fail unless init_domain is called again to reinitialize the resources. Therefore, ensure that release_domain is
    * only called when the operations requiring the NTT domain are completely finished and the domain is no longer
    * needed.
    * Also note that it is releasing the domain associated to the specific device.
@@ -53,14 +53,14 @@ namespace ntt {
    * the resources. The error code can be used to diagnose the problem.
    * */
   template <typename S>
-  cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
+  cudaError_t release_domain(device_context::DeviceContext& ctx);
 
   /* Returns the basic root of unity Wn
    * @param logn log size of the required root.
    * @return Wn root of unity
    */
   template <typename S>
-  S GetRootOfUnity(uint64_t max_size);
+  S get_root_of_unity(uint64_t max_size);
 
   /* Returns the basic root of unity Wn corresponding to the basic root used to initialize the domain.
    * This function can be called only after InitializeDomain()!
@@ -70,7 +70,7 @@ namespace ntt {
    * @return Wn root of unity corresponding to logn and the basic root used for initDomain(root)
    */
   template <typename S>
-  S GetRootOfUnityFromDomain(uint64_t logn, device_context::DeviceContext& ctx);
+  S get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx);
 
   /**
    * @enum NTTDir
@@ -147,11 +147,11 @@ namespace ntt {
    */
   template <typename S>
   NTTConfig<S>
-  DefaultNTTConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context());
+  default_ntt_config(const device_context::DeviceContext& ctx = device_context::get_default_device_context());
 
   /**
-   * A function that computes NTT or iNTT in-place. It's necessary to call [InitDomain](@ref InitDomain) with an
-   * appropriate primitive root before calling this function (only one call to `InitDomain` should suffice for all
+   * A function that computes NTT or iNTT in-place. It's necessary to call [init_domain](@ref init_domain) with an
+   * appropriate primitive root before calling this function (only one call to `init_domain` should suffice for all
    * NTTs).
    * @param input Input of the NTT. Length of this array needs to be \f$ size \cdot config.batch\_size \f$. Note
    * that if inputs are in Montgomery form, the outputs will be as well and vice-versa: non-Montgomery inputs produce
@@ -167,7 +167,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S, typename E>
-  cudaError_t NTT(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
+  cudaError_t ntt(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
 
 } // namespace ntt
 

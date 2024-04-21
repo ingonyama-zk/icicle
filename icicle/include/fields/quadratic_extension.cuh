@@ -38,19 +38,19 @@ public:
 
   static constexpr HOST_DEVICE_INLINE ExtensionField one() { return ExtensionField{FF::one(), FF::zero()}; }
 
-  static constexpr HOST_DEVICE_INLINE ExtensionField ToMontgomery(const ExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ExtensionField to_montgomery(const ExtensionField& xs)
   {
     return ExtensionField{xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r}};
   }
 
-  static constexpr HOST_DEVICE_INLINE ExtensionField FromMontgomery(const ExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ExtensionField from_montgomery(const ExtensionField& xs)
   {
     return ExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
   }
 
   static HOST_INLINE ExtensionField rand_host() { return ExtensionField{FF::rand_host(), FF::rand_host()}; }
 
-  static void RandHostMany(ExtensionField* out, int size)
+  static void rand_host_many(ExtensionField* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = rand_host();

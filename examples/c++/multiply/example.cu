@@ -62,8 +62,8 @@ int main(int argc, char** argv)
   T* host_in1 = (T*)malloc(vector_size * sizeof(T));
   T* host_in2 = (T*)malloc(vector_size * sizeof(T));
   std::cout << "Initializing vectors with random data" << std::endl;
-  T::RandHostMany(host_in1, vector_size);
-  T::RandHostMany(host_in2, vector_size);
+  T::rand_host_many(host_in1, vector_size);
+  T::rand_host_many(host_in2, vector_size);
   // device data
   device_context::DeviceContext ctx = device_context::get_default_device_context();
   T* device_in1;

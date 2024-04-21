@@ -41,7 +41,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context
 
   // init domain
-  auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
+  auto ntt_config = ntt::default_ntt_config<test_scalar>();
   const bool is_radix2_alg = (argc > 1) ? atoi(argv[1]) : false;
   ntt_config.ntt_algorithm = is_radix2_alg ? ntt::NttAlgorithm::Radix2 : ntt::NttAlgorithm::MixedRadix;
 

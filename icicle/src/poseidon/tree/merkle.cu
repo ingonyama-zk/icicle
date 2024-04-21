@@ -259,7 +259,7 @@ namespace merkle {
     return CHK_LAST();
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, BuildPoseidonMerkleTree)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, build_poseidon_merkle_tree)(
     const scalar_t* leaves,
     scalar_t* digests,
     uint32_t height,

@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
   S basic_root = S::omega(log_ntt_size /*NTT_LOG_SIZE*/);
   bn254InitializeDomain(&basic_root, ctx, true);
   // Create an NTTConfig instance
-  NTTConfig<S> config = DefaultNTTConfig<S>();
+  NTTConfig<S> config = default_ntt_config<S>();
   config.ntt_algorithm = NttAlgorithm::MixedRadix; 
   config.batch_size = nof_ntts;
   START_TIMER(MixedRadix);

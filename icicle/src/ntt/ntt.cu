@@ -377,7 +377,7 @@ namespace ntt {
   /**
    * @struct Domain
    * Struct containing information about the domain on which (i)NTT is evaluated i.e. twiddle factors.
-   * Twiddle factors are private, static and can only be set using [InitDomain](@ref InitDomain) function.
+   * Twiddle factors are private, static and can only be set using [init_domain](@ref init_domain) function.
    * The internal representation of twiddles is prone to change in accordance with changing [NTT](@ref NTT) algorithm.
    * @tparam S The type of twiddle factors \f$ \{ \omega^i \} \f$. Must be a field.
    */
@@ -386,7 +386,7 @@ namespace ntt {
   {
     // Mutex for protecting access to the domain/device container array
     static inline std::mutex device_domain_mutex;
-    // The domain-per-device container - assumption is InitDomain is called once per device per program.
+    // The domain-per-device container - assumption is init_domain is called once per device per program.
 
     int max_size = 0;
     int max_log_size = 0;
@@ -407,26 +407,26 @@ namespace ntt {
 
   public:
     template <typename U>
-    friend cudaError_t InitDomain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+    friend cudaError_t init_domain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
 
     template <typename U>
-    friend cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
+    friend cudaError_t release_domain(device_context::DeviceContext& ctx);
 
     template <typename U>
-    friend U GetRootOfUnity<U>(uint64_t max_size);
+    friend U get_root_of_unity<U>(uint64_t logn, device_context::DeviceContext& ctx);
 
     template <typename U>
-    friend U GetRootOfUnityFromDomain<U>(uint64_t logn, device_context::DeviceContext& ctx);
+    friend U get_root_of_unity_from_domain<U>(uint64_t logn, device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
-    friend cudaError_t NTT<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
+    friend cudaError_t ntt<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
 
   template <typename S>
   static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
 
   template <typename S>
-  cudaError_t InitDomain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+  cudaError_t init_domain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
     CHK_INIT_IF_RETURN();
 
@@ -510,7 +510,7 @@ namespace ntt {
   }
 
   template <typename S>
-  cudaError_t ReleaseDomain(device_context::DeviceContext& ctx)
+  cudaError_t release_domain(device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
 
@@ -543,17 +543,17 @@ namespace ntt {
   }
 
   template <typename S>
-  S GetRootOfUnity(uint64_t max_size)
+  S get_root_of_unity(uint64_t max_size)
   {
     // ceil up
     const auto log_max_size = static_cast<uint32_t>(std::ceil(std::log2(max_size)));
     return S::omega(log_max_size);
   }
   // explicit instantiation to avoid having to include this file
-  template scalar_t GetRootOfUnity(uint64_t logn);
+  template scalar_t get_root_of_unity(uint64_t logn);
 
   template <typename S>
-  S GetRootOfUnityFromDomain(uint64_t logn, device_context::DeviceContext& ctx)
+  S get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx)
   {
     Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
     if (logn > domain.max_log_size) {
@@ -566,7 +566,7 @@ namespace ntt {
     return domain.twiddles[twiddles_idx];
   }
   // explicit instantiation to avoid having to include this file
-  template scalar_t GetRootOfUnityFromDomain(uint64_t logn, device_context::DeviceContext& ctx);
+  template scalar_t get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx);
 
   template <typename S>
   static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
@@ -641,7 +641,7 @@ namespace ntt {
   }
 
   template <typename S, typename E>
-  cudaError_t NTT(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
+  cudaError_t ntt(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
 
@@ -745,7 +745,7 @@ namespace ntt {
   }
 
   template <typename S>
-  NTTConfig<S> DefaultNTTConfig(const device_context::DeviceContext& ctx)
+  NTTConfig<S> default_ntt_config(const device_context::DeviceContext& ctx)
   {
     NTTConfig<S> config = {
       ctx,                // ctx
@@ -761,5 +761,5 @@ namespace ntt {
     return config;
   }
   // explicit instantiation to avoid having to include this file
-  template NTTConfig<scalar_t> DefaultNTTConfig(const device_context::DeviceContext& ctx);
+  template NTTConfig<scalar_t> default_ntt_config(const device_context::DeviceContext& ctx);
 } // namespace ntt

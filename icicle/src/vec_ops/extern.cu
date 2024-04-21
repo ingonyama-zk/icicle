@@ -13,9 +13,9 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, MulCuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+  CONCAT_EXPAND(FIELD, mul_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
   {
-    return Mul<scalar_t>(vec_a, vec_b, n, config, result);
+    return mul<scalar_t>(vec_a, vec_b, n, config, result);
   }
 
   /**
@@ -25,9 +25,9 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, AddCuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+  CONCAT_EXPAND(FIELD, add_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
   {
-    return Add<scalar_t>(vec_a, vec_b, n, config, result);
+    return add<scalar_t>(vec_a, vec_b, n, config, result);
   }
 
   /**
@@ -37,9 +37,9 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, SubCuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+  CONCAT_EXPAND(FIELD, sub_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
   {
-    return Sub<scalar_t>(vec_a, vec_b, n, config, result);
+    return sub<scalar_t>(vec_a, vec_b, n, config, result);
   }
 
   /**
@@ -48,7 +48,7 @@ namespace vec_ops {
    * or standalone "STARK field" given by `-DFIELD`).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, TransposeMatrix)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, transpose_matrix_cuda)(
     const scalar_t* input,
     uint32_t row_size,
     uint32_t column_size,

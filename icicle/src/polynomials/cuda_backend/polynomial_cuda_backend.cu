@@ -256,7 +256,7 @@ namespace polynomials {
       }
 
       // transform from evaluations to coefficients
-      auto ntt_config = ntt::DefaultNTTConfig<C>(m_device_context);
+      auto ntt_config = ntt::default_ntt_config<C>(m_device_context);
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
       ntt_config.is_async = true;
@@ -265,7 +265,7 @@ namespace polynomials {
         (this->m_state == State::EvaluationsOnRou_Natural) ? ntt::Ordering::kNN : ntt::Ordering::kRN;
       // Note: it is important to do the NTT with old size because padding in evaluations form is computing another
       // (higher order) polynomial
-      CHK_STICKY(ntt::NTT(evals, this->m_nof_elements, ntt::NTTDir::kInverse, ntt_config, coeffs));
+      CHK_STICKY(ntt::ntt(evals, this->m_nof_elements, ntt::NTTDir::kInverse, ntt_config, coeffs));
       this->set_state(State::Coefficients);
 
       if (is_allocate_new_mem) { set_storage(coeffs, nof_coefficients); } // release old memory and use new
@@ -310,13 +310,13 @@ namespace polynomials {
 
       C* coeffs = static_cast<C*>(m_storage);
       I* evals = static_cast<I*>(m_storage);
-      auto ntt_config = ntt::DefaultNTTConfig<C>(m_device_context);
+      auto ntt_config = ntt::default_ntt_config<C>(m_device_context);
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
       ntt_config.is_async = true;
       // already copied the coefficients with padding. Now computing evaluations.
       ntt_config.ordering = is_reversed ? ntt::Ordering::kNR : ntt::Ordering::kNN;
-      CHK_STICKY(ntt::NTT(coeffs, nof_evaluations, ntt::NTTDir::kForward, ntt_config, evals));
+      CHK_STICKY(ntt::ntt(coeffs, nof_evaluations, ntt::NTTDir::kForward, ntt_config, evals));
 
       this->set_state(is_reversed ? State::EvaluationsOnRou_Reversed : State::EvaluationsOnRou_Natural);
     }
@@ -433,7 +433,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (out_size + NOF_THREADS - 1) / NOF_THREADS;
-      Slice<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(in_coeffs, out_coeffs, offset, stride, out_size);
+      slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(in_coeffs, out_coeffs, offset, stride, out_size);
 
       CHK_LAST();
     }
@@ -465,7 +465,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (output_size + NOF_THREADS - 1) / NOF_THREADS;
-      AddSubKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      add_sub_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         a_mem_p, b_mem_p, a->get_nof_elements(), b->get_nof_elements(), add1_sub0, res_mem_p);
 
       CHK_LAST();
@@ -511,7 +511,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      MulScalarKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(p_elements_p, scalar, N, out_evals_p);
+      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(p_elements_p, scalar, N, out_evals_p);
 
       CHK_LAST();
     }
@@ -536,7 +536,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (c_N + NOF_THREADS - 1) / NOF_THREADS;
-      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
+      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
 
       CHK_LAST();
     }
@@ -559,20 +559,20 @@ namespace polynomials {
       I* c_evals_high_p = c_evals_low_p + N;
 
       // (3) compute NTT of a,b on coset and write to c
-      auto ntt_config = ntt::DefaultNTTConfig<C>(m_device_context);
+      auto ntt_config = ntt::default_ntt_config<C>(m_device_context);
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
       ntt_config.is_async = true;
       ntt_config.ordering = ntt::Ordering::kNR;
-      ntt_config.coset_gen = ntt::GetRootOfUnityFromDomain<C>((uint64_t)log2(c_N), ntt_config.ctx);
+      ntt_config.coset_gen = ntt::get_root_of_unity_from_domain<C>((uint64_t)log2(c_N), ntt_config.ctx);
 
-      CHK_STICKY(ntt::NTT(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_low_p));  // a_H1
-      CHK_STICKY(ntt::NTT(b_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p)); // b_H1
+      CHK_STICKY(ntt::ntt(a_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_low_p));  // a_H1
+      CHK_STICKY(ntt::ntt(b_coeff_p, N, ntt::NTTDir::kForward, ntt_config, c_evals_high_p)); // b_H1
 
       // (4) compute a_H1 * b_H1 inplace
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
       // (5) transform a,b to evaluations
       a->transform_to_evaluations(N, true /*=reversed*/);
@@ -581,7 +581,7 @@ namespace polynomials {
       auto [b_evals_p, b_nof_evals] = b->get_rou_evaluations();
 
       // (6) compute a_H0 * b_H0
-      MulKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
+      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
 
       CHK_LAST();
     }
@@ -620,7 +620,7 @@ namespace polynomials {
         // each iteration is removing the largest monomial in r until deg(r)<deg(b)
         const int NOF_THREADS = 128;
         const int NOF_BLOCKS = ((deg_r + 1) + NOF_THREADS - 1) / NOF_THREADS; // 'deg_r+1' is number of elements in R
-        SchoolBookDivisionStep<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        school_book_division_step<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
           R_coeffs, Q_coeffs, b_coeffs, deg_r, deg_b, lc_b_inv);
 
         // faster than degree(R) based on the fact that degree is decreasing
@@ -671,26 +671,26 @@ namespace polynomials {
       // Therefore evaluation on coset is required to compute non-zero evaluations, which make element-wise division
       // possible
       auto out_coeffs = get_context_storage_mutable(out);
-      auto ntt_config = ntt::DefaultNTTConfig<C>(m_device_context);
+      auto ntt_config = ntt::default_ntt_config<C>(m_device_context);
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
       ntt_config.is_async = true;
       ntt_config.ordering = ntt::Ordering::kNM;
-      ntt_config.coset_gen = ntt::GetRootOfUnityFromDomain<C>((uint64_t)log2(2 * N), ntt_config.ctx);
+      ntt_config.coset_gen = ntt::get_root_of_unity_from_domain<C>((uint64_t)log2(2 * N), ntt_config.ctx);
 
-      CHK_STICKY(ntt::NTT(out_coeffs, N, ntt::NTTDir::kForward, ntt_config, out_coeffs));
-      CHK_STICKY(ntt::NTT(numerator_coeffs, N, ntt::NTTDir::kForward, ntt_config, numerator_coeffs));
+      CHK_STICKY(ntt::ntt(out_coeffs, N, ntt::NTTDir::kForward, ntt_config, out_coeffs));
+      CHK_STICKY(ntt::ntt(numerator_coeffs, N, ntt::NTTDir::kForward, ntt_config, numerator_coeffs));
 
       // (3) element wise division
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      DivElementWiseKernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      div_element_wise_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         numerator_coeffs, out_coeffs, N, out_coeffs);
 
       // (4) INTT back both a and out
       ntt_config.ordering = ntt::Ordering::kMN;
-      CHK_STICKY(ntt::NTT(out_coeffs, N, ntt::NTTDir::kInverse, ntt_config, out_coeffs));
-      CHK_STICKY(ntt::NTT(numerator_coeffs, N, ntt::NTTDir::kInverse, ntt_config, numerator_coeffs));
+      CHK_STICKY(ntt::ntt(out_coeffs, N, ntt::NTTDir::kInverse, ntt_config, out_coeffs));
+      CHK_STICKY(ntt::ntt(numerator_coeffs, N, ntt::NTTDir::kInverse, ntt_config, numerator_coeffs));
     }
 
     // arithmetic with monomials
@@ -699,7 +699,7 @@ namespace polynomials {
       const uint64_t new_nof_elements = max(poly->get_nof_elements(), monomial + 1);
       poly->transform_to_coefficients(new_nof_elements);
       auto coeffs = get_context_storage_mutable(poly);
-      AddSingleElementInplace<<<1, 1, 0, m_device_context.stream>>>(coeffs + monomial, monomial_coeff);
+      add_single_element_inplace<<<1, 1, 0, m_device_context.stream>>>(coeffs + monomial, monomial_coeff);
 
       CHK_LAST();
     }
@@ -720,7 +720,7 @@ namespace polynomials {
       auto [coeff, _] = p->get_coefficients();
 
       int64_t h_degree;
-      HighestNonZeroIdx<<<1, 1, 0, m_device_context.stream>>>(coeff, len, d_degree);
+      highest_non_zero_idx<<<1, 1, 0, m_device_context.stream>>>(coeff, len, d_degree);
       CHK_STICKY(
         cudaMemcpyAsync(&h_degree, d_degree, sizeof(int64_t), cudaMemcpyDeviceToHost, m_device_context.stream));
       CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
@@ -754,9 +754,9 @@ namespace polynomials {
       CHK_STICKY(cudaMallocAsync(&d_tmp, sizeof(I) * nof_coeff, m_device_context.stream));
       const int NOF_THREADS = 32;
       const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
-      evaluatePolynomialWithoutReduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      evaluate_polynomial_without_reduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         d_x, coeff, nof_coeff, d_tmp); // TODO Yuval: parallelize kernel
-      dummyReduce<<<1, 1, 0, m_device_context.stream>>>(d_tmp, nof_coeff, d_eval);
+      dummy_reduce<<<1, 1, 0, m_device_context.stream>>>(d_tmp, nof_coeff, d_eval);
 
       if (is_eval_on_host) {
         CHK_STICKY(cudaMemcpyAsync(eval, d_eval, sizeof(I), cudaMemcpyDeviceToHost, m_device_context.stream));

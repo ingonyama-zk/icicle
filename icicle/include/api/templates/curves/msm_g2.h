@@ -1,4 +1,4 @@
-extern "C" cudaError_t ${CURVE}G2PrecomputeMSMBases(
+extern "C" cudaError_t ${CURVE}_g2_precompute_msm_bases(
   ${CURVE}::g2_affine_t* bases,
   int bases_size,
   int precompute_factor,
@@ -7,5 +7,5 @@ extern "C" cudaError_t ${CURVE}G2PrecomputeMSMBases(
   device_context::DeviceContext& ctx,
   ${CURVE}::g2_affine_t* output_bases);
 
-extern "C" cudaError_t ${CURVE}G2MSMCuda(
+extern "C" cudaError_t ${CURVE}_g2_msm_cuda(
   const ${CURVE}::scalar_t* scalars, const ${CURVE}::g2_affine_t* points, int msm_size, msm::MSMConfig& config, ${CURVE}::g2_projective_t* out);

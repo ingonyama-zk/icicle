@@ -129,8 +129,8 @@ int main()
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];
 
-  test_scalar::RandHostMany(scalars, N);
-  test_projective::RandHostManyAffine(points, N);
+  test_scalar::rand_host_many(scalars, N);
+  test_projective::rand_host_many_affine(points, N);
 
   std::cout << "finished generating" << std::endl;
 
@@ -187,7 +187,7 @@ int main()
   };
 
   auto begin1 = std::chrono::high_resolution_clock::now();
-  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res_d);
+  msm::msm<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res_d);
   cudaEvent_t msm_end_event;
   cudaEventCreate(&msm_end_event);
   auto end1 = std::chrono::high_resolution_clock::now();
@@ -199,7 +199,7 @@ int main()
   std::cout << test_projective::to_affine(large_res[1]) << " " << test_projective::is_on_curve(large_res[1])
             << std::endl;
   auto begin = std::chrono::high_resolution_clock::now();
-  msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res);
+  msm::msm<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   // test_reduce_single(scalars);

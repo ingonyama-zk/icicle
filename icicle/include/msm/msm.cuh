@@ -32,7 +32,7 @@ namespace msm {
   /**
    * @struct MSMConfig
    * Struct that encodes MSM parameters to be passed into the [MSM](@ref MSM) function. The intended use of this struct
-   * is to create it using [DefaultMSMConfig](@ref DefaultMSMConfig) function and then you'll hopefully only need to
+   * is to create it using [default_msm_config](@ref default_msm_config) function and then you'll hopefully only need to
    * change a small number of default values for each of your MSMs.
    */
   struct MSMConfig {
@@ -43,7 +43,7 @@ namespace msm {
                               *   points, it should be set to the product of MSM size and [batch_size](@ref
                               *   batch_size). Default value: 0 (meaning it's equal to the MSM size). */
     int precompute_factor;   /**< The number of extra points to pre-compute for each point. See the
-                              *   [PrecomputeMSMBases](@ref PrecomputeMSMBases) function, `precompute_factor` passed
+                              *   [precompute_msm_bases](@ref precompute_msm_bases) function, `precompute_factor` passed
                               *   there needs to be equal to the one used here. Larger values decrease the
                               *   number of computations to make, on-line memory footprint, but increase the static
                               *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
@@ -52,7 +52,7 @@ namespace msm {
                               *   means more on-line memory footprint but also more parallelism and less computational
                               *   complexity (up to a certain point). Currently pre-computation is independent of
                               *   \f$ c \f$, however in the future value of \f$ c \f$ here and the one passed into the
-                              *   [PrecomputeMSMBases](@ref PrecomputeMSMBases) function will need to be identical.
+                              *   [precompute_msm_bases](@ref precompute_msm_bases) function will need to be identical.
                               *    Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically).  */
     int bitsize;             /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
                               *   but if a different (better) upper bound is known, it should be reflected in this
@@ -86,7 +86,7 @@ namespace msm {
    * @return Default value of [MSMConfig](@ref MSMConfig).
    */
   static MSMConfig
-  DefaultMSMConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
+  default_msm_config(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
   {
     MSMConfig config = {
       ctx,   // ctx
@@ -125,7 +125,7 @@ namespace msm {
    *
    */
   template <typename S, typename A, typename P>
-  cudaError_t MSM(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results);
+  cudaError_t msm(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results);
 
   /**
    * A function that precomputes MSM bases by extending them with their shifted copies.
@@ -148,7 +148,7 @@ namespace msm {
    *
    */
   template <typename A, typename P>
-  cudaError_t PrecomputeMSMBases(
+  cudaError_t precompute_msm_bases(
     A* bases,
     int bases_size,
     int precompute_factor,

@@ -1,13 +1,13 @@
-extern "C" cudaError_t ${FIELD}MulCuda(
+extern "C" cudaError_t ${FIELD}_mul_cuda(
   ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 
-extern "C" cudaError_t ${FIELD}AddCuda(
+extern "C" cudaError_t ${FIELD}_add_cuda(
   ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 
-extern "C" cudaError_t ${FIELD}SubCuda(
+extern "C" cudaError_t ${FIELD}_sub_cuda(
   ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 
-extern "C" cudaError_t ${FIELD}TransposeMatrix(
+extern "C" cudaError_t ${FIELD}_transpose_matrix_cuda(
   const ${FIELD}::scalar_t* input,
   uint32_t row_size,
   uint32_t column_size,
