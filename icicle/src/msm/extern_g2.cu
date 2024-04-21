@@ -14,7 +14,7 @@ namespace msm {
    *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, g2_precompute_msm_bases)(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, g2_precompute_msm_bases_cuda)(
     g2_affine_t* bases,
     int bases_size,
     int precompute_factor,

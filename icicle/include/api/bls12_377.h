@@ -16,7 +16,7 @@
 #include "poseidon/poseidon.cuh"
 #include "poseidon/tree/merkle.cuh"
 
-extern "C" cudaError_t bls12_377_g2_precompute_msm_bases(
+extern "C" cudaError_t bls12_377_g2_precompute_msm_bases_cuda(
   bls12_377::g2_affine_t* bases,
   int bases_size,
   int precompute_factor,

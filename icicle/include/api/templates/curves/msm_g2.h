@@ -1,4 +1,4 @@
-extern "C" cudaError_t ${CURVE}_g2_precompute_msm_bases(
+extern "C" cudaError_t ${CURVE}_g2_precompute_msm_bases_cuda(
   ${CURVE}::g2_affine_t* bases,
   int bases_size,
   int precompute_factor,
