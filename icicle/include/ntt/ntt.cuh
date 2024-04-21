@@ -62,6 +62,13 @@ namespace ntt {
   template <typename S>
   S get_root_of_unity(uint64_t max_size);
 
+  /* Returns the basic root of unity Wn
+   * @param logn log size of the required root.
+   * @return Wn root of unity
+   */
+  template <typename S>
+  S GetRootOfUnity(uint64_t max_size);
+
   /* Returns the basic root of unity Wn corresponding to the basic root used to initialize the domain.
    * This function can be called only after InitializeDomain()!
    * Useful when computing NTT on cosets. In that case we must use the root W_2n that is between W_n and W_n+1.
