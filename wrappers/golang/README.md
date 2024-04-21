@@ -4,7 +4,7 @@ In order to build the underlying ICICLE libraries you should run the build scrip
 
 Build script USAGE
 
-```
+```bash
 ./build.sh <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
 
 curve - The name of the curve to build or "all" to build all curves
@@ -26,7 +26,7 @@ If you wish to build for a specific curve, for example bn254, without G2 or ECNT
 ```
 
 >[!NOTE]
->Current supported curves are `bn254`, `bls12_381`, `bls12_377` and `bw6_671`
+>Current supported curves are `bn254`, `bls12_381`, `bls12_377`, `bw6_671` and `grumpkin`
 
 >[!NOTE]
 >G2 and ECNTT are located in nested packages
@@ -35,13 +35,13 @@ If you wish to build for a specific curve, for example bn254, without G2 or ECNT
 
 To run the tests for curve bn254.
 
-```
+```bash
 go test ./wrappers/golang/curves/bn254 -count=1
 ```
 
 To run all the tests in the golang bindings
 
-```
+```bash
 go test ./... -count=1
 ```
 
@@ -55,7 +55,7 @@ The libraries produced from the CUDA code compilation are used to bind Golang to
 
 ```go
 /*
-#cgo LDFLAGS: -L$/path/to/shared/libs/curves -L$/path/to/shared/libs/fields -lingo_curve_bn254 -lingo_field_bn254 -lstdc++ -lm
+#cgo LDFLAGS: -L$/path/to/shared/libs -lingo_curve_bn254 -L$/path/to/shared/libs -lingo_field_bn254 -lstdc++ -lm
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"
