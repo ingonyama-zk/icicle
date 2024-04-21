@@ -21,11 +21,6 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "ICICLE Provers",
-          id: "icicle/integrations"
-        },
-        {
-          type: "doc",
           label: "ICICLE Core",
           id: "icicle/core",
         },
@@ -148,6 +143,11 @@ module.exports = {
           type: "doc",
           label: "Google Colab Instructions",
           id: "icicle/colab-instructions",
+        },
+        {
+          type: "doc",
+          label: "ICICLE Provers",
+          id: "icicle/integrations"
         },
       ]
     },
