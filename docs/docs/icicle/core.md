@@ -127,13 +127,21 @@ Default: `OFF`
 
 USAGE: `-DBUILD_TESTS=ON`
 
-### BUILD_BENCHMARKS
+#### BUILD_BENCHMARKS
 
 Can be used in any mode to include benchmarks runner binary.
 
 Default: `OFF`
 
 USAGE: `-DBUILD_BENCHMARKS=ON`
+
+#### DEVMODE
+
+Can be used in any mode to include debug symbols in the build.
+
+Default: `OFF`
+
+USAGE: `-DEVMODE=ON`
 
 ## Linking
 
