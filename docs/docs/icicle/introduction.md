@@ -12,9 +12,9 @@ ICICLE Core compiles into a static library. This library can be used with our of
 
 Based on this dependency architecture, the ICICLE repository has three main sections:
 
-- ICICLE core
-- ICICLE Rust bindings
-- ICICLE Golang bindings
+- [ICICLE Core](#icicle-core)
+- [ICICLE Rust bindings](#icicle-rust-and-golang-bindings)
+- [ICICLE Golang bindings](#icicle-rust-and-golang-bindings)
 
 ### ICICLE Core
 

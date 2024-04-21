@@ -146,11 +146,6 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Supporting additional curves",
-          id: "icicle/supporting-additional-curves",
-        },
-        {
-          type: "doc",
           label: "Google Colab Instructions",
           id: "icicle/colab-instructions",
         },
