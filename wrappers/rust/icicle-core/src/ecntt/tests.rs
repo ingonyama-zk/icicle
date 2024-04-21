@@ -12,9 +12,9 @@ use crate::ntt::NTTConfig;
 
 pub fn check_ecntt<C: Curve>()
 where
-    <<C as Curve>::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
-    let test_sizes = [1 << 4];
+    let test_sizes = [1 << 4, 1 << 9];
     for test_size in test_sizes {
         let points = C::generate_random_projective_points(test_size);
 
@@ -38,8 +38,8 @@ pub fn check_ecntt_batch<C: Curve>()
 where
     <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
-    let test_sizes = [1 << 4, 1 << 10];
-    let batch_sizes = [1];
+    let test_sizes = [1 << 4, 1 << 9];
+    let batch_sizes = [1, 1 << 4, 21];
     for test_size in test_sizes {
         // let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
         let mut config: NTTConfig<'_, C::ScalarField> = NTTConfig::default();

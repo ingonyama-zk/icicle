@@ -7,13 +7,14 @@ use crate::{
 
 pub use crate::curve::Projective;
 
-#[cfg(feature = "arkworks")]
+// #[cfg(feature = "arkworks")] //TODO: uncomment on correctness test
 #[doc(hidden)]
 pub mod tests;
 
 #[doc(hidden)]
 pub trait ECNTT<C: Curve>: ECNTTUnchecked<Projective<C>, C::ScalarField> {}
 
+#[doc(hidden)]
 pub trait ECNTTUnchecked<T, F: FieldImpl> {
     fn ntt_unchecked(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
@@ -68,17 +69,17 @@ macro_rules! impl_ecntt {
     };
 }
 
-/// Computes the ECNTT, or a batch of several NTTs.
+/// Computes the ECNTT, or a batch of several ECNTTs.
 ///
 /// # Arguments
 ///
-/// * `input` - inputs of the NTT.
+/// * `input` - inputs of the ECNTT.
 ///
-/// * `dir` - whether to compute forward of inverse NTT.
+/// * `dir` - whether to compute forward of inverse ECNTT.
 ///
-/// * `cfg` - config used to specify extra arguments of the NTT.
+/// * `cfg` - config used to specify extra arguments of the ECNTT.
 ///
-/// * `output` - buffer to write the NTT outputs into. Must be of the same size as `input`.
+/// * `output` - buffer to write the ECNTT outputs into. Must be of the same size as `input`.
 pub fn ecntt<C: Curve>(
     input: &(impl HostOrDeviceSlice<Projective<C>> + ?Sized),
     dir: NTTDir,
@@ -94,15 +95,15 @@ where
     )
 }
 
-/// Computes the ECNTT, or a batch of several NTTs inplace.
+/// Computes the ECNTT, or a batch of several ECNTTs inplace.
 ///
 /// # Arguments
 ///
-/// * `inout` - buffer with inputs to also write the NTT outputs into.
+/// * `inout` - buffer with inputs to also write the ECNTT outputs into.
 ///
-/// * `dir` - whether to compute forward of inverse NTT.
+/// * `dir` - whether to compute forward of inverse ECNTT.
 ///
-/// * `cfg` - config used to specify extra arguments of the NTT.
+/// * `cfg` - config used to specify extra arguments of the ECNTT.
 pub fn ecntt_inplace<C: Curve>(
     inout: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
     dir: NTTDir,
@@ -154,28 +155,28 @@ macro_rules! impl_ecntt_bench {
     (
       $field_prefix:literal,
       $field:ident,
-      $base_field:ident,
       $curve:ident
     ) => {
+        use icicle_core::ntt::ntt;
+        use icicle_core::ntt::NTTDomain;
+        use icicle_cuda_runtime::memory::HostOrDeviceSlice;
         use std::sync::OnceLock;
-
-        #[cfg(feature = "arkworks")]
-        use ark_ff::FftField;
 
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
         use icicle_core::{
-            traits::ArkConvertible,
             curve::Curve,
             ecntt::{ecntt, Projective},
-            ntt::{FieldImpl, HostOrDeviceSlice, NTTConfig, NTTDir, NttAlgorithm, Ordering},
+            ntt::{FieldImpl, NTTConfig, NTTDir, NttAlgorithm, Ordering},
+            traits::ArkConvertible,
         };
 
         use icicle_core::ecntt::ECNTT;
         use icicle_core::ntt::NTT;
+        use icicle_cuda_runtime::memory::HostSlice;
 
-        fn ecntt_for_bench<F: FieldImpl + ArkConvertible, C: Curve>(
-            points: &HostOrDeviceSlice<Projective<C>>,
-            mut batch_ntt_result: &mut HostOrDeviceSlice<Projective<C>>,
+        fn ecntt_for_bench<C: Curve>(
+            points: &(impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+            mut batch_ntt_result: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
             test_sizes: usize,
             batch_size: usize,
             is_inverse: NTTDir,
@@ -183,22 +184,26 @@ macro_rules! impl_ecntt_bench {
             config: &mut NTTConfig<C::ScalarField>,
             _seed: u32,
         ) where
-            <C::BaseField as FieldImpl>::Config: NTT<Projective<C>, F>,
+            C::ScalarField: ArkConvertible,
+            <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+            <C::ScalarField as FieldImpl>::Config: NTTDomain<C::ScalarField>,
         {
-            ntt(&points, is_inverse, config, &mut batch_ntt_result).unwrap();
+            ecntt(points, is_inverse, config, batch_ntt_result).unwrap();
         }
 
         static INIT: OnceLock<()> = OnceLock::new();
 
-        fn benchmark_ecntt<F: FieldImpl + ArkConvertible, C: Curve>(c: &mut Criterion)
+        fn benchmark_ecntt<C: Curve>(c: &mut Criterion)
         where
-            F::ArkEquivalent: FftField,
-            <F as FieldImpl>::Config: NTT<Projective<C>, F>,
-            <F as FieldImpl>::Config: NTTDomain<F>
+            C::ScalarField: ArkConvertible,
+            <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+            <C::ScalarField as FieldImpl>::Config: NTTDomain<C::ScalarField>,
         {
-            use icicle_core::ntt::tests::init_domain;
-            use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
             use criterion::SamplingMode;
+            use icicle_core::ntt::ntt;
+            use icicle_core::ntt::tests::init_domain;
+            use icicle_core::ntt::NTTDomain;
+            use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
 
             let group_id = format!("{} EC NTT", $field_prefix);
             let mut group = c.benchmark_group(&group_id);
@@ -207,14 +212,17 @@ macro_rules! impl_ecntt_bench {
 
             const MAX_SIZE: u64 = 1 << 18;
             const FAST_TWIDDLES_MODE: bool = false;
-            INIT.get_or_init(move || init_domain::<F>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
+
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
 
             let test_sizes = [1 << 4, 1 << 8];
             let batch_sizes = [1, 1 << 4, 128];
             for test_size in test_sizes {
                 for batch_size in batch_sizes {
-                    let points = HostOrDeviceSlice::on_host(C::generate_random_projective_points(test_size * batch_size));
-                    let mut batch_ntt_result = HostOrDeviceSlice::on_host(vec![Projective::zero(); batch_size * test_size]);
+                    let points = C::generate_random_projective_points(test_size);
+                    let points = HostSlice::from_slice(&points);
+                    let mut batch_ntt_result = vec![Projective::<C>::zero(); batch_size * test_size];
+                    let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
                     let mut config = NTTConfig::default();
                     for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
                         for ordering in [
@@ -229,12 +237,15 @@ macro_rules! impl_ecntt_bench {
                             for alg in [NttAlgorithm::Radix2] {
                                 config.batch_size = batch_size as i32;
                                 config.ntt_algorithm = alg;
-                                let bench_descr = format!("{:?} {:?} {:?} {} x {}", alg, ordering, is_inverse, test_size, batch_size);
+                                let bench_descr = format!(
+                                    "{:?} {:?} {:?} {} x {}",
+                                    alg, ordering, is_inverse, test_size, batch_size
+                                );
                                 group.bench_function(&bench_descr, |b| {
                                     b.iter(|| {
-                                        ecntt_for_bench::<F, C>(
-                                            &points,
-                                            &mut batch_ntt_result,
+                                        ecntt_for_bench::<C>(
+                                            points,
+                                            batch_ntt_result,
                                             test_size,
                                             batch_size,
                                             is_inverse,
@@ -253,7 +264,7 @@ macro_rules! impl_ecntt_bench {
             group.finish();
         }
 
-        criterion_group!(benches, benchmark_ecntt<$field, $curve>);
+        criterion_group!(benches, benchmark_ecntt<$curve>);
         criterion_main!(benches);
     };
 }
