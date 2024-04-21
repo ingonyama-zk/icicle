@@ -8,7 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761"
+	bw6_761 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761"
 )
 
 type PolynomialHandle = C.struct_PolynomialInst

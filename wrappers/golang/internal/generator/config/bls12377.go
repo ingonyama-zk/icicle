@@ -6,6 +6,7 @@ func init() {
 		Curve:               "bls12_377",
 		GnarkImport:         "bls12-377",
 		SupportsPoly:        true,
+		SupportsPoseidon:        true,
 		SupportsNTT:         true,
 		SupportsECNTT:       true,
 		SupportsG2:          true,

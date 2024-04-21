@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761"
+	bw6_761 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761/ntt"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761/vecOps"
 	"github.com/stretchr/testify/assert"

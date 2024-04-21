@@ -8,7 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
+	babybear "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
 )
 
 type PolynomialHandle = C.struct_PolynomialInst

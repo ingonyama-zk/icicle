@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377"
+	bls12_377 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377/ntt"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12377/vecOps"
 	"github.com/stretchr/testify/assert"
@@ -90,7 +90,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestPolyCreateFromCoefficients(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	scalars := bls12_377.GenerateScalars(33)
 	var uniPoly DensePolynomial
 

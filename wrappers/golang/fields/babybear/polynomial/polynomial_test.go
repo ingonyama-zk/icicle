@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
+	babybear "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/ntt"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/vecOps"
 	"github.com/stretchr/testify/assert"
