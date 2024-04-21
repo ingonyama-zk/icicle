@@ -6,18 +6,17 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 const (
-	SCALAR_LIMBS int = 4
+	SCALAR_LIMBS int = 8
 )
 
 type ScalarField struct {
-	limbs [SCALAR_LIMBS]uint64
+	limbs [SCALAR_LIMBS]uint32
 }
 
 func (f ScalarField) Len() int {
@@ -25,18 +24,23 @@ func (f ScalarField) Len() int {
 }
 
 func (f ScalarField) Size() int {
-	return int(SCALAR_LIMBS * 8)
+	return int(SCALAR_LIMBS * 4)
 }
 
-func (f ScalarField) GetLimbs() []uint64 {
+func (f ScalarField) GetLimbs() []uint32 {
 	return f.limbs[:]
 }
 
-func (f ScalarField) AsPointer() *uint64 {
+func (f ScalarField) AsPointer() *uint32 {
 	return &f.limbs[0]
 }
 
-func (f *ScalarField) FromLimbs(limbs []uint64) ScalarField {
+func (f *ScalarField) FromUint32(v uint32) ScalarField {
+	f.limbs[SCALAR_LIMBS-1] = v
+	return *f
+}
+
+func (f *ScalarField) FromLimbs(limbs []uint32) ScalarField {
 	if len(limbs) != f.Len() {
 		panic("Called FromLimbs with limbs of different length than field")
 	}
@@ -65,21 +69,21 @@ func (f *ScalarField) One() ScalarField {
 }
 
 func (f *ScalarField) FromBytesLittleEndian(bytes []byte) ScalarField {
-	if len(bytes)/8 != f.Len() {
-		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*8, len(bytes)))
+	if len(bytes)/4 != f.Len() {
+		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*4, len(bytes)))
 	}
 
 	for i := range f.limbs {
-		f.limbs[i] = binary.LittleEndian.Uint64(bytes[i*8 : i*8+8])
+		f.limbs[i] = binary.LittleEndian.Uint32(bytes[i*4 : i*4+4])
 	}
 
 	return *f
 }
 
 func (f ScalarField) ToBytesLittleEndian() []byte {
-	bytes := make([]byte, f.Len()*8)
+	bytes := make([]byte, f.Len()*4)
 	for i, v := range f.limbs {
-		binary.LittleEndian.PutUint64(bytes[i*8:], v)
+		binary.LittleEndian.PutUint32(bytes[i*4:], v)
 	}
 
 	return bytes

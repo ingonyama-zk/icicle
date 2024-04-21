@@ -33,13 +33,23 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true'
       run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
 
-  build-linux:
-    name: Build on Linux
+  build-curves-linux:
+    name: Build curves on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
     needs: [check-changed-files, check-format]
     strategy:
       matrix:
-        curve: [bn254, bls12_381, bls12_377, bw6_761]
+        curve: 
+          - name: bn254
+            build_args: -g2 -ecntt
+          - name: bls12_381
+            build_args: -g2 -ecntt
+          - name: bls12_377
+            build_args: -g2 -ecntt
+          - name: bw6_761
+            build_args: -g2 -ecntt
+          - name: grumpkin
+            build_args:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -50,21 +60,50 @@ jobs:
     - name: Build
       working-directory: ./wrappers/golang
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ./build.sh ${{ matrix.curve }} -g2 -ecntt # builds a single curve with G2 and ECNTT enabled
+      run: ./build.sh -curve=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} # builds a single curve with G2 and ECNTT enabled
     - name: Upload ICICLE lib artifacts
       uses: actions/upload-artifact@v4
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       with:
-        name: icicle-builds-${{ matrix.curve }}-${{ github.workflow }}-${{ github.sha }}
+        name: icicle-builds-${{ matrix.curve.name }}-${{ github.workflow }}-${{ github.sha }}
         path: |
-          icicle/build/lib/libingo_curve_${{ matrix.curve }}.a
-          icicle/build/lib/libingo_field_${{ matrix.curve }}.a
+          icicle/build/lib/libingo_curve_${{ matrix.curve.name }}.a
+          icicle/build/lib/libingo_field_${{ matrix.curve.name }}.a
+        retention-days: 1
+ 
+  build-fields-linux:
+    name: Build fields on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format]
+    strategy:
+      matrix:
+        field:
+          - name: babybear
+            build_args: -field-ext
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
+    - name: Build
+      working-directory: ./wrappers/golang
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      run: ./build.sh -field=${{ matrix.field.name }} ${{ matrix.field.build_args }} # builds a single field with field-ext enabled
+    - name: Upload ICICLE lib artifacts
+      uses: actions/upload-artifact@v4
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      with:
+        name: icicle-builds-${{ matrix.field.name }}-${{ github.workflow }}-${{ github.sha }}
+        path: |
+          icicle/build/lib/libingo_field_${{ matrix.field.name }}.a
         retention-days: 1
   
   test-linux:
     name: Test on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, build-linux]
+    needs: [check-changed-files, build-curves-linux, build-fields-linux]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -85,7 +124,7 @@ jobs:
       # -p controls the number of programs that can be run in parallel
       run: |
         export CPATH=$CPATH:/usr/local/cuda/include
-        go test --tags=g2 ./... -count=1 -failfast -p 2 -timeout 60m
+        go test ./... -count=1 -failfast -p 2 -timeout 60m
   
   # TODO: bw6 on windows requires more memory than the standard runner has
   # Add a large runner and then enable this job

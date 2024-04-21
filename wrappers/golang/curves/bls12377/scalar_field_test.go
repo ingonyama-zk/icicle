@@ -1,16 +1,15 @@
 package bls12377
 
 import (
-	"testing"
-
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestScalarFieldFromLimbs(t *testing.T) {
 	emptyField := ScalarField{}
-	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the ScalarField's limbs")
 	randLimbs[0] = 100
@@ -19,7 +18,7 @@ func TestScalarFieldFromLimbs(t *testing.T) {
 
 func TestScalarFieldGetLimbs(t *testing.T) {
 	emptyField := ScalarField{}
-	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ScalarField's limbs")
@@ -28,10 +27,10 @@ func TestScalarFieldGetLimbs(t *testing.T) {
 func TestScalarFieldOne(t *testing.T) {
 	var emptyField ScalarField
 	emptyField.One()
-	limbOne := generateLimbOne(int(SCALAR_LIMBS))
+	limbOne := test_helpers.GenerateLimbOne(int(SCALAR_LIMBS))
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
 
-	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
@@ -41,10 +40,10 @@ func TestScalarFieldOne(t *testing.T) {
 func TestScalarFieldZero(t *testing.T) {
 	var emptyField ScalarField
 	emptyField.Zero()
-	limbsZero := make([]uint64, SCALAR_LIMBS)
+	limbsZero := make([]uint32, SCALAR_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
-	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
@@ -53,15 +52,15 @@ func TestScalarFieldZero(t *testing.T) {
 
 func TestScalarFieldSize(t *testing.T) {
 	var emptyField ScalarField
-	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*8, emptyField.Size(), "Size returned an incorrect value of bytes")
+	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
 func TestScalarFieldAsPointer(t *testing.T) {
 	var emptyField ScalarField
-	randLimbs := generateRandomLimb(int(SCALAR_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
@@ -69,7 +68,7 @@ func TestScalarFieldAsPointer(t *testing.T) {
 
 func TestScalarFieldFromBytes(t *testing.T) {
 	var emptyField ScalarField
-	bytes, expected := generateBytesArray(int(SCALAR_LIMBS))
+	bytes, expected := test_helpers.GenerateBytesArray(int(SCALAR_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
 
@@ -78,7 +77,7 @@ func TestScalarFieldFromBytes(t *testing.T) {
 
 func TestScalarFieldToBytes(t *testing.T) {
 	var emptyField ScalarField
-	expected, limbs := generateBytesArray(int(SCALAR_LIMBS))
+	expected, limbs := test_helpers.GenerateBytesArray(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(limbs)
 
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")

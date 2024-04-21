@@ -5,37 +5,17 @@ package ecntt
 import "C"
 
 import (
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
 func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
-	core.NttCheck(points, cfg, results)
+	pointsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](points, cfg, results)
 
-	var pointsPointer unsafe.Pointer
-	if points.IsOnDevice() {
-		pointsDevice := points.(core.DeviceSlice)
-		pointsDevice.CheckDevice()
-		pointsPointer = pointsDevice.AsUnsafePointer()
-	} else {
-		pointsPointer = points.AsUnsafePointer()
-	}
 	cPoints := (*C.projective_t)(pointsPointer)
-
-	cSize := (C.int)(points.Len() / int(cfg.BatchSize))
+	cSize := (C.int)(size)
 	cDir := (C.int)(dir)
-	cCfg := (*C.NTTConfig)(unsafe.Pointer(cfg))
-
-	var resultsPointer unsafe.Pointer
-	if results.IsOnDevice() {
-		resultsDevice := results.(core.DeviceSlice)
-		resultsDevice.CheckDevice()
-		resultsPointer = resultsDevice.AsUnsafePointer()
-	} else {
-		resultsPointer = results.AsUnsafePointer()
-	}
+	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.projective_t)(resultsPointer)
 
 	__ret := C.bw6_761ECNTTCuda(cPoints, cSize, cDir, cCfg, cResults)

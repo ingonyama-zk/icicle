@@ -194,7 +194,7 @@ func (h HostSlice[T]) AsPointer() *T {
 }
 
 func (h HostSlice[T]) AsUnsafePointer() unsafe.Pointer {
-	return unsafe.Pointer(h.AsPointer())
+	return unsafe.Pointer(&h[0])
 }
 
 func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *DeviceSlice {
@@ -207,8 +207,7 @@ func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *Devic
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	hostSrc := h.AsUnsafePointer()
-	cr.CopyToDevice(dst.inner, hostSrc, uint(size))
+	cr.CopyToDevice(dst.inner, h.AsUnsafePointer(), uint(size))
 	dst.length = h.Len()
 	return dst
 }
@@ -223,8 +222,7 @@ func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, 
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	hostSrc := h.AsUnsafePointer()
-	cr.CopyToDeviceAsync(dst.inner, hostSrc, uint(size), stream)
+	cr.CopyToDeviceAsync(dst.inner, h.AsUnsafePointer(), uint(size), stream)
 	dst.length = h.Len()
 	return dst
 }
