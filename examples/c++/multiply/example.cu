@@ -17,7 +17,7 @@ int vector_mult(T* vec_b, T* vec_a, T* vec_result, size_t n_elments, device_cont
   config.is_a_on_device = true;
   config.is_b_on_device = true;
   config.is_result_on_device = true;
-  cudaError_t err =  bn254MulCuda(vec_a, vec_b, n_elments, config, vec_result);
+  cudaError_t err =  bn254_mul_cuda(vec_a, vec_b, n_elments, config, vec_result);
   if (err != cudaSuccess) {
     std::cerr << "Failed to multiply vectors - " << cudaGetErrorString(err) << std::endl;
     return 0;
