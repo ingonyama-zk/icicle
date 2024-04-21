@@ -29,6 +29,7 @@ pub trait FieldImpl:
     fn from_bytes_le(bytes: &[u8]) -> Self;
     fn zero() -> Self;
     fn one() -> Self;
+    fn from_u32(val: u32) -> Self;
 }
 
 #[cfg(feature = "arkworks")]

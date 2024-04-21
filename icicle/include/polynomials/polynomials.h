@@ -66,16 +66,16 @@ namespace polynomials {
 
     // Evaluation methods
     Image operator()(const Domain& x) const;
-    Image evaluate(const Domain& x) const;
+    void evaluate(const Domain* x, Image* eval /*OUT*/) const;
     void evaluate_on_domain(Domain* domain, uint64_t size, Image* evals /*OUT*/) const; // caller allocates memory
 
     // Method to obtain the degree of the polynomial
     int64_t degree();
 
     // Methods for copying coefficients to host memory.
-    Coeff copy_coefficient_to_host(uint64_t idx) const; // single coefficient
+    Coeff get_coeff(uint64_t idx) const; // single coefficient
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
-    int64_t copy_coefficients_to_host(Coeff* host_coeffs = nullptr, int64_t start_idx = 0, int64_t end_idx = -1) const;
+    uint64_t copy_coeffs(Coeff* host_coeffs, uint64_t start_idx, uint64_t end_idx) const;
 
     // Methods for obtaining a view of the coefficients or evaluations
     std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view();

@@ -413,7 +413,10 @@ namespace ntt {
     friend cudaError_t ReleaseDomain(device_context::DeviceContext& ctx);
 
     template <typename U>
-    friend U GetRootOfUnity<U>(uint64_t logn, device_context::DeviceContext& ctx);
+    friend U GetRootOfUnity<U>(uint64_t max_size);
+
+    template <typename U>
+    friend U GetRootOfUnityFromDomain<U>(uint64_t logn, device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
     friend cudaError_t NTT<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
@@ -540,7 +543,17 @@ namespace ntt {
   }
 
   template <typename S>
-  S GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx)
+  S GetRootOfUnity(uint64_t max_size)
+  {
+    // ceil up
+    const auto log_max_size = static_cast<uint32_t>(std::ceil(std::log2(max_size)));
+    return S::omega(log_max_size);
+  }
+  // explicit instantiation to avoid having to include this file
+  template scalar_t GetRootOfUnity(uint64_t logn);
+
+  template <typename S>
+  S GetRootOfUnityFromDomain(uint64_t logn, device_context::DeviceContext& ctx)
   {
     Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
     if (logn > domain.max_log_size) {
@@ -553,7 +566,7 @@ namespace ntt {
     return domain.twiddles[twiddles_idx];
   }
   // explicit instantiation to avoid having to include this file
-  template scalar_t GetRootOfUnity(uint64_t logn, device_context::DeviceContext& ctx);
+  template scalar_t GetRootOfUnityFromDomain(uint64_t logn, device_context::DeviceContext& ctx);
 
   template <typename S>
   static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)

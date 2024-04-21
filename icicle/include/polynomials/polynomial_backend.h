@@ -54,13 +54,12 @@ namespace polynomials {
     const void* get_context_storage_immutable(PolyContext ctxt) { return ctxt->get_storage_immutable(); }
 
     // Evaluation methods
-    virtual I evaluate(PolyContext op, const D& domain_x) = 0;
+    virtual void evaluate(PolyContext op, const D* domain_x, I* eval /*OUT*/) = 0;
     virtual void evaluate_on_domain(PolyContext op, const D* domain, uint64_t size, I* evaluations /*OUT*/) = 0;
 
     // Methods to copy coefficients to host memory
-    virtual C copy_coefficient_to_host(PolyContext op, uint64_t coeff_idx) = 0;
-    virtual int64_t
-    copy_coefficients_to_host(PolyContext op, C* host_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
+    virtual C get_coeff(PolyContext op, uint64_t coeff_idx) = 0;
+    virtual uint64_t copy_coeffs(PolyContext op, C* coeffs, uint64_t start_idx, uint64_t end_idx) = 0;
 
     // Methods to get views of coefficients and evaluations, including device id
     virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
