@@ -15,6 +15,7 @@ import (
 	msm "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/msm"
 	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/ntt"
 	poly "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/polynomial"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/tests"
 	vecops "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/vecOps"
 )
 
@@ -49,6 +50,8 @@ func generateFiles() {
 			curves.Generate(g2BaseDir, packageName, curve.Curve, "G2")
 			msm.Generate(curveDir, "g2", curve.Curve, "G2", curve.GnarkImport)
 		}
+
+		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0)
 	}
 
 	for _, field := range config.Fields {
@@ -71,6 +74,8 @@ func generateFiles() {
 			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
 			lib_linker.Generate(extensionsDir, "extension", field.Field, lib_linker.FIELD, 1)
 		}
+
+		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU)
 	}
 
 	// Mock field and curve files for core

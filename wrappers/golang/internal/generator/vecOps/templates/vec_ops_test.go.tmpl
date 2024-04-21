@@ -1,4 +1,4 @@
-package {{.PackageName}}
+package tests
 
 import (
 	"testing"
@@ -6,10 +6,11 @@ import (
 	{{.Field}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVecOps(t *testing.T) {
+func Test{{capitalize .Field}}VecOps(t *testing.T) {
 	testSize := 1 << 14
 
 	a := {{.Field}}.GenerateScalars(testSize)
@@ -24,17 +25,17 @@ func TestVecOps(t *testing.T) {
 
 	cfg := core.DefaultVecOpsConfig()
 
-	VecOp(a, b, out, cfg, core.Add)
-	VecOp(out, b, out2, cfg, core.Sub)
+	vecOps.VecOp(a, b, out, cfg, core.Add)
+	vecOps.VecOp(out, b, out2, cfg, core.Sub)
 
 	assert.Equal(t, a, out2)
 
-	VecOp(a, ones, out3, cfg, core.Mul)
+	vecOps.VecOp(a, ones, out3, cfg, core.Mul)
 
 	assert.Equal(t, a, out3)
 }
 
-func TestTranspose(t *testing.T) {
+func Test{{capitalize .Field}}Transpose(t *testing.T) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 	onDevice := false
@@ -47,8 +48,8 @@ func TestTranspose(t *testing.T) {
 
 	ctx, _ := cr.GetDefaultDeviceContext()
 
-	TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
-	TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)
 	
 	assert.Equal(t, matrix, out2)
 
@@ -59,8 +60,8 @@ func TestTranspose(t *testing.T) {
 	dOut.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
 	dOut2.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
 
-	TransposeMatrix(dMatrix, dOut, columnSize, rowSize, ctx, onDevice, isAsync)
-	TransposeMatrix(dOut, dOut2, rowSize, columnSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, ctx, onDevice, isAsync)
 	output := make(core.HostSlice[{{.Field}}.{{.FieldPrefix}}Field], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 

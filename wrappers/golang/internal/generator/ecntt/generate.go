@@ -24,6 +24,6 @@ func Generate(baseDir, curve, gnarkImport string) {
 	}
 
 	generator.GenerateFile(ecnttTemplates["src"], path.Join(baseDir, "ecntt"), "", "", data)
-	generator.GenerateFile(ecnttTemplates["test"], path.Join(baseDir, "ecntt"), "", "", data)
 	generator.GenerateFile(ecnttTemplates["header"], path.Join(baseDir, "ecntt", "include"), "", "", data)
+	generator.GenerateFile(ecnttTemplates["test"], path.Join(baseDir, "tests"), "", "", data)
 }

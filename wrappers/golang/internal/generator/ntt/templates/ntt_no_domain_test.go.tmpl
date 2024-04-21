@@ -1,7 +1,6 @@
-package {{.PackageName}}
+package tests
 
 import (
-	"os"
 	{{if ne .GnarkImport "" -}}
 	"reflect"
 	{{end -}}
@@ -9,23 +8,11 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	{{.Field}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"
 	{{.FieldNoDomain}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPathNoDomain}}"
 	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/ntt"
 )
 
-const (
-	largestTestSize = 17
-)
-
-func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
-	rouIcicle := {{.Field}}.{{.FieldPrefix}}Field{}
-	rouIcicle.FromUint32({{.ROU}})
-	e := ntt.InitDomain(rouIcicle, cfg.Ctx, false)
-	return e
-}
-
-func TestNtt(t *testing.T) {
+func TestNttNoDomain(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := {{.FieldNoDomain}}.GenerateScalars(1 << largestTestSize)
 
@@ -38,12 +25,12 @@ func TestNtt(t *testing.T) {
 
 			// run ntt
 			output := make(core.HostSlice[{{.FieldNoDomain}}.{{.FieldNoDomainPrefix}}Field], testSize)
-			Ntt(scalarsCopy, core.KForward, &cfg, output)
+			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 		}
 	}
 }
 
-func TestNttDeviceAsync(t *testing.T) {
+func TestNttDeviceAsyncNoDomain(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := {{.FieldNoDomain}}.GenerateScalars(1 << largestTestSize)
 
@@ -65,7 +52,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
 
 				// run ntt
-				Ntt(deviceInput, direction, &cfg, deviceOutput)
+				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
 				output := make(core.HostSlice[{{.FieldNoDomain}}.{{.FieldNoDomainPrefix}}Field], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
@@ -75,7 +62,7 @@ func TestNttDeviceAsync(t *testing.T) {
 	}
 }
 
-func TestNttBatch(t *testing.T) {
+func TestNttBatchNoDomain(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
 	largestBatchSize := 100
 	scalars := {{.FieldNoDomain}}.GenerateScalars(1 << largestTestSize * largestBatchSize)
@@ -91,25 +78,7 @@ func TestNttBatch(t *testing.T) {
 			cfg.BatchSize = int32(batchSize)
 			// run ntt
 			output := make(core.HostSlice[{{.FieldNoDomain}}.{{.FieldNoDomainPrefix}}Field], totalSize)
-			Ntt(scalarsCopy, core.KForward, &cfg, output)
+			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 		}
-	}
-}
-
-func TestMain(m *testing.M) {
-	// setup domain
-	cfg := ntt.GetDefaultNttConfig()
-	e := initDomain(largestTestSize, cfg)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("initDomain failed")
-	}
-
-	// execute tests
-	os.Exit(m.Run())
-
-	// release domain
-	e = ntt.ReleaseDomain(cfg.Ctx)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("ReleaseDomain failed")
 	}
 }

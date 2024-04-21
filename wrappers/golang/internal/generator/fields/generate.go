@@ -14,20 +14,33 @@ var fieldTemplates = map[string]string{
 
 func Generate(baseDir, packageName, field, fieldPrefix string, isScalar bool, numLimbs int) {
 	data := struct {
-		PackageName string
-		Field       string
-		FieldPrefix string
-		IsScalar    bool
-		NUM_LIMBS   int
+		PackageName    string
+		Field          string
+		FieldPrefix    string
+		BaseImportPath string
+		IsScalar       bool
+		NUM_LIMBS      int
 	}{
 		packageName,
 		field,
 		fieldPrefix,
+		baseDir,
 		isScalar,
 		numLimbs,
 	}
 
+	filePrefix := ""
+	if packageName == "g2" {
+		filePrefix = "g2_"
+	}
+
+	testDir := "tests"
+	parentDir := path.Base(baseDir)
+	if parentDir == "g2" || parentDir == "extension" {
+		testDir = "../tests"
+	}
+
 	generator.GenerateFile(fieldTemplates["src"], baseDir, strings.ToLower(fieldPrefix)+"_", "", data)
-	generator.GenerateFile(fieldTemplates["test"], baseDir, strings.ToLower(fieldPrefix)+"_", "", data)
 	generator.GenerateFile(fieldTemplates["header"], path.Join(baseDir, "include"), "", "", data)
+	generator.GenerateFile(fieldTemplates["test"], path.Join(baseDir, testDir), filePrefix+strings.ToLower(fieldPrefix)+"_", "", data)
 }

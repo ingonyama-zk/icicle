@@ -26,6 +26,6 @@ func Generate(baseDir, field, fieldPrefix, gnarkImport string) {
 	}
 
 	generator.GenerateFile(polynomialTemplates["src"], path.Join(baseDir, "polynomial"), "", "", data)
-	generator.GenerateFile(polynomialTemplates["test"], path.Join(baseDir, "polynomial"), "", "", data)
 	generator.GenerateFile(polynomialTemplates["header"], path.Join(baseDir, "polynomial", "include"), "", "", data)
+	generator.GenerateFile(polynomialTemplates["test"], path.Join(baseDir, "tests"), "", "", data)
 }

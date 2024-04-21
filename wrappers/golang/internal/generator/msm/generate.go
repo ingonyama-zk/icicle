@@ -2,6 +2,7 @@ package msm
 
 import (
 	"path"
+	"path/filepath"
 
 	generator "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/generator_utils"
 )
@@ -27,7 +28,12 @@ func Generate(baseDir, packageName, curve, curvePrefix, gnarkImport string) {
 		gnarkImport,
 	}
 
+	filePrefix := ""
+	if packageName == "g2" {
+		filePrefix = "g2_"
+	}
+
 	generator.GenerateFile(msmTemplates["src"], path.Join(baseDir, packageName), "", "", data)
-	generator.GenerateFile(msmTemplates["test"], path.Join(baseDir, packageName), "", "", data)
 	generator.GenerateFile(msmTemplates["header"], path.Join(baseDir, packageName, "include"), "", "", data)
+	generator.GenerateFile(msmTemplates["test"], filepath.Join(baseDir, "tests"), filePrefix, "", data)
 }

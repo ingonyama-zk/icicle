@@ -1,18 +1,13 @@
-package ecntt
+package tests
 
 import (
-	"os"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/ntt"
 	{{.Curve}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"
-	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"
+	ecntt "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/ecntt"
+	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/ntt"
 	"github.com/stretchr/testify/assert"
-)
-
-const (
-	largestTestSize = 17
 )
 
 func TestECNtt(t *testing.T) {
@@ -28,31 +23,8 @@ func TestECNtt(t *testing.T) {
 			cfg.NttAlgorithm = core.Radix2
 
 			output := make(core.HostSlice[{{.Curve}}.Projective], testSize)
-			e := ECNtt(pointsCopy, core.KForward, &cfg, output)
+			e := ecntt.ECNtt(pointsCopy, core.KForward, &cfg, output)
 			assert.Equal(t, core.IcicleErrorCode(0), e.IcicleErrorCode, "ECNtt failed")
 		}
-	}
-}
-
-func TestMain(m *testing.M) {
-	// setup domain
-	cfg := ntt.GetDefaultNttConfig()
-	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
-	rou := rouMont.Bits()
-	rouIcicle := {{.Curve}}.ScalarField{}
-
-	rouIcicle.FromLimbs(core.ConvertUint64ArrToUint32Arr(rou[:]))
-	e := ntt.InitDomain(rouIcicle, cfg.Ctx, false)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("initDomain failed")
-	}
-
-	// execute tests
-	os.Exit(m.Run())
-
-	// release domain
-	e = ntt.ReleaseDomain(cfg.Ctx)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("ReleaseDomain failed")
 	}
 }

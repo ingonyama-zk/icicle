@@ -49,6 +49,6 @@ func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string
 	}
 
 	generator.GenerateFile(nttTemplates["src"], path.Join(baseDir, additionalDirPath, "ntt"), "", "", data)
-	generator.GenerateFile(testPath, path.Join(baseDir, additionalDirPath, "ntt"), "", "", data)
 	generator.GenerateFile(nttTemplates["header"], path.Join(baseDir, additionalDirPath, "ntt", "include"), "", "", data)
+	generator.GenerateFile(testPath, path.Join(baseDir, "tests"), "", "", data)
 }
