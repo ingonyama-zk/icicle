@@ -8,13 +8,7 @@ use icicle_cuda_runtime::error::CudaError;
 use crate::curve::{CurveCfg, ScalarCfg, ScalarField};
 use icicle_core::ecntt::Projective;
 
-impl_ecntt!(
-    "bls12_377",
-    bls12_377,
-    ScalarField,
-    ScalarCfg,
-    CurveCfg
-);
+impl_ecntt!("bls12_377", bls12_377, ScalarField, ScalarCfg, CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

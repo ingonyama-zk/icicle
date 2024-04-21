@@ -1,5 +1,5 @@
 #[cfg(feature = "ec_ntt")]
-use icicle_bn254::curve::{ScalarField, CurveCfg};
+use icicle_bn254::curve::{CurveCfg, ScalarField};
 
 #[cfg(feature = "ec_ntt")]
 use icicle_core::impl_ecntt_bench;
