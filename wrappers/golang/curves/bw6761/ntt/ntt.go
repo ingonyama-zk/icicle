@@ -23,7 +23,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.scalar_t)(resultsPointer)
 
-	__ret := C.bw6_761NTTCuda(cScalars, cSize, cDir, cCfg, cResults)
+	__ret := C.bw6_761_ntt_cuda(cScalars, cSize, cDir, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

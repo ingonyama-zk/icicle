@@ -11,19 +11,19 @@ import (
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
 
-type G2Projective struct {
-	X, Y, Z G2BaseField
+type _g2Projective struct {
+	X, Y, Z _g2BaseField
 }
 
-func (p G2Projective) Size() int {
+func (p _g2Projective) Size() int {
 	return p.X.Size() * 3
 }
 
-func (p G2Projective) AsPointer() *uint32 {
+func (p _g2Projective) AsPointer() *uint32 {
 	return p.X.AsPointer()
 }
 
-func (p *G2Projective) Zero() G2Projective {
+func (p *_g2Projective) Zero() _g2Projective {
 	p.X.Zero()
 	p.Y.One()
 	p.Z.Zero()
@@ -31,7 +31,7 @@ func (p *G2Projective) Zero() G2Projective {
 	return *p
 }
 
-func (p *G2Projective) FromLimbs(x, y, z []uint32) G2Projective {
+func (p *_g2Projective) FromLimbs(x, y, z []uint32) _g2Projective {
 	p.X.FromLimbs(x)
 	p.Y.FromLimbs(y)
 	p.Z.FromLimbs(z)
@@ -39,8 +39,8 @@ func (p *G2Projective) FromLimbs(x, y, z []uint32) G2Projective {
 	return *p
 }
 
-func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
-	z := G2BaseField{}
+func (p *_g2Projective) FromAffine(a _g2Affine) _g2Projective {
+	z := _g2BaseField{}
 	z.One()
 
 	p.X = a.X
@@ -50,128 +50,128 @@ func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
 	return *p
 }
 
-func (p G2Projective) ProjectiveEq(p2 *G2Projective) bool {
-	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
-	cP2 := (*C.g2_projective_t)(unsafe.Pointer(&p2))
-	__ret := C.bw6_761G2_eq(cP, cP2)
+func (p _g2Projective) ProjectiveEq(p2 *_g2Projective) bool {
+	cP := (*C._g2_projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C._g2_projective_t)(unsafe.Pointer(&p2))
+	__ret := C.bw6_761_g2_eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 
-func (p *G2Projective) ProjectiveToAffine() G2Affine {
-	var a G2Affine
+func (p *_g2Projective) ProjectiveToAffine() _g2Affine {
+	var a _g2Affine
 
-	cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
-	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
-	C.bw6_761G2_to_affine(cP, cA)
+	cA := (*C._g2_affine_t)(unsafe.Pointer(&a))
+	cP := (*C._g2_projective_t)(unsafe.Pointer(&p))
+	C.bw6_761_g2_to_affine(cP, cA)
 	return a
 }
 
-func G2GenerateProjectivePoints(size int) core.HostSlice[G2Projective] {
-	points := make([]G2Projective, size)
+func _g2GenerateProjectivePoints(size int) core.HostSlice[_g2Projective] {
+	points := make([]_g2Projective, size)
 	for i := range points {
-		points[i] = G2Projective{}
+		points[i] = _g2Projective{}
 	}
 
-	pointsSlice := core.HostSliceFromElements[G2Projective](points)
-	pPoints := (*C.g2_projective_t)(unsafe.Pointer(&pointsSlice[0]))
+	pointsSlice := core.HostSliceFromElements[_g2Projective](points)
+	pPoints := (*C._g2_projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bw6_761G2_generate_projective_points(pPoints, cSize)
+	C.bw6_761_g2_generate_projective_points(pPoints, cSize)
 
 	return pointsSlice
 }
 
-type G2Affine struct {
-	X, Y G2BaseField
+type _g2Affine struct {
+	X, Y _g2BaseField
 }
 
-func (a G2Affine) Size() int {
+func (a _g2Affine) Size() int {
 	return a.X.Size() * 2
 }
 
-func (a G2Affine) AsPointer() *uint32 {
+func (a _g2Affine) AsPointer() *uint32 {
 	return a.X.AsPointer()
 }
 
-func (a *G2Affine) Zero() G2Affine {
+func (a *_g2Affine) Zero() _g2Affine {
 	a.X.Zero()
 	a.Y.Zero()
 
 	return *a
 }
 
-func (a *G2Affine) FromLimbs(x, y []uint32) G2Affine {
+func (a *_g2Affine) FromLimbs(x, y []uint32) _g2Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
 
 	return *a
 }
 
-func (a G2Affine) ToProjective() G2Projective {
-	var z G2BaseField
+func (a _g2Affine) ToProjective() _g2Projective {
+	var z _g2BaseField
 
-	return G2Projective{
+	return _g2Projective{
 		X: a.X,
 		Y: a.Y,
 		Z: z.One(),
 	}
 }
 
-func G2AffineFromProjective(p *G2Projective) G2Affine {
+func _g2AffineFromProjective(p *_g2Projective) _g2Affine {
 	return p.ProjectiveToAffine()
 }
 
-func G2GenerateAffinePoints(size int) core.HostSlice[G2Affine] {
-	points := make([]G2Affine, size)
+func _g2GenerateAffinePoints(size int) core.HostSlice[_g2Affine] {
+	points := make([]_g2Affine, size)
 	for i := range points {
-		points[i] = G2Affine{}
+		points[i] = _g2Affine{}
 	}
 
-	pointsSlice := core.HostSliceFromElements[G2Affine](points)
-	cPoints := (*C.g2_affine_t)(unsafe.Pointer(&pointsSlice[0]))
+	pointsSlice := core.HostSliceFromElements[_g2Affine](points)
+	cPoints := (*C._g2_affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bw6_761G2_generate_affine_points(cPoints, cSize)
+	C.bw6_761_g2_generate_affine_points(cPoints, cSize)
 
 	return pointsSlice
 }
 
-func convertG2AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.g2_affine_t)(points.AsUnsafePointer())
+func convert_g2AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C._g2_affine_t)(points.AsUnsafePointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761G2_affine_convert_montgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bw6_761_g2_affine_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
 
-func G2AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
+func _g2AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convertG2AffinePointsMontgomery(points, true)
+	return convert_g2AffinePointsMontgomery(points, true)
 }
 
-func G2AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+func _g2AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convertG2AffinePointsMontgomery(points, false)
+	return convert_g2AffinePointsMontgomery(points, false)
 }
 
-func convertG2ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.g2_projective_t)(points.AsUnsafePointer())
+func convert_g2ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
+	cValues := (*C._g2_projective_t)(points.AsUnsafePointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761G2_projective_convert_montgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bw6_761_g2_projective_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
 
-func G2ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
+func _g2ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convertG2ProjectivePointsMontgomery(points, true)
+	return convert_g2ProjectivePointsMontgomery(points, true)
 }
 
-func G2ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+func _g2ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 	points.CheckDevice()
-	return convertG2ProjectivePointsMontgomery(points, false)
+	return convert_g2ProjectivePointsMontgomery(points, false)
 }
