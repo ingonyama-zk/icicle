@@ -46,7 +46,7 @@ namespace ntt {
   }
 
   /**
-   * Extern "C" version of [GetRootOfUnity](@ref GetRootOfUnity) function with the following
+   * Extern "C" version of [get_root_of_unity](@ref get_root_of_unity) function with the following
    * value of template parameter (where the field is given by `-DFIELD` env variable during build):
    *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
    * stand-alone "STARK field";
@@ -55,12 +55,4 @@ namespace ntt {
   {
     return get_root_of_unity<scalar_t>(logn);
   }
-
-  /**
-   * Extern "C" version of [GetRootOfUnity](@ref GetRootOfUnity) function with the following
-   * value of template parameter (where the field is given by `-DFIELD` env variable during build):
-   *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
-   * stand-alone "STARK field";
-   */
-  extern "C" scalar_t CONCAT_EXPAND(FIELD, GetRootOfUnity)(uint32_t logn) { return GetRootOfUnity<scalar_t>(logn); }
 } // namespace ntt
