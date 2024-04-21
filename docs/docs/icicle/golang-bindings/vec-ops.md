@@ -109,7 +109,6 @@ type VecOpsConfig struct {
     isAOnDevice bool
     isBOnDevice bool
     isResultOnDevice bool
-    IsResultMontgomeryForm bool
     IsAsync bool
 }
 ```
@@ -120,7 +119,6 @@ type VecOpsConfig struct {
 - **isAOnDevice**: Indicates if vector `a` is located on the device.
 - **isBOnDevice**: Indicates if vector `b` is located on the device.
 - **isResultOnDevice**: Specifies where the result vector should be stored (device or host memory).
-- **IsResultMontgomeryForm**: Determines if the result vector should be in Montgomery form.
 - **IsAsync**: Controls whether the vector operation runs asynchronously.
 
 ### Default Configuration
