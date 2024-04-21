@@ -1,4 +1,4 @@
-package libe_linker
+package lib_linker
 
 import (
 	generator "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/generator_utils"
