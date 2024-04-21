@@ -9,20 +9,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func randomField(size int) internal.MockField {
+func randomField(size int) internal.MockBaseField {
 	limbs := make([]uint32, size)
 	for i := range limbs {
 		limbs[i] = rand.Uint32()
 	}
 
-	var field internal.MockField
+	var field internal.MockBaseField
 	field.FromLimbs(limbs)
 
 	return field
 }
 
-func randomFields(numFields, fieldSize int) []internal.MockField {
-	var randFields []internal.MockField
+func randomFields(numFields, fieldSize int) []internal.MockBaseField {
+	var randFields []internal.MockBaseField
 
 	for i := 0; i < numFields; i++ {
 		randFields = append(randFields, randomField(fieldSize))
@@ -67,12 +67,12 @@ func randomAffinePoints(numPoints, fieldSize int) []internal.MockAffine {
 const (
 	numPoints      = 4
 	numFields      = 4
-	fieldSize      = 8
+	fieldSize      = 4
 	fieldBytesSize = fieldSize * 4
 )
 
 func TestHostSlice(t *testing.T) {
-	var emptyHostSlice HostSlice[internal.MockField]
+	var emptyHostSlice HostSlice[internal.MockBaseField]
 	assert.Equal(t, emptyHostSlice.Len(), 0)
 	assert.Equal(t, emptyHostSlice.Cap(), 0)
 
@@ -82,13 +82,13 @@ func TestHostSlice(t *testing.T) {
 	assert.Equal(t, hostSlice.Len(), 4)
 	assert.Equal(t, hostSlice.Cap(), 4)
 
-	hostSliceCasted := (HostSlice[internal.MockField])(randFields)
+	hostSliceCasted := (HostSlice[internal.MockBaseField])(randFields)
 	assert.Equal(t, hostSliceCasted.Len(), 4)
 	assert.Equal(t, hostSliceCasted.Cap(), 4)
 }
 
 func TestHostSliceIsEmpty(t *testing.T) {
-	var emptyHostSlice HostSlice[*internal.MockField]
+	var emptyHostSlice HostSlice[*internal.MockBaseField]
 	assert.True(t, emptyHostSlice.IsEmpty())
 
 	randFields := randomFields(numFields, fieldSize)
@@ -98,7 +98,7 @@ func TestHostSliceIsEmpty(t *testing.T) {
 }
 
 func TestHostSliceIsOnDevice(t *testing.T) {
-	var emptyHostSlice HostSlice[*internal.MockField]
+	var emptyHostSlice HostSlice[*internal.MockBaseField]
 	assert.False(t, emptyHostSlice.IsOnDevice())
 }
 
@@ -112,17 +112,17 @@ func TestDeviceSlice(t *testing.T) {
 	var emptyDeviceSlice DeviceSlice
 	assert.Equal(t, 0, emptyDeviceSlice.Len())
 	assert.Equal(t, 0, emptyDeviceSlice.Cap())
-	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())
+	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
 
 	emptyDeviceSlice.Malloc(numFields*fieldBytesSize, fieldBytesSize)
 	assert.Equal(t, numFields, emptyDeviceSlice.Len())
 	assert.Equal(t, numFields*fieldBytesSize, emptyDeviceSlice.Cap())
-	assert.NotEqual(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())
+	assert.NotEqual(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
 
 	emptyDeviceSlice.Free()
 	assert.Equal(t, 0, emptyDeviceSlice.Len())
 	assert.Equal(t, 0, emptyDeviceSlice.Cap())
-	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsPointer())
+	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
 }
 
 func TestDeviceSliceIsEmpty(t *testing.T) {

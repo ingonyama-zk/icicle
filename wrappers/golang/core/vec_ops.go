@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"unsafe"
 
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 )
@@ -23,8 +24,6 @@ type VecOpsConfig struct {
 	isBOnDevice bool
 	/* If true, output is preserved on device, otherwise on host. Default value: false. */
 	isResultOnDevice bool
-	/* True if `result` vector should be in Montgomery form and false otherwise. Default value: false. */
-	IsResultMontgomeryForm bool
 	/* Whether to run the vector operations asynchronously. If set to `true`, the function will be
 	*  non-blocking and you'll need to synchronize it explicitly by calling
 	*  `SynchronizeStream`. If set to false, the function will block the current CPU thread. */
@@ -42,14 +41,13 @@ func DefaultVecOpsConfig() VecOpsConfig {
 		false, // isAOnDevice
 		false, // isBOnDevice
 		false, // isResultOnDevice
-		false, // IsResultMontgomeryForm
 		false, // IsAsync
 	}
 
 	return config
 }
 
-func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) {
+func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {
 	aLen, bLen, outLen := a.Len(), b.Len(), out.Len()
 	if aLen != bLen {
 		errorString := fmt.Sprintf(
@@ -68,7 +66,45 @@ func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) {
 		panic(errorString)
 	}
 
+	if a.IsOnDevice() {
+		a.(DeviceSlice).CheckDevice()
+	}
+	if b.IsOnDevice() {
+		b.(DeviceSlice).CheckDevice()
+	}
+	if out.IsOnDevice() {
+		out.(DeviceSlice).CheckDevice()
+	}
+
 	cfg.isAOnDevice = a.IsOnDevice()
 	cfg.isBOnDevice = b.IsOnDevice()
 	cfg.isResultOnDevice = out.IsOnDevice()
+
+	return a.AsUnsafePointer(), b.AsUnsafePointer(), out.AsUnsafePointer(), unsafe.Pointer(cfg), a.Len()
+}
+
+func TransposeCheck(in, out HostOrDeviceSlice, onDevice bool) {
+	inLen, outLen := in.Len(), out.Len()
+
+	if inLen != outLen {
+		errorString := fmt.Sprintf(
+			"in and out vector lengths %d; %d are not equal",
+			inLen,
+			outLen,
+		)
+		panic(errorString)
+	}
+	if (onDevice != in.IsOnDevice()) || (onDevice != out.IsOnDevice()) {
+		errorString := fmt.Sprintf(
+			"onDevice is set to %t, but in.IsOnDevice():%t and out.IsOnDevice():%t",
+			onDevice,
+			in.IsOnDevice(),
+			out.IsOnDevice(),
+		)
+		panic(errorString)
+	}
+	if onDevice {
+		in.(DeviceSlice).CheckDevice()
+		out.(DeviceSlice).CheckDevice()
+	}
 }

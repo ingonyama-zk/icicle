@@ -1,18 +1,14 @@
-#define CURVE_ID BLS12_381
-
 #include <chrono>
 #include <iostream>
 #include <vector>
-
-#include "curves/curve_config.cuh"
-#include "appUtils/ntt/ntt.cu"
-#include "appUtils/ntt/kernel_ntt.cu"
-#include "utils/vec_ops.cu"
-#include "utils/error_handler.cuh"
 #include <memory>
 
-typedef curve_config::scalar_t test_scalar;
-typedef curve_config::scalar_t test_data;
+#include "api/bn254.h"
+#include "gpu-utils/error_handler.cuh"
+
+using namespace bn254;
+typedef scalar_t test_scalar;
+typedef scalar_t test_data;
 
 void random_samples(test_data* res, uint32_t count)
 {
@@ -55,8 +51,8 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&start));
   CHK_IF_RETURN(cudaEventCreate(&stop));
 
-  const test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  ntt::InitDomain(basic_root, ntt_config.ctx, true /*=fast_twidddles_mode*/);
+  test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
+  bn254InitializeDomain(&basic_root, ntt_config.ctx, true /*=fast_twidddles_mode*/);
 
   // (1) cpu allocation
   auto CpuA = std::make_unique<test_data[]>(NTT_SIZE);
@@ -79,26 +75,25 @@ int main(int argc, char** argv)
       ntt_config.are_inputs_on_device = false;
       ntt_config.are_outputs_on_device = true;
       ntt_config.ordering = ntt::Ordering::kNM;
-      CHK_IF_RETURN(ntt::NTT(CpuA.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuA));
-      CHK_IF_RETURN(ntt::NTT(CpuB.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuB));
+      CHK_IF_RETURN(bn254NTTCuda(CpuA.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuA));
+      CHK_IF_RETURN(bn254NTTCuda(CpuB.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuB));
 
       // (4) multiply A,B
       CHK_IF_RETURN(cudaMallocAsync(&MulGpu, sizeof(test_data) * NTT_SIZE, ntt_config.ctx.stream));
-      vec_ops::VecOpsConfig<test_data> config{
+      vec_ops::VecOpsConfig config{
         ntt_config.ctx,
         true,  // is_a_on_device
         true,  // is_b_on_device
         true,  // is_result_on_device
-        false, // is_montgomery
         false  // is_async
       };
-      CHK_IF_RETURN(vec_ops::Mul(GpuA, GpuB, NTT_SIZE, config, MulGpu));
+      CHK_IF_RETURN(bn254MulCuda(GpuA, GpuB, NTT_SIZE, config, MulGpu));
 
       // (5) INTT (in place)
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
       ntt_config.ordering = ntt::Ordering::kMN;
-      CHK_IF_RETURN(ntt::NTT(MulGpu, NTT_SIZE, ntt::NTTDir::kInverse, ntt_config, MulGpu));
+      CHK_IF_RETURN(bn254NTTCuda(MulGpu, NTT_SIZE, ntt::NTTDir::kInverse, ntt_config, MulGpu));
 
       CHK_IF_RETURN(cudaFreeAsync(GpuA, ntt_config.ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(GpuB, ntt_config.ctx.stream));
@@ -117,7 +112,7 @@ int main(int argc, char** argv)
   benchmark(false); // warmup
   benchmark(true, 20);
 
-  ntt::ReleaseDomain<test_scalar>(ntt_config.ctx);
+  bn254ReleaseDomain(ntt_config.ctx);
   CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
 
   return 0;

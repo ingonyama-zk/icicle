@@ -1,169 +1,62 @@
 cmake_minimum_required(VERSION 3.18)
 
-# GoogleTest requires at least C++14
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-
-if("$ENV{ICICLE_PIC}" STREQUAL "OFF" OR ICICLE_PIC STREQUAL "OFF")
-  message(WARNING "Note that PIC (position-independent code) is disabled.")
-else()
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-endif()
-
-# add the target cuda architectures
-# each additional architecture increases the compilation time and output file size
-if(${CMAKE_VERSION} VERSION_LESS "3.24.0")
-  set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
-else()
-  find_program(_nvidia_smi "nvidia-smi")
-
-  if(_nvidia_smi)
-    set(DETECT_GPU_COUNT_NVIDIA_SMI 0)
-
-    # execute nvidia-smi -L to get a short list of GPUs available
-    exec_program(${_nvidia_smi_path} ARGS -L
-      OUTPUT_VARIABLE _nvidia_smi_out
-      RETURN_VALUE _nvidia_smi_ret)
-
-    # process the stdout of nvidia-smi
-    if(_nvidia_smi_ret EQUAL 0)
-      # convert string with newlines to list of strings
-      string(REGEX REPLACE "\n" ";" _nvidia_smi_out "${_nvidia_smi_out}")
-
-      foreach(_line ${_nvidia_smi_out})
-        if(_line MATCHES "^GPU [0-9]+:")
-          math(EXPR DETECT_GPU_COUNT_NVIDIA_SMI "${DETECT_GPU_COUNT_NVIDIA_SMI}+1")
-
-          # the UUID is not very useful for the user, remove it
-          string(REGEX REPLACE " \\(UUID:.*\\)" "" _gpu_info "${_line}")
-
-          if(NOT _gpu_info STREQUAL "")
-            list(APPEND DETECT_GPU_INFO "${_gpu_info}")
-          endif()
-        endif()
-      endforeach()
-
-      check_num_gpu_info(${DETECT_GPU_COUNT_NVIDIA_SMI} DETECT_GPU_INFO)
-      set(DETECT_GPU_COUNT ${DETECT_GPU_COUNT_NVIDIA_SMI})
-    endif()
-  endif()
-
-  # ##
-  if(DETECT_GPU_COUNT GREATER 0)
-    set(CMAKE_CUDA_ARCHITECTURES native) # do native
-  else()
-    # no GPUs found, like on Github CI runners
-    set(CMAKE_CUDA_ARCHITECTURES 50) # some safe value
-  endif()
-endif()
-
 project(icicle LANGUAGES CUDA CXX)
-# Check CUDA version and, if possible, enable multi-threaded compilation 
-if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "12.2")
-    message(STATUS "Using multi-threaded CUDA compilation.")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --split-compile 0")
-else()
-    message(STATUS "Can't use multi-threaded CUDA compilation.")
-endif()
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
-set(CMAKE_CUDA_FLAGS_RELEASE "")
-set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -lineinfo")
-include_directories("${CMAKE_SOURCE_DIR}")
 
+include(cmake/Common.cmake)
+include(cmake/FieldsCommon.cmake)
+include(cmake/CurvesCommon.cmake)
 
-# when adding a new curve/field, append its name to the end of this list
-set(SUPPORTED_CURVES bn254;bls12_381;bls12_377;bw6_761;grumpkin)
-set(SUPPORTED_CURVES_WITH_POSEIDON bn254;bls12_381;bls12_377;bw6_761;grumpkin)
-SET(SUPPORTED_CURVES_WITHOUT_NTT grumpkin)
+set_env()
+set_gpu_env()
 
-set(IS_CURVE_SUPPORTED FALSE)
-set(I 0)
-foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
-  math(EXPR I "${I} + 1")
-  if (CURVE STREQUAL SUPPORTED_CURVE)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DCURVE_ID=${I}")
-    set(IS_CURVE_SUPPORTED TRUE)
-  endif ()
-endforeach()
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-if (NOT IS_CURVE_SUPPORTED)
-  message( FATAL_ERROR "The value of CURVE variable: ${CURVE} is not one of the supported curves: ${SUPPORTED_CURVES}" )
+option(DEVMODE "Enable development mode" OFF)
+option(EXT_FIELD "Build extension field" OFF)
+option(G2 "Build G2" OFF)
+option(MSM "Build MSM" ON)
+option(ECNTT "Build ECNTT" OFF)
+option(BUILD_HASH "Build hash functions" OFF)
+option(BUILD_TESTS "Build unit tests" OFF)
+option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+# add options here
+
+if((DEFINED CURVE) AND (DEFINED FIELD))
+  message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
 endif ()
 
-if (DEVMODE STREQUAL "ON")
+if (DEVMODE)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O0 --ptxas-options=-O0 --ptxas-options=-allow-expensive-optimizations=false -DDEVMODE=ON")
 endif ()
 
-if (G2_DEFINED STREQUAL "ON")
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2_DEFINED=ON")
+if(DEFINED FIELD)
+  check_field()
+  add_subdirectory(src/fields)
 endif ()
 
-if (ECNTT_DEFINED STREQUAL "ON")
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DECNTT_DEFINED=ON")
+if(DEFINED CURVE)
+  check_curve()
+  set(FIELD ${CURVE})
+  add_subdirectory(src/fields)
+  add_subdirectory(src/curves)
 endif ()
 
-option(BUILD_TESTS "Build tests" OFF)
-
-if (NOT BUILD_TESTS)
-
-  message(STATUS "Building without tests.")
-
-  if (CURVE IN_LIST SUPPORTED_CURVES_WITH_POSEIDON)
-    list(APPEND ICICLE_SOURCES appUtils/poseidon/poseidon.cu)
-    list(APPEND ICICLE_SOURCES appUtils/tree/merkle.cu)
-  endif()
-
-  if (NOT CURVE IN_LIST SUPPORTED_CURVES_WITHOUT_NTT)
-      list(APPEND ICICLE_SOURCES appUtils/ntt/ntt.cu)
-      list(APPEND ICICLE_SOURCES appUtils/ntt/kernel_ntt.cu)
-      if(ECNTT_DEFINED STREQUAL "ON")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DECNTT_DEFINED=ON")
-      endif()
-  endif()
-
-  add_library(
-    icicle
-    utils/vec_ops.cu
-    utils/mont.cu
-    primitives/field.cu
-    primitives/projective.cu
-    appUtils/msm/msm.cu
-    ${ICICLE_SOURCES}
-  )
-  set_target_properties(icicle PROPERTIES OUTPUT_NAME "ingo_${CURVE}")
-  target_compile_definitions(icicle PRIVATE CURVE=${CURVE})  
-
-else()
-
-  message(STATUS "Building tests.")
-
-  include(FetchContent)
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
-  )
-  # For Windows: Prevent overriding the parent project's compiler/linker settings
-
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(googletest)
-
-  enable_testing()
-
-  add_executable(
-    runner
-    tests/runner.cu
-  )
-
-  target_link_libraries(
-    runner
-    GTest::gtest_main
-  )
-
-  include(GoogleTest)
-  set_target_properties(runner PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-  gtest_discover_tests(runner)
-
+if (G2)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DG2")
 endif ()
+
+if (EXT_FIELD)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DEXT_FIELD")
+endif ()
+
+if(BUILD_HASH)
+  add_subdirectory(src/hash)
+endif ()
+
+if (BUILD_TESTS)
+  add_subdirectory(tests)
+endif()
+
+if (BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()

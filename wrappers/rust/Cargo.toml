@@ -8,13 +8,15 @@ members = [
   "icicle-curves/icicle-bls12-381",
   "icicle-curves/icicle-bn254",
   "icicle-curves/icicle-grumpkin",
+  "icicle-fields/icicle-babybear",
+  "icicle-hash",
 ]
 exclude = [
   "icicle-curves/icicle-curve-template",
 ]
 
 [workspace.package]
-version = "1.10.0"
+version = "1.10.1"
 edition = "2021"
 authors = [ "Ingonyama" ]
 homepage = "https://www.ingonyama.com"

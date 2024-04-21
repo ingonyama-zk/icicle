@@ -135,7 +135,7 @@ func GenerateAffinePoints(size int) core.HostSlice[Affine] {
 }
 
 func convertAffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.affine_t)(points.AsPointer())
+	cValues := (*C.affine_t)(points.AsUnsafePointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
@@ -156,7 +156,7 @@ func AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 }
 
 func convertProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.projective_t)(points.AsPointer())
+	cValues := (*C.projective_t)(points.AsUnsafePointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()

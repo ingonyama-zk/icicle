@@ -74,7 +74,6 @@ pub struct VecOpsConfig<'a> {
     is_a_on_device: bool,
     is_b_on_device: bool,
     is_result_on_device: bool,
-    is_result_montgomery_form: bool,
     pub is_async: bool,
 }
 ```
@@ -85,7 +84,6 @@ pub struct VecOpsConfig<'a> {
 - **`is_a_on_device`**: Indicates if the first operand vector resides in device memory.
 - **`is_b_on_device`**: Indicates if the second operand vector resides in device memory.
 - **`is_result_on_device`**: Specifies if the result vector should be stored in device memory.
-- **`is_result_montgomery_form`**: Determines if the result should be in Montgomery form.
 - **`is_async`**: Enables asynchronous operation. If `true`, operations are non-blocking; otherwise, they block the current thread.
 
 ### Default Configuration
@@ -112,7 +110,6 @@ impl<'a> VecOpsConfig<'a> {
             is_a_on_device: false,
             is_b_on_device: false,
             is_result_on_device: false,
-            is_result_montgomery_form: false,
             is_async: false,
         }
     }

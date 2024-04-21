@@ -1,251 +1,86 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
-	"strings"
-	"text/template"
+	"os/exec"
+	"path"
+
+	config "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/config"
+	curves "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/curves"
+	ecntt "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/ecntt"
+	fields "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/fields"
+	lib_linker "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/lib_linker"
+	mock "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/mock"
+	msm "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/msm"
+	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/ntt"
+	vecops "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/vecOps"
 )
-
-const (
-	baseDir = "../../curves/" // wrappers/golang/curves
-)
-
-func create(output string, buf *bytes.Buffer) error {
-	// create output dir if not exist
-	_ = os.MkdirAll(filepath.Dir(output), os.ModePerm)
-
-	// create output file
-	file, err := os.Create(output)
-	if err != nil {
-		return err
-	}
-
-	if _, err := io.Copy(file, buf); err != nil {
-		file.Close()
-		return err
-	}
-
-	file.Close()
-	return nil
-}
-
-type CurveData struct {
-	PackageName    string
-	Curve          string
-	GnarkImport    string
-	ScalarLimbsNum int
-	BaseLimbsNum   int
-	G2BaseLimbsNum int
-}
-
-var bn254 = CurveData{
-	PackageName:    "bn254",
-	Curve:          "bn254",
-	GnarkImport:    "bn254",
-	ScalarLimbsNum: 8,
-	BaseLimbsNum:   8,
-	G2BaseLimbsNum: 16,
-}
-var bls12381 = CurveData{
-	PackageName:    "bls12381",
-	Curve:          "bls12_381",
-	GnarkImport:    "bls12-381",
-	ScalarLimbsNum: 8,
-	BaseLimbsNum:   12,
-	G2BaseLimbsNum: 24,
-}
-var bls12377 = CurveData{
-	PackageName:    "bls12377",
-	Curve:          "bls12_377",
-	GnarkImport:    "bls12-377",
-	ScalarLimbsNum: 8,
-	BaseLimbsNum:   12,
-	G2BaseLimbsNum: 24,
-}
-var bw6761 = CurveData{
-	PackageName:    "bw6761",
-	Curve:          "bw6_761",
-	GnarkImport:    "bw6-761",
-	ScalarLimbsNum: 12,
-	BaseLimbsNum:   24,
-	G2BaseLimbsNum: 24,
-}
-
-type Entry struct {
-	outputName     string
-	parsedTemplate *template.Template
-}
-
-func toPackage(s string) string {
-	return strings.ReplaceAll(s, "-", "")
-}
 
 func generateFiles() {
 	fmt.Println("Generating files")
-	funcs := template.FuncMap{
-		"log":       fmt.Println,
-		"toLower":   strings.ToLower,
-		"toUpper":   strings.ToUpper,
-		"toPackage": toPackage,
-	}
 
-	curvesData := []CurveData{bn254, bls12377, bls12381, bw6761}
-	var entries []Entry
+	for _, curve := range config.Curves {
+		curveDir := path.Join("curves", curve.PackageName)
+		scalarFieldPrefix := "Scalar"
+		fields.Generate(curveDir, curve.PackageName, curve.Curve, scalarFieldPrefix, true, curve.ScalarFieldNumLimbs)
+		fields.Generate(curveDir, curve.PackageName, curve.Curve, "Base", false, curve.BaseFieldNumLimbs)
+		curves.Generate(curveDir, curve.PackageName, curve.Curve, "")
+		vecops.Generate(curveDir, curve.Curve, scalarFieldPrefix)
+		lib_linker.Generate(curveDir, curve.PackageName, curve.Curve, lib_linker.CURVE, 0)
 
-	templateFiles := []string{
-		"main.go.tmpl",
-		"msm.go.tmpl",
-		"msm_test.go.tmpl",
-		"ntt.go.tmpl",
-		"ntt_test.go.tmpl",
-		"curve_test.go.tmpl",
-		"curve.go.tmpl",
-		"vec_ops_test.go.tmpl",
-		"vec_ops.go.tmpl",
-		"helpers_test.go.tmpl",
-	}
-
-	for _, tmplName := range templateFiles {
-		tmpl := template.New(tmplName).Funcs(funcs)
-		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
-		if err != nil {
-			panic(err)
+		if curve.SupportsNTT {
+			ntt.Generate(curveDir, "", curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, true, "", "")
 		}
-		fileName, ok := strings.CutSuffix(tmplName, ".tmpl")
-		if !ok {
-			panic(err)
+
+		if curve.SupportsECNTT {
+			ecntt.Generate(curveDir, curve.Curve, curve.GnarkImport)
 		}
-		entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
-	}
 
-	templateG2Files := []string{
-		"msm.go.tmpl",
-		"msm_test.go.tmpl",
-		"curve_test.go.tmpl",
-		"curve.go.tmpl",
-	}
-
-	for _, tmplName := range templateG2Files {
-		tmpl := template.New(tmplName).Funcs(funcs)
-		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName))
-		if err != nil {
-			panic(err)
-		}
-		rawFileName, _ := strings.CutSuffix(tmplName, ".tmpl")
-		fileName := fmt.Sprintf("g2_%s", rawFileName)
-		entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
-	}
-
-	templateFieldFiles := []string{
-		"field.go.tmpl",
-		"field_test.go.tmpl",
-	}
-
-	fieldFilePrefixes := []string{
-		"base",
-		"g2_base",
-		"scalar",
-	}
-
-	for _, tmplName := range templateFieldFiles {
-		tmpl := template.New(tmplName).Funcs(funcs)
-		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", tmplName), "templates/scalar_field.go.tmpl", "templates/scalar_field_test.go.tmpl")
-		if err != nil {
-			panic(err)
-		}
-		fieldFile, _ := strings.CutSuffix(tmplName, ".tmpl")
-		for _, fieldPrefix := range fieldFilePrefixes {
-			fileName := strings.Join([]string{fieldPrefix, fieldFile}, "_")
-			entries = append(entries, Entry{outputName: fileName, parsedTemplate: tmplParsed})
+		msm.Generate(curveDir, "msm", curve.Curve, "", curve.GnarkImport)
+		if curve.SupportsG2 {
+			g2BaseDir := path.Join(curveDir, "g2")
+			packageName := "g2"
+			fields.Generate(g2BaseDir, packageName, curve.Curve, "G2Base", false, curve.G2FieldNumLimbs)
+			curves.Generate(g2BaseDir, packageName, curve.Curve, "G2")
+			msm.Generate(curveDir, "g2", curve.Curve, "G2", curve.GnarkImport)
 		}
 	}
 
-	// Header files
-	templateIncludeFiles := []string{
-		"curve.h.tmpl",
-		"g2_curve.h.tmpl",
-		"scalar_field.h.tmpl",
-		"msm.h.tmpl",
-		"g2_msm.h.tmpl",
-		"ntt.h.tmpl",
-		"vec_ops.h.tmpl",
-	}
+	for _, field := range config.Fields {
+		fieldDir := path.Join("fields", field.PackageName)
+		scalarFieldPrefix := "Scalar"
+		fields.Generate(fieldDir, field.PackageName, field.Field, scalarFieldPrefix, true, field.LimbsNum)
+		vecops.Generate(fieldDir, field.Field, scalarFieldPrefix)
+		ntt.Generate(fieldDir, "", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, true, "", "")
+		lib_linker.Generate(fieldDir, field.PackageName, field.Field, lib_linker.FIELD, 0)
 
-	for _, includeFile := range templateIncludeFiles {
-		tmpl := template.New(includeFile).Funcs(funcs)
-		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/include/%s", includeFile))
-		if err != nil {
-			panic(err)
-		}
-		fileName, _ := strings.CutSuffix(includeFile, ".tmpl")
-		entries = append(entries, Entry{outputName: fmt.Sprintf("include/%s", fileName), parsedTemplate: tmplParsed})
-	}
-
-	for _, curveData := range curvesData {
-		for _, entry := range entries {
-			fileName := entry.outputName
-			if strings.Contains(fileName, "main") {
-				fileName = strings.Replace(fileName, "main", curveData.Curve, 1)
-			}
-			outFile := filepath.Join(baseDir, curveData.PackageName, fileName)
-			var buf bytes.Buffer
-			data := struct {
-				CurveData
-				IsScalar bool
-				IsG2     bool
-				IsMock   bool
-			}{
-				curveData,
-				strings.Contains(fileName, "scalar_field"),
-				strings.Contains(fileName, "g2"),
-				false,
-			}
-			entry.parsedTemplate.Execute(&buf, data)
-			create(outFile, &buf)
+		if field.SupportsExtension {
+			extensionsDir := path.Join(fieldDir, "extension")
+			extensionField := field.Field + "Extension"
+			extensionFieldPrefix := "Extension"
+			fields.Generate(extensionsDir, "extension", extensionField, extensionFieldPrefix, true, field.ExtensionLimbsNum)
+			vecops.Generate(extensionsDir, extensionField, extensionFieldPrefix)
+			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
+			lib_linker.Generate(extensionsDir, "extension", field.Field, lib_linker.FIELD, 1)
 		}
 	}
 
-	// Generate internal mock field and mock curve files for testing core package
-	internalTemplateFiles := []string{
-		"curve_test.go.tmpl",
-		"curve.go.tmpl",
-		"field_test.go.tmpl",
-		"field.go.tmpl",
-		"helpers_test.go.tmpl",
-	}
-
-	for _, internalTemplate := range internalTemplateFiles {
-		tmpl := template.New(internalTemplate).Funcs(funcs)
-		tmplParsed, err := tmpl.ParseFiles(fmt.Sprintf("templates/%s", internalTemplate))
-		if err != nil {
-			panic(err)
-		}
-		fileName, _ := strings.CutSuffix(internalTemplate, ".tmpl")
-		outFile := filepath.Join("../../core/internal/", fileName)
-
-		var buf bytes.Buffer
-		data := struct {
-			PackageName  string
-			BaseLimbsNum int
-			IsMock       bool
-			IsG2         bool
-			IsScalar     bool
-		}{
-			"internal",
-			8,
-			true,
-			false,
-			false,
-		}
-		tmplParsed.Execute(&buf, data)
-		create(outFile, &buf)
-	}
+	// Mock field and curve files for core
+	mock.Generate("core/internal", "internal", "Mock", "MockBase", false, 4)
 }
 
+//go:generate go run main.go
 func main() {
 	generateFiles()
+
+	cmd := exec.Command("gofmt", "-w", "../../")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("\n%s\n", err.Error())
+		os.Exit(-1)
+	}
 }

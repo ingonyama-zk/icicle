@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	SCALAR_LIMBS int8 = 8
+	SCALAR_LIMBS int = 8
 )
 
 type ScalarField struct {
@@ -33,6 +33,11 @@ func (f ScalarField) GetLimbs() []uint32 {
 
 func (f ScalarField) AsPointer() *uint32 {
 	return &f.limbs[0]
+}
+
+func (f *ScalarField) FromUint32(v uint32) ScalarField {
+	f.limbs[SCALAR_LIMBS-1] = v
+	return *f
 }
 
 func (f *ScalarField) FromLimbs(limbs []uint32) ScalarField {
@@ -95,7 +100,7 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 }
 
 func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.scalar_t)(scalars.AsPointer())
+	cValues := (*C.scalar_t)(scalars.AsUnsafePointer())
 	cSize := (C.size_t)(scalars.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()

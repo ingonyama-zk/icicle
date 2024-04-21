@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	BASE_LIMBS int8 = 12
+	BASE_LIMBS int = 12
 )
 
 type BaseField struct {
@@ -27,6 +27,11 @@ func (f BaseField) GetLimbs() []uint32 {
 
 func (f BaseField) AsPointer() *uint32 {
 	return &f.limbs[0]
+}
+
+func (f *BaseField) FromUint32(v uint32) BaseField {
+	f.limbs[BASE_LIMBS-1] = v
+	return *f
 }
 
 func (f *BaseField) FromLimbs(limbs []uint32) BaseField {

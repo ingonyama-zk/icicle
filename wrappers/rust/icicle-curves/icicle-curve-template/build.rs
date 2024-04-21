@@ -13,14 +13,14 @@ fn main() {
 
     // Optional Features
     #[cfg(feature = "g2")]
-    config.define("G2_DEFINED", "ON");
+    config.define("G2", "ON");
 
     // Build
     let out_dir = config
         .build_target("icicle")
         .build();
 
-    println!("cargo:rustc-link-search={}/build", out_dir.display());
+    println!("cargo:rustc-link-search={}/build/lib", out_dir.display());
 
     println!("cargo:rustc-link-lib=ingo_<CURVE>");
     println!("cargo:rustc-link-lib=stdc++");
