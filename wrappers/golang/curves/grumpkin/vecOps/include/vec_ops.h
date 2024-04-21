@@ -28,7 +28,7 @@ cudaError_t grumpkin_add_cuda(
   scalar_t* result
 );
 
-cudaError_t grumpkinsub_cuda(
+cudaError_t grumpkin_sub_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -36,7 +36,7 @@ cudaError_t grumpkinsub_cuda(
   scalar_t* result
 );
 
-cudaError_t grumpkintranspose_matrix_cuda(
+cudaError_t grumpkin_transpose_matrix_cuda(
   scalar_t* mat_in,
   int row_size,
   int column_size,

@@ -53,7 +53,7 @@ func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.Cur
 func (p {{.CurvePrefix}}Projective) ProjectiveEq(p2 *{{.CurvePrefix}}Projective) bool {
 	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
 	cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p2))
-	__ret := C.{{.Curve}}{{.CurvePrefix}}Eq(cP, cP2)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}_eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 
@@ -62,7 +62,7 @@ func (p *{{.CurvePrefix}}Projective) ProjectiveToAffine() {{.CurvePrefix}}Affine
 
 	cA := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&a))
 	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
-	C.{{.Curve}}{{.CurvePrefix}}ToAffine(cP, cA)
+	C.{{.Curve}}{{.CurvePrefix}}_to_affine(cP, cA)
 	return a
 }
 
@@ -75,7 +75,7 @@ func {{.CurvePrefix}}GenerateProjectivePoints(size int) core.HostSlice[{{.CurveP
 	pointsSlice := core.HostSliceFromElements[{{.CurvePrefix}}Projective](points)
 	pPoints := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.{{.Curve}}{{.CurvePrefix}}GenerateProjectivePoints(pPoints, cSize)
+	C.{{.Curve}}{{.CurvePrefix}}_generate_projective_points(pPoints, cSize)
 
 	return pointsSlice
 }
@@ -129,7 +129,7 @@ func {{.CurvePrefix}}GenerateAffinePoints(size int) core.HostSlice[{{.CurvePrefi
 	pointsSlice := core.HostSliceFromElements[{{.CurvePrefix}}Affine](points)
 	cPoints := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.{{.Curve}}{{.CurvePrefix}}GenerateAffinePoints(cPoints, cSize)
+	C.{{.Curve}}{{.CurvePrefix}}_generate_affine_points(cPoints, cSize)
 
 	return pointsSlice
 }
@@ -140,7 +140,7 @@ func convert{{.CurvePrefix}}AffinePointsMontgomery(points *core.DeviceSlice, isI
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.{{.Curve}}{{.CurvePrefix}}AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}_affine_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
@@ -161,7 +161,7 @@ func convert{{.CurvePrefix}}ProjectivePointsMontgomery(points *core.DeviceSlice,
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.{{.Curve}}{{.CurvePrefix}}ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.{{.Curve}}{{.CurvePrefix}}_projective_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }

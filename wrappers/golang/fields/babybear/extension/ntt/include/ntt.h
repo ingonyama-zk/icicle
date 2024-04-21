@@ -1,8 +1,8 @@
 #include <cuda_runtime.h>
 #include <stdbool.h>
 
-#ifndef _BABYBEAREXTENSION_NTT_H
-#define _BABYBEAREXTENSION_NTT_H
+#ifndef _BABYBEAR_EXTENSION_NTT_H
+#define _BABYBEAR_EXTENSION_NTT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +12,7 @@ typedef struct scalar_t scalar_t;
 typedef struct NTTConfig NTTConfig;
 
 
-cudaError_t babybearExtension_ntt_cuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+cudaError_t babybear_extension_ntt_cuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
 
 
 #ifdef __cplusplus

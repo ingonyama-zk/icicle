@@ -23,7 +23,7 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 	cSize := (C.int)(size)
 	cCfg := (*C.MSMConfig)(cfgPointer)
 
-	__ret := C.grumpkinMSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
+	__ret := C.grumpkin_msm_cuda(cScalars, cPoints, cSize, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return err
 }
@@ -39,7 +39,7 @@ func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c in
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
-	__ret := C.grumpkinPrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
+	__ret := C.grumpkin_precompute_msm_bases_cuda(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
 	err := (cr.CudaError)(__ret)
 	return err
 }

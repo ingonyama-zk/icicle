@@ -44,14 +44,14 @@ func InitDomain(primitiveRoot {{.Field}}.{{.FieldPrefix}}Field, ctx cr.DeviceCon
 	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
 	cFastTwiddles := (C._Bool)(fastTwiddles)
-	__ret := C.{{.Field}}InitializeDomain(cPrimitiveRoot, cCtx, cFastTwiddles)
+	__ret := C.{{.Field}}_initialize_domain(cPrimitiveRoot, cCtx, cFastTwiddles)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }
 
 func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError {
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	__ret := C.{{.Field}}ReleaseDomain(cCtx)
+	__ret := C.{{.Field}}_release_domain(cCtx)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

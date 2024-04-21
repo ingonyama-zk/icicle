@@ -28,7 +28,7 @@ cudaError_t babybear_add_cuda(
   scalar_t* result
 );
 
-cudaError_t babybearsub_cuda(
+cudaError_t babybear_sub_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -36,7 +36,7 @@ cudaError_t babybearsub_cuda(
   scalar_t* result
 );
 
-cudaError_t babybeartranspose_matrix_cuda(
+cudaError_t babybear_transpose_matrix_cuda(
   scalar_t* mat_in,
   int row_size,
   int column_size,

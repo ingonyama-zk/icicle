@@ -5,22 +5,22 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	babybearExtension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
+	babybear_extension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestVecOps(t *testing.T) {
 	testSize := 1 << 14
 
-	a := babybearExtension.GenerateScalars(testSize)
-	b := babybearExtension.GenerateScalars(testSize)
-	var scalar babybearExtension.ExtensionField
+	a := babybear_extension.GenerateScalars(testSize)
+	b := babybear_extension.GenerateScalars(testSize)
+	var scalar babybear_extension.extensionField
 	scalar.One()
 	ones := core.HostSliceWithValue(scalar, testSize)
 
-	out := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
-	out2 := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
-	out3 := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
+	out := make(core.HostSlice[babybear_extension.extensionField], testSize)
+	out2 := make(core.HostSlice[babybear_extension.extensionField], testSize)
+	out3 := make(core.HostSlice[babybear_extension.extensionField], testSize)
 
 	cfg := core.DefaultVecOpsConfig()
 
@@ -40,10 +40,10 @@ func TestTranspose(t *testing.T) {
 	onDevice := false
 	isAsync := false
 
-	matrix := babybearExtension.GenerateScalars(rowSize * columnSize)
+	matrix := babybear_extension.GenerateScalars(rowSize * columnSize)
 
-	out := make(core.HostSlice[babybearExtension.ExtensionField], rowSize*columnSize)
-	out2 := make(core.HostSlice[babybearExtension.ExtensionField], rowSize*columnSize)
+	out := make(core.HostSlice[babybear_extension.extensionField], rowSize*columnSize)
+	out2 := make(core.HostSlice[babybear_extension.extensionField], rowSize*columnSize)
 
 	ctx, _ := cr.GetDefaultDeviceContext()
 
@@ -61,7 +61,7 @@ func TestTranspose(t *testing.T) {
 
 	TransposeMatrix(dMatrix, dOut, columnSize, rowSize, ctx, onDevice, isAsync)
 	TransposeMatrix(dOut, dOut2, rowSize, columnSize, ctx, onDevice, isAsync)
-	output := make(core.HostSlice[babybearExtension.ExtensionField], rowSize*columnSize)
+	output := make(core.HostSlice[babybear_extension.extensionField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 
 	assert.Equal(t, matrix, output)

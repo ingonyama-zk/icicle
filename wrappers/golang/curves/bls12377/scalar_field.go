@@ -94,7 +94,7 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)
-	C.bls12_377GenerateScalars(cScalars, cSize)
+	C.bls12_377_generate_scalars(cScalars, cSize)
 
 	return scalarSlice
 }
@@ -105,7 +105,7 @@ func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaErr
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bls12_377ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bls12_377_scalar_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }

@@ -7,25 +7,25 @@ import (
 	"testing"
 )
 
-func TestExtensionFieldFromLimbs(t *testing.T) {
-	emptyField := ExtensionField{}
+func TestextensionFieldFromLimbs(t *testing.T) {
+	emptyField := extensionField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
-	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the ExtensionField's limbs")
+	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the extensionField's limbs")
 	randLimbs[0] = 100
 	assert.NotEqual(t, randLimbs, emptyField.limbs)
 }
 
-func TestExtensionFieldGetLimbs(t *testing.T) {
-	emptyField := ExtensionField{}
+func TestextensionFieldGetLimbs(t *testing.T) {
+	emptyField := extensionField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ExtensionField's limbs")
+	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the extensionField's limbs")
 }
 
-func TestExtensionFieldOne(t *testing.T) {
-	var emptyField ExtensionField
+func TestextensionFieldOne(t *testing.T) {
+	var emptyField extensionField
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int(EXTENSION_LIMBS))
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
@@ -34,11 +34,11 @@ func TestExtensionFieldOne(t *testing.T) {
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "ExtensionField with limbs to field one did not work")
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "extensionField with limbs to field one did not work")
 }
 
-func TestExtensionFieldZero(t *testing.T) {
-	var emptyField ExtensionField
+func TestextensionFieldZero(t *testing.T) {
+	var emptyField extensionField
 	emptyField.Zero()
 	limbsZero := make([]uint32, EXTENSION_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
@@ -47,27 +47,27 @@ func TestExtensionFieldZero(t *testing.T) {
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "ExtensionField with limbs to field zero failed")
+	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "extensionField with limbs to field zero failed")
 }
 
-func TestExtensionFieldSize(t *testing.T) {
-	var emptyField ExtensionField
+func TestextensionFieldSize(t *testing.T) {
+	var emptyField extensionField
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func TestExtensionFieldAsPointer(t *testing.T) {
-	var emptyField ExtensionField
+func TestextensionFieldAsPointer(t *testing.T) {
+	var emptyField extensionField
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func TestExtensionFieldFromBytes(t *testing.T) {
-	var emptyField ExtensionField
+func TestextensionFieldFromBytes(t *testing.T) {
+	var emptyField extensionField
 	bytes, expected := test_helpers.GenerateBytesArray(int(EXTENSION_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
@@ -75,8 +75,8 @@ func TestExtensionFieldFromBytes(t *testing.T) {
 	assert.ElementsMatch(t, emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func TestExtensionFieldToBytes(t *testing.T) {
-	var emptyField ExtensionField
+func TestextensionFieldToBytes(t *testing.T) {
+	var emptyField extensionField
 	expected, limbs := test_helpers.GenerateBytesArray(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(limbs)
 
@@ -90,7 +90,7 @@ func TestGenerateScalars(t *testing.T) {
 	assert.Implements(t, (*core.HostOrDeviceSlice)(nil), &scalars)
 
 	assert.Equal(t, numScalars, scalars.Len())
-	zeroScalar := ExtensionField{}
+	zeroScalar := extensionField{}
 	assert.NotContains(t, scalars, zeroScalar)
 }
 

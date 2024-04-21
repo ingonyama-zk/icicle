@@ -28,7 +28,7 @@ cudaError_t {{.Field}}_add_cuda(
   scalar_t* result
 );
 
-cudaError_t {{.Field}}sub_cuda(
+cudaError_t {{.Field}}_sub_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -36,7 +36,7 @@ cudaError_t {{.Field}}sub_cuda(
   scalar_t* result
 );
 
-cudaError_t {{.Field}}transpose_matrix_cuda(
+cudaError_t {{.Field}}_transpose_matrix_cuda(
   scalar_t* mat_in,
   int row_size,
   int column_size,
