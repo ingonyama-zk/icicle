@@ -14,13 +14,13 @@ func TestVecOps(t *testing.T) {
 
 	a := babybear_extension.GenerateScalars(testSize)
 	b := babybear_extension.GenerateScalars(testSize)
-	var scalar babybear_extension.extensionField
+	var scalar babybear_extension.ExtensionField
 	scalar.One()
 	ones := core.HostSliceWithValue(scalar, testSize)
 
-	out := make(core.HostSlice[babybear_extension.extensionField], testSize)
-	out2 := make(core.HostSlice[babybear_extension.extensionField], testSize)
-	out3 := make(core.HostSlice[babybear_extension.extensionField], testSize)
+	out := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
+	out2 := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
+	out3 := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 
 	cfg := core.DefaultVecOpsConfig()
 
@@ -42,8 +42,8 @@ func TestTranspose(t *testing.T) {
 
 	matrix := babybear_extension.GenerateScalars(rowSize * columnSize)
 
-	out := make(core.HostSlice[babybear_extension.extensionField], rowSize*columnSize)
-	out2 := make(core.HostSlice[babybear_extension.extensionField], rowSize*columnSize)
+	out := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
+	out2 := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 
 	ctx, _ := cr.GetDefaultDeviceContext()
 
@@ -61,7 +61,7 @@ func TestTranspose(t *testing.T) {
 
 	TransposeMatrix(dMatrix, dOut, columnSize, rowSize, ctx, onDevice, isAsync)
 	TransposeMatrix(dOut, dOut2, rowSize, columnSize, ctx, onDevice, isAsync)
-	output := make(core.HostSlice[babybear_extension.extensionField], rowSize*columnSize)
+	output := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 
 	assert.Equal(t, matrix, output)

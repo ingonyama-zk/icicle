@@ -58,7 +58,7 @@ func generateFiles() {
 		if field.SupportsExtension {
 			extensionsDir := path.Join(fieldDir, "extension")
 			extensionField := field.Field + "_extension"
-			extensionFieldPrefix := "extension"
+			extensionFieldPrefix := "Extension"
 			fields.Generate(extensionsDir, "extension", extensionField, extensionFieldPrefix, true, field.ExtensionLimbsNum)
 			vecops.Generate(extensionsDir, extensionField, extensionFieldPrefix)
 			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)

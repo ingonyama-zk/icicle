@@ -15,32 +15,32 @@ const (
 	EXTENSION_LIMBS int = 4
 )
 
-type extensionField struct {
+type ExtensionField struct {
 	limbs [EXTENSION_LIMBS]uint32
 }
 
-func (f extensionField) Len() int {
+func (f ExtensionField) Len() int {
 	return int(EXTENSION_LIMBS)
 }
 
-func (f extensionField) Size() int {
+func (f ExtensionField) Size() int {
 	return int(EXTENSION_LIMBS * 4)
 }
 
-func (f extensionField) GetLimbs() []uint32 {
+func (f ExtensionField) GetLimbs() []uint32 {
 	return f.limbs[:]
 }
 
-func (f extensionField) AsPointer() *uint32 {
+func (f ExtensionField) AsPointer() *uint32 {
 	return &f.limbs[0]
 }
 
-func (f *extensionField) FromUint32(v uint32) extensionField {
+func (f *ExtensionField) FromUint32(v uint32) ExtensionField {
 	f.limbs[EXTENSION_LIMBS-1] = v
 	return *f
 }
 
-func (f *extensionField) FromLimbs(limbs []uint32) extensionField {
+func (f *ExtensionField) FromLimbs(limbs []uint32) ExtensionField {
 	if len(limbs) != f.Len() {
 		panic("Called FromLimbs with limbs of different length than field")
 	}
@@ -51,7 +51,7 @@ func (f *extensionField) FromLimbs(limbs []uint32) extensionField {
 	return *f
 }
 
-func (f *extensionField) Zero() extensionField {
+func (f *ExtensionField) Zero() ExtensionField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
@@ -59,7 +59,7 @@ func (f *extensionField) Zero() extensionField {
 	return *f
 }
 
-func (f *extensionField) One() extensionField {
+func (f *ExtensionField) One() ExtensionField {
 	for i := range f.limbs {
 		f.limbs[i] = 0
 	}
@@ -68,7 +68,7 @@ func (f *extensionField) One() extensionField {
 	return *f
 }
 
-func (f *extensionField) FromBytesLittleEndian(bytes []byte) extensionField {
+func (f *ExtensionField) FromBytesLittleEndian(bytes []byte) ExtensionField {
 	if len(bytes)/4 != f.Len() {
 		panic(fmt.Sprintf("Called FromBytesLittleEndian with incorrect bytes length; expected %d - got %d", f.Len()*4, len(bytes)))
 	}
@@ -80,7 +80,7 @@ func (f *extensionField) FromBytesLittleEndian(bytes []byte) extensionField {
 	return *f
 }
 
-func (f extensionField) ToBytesLittleEndian() []byte {
+func (f ExtensionField) ToBytesLittleEndian() []byte {
 	bytes := make([]byte, f.Len()*4)
 	for i, v := range f.limbs {
 		binary.LittleEndian.PutUint32(bytes[i*4:], v)
@@ -89,8 +89,8 @@ func (f extensionField) ToBytesLittleEndian() []byte {
 	return bytes
 }
 
-func GenerateScalars(size int) core.HostSlice[extensionField] {
-	scalarSlice := make(core.HostSlice[extensionField], size)
+func GenerateScalars(size int) core.HostSlice[ExtensionField] {
+	scalarSlice := make(core.HostSlice[ExtensionField], size)
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)

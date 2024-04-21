@@ -30,11 +30,11 @@ func TestNtt(t *testing.T) {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 			testSize := 1 << size
 
-			scalarsCopy := core.HostSliceFromElements[babybear_extension.extensionField](scalars[:testSize])
+			scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
 			cfg.Ordering = v
 
 			// run ntt
-			output := make(core.HostSlice[babybear_extension.extensionField], testSize)
+			output := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 			Ntt(scalarsCopy, core.KForward, &cfg, output)
 		}
 	}
@@ -48,7 +48,7 @@ func TestNttDeviceAsync(t *testing.T) {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 				testSize := 1 << size
-				scalarsCopy := core.HostSliceFromElements[babybear_extension.extensionField](scalars[:testSize])
+				scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
 
 				stream, _ := cr.CreateStream()
 
@@ -63,7 +63,7 @@ func TestNttDeviceAsync(t *testing.T) {
 
 				// run ntt
 				Ntt(deviceInput, direction, &cfg, deviceOutput)
-				output := make(core.HostSlice[babybear_extension.extensionField], testSize)
+				output := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				cr.SynchronizeStream(&stream)
@@ -82,12 +82,12 @@ func TestNttBatch(t *testing.T) {
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 
-			scalarsCopy := core.HostSliceFromElements[babybear_extension.extensionField](scalars[:totalSize])
+			scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:totalSize])
 
 			cfg.Ordering = core.KNN
 			cfg.BatchSize = int32(batchSize)
 			// run ntt
-			output := make(core.HostSlice[babybear_extension.extensionField], totalSize)
+			output := make(core.HostSlice[babybear_extension.ExtensionField], totalSize)
 			Ntt(scalarsCopy, core.KForward, &cfg, output)
 		}
 	}
