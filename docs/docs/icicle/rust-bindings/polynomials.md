@@ -16,7 +16,7 @@ Before utilizing any functions from the polynomial API, it is mandatory to initi
 :::note
 **Field-Specific Initialization Requirement**
 
-The Icicle library is structured such that each field or curve has its dedicated library implementation. As a result, initialization must be performed individually for each field or curve to ensure the correct setup and functionality of the library.
+The ICICLE library is structured such that each field or curve has its dedicated library implementation. As a result, initialization must be performed individually for each field or curve to ensure the correct setup and functionality of the library.
 :::
 
 
@@ -154,7 +154,7 @@ use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 Polynomials can be created from coefficients or evaluations:
 
 ```rust
-// Assume F is the field type
+// Assume F is the field type (e.g. icicle_bn254::curve::ScalarField or a type parameter)
 let coeffs = ...;
 let p_from_coeffs = PolynomialBabyBear::from_coeffs(HostSlice::from_slice(&coeffs), size);
 
