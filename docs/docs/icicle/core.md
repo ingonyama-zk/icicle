@@ -148,7 +148,7 @@ Since ICICLE Core is written in CUDA / C++ its really simple to generate static 
 
 Static libraries can be loaded into memory once and used by multiple programs, reducing memory usage and potentially improving performance. They also allow you to separate functionality into distinct modules so your static library may need to compile only specific features that you want to use.
 
-Lets review the Golang bindings since its a pretty verbose example (compared to rust which hides it pretty well) of using static libraries. Golang has a library named `CGO` which can be used to link static libraries. Here's a basic example on how you can use cgo to link these libraries:
+Let's review the [Golang bindings](golang-bindings.md) since its a pretty verbose example (compared to rust which hides it pretty well) of using static libraries. Golang has a library named `CGO` which can be used to link static libraries. Here's a basic example on how you can use cgo to link these libraries:
 
 ```go
 /*
