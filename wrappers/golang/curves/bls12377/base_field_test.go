@@ -1,14 +1,14 @@
 package bls12377
 
 import (
-	"testing"
-
+	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestBaseFieldFromLimbs(t *testing.T) {
 	emptyField := BaseField{}
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 	assert.ElementsMatch(t, randLimbs, emptyField.limbs, "Limbs do not match; there was an issue with setting the BaseField's limbs")
 	randLimbs[0] = 100
@@ -17,7 +17,7 @@ func TestBaseFieldFromLimbs(t *testing.T) {
 
 func TestBaseFieldGetLimbs(t *testing.T) {
 	emptyField := BaseField{}
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the BaseField's limbs")
@@ -26,10 +26,10 @@ func TestBaseFieldGetLimbs(t *testing.T) {
 func TestBaseFieldOne(t *testing.T) {
 	var emptyField BaseField
 	emptyField.One()
-	limbOne := generateLimbOne(int(BASE_LIMBS))
+	limbOne := test_helpers.GenerateLimbOne(int(BASE_LIMBS))
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
 
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
@@ -39,10 +39,10 @@ func TestBaseFieldOne(t *testing.T) {
 func TestBaseFieldZero(t *testing.T) {
 	var emptyField BaseField
 	emptyField.Zero()
-	limbsZero := make([]uint64, BASE_LIMBS)
+	limbsZero := make([]uint32, BASE_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
@@ -51,15 +51,15 @@ func TestBaseFieldZero(t *testing.T) {
 
 func TestBaseFieldSize(t *testing.T) {
 	var emptyField BaseField
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*8, emptyField.Size(), "Size returned an incorrect value of bytes")
+	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
 func TestBaseFieldAsPointer(t *testing.T) {
 	var emptyField BaseField
-	randLimbs := generateRandomLimb(int(BASE_LIMBS))
+	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
@@ -67,7 +67,7 @@ func TestBaseFieldAsPointer(t *testing.T) {
 
 func TestBaseFieldFromBytes(t *testing.T) {
 	var emptyField BaseField
-	bytes, expected := generateBytesArray(int(BASE_LIMBS))
+	bytes, expected := test_helpers.GenerateBytesArray(int(BASE_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
 
@@ -76,7 +76,7 @@ func TestBaseFieldFromBytes(t *testing.T) {
 
 func TestBaseFieldToBytes(t *testing.T) {
 	var emptyField BaseField
-	expected, limbs := generateBytesArray(int(BASE_LIMBS))
+	expected, limbs := test_helpers.GenerateBytesArray(int(BASE_LIMBS))
 	emptyField.FromLimbs(limbs)
 
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
