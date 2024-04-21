@@ -33,30 +33,30 @@ go get github.com/ingonyama-zk/icicle@<commit_id>
 
 To build the shared libraries you can run this script:
 
-```
+```bash
 ./build.sh <curve> [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
-
-curve - The name of the curve to build or "all" to build all curves
--g2 - Optional - build with G2 enabled 
--ecntt - Optional - build with ECNTT enabled
--devmode - Optional - build in devmode
 ```
+- **`curve`** - The name of the curve to build or "all" to build all curves
+- **`g2`** - Optional - build with G2 enabled 
+- **`ecntt`** - Optional - build with ECNTT enabled
+- **`devmode`** - Optional - build in devmode
+
 
 To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
-```
+```bash
 ./build.sh all -g2 -ecntt
 ```
 
 If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
 
-```
+``` bash
 ./build.sh bn254
 ```
 
 Now you can import ICICLE into your project
 
-```golang
+```go
 import (
     "github.com/stretchr/testify/assert"
     "testing"
@@ -93,7 +93,7 @@ The libraries produced from the CUDA code compilation are used to bind Golang to
 
 ```go
 /*
-#cgo LDFLAGS: -L$/path/to/shared/libs/curves -L$/path/to/shared/libs/fields -lingo_curve_bn254 -lingo_field_bn254 -lstdc++ -lm
+#cgo LDFLAGS: -L$/path/to/shared/libs -lingo_curve_bn254 -L$/path/to/shared/libs -lingo_field_bn254 -lstdc++ -lm
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"
