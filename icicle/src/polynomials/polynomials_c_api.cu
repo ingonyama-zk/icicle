@@ -189,17 +189,6 @@ namespace polynomials {
     return result;
   }
 
-  // Evaluates a polynomial at a given point.
-  // p: Pointer to the polynomial instance.
-  // x: Point at which to evaluate the polynomial.
-  // Returns the evaluation result.
-  scalar_t CONCAT_EXPAND(FIELD, polynomial_evaluate)(const PolynomialInst* p, const scalar_t& x)
-  {
-    scalar_t eval = {};
-    p->evaluate(&x, &eval);
-    return eval;
-  }
-
   // Evaluates a polynomial on a domain of points.
   // p: Pointer to the polynomial instance.
   // domain: Array of points constituting the domain.

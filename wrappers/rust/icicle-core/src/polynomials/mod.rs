@@ -112,9 +112,6 @@ macro_rules! impl_univariate_polynomial_api {
             #[link_name = concat!($field_prefix, "polynomial_odd")]
             fn odd(a: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "polynomial_evaluate")]
-            fn eval(a: PolynomialHandle, x: &$field) -> $field;
-
             #[link_name = concat!($field_prefix, "polynomial_evaluate_on_domain")]
             fn eval_on_domain(a: PolynomialHandle, domain: *const $field, domain_size: u64, evals: *mut $field);
 
@@ -229,7 +226,11 @@ macro_rules! impl_univariate_polynomial_api {
             }
 
             fn eval(&self, x: &Self::Field) -> Self::Field {
-                unsafe { eval(self.handle, x) }
+                let mut eval = Self::Field::zero();
+                unsafe {
+                    eval_on_domain(self.handle, x, 1, &mut eval);
+                }
+                eval
             }
 
             fn eval_on_domain<
