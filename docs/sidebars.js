@@ -65,9 +65,9 @@ module.exports = {
               id: "icicle/golang-bindings/vec-ops",
             },
             {
-            type: "doc",
-            label: "Multi GPU Support",
-            id: "icicle/golang-bindings/multi-gpu",
+              type: "doc",
+              label: "Multi GPU Support",
+              id: "icicle/golang-bindings/multi-gpu",
             },
           ]
         },
@@ -138,6 +138,11 @@ module.exports = {
               id: "icicle/primitives/poseidon",
             },
           ],
+        },
+        {
+          type: "doc",
+          label: "Polynomials",
+          id: "icicle/polynomials/overview",
         },
         {
           type: "doc",
