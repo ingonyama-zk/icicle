@@ -103,6 +103,11 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "EC-NTT",
+              id: "icicle/rust-bindings/ecntt",
+            },
+            {
+              type: "doc",
               label: "Vector operations",
               id: "icicle/rust-bindings/vec-ops",
             },
