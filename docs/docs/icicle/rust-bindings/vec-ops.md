@@ -154,3 +154,64 @@ All operations are element-wise operations, and the results placed into the `res
 - **`add`**: Computes the element-wise sum of two vectors.
 - **`sub`**: Computes the element-wise difference between two vectors.
 - **`mul`**: Performs element-wise multiplication of two vectors.
+
+
+## MatrixTranspose API Documentation
+
+This section describes the functionality of the `TransposeMatrix` function used for matrix transposition.
+
+The function takes a matrix represented as a 1D slice and transposes it, storing the result in another 1D slice.
+
+### Function
+
+```rust
+pub fn transpose_matrix<F>(
+    input: &HostOrDeviceSlice<F>,
+    row_size: u32,
+    column_size: u32,
+    output: &mut HostOrDeviceSlice<F>,
+    ctx: &DeviceContext,
+    on_device: bool,
+    is_async: bool,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>
+```
+
+### Parameters
+
+- **`input`**: A slice representing the input matrix. The slice can be stored on either the host or the device.
+- **`row_size`**: The number of rows in the input matrix.
+- **`column_size`**: The number of columns in the input matrix.
+- **`output`**: A mutable slice to store the transposed matrix. The slice can be stored on either the host or the device.
+- **`ctx`**: A reference to the `DeviceContext`, which provides information about the device where the operation will be performed.
+- **`on_device`**: A boolean flag indicating whether the inputs and outputs are on the device. 
+- **`is_async`**: A boolean flag indicating whether the operation should be performed asynchronously. 
+
+### Return Value
+
+`Ok(())` if the operation is successful, or an `IcicleResult` error otherwise.
+
+### Example
+
+```rust
+use icicle::HostOrDeviceSlice;
+use icicle::DeviceContext;
+use icicle::FieldImpl;
+use icicle::VecOps;
+
+let input: HostOrDeviceSlice<i32> = // ...;
+let mut output: HostOrDeviceSlice<i32> = // ...;
+let ctx: DeviceContext = // ...;
+
+transpose_matrix(&input, 5, 4, &mut output, &ctx, true, false)
+    .expect("Failed to transpose matrix");
+```
+
+
+The function takes a matrix represented as a 1D slice, transposes it, and stores the result in another 1D slice. The input and output slices can be stored on either the host or the device, and the operation can be performed synchronously or asynchronously.
+
+The function is generic and can work with any type `F` that implements the `FieldImpl` trait. The `<F as FieldImpl>::Config` type must also implement the `VecOps<F>` trait, which provides the `transpose` method used to perform the actual transposition.
+
+The function returns an `IcicleResult<()>`, indicating whether the operation was successful or not.
