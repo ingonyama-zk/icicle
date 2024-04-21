@@ -483,9 +483,34 @@ TEST_F(PolynomialTest, slicing)
 #include "msm/msm.cuh"
 #include "curves/curve_config.cuh"
 using curve_config::affine_t;
+using curve_config::projective_t;
+
+// using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
+namespace msm {
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
+    const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
+  cudaError_t _MSM(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
+  {
+    return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
+  }
+} // namespace msm
+
+#ifdef G2
 using curve_config::g2_affine_t;
 using curve_config::g2_projective_t;
-using curve_config::projective_t;
+
+namespace msm {
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
+    const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
+
+  cudaError_t
+  _G2MSM(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
+  {
+    return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
+  }
+} // namespace msm
+#endif // G2
+
 class dummy_g2_t : public scalar_t
 {
 public:
@@ -509,25 +534,7 @@ public:
     return dummy_g2_t{scalar_t::sub_modulus<1>(rs)};
   }
 };
-
-// using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
 namespace msm {
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
-    const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
-
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
-    const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
-
-  cudaError_t _MSM(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
-  {
-    return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
-  }
-  cudaError_t
-  _G2MSM(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
-  {
-    return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
-  }
-
   cudaError_t
   _G2MSM(const scalar_t* scalars, const dummy_g2_t* points, int msm_size, MSMConfig& config, dummy_g2_t* out)
   {
@@ -934,6 +941,21 @@ TEST_F(PolynomialTest, commitMSM)
   EXPECT_EQ(d_coeff.isValid(), false);
 }
 
+TEST_F(PolynomialTest, DummyGroth16)
+{
+  // (1) construct R1CS and QAP for circuit with N inputs
+  Groth16Example<scalar_t, affine_t, projective_t, dummy_g2_t, dummy_g2_t> groth16_example(30 /*=N*/);
+
+  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
+  auto witness = groth16_example.random_witness_inputs();
+  groth16_example.compute_witness(witness);
+
+  groth16_example.setup();
+  auto proof = groth16_example.prove(witness);
+  ASSERT_EQ(groth16_example.dummy_verify(proof, witness), true);
+}
+
+#ifdef G2
 TEST_F(PolynomialTest, Groth16)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
@@ -948,20 +970,8 @@ TEST_F(PolynomialTest, Groth16)
   auto proof = groth16_example.prove(witness);
   // groth16_example.verify(proof); // cannot implement without pairing
 }
+#endif // G2
 
-TEST_F(PolynomialTest, DummyGroth16)
-{
-  // (1) construct R1CS and QAP for circuit with N inputs
-  Groth16Example<scalar_t, affine_t, projective_t, dummy_g2_t, dummy_g2_t> groth16_example(30 /*=N*/);
-
-  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
-  auto witness = groth16_example.random_witness_inputs();
-  groth16_example.compute_witness(witness);
-
-  groth16_example.setup();
-  auto proof = groth16_example.prove(witness);
-  ASSERT_EQ(groth16_example.dummy_verify(proof, witness), true);
-}
 #endif // CURVE
 
 int main(int argc, char** argv)
