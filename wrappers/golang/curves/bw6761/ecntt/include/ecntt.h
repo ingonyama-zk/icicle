@@ -10,7 +10,7 @@ extern "C" {
 typedef struct NTTConfig NTTConfig;
 typedef struct projective_t projective_t;
 
-cudaError_t bw6_761ECNTTCuda(const projective_t* input, int size, int dir, NTTConfig* config, projective_t* output);
+cudaError_t bw6_761_ecntt_cuda(const projective_t* input, int size, int dir, NTTConfig* config, projective_t* output);
 
 #ifdef __cplusplus
 }

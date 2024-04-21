@@ -12,7 +12,7 @@ typedef struct scalar_t scalar_t;
 typedef struct VecOpsConfig VecOpsConfig;
 typedef struct DeviceContext DeviceContext;
 
-cudaError_t bls12_381MulCuda(
+cudaError_t bls12_381_mul_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -20,7 +20,7 @@ cudaError_t bls12_381MulCuda(
   scalar_t* result
 );
 
-cudaError_t bls12_381AddCuda(
+cudaError_t bls12_381_add_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -28,7 +28,7 @@ cudaError_t bls12_381AddCuda(
   scalar_t* result
 );
 
-cudaError_t bls12_381SubCuda(
+cudaError_t bls12_381sub_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -36,7 +36,7 @@ cudaError_t bls12_381SubCuda(
   scalar_t* result
 );
 
-cudaError_t bls12_381TransposeMatrix(
+cudaError_t bls12_381transpose_matrix_cuda(
   scalar_t* mat_in,
   int row_size,
   int column_size,

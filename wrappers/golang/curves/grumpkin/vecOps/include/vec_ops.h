@@ -12,7 +12,7 @@ typedef struct scalar_t scalar_t;
 typedef struct VecOpsConfig VecOpsConfig;
 typedef struct DeviceContext DeviceContext;
 
-cudaError_t grumpkinMulCuda(
+cudaError_t grumpkin_mul_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -20,7 +20,7 @@ cudaError_t grumpkinMulCuda(
   scalar_t* result
 );
 
-cudaError_t grumpkinAddCuda(
+cudaError_t grumpkin_add_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -28,7 +28,7 @@ cudaError_t grumpkinAddCuda(
   scalar_t* result
 );
 
-cudaError_t grumpkinSubCuda(
+cudaError_t grumpkinsub_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -36,7 +36,7 @@ cudaError_t grumpkinSubCuda(
   scalar_t* result
 );
 
-cudaError_t grumpkinTransposeMatrix(
+cudaError_t grumpkintranspose_matrix_cuda(
   scalar_t* mat_in,
   int row_size,
   int column_size,

@@ -12,9 +12,9 @@ typedef struct scalar_t scalar_t;
 typedef struct NTTConfig NTTConfig;
 typedef struct DeviceContext DeviceContext;
 
-cudaError_t bls12_381NTTCuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
-cudaError_t bls12_381InitializeDomain(scalar_t* primitive_root, DeviceContext* ctx, bool fast_twiddles);
-cudaError_t bls12_381ReleaseDomain(DeviceContext* ctx);
+cudaError_t bls12_381_ntt_cuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+cudaError_t bls12_381_initialize_domain(scalar_t* primitive_root, DeviceContext* ctx, bool fast_twiddles);
+cudaError_t bls12_381_release_domain(DeviceContext* ctx);
 
 #ifdef __cplusplus
 }

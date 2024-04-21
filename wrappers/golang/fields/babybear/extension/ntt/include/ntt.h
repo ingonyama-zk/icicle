@@ -12,7 +12,7 @@ typedef struct scalar_t scalar_t;
 typedef struct NTTConfig NTTConfig;
 
 
-cudaError_t babybearExtensionNTTCuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+cudaError_t babybearExtension_ntt_cuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
 
 
 #ifdef __cplusplus
