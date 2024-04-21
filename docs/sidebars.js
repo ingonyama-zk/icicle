@@ -25,6 +25,11 @@ module.exports = {
           id: "icicle/integrations"
         },
         {
+          type: "doc",
+          label: "ICICLE Core",
+          id: "icicle/core",
+        },
+        {
           type: "category",
           label: "Golang bindings",
           link: {

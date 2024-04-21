@@ -8,9 +8,9 @@ This guide is oriented towards developers who want to start writing code with th
 
 The diagram above displays the general architecture of ICICLE and the API layers that exist. The CUDA API, which we also call ICICLE Core, is the lowest level and is comprised of CUDA kernels which implement all primitives such as MSM as well as C++ wrappers which expose these methods for different curves.
 
-ICICLE Core compiles into a static library. This library can be used with our official Golang and Rust wrappers or you can implement a wrapper for it in any language.
+ICICLE Core compiles into a static library. This library can be used with our official Golang and Rust wrappers or linked with your C++ project. You can also implement a wrapper for it in any other language.
 
-Based on this dependency architecture, the ICICLE repository has three main sections, each of which is independent from the other.
+Based on this dependency architecture, the ICICLE repository has three main sections:
 
 - ICICLE core
 - ICICLE Rust bindings
@@ -18,20 +18,26 @@ Based on this dependency architecture, the ICICLE repository has three main sect
 
 ### ICICLE Core
 
-[ICICLE core](https://github.com/ingonyama-zk/icicle/tree/main/icicle) contains all the low level CUDA code implementing primitives such as [points](https://github.com/ingonyama-zk/icicle/tree/main/icicle/primitives) and [MSM](https://github.com/ingonyama-zk/icicle/tree/main/icicle/appUtils/msm). There also exists higher level C++ wrappers to expose the low level CUDA primitives ([example](https://github.com/ingonyama-zk/icicle/blob/c1a32a9879a7612916e05aa3098f76144de4109e/icicle/appUtils/msm/msm.cu#L1)).
+[ICICLE Core](/icicle/core) is a library that directly works with GPU by defining CUDA kernels and algorithms that invoke them. It contains code for [fast field arithmetic](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/field/field.cuh), cryptographic primitives used in ZK such as [NTT](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/ntt/), [MSM](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/msm/), [Poseidon Hash](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/poseidon/), [Polynomials](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/polynomials/) and others.
 
-ICICLE Core would typically be compiled into a static library and used in a third party language such as Rust or Golang.
+ICICLE Core would typically be compiled into a static library and either used in a third party language such as Rust or Golang, or linked with your own C++ project.
 
 ### ICICLE Rust and Golang bindings
 
-- [ICICLE Rust bindings](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust)
-- [ICICLE Golang bindings](https://github.com/ingonyama-zk/icicle/tree/main/goicicle)
+- [ICICLE Rust bindings](/icicle/rust-bindings)
+- [ICICLE Golang bindings](/icicle/golang-bindings)
 
 These bindings allow you to easily use ICICLE in a Rust or Golang project. Setting up Golang bindings requires a bit of extra steps compared to the Rust bindings which utilize the `cargo build` tool.
 
 ## Running ICICLE
 
 This guide assumes that you have a Linux or Windows machine with an Nvidia GPU installed. If you don't have access to an Nvidia GPU you can access one for free on [Google Colab](https://colab.google/).
+
+:::info note
+
+ICICLE can only run on Linux or Windows. **MacOS is not supported**.
+
+:::
 
 ### Prerequisites
 
@@ -50,9 +56,9 @@ If you don't wish to install these prerequisites you can follow this tutorial us
 
 ### Setting up ICICLE and running tests
 
-The objective of this guide is to make sure you can run the ICICLE Core, Rust and Golang tests. Achieving this will ensure you know how to setup ICICLE and run a ICICLE program. For simplicity, we will be using the ICICLE docker container as our environment, however, you may install the prerequisites on your machine and follow the same commands in your terminal.
+The objective of this guide is to make sure you can run the ICICLE Core, Rust and Golang tests. Achieving this will ensure you know how to setup ICICLE and run an ICICLE program. For simplicity, we will be using the ICICLE docker container as our environment, however, you may install the prerequisites on your machine and [skip](#icicle-core-1) the docker section.
 
-#### Setting up our environment
+#### Setting up environment with Docker
 
 Lets begin by cloning the ICICLE repository:
 
@@ -105,29 +111,23 @@ ICICLE Core is found under [`<project_root>/icicle`](https://github.com/ingonyam
 cd icicle
 ```
 
-We are going to compile ICICLE for a specific curve
+For this example, we are going to compile ICICLE for a `bn254` curve. However other compilation strategies are supported.
 
 ```sh
 mkdir -p build
 cmake -S . -B build -DCURVE=bn254 -DBUILD_TESTS=ON
-cmake --build build
+cmake --build build -j
 ```
 
-`-DBUILD_TESTS=ON` compiles the tests, without this flag `ctest` won't work.
-`-DCURVE=bn254` tells the compiler which curve to build. You can find a list of supported curves [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/curves).
+`-DBUILD_TESTS` option compiles the tests, without this flag `ctest` won't work.
+`-DCURVE` option tells the compiler which curve to build. You can find a list of supported curves [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/cmake/CurvesCommon.cmake#L2).
 
 The output in `build` folder should include the static libraries for the compiled curve.
-
-:::info
-
-Make sure to only use `-DBUILD_TESTS=ON` for running tests as the archive output will only be available when `-DBUILD_TESTS=ON` is not supplied.
-
-:::
 
 To run the test
 
 ```sh
-cd build
+cd build/tests
 ctest
 ```
 
@@ -169,8 +169,24 @@ Golang is WIP in v1, coming soon. Please checkout a previous [release v0.1.0](ht
 
 ### Running ICICLE examples
 
-ICICLE examples can be found [here](https://github.com/ingonyama-zk/icicle-examples) these examples cover some simple use cases using C++, rust and golang.
+ICICLE examples can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/examples) these examples cover some simple use cases using C++, rust and golang.
 
+Lets run one of our C++ examples, in this case the [MSM example](https://github.com/ingonyama-zk/icicle/blob/main/examples/c%2B%2B/msm/example.cu).
+
+```sh
+cd examples/c++/msm
+./compile.sh
+./run.sh
+```
+
+:::tip
+
+Read through the compile.sh and CMakeLists.txt to understand how to link your own C++ project with ICICLE
+
+:::
+
+
+#### Running with Docker
 In each example directory, ZK-container files are located in a subdirectory `.devcontainer`.
 
 ```sh
@@ -178,21 +194,6 @@ msm/
 ├── .devcontainer
    ├── devcontainer.json
    └── Dockerfile
-```
-
-Lets run one of our C++ examples, in this case the [MSM example](https://github.com/ingonyama-zk/icicle-examples/blob/main/c%2B%2B/msm/example.cu).
-
-Clone the repository
-
-```sh
-git clone https://github.com/ingonyama-zk/icicle-examples.git
-cd icicle-examples
-```
-
-Enter the test directory
-
-```sh
-cd c++/msm
 ```
 
 Now lets build our docker file and run the test inside it. Make sure you have installed the [optional prerequisites](#optional-prerequisites).
@@ -207,54 +208,11 @@ Lets start and enter the container
 docker run -it --rm --gpus all -v .:/icicle-example icicle-example-msm
 ```
 
-to run the example
+Inside the container you can run the same commands:
 
 ```sh
-rm -rf build
-mkdir -p build
-cmake -S . -B build
-cmake --build build
-./build/example
+./compile.sh
+./run.sh
 ```
 
 You can now experiment with our other examples, perhaps try to run a rust or golang example next.
-
-## Writing new bindings for ICICLE
-
-Since ICICLE Core is written in CUDA / C++ its really simple to generate static libraries. These static libraries can be installed on any system and called by higher level languages such as Golang.
-
-static libraries can be loaded into memory once and used by multiple programs, reducing memory usage and potentially improving performance. They also allow you to separate functionality into distinct modules so your static library may need to compile only specific features that you want to use.
-
-Lets review the Golang bindings since its a pretty verbose example (compared to rust which hides it pretty well) of using static libraries. Golang has a library named `CGO` which can be used to link static libraries. Here's a basic example on how you can use cgo to link these libraries:
-
-```go
-/*
-#cgo LDFLAGS: -L/path/to/shared/libs -lbn254 -lbls12_381 -lbls12_377 -lbw6_671
-#include "icicle.h" // make sure you use the correct header file(s)
-*/
-import "C"
-
-func main() {
-  // Now you can call the C functions from the ICICLE libraries.
-  // Note that C function calls are prefixed with 'C.' in Go code.
-
-  out := (*C.BN254_projective_t)(unsafe.Pointer(p))
-  in := (*C.BN254_affine_t)(unsafe.Pointer(affine))
-
-  C.projective_from_affine_bn254(out, in)
-}
-```
-
-The comments on the first line tell `CGO` which libraries to import as well as which header files to include. You can then call methods which are part of the static library and defined in the header file, `C.projective_from_affine_bn254` is an example.
-
-If you wish to create your own bindings for a language of your choice we suggest you start by investigating how you can call static libraries.
-
-### ICICLE Adapters
-
-One of the core ideas behind ICICLE is that developers can gradually accelerate their provers. Many protocols are written using other cryptographic libraries and completely replacing them may be complex and time consuming.
-
-Therefore we offer adapters for various popular libraries, these adapters allow us to convert points and scalars between different formats defined by various libraries. Here is a list:
-
-Golang adapters:
-
-- [Gnark crypto adapter](https://github.com/ingonyama-zk/iciclegnark)
