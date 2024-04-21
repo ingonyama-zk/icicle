@@ -111,6 +111,11 @@ module.exports = {
               label: "Multi GPU Support",
               id: "icicle/rust-bindings/multi-gpu",
             },
+            {
+              type: "doc",
+              label: "Polynomials",
+              id: "icicle/rust-bindings/polynomials",
+            },
           ],
         },
         {
