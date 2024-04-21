@@ -1,4 +1,4 @@
-#define CURVE_ID 1
+#define CURVE_ID 2
 
 #include "msm.cu"
 
@@ -119,12 +119,20 @@ typedef curve_config::affine_t test_affine;
 // typedef Dummy_Projective test_projective;
 // typedef Dummy_Projective test_affine;
 
-int main()
+int main(int argc, char** argv)
 {
-  int batch_size = 1;
+
+  cudaEvent_t start, stop;
+  float msm_time;
+
+  int msm_log_size = (argc > 1) ? atoi(argv[1]) : 18;
+  int msm_size = 1<<msm_log_size;
+  int batch_size = (argc > 2) ? atoi(argv[2]) : 1;;
   //   unsigned msm_size = 1<<21;
-  int msm_size = 12180757;
   int N = batch_size * msm_size;
+  int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
+
+  printf("running msm 2^%d, batch_size=%d, precomp_factor=%d\n",msm_log_size, batch_size, precomp_factor);
 
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];
@@ -172,7 +180,7 @@ int main()
   msm::MSMConfig config = {
     ctx,   // DeviceContext
     0,     // points_size
-    1,     // precompute_factor
+    precomp_factor,     // precompute_factor
     0,     // c
     0,     // bitsize
     10,    // large_bucket_factor
@@ -186,26 +194,38 @@ int main()
     true,  // is_async
   };
 
-  auto begin1 = std::chrono::high_resolution_clock::now();
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  //warm up
   msm::MSM<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res_d);
-  cudaEvent_t msm_end_event;
-  cudaEventCreate(&msm_end_event);
-  auto end1 = std::chrono::high_resolution_clock::now();
-  auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
-  printf("No Big Triangle : %.3f seconds.\n", elapsed1.count() * 1e-9);
-  config.is_big_triangle = true;
-  config.are_results_on_device = false;
-  std::cout << test_projective::to_affine(large_res[0]) << std::endl;
-  auto begin = std::chrono::high_resolution_clock::now();
-  msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res);
+  cudaDeviceSynchronize();
+
+  // auto begin1 = std::chrono::high_resolution_clock::now();
+  // if (precomp_factor > 1) msm::PrecomputeMSMBases<test_affine, test_projective>(points, msm_size, precomp_factor, 16, false, ctx, precomp_points);
+  cudaEventRecord(start, stream);
+  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res_d);
+  cudaEventRecord(stop, stream);
+  cudaStreamSynchronize(stream);
+  cudaEventElapsedTime(&msm_time, start, stop);
+  // cudaEvent_t msm_end_event;
+  // cudaEventCreate(&msm_end_event);
+  // auto end1 = std::chrono::high_resolution_clock::now();
+  // auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
+  printf("No Big Triangle : %.3f ms.\n", msm_time);
+  // config.is_big_triangle = true;
+  // config.are_results_on_device = false;
+  // std::cout << test_projective::to_affine(large_res[0]) << std::endl;
+  // auto begin = std::chrono::high_resolution_clock::now();
+  // msm::MSM<test_scalar, test_affine, test_projective>(scalars_d, points_d, msm_size, config, large_res);
   // test_reduce_triangle(scalars);
   // test_reduce_rectangle(scalars);
   // test_reduce_single(scalars);
   // test_reduce_var(scalars);
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
-  printf("Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
-  cudaStreamSynchronize(stream);
+  // auto end = std::chrono::high_resolution_clock::now();
+  // auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
+  // printf("Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
+  // cudaStreamSynchronize(stream);
   cudaStreamDestroy(stream);
 
   std::cout << test_projective::to_affine(large_res[0]) << std::endl;
