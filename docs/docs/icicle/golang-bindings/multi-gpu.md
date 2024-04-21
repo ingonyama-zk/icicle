@@ -78,9 +78,9 @@ While the goroutine is locked to the host thread, the Go runtime will not assign
 
 **Parameters:**
 
-- `deviceId int`: The ID of the device on which to run the provided function. Device IDs start from 0.
-- `funcToRun func(args ...any)`: The function to be executed on the specified device.
-- `args ...any`: Arguments to be passed to `funcToRun`.
+- **`deviceId int`**: The ID of the device on which to run the provided function. Device IDs start from 0.
+- **`funcToRun func(args ...any)`**: The function to be executed on the specified device.
+- **`args ...any`**: Arguments to be passed to `funcToRun`.
 
 **Behavior:**
 
@@ -102,11 +102,11 @@ Sets the active device for the current host thread. All subsequent CUDA calls ma
 
 **Parameters:**
 
-- `device int`: The ID of the device to set as the current device.
+- **`device int`**: The ID of the device to set as the current device.
 
 **Returns:**
 
-- `CudaError`: Error code indicating the success or failure of the operation.
+- **`CudaError`**: Error code indicating the success or failure of the operation.
 
 ### `GetDeviceCount`
 
@@ -114,7 +114,7 @@ Retrieves the number of CUDA-capable devices available on the host.
 
 **Returns:**
 
-- `(int, CudaError)`: The number of devices and an error code indicating the success or failure of the operation.
+- **`(int, CudaError)`**: The number of devices and an error code indicating the success or failure of the operation.
 
 ### `GetDevice`
 
@@ -122,7 +122,7 @@ Gets the ID of the currently active device for the calling host thread.
 
 **Returns:**
 
-- `(int, CudaError)`: The ID of the current device and an error code indicating the success or failure of the operation.
+- **`(int, CudaError)`**: The ID of the current device and an error code indicating the success or failure of the operation.
 
 ### `GetDeviceFromPointer`
 
@@ -130,10 +130,10 @@ Retrieves the device associated with a given pointer.
 
 **Parameters:**
 
-- `ptr unsafe.Pointer`: Pointer to query.
+- **`ptr unsafe.Pointer`**: Pointer to query.
 
 **Returns:**
 
-- `int`: The device ID associated with the memory pointed to by `ptr`.
+- **`int`**: The device ID associated with the memory pointed to by `ptr`.
 
 This documentation should provide a clear understanding of how to effectively manage multiple GPUs in Go applications using CUDA, with a particular emphasis on the `RunOnDevice` function for executing tasks on specific GPUs.

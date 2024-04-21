@@ -61,10 +61,10 @@ pub fn ntt<F>(
 
 `ntt:ntt` expects:
 
-`input` - buffer to read the inputs of the NTT from. <br/>
-`dir` - whether to compute forward or inverse NTT. <br/>
-`cfg` - config used to specify extra arguments of the NTT. <br/>
-`output` - buffer to write the NTT outputs into. Must be of the same  size as input.
+- **`input`** - buffer to read the inputs of the NTT from. <br/>
+- **`dir`** - whether to compute forward or inverse NTT. <br/>
+- **`cfg`** - config used to specify extra arguments of the NTT. <br/>
+- **`output`** - buffer to write the NTT outputs into. Must be of the same  size as input.
 
 The `input` and `output` buffers can be on device or on host. Being on host means that they will be transferred to device during runtime.
 
@@ -186,3 +186,23 @@ where
 #### Returns
 
 - **`IcicleResult<()>`**: Will return an error if the operation fails.
+
+### Releaseing the domain
+
+The `release_domain` function is responsible for releasing the resources associated with a specific domain in the CUDA device context.
+
+```rust
+pub fn release_domain<F>(ctx: &DeviceContext) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: NTT<F>
+```
+
+#### Parameters
+
+- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
+
+#### Returns
+
+The function returns an `IcicleResult<()>`, which represents the result of the operation. If the operation is successful, the function returns `Ok(())`, otherwise it returns an error.
+
