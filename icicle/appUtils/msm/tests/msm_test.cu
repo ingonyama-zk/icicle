@@ -187,7 +187,7 @@ int main(int argc, char** argv)
     1,     // batch_size
     false, // are_scalars_on_device
     false, // are_scalars_montgomery_form
-    false, // are_points_on_device
+    true, // are_points_on_device
     false, // are_points_montgomery_form
     true,  // are_results_on_device
     false, // is_big_triangle
@@ -198,13 +198,13 @@ int main(int argc, char** argv)
   cudaEventCreate(&stop);
 
   //warm up
-  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res_d);
+  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, large_res_d);
   cudaDeviceSynchronize();
 
   // auto begin1 = std::chrono::high_resolution_clock::now();
   // if (precomp_factor > 1) msm::PrecomputeMSMBases<test_affine, test_projective>(points, msm_size, precomp_factor, 16, false, ctx, precomp_points);
   cudaEventRecord(start, stream);
-  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points, msm_size, config, large_res_d);
+  msm::MSM<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, large_res_d);
   cudaEventRecord(stop, stream);
   cudaStreamSynchronize(stream);
   cudaEventElapsedTime(&msm_time, start, stop);
