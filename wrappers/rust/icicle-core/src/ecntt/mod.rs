@@ -12,9 +12,9 @@ pub use crate::curve::Projective;
 pub mod tests;
 
 #[doc(hidden)]
-pub trait ECNTTC<C: Curve>: ECNTT<Projective<C>, C::ScalarField> {}
+pub trait ECNTT<C: Curve>: ECNTTUnchecked<Projective<C>, C::ScalarField> {}
 
-pub trait ECNTT<T, F: FieldImpl> {
+pub trait ECNTTUnchecked<T, F: FieldImpl> {
     fn ntt_unchecked(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
@@ -48,14 +48,14 @@ macro_rules! impl_ecntt {
                 $curve, $field, $field_config, CudaError, DeviceContext, NTTConfig, NTTDir, DEFAULT_DEVICE_ID,
             };
             use icicle_core::ecntt::ECNTT;
-            use icicle_core::ecntt::ECNTTC;
+            use icicle_core::ecntt::ECNTTUnchecked;
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::NTT;
             use icicle_core::traits::IcicleResultWrap;
             use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
             pub type ProjectiveC = Projective<$curve>;
-            impl_ntt_without_domain!($field_prefix, $field, $field_config, ECNTT, "ECNTT", ProjectiveC);
+            impl_ntt_without_domain!($field_prefix, $field, $field_config, ECNTTUnchecked, "ECNTT", ProjectiveC);
 
             fn ntt_unchecked(
                 input: &(impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
@@ -63,7 +63,7 @@ macro_rules! impl_ecntt {
                 cfg: &NTTConfig<$field>,
                 output: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
             ) -> IcicleResult<()> {
-                <curve::ScalarCfg as ECNTT<Projective<$curve>, $field>>::ntt_unchecked(input, dir, cfg, output)
+                <curve::ScalarCfg as ECNTTUnchecked<Projective<$curve>, $field>>::ntt_unchecked(input, dir, cfg, output)
             }
 
             fn ntt_inplace_unchecked(
@@ -71,10 +71,10 @@ macro_rules! impl_ecntt {
                 dir: NTTDir,
                 cfg: &NTTConfig<$field>,
             ) -> IcicleResult<()> {
-                <curve::ScalarCfg as ECNTT<Projective<$curve>, $field>>::ntt_inplace_unchecked(inout, dir, cfg)
+                <curve::ScalarCfg as ECNTTUnchecked<Projective<$curve>, $field>>::ntt_inplace_unchecked(inout, dir, cfg)
             }
 
-            impl ECNTTC<$curve> for $field_config {}
+            impl ECNTT<$curve> for $field_config {}
         }
     };
 }
@@ -90,7 +90,7 @@ macro_rules! impl_ecntt {
 /// * `cfg` - config used to specify extra arguments of the NTT.
 ///
 /// * `output` - buffer to write the NTT outputs into. Must be of the same size as `input`.
-pub fn ecntta<C: Curve>(
+pub fn ecntt<C: Curve>(
     input: &(impl HostOrDeviceSlice<Projective<C>> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
@@ -98,9 +98,9 @@ pub fn ecntta<C: Curve>(
 ) -> IcicleResult<()>
 where
     C::ScalarField: FieldImpl,
-    <C::ScalarField as FieldImpl>::Config: ECNTTC<C>,
+    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
-    <<C::ScalarField as FieldImpl>::Config as ECNTT<Projective<C>, C::ScalarField>>::ntt_unchecked(
+    <<C::ScalarField as FieldImpl>::Config as ECNTTUnchecked<Projective<C>, C::ScalarField>>::ntt_unchecked(
         input, dir, &cfg, output,
     )
 }
@@ -121,9 +121,9 @@ pub fn ecntt_inplace<C: Curve>(
 ) -> IcicleResult<()>
 where
     C::ScalarField: FieldImpl,
-    <C::ScalarField as FieldImpl>::Config: ECNTTC<C>,
+    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
-    <<C::ScalarField as FieldImpl>::Config as ECNTT<Projective<C>, C::ScalarField>>::ntt_inplace_unchecked(
+    <<C::ScalarField as FieldImpl>::Config as ECNTTUnchecked<Projective<C>, C::ScalarField>>::ntt_inplace_unchecked(
         inout, dir, &cfg,
     )
 }

@@ -12,7 +12,7 @@ use crate::ntt::NTTConfig;
 
 pub fn check_ecntt<C: Curve>()
 where
-    <<C as Curve>::ScalarField as FieldImpl>::Config: ECNTTC<C>,
+    <<C as Curve>::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
     let test_sizes = [1 << 4];
     for test_size in test_sizes {
@@ -31,7 +31,7 @@ where
         let mut out_p = vec![Projective::<C>::zero(); test_size];
         let ecntt_result = HostSlice::from_mut_slice(&mut out_p);
         let input = HostSlice::from_slice(slice);
-        ecntta(input, NTTDir::kForward, &config, ecntt_result).unwrap();
+        ecntt(input, NTTDir::kForward, &config, ecntt_result).unwrap();
         assert_ne!(ecntt_result.as_slice(), points);
 
         // let mut ark_ntt_result = ark_points.clone();
@@ -44,7 +44,7 @@ where
 
         let mut slice = vec![Projective::<C>::zero(); test_size];
         let iecntt_result = HostSlice::from_mut_slice(&mut slice);
-        ecntta(ecntt_result, NTTDir::kInverse, &config, iecntt_result).unwrap();
+        ecntt(ecntt_result, NTTDir::kInverse, &config, iecntt_result).unwrap();
 
         assert_eq!(iecntt_result.as_slice(), points);
     }
@@ -52,7 +52,7 @@ where
 
 pub fn check_ecntt_batch<C: Curve>()
 where
-    <C::ScalarField as FieldImpl>::Config: ECNTTC<C>,
+    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
     let test_sizes = [1 << 4, 1 << 10];
     let batch_sizes = [1];
@@ -78,12 +78,12 @@ where
                     for alg in [NttAlgorithm::Radix2] {
                         config.batch_size = batch_size as i32;
                         config.ntt_algorithm = alg;
-                        ecntta(points, is_inverse, &config, batch_ntt_result).unwrap();
+                        ecntt(points, is_inverse, &config, batch_ntt_result).unwrap();
                         config.batch_size = 1;
                         let mut slice = vec![Projective::zero(); test_size];
                         let one_ntt_result = HostSlice::from_mut_slice(&mut slice);
                         for i in 0..batch_size {
-                            ecntta(
+                            ecntt(
                                 HostSlice::from_slice(
                                     &points[i * test_size..(i + 1) * test_size]
                                         .as_slice()
