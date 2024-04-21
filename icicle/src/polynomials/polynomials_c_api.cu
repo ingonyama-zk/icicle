@@ -222,8 +222,8 @@ namespace polynomials {
   // start_idx: Start index of the range to copy.
   // end_idx: End index of the range to copy.
   // Returns the number of coefficients copied. if memory is NULL, returns number of coefficients.
-  int64_t CONCAT_EXPAND(FIELD, polynomial_copy_coeffs_range)(
-    PolynomialInst* p, scalar_t* memory, int64_t start_idx, int64_t end_idx)
+  uint64_t CONCAT_EXPAND(FIELD, polynomial_copy_coeffs_range)(
+    PolynomialInst* p, scalar_t* memory, uint64_t start_idx, uint64_t end_idx)
   {
     return p->copy_coeffs(memory, start_idx, end_idx);
   }

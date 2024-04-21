@@ -325,11 +325,9 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   EXPECT_EQ(h1, two);
   EXPECT_EQ(h2, three);
 
-  int64_t nof_coeffs = h.copy_coeffs(nullptr); // query #coeffs
-  EXPECT_GE(nof_coeffs, 3);                    // can be larger due to padding to powers of two
   scalar_t h_coeffs[3] = {0};
-  nof_coeffs = h.copy_coeffs(h_coeffs, 0, 2); // read the coefficients
-  EXPECT_EQ(nof_coeffs, 3);                   // expecting 3 due to specified indices
+  auto nof_coeffs = h.copy_coeffs(h_coeffs, 0, 2); // read the coefficients
+  EXPECT_EQ(nof_coeffs, 3);                        // expecting 3 due to specified indices
 
   scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {

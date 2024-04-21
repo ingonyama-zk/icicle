@@ -178,7 +178,7 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
-  int64_t Polynomial<C, D, I>::copy_coeffs(C* host_coeffs, int64_t start_idx, int64_t end_idx) const
+  uint64_t Polynomial<C, D, I>::copy_coeffs(C* host_coeffs, uint64_t start_idx, uint64_t end_idx) const
   {
     return m_backend->copy_coeffs(m_context, host_coeffs, start_idx, end_idx);
   }
