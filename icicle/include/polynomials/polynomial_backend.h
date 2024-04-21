@@ -59,7 +59,7 @@ namespace polynomials {
 
     // Methods to copy coefficients to host memory
     virtual C get_coeff(PolyContext op, uint64_t coeff_idx) = 0;
-    virtual int64_t copy_coeffs(PolyContext op, C* coeffs, int64_t start_idx = 0, int64_t end_idx = -1) = 0;
+    virtual uint64_t copy_coeffs(PolyContext op, C* coeffs, uint64_t start_idx, uint64_t end_idx) = 0;
 
     // Methods to get views of coefficients and evaluations, including device id
     virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>

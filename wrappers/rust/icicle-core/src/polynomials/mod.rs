@@ -122,7 +122,7 @@ macro_rules! impl_univariate_polynomial_api {
             fn degree(a: PolynomialHandle) -> i64;
 
             #[link_name = concat!($field_prefix, "polynomial_copy_coeffs_range")]
-            fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: i64, end_idx: i64) -> i64;
+            fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: u64, end_idx: u64) -> u64;
 
             #[link_name = concat!($field_prefix, "polynomial_get_coeffs_raw_ptr")]
             fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64, device_id: *mut u64) -> *mut $field;
@@ -258,13 +258,13 @@ macro_rules! impl_univariate_polynomial_api {
                 unsafe {
                     // returns total #coeffs. Not copying when null
                     let nof_coeffs = copy_coeffs(self.handle, std::ptr::null_mut(), 0, 0);
-                    nof_coeffs as u64
+                    nof_coeffs
                 }
             }
 
             fn get_coeff(&self, idx: u64) -> Self::Field {
                 let mut coeff: Self::Field = Self::Field::zero();
-                unsafe { copy_coeffs(self.handle, &mut coeff, idx as i64, idx as i64) };
+                unsafe { copy_coeffs(self.handle, &mut coeff, idx, idx) };
                 coeff
             }
 
@@ -274,7 +274,7 @@ macro_rules! impl_univariate_polynomial_api {
                 let end_idx = cmp::min(nof_coeffs, start_idx + coeffs_len - 1);
 
                 unsafe {
-                    copy_coeffs(self.handle, coeffs.as_mut_ptr(), start_idx as i64, end_idx as i64);
+                    copy_coeffs(self.handle, coeffs.as_mut_ptr(), start_idx, end_idx);
                 }
             }
 

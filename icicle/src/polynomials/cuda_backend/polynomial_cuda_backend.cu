@@ -775,15 +775,13 @@ namespace polynomials {
       }
     }
 
-    int64_t copy_coeffs(PolyContext op, C* out_coeffs, int64_t start_idx = 0, int64_t end_idx = -1) override
+    uint64_t copy_coeffs(PolyContext op, C* out_coeffs, uint64_t start_idx, uint64_t end_idx) override
     {
       const uint64_t nof_coeffs = op->get_nof_elements();
       if (nullptr == out_coeffs) { return nof_coeffs; } // no allocated memory
 
-      end_idx = (end_idx == -1) ? nof_coeffs - 1 : end_idx;
-
-      const bool is_valid_start_idx = start_idx < nof_coeffs && start_idx >= 0;
-      const bool is_valid_end_idx = end_idx < nof_coeffs && end_idx >= 0 && end_idx >= start_idx;
+      const bool is_valid_start_idx = start_idx < nof_coeffs;
+      const bool is_valid_end_idx = end_idx < nof_coeffs && end_idx >= start_idx;
       const bool is_valid_indices = is_valid_start_idx && is_valid_end_idx;
       if (!is_valid_indices) {
         // return -1 instead? I could but 'get_coeff()' cannot with its current declaration
