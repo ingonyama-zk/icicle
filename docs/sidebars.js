@@ -21,8 +21,8 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "ICICLE Provers",
-          id: "icicle/integrations"
+          label: "ICICLE Core",
+          id: "icicle/core",
         },
         {
           type: "category",
@@ -146,13 +146,13 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Supporting additional curves",
-          id: "icicle/supporting-additional-curves",
+          label: "Google Colab Instructions",
+          id: "icicle/colab-instructions",
         },
         {
           type: "doc",
-          label: "Google Colab Instructions",
-          id: "icicle/colab-instructions",
+          label: "ICICLE Provers",
+          id: "icicle/integrations"
         },
       ]
     },
