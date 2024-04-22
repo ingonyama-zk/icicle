@@ -359,7 +359,7 @@ macro_rules! impl_ntt_tests {
     (
       $field:ident
     ) => {
-        const MAX_SIZE: u64 = 1 << 17;
+        const MAX_SIZE: u64 = 1 << 20;
         static INIT: OnceLock<()> = OnceLock::new();
         static RELEASE: OnceLock<()> = OnceLock::new(); // for release domain test
         const FAST_TWIDDLES_MODE: bool = false;

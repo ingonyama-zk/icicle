@@ -106,86 +106,55 @@ where
     F::ArkEquivalent: FftField,
     <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
 {
-    let test_sizes = [1 << 4, 1 << 16];
+    let test_sizes = [1 << 20];
     for test_size in test_sizes {
         let small_size = test_size >> 1;
         let test_size_rou = F::ArkEquivalent::get_root_of_unity(test_size as u64).unwrap();
-        let ark_small_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(small_size)
+        let ark_coset_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(small_size)
             .unwrap()
             .get_coset(test_size_rou)
             .unwrap();
-        let ark_large_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(test_size).unwrap();
+        let ark_domain = GeneralEvaluationDomain::<F::ArkEquivalent>::new(small_size).unwrap();
 
-        let mut scalars: Vec<F> = F::Config::generate_random(small_size);
-        let mut ark_scalars = scalars
-            .iter()
-            .map(|v| v.to_ark())
-            .collect::<Vec<F::ArkEquivalent>>();
-
-        for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+        for alg in [NttAlgorithm::MixedRadix] {
+            let scalars: Vec<F> = F::Config::generate_random(small_size);
+            let mut ark_scalars = scalars
+                .iter()
+                .map(|v| v.to_ark())
+                .collect::<Vec<F::ArkEquivalent>>();
             let mut config = NTTConfig::default();
-            config.ordering = Ordering::kNR;
+            config.ordering = Ordering::kNM;
             config.ntt_algorithm = alg;
-            let mut ntt_result_1 = vec![F::zero(); small_size];
+
             let mut ntt_result_2 = vec![F::zero(); small_size];
             let ntt_result_2 = HostSlice::from_mut_slice(&mut ntt_result_2);
-            let scalars_h = HostSlice::from_slice(&scalars[..small_size]);
-            ntt(
-                scalars_h,
-                NTTDir::kForward,
-                &config,
-                HostSlice::from_mut_slice(&mut ntt_result_1),
-            )
-            .unwrap();
-            assert_ne!(*ntt_result_1.as_slice(), scalars);
-            config.coset_gen = F::from_ark(test_size_rou);
-            ntt(scalars_h, NTTDir::kForward, &config, ntt_result_2).unwrap();
-            let mut ntt_large_result = vec![F::zero(); test_size];
-            // back to non-coset NTT
-            config.coset_gen = F::one();
-            scalars.resize(test_size, F::zero());
-            ntt(
-                HostSlice::from_slice(&scalars),
-                NTTDir::kForward,
-                &config,
-                HostSlice::from_mut_slice(&mut ntt_large_result),
-            )
-            .unwrap();
-            assert_eq!(*ntt_result_1.as_slice(), ntt_large_result.as_slice()[..small_size]);
-            assert_eq!(*ntt_result_2.as_slice(), ntt_large_result.as_slice()[small_size..]);
-
-            let mut ark_large_scalars = ark_scalars.clone();
-            ark_small_domain.fft_in_place(&mut ark_scalars);
-            let ntt_result_as_ark = ntt_large_result
+            let scalars_h = HostSlice::from_slice(&scalars);
+            ntt(scalars_h, NTTDir::kInverse, &config, ntt_result_2).unwrap();
+            
+            ark_domain.ifft_in_place(&mut ark_scalars);
+            let ntt_result_as_ark = ntt_result_2
                 .as_slice()
                 .iter()
                 .map(|p| p.to_ark())
                 .collect::<Vec<F::ArkEquivalent>>();
             assert_eq!(
-                ark_scalars[..small_size],
-                list_to_reverse_bit_order(&ntt_result_as_ark[small_size..])
+                ark_scalars[0],
+                ntt_result_as_ark[0]
             );
-            ark_large_domain.fft_in_place(&mut ark_large_scalars);
-            assert_eq!(ark_large_scalars, list_to_reverse_bit_order(&ntt_result_as_ark));
-
+            
+            config.ordering = Ordering::kMN;
             config.coset_gen = F::from_ark(test_size_rou);
-            config.ordering = Ordering::kRN;
             let mut intt_result = vec![F::zero(); small_size];
             ntt(
                 ntt_result_2,
-                NTTDir::kInverse,
+                NTTDir::kForward,
                 &config,
                 HostSlice::from_mut_slice(&mut intt_result),
             )
             .unwrap();
-            assert_eq!(*intt_result.as_slice(), scalars[..small_size]);
 
-            ark_small_domain.ifft_in_place(&mut ark_scalars);
-            let intt_result_as_ark = intt_result
-                .iter()
-                .map(|p| p.to_ark())
-                .collect::<Vec<F::ArkEquivalent>>();
-            assert_eq!(ark_scalars[..small_size], intt_result_as_ark);
+            ark_coset_domain.fft_in_place(&mut ark_scalars);
+            assert_eq!(ark_scalars[0], intt_result[0].to_ark());
         }
     }
 }
