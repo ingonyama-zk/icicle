@@ -25,7 +25,15 @@ func Generate(baseDir, field, fieldPrefix string) {
 		baseDir,
 	}
 
+	testDir := "tests"
+	filePrefix := ""
+	parentDir := path.Base(baseDir)
+	if parentDir == "extension" {
+		testDir = "../tests"
+		filePrefix = "extension_"
+	}
+
 	generator.GenerateFile(vecOpsTemplates["src"], path.Join(baseDir, "vecOps"), "", "", data)
-	generator.GenerateFile(vecOpsTemplates["test"], path.Join(baseDir, "vecOps"), "", "", data)
 	generator.GenerateFile(vecOpsTemplates["header"], path.Join(baseDir, "vecOps", "include"), "", "", data)
+	generator.GenerateFile(vecOpsTemplates["test"], path.Join(baseDir, testDir), filePrefix, "", data)
 }

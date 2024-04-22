@@ -30,7 +30,7 @@ func (f MockBaseField) AsPointer() *uint32 {
 }
 
 func (f *MockBaseField) FromUint32(v uint32) MockBaseField {
-	f.limbs[MOCKBASE_LIMBS-1] = v
+	f.limbs[0] = v
 	return *f
 }
 
