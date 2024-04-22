@@ -15,15 +15,14 @@ impl_ntt_without_domain!("babybearExtension", ExtensionField, ScalarField, Scala
 pub(crate) mod tests {
     use super::{ExtensionField, ScalarField};
     use icicle_core::{
-        ntt::{initialize_domain, release_domain, ntt_inplace, NTTConfig, NTTDir},
+        ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir},
         traits::{FieldImpl, GenerateRandom},
     };
     use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostSlice};
     use p3_baby_bear::BabyBear;
     use p3_dft::{Radix2Dit, TwoAdicSubgroupDft};
     use p3_field::{
-        extension::BinomialExtensionField, AbstractExtensionField, AbstractField, PrimeField32,
-        TwoAdicField,
+        extension::BinomialExtensionField, AbstractExtensionField, AbstractField, PrimeField32, TwoAdicField,
     };
     use p3_matrix::dense::RowMajorMatrix;
     use risc0_core::field::{
