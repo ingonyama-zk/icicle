@@ -60,7 +60,7 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # Running tests from the root workspace will run all workspace members' tests by default
       # We need to limit the number of threads to avoid running out of memory on weaker machines
-      # ignored tests are polynomial tests. Since they conflict with NTT tests, they are executed sperately
+      # ignored tests are polynomial tests. Since they conflict with NTT tests, they are executed separately
       run: |
         cargo test --workspace --exclude icicle-babybear --release --verbose --features=g2 -- --test-threads=2 --ignored
         cargo test --workspace --exclude icicle-babybear --release --verbose --features=g2 -- --test-threads=2
