@@ -24,8 +24,6 @@ type VecOpsConfig struct {
 	isBOnDevice bool
 	/* If true, output is preserved on device, otherwise on host. Default value: false. */
 	isResultOnDevice bool
-	/* True if `result` vector should be in Montgomery form and false otherwise. Default value: false. */
-	IsResultMontgomeryForm bool
 	/* Whether to run the vector operations asynchronously. If set to `true`, the function will be
 	*  non-blocking and you'll need to synchronize it explicitly by calling
 	*  `SynchronizeStream`. If set to false, the function will block the current CPU thread. */
@@ -43,7 +41,6 @@ func DefaultVecOpsConfig() VecOpsConfig {
 		false, // isAOnDevice
 		false, // isBOnDevice
 		false, // isResultOnDevice
-		false, // IsResultMontgomeryForm
 		false, // IsAsync
 	}
 

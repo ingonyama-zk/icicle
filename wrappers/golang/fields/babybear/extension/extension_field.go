@@ -36,7 +36,7 @@ func (f ExtensionField) AsPointer() *uint32 {
 }
 
 func (f *ExtensionField) FromUint32(v uint32) ExtensionField {
-	f.limbs[EXTENSION_LIMBS-1] = v
+	f.limbs[0] = v
 	return *f
 }
 

@@ -14,16 +14,29 @@ var curveTemplates = map[string]string{
 
 func Generate(baseDir, packageName, curve, curvePrefix string) {
 	data := struct {
-		PackageName string
-		Curve       string
-		CurvePrefix string
+		PackageName    string
+		Curve          string
+		CurvePrefix    string
+		BaseImportPath string
 	}{
 		packageName,
 		curve,
 		curvePrefix,
+		baseDir,
+	}
+
+	filePrefix := ""
+	if packageName == "g2" {
+		filePrefix = "g2_"
+	}
+
+	testDir := "tests"
+	parentDir := path.Base(baseDir)
+	if parentDir == "g2" || parentDir == "extension" {
+		testDir = "../tests"
 	}
 
 	generator.GenerateFile(curveTemplates["src"], baseDir, "", "", data)
-	generator.GenerateFile(curveTemplates["test"], baseDir, "", "", data)
 	generator.GenerateFile(curveTemplates["header"], path.Join(baseDir, "include"), "", "", data)
+	generator.GenerateFile(curveTemplates["test"], path.Join(baseDir, testDir), filePrefix, "", data)
 }

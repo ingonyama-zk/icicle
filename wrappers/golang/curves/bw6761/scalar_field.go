@@ -36,7 +36,7 @@ func (f ScalarField) AsPointer() *uint32 {
 }
 
 func (f *ScalarField) FromUint32(v uint32) ScalarField {
-	f.limbs[SCALAR_LIMBS-1] = v
+	f.limbs[0] = v
 	return *f
 }
 

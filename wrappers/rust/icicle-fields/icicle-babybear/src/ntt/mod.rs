@@ -9,7 +9,7 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 impl_ntt!("babybear", babybear, ScalarField, ScalarCfg);
-impl_ntt_without_domain!("babybear_extension", ExtensionField, ScalarField, ScalarCfg);
+impl_ntt_without_domain!("babybear_extension", ScalarField, ScalarCfg, NTT, "_ntt", ExtensionField);
 
 #[cfg(test)]
 pub(crate) mod tests {

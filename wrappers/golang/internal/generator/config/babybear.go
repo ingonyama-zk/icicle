@@ -9,6 +9,7 @@ func init() {
 		ExtensionLimbsNum: 4,
 		SupportsNTT:       true,
 		SupportsPoseidon:  false,
+		SupportsPoly:      true,
 		ROU:               1461624142,
 	}
 

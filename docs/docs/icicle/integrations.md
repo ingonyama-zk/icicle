@@ -1,6 +1,6 @@
 # ICICLE integrated provers
 
-ICICLE has been used by companies and projects such as [Celer Network](https://github.com/celer-network), [Consensys Gnark](https://github.com/Consensys/gnark), [EZKL](https://blog.ezkl.xyz/post/acceleration/) and others to accelerate their ZK proving pipeline.
+ICICLE has been used by companies and projects such as [Celer Network](https://github.com/celer-network), [Consensys Gnark](https://github.com/Consensys/gnark), [EZKL](https://blog.ezkl.xyz/post/acceleration/), [ZKWASM](https://twitter.com/DelphinusLab/status/1762604988797513915) and others to accelerate their ZK proving pipeline.
 
 Many of these integrations have been a collaboration between Ingonyama and the integrating company. We have learned a lot about designing GPU based ZK provers.
 

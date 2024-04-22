@@ -2,7 +2,7 @@ use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::{DeviceContext, DEFAULT_DEVICE_ID};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-use crate::{error::IcicleResult, traits::FieldImpl};
+pub use crate::{error::IcicleResult, traits::FieldImpl};
 
 #[cfg(feature = "arkworks")]
 #[doc(hidden)]
@@ -82,8 +82,8 @@ pub struct NTTConfig<'a, S> {
     pub columns_batch: bool,
     /// Ordering of inputs and outputs. See [Ordering](Ordering). Default value: `Ordering::kNN`.
     pub ordering: Ordering,
-    are_inputs_on_device: bool,
-    are_outputs_on_device: bool,
+    pub are_inputs_on_device: bool,
+    pub are_outputs_on_device: bool,
     /// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
     pub is_async: bool,
@@ -249,27 +249,29 @@ where
 macro_rules! impl_ntt_without_domain {
     (
       $field_prefix:literal,
-      $inout_field:ident,
       $domain_field:ident,
-      $domain_config:ident
+      $domain_config:ident,
+      $ntt_type:ident,
+      $ntt_type_lit:literal,
+      $inout:ident
     ) => {
         extern "C" {
-            #[link_name = concat!($field_prefix, "_ntt_cuda")]
+            #[link_name = concat!($field_prefix, concat!($ntt_type_lit, "_cuda"))]
             fn ntt_cuda(
-                input: *const $inout_field,
+                input: *const $inout,
                 size: i32,
                 dir: NTTDir,
                 config: &NTTConfig<$domain_field>,
-                output: *mut $inout_field,
+                output: *mut $inout,
             ) -> CudaError;
         }
 
-        impl NTT<$inout_field, $domain_field> for $domain_config {
+        impl $ntt_type<$inout, $domain_field> for $domain_config {
             fn ntt_unchecked(
-                input: &(impl HostOrDeviceSlice<$inout_field> + ?Sized),
+                input: &(impl HostOrDeviceSlice<$inout> + ?Sized),
                 dir: NTTDir,
                 cfg: &NTTConfig<$domain_field>,
-                output: &mut (impl HostOrDeviceSlice<$inout_field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$inout> + ?Sized),
             ) -> IcicleResult<()> {
                 unsafe {
                     ntt_cuda(
@@ -284,7 +286,7 @@ macro_rules! impl_ntt_without_domain {
             }
 
             fn ntt_inplace_unchecked(
-                inout: &mut (impl HostOrDeviceSlice<$inout_field> + ?Sized),
+                inout: &mut (impl HostOrDeviceSlice<$inout> + ?Sized),
                 dir: NTTDir,
                 cfg: &NTTConfig<$domain_field>,
             ) -> IcicleResult<()> {
@@ -347,7 +349,7 @@ macro_rules! impl_ntt {
                 }
             }
 
-            impl_ntt_without_domain!($field_prefix, $field, $field, $field_config);
+            impl_ntt_without_domain!($field_prefix, $field, $field_config, NTT, "_ntt", $field);
         }
     };
 }
