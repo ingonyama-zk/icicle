@@ -159,13 +159,11 @@ out.Malloc(batchSize*p.Size(), p.Size())
 
 ## Support for G2 group
 
-To activate G2 support first you must make sure you are building the static libraries with G2 feature enabled.
+To activate G2 support first you must make sure you are building the static libraries with G2 feature enabled as described in the [Golang building instructions](../golang-bindings.md#using-icicle-golang-bindings-in-your-project).
 
-```bash
-./build.sh bn254 -g2
-```
 
-Now you may import `g2` package of the specified curve
+
+Now you may import `g2` package of the specified curve.
 
 ```go
 import (
