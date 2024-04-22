@@ -6,7 +6,6 @@ Build script USAGE
 
 ```bash
 ./build.sh [-curve=<curve> | -field=<field>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
-```
 
 curve - The name of the curve to build or "all" to build all curves
 field - The name of the field to build or "all" to build all fields
