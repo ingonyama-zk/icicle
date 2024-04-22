@@ -16,7 +16,7 @@ use icicle_cuda_runtime::{
 
 impl_msm!("bls12_381", bls12_381, CurveCfg);
 #[cfg(feature = "g2")]
-impl_msm!("bls12_381G2", bls12_381_g2, G2CurveCfg);
+impl_msm!("bls12_381_g2", bls12_381_g2, G2CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

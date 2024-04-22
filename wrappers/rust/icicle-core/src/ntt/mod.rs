@@ -256,7 +256,7 @@ macro_rules! impl_ntt_without_domain {
       $inout:ident
     ) => {
         extern "C" {
-            #[link_name = concat!($field_prefix, concat!($ntt_type_lit, "Cuda"))]
+            #[link_name = concat!($field_prefix, concat!($ntt_type_lit, "_cuda"))]
             fn ntt_cuda(
                 input: *const $inout,
                 size: i32,
@@ -317,17 +317,17 @@ macro_rules! impl_ntt {
             use crate::ntt::*;
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "InitializeDomain")]
+                #[link_name = concat!($field_prefix, "_initialize_domain")]
                 fn initialize_ntt_domain(
                     primitive_root: &$field,
                     ctx: &DeviceContext,
                     fast_twiddles_mode: bool,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "ReleaseDomain")]
+                #[link_name = concat!($field_prefix, "_release_domain")]
                 fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "GetRootOfUnity")]
+                #[link_name = concat!($field_prefix, "_get_root_of_unity")]
                 fn get_root_of_unity(max_size: u64) -> $field;
             }
 
@@ -349,7 +349,7 @@ macro_rules! impl_ntt {
                 }
             }
 
-            impl_ntt_without_domain!($field_prefix, $field, $field_config, NTT, "NTT", $field);
+            impl_ntt_without_domain!($field_prefix, $field, $field_config, NTT, "_ntt", $field);
         }
     };
 }

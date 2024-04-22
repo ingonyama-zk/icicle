@@ -72,7 +72,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context (warmup)
 
   // init domain
-  auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
+  auto ntt_config = ntt::default_ntt_config<test_scalar>();
   ntt_config.ordering = ordering;
   ntt_config.are_inputs_on_device = true;
   ntt_config.are_outputs_on_device = true;
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 
   auto start = std::chrono::high_resolution_clock::now();
   const scalar_t basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  ntt::InitDomain(basic_root, ntt_config.ctx, FAST_TW);
+  ntt::init_domain(basic_root, ntt_config.ctx, FAST_TW);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
     CHK_IF_RETURN(cudaEventRecord(new_start, ntt_config.ctx.stream));
     ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
     for (size_t i = 0; i < iterations; i++) {
-      CHK_IF_RETURN(ntt::NTT(
+      CHK_IF_RETURN(ntt::ntt(
         INPLACE         ? GpuOutputNew
         : COLUMNS_BATCH ? GpuScalarsTransposed
                         : GpuScalars,
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
     ntt_config.ntt_algorithm = ntt::NttAlgorithm::Radix2;
     for (size_t i = 0; i < iterations; i++) {
       CHK_IF_RETURN(
-        ntt::NTT(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld));
+        ntt::ntt(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld));
     }
     CHK_IF_RETURN(cudaEventRecord(icicle_stop, ntt_config.ctx.stream));
     CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(GpuOutputOld));
   CHK_IF_RETURN(cudaFree(GpuOutputNew));
 
-  ntt::ReleaseDomain<test_scalar>(ntt_config.ctx);
+  ntt::release_domain<test_scalar>(ntt_config.ctx);
 
   return CHK_LAST();
 }

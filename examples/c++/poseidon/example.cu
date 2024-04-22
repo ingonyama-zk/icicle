@@ -19,7 +19,7 @@ void build_tree(
   for (uint32_t level = tree_height - 1; level > 0; level--) {
     const uint32_t next_level = level - 1;
     const uint32_t next_level_width = 1 << next_level;
-    bn254PoseidonHash(&tree[tree_index(level, 0)], &tree[tree_index(next_level, 0)], next_level_width, 2, *constants, config);
+    bn254_poseidon_hash_cuda(&tree[tree_index(level, 0)], &tree[tree_index(next_level, 0)], next_level_width, 2, *constants, config);
   }
 }
 
@@ -82,7 +82,7 @@ uint32_t validate_proof(
       hashes_in[1] = level_hash;
     }
     // next level hash
-    bn254PoseidonHash(hashes_in, hash_out, 1, 2, *constants, config);
+    bn254_poseidon_hash_cuda(hashes_in, hash_out, 1, 2, *constants, config);
     level_hash = hash_out[0];
   }
   return proof_hash[0] == level_hash;
@@ -113,13 +113,13 @@ int main(int argc, char* argv[])
   }
   std::cout << "Hashing blocks into tree leaves..." << std::endl;
   PoseidonConstants<scalar_t> constants;
-  bn254InitOptimizedPoseidonConstants(data_arity, ctx, &constants);
+  bn254_init_optimized_poseidon_constants_cuda(data_arity, ctx, &constants);
   PoseidonConfig config = default_poseidon_config(data_arity+1); 
-  bn254PoseidonHash(data, &tree[tree_index(leaf_level, 0)], tree_width, 4, constants, config);
+  bn254_poseidon_hash_cuda(data, &tree[tree_index(leaf_level, 0)], tree_width, 4, constants, config);
 
   std::cout << "3. Building Merkle tree" << std::endl;
   PoseidonConstants<scalar_t> tree_constants;
-  bn254InitOptimizedPoseidonConstants(tree_arity, ctx, &tree_constants);
+  bn254_init_optimized_poseidon_constants_cuda(tree_arity, ctx, &tree_constants);
   PoseidonConfig tree_config = default_poseidon_config(tree_arity+1);
   build_tree(tree_height, tree, &tree_constants, tree_config);
 

@@ -23,7 +23,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.scalar_t)(resultsPointer)
 
-	__ret := C.bw6_761NTTCuda(cScalars, cSize, cDir, cCfg, cResults)
+	__ret := C.bw6_761_ntt_cuda(cScalars, cSize, cDir, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }
@@ -43,14 +43,14 @@ func InitDomain(primitiveRoot bw6_761.ScalarField, ctx cr.DeviceContext, fastTwi
 	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
 	cFastTwiddles := (C._Bool)(fastTwiddles)
-	__ret := C.bw6_761InitializeDomain(cPrimitiveRoot, cCtx, cFastTwiddles)
+	__ret := C.bw6_761_initialize_domain(cPrimitiveRoot, cCtx, cFastTwiddles)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }
 
 func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError {
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	__ret := C.bw6_761ReleaseDomain(cCtx)
+	__ret := C.bw6_761_release_domain(cCtx)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

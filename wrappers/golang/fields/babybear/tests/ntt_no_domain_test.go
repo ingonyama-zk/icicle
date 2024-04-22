@@ -5,23 +5,23 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	babybearExtension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
+	babybear_extension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
 	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/ntt"
 )
 
 func TestNttNoDomain(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
-	scalars := babybearExtension.GenerateScalars(1 << largestTestSize)
+	scalars := babybear_extension.GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 			testSize := 1 << size
 
-			scalarsCopy := core.HostSliceFromElements[babybearExtension.ExtensionField](scalars[:testSize])
+			scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
 			cfg.Ordering = v
 
 			// run ntt
-			output := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
+			output := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 		}
 	}
@@ -29,13 +29,13 @@ func TestNttNoDomain(t *testing.T) {
 
 func TestNttDeviceAsyncNoDomain(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
-	scalars := babybearExtension.GenerateScalars(1 << largestTestSize)
+	scalars := babybear_extension.GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 				testSize := 1 << size
-				scalarsCopy := core.HostSliceFromElements[babybearExtension.ExtensionField](scalars[:testSize])
+				scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
 
 				stream, _ := cr.CreateStream()
 
@@ -50,7 +50,7 @@ func TestNttDeviceAsyncNoDomain(t *testing.T) {
 
 				// run ntt
 				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
-				output := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
+				output := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				cr.SynchronizeStream(&stream)
@@ -62,19 +62,19 @@ func TestNttDeviceAsyncNoDomain(t *testing.T) {
 func TestNttBatchNoDomain(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
 	largestBatchSize := 100
-	scalars := babybearExtension.GenerateScalars(1 << largestTestSize * largestBatchSize)
+	scalars := babybear_extension.GenerateScalars(1 << largestTestSize * largestBatchSize)
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{1, 16, largestBatchSize} {
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 
-			scalarsCopy := core.HostSliceFromElements[babybearExtension.ExtensionField](scalars[:totalSize])
+			scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:totalSize])
 
 			cfg.Ordering = core.KNN
 			cfg.BatchSize = int32(batchSize)
 			// run ntt
-			output := make(core.HostSlice[babybearExtension.ExtensionField], totalSize)
+			output := make(core.HostSlice[babybear_extension.ExtensionField], totalSize)
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 		}
 	}

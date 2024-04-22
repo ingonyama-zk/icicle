@@ -18,7 +18,7 @@ using namespace keccak;
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
-void uint8ToHexString(const uint8_t* values, int size)
+void uint8_to_hex_string(const uint8_t* values, int size)
 {
   std::stringstream ss;
 
@@ -51,12 +51,12 @@ int main(int argc, char* argv[])
 
   START_TIMER(keccak_timer);
   KeccakConfig config = default_keccak_config();
-  Keccak256(in_ptr, input_block_size, number_of_blocks, out_ptr, config);
+  keccak256(in_ptr, input_block_size, number_of_blocks, out_ptr, config);
   END_TIMER(keccak_timer, "Keccak")
 
   for (int i = 0; i < number_of_blocks; i++) {
 #ifdef DEBUG
-    uint8ToHexString(out_ptr + i * (D / 8), D / 8);
+    uint8_to_hex_string(out_ptr + i * (D / 8), D / 8);
 #endif
   }
 

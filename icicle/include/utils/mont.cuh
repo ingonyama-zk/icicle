@@ -12,7 +12,7 @@ namespace mont {
     __global__ void MontgomeryKernel(const E* input, int n, E* output)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
-      if (tid < n) { output[tid] = is_into ? E::ToMontgomery(input[tid]) : E::FromMontgomery(input[tid]); }
+      if (tid < n) { output[tid] = is_into ? E::to_montgomery(input[tid]) : E::from_montgomery(input[tid]); }
     }
 
     template <typename E, bool is_into>
@@ -29,13 +29,13 @@ namespace mont {
   } // namespace
 
   template <typename E>
-  cudaError_t ToMontgomery(const E* d_input, int n, cudaStream_t stream, E* d_output)
+  cudaError_t to_montgomery(const E* d_input, int n, cudaStream_t stream, E* d_output)
   {
     return ConvertMontgomery<E, true>(d_input, n, stream, d_output);
   }
 
   template <typename E>
-  cudaError_t FromMontgomery(const E* d_input, int n, cudaStream_t stream, E* d_output)
+  cudaError_t from_montgomery(const E* d_input, int n, cudaStream_t stream, E* d_output)
   {
     return ConvertMontgomery<E, false>(d_input, n, stream, d_output);
   }

@@ -61,7 +61,7 @@ macro_rules! impl_ecntt {
                 $field,
                 $field_config,
                 ECNTTUnchecked,
-                "ECNTT",
+                "_ecntt_",
                 ProjectiveC
             );
 

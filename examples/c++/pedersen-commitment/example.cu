@@ -138,15 +138,15 @@ int main(int argc, char** argv)
   std::cout << "Generating commitment vector" << std::endl;
   projective_t result;
   scalar_t* scalars = new scalar_t[N+1];
-  scalar_t::RandHostMany(scalars, N);
+  scalar_t::rand_host_many(scalars, N);
 
   std::cout << "Generating salt" << std::endl;
   scalars[N] = scalar_t::rand_host();
 
   std::cout << "Executing MSM" << std::endl;
-  auto config = msm::DefaultMSMConfig();
+  auto config = msm::default_msm_config();
   START_TIMER(msm);
-  bn254MSMCuda(scalars, points, N+1, config, &result);
+  bn254_msm_cuda(scalars, points, N+1, config, &result);
   END_TIMER(msm, "Time to execute MSM");
 
   std::cout << "Computed commitment: " << result << std::endl;

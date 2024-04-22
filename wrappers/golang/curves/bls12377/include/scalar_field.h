@@ -11,8 +11,8 @@ extern "C" {
 typedef struct scalar_t scalar_t;
 typedef struct DeviceContext DeviceContext;
 
-void bls12_377GenerateScalars(scalar_t* scalars, int size);
-cudaError_t bls12_377ScalarConvertMontgomery(scalar_t* d_inout, size_t n, bool is_into, DeviceContext* ctx);
+void bls12_377_generate_scalars(scalar_t* scalars, int size);
+cudaError_t bls12_377_scalar_convert_montgomery(scalar_t* d_inout, size_t n, bool is_into, DeviceContext* ctx);
 
 #ifdef __cplusplus
 }

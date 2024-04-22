@@ -231,7 +231,7 @@ macro_rules! impl_msm {
             use super::{$curve, Affine, CudaError, Curve, DeviceContext, MSMConfig, Projective};
 
             extern "C" {
-                #[link_name = concat!($curve_prefix, "MSMCuda")]
+                #[link_name = concat!($curve_prefix, "_msm_cuda")]
                 pub(crate) fn msm_cuda(
                     scalars: *const <$curve as Curve>::ScalarField,
                     points: *const Affine<$curve>,
@@ -240,7 +240,7 @@ macro_rules! impl_msm {
                     out: *mut Projective<$curve>,
                 ) -> CudaError;
 
-                #[link_name = concat!($curve_prefix, "PrecomputeMSMBases")]
+                #[link_name = concat!($curve_prefix, "_precompute_msm_bases_cuda")]
                 pub(crate) fn precompute_bases_cuda(
                     points: *const Affine<$curve>,
                     bases_size: i32,

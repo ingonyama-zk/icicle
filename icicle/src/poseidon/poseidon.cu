@@ -89,7 +89,7 @@ namespace poseidon {
     return CHK_LAST();
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, PoseidonHash)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_hash_cuda)(
     scalar_t* input,
     scalar_t* output,
     int number_of_states,

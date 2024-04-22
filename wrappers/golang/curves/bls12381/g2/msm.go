@@ -23,7 +23,7 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 	cSize := (C.int)(size)
 	cCfg := (*C.MSMConfig)(cfgPointer)
 
-	__ret := C.bls12_381G2MSMCuda(cScalars, cPoints, cSize, cCfg, cResults)
+	__ret := C.bls12_381_g2_msm_cuda(cScalars, cPoints, cSize, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return err
 }
@@ -39,7 +39,7 @@ func G2PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c 
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
 	cOutputBases := (*C.g2_affine_t)(outputBasesPointer)
 
-	__ret := C.bls12_381G2PrecomputeMSMBases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
+	__ret := C.bls12_381_g2_precompute_msm_bases_cuda(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
 	err := (cr.CudaError)(__ret)
 	return err
 }

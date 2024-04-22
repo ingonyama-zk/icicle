@@ -16,8 +16,8 @@ static void BM_MixedECAdd(State& state)
 
   projective_t* h_points1 = (projective_t*)malloc(n * sizeof(projective_t));
   affine_t* h_points2 = (affine_t*)malloc(n * sizeof(affine_t));
-  projective_t::RandHostMany(h_points1, n);
-  projective_t::RandHostManyAffine(h_points2, n);
+  projective_t::rand_host_many(h_points1, n);
+  projective_t::rand_host_many_affine(h_points2, n);
   cudaMemcpy(points1, h_points1, sizeof(projective_t) * n, cudaMemcpyHostToDevice);
   cudaMemcpy(points2, h_points2, sizeof(affine_t) * n, cudaMemcpyHostToDevice);
 
@@ -51,8 +51,8 @@ static void BM_FullECAdd(benchmark::State& state)
 
   projective_t* h_points1 = (projective_t*)malloc(n * sizeof(projective_t));
   projective_t* h_points2 = (projective_t*)malloc(n * sizeof(projective_t));
-  projective_t::RandHostMany(h_points1, n);
-  projective_t::RandHostMany(h_points2, n);
+  projective_t::rand_host_many(h_points1, n);
+  projective_t::rand_host_many(h_points2, n);
   cudaMemcpy(points1, h_points1, sizeof(projective_t) * n, cudaMemcpyHostToDevice);
   cudaMemcpy(points2, h_points2, sizeof(projective_t) * n, cudaMemcpyHostToDevice);
 

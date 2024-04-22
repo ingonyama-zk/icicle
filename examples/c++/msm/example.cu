@@ -21,8 +21,8 @@ int main(int argc, char* argv[])
   scalar_t* scalars = new scalar_t[N];
   affine_t* points = new affine_t[N];
   projective_t result;
-  scalar_t::RandHostMany(scalars, N);
-  projective_t::RandHostManyAffine(points, N);
+  scalar_t::rand_host_many(scalars, N);
+  projective_t::rand_host_many_affine(points, N);
 
   std::cout << "Using default MSM configuration with on-host inputs" << std::endl;
   device_context::DeviceContext ctx = device_context::get_default_device_context();
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
   std::cout << "Running MSM kernel with on-host inputs" << std::endl;
   cudaStream_t stream = config.ctx.stream;
   // Execute the MSM kernel
-  bn254MSMCuda(scalars, points, msm_size, config, &result);
+  bn254_msm_cuda(scalars, points, msm_size, config, &result);
   std::cout << projective_t::to_affine(result) << std::endl;
 
   std::cout << "Copying inputs on-device" << std::endl;
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Running MSM kernel with on-device inputs" << std::endl;
   // Execute the MSM kernel
-  bn254MSMCuda(scalars_d, points_d, msm_size, config, result_d);
+  bn254_msm_cuda(scalars_d, points_d, msm_size, config, result_d);
 
   // Copy the result back to the host
   cudaMemcpy(&result, result_d, sizeof(projective_t), cudaMemcpyDeviceToHost);
@@ -85,14 +85,14 @@ int main(int argc, char* argv[])
   std::cout << "Generating random inputs on-host" << std::endl;
   // use the same scalars
   g2_affine_t* g2_points = new g2_affine_t[N];
-  g2_projective_t::RandHostManyAffine(g2_points, N);
+  g2_projective_t::rand_host_many_affine(g2_points, N);
 
   std::cout << "Reconfiguring MSM to use on-host inputs" << std::endl;
   config.are_results_on_device = false;
   config.are_scalars_on_device = false;
   config.are_points_on_device = false;
   g2_projective_t g2_result;
-  bn254G2MSMCuda(scalars, g2_points, msm_size, config, &g2_result);
+  bn254_g2_msm_cuda(scalars, g2_points, msm_size, config, &g2_result);
   std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
 
   std::cout << "Copying inputs on-device" << std::endl;
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
   config.are_points_on_device = true;
 
   std::cout << "Running MSM kernel with on-device inputs" << std::endl;
-  bn254G2MSMCuda(scalars_d, g2_points_d, msm_size, config, g2_result_d);
+  bn254_g2_msm_cuda(scalars_d, g2_points_d, msm_size, config, g2_result_d);
   cudaMemcpy(&g2_result, g2_result_d, sizeof(g2_projective_t), cudaMemcpyDeviceToHost);
   std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
 

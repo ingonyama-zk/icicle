@@ -35,9 +35,9 @@ public:
   static void SetUpTestSuite()
   {
     // init NTT domain
-    auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
+    auto ntt_config = ntt::default_ntt_config<scalar_t>();
     const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
-    ntt::InitDomain(basic_root, ntt_config.ctx);
+    ntt::init_domain(basic_root, ntt_config.ctx);
     // initializing polynoimals factory for CUDA backend
     Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
   }
@@ -140,7 +140,7 @@ TEST_F(PolynomialTest, evaluationOnDomain)
 
   size *= 2; // evaluating on a larger domain
   auto default_device_context = device_context::get_default_device_context();
-  const auto w = ntt::GetRootOfUnityFromDomain<scalar_t>((int)log2(size), default_device_context);
+  const auto w = ntt::get_root_of_unity_from_domain<scalar_t>((int)log2(size), default_device_context);
 
   // construct domain as rou
   scalar_t x = one;
@@ -487,11 +487,11 @@ using curve_config::projective_t;
 
 // using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
 namespace msm {
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, MSMCuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, msm_cuda)(
     const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
-  cudaError_t _MSM(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
+  cudaError_t _msm(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
   {
-    return CONCAT_EXPAND(CURVE, MSMCuda)(scalars, points, msm_size, config, out);
+    return CONCAT_EXPAND(CURVE, msm_cuda)(scalars, points, msm_size, config, out);
   }
 } // namespace msm
 
@@ -500,13 +500,13 @@ using curve_config::g2_affine_t;
 using curve_config::g2_projective_t;
 
 namespace msm {
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, G2MSMCuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, g2_msm_cuda)(
     const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
 
   cudaError_t
-  _G2MSM(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
+  _g2_msm(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
   {
-    return CONCAT_EXPAND(CURVE, G2MSMCuda)(scalars, points, msm_size, config, out);
+    return CONCAT_EXPAND(CURVE, g2_msm_cuda)(scalars, points, msm_size, config, out);
   }
 } // namespace msm
 #endif // G2
@@ -536,7 +536,7 @@ public:
 };
 namespace msm {
   cudaError_t
-  _G2MSM(const scalar_t* scalars, const dummy_g2_t* points, int msm_size, MSMConfig& config, dummy_g2_t* out)
+  _g2_msm(const scalar_t* scalars, const dummy_g2_t* points, int msm_size, MSMConfig& config, dummy_g2_t* out)
   {
     scalar_t* scalars_host = static_cast<scalar_t*>(malloc(msm_size * sizeof(scalar_t)));
     cudaMemcpyAsync(scalars_host, scalars, msm_size * sizeof(scalar_t), cudaMemcpyDeviceToHost, config.ctx.stream);
@@ -801,14 +801,14 @@ public:
     const int vanishing_poly_deg = n;
     Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
-    auto msm_config = msm::DefaultMSMConfig();
+    auto msm_config = msm::default_msm_config();
     msm_config.are_scalars_on_device = true;
 
     // compute [A]1
     {
       G1P U_commited;
       auto [U_coeff, N, device_id] = U.get_coefficients_view();
-      CHK_STICKY(msm::_MSM(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
+      CHK_STICKY(msm::_msm(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
       proof.A = G1P::to_affine(U_commited + G1P::from_affine(pk.g1.alpha) + r * G1P::from_affine(pk.g1.delta));
     }
 
@@ -817,11 +817,11 @@ public:
     {
       G2P V_commited_g2;
       auto [V_coeff, N, device_id] = V.get_coefficients_view();
-      CHK_STICKY(msm::_G2MSM(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
+      CHK_STICKY(msm::_g2_msm(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
       proof.B = G2P::to_affine(V_commited_g2 + pk.g2.beta + s * G2P::from_affine(pk.g2.delta));
 
       G1P V_commited_g1;
-      CHK_STICKY(msm::_MSM(V_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
+      CHK_STICKY(msm::_msm(V_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
       B1 = V_commited_g1 + pk.g1.beta + G1P::from_affine(pk.g1.delta) * s;
     }
 
@@ -830,11 +830,11 @@ public:
       auto [H_coeff, N, device_id] = h.get_coefficients_view();
 
       G1P HT_commited;
-      CHK_STICKY(msm::_MSM(H_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
+      CHK_STICKY(msm::_msm(H_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
 
       G1P private_inputs_commited;
       msm_config.are_scalars_on_device = false;
-      CHK_STICKY(msm::_MSM(
+      CHK_STICKY(msm::_msm(
         witness.data() + l + 1, pk.g1.private_witness_points.data(), m - l, msm_config, &private_inputs_commited));
 
       proof.C = G1P::to_affine(
@@ -895,7 +895,8 @@ TEST_F(PolynomialTest, QAP)
   //  (4) sanity check: verify AB=C at the evaluation points
   {
     auto default_device_context = device_context::get_default_device_context();
-    const auto w = ntt::GetRootOfUnityFromDomain<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
+    const auto w =
+      ntt::get_root_of_unity_from_domain<scalar_t>((int)ceil(log2(nof_constraints)), default_device_context);
     auto x = scalar_t::one();
     for (int i = 0; i < vanishing_poly_deg; ++i) {
       ASSERT_EQ(Lx(x) * Rx(x), Ox(x));
@@ -921,7 +922,7 @@ TEST_F(PolynomialTest, commitMSM)
   auto f = randomize_polynomial(size);
 
   auto [d_coeff, N, device_id] = f.get_coefficients_view();
-  auto msm_config = msm::DefaultMSMConfig();
+  auto msm_config = msm::default_msm_config();
   msm_config.are_scalars_on_device = true;
 
   auto points = std::make_unique<affine_t[]>(size);
@@ -932,7 +933,7 @@ TEST_F(PolynomialTest, commitMSM)
   compute_powers_of_tau(g, tau, points.get(), size);
 
   EXPECT_EQ(d_coeff.isValid(), true);
-  CHK_STICKY(msm::_MSM(d_coeff.get(), points.get(), size, msm_config, &result));
+  CHK_STICKY(msm::_msm(d_coeff.get(), points.get(), size, msm_config, &result));
 
   EXPECT_EQ(result, f(tau) * g);
 

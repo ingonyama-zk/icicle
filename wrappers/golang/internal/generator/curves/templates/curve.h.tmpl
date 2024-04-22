@@ -12,12 +12,12 @@ typedef struct {{toCName .CurvePrefix}}projective_t {{toCName .CurvePrefix}}proj
 typedef struct {{toCName .CurvePrefix}}affine_t {{toCName .CurvePrefix}}affine_t;
 typedef struct DeviceContext DeviceContext;
 
-bool {{.Curve}}{{.CurvePrefix}}Eq({{toCName .CurvePrefix}}projective_t* point1, {{toCName .CurvePrefix}}projective_t* point2);
-void {{.Curve}}{{.CurvePrefix}}ToAffine({{toCName .CurvePrefix}}projective_t* point, {{toCName .CurvePrefix}}affine_t* point_out);
-void {{.Curve}}{{.CurvePrefix}}GenerateProjectivePoints({{toCName .CurvePrefix}}projective_t* points, int size);
-void {{.Curve}}{{.CurvePrefix}}GenerateAffinePoints({{toCName .CurvePrefix}}affine_t* points, int size);
-cudaError_t {{.Curve}}{{.CurvePrefix}}AffineConvertMontgomery({{toCName .CurvePrefix}}affine_t* points, size_t n, bool is_into, DeviceContext* ctx);
-cudaError_t {{.Curve}}{{.CurvePrefix}}ProjectiveConvertMontgomery({{toCName .CurvePrefix}}projective_t* points, size_t n, bool is_into, DeviceContext* ctx);
+bool {{.Curve}}{{toCNameBackwards .CurvePrefix}}_eq({{toCName .CurvePrefix}}projective_t* point1, {{toCName .CurvePrefix}}projective_t* point2);
+void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_to_affine({{toCName .CurvePrefix}}projective_t* point, {{toCName .CurvePrefix}}affine_t* point_out);
+void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_generate_projective_points({{toCName .CurvePrefix}}projective_t* points, int size);
+void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_generate_affine_points({{toCName .CurvePrefix}}affine_t* points, int size);
+cudaError_t {{.Curve}}{{toCNameBackwards .CurvePrefix}}_affine_convert_montgomery({{toCName .CurvePrefix}}affine_t* points, size_t n, bool is_into, DeviceContext* ctx);
+cudaError_t {{.Curve}}{{toCNameBackwards .CurvePrefix}}_projective_convert_montgomery({{toCName .CurvePrefix}}projective_t* points, size_t n, bool is_into, DeviceContext* ctx);
 
 #ifdef __cplusplus
 }

@@ -5,23 +5,23 @@ import (
 
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	babybearExtension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
+	babybear_extension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBabybearExtensionVecOps(t *testing.T) {
+func TestBabybear_extensionVecOps(t *testing.T) {
 	testSize := 1 << 14
 
-	a := babybearExtension.GenerateScalars(testSize)
-	b := babybearExtension.GenerateScalars(testSize)
-	var scalar babybearExtension.ExtensionField
+	a := babybear_extension.GenerateScalars(testSize)
+	b := babybear_extension.GenerateScalars(testSize)
+	var scalar babybear_extension.ExtensionField
 	scalar.One()
 	ones := core.HostSliceWithValue(scalar, testSize)
 
-	out := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
-	out2 := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
-	out3 := make(core.HostSlice[babybearExtension.ExtensionField], testSize)
+	out := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
+	out2 := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
+	out3 := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 
 	cfg := core.DefaultVecOpsConfig()
 
@@ -35,16 +35,16 @@ func TestBabybearExtensionVecOps(t *testing.T) {
 	assert.Equal(t, a, out3)
 }
 
-func TestBabybearExtensionTranspose(t *testing.T) {
+func TestBabybear_extensionTranspose(t *testing.T) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 	onDevice := false
 	isAsync := false
 
-	matrix := babybearExtension.GenerateScalars(rowSize * columnSize)
+	matrix := babybear_extension.GenerateScalars(rowSize * columnSize)
 
-	out := make(core.HostSlice[babybearExtension.ExtensionField], rowSize*columnSize)
-	out2 := make(core.HostSlice[babybearExtension.ExtensionField], rowSize*columnSize)
+	out := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
+	out2 := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 
 	ctx, _ := cr.GetDefaultDeviceContext()
 
@@ -62,7 +62,7 @@ func TestBabybearExtensionTranspose(t *testing.T) {
 
 	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, ctx, onDevice, isAsync)
 	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, ctx, onDevice, isAsync)
-	output := make(core.HostSlice[babybearExtension.ExtensionField], rowSize*columnSize)
+	output := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 
 	assert.Equal(t, matrix, output)

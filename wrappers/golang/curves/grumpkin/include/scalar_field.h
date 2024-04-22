@@ -11,8 +11,8 @@ extern "C" {
 typedef struct scalar_t scalar_t;
 typedef struct DeviceContext DeviceContext;
 
-void grumpkinGenerateScalars(scalar_t* scalars, int size);
-cudaError_t grumpkinScalarConvertMontgomery(scalar_t* d_inout, size_t n, bool is_into, DeviceContext* ctx);
+void grumpkin_generate_scalars(scalar_t* scalars, int size);
+cudaError_t grumpkin_scalar_convert_montgomery(scalar_t* d_inout, size_t n, bool is_into, DeviceContext* ctx);
 
 #ifdef __cplusplus
 }

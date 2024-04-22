@@ -46,7 +46,7 @@ impl<'a> KeccakConfig<'a> {
 }
 
 extern "C" {
-    pub(crate) fn Keccak256(
+    pub(crate) fn keccak256_cuda(
         input: *const u8,
         input_block_size: i32,
         number_of_blocks: i32,
@@ -54,7 +54,7 @@ extern "C" {
         config: KeccakConfig,
     ) -> CudaError;
 
-    pub(crate) fn Keccak512(
+    pub(crate) fn keccak512_cuda(
         input: *const u8,
         input_block_size: i32,
         number_of_blocks: i32,
@@ -71,7 +71,7 @@ pub fn keccak256(
     config: KeccakConfig,
 ) -> IcicleResult<()> {
     unsafe {
-        Keccak256(
+        keccak256_cuda(
             input.as_ptr(),
             input_block_size,
             number_of_blocks,
@@ -90,7 +90,7 @@ pub fn keccak512(
     config: KeccakConfig,
 ) -> IcicleResult<()> {
     unsafe {
-        Keccak512(
+        keccak512_cuda(
             input.as_ptr(),
             input_block_size,
             number_of_blocks,

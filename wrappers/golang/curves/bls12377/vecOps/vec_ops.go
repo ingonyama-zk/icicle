@@ -22,11 +22,11 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 
 	switch op {
 	case core.Sub:
-		ret = (cr.CudaError)(C.bls12_377SubCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.bls12_377_sub_cuda(cA, cB, cSize, cConfig, cOut))
 	case core.Add:
-		ret = (cr.CudaError)(C.bls12_377AddCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.bls12_377_add_cuda(cA, cB, cSize, cConfig, cOut))
 	case core.Mul:
-		ret = (cr.CudaError)(C.bls12_377MulCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.bls12_377_mul_cuda(cA, cB, cSize, cConfig, cOut))
 	}
 
 	return ret
@@ -43,6 +43,6 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ct
 	cOnDevice := (C._Bool)(onDevice)
 	cIsAsync := (C._Bool)(isAsync)
 
-	err := (cr.CudaError)(C.bls12_377TransposeMatrix(cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
+	err := (cr.CudaError)(C.bls12_377_transpose_matrix_cuda(cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
 	return core.FromCudaError(err)
 }

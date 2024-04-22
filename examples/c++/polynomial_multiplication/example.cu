@@ -41,7 +41,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(nullptr)); // init GPU context
 
   // init domain
-  auto ntt_config = ntt::DefaultNTTConfig<test_scalar>();
+  auto ntt_config = ntt::default_ntt_config<test_scalar>();
   const bool is_radix2_alg = (argc > 1) ? atoi(argv[1]) : false;
   ntt_config.ntt_algorithm = is_radix2_alg ? ntt::NttAlgorithm::Radix2 : ntt::NttAlgorithm::MixedRadix;
 
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&stop));
 
   test_scalar basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  bn254InitializeDomain(&basic_root, ntt_config.ctx, true /*=fast_twidddles_mode*/);
+  bn254_initialize_domain(&basic_root, ntt_config.ctx, true /*=fast_twidddles_mode*/);
 
   // (1) cpu allocation
   auto CpuA = std::make_unique<test_data[]>(NTT_SIZE);
@@ -75,8 +75,8 @@ int main(int argc, char** argv)
       ntt_config.are_inputs_on_device = false;
       ntt_config.are_outputs_on_device = true;
       ntt_config.ordering = ntt::Ordering::kNM;
-      CHK_IF_RETURN(bn254NTTCuda(CpuA.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuA));
-      CHK_IF_RETURN(bn254NTTCuda(CpuB.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuB));
+      CHK_IF_RETURN(bn254_ntt_cuda(CpuA.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuA));
+      CHK_IF_RETURN(bn254_ntt_cuda(CpuB.get(), NTT_SIZE, ntt::NTTDir::kForward, ntt_config, GpuB));
 
       // (4) multiply A,B
       CHK_IF_RETURN(cudaMallocAsync(&MulGpu, sizeof(test_data) * NTT_SIZE, ntt_config.ctx.stream));
@@ -87,13 +87,13 @@ int main(int argc, char** argv)
         true,  // is_result_on_device
         false  // is_async
       };
-      CHK_IF_RETURN(bn254MulCuda(GpuA, GpuB, NTT_SIZE, config, MulGpu));
+      CHK_IF_RETURN(bn254_mul_cuda(GpuA, GpuB, NTT_SIZE, config, MulGpu));
 
       // (5) INTT (in place)
       ntt_config.are_inputs_on_device = true;
       ntt_config.are_outputs_on_device = true;
       ntt_config.ordering = ntt::Ordering::kMN;
-      CHK_IF_RETURN(bn254NTTCuda(MulGpu, NTT_SIZE, ntt::NTTDir::kInverse, ntt_config, MulGpu));
+      CHK_IF_RETURN(bn254_ntt_cuda(MulGpu, NTT_SIZE, ntt::NTTDir::kInverse, ntt_config, MulGpu));
 
       CHK_IF_RETURN(cudaFreeAsync(GpuA, ntt_config.ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(GpuB, ntt_config.ctx.stream));
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
   benchmark(false); // warmup
   benchmark(true, 20);
 
-  bn254ReleaseDomain(ntt_config.ctx);
+  bn254_release_domain(ntt_config.ctx);
   CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
 
   return 0;

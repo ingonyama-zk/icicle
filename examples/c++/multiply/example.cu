@@ -17,7 +17,7 @@ int vector_mult(T* vec_b, T* vec_a, T* vec_result, size_t n_elments, device_cont
   config.is_a_on_device = true;
   config.is_b_on_device = true;
   config.is_result_on_device = true;
-  cudaError_t err =  bn254MulCuda(vec_a, vec_b, n_elments, config, vec_result);
+  cudaError_t err =  bn254_mul_cuda(vec_a, vec_b, n_elments, config, vec_result);
   if (err != cudaSuccess) {
     std::cerr << "Failed to multiply vectors - " << cudaGetErrorString(err) << std::endl;
     return 0;
@@ -62,8 +62,8 @@ int main(int argc, char** argv)
   T* host_in1 = (T*)malloc(vector_size * sizeof(T));
   T* host_in2 = (T*)malloc(vector_size * sizeof(T));
   std::cout << "Initializing vectors with random data" << std::endl;
-  T::RandHostMany(host_in1, vector_size);
-  T::RandHostMany(host_in2, vector_size);
+  T::rand_host_many(host_in1, vector_size);
+  T::rand_host_many(host_in2, vector_size);
   // device data
   device_context::DeviceContext ctx = device_context::get_default_device_context();
   T* device_in1;

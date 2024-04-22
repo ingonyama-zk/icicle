@@ -12,21 +12,21 @@ namespace vec_ops {
 #define MAX_THREADS_PER_BLOCK 256
 
     template <typename E>
-    __global__ void MulKernel(const E* scalar_vec, const E* element_vec, int n, E* result)
+    __global__ void mul_kernel(const E* scalar_vec, const E* element_vec, int n, E* result)
     {
       int tid = blockDim.x * blockIdx.x + threadIdx.x;
       if (tid < n) { result[tid] = scalar_vec[tid] * element_vec[tid]; }
     }
 
     template <typename E, typename S>
-    __global__ void MulScalarKernel(const E* element_vec, const S scalar, int n, E* result)
+    __global__ void mul_scalar_kernel(const E* element_vec, const S scalar, int n, E* result)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid < n) { result[tid] = element_vec[tid] * (scalar); }
     }
 
     template <typename E>
-    __global__ void DivElementWiseKernel(const E* element_vec1, const E* element_vec2, int n, E* result)
+    __global__ void div_element_wise_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
     {
       // TODO:implement better based on https://eprint.iacr.org/2008/199
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -34,14 +34,14 @@ namespace vec_ops {
     }
 
     template <typename E>
-    __global__ void AddKernel(const E* element_vec1, const E* element_vec2, int n, E* result)
+    __global__ void add_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid < n) { result[tid] = element_vec1[tid] + element_vec2[tid]; }
     }
 
     template <typename E>
-    __global__ void SubKernel(const E* element_vec1, const E* element_vec2, int n, E* result)
+    __global__ void sub_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid < n) { result[tid] = element_vec1[tid] - element_vec2[tid]; }
@@ -57,7 +57,7 @@ namespace vec_ops {
   } // namespace
 
   template <typename E, void (*Kernel)(const E*, const E*, int, E*)>
-  cudaError_t VecOp(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t vec_op(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     CHK_INIT_IF_RETURN();
 
@@ -106,21 +106,21 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t Mul(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t mul(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
-    return VecOp<E, MulKernel>(vec_a, vec_b, n, config, result);
+    return vec_op<E, mul_kernel>(vec_a, vec_b, n, config, result);
   }
 
   template <typename E>
-  cudaError_t Add(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t add(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
-    return VecOp<E, AddKernel>(vec_a, vec_b, n, config, result);
+    return vec_op<E, add_kernel>(vec_a, vec_b, n, config, result);
   }
 
   template <typename E>
-  cudaError_t Sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
-    return VecOp<E, SubKernel>(vec_a, vec_b, n, config, result);
+    return vec_op<E, sub_kernel>(vec_a, vec_b, n, config, result);
   }
 
   template <typename E>

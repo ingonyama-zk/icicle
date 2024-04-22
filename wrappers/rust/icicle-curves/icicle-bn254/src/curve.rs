@@ -32,7 +32,7 @@ impl_curve!(
 );
 #[cfg(feature = "g2")]
 impl_curve!(
-    "bn254G2",
+    "bn254_g2",
     bn254_g2,
     G2CurveCfg,
     ScalarField,

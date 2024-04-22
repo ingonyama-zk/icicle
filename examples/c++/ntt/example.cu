@@ -86,13 +86,13 @@ int main(int argc, char* argv[])
   // Create a device context
   auto ctx = device_context::get_default_device_context();
   S basic_root = S::omega(log_ntt_size /*NTT_LOG_SIZE*/);
-  bn254InitializeDomain(&basic_root, ctx, true);
+  bn254_initialize_domain(&basic_root, ctx, true);
   // Create an NTTConfig instance
-  NTTConfig<S> config = DefaultNTTConfig<S>();
+  NTTConfig<S> config = default_ntt_config<S>();
   config.ntt_algorithm = NttAlgorithm::MixedRadix; 
   config.batch_size = nof_ntts;
   START_TIMER(MixedRadix);
-  cudaError_t err = bn254NTTCuda(input, ntt_size, NTTDir::kForward, config, output);
+  cudaError_t err = bn254_ntt_cuda(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(MixedRadix, "MixedRadix NTT");
   
   std::cout << "Validating output" << std::endl;
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
 
   config.ntt_algorithm = NttAlgorithm::Radix2; 
   START_TIMER(Radix2);
-  err = bn254NTTCuda(input, ntt_size, NTTDir::kForward, config, output);
+  err = bn254_ntt_cuda(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(Radix2, "Radix2 NTT");
 
   std::cout << "Validating output" << std::endl;

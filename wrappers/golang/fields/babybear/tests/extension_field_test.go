@@ -2,18 +2,18 @@ package tests
 
 import (
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	babybearExtension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
+	babybear_extension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
 	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 const (
-	EXTENSION_LIMBS = babybearExtension.EXTENSION_LIMBS
+	EXTENSION_LIMBS = babybear_extension.EXTENSION_LIMBS
 )
 
 func TestExtensionFieldFromLimbs(t *testing.T) {
-	emptyField := babybearExtension.ExtensionField{}
+	emptyField := babybear_extension.ExtensionField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ExtensionField's limbs")
@@ -22,7 +22,7 @@ func TestExtensionFieldFromLimbs(t *testing.T) {
 }
 
 func TestExtensionFieldGetLimbs(t *testing.T) {
-	emptyField := babybearExtension.ExtensionField{}
+	emptyField := babybear_extension.ExtensionField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
@@ -30,7 +30,7 @@ func TestExtensionFieldGetLimbs(t *testing.T) {
 }
 
 func TestExtensionFieldOne(t *testing.T) {
-	var emptyField babybearExtension.ExtensionField
+	var emptyField babybear_extension.ExtensionField
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int(EXTENSION_LIMBS))
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
@@ -43,7 +43,7 @@ func TestExtensionFieldOne(t *testing.T) {
 }
 
 func TestExtensionFieldZero(t *testing.T) {
-	var emptyField babybearExtension.ExtensionField
+	var emptyField babybear_extension.ExtensionField
 	emptyField.Zero()
 	limbsZero := make([]uint32, EXTENSION_LIMBS)
 	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
@@ -56,7 +56,7 @@ func TestExtensionFieldZero(t *testing.T) {
 }
 
 func TestExtensionFieldSize(t *testing.T) {
-	var emptyField babybearExtension.ExtensionField
+	var emptyField babybear_extension.ExtensionField
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
@@ -64,7 +64,7 @@ func TestExtensionFieldSize(t *testing.T) {
 }
 
 func TestExtensionFieldAsPointer(t *testing.T) {
-	var emptyField babybearExtension.ExtensionField
+	var emptyField babybear_extension.ExtensionField
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
@@ -72,7 +72,7 @@ func TestExtensionFieldAsPointer(t *testing.T) {
 }
 
 func TestExtensionFieldFromBytes(t *testing.T) {
-	var emptyField babybearExtension.ExtensionField
+	var emptyField babybear_extension.ExtensionField
 	bytes, expected := test_helpers.GenerateBytesArray(int(EXTENSION_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
@@ -81,39 +81,39 @@ func TestExtensionFieldFromBytes(t *testing.T) {
 }
 
 func TestExtensionFieldToBytes(t *testing.T) {
-	var emptyField babybearExtension.ExtensionField
+	var emptyField babybear_extension.ExtensionField
 	expected, limbs := test_helpers.GenerateBytesArray(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(limbs)
 
 	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
 
-func TestBabybearExtensionGenerateScalars(t *testing.T) {
+func TestBabybear_extensionGenerateScalars(t *testing.T) {
 	const numScalars = 8
-	scalars := babybearExtension.GenerateScalars(numScalars)
+	scalars := babybear_extension.GenerateScalars(numScalars)
 
 	assert.Implements(t, (*core.HostOrDeviceSlice)(nil), &scalars)
 
 	assert.Equal(t, numScalars, scalars.Len())
-	zeroScalar := babybearExtension.ExtensionField{}
+	zeroScalar := babybear_extension.ExtensionField{}
 	assert.NotContains(t, scalars, zeroScalar)
 }
 
-func TestBabybearExtensionMongtomeryConversion(t *testing.T) {
+func TestBabybear_extensionMongtomeryConversion(t *testing.T) {
 	size := 1 << 15
-	scalars := babybearExtension.GenerateScalars(size)
+	scalars := babybear_extension.GenerateScalars(size)
 
 	var deviceScalars core.DeviceSlice
 	scalars.CopyToDevice(&deviceScalars, true)
 
-	babybearExtension.ToMontgomery(&deviceScalars)
+	babybear_extension.ToMontgomery(&deviceScalars)
 
-	scalarsMontHost := babybearExtension.GenerateScalars(size)
+	scalarsMontHost := babybear_extension.GenerateScalars(size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)
 
-	babybearExtension.FromMontgomery(&deviceScalars)
+	babybear_extension.FromMontgomery(&deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)

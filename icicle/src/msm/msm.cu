@@ -399,13 +399,13 @@ namespace msm {
           cudaMemcpyAsync(d_allocated_scalars, scalars, sizeof(S) * nof_scalars, cudaMemcpyHostToDevice, stream));
 
         if (are_scalars_montgomery_form) {
-          CHK_IF_RETURN(mont::FromMontgomery(d_allocated_scalars, nof_scalars, stream, d_allocated_scalars));
+          CHK_IF_RETURN(mont::from_montgomery(d_allocated_scalars, nof_scalars, stream, d_allocated_scalars));
         }
         d_scalars = d_allocated_scalars;
       } else { // already on device
         if (are_scalars_montgomery_form) {
           CHK_IF_RETURN(cudaMallocAsync(&d_allocated_scalars, sizeof(S) * nof_scalars, stream));
-          CHK_IF_RETURN(mont::FromMontgomery(scalars, nof_scalars, stream, d_allocated_scalars));
+          CHK_IF_RETURN(mont::from_montgomery(scalars, nof_scalars, stream, d_allocated_scalars));
           d_scalars = d_allocated_scalars;
         } else {
           d_scalars = scalars;
@@ -508,13 +508,13 @@ namespace msm {
           cudaMemcpyAsync(d_allocated_points, points, sizeof(A) * nof_points, cudaMemcpyHostToDevice, stream_points));
 
         if (are_points_montgomery_form) {
-          CHK_IF_RETURN(mont::FromMontgomery(d_allocated_points, nof_points, stream_points, d_allocated_points));
+          CHK_IF_RETURN(mont::from_montgomery(d_allocated_points, nof_points, stream_points, d_allocated_points));
         }
         d_points = d_allocated_points;
       } else { // already on device
         if (are_points_montgomery_form) {
           CHK_IF_RETURN(cudaMallocAsync(&d_allocated_points, sizeof(A) * nof_points, stream_points));
-          CHK_IF_RETURN(mont::FromMontgomery(points, nof_points, stream_points, d_allocated_points));
+          CHK_IF_RETURN(mont::from_montgomery(points, nof_points, stream_points, d_allocated_points));
           d_points = d_allocated_points;
         } else {
           d_points = points;
@@ -829,7 +829,7 @@ namespace msm {
   } // namespace
 
   template <typename S, typename A, typename P>
-  cudaError_t MSM(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results)
+  cudaError_t msm(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results)
   {
     const int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
     cudaStream_t& stream = config.ctx.stream;
@@ -851,7 +851,7 @@ namespace msm {
   }
 
   template <typename A, typename P>
-  cudaError_t PrecomputeMSMBases(
+  cudaError_t precompute_msm_bases(
     A* bases,
     int bases_size,
     int precompute_factor,

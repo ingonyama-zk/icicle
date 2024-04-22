@@ -22,11 +22,11 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 
 	switch op {
 	case core.Sub:
-		ret = (cr.CudaError)(C.babybearSubCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.babybear_sub_cuda(cA, cB, cSize, cConfig, cOut))
 	case core.Add:
-		ret = (cr.CudaError)(C.babybearAddCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.babybear_add_cuda(cA, cB, cSize, cConfig, cOut))
 	case core.Mul:
-		ret = (cr.CudaError)(C.babybearMulCuda(cA, cB, cSize, cConfig, cOut))
+		ret = (cr.CudaError)(C.babybear_mul_cuda(cA, cB, cSize, cConfig, cOut))
 	}
 
 	return ret
@@ -43,6 +43,6 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ct
 	cOnDevice := (C._Bool)(onDevice)
 	cIsAsync := (C._Bool)(isAsync)
 
-	err := (cr.CudaError)(C.babybearTransposeMatrix(cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
+	err := (cr.CudaError)(C.babybear_transpose_matrix_cuda(cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
 	return core.FromCudaError(err)
 }

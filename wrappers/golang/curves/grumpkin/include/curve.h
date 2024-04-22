@@ -12,12 +12,12 @@ typedef struct projective_t projective_t;
 typedef struct affine_t affine_t;
 typedef struct DeviceContext DeviceContext;
 
-bool grumpkinEq(projective_t* point1, projective_t* point2);
-void grumpkinToAffine(projective_t* point, affine_t* point_out);
-void grumpkinGenerateProjectivePoints(projective_t* points, int size);
-void grumpkinGenerateAffinePoints(affine_t* points, int size);
-cudaError_t grumpkinAffineConvertMontgomery(affine_t* points, size_t n, bool is_into, DeviceContext* ctx);
-cudaError_t grumpkinProjectiveConvertMontgomery(projective_t* points, size_t n, bool is_into, DeviceContext* ctx);
+bool grumpkin_eq(projective_t* point1, projective_t* point2);
+void grumpkin_to_affine(projective_t* point, affine_t* point_out);
+void grumpkin_generate_projective_points(projective_t* points, int size);
+void grumpkin_generate_affine_points(affine_t* points, int size);
+cudaError_t grumpkin_affine_convert_montgomery(affine_t* points, size_t n, bool is_into, DeviceContext* ctx);
+cudaError_t grumpkin_projective_convert_montgomery(projective_t* points, size_t n, bool is_into, DeviceContext* ctx);
 
 #ifdef __cplusplus
 }

@@ -18,7 +18,7 @@ func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTC
 	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.projective_t)(resultsPointer)
 
-	__ret := C.bw6_761ECNTTCuda(cPoints, cSize, cDir, cCfg, cResults)
+	__ret := C.bw6_761_ecntt_cuda(cPoints, cSize, cDir, cCfg, cResults)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

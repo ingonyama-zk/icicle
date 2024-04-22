@@ -1,8 +1,8 @@
 #include <cuda_runtime.h>
 #include <stdbool.h>
 
-#ifndef _BABYBEAREXTENSION_VEC_OPS_H
-#define _BABYBEAREXTENSION_VEC_OPS_H
+#ifndef _BABYBEAR_EXTENSION_VEC_OPS_H
+#define _BABYBEAR_EXTENSION_VEC_OPS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +12,7 @@ typedef struct scalar_t scalar_t;
 typedef struct VecOpsConfig VecOpsConfig;
 typedef struct DeviceContext DeviceContext;
 
-cudaError_t babybearExtensionMulCuda(
+cudaError_t babybear_extension_mul_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -20,7 +20,7 @@ cudaError_t babybearExtensionMulCuda(
   scalar_t* result
 );
 
-cudaError_t babybearExtensionAddCuda(
+cudaError_t babybear_extension_add_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -28,7 +28,7 @@ cudaError_t babybearExtensionAddCuda(
   scalar_t* result
 );
 
-cudaError_t babybearExtensionSubCuda(
+cudaError_t babybear_extension_sub_cuda(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -36,7 +36,7 @@ cudaError_t babybearExtensionSubCuda(
   scalar_t* result
 );
 
-cudaError_t babybearExtensionTransposeMatrix(
+cudaError_t babybear_extension_transpose_matrix_cuda(
   scalar_t* mat_in,
   int row_size,
   int column_size,

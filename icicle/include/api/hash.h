@@ -8,9 +8,9 @@
 #include "hash/keccak/keccak.cuh"
 
 extern "C" cudaError_t
-  Keccak256(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config);
+  keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config);
 
 extern "C" cudaError_t
-  Keccak512(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config);
+  keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config);
 
 #endif

@@ -736,7 +736,7 @@ public:
     return value;
   }
 
-  static void RandHostMany(Field* out, int size)
+  static void rand_host_many(Field* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = rand_host();
@@ -910,9 +910,9 @@ public:
     return xs * xs;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field ToMontgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
+  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
 
-  static constexpr HOST_DEVICE_INLINE Field FromMontgomery(const Field& xs)
+  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
   {
     return xs * Field{CONFIG::montgomery_r_inv};
   }

@@ -132,7 +132,7 @@ macro_rules! impl_tree_builder {
             use icicle_core::poseidon::PoseidonConstants;
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "BuildPoseidonMerkleTree")]
+                #[link_name = concat!($field_prefix, "_build_poseidon_merkle_tree")]
                 pub(crate) fn _build_poseidon_merkle_tree(
                     leaves: *mut $field,
                     digests: *mut $field,
