@@ -173,7 +173,7 @@ import (
 )
 ```
 
-These packages include `G2Projective` and `G2Affine` points as well as a `G2Msm` method.
+This package include `G2Projective` and `G2Affine` points as well as a `G2Msm` method.
 
 ```go
 package main
