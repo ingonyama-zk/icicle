@@ -17,7 +17,11 @@ cmake = "0.1.50"
 [dev-dependencies]
 risc0-core = "0.21.0"
 risc0-zkp = "0.21.0"
-#icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
+p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+serial_test = "3.0.0"
 
 [features]
 default = []
