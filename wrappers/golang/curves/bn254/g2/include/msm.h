@@ -1,8 +1,8 @@
 #include <cuda_runtime.h>
 #include <stdbool.h>
 
-#ifndef _BN254_g2MSM_H
-#define _BN254_g2MSM_H
+#ifndef _BN254_G2MSM_H
+#define _BN254_G2MSM_H
 
 #ifdef __cplusplus
 extern "C" {
