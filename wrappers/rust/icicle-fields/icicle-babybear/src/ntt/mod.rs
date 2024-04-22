@@ -15,16 +15,26 @@ impl_ntt_without_domain!("babybearExtension", ExtensionField, ScalarField, Scala
 pub(crate) mod tests {
     use super::{ExtensionField, ScalarField};
     use icicle_core::{
-        ntt::{initialize_domain, ntt_inplace, NTTConfig, NTTDir},
+        ntt::{initialize_domain, release_domain, ntt_inplace, NTTConfig, NTTDir},
         traits::{FieldImpl, GenerateRandom},
     };
     use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostSlice};
+    use p3_baby_bear::BabyBear;
+    use p3_dft::{Radix2Dit, TwoAdicSubgroupDft};
+    use p3_field::{
+        extension::BinomialExtensionField, AbstractExtensionField, AbstractField, PrimeField32,
+        TwoAdicField,
+    };
+    use p3_matrix::dense::RowMajorMatrix;
     use risc0_core::field::{
         baby_bear::{Elem, ExtElem},
         Elem as FieldElem, RootsOfUnity,
     };
+    use serial_test::serial;
 
+    // Note that risc0 and plonky3 tests shouldn't be ran simultaneously in parallel as they use different roots of unity
     #[test]
+    #[serial]
     fn test_against_risc0() {
         let log_sizes = [15, 20];
         let ctx = DeviceContext::default();
@@ -75,5 +85,84 @@ pub(crate) mod tests {
                 assert_eq!(Into::<[u32; 4]>::into(*s1)[..], s2.to_u32_words()[..]);
             }
         }
+
+        release_domain::<ScalarField>(&ctx).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn test_against_plonky3() {
+        let log_ncols = [15, 18];
+        let nrows = 4;
+        let ctx = DeviceContext::default();
+        let plonky3_rou = BabyBear::two_adic_generator(log_ncols[1]);
+        // To compute FFTs using icicle, we first need to initialize it using plonky3's "two adic generator"
+        initialize_domain(ScalarField::from([plonky3_rou.as_canonical_u32()]), &ctx, false).unwrap();
+        for log_ncol in log_ncols {
+            let ntt_size = 1 << log_ncol;
+
+            let mut scalars: Vec<ScalarField> = <ScalarField as FieldImpl>::Config::generate_random(nrows * ntt_size);
+            let scalars_p3: Vec<BabyBear> = scalars
+                .iter()
+                .map(|x| BabyBear::from_wrapped_u32(Into::<[u32; 1]>::into(*x)[0]))
+                .collect();
+            let matrix_p3 = RowMajorMatrix::new(scalars_p3, nrows);
+
+            let mut ntt_cfg: NTTConfig<'_, ScalarField> = NTTConfig::default();
+            // Next two lines signalize that we want to compute `nrows` FFTs in column-ordered fashion
+            ntt_cfg.batch_size = nrows as i32;
+            ntt_cfg.columns_batch = true;
+            ntt_inplace(HostSlice::from_mut_slice(&mut scalars[..]), NTTDir::kForward, &ntt_cfg).unwrap();
+
+            let result_p3 = Radix2Dit.dft_batch(matrix_p3);
+
+            for i in 0..nrows {
+                for j in 0..ntt_size {
+                    assert_eq!(
+                        Into::<[u32; 1]>::into(scalars[i + j * nrows])[0],
+                        result_p3.values[i + j * nrows].as_canonical_u32()
+                    );
+                }
+            }
+
+            type Plonky3Extension = BinomialExtensionField<BabyBear, 4>;
+
+            let mut ext_scalars: Vec<ExtensionField> =
+                <ExtensionField as FieldImpl>::Config::generate_random(nrows * ntt_size);
+            let ext_scalars_p3: Vec<Plonky3Extension> = ext_scalars
+                .iter()
+                .map(|x| {
+                    let arr: [u32; 4] = (*x).into();
+                    Plonky3Extension::from_base_slice(
+                        &(arr
+                            .iter()
+                            .map(|y| BabyBear::from_wrapped_u32(*y))
+                            .collect::<Vec<BabyBear>>())[..],
+                    )
+                })
+                .collect();
+            let ext_matrix_p3 = RowMajorMatrix::new(ext_scalars_p3, nrows);
+
+            ntt_inplace(
+                HostSlice::from_mut_slice(&mut ext_scalars[..]),
+                NTTDir::kForward,
+                &ntt_cfg,
+            )
+            .unwrap();
+
+            let ext_result_p3 = Radix2Dit.dft_batch(ext_matrix_p3);
+
+            for i in 0..nrows {
+                for j in 0..ntt_size {
+                    let arr: [u32; 4] = ext_scalars[i + j * nrows].into();
+                    let base_slice: &[BabyBear] = ext_result_p3.values[i + j * nrows].as_base_slice();
+                    for k in 0..4 {
+                        assert_eq!(arr[k], base_slice[k].as_canonical_u32());
+                    }
+                }
+            }
+        }
+
+        release_domain::<ScalarField>(&ctx).unwrap();
     }
 }

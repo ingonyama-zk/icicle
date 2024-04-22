@@ -47,8 +47,7 @@ namespace babybear {
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 11;
     // true if nonresidue is negative.
-    // TODO: we're very confused by plonky3 and risc0 having different nonresidues: 11 and -11 respectively
-    static constexpr bool nonresidue_is_negative = true;
+    static constexpr bool nonresidue_is_negative = false;
   };
 
   /**
