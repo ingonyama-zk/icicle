@@ -12,11 +12,13 @@ icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
 icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"] }
 ark-bw6-761 = { version = "0.4.0", optional = true }
+criterion = "0.3"
 
 [build-dependencies]
 cmake = "0.1.50"
 
 [dev-dependencies]
+criterion = "0.3"
 ark-bw6-761 = "0.4.0"
 ark-std = "0.4.0"
 ark-ff = "0.4.0"

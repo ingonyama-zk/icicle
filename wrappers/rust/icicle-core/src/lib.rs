@@ -1,4 +1,5 @@
 pub mod curve;
+pub mod ecntt;
 pub mod error;
 pub mod field;
 pub mod msm;
