@@ -30,6 +30,9 @@ namespace field_config = grumpkin;
 #elif FIELD_ID == BABY_BEAR
 #include "fields/stark_fields/babybear.cuh"
 namespace field_config = babybear;
+#elif FIELD_ID == STARK_252
+#include "fields/stark_fields/stark252.cuh"
+namespace field_config = stark252;
 #endif
 
 #endif
