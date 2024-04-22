@@ -52,7 +52,7 @@ To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
 
 ``` bash
-./build.sh bn254
+./build.sh -curve=bn254
 ```
 
 Now you can import ICICLE into your project
