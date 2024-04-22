@@ -3,11 +3,14 @@ package tests
 import (
 	"os"
 	"testing"
-
+	
+	{{if or .SupportsNTT .SupportsPoly -}}
 	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	{{.Field}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"
-	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/ntt"
-	poly "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/polynomial"
+	{{.Field}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"{{end}}
+	{{if .SupportsNTT -}}
+	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
+	{{if .SupportsPoly -}}
+	poly "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/polynomial"{{end}}
 
 	{{if ne .GnarkImport "" -}}
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"
@@ -17,7 +20,7 @@ import (
 const (
 	largestTestSize = 20
 )
-
+{{if or .SupportsNTT .SupportsPoly -}}
 func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
 	{{if ne .GnarkImport "" -}}
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
@@ -32,24 +35,24 @@ func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleEr
 	{{end -}}
 	e := ntt.InitDomain(rouIcicle, cfg.Ctx, false)
 	return e
-}
+}{{end}}
 
 func TestMain(m *testing.M) {
-	poly.InitPolyBackend()
+	{{if .SupportsPoly -}}poly.InitPolyBackend(){{end}}
 
-	// setup domain
+	{{if or .SupportsNTT .SupportsPoly -}}// setup domain
 	cfg := ntt.GetDefaultNttConfig()
 	e := initDomain(largestTestSize, cfg)
 	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
 		panic("initDomain failed")
-	}
+	}{{end}}
 
 	// execute tests
 	os.Exit(m.Run())
 
-	// release domain
+	{{if or .SupportsNTT .SupportsPoly -}}// release domain
 	e = ntt.ReleaseDomain(cfg.Ctx)
 	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
 		panic("ReleaseDomain failed")
-	}
+	}{{end}}
 }

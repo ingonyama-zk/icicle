@@ -51,7 +51,7 @@ func generateFiles() {
 			msm.Generate(curveDir, "g2", curve.Curve, "G2", curve.GnarkImport)
 		}
 
-		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0)
+		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, curve.SupportsNTT, curve.SupportsPoly)
 	}
 
 	for _, field := range config.Fields {
@@ -75,7 +75,7 @@ func generateFiles() {
 			lib_linker.Generate(extensionsDir, "extension", field.Field, lib_linker.FIELD, 1)
 		}
 
-		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU)
+		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, field.SupportsNTT, field.SupportsPoly)
 	}
 
 	// Mock field and curve files for core
