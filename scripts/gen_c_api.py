@@ -53,6 +53,10 @@ A set corresponding to each field contains headers that shouldn't be included.
 FIELDS_CONFIG = {
     "babybear": {
         "poseidon.h",
+    },
+    "stark252": {
+        "poseidon.h",
+        "field_ext.h",
     }
 }
 
