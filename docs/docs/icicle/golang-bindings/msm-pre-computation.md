@@ -4,7 +4,7 @@ To understand the theory behind MSM pre computation technique refer to Niall Emm
 
 ### Supported curves
 
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `grumpkin`
 
 ## Core package
 
@@ -37,15 +37,27 @@ func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c in
 ##### Example
 
 ```go
-cfg := GetDefaultMSMConfig()
-points := GenerateAffinePoints(1024)
-precomputeFactor := 8
-var precomputeOut core.DeviceSlice
-_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+package main
 
-err := PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
-if err != cr.CudaSuccess {
-    log.Fatalf("PrecomputeBases failed: %v", err)
+import (
+	"log"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
+)
+
+func main() {
+	cfg := bn254.GetDefaultMSMConfig()
+	points := bn254.GenerateAffinePoints(1024)
+	var precomputeFactor int32 = 8
+	var precomputeOut core.DeviceSlice
+	precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+
+	err := bn254.PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+	if err != cr.CudaSuccess {
+		log.Fatalf("PrecomputeBases failed: %v", err)
+	}
 }
 ```
 
@@ -68,15 +80,27 @@ func G2PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c 
 ##### Example
 
 ```go
-cfg := G2GetDefaultMSMConfig()
-points := G2GenerateAffinePoints(1024)
-precomputeFactor := 8
-var precomputeOut core.DeviceSlice
-_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+package main
 
-err := G2PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
-if err != cr.CudaSuccess {
-    log.Fatalf("G2PrecomputeBases failed: %v", err)
+import (
+	"log"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	g2 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254/g2"
+)
+
+func main() {
+	cfg := g2.G2GetDefaultMSMConfig()
+	points := g2.G2GenerateAffinePoints(1024)
+	var precomputeFactor int32 = 8
+	var precomputeOut core.DeviceSlice
+	precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+
+	err := g2.G2PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+	if err != cr.CudaSuccess {
+		log.Fatalf("PrecomputeBases failed: %v", err)
+	}
 }
 ```
 

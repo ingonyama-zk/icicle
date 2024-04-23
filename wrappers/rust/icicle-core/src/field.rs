@@ -3,15 +3,16 @@ use crate::traits::ArkConvertible;
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, Field as ArkField, PrimeField};
+use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::memory::DeviceSlice;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
 pub struct Field<const NUM_LIMBS: usize, F: FieldConfig> {
-    limbs: [u64; NUM_LIMBS],
+    limbs: [u32; NUM_LIMBS],
     p: PhantomData<F>,
 }
 
@@ -26,7 +27,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
             .iter()
             .rev()
         {
-            write!(f, "{:016x}", b)?;
+            write!(f, "{:08x}", b)?;
         }
         Ok(())
     }
@@ -38,21 +39,21 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Debug for Field<NUM_LIMBS, F> {
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
-    fn into(self) -> [u64; NUM_LIMBS] {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u32; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn into(self) -> [u32; NUM_LIMBS] {
         self.limbs
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u64; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
-    fn from(limbs: [u64; NUM_LIMBS]) -> Self {
+impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u32; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
+    fn from(limbs: [u32; NUM_LIMBS]) -> Self {
         Self { limbs, p: PhantomData }
     }
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     type Config = F;
-    type Repr = [u64; NUM_LIMBS];
+    type Repr = [u32; NUM_LIMBS];
 
     fn to_bytes_le(&self) -> Vec<u8> {
         self.limbs
@@ -68,49 +69,50 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     // please note that this function zero-pads if there are not enough bytes
     // and only takes the first bytes in there are too many of them
     fn from_bytes_le(bytes: &[u8]) -> Self {
-        let mut limbs: [u64; NUM_LIMBS] = [0; NUM_LIMBS];
+        let mut limbs: [u32; NUM_LIMBS] = [0; NUM_LIMBS];
         for (i, chunk) in bytes
-            .chunks(8)
+            .chunks(4)
             .take(NUM_LIMBS)
             .enumerate()
         {
-            let mut chunk_array: [u8; 8] = [0; 8];
+            let mut chunk_array: [u8; 4] = [0; 4];
             chunk_array[..chunk.len()].clone_from_slice(chunk);
-            limbs[i] = u64::from_le_bytes(chunk_array);
+            limbs[i] = u32::from_le_bytes(chunk_array);
         }
         Self::from(limbs)
     }
 
     fn zero() -> Self {
-        Field {
-            limbs: [0u64; NUM_LIMBS],
-            p: PhantomData,
-        }
+        FieldImpl::from_u32(0)
     }
 
     fn one() -> Self {
-        let mut limbs = [0u64; NUM_LIMBS];
-        limbs[0] = 1;
+        FieldImpl::from_u32(1)
+    }
+
+    fn from_u32(val: u32) -> Self {
+        let mut limbs = [0u32; NUM_LIMBS];
+        limbs[0] = val;
         Field { limbs, p: PhantomData }
     }
 }
 
 #[doc(hidden)]
-pub trait MontgomeryConvertibleField<F: FieldImpl> {
-    fn to_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
-    fn from_mont(values: &mut HostOrDeviceSlice<F>) -> CudaError;
+pub trait MontgomeryConvertibleField<'a, F: FieldImpl> {
+    fn to_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
+    fn from_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
+impl<'a, const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible<'a> for Field<NUM_LIMBS, F>
 where
-    F: MontgomeryConvertibleField<Self>,
+    F: MontgomeryConvertibleField<'a, Self>,
 {
-    fn to_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        F::to_mont(values)
+    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
+        F::to_mont(values, ctx)
     }
 
-    fn from_mont(values: &mut HostOrDeviceSlice<Self>) -> CudaError {
-        F::from_mont(values)
+    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
+        F::from_mont(values, ctx)
     }
 }
 
@@ -168,13 +170,13 @@ macro_rules! impl_scalar_field {
         impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
 
         mod $field_prefix_ident {
-            use crate::curve::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
+            use super::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "GenerateScalars")]
+                #[link_name = concat!($field_prefix, "_generate_scalars")]
                 pub(crate) fn generate_scalars(scalars: *mut $field_name, size: usize);
 
-                #[link_name = concat!($field_prefix, "ScalarConvertMontgomery")]
+                #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
                 fn _convert_scalars_montgomery(
                     scalars: *mut $field_name,
                     size: usize,
@@ -184,17 +186,12 @@ macro_rules! impl_scalar_field {
             }
 
             pub(crate) fn convert_scalars_montgomery(
-                scalars: &mut HostOrDeviceSlice<$field_name>,
+                scalars: *mut $field_name,
+                len: usize,
                 is_into: bool,
+                ctx: &DeviceContext,
             ) -> CudaError {
-                unsafe {
-                    _convert_scalars_montgomery(
-                        scalars.as_mut_ptr(),
-                        scalars.len(),
-                        is_into,
-                        &DeviceContext::default() as *const _ as *const DeviceContext,
-                    )
-                }
+                unsafe { _convert_scalars_montgomery(scalars, len, is_into, ctx as *const DeviceContext) }
             }
         }
 
@@ -206,13 +203,34 @@ macro_rules! impl_scalar_field {
             }
         }
 
-        impl MontgomeryConvertibleField<$field_name> for $field_cfg {
-            fn to_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
-                $field_prefix_ident::convert_scalars_montgomery(values, true)
+        impl<'a> MontgomeryConvertibleField<'a, $field_name> for $field_cfg {
+            fn to_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
+                check_device(ctx.device_id);
+                assert_eq!(
+                    values
+                        .device_id()
+                        .unwrap(),
+                    ctx.device_id,
+                    "Device ids are different in slice and context"
+                );
+                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
             }
 
-            fn from_mont(values: &mut HostOrDeviceSlice<$field_name>) -> CudaError {
-                $field_prefix_ident::convert_scalars_montgomery(values, false)
+            fn from_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
+                check_device(ctx.device_id);
+                assert_eq!(
+                    values
+                        .device_id()
+                        .unwrap(),
+                    ctx.device_id,
+                    "Device ids are different in slice and context"
+                );
+                $field_prefix_ident::convert_scalars_montgomery(
+                    unsafe { values.as_mut_ptr() },
+                    values.len(),
+                    false,
+                    ctx,
+                )
             }
         }
     };
@@ -226,6 +244,11 @@ macro_rules! impl_field_tests {
         #[test]
         fn test_field_convert_montgomery() {
             check_field_convert_montgomery::<$field_name>()
+        }
+
+        #[test]
+        fn test_field_equality() {
+            check_field_equality::<$field_name>()
         }
     };
 }

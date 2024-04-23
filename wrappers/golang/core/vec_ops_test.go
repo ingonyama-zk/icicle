@@ -1,9 +1,10 @@
 package core
 
 import (
+	"testing"
+
 	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestVecOpsDefaultConfig(t *testing.T) {
@@ -13,7 +14,6 @@ func TestVecOpsDefaultConfig(t *testing.T) {
 		false, // isAOnDevice
 		false, // isBOnDevice
 		false, // isResultOnDevice
-		false, // IsResultMontgomeryForm
 		false, // IsAsync
 	}
 

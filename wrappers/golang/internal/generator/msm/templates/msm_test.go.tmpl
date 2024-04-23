@@ -1,0 +1,365 @@
+package tests
+
+import (
+	"fmt"
+	"sync"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	{{if ne .GnarkImport "" -}}
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fp"
+	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr"
+	{{end}}
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	icicle{{capitalize .Curve}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"
+	"github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/{{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}"
+)
+{{if ne .GnarkImport "" -}}
+{{$isBW6 := eq .Curve "bw6_761"}}{{$isG2 := eq .CurvePrefix "G2"}}{{$isG1 := ne .CurvePrefix "G2"}}{{if or $isBW6 $isG1}}
+func projectiveToGnarkAffine{{if and $isBW6 $isG2}}G2{{end}}(p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{if and $isBW6 $isG2}}G2{{end}}Projective) {{toPackage .GnarkImport}}.{{if and $isBW6 $isG2}}G2{{else}}G1{{end}}Affine {
+	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
+	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
+	pz, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Z).ToBytesLittleEndian()))
+
+	zInv := new(fp.Element)
+	x := new(fp.Element)
+	y := new(fp.Element)
+
+	zInv.Inverse(&pz)
+
+	x.Mul(&px, zInv)
+	y.Mul(&py, zInv)
+
+	return {{toPackage .GnarkImport}}.{{if and $isBW6 $isG2}}G2{{else}}G1{{end}}Affine{X: *x, Y: *y}
+}
+{{end}}
+{{- $isNotBW6 := ne .Curve "bw6_761"}}{{$isG2 := eq .CurvePrefix "G2"}}{{if and $isNotBW6 $isG2 }}
+func projectiveToGnarkAffineG2(p g2.G2Projective) {{toPackage .GnarkImport}}.G2Affine {
+	pxBytes := p.X.ToBytesLittleEndian()
+	pxA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[:fp.Bytes]))
+	pxA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pxBytes[fp.Bytes:]))
+	x := {{toPackage .GnarkImport}}.E2{
+		A0: pxA0,
+		A1: pxA1,
+	}
+
+	pyBytes := p.Y.ToBytesLittleEndian()
+	pyA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[:fp.Bytes]))
+	pyA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pyBytes[fp.Bytes:]))
+	y := {{toPackage .GnarkImport}}.E2{
+		A0: pyA0,
+		A1: pyA1,
+	}
+
+	pzBytes := p.Z.ToBytesLittleEndian()
+	pzA0, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[:fp.Bytes]))
+	pzA1, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)(pzBytes[fp.Bytes:]))
+	z := {{toPackage .GnarkImport}}.E2{
+		A0: pzA0,
+		A1: pzA1,
+	}
+
+	var zSquared {{toPackage .GnarkImport}}.E2
+	zSquared.Mul(&z, &z)
+
+	var X {{toPackage .GnarkImport}}.E2
+	X.Mul(&x, &z)
+
+	var Y {{toPackage .GnarkImport}}.E2
+	Y.Mul(&y, &zSquared)
+
+	g2Jac := {{toPackage .GnarkImport}}.G2Jac{
+		X: X,
+		Y: Y,
+		Z: z,
+	}
+
+	var g2Affine {{toPackage .GnarkImport}}.G2Affine
+	return *g2Affine.FromJacobian(&g2Jac)
+}
+{{end}}
+func testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars core.HostSlice[icicle{{capitalize .Curve}}.ScalarField], points core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Affine], out {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective) bool {
+	scalarsFr := make([]fr.Element, len(scalars))
+	for i, v := range scalars {
+		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
+		scalarsFr[i] = slice64
+	}
+
+	pointsFp := make([]{{toPackage .GnarkImport}}.{{if eq .CurvePrefix "G2"}}G2{{else}}G1{{end}}Affine, len(points))
+	for i, v := range points {
+		pointsFp[i] = projectiveToGnarkAffine{{.CurvePrefix}}(v.ToProjective())
+	}
+
+	return testAgainstGnarkCryptoMsm{{.CurvePrefix}}GnarkCryptoTypes(scalarsFr, pointsFp, out)
+}
+
+func testAgainstGnarkCryptoMsm{{.CurvePrefix}}GnarkCryptoTypes(scalarsFr core.HostSlice[fr.Element], pointsFp core.HostSlice[{{toPackage .GnarkImport}}.{{if eq .CurvePrefix "G2"}}G2{{else}}G1{{end}}Affine], out {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective) bool {
+	var msmRes {{toPackage .GnarkImport}}.{{if eq .CurvePrefix "G2"}}G2{{else}}G1{{end}}Jac
+	msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
+
+	var icicleResAsJac {{toPackage .GnarkImport}}.{{if eq .CurvePrefix "G2"}}G2{{else}}G1{{end}}Jac
+	proj := projectiveToGnarkAffine{{.CurvePrefix}}(out)
+	icicleResAsJac.FromAffine(&proj)
+
+	return msmRes.Equal(&icicleResAsJac)
+}
+
+{{$isBW6 := eq .Curve "bw6_761"}}{{$isG2 := eq .CurvePrefix "G2"}}{{$isG1 := ne .CurvePrefix "G2"}}{{if or $isBW6 $isG1 -}}
+func convertIcicleAffineTo{{if and $isBW6 $isG2}}G2{{else}}G1{{end}}Affine(iciclePoints []{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Affine) []{{toPackage .GnarkImport}}.{{if and $isBW6 $isG2}}G2{{else}}G1{{end}}Affine {
+	points := make([]{{toPackage .GnarkImport}}.{{if and $isBW6 $isG2}}G2{{else}}G1{{end}}Affine, len(iciclePoints))
+	for index, iciclePoint := range iciclePoints {
+		xBytes := ([fp.Bytes]byte)(iciclePoint.X.ToBytesLittleEndian())
+		fpXElem, _ := fp.LittleEndian.Element(&xBytes)
+
+		yBytes := ([fp.Bytes]byte)(iciclePoint.Y.ToBytesLittleEndian())
+		fpYElem, _ := fp.LittleEndian.Element(&yBytes)
+		points[index] = {{toPackage .GnarkImport}}.{{if and $isBW6 $isG2}}G2{{else}}G1{{end}}Affine{
+			X: fpXElem,
+			Y: fpYElem,
+		}
+	}
+
+	return points
+}{{end}}
+{{ $isNotBW6 := ne .Curve "bw6_761"}}{{$isG2 := eq .CurvePrefix "G2"}}{{if and $isNotBW6 $isG2 -}}
+func convertIcicleG2AffineToG2Affine(iciclePoints []g2.G2Affine) []{{toPackage .GnarkImport}}.G2Affine {
+	points := make([]{{toPackage .GnarkImport}}.G2Affine, len(iciclePoints))
+	for index, iciclePoint := range iciclePoints {
+		xBytes := ([fp.Bytes * 2]byte)(iciclePoint.X.ToBytesLittleEndian())
+		xA0Bytes := ([fp.Bytes]byte)(xBytes[:fp.Bytes])
+		xA1Bytes := ([fp.Bytes]byte)(xBytes[fp.Bytes:])
+		xA0Elem, _ := fp.LittleEndian.Element(&xA0Bytes)
+		xA1Elem, _ := fp.LittleEndian.Element(&xA1Bytes)
+
+		yBytes := ([fp.Bytes * 2]byte)(iciclePoint.Y.ToBytesLittleEndian())
+		yA0Bytes := ([fp.Bytes]byte)(yBytes[:fp.Bytes])
+		yA1Bytes := ([fp.Bytes]byte)(yBytes[fp.Bytes:])
+		yA0Elem, _ := fp.LittleEndian.Element(&yA0Bytes)
+		yA1Elem, _ := fp.LittleEndian.Element(&yA1Bytes)
+
+		points[index] = {{toPackage .GnarkImport}}.G2Affine{
+			X: {{toPackage .GnarkImport}}.E2{
+				A0: xA0Elem,
+				A1: xA1Elem,
+			},
+			Y: {{toPackage .GnarkImport}}.E2{
+				A0: yA0Elem,
+				A1: yA1Elem,
+			},
+		}
+	}
+
+	return points
+}{{end}}{{end}}
+
+func TestMSM{{.CurvePrefix}}(t *testing.T) {
+	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+	cfg.IsAsync = true
+	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+		size := 1 << power
+
+		scalars := icicle{{capitalize .Curve}}.GenerateScalars(size)
+		points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(size)
+
+		stream, _ := cr.CreateStream()
+		var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+		var out core.DeviceSlice
+		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		cfg.Ctx.Stream = &stream
+
+		e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+		outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], 1)
+		outHost.CopyFromDeviceAsync(&out, stream)
+		out.FreeAsync(stream)
+
+		cr.SynchronizeStream(&stream)
+		{{if ne .GnarkImport "" -}}
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars, points, outHost[0]))
+		{{end}}
+	}
+}
+{{if ne .GnarkImport "" -}}
+func TestMSM{{if eq .CurvePrefix "G2"}}G2{{end}}GnarkCryptoTypes(t *testing.T) {
+	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+	for _, power := range []int{3} {
+		size := 1 << power
+
+		scalars := make([]fr.Element, size)
+		var x fr.Element
+		for i := 0; i < size; i++ {
+			x.SetRandom()
+			scalars[i] = x
+		}
+		scalarsHost := (core.HostSlice[fr.Element])(scalars)
+		points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(size)
+		pointsGnark := convertIcicle{{$isNotBW6 := ne .Curve "bw6_761"}}{{$isG2 := eq .CurvePrefix "G2"}}{{if and $isNotBW6 $isG2}}G2{{end}}AffineTo{{if eq .CurvePrefix "G2"}}G2{{else}}G1{{end}}Affine(points)
+		pointsHost := (core.HostSlice[{{toPackage .GnarkImport}}.{{if eq .CurvePrefix "G2"}}G2{{else}}G1{{end}}Affine])(pointsGnark)
+
+		var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		cfg.ArePointsMontgomeryForm = true
+		cfg.AreScalarsMontgomeryForm = true
+
+		e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalarsHost, pointsHost, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+		outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], 1)
+		outHost.CopyFromDevice(&out)
+		out.Free()
+
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}GnarkCryptoTypes(scalarsHost, pointsHost, outHost[0]))
+	}
+}
+{{end}}
+func TestMSM{{.CurvePrefix}}Batch(t *testing.T) {
+	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+	for _, power := range []int{10, 16} {
+		for _, batchSize := range []int{1, 3, 16} {
+			size := 1 << power
+			totalSize := size * batchSize
+			scalars := icicle{{capitalize .Curve}}.GenerateScalars(totalSize)
+			points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(totalSize)
+
+			var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+			var out core.DeviceSlice
+			_, e := out.Malloc(batchSize*p.Size(), p.Size())
+			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+
+			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, points, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], batchSize)
+			outHost.CopyFromDevice(&out)
+			out.Free()
+			{{if ne .GnarkImport "" -}}
+			// Check with gnark-crypto
+			for i := 0; i < batchSize; i++ {
+				scalarsSlice := scalars[i*size : (i+1)*size]
+				pointsSlice := points[i*size : (i+1)*size]
+				out := outHost[i]
+				assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalarsSlice, pointsSlice, out))
+			}{{end}}
+		}
+	}
+}
+
+func TestPrecomputeBase{{.CurvePrefix}}(t *testing.T) {
+	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+	const precomputeFactor = 8
+	for _, power := range []int{10, 16} {
+		for _, batchSize := range []int{1, 3, 16} {
+			size := 1 << power
+			totalSize := size * batchSize
+			scalars := icicle{{capitalize .Curve}}.GenerateScalars(totalSize)
+			points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(totalSize)
+
+			var precomputeOut core.DeviceSlice
+			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+
+			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
+
+			var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+			var out core.DeviceSlice
+			_, e = out.Malloc(batchSize*p.Size(), p.Size())
+			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+
+			cfg.PrecomputeFactor = precomputeFactor
+
+			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, precomputeOut, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], batchSize)
+			outHost.CopyFromDevice(&out)
+			out.Free()
+			precomputeOut.Free()
+			{{if ne .GnarkImport "" -}}
+			// Check with gnark-crypto
+			for i := 0; i < batchSize; i++ {
+				scalarsSlice := scalars[i*size : (i+1)*size]
+				pointsSlice := points[i*size : (i+1)*size]
+				out := outHost[i]
+				assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalarsSlice, pointsSlice, out))
+			}{{end}}
+		}
+	}
+}
+
+func TestMSM{{.CurvePrefix}}SkewedDistribution(t *testing.T) {
+	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+		size := 1 << power
+
+		scalars := icicle{{capitalize .Curve}}.GenerateScalars(size)
+		for i := size / 4; i < size; i++ {
+			scalars[i].One()
+		}
+		points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(size)
+		for i := 0; i < size/4; i++ {
+			points[i].Zero()
+		}
+
+		var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+
+		e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+		outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], 1)
+		outHost.CopyFromDevice(&out)
+		out.Free()
+		{{if ne .GnarkImport "" -}}
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars, points, outHost[0])){{end}}
+	}
+}
+
+func TestMSM{{.CurvePrefix}}MultiDevice(t *testing.T) {
+	numDevices, _ := cr.GetDeviceCount()
+	numDevices = 1 // TODO remove when test env is fixed
+	fmt.Println("There are ", numDevices, " devices available")
+	orig_device, _ := cr.GetDevice()
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < numDevices; i++ {
+		wg.Add(1)
+		cr.RunOnDevice(i, func(args ...any) {
+			defer wg.Done()
+			cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+			cfg.IsAsync = true
+			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+				size := 1 << power
+				scalars := icicle{{capitalize .Curve}}.GenerateScalars(size)
+				points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(size)
+
+				stream, _ := cr.CreateStream()
+				var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+				var out core.DeviceSlice
+				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+				assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+				cfg.Ctx.Stream = &stream
+
+				e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, points, &cfg, out)
+				assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+				outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], 1)
+				outHost.CopyFromDeviceAsync(&out, stream)
+				out.FreeAsync(stream)
+
+				cr.SynchronizeStream(&stream)
+				{{if ne .GnarkImport "" -}}// Check with gnark-crypto
+				assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars, points, outHost[0])){{end}}
+			}
+		})
+	}
+	wg.Wait()
+	cr.SetDevice(orig_device)
+}

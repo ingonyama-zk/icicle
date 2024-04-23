@@ -4,57 +4,60 @@ In order to build the underlying ICICLE libraries you should run the build scrip
 
 Build script USAGE
 
-```
-./build <curve> [G2_enabled]
+```bash
+./build.sh [-curve=<curve> | -field=<field>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
 
 curve - The name of the curve to build or "all" to build all curves
-G2_enabled - Optional - To build with G2 enabled 
+field - The name of the field to build or "all" to build all fields
+-g2 - Optional - build with G2 enabled 
+-ecntt - Optional - build with ECNTT enabled
+-devmode - Optional - build in devmode
 ```
 
-To build ICICLE libraries for all supported curves with G2 enabled.
+To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
 ```
-./build.sh all ON
+./build.sh all -g2 -ecntt
 ```
 
-If you wish to build for a specific curve, for example bn254, without G2 enabled.
+If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
 
 ```
 ./build.sh bn254
 ```
 
 >[!NOTE]
->Current supported curves are `bn254`, `bls12_381`, `bls12_377` and `bw6_671`
+>Current supported curves are `bn254`, `bls12_381`, `bls12_377`, `bw6_671` and `grumpkin`
+>Current supported fields are `babybear`
 
 >[!NOTE]
->G2 is enabled by building your golang project with the build tag `g2`
->Make sure to add it to your build tags if you want it enabled
+>G2 and ECNTT are located in nested packages
 
 ## Running golang tests
 
 To run the tests for curve bn254.
 
-```
+```bash
 go test ./wrappers/golang/curves/bn254 -count=1
 ```
 
 To run all the tests in the golang bindings
 
-```
-go test --tags=g2 ./... -count=1
+```bash
+go test ./... -count=1
 ```
 
 ## How do Golang bindings work?
 
 The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
 
-1. These libraries (named `libingo_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
+1. These libraries (named `libingo_curve_<curve>.a` and `libingo_field_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
 
 2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 
 ```go
 /*
-#cgo LDFLAGS: -L/path/to/shared/libs -lingo_bn254
+#cgo LDFLAGS: -L$/path/to/shared/libs -lingo_curve_bn254 -L$/path/to/shared/libs -lingo_field_bn254 -lstdc++ -lm
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"

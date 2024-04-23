@@ -33,28 +33,31 @@ go get github.com/ingonyama-zk/icicle@<commit_id>
 
 To build the shared libraries you can run this script:
 
+```bash
+./build.sh [-curve=<curve> | -field=<field>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
 ```
-./build <curve> [G2_enabled]
+- **`curve`** - The name of the curve to build or "all" to build all curves
+- **`field`** - The name of the field to build or "all" to build all fields
+- **`g2`** - Optional - build with G2 enabled 
+- **`ecntt`** - Optional - build with ECNTT enabled
+- **`devmode`** - Optional - build in devmode
+- Usage can be displayed with the flag `-help`
 
-curve - The name of the curve to build or "all" to build all curves
-G2_enabled - Optional - To build with G2 enabled 
-```
-
-For example if you want to build all curves with G2 enabled you would run:
+To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
 ```bash
-./build.sh all ON
+./build.sh all -g2 -ecntt
 ```
 
-If you are interested in building a specific curve you would run:
+If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
 
-```bash
-./build.sh bls12_381 ON
+``` bash
+./build.sh -curve=bn254
 ```
 
 Now you can import ICICLE into your project
 
-```golang
+```go
 import (
     "github.com/stretchr/testify/assert"
     "testing"
@@ -85,13 +88,13 @@ go test <path_to_curve> -count=1
 
 The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
 
-1. These libraries (named `libingo_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
+1. These libraries (named `libingo_curve_<curve>.a` and `libingo_field_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
 
 2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 
 ```go
 /*
-#cgo LDFLAGS: -L/path/to/shared/libs -lingo_bn254
+#cgo LDFLAGS: -L/path/to/shared/libs -lingo_curve_bn254 -L$/path/to/shared/libs -lingo_field_bn254 -lstdc++ -lm
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"

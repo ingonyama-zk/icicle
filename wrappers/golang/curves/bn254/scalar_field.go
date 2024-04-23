@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	SCALAR_LIMBS int8 = 8
+	SCALAR_LIMBS int = 8
 )
 
 type ScalarField struct {
@@ -33,6 +33,11 @@ func (f ScalarField) GetLimbs() []uint32 {
 
 func (f ScalarField) AsPointer() *uint32 {
 	return &f.limbs[0]
+}
+
+func (f *ScalarField) FromUint32(v uint32) ScalarField {
+	f.limbs[0] = v
+	return *f
 }
 
 func (f *ScalarField) FromLimbs(limbs []uint32) ScalarField {
@@ -89,18 +94,18 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)
-	C.bn254GenerateScalars(cScalars, cSize)
+	C.bn254_generate_scalars(cScalars, cSize)
 
 	return scalarSlice
 }
 
 func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.scalar_t)(scalars.AsPointer())
+	cValues := (*C.scalar_t)(scalars.AsUnsafePointer())
 	cSize := (C.size_t)(scalars.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254ScalarConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bn254_scalar_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }

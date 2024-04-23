@@ -1,12 +1,11 @@
 #include <chrono>
 #include <iostream>
 
-// select the curve
-#define CURVE_ID 1
 // include NTT template
-#include "appUtils/ntt/ntt.cu"
-#include "appUtils/ntt/kernel_ntt.cu"
-using namespace curve_config;
+
+#include "curves/params/bn254.cuh"
+#include "api/bn254.h"
+using namespace bn254;
 using namespace ntt;
 
 // Operate on scalars
@@ -86,14 +85,14 @@ int main(int argc, char* argv[])
   std::cout << "Running NTT with on-host data" << std::endl;
   // Create a device context
   auto ctx = device_context::get_default_device_context();
-  const S basic_root = S::omega(log_ntt_size /*NTT_LOG_SIZE*/);
-  InitDomain(basic_root, ctx);
+  S basic_root = S::omega(log_ntt_size /*NTT_LOG_SIZE*/);
+  bn254_initialize_domain(&basic_root, ctx, true);
   // Create an NTTConfig instance
-  NTTConfig<S> config = DefaultNTTConfig<S>();
+  NTTConfig<S> config = default_ntt_config<S>();
   config.ntt_algorithm = NttAlgorithm::MixedRadix; 
   config.batch_size = nof_ntts;
   START_TIMER(MixedRadix);
-  cudaError_t err = NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
+  cudaError_t err = bn254_ntt_cuda(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(MixedRadix, "MixedRadix NTT");
   
   std::cout << "Validating output" << std::endl;
@@ -101,7 +100,7 @@ int main(int argc, char* argv[])
 
   config.ntt_algorithm = NttAlgorithm::Radix2; 
   START_TIMER(Radix2);
-  err = NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
+  err = bn254_ntt_cuda(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(Radix2, "Radix2 NTT");
 
   std::cout << "Validating output" << std::endl;

@@ -1,0 +1,28 @@
+[package]
+name = "icicle-babybear"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Rust wrapper for the CUDA implementation of baby bear prime field by Ingonyama"
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+icicle-core = { workspace = true }
+icicle-cuda-runtime = { workspace = true }
+
+[build-dependencies]
+cmake = "0.1.50"
+
+[dev-dependencies]
+risc0-core = "0.21.0"
+risc0-zkp = "0.21.0"
+p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "83590121c8c28011cffa7e73cb71cf9bf94b8477" }
+serial_test = "3.0.0"
+
+[features]
+default = []
+devmode = ["icicle-core/devmode"]
