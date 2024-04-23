@@ -3,9 +3,13 @@
 # Exit immediately on error
 set -e
 
-rm -rf build
-mkdir -p build
-cmake -S . -B build
-cmake --build build
+mkdir -p build/example
+mkdir -p build/icicle
 
+# Configure and build Icicle
+cmake -S ../../../icicle/ -B build/icicle -DMSM=OFF -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254
+cmake --build build/icicle
 
+# Configure and build the example application
+cmake -S . -B build/example
+cmake --build build/example

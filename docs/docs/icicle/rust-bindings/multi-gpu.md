@@ -62,11 +62,11 @@ Sets the current CUDA device by its ID, when calling `set_device` it will set th
 
 **Parameters:**
 
-- `device_id: usize`: The ID of the device to set as the current device. Device IDs start from 0.
+- **`device_id: usize`**: The ID of the device to set as the current device. Device IDs start from 0.
 
 **Returns:**
 
-- `CudaResult<()>`: An empty result indicating success if the device is set successfully. In case of failure, returns a `CudaError`.
+- **`CudaResult<()>`**: An empty result indicating success if the device is set successfully. In case of failure, returns a `CudaError`.
 
 **Errors:**
 
@@ -88,7 +88,7 @@ Retrieves the number of CUDA devices available on the machine.
 
 **Returns:**
 
-- `CudaResult<usize>`: The number of available CUDA devices. On success, contains the count of CUDA devices. On failure, returns a `CudaError`.
+- **`CudaResult<usize>`**: The number of available CUDA devices. On success, contains the count of CUDA devices. On failure, returns a `CudaError`.
 
 **Errors:**
 
@@ -109,7 +109,7 @@ Retrieves the ID of the current CUDA device.
 
 **Returns:**
 
-- `CudaResult<usize>`: The ID of the current CUDA device. On success, contains the device ID. On failure, returns a `CudaError`.
+- **`CudaResult<usize>`**: The ID of the current CUDA device. On success, contains the device ID. On failure, returns a `CudaError`.
 
 **Errors:**
 
@@ -191,7 +191,7 @@ Validates that the specified `device_id` matches the ID of the currently active 
 
 #### Behavior
 
-- **Panics** if the `device_id` does not match the active device's ID, preventing cross-device operation errors.
+- **`Panics`** if the `device_id` does not match the active device's ID, preventing cross-device operation errors.
 
 #### Example
 

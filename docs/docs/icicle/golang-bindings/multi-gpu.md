@@ -15,41 +15,52 @@ In this example we will display how you can
 
 
 ```go
+package main
+
+import (
+	"fmt"
+	"sync"
+
+	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
+)
+
 func main() {
-	numDevices, _ := cuda_runtime.GetDeviceCount()
+	numDevices, _ := cr.GetDeviceCount()
 	fmt.Println("There are ", numDevices, " devices available")
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < numDevices; i++ {
 		wg.Add(1)
-        // RunOnDevice makes sure each MSM runs on a single thread
-		cuda_runtime.RunOnDevice(i, func(args ...any) {
+		// RunOnDevice makes sure each MSM runs on a single thread
+		cr.RunOnDevice(i, func(args ...any) {
 			defer wg.Done()
-			cfg := GetDefaultMSMConfig()
+			cfg := bn254.GetDefaultMSMConfig()
 			cfg.IsAsync = true
 			for _, power := range []int{10, 18} {
 				size := 1 << power // 2^pwr
 
-                // generate random scalars
-				scalars := GenerateScalars(size)
-				points := GenerateAffinePoints(size)
+				// generate random scalars
+				scalars := bn254.GenerateScalars(size)
+				points := bn254.GenerateAffinePoints(size)
 
-                // create a stream and allocate result pointer
-				stream, _ := cuda_runtime.CreateStream()
-				var p Projective
+				// create a stream and allocate result pointer
+				stream, _ := cr.CreateStream()
+				var p bn254.Projective
 				var out core.DeviceSlice
-				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
-                // assign stream to device context
+				out.MallocAsync(p.Size(), p.Size(), stream)
+				// assign stream to device context
 				cfg.Ctx.Stream = &stream
 
-                // execute MSM
-				e = Msm(scalars, points, &cfg, out)
-                // read result from device
-				outHost := make(core.HostSlice[Projective], 1)
+				// execute MSM
+				bn254.Msm(scalars, points, &cfg, out)
+				// read result from device
+				outHost := make(core.HostSlice[bn254.Projective], 1)
 				outHost.CopyFromDeviceAsync(&out, stream)
 				out.FreeAsync(stream)
 
-                // sync the stream
+				// sync the stream
 				cr.SynchronizeStream(&stream)
 			}
 		})
@@ -78,9 +89,9 @@ While the goroutine is locked to the host thread, the Go runtime will not assign
 
 **Parameters:**
 
-- `deviceId int`: The ID of the device on which to run the provided function. Device IDs start from 0.
-- `funcToRun func(args ...any)`: The function to be executed on the specified device.
-- `args ...any`: Arguments to be passed to `funcToRun`.
+- **`deviceId int`**: The ID of the device on which to run the provided function. Device IDs start from 0.
+- **`funcToRun func(args ...any)`**: The function to be executed on the specified device.
+- **`args ...any`**: Arguments to be passed to `funcToRun`.
 
 **Behavior:**
 
@@ -102,11 +113,11 @@ Sets the active device for the current host thread. All subsequent CUDA calls ma
 
 **Parameters:**
 
-- `device int`: The ID of the device to set as the current device.
+- **`device int`**: The ID of the device to set as the current device.
 
 **Returns:**
 
-- `CudaError`: Error code indicating the success or failure of the operation.
+- **`CudaError`**: Error code indicating the success or failure of the operation.
 
 ### `GetDeviceCount`
 
@@ -114,7 +125,7 @@ Retrieves the number of CUDA-capable devices available on the host.
 
 **Returns:**
 
-- `(int, CudaError)`: The number of devices and an error code indicating the success or failure of the operation.
+- **`(int, CudaError)`**: The number of devices and an error code indicating the success or failure of the operation.
 
 ### `GetDevice`
 
@@ -122,7 +133,7 @@ Gets the ID of the currently active device for the calling host thread.
 
 **Returns:**
 
-- `(int, CudaError)`: The ID of the current device and an error code indicating the success or failure of the operation.
+- **`(int, CudaError)`**: The ID of the current device and an error code indicating the success or failure of the operation.
 
 ### `GetDeviceFromPointer`
 
@@ -130,10 +141,10 @@ Retrieves the device associated with a given pointer.
 
 **Parameters:**
 
-- `ptr unsafe.Pointer`: Pointer to query.
+- **`ptr unsafe.Pointer`**: Pointer to query.
 
 **Returns:**
 
-- `int`: The device ID associated with the memory pointed to by `ptr`.
+- **`int`**: The device ID associated with the memory pointed to by `ptr`.
 
 This documentation should provide a clear understanding of how to effectively manage multiple GPUs in Go applications using CUDA, with a particular emphasis on the `RunOnDevice` function for executing tasks on specific GPUs.

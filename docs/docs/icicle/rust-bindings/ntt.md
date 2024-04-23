@@ -29,7 +29,7 @@ fn main() {
     // Create a CUDA stream
     let stream = CudaStream::create().expect("Failed to create CUDA stream");
     let ctx = DeviceContext::default(); // Assuming default device context
-    ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
+    ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
 
     // Configure NTT
     let mut cfg = ntt::NTTConfig::default();
@@ -61,10 +61,10 @@ pub fn ntt<F>(
 
 `ntt:ntt` expects:
 
-`input` - buffer to read the inputs of the NTT from. <br/>
-`dir` - whether to compute forward or inverse NTT. <br/>
-`cfg` - config used to specify extra arguments of the NTT. <br/>
-`output` - buffer to write the NTT outputs into. Must be of the same  size as input.
+- **`input`** - buffer to read the inputs of the NTT from. <br/>
+- **`dir`** - whether to compute forward or inverse NTT. <br/>
+- **`cfg`** - config used to specify extra arguments of the NTT. <br/>
+- **`output`** - buffer to write the NTT outputs into. Must be of the same  size as input.
 
 The `input` and `output` buffers can be on device or on host. Being on host means that they will be transferred to device during runtime.
 
@@ -155,13 +155,13 @@ Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your 
 Before performing NTT operations, its necessary to initialize the NTT domain, It only needs to be called once per GPU since the twiddles are cached.
 
 ```rust
-ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx).unwrap();
+ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
 ```
 
 ### `initialize_domain`
 
 ```rust
-pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext, fast_twiddles: bool) -> IcicleResult<()>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F>;
@@ -177,23 +177,32 @@ where
 
 - **`IcicleResult<()>`**: Will return an error if the operation fails.
 
-### `initialize_domain_fast_twiddles_mode`
+#### Parameters
 
-Similar to `initialize_domain`, `initialize_domain_fast_twiddles_mode` is a faster implementation and can be used for larger NTTs.
+- **`primitive_root`**: The primitive root of unity, chosen based on the maximum NTT size required for the computations. It must be of an order that is a power of two. This root is used to generate twiddle factors that are essential for the NTT operations.
+
+- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
+
+#### Returns
+
+- **`IcicleResult<()>`**: Will return an error if the operation fails.
+
+### Releaseing the domain
+
+The `release_domain` function is responsible for releasing the resources associated with a specific domain in the CUDA device context.
 
 ```rust
-pub fn initialize_domain_fast_twiddles_mode<F>(primitive_root: F, ctx: &DeviceContext) -> IcicleResult<()>
+pub fn release_domain<F>(ctx: &DeviceContext) -> IcicleResult<()>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>;
+    <F as FieldImpl>::Config: NTT<F>
 ```
 
 #### Parameters
-
-- **`primitive_root`**: The primitive root of unity, chosen based on the maximum NTT size required for the computations. It must be of an order that is a power of two. This root is used to generate twiddle factors that are essential for the NTT operations.
 
 - **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
 
 #### Returns
 
-- **`IcicleResult<()>`**: Will return an error if the operation fails.
+The function returns an `IcicleResult<()>`, which represents the result of the operation. If the operation is successful, the function returns `Ok(())`, otherwise it returns an error.
+

@@ -8,11 +8,15 @@ use icicle_core::{
     msm::{MSMConfig, MSM},
     traits::IcicleResultWrap,
 };
-use icicle_cuda_runtime::{device_context::DeviceContext, error::CudaError, memory::HostOrDeviceSlice};
+use icicle_cuda_runtime::{
+    device_context::DeviceContext,
+    error::CudaError,
+    memory::{DeviceSlice, HostOrDeviceSlice},
+};
 
 impl_msm!("bn254", bn254, CurveCfg);
 #[cfg(feature = "g2")]
-impl_msm!("bn254G2", bn254_g2, G2CurveCfg);
+impl_msm!("bn254_g2", bn254_g2, G2CurveCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

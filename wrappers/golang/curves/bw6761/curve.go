@@ -53,7 +53,7 @@ func (p *Projective) FromAffine(a Affine) Projective {
 func (p Projective) ProjectiveEq(p2 *Projective) bool {
 	cP := (*C.projective_t)(unsafe.Pointer(&p))
 	cP2 := (*C.projective_t)(unsafe.Pointer(&p2))
-	__ret := C.bw6_761Eq(cP, cP2)
+	__ret := C.bw6_761_eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 
@@ -62,7 +62,7 @@ func (p *Projective) ProjectiveToAffine() Affine {
 
 	cA := (*C.affine_t)(unsafe.Pointer(&a))
 	cP := (*C.projective_t)(unsafe.Pointer(&p))
-	C.bw6_761ToAffine(cP, cA)
+	C.bw6_761_to_affine(cP, cA)
 	return a
 }
 
@@ -75,7 +75,7 @@ func GenerateProjectivePoints(size int) core.HostSlice[Projective] {
 	pointsSlice := core.HostSliceFromElements[Projective](points)
 	pPoints := (*C.projective_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bw6_761GenerateProjectivePoints(pPoints, cSize)
+	C.bw6_761_generate_projective_points(pPoints, cSize)
 
 	return pointsSlice
 }
@@ -129,18 +129,18 @@ func GenerateAffinePoints(size int) core.HostSlice[Affine] {
 	pointsSlice := core.HostSliceFromElements[Affine](points)
 	cPoints := (*C.affine_t)(unsafe.Pointer(&pointsSlice[0]))
 	cSize := (C.int)(size)
-	C.bw6_761GenerateAffinePoints(cPoints, cSize)
+	C.bw6_761_generate_affine_points(cPoints, cSize)
 
 	return pointsSlice
 }
 
 func convertAffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.affine_t)(points.AsPointer())
+	cValues := (*C.affine_t)(points.AsUnsafePointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761AffineConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bw6_761_affine_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }
@@ -156,12 +156,12 @@ func AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
 }
 
 func convertProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.projective_t)(points.AsPointer())
+	cValues := (*C.projective_t)(points.AsUnsafePointer())
 	cSize := (C.size_t)(points.Len())
 	cIsInto := (C._Bool)(isInto)
 	defaultCtx, _ := cr.GetDefaultDeviceContext()
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761ProjectiveConvertMontgomery(cValues, cSize, cIsInto, cCtx)
+	__ret := C.bw6_761_projective_convert_montgomery(cValues, cSize, cIsInto, cCtx)
 	err := (cr.CudaError)(__ret)
 	return err
 }

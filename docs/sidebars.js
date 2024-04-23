@@ -21,8 +21,8 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "ICICLE Provers",
-          id: "icicle/integrations"
+          label: "ICICLE Core",
+          id: "icicle/core",
         },
         {
           type: "category",
@@ -56,13 +56,18 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "EC-NTT",
+              id: "icicle/golang-bindings/ecntt",
+            },
+            {
+              type: "doc",
               label: "Vector operations",
               id: "icicle/golang-bindings/vec-ops",
             },
             {
-            type: "doc",
-            label: "Multi GPU Support",
-            id: "icicle/golang-bindings/multi-gpu",
+              type: "doc",
+              label: "Multi GPU Support",
+              id: "icicle/golang-bindings/multi-gpu",
             },
           ]
         },
@@ -98,6 +103,11 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "EC-NTT",
+              id: "icicle/rust-bindings/ecntt",
+            },
+            {
+              type: "doc",
               label: "Vector operations",
               id: "icicle/rust-bindings/vec-ops",
             },
@@ -105,6 +115,11 @@ module.exports = {
               type: "doc",
               label: "Multi GPU Support",
               id: "icicle/rust-bindings/multi-gpu",
+            },
+            {
+              type: "doc",
+              label: "Polynomials",
+              id: "icicle/rust-bindings/polynomials",
             },
           ],
         },
@@ -136,18 +151,23 @@ module.exports = {
         },
         {
           type: "doc",
+          label: "Polynomials",
+          id: "icicle/polynomials/overview",
+        },
+        {
+          type: "doc",
           label: "Multi GPU Support",
           id: "icicle/multi-gpu",
         },
         {
           type: "doc",
-          label: "Supporting additional curves",
-          id: "icicle/supporting-additional-curves",
+          label: "Google Colab Instructions",
+          id: "icicle/colab-instructions",
         },
         {
           type: "doc",
-          label: "Google Colab Instructions",
-          id: "icicle/colab-instructions",
+          label: "ICICLE Provers",
+          id: "icicle/integrations"
         },
       ]
     },

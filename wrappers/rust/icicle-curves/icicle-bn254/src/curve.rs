@@ -6,14 +6,15 @@ use icicle_core::curve::{Affine, Curve, Projective};
 use icicle_core::field::{Field, MontgomeryConvertibleField};
 use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
 use icicle_core::{impl_curve, impl_field, impl_scalar_field};
+use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
 
-pub(crate) const SCALAR_LIMBS: usize = 4;
-pub(crate) const BASE_LIMBS: usize = 4;
+pub(crate) const SCALAR_LIMBS: usize = 8;
+pub(crate) const BASE_LIMBS: usize = 8;
 #[cfg(feature = "g2")]
-pub(crate) const G2_BASE_LIMBS: usize = 8;
+pub(crate) const G2_BASE_LIMBS: usize = 16;
 
 impl_scalar_field!("bn254", bn254_sf, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
 impl_field!(BASE_LIMBS, BaseField, BaseCfg, Fq);
@@ -31,7 +32,7 @@ impl_curve!(
 );
 #[cfg(feature = "g2")]
 impl_curve!(
-    "bn254G2",
+    "bn254_g2",
     bn254_g2,
     G2CurveCfg,
     ScalarField,

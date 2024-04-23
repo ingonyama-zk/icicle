@@ -36,19 +36,19 @@ func TestMSMDefaultConfig(t *testing.T) {
 func TestMSMCheckHostSlices(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 
-	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-	rawScalars := make([]internal.MockField, 10)
+	rawScalars := make([]internal.MockBaseField, 10)
 	for i := range rawScalars {
-		var emptyField internal.MockField
-		emptyField.FromLimbs(randLimbs)
+		var emptyField internal.MockBaseField
+		emptyField.One()
 
 		rawScalars[i] = emptyField
 	}
-	scalars := HostSliceFromElements[internal.MockField](rawScalars)
+	scalars := HostSliceFromElements[internal.MockBaseField](rawScalars)
 
 	affine := internal.MockAffine{}
-	limbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-	affine.FromLimbs(limbs, limbs)
+	var emptyField internal.MockBaseField
+	emptyField.One()
+	affine.FromLimbs(emptyField.GetLimbs(), emptyField.GetLimbs())
 	rawAffinePoints := make([]internal.MockAffine, 10)
 	for i := range rawAffinePoints {
 		rawAffinePoints[i] = affine
@@ -69,21 +69,21 @@ func TestMSMCheckHostSlices(t *testing.T) {
 func TestMSMCheckDeviceSlices(t *testing.T) {
 	cfg := GetDefaultMSMConfig()
 
-	randLimbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-	rawScalars := make([]internal.MockField, 10)
+	rawScalars := make([]internal.MockBaseField, 10)
 	for i := range rawScalars {
-		var emptyField internal.MockField
-		emptyField.FromLimbs(randLimbs)
+		var emptyField internal.MockBaseField
+		emptyField.One()
 
 		rawScalars[i] = emptyField
 	}
-	scalars := HostSliceFromElements[internal.MockField](rawScalars)
+	scalars := HostSliceFromElements[internal.MockBaseField](rawScalars)
 	var scalarsOnDevice DeviceSlice
 	scalars.CopyToDevice(&scalarsOnDevice, true)
 
 	affine := internal.MockAffine{}
-	limbs := []uint32{1, 2, 3, 4, 5, 6, 7, 8}
-	affine.FromLimbs(limbs, limbs)
+	var emptyField internal.MockBaseField
+	emptyField.One()
+	affine.FromLimbs(emptyField.GetLimbs(), emptyField.GetLimbs())
 	rawAffinePoints := make([]internal.MockAffine, 10)
 	for i := range rawAffinePoints {
 		rawAffinePoints[i] = affine

@@ -13,13 +13,11 @@ project(icicle LANGUAGES CUDA CXX)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
-# change the path to your Icicle location
-include_directories("../../../icicle")
+
 add_executable(
   example
   example.cu
 )
-
-find_library(NVML_LIBRARY nvidia-ml PATHS /usr/local/cuda-12.0/targets/x86_64-linux/lib/stubs/ )
-target_link_libraries(example ${NVML_LIBRARY})
+target_include_directories(example PRIVATE "../../../icicle/include")
+target_link_libraries(example ${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_field_bn254.a)
 set_target_properties(example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
