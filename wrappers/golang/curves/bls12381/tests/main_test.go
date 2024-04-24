@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	bls12_381 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381"
-	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381/ntt"
-	poly "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381/polynomial"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381"
+	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/ntt"
+	poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/polynomial"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
 )

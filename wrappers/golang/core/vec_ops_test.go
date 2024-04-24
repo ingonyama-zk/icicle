@@ -3,7 +3,7 @@ package core
 import (
 	"testing"
 
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 	"github.com/stretchr/testify/assert"
 )
 

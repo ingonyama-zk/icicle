@@ -1,7 +1,7 @@
 package core
 
 import (
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 )
 
 type IcicleErrorCode int
