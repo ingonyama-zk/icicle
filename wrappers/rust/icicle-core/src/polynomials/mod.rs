@@ -1,37 +1,66 @@
 use crate::traits::{FieldConfig, FieldImpl};
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
+// UnivariatePolynomial trait defines core functionalities for univariate polynomials
 pub trait UnivariatePolynomial
 where
     Self::Field: FieldImpl,
     Self::FieldConfig: FieldConfig,
 {
-    type Field;
-    type FieldConfig;
+    // Associated types for Field and FieldConfig
+    type Field: FieldImpl;
+    type FieldConfig: FieldConfig;
 
+    // Create a polynomial from coefficients provided in a slice
     fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self;
+
+    // Create a polynomial from roots of unity evaluations provided in a slice
     fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self;
+
+    // Divide the polynomial by another polynomial and return quotient and remainder
     fn divide(&self, denominator: &Self) -> (Self, Self)
     where
         Self: Sized;
+
+    // Divide the polynomial vanishing polynomial 'X^n-1' for given degree n
     fn div_by_vanishing(&self, degree: u64) -> Self;
+
+    // Add a monomial (term) to the polynomial in-place
     fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
+
+    // Subtract a monomial from the polynomial in-place
     fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
+
+    // Create a sub-polynomial from a specified range within the original polynomial
     fn slice(&self, offset: u64, stride: u64, size: u64) -> Self;
+
+    // Return a new polynomial containing only the even terms
     fn even(&self) -> Self;
+
+    // Return a new polynomial containing only the odd terms
     fn odd(&self) -> Self;
+
+    // Evaluate the polynomial at a given domain point
     fn eval(&self, x: &Self::Field) -> Self::Field;
-    fn degree(&self) -> i64;
+
+    // Evaluate the polynomial at each element in a domain and store results in a slice
     fn eval_on_domain<D: HostOrDeviceSlice<Self::Field> + ?Sized, E: HostOrDeviceSlice<Self::Field> + ?Sized>(
         &self,
         domain: &D,
         evals: &mut E,
     );
-    fn get_nof_coeffs(&self) -> u64;
+
+    // Get the coefficient at a specific index
     fn get_coeff(&self, idx: u64) -> Self::Field;
+
+    // Copy coefficients from the polynomial into a provided slice within a specified range
     fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
+
+    // Get the degree (highest power of the variable) of the polynomial
+    fn degree(&self) -> i64;
 }
 
+// Macro to generate Rust FFI bindings for a univariate dense polynomial for a specific field
 #[macro_export]
 macro_rules! impl_univariate_polynomial_api {
     (
@@ -49,8 +78,10 @@ macro_rules! impl_univariate_polynomial_api {
             ptr, slice,
         };
 
+        // Define type for C-level polynomial handle
         type PolynomialHandle = *const c_void;
 
+        // C function prototypes for interaction with the C library
         extern "C" {
             #[link_name = concat!($field_prefix, "_polynomial_init_cuda_backend")]
             fn init_cuda_backend() -> bool;
@@ -125,22 +156,25 @@ macro_rules! impl_univariate_polynomial_api {
             fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64, device_id: *mut u64) -> *mut $field;
         }
 
+        // Struct representing a dense univariate polynomial
         pub struct DensePolynomial {
             handle: PolynomialHandle,
         }
 
         impl DensePolynomial {
+            // Initializes the CUDA backend for polynomial operations
             pub fn init_cuda_backend() -> bool {
                 unsafe { init_cuda_backend() }
             }
 
-            // TODO Yuval: implement Display trait
+            // Prints the polynomial to stdout using the unsafe C function
             pub fn print(&self) {
                 unsafe {
                     print(self.handle);
                 }
             }
 
+            // Returns a mutable slice of the polynomial coefficients on the device
             pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<$field> {
                 unsafe {
                     let mut len: u64 = 0;
@@ -156,6 +190,7 @@ macro_rules! impl_univariate_polynomial_api {
             type Field = $field;
             type FieldConfig = $field_cfg;
 
+            // Creates a polynomial from coefficients
             fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self {
                 unsafe {
                     DensePolynomial {
@@ -164,6 +199,7 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
+            // Creates a polynomial from roots-of-unity evaluations
             fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self {
                 unsafe {
                     Self {
@@ -255,14 +291,6 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            fn get_nof_coeffs(&self) -> u64 {
-                unsafe {
-                    // returns total #coeffs. Not copying when null
-                    let nof_coeffs = copy_coeffs(self.handle, std::ptr::null_mut(), 0, 0);
-                    nof_coeffs
-                }
-            }
-
             fn get_coeff(&self, idx: u64) -> Self::Field {
                 let mut coeff: Self::Field = Self::Field::zero();
                 unsafe { copy_coeffs(self.handle, &mut coeff, idx, idx) };
@@ -271,10 +299,10 @@ macro_rules! impl_univariate_polynomial_api {
 
             fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
                 let coeffs_len = coeffs.len() as u64;
-                let nof_coeffs = self.get_nof_coeffs();
-                let end_idx = cmp::min(nof_coeffs, start_idx + coeffs_len - 1);
-
                 unsafe {
+                    // no copy when null but returns #coeffs. Note that #coefffs>=degree
+                    let nof_coeffs = copy_coeffs(self.handle, std::ptr::null_mut(), 0, 0);
+                    let end_idx = cmp::min(nof_coeffs, start_idx + coeffs_len - 1);
                     copy_coeffs(self.handle, coeffs.as_mut_ptr(), start_idx, end_idx);
                 }
             }
