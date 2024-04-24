@@ -13,10 +13,10 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fp"
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr"
 	{{end}}
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	icicle{{capitalize .Curve}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/{{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	icicle{{capitalize .Curve}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/{{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}"
 )
 {{if ne .GnarkImport "" -}}
 {{$isBW6 := eq .Curve "bw6_761"}}{{$isG2 := eq .CurvePrefix "G2"}}{{$isG1 := ne .CurvePrefix "G2"}}{{if or $isBW6 $isG1}}

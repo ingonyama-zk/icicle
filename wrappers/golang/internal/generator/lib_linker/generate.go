@@ -1,8 +1,9 @@
 package lib_linker
 
 import (
-	generator "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/generator_utils"
 	"strings"
+
+	generator "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/generator_utils"
 )
 
 type MainTemplateType string

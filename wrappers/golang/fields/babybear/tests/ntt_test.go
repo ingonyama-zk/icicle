@@ -3,11 +3,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	babybear "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear"
-	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/ntt"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear"
+	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/ntt"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 )
 

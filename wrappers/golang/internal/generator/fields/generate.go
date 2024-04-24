@@ -1,9 +1,10 @@
 package fields
 
 import (
-	generator "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/generator_utils"
 	"path"
 	"strings"
+
+	generator "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/generator_utils"
 )
 
 var fieldTemplates = map[string]string{

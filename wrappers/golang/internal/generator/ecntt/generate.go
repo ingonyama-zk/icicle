@@ -3,7 +3,7 @@ package ntt
 import (
 	"path"
 
-	generator "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/generator_utils"
+	generator "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/generator_utils"
 )
 
 var ecnttTemplates = map[string]string{

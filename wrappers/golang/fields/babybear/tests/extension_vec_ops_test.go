@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	babybear_extension "github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/fields/babybear/extension/vecOps"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	babybear_extension "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/extension"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/extension/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 

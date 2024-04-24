@@ -7,8 +7,8 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 )
 
 type G2Projective struct {

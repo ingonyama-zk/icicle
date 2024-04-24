@@ -1,10 +1,11 @@
 package tests
 
 import (
-	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bw6761/g2"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761/g2"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestG2AffineZero(t *testing.T) {
