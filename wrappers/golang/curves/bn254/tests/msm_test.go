@@ -12,10 +12,10 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	icicleBn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254/msm"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	icicleBn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
 )
 
 func projectiveToGnarkAffine(p icicleBn254.Projective) bn254.G1Affine {

@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/wrappers/golang/cuda_runtime"
-	grumpkin "github.com/ingonyama-zk/icicle/wrappers/golang/curves/grumpkin"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/curves/grumpkin/vecOps"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	grumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/grumpkin"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/grumpkin/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 
