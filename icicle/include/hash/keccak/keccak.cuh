@@ -50,7 +50,7 @@ namespace keccak {
    */
   template <int C, int D>
   cudaError_t
-  keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config);
+  keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config);
 } // namespace keccak
 
 #endif
