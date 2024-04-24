@@ -190,6 +190,43 @@ where
     }
 }
 
+pub fn check_ntt_coset_nm<F: FieldImpl + ArkConvertible>()
+where
+    F::ArkEquivalent: FftField,
+    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
+{
+    let test_sizes = [1 << 9, 1 << 10, 1 << 11, 1 << 16];
+    for test_size in test_sizes {
+        let coset_generators = [
+            F::from_ark(F::ArkEquivalent::get_root_of_unity((test_size << 1) as u64).unwrap()),
+            F::Config::generate_random(1)[0],
+        ];
+
+        let scalars: Vec<F> = F::Config::generate_random(test_size);
+        for coset_gen in coset_generators {
+            let mut config = NTTConfig::default();
+            config.ordering = Ordering::kNM;
+            config.ntt_algorithm = NttAlgorithm::MixedRadix;
+            config.coset_gen = coset_gen;
+
+            let mut intt_result = vec![F::zero(); test_size];
+            let intt_result = HostSlice::from_mut_slice(&mut intt_result);
+            ntt(HostSlice::from_slice(&scalars), NTTDir::kInverse, &config, intt_result).unwrap();
+
+            config.ordering = Ordering::kMN;
+            let mut ntt_result = vec![F::zero(); test_size];
+            ntt(
+                intt_result,
+                NTTDir::kForward,
+                &config,
+                HostSlice::from_mut_slice(&mut ntt_result),
+            )
+            .unwrap();
+            assert_eq!(ntt_result, scalars);
+        }
+    }
+}
+
 pub fn check_ntt_arbitrary_coset<F: FieldImpl + ArkConvertible>()
 where
     F::ArkEquivalent: FftField + ArkField,

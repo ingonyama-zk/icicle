@@ -380,6 +380,13 @@ macro_rules! impl_ntt_tests {
 
         #[test]
         #[parallel]
+        fn test_ntt_coset_nm() {
+            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
+            check_ntt_coset_nm::<$field>();
+        }
+
+        #[test]
+        #[parallel]
         fn test_ntt_arbitrary_coset() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
             check_ntt_arbitrary_coset::<$field>()

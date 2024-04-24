@@ -134,14 +134,17 @@ namespace mxntt {
     int n_scalars,
     uint32_t log_size,
     eRevType rev_type,
-    bool dit,
     E* out_vec)
   {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid >= size * batch_size) return;
     int64_t scalar_id = (tid / columns_batch_size) % size;
-    if (rev_type != eRevType::None)
-      scalar_id = generalized_rev((tid / columns_batch_size) & ((1 << log_size) - 1), log_size, dit, false, rev_type);
+    if (rev_type != eRevType::None) {
+      // Note: to multiply a Mixed-order in_vec by scalars, need to mix the scalars. Mixing N->M is done by dif (I)NTT.
+      // Therefore for multiplication always use dif reversal (since what is important is how the in_vec was mixed).
+      scalar_id =
+        generalized_rev((tid / columns_batch_size) & ((1 << log_size) - 1), log_size, false /*=dit*/, false, rev_type);
+    }
     out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
   }
 
@@ -959,7 +962,7 @@ namespace mxntt {
       batch_elementwise_mul_with_reorder_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_input, ntt_size, columns_batch, batch_size, columns_batch ? batch_size : 1,
         arbitrary_coset ? arbitrary_coset : external_twiddles, arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn,
-        reverse_coset, dit, d_output);
+        reverse_coset, d_output);
 
       d_input = d_output;
     }
@@ -992,7 +995,7 @@ namespace mxntt {
       batch_elementwise_mul_with_reorder_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_output, ntt_size, columns_batch, batch_size, columns_batch ? batch_size : 1,
         arbitrary_coset ? arbitrary_coset : external_twiddles + n_twiddles, arbitrary_coset ? 1 : -coset_gen_index,
-        n_twiddles, logn, reverse_coset, dit, d_output);
+        n_twiddles, logn, reverse_coset, d_output);
     }
 
     return CHK_LAST();
