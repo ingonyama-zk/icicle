@@ -5,12 +5,12 @@ import (
 	"testing"
 	
 	{{if or .SupportsNTT .SupportsPoly -}}
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	{{.Field}} "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}"{{end}}
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}"{{end}}
 	{{if .SupportsNTT -}}
-	ntt "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
+	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
 	{{if .SupportsPoly -}}
-	poly "github.com/ingonyama-zk/icicle/wrappers/golang/{{.BaseImportPath}}/polynomial"{{end}}
+	poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/polynomial"{{end}}
 
 	{{if ne .GnarkImport "" -}}
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"

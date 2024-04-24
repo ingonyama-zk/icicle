@@ -1,8 +1,9 @@
 package fields
 
 import (
-	generator "github.com/ingonyama-zk/icicle/wrappers/golang/internal/generator/generator_utils"
 	"strings"
+
+	generator "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/generator_utils"
 )
 
 var mockTemplates = map[string]string{
@@ -24,7 +25,7 @@ func Generate(baseDir, packageName, field, fieldPrefix string, isScalar bool, nu
 		isScalar,
 		numLimbs,
 	}
-	generator.GenerateFile(mockTemplates["field"], baseDir, strings.ToLower(field)+"_", "", fieldData)
+	generator.GenerateFile(mockTemplates["fields"], baseDir, strings.ToLower(field)+"_", "", fieldData)
 
 	curveData := struct {
 		PackageName string

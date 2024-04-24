@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core"
-	bn254 "github.com/ingonyama-zk/icicle/wrappers/golang/curves/bn254"
-	"github.com/ingonyama-zk/icicle/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

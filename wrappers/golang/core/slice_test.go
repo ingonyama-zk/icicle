@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/wrappers/golang/core/internal"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core/internal"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -91,7 +91,7 @@ This is normally fixed by exporting the path to the shared library location in t
 ### cuda_runtime.h: No such file or directory
 
 ```
-# github.com/ingonyama-zk/icicle/wrappers/golang/curves/bls12381
+# github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381
 In file included from wrappers/golang/curves/bls12381/curve.go:5:
 wrappers/golang/curves/bls12381/include/curve.h:1:10: fatal error: cuda_runtime.h: No such file or directory
     1 | #include <cuda_runtime.h>
