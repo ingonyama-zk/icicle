@@ -1,4 +1,4 @@
-module github.com/ingonyama-zk/icicle
+module github.com/ingonyama-zk/icicle/v2
 
 go 1.20
 
