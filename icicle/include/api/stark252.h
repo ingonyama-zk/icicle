@@ -14,13 +14,25 @@
 #include "vec_ops/vec_ops.cuh"
 
 extern "C" cudaError_t stark252_extension_mul_cuda(
-  stark252::extension_t* vec_a, stark252::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::extension_t* result);
+  stark252::extension_t* vec_a,
+  stark252::extension_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  stark252::extension_t* result);
 
 extern "C" cudaError_t stark252_extension_add_cuda(
-  stark252::extension_t* vec_a, stark252::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::extension_t* result);
+  stark252::extension_t* vec_a,
+  stark252::extension_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  stark252::extension_t* result);
 
 extern "C" cudaError_t stark252_extension_sub_cuda(
-  stark252::extension_t* vec_a, stark252::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::extension_t* result);
+  stark252::extension_t* vec_a,
+  stark252::extension_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  stark252::extension_t* result);
 
 extern "C" cudaError_t stark252_extension_transpose_matrix_cuda(
   const stark252::extension_t* input,
@@ -32,13 +44,25 @@ extern "C" cudaError_t stark252_extension_transpose_matrix_cuda(
   bool is_async);
 
 extern "C" cudaError_t stark252_mul_cuda(
-  stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
+  stark252::scalar_t* vec_a,
+  stark252::scalar_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  stark252::scalar_t* result);
 
 extern "C" cudaError_t stark252_add_cuda(
-  stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
+  stark252::scalar_t* vec_a,
+  stark252::scalar_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  stark252::scalar_t* result);
 
 extern "C" cudaError_t stark252_sub_cuda(
-  stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
+  stark252::scalar_t* vec_a,
+  stark252::scalar_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  stark252::scalar_t* result);
 
 extern "C" cudaError_t stark252_transpose_matrix_cuda(
   const stark252::scalar_t* input,
@@ -50,7 +74,11 @@ extern "C" cudaError_t stark252_transpose_matrix_cuda(
   bool is_async);
 
 extern "C" cudaError_t stark252_extension_ntt_cuda(
-  const stark252::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<stark252::scalar_t>& config, stark252::extension_t* output);
+  const stark252::extension_t* input,
+  int size,
+  ntt::NTTDir dir,
+  ntt::NTTConfig<stark252::scalar_t>& config,
+  stark252::extension_t* output);
 
 extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
 
@@ -61,7 +89,11 @@ extern "C" cudaError_t stark252_initialize_domain(
   stark252::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
 
 extern "C" cudaError_t stark252_ntt_cuda(
-  const stark252::scalar_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<stark252::scalar_t>& config, stark252::scalar_t* output);
+  const stark252::scalar_t* input,
+  int size,
+  ntt::NTTDir dir,
+  ntt::NTTConfig<stark252::scalar_t>& config,
+  stark252::scalar_t* output);
 
 extern "C" cudaError_t stark252_release_domain(device_context::DeviceContext& ctx);
 
