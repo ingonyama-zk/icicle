@@ -195,7 +195,7 @@ where
     F::ArkEquivalent: FftField,
     <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
 {
-    let test_sizes = [1 << 9, 1 << 10, 1 << 11, 1 << 16];
+    let test_sizes = [1 << 9, 1 << 10, 1 << 11, 1 << 13, 1 << 14, 1 << 16];
     for test_size in test_sizes {
         let coset_generators = [
             F::from_ark(F::ArkEquivalent::get_root_of_unity((test_size << 1) as u64).unwrap()),

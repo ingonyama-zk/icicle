@@ -134,16 +134,21 @@ namespace mxntt {
     int n_scalars,
     uint32_t log_size,
     eRevType rev_type,
+    bool fast_tw,
     E* out_vec)
   {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
     if (tid >= size * batch_size) return;
     int64_t scalar_id = (tid / columns_batch_size) % size;
     if (rev_type != eRevType::None) {
-      // Note: to multiply a Mixed-order in_vec by scalars, need to mix the scalars. Mixing N->M is done by dif (I)NTT.
-      // Therefore for multiplication always use dif reversal (since what is important is how the in_vec was mixed).
+      // Notes:
+      // (1) DIF (I)NTT is mixing digits (N->M) such that a DIF reverse complemets it back to N. Same for DIT where a
+      // DIT reverse complements the DIT compute. Obviously DIF<->DIT complement each other. Therefore is should be
+      // clear that DIF is mixing like a DIT reverse and vice versa.
+      // (2) to multiply a Mixed-order in_vec by scalars, need to mix the scalars corresponding to how the in_vec was
+      // mixed. Mixing N->M is done by DIF (I)NTT. Therefore for multiplication in M state always use DIT reversal.
       scalar_id =
-        generalized_rev((tid / columns_batch_size) & ((1 << log_size) - 1), log_size, false /*=dit*/, false, rev_type);
+        generalized_rev((tid / columns_batch_size) & ((1 << log_size) - 1), log_size, true /*=dit*/, fast_tw, rev_type);
     }
     out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
   }
@@ -906,6 +911,7 @@ namespace mxntt {
     S* external_twiddles,
     S* internal_twiddles,
     S* basic_twiddles,
+    S* linear_twiddle, // twiddles organized as [1,w,w^2,...] for coset-eval in fast-tw mode
     int ntt_size,
     int max_logn,
     int batch_size,
@@ -961,8 +967,8 @@ namespace mxntt {
     if (is_on_coset && !is_inverse) {
       batch_elementwise_mul_with_reorder_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_input, ntt_size, columns_batch, batch_size, columns_batch ? batch_size : 1,
-        arbitrary_coset ? arbitrary_coset : external_twiddles, arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn,
-        reverse_coset, d_output);
+        arbitrary_coset ? arbitrary_coset : linear_twiddle, arbitrary_coset ? 1 : coset_gen_index, n_twiddles, logn,
+        reverse_coset, fast_tw, d_output);
 
       d_input = d_output;
     }
@@ -994,8 +1000,8 @@ namespace mxntt {
     if (is_on_coset && is_inverse) {
       batch_elementwise_mul_with_reorder_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_output, ntt_size, columns_batch, batch_size, columns_batch ? batch_size : 1,
-        arbitrary_coset ? arbitrary_coset : external_twiddles + n_twiddles, arbitrary_coset ? 1 : -coset_gen_index,
-        n_twiddles, logn, reverse_coset, d_output);
+        arbitrary_coset ? arbitrary_coset : linear_twiddle + n_twiddles, arbitrary_coset ? 1 : -coset_gen_index,
+        n_twiddles, logn, reverse_coset, fast_tw, d_output);
     }
 
     return CHK_LAST();
@@ -1024,6 +1030,8 @@ namespace mxntt {
     scalar_t* external_twiddles,
     scalar_t* internal_twiddles,
     scalar_t* basic_twiddles,
+    scalar_t* linear_twiddles,
+
     int ntt_size,
     int max_logn,
     int batch_size,
@@ -1042,6 +1050,8 @@ namespace mxntt {
     scalar_t* external_twiddles,
     scalar_t* internal_twiddles,
     scalar_t* basic_twiddles,
+    scalar_t* linear_twiddles,
+
     int ntt_size,
     int max_logn,
     int batch_size,
