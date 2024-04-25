@@ -69,12 +69,13 @@ macro_rules! impl_univariate_polynomial_api {
         $field:ident,
         $field_cfg:ident
     ) => {
-        use icicle_core::{polynomials::UnivariatePolynomial, traits::FieldImpl};
+        use icicle_core::{error::IcicleErrorCode, polynomials::UnivariatePolynomial, traits::FieldImpl};
         use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
         use std::{
             clone, cmp,
             ffi::c_void,
             ops::{Add, AddAssign, Div, Mul, Rem, Sub},
+            os::raw::c_char,
             ptr, slice,
         };
 
@@ -83,11 +84,14 @@ macro_rules! impl_univariate_polynomial_api {
 
         // C function prototypes for interaction with the C library
         extern "C" {
+            #[link_name = concat!($field_prefix, "_polynomial_get_last_error_str")]
+            fn get_last_error() -> *const c_char;
+
             #[link_name = concat!($field_prefix, "_polynomial_init_cuda_backend")]
-            fn init_cuda_backend() -> bool;
+            fn init_cuda_backend() -> IcicleErrorCode;
 
             #[link_name = concat!($field_prefix, "_polynomial_create_from_coefficients")]
-            fn create_from_coeffs(coeffs: *const $field, size: usize) -> PolynomialHandle;
+            fn create_from_coeffs(p: *mut PolynomialHandle, coeffs: *const $field, size: usize) -> IcicleErrorCode;
 
             #[link_name = concat!($field_prefix, "_polynomial_create_from_rou_evaluations")]
             fn create_from_rou_evals(coeffs: *const $field, size: usize) -> PolynomialHandle;
@@ -111,7 +115,7 @@ macro_rules! impl_univariate_polynomial_api {
             fn subtract(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
             #[link_name = concat!($field_prefix, "_polynomial_multiply")]
-            fn multiply(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
+            fn multiply(res: *mut PolynomialHandle, a: PolynomialHandle, b: PolynomialHandle) -> IcicleErrorCode;
 
             #[link_name = concat!($field_prefix, "_polynomial_multiply_by_scalar")]
             fn multiply_by_scalar(a: PolynomialHandle, b: &$field) -> PolynomialHandle;
@@ -161,10 +165,25 @@ macro_rules! impl_univariate_polynomial_api {
             handle: PolynomialHandle,
         }
 
+        fn error_handling(error: IcicleErrorCode) {
+            match error {
+                IcicleErrorCode::IcicleSuccess => {}
+                _ => unsafe {
+                    let str_slice = std::ffi::CStr::from_ptr(get_last_error())
+                        .to_str()
+                        .unwrap();
+                    panic!("{}", str_slice);
+                },
+            }
+        }
+
         impl DensePolynomial {
             // Initializes the CUDA backend for polynomial operations
-            pub fn init_cuda_backend() -> bool {
-                unsafe { init_cuda_backend() }
+            pub fn init_cuda_backend() {
+                unsafe {
+                    let rv = init_cuda_backend();
+                    error_handling(rv);
+                }
             }
 
             // Prints the polynomial to stdout using the unsafe C function
@@ -192,10 +211,11 @@ macro_rules! impl_univariate_polynomial_api {
 
             // Creates a polynomial from coefficients
             fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self {
+                let mut p_handle: PolynomialHandle = std::ptr::null_mut();
                 unsafe {
-                    DensePolynomial {
-                        handle: create_from_coeffs(coeffs.as_ptr(), size),
-                    }
+                    let rv = create_from_coeffs(&mut p_handle, coeffs.as_ptr(), size);
+                    error_handling(rv);
+                    DensePolynomial { handle: p_handle }
                 }
             }
 
@@ -364,10 +384,11 @@ macro_rules! impl_univariate_polynomial_api {
             type Output = DensePolynomial;
 
             fn mul(self: Self, rhs: Self) -> Self::Output {
+                let mut r_handle: PolynomialHandle = std::ptr::null_mut();
                 unsafe {
-                    DensePolynomial {
-                        handle: multiply(self.handle, rhs.handle),
-                    }
+                    let rv = multiply(&mut r_handle, self.handle, rhs.handle);
+                    error_handling(rv);
+                    DensePolynomial { handle: r_handle }
                 }
             }
         }

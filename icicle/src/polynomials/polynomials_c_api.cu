@@ -3,6 +3,7 @@
 #include "utils/utils.h"
 #include "utils/integrity_pointer.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
+#include "gpu-utils/error_handler.cuh"
 
 namespace polynomials {
   extern "C" {
@@ -10,21 +11,43 @@ namespace polynomials {
   // Defines a polynomial instance based on the scalar type from the FIELD configuration.
   typedef Polynomial<scalar_t> PolynomialInst;
 
-  bool CONCAT_EXPAND(FIELD, polynomial_init_cuda_backend)()
+#define sLastError CONCAT_EXPAND(FIELD, last_error)
+
+  static IcicleError sLastError = IcicleError(IcicleError_t::IcicleSuccess, "");
+  const char* CONCAT_EXPAND(FIELD, polynomial_get_last_error_str)() { return sLastError.what(); }
+
+  IcicleError_t CONCAT_EXPAND(FIELD, polynomial_init_cuda_backend)()
   {
-    static auto cuda_factory = std::make_shared<CUDAPolynomialFactory<scalar_t>>();
-    PolynomialInst::initialize(cuda_factory);
-    return cuda_factory != nullptr;
+    try {
+      static auto cuda_factory = std::make_shared<CUDAPolynomialFactory<scalar_t>>();
+      PolynomialInst::initialize(cuda_factory);
+    } catch (IcicleError& e) {
+      sLastError = e;
+      return e.getErrorCode();
+    } catch (std::runtime_error& e) {
+      return IcicleError_t::UndefinedError;
+      sLastError = IcicleError(IcicleError_t::UndefinedError, e.what());
+    }
+    return sLastError.getErrorCode();
   }
 
   // Constructs a polynomial from a set of coefficients.
   // coeffs: Array of coefficients.
   // size: Number of coefficients in the array.
   // Returns a pointer to the newly created polynomial instance.
-  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_create_from_coefficients)(scalar_t* coeffs, size_t size)
+  IcicleError_t
+  CONCAT_EXPAND(FIELD, polynomial_create_from_coefficients)(PolynomialInst** p /*OUT*/, scalar_t* coeffs, size_t size)
   {
-    auto result = new PolynomialInst(PolynomialInst::from_coefficients(coeffs, size));
-    return result;
+    try {
+      *p = new PolynomialInst(PolynomialInst::from_coefficients(coeffs, size));
+    } catch (IcicleError& e) {
+      sLastError = e;
+      return e.getErrorCode();
+    } catch (std::runtime_error& e) {
+      return IcicleError_t::UndefinedError;
+      sLastError = IcicleError(IcicleError_t::UndefinedError, e.what());
+    }
+    return sLastError.getErrorCode();
   }
 
   // Constructs a polynomial from evaluations at the roots of unity.
@@ -80,10 +103,19 @@ namespace polynomials {
   // Multiplies two polynomials.
   // a, b: Pointers to the polynomial instances to multiply.
   // Returns a pointer to the resulting polynomial instance.
-  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_multiply)(const PolynomialInst* a, const PolynomialInst* b)
+  IcicleError_t
+  CONCAT_EXPAND(FIELD, polynomial_multiply)(PolynomialInst** res /*OUT*/, PolynomialInst* a, const PolynomialInst* b)
   {
-    auto result = new PolynomialInst(std::move(*a * *b));
-    return result;
+    try {
+      *res = new PolynomialInst(std::move(*a * *b));
+    } catch (IcicleError& e) {
+      sLastError = e;
+      return e.getErrorCode();
+    } catch (std::runtime_error& e) {
+      return IcicleError_t::UndefinedError;
+      sLastError = IcicleError(IcicleError_t::UndefinedError, e.what());
+    }
+    return sLastError.getErrorCode();
   }
 
   // Multiplies a polynomial by scalar.

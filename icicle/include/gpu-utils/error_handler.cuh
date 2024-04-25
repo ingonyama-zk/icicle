@@ -12,6 +12,7 @@ enum class IcicleError_t {
   IcicleSuccess = 0,
   InvalidArgument = 1,
   MemoryAllocationError = 2,
+  InternalCudaError = 199999999,
   UndefinedError = 999999999,
 };
 
@@ -34,13 +35,13 @@ std::string inline IcicleGetErrorString(IcicleError_t error)
 class IcicleError : public std::runtime_error
 {
 private:
-  int errCode; // Field to store the error code
+  IcicleError_t errCode; // Field to store the error code
 
 public:
   // Constructor for cudaError_t with optional message
   IcicleError(cudaError_t cudaError, const std::string& msg = "")
       : std::runtime_error("CUDA Error: " + std::string(cudaGetErrorString(cudaError)) + " " + msg),
-        errCode(static_cast<int>(cudaError))
+        errCode(static_cast<IcicleError_t>(cudaError))
   {
   }
 
@@ -49,8 +50,7 @@ public:
 
   // Constructor for IcicleError_t with optional message
   IcicleError(IcicleError_t icicleError, const std::string& msg = "")
-      : std::runtime_error("Icicle Error: " + IcicleGetErrorString(icicleError) + " " + msg),
-        errCode(static_cast<int>(icicleError))
+      : std::runtime_error("Icicle Error: " + msg), errCode(icicleError)
   {
   }
 
@@ -58,7 +58,7 @@ public:
   IcicleError(IcicleError_t icicleError, const char* msg) : IcicleError(icicleError, std::string(msg)) {}
 
   // Getter for errCode
-  int getErrorCode() const { return errCode; }
+  IcicleError_t getErrorCode() const { return errCode; }
 };
 
 // TODO: ? do{..}while(0) as per https://hownot2code.wordpress.com/2016/12/05/do-while-0-in-macros/

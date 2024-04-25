@@ -6,7 +6,8 @@ namespace polynomials {
   Polynomial<C, D, I>::Polynomial()
   {
     if (nullptr == s_factory) {
-      throw std::runtime_error("Polynomial factory not initialized. Must call Polynomial::initialize(factory)");
+      THROW_ICICLE_ERR(
+        IcicleError_t::UndefinedError, "Polynomial factory not initialized. Must call Polynomial::initialize(factory)");
     }
     m_context = s_factory->create_context();
     m_backend = s_factory->create_backend();
