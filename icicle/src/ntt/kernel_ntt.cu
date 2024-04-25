@@ -141,6 +141,12 @@ namespace mxntt {
     if (tid >= size * batch_size) return;
     int64_t scalar_id = (tid / columns_batch_size) % size;
     if (rev_type != eRevType::None) {
+      // Note: when we multiply an in_vec that is mixed (by DIF (I)NTT), we want to shuffle the
+      // scalars the same way (then multiply element-wise). This would be a DIT-digit-reverse shuffle. (this is
+      // confusing but) BUT to avoid shuffling the scalars, we instead want to ask which element in the non-shuffled
+      // vec is now placed at index tid, which is the opposite of a DIT-digit-reverse --> this is the DIF-digit-reverse.
+      // Therefore we use the DIF-digit-reverse to know which element moved to index tid and use it to access the
+      // corresponding element in scalars vec.
       const bool dif = rev_type == eRevType::NaturalToMixedRev;
       scalar_id =
         generalized_rev((tid / columns_batch_size) & ((1 << log_size) - 1), log_size, !dif, fast_tw, rev_type);
