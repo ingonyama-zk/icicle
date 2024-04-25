@@ -141,14 +141,9 @@ namespace mxntt {
     if (tid >= size * batch_size) return;
     int64_t scalar_id = (tid / columns_batch_size) % size;
     if (rev_type != eRevType::None) {
-      // Notes:
-      // (1) DIF (I)NTT is mixing digits (N->M) such that a DIF reverse complemets it back to N. Same for DIT where a
-      // DIT reverse complements the DIT compute. Obviously DIF<->DIT complement each other. Therefore is should be
-      // clear that DIF is mixing like a DIT reverse and vice versa.
-      // (2) to multiply a Mixed-order in_vec by scalars, need to mix the scalars corresponding to how the in_vec was
-      // mixed. Mixing N->M is done by DIF (I)NTT. Therefore for multiplication in M state always use DIT reversal.
+      const bool dif = rev_type == eRevType::NaturalToMixedRev;
       scalar_id =
-        generalized_rev((tid / columns_batch_size) & ((1 << log_size) - 1), log_size, true /*=dit*/, fast_tw, rev_type);
+        generalized_rev((tid / columns_batch_size) & ((1 << log_size) - 1), log_size, !dif, fast_tw, rev_type);
     }
     out_vec[tid] = *(scalar_vec + ((scalar_id * step) % n_scalars)) * in_vec[tid];
   }
