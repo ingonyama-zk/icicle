@@ -380,9 +380,9 @@ macro_rules! impl_ntt_tests {
 
         #[test]
         #[parallel]
-        fn test_ntt_coset_nm() {
+        fn test_ntt_coset_interpolation_nm() {
             INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-            check_ntt_coset_nm::<$field>();
+            check_ntt_coset_interpolation_nm::<$field>();
         }
 
         #[test]
