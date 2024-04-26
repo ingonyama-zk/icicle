@@ -57,6 +57,8 @@ FIELDS_CONFIG = {
     "stark252": {
         "poseidon.h",
         "field_ext.h",
+        "vec_ops_ext.h",
+        "ntt_ext.h",
     }
 }
 
