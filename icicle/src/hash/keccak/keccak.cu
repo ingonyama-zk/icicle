@@ -245,7 +245,7 @@ namespace keccak {
       CHK_IF_RETURN(cudaMallocAsync(&output_device, number_of_blocks * (D / 8), stream));
     }
 
-    int number_of_threads = 1024;
+    int number_of_threads = 512;
     int number_of_gpu_blocks = (number_of_blocks - 1) / number_of_threads + 1;
     keccak_hash_blocks<C, D><<<number_of_gpu_blocks, number_of_threads, 0, stream>>>(
       input_device, input_block_size, number_of_blocks, output_device);
