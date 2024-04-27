@@ -717,8 +717,7 @@ namespace ntt {
           d_input, d_output, domain.twiddles, size, domain.max_size, batch_size, is_inverse, config.ordering, coset,
           coset_index, stream));
       } else {
-        const bool is_on_coset = (coset_index != 0) || coset;
-        const bool is_fast_twiddles_enabled = (domain.fast_external_twiddles != nullptr) && !is_on_coset;
+        const bool is_fast_twiddles_enabled = (domain.fast_external_twiddles != nullptr);
         S* twiddles = is_fast_twiddles_enabled
                         ? (is_inverse ? domain.fast_external_twiddles_inv : domain.fast_external_twiddles)
                         : domain.twiddles;
@@ -728,9 +727,11 @@ namespace ntt {
         S* basic_twiddles = is_fast_twiddles_enabled
                               ? (is_inverse ? domain.fast_basic_twiddles_inv : domain.fast_basic_twiddles)
                               : domain.basic_twiddles;
+        S* linear_twiddles = domain.twiddles; // twiddles organized as [1,w,w^2,...]
         CHK_IF_RETURN(mxntt::mixed_radix_ntt(
-          d_input, d_output, twiddles, internal_twiddles, basic_twiddles, size, domain.max_log_size, batch_size,
-          config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index, stream));
+          d_input, d_output, twiddles, internal_twiddles, basic_twiddles, linear_twiddles, size, domain.max_log_size,
+          batch_size, config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index,
+          stream));
       }
     }
 

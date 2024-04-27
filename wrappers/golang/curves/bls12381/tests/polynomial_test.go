@@ -5,6 +5,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381"
+
 	// "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/ntt"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/polynomial"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/vecOps"

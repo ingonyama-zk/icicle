@@ -5,13 +5,11 @@ package ntt
 import "C"
 
 import (
+	"unsafe"
+
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-)
-
-import (
-	"unsafe"
 )
 
 func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {

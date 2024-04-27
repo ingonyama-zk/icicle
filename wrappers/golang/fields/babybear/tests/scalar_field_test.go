@@ -1,11 +1,12 @@
 package tests
 
 import (
+	"testing"
+
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (

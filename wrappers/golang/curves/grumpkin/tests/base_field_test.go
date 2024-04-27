@@ -1,10 +1,11 @@
 package tests
 
 import (
+	"testing"
+
 	grumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/grumpkin"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (

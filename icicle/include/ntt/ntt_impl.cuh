@@ -32,6 +32,7 @@ namespace mxntt {
     S* external_twiddles,
     S* internal_twiddles,
     S* basic_twiddles,
+    S* linear_twiddle, // twiddles organized as [1,w,w^2,...] for coset-eval in fast-tw mode
     int ntt_size,
     int max_logn,
     int batch_size,
