@@ -14,7 +14,7 @@ import (
 )
 
 func TestMSM(t *testing.T) {
-	cfg := msm.GetDefaultMSMConfig()
+	cfg := msm.GetDefaultMSMConfigForDevice(0)
 	cfg.IsAsync = true
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
@@ -22,6 +22,7 @@ func TestMSM(t *testing.T) {
 		scalars := icicleGrumpkin.GenerateScalars(size)
 		points := icicleGrumpkin.GenerateAffinePoints(size)
 
+		cr.SetDevice(cfg.Ctx.GetDeviceId())
 		stream, _ := cr.CreateStream()
 		var p icicleGrumpkin.Projective
 		var out core.DeviceSlice
@@ -41,7 +42,7 @@ func TestMSM(t *testing.T) {
 }
 
 func TestMSMBatch(t *testing.T) {
-	cfg := msm.GetDefaultMSMConfig()
+	cfg := msm.GetDefaultMSMConfigForDevice(0)
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
@@ -54,6 +55,7 @@ func TestMSMBatch(t *testing.T) {
 			_, e := out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
+			cr.SetDevice(cfg.Ctx.GetDeviceId())
 			e = msm.Msm(scalars, points, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 			outHost := make(core.HostSlice[icicleGrumpkin.Projective], batchSize)
@@ -65,7 +67,7 @@ func TestMSMBatch(t *testing.T) {
 }
 
 func TestPrecomputeBase(t *testing.T) {
-	cfg := msm.GetDefaultMSMConfig()
+	cfg := msm.GetDefaultMSMConfigForDevice(0)
 	const precomputeFactor = 8
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
@@ -74,6 +76,7 @@ func TestPrecomputeBase(t *testing.T) {
 			scalars := icicleGrumpkin.GenerateScalars(totalSize)
 			points := icicleGrumpkin.GenerateAffinePoints(totalSize)
 
+			cr.SetDevice(cfg.Ctx.GetDeviceId())
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
@@ -100,7 +103,7 @@ func TestPrecomputeBase(t *testing.T) {
 }
 
 func TestMSMSkewedDistribution(t *testing.T) {
-	cfg := msm.GetDefaultMSMConfig()
+	cfg := msm.GetDefaultMSMConfigForDevice(0)
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
@@ -113,6 +116,7 @@ func TestMSMSkewedDistribution(t *testing.T) {
 			points[i].Zero()
 		}
 
+		cr.SetDevice(cfg.Ctx.GetDeviceId())
 		var p icicleGrumpkin.Projective
 		var out core.DeviceSlice
 		_, e := out.Malloc(p.Size(), p.Size())
@@ -129,7 +133,6 @@ func TestMSMSkewedDistribution(t *testing.T) {
 
 func TestMSMMultiDevice(t *testing.T) {
 	numDevices, _ := cr.GetDeviceCount()
-	numDevices = 1 // TODO remove when test env is fixed
 	fmt.Println("There are ", numDevices, " devices available")
 	orig_device, _ := cr.GetDevice()
 	wg := sync.WaitGroup{}

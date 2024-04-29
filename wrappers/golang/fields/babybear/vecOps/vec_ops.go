@@ -12,6 +12,7 @@ import (
 )
 
 func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret cr.CudaError) {
+	cr.SetDevice(config.Ctx.GetDeviceId())
 	aPointer, bPointer, outPointer, cfgPointer, size := core.VecOpCheck(a, b, out, &config)
 
 	cA := (*C.scalar_t)(aPointer)
@@ -33,6 +34,7 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 }
 
 func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError) {
+	cr.SetDevice(config.Ctx.GetDeviceId())
 	core.TransposeCheck(in, out, onDevice)
 
 	cIn := (*C.scalar_t)(in.AsUnsafePointer())

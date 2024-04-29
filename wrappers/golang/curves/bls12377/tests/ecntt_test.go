@@ -11,7 +11,7 @@ import (
 )
 
 func TestECNtt(t *testing.T) {
-	cfg := ntt.GetDefaultNttConfig()
+	cfg := ntt.GetDefaultNttConfigForDevice(0)
 	points := bls12_377.GenerateProjectivePoints(1 << largestTestSize)
 
 	for _, size := range []int{4, 5, 6, 7, 8} {

@@ -119,7 +119,7 @@ func convertIcicleG2AffineToG2Affine(iciclePoints []g2.G2Affine) []bn254.G2Affin
 }
 
 func TestMSMG2(t *testing.T) {
-	cfg := g2.G2GetDefaultMSMConfig()
+	cfg := g2.G2GetDefaultMSMConfigForDevice(0)
 	cfg.IsAsync = true
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
@@ -127,6 +127,7 @@ func TestMSMG2(t *testing.T) {
 		scalars := icicleBn254.GenerateScalars(size)
 		points := g2.G2GenerateAffinePoints(size)
 
+		cr.SetDevice(cfg.Ctx.GetDeviceId())
 		stream, _ := cr.CreateStream()
 		var p g2.G2Projective
 		var out core.DeviceSlice
@@ -147,7 +148,7 @@ func TestMSMG2(t *testing.T) {
 	}
 }
 func TestMSMG2GnarkCryptoTypes(t *testing.T) {
-	cfg := g2.G2GetDefaultMSMConfig()
+	cfg := g2.G2GetDefaultMSMConfigForDevice(0)
 	for _, power := range []int{3} {
 		size := 1 << power
 
@@ -162,6 +163,7 @@ func TestMSMG2GnarkCryptoTypes(t *testing.T) {
 		pointsGnark := convertIcicleG2AffineToG2Affine(points)
 		pointsHost := (core.HostSlice[bn254.G2Affine])(pointsGnark)
 
+		cr.SetDevice(cfg.Ctx.GetDeviceId())
 		var p g2.G2Projective
 		var out core.DeviceSlice
 		_, e := out.Malloc(p.Size(), p.Size())
@@ -181,7 +183,7 @@ func TestMSMG2GnarkCryptoTypes(t *testing.T) {
 }
 
 func TestMSMG2Batch(t *testing.T) {
-	cfg := g2.G2GetDefaultMSMConfig()
+	cfg := g2.G2GetDefaultMSMConfigForDevice(0)
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
@@ -194,6 +196,7 @@ func TestMSMG2Batch(t *testing.T) {
 			_, e := out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
+			cr.SetDevice(cfg.Ctx.GetDeviceId())
 			e = g2.G2Msm(scalars, points, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
 			outHost := make(core.HostSlice[g2.G2Projective], batchSize)
@@ -211,7 +214,7 @@ func TestMSMG2Batch(t *testing.T) {
 }
 
 func TestPrecomputeBaseG2(t *testing.T) {
-	cfg := g2.G2GetDefaultMSMConfig()
+	cfg := g2.G2GetDefaultMSMConfigForDevice(0)
 	const precomputeFactor = 8
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
@@ -220,6 +223,7 @@ func TestPrecomputeBaseG2(t *testing.T) {
 			scalars := icicleBn254.GenerateScalars(totalSize)
 			points := g2.G2GenerateAffinePoints(totalSize)
 
+			cr.SetDevice(cfg.Ctx.GetDeviceId())
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
@@ -252,7 +256,7 @@ func TestPrecomputeBaseG2(t *testing.T) {
 }
 
 func TestMSMG2SkewedDistribution(t *testing.T) {
-	cfg := g2.G2GetDefaultMSMConfig()
+	cfg := g2.G2GetDefaultMSMConfigForDevice(0)
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
 		size := 1 << power
 
@@ -265,6 +269,7 @@ func TestMSMG2SkewedDistribution(t *testing.T) {
 			points[i].Zero()
 		}
 
+		cr.SetDevice(cfg.Ctx.GetDeviceId())
 		var p g2.G2Projective
 		var out core.DeviceSlice
 		_, e := out.Malloc(p.Size(), p.Size())
@@ -282,7 +287,6 @@ func TestMSMG2SkewedDistribution(t *testing.T) {
 
 func TestMSMG2MultiDevice(t *testing.T) {
 	numDevices, _ := cr.GetDeviceCount()
-	numDevices = 1 // TODO remove when test env is fixed
 	fmt.Println("There are ", numDevices, " devices available")
 	orig_device, _ := cr.GetDevice()
 	wg := sync.WaitGroup{}

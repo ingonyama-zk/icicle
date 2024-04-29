@@ -10,6 +10,7 @@ import (
 )
 
 func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+	cr.SetDevice(cfg.Ctx.GetDeviceId())
 	pointsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](points, cfg, results)
 
 	cPoints := (*C.projective_t)(pointsPointer)

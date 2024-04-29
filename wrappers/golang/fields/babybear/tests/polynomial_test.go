@@ -5,7 +5,6 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear"
-
 	// "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/ntt"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/polynomial"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/vecOps"
@@ -36,7 +35,7 @@ func vecOp(a, b babybear.ScalarField, op core.VecOps) babybear.ScalarField {
 	bhost := core.HostSliceWithValue(b, 1)
 	out := make(core.HostSlice[babybear.ScalarField], 1)
 
-	cfg := core.DefaultVecOpsConfig()
+	cfg := core.DefaultVecOpsConfigForDevice(0)
 	vecOps.VecOp(ahost, bhost, out, cfg, op)
 	return out[0]
 }

@@ -23,7 +23,7 @@ func TestBabybearVecOps(t *testing.T) {
 	out2 := make(core.HostSlice[babybear.ScalarField], testSize)
 	out3 := make(core.HostSlice[babybear.ScalarField], testSize)
 
-	cfg := core.DefaultVecOpsConfig()
+	cfg := core.DefaultVecOpsConfigForDevice(0)
 
 	vecOps.VecOp(a, b, out, cfg, core.Add)
 	vecOps.VecOp(out, b, out2, cfg, core.Sub)
@@ -46,7 +46,7 @@ func TestBabybearTranspose(t *testing.T) {
 	out := make(core.HostSlice[babybear.ScalarField], rowSize*columnSize)
 	out2 := make(core.HostSlice[babybear.ScalarField], rowSize*columnSize)
 
-	ctx, _ := cr.GetDefaultDeviceContext()
+	cfg := core.DefaultVecOpsConfigForDevice(0)
 
 	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
 	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)

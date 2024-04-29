@@ -5,7 +5,6 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	bw6_761 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761"
-
 	// "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761/ntt"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761/polynomial"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761/vecOps"
@@ -36,7 +35,7 @@ func vecOp(a, b bw6_761.ScalarField, op core.VecOps) bw6_761.ScalarField {
 	bhost := core.HostSliceWithValue(b, 1)
 	out := make(core.HostSlice[bw6_761.ScalarField], 1)
 
-	cfg := core.DefaultVecOpsConfig()
+	cfg := core.DefaultVecOpsConfigForDevice(0)
 	vecOps.VecOp(ahost, bhost, out, cfg, op)
 	return out[0]
 }

@@ -12,7 +12,7 @@ import (
 )
 
 func TestNTTGetDefaultConfig(t *testing.T) {
-	actual := ntt.GetDefaultNttConfig()
+	actual := ntt.GetDefaultNttConfigForDevice(0)
 	expected := test_helpers.GenerateLimbOne(int(babybear.SCALAR_LIMBS))
 	assert.Equal(t, expected, actual.CosetGen[:])
 
@@ -28,7 +28,7 @@ func TestInitDomain(t *testing.T) {
 }
 
 func TestNtt(t *testing.T) {
-	cfg := ntt.GetDefaultNttConfig()
+	cfg := ntt.GetDefaultNttConfigForDevice(0)
 	scalars := babybear.GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{4, largestTestSize} {
@@ -47,7 +47,7 @@ func TestNtt(t *testing.T) {
 }
 
 func TestNttDeviceAsync(t *testing.T) {
-	cfg := ntt.GetDefaultNttConfig()
+	cfg := ntt.GetDefaultNttConfigForDevice(0)
 	scalars := babybear.GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{1, 10, largestTestSize} {
@@ -56,6 +56,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[babybear.ScalarField](scalars[:testSize])
 
+				cr.SetDevice(cfg.Ctx.GetDeviceId())
 				stream, _ := cr.CreateStream()
 
 				cfg.Ordering = v
@@ -79,7 +80,7 @@ func TestNttDeviceAsync(t *testing.T) {
 }
 
 func TestNttBatch(t *testing.T) {
-	cfg := ntt.GetDefaultNttConfig()
+	cfg := ntt.GetDefaultNttConfigForDevice(0)
 	largestBatchSize := 100
 	scalars := babybear.GenerateScalars(1 << largestTestSize * largestBatchSize)
 

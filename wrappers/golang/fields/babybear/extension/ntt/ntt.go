@@ -10,6 +10,7 @@ import (
 )
 
 func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+	cr.SetDevice(cfg.Ctx.GetDeviceId())
 	scalarsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](scalars, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)

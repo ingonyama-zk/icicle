@@ -5,14 +5,17 @@ package ntt
 import "C"
 
 import (
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear"
 )
 
+import (
+	"unsafe"
+)
+
 func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+	cr.SetDevice(cfg.Ctx.GetDeviceId())
 	scalarsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](scalars, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
@@ -35,6 +38,17 @@ func GetDefaultNttConfig() core.NTTConfig[[babybear.SCALAR_LIMBS]uint32] {
 	}
 
 	return core.GetDefaultNTTConfig(cosetGen)
+}
+
+func GetDefaultNttConfigForDevice(device int) core.NTTConfig[[babybear.SCALAR_LIMBS]uint32] {
+	cosetGenField := babybear.ScalarField{}
+	cosetGenField.One()
+	var cosetGen [babybear.SCALAR_LIMBS]uint32
+	for i, v := range cosetGenField.GetLimbs() {
+		cosetGen[i] = v
+	}
+
+	return core.GetDefaultNttConfigForDevice(cosetGen, device)
 }
 
 func InitDomain(primitiveRoot babybear.ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError {

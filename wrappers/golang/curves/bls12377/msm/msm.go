@@ -5,17 +5,21 @@ package msm
 import "C"
 
 import (
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 func GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
+func GetDefaultMSMConfigForDevice(device int) core.MSMConfig {
+	return core.GetDefaultMSMConfigForDevice(device)
+}
+
 func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+	cr.SetDevice(cfg.Ctx.GetDeviceId())
 	scalarsPointer, pointsPointer, resultsPointer, size, cfgPointer := core.MsmCheck(scalars, points, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)

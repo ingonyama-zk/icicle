@@ -5,14 +5,17 @@ package ntt
 import "C"
 
 import (
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 	bw6_761 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761"
 )
 
+import (
+	"unsafe"
+)
+
 func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+	cr.SetDevice(cfg.Ctx.GetDeviceId())
 	scalarsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](scalars, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
@@ -35,6 +38,17 @@ func GetDefaultNttConfig() core.NTTConfig[[bw6_761.SCALAR_LIMBS]uint32] {
 	}
 
 	return core.GetDefaultNTTConfig(cosetGen)
+}
+
+func GetDefaultNttConfigForDevice(device int) core.NTTConfig[[bw6_761.SCALAR_LIMBS]uint32] {
+	cosetGenField := bw6_761.ScalarField{}
+	cosetGenField.One()
+	var cosetGen [bw6_761.SCALAR_LIMBS]uint32
+	for i, v := range cosetGenField.GetLimbs() {
+		cosetGen[i] = v
+	}
+
+	return core.GetDefaultNttConfigForDevice(cosetGen, device)
 }
 
 func InitDomain(primitiveRoot bw6_761.ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError {
