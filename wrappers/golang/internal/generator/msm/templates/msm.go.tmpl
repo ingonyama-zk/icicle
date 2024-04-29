@@ -14,7 +14,12 @@ func {{.CurvePrefix}}GetDefaultMSMConfig() core.MSMConfig {
 	return core.GetDefaultMSMConfig()
 }
 
+func {{.CurvePrefix}}GetDefaultMSMConfigForDevice(device int) core.MSMConfig {
+	return core.GetDefaultMSMConfigForDevice(device)
+}
+
 func {{.CurvePrefix}}Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError {
+	cr.SetDevice(cfg.Ctx.GetDeviceId())
 	scalarsPointer, pointsPointer, resultsPointer, size, cfgPointer := core.MsmCheck(scalars, points, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
