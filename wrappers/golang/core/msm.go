@@ -76,6 +76,26 @@ func GetDefaultMSMConfig() MSMConfig {
 	}
 }
 
+func GetDefaultMSMConfigForDevice(device int) MSMConfig {
+	ctx, _ := cr.GetDefaultContextForDevice(device)
+	return MSMConfig{
+		ctx,   // Ctx
+		0,     // pointsSize
+		1,     // PrecomputeFactor
+		0,     // C
+		0,     // Bitsize
+		10,    // LargeBucketFactor
+		1,     // batchSize
+		false, // areScalarsOnDevice
+		false, // AreScalarsMontgomeryForm
+		false, // arePointsOnDevice
+		false, // ArePointsMontgomeryForm
+		false, // areResultsOnDevice
+		false, // IsBigTriangle
+		false, // IsAsync
+	}
+}
+
 func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int, unsafe.Pointer) {
 	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len()/int(cfg.PrecomputeFactor), results.Len()
 	if scalarsLength%pointsLength != 0 {

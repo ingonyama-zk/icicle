@@ -44,6 +44,25 @@ func GetDefaultDeviceContext() (DeviceContext, CudaError) {
 	}, CudaSuccess
 }
 
+func GetDefaultContextForDevice(device int) (DeviceContext, CudaError) {
+	numDevice, err := GetDeviceCount()
+	if err != CudaSuccess {
+		panic(fmt.Sprintf("Could not get current device count due to %v", err))
+	}
+	if device > numDevice-1 {
+		panic(fmt.Sprintf("Device %d does not exist, there are only %d devices available", device, numDevice))
+	}
+	SetDevice(device)
+	var defaultStream Stream
+	var defaultMempool MemPool
+
+	return DeviceContext{
+		&defaultStream,
+		uint(device),
+		defaultMempool,
+	}, CudaSuccess
+}
+
 func SetDevice(device int) CudaError {
 	cDevice := (C.int)(device)
 	ret := C.cudaSetDevice(cDevice)

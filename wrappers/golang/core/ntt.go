@@ -68,6 +68,21 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
 	}
 }
 
+func GetDefaultNttConfigForDevice[T any](cosetGen T, device int) NTTConfig[T] {
+	ctx, _ := cr.GetDefaultContextForDevice(device)
+	return NTTConfig[T]{
+		ctx,      // Ctx
+		cosetGen, // CosetGen
+		1,        // BatchSize
+		false,    // ColumnsBatch
+		KNN,      // Ordering
+		false,    // areInputsOnDevice
+		false,    // areOutputsOnDevice
+		false,    // IsAsync
+		Auto,
+	}
+}
+
 func NttCheck[T any](input HostOrDeviceSlice, cfg *NTTConfig[T], output HostOrDeviceSlice) (unsafe.Pointer, unsafe.Pointer, int, unsafe.Pointer) {
 	inputLen, outputLen := input.Len(), output.Len()
 	if inputLen != outputLen {

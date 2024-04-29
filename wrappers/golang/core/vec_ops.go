@@ -46,6 +46,18 @@ func DefaultVecOpsConfig() VecOpsConfig {
 
 	return config
 }
+func DefaultVecOpsConfigForDevice(device int) VecOpsConfig {
+	ctx, _ := cr.GetDefaultContextForDevice(device)
+	config := VecOpsConfig{
+		ctx,   // ctx
+		false, // isAOnDevice
+		false, // isBOnDevice
+		false, // isResultOnDevice
+		false, // IsAsync
+	}
+
+	return config
+}
 
 func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {
 	aLen, bLen, outLen := a.Len(), b.Len(), out.Len()
