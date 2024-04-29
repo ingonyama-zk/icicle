@@ -35,7 +35,7 @@ func vecOp(a, b {{.Field}}.{{.FieldPrefix}}Field, op core.VecOps) {{.Field}}.{{.
 	bhost := core.HostSliceWithValue(b, 1)
 	out := make(core.HostSlice[{{.Field}}.{{.FieldPrefix}}Field], 1)
 
-	cfg := core.DefaultVecOpsConfig()
+	cfg := core.DefaultVecOpsConfigForDevice(0)
 	vecOps.VecOp(ahost, bhost, out, cfg, op)
 	return out[0]
 }
