@@ -99,11 +99,40 @@ jobs:
         path: |
           icicle/build/lib/libingo_field_${{ matrix.field.name }}.a
         retention-days: 1
+    
+    build-hashes-linux:
+    name: Build hashes on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format]
+    strategy:
+      matrix:
+        hash:
+          - name: keccak
+            build_args:
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
+    - name: Build
+      working-directory: ./wrappers/golang
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      run: ./build.sh -hash=${{ matrix.hash.name }} ${{ matrix.hash.build_args }} # builds a single hash algorithm
+    - name: Upload ICICLE lib artifacts
+      uses: actions/upload-artifact@v4
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      with:
+        name: icicle-builds-${{ matrix.hash.name }}-${{ github.workflow }}-${{ github.sha }}
+        path: |
+          icicle/build/lib/libingo_hash.a
+        retention-days: 1
   
   test-linux:
     name: Test on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, build-curves-linux, build-fields-linux]
+    needs: [check-changed-files, build-curves-linux, build-fields-linux, build-hashes-linux]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
