@@ -62,8 +62,8 @@ jobs:
       # We need to limit the number of threads to avoid running out of memory on weaker machines
       # ignored tests are polynomial tests. Since they conflict with NTT tests, they are executed separately
       run: |
-        cargo test --workspace --exclude icicle-babybear icicle-stark252 --release --verbose --features=g2 -- --test-threads=2 --ignored
-        cargo test --workspace --exclude icicle-babybear icicle-stark252 --release --verbose --features=g2 -- --test-threads=2
+        cargo test --workspace --exclude icicle-babybear --exclude icicle-stark252 --release --verbose --features=g2 -- --test-threads=2 --ignored
+        cargo test --workspace --exclude icicle-babybear --exclude icicle-stark252 --release --verbose --features=g2 -- --test-threads=2
 
     - name: Run baby bear tests
       working-directory: ./wrappers/rust/icicle-fields/icicle-babybear
