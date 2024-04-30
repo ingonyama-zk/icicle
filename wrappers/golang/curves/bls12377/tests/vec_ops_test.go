@@ -46,7 +46,7 @@ func TestBls12_377Transpose(t *testing.T) {
 	out := make(core.HostSlice[bls12_377.ScalarField], rowSize*columnSize)
 	out2 := make(core.HostSlice[bls12_377.ScalarField], rowSize*columnSize)
 
-	cfg := core.DefaultVecOpsConfigForDevice(0)
+	ctx, _ := cr.GetDefaultContextForDevice(0)
 
 	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
 	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)

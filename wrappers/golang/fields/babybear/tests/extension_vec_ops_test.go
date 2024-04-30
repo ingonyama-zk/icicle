@@ -46,7 +46,7 @@ func TestBabybear_extensionTranspose(t *testing.T) {
 	out := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 	out2 := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 
-	cfg := core.DefaultVecOpsConfigForDevice(0)
+	ctx, _ := cr.GetDefaultContextForDevice(0)
 
 	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
 	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)
