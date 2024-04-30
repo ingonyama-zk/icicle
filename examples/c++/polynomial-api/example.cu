@@ -1,8 +1,10 @@
 #include <iostream>
-#include "curves/curve_config.cuh"
+
 #include "polynomials/polynomials.h"
-#include "appUtils/ntt/ntt.cuh"
-using namespace curve_config;
+#include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
+#include "ntt/ntt.cuh"
+
+using namespace field_config;
 using namespace polynomials;
 
 // define the polynomial type
@@ -17,7 +19,7 @@ const auto four = scalar_t::from(4);
 const auto five = scalar_t::from(5);
 const auto minus_one = zero - one;
 
-void example_evaluate() 
+void example_evaluate()
 {
   std::cout << std::endl << "Example: Polynomial evaluation on random value" << std::endl;
   const scalar_t coeffs[3] = {one, two, three};
@@ -29,13 +31,14 @@ void example_evaluate()
   std::cout << "f(x) = " << fx << std::endl;
 }
 
-void example_from_rou(const int size) {
+void example_from_rou(const int size)
+{
   std::cout << std::endl << "Example: Reconstruct polynomial from values at roots of unity" << std::endl;
   const int log_size = (int)ceil(log2(size));
   const int nof_evals = 1 << log_size;
   auto coeff = std::make_unique<scalar_t[]>(size);
   for (int i = 0; i < size; i++)
-      coeff[i] = scalar_t::rand_host();
+    coeff[i] = scalar_t::rand_host();
   auto f = Polynomial_t::from_coefficients(coeff.get(), size);
   // rou: root of unity
   auto omega = scalar_t::omega(log_size);
@@ -73,17 +76,16 @@ static bool is_equal(Polynomial_t& lhs, Polynomial_t& rhs)
 {
   const int deg_lhs = lhs.degree();
   const int deg_rhs = rhs.degree();
-  if (deg_lhs != deg_rhs) {
-    return false;
-  }
+  if (deg_lhs != deg_rhs) { return false; }
   auto lhs_coeffs = std::make_unique<scalar_t[]>(deg_lhs);
   auto rhs_coeffs = std::make_unique<scalar_t[]>(deg_rhs);
-  lhs.get_coefficients_on_host(lhs_coeffs.get(), 1, deg_lhs - 1);
-  rhs.get_coefficients_on_host(rhs_coeffs.get(), 1, deg_rhs - 1);
+  lhs.copy_coeffs(lhs_coeffs.get(), 1, deg_lhs - 1);
+  rhs.copy_coeffs(rhs_coeffs.get(), 1, deg_rhs - 1);
   return memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(scalar_t)) == 0;
 }
 
-void example_addition(const int size0, const int size1) {
+void example_addition(const int size0, const int size1)
+{
   std::cout << std::endl << "Example: Polynomial addition" << std::endl;
   auto f = randomize_polynomial(size0);
   auto g = randomize_polynomial(size1);
@@ -138,10 +140,10 @@ void example_multiplicationScalar(const int log0)
   auto g = s * f;
   auto x = scalar_t::rand_host();
   auto fx = f(x);
-  auto fx2 = s*fx;
+  auto fx2 = s * fx;
   auto gx = g(x);
   std::cout << "Compare (2*f)(x) and 2*f(x): " << std::endl;
-  std::cout << gx << std::endl; 
+  std::cout << gx << std::endl;
   std::cout << fx2 << std::endl;
 }
 
@@ -156,7 +158,7 @@ void example_monomials()
   const auto expected_addmonmon_f_x = fx + three * x;
   const auto addmonom_f_x = f(x);
   std::cout << "Computed f'(x) = " << addmonom_f_x << std::endl;
-  std::cout << "Expected f'(x) = " << expected_addmonmon_f_x << std::endl;  
+  std::cout << "Expected f'(x) = " << expected_addmonmon_f_x << std::endl;
 }
 
 void example_ReadCoeffsToHost()
@@ -168,19 +170,18 @@ void example_ReadCoeffsToHost()
   auto g = Polynomial_t::from_coefficients(coeffs_g, 3);
   auto h = f + g; // 1+2x+3x^3
   std::cout << "Get one coefficient of h() at a time: " << std::endl;
-  const auto h0 = h.get_coefficient_on_host(0);
-  const auto h1 = h.get_coefficient_on_host(1);
-  const auto h2 = h.get_coefficient_on_host(2);
+  const auto h0 = h.get_coeff(0);
+  const auto h1 = h.get_coeff(1);
+  const auto h2 = h.get_coeff(2);
   std::cout << "Coefficients of h: " << std::endl;
   std::cout << "0:" << h0 << " expected: " << one << std::endl;
-  std::cout << "1:" << h1 << " expected: " << two << std::endl; 
+  std::cout << "1:" << h1 << " expected: " << two << std::endl;
   std::cout << "2:" << h2 << " expected: " << three << std::endl;
   std::cout << "Get all coefficients of h() at a time: " << std::endl;
-  // fetch the number of coefficients, which is padded to powers of two
-  int64_t nof_coeffs = h.get_coefficients_on_host(nullptr);
+
   scalar_t h_coeffs[3] = {0};
   // fetch the coefficients for a given range
-  nof_coeffs = h.get_coefficients_on_host(h_coeffs, 0, 2);
+  auto nof_coeffs = h.copy_coeffs(h_coeffs, 0, 2);
   scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
     std::cout << i << ":" << h_coeffs[i] << " expected: " << expected_h_coeffs[i] << std::endl;
@@ -197,8 +198,8 @@ void example_divisionSmall()
   auto [q, r] = a.divide(b);
   scalar_t q_coeffs[2] = {0}; // 3x+4
   scalar_t r_coeffs[2] = {0}; // 3x+9
-  const auto q_nof_coeffs = q.get_coefficients_on_host(q_coeffs, 0, 1);
-  const auto r_nof_coeffs = r.get_coefficients_on_host(r_coeffs, 0, 1);
+  const auto q_nof_coeffs = q.copy_coeffs(q_coeffs, 0, 1);
+  const auto r_nof_coeffs = r.copy_coeffs(r_coeffs, 0, 1);
   std::cout << "Quotient: 0:" << q_coeffs[0] << " expected: " << scalar_t::from(4) << std::endl;
   std::cout << "Quotient: 1:" << q_coeffs[1] << " expected: " << scalar_t::from(3) << std::endl;
   std::cout << "Reminder: 0:" << r_coeffs[0] << " expected: " << scalar_t::from(9) << std::endl;
@@ -244,7 +245,7 @@ void example_clone(const int log0)
   const auto x = scalar_t::rand_host();
   const auto fx = f(x);
   Polynomial_t g;
-  g = f.clone(); 
+  g = f.clone();
   g += f;
   auto h = g.clone();
   std::cout << "g(x) = " << g(x) << " expected: " << two * fx << std::endl;
@@ -255,10 +256,10 @@ int main(int argc, char** argv)
 {
   // Initialize NTT. TODO: can we hide this in the library?
   static const int MAX_NTT_LOG_SIZE = 24;
-  auto ntt_config = ntt::DefaultNTTConfig<scalar_t>();
+  auto ntt_config = ntt::default_ntt_config<scalar_t>();
   const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
-  ntt::InitDomain(basic_root, ntt_config.ctx);
-    
+  ntt::init_domain(basic_root, ntt_config.ctx);
+
   // Virtual factory design pattern: initializing polynomimals factory for CUDA backend
   Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
 
@@ -274,6 +275,6 @@ int main(int argc, char** argv)
   example_divisionSmall();
   example_divisionLarge(12, 2);
   example_divideByVanishingPolynomial();
-  
+
   return 0;
 }

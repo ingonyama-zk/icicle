@@ -10,16 +10,6 @@ Polynomials are crucial for Zero-Knowledge Proofs (ZKPs): they enable efficient 
 
 ## Running the example
 
-Make sure you have compiled a curve-specific `ICICLE` library.
-For example, for bn254 curve execute the following from the project root directory:
-
-```sh
-cd icicle
-mkdir -p build
-cmake -DBUILD_TESTS=ON -DG2_DEFINED=ON -DCURVE=bn254 -S . -B build
-cmake --build build
-```
-
 To run example, from project root directory:
 
 ```sh
@@ -28,7 +18,7 @@ cd examples/c++/polynomial-api
 ./run.sh
 ```
 
-To change the curve, edit `CURVE_ID` in `CMakeLists.txt`
+To change the scalar field, modify `compile.h` to build the corresponding lib and `CMakeLists.txt` to link to that lib and set `FIELD_ID` correspondingly.
 
 ## What's in the examples
 

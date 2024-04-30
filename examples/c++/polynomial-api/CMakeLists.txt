@@ -8,20 +8,20 @@ if (${CMAKE_VERSION} VERSION_LESS "3.24.0")
 else()
     set(CMAKE_CUDA_ARCHITECTURES native) # on 3.24+, on earlier it is ignored, and the target is not passed
 endif ()
-project(icicle LANGUAGES CUDA CXX)
+project(example LANGUAGES CUDA CXX)
+
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -DCURVE_ID=BN254")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
-# change the path to your Icicle location
-include_directories("../../../icicle")
+
 add_executable(
   example
   example.cu
 )
-find_library(NVML_LIBRARY nvidia-ml PATHS /usr/local/cuda/targets/x86_64-linux/lib/stubs/ )
-find_library(ICICLE_LIBRARY ingo_bn254 PATHS ../../../icicle/build/ )
 
-
-target_link_libraries(example ${NVML_LIBRARY} ${ICICLE_LIBRARY})
 set_target_properties(example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_include_directories(example PRIVATE "../../../icicle/include")
 
+# can link to another curve/field by changing the following lib and FIELD_ID
+target_link_libraries(example ${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_field_bn254.a)
+target_compile_definitions(example PUBLIC FIELD_ID BN254)
