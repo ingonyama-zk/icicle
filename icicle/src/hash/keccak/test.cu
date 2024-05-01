@@ -1,4 +1,4 @@
-#include "utils/device_context.cuh"
+#include "gpu-utils/device_context.cuh"
 #include "keccak.cu"
 
 // #define DEBUG
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 
   START_TIMER(keccak_timer);
   KeccakConfig config = default_keccak_config();
-  keccak256(in_ptr, input_block_size, number_of_blocks, out_ptr, config);
+  keccak256_cuda(in_ptr, input_block_size, number_of_blocks, out_ptr, config);
   END_TIMER(keccak_timer, "Keccak")
 
   for (int i = 0; i < number_of_blocks; i++) {
