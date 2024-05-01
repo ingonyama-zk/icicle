@@ -51,7 +51,7 @@ extern "C" {
         input_block_size: i32,
         number_of_blocks: i32,
         output: *mut u8,
-        config: KeccakConfig,
+        config: &KeccakConfig,
     ) -> CudaError;
 
     pub(crate) fn keccak512_cuda(
@@ -59,7 +59,7 @@ extern "C" {
         input_block_size: i32,
         number_of_blocks: i32,
         output: *mut u8,
-        config: KeccakConfig,
+        config: &KeccakConfig,
     ) -> CudaError;
 }
 
@@ -68,7 +68,7 @@ pub fn keccak256(
     input_block_size: i32,
     number_of_blocks: i32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: KeccakConfig,
+    config: &KeccakConfig,
 ) -> IcicleResult<()> {
     unsafe {
         keccak256_cuda(
@@ -87,7 +87,7 @@ pub fn keccak512(
     input_block_size: i32,
     number_of_blocks: i32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: KeccakConfig,
+    config: &KeccakConfig,
 ) -> IcicleResult<()> {
     unsafe {
         keccak512_cuda(

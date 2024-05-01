@@ -224,7 +224,7 @@ namespace keccak {
 
   template <int C, int D>
   cudaError_t
-  keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
+  keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -245,7 +245,7 @@ namespace keccak {
       CHK_IF_RETURN(cudaMallocAsync(&output_device, number_of_blocks * (D / 8), stream));
     }
 
-    int number_of_threads = 1024;
+    int number_of_threads = 512;
     int number_of_gpu_blocks = (number_of_blocks - 1) / number_of_threads + 1;
     keccak_hash_blocks<C, D><<<number_of_gpu_blocks, number_of_threads, 0, stream>>>(
       input_device, input_block_size, number_of_blocks, output_device);
@@ -262,13 +262,13 @@ namespace keccak {
   }
 
   extern "C" cudaError_t
-  keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
+  keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config)
   {
     return keccak_hash<512, 256>(input, input_block_size, number_of_blocks, output, config);
   }
 
   extern "C" cudaError_t
-  keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig config)
+  keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config)
   {
     return keccak_hash<1024, 512>(input, input_block_size, number_of_blocks, output, config);
   }

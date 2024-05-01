@@ -7,9 +7,11 @@ DEVMODE=OFF
 EXT_FIELD=OFF
 BUILD_CURVES=( )
 BUILD_FIELDS=( )
+BUILD_HASHES=( )
 
 SUPPORTED_CURVES=("bn254" "bls12_377" "bls12_381" "bw6_761", "grumpkin")
 SUPPORTED_FIELDS=("babybear")
+SUPPORTED_HASHES=("keccak")
 
 if [[ $1 == "-help" ]]; then
   echo "Build script for building ICICLE cpp libraries"
@@ -67,6 +69,15 @@ do
         -field-ext)
             EXT_FIELD=ON
             ;;
+        -hash*)
+            hash=$(echo "$arg_lower" | cut -d'=' -f2)
+            if [[ $hash == "all" ]]
+            then
+              BUILD_HASHES=("${SUPPORTED_HASHES[@]}")
+            else
+              BUILD_HASHES=( $hash )
+            fi
+            ;;
         -devmode)
             DEVMODE=ON
             ;;
@@ -105,3 +116,10 @@ do
   cmake --build build -j8 && rm build_config.txt
 done
 
+for HASH in "${BUILD_HASHES[@]}"
+do
+  echo "HASH=${HASH_DEFINED}" > build_config.txt
+  echo "DEVMODE=${DEVMODE}" >> build_config.txt
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DBUILD_HASH=$HASH -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake --build build -j8 && rm build_config.txt
+done
