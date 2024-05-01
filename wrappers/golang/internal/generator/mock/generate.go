@@ -25,7 +25,7 @@ func Generate(baseDir, packageName, field, fieldPrefix string, isScalar bool, nu
 		isScalar,
 		numLimbs,
 	}
-	generator.GenerateFile(mockTemplates["fields"], baseDir, strings.ToLower(field)+"_", "", fieldData)
+	generator.GenerateFile(mockTemplates["field"], baseDir, strings.ToLower(field)+"_", "", fieldData)
 
 	curveData := struct {
 		PackageName string
