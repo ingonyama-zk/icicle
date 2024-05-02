@@ -8,6 +8,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+criterion = "0.3"
 icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
 ark-grumpkin-test = { git = "https://github.com/ingonyama-zk/ark-grumpkin-test.git", optional = true}
@@ -16,6 +17,7 @@ ark-grumpkin-test = { git = "https://github.com/ingonyama-zk/ark-grumpkin-test.g
 cmake = "0.1.50"
 
 [dev-dependencies]
+criterion = "0.3"
 ark-std = "0.4.0"
 ark-ff = "0.4.0"
 ark-ec = "0.4.0"

@@ -409,16 +409,13 @@ macro_rules! impl_msm_bench {
                         let mut scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
                         let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
                         // a version of batched msm without using `cfg.points_size`, requires copying bases
-                        let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
-                            .take(batch_size)
-                            .flatten()
-                            .collect();
+
                         let scalars_h = HostSlice::from_slice(&scalars);
 
                         let mut msm_results = DeviceVec::<Projective<C>>::cuda_malloc(batch_size).unwrap();
                         let mut points_d = DeviceVec::<Affine<C>>::cuda_malloc(full_size).unwrap();
                         points_d
-                            .copy_from_host_async(HostSlice::from_slice(&points_cloned), &stream)
+                            .copy_from_host_async(HostSlice::from_slice(&points), &stream)
                             .unwrap();
 
                         cfg.precompute_factor = precompute_factor as i32;
