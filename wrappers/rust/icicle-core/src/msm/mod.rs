@@ -423,8 +423,6 @@ macro_rules! impl_msm_bench {
 
                         cfg.precompute_factor = precompute_factor as i32;
 
-                        cfg.precompute_factor = precompute_factor as i32;
-
                         let bench_descr = format!(
                             " {} x {} with precomp = {:?}",
                             test_size, batch_size, precompute_factor
