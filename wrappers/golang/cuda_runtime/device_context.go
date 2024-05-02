@@ -128,7 +128,9 @@ func RunOnDevice(deviceId int, funcToRun func(args ...any), args ...any) {
 	go func(id int) {
 		defer runtime.UnlockOSThread()
 		runtime.LockOSThread()
+		originalDevice, _ := GetDevice()
 		SetDevice(id)
 		funcToRun(args...)
+		SetDevice(originalDevice)
 	}(deviceId)
 }
