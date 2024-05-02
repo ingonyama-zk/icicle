@@ -427,7 +427,7 @@ macro_rules! impl_msm_bench {
                             " {} x {} with precomp = {:?}",
                             test_size, batch_size, precompute_factor
                         );
-                        
+
                         group.bench_function(&bench_descr, |b| {
                             b.iter(|| {
                                 msm_for_bench(
