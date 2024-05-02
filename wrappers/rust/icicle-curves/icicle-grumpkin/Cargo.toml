@@ -28,3 +28,7 @@ default = []
 ec_ntt = ["icicle-core/ec_ntt"]
 devmode = ["icicle-core/devmode"]
 arkworks = ["ark-grumpkin-test", "icicle-core/arkworks"]
+
+[[bench]]
+name = "msm"
+harness = false
