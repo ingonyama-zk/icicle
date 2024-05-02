@@ -381,7 +381,6 @@ macro_rules! impl_msm_bench {
             cfg.is_async = true;
             cfg.large_bucket_factor = 5;
             cfg.c = 4;
-            let precompute_factor = 8;
 
             warmup(&stream).unwrap();
 
