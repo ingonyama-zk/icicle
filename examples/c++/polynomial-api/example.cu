@@ -3,9 +3,11 @@
 #include "polynomials/polynomials.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "ntt/ntt.cuh"
+#include "poseidon/tree/merkle.cuh"
 
-using namespace field_config;
+// using namespace field_config;
 using namespace polynomials;
+using namespace merkle;
 
 // define the polynomial type
 typedef Polynomial<scalar_t> Polynomial_t;
@@ -252,6 +254,72 @@ void example_clone(const int log0)
   std::cout << "h(x) = " << h(x) << " expected: " << g(x) << std::endl;
 }
 
+void example_EvenOdd() {
+  std::cout << std::endl << "Example: Split into even and odd powers " << std::endl;
+  const scalar_t coeffs[4] = {one, two, three, four}; // 1+2x+3x^2+4x^3
+  auto f = Polynomial_t::from_coefficients(coeffs, 4);
+  auto f_even = f.even();
+  auto f_odd = f.odd();
+
+  scalar_t even_coeffs[2] = {0};
+  scalar_t odd_coeffs[2] = {0};
+  const auto even_nof_coeffs = f_even.copy_coeffs(even_coeffs, 0, 1);
+  const auto odd_nof_coeffs = f_odd.copy_coeffs(odd_coeffs, 0, 1);
+  std::cout << "Even: 0:" << even_coeffs[0] << " expected: " << one << std::endl;
+  std::cout << "Even: 1:" << even_coeffs[1] << " expected: " << three << std::endl;
+  std::cout << "Odd: 0:" << odd_coeffs[0] << " expected: " << two << std::endl;
+  std::cout << "Odd: 1:" << odd_coeffs[1] << " expected: " << four << std::endl;
+
+}
+
+void example_Slice() {
+  std::cout << std::endl << "Example: Slice polynomial " << std::endl;
+  const scalar_t coeffs[4] = {one, two, three, four}; // 1+2x+3x^2+4x^3
+  auto f = Polynomial_t::from_coefficients(coeffs, 4);
+  auto f_slice = f.slice(0, 3, 2); // 1+4x
+  scalar_t slice_coeffs[2] = {0};
+  const auto slice_nof_coeffs = f_slice.copy_coeffs(slice_coeffs, 0, 1);
+  std::cout << "Slice: 0:" << slice_coeffs[0] << " expected: " << one << std::endl;
+  std::cout << "Slice: 1:" << slice_coeffs[1] << " expected: " << four << std::endl;
+} 
+
+
+template <typename S>
+  size_t my_get_digests_len(uint32_t height, uint32_t arity)
+  {
+    size_t digests_len = 0;
+    size_t row_length = 1;
+    for (int i = 1; i < height; i++) {
+      digests_len += row_length;
+      row_length *= arity;
+    }
+
+    return digests_len;
+  }
+
+void example_DeviceMemoryView() {
+  const int log_size = 6;
+  const int size = 1 << log_size;
+  auto f = randomize_polynomial(size);
+  auto [d_coeff, N, device_id] = f.get_coefficients_view();
+  // std::cout << "Device id: " << device_id << std::endl;
+  // std::cout << "D: " <<   d_coeff.isValid() << std::endl;
+  // commit coefficients to Merkle tree
+  device_context::DeviceContext ctx = device_context::get_default_device_context();
+  PoseidonConstants<scalar_t> constants;
+  init_optimized_poseidon_constants<scalar_t>(2, ctx, &constants);
+  uint32_t tree_height = log_size + 1;
+  int keep_rows = 0; // keep all rows
+  size_t digests_len = log_size - 1;
+  scalar_t* digests = static_cast<scalar_t*>(malloc(sizeof(scalar_t) * digests_len));
+  TreeBuilderConfig config = default_merkle_config();
+  config.keep_rows = keep_rows;
+  config.are_inputs_on_device = true;
+  build_merkle_tree<scalar_t, (2+1)>(d_coeff.get(), digests, tree_height, constants, config);
+  std::cout << "Merkle tree root: " << digests[0] << std::endl;
+  free(digests);
+}
+
 int main(int argc, char** argv)
 {
   // Initialize NTT. TODO: can we hide this in the library?
@@ -275,6 +343,9 @@ int main(int argc, char** argv)
   example_divisionSmall();
   example_divisionLarge(12, 2);
   example_divideByVanishingPolynomial();
+  example_EvenOdd();
+  example_Slice();
+  example_DeviceMemoryView();
 
   return 0;
 }
