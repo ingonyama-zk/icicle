@@ -3,12 +3,12 @@ use crate::traits::ArkConvertible;
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 #[cfg(feature = "arkworks")]
 use ark_ff::{BigInteger, Field as ArkField, PrimeField};
+use hex::FromHex;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::DeviceSlice;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
-use hex::FromHex;
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]

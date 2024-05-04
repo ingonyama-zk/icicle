@@ -34,10 +34,9 @@ namespace poseidon2 {
     const Poseidon2Constants<scalar_t>* constants,
     Poseidon2Config* config)
   {
-
-#define P2_HASH_T(width) \
-case width:\
-  return poseidon2_hash<scalar_t, width>(input, output, number_of_states, *constants, *config);
+#define P2_HASH_T(width)                                                                                               \
+  case width:                                                                                                          \
+    return poseidon2_hash<scalar_t, width>(input, output, number_of_states, *constants, *config);
 
     switch (width) {
       P2_HASH_T(2)
@@ -49,8 +48,9 @@ case width:\
       P2_HASH_T(20)
       P2_HASH_T(24)
     default:
-      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "PoseidonHash: #arity must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
+      THROW_ICICLE_ERR(
+        IcicleError_t::InvalidArgument, "PoseidonHash: #arity must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
     }
     return CHK_LAST();
   }
-}
+} // namespace poseidon2

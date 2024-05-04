@@ -37,9 +37,7 @@ namespace poseidon2 {
     if (!(alpha == 3 || alpha == 5 || alpha == 7 || alpha == 11)) {
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid alpha value");
     }
-    if (external_rounds % 2) {
-      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid external rounds");
-    }
+    if (external_rounds % 2) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid external rounds"); }
 
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = ctx.stream;
@@ -55,19 +53,16 @@ namespace poseidon2 {
     S* d_round_constants = d_constants + internal_matrix_len;
 
     // Copy internal matrix
-    CHK_IF_RETURN(cudaMemcpyAsync(d_internal_matrix, internal_matrix_diag, sizeof(S) * internal_matrix_len, cudaMemcpyHostToDevice, stream));
+    CHK_IF_RETURN(cudaMemcpyAsync(
+      d_internal_matrix, internal_matrix_diag, sizeof(S) * internal_matrix_len, cudaMemcpyHostToDevice, stream));
     // Copy round constants
-    CHK_IF_RETURN(cudaMemcpyAsync(d_round_constants, round_constants, sizeof(S) * round_constants_len, cudaMemcpyHostToDevice, stream));
+    CHK_IF_RETURN(cudaMemcpyAsync(
+      d_round_constants, round_constants, sizeof(S) * round_constants_len, cudaMemcpyHostToDevice, stream));
 
     // Make sure all the constants have been copied
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
     *poseidon_constants = {
-      width,
-      alpha,
-      internal_rounds,
-      external_rounds,
-      d_round_constants,
-      d_internal_matrix,
+      width, alpha, internal_rounds, external_rounds, d_round_constants, d_internal_matrix,
     };
 
     return CHK_LAST();
@@ -79,13 +74,13 @@ namespace poseidon2 {
   {
     CHK_INIT_IF_RETURN();
 
-#define P2_CONSTANTS_DEF(width) \
-case width:\
-  internal_rounds = t##width::internal_rounds;\
-  round_constants = t##width::round_constants;\
-  internal_matrix = t##width::mat_diag_m_1;\
-  alpha = t##width::alpha;\
-  break;
+#define P2_CONSTANTS_DEF(width)                                                                                        \
+  case width:                                                                                                          \
+    internal_rounds = t##width::internal_rounds;                                                                       \
+    round_constants = t##width::round_constants;                                                                       \
+    internal_matrix = t##width::mat_diag_m_1;                                                                          \
+    alpha = t##width::alpha;                                                                                           \
+    break;
 
     int alpha;
     int external_rounds = EXTERNAL_ROUNDS_DEFAULT;
@@ -101,14 +96,16 @@ case width:\
       P2_CONSTANTS_DEF(16)
       P2_CONSTANTS_DEF(20)
       P2_CONSTANTS_DEF(24)
-      default:
-        THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "init_optimized_poseidon2_constants: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
+    default:
+      THROW_ICICLE_ERR(
+        IcicleError_t::InvalidArgument,
+        "init_optimized_poseidon2_constants: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
     }
     S* h_round_constants = reinterpret_cast<S*>(round_constants);
     S* h_internal_matrix = reinterpret_cast<S*>(internal_matrix);
 
-    create_optimized_poseidon2_constants(width, alpha, internal_rounds, external_rounds, h_round_constants, h_internal_matrix, ctx, poseidon2_constants);
+    create_optimized_poseidon2_constants(
+      width, alpha, internal_rounds, external_rounds, h_round_constants, h_internal_matrix, ctx, poseidon2_constants);
 
     return CHK_LAST();
   }

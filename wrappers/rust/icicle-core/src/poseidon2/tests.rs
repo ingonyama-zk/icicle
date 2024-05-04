@@ -24,9 +24,13 @@ where
         Ok(t) => return t,
         Err(e) => {
             println!("EC {:?}", e.icicle_error_code);
-            println!("CE {:?}", e.cuda_error.is_none());
+            println!(
+                "CE {:?}",
+                e.cuda_error
+                    .is_none()
+            );
             println!("R {:?}", e.reason);
-        },
+        }
     }
     let res = res.unwrap();
     println!("wtf2");
@@ -74,7 +78,6 @@ where
 
         _check_poseidon_hash_many(width, constants);
     }
-    
 }
 
 pub fn check_poseidon_kats<F: FieldImpl>(width: usize, kats: &[F])
@@ -93,9 +96,9 @@ where
     }
 
     let mut inputs: Vec<F> = std::iter::repeat(input.clone())
-                            .take(batch_size)
-                            .flatten()
-                            .collect();
+        .take(batch_size)
+        .flatten()
+        .collect();
 
     let input_slice = HostSlice::from_mut_slice(&mut inputs);
     let output_slice = HostSlice::from_mut_slice(&mut outputs);
@@ -111,7 +114,10 @@ where
     )
     .unwrap();
 
-    for (i, val) in output_slice.iter().enumerate() {
+    for (i, val) in output_slice
+        .iter()
+        .enumerate()
+    {
         assert_eq!(*val, kats[i % width]);
     }
 }

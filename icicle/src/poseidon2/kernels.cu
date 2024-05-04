@@ -8,15 +8,15 @@ namespace poseidon2 {
   {
     S result2 = S::sqr(element);
     switch (alpha) {
-      case 3:
-        return result2 * element;
-      case 5:
-        return S::sqr(result2) * element;
-      case 7:
-        return S::sqr(result2) * result2 * element;
-      case 11:
-        S result8 = S::sqr(S::sqr(result2));
-        return result8 * result2 * element;
+    case 3:
+      return result2 * element;
+    case 5:
+      return S::sqr(result2) * element;
+    case 7:
+      return S::sqr(result2) * result2 * element;
+    case 11:
+      S result8 = S::sqr(S::sqr(result2));
+      return result8 * result2 * element;
     }
   }
 
@@ -78,55 +78,55 @@ namespace poseidon2 {
   {
     S sum;
     switch (T) {
-      case 2:
-        // Matrix circ(2, 1)
-        // [2, 1]
-        // [1, 2]
-        sum = state[0] + state[1];
-        state[0] = state[0] + sum;
-        state[1] = state[1] + sum;
-        break;
-      case 3:
-        // Matrix circ(2, 1, 1)
-        // [2, 1, 1]
-        // [1, 2, 1]
-        // [1, 1, 2]
-        sum = state[0] + state[1] + state[2];
-        state[0] = state[0] + sum;
-        state[1] = state[1] + sum;
-        state[2] = state[2] + sum;
-        break;
-      case 4:
-      case 8:
-      case 12:
-      case 16:
-      case 20:
-      case 24:
-        UNROLL
-        for (int i = 0; i < T; i += 4) {
-          switch (mds) {
-            case MdsType::DEFAULT:
-              mds_light_4x4(&state[i]);
-              break;
-            case MdsType::PLONKY:
-              mds_light_plonky_4x4(&state[i]);
-          }
+    case 2:
+      // Matrix circ(2, 1)
+      // [2, 1]
+      // [1, 2]
+      sum = state[0] + state[1];
+      state[0] = state[0] + sum;
+      state[1] = state[1] + sum;
+      break;
+    case 3:
+      // Matrix circ(2, 1, 1)
+      // [2, 1, 1]
+      // [1, 2, 1]
+      // [1, 1, 2]
+      sum = state[0] + state[1] + state[2];
+      state[0] = state[0] + sum;
+      state[1] = state[1] + sum;
+      state[2] = state[2] + sum;
+      break;
+    case 4:
+    case 8:
+    case 12:
+    case 16:
+    case 20:
+    case 24:
+      UNROLL
+      for (int i = 0; i < T; i += 4) {
+        switch (mds) {
+        case MdsType::DEFAULT:
+          mds_light_4x4(&state[i]);
+          break;
+        case MdsType::PLONKY:
+          mds_light_plonky_4x4(&state[i]);
         }
+      }
 
-        S sums[4] = { state[0], state[1], state[2], state[3] };
-        UNROLL
-        for (int i = 4; i < T; i += 4) {
-          sums[i] = sums[i] + state[i];
-          sums[i + 1] = sums[i + 1] + state[i + 1];
-          sums[i + 2] = sums[i + 2] + state[i + 2];
-          sums[i + 3] = sums[i + 3] + state[i + 3];
-        }
+      S sums[4] = {state[0], state[1], state[2], state[3]};
+      UNROLL
+      for (int i = 4; i < T; i += 4) {
+        sums[i] = sums[i] + state[i];
+        sums[i + 1] = sums[i + 1] + state[i + 1];
+        sums[i + 2] = sums[i + 2] + state[i + 2];
+        sums[i + 3] = sums[i + 3] + state[i + 3];
+      }
 
-        UNROLL
-        for (int i = 0; i < T; i++) {
-          state[i] = state[i] + sums[i % 4];
-        }
-        break;
+      UNROLL
+      for (int i = 0; i < T; i++) {
+        state[i] = state[i] + sums[i % 4];
+      }
+      break;
     }
   }
 
@@ -139,46 +139,50 @@ namespace poseidon2 {
 
     S sum = element;
     switch (T) {
-      case 2:
-        // [2, 1]
-        // [1, 3]
-        sum = sum + state[1];
-        state[0] = element + sum;
-        state[1] = state[1] * state[1] + sum;
-        break;
-      case 3:
-        // [2, 1, 1]
-        // [1, 2, 1]
-        // [1, 1, 3]
-        sum = state[1] + state[2];
-        state[0] = element + sum;
-        state[1] = state[1] + sum;
-        state[2] = state[2] * state[2];
-        state[2] = state[2] + sum;
-        break;
-      case 4:
-      case 8:
-      case 12:
-      case 16:
-      case 20:
-      case 24:
-        UNROLL
-        for (int i = 1; i < T; i++) {
-          sum = sum + state[i];
-        }
+    case 2:
+      // [2, 1]
+      // [1, 3]
+      sum = sum + state[1];
+      state[0] = element + sum;
+      state[1] = state[1] * state[1] + sum;
+      break;
+    case 3:
+      // [2, 1, 1]
+      // [1, 2, 1]
+      // [1, 1, 3]
+      sum = state[1] + state[2];
+      state[0] = element + sum;
+      state[1] = state[1] + sum;
+      state[2] = state[2] * state[2];
+      state[2] = state[2] + sum;
+      break;
+    case 4:
+    case 8:
+    case 12:
+    case 16:
+    case 20:
+    case 24:
+      UNROLL
+      for (int i = 1; i < T; i++) {
+        sum = sum + state[i];
+      }
 
-        state[0] = element * constants.internal_matrix_diag[0] + sum;
-        UNROLL
-        for (int i = 1; i < T; i++) {
-          state[i] = state[i] * constants.internal_matrix_diag[i] + sum;
-        }
-        break;
+      state[0] = element * constants.internal_matrix_diag[0] + sum;
+      UNROLL
+      for (int i = 1; i < T; i++) {
+        state[i] = state[i] * constants.internal_matrix_diag[i] + sum;
+      }
+      break;
     }
   }
 
   template <typename S, int T>
   __global__ void poseidon2_permutation_kernel(
-    S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S> constants, const Poseidon2Config config)
+    S* states,
+    S* states_out,
+    size_t number_of_states,
+    const Poseidon2Constants<S> constants,
+    const Poseidon2Config config)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }
@@ -191,7 +195,7 @@ namespace poseidon2 {
     unsigned int rn;
 
     mds_light<S, T>(state, config.mds_type);
-    
+
     // External rounds
     for (rn = 0; rn < constants.external_rounds / 2; rn++) {
       add_rc<S, T>(state, rn, constants.round_constants);
@@ -237,4 +241,4 @@ namespace poseidon2 {
 
     state[(idx / (T - 1) * T) + (idx % (T - 1)) + 1] = out[idx];
   }
-} // namespace poseidon
+} // namespace poseidon2

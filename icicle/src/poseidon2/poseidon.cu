@@ -6,13 +6,18 @@ namespace poseidon2 {
   static int poseidon_block_size = 128;
 
   template <typename S, int T>
-  int poseidon_number_of_blocks(size_t number_of_states) {
+  int poseidon_number_of_blocks(size_t number_of_states)
+  {
     return number_of_states / poseidon_block_size + static_cast<bool>(number_of_states % poseidon_block_size);
   }
 
   template <typename S, int T>
-  cudaError_t
-  permute_many(S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S>& constants, const Poseidon2Config& config)
+  cudaError_t permute_many(
+    S* states,
+    S* states_out,
+    size_t number_of_states,
+    const Poseidon2Constants<S>& constants,
+    const Poseidon2Config& config)
   {
     cudaStream_t& stream = config.ctx.stream;
     poseidon2_permutation_kernel<S, T>
@@ -24,7 +29,11 @@ namespace poseidon2 {
 
   template <typename S, int T>
   cudaError_t poseidon2_hash(
-    S* states, S* output, size_t number_of_states, const Poseidon2Constants<S>& constants, const Poseidon2Config& config)
+    S* states,
+    S* output,
+    size_t number_of_states,
+    const Poseidon2Constants<S>& constants,
+    const Poseidon2Config& config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -48,15 +57,13 @@ namespace poseidon2 {
         CHK_IF_RETURN(cudaMallocAsync(&output_device, number_of_states * sizeof(S), stream))
       }
 
-      get_hash_results<S, T>
-        <<<poseidon_number_of_blocks<S, T>(number_of_states), poseidon_block_size, 0, stream>>>(
-          d_states, number_of_states, config.output_index, output_device);
+      get_hash_results<S, T><<<poseidon_number_of_blocks<S, T>(number_of_states), poseidon_block_size, 0, stream>>>(
+        d_states, number_of_states, config.output_index, output_device);
       CHK_IF_RETURN(cudaPeekAtLastError());
 
       if (config.loop_state) {
-        copy_recursive<S, T>
-          <<<poseidon_number_of_blocks<S, T>(number_of_states), poseidon_block_size, 0, stream>>>(
-            d_states, number_of_states, config.output_index, output_device);
+        copy_recursive<S, T><<<poseidon_number_of_blocks<S, T>(number_of_states), poseidon_block_size, 0, stream>>>(
+          d_states, number_of_states, config.output_index, output_device);
         CHK_IF_RETURN(cudaPeekAtLastError());
       }
 
@@ -72,4 +79,4 @@ namespace poseidon2 {
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
     return CHK_LAST();
   }
-} // namespace poseidon
+} // namespace poseidon2

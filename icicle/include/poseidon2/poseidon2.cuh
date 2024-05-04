@@ -19,10 +19,7 @@ namespace poseidon2 {
    */
   const int EXTERNAL_ROUNDS_DEFAULT = 8;
 
-  enum MdsType {
-    DEFAULT,
-    PLONKY
-  };
+  enum MdsType { DEFAULT, PLONKY };
 
   enum PoseidonMode {
     COMPRESSION,
@@ -58,11 +55,12 @@ namespace poseidon2 {
     PoseidonMode mode;
     MdsType mds_type;
     int output_index;
-    bool loop_state;            /**< If true, hash results will also be copied in the input pointer in aligned format */
-    bool is_async; /**< Whether to run the Poseidon2 asynchronously. If set to `true`, the poseidon_hash function will be
-                    *   non-blocking and you'd need to synchronize it explicitly by running
-                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the poseidon_hash
-                    *   function will block the current CPU thread. */
+    bool loop_state; /**< If true, hash results will also be copied in the input pointer in aligned format */
+    bool
+      is_async; /**< Whether to run the Poseidon2 asynchronously. If set to `true`, the poseidon_hash function will be
+                 *   non-blocking and you'd need to synchronize it explicitly by running
+                 *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the poseidon_hash
+                 *   function will block the current CPU thread. */
   };
 
   static Poseidon2Config default_poseidon2_config(
@@ -74,7 +72,7 @@ namespace poseidon2 {
       false, // are_outputs_on_device
       PoseidonMode::COMPRESSION,
       MdsType::DEFAULT,
-      1, // output_index
+      1,     // output_index
       false, // loop_state
       false, // is_async
     };
@@ -111,7 +109,11 @@ namespace poseidon2 {
    */
   template <typename S, int T>
   cudaError_t poseidon2_hash(
-    S* states, S* output, size_t number_of_states, const Poseidon2Constants<S>& constants, const Poseidon2Config& config);
+    S* states,
+    S* output,
+    size_t number_of_states,
+    const Poseidon2Constants<S>& constants,
+    const Poseidon2Config& config);
 } // namespace poseidon2
 
 #endif

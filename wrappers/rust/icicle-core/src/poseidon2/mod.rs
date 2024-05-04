@@ -40,7 +40,11 @@ pub struct Poseidon2Constants<'a, F: FieldImpl> {
 
 impl<F: FieldImpl> std::fmt::Debug for Poseidon2Constants<'_, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}, {}, {}, {}", self.width, self.alpha, self.internal_rounds, self.external_rounds)
+        write!(
+            f,
+            "{}, {}, {}, {}",
+            self.width, self.alpha, self.internal_rounds, self.external_rounds
+        )
     }
 }
 
@@ -231,7 +235,9 @@ macro_rules! impl_poseidon2 {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon2::{$field, $field_config, CudaError, DeviceContext, Poseidon2Config, Poseidon2Constants};
+            use crate::poseidon2::{
+                $field, $field_config, CudaError, DeviceContext, Poseidon2Config, Poseidon2Constants,
+            };
             extern "C" {
                 #[link_name = concat!($field_prefix, "_create_optimized_poseidon2_constants_cuda")]
                 pub(crate) fn _create_optimized_constants(
@@ -299,8 +305,8 @@ macro_rules! impl_poseidon2 {
                     let mut constants = MaybeUninit::<Poseidon2Constants<'a, $field>>::uninit();
                     let err = $field_prefix_ident::_load_optimized_constants(width, ctx, constants.as_mut_ptr()).wrap();
 
-                    println!("Err: {:?}", err );
-                    println!("Val: {:?}", constants.assume_init_read() );
+                    println!("Err: {:?}", err);
+                    println!("Val: {:?}", constants.assume_init_read());
                     let t: Result<Poseidon2Constants<$field>, &str> = Ok(constants.assume_init_read());
                     println!("t.is_err = {}", t.is_err());
                     // println!("Ok(val) = {:?}", t);
