@@ -8,6 +8,7 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::DeviceSlice;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
+use hex::FromHex;
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -80,6 +81,12 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
             limbs[i] = u32::from_le_bytes(chunk_array);
         }
         Self::from(limbs)
+    }
+
+    fn from_hex(s: &str) -> Self {
+        let mut bytes = Vec::from_hex(&s[2..]).expect("Invalid hex string");
+        bytes.reverse();
+        Self::from_bytes_le(&bytes)
     }
 
     fn zero() -> Self {
