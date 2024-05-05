@@ -26,6 +26,42 @@ module.exports = {
         },
         {
           type: "category",
+          label: "Primitives",
+          link: {
+            type: `doc`,
+            id: 'icicle/primitives/overview',
+          },
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              label: "MSM",
+              id: "icicle/primitives/msm",
+            },
+            {
+              type: "doc",
+              label: "NTT",
+              id: "icicle/primitives/ntt",
+            },
+            {
+              type: "doc",
+              label: "Poseidon Hash",
+              id: "icicle/primitives/poseidon",
+            },
+          ],
+        },
+        {
+          type: "doc",
+          label: "Polynomials",
+          id: "icicle/polynomials/overview",
+        },
+        {
+          type: "doc",
+          label: "Multi GPU Support",
+          id: "icicle/multi-gpu",
+        },
+        {
+          type: "category",
           label: "Golang bindings",
           link: {
             type: `doc`,
@@ -124,42 +160,6 @@ module.exports = {
           ],
         },
         {
-          type: "category",
-          label: "Primitives",
-          link: {
-            type: `doc`,
-            id: 'icicle/primitives/overview',
-          },
-          collapsed: true,
-          items: [
-            {
-              type: "doc",
-              label: "MSM",
-              id: "icicle/primitives/msm",
-            },
-            {
-              type: "doc",
-              label: "NTT",
-              id: "icicle/primitives/ntt",
-            },
-            {
-              type: "doc",
-              label: "Poseidon Hash",
-              id: "icicle/primitives/poseidon",
-            },
-          ],
-        },
-        {
-          type: "doc",
-          label: "Polynomials",
-          id: "icicle/polynomials/overview",
-        },
-        {
-          type: "doc",
-          label: "Multi GPU Support",
-          id: "icicle/multi-gpu",
-        },
-        {
           type: "doc",
           label: "Google Colab Instructions",
           id: "icicle/colab-instructions",
@@ -190,6 +190,7 @@ module.exports = {
       type: "category",
       label: "Additional Resources",
       collapsed: false,
+      collapsible: false,
       items: [
         {
           type: "link",

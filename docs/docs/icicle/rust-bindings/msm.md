@@ -1,9 +1,5 @@
 # MSM
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
-
 ## Example
 
 ```rust
@@ -84,7 +80,7 @@ pub struct MSMConfig<'a> {
 ```
 
 - **`ctx: DeviceContext`**: Specifies the device context, device id and the CUDA stream for asynchronous execution.
-- **`point_size: i32`**: 
+- **`point_size: i32`**:
 - **`precompute_factor: i32`**: Determines the number of extra points to pre-compute for each point, affecting memory footprint and performance.
 - **`c: i32`**: The "window bitsize," a parameter controlling the computational complexity and memory footprint of the MSM operation.
 - **`bitsize: i32`**: The number of bits of the largest scalar, typically equal to the bit size of the scalar field.
@@ -120,7 +116,6 @@ msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
 
 You may reference the rust code [here](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961030e4e12bf1c9a78a2dadb2518/wrappers/rust/icicle-core/src/msm/mod.rs#L54).
 
-
 ## How do I toggle between MSM modes?
 
 Toggling between MSM modes occurs automatically based on the number of results you are expecting from the `msm::msm` function. If you are expecting an array of `msm_results`, ICICLE will automatically split `scalars` and `points` into equal parts and run them as multiple MSMs in parallel.
@@ -135,7 +130,6 @@ msm::msm(&scalars, &points, &cfg, &mut msm_result).unwrap();
 ```
 
 In the example above we allocate a single expected result which the MSM method will interpret as `batch_size=1` and run a single MSM.
-
 
 In the next example, we are expecting 10 results which sets `batch_size=10` and runs 10 MSMs in batch mode.
 
@@ -152,7 +146,7 @@ Here is a [reference](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961
 
 ## Support for G2 group
 
-MSM also supports G2 group. 
+MSM also supports G2 group.
 
 Using MSM in G2 requires a G2 config, and of course your Points should also be G2 Points.
 

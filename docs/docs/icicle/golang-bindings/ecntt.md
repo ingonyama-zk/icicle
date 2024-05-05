@@ -1,9 +1,5 @@
 # ECNTT
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn254`
-
 ## ECNTT Method
 
 The `ECNtt[T any]()` function performs the Elliptic Curve Number Theoretic Transform (EC-NTT) on the input points slice, using the provided dir (direction), cfg (configuration), and stores the results in the results slice.
@@ -12,13 +8,12 @@ The `ECNtt[T any]()` function performs the Elliptic Curve Number Theoretic Trans
 func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError
 ```
 
-### Parameters:
+### Parameters
 
 - **`points`**: A slice of elliptic curve points (in projective coordinates) that will be transformed. The slice can be stored on the host or the device, as indicated by the `core.HostOrDeviceSlice` type.
 - **`dir`**: The direction of the EC-NTT transform, either `core.KForward` or `core.KInverse`.
 - **`cfg`**: A pointer to an `NTTConfig` object, containing configuration options for the NTT operation.
 - **`results`**: A slice that will store the transformed elliptic curve points (in projective coordinates). The slice can be stored on the host or the device, as indicated by the `core.HostOrDeviceSlice` type.
-
 
 ### Return Value
 

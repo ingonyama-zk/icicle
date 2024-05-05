@@ -2,14 +2,14 @@
 
 ICICLE Core is a library written in C++/CUDA. All the ICICLE primitives are implemented within ICICLE Core.
 
-The Core is split into logical modules that can be compiled into static libraries using different [strategies](#compilation-strategies). You can then [link](#linking) these libraries with your C++ project or write your own [bindings](#writing-new-bindings-for-icicle) for other programming languages. If you want to use ICICLE with existing bindings please refer to [Rust](/icicle/rust-bindings) / [Golang](/icicle/golang-bindings).
+The Core is split into logical modules that can be compiled into static libraries using different [strategies](#compilation-strategies). You can then [link](#linking) these libraries with your C++ project or write your own [bindings](#writing-new-bindings-for-icicle) for other programming languages. If you want to use ICICLE with existing bindings please refer to the [Rust](/icicle/rust-bindings) or [Golang](/icicle/golang-bindings) bindings documentation.
 
 ## Compilation strategies
 
-Most of the codebase is curve/field agnostic, which means it can be compiled for different curves and fields. When you build ICICLE Core you choose a single curve or field. If you need multiple curves or fields  - you just compile ICICLE into multiple static libraries. It's that simple. Currently, the following choices are supported:
+Most of the codebase is curve/field agnostic, which means it can be compiled for different curves and fields. When you build ICICLE Core you choose a single curve or field. If you need multiple curves or fields, you compile ICICLE ocne per curve or field that is needed. It's that simple. Currently, the following choices are supported:
 
- - [Field mode](#compiling-for-a-field) - used for STARK fields like BabyBear / Mersenne / Goldilocks. Includes field arithmetic, NTT, Poseidon, Extension fields and other primitives.
- - [Curve mode](#compiling-for-a-curve) - used for SNARK curves like BN254/ BLS curves / Grumpkin / etc. Curve mode is built upon field mode, so it includes everything that field does. It also includes curve operations / MSM / ECNTT / G2 and other curve-related primitives.
+- [Field mode](#compiling-for-a-field) - used for STARK fields like BabyBear / Mersenne / Goldilocks. Includes field arithmetic, NTT, Poseidon, Extension fields and other primitives.
+- [Curve mode](#compiling-for-a-curve) - used for SNARK curves like BN254 / BLS curves / Grumpkin / etc. Curve mode is built upon field mode, so it includes everything that field does It also includes curve operations / MSM / ECNTT / G2 and other curve-related primitives.
 
 :::info
 
@@ -20,14 +20,17 @@ If you only want to use curve's scalar/base field, you still need to go with a c
 ### Compiling for a field
 
 ICICLE supports the following STARK fields:
- - [BabyBear](https://eprint.iacr.org/2023/824.pdf)
+
+- [BabyBear](https://eprint.iacr.org/2023/824.pdf)
+- [Stark252](https://docs.starknet.io/documentation/architecture_and_concepts/Cryptography/p-value/)
 
 Field mode includes:
- - [Field arithmetic](https://github.com/ingonyama-zk/icicle/blob/main/icicle/include/fields/field.cuh) - field multiplication, addition, subtraction
- - [NTT](icicle/primitives/ntt) - FFT / iFFT
- - [Poseidon Hash](icicle/primitives/poseidon)
- - [Vector operations](https://github.com/ingonyama-zk/icicle/blob/main/icicle/include/vec_ops/vec_ops.cuh)
- - [Polynomial](#) - structs and methods to work with polynomials
+
+- [Field arithmetic](https://github.com/ingonyama-zk/icicle/blob/main/icicle/include/fields/field.cuh) - field multiplication, addition, subtraction
+- [NTT](icicle/primitives/ntt) - FFT / iFFT
+- [Poseidon Hash](icicle/primitives/poseidon)
+- [Vector operations](https://github.com/ingonyama-zk/icicle/blob/main/icicle/include/vec_ops/vec_ops.cuh)
+- [Polynomial](polynomials/overview) - structs and methods to work with polynomials
 
 You can compile ICICLE for a STARK field using this command:
 
@@ -38,23 +41,22 @@ cmake -DFIELD=<FIELD> -S . -B build
 cmake --build build -j
 ```
 
-Icicle Supports the following `<FIELD>` FIELDS:
-- `babybear`
-
 This command will output `libingo_field_<FIELD>.a` into `build/lib`.
 
 ### Compiling for a curve
 
 ICICLE supports the following SNARK curves:
- - [BN254](https://neuromancer.sk/std/bn/bn254)
- - [BLS12-377](https://neuromancer.sk/std/bls/BLS12-377)
- - [BLS12-381](https://neuromancer.sk/std/bls/BLS12-381)
- - [BW6-761](https://eprint.iacr.org/2020/351)
- - Grumpkin
+
+- [BN254](https://neuromancer.sk/std/bn/bn254)
+- [BLS12-377](https://neuromancer.sk/std/bls/BLS12-377)
+- [BLS12-381](https://neuromancer.sk/std/bls/BLS12-381)
+- [BW6-761](https://eprint.iacr.org/2020/351)
+- Grumpkin
 
 Curve mode includes everything you can find in field mode with addition of:
- - [MSM](icicle/primitives/msm) - MSM / Batched MSM
- - [ECNTT](#)
+
+- [MSM](icicle/primitives/msm) - MSM / Batched MSM
+- [ECNTT](#)
 
 :::note
 
@@ -81,7 +83,7 @@ There exist multiple options that allow you to customize your build or enable ad
 
 #### EXT_FIELD
 
-Used only in a [field mode](#compiling-for-a-field) to add Extension field into a build. Adds NTT for the extension field.
+Used only in [field mode](#compiling-for-a-field) to add an Extension field. Adds NTT for the extension field.
 
 Default: `OFF`
 
@@ -89,7 +91,7 @@ Usage: `-DEXT_FIELD=ON`
 
 #### G2
 
-Used only in a [curve mode](#compiling-for-a-curve) to add G2 definitions into a build. Also adds G2 MSM.
+Used only in [curve mode](#compiling-for-a-curve) to add G2 definitions. Also adds G2 MSM.
 
 Default: `OFF`
 
@@ -97,7 +99,7 @@ Usage: `-DG2=ON`
 
 #### ECNTT
 
-Used only in a [curve mode](#compiling-for-a-curve) to add ECNTT function into a build.
+Used only in [curve mode](#compiling-for-a-curve) to add ECNTT function.
 
 Default: `OFF`
 
@@ -105,7 +107,7 @@ Usage: `-DECNTT=ON`
 
 #### MSM
 
-Used only in a [curve mode](#compiling-for-a-curve) to add MSM function into a build. As MSM takes a lot of time to build, you can disable it with this option to reduce compilation time.
+Used only in [curve mode](#compiling-for-a-curve) to add MSM function. As MSM takes a lot of time to build, you can disable it with this option to reduce compilation time.
 
 Default: `ON`
 
@@ -148,7 +150,6 @@ USAGE: `-DEVMODE=ON`
 To link ICICLE with your project you first need to compile ICICLE with options of your choice. After that you can use CMake `target_link_libraries` to link with the generated static libraries and `target_include_directories` to include ICICLE headers (located in `icicle/include`).
 
 Refer to our [c++ examples](https://github.com/ingonyama-zk/icicle/tree/main/examples/c%2B%2B) for more info. Take a look at this [CMakeLists.txt](https://github.com/ingonyama-zk/icicle/blob/main/examples/c%2B%2B/msm/CMakeLists.txt#L22)
-
 
 ## Writing new bindings for ICICLE
 

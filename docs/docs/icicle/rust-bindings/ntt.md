@@ -1,10 +1,6 @@
 # NTT
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
-
-## Example 
+## Example
 
 ```rust
 use icicle_bn254::curve::{ScalarCfg, ScalarField};
@@ -61,13 +57,12 @@ pub fn ntt<F>(
 
 `ntt:ntt` expects:
 
-- **`input`** - buffer to read the inputs of the NTT from. <br/>
-- **`dir`** - whether to compute forward or inverse NTT. <br/>
-- **`cfg`** - config used to specify extra arguments of the NTT. <br/>
+- **`input`** - buffer to read the inputs of the NTT from.
+- **`dir`** - whether to compute forward or inverse NTT.
+- **`cfg`** - config used to specify extra arguments of the NTT.
 - **`output`** - buffer to write the NTT outputs into. Must be of the same  size as input.
 
 The `input` and `output` buffers can be on device or on host. Being on host means that they will be transferred to device during runtime.
-
 
 ### NTT Config
 
@@ -107,8 +102,7 @@ The `NTTConfig` struct is a configuration object used to specify parameters for 
 
 - **`ntt_algorithm: NttAlgorithm`**: Can be one of `Auto`, `Radix2`, `MixedRadix`.
 `Auto` will select `Radix 2` or `Mixed Radix` algorithm based on heuristics.
-`Radix2` and `MixedRadix` will force the use of an algorithm regardless of the input size or other considerations. You should use one of these options when you know for sure that you want to 
-
+`Radix2` and `MixedRadix` will force the use of an algorithm regardless of the input size or other considerations. You should use one of these options when you know for sure that you want to
 
 #### Usage
 
@@ -133,7 +127,6 @@ let custom_config = NTTConfig {
     ntt_algorithm: NttAlgorithm::MixedRadix,
 };
 ```
-
 
 ### Modes
 
@@ -205,4 +198,3 @@ where
 #### Returns
 
 The function returns an `IcicleResult<()>`, which represents the result of the operation. If the operation is successful, the function returns `Ok(())`, otherwise it returns an error.
-

@@ -12,7 +12,7 @@ Rust bindings allow you to use ICICLE as a rust library.
 
 Simply add the following to your `Cargo.toml`.
 
-```
+```toml
 # GPU Icicle integration
 icicle-cuda-runtime = { git = "https://github.com/ingonyama-zk/icicle.git" }
 icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git" }
@@ -25,7 +25,7 @@ If you wish to point to a specific ICICLE branch add `branch = "<name_of_branch>
 
 When you build your project ICICLE will be built as part of the build command.
 
-# How do the rust bindings work?
+## How do the rust bindings work?
 
 The rust bindings are just rust wrappers for ICICLE Core static libraries which can be compiled. We integrate the compilation of the static libraries into rusts toolchain to make usage seamless and easy. This is achieved by [extending rusts build command](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-curves/icicle-bn254/build.rs).
 
@@ -55,3 +55,33 @@ fn main() {
     println!("cargo:rustc-link-lib=cudart");
 }
 ```
+
+## Supported curves, fields and operations
+
+### Supported curves and operations
+
+| Operation\Curve | bn254 | bls12_377 | bls12_381 | bw6-761 | grumpkin |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| MSM | ✅ | ✅ | ✅ | ✅ | ✅ |
+| G2  | ✅ | ✅ | ✅ | ✅ | ❌ |
+| NTT | ✅ | ✅ | ✅ | ✅ | ❌ |
+| ECNTT | ✅ | ✅ | ✅ | ✅ | ❌ |
+| VecOps | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Polynomials | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Poseidon | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Merkle Tree | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### Supported fields and operations
+
+| Operation\Field | babybear | stark252 |
+| --- | :---: | :---: |
+| VecOps | ✅ | ✅ |
+| Polynomials | ✅ | ✅ |
+| NTT | ✅ | ✅ |
+| Extension Field | ✅ | ❌ |
+
+### Supported hashes
+
+| Hash | Sizes |
+| --- | :---: |
+| Keccak | 256, 512 |

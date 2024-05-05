@@ -11,24 +11,29 @@ A_k = \sum_{n=0}^{N-1} a_n \cdot \omega^{nk} \mod p
 $$
 
 where:
+
 - $N$ is the size of the input sequence and is a power of 2,
 - $p$ is a prime number such that $p = kN + 1$ for some integer $k$, ensuring that $p$ supports the existence of $N$th roots of unity,
 - $\omega$ is a primitive $N$th root of unity modulo $p$, meaning $\omega^N \equiv 1 \mod p$ and no smaller positive power of $\omega$ is congruent to 1 modulo $p$,
 - $k$ ranges from 0 to $N-1$, and it indexes the output sequence.
 
-The NTT is particularly useful because it enables efficient polynomial multiplication under modulo arithmetic, crucial for algorithms in cryptographic protocols, and other areas requiring fast modular arithmetic operations. 
+NTT is particularly useful because it enables efficient polynomial multiplication under modulo arithmetic, crucial for algorithms in cryptographic protocols and other areas requiring fast modular arithmetic operations.
 
 There exists also INTT which is the inverse operation of NTT. INTT can take as input an output sequence of integers from an NTT and reconstruct the original sequence.
 
-# Using NTT
+## Using NTT
 
-### Supported curves
+### Supported fields
 
-NTT supports the following curves:
+NTT supports the following fields:
 
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
+`babybear`, `stark252`
 
-## Supported Bindings
+And the scalar field of the following curves:
+
+`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
+
+### Supported Bindings
 
 - [Golang](../golang-bindings/ntt.md)
 - [Rust](../rust-bindings/ntt.md)
@@ -61,19 +66,17 @@ Choosing an algorithm is heavily dependent on your use case. For example Cooley-
 
 NTT also supports two different modes `Batch NTT` and `Single NTT`
 
-Batch NTT allows you to run many NTTs with a single API call, Single MSM will launch a single MSM computation.
-
 Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
 
-**Single NTT Mode**
+#### Single NTT
 
-- Choose this mode when your application requires processing individual NTT operations in isolation.
+Single NTT will launch a single NTT computation.
 
-**Batch NTT Mode**
+Choose this mode when your application requires processing individual NTT operations in isolation.
 
-- Batch NTT mode can significantly reduce read/write as well as computation overhead by executing multiple NTT operations in parallel.
+#### Batch NTT Mode
 
-- Batch mode may also offer better utilization of computational resources (memory and compute).
+Batch NTT allows you to run many NTTs with a single API call. Batch NTT mode can significantly reduce read/write times as well as computation overhead by executing multiple NTT operations in parallel. Batch mode may also offer better utilization of computational resources (memory and compute).
 
 ## Supported algorithms
 
@@ -90,8 +93,8 @@ At its core, the Radix-2 NTT algorithm divides the problem into smaller sub-prob
    The algorithm recursively divides the input sequence into smaller sequences. At each step, it separates the sequence into even-indexed and odd-indexed elements, forming two subsequences that are then processed independently.
 
 3. **Butterfly Operations:**
-   The core computational element of the Radix-2 NTT is the "butterfly" operation, which combines pairs of elements from the sequences obtained in the decomposition step. 
-   
+   The core computational element of the Radix-2 NTT is the "butterfly" operation, which combines pairs of elements from the sequences obtained in the decomposition step.
+
    Each butterfly operation involves multiplication by a "twiddle factor," which is a root of unity in the finite field, and addition or subtraction of the results, all performed modulo the prime modulus.
 
    $$
@@ -108,7 +111,6 @@ At its core, the Radix-2 NTT algorithm divides the problem into smaller sub-prob
 
    $k$ - The index of the current operation within the butterfly or the transform stage
 
-
    The twiddle factors are precomputed to save runtime and improve performance.
 
 4. **Bit-Reversal Permutation:**
@@ -116,7 +118,7 @@ At its core, the Radix-2 NTT algorithm divides the problem into smaller sub-prob
 
 ### Mixed Radix
 
-The Mixed Radix NTT algorithm extends the concepts of the Radix-2 algorithm by allowing the decomposition of the input sequence based on various factors of its length. Specifically ICICLEs implementation splits the input into blocks of sizes 16,32,64 compared to radix2 which is always splitting such that we end with NTT of size 2. This approach offers enhanced flexibility and efficiency, especially for input sizes that are composite numbers, by leveraging the "divide and conquer" strategy across multiple radixes.
+The Mixed Radix NTT algorithm extends the concepts of the Radix-2 algorithm by allowing the decomposition of the input sequence based on various factors of its length. Specifically ICICLEs implementation splits the input into blocks of sizes 16, 32, or 64 compared to radix2 which is always splitting such that we end with NTT of size 2. This approach offers enhanced flexibility and efficiency, especially for input sizes that are composite numbers, by leveraging the "divide and conquer" strategy across multiple radices.
 
 The NTT blocks in Mixed Radix are implemented more efficiently based on winograd NTT but also optimized memory and register usage is better compared to Radix-2.
 
@@ -126,11 +128,11 @@ Mixed Radix can reduce the number of stages required to compute for large inputs
    The input to the Mixed Radix NTT is a sequence of integers $a_0, a_1, \ldots, a_{N-1}$, where $N$ is not strictly required to be a power of two. Instead, $N$ can be any composite number, ideally factorized into primes or powers of primes.
 
 2. **Factorization and Decomposition:**
-   Unlike the Radix-2 algorithm, which strictly divides the computational problem into halves, the Mixed Radix NTT algorithm implements a flexible decomposition approach which isn't limited to prime factorization. 
-   
+   Unlike the Radix-2 algorithm, which strictly divides the computational problem into halves, the Mixed Radix NTT algorithm implements a flexible decomposition approach which isn't limited to prime factorization.
+
    For example, an NTT of size 256 can be decomposed into two stages of $16 \times \text{NTT}_{16}$, leveraging a composite factorization strategy rather than decomposing into eight stages of $\text{NTT}_{2}$. This exemplifies the use of composite factors (in this case, $256 = 16 \times 16$) to apply smaller NTT transforms, optimizing computational efficiency by adapting the decomposition strategy to the specific structure of $N$.
 
-3. **Butterfly Operations with Multiple Radixes:**
+3. **Butterfly Operations with Multiple Radices:**
    The Mixed Radix algorithm utilizes butterfly operations for various radix sizes. Each sub-transform involves specific butterfly operations characterized by multiplication with twiddle factors appropriate for the radix in question.
 
    The generalized butterfly operation for a radix-$r$ element can be expressed as:
@@ -139,7 +141,15 @@ Mixed Radix can reduce the number of stages required to compute for large inputs
    X_{k,r} = \sum_{j=0}^{r-1} (A_{j,k} \cdot W^{jk}) \mod p
    $$
 
-   where $X_{k,r}$ is the output of the $radix-r$ butterfly operation for the $k-th$ set of inputs, $A_{j,k}$ represents the $j-th$ input element for the $k-th$ operation, $W$ is the twiddle factor, and $p$ is the prime modulus.
+   where:
+
+   $X_{k,r}$ - is the output of the $radix-r$ butterfly operation for the $k-th$ set of inputs
+
+   $A_{j,k}$ - represents the $j-th$ input element for the $k-th$ operation
+
+   $W$ - is the twiddle factor
+
+   $p$ - is the prime modulus
 
 4. **Recombination and Reordering:**
    After applying the appropriate butterfly operations across all decomposition levels, the Mixed Radix algorithm recombines the results into a single output sequence. Due to the varied sizes of the sub-transforms, a more complex reordering process may be required compared to Radix-2. This involves digit-reversal permutations to ensure that the final output sequence is correctly ordered.
@@ -154,6 +164,6 @@ Mixed radix on the other hand works better for larger NTTs with larger input siz
 
 Performance really depends on logn size, batch size, ordering, inverse, coset, coeff-field and which GPU you are using.
 
-For this reason we implemented our [heuristic auto-selection](https://github.com/ingonyama-zk/icicle/blob/774250926c00ffe84548bc7dd97aea5227afed7e/icicle/appUtils/ntt/ntt.cu#L474) which should choose the most efficient algorithm in most cases. 
+For this reason we implemented our [heuristic auto-selection](https://github.com/ingonyama-zk/icicle/blob/main/icicle/src/ntt/ntt.cu#L573) which should choose the most efficient algorithm in most cases.
 
 We still recommend you benchmark for your specific use case if you think a different configuration would yield better results.

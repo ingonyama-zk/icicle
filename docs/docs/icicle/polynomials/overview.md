@@ -7,6 +7,7 @@ The Polynomial API offers a robust framework for polynomial operations within a 
 ## Key Features
 
 ### Backend Agnostic Architecture
+
 Our API is structured to be independent of any specific computational backend. While a CUDA backend is currently implemented, the architecture facilitates easy integration of additional backends. This capability allows users to perform polynomial operations without the need to tailor their code to specific hardware, enhancing code portability and scalability.
 
 ### Templating in the Polynomial API
@@ -27,15 +28,19 @@ In this template:
 - **`Image`**: Defines the type of the output values of the polynomial. This is typically the same as the coefficients.
 
 #### Default instantiation
+
 ```cpp
 extern template class Polynomial<scalar_t>;
 ```
 
 #### Extended use cases
+
 The templated nature of the Polynomial API also supports more complex scenarios. For example, coefficients and images could be points on an elliptic curve (EC points), which are useful in cryptographic applications and advanced algebraic structures. This approach allows the API to be extended easily to support new algebraic constructions without modifying the core implementation.
 
 ### Supported Operations
+
 The Polynomial class encapsulates a polynomial, providing a variety of operations:
+
 - **Construction**: Create polynomials from coefficients or evaluations on roots-of-unity domains.
 - **Arithmetic Operations**: Perform addition, subtraction, multiplication, and division.
 - **Evaluation**: Directly evaluate polynomials at specific points or across a domain.
@@ -47,6 +52,7 @@ The Polynomial class encapsulates a polynomial, providing a variety of operation
 This section outlines how to use the Polynomial API in C++. Bindings for Rust and Go are detailed under the Bindings sections.
 
 ### Backend Initialization
+
 Initialization with an appropriate factory is required to configure the computational context and backend.
 
 ```cpp
@@ -57,10 +63,12 @@ Initialization with an appropriate factory is required to configure the computat
 Polynomial::initialize(std::make_shared<CUDAPolynomialFactory>());
 ```
 
-:::note Icicle is built to a library per field/curve. Initialization must be done per library. That is, applications linking to multiple curves/fields should do it per curve/field.
+:::note
+Initialization of a factory must be done per linked curve or field.
 :::
 
 ### Construction
+
 Polynomials can be constructed from coefficients, from evaluations on roots-of-unity domains, or by cloning existing polynomials.
 
 ```cpp
@@ -80,10 +88,11 @@ auto p_cloned = p.clone(); // p_cloned and p do not share memory
 ```
 
 :::note
-The coefficients or evaluations may be allocated either on host or device memory. In both cases the memory is copied to backend device.
+The coefficients or evaluations may be allocated either on host or device memory. In both cases the memory is copied to the backend device.
 :::
 
 ### Arithmetic
+
 Constructed polynomials can be used for various arithmetic operations:
 
 ```cpp
@@ -105,7 +114,8 @@ Polynomial operator%(const Polynomial& rhs) const; // returns remainder R(x)
 Polynomial divide_by_vanishing_polynomial(uint64_t degree) const; // sdivision by the vanishing polynomial V(x)=X^N-1
 ```
 
-#### Example:
+#### Example
+
 Given polynomials A(x),B(x),C(x) and V(x) the vanishing polynomial.
 
 $$
@@ -117,6 +127,7 @@ auto H = (A*B-C).divide_by_vanishing_polynomial(N);
 ```
 
 ### Evaluation
+
 Evaluate polynomials at arbitrary domain points or across a domain.
 
 ```cpp
@@ -138,7 +149,9 @@ auto evaluations = std::make_unique<scalar_t[]>(domain_size); // can be device m
 f.evaluate_on_domain(domain, domain_size, evaluations);
 ```
 
-:::note For special domains such as roots of unity this method is not the most efficient for two reasons:
+:::note
+For special domains such as roots of unity, this method is not the most efficient for two reasons:
+
 - Need to build the domain of size N.
 - The implementation is not trying to identify this special domain.
 
@@ -146,11 +159,12 @@ Therefore the computation is typically $O(n^2)$ rather than $O(nlogn)$.
 See the 'device views' section for more details.
 :::
 
-
 ### Manipulations
+
 Beyond arithmetic, the API supports efficient polynomial manipulations:
 
 #### Monomials
+
 ```cpp
 // Monomial operations
 Polynomial& add_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
@@ -160,31 +174,35 @@ Polynomial& sub_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
 The ability to add or subtract monomials directly and in-place is an efficient way to manipualte polynomials.
 
 Example:
+
 ```cpp
 f.add_monomial_in_place(scalar_t::from(5)); // f(x) += 5
 f.sub_monomial_in_place(scalar_t::from(3), 8); // f(x) -= 3x^8
 ```
 
 #### Computing the degree of a Polynomial
+
 ```cpp
 // Degree computation
 int64_t degree();
 ```
 
 The degree of a polynomial is a fundamental characteristic that describes the highest power of the variable in the polynomial expression with a non-zero coefficient.
-The `degree()` function in the API returns the degree of the polynomial, corresponding to the highest exponent with a non-zero coefficient. 
+The `degree()` function in the API returns the degree of the polynomial, corresponding to the highest exponent with a non-zero coefficient.
 
 - For the polynomial $f(x) = x^5 + 2x^3 + 4$, the degree is 5 because the highest power of $x$ with a non-zero coefficient is 5.
 - For a scalar value such as a constant term (e.g., $f(x) = 7$, the degree is considered 0, as it corresponds to $x^0$.
 - The degree of the zero polynomial, $f(x) = 0$, where there are no non-zero coefficients, is defined as -1. This special case often represents an "empty" or undefined state in many mathematical contexts.
 
 Example:
+
 ```cpp
 auto f = /*some expression*/;
 auto degree_of_f = f.degree();
 ```
 
 #### Slicing
+
 ```cpp
 // Slicing and selecting even or odd components.
 Polynomial slice(uint64_t offset, uint64_t stride, uint64_t size = 0 /*0 means take all elements*/);
@@ -195,6 +213,7 @@ Polynomial odd();
 The Polynomial API provides methods for slicing polynomials and selecting specific components, such as even or odd indexed terms. Slicing allows extracting specific sections of a polynomial based on an offset, stride, and size.
 
 The following examples demonstrate folding a polynomial's even and odd parts and arbitrary slicing;
+
 ```cpp
 // folding a polynomials even and odd parts with randomness
 auto x = rand();
@@ -207,13 +226,15 @@ auto first_quarter = f.slice(0 /*offset*/, 1 /*stride*/, f.degree()/4 /*size*/);
 ```
 
 ### Memory access (copy/view)
-Access to the polynomial's internal state can be vital for operations like commitment schemes or when more efficient custom operations are necessary. This can be done in one of two ways:
-- **Copy** the coefficients or evaluations to user allocated memory or
-- **View** into the device memory without copying.
 
-#### Copy
-Copy the polynomial coefficients to either host or device allocated memory.
-:::note copying to host memory is backend agnostic while copying to device memory requires the memory to be allocated on the corresponding backend.
+Access to the polynomial's internal state can be vital for operations like commitment schemes or when more efficient custom operations are necessary. This can be done either by copying or viewing the polynomial
+
+#### Copying
+
+Copies the polynomial coefficients to either host or device allocated memory.
+
+:::note
+Copying to host memory is backend agnostic while copying to device memory requires the memory to be allocated on the corresponding backend.
 :::
 
 ```cpp
@@ -222,6 +243,7 @@ uint64_t copy_coeffs(Coeff* coeffs, uint64_t start_idx, uint64_t end_idx) const;
 ```
 
 Example:
+
 ```cpp
 auto coeffs_device = /*allocate CUDA or host memory*/
 f.copy_coeffs(coeffs_device, 0/*start*/, f.degree());
@@ -232,7 +254,8 @@ auto rv = msm::MSM(coeffs_device, points, msm_size, cfg, results);
 ```
 
 #### Views
-The Polynomial API supports efficient data handling through the use of memory views. These views provide direct access to the polynomial's internal state, such as coefficients or evaluations, without the need to copy data. This feature is particularly useful for operations that require direct access to device memory, enhancing both performance and memory efficiency.
+
+The Polynomial API supports efficient data handling through the use of memory views. These views provide direct access to the polynomial's internal state, such as coefficients or evaluations without the need to copy data. This feature is particularly useful for operations that require direct access to device memory, enhancing both performance and memory efficiency.
 
 ##### What is a Memory View?
 
@@ -268,6 +291,7 @@ gpu_accelerated_function(coeffs_view.get(),...);
 ```
 
 ##### Integrity-Pointer: Managing Memory Views
+
 Within the Polynomial API, memory views are managed through a specialized tool called the Integrity-Pointer. This pointer type is designed to safeguard operations by monitoring the validity of the memory it points to. It can detect if the memory has been modified or released, thereby preventing unsafe access to stale or non-existent data.
 The Integrity-Pointer not only acts as a regular pointer but also provides additional functionality to ensure the integrity of the data it references. Here are its key features:
 
@@ -305,8 +329,10 @@ if (coeff_view.isValid()) {
 ```
 
 #### Evaluations View: Accessing Polynomial Evaluations Efficiently
+
 The Polynomial API offers a specialized method, `get_rou_evaluations_view(...)`, which facilitates direct access to the evaluations of a polynomial. This method is particularly useful for scenarios where polynomial evaluations need to be accessed frequently or manipulated externally without the overhead of copying data.
 This method provides a memory view into the device memory where polynomial evaluations are stored. It allows for efficient interpolation on larger domains, leveraging the raw evaluations directly from memory.
+
 :::warning
 Invalid request: requesting evaluations on a domain smaller than the degree of the polynomial is not supported and is considered invalid.
 :::
@@ -334,7 +360,9 @@ cudaSetDevice(int deviceID);
 This function sets the active CUDA device. All subsequent operations that allocate or deal with polynomial data will be performed on this device.
 
 ### Allocation Consistency
+
 Polynomials are always allocated on the current CUDA device at the time of their creation. It is crucial to ensure that the device context is correctly set before initiating any operation that involves memory allocation:
+
 ```cpp
 // Set the device before creating polynomials
 cudaSetDevice(0);
@@ -345,6 +373,7 @@ Polynomial p2 = Polynomial::from_coefficients(coeffs, size);
 ```
 
 ### Matching Devices for Operations
+
 When performing operations that result in the creation of new polynomials (such as addition or multiplication), it is imperative that both operands are on the same CUDA device. If the operands reside on different devices, an exception is thrown:
 
 ```cpp
@@ -354,7 +383,9 @@ auto p3 = p1 + p2; // Throws an exception if p1 and p2 are not on the same devic
 ```
 
 ### Device-Agnostic Operations
+
 Operations that do not involve the creation of new polynomials, such as computing the degree of a polynomial or performing in-place modifications, can be executed regardless of the current device setting:
+
 ```cpp
 // 'degree' and in-place operations do not require device matching
 int deg = p1.degree();
@@ -362,9 +393,11 @@ p1 += p2; // Valid if p1 and p2 are on the same device, throws otherwise
 ```
 
 ### Error Handling
+
 The API is designed to throw exceptions if operations are attempted across polynomials that are not located on the same GPU. This ensures that all polynomial operations are performed consistently and without data integrity issues due to device mismatches.
 
 ### Best Practices
+
 To maximize the performance and avoid runtime errors in a multi-GPU setup, always ensure that:
 
 - The CUDA device is set correctly before polynomial allocation.
