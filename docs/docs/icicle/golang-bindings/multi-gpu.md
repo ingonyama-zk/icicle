@@ -113,7 +113,7 @@ RunOnDevice(0, func(args ...any) {
 Sets the active device for the current host thread. All subsequent CUDA calls made from this thread will target the specified device.
 
 :::warning
-This function should not be used directly in conjuction with goroutines. If you want to run multi-gpu scenarios with goroutines you should use [RunOnDevice](#runondevice)
+This function should not be used directly in conjunction with goroutines. If you want to run multi-gpu scenarios with goroutines you should use [RunOnDevice](#runondevice)
 :::
 
 **Parameters:**
