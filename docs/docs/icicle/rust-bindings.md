@@ -67,7 +67,7 @@ fn main() {
 | NTT | ✅ | ✅ | ✅ | ✅ | ❌ |
 | ECNTT | ✅ | ✅ | ✅ | ✅ | ❌ |
 | VecOps | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Polynomials | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Polynomials | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Poseidon | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Merkle Tree | ✅ | ✅ | ✅ | ✅ | ✅ |
 
