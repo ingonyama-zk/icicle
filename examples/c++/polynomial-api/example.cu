@@ -260,7 +260,6 @@ void example_EvenOdd() {
   auto f = Polynomial_t::from_coefficients(coeffs, 4);
   auto f_even = f.even();
   auto f_odd = f.odd();
-
   scalar_t even_coeffs[2] = {0};
   scalar_t odd_coeffs[2] = {0};
   const auto even_nof_coeffs = f_even.copy_coeffs(even_coeffs, 0, 1);
@@ -269,7 +268,6 @@ void example_EvenOdd() {
   std::cout << "Even: 1:" << even_coeffs[1] << " expected: " << three << std::endl;
   std::cout << "Odd: 0:" << odd_coeffs[0] << " expected: " << two << std::endl;
   std::cout << "Odd: 1:" << odd_coeffs[1] << " expected: " << four << std::endl;
-
 }
 
 void example_Slice() {
@@ -283,27 +281,11 @@ void example_Slice() {
   std::cout << "Slice: 1:" << slice_coeffs[1] << " expected: " << four << std::endl;
 } 
 
-
-template <typename S>
-  size_t my_get_digests_len(uint32_t height, uint32_t arity)
-  {
-    size_t digests_len = 0;
-    size_t row_length = 1;
-    for (int i = 1; i < height; i++) {
-      digests_len += row_length;
-      row_length *= arity;
-    }
-
-    return digests_len;
-  }
-
 void example_DeviceMemoryView() {
   const int log_size = 6;
   const int size = 1 << log_size;
   auto f = randomize_polynomial(size);
   auto [d_coeff, N, device_id] = f.get_coefficients_view();
-  // std::cout << "Device id: " << device_id << std::endl;
-  // std::cout << "D: " <<   d_coeff.isValid() << std::endl;
   // commit coefficients to Merkle tree
   device_context::DeviceContext ctx = device_context::get_default_device_context();
   PoseidonConstants<scalar_t> constants;

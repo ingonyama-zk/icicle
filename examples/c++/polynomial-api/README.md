@@ -46,4 +46,4 @@ To change the scalar field, modify `compile.h` to build the corresponding lib an
 
 - `example_Slice`: extends even/odd methods and keeps coefficients for a given offset and stride. For $f(x) = 1+2x+3x^2+4x^3$, origin 0 stride 3 slice gives $1+4x$
 
-- `example_DeviceMemoryView`: device-memory views of polynomials allow "pass" polynomials to other GPU functions. In this example the coefficients of a polynomial are commited to a Merkle tree bypassing the host.
+- `example_DeviceMemoryView`: device-memory views of polynomials allow "pass" polynomials to other GPU functions. In this example the coefficients of a polynomial are comitted to a Merkle tree bypassing the host.
