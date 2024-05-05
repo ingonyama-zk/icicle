@@ -36,4 +36,12 @@ arkworks = ["ark-bls12-381", "icicle-core/arkworks"]
 
 [[bench]]
 name = "ecntt"
-harness = false # Criterion provides own harness
+harness = false
+
+[[bench]]
+name = "ntt"
+harness = false
+
+[[bench]]
+name = "msm"
+harness = false

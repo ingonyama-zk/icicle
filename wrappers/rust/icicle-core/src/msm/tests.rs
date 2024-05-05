@@ -15,7 +15,7 @@ use ark_ec::VariableBaseMSM;
 #[cfg(feature = "arkworks")]
 use ark_std::{rand::Rng, test_rng, UniformRand};
 
-fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: usize) -> Vec<Affine<C>> {
+pub fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: usize) -> Vec<Affine<C>> {
     let rng = &mut test_rng();
     let mut points = C::generate_random_affine_points(size);
     for _ in 0..num_zeroes {
