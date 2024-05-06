@@ -36,7 +36,7 @@ The Core is split into logical modules that can be compiled into static librarie
 
 ## Compilation strategies
 
-Most of the codebase is curve/field agnostic, which means it can be compiled for different curves and fields. When you build ICICLE Core you choose a single curve or field. If you need multiple curves or fields, you compile ICICLE ocne per curve or field that is needed. It's that simple. Currently, the following choices are supported:
+Most of the codebase is curve/field agnostic, which means it can be compiled for different curves and fields. When you build ICICLE Core you choose a single curve or field. If you need multiple curves or fields, you compile ICICLE once per curve or field that is needed. It's that simple. Currently, the following choices are supported:
 
 - [Field mode][COMPILE_FIELD_MODE] - used for STARK fields like BabyBear / Mersenne / Goldilocks. Includes field arithmetic, NTT, Poseidon, Extension fields and other primitives.
 - [Curve mode][COMPILE_CURVE_MODE] - used for SNARK curves like BN254 / BLS curves / Grumpkin / etc. Curve mode is built upon field mode, so it includes everything that field does It also includes curve operations / MSM / ECNTT / G2 and other curve-related primitives.

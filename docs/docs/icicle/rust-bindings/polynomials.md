@@ -165,7 +165,6 @@ use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 Polynomials can be created from coefficients or evaluations:
 
 ```rust
-// Assume F is the field type (e.g. icicle_bn254::curve::ScalarField or a type parameter)
 let coeffs = ...;
 let p_from_coeffs = PolynomialBabyBear::from_coeffs(HostSlice::from_slice(&coeffs), size);
 
