@@ -13,27 +13,6 @@ SUPPORTED_CURVES=("bn254" "bls12_377" "bls12_381" "bw6_761", "grumpkin")
 SUPPORTED_FIELDS=("babybear")
 SUPPORTED_HASHES=("keccak")
 
-if [[ $1 == "-help" ]]; then
-  echo "Build script for building ICICLE cpp libraries"
-  echo ""
-  echo "If more than one curve or more than one field is supplied, the last one supplied will be built"
-  echo ""
-  echo "USAGE: ./build.sh [OPTION...]"
-  echo ""
-  echo "OPTIONS:"
-  echo "  -curve=<curve_name>       The curve that should be built. If \"all\" is supplied,"
-  echo "                            all curves will be built with any other supplied curve options"
-  echo "  -g2                       Builds the curve lib with G2 enabled"
-  echo "  -ecntt                    Builds the curve lib with ECNTT enabled"
-  echo "  -field=<field_name>       The field that should be built. If \"all\" is supplied,"
-  echo "                            all fields will be built with any other supplied field options"
-  echo "  -field-ext                Builds the field lib with the extension field enabled"
-  echo "  -devmode                  Enables devmode debugging and fast build times"
-  echo "  -cuda_version=<version>   The version of cuda to use for compiling"
-  echo ""
-  exit 0
-fi
-
 for arg in "$@"
 do
     arg_lower=$(echo "$arg" | tr '[:upper:]' '[:lower:]')
@@ -81,6 +60,27 @@ do
         -devmode)
             DEVMODE=ON
             ;;
+        -help)
+            echo "Build script for building ICICLE cpp libraries"
+            echo ""
+            echo "If more than one curve or more than one field is supplied, the last one supplied will be built"
+            echo ""
+            echo "USAGE: ./build.sh [OPTION...]"
+            echo ""
+            echo "OPTIONS:"
+            echo "  -curve=<curve_name>       The curve that should be built. If \"all\" is supplied,"
+            echo "                            all curves will be built with any other supplied curve options"
+            echo "  -g2                       Builds the curve lib with G2 enabled"
+            echo "  -ecntt                    Builds the curve lib with ECNTT enabled"
+            echo "  -field=<field_name>       The field that should be built. If \"all\" is supplied,"
+            echo "                            all fields will be built with any other supplied field options"
+            echo "  -field-ext                Builds the field lib with the extension field enabled"
+            echo "  -hash=<hash>              The name of the hash to build or "all" to build all supported hashes"
+            echo "  -devmode                  Enables devmode debugging and fast build times"
+            echo "  -cuda_version=<version>   The version of cuda to use for compiling"
+            echo ""
+            exit 0
+          ;;
         *)
             echo "Unknown argument: $arg"
             exit 1
