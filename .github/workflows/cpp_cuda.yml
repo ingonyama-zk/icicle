@@ -71,6 +71,8 @@ jobs:
         field: 
           - name: babybear
             build_args: -DEXT_FIELD=ON
+          - name: stark252
+            build_args: -DEXT_FIELD=OFF
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
