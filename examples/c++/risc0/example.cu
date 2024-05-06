@@ -7,7 +7,7 @@
 #define FIELD_ID BN254
 // #include "curves/curve_config.cuh"
 #include "polynomials/polynomials.h"
-#include "polynomials/polynomials_c_api.h"
+// #include "polynomials/polynomials_c_api.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 
 
@@ -141,10 +141,34 @@ void solve_linear(scalar_t xa, scalar_t ya, scalar_t xb, scalar_t yb, scalar_t *
   coeffs[0] = ya - coeffs[1] * xa;
 }
 
+
+std::unique_ptr<scalar_t[]> initialize_domain(int logn) {
+    auto omega = scalar_t::omega(logn);  // Compute the nth root of unity
+    auto n = (1 << logn);               // Calculate the domain size as 2^logn
+    auto domain = std::make_unique<scalar_t[]>(n);  // Allocate memory for the domain
+
+    scalar_t x = scalar_t::one();  // Start with one
+    for (int i = 0; i < n; ++i) {
+        domain[i] = x;             // Assign the current value of xx to the domain
+        x = x * omega;            // Update xx by multiplying it with omega
+    }
+
+    return domain;  // Return the populated domain
+}
+
+// return on host the evaluations of a polynomial on the rou domain size n
+std::unique_ptr<scalar_t[]> rou_evaluations(Polynomial_t * p, int n) {
+  auto evals_h = std::make_unique<scalar_t[]>(n);
+  auto [evals_d, unused_size, unused_device_id] = p->get_rou_evaluations_view(n); 
+  cudaMemcpy(evals_h.get(), evals_d.get(), n*sizeof(scalar_t), cudaMemcpyDeviceToHost);
+  return evals_h;
+}
+
+
 int main(int argc, char** argv)
 {
 
-  std::cout << "This is a ICICLE C++ implementation of the STARK by Hand Explainer." << std::endl;
+  std::cout << "This is an ICICLE C++ implementation of the STARK by Hand Explainer." << std::endl;
   std::cout << "https://dev.risczero.com/proof-system/stark-by-hand" << std::endl;
 
   const int logn=3;
@@ -172,18 +196,13 @@ int main(int argc, char** argv)
   rv_t rv_d2_trace[] = {30, 54, 84,  138, 2, 77, 21, 36};
   rv_t rv_d3_trace[] = {54, 84, 138, 222, 71, 17, 92, 33};
 
-  scalar_t d1_trace[n], d2_trace[n], d3_trace[n];
+  scalar_t* d1_trace = new scalar_t[n];
+  scalar_t* d2_trace = new scalar_t[n];
+  scalar_t* d3_trace = new scalar_t[n];
 
   to_ff(rv_d1_trace, d1_trace, n);
   to_ff(rv_d2_trace, d2_trace, n);
   to_ff(rv_d3_trace, d3_trace, n);
-
-  std::cout << "d1 trace" << std::endl;
-  for (int i = 0; i < n; ++i) {
-    std::cout << i << ": " << d1_trace[i] << std::endl;
-  }
-
-
 
   // Trace: Control Columns
   // Init steps are flagged in c1_trace
@@ -195,15 +214,13 @@ int main(int argc, char** argv)
   rv_t rv_c2_trace[] = {0, 1, 1, 1, 0, 0, 0, 0};
   rv_t rv_c3_trace[] = {0, 0, 0, 1, 0, 0, 0, 0};
 
-  scalar_t c1_trace[n], c2_trace[n], c3_trace[n];
+  scalar_t* c1_trace = new scalar_t[n];
+  scalar_t* c2_trace = new scalar_t[n];
+  scalar_t* c3_trace = new scalar_t[n];
+
   to_ff(rv_c1_trace, c1_trace, n);
   to_ff(rv_c2_trace, c2_trace, n);
   to_ff(rv_c3_trace, c3_trace, n);
-
-  std::cout << "c1 trace" << std::endl;
-  for (int i = 0; i < n; ++i) {
-    std::cout << i << ": " << c1_trace[i] << std::endl;
-  } 
 
   // We will construct a zero-knowledge proof that:
   // this trace represents a program that satisfies these 6 rules:
@@ -215,16 +232,6 @@ int main(int argc, char** argv)
   //  6) if c2_trace[i] == 1, then d3_trace[i] == d2_trace[i+1}
 
   std::cout << "Lesson 4: Constructing Trace Polynomials" << std::endl;
-  std::cout << std::endl << "3. Reconstruct polynomial from trace data" << std::endl;
-  // d1_coeffs = np.array(intt(d1_trace, prime=_field_size))
-  // d2_coeffs = np.array(intt(d2_trace, prime=_field_size))
-  // d3_coeffs = np.array(intt(d3_trace, prime=_field_size))
-  // c1_coeffs = np.array(intt(c1_trace, prime=_field_size))
-  // c2_coeffs = np.array(intt(c2_trace, prime=_field_size))
-  // c3_coeffs = np.array(intt(c3_trace, prime=_field_size))
-
-  auto f = Polynomial_t::from_rou_evaluations(d1_trace, n);
-  auto d = f.degree();
 
   auto d1_poly = Polynomial_t::from_rou_evaluations(d1_trace, n);
   auto d2_poly = Polynomial_t::from_rou_evaluations(d2_trace, n);
@@ -235,34 +242,38 @@ int main(int argc, char** argv)
 
   // Evaluating Trace Polynomials over rou powers would return the original trace data
   
-
   auto d1_degree = d1_poly.degree();
   std::cout << "Degree: " << d1_degree << std::endl;
-  auto x = scalar_t::one();
+
   auto omega = scalar_t::omega(logn);
+  auto domain = initialize_domain(logn);
+
+  // Sanity check:evaluate on the domain (equivalent to NTT)
+  auto evaluations = std::make_unique<scalar_t[]>(n);
+  d1_poly.evaluate_on_domain(domain.get(), n, evaluations.get());
+
+
+  auto x = scalar_t::one();
   for (int i = 0; i < n; ++i) {
-    std::cout << "i: " << d1_poly(x) << " trace: " << d1_trace[i] << std::endl;
+    std::cout << "trace: " << d1_trace[i] << " evaluation " << evaluations[i] << std::endl;
     x = x * omega;
   }
 
   std::cout << std::endl << "4. Generate Reed-Solomon traces" << std::endl;
+
   // Evaluating Trace Polynomials over the "expanded domain" gives a "trace block."
 
-  scalar_t d1_trace_rs[4*n], d2_trace_rs[4*n], d3_trace_rs[4*n];
-  scalar_t c1_trace_rs[4*n], c2_trace_rs[4*n], c3_trace_rs[4*n];
+  // auto domain_rs = initialize_domain(logn+2);
+
+  auto d1_trace_rs = rou_evaluations(&d1_poly, 4*n);
+  auto d2_trace_rs = rou_evaluations(&d2_poly, 4*n);
+  auto d3_trace_rs = rou_evaluations(&d3_poly, 4*n);
+  auto c1_trace_rs = rou_evaluations(&c1_poly, 4*n);
+  auto c2_trace_rs = rou_evaluations(&c2_poly, 4*n);
+  auto c3_trace_rs = rou_evaluations(&c3_poly, 4*n);
 
   auto omega_rs = scalar_t::omega(2+logn);
   auto x_rs = scalar_t::one();
-
-  for (int i = 0; i < 4*n; ++i) {
-    d1_trace_rs[i] = d1_poly(x_rs);
-    d2_trace_rs[i] = d2_poly(x_rs);
-    d3_trace_rs[i] = d3_poly(x_rs);
-    c1_trace_rs[i] = c1_poly(x_rs);
-    c2_trace_rs[i] = c2_poly(x_rs);
-    c3_trace_rs[i] = c3_poly(x_rs);
-    x_rs = x_rs * omega_rs;
-  }
 
   for(int i = 0; i < 4*n; ++i) {
     std::cout << i << ": " << d1_trace_rs[i] << std::endl;
@@ -313,7 +324,7 @@ int main(int argc, char** argv)
   std::cout <<  "Applied to the original trace data, the constraint yields all 0s: " << std::endl;
   print_vector(fib_constraint,n);
   scalar_t fib_constraint_rs[4*n];
-  compute_fib_constraint(d1_trace_rs, d2_trace_rs, d3_trace_rs, c1_trace_rs, c2_trace_rs, c3_trace_rs, fib_constraint_rs, 4*n);
+  compute_fib_constraint(d1_trace_rs.get(), d2_trace_rs.get(), d3_trace_rs.get(), c1_trace_rs.get(), c2_trace_rs.get(), c3_trace_rs.get(), fib_constraint_rs, 4*n);
   std::cout <<  "Applied to the Reed-Solomon expanded trace blocks, the constraint yields 0s in every 4th row: " << std::endl;
   print_vector(fib_constraint_rs,4*n);
   scalar_t fib_constraint_zkcommitment[4*n];
@@ -331,7 +342,7 @@ int main(int argc, char** argv)
   print_vector(init1_constraint, n);
 
   scalar_t init1_constraint_rs[4*n];
-  compute_value_constraint(d1_trace_rs, scalar_t::from(24), c1_trace_rs, init1_constraint_rs, 4*n);
+  compute_value_constraint(d1_trace_rs.get(), scalar_t::from(24), c1_trace_rs.get(), init1_constraint_rs, 4*n);
   std::cout << "Reed-Solomon expansion Init 1 constraint gives 0s in every 4th row" << std::endl;
   print_vector(init1_constraint_rs, 4*n);
 
@@ -346,7 +357,7 @@ int main(int argc, char** argv)
   print_vector(init2_constraint, n);
 
   scalar_t init2_constraint_rs[4*n];
-  compute_value_constraint(d2_trace_rs, scalar_t::from(30), c1_trace_rs, init2_constraint_rs, 4*n);
+  compute_value_constraint(d2_trace_rs.get(), scalar_t::from(30), c1_trace_rs.get(), init2_constraint_rs, 4*n);
   std::cout << "Reed-Solomon expansion Init 2 constraint gives 0s in every 4th row" << std::endl;
   print_vector(init2_constraint_rs, 4*n);
 
@@ -361,7 +372,7 @@ int main(int argc, char** argv)
   print_vector(termination_constraint, n);
 
   scalar_t termination_constraint_rs[4*n];
-  compute_value_constraint(d3_trace_rs, scalar_t::from(222), c3_trace_rs, termination_constraint_rs, 4*n);
+  compute_value_constraint(d3_trace_rs.get(), scalar_t::from(222), c3_trace_rs.get(), termination_constraint_rs, 4*n);
   std::cout << "Reed-Solomon expansion Termination constraint gives 0s in every 4th row" << std::endl;
   print_vector(termination_constraint_rs, 4*n);
 
@@ -376,7 +387,7 @@ int main(int argc, char** argv)
   print_vector(recursion_constraint1, n);
 
   scalar_t recursion_constraint1_rs[4*n];
-  compute_recursion_constraint(d1_trace_rs, d2_trace_rs, c2_trace_rs, recursion_constraint1_rs, 4*n, 4);
+  compute_recursion_constraint(d1_trace_rs.get(), d2_trace_rs.get(), c2_trace_rs.get(), recursion_constraint1_rs, 4*n, 4);
   std::cout << "Reed-Solomon expansion Recursion constraint gives 0s in every 4th row" << std::endl;
   print_vector(recursion_constraint1_rs, 4*n);
 
@@ -391,7 +402,7 @@ int main(int argc, char** argv)
   print_vector(recursion_constraint2, n);
 
   scalar_t recursion_constraint2_rs[4*n];
-  compute_recursion_constraint(d2_trace_rs, d3_trace_rs, c2_trace_rs, recursion_constraint2_rs, 4*n, 4);
+  compute_recursion_constraint(d2_trace_rs.get(), d3_trace_rs.get(), c2_trace_rs.get(), recursion_constraint2_rs, 4*n, 4);
   std::cout << "Reed-Solomon expansion Recursion constraint gives 0s in every 4th row" << std::endl;
   print_vector(recursion_constraint2_rs, 4*n);
 
@@ -563,6 +574,23 @@ int main(int argc, char** argv)
     lhs[i] = fri[i+1](xp*xp);
     std::cout << "Round " << i << std::endl << "rhs: " << rhs[i] << std::endl << "lhs: " << lhs[i] << std::endl;
   }
+
+
+  // Clean up
+
+  delete[] d1_trace;
+  delete[] d2_trace;
+  delete[] d3_trace;
+  delete[] c1_trace;
+  delete[] c2_trace;
+  delete[] c3_trace;
+
+  // delete[] d1_trace_rs;
+  // delete[] d2_trace_rs;
+  // delete[] d3_trace_rs;
+  // delete[] c1_trace_rs;
+  // delete[] c2_trace_rs;
+  // delete[] c3_trace_rs;
 
   return 0;
 }

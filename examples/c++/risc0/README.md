@@ -27,7 +27,7 @@ Make sure you have compiled a curve-specific ICICLE library. For example, for bn
 ```sh
 cd icicle
 mkdir -p build
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=bn254 -DG2=ON -S . -B buildls 
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=bn254 -DG2=ON -S . -B build 
 cmake --build build
 ```
 
