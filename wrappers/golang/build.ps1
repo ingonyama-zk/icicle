@@ -13,7 +13,7 @@ $SUPPORTED_HASHES = @("keccak")
 
 foreach ($arg in $args) {
   $arg_lower = $arg.ToLower()
-  switch ($arg_lower) {
+  switch -Wildcard ($arg_lower) {
     "-cuda_version=*" {
       $cuda_version = $arg.Split("=")[1]
       $CUDA_COMPILER_PATH = "/usr/local/cuda-$cuda_version/bin/nvcc"
