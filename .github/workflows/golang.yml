@@ -157,7 +157,7 @@ jobs:
 
   build-curves-windows:
     name: Build curves on Windows
-    runs-on: [self-hosted, Linux, X64, icicle]
+    runs-on: icicle-large-windows
     needs: [check-changed-files, check-format]
     strategy:
       matrix:
