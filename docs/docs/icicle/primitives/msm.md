@@ -49,13 +49,6 @@ Accelerating MSM is crucial to a ZK protocol's performance due to the [large per
 
 You can learn more about how MSMs work from this [video](https://www.youtube.com/watch?v=Bl5mQA7UL2I) and from our resource list on [Ingopedia](https://www.ingonyama.com/ingopedia/msm).
 
-## Supported curves
-
-MSM supports the following curves:
-
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `grumpkin`
-
-
 ## Supported Bindings
 
 - [Golang](../golang-bindings/msm.md)
@@ -81,16 +74,16 @@ Large Triangle Accumulation is a method for optimizing MSM which focuses on redu
 
 #### When should I use Large triangle accumulation?
 
-The Large Triangle Accumulation algorithm is more sequential in nature, as it builds upon each step sequentially (accumulating sums and then performing doubling). This structure can make it less suitable for parallelization but potentially more efficient for a <b>large batch of smaller MSM computations</b>.
+The Large Triangle Accumulation algorithm is more sequential in nature, as it builds upon each step sequentially (accumulating sums and then performing doubling). This structure can make it less suitable for parallelization but potentially more efficient for a **large batch of smaller MSM computations**.
 
 ## MSM Modes
 
 ICICLE MSM also supports two different modes `Batch MSM` and `Single MSM`
 
-Batch MSM allows you to run many MSMs with a single API call, Single MSM will launch a single MSM computation.
+Batch MSM allows you to run many MSMs with a single API call while single MSM will launch a single MSM computation.
 
 ### Which mode should I use?
 
-This decision is highly dependent on your use case and design. However, if your design allows for it, using batch mode can significantly improve efficiency. Batch processing allows you to perform multiple MSMs leveraging the parallel processing capabilities of GPUs.
+This decision is highly dependent on your use case and design. However, if your design allows for it, using batch mode can significantly improve efficiency. Batch processing allows you to perform multiple MSMs simultaneously, leveraging the parallel processing capabilities of GPUs.
 
 Single MSM mode should be used when batching isn't possible or when you have to run a single MSM.

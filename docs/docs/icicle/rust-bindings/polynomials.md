@@ -1,13 +1,15 @@
-:::note Please refer to the Polynomials overview page for a deep overview. This section is a brief description of the Rust FFI bindings. 
+# Rust FFI Bindings for Univariate Polynomial
+
+:::note
+Please refer to the Polynomials overview page for a deep overview. This section is a brief description of the Rust FFI bindings.
 :::
 
-# Rust FFI Bindings for Univariate Polynomial
 This documentation is designed to provide developers with a clear understanding of how to utilize the Rust bindings for polynomial operations efficiently and effectively, leveraging the robust capabilities of both Rust and C++ in their applications.
 
 ## Introduction
+
 The Rust FFI bindings for the Univariate Polynomial serve as a "shallow wrapper" around the underlying C++ implementation. These bindings provide a straightforward Rust interface that directly calls functions from a C++ library, effectively bridging Rust and C++ operations. The Rust layer handles simple interface translations without delving into complex logic or data structures, which are managed on the C++ side. This design ensures efficient data handling, memory management, and execution of polynomial operations directly via C++.
 Currently, these bindings are tailored specifically for polynomials where the coefficients, domain, and images are represented as scalar fields.
-
 
 ## Initialization Requirements
 
@@ -19,12 +21,12 @@ Before utilizing any functions from the polynomial API, it is mandatory to initi
 The ICICLE library is structured such that each field or curve has its dedicated library implementation. As a result, initialization must be performed individually for each field or curve to ensure the correct setup and functionality of the library.
 :::
 
-
 ## Core Trait: `UnivariatePolynomial`
 
 The `UnivariatePolynomial` trait encapsulates the essential functionalities required for managing univariate polynomials in the Rust ecosystem. This trait standardizes the operations that can be performed on polynomials, regardless of the underlying implementation details. It allows for a unified approach to polynomial manipulation, providing a suite of methods that are fundamental to polynomial arithmetic.
 
 ### Trait Definition
+
 ```rust
 pub trait UnivariatePolynomial
 where
@@ -77,6 +79,7 @@ where
 ```
 
 ## `DensePolynomial` Struct
+
 The DensePolynomial struct represents a dense univariate polynomial in Rust, leveraging a handle to manage its underlying memory within the CUDA device context. This struct acts as a high-level abstraction over complex C++ memory management practices, facilitating the integration of high-performance polynomial operations through Rust's Foreign Function Interface (FFI) bindings.
 
 ```rust
@@ -88,15 +91,19 @@ pub struct DensePolynomial {
 ### Traits implementation and methods
 
 #### `Drop`
+
 Ensures proper resource management by releasing the CUDA memory when a DensePolynomial instance goes out of scope. This prevents memory leaks and ensures that resources are cleaned up correctly, adhering to Rust's RAII (Resource Acquisition Is Initialization) principles.
 
 #### `Clone`
+
 Provides a way to create a new instance of a DensePolynomial with its own unique handle, thus duplicating the polynomial data in the CUDA context. Cloning is essential since the DensePolynomial manages external resources, which cannot be safely shared across instances without explicit duplication.
 
 #### Operator Overloading: `Add`, `Sub`, `Mul`, `Rem`, `Div`
+
 These traits are implemented for references to DensePolynomial (i.e., &DensePolynomial), enabling natural mathematical operations such as addition (+), subtraction (-), multiplication (*), division (/), and remainder (%). This syntactic convenience allows users to compose complex polynomial expressions in a way that is both readable and expressive.
 
 #### Key Methods
+
 In addition to the traits, the following methods are implemented:
 
 ```rust
@@ -107,16 +114,16 @@ impl DensePolynomial {
 }      
 ```
 
-:::note Might be consolidated with `UnivariatePolynomial` trait
-:::
-
 ## Flexible Memory Handling With `HostOrDeviceSlice`
+
 The DensePolynomial API is designed to accommodate a wide range of computational environments by supporting both host and device memory through the `HostOrDeviceSlice` trait. This approach ensures that polynomial operations can be seamlessly executed regardless of where the data resides, making the API highly adaptable and efficient for various hardware configurations.
 
 ### Overview of `HostOrDeviceSlice`
+
 The HostOrDeviceSlice is a Rust trait that abstracts over slices of memory that can either be on the host (CPU) or the device (GPU), as managed by CUDA. This abstraction is crucial for high-performance computing scenarios where data might need to be moved between different memory spaces depending on the operations being performed and the specific hardware capabilities available.
 
 ### Usage in API Functions
+
 Functions within the DensePolynomial API that deal with polynomial coefficients or evaluations use the HostOrDeviceSlice trait to accept inputs. This design allows the functions to be agnostic of the actual memory location of the data, whether it's in standard system RAM accessible by the CPU or in GPU memory accessible by CUDA cores.
 
 ```rust
@@ -132,10 +139,13 @@ let p_from_evals = PolynomialBabyBear::from_rou_evals(&evals, evals.len());
 ```
 
 ## Usage
+
 This section outlines practical examples demonstrating how to utilize the `DensePolynomial` Rust API. The API is flexible, supporting multiple scalar fields. Below are examples showing how to use polynomials defined over different fields and perform a variety of operations.
 
 ### Initialization and Basic Operations
+
 First, choose the appropriate field implementation for your polynomial operations, initializing the CUDA backend if necessary
+
 ```rust
 use icicle_babybear::polynomials::DensePolynomial as PolynomialBabyBear;
 
@@ -151,10 +161,10 @@ use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 ```
 
 ### Creation
+
 Polynomials can be created from coefficients or evaluations:
 
 ```rust
-// Assume F is the field type (e.g. icicle_bn254::curve::ScalarField or a type parameter)
 let coeffs = ...;
 let p_from_coeffs = PolynomialBabyBear::from_coeffs(HostSlice::from_slice(&coeffs), size);
 
@@ -164,6 +174,7 @@ let p_from_evals = PolynomialBabyBear::from_rou_evals(HostSlice::from_slice(&eva
 ```
 
 ### Arithmetic Operations
+
 Utilize overloaded operators for intuitive mathematical expressions:
 
 ```rust
@@ -174,6 +185,7 @@ let mul_scalar = &f * &scalar;  // Scalar multiplication
 ```
 
 ### Division and Remainder
+
 Compute quotient and remainder or perform division by a vanishing polynomial:
 
 ```rust
@@ -186,6 +198,7 @@ let h = f.div_by_vanishing(N);  // Division by V(x) = X^N - 1
 ```
 
 ### Monomial Operations
+
 Add or subtract monomials in-place for efficient polynomial manipulation:
 
 ```rust
@@ -194,6 +207,7 @@ f.sub_monomial_inplace(&one, 0 /*monmoial*/);   // Subtracts 1 from f
 ```
 
 ### Slicing
+
 Extract specific components:
 
 ```rust
@@ -203,6 +217,7 @@ let arbitrary_slice = f.slice(offset, stride, size);
 ```
 
 ### Evaluate
+
 Evaluate the polynoomial:
 
 ```rust
@@ -216,6 +231,7 @@ f.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut 
 ```
 
 ### Read coefficients
+
 Read or copy polynomial coefficients for further processing:
 
 ```rust
@@ -227,6 +243,7 @@ f.copy_coeffs(0, &mut device_mem[..]);
 ```
 
 ### Polynomial Degree
+
 Determine the highest power of the variable with a non-zero coefficient:
 
 ```rust
@@ -234,6 +251,7 @@ let deg = f.degree();  // Degree of the polynomial
 ```
 
 ### Memory Management: Views (rust slices)
+
 Rust enforces correct usage of views at compile time, eliminating the need for runtime checks:
 
 ```rust

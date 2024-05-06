@@ -1,12 +1,14 @@
 # Vector Operations
 
 ## Overview
-Icicle is exposing a number of vector operations which a user can control:
+
+Icicle exposes a number of vector operations which a user can use:
+
 * The VecOps API provides efficient vector operations such as addition, subtraction, and multiplication.
 * MatrixTranspose API allows a user to perform a transpose on a vector representation of a matrix
 
-
 ## VecOps API Documentation
+
 ### Example
 
 #### Vector addition

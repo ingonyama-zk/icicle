@@ -2,11 +2,7 @@
 
 To understand the theory behind MSM pre computation technique refer to Niall Emmart's [talk](https://youtu.be/KAWlySN7Hm8?feature=shared&t=1734).
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `Grumpkin`
-
-### `precompute_bases`
+## `precompute_bases`
 
 Precomputes bases for the multi-scalar multiplication (MSM) by extending each base point with its multiples, facilitating more efficient MSM calculations.
 
@@ -20,8 +16,7 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
 ) -> IcicleResult<()>
 ```
 
-
-#### Parameters
+### Parameters
 
 - **`points`**: The original set of affine points (\(P_1, P_2, ..., P_n\)) to be used in the MSM. For batch MSM operations, this should include all unique points concatenated together.
 - **`precompute_factor`**: Specifies the total number of points to precompute for each base, including the base point itself. This parameter directly influences the memory requirements and the potential speedup of the MSM operation.

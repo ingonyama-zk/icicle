@@ -1,58 +1,54 @@
 # NTT
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
-
 ## NTT Example
 
 ```go
 package main
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+  "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+  cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+  bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
 
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
+  "github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 )
 
 func init() {
-	cfg := bn254.GetDefaultNttConfig()
-	initDomain(18, cfg)
+  cfg := bn254.GetDefaultNttConfig()
+  initDomain(18, cfg)
 }
 
 func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
-	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
-	rou := rouMont.Bits()
-	rouIcicle := bn254.ScalarField{}
+  rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
+  rou := rouMont.Bits()
+  rouIcicle := bn254.ScalarField{}
 
-	rouIcicle.FromLimbs(rou[:])
-	e := bn254.InitDomain(rouIcicle, cfg.Ctx, false)
-	return e
+  rouIcicle.FromLimbs(rou[:])
+  e := bn254.InitDomain(rouIcicle, cfg.Ctx, false)
+  return e
 }
 
 func main() {
-	// Obtain the default NTT configuration with a predefined coset generator.
-	cfg := bn254.GetDefaultNttConfig()
+  // Obtain the default NTT configuration with a predefined coset generator.
+  cfg := bn254.GetDefaultNttConfig()
 
-	// Define the size of the input scalars.
-	size := 1 << 18
+  // Define the size of the input scalars.
+  size := 1 << 18
 
-	// Generate scalars for the NTT operation.
-	scalars := bn254.GenerateScalars(size)
+  // Generate scalars for the NTT operation.
+  scalars := bn254.GenerateScalars(size)
 
-	// Set the direction of the NTT (forward or inverse).
-	dir := core.KForward
+  // Set the direction of the NTT (forward or inverse).
+  dir := core.KForward
 
-	// Allocate memory for the results of the NTT operation.
-	results := make(core.HostSlice[bn254.ScalarField], size)
+  // Allocate memory for the results of the NTT operation.
+  results := make(core.HostSlice[bn254.ScalarField], size)
 
-	// Perform the NTT operation.
-	err := bn254.Ntt(scalars, dir, &cfg, results)
-	if err.CudaErrorCode != cr.CudaSuccess {
-		panic("NTT operation failed")
-	}
+  // Perform the NTT operation.
+  err := bn254.Ntt(scalars, dir, &cfg, results)
+  if err.CudaErrorCode != cr.CudaSuccess {
+    panic("NTT operation failed")
+  }
 }
 ```
 
@@ -146,10 +142,10 @@ import (
 )
 
 func example() {
-    cfg := GetDefaultNttConfig()
-	err := ReleaseDomain(cfg.Ctx)
-    if err != nil {
-        // Handle the error
-    }
+  cfg := GetDefaultNttConfig()
+  err := ReleaseDomain(cfg.Ctx)
+  if err != nil {
+      // Handle the error
+  }
 }
 ```
