@@ -274,7 +274,7 @@ void example_Slice() {
   std::cout << std::endl << "Example: Slice polynomial " << std::endl;
   const scalar_t coeffs[4] = {one, two, three, four}; // 1+2x+3x^2+4x^3
   auto f = Polynomial_t::from_coefficients(coeffs, 4);
-  auto f_slice = f.slice(0, 3, 2); // 1+4x
+  auto f_slice = f.slice(0/=offset/, 3/=stride/, 2*/=size/); // 1+4x
   scalar_t slice_coeffs[2] = {0};
   const auto slice_nof_coeffs = f_slice.copy_coeffs(slice_coeffs, 0, 1);
   std::cout << "Slice: 0:" << slice_coeffs[0] << " expected: " << one << std::endl;
