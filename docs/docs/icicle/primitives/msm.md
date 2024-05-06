@@ -49,18 +49,6 @@ Accelerating MSM is crucial to a ZK protocol's performance due to the [large per
 
 You can learn more about how MSMs work from this [video](https://www.youtube.com/watch?v=Bl5mQA7UL2I) and from our resource list on [Ingopedia](https://www.ingonyama.com/ingopedia/msm).
 
-## Supported curves
-
-MSM supports the following curves:
-
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `grumpkin`
-
-:::note
-
-The G2 extension field is supported by MSM for all curves **except grumpkin**
-
-:::
-
 ## Supported Bindings
 
 - [Golang](../golang-bindings/msm.md)

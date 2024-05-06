@@ -55,12 +55,6 @@ So for Poseidon of arity 2 and input of size 1024 * 2, we would expect 1024 elem
 
 [`Rust`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-core/src/poseidon)
 
-### Supported curves
-
-Poseidon supports the following curves:
-
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
-
 ### Constants
 
 Poseidon is extremely customizable and using different constants will produce different hashes, security levels and performance results.

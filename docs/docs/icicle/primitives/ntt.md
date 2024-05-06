@@ -23,16 +23,6 @@ There exists also INTT which is the inverse operation of NTT. INTT can take as i
 
 ## Using NTT
 
-### Supported fields
-
-NTT supports the following fields:
-
-`babybear`, `stark252`
-
-And the scalar field of the following curves:
-
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`
-
 ### Supported Bindings
 
 - [Golang](../golang-bindings/ntt.md)
