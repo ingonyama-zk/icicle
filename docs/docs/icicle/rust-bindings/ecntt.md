@@ -1,9 +1,5 @@
 # ECNTT
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn254`
-
 ## ECNTT Method
 
 The `ecntt` function computes the Elliptic Curve Number Theoretic Transform (EC-NTT) or its inverse on a batch of points of a curve.
@@ -25,7 +21,7 @@ where
 
 ## Parameters
 
-- **`input`**: The input data as a slice of `Projective<C>`. This represents points on a specific elliptic curve `C`. 
+- **`input`**: The input data as a slice of `Projective<C>`. This represents points on a specific elliptic curve `C`.
 - **`dir`**: The direction of the NTT. It can be `NTTDir::kForward` for forward NTT or `NTTDir::kInverse` for inverse NTT.
 - **`cfg`**: The NTT configuration object of type `NTTConfig<C::ScalarField>`. This object specifies parameters for the NTT computation, such as the batch size and algorithm to use.
 - **`output`**: The output buffer to write the results into. This should be a slice of `Projective<C>` with the same size as the input.

@@ -1,6 +1,6 @@
 # Golang Bindings
 
-In order to build the underlying ICICLE libraries you should run the build script `build.sh` found in the `wrappers/golang` directory.
+In order to build the underlying ICICLE libraries you should run the build script found [here](./build.sh).
 
 Build script USAGE
 
@@ -16,35 +16,50 @@ field - The name of the field to build or "all" to build all fields
 
 To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
-```
-./build.sh all -g2 -ecntt
+```sh
+./build.sh -curve=all -g2 -ecntt
 ```
 
 If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
 
-```
-./build.sh bn254
+```sh
+./build.sh -curve=bn254
 ```
 
->[!NOTE]
->Current supported curves are `bn254`, `bls12_381`, `bls12_377`, `bw6_671` and `grumpkin`
->Current supported fields are `babybear`
+## Supported curves, fields and operations
 
->[!NOTE]
->G2 and ECNTT are located in nested packages
+### Supported curves and operations
+
+| Operation\Curve | bn254 | bls12_377 | bls12_381 | bw6-761 | grumpkin |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| MSM | ✅ | ✅ | ✅ | ✅ | ✅ |
+| G2  | ✅ | ✅ | ✅ | ✅ | ❌ |
+| NTT | ✅ | ✅ | ✅ | ✅ | ❌ |
+| ECNTT | ✅ | ✅ | ✅ | ✅ | ❌ |
+| VecOps | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Polynomials | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+### Supported fields and operations
+
+| Operation\Field | babybear |
+| --- | :---: |
+| VecOps | ✅ |
+| Polynomials | ✅ |
+| NTT | ✅ |
+| Extension Field | ✅ |
 
 ## Running golang tests
 
 To run the tests for curve bn254.
 
-```bash
-go test ./wrappers/golang/curves/bn254 -count=1
+```sh
+go test ./wrappers/golang/curves/bn254/tests -count=1 -v
 ```
 
 To run all the tests in the golang bindings
 
-```bash
-go test ./... -count=1
+```sh
+go test ./... -count=1 -v
 ```
 
 ## How do Golang bindings work?
@@ -76,7 +91,7 @@ Replace `/path/to/shared/libs` with the actual path where the shared libraries a
 
 In some cases you may encounter the following error, despite exporting the correct `LD_LIBRARY_PATH`.
 
-```
+```sh
 /usr/local/go/pkg/tool/linux_amd64/link: running gcc failed: exit status 1
 /usr/bin/ld: cannot find -lbn254: No such file or directory
 /usr/bin/ld: cannot find -lbn254: No such file or directory
@@ -90,7 +105,7 @@ This is normally fixed by exporting the path to the shared library location in t
 
 ### cuda_runtime.h: No such file or directory
 
-```
+```sh
 # github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381
 In file included from wrappers/golang/curves/bls12381/curve.go:5:
 wrappers/golang/curves/bls12381/include/curve.h:1:10: fatal error: cuda_runtime.h: No such file or directory
@@ -101,6 +116,6 @@ compilation terminated.
 
 Our golang bindings rely on cuda headers and require that they can be found as system headers. Make sure to add the `cuda/include` of your cuda installation to your CPATH
 
-```
+```sh
 export CPATH=$CPATH:<path/to/cuda/include>
 ```

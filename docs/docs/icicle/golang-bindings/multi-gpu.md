@@ -2,8 +2,7 @@
 
 To learn more about the theory of Multi GPU programming refer to [this part](../multi-gpu.md) of documentation.
 
-Here we will cover the core multi GPU apis and a [example](#a-multi-gpu-example)
-
+Here we will cover the core multi GPU apis and an [example](#a-multi-gpu-example)
 
 ## A Multi GPU example
 
@@ -12,7 +11,6 @@ In this example we will display how you can
 1. Fetch the number of devices installed on a machine
 2. For every GPU launch a thread and set an active device per thread.
 3. Execute a MSM on each GPU
-
 
 ```go
 package main
@@ -79,13 +77,13 @@ To streamline device management we offer as part of `cuda_runtime` package metho
 
 Runs a given function on a specific GPU device, ensuring that all CUDA calls within the function are executed on the selected device.
 
-In Go, most concurrency can be done via Goroutines. However, there is no guarantee that a goroutine stays on a specific host thread. 
+In Go, most concurrency can be done via Goroutines. However, there is no guarantee that a goroutine stays on a specific host thread.
 
-`RunOnDevice` was designed to solve this caveat and insure that the goroutine will stay on a specific host thread.
+`RunOnDevice` was designed to solve this caveat and ensure that the goroutine will stay on a specific host thread.
 
-`RunOnDevice` will lock a goroutine into a specific host thread, sets a current GPU device, runs a provided function, and unlocks the goroutine from the host thread after the provided function finishes.
+`RunOnDevice` locks a goroutine into a specific host thread, sets a current GPU device, runs a provided function, and unlocks the goroutine from the host thread after the provided function finishes.
 
-While the goroutine is locked to the host thread, the Go runtime will not assign other goroutine's to that host thread.
+While the goroutine is locked to the host thread, the Go runtime will not assign other goroutines to that host thread.
 
 **Parameters:**
 
@@ -96,7 +94,10 @@ While the goroutine is locked to the host thread, the Go runtime will not assign
 **Behavior:**
 
 - The function `funcToRun` is executed in a new goroutine that is locked to a specific OS thread to ensure that all CUDA calls within the function target the specified device.
-- It's important to note that any goroutines launched within `funcToRun` are not automatically bound to the same GPU device. If necessary, `RunOnDevice` should be called again within such goroutines with the same `deviceId`.
+
+:::note
+Any goroutines launched within `funcToRun` are not automatically bound to the same GPU device. If necessary, `RunOnDevice` should be called again within such goroutines with the same `deviceId`.
+:::
 
 **Example:**
 
@@ -110,6 +111,10 @@ RunOnDevice(0, func(args ...any) {
 ### `SetDevice`
 
 Sets the active device for the current host thread. All subsequent CUDA calls made from this thread will target the specified device.
+
+:::warning
+This function should not be used directly in conjunction with goroutines. If you want to run multi-gpu scenarios with goroutines you should use [RunOnDevice](#runondevice)
+:::
 
 **Parameters:**
 

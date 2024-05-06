@@ -8,38 +8,37 @@ Poseidon has been used in many popular ZK protocols such as Filecoin and [Plonk]
 
 Our implementation of Poseidon is implemented in accordance with the optimized [Filecoin version](https://spec.filecoin.io/algorithms/crypto/poseidon/).
 
-Let understand how Poseidon works.
+Lets understand how Poseidon works.
 
-### Initialization
+## Initialization
 
-Poseidon starts with the initialization of its internal state, which is composed of the input elements and some pregenerated constants. An initial round constant is added to each element of the internal state. Adding The round constants ensure the state is properly mixed from the outset.
+Poseidon starts with the initialization of its internal state, which is composed of the input elements and some pre-generated constants. An initial round constant is added to each element of the internal state. Adding the round constants ensures the state is properly mixed from the beginning.
 
 This is done to prevent collisions and to prevent certain cryptographic attacks by ensuring that the internal state is sufficiently mixed and unpredictable.
 
 ![Alt text](image.png)
 
-### Applying full and partial rounds
+## Applying full and partial rounds
 
-To generate a secure hash output, the algorithm goes through a series of "full rounds" and "partial rounds" as well as transformations between these sets of rounds.
+To generate a secure hash output, the algorithm goes through a series of "full rounds" and "partial rounds" as well as transformations between these sets of rounds in the following order:
 
-First full rounds => apply SBox and Round constants => partial rounds => Last full rounds => Apply SBox
+```First full rounds -> apply S-box and Round constants -> partial rounds -> Last full rounds -> Apply S-box```
 
-#### Full rounds
+### Full rounds
 
 ![Alt text](image-1.png)
 
-**Uniform Application of S-Box:** In full rounds, the S-box (a non-linear transformation) is applied uniformly to every element of the hash function's internal state. This ensures a high degree of mixing and diffusion, contributing to the hash function's security. The functions S-box involves raising each element of the state to a certain power denoted by `α` a member of the finite field defined by the prime `p`, `α` can be different depending on the the implementation and user configuration.
+**Uniform Application of S-box:** In full rounds, the S-box (a non-linear transformation) is applied uniformly to every element of the hash function's internal state. This ensures a high degree of mixing and diffusion, contributing to the hash function's security. The functions S-box involves raising each element of the state to a certain power denoted by `α` a member of the finite field defined by the prime `p`; `α` can be different depending on the the implementation and user configuration.
 
 **Linear Transformation:** After applying the S-box, a linear transformation is performed on the state. This involves multiplying the state by a MDS (Maximum Distance Separable) Matrix. which further diffuses the transformations applied by the S-box across the entire state.
 
 **Addition of Round Constants:** Each element of the state is then modified by adding a unique round constant. These constants are different for each round and are precomputed as part of the hash function's initialization. The addition of round constants ensures that even minor changes to the input produce significant differences in the output.
 
-#### Partial Rounds
+### Partial Rounds
 
 **Selective Application of S-Box:** Partial rounds apply the S-box transformation to only one element of the internal state per round, rather than to all elements. This selective application significantly reduces the computational complexity of the hash function without compromising its security. The choice of which element to apply the S-box to can follow a specific pattern or be fixed, depending on the design of the hash function.
 
 **Linear Transformation and Round Constants:** A linear transformation is performed and round constants are added. The linear transformation in partial rounds can be designed to be less computationally intensive (this is done by using a sparse matrix) than in full rounds, further optimizing the function's efficiency.
-
 
 The user of Poseidon can often choose how many partial or full rounds he wishes to apply; more full rounds will increase security but degrade performance. The choice and balance is highly dependent on the use case.
 
@@ -52,25 +51,20 @@ What that means is we calculate multiple hash-sums over multiple pre-images in p
 
 So for Poseidon of arity 2 and input of size 1024 * 2, we would expect 1024 elements of output. Which means each block would be of size 2 and that would result in 1024 Poseidon hashes being performed.
 
-### Supported API
+### Supported Bindings
 
-[`Rust`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-core/src/poseidon), [`C++`](https://github.com/ingonyama-zk/icicle/tree/main/icicle/appUtils/poseidon)
-
-### Supported curves
-
-Poseidon supports the following curves:
-
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`
+[`Rust`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-core/src/poseidon)
 
 ### Constants
 
 Poseidon is extremely customizable and using different constants will produce different hashes, security levels and performance results.
 
-We support pre-calculated and optimized constants for each of the [supported curves](#supported-curves).The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/appUtils/poseidon/constants) and are labeled clearly per curve `<curve_name>_poseidon.h`.
+We support pre-calculated and optimized constants for each of the [supported curves](#supported-curves).The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon/constants) and are labeled clearly per curve `<curve_name>_poseidon.h`.
 
-If you wish to generate your own constants you can use our python script which can be found [here](https://github.com/ingonyama-zk/icicle/blob/b6dded89cdef18348a5d4e2748b71ce4211c63ad/icicle/appUtils/poseidon/constants/generate_parameters.py#L1).
+If you wish to generate your own constants you can use our python script which can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon/constants/generate_parameters.py).
 
 Prerequisites:
+
 - Install python 3
 - `pip install poseidon-hash`
 - `pip install galois==0.3.7`
@@ -97,7 +91,7 @@ primitive_element = 7 # bls12-381
 # primitive_element = 15 # bw6-761
 ```
 
-We only support `alpha = 5` so if you want to use another alpha for SBox please reach out on discord or open a github issue.
+We only support `alpha = 5` so if you want to use another alpha for S-box please reach out on discord or open a github issue.
 
 ### Rust API
 
@@ -128,8 +122,7 @@ poseidon_hash_many::<F>(
 
 The `PoseidonConfig::default()` can be modified, by default the inputs and outputs are set to be on `Host` for example.
 
-
-```
+```rust
 impl<'a> Default for PoseidonConfig<'a> {
     fn default() -> Self {
         let ctx = get_default_device_context();
@@ -174,11 +167,10 @@ let ctx = get_default_device_context();
     )
     .unwrap();
 ```
-For more examples using different configurations refer here.
 
 ## The Tree Builder
 
-The tree builder allows you to build Merkle trees using Poseidon. 
+The tree builder allows you to build Merkle trees using Poseidon.
 
 You can define both the tree's `height` and its `arity`. The tree `height` determines the number of layers in the tree, including the root and the leaf layer. The `arity` determines how many children each internal node can have.
 
@@ -206,9 +198,9 @@ Similar to Poseidon, you can also configure the Tree Builder `TreeBuilderConfig:
 - `are_inputs_on_device`: Have the inputs been loaded to device memory ?
 - `is_async`: Should the TreeBuilder run asynchronously? `False` will block the current CPU thread. `True` will require you call `cudaStreamSynchronize` or `cudaDeviceSynchronize` to retrieve the result.
 
-### Benchmarks 
+### Benchmarks
 
-We ran the Poseidon tree builder on: 
+We ran the Poseidon tree builder on:
 
 **CPU**: 12th Gen Intel(R) Core(TM) i9-12900K/
 
@@ -218,9 +210,8 @@ We ran the Poseidon tree builder on:
 
 The benchmarks include copying data from and to the device.
 
-
 | Rows to keep parameter      | Run time, Icicle | Supranational PC2
-| ----------- | ----------- | ----------- |  
+| ----------- | ----------- | -----------
 | 10          | 9.4 seconds       |    13.6 seconds
 | 20          | 9.5 seconds       |    13.6 seconds
 | 29          | 13.7 seconds       |    13.6 seconds
