@@ -119,6 +119,7 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 - [nonam3e](https://github.com/nonam3e), for adding Grumpkin curve support into ICICLE
 - [alxiong](https://github.com/alxiong), for adding warmup for CudaStream
 - [cyl19970726](https://github.com/cyl19970726), for updating go install source in Dockerfile
+- [PatStiles](https://github.com/PatStiles), for adding Stark252 field
 
 ## Help & Support
 
