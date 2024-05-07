@@ -142,12 +142,13 @@ void solve_linear(scalar_t xa, scalar_t ya, scalar_t xb, scalar_t yb, scalar_t *
 }
 
 
-std::unique_ptr<scalar_t[]> initialize_domain(int logn) {
+std::unique_ptr<scalar_t[]> initialize_domain(int logn, scalar_t shift = scalar_t::one()) {
     auto omega = scalar_t::omega(logn);  // Compute the nth root of unity
     auto n = (1 << logn);               // Calculate the domain size as 2^logn
     auto domain = std::make_unique<scalar_t[]>(n);  // Allocate memory for the domain
 
-    scalar_t x = scalar_t::one();  // Start with one
+    // scalar_t x = scalar_t::one();  // Start with one
+    scalar_t x = shift;
     for (int i = 0; i < n; ++i) {
         domain[i] = x;             // Assign the current value of xx to the domain
         x = x * omega;            // Update xx by multiplying it with omega
@@ -233,51 +234,51 @@ int main(int argc, char** argv)
 
   std::cout << "Lesson 4: Constructing Trace Polynomials" << std::endl;
 
-  auto d1_poly = Polynomial_t::from_rou_evaluations(d1_trace, n);
-  auto d2_poly = Polynomial_t::from_rou_evaluations(d2_trace, n);
-  auto d3_poly = Polynomial_t::from_rou_evaluations(d3_trace, n);
-  auto c1_poly = Polynomial_t::from_rou_evaluations(c1_trace, n);
-  auto c2_poly = Polynomial_t::from_rou_evaluations(c2_trace, n);
-  auto c3_poly = Polynomial_t::from_rou_evaluations(c3_trace, n);
+  auto p_d1 = Polynomial_t::from_rou_evaluations(d1_trace, n);
+  auto p_d2 = Polynomial_t::from_rou_evaluations(d2_trace, n);
+  auto p_d3 = Polynomial_t::from_rou_evaluations(d3_trace, n);
+  auto p_c1 = Polynomial_t::from_rou_evaluations(c1_trace, n);
+  auto p_c2 = Polynomial_t::from_rou_evaluations(c2_trace, n);
+  auto p_c3 = Polynomial_t::from_rou_evaluations(c3_trace, n);
 
   // Evaluating Trace Polynomials over rou powers would return the original trace data
   
-  auto d1_degree = d1_poly.degree();
+  auto d1_degree = p_d1.degree();
   std::cout << "Degree: " << d1_degree << std::endl;
 
   auto omega = scalar_t::omega(logn);
   auto domain = initialize_domain(logn);
 
-  // Sanity check:evaluate on the domain (equivalent to NTT)
+  // Sanity check: evaluate on the domain (equivalent to NTT) 
   auto evaluations = std::make_unique<scalar_t[]>(n);
-  d1_poly.evaluate_on_domain(domain.get(), n, evaluations.get());
+  p_d1.evaluate_on_domain(domain.get(), n, evaluations.get());
+  // TBD: use auto evaluations = rou_evaluations(&p_d1, 1*n);
 
 
-  auto x = scalar_t::one();
   for (int i = 0; i < n; ++i) {
     std::cout << "trace: " << d1_trace[i] << " evaluation " << evaluations[i] << std::endl;
-    x = x * omega;
   }
 
   std::cout << std::endl << "4. Generate Reed-Solomon traces" << std::endl;
 
-  // Evaluating Trace Polynomials over the "expanded domain" gives a "trace block."
+  // Interpolate trace polynomials on 4x expanded rou domain (Reed Solomon) 
 
   // auto domain_rs = initialize_domain(logn+2);
 
-  auto d1_trace_rs = rou_evaluations(&d1_poly, 4*n);
-  auto d2_trace_rs = rou_evaluations(&d2_poly, 4*n);
-  auto d3_trace_rs = rou_evaluations(&d3_poly, 4*n);
-  auto c1_trace_rs = rou_evaluations(&c1_poly, 4*n);
-  auto c2_trace_rs = rou_evaluations(&c2_poly, 4*n);
-  auto c3_trace_rs = rou_evaluations(&c3_poly, 4*n);
+  auto d1_trace_rs = rou_evaluations(&p_d1, 4*n);
+  auto d2_trace_rs = rou_evaluations(&p_d2, 4*n);
+  auto d3_trace_rs = rou_evaluations(&p_d3, 4*n);
+  auto c1_trace_rs = rou_evaluations(&p_c1, 4*n);
+  // auto c1_trace_rs1 = rou_evaluations(&p_c1, 4*n);
+  auto c2_trace_rs = rou_evaluations(&p_c2, 4*n);
+  auto c3_trace_rs = rou_evaluations(&p_c3, 4*n);
 
   auto omega_rs = scalar_t::omega(2+logn);
-  auto x_rs = scalar_t::one();
 
-  for(int i = 0; i < 4*n; ++i) {
-    std::cout << i << ": " << d1_trace_rs[i] << std::endl;
-  }
+  print_vector(c1_trace_rs.get(), 4*n);
+  // print_vector(c1_trace_rs1.get(), 4*n);
+
+  
   std::cout << "Note that every 4th entry matches the original trace data." << std::endl;
   std::cout << "This is a degree 4 Reed Solomon expansion of the original trace." << std::endl;
 
@@ -285,32 +286,42 @@ int main(int argc, char** argv)
   std::cout << "To maintain a zero-knowledge protocol, the trace polynomials are evaluated over a zk commitment domain" << std::endl;
   std::cout << std::endl << "5. Reconstruct polynomial for the codeword" << std::endl;
 
-  scalar_t d1_zkcommitment[4*n], d2_zkcommitment[4*n], d3_zkcommitment[4*n];
-  scalar_t c1_zkcommitment[4*n], c2_zkcommitment[4*n], c3_zkcommitment[4*n];
-
-  
   std::cout << std::endl << "6. Commit to the codeword polynomial" << std::endl;
   std::cout << "Evaluate with a shift " << std::endl;
+  auto domain_zkcommitment = initialize_domain(logn+2, basic_root);
+  auto d1_zkcommitment = std::make_unique<scalar_t[]>(4*n);
+  auto d2_zkcommitment = std::make_unique<scalar_t[]>(4*n);
+  auto d3_zkcommitment = std::make_unique<scalar_t[]>(4*n);
+  auto c1_zkcommitment = std::make_unique<scalar_t[]>(4*n);
+  auto c2_zkcommitment = std::make_unique<scalar_t[]>(4*n);
+  auto c3_zkcommitment = std::make_unique<scalar_t[]>(4*n);
+
+  auto c1_trace_rs0 = rou_evaluations(&p_c1, 4*n);
+  print_vector(c1_trace_rs0.get(), 4*n);
+  
+  p_d1.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d1_zkcommitment.get());
+  p_d2.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d2_zkcommitment.get());
+  p_d3.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d3_zkcommitment.get());
+  p_c1.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c1_zkcommitment.get());
+  p_c2.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c2_zkcommitment.get());
+  p_c3.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c3_zkcommitment.get());
+
+  auto c1_trace_rs1 = rou_evaluations(&p_c1, 4*n);
+  print_vector(c1_trace_rs1.get(), 4*n);
+return 0;  
+
   scalar_t xzk = basic_root;
   
-  for (int i = 0; i < 4*n; ++i) {
-    d1_zkcommitment[i] = d1_poly(xzk);
-    d2_zkcommitment[i] = d2_poly(xzk);
-    d3_zkcommitment[i] = d3_poly(xzk);
-    c1_zkcommitment[i] = c1_poly(xzk);
-    c2_zkcommitment[i] = c2_poly(xzk);
-    c3_zkcommitment[i] = c3_poly(xzk);
-    xzk = xzk * omega_rs;
-  }
-
   std::cout << "These zk-commitment blocks do not share any evaluation points with the original trace data." << std::endl;
   for (int i = 0; i < 4*n; ++i) {
     std::cout << i << ": " << d1_zkcommitment[i] << std::endl;
   }
     
   std::cout << "Build Merkle Tree (TBD)" << std::endl;
+
   std::cout << "Lesson 6: Constraint Polynomials" << std::endl;
   std::cout << "The constraints are used to check the correctness of the trace. In this example, we check 6 rules to establish the validity of the trace." << std::endl;
+  // TBD: use polynomial math to build constraints
   // Applying rule checks to trace blocks makes constraint blocks.
   // A constraint block has 0s in every 4th row -- these 0s indicate the passing of the various rulechecks.
 
@@ -321,21 +332,27 @@ int main(int argc, char** argv)
 
   scalar_t fib_constraint[n];
   compute_fib_constraint(d1_trace, d2_trace, d3_trace, c1_trace, c2_trace, c3_trace, fib_constraint, n);
+  // auto p_fib_constraint =  (p_d3 - p_d2 - p_d1) * (p_c1 + p_c2 + p_c3);
+  auto p_fib_constraint =  p_c1.clone();
+  // auto fib_constraint1 = rou_evaluations(&p_fib_constraint, n);
   std::cout <<  "Applied to the original trace data, the constraint yields all 0s: " << std::endl;
   print_vector(fib_constraint,n);
+  // print_vector(fib_constraint1.get(),n);  
+
   scalar_t fib_constraint_rs[4*n];
   compute_fib_constraint(d1_trace_rs.get(), d2_trace_rs.get(), d3_trace_rs.get(), c1_trace_rs.get(), c2_trace_rs.get(), c3_trace_rs.get(), fib_constraint_rs, 4*n);
+  auto fib_constraint_rs1 = rou_evaluations(&p_c1, 4*n);
   std::cout <<  "Applied to the Reed-Solomon expanded trace blocks, the constraint yields 0s in every 4th row: " << std::endl;
   print_vector(fib_constraint_rs,4*n);
+  std::cout <<  "the same when using polynomial objects: " << std::endl;
+  print_vector(fib_constraint_rs1.get(),4*n);
+return 0;  
+
   scalar_t fib_constraint_zkcommitment[4*n];
-  compute_fib_constraint(d1_zkcommitment, d2_zkcommitment, d3_zkcommitment, c1_zkcommitment, c2_zkcommitment, c3_zkcommitment, fib_constraint_zkcommitment, 4*n);
+  compute_fib_constraint(d1_zkcommitment.get(), d2_zkcommitment.get(), d3_zkcommitment.get(), c1_zkcommitment.get(), c2_zkcommitment.get(), c3_zkcommitment.get(), fib_constraint_zkcommitment, 4*n);
   std::cout <<  "Applied to zk-commitment domain, no 0s" << std::endl;
   print_vector(fib_constraint_zkcommitment,4*n);
     
-  // init1_constraint_columns = init1_constraint(trace_data)
-  // init1_constraint_reedsolomonexpansion = init1_constraint(trace_reedsolomonexpansion)
-  // init1_constraint_zkcommitment = init1_constraint(trace_zkcommitment)
-
   scalar_t init1_constraint[n];
   compute_value_constraint(d1_trace, scalar_t::from(24), c1_trace, init1_constraint, n);
   std::cout << "Original Init 1 constraint gives 0s" << std::endl;
@@ -347,7 +364,7 @@ int main(int argc, char** argv)
   print_vector(init1_constraint_rs, 4*n);
 
   scalar_t init1_constraint_zkcommitment[4*n];
-  compute_value_constraint(d1_zkcommitment, scalar_t::from(24), c1_zkcommitment, init1_constraint_zkcommitment, 4*n);
+  compute_value_constraint(d1_zkcommitment.get(), scalar_t::from(24), c1_zkcommitment.get(), init1_constraint_zkcommitment, 4*n);
   std::cout << "ZK Commitment Init 1 constraint gives no 0s" << std::endl;
   print_vector(init1_constraint_zkcommitment, 4*n);
 
@@ -362,7 +379,7 @@ int main(int argc, char** argv)
   print_vector(init2_constraint_rs, 4*n);
 
   scalar_t init2_constraint_zkcommitment[4*n];
-  compute_value_constraint(d2_zkcommitment, scalar_t::from(30), c1_zkcommitment, init2_constraint_zkcommitment, 4*n);
+  compute_value_constraint(d2_zkcommitment.get(), scalar_t::from(30), c1_zkcommitment.get(), init2_constraint_zkcommitment, 4*n);
   std::cout << "ZK Commitment Init 2 constraint gives no 0s" << std::endl;
   print_vector(init2_constraint_zkcommitment, 4*n);
 
@@ -377,7 +394,7 @@ int main(int argc, char** argv)
   print_vector(termination_constraint_rs, 4*n);
 
   scalar_t termination_constraint_zkcommitment[4*n];
-  compute_value_constraint(d3_zkcommitment, scalar_t::from(222), c3_zkcommitment, termination_constraint_zkcommitment, 4*n);
+  compute_value_constraint(d3_zkcommitment.get(), scalar_t::from(222), c3_zkcommitment.get(), termination_constraint_zkcommitment, 4*n);
   std::cout << "ZK Commitment Termination constraint gives no 0s" << std::endl;
   print_vector(termination_constraint_zkcommitment, 4*n);
 
@@ -392,7 +409,7 @@ int main(int argc, char** argv)
   print_vector(recursion_constraint1_rs, 4*n);
 
   scalar_t recursion_constraint1_zkcommitment[4*n];
-  compute_recursion_constraint(d1_zkcommitment, d2_zkcommitment, c2_zkcommitment, recursion_constraint1_zkcommitment, 4*n, 4);
+  compute_recursion_constraint(d1_zkcommitment.get(), d2_zkcommitment.get(), c2_zkcommitment.get(), recursion_constraint1_zkcommitment, 4*n, 4);
   std::cout << "ZK Commitment Recursion constraint gives no 0s" << std::endl;
   print_vector(recursion_constraint1_zkcommitment, 4*n);
 
@@ -407,7 +424,7 @@ int main(int argc, char** argv)
   print_vector(recursion_constraint2_rs, 4*n);
 
   scalar_t recursion_constraint2_zkcommitment[4*n];
-  compute_recursion_constraint(d2_zkcommitment, d3_zkcommitment, c2_zkcommitment, recursion_constraint2_zkcommitment, 4*n, 4);
+  compute_recursion_constraint(d2_zkcommitment.get(), d3_zkcommitment.get(), c2_zkcommitment.get(), recursion_constraint2_zkcommitment, 4*n, 4);
   std::cout << "ZK Commitment Recursion constraint gives no 0s" << std::endl;
   print_vector(recursion_constraint2_zkcommitment, 4*n);
 
@@ -422,7 +439,6 @@ int main(int argc, char** argv)
   print_vector(mixed_constraint, n);
 
   
-
   // scalar_t* all_constraints_rs[] = {fib_constraint_rs, init1_constraint_rs, init2_constraint_rs, termination_constraint_rs, recursion_constraint1_rs, recursion_constraint2_rs};
   scalar_t* all_constraints_rs[] = {fib_constraint_rs, init1_constraint_rs, init2_constraint_rs, termination_constraint_rs};
   scalar_t mixed_constraint_rs[4*n];
@@ -468,7 +484,7 @@ int main(int argc, char** argv)
     xzk = xzk * omega_rs;
   }
 
-  std::cout << "The Virifier should provide the Merke commitment for the above" << std::endl;
+  std::cout << "The Verifier should provide the Merke commitment for the above" << std::endl;
 
   std::cout << "Lesson 9: The DEEP Technique" << std::endl;
   std::cout << "The DEEP technique improves the security of a single query by sampling outside of the commitment domain."  << std::endl;
@@ -483,10 +499,10 @@ int main(int argc, char** argv)
   
   const scalar_t coeffs1[2] = {scalar_t::zero()-DEEP_point, scalar_t::one()};
   auto denom_DEEP1 = Polynomial_t::from_coefficients(coeffs1, 2);
-  auto d1_poly_tmp = d1_poly.clone();
-  d1_poly_tmp.sub_monomial_inplace(d1_poly(DEEP_point)) ;
-  auto [d1_poly_DEEP, r] = d1_poly_tmp.divide(denom_DEEP1);
-  std::cout << "The DEEP d1 degree is: " << d1_poly_DEEP.degree() << std::endl;
+  auto p_d1_tmp = p_d1.clone();
+  p_d1_tmp.sub_monomial_inplace(p_d1(DEEP_point)) ;
+  auto [p_d1_DEEP, r] = p_d1_tmp.divide(denom_DEEP1);
+  std::cout << "The DEEP d1 degree is: " << p_d1_DEEP.degree() << std::endl;
 
   // d2, d3 use recursion constraints and need the point corresponding to the previous state (clock cycle)
   auto DEEP_prev_point = DEEP_point*scalar_t::inverse(omega);
@@ -494,34 +510,34 @@ int main(int argc, char** argv)
   auto denom_DEEP2 = Polynomial_t::from_coefficients(coeffs2, 2);
   
   scalar_t coeffs_d2bar[2];
-  solve_linear(DEEP_point, d2_poly(DEEP_point), DEEP_prev_point, d2_poly(DEEP_prev_point), coeffs_d2bar);
+  solve_linear(DEEP_point, p_d2(DEEP_point), DEEP_prev_point, p_d2(DEEP_prev_point), coeffs_d2bar);
   auto d2bar = Polynomial_t::from_coefficients(coeffs_d2bar, 2);
-  auto [d2_poly_DEEP, r2] = (d2_poly - d2bar).divide(denom_DEEP1*denom_DEEP2);
-  std::cout << "The DEEP d2 degree is: " << d2_poly_DEEP.degree() << std::endl;
+  auto [p_d2_DEEP, r2] = (p_d2 - d2bar).divide(denom_DEEP1*denom_DEEP2);
+  std::cout << "The DEEP d2 degree is: " << p_d2_DEEP.degree() << std::endl;
 
   scalar_t coeffs_d3bar[2];
-  solve_linear(DEEP_point, d3_poly(DEEP_point), DEEP_prev_point, d3_poly(DEEP_prev_point), coeffs_d3bar);
+  solve_linear(DEEP_point, p_d3(DEEP_point), DEEP_prev_point, p_d3(DEEP_prev_point), coeffs_d3bar);
   auto d3bar = Polynomial_t::from_coefficients(coeffs_d3bar, 2);
-  auto [d3_poly_DEEP, r3] = (d3_poly - d3bar).divide(denom_DEEP1*denom_DEEP2);
-  std::cout << "The DEEP d3 degree is: " << d3_poly_DEEP.degree() << std::endl;
+  auto [p_d3_DEEP, r3] = (p_d3 - d3bar).divide(denom_DEEP1*denom_DEEP2);
+  std::cout << "The DEEP d3 degree is: " << p_d3_DEEP.degree() << std::endl;
 
 
   // DEEP c{1,2,3} polynomials
 
-  const scalar_t coeffs_c1bar[1] = {c1_poly(DEEP_point)};
+  const scalar_t coeffs_c1bar[1] = {p_c1(DEEP_point)};
   auto c1bar = Polynomial_t::from_coefficients(coeffs_c1bar, 1);
-  auto [c1_poly_DEEP, r_c1] = (c1_poly - c1bar).divide(denom_DEEP1);
-  std::cout << "The DEEP c1 degree is: " << c1_poly_DEEP.degree() << std::endl;
+  auto [p_c1_DEEP, r_c1] = (p_c1 - c1bar).divide(denom_DEEP1);
+  std::cout << "The DEEP c1 degree is: " << p_c1_DEEP.degree() << std::endl;
 
-  const scalar_t coeffs_c2bar[1] = {c2_poly(DEEP_point)};
+  const scalar_t coeffs_c2bar[1] = {p_c2(DEEP_point)};
   auto c2bar = Polynomial_t::from_coefficients(coeffs_c2bar, 1);
-  auto [c2_poly_DEEP, r_c2] = (c2_poly - c2bar).divide(denom_DEEP1);
-  std::cout << "The DEEP c2 degree is: " << c2_poly_DEEP.degree() << std::endl;
+  auto [p_c2_DEEP, r_c2] = (p_c2 - c2bar).divide(denom_DEEP1);
+  std::cout << "The DEEP c2 degree is: " << p_c2_DEEP.degree() << std::endl;
 
-  const scalar_t coeffs_c3bar[1] = {c3_poly(DEEP_point)};
+  const scalar_t coeffs_c3bar[1] = {p_c3(DEEP_point)};
   auto c3bar = Polynomial_t::from_coefficients(coeffs_c3bar, 1);
-  auto [c3_poly_DEEP, r_c3] = (c3_poly - c3bar).divide(denom_DEEP1);
-  std::cout << "The DEEP c3 degree is: " << c3_poly_DEEP.degree() << std::endl;
+  auto [p_c3_DEEP, r_c3] = (p_c3 - c3bar).divide(denom_DEEP1);
+  std::cout << "The DEEP c3 degree is: " << p_c3_DEEP.degree() << std::endl;
 
   // DEEP validity polynomial
   const scalar_t coeffs_vbar[1] = {p_validity_rs(DEEP_point)};
@@ -536,12 +552,12 @@ int main(int argc, char** argv)
 
   Polynomial_t* all_DEEP[7];
 
-  all_DEEP[0] = &d1_poly_DEEP;
-  all_DEEP[1] = &d2_poly_DEEP;
-  all_DEEP[2] = &d3_poly_DEEP;
-  all_DEEP[3] = &c1_poly_DEEP;
-  all_DEEP[4] = &c2_poly_DEEP;
-  all_DEEP[5] = &c3_poly_DEEP;
+  all_DEEP[0] = &p_d1_DEEP;
+  all_DEEP[1] = &p_d2_DEEP;
+  all_DEEP[2] = &p_d3_DEEP;
+  all_DEEP[3] = &p_c1_DEEP;
+  all_DEEP[4] = &p_c2_DEEP;
+  all_DEEP[5] = &p_c3_DEEP;
   all_DEEP[6] = &v_DEEP;
 
   Polynomial_t fri_input = p_mix(all_DEEP, 7, scalar_t::from(99));
@@ -575,7 +591,6 @@ int main(int argc, char** argv)
     std::cout << "Round " << i << std::endl << "rhs: " << rhs[i] << std::endl << "lhs: " << lhs[i] << std::endl;
   }
 
-
   // Clean up
 
   delete[] d1_trace;
@@ -584,13 +599,6 @@ int main(int argc, char** argv)
   delete[] c1_trace;
   delete[] c2_trace;
   delete[] c3_trace;
-
-  // delete[] d1_trace_rs;
-  // delete[] d2_trace_rs;
-  // delete[] d3_trace_rs;
-  // delete[] c1_trace_rs;
-  // delete[] c2_trace_rs;
-  // delete[] c3_trace_rs;
 
   return 0;
 }
