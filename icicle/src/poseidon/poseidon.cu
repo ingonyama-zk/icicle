@@ -13,21 +13,30 @@ namespace poseidon {
   {
     size_t rc_offset = 0;
 
+    CHK_STICKY(cudaStreamSynchronize(stream));
+
     full_rounds<S, T><<<
       PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads,
       sizeof(S) * PKC<T>::hashes_per_block * T, stream>>>(
       states, number_of_states, rc_offset, FIRST_FULL_ROUNDS, constants);
     rc_offset += T * (constants.full_rounds_half + 1);
 
+    CHK_STICKY(cudaStreamSynchronize(stream));
+
     partial_rounds<S, T>
       <<<PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0, stream>>>(
         states, number_of_states, rc_offset, constants);
     rc_offset += constants.partial_rounds;
 
+
+    CHK_STICKY(cudaStreamSynchronize(stream));
+
     full_rounds<S, T><<<
       PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads,
       sizeof(S) * PKC<T>::hashes_per_block * T, stream>>>(
       states, number_of_states, rc_offset, SECOND_FULL_ROUNDS, constants);
+
+      CHK_STICKY(cudaStreamSynchronize(stream));
     return CHK_LAST();
   }
 
@@ -60,16 +69,24 @@ namespace poseidon {
       CHK_IF_RETURN(cudaMallocAsync(&output_device, number_of_states * sizeof(S), stream))
     }
 
+    CHK_STICKY(cudaStreamSynchronize(stream));
+
     prepare_poseidon_states<S, T>
       <<<PKC<T>::number_of_full_blocks(number_of_states), PKC<T>::number_of_threads, 0, stream>>>(
         states, number_of_states, constants.domain_tag, config.aligned);
 
+      CHK_STICKY(cudaStreamSynchronize(stream));
+
     cudaError_t hash_error = permute_many<S, T>(states, number_of_states, constants, stream);
     CHK_IF_RETURN(hash_error);
+
+CHK_STICKY(cudaStreamSynchronize(stream));
 
     get_hash_results<S, T>
       <<<PKC<T>::number_of_singlehash_blocks(number_of_states), PKC<T>::singlehash_block_size, 0, stream>>>(
         states, number_of_states, output_device);
+
+        CHK_STICKY(cudaStreamSynchronize(stream));
 
     if (config.loop_state) {
       copy_recursive<S, T>
@@ -77,7 +94,11 @@ namespace poseidon {
           states, number_of_states, output_device);
     }
 
+    CHK_STICKY(cudaStreamSynchronize(stream));
+
     if (!config.input_is_a_state) CHK_IF_RETURN(cudaFreeAsync(states, stream));
+
+    printf("number_of_states: %lu, sizeof(S) : %lu\n input_is_a_state:%d \n", number_of_states , sizeof(S), config.input_is_a_state);
 
     if (!config.are_outputs_on_device) {
       CHK_IF_RETURN(
