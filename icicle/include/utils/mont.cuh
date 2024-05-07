@@ -9,7 +9,7 @@ namespace mont {
 #define MAX_THREADS_PER_BLOCK 256
 
     template <typename E, bool is_into>
-    __global__ void MontgomeryKernel(const E* input, int n, E* output)
+    void MontgomeryKernel(const E* input, int n, E* output)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid < n) { output[tid] = is_into ? E::to_montgomery(input[tid]) : E::from_montgomery(input[tid]); }

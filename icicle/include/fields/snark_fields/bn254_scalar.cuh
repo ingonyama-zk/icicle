@@ -2,9 +2,9 @@
 #ifndef BN254_SCALAR_PARAMS_H
 #define BN254_SCALAR_PARAMS_H
 
-#include "fields/storage.cuh"
-#include "fields/field.cuh"
-#include "fields/quadratic_extension.cuh"
+#include "../storage.cuh"
+#include "../field.cuh"
+#include "../quadratic_extension.cuh"
 
 namespace bn254 {
   struct fp_config {

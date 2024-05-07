@@ -3,12 +3,10 @@
 #define ERR_H
 
 #include <iostream>
-
-#include <cuda_runtime.h>
 #include <stdexcept>
 #include <string>
 
-enum class IcicleError_t {
+enum IcicleError_t {
   IcicleSuccess = 0,
   InvalidArgument = 1,
   MemoryAllocationError = 2,
@@ -38,14 +36,14 @@ private:
 
 public:
   // Constructor for cudaError_t with optional message
-  IcicleError(cudaError_t cudaError, const std::string& msg = "")
-      : std::runtime_error("CUDA Error: " + std::string(cudaGetErrorString(cudaError)) + " " + msg),
+  IcicleError(int cudaError, const std::string& msg = "")
+      : std::runtime_error("Error: " + msg),
         errCode(static_cast<int>(cudaError))
   {
   }
 
   // Constructor for cudaError_t with const char* message
-  IcicleError(cudaError_t cudaError, const char* msg) : IcicleError(cudaError, std::string(msg)) {}
+  IcicleError(int cudaError, const char* msg) : IcicleError(cudaError, std::string(msg)) {}
 
   // Constructor for IcicleError_t with optional message
   IcicleError(IcicleError_t icicleError, const std::string& msg = "")
@@ -67,11 +65,10 @@ public:
 #define CHK_LOG(val)                   check((val), #val, __FILE__, __LINE__)
 #define CHK_VAL(val, file, line)       check((val), #val, file, line)
 
-cudaError_t inline check(cudaError_t err, const char* const func, const char* const file, const int line)
+int inline check(int err, const char* const func, const char* const file, const int line)
 {
-  if (err != cudaSuccess) {
+  if (err != 0) {
     std::cerr << "CUDA Runtime Error by: " << func << " at: " << file << ":" << line << std::endl;
-    std::cerr << cudaGetErrorString(err) << std::endl << std::endl;
   }
 
   return err;
@@ -90,12 +87,12 @@ cudaError_t inline check(cudaError_t err, const char* const func, const char* co
 #define THROW_ICICLE_CUDA(val)                       throwIcicleCudaErr(val, __FUNCTION__, __FILE__, __LINE__)
 #define THROW_ICICLE_CUDA_ERR(val, func, file, line) throwIcicleCudaErr(val, func, file, line)
 void inline throwIcicleCudaErr(
-  cudaError_t err, const char* const func, const char* const file, const int line, bool isUnrecoverable = true)
+  int err, const char* const func, const char* const file, const int line, bool isUnrecoverable = true)
 {
   // TODO: fmt::format introduced only in C++20
-  std::string err_msg = (isUnrecoverable ? "!!!Unrecoverable!!! : " : "") + std::string{cudaGetErrorString(err)} +
-                        " : detected by: " + func + " at: " + file + ":" + std::to_string(line) +
-                        "\nThe error is reported there and may be caused by prior calls.\n";
+  std::string err_msg = (isUnrecoverable ? "!!!Unrecoverable!!! : " : "");
+  //  + " : detected by: " + func + " at: " + file + ":" + std::to_string(line) +
+  //                       "\nThe error is reported there and may be caused by prior calls.\n";
   std::cerr << err_msg << std::endl; // TODO: Logging
   throw IcicleError{err, err_msg};
 }
@@ -111,14 +108,14 @@ void inline throwIcicleErr(
   throw IcicleError{err, err_msg};
 }
 
-cudaError_t inline checkCudaErrorIsSticky(
-  cudaError_t err, const char* const func, const char* const file, const int line, bool isThrowing = true)
+int inline checkCudaErrorIsSticky(
+  int err, const char* const func, const char* const file, const int line, bool isThrowing = true)
 {
-  if (err != cudaSuccess) {
+  if (err != 0) {
     // check for sticky (unrecoverable) error when the only option is to restart process
-    cudaError_t err2 = cudaDeviceSynchronize();
+    int err2 = 0;
     bool is_logged;
-    if (err2 != cudaSuccess) { // we suspect sticky error
+    if (err2 != 0) { // we suspect sticky error
       if (err != err2) {
         is_logged = true;
         CHK_ERR(err, func, file, line);
@@ -139,13 +136,13 @@ cudaError_t inline checkCudaErrorIsSticky(
 // most common macros to use
 #define CHK_INIT_IF_RETURN()                                                                                           \
   {                                                                                                                    \
-    cudaError_t err_result = CHK_LAST();                                                                               \
+    int err_result = CHK_LAST();                                                                               \
     if (err_result != cudaSuccess) return err_result;                                                                  \
   }
 
 #define CHK_IF_RETURN(val)                                                                                             \
   {                                                                                                                    \
-    cudaError_t err_result = CHK_STICKY(val);                                                                          \
+    int err_result = CHK_STICKY(val);                                                                          \
     if (err_result != cudaSuccess) return err_result;                                                                  \
   }
 
