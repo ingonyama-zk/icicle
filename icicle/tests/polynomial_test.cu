@@ -94,12 +94,14 @@ public:
     const int deg_rhs = rhs.degree();
     ASSERT_EQ(deg_lhs, deg_rhs);
 
-    auto lhs_coeffs = std::make_unique<scalar_t[]>(deg_lhs);
-    auto rhs_coeffs = std::make_unique<scalar_t[]>(deg_rhs);
-    lhs.copy_coeffs(lhs_coeffs.get(), 1, deg_lhs - 1);
-    rhs.copy_coeffs(rhs_coeffs.get(), 1, deg_rhs - 1);
+    const int nof_elements_to_compare = (deg_lhs < 0) ? 1 : deg_lhs + 1;
 
-    ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(scalar_t)));
+    auto lhs_coeffs = std::make_unique<scalar_t[]>(nof_elements_to_compare);
+    auto rhs_coeffs = std::make_unique<scalar_t[]>(nof_elements_to_compare);
+    lhs.copy_coeffs(lhs_coeffs.get(), 0, nof_elements_to_compare - 1);
+    rhs.copy_coeffs(rhs_coeffs.get(), 0, nof_elements_to_compare - 1);
+
+    ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), nof_elements_to_compare * sizeof(scalar_t)));
   }
 
   static Polynomial_t vanishing_polynomial(int degree)
@@ -417,16 +419,22 @@ TEST_F(PolynomialTest, View)
   const int size = 1 << 6;
 
   auto f = randomize_polynomial(size);
-  auto [d_coeff, N, device_id] = f.get_coefficients_view();
+  {
+    auto [d_coeff, N, device_id] = f.get_coefficients_view();
 
-  EXPECT_EQ(d_coeff.isValid(), true);
-  auto g = f + f;
-  // expecting the view to remain valid in that case
-  EXPECT_EQ(d_coeff.isValid(), true);
+    EXPECT_EQ(d_coeff.isValid(), true);
+    auto g = f + f;
+    // expecting the view to remain valid in that case
+    EXPECT_EQ(d_coeff.isValid(), true);
 
-  f += f;
-  // expecting view to be invalidated since f is modified
-  EXPECT_EQ(d_coeff.isValid(), false);
+    f += f;
+    // expecting view to be invalidated since f is modified
+    EXPECT_EQ(d_coeff.isValid(), false);
+  }
+
+  auto [d_evals, N, device_id] = f.get_rou_evaluations_view();
+  auto g = Polynomial_t::from_rou_evaluations(d_evals.get(), N);
+  assert_equal(f, g);
 }
 
 TEST_F(PolynomialTest, interpolation)
