@@ -296,19 +296,24 @@ int main(int argc, char** argv)
   auto c2_zkcommitment = std::make_unique<scalar_t[]>(4*n);
   auto c3_zkcommitment = std::make_unique<scalar_t[]>(4*n);
 
-  auto c1_trace_rs0 = rou_evaluations(&p_c1, 4*n);
-  print_vector(c1_trace_rs0.get(), 4*n);
-  
-  p_d1.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d1_zkcommitment.get());
-  p_d2.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d2_zkcommitment.get());
-  p_d3.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d3_zkcommitment.get());
-  p_c1.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c1_zkcommitment.get());
-  p_c2.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c2_zkcommitment.get());
-  p_c3.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c3_zkcommitment.get());
+  // auto c1_trace_rs0 = rou_evaluations(&p_c1, 4*n);
+  // print_vector(c1_trace_rs0.get(), 4*n);
+  auto p_d1_copy = p_d1.clone();
+  auto p_d2_copy = p_d2.clone();
+  auto p_d3_copy = p_d3.clone();
+  auto p_c1_copy = p_c1.clone();
+  auto p_c2_copy = p_c2.clone();
+  auto p_c3_copy = p_c3.clone();
 
-  auto c1_trace_rs1 = rou_evaluations(&p_c1, 4*n);
-  print_vector(c1_trace_rs1.get(), 4*n);
-return 0;  
+  p_d1_copy.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d1_zkcommitment.get());
+  p_d2_copy.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d2_zkcommitment.get());
+  p_d3_copy.evaluate_on_domain(domain_zkcommitment.get(), 4*n, d3_zkcommitment.get());
+  p_c1_copy.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c1_zkcommitment.get());
+  p_c2_copy.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c2_zkcommitment.get());
+  p_c3_copy.evaluate_on_domain(domain_zkcommitment.get(), 4*n, c3_zkcommitment.get());
+
+  // auto c1_trace_rs1 = rou_evaluations(&p_c1, 4*n);
+  // print_vector(c1_trace_rs1.get(), 4*n);  
 
   scalar_t xzk = basic_root;
   
@@ -332,21 +337,22 @@ return 0;
 
   scalar_t fib_constraint[n];
   compute_fib_constraint(d1_trace, d2_trace, d3_trace, c1_trace, c2_trace, c3_trace, fib_constraint, n);
-  // auto p_fib_constraint =  (p_d3 - p_d2 - p_d1) * (p_c1 + p_c2 + p_c3);
-  auto p_fib_constraint =  p_c1.clone();
+  auto p_fib_constraint =  (p_d3 - p_d2 - p_d1) * (p_c1 + p_c2 + p_c3);
+  // auto p_factor1 = p_d3 - p_d2 - p_d1;
+  // auto p_factor2 = p_c1 + p_c2 + p_c3;
+  // auto p_fib_constraint =  p_factor1 * p_factor2;
   // auto fib_constraint1 = rou_evaluations(&p_fib_constraint, n);
   std::cout <<  "Applied to the original trace data, the constraint yields all 0s: " << std::endl;
   print_vector(fib_constraint,n);
-  // print_vector(fib_constraint1.get(),n);  
 
   scalar_t fib_constraint_rs[4*n];
   compute_fib_constraint(d1_trace_rs.get(), d2_trace_rs.get(), d3_trace_rs.get(), c1_trace_rs.get(), c2_trace_rs.get(), c3_trace_rs.get(), fib_constraint_rs, 4*n);
-  auto fib_constraint_rs1 = rou_evaluations(&p_c1, 4*n);
+  // this line gives an error, need to debug
+  // auto fib_constraint_rs1 = rou_evaluations(&p_fib_constraint, 4*n);
   std::cout <<  "Applied to the Reed-Solomon expanded trace blocks, the constraint yields 0s in every 4th row: " << std::endl;
   print_vector(fib_constraint_rs,4*n);
-  std::cout <<  "the same when using polynomial objects: " << std::endl;
-  print_vector(fib_constraint_rs1.get(),4*n);
-return 0;  
+  // std::cout <<  "the same when using polynomial objects: " << std::endl;
+  // print_vector(fib_constraint_rs1.get(),4*n);
 
   scalar_t fib_constraint_zkcommitment[4*n];
   compute_fib_constraint(d1_zkcommitment.get(), d2_zkcommitment.get(), d3_zkcommitment.get(), c1_zkcommitment.get(), c2_zkcommitment.get(), c3_zkcommitment.get(), fib_constraint_zkcommitment, 4*n);
