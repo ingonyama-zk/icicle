@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	bw6761 "github.com/consensys/gnark-crypto/ecc/bw6-761"
+	"github.com/consensys/gnark-crypto/ecc/bw6-761"
 	"github.com/consensys/gnark-crypto/ecc/bw6-761/fp"
 	"github.com/consensys/gnark-crypto/ecc/bw6-761/fr"
 
@@ -242,9 +242,7 @@ func TestMSMG2SkewedDistribution(t *testing.T) {
 
 func TestMSMG2MultiDevice(t *testing.T) {
 	numDevices, _ := cr.GetDeviceCount()
-	numDevices = 1 // TODO remove when test env is fixed
 	fmt.Println("There are ", numDevices, " devices available")
-	orig_device, _ := cr.GetDevice()
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < numDevices; i++ {
@@ -278,5 +276,4 @@ func TestMSMG2MultiDevice(t *testing.T) {
 		})
 	}
 	wg.Wait()
-	cr.SetDevice(orig_device)
 }
