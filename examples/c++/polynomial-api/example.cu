@@ -254,7 +254,8 @@ void example_clone(const int log0)
   std::cout << "h(x) = " << h(x) << " expected: " << g(x) << std::endl;
 }
 
-void example_EvenOdd() {
+void example_EvenOdd()
+{
   std::cout << std::endl << "Example: Split into even and odd powers " << std::endl;
   const scalar_t coeffs[4] = {one, two, three, four}; // 1+2x+3x^2+4x^3
   auto f = Polynomial_t::from_coefficients(coeffs, 4);
@@ -270,18 +271,20 @@ void example_EvenOdd() {
   std::cout << "Odd: 1:" << odd_coeffs[1] << " expected: " << four << std::endl;
 }
 
-void example_Slice() {
+void example_Slice()
+{
   std::cout << std::endl << "Example: Slice polynomial " << std::endl;
   const scalar_t coeffs[4] = {one, two, three, four}; // 1+2x+3x^2+4x^3
   auto f = Polynomial_t::from_coefficients(coeffs, 4);
-  auto f_slice = f.slice(0/=offset/, 3/=stride/, 2*/=size/); // 1+4x
+  auto f_slice = f.slice(0 /*=offset*/, 3 /*= stride*/, 2 /*/= size*/); // 1+4x
   scalar_t slice_coeffs[2] = {0};
   const auto slice_nof_coeffs = f_slice.copy_coeffs(slice_coeffs, 0, 1);
   std::cout << "Slice: 0:" << slice_coeffs[0] << " expected: " << one << std::endl;
   std::cout << "Slice: 1:" << slice_coeffs[1] << " expected: " << four << std::endl;
-} 
+}
 
-void example_DeviceMemoryView() {
+void example_DeviceMemoryView()
+{
   const int log_size = 6;
   const int size = 1 << log_size;
   auto f = randomize_polynomial(size);
@@ -297,7 +300,7 @@ void example_DeviceMemoryView() {
   TreeBuilderConfig config = default_merkle_config();
   config.keep_rows = keep_rows;
   config.are_inputs_on_device = true;
-  build_merkle_tree<scalar_t, (2+1)>(d_coeff.get(), digests, tree_height, constants, config);
+  build_merkle_tree<scalar_t, (2 + 1)>(d_coeff.get(), digests, tree_height, constants, config);
   std::cout << "Merkle tree root: " << digests[0] << std::endl;
   free(digests);
 }
