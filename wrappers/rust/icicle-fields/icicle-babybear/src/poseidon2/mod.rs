@@ -19,7 +19,6 @@ pub(crate) mod tests {
     use icicle_core::poseidon2::{create_optimized_poseidon2_constants, tests::*, DiffusionStrategy, MdsType};
     use icicle_core::traits::FieldImpl;
     use icicle_cuda_runtime::device_context::DeviceContext;
-    use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
 
     use p3_baby_bear::BabyBear;
     use p3_baby_bear::DiffusionMatrixBabyBear;
