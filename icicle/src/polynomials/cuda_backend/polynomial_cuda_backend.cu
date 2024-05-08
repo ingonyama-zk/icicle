@@ -277,7 +277,7 @@ namespace polynomials {
       nof_evaluations = (nof_evaluations == 0) ? this->m_nof_elements : ceil_to_power_of_two(nof_evaluations);
       const bool is_same_nof_evaluations = nof_evaluations == this->m_nof_elements;
       const bool is_same_order = is_reversed && this->m_state == State::EvaluationsOnRou_Reversed ||
-                                 (!is_reversed && State::EvaluationsOnRou_Natural);
+                                 (!is_reversed && this->m_state == State::EvaluationsOnRou_Natural);
       const bool is_already_in_state = is_same_nof_evaluations && is_same_order;
       if (is_already_in_state) { return; }
 
