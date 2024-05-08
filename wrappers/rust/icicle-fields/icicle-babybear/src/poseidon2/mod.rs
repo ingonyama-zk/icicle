@@ -15,9 +15,9 @@ impl_poseidon2!("babybear", babybear, ScalarField, ScalarCfg);
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::field::ScalarField;
+    use icicle_core::impl_poseidon2_tests;
     use icicle_core::poseidon2::{create_optimized_poseidon2_constants, tests::*, DiffusionStrategy, MdsType};
     use icicle_core::traits::FieldImpl;
-    use icicle_core::{impl_poseidon2_custom_config_test, impl_poseidon2_tests};
     use icicle_cuda_runtime::device_context::DeviceContext;
     use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
 

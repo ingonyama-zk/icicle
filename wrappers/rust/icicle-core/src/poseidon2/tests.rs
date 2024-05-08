@@ -45,7 +45,6 @@ where
     let a1 = output_slice[0];
     let a2 = output_slice[output_slice.len() - 2];
 
-    println!("first: {:?}, last: {:?}", a1, a2);
     assert_eq!(a1, a2);
 
     (a1, a2)
@@ -69,7 +68,7 @@ where
 {
     assert_eq!(width, kats.len());
 
-    let batch_size = 1;
+    let batch_size = 1024;
     let mut input = vec![F::one(); width];
     let mut outputs = vec![F::zero(); width * batch_size];
 

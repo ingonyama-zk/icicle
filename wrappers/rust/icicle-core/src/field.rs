@@ -84,7 +84,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 
     fn from_hex(s: &str) -> Self {
-        let mut bytes = Vec::from_hex(&s[2..]).expect("Invalid hex string");
+        let mut bytes = Vec::from_hex(if s.starts_with("0x") { &s[2..] } else { s }).expect("Invalid hex string");
         bytes.reverse();
         Self::from_bytes_le(&bytes)
     }
