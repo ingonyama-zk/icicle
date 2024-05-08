@@ -35,7 +35,18 @@ jobs:
     needs: [check-changed-files, check-format]
     strategy:
       matrix:
-        curve: [bn254, bls12_381, bls12_377, bw6_761]
+        curve:
+          - name: bn254
+            build_args: -DG2=ON -DECNTT=ON
+          - name: bls12_381
+            build_args: -DG2=ON -DECNTT=ON
+          - name: bls12_377
+            build_args: -DG2=ON -DECNTT=ON
+          - name: bw6_761
+            build_args: -DG2=ON -DECNTT=ON
+          - name: grumpkin
+            build_args:
+
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -44,7 +55,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve }} -DG2=ON -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.field.build_args }} -S . -B build
         cmake --build build -j
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
@@ -57,7 +68,11 @@ jobs:
     needs: [check-changed-files, check-format]
     strategy:
       matrix:
-        field: [babybear]
+        field: 
+          - name: babybear
+            build_args: -DEXT_FIELD=ON
+          - name: stark252
+            build_args: -DEXT_FIELD=OFF
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -66,7 +81,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field }} -DEXT_FIELD=ON -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -S . -B build
         cmake --build build -j
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
