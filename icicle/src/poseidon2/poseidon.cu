@@ -56,12 +56,6 @@ namespace poseidon2 {
         d_states, number_of_states, config.output_index, output_device);
       CHK_IF_RETURN(cudaPeekAtLastError());
 
-      if (config.loop_state) {
-        copy_recursive<S, T><<<poseidon_number_of_blocks<S, T>(number_of_states), poseidon_block_size, 0, stream>>>(
-          d_states, number_of_states, config.output_index, output_device);
-        CHK_IF_RETURN(cudaPeekAtLastError());
-      }
-
       if (!config.are_outputs_on_device) {
         CHK_IF_RETURN(
           cudaMemcpyAsync(output, output_device, number_of_states * sizeof(S), cudaMemcpyDeviceToHost, stream));

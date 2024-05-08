@@ -343,13 +343,6 @@ macro_rules! impl_poseidon2 {
                         constants.as_mut_ptr(),
                     )
                     .wrap();
-
-                    // println!("Err: {:?}", err);
-                    // println!("Val: {:?}", constants.assume_init_read());
-                    // let t: Result<Poseidon2Constants<$field>, &str> = Ok(constants.assume_init_read());
-                    // println!("t.is_err = {}", t.is_err());
-                    // // println!("Ok(val) = {:?}", t);
-                    // // println!("Err + Val: {:?}", err.and(t) );
                     err.and(Ok(constants.assume_init()))
                 }
             }
@@ -386,21 +379,6 @@ macro_rules! impl_poseidon2_tests {
         #[test]
         fn test_poseidon2_hash_many() {
             check_poseidon_hash_many::<$field>()
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! impl_poseidon2_custom_config_test {
-    (
-      $field:ident,
-      $field_bytes:literal,
-      $field_prefix:literal,
-      $partial_rounds:literal
-    ) => {
-        #[test]
-        fn test_poseidon2_custom_config() {
-            check_poseidon_custom_config::<$field>($field_bytes, $field_prefix, $partial_rounds)
         }
     };
 }

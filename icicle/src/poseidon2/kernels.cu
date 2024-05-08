@@ -3,49 +3,6 @@
 
 namespace poseidon2 {
   template <typename S>
-  __device__ void print_scalar(S element)
-  {
-    printf(
-      "%lu, %lu, %lu, %lu\n",
-      (unsigned long)element.limbs_storage.limbs[0] + (((unsigned long)element.limbs_storage.limbs[1]) << 32),
-      (unsigned long)element.limbs_storage.limbs[2] + (((unsigned long)element.limbs_storage.limbs[3]) << 32),
-      (unsigned long)element.limbs_storage.limbs[4] + (((unsigned long)element.limbs_storage.limbs[5]) << 32),
-      (unsigned long)element.limbs_storage.limbs[6] + (((unsigned long)element.limbs_storage.limbs[7]) << 32));
-  }
-
-  template <typename S>
-  __device__ void print_scalar_u32(S element)
-  {
-    printf("%d", element.limbs_storage.limbs[0]);
-  }
-
-  template <typename S>
-  __device__ void print_scalar_u64(S element)
-  {
-    printf(
-      "%lu", (unsigned long)element.limbs_storage.limbs[0] + ((unsigned long)element.limbs_storage.limbs[1] << 32));
-  }
-
-  template <typename S>
-  __device__ void print_scalar_hex(S element)
-  {
-    printf(
-      "0x%08x%08x%08x%08x%08x%08x%08x%08x", element.limbs_storage.limbs[0], element.limbs_storage.limbs[1],
-      element.limbs_storage.limbs[2], element.limbs_storage.limbs[3], element.limbs_storage.limbs[4],
-      element.limbs_storage.limbs[5], element.limbs_storage.limbs[6], element.limbs_storage.limbs[7]);
-  }
-
-  template <typename S, int T>
-  __device__ void print_state(S state[T])
-  {
-    for (int i = 0; i < T; i++) {
-      print_scalar_u32(state[i]);
-      printf(", ");
-    }
-    printf("\n");
-  }
-
-  template <typename S>
   DEVICE_INLINE S sbox_el(S element, const int alpha)
   {
     S result2 = S::sqr(element);
@@ -185,7 +142,7 @@ namespace poseidon2 {
     case 2:
       // [2, 1]
       // [1, 3]
-      sum = sum + element + state[1];
+      sum = element + state[1];
       state[0] = element + sum;
       state[1] = S::template mul_unsigned<2>(state[1]) + sum;
       break;
@@ -193,7 +150,7 @@ namespace poseidon2 {
       // [2, 1, 1]
       // [1, 2, 1]
       // [1, 1, 3]
-      sum = sum + element + state[1] + state[2];
+      sum = element + state[1] + state[2];
       state[0] = element + sum;
       state[1] = state[1] + sum;
       state[2] = S::template mul_unsigned<2>(state[2]) + sum;
@@ -224,34 +181,6 @@ namespace poseidon2 {
         for (int i = 1; i < T; i++) {
           state[i] = S::from_montgomery(state[i] * constants.internal_matrix_diag[i] + sum);
         }
-        // print_state<S, T>(state);
-        break;
-        // typename S::Wide part_sum = S::Wide::from_field(S::zero());
-        // UNROLL
-        // for (int i = 1; i < T; i++) {
-        //   part_sum = part_sum + S::Wide::from_field(S::to_montgomery(state[i]));
-        // }
-        // typename S::Wide state0_neg = S::Wide::from_field(S::neg(S::to_montgomery(element)));
-        // printf("element = ");
-        // print_scalar_u32(element);
-        // printf("; full sum = ");
-        // print_scalar_u64(wide_sum);
-        // printf("; -state[0] = ");
-        // print_scalar_u64(state0_neg);
-        // printf("; state[0] = ");
-        // print_scalar_u64(part_sum + state0_neg);
-        // printf("; state[0]_reduce = ");
-        // print_scalar_u32(S::reduce(part_sum + state0_neg));
-        // printf("; state[0]_from_mont = ");
-        // print_scalar_u32(S::from_montgomery(S::reduce(part_sum + state0_neg)));
-        // printf("\n");
-
-        // state[0] = S::reduce(wide_sum + state0_neg + state0_neg);
-        // UNROLL
-        // for (int i = 1; i < T; i++) {
-        //   S si = sum +
-        //   state[i] = S::from_montgomery(state[i] * constants.internal_matrix_diag[i] + sum);
-        // }
         break;
       }
     }
@@ -273,42 +202,20 @@ namespace poseidon2 {
 
     mds_light<S, T>(state, constants.mds_type);
 
-    printf("LinearLayer\n");
-    print_state<S, T>(state);
-
-    // printf("RC\n");
-    // for (int i = 0; i < 10; i++) {
-    //   print_scalar_hex(constants.round_constants[i]);
-    // }
-
     size_t rc_offset = 0;
     // External rounds
     for (rn = 0; rn < constants.external_rounds / 2; rn++) {
-      // printf("External Round %d\n", rn);
-      // print_state<S, T>(state);
       add_rc<S, T>(state, rc_offset, constants.round_constants);
-      // printf("External Round rc %d\n", rn);
-      // print_state<S, T>(state);
       sbox<S, T>(state, constants.alpha);
-      // printf("External Round sbox %d\n", rn);
-      // print_state<S, T>(state);
       mds_light<S, T>(state, constants.mds_type);
       rc_offset += T;
     }
-    printf("External Rounds\n");
-    print_state<S, T>(state);
 
     // Internal rounds
     for (; rn < constants.external_rounds / 2 + constants.internal_rounds; rn++) {
-      // printf("\n");
-      // printf("Internal Round %d\n", rn);
-      // print_state<S, T>(state);
-      // printf("\n");
       internal_round<S, T>(state, rc_offset, constants);
       rc_offset++;
     }
-    printf("Internal Rounds\n");
-    print_state<S, T>(state);
 
     // External rounds
     for (; rn < constants.external_rounds + constants.internal_rounds; rn++) {
@@ -317,8 +224,6 @@ namespace poseidon2 {
       mds_light<S, T>(state, constants.mds_type);
       rc_offset += T;
     }
-    printf("External Rounds\n");
-    print_state<S, T>(state);
 
     UNROLL
     for (int i = 0; i < T; i++) {
@@ -334,14 +239,5 @@ namespace poseidon2 {
     if (idx >= number_of_states) { return; }
 
     out[idx] = states[idx * T + index];
-  }
-
-  template <typename S, int T>
-  __global__ void copy_recursive(S* state, size_t number_of_states, int index, S* out)
-  {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (idx >= number_of_states) { return; }
-
-    state[(idx / (T - 1) * T) + (idx % (T - 1)) + 1] = out[idx];
   }
 } // namespace poseidon2

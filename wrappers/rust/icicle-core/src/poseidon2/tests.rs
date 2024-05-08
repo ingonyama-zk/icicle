@@ -4,8 +4,8 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
 use super::{
-    create_optimized_poseidon2_constants, load_optimized_poseidon2_constants, poseidon_hash_many, DiffusionStrategy,
-    Poseidon2, Poseidon2Config, Poseidon2Constants,
+    load_optimized_poseidon2_constants, poseidon_hash_many, DiffusionStrategy, Poseidon2, Poseidon2Config,
+    Poseidon2Constants,
 };
 
 pub fn init_poseidon<'a, F: FieldImpl>(
@@ -104,46 +104,3 @@ where
         assert_eq!(*val, kats[i % width]);
     }
 }
-
-// pub fn check_poseidon_custom_config<F: FieldImpl>(field_bytes: usize, field_prefix: &str, partial_rounds: u32)
-// where
-//     <F as FieldImpl>::Config: Poseidon2<F>,
-// {
-//     let width = 2u32;
-//     let alpha = 5u32;
-//     let constants = init_poseidon::<F>(width as u32);
-
-//     let external_rounds = 8;
-
-//     let ctx = DeviceContext::default();
-//     let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
-//     let constants_file = PathBuf::from(cargo_manifest_dir)
-//         .join("tests")
-//         .join(format!("{}_constants.bin", field_prefix));
-//     let mut constants_buf = vec![];
-//     File::open(constants_file)
-//         .unwrap()
-//         .read_to_end(&mut constants_buf)
-//         .unwrap();
-
-//     let mut custom_constants = vec![];
-//     for chunk in constants_buf.chunks(field_bytes) {
-//         custom_constants.push(F::from_bytes_le(chunk));
-//     }
-
-//     let custom_constants = create_optimized_poseidon2_constants::<F>(
-//         width as u32,
-//         alpha as u32,
-//         &ctx,
-//         external_rounds,
-//         internal_rounds,
-//         &mut custom_constants,
-//     )
-//     .unwrap();
-
-//     let (a1, a2) = _check_poseidon_hash_many(constants);
-//     let (b1, b2) = _check_poseidon_hash_many(custom_constants);
-
-//     assert_eq!(a1, b1);
-//     assert_eq!(a2, b2);
-// }

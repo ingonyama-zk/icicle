@@ -847,8 +847,6 @@ public:
     return r;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field monty_reduce(const Wide& xs) {}
-
   friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
