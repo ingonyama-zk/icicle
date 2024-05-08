@@ -8,4 +8,5 @@ This section of the documentation is dedicated to the ICICLE primitives, we will
 
 - [MSM](./msm.md)
 - [NTT](./ntt.md)
+- [Keccak Hash](./keccak.md)
 - [Poseidon Hash](./poseidon.md)
