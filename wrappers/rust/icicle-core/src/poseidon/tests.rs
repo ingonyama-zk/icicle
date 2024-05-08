@@ -56,7 +56,6 @@ pub fn check_poseidon_hash_many<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: Poseidon<F>,
 {
-    let arity = 2u32;
     for arity in [2, 4] {
         let constants = init_poseidon::<F>(arity as u32);
 
