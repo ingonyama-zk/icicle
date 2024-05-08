@@ -45,6 +45,11 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "Keccak Hash",
+              id: "icicle/primitives/keccak",
+            },
+            {
+              type: "doc",
               label: "Poseidon Hash",
               id: "icicle/primitives/poseidon",
             },
@@ -102,6 +107,11 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "Keccak Hash",
+              id: "icicle/golang-bindings/keccak",
+            },
+            {
+              type: "doc",
               label: "Multi GPU Support",
               id: "icicle/golang-bindings/multi-gpu",
             },
@@ -146,6 +156,11 @@ module.exports = {
               type: "doc",
               label: "Vector operations",
               id: "icicle/rust-bindings/vec-ops",
+            },
+            {
+              type: "doc",
+              label: "Keccak Hash",
+              id: "icicle/rust-bindings/keccak",
             },
             {
               type: "doc",
