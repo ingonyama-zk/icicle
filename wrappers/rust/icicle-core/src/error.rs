@@ -17,9 +17,9 @@ pub enum IcicleErrorCode {
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct IcicleError {
-    pub icicle_error_code: IcicleErrorCode,
-    pub cuda_error: Option<CudaError>,
-    pub reason: Option<&'static str>,
+    icicle_error_code: IcicleErrorCode,
+    cuda_error: Option<CudaError>,
+    reason: Option<&'static str>,
 }
 
 pub type IcicleResult<T> = Result<T, IcicleError>;
