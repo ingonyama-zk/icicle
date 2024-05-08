@@ -22,7 +22,6 @@ namespace poseidon2 {
   template <typename S, int T>
   DEVICE_INLINE S sbox(S state[T], const int alpha)
   {
-    UNROLL
     for (int i = 0; i < T; i++) {
       state[i] = sbox_el(state[i], alpha);
     }
@@ -31,7 +30,6 @@ namespace poseidon2 {
   template <typename S, int T>
   DEVICE_INLINE S add_rc(S state[T], size_t rc_offset, const S* rc)
   {
-    UNROLL
     for (int i = 0; i < T; i++) {
       state[i] = state[i] + rc[rc_offset + i];
     }
@@ -101,7 +99,6 @@ namespace poseidon2 {
     case 16:
     case 20:
     case 24:
-      UNROLL
       for (int i = 0; i < T; i += 4) {
         switch (mds) {
         case MdsType::DEFAULT_MDS:
@@ -111,18 +108,14 @@ namespace poseidon2 {
           mds_light_plonky_4x4(&state[i]);
         }
       }
-      // printf("First matmul\n");
-      // print_state<S, T>(state);
 
       S sums[4] = {state[0], state[1], state[2], state[3]};
-      UNROLL
       for (int i = 4; i < T; i += 4) {
         sums[0] = sums[0] + state[i];
         sums[1] = sums[1] + state[i + 1];
         sums[2] = sums[2] + state[i + 2];
         sums[3] = sums[3] + state[i + 3];
       }
-      UNROLL
       for (int i = 0; i < T; i++) {
         state[i] = state[i] + sums[i % 4];
       }
@@ -162,7 +155,6 @@ namespace poseidon2 {
     case 20:
     case 24:
       typename S::Wide wide_sum = S::Wide::from_field(element);
-      UNROLL
       for (int i = 1; i < T; i++) {
         wide_sum = wide_sum + S::Wide::from_field(state[i]);
       }
@@ -170,14 +162,12 @@ namespace poseidon2 {
       switch (constants.diffusion) {
       case DiffusionStrategy::DEFAULT_DIFFUSION:
         state[0] = element * constants.internal_matrix_diag[0] + sum;
-        UNROLL
         for (int i = 1; i < T; i++) {
           state[i] = state[i] * constants.internal_matrix_diag[i] + sum;
         }
         break;
       case DiffusionStrategy::MONTGOMERY:
         state[0] = S::from_montgomery(element * constants.internal_matrix_diag[0] + sum);
-        UNROLL
         for (int i = 1; i < T; i++) {
           state[i] = S::from_montgomery(state[i] * constants.internal_matrix_diag[i] + sum);
         }
