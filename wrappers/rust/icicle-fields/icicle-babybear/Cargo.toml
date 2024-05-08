@@ -8,7 +8,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-icicle-core = { workspace = true, features = [] }
+icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
 
 [build-dependencies]
