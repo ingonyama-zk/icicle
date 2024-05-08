@@ -990,6 +990,13 @@ public:
     }
     return (u == one) ? b : c;
   }
+
+
+  static __device__ __forceinline__ void warpShuffleField(Field& r, const Field& f, const uint32_t lane) {
+    #pragma unroll
+    for(int32_t i=0;i<TLC;i++) 
+      r.limbs_storage.limbs[i]=__shfl_sync(0xFFFFFFFF, f.limbs_storage.limbs[i], lane);
+  }
 };
 
 template <class CONFIG>

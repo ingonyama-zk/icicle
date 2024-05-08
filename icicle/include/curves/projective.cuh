@@ -227,6 +227,13 @@ public:
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];
   }
+
+
+  static __device__ __forceinline__ void warpShuffleProjective(Projective& r, const Projective& pt, const uint32_t lane) {
+    FF::warpShuffleField(r.x, pt.x, lane);
+    FF::warpShuffleField(r.y, pt.y, lane);
+    FF::warpShuffleField(r.z, pt.z, lane);
+  }
 };
 
 template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>

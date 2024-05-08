@@ -141,6 +141,77 @@ namespace msm {
       if (threadIdx.x == 0) { v_r[blockIdx.x] = v[tid]; }
     }
 
+
+
+template<typename P>
+__launch_bounds__(256,1)
+__global__ void segments_reduce_kernel(P* results, P* buckets, uint32_t nof_bms, uint32_t bucketBits) {
+  const uint32_t BUCKET_COUNT=1<<bucketBits;  
+
+  uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x, warpThread=threadIdx.x & 0x1F;
+  uint32_t threads_per_bm=(gridDim.x*blockDim.x)/nof_bms;
+  uint32_t bucketsPerThread=(BUCKET_COUNT+threads_per_bm-1)/threads_per_bm;
+  uint32_t bm_index = globalTID/threads_per_bm;
+  uint32_t bm_tid = globalTID%threads_per_bm;
+  uint32_t loadIndex, storeIndex, scale;
+  bool     infinity, bit;
+
+  if (globalTID >= threads_per_bm*nof_bms) return;
+
+  P sum = P::zero();
+  P sumOfSums = P::zero();
+  P pt = P::zero();
+
+  if (globalTID == 0) printf("bucket count %d\n", BUCKET_COUNT);
+
+  for(int32_t i=bucketsPerThread-1;i>=0;i--) {
+    loadIndex=bm_tid*bucketsPerThread + i;
+    if(loadIndex<BUCKET_COUNT) {
+      pt = buckets[bm_index*BUCKET_COUNT + loadIndex];
+      sum = sum + pt;
+    }
+    sumOfSums = sumOfSums + sum;
+  }
+
+  scale=bm_tid * bucketsPerThread; 
+  
+  // compute sum=scale*sum
+  pt = sum;
+  infinity=true;
+  for(int32_t i=31;i>=0;i--) {
+    if(!infinity) 
+      sum = sum + sum;
+    bit=(scale & (1<<i))!=0;
+    if(infinity && bit) 
+      infinity=false;
+    else if(!infinity && bit)
+      sum = sum + pt;
+
+    __syncwarp(0xFFFFFFFF);
+  }
+
+  if(infinity)
+    sum = sumOfSums;
+  else
+    sum = sum + sumOfSums;
+
+  // sum across the warp
+  #pragma unroll 1
+  for(int32_t i=1;i<32;i=i+i) {
+    P::warpShuffleProjective(pt, sum, threadIdx.x ^ i); //TODO: implement
+    sum = sum + pt;
+  }
+
+  // since all threads in the warp have the same sum, we can use a trick!
+  storeIndex=globalTID>>5;
+  if(warpThread==0) {
+    results[storeIndex] = sum;
+  }
+}
+
+
+
+
     // this kernel initializes the buckets with zero points
     // each thread initializes a different bucket
     template <typename P>
@@ -371,6 +442,7 @@ namespace msm {
       bool are_points_montgomery_form,
       bool are_results_on_device,
       bool is_big_triangle,
+      bool segments_reduction,
       int large_bucket_factor,
       int precompute_factor,
       bool is_async,
@@ -378,17 +450,20 @@ namespace msm {
     {
       CHK_INIT_IF_RETURN();
 
+      printf("c value = %d\n", c);
+      printf("precompute_factor = %d\n", precompute_factor);
+
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
       const bool is_nof_points_valid = ((single_msm_size * batch_size) % nof_points == 0);
       if (!is_nof_points_valid) {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
       }
-      if ((precompute_factor & (precompute_factor - 1)) != 0) {
-        THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument,
-          "bucket_method_msm: precompute factors that are not powers of 2 currently unsupported");
-      }
+      // if ((precompute_factor & (precompute_factor - 1)) != 0) {
+      //   THROW_ICICLE_ERR(
+      //     IcicleError_t::InvalidArgument,
+      //     "bucket_method_msm: precompute factors that are not powers of 2 currently unsupported");
+      // }
 
       const S* d_scalars;
       S* d_allocated_scalars = nullptr;
@@ -721,9 +796,22 @@ namespace msm {
       if (!are_results_on_device)
         CHK_IF_RETURN(cudaMallocAsync(&d_allocated_final_result, sizeof(P) * batch_size, stream));
 
+      // return CHK_LAST();
+
       // --- Reduction of buckets happens here, after this we'll get a single sum for each bucket module/window ---
       unsigned nof_empty_bms_per_batch = 0; // for non-triangle accumluation this may be >0
       P* final_results;
+
+      if (segments_reduction){
+        int32_t ec, smCount;
+        ec=cudaDeviceGetAttribute(&smCount, cudaDevAttrMultiProcessorCount, 0);
+        if(ec!=0) return CHK_LAST();
+        CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch * 8 * smCount, stream));
+        segments_reduce_kernel<<<smCount, 256, 0, stream>>>(final_results, buckets, nof_bms_in_batch, c);
+      }
+
+
+      else{
       if (is_big_triangle || c == 1) {
         CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch, stream));
         // launch the bucket module sum kernel - a thread for each bucket module
@@ -801,6 +889,7 @@ namespace msm {
           source_buckets_count = target_buckets_count;
         }
       }
+      }
 
       // ------- This is the final stage where bucket modules/window sums get added up with appropriate weights
       // -------
@@ -835,18 +924,20 @@ namespace msm {
     cudaStream_t& stream = config.ctx.stream;
 
     unsigned c = config.batch_size > 1 ? ((config.c == 0) ? get_optimal_c(msm_size) : config.c) : 16;
+    // unsigned c = config.c;
     // reduce c to closest power of two (from below) if not using big_triangle reduction logic
     // TODO: support arbitrary values of c
     if (!config.is_big_triangle) {
       while ((c & (c - 1)) != 0)
         c &= (c - 1);
     }
+    c = config.c;
 
     return CHK_STICKY(bucket_method_msm(
       bitsize, c, scalars, points, config.batch_size, msm_size,
       (config.points_size == 0) ? msm_size : config.points_size, results, config.are_scalars_on_device,
       config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
-      config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.precompute_factor,
+      config.are_results_on_device, config.is_big_triangle, config.segments_reduction, config.large_bucket_factor, config.precompute_factor,
       config.is_async, stream));
   }
 
@@ -868,7 +959,9 @@ namespace msm {
       output_bases, bases, sizeof(A) * bases_size,
       are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
 
-    unsigned c = 16;
+    // unsigned c = 16;
+    unsigned c = _c;
+    printf("precomp c value = %d\n", c);
     unsigned total_nof_bms = (P::SCALAR_FF_NBITS - 1) / c + 1;
     unsigned shift = c * ((total_nof_bms - 1) / precompute_factor + 1);
 

@@ -142,8 +142,9 @@ int main(int argc, char** argv)
   //   unsigned msm_size = 1<<21;
   int N = batch_size * msm_size;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
+  int user_c = (argc > 4) ? atoi(argv[4]) : 16;
 
-  printf("running msm 2^%d, batch_size=%d, precomp_factor=%d\n",msm_log_size, batch_size, precomp_factor);
+  printf("running msm 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n",msm_log_size, batch_size, precomp_factor, user_c);
 
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];
@@ -155,7 +156,8 @@ int main(int argc, char** argv)
 
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
   // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
-  test_projective large_res[batch_size];
+  test_projective res[batch_size];
+  test_projective ref[batch_size];
   // test_projective batched_large_res[batch_size];
   // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
   // fake_point batched_large_res[256];
@@ -169,12 +171,14 @@ int main(int argc, char** argv)
   test_scalar* scalars_d;
   test_affine* points_d;
   test_affine* precomp_points_d;
-  test_projective* large_res_d;
+  test_projective* res_d;
+  test_projective* ref_d;
 
   cudaMalloc(&scalars_d, sizeof(test_scalar) * msm_size);
   cudaMalloc(&points_d, sizeof(test_affine) * msm_size);
   cudaMalloc(&precomp_points_d, sizeof(test_affine) * msm_size * precomp_factor);
-  cudaMalloc(&large_res_d, sizeof(test_projective));
+  cudaMalloc(&res_d, sizeof(test_projective));
+  cudaMalloc(&ref_d, sizeof(test_projective));
   cudaMemcpy(scalars_d, scalars, sizeof(test_scalar) * msm_size, cudaMemcpyHostToDevice);
   cudaMemcpy(points_d, points, sizeof(test_affine) * msm_size, cudaMemcpyHostToDevice);
 
@@ -194,7 +198,7 @@ int main(int argc, char** argv)
     ctx,   // DeviceContext
     0,     // points_size
     precomp_factor,     // precompute_factor
-    0,     // c
+    user_c,     // c
     0,     // bitsize
     10,    // large_bucket_factor
     batch_size,     // batch_size
@@ -205,20 +209,22 @@ int main(int argc, char** argv)
     true,  // are_results_on_device
     false, // is_big_triangle
     true,  // is_async
+    true,  // segments_reduction
   };
 
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  if (precomp_factor > 1) msm::precompute_msm_bases<test_affine, test_projective>(points_d, msm_size, precomp_factor, 16, false, ctx, precomp_points_d);
+  if (precomp_factor > 1) msm::precompute_msm_bases<test_affine, test_projective>(points_d, msm_size, precomp_factor, user_c, false, ctx, precomp_points_d);
+  
   
   // warm up
-  msm::msm<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, large_res_d);
+  msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
   cudaDeviceSynchronize();
 
   // auto begin1 = std::chrono::high_resolution_clock::now();
   cudaEventRecord(start, stream);
-  msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, large_res_d);
+  msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
   cudaEventRecord(stop, stream);
   cudaStreamSynchronize(stream);
   cudaEventElapsedTime(&msm_time, start, stop);
@@ -226,7 +232,14 @@ int main(int argc, char** argv)
   // cudaEventCreate(&msm_end_event);
   // auto end1 = std::chrono::high_resolution_clock::now();
   // auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
-  printf("No Big Triangle : %.3f ms.\n", msm_time);
+  printf("msm time : %.3f ms.\n", msm_time);
+
+  //reference
+  config.c = 16;
+  config.precompute_factor = 1;
+  config.segments_reduction = false;
+  msm::msm<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, ref_d);
+
   // config.is_big_triangle = true;
   // config.are_results_on_device = false;
   // std::cout << test_projective::to_affine(large_res[0]) << std::endl;
@@ -239,32 +252,33 @@ int main(int argc, char** argv)
   // auto end = std::chrono::high_resolution_clock::now();
   // auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
   // printf("Big Triangle: %.3f seconds.\n", elapsed.count() * 1e-9);
-  // cudaStreamSynchronize(stream);
+  cudaStreamSynchronize(stream);
   cudaStreamDestroy(stream);
 
-  std::cout << test_projective::to_affine(large_res[0]) << std::endl;
+  // std::cout << test_projective::to_affine(large_res[0]) << std::endl;
 
-  cudaMemcpy(&large_res[1], large_res_d, sizeof(test_projective), cudaMemcpyDeviceToHost);
+  cudaMemcpy(res, res_d, sizeof(test_projective) * batch_size, cudaMemcpyDeviceToHost);
+  cudaMemcpy(ref, ref_d, sizeof(test_projective) * batch_size, cudaMemcpyDeviceToHost);
 
   //   reference_msm<test_affine, test_scalar, test_projective>(scalars, points, msm_size);
 
   // std::cout<<"final results batched large"<<std::endl;
-  // bool success = true;
-  // for (unsigned i = 0; i < batch_size; i++)
-  // {
-  //   std::cout<<test_projective::to_affine(batched_large_res[i])<<std::endl;
-  //   if (test_projective::to_affine(large_res[i])==test_projective::to_affine(batched_large_res[i])){
-  //     std::cout<<"good"<<std::endl;
-  //   }
-  //   else{
-  //     std::cout<<"miss"<<std::endl;
-  //     std::cout<<test_projective::to_affine(large_res[i])<<std::endl;
-  //     success = false;
-  //   }
-  // }
-  // if (success){
-  //   std::cout<<"success!"<<std::endl;
-  // }
+  bool success = true;
+  for (unsigned i = 0; i < batch_size; i++)
+  {
+    std::cout<<test_projective::to_affine(res[i])<<std::endl;
+    if (test_projective::to_affine(res[i])==test_projective::to_affine(ref[i])){
+      std::cout<<"good"<<std::endl;
+    }
+    else{
+      std::cout<<"miss"<<std::endl;
+      std::cout<<test_projective::to_affine(ref[i])<<std::endl;
+      success = false;
+    }
+  }
+  if (success){
+    std::cout<<"success!"<<std::endl;
+  }
 
   // std::cout<<batched_large_res[0]<<std::endl;
   // std::cout<<batched_large_res[1]<<std::endl;
