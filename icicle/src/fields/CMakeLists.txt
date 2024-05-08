@@ -30,7 +30,7 @@ endif()
 if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/extern.cu)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/kernel_ntt.cu)
-  list(APPEND FIELD_SOURCE ${POLYNOMIAL_SOURCE_FILES}) # requries NTT  
+  list(APPEND FIELD_SOURCE ${POLYNOMIAL_SOURCE_FILES}) # requires NTT  
 endif()
 
 add_library(${TARGET} STATIC ${FIELD_SOURCE})

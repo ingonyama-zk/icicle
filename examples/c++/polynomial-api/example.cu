@@ -133,7 +133,7 @@ void example_multiplication(const int log0, const int log1)
   std::cout << "multiply and evaluate: " << mx << std::endl;
 }
 
-void example_multiplicationScalar(const int log0)
+void example_multiplication_scalar(const int log0)
 {
   std::cout << std::endl << "Example: Scalar by Polynomial multiplication" << std::endl;
   const int size = 1 << log0;
@@ -163,7 +163,7 @@ void example_monomials()
   std::cout << "Expected f'(x) = " << expected_addmonmon_f_x << std::endl;
 }
 
-void example_ReadCoeffsToHost()
+void example_read_coeffs_to_host()
 {
   std::cout << std::endl << "Example: Read coefficients to host" << std::endl;
   const scalar_t coeffs_f[3] = {zero, one, two}; // 0+1x+2x^2
@@ -190,7 +190,7 @@ void example_ReadCoeffsToHost()
   }
 }
 
-void example_divisionSmall()
+void example_division_small()
 {
   std::cout << std::endl << "Example: Polynomial division (small)" << std::endl;
   const scalar_t coeffs_a[4] = {five, zero, four, three}; // 3x^3+4x^2+5
@@ -208,7 +208,7 @@ void example_divisionSmall()
   std::cout << "Reminder: 1:" << r_coeffs[1] << " expected: " << scalar_t::from(3) << std::endl;
 }
 
-void example_divisionLarge(const int log0, const int log1)
+void example_division_large(const int log0, const int log1)
 {
   std::cout << std::endl << "Example: Polynomial division (large)" << std::endl;
   const int size0 = 1 << log0, size1 = 1 << log1;
@@ -226,7 +226,7 @@ void example_divisionLarge(const int log0, const int log1)
   std::cout << "rhs = " << bx * qx + rx << std::endl;
 }
 
-void example_divideByVanishingPolynomial()
+void example_divide_by_vanishing_polynomial()
 {
   std::cout << std::endl << "Example: Polynomial division by vanishing polynomial" << std::endl;
   const scalar_t coeffs_v[5] = {minus_one, zero, zero, zero, one}; // x^4-1 vanishes on 4th roots of unity
@@ -254,7 +254,7 @@ void example_clone(const int log0)
   std::cout << "h(x) = " << h(x) << " expected: " << g(x) << std::endl;
 }
 
-void example_EvenOdd()
+void example_even_odd()
 {
   std::cout << std::endl << "Example: Split into even and odd powers " << std::endl;
   const scalar_t coeffs[4] = {one, two, three, four}; // 1+2x+3x^2+4x^3
@@ -271,7 +271,7 @@ void example_EvenOdd()
   std::cout << "Odd: 1:" << odd_coeffs[1] << " expected: " << four << std::endl;
 }
 
-void example_Slice()
+void example_slice()
 {
   std::cout << std::endl << "Example: Slice polynomial " << std::endl;
   const scalar_t coeffs[4] = {one, two, three, four}; // 1+2x+3x^2+4x^3
@@ -283,26 +283,19 @@ void example_Slice()
   std::cout << "Slice: 1:" << slice_coeffs[1] << " expected: " << four << std::endl;
 }
 
-void example_DeviceMemoryView()
+void example_device_memory_view()
 {
   const int log_size = 6;
   const int size = 1 << log_size;
   auto f = randomize_polynomial(size);
-  auto [d_coeff, N, device_id] = f.get_coefficients_view();
-  // commit coefficients to Merkle tree
-  device_context::DeviceContext ctx = device_context::get_default_device_context();
-  PoseidonConstants<scalar_t> constants;
-  init_optimized_poseidon_constants<scalar_t>(2, ctx, &constants);
-  uint32_t tree_height = log_size + 1;
-  int keep_rows = 0; // keep all rows
-  size_t digests_len = log_size - 1;
-  scalar_t* digests = static_cast<scalar_t*>(malloc(sizeof(scalar_t) * digests_len));
-  TreeBuilderConfig config = default_merkle_config();
-  config.keep_rows = keep_rows;
-  config.are_inputs_on_device = true;
-  build_merkle_tree<scalar_t, (2 + 1)>(d_coeff.get(), digests, tree_height, constants, config);
-  std::cout << "Merkle tree root: " << digests[0] << std::endl;
-  free(digests);
+  auto [d_coeffs, N, device_id] = f.get_coefficients_view();
+
+  // compute coset evaluations
+  auto coset_evals = std::make_unique<scalar_t[]>(size);
+  auto ntt_config = ntt::default_ntt_config<scalar_t>();
+  ntt_config.are_inputs_on_device = true; // using the device data directly as a view
+  ntt_config.coset_gen = ntt::get_root_of_unity<scalar_t>(size * 2);
+  ntt::ntt(d_coeffs.get(), size, ntt::NTTDir::kForward, ntt_config, coset_evals.get());
 }
 
 int main(int argc, char** argv)
@@ -322,15 +315,15 @@ int main(int argc, char** argv)
   example_addition(12, 17);
   example_addition_inplace(2, 2);
   example_multiplication(15, 12);
-  example_multiplicationScalar(15);
+  example_multiplication_scalar(15);
   example_monomials();
-  example_ReadCoeffsToHost();
-  example_divisionSmall();
-  example_divisionLarge(12, 2);
-  example_divideByVanishingPolynomial();
-  example_EvenOdd();
-  example_Slice();
-  example_DeviceMemoryView();
+  example_read_coeffs_to_host();
+  example_division_small();
+  example_division_large(12, 2);
+  example_divide_by_vanishing_polynomial();
+  example_even_odd();
+  example_slice();
+  example_device_memory_view();
 
   return 0;
 }
