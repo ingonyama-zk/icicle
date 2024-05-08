@@ -3,13 +3,13 @@ from sage.rings.polynomial.polynomial_gf2x import GF2X_BuildIrred_list
 from math import *
 import itertools
 
-CURVE_NAME = "bn254"
+CURVE_NAME = "babybear"
 
 ###########################################################################
 # p = 18446744069414584321 # GoldiLocks
-# p = 2013265921 # BabyBear
+p = 2013265921 # BabyBear
 # p = 52435875175126190479447740508185965837690552500527637822603658699938581184513 # BLS12-381
-p = 21888242871839275222246405745257275088548364400416034343698204186575808495617 # BN254/BN256
+# p = 21888242871839275222246405745257275088548364400416034343698204186575808495617 # BN254/BN256
 # p = 28948022309329048855892746252171976963363056481941560715954676764349967630337 # Pasta (Pallas)
 # p = 28948022309329048855892746252171976963363056481941647379679742748393362948097 # Pasta (Vesta)
 
@@ -605,7 +605,7 @@ def to_bytes(value, indent):
         l = l + 1
     value = hex(int(value))[2:]
     value = value.zfill(l - 2)
-    value_bytes = ["0x" + value[i:i + 2] for i in range(0, len(value), 2)]
+    value_bytes = reversed(["0x" + value[i:i + 2] for i in range(0, len(value), 2)])
     print(" " * indent +  ", ".join(value_bytes) + ",")
 
 print("#pragma once")
@@ -675,7 +675,8 @@ for t in TS:
     # Round constants
     print("    unsigned char round_constants[] = {")
     for (i,val) in enumerate(round_constants):
-        to_bytes(val, 6)
+        if (i % t == 0 or (i < (R_F_FIXED / 2) * t) or (i > (R_F_FIXED / 2 + R_P_FIXED) * t)):
+            to_bytes(val, 6)
     print("    };")
     print("  }")
     print()

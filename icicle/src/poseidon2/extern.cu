@@ -13,17 +13,24 @@ namespace poseidon2 {
     int external_rounds,
     const scalar_t* round_constants,
     const scalar_t* internal_matrix_diag,
+    MdsType mds_type,
+    DiffusionStrategy diffusion,
     device_context::DeviceContext& ctx,
     Poseidon2Constants<scalar_t>* poseidon_constants)
   {
     return create_optimized_poseidon2_constants<scalar_t>(
-      width, alpha, internal_rounds, external_rounds, round_constants, internal_matrix_diag, ctx, poseidon_constants);
+      width, alpha, internal_rounds, external_rounds, round_constants, internal_matrix_diag, mds_type, diffusion, ctx,
+      poseidon_constants);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, init_optimized_poseidon2_constants_cuda)(
-    int width, device_context::DeviceContext& ctx, Poseidon2Constants<scalar_t>* constants)
+    int width,
+    MdsType mds_type,
+    DiffusionStrategy diffusion,
+    device_context::DeviceContext& ctx,
+    Poseidon2Constants<scalar_t>* constants)
   {
-    return init_optimized_poseidon2_constants<scalar_t>(width, ctx, constants);
+    return init_optimized_poseidon2_constants<scalar_t>(width, mds_type, diffusion, ctx, constants);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_hash_cuda)(

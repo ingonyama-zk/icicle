@@ -1,40 +1,23 @@
-use crate::ntt::IcicleResult;
+use crate::poseidon2::{MdsType, PoseidonMode};
 use crate::traits::FieldImpl;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
-use std::io::Read;
-use std::path::PathBuf;
-use std::{env, fs::File};
-
 use super::{
-    create_optimized_poseidon2_constants, load_optimized_poseidon2_constants, poseidon_hash_many, Poseidon2,
-    Poseidon2Config, Poseidon2Constants,
+    create_optimized_poseidon2_constants, load_optimized_poseidon2_constants, poseidon_hash_many, DiffusionStrategy,
+    Poseidon2, Poseidon2Config, Poseidon2Constants,
 };
 
-pub fn init_poseidon<'a, F: FieldImpl>(width: u32) -> Poseidon2Constants<'a, F>
+pub fn init_poseidon<'a, F: FieldImpl>(
+    width: u32,
+    mds_type: MdsType,
+    diffusion: DiffusionStrategy,
+) -> Poseidon2Constants<'a, F>
 where
     <F as FieldImpl>::Config: Poseidon2<F>,
 {
     let ctx = DeviceContext::default();
-    let res = load_optimized_poseidon2_constants::<F>(width, &ctx);
-
-    println!("wtf, {:?}", res.is_err());
-    match res {
-        Ok(t) => return t,
-        Err(e) => {
-            println!("EC {:?}", e.icicle_error_code);
-            println!(
-                "CE {:?}",
-                e.cuda_error
-                    .is_none()
-            );
-            println!("R {:?}", e.reason);
-        }
-    }
-    let res = res.unwrap();
-    println!("wtf2");
-    res
+    load_optimized_poseidon2_constants::<F>(width, mds_type, diffusion, &ctx).unwrap()
 }
 
 fn _check_poseidon_hash_many<F: FieldImpl>(width: u32, constants: Poseidon2Constants<F>) -> (F, F)
@@ -74,20 +57,19 @@ where
 {
     let widths = [2, 3, 4, 8, 12, 16, 20, 24];
     for width in widths {
-        let constants = init_poseidon::<'a, F>(width as u32);
+        let constants = init_poseidon::<'a, F>(width as u32, MdsType::Default, DiffusionStrategy::Default);
 
         _check_poseidon_hash_many(width, constants);
     }
 }
 
-pub fn check_poseidon_kats<F: FieldImpl>(width: usize, kats: &[F])
+pub fn check_poseidon_kats<'a, F: FieldImpl>(width: usize, kats: &[F], constants: &Poseidon2Constants<'a, F>)
 where
     <F as FieldImpl>::Config: Poseidon2<F>,
 {
     assert_eq!(width, kats.len());
-    let constants = init_poseidon::<F>(width as u32);
 
-    let batch_size = 1024;
+    let batch_size = 1;
     let mut input = vec![F::one(); width];
     let mut outputs = vec![F::zero(); width * batch_size];
 
@@ -103,7 +85,8 @@ where
     let input_slice = HostSlice::from_mut_slice(&mut inputs);
     let output_slice = HostSlice::from_mut_slice(&mut outputs);
 
-    let config = Poseidon2Config::default();
+    let mut config = Poseidon2Config::default();
+    config.mode = PoseidonMode::Permutation;
     poseidon_hash_many::<F>(
         input_slice,
         output_slice,

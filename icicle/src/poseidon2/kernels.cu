@@ -2,6 +2,48 @@
 #include "gpu-utils/modifiers.cuh"
 
 namespace poseidon2 {
+  template <typename S>
+  __device__ void print_scalar(S element)
+  {
+    printf(
+      "%lu, %lu, %lu, %lu\n",
+      (unsigned long)element.limbs_storage.limbs[0] + (((unsigned long)element.limbs_storage.limbs[1]) << 32),
+      (unsigned long)element.limbs_storage.limbs[2] + (((unsigned long)element.limbs_storage.limbs[3]) << 32),
+      (unsigned long)element.limbs_storage.limbs[4] + (((unsigned long)element.limbs_storage.limbs[5]) << 32),
+      (unsigned long)element.limbs_storage.limbs[6] + (((unsigned long)element.limbs_storage.limbs[7]) << 32));
+  }
+
+  template <typename S>
+  __device__ void print_scalar_u32(S element)
+  {
+    printf("%d", element.limbs_storage.limbs[0]);
+  }
+
+  template <typename S>
+  __device__ void print_scalar_u64(S element)
+  {
+    printf(
+      "%lu", (unsigned long)element.limbs_storage.limbs[0] + ((unsigned long)element.limbs_storage.limbs[1] << 32));
+  }
+
+  template <typename S>
+  __device__ void print_scalar_hex(S element)
+  {
+    printf(
+      "0x%08x%08x%08x%08x%08x%08x%08x%08x", element.limbs_storage.limbs[0], element.limbs_storage.limbs[1],
+      element.limbs_storage.limbs[2], element.limbs_storage.limbs[3], element.limbs_storage.limbs[4],
+      element.limbs_storage.limbs[5], element.limbs_storage.limbs[6], element.limbs_storage.limbs[7]);
+  }
+
+  template <typename S, int T>
+  __device__ void print_state(S state[T])
+  {
+    for (int i = 0; i < T; i++) {
+      print_scalar_u32(state[i]);
+      printf(", ");
+    }
+    printf("\n");
+  }
 
   template <typename S>
   DEVICE_INLINE S sbox_el(S element, const int alpha)
@@ -30,11 +72,11 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  DEVICE_INLINE S add_rc(S state[T], const unsigned int rn, const S* rc)
+  DEVICE_INLINE S add_rc(S state[T], size_t rc_offset, const S* rc)
   {
     UNROLL
     for (int i = 0; i < T; i++) {
-      state[i] = state[i] + rc[rn * T + i];
+      state[i] = state[i] + rc[rc_offset + i];
     }
   }
 
@@ -105,23 +147,24 @@ namespace poseidon2 {
       UNROLL
       for (int i = 0; i < T; i += 4) {
         switch (mds) {
-        case MdsType::DEFAULT:
+        case MdsType::DEFAULT_MDS:
           mds_light_4x4(&state[i]);
           break;
         case MdsType::PLONKY:
           mds_light_plonky_4x4(&state[i]);
         }
       }
+      // printf("First matmul\n");
+      // print_state<S, T>(state);
 
       S sums[4] = {state[0], state[1], state[2], state[3]};
       UNROLL
       for (int i = 4; i < T; i += 4) {
-        sums[i] = sums[i] + state[i];
-        sums[i + 1] = sums[i + 1] + state[i + 1];
-        sums[i + 2] = sums[i + 2] + state[i + 2];
-        sums[i + 3] = sums[i + 3] + state[i + 3];
+        sums[0] = sums[0] + state[i];
+        sums[1] = sums[1] + state[i + 1];
+        sums[2] = sums[2] + state[i + 2];
+        sums[3] = sums[3] + state[i + 3];
       }
-
       UNROLL
       for (int i = 0; i < T; i++) {
         state[i] = state[i] + sums[i % 4];
@@ -137,24 +180,23 @@ namespace poseidon2 {
     element = element + constants.round_constants[rc_offset];
     element = sbox_el<S>(element, constants.alpha);
 
-    S sum = element;
+    S sum;
     switch (T) {
     case 2:
       // [2, 1]
       // [1, 3]
-      sum = sum + state[1];
+      sum = sum + element + state[1];
       state[0] = element + sum;
-      state[1] = state[1] * state[1] + sum;
+      state[1] = S::template mul_unsigned<2>(state[1]) + sum;
       break;
     case 3:
       // [2, 1, 1]
       // [1, 2, 1]
       // [1, 1, 3]
-      sum = state[1] + state[2];
+      sum = sum + element + state[1] + state[2];
       state[0] = element + sum;
       state[1] = state[1] + sum;
-      state[2] = state[2] * state[2];
-      state[2] = state[2] + sum;
+      state[2] = S::template mul_unsigned<2>(state[2]) + sum;
       break;
     case 4:
     case 8:
@@ -162,27 +204,62 @@ namespace poseidon2 {
     case 16:
     case 20:
     case 24:
+      typename S::Wide wide_sum = S::Wide::from_field(element);
       UNROLL
       for (int i = 1; i < T; i++) {
-        sum = sum + state[i];
+        wide_sum = wide_sum + S::Wide::from_field(state[i]);
       }
+      sum = S::reduce(wide_sum);
+      switch (constants.diffusion) {
+      case DiffusionStrategy::DEFAULT_DIFFUSION:
+        state[0] = element * constants.internal_matrix_diag[0] + sum;
+        UNROLL
+        for (int i = 1; i < T; i++) {
+          state[i] = state[i] * constants.internal_matrix_diag[i] + sum;
+        }
+        break;
+      case DiffusionStrategy::MONTGOMERY:
+        state[0] = S::from_montgomery(element * constants.internal_matrix_diag[0] + sum);
+        UNROLL
+        for (int i = 1; i < T; i++) {
+          state[i] = S::from_montgomery(state[i] * constants.internal_matrix_diag[i] + sum);
+        }
+        // print_state<S, T>(state);
+        break;
+        // typename S::Wide part_sum = S::Wide::from_field(S::zero());
+        // UNROLL
+        // for (int i = 1; i < T; i++) {
+        //   part_sum = part_sum + S::Wide::from_field(S::to_montgomery(state[i]));
+        // }
+        // typename S::Wide state0_neg = S::Wide::from_field(S::neg(S::to_montgomery(element)));
+        // printf("element = ");
+        // print_scalar_u32(element);
+        // printf("; full sum = ");
+        // print_scalar_u64(wide_sum);
+        // printf("; -state[0] = ");
+        // print_scalar_u64(state0_neg);
+        // printf("; state[0] = ");
+        // print_scalar_u64(part_sum + state0_neg);
+        // printf("; state[0]_reduce = ");
+        // print_scalar_u32(S::reduce(part_sum + state0_neg));
+        // printf("; state[0]_from_mont = ");
+        // print_scalar_u32(S::from_montgomery(S::reduce(part_sum + state0_neg)));
+        // printf("\n");
 
-      state[0] = element * constants.internal_matrix_diag[0] + sum;
-      UNROLL
-      for (int i = 1; i < T; i++) {
-        state[i] = state[i] * constants.internal_matrix_diag[i] + sum;
+        // state[0] = S::reduce(wide_sum + state0_neg + state0_neg);
+        // UNROLL
+        // for (int i = 1; i < T; i++) {
+        //   S si = sum +
+        //   state[i] = S::from_montgomery(state[i] * constants.internal_matrix_diag[i] + sum);
+        // }
+        break;
       }
-      break;
     }
   }
 
   template <typename S, int T>
-  __global__ void poseidon2_permutation_kernel(
-    S* states,
-    S* states_out,
-    size_t number_of_states,
-    const Poseidon2Constants<S> constants,
-    const Poseidon2Config config)
+  __global__ void
+  poseidon2_permutation_kernel(S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S> constants)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }
@@ -194,28 +271,54 @@ namespace poseidon2 {
     }
     unsigned int rn;
 
-    mds_light<S, T>(state, config.mds_type);
+    mds_light<S, T>(state, constants.mds_type);
 
+    printf("LinearLayer\n");
+    print_state<S, T>(state);
+
+    // printf("RC\n");
+    // for (int i = 0; i < 10; i++) {
+    //   print_scalar_hex(constants.round_constants[i]);
+    // }
+
+    size_t rc_offset = 0;
     // External rounds
     for (rn = 0; rn < constants.external_rounds / 2; rn++) {
-      add_rc<S, T>(state, rn, constants.round_constants);
+      // printf("External Round %d\n", rn);
+      // print_state<S, T>(state);
+      add_rc<S, T>(state, rc_offset, constants.round_constants);
+      // printf("External Round rc %d\n", rn);
+      // print_state<S, T>(state);
       sbox<S, T>(state, constants.alpha);
-      mds_light<S, T>(state, config.mds_type);
+      // printf("External Round sbox %d\n", rn);
+      // print_state<S, T>(state);
+      mds_light<S, T>(state, constants.mds_type);
+      rc_offset += T;
     }
+    printf("External Rounds\n");
+    print_state<S, T>(state);
 
     // Internal rounds
-    size_t rc_offset = rn * T;
     for (; rn < constants.external_rounds / 2 + constants.internal_rounds; rn++) {
+      // printf("\n");
+      // printf("Internal Round %d\n", rn);
+      // print_state<S, T>(state);
+      // printf("\n");
       internal_round<S, T>(state, rc_offset, constants);
       rc_offset++;
     }
+    printf("Internal Rounds\n");
+    print_state<S, T>(state);
 
     // External rounds
     for (; rn < constants.external_rounds + constants.internal_rounds; rn++) {
-      add_rc<S, T>(state, rn, constants.round_constants);
+      add_rc<S, T>(state, rc_offset, constants.round_constants);
       sbox<S, T>(state, constants.alpha);
-      mds_light<S, T>(state, config.mds_type);
+      mds_light<S, T>(state, constants.mds_type);
+      rc_offset += T;
     }
+    printf("External Rounds\n");
+    print_state<S, T>(state);
 
     UNROLL
     for (int i = 0; i < T; i++) {

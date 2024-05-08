@@ -19,7 +19,7 @@ using namespace poseidon2_constants_bw6_761;
 using namespace poseidon2_constants_grumpkin;
 #elif FIELD_ID == BABY_BEAR
 #include "poseidon2/constants/babybear_poseidon2.h"
-using namespace poseidon2_constants_grumpkin;
+using namespace poseidon2_constants_babybear;
 #endif
 
 namespace poseidon2 {
@@ -31,9 +31,12 @@ namespace poseidon2 {
     int external_rounds,
     const S* round_constants,
     const S* internal_matrix_diag,
+    MdsType mds_type,
+    DiffusionStrategy diffusion,
     device_context::DeviceContext& ctx,
     Poseidon2Constants<S>* poseidon_constants)
   {
+    cudaFree(nullptr); // Temporary solution
     if (!(alpha == 3 || alpha == 5 || alpha == 7 || alpha == 11)) {
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid alpha value");
     }
@@ -42,7 +45,7 @@ namespace poseidon2 {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = ctx.stream;
 
-    int round_constants_len = width * external_rounds + internal_rounds;
+    int round_constants_len = width * (external_rounds) + internal_rounds;
     int internal_matrix_len = width;
 
     // Malloc memory for copying round constants and internal matrix
@@ -61,17 +64,21 @@ namespace poseidon2 {
 
     // Make sure all the constants have been copied
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
-    *poseidon_constants = {
-      width, alpha, internal_rounds, external_rounds, d_round_constants, d_internal_matrix,
-    };
+    *poseidon_constants = {width,    alpha,    internal_rounds, external_rounds, d_round_constants, d_internal_matrix,
+                           mds_type, diffusion};
 
     return CHK_LAST();
   }
 
   template <typename S>
   cudaError_t init_optimized_poseidon2_constants(
-    int width, device_context::DeviceContext& ctx, Poseidon2Constants<S>* poseidon2_constants)
+    int width,
+    MdsType mds_type,
+    DiffusionStrategy diffusion,
+    device_context::DeviceContext& ctx,
+    Poseidon2Constants<S>* poseidon2_constants)
   {
+    cudaFree(nullptr); // Temporary solution
     CHK_INIT_IF_RETURN();
 
 #define P2_CONSTANTS_DEF(width)                                                                                        \
@@ -105,7 +112,8 @@ namespace poseidon2 {
     S* h_internal_matrix = reinterpret_cast<S*>(internal_matrix);
 
     create_optimized_poseidon2_constants(
-      width, alpha, internal_rounds, external_rounds, h_round_constants, h_internal_matrix, ctx, poseidon2_constants);
+      width, alpha, internal_rounds, external_rounds, h_round_constants, h_internal_matrix, mds_type, diffusion, ctx,
+      poseidon2_constants);
 
     return CHK_LAST();
   }

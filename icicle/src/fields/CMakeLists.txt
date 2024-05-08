@@ -3,7 +3,7 @@ if (EXT_FIELD)
 endif ()
 
 SET(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
-SET(SUPPORTED_FIELDS_WITHOUT_POSEIDON2 bls12_381,bls12_377,grumpkin,bw6_761,babybear,stark252)
+SET(SUPPORTED_FIELDS_WITHOUT_POSEIDON2 bls12_381,bls12_377,grumpkin,bw6_761,stark252)
 
 set(TARGET icicle_field)
 

@@ -13,16 +13,11 @@ namespace poseidon2 {
 
   template <typename S, int T>
   cudaError_t permute_many(
-    S* states,
-    S* states_out,
-    size_t number_of_states,
-    const Poseidon2Constants<S>& constants,
-    const Poseidon2Config& config)
+    S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S>& constants, cudaStream_t& stream)
   {
-    cudaStream_t& stream = config.ctx.stream;
     poseidon2_permutation_kernel<S, T>
       <<<poseidon_number_of_blocks<S, T>(number_of_states), poseidon_block_size, 0, stream>>>(
-        states, states_out, number_of_states, constants, config);
+        states, states_out, number_of_states, constants);
     CHK_IF_RETURN(cudaPeekAtLastError());
     return CHK_LAST();
   }
@@ -46,7 +41,7 @@ namespace poseidon2 {
       CHK_IF_RETURN(cudaMemcpyAsync(d_states, states, number_of_states * T * sizeof(S), cudaMemcpyHostToDevice, stream))
     }
 
-    cudaError_t hash_error = permute_many<S, T>(d_states, d_states, number_of_states, constants, config);
+    cudaError_t hash_error = permute_many<S, T>(d_states, d_states, number_of_states, constants, stream);
     CHK_IF_RETURN(hash_error);
 
     if (config.mode == PoseidonMode::COMPRESSION) {
@@ -71,6 +66,11 @@ namespace poseidon2 {
         CHK_IF_RETURN(
           cudaMemcpyAsync(output, output_device, number_of_states * sizeof(S), cudaMemcpyDeviceToHost, stream));
         CHK_IF_RETURN(cudaFreeAsync(output_device, stream));
+      }
+    } else {
+      if (!config.are_states_on_device || !config.are_outputs_on_device) {
+        CHK_IF_RETURN(
+          cudaMemcpyAsync(output, d_states, number_of_states * T * sizeof(S), cudaMemcpyDeviceToHost, stream));
       }
     }
 

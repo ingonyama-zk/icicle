@@ -11,6 +11,13 @@ use crate::{error::IcicleResult, traits::FieldImpl};
 
 #[repr(C)]
 #[derive(Debug, Clone)]
+pub enum DiffusionStrategy {
+    Default,
+    Montgomery,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
 pub enum MdsType {
     Default,
     Plonky,
@@ -36,6 +43,10 @@ pub struct Poseidon2Constants<'a, F: FieldImpl> {
     round_constants: &'a DeviceSlice<F>,
 
     inernal_matrix_diag: &'a DeviceSlice<F>,
+
+    pub mds_type: MdsType,
+
+    pub diffusion: DiffusionStrategy,
 }
 
 impl<F: FieldImpl> std::fmt::Debug for Poseidon2Constants<'_, F> {
@@ -61,8 +72,6 @@ pub struct Poseidon2Config<'a> {
 
     pub mode: PoseidonMode,
 
-    pub mds_type: MdsType,
-
     pub output_index: u32,
 
     /// If true, hash results will also be copied in the input pointer in aligned format
@@ -87,7 +96,6 @@ impl<'a> Poseidon2Config<'a> {
             are_states_on_device: false,
             are_outputs_on_device: false,
             mode: PoseidonMode::Compression,
-            mds_type: MdsType::Default,
             output_index: 1,
             loop_state: false,
             is_async: false,
@@ -99,13 +107,20 @@ pub trait Poseidon2<F: FieldImpl> {
     fn create_optimized_constants<'a>(
         width: u32,
         alpha: u32,
-        external_rounds: u32,
         internal_rounds: u32,
+        external_rounds: u32,
         round_constants: &mut [F],
         internal_matrix_diag: &mut [F],
+        mds_type: MdsType,
+        diffusion: DiffusionStrategy,
         ctx: &DeviceContext,
     ) -> IcicleResult<Poseidon2Constants<'a, F>>;
-    fn load_optimized_constants<'a>(width: u32, ctx: &DeviceContext) -> IcicleResult<Poseidon2Constants<'a, F>>;
+    fn load_optimized_constants<'a>(
+        width: u32,
+        mds_type: MdsType,
+        diffusion: DiffusionStrategy,
+        ctx: &DeviceContext,
+    ) -> IcicleResult<Poseidon2Constants<'a, F>>;
     fn poseidon_unchecked(
         states: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
@@ -119,13 +134,15 @@ pub trait Poseidon2<F: FieldImpl> {
 /// Loads pre-calculated poseidon constants on the GPU.
 pub fn load_optimized_poseidon2_constants<'a, F>(
     width: u32,
+    mds_type: MdsType,
+    diffusion: DiffusionStrategy,
     ctx: &DeviceContext,
 ) -> IcicleResult<Poseidon2Constants<'a, F>>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: Poseidon2<F>,
 {
-    <<F as FieldImpl>::Config as Poseidon2<F>>::load_optimized_constants(width, ctx)
+    <<F as FieldImpl>::Config as Poseidon2<F>>::load_optimized_constants(width, mds_type, diffusion, ctx)
 }
 
 /// Creates new instance of poseidon constants on the GPU.
@@ -133,10 +150,12 @@ pub fn create_optimized_poseidon2_constants<'a, F>(
     width: u32,
     alpha: u32,
     ctx: &DeviceContext,
-    external_rounds: u32,
     internal_rounds: u32,
+    external_rounds: u32,
     round_constants: &mut [F],
     internal_matrix_diag: &mut [F],
+    mds_type: MdsType,
+    diffusion: DiffusionStrategy,
 ) -> IcicleResult<Poseidon2Constants<'a, F>>
 where
     F: FieldImpl,
@@ -145,10 +164,12 @@ where
     <<F as FieldImpl>::Config as Poseidon2<F>>::create_optimized_constants(
         width,
         alpha,
-        external_rounds,
         internal_rounds,
+        external_rounds,
         round_constants,
         internal_matrix_diag,
+        mds_type,
+        diffusion,
         ctx,
     )
 }
@@ -236,17 +257,20 @@ macro_rules! impl_poseidon2 {
     ) => {
         mod $field_prefix_ident {
             use crate::poseidon2::{
-                $field, $field_config, CudaError, DeviceContext, Poseidon2Config, Poseidon2Constants,
+                $field, $field_config, CudaError, DeviceContext, DiffusionStrategy, MdsType, Poseidon2Config,
+                Poseidon2Constants,
             };
             extern "C" {
                 #[link_name = concat!($field_prefix, "_create_optimized_poseidon2_constants_cuda")]
                 pub(crate) fn _create_optimized_constants(
                     width: u32,
                     alpha: u32,
-                    external_rounds: u32,
                     internal_rounds: u32,
+                    external_rounds: u32,
                     constants: *mut $field,
                     internal_matrix_diag: *mut $field,
+                    mds_type: MdsType,
+                    diffusion: DiffusionStrategy,
                     ctx: &DeviceContext,
                     poseidon_constants: *mut Poseidon2Constants<$field>,
                 ) -> CudaError;
@@ -254,6 +278,8 @@ macro_rules! impl_poseidon2 {
                 #[link_name = concat!($field_prefix, "_init_optimized_poseidon2_constants_cuda")]
                 pub(crate) fn _load_optimized_constants(
                     width: u32,
+                    mds_type: MdsType,
+                    diffusion: DiffusionStrategy,
                     ctx: &DeviceContext,
                     constants: *mut Poseidon2Constants<$field>,
                 ) -> CudaError;
@@ -274,10 +300,12 @@ macro_rules! impl_poseidon2 {
             fn create_optimized_constants<'a>(
                 width: u32,
                 alpha: u32,
-                external_rounds: u32,
                 internal_rounds: u32,
+                external_rounds: u32,
                 round_constants: &mut [$field],
                 internal_matrix_diag: &mut [$field],
+                mds_type: MdsType,
+                diffusion: DiffusionStrategy,
                 ctx: &DeviceContext,
             ) -> IcicleResult<Poseidon2Constants<'a, $field>> {
                 unsafe {
@@ -285,10 +313,12 @@ macro_rules! impl_poseidon2 {
                     let err = $field_prefix_ident::_create_optimized_constants(
                         width,
                         alpha,
-                        external_rounds,
                         internal_rounds,
+                        external_rounds,
                         round_constants as *mut _ as *mut $field,
                         internal_matrix_diag as *mut _ as *mut $field,
+                        mds_type,
+                        diffusion,
                         ctx,
                         poseidon_constants.as_mut_ptr(),
                     )
@@ -299,18 +329,27 @@ macro_rules! impl_poseidon2 {
 
             fn load_optimized_constants<'a>(
                 width: u32,
+                mds_type: MdsType,
+                diffusion: DiffusionStrategy,
                 ctx: &DeviceContext,
             ) -> IcicleResult<Poseidon2Constants<'a, $field>> {
                 unsafe {
                     let mut constants = MaybeUninit::<Poseidon2Constants<'a, $field>>::uninit();
-                    let err = $field_prefix_ident::_load_optimized_constants(width, ctx, constants.as_mut_ptr()).wrap();
+                    let err = $field_prefix_ident::_load_optimized_constants(
+                        width,
+                        mds_type,
+                        diffusion,
+                        ctx,
+                        constants.as_mut_ptr(),
+                    )
+                    .wrap();
 
-                    println!("Err: {:?}", err);
-                    println!("Val: {:?}", constants.assume_init_read());
-                    let t: Result<Poseidon2Constants<$field>, &str> = Ok(constants.assume_init_read());
-                    println!("t.is_err = {}", t.is_err());
-                    // println!("Ok(val) = {:?}", t);
-                    // println!("Err + Val: {:?}", err.and(t) );
+                    // println!("Err: {:?}", err);
+                    // println!("Val: {:?}", constants.assume_init_read());
+                    // let t: Result<Poseidon2Constants<$field>, &str> = Ok(constants.assume_init_read());
+                    // println!("t.is_err = {}", t.is_err());
+                    // // println!("Ok(val) = {:?}", t);
+                    // // println!("Err + Val: {:?}", err.and(t) );
                     err.and(Ok(constants.assume_init()))
                 }
             }

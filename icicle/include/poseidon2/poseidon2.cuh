@@ -19,7 +19,12 @@ namespace poseidon2 {
    */
   const int EXTERNAL_ROUNDS_DEFAULT = 8;
 
-  enum MdsType { DEFAULT, PLONKY };
+  enum DiffusionStrategy {
+    DEFAULT_DIFFUSION,
+    MONTGOMERY,
+  };
+
+  enum MdsType { DEFAULT_MDS, PLONKY };
 
   enum PoseidonMode {
     COMPRESSION,
@@ -42,6 +47,8 @@ namespace poseidon2 {
     int external_rounds;
     S* round_constants = nullptr;
     S* internal_matrix_diag = nullptr;
+    MdsType mds_type;
+    DiffusionStrategy diffusion;
   };
 
   /**
@@ -53,7 +60,6 @@ namespace poseidon2 {
     bool are_states_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     PoseidonMode mode;
-    MdsType mds_type;
     int output_index;
     bool loop_state; /**< If true, hash results will also be copied in the input pointer in aligned format */
     bool
@@ -71,7 +77,6 @@ namespace poseidon2 {
       false, // are_states_on_device
       false, // are_outputs_on_device
       PoseidonMode::COMPRESSION,
-      MdsType::DEFAULT,
       1,     // output_index
       false, // loop_state
       false, // is_async
@@ -87,6 +92,8 @@ namespace poseidon2 {
     int external_rounds,
     const S* round_constants,
     const S* internal_matrix_diag,
+    MdsType mds_type,
+    DiffusionStrategy diffusion,
     device_context::DeviceContext& ctx,
     Poseidon2Constants<S>* poseidon_constants);
 
@@ -94,8 +101,12 @@ namespace poseidon2 {
    * Loads pre-calculated optimized constants, moves them to the device
    */
   template <typename S>
-  cudaError_t
-  init_optimized_poseidon2_constants(int width, device_context::DeviceContext& ctx, Poseidon2Constants<S>* constants);
+  cudaError_t init_optimized_poseidon2_constants(
+    int width,
+    MdsType mds_type,
+    DiffusionStrategy diffusion,
+    device_context::DeviceContext& ctx,
+    Poseidon2Constants<S>* constants);
 
   /**
    * Compute the poseidon hash over a sequence of preimages.
