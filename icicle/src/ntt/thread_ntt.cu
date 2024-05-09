@@ -51,7 +51,7 @@ public:
   S WI[7];
   S WE[8];
 
-  DEVICE_INLINE void loadBasicTwiddles(S* basic_twiddles)
+  void loadBasicTwiddles(S* basic_twiddles)
   {
     UNROLL
     for (int i = 0; i < 3; i++) {
@@ -59,7 +59,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadBasicTwiddlesGeneric(S* basic_twiddles, bool inv)
+  void loadBasicTwiddlesGeneric(S* basic_twiddles, bool inv)
   {
     UNROLL
     for (int i = 0; i < 3; i++) {
@@ -67,7 +67,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadInternalTwiddles64(S* data, bool stride)
+  void loadInternalTwiddles64(S* data, bool stride)
   {
     UNROLL
     for (int i = 0; i < 7; i++) {
@@ -75,7 +75,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadInternalTwiddles32(S* data, bool stride)
+  void loadInternalTwiddles32(S* data, bool stride)
   {
     UNROLL
     for (int i = 0; i < 7; i++) {
@@ -83,7 +83,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadInternalTwiddles16(S* data, bool stride)
+  void loadInternalTwiddles16(S* data, bool stride)
   {
     UNROLL
     for (int i = 0; i < 7; i++) {
@@ -91,7 +91,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadInternalTwiddlesGeneric64(S* data, bool stride, bool inv)
+  void loadInternalTwiddlesGeneric64(S* data, bool stride, bool inv)
   {
     UNROLL
     for (int i = 0; i < 7; i++) {
@@ -100,7 +100,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadInternalTwiddlesGeneric32(S* data, bool stride, bool inv)
+  void loadInternalTwiddlesGeneric32(S* data, bool stride, bool inv)
   {
     UNROLL
     for (int i = 0; i < 7; i++) {
@@ -109,7 +109,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadInternalTwiddlesGeneric16(S* data, bool stride, bool inv)
+  void loadInternalTwiddlesGeneric16(S* data, bool stride, bool inv)
   {
     UNROLL
     for (int i = 0; i < 7; i++) {
@@ -118,7 +118,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
+  void loadExternalTwiddles64(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -128,7 +128,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
+  void loadExternalTwiddles32(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 2 + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -141,7 +141,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
+  void loadExternalTwiddles16(S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta)
   {
     data += tw_order * s_meta.ntt_inp_id * 4 + (s_meta.ntt_block_id & (tw_order - 1));
 
@@ -154,7 +154,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadExternalTwiddlesGeneric64(
+  void loadExternalTwiddlesGeneric64(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
     UNROLL
@@ -165,7 +165,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadExternalTwiddlesGeneric32(
+  void loadExternalTwiddlesGeneric32(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
     UNROLL
@@ -179,7 +179,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadExternalTwiddlesGeneric16(
+  void loadExternalTwiddlesGeneric16(
     S* data, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
   {
     UNROLL
@@ -193,7 +193,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  void
   loadGlobalData(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -209,7 +209,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadGlobalDataColumnBatch(
+  void loadGlobalDataColumnBatch(
     const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -223,7 +223,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  void
   storeGlobalData(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -239,7 +239,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void storeGlobalDataColumnBatch(
+  void storeGlobalDataColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -253,7 +253,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  void
   loadGlobalData32(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -272,7 +272,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadGlobalData32ColumnBatch(
+  void loadGlobalData32ColumnBatch(
     const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -289,7 +289,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  void
   storeGlobalData32(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -308,7 +308,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void storeGlobalData32ColumnBatch(
+  void storeGlobalData32ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -325,7 +325,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  void
   loadGlobalData16(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -344,7 +344,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadGlobalData16ColumnBatch(
+  void loadGlobalData16ColumnBatch(
     const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -361,7 +361,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void
+  void
   storeGlobalData16(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
@@ -380,7 +380,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void storeGlobalData16ColumnBatch(
+  void storeGlobalData16ColumnBatch(
     E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -397,7 +397,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void ntt4_2()
+  void ntt4_2()
   {
     UNROLL
     for (int i = 0; i < 2; i++) {
@@ -405,7 +405,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void ntt2_4()
+  void ntt2_4()
   {
     UNROLL
     for (int i = 0; i < 4; i++) {
@@ -413,7 +413,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void ntt2(E& X0, E& X1)
+  void ntt2(E& X0, E& X1)
   {
     E T;
 
@@ -422,7 +422,7 @@ public:
     X0 = T;
   }
 
-  DEVICE_INLINE void ntt4(E& X0, E& X1, E& X2, E& X3)
+  void ntt4(E& X0, E& X1, E& X2, E& X3)
   {
     E T;
 
@@ -440,7 +440,7 @@ public:
   }
 
   // rbo version
-  DEVICE_INLINE void ntt4rbo(E& X0, E& X1, E& X2, E& X3)
+  void ntt4rbo(E& X0, E& X1, E& X2, E& X3)
   {
     E T;
 
@@ -457,7 +457,7 @@ public:
     X3 = T - X3;
   }
 
-  DEVICE_INLINE void ntt8(E& X0, E& X1, E& X2, E& X3, E& X4, E& X5, E& X6, E& X7)
+  void ntt8(E& X0, E& X1, E& X2, E& X3, E& X4, E& X5, E& X6, E& X7)
   {
     E T;
 
@@ -497,7 +497,7 @@ public:
     X4 = X4 - T;
   }
 
-  DEVICE_INLINE void ntt8win()
+  void ntt8win()
   {
     E T;
 
@@ -539,7 +539,7 @@ public:
     X[4] = X[4] - T;
   }
 
-  DEVICE_INLINE void SharedData64Columns8(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData64Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t column_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
@@ -554,7 +554,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData64Rows8(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData64Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x7 : threadIdx.x >> 3;
     uint32_t row_id = stride ? threadIdx.x >> 3 : threadIdx.x & 0x7;
@@ -569,7 +569,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData32Columns8(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData32Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
@@ -584,7 +584,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData32Rows8(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData32Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = stride ? threadIdx.x >> 4 : threadIdx.x & 0x3;
@@ -599,7 +599,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData32Columns4_2(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData32Columns4_2(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t column_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
@@ -617,7 +617,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData32Rows4_2(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData32Rows4_2(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0xf : threadIdx.x >> 2;
     uint32_t row_id = (stride ? threadIdx.x >> 4 : threadIdx.x & 0x3) * 2;
@@ -635,7 +635,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData16Columns8(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData16Columns8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
@@ -650,7 +650,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData16Rows8(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData16Rows8(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
@@ -665,7 +665,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData16Columns2_4(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData16Columns2_4(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t column_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
@@ -683,7 +683,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void SharedData16Rows2_4(E* shmem, bool store, bool high_bits, bool stride)
+  void SharedData16Rows2_4(E* shmem, bool store, bool high_bits, bool stride)
   {
     uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
     uint32_t row_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 4;
@@ -701,7 +701,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void twiddlesInternal()
+  void twiddlesInternal()
   {
     UNROLL
     for (int i = 1; i < 8; i++) {
@@ -709,7 +709,7 @@ public:
     }
   }
 
-  DEVICE_INLINE void twiddlesExternal()
+  void twiddlesExternal()
   {
     UNROLL
     for (int i = 0; i < 8; i++) {

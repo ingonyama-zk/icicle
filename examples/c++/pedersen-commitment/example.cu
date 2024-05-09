@@ -88,7 +88,7 @@ void point_near_x(T x, affine_t *point) {
 }
 
 static int seed = 0;
-static HOST_INLINE T rand_host_seed()
+static T rand_host_seed()
   {
     std::mt19937_64 generator(seed++);
     std::uniform_int_distribution<unsigned> distribution;

@@ -20,32 +20,32 @@ public:
   unsigned p = 10;
   // unsigned p = 1<<30;
 
-  static HOST_DEVICE_INLINE Dummy_Scalar zero() { return {0}; }
+  static Dummy_Scalar zero() { return {0}; }
 
-  static HOST_DEVICE_INLINE Dummy_Scalar one() { return {1}; }
+  static Dummy_Scalar one() { return {1}; }
 
-  friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar)
+  friend std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar)
   {
     os << scalar.x;
     return os;
   }
 
-  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
+  unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
   {
     return (x >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
   }
 
-  friend HOST_DEVICE_INLINE Dummy_Scalar operator+(Dummy_Scalar p1, const Dummy_Scalar& p2)
+  friend Dummy_Scalar operator+(Dummy_Scalar p1, const Dummy_Scalar& p2)
   {
     return {(p1.x + p2.x) % p1.p};
   }
 
-  friend HOST_DEVICE_INLINE bool operator==(const Dummy_Scalar& p1, const Dummy_Scalar& p2) { return (p1.x == p2.x); }
+  friend bool operator==(const Dummy_Scalar& p1, const Dummy_Scalar& p2) { return (p1.x == p2.x); }
 
-  friend HOST_DEVICE_INLINE bool operator==(const Dummy_Scalar& p1, const unsigned p2) { return (p1.x == p2); }
+  friend bool operator==(const Dummy_Scalar& p1, const unsigned p2) { return (p1.x == p2); }
 
-  static HOST_DEVICE_INLINE Dummy_Scalar neg(const Dummy_Scalar& scalar) { return {scalar.p - scalar.x}; }
-  static HOST_INLINE Dummy_Scalar rand_host()
+  static Dummy_Scalar neg(const Dummy_Scalar& scalar) { return {scalar.p - scalar.x}; }
+  static Dummy_Scalar rand_host()
   {
     return {(unsigned)rand() % 10};
     // return {(unsigned)rand()};
@@ -57,32 +57,32 @@ class Dummy_Projective
 public:
   Dummy_Scalar x;
 
-  static HOST_DEVICE_INLINE Dummy_Projective zero() { return {0}; }
+  static Dummy_Projective zero() { return {0}; }
 
-  static HOST_DEVICE_INLINE Dummy_Projective one() { return {1}; }
+  static Dummy_Projective one() { return {1}; }
 
-  static HOST_DEVICE_INLINE Dummy_Projective to_affine(const Dummy_Projective& point) { return {point.x}; }
+  static Dummy_Projective to_affine(const Dummy_Projective& point) { return {point.x}; }
 
-  static HOST_DEVICE_INLINE Dummy_Projective from_affine(const Dummy_Projective& point) { return {point.x}; }
+  static Dummy_Projective from_affine(const Dummy_Projective& point) { return {point.x}; }
 
-  static HOST_DEVICE_INLINE Dummy_Projective neg(const Dummy_Projective& point) { return {Dummy_Scalar::neg(point.x)}; }
+  static Dummy_Projective neg(const Dummy_Projective& point) { return {Dummy_Scalar::neg(point.x)}; }
 
-  friend HOST_DEVICE_INLINE Dummy_Projective operator+(Dummy_Projective p1, const Dummy_Projective& p2)
+  friend Dummy_Projective operator+(Dummy_Projective p1, const Dummy_Projective& p2)
   {
     return {p1.x + p2.x};
   }
 
-  // friend HOST_DEVICE_INLINE Dummy_Projective operator-(Dummy_Projective p1, const Dummy_Projective& p2) {
+  // friend Dummy_Projective operator-(Dummy_Projective p1, const Dummy_Projective& p2) {
   //   return p1 + neg(p2);
   // }
 
-  friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Projective& point)
+  friend std::ostream& operator<<(std::ostream& os, const Dummy_Projective& point)
   {
     os << point.x;
     return os;
   }
 
-  friend HOST_DEVICE_INLINE Dummy_Projective operator*(Dummy_Scalar scalar, const Dummy_Projective& point)
+  friend Dummy_Projective operator*(Dummy_Scalar scalar, const Dummy_Projective& point)
   {
     Dummy_Projective res = zero();
 #ifdef CUDA_ARCH
@@ -95,14 +95,14 @@ public:
     return res;
   }
 
-  friend HOST_DEVICE_INLINE bool operator==(const Dummy_Projective& p1, const Dummy_Projective& p2)
+  friend bool operator==(const Dummy_Projective& p1, const Dummy_Projective& p2)
   {
     return (p1.x == p2.x);
   }
 
-  static HOST_DEVICE_INLINE bool is_zero(const Dummy_Projective& point) { return point.x == 0; }
+  static bool is_zero(const Dummy_Projective& point) { return point.x == 0; }
 
-  static HOST_INLINE Dummy_Projective rand_host()
+  static Dummy_Projective rand_host()
   {
     return {(unsigned)rand() % 10};
     // return {(unsigned)rand()};

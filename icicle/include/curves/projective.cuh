@@ -1,7 +1,7 @@
 #pragma once
 
 #include "affine.cuh"
-#include "gpu-utils/sharedmem.cuh"
+#include "../gpu-utils/sharedmem.cuh"
 
 template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
 class Projective
@@ -19,34 +19,34 @@ public:
   FF y;
   FF z;
 
-  static HOST_DEVICE_INLINE Projective zero() { return {FF::zero(), FF::one(), FF::zero()}; }
+  static Projective zero() { return {FF::zero(), FF::one(), FF::zero()}; }
 
-  static HOST_DEVICE_INLINE Affine<FF> to_affine(const Projective& point)
+  static Affine<FF> to_affine(const Projective& point)
   {
     FF denom = FF::inverse(point.z);
     return {point.x * denom, point.y * denom};
   }
 
-  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point)
+  static Projective from_affine(const Affine<FF>& point)
   {
     return point == Affine<FF>::zero() ? zero() : Projective{point.x, point.y, FF::one()};
   }
 
-  static HOST_DEVICE_INLINE Projective to_montgomery(const Projective& point)
+  static Projective to_montgomery(const Projective& point)
   {
     return {FF::to_montgomery(point.x), FF::to_montgomery(point.y), FF::to_montgomery(point.z)};
   }
 
-  static HOST_DEVICE_INLINE Projective from_montgomery(const Projective& point)
+  static Projective from_montgomery(const Projective& point)
   {
     return {FF::from_montgomery(point.x), FF::from_montgomery(point.y), FF::from_montgomery(point.z)};
   }
 
-  static HOST_DEVICE_INLINE Projective generator() { return {GENERATOR_X, GENERATOR_Y, FF::one()}; }
+  static Projective generator() { return {GENERATOR_X, GENERATOR_Y, FF::one()}; }
 
-  static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
+  static Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
 
-  static HOST_DEVICE_INLINE Projective dbl(const Projective& point)
+  static Projective dbl(const Projective& point)
   {
     const FF X = point.x;
     const FF Y = point.y;
@@ -74,7 +74,7 @@ public:
     return {X3, Y3, Z3};
   }
 
-  friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2)
+  friend Projective operator+(Projective p1, const Projective& p2)
   {
     const FF X1 = p1.x;                                                                //                   < 2
     const FF Y1 = p1.y;                                                                //                   < 2
@@ -118,9 +118,9 @@ public:
     return {X3, Y3, Z3};
   }
 
-  friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Projective& p2) { return p1 + neg(p2); }
+  friend Projective operator-(Projective p1, const Projective& p2) { return p1 + neg(p2); }
 
-  friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Affine<FF>& p2)
+  friend Projective operator+(Projective p1, const Affine<FF>& p2)
   {
     const FF X1 = p1.x;                                                                //                   < 2
     const FF Y1 = p1.y;                                                                //                   < 2
@@ -163,12 +163,12 @@ public:
     return {X3, Y3, Z3};
   }
 
-  friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Affine<FF>& p2)
+  friend Projective operator-(Projective p1, const Affine<FF>& p2)
   {
     return p1 + Affine<FF>::neg(p2);
   }
 
-  friend HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar, const Projective& point)
+  friend Projective operator*(SCALAR_FF scalar, const Projective& point)
   {
     Projective res = zero();
 #ifdef __CUDA_ARCH__
@@ -181,27 +181,27 @@ public:
     return res;
   }
 
-  friend HOST_DEVICE_INLINE Projective operator*(const Projective& point, SCALAR_FF scalar) { return scalar * point; }
+  friend Projective operator*(const Projective& point, SCALAR_FF scalar) { return scalar * point; }
 
-  friend HOST_DEVICE_INLINE bool operator==(const Projective& p1, const Projective& p2)
+  friend bool operator==(const Projective& p1, const Projective& p2)
   {
     return (p1.x * p2.z == p2.x * p1.z) && (p1.y * p2.z == p2.y * p1.z);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const Projective& p1, const Projective& p2) { return !(p1 == p2); }
+  friend bool operator!=(const Projective& p1, const Projective& p2) { return !(p1 == p2); }
 
-  friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Projective& point)
+  friend std::ostream& operator<<(std::ostream& os, const Projective& point)
   {
     os << "Point { x: " << point.x << "; y: " << point.y << "; z: " << point.z << " }";
     return os;
   }
 
-  static HOST_DEVICE_INLINE bool is_zero(const Projective& point)
+  static bool is_zero(const Projective& point)
   {
     return point.x == FF::zero() && point.y != FF::zero() && point.z == FF::zero();
   }
 
-  static HOST_DEVICE_INLINE bool is_on_curve(const Projective& point)
+  static bool is_on_curve(const Projective& point)
   {
     if (is_zero(point)) return true;
     bool eq_holds =
@@ -210,7 +210,7 @@ public:
     return point.z != FF::zero() && eq_holds;
   }
 
-  static HOST_INLINE Projective rand_host()
+  static Projective rand_host()
   {
     SCALAR_FF rand_scalar = SCALAR_FF::rand_host();
     return rand_scalar * generator();
@@ -231,9 +231,9 @@ public:
 
 template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
 struct SharedMemory<Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y>> {
-  __device__ Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y>* getPointer()
+  Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y>* getPointer()
   {
-    extern __shared__ Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y> s_projective_[];
+    Projective<FF, SCALAR_FF, B_VALUE, GENERATOR_X, GENERATOR_Y> *s_projective_ = nullptr;
     return s_projective_;
   }
 };

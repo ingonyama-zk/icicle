@@ -32,7 +32,7 @@ namespace poseidon {
   }
 
   template <typename S>
-  DEVICE_INLINE S sbox_alpha_five(S element)
+  S sbox_alpha_five(S element)
   {
     S result = S::sqr(element);
     result = S::sqr(result);
@@ -83,7 +83,7 @@ namespace poseidon {
   __global__ void full_rounds(
     S* states, size_t number_of_states, size_t rc_offset, bool first_half, const PoseidonConstants<S> constants)
   {
-    extern __shared__ S shared_states[];
+    S shared_states[];
 
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     int state_number = idx / T;

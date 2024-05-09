@@ -2,13 +2,13 @@
 #ifndef BN254_PARAMS_H
 #define BN254_PARAMS_H
 
-#include "fields/storage.cuh"
+#include "../../fields/storage.cuh"
 
-#include "curves/macro.h"
-#include "curves/projective.cuh"
-#include "fields/snark_fields/bn254_base.cuh"
-#include "fields/snark_fields/bn254_scalar.cuh"
-#include "fields/quadratic_extension.cuh"
+#include "../macro.h"
+#include "../projective.cuh"
+#include "../../fields/snark_fields/bn254_base.cuh"
+#include "../../fields/snark_fields/bn254_scalar.cuh"
+#include "../../fields/quadratic_extension.cuh"
 
 namespace bn254 {
   // G1 and G2 generators

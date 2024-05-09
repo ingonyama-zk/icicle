@@ -6,6 +6,6 @@
 #define UNROLL       #pragma unroll
 #endif
 
-#define HOST_INLINE        __host__ INLINE_MACRO
-#define DEVICE_INLINE      __device__ INLINE_MACRO
-#define HOST_DEVICE_INLINE __host__ __device__ INLINE_MACRO
+#define        __host__ INLINE_MACRO
+#define      __device__ INLINE_MACRO
+#define __host__ __device__ INLINE_MACRO
