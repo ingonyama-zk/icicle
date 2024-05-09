@@ -6,6 +6,7 @@ pub mod msm;
 pub mod ntt;
 pub mod polynomials;
 pub mod poseidon;
+pub mod poseidon2;
 #[doc(hidden)]
 pub mod tests;
 pub mod traits;

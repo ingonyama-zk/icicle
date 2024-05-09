@@ -120,7 +120,7 @@ pub(crate) mod tests {
             ntt_cfg.columns_batch = true;
             ntt_inplace(HostSlice::from_mut_slice(&mut scalars[..]), NTTDir::kForward, &ntt_cfg).unwrap();
 
-            let result_p3 = Radix2Dit.dft_batch(matrix_p3);
+            let result_p3 = Radix2Dit::default().dft_batch(matrix_p3);
 
             for i in 0..nrows {
                 for j in 0..ntt_size {
@@ -156,7 +156,7 @@ pub(crate) mod tests {
             )
             .unwrap();
 
-            let ext_result_p3 = Radix2Dit.dft_batch(ext_matrix_p3);
+            let ext_result_p3 = Radix2Dit::default().dft_batch(ext_matrix_p3);
 
             for i in 0..nrows {
                 for j in 0..ntt_size {

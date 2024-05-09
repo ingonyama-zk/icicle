@@ -3,6 +3,7 @@ if (EXT_FIELD)
 endif ()
 
 SET(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
+SET(SUPPORTED_FIELDS_WITHOUT_POSEIDON2 bls12_381;bls12_377;grumpkin;bw6_761;stark252)
 
 set(TARGET icicle_field)
 
@@ -25,6 +26,10 @@ set(POLYNOMIAL_SOURCE_FILES
 if (DEFINED CURVE)
   list(APPEND FIELD_SOURCE ${SRC}/poseidon/poseidon.cu)
   list(APPEND FIELD_SOURCE ${SRC}/poseidon/tree/merkle.cu)
+endif()
+
+if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_POSEIDON2)
+  list(APPEND FIELD_SOURCE ${SRC}/poseidon2/extern.cu)
 endif()
 
 if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
