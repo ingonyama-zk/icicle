@@ -2,13 +2,12 @@
 #ifndef MSM_H
 #define MSM_H
 
-#include <cuda_runtime.h>
 
-#include "curves/affine.cuh"
-#include "curves/projective.cuh"
-#include "fields/field.cuh"
-#include "gpu-utils/device_context.cuh"
-#include "gpu-utils/error_handler.cuh"
+#include "../curves/affine.cuh"
+#include "../curves/projective.cuh"
+#include "../fields/field.cuh"
+#include "../gpu-utils/device_context.cuh"
+#include "../gpu-utils/error_handler.cuh"
 
 /**
  * @namespace msm
@@ -124,6 +123,8 @@ namespace msm {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    *
    */
+
+  typedef int cudaError_t;
   template <typename S, typename A, typename P>
   cudaError_t msm(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results);
 

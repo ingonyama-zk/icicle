@@ -1,10 +1,15 @@
-#include "curves/curve_config.cuh"
-#include "fields/field_config.cuh"
+#define CURVE_ID BN254
+#define FIELD_ID BN254
+#include "../../include/curves/curve_config.cuh"
+#include "../../include/fields/field_config.cuh"
+#include "../../include/gpu-utils/device_context.cuh"
+#include "../../include/msm/msm.cuh"
 
+typedef int cudaError_t;
 using namespace curve_config;
 using namespace field_config;
 
-#include "utils/utils.h"
+#include "../../include/utils/utils.h"
 
 namespace msm {
   /**
@@ -22,8 +27,7 @@ namespace msm {
     device_context::DeviceContext& ctx,
     affine_t* output_bases)
   {
-    return precompute_msm_bases<affine_t, projective_t>(
-      bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
+    return 0;
   }
 
   /**
@@ -37,6 +41,6 @@ namespace msm {
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, msm_cuda)(
     const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
   {
-    return msm<scalar_t, affine_t, projective_t>(scalars, points, msm_size, config, out);
+    return 0;
   }
 } // namespace msm
