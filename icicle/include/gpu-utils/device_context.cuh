@@ -1,10 +1,12 @@
 #pragma once
 #ifndef DEVICE_CONTEXT_H
 #define DEVICE_CONTEXT_H
+#include <cstddef>
 
 namespace device_context {
 
-  constexpr std::size_t MAX_DEVICES = 32;
+  size_t MAX_DEVICES = 32;
+  
 
   /**
    * Properties of the device used in icicle functions.

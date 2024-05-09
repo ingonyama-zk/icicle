@@ -1,4 +1,6 @@
-#include "hash/keccak/keccak.cuh"
+#include "../../../include/hash/keccak/keccak.cuh"
+
+typedef int cudaError_t;
 
 namespace keccak {
   template <int C, int D>

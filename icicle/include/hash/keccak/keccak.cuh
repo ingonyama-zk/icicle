@@ -3,9 +3,9 @@
 #define KECCAK_H
 
 #include <cstdint>
-#include "gpu-utils/device_context.cuh"
-#include "gpu-utils/error_handler.cuh"
-
+#include "../../gpu-utils/device_context.cuh"
+#include "../../gpu-utils/error_handler.cuh"
+typedef int cudaError_t;
 namespace keccak {
   /**
    * @struct KeccakConfig
