@@ -163,6 +163,7 @@ const config = {
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
+        additionalLanguages: ['rust', 'go'],
       },
       image: 'img/logo.png',
     }),
