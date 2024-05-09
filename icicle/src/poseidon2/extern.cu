@@ -6,7 +6,7 @@ using namespace field_config;
 #include "poseidon.cu"
 
 namespace poseidon2 {
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, create_optimized_poseidon2_constants_cuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, create_poseidon2_constants_cuda)(
     int width,
     int alpha,
     int internal_rounds,
@@ -18,23 +18,23 @@ namespace poseidon2 {
     device_context::DeviceContext& ctx,
     Poseidon2Constants<scalar_t>* poseidon_constants)
   {
-    return create_optimized_poseidon2_constants<scalar_t>(
+    return create_poseidon2_constants<scalar_t>(
       width, alpha, internal_rounds, external_rounds, round_constants, internal_matrix_diag, mds_type, diffusion, ctx,
       poseidon_constants);
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, init_optimized_poseidon2_constants_cuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, init_poseidon2_constants_cuda)(
     int width,
     MdsType mds_type,
     DiffusionStrategy diffusion,
     device_context::DeviceContext& ctx,
     Poseidon2Constants<scalar_t>* constants)
   {
-    return init_optimized_poseidon2_constants<scalar_t>(width, mds_type, diffusion, ctx, constants);
+    return init_poseidon2_constants<scalar_t>(width, mds_type, diffusion, ctx, constants);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_hash_cuda)(
-    scalar_t* input,
+    const scalar_t* input,
     scalar_t* output,
     int number_of_states,
     int width,
@@ -59,5 +59,11 @@ namespace poseidon2 {
         IcicleError_t::InvalidArgument, "PoseidonHash: #arity must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
     }
     return CHK_LAST();
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, release_poseidon2_constants_cuda)(
+    Poseidon2Constants<scalar_t>* constants, device_context::DeviceContext& ctx)
+  {
+    return release_poseidon2_constants<scalar_t>(constants, ctx);
   }
 } // namespace poseidon2

@@ -12,9 +12,42 @@
 #include "fields/stark_fields/babybear.cuh"
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
+#include "poseidon/poseidon.cuh"
+#include "poseidon/tree/merkle.cuh"
 
 extern "C" cudaError_t babybear_extension_ntt_cuda(
   const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
+
+extern "C" cudaError_t babybear_create_poseidon2_constants_cuda(
+  int width,
+  int alpha,
+  int internal_rounds,
+  int external_rounds,
+  const babybear::scalar_t* round_constants,
+  const babybear::scalar_t* internal_matrix_diag,
+  poseidon2::MdsType mds_type,
+  poseidon2::DiffusionStrategy diffusion,
+  device_context::DeviceContext& ctx,
+  poseidon2::Poseidon2Constants<babybear::scalar_t>* poseidon_constants);
+
+extern "C" cudaError_t babybear_init_poseidon2_constants_cuda(
+  int width,
+  poseidon2::MdsType mds_type,
+  poseidon2::DiffusionStrategy diffusion,
+  device_context::DeviceContext& ctx,
+  poseidon2::Poseidon2Constants<babybear::scalar_t>* poseidon_constants);
+
+extern "C" cudaError_t babybear_poseidon2_hash_cuda(
+  const babybear::scalar_t* input,
+  babybear::scalar_t* output,
+  int number_of_states,
+  int width,
+  const poseidon2::Poseidon2Constants<babybear::scalar_t>& constants,
+  poseidon2::Poseidon2Config& config);
+
+extern "C" cudaError_t babybear_release_poseidon2_constants_cuda(
+  poseidon2::Poseidon2Constants<babybear::scalar_t>* constants,
+  device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t babybear_mul_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);

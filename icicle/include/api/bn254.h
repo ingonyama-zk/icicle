@@ -71,6 +71,37 @@ extern "C" cudaError_t bn254_affine_convert_montgomery(
 extern "C" cudaError_t bn254_projective_convert_montgomery(
   bn254::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
+extern "C" cudaError_t bn254_create_poseidon2_constants_cuda(
+  int width,
+  int alpha,
+  int internal_rounds,
+  int external_rounds,
+  const bn254::scalar_t* round_constants,
+  const bn254::scalar_t* internal_matrix_diag,
+  poseidon2::MdsType mds_type,
+  poseidon2::DiffusionStrategy diffusion,
+  device_context::DeviceContext& ctx,
+  poseidon2::Poseidon2Constants<bn254::scalar_t>* poseidon_constants);
+
+extern "C" cudaError_t bn254_init_poseidon2_constants_cuda(
+  int width,
+  poseidon2::MdsType mds_type,
+  poseidon2::DiffusionStrategy diffusion,
+  device_context::DeviceContext& ctx,
+  poseidon2::Poseidon2Constants<bn254::scalar_t>* poseidon_constants);
+
+extern "C" cudaError_t bn254_poseidon2_hash_cuda(
+  const bn254::scalar_t* input,
+  bn254::scalar_t* output,
+  int number_of_states,
+  int width,
+  const poseidon2::Poseidon2Constants<bn254::scalar_t>& constants,
+  poseidon2::Poseidon2Config& config);
+
+extern "C" cudaError_t bn254_release_poseidon2_constants_cuda(
+  poseidon2::Poseidon2Constants<bn254::scalar_t>* constants,
+  device_context::DeviceContext& ctx);
+
 extern "C" cudaError_t bn254_create_optimized_poseidon_constants_cuda(
   int arity,
   int full_rounds_half,

@@ -24,7 +24,7 @@ using namespace poseidon2_constants_babybear;
 
 namespace poseidon2 {
   template <typename S>
-  cudaError_t create_optimized_poseidon2_constants(
+  cudaError_t create_poseidon2_constants(
     int width,
     int alpha,
     int internal_rounds,
@@ -71,7 +71,7 @@ namespace poseidon2 {
   }
 
   template <typename S>
-  cudaError_t init_optimized_poseidon2_constants(
+  cudaError_t init_poseidon2_constants(
     int width,
     MdsType mds_type,
     DiffusionStrategy diffusion,
@@ -105,16 +105,31 @@ namespace poseidon2 {
       P2_CONSTANTS_DEF(24)
     default:
       THROW_ICICLE_ERR(
-        IcicleError_t::InvalidArgument,
-        "init_optimized_poseidon2_constants: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
+        IcicleError_t::InvalidArgument, "init_poseidon2_constants: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
     }
     S* h_round_constants = reinterpret_cast<S*>(round_constants);
     S* h_internal_matrix = reinterpret_cast<S*>(internal_matrix);
 
-    create_optimized_poseidon2_constants(
+    create_poseidon2_constants(
       width, alpha, internal_rounds, external_rounds, h_round_constants, h_internal_matrix, mds_type, diffusion, ctx,
       poseidon2_constants);
 
+    return CHK_LAST();
+  }
+
+  template <typename S>
+  cudaError_t release_poseidon2_constants(Poseidon2Constants<S>* constants, device_context::DeviceContext& ctx)
+  {
+    CHK_INIT_IF_RETURN();
+    CHK_IF_RETURN(cudaFreeAsync(constants->round_constants, ctx.stream));
+    CHK_IF_RETURN(cudaFreeAsync(constants->internal_matrix_diag, ctx.stream));
+
+    constants->alpha = 0;
+    constants->width = 0;
+    constants->external_rounds = 0;
+    constants->internal_rounds = 0;
+    constants->round_constants = nullptr;
+    constants->internal_matrix_diag = nullptr;
     return CHK_LAST();
   }
 } // namespace poseidon2

@@ -61,7 +61,6 @@ namespace poseidon2 {
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     PoseidonMode mode;
     int output_index;
-    bool loop_state; /**< If true, hash results will also be copied in the input pointer in aligned format */
     bool
       is_async; /**< Whether to run the Poseidon2 asynchronously. If set to `true`, the poseidon_hash function will be
                  *   non-blocking and you'd need to synchronize it explicitly by running
@@ -78,14 +77,13 @@ namespace poseidon2 {
       false, // are_outputs_on_device
       PoseidonMode::COMPRESSION,
       1,     // output_index
-      false, // loop_state
       false, // is_async
     };
     return config;
   }
 
   template <typename S>
-  cudaError_t create_optimized_poseidon2_constants(
+  cudaError_t create_poseidon2_constants(
     int width,
     int alpha,
     int internal_rounds,
@@ -101,12 +99,15 @@ namespace poseidon2 {
    * Loads pre-calculated optimized constants, moves them to the device
    */
   template <typename S>
-  cudaError_t init_optimized_poseidon2_constants(
+  cudaError_t init_poseidon2_constants(
     int width,
     MdsType mds_type,
     DiffusionStrategy diffusion,
     device_context::DeviceContext& ctx,
     Poseidon2Constants<S>* constants);
+
+  template <typename S>
+  cudaError_t release_poseidon2_constants(Poseidon2Constants<S>* constants, device_context::DeviceContext& ctx);
 
   /**
    * Compute the poseidon hash over a sequence of preimages.
@@ -120,7 +121,7 @@ namespace poseidon2 {
    */
   template <typename S, int T>
   cudaError_t poseidon2_hash(
-    S* states,
+    const S* states,
     S* output,
     size_t number_of_states,
     const Poseidon2Constants<S>& constants,

@@ -21,21 +21,25 @@ CURVES_CONFIG = {
         "ntt_ext.h",
     ],
     "bls12_381": [
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
     ],
     "bls12_377": [
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
     ],
     "bw6_761": [
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
     ],
     "grumpkin": {
+        "poseidon2.h",
         "curve_g2.h",
         "msm_g2.h",
         "ecntt.h",
@@ -56,6 +60,7 @@ FIELDS_CONFIG = {
     },
     "stark252": {
         "poseidon.h",
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",

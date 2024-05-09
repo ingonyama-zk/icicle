@@ -14,8 +14,7 @@ namespace poseidon2 {
     case 7:
       return S::sqr(result2) * result2 * element;
     case 11:
-      S result8 = S::sqr(S::sqr(result2));
-      return result8 * result2 * element;
+      return S::sqr(S::sqr(result2)) * result2 * element;
     }
   }
 
@@ -177,8 +176,8 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  __global__ void
-  poseidon2_permutation_kernel(S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S> constants)
+  __global__ void poseidon2_permutation_kernel(
+    const S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S> constants)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }
@@ -223,7 +222,7 @@ namespace poseidon2 {
 
   // These function is just doing copy from the states to the output
   template <typename S, int T>
-  __global__ void get_hash_results(S* states, size_t number_of_states, int index, S* out)
+  __global__ void get_hash_results(const S* states, size_t number_of_states, int index, S* out)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }
