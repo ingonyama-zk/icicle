@@ -16,7 +16,7 @@ impl_poseidon2!("babybear", babybear, ScalarField, ScalarCfg);
 pub(crate) mod tests {
     use crate::field::ScalarField;
     use icicle_core::impl_poseidon2_tests;
-    use icicle_core::poseidon2::{create_optimized_poseidon2_constants, tests::*, DiffusionStrategy, MdsType};
+    use icicle_core::poseidon2::{create_poseidon2_constants, tests::*, DiffusionStrategy, MdsType};
     use icicle_core::traits::FieldImpl;
     use icicle_cuda_runtime::device_context::DeviceContext;
 
@@ -291,7 +291,7 @@ pub(crate) mod tests {
             ScalarField::from_u32(1 << 13),
             ScalarField::from_u32(1 << 15),
         ];
-        let mut constants = create_optimized_poseidon2_constants(
+        let constants = create_poseidon2_constants(
             WIDTH as u32,
             ALPHA as u32,
             &ctx,
@@ -616,7 +616,7 @@ pub(crate) mod tests {
             ScalarField::from_u32(1 << 22),
             ScalarField::from_u32(1 << 23),
         ];
-        let mut constants = create_optimized_poseidon2_constants(
+        let constants = create_poseidon2_constants(
             WIDTH as u32,
             ALPHA as u32,
             &ctx,
