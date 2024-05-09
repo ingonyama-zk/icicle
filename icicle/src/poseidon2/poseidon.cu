@@ -13,7 +13,11 @@ namespace poseidon2 {
 
   template <typename S, int T>
   cudaError_t permute_many(
-    S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S>& constants, cudaStream_t& stream)
+    const S* states,
+    S* states_out,
+    size_t number_of_states,
+    const Poseidon2Constants<S>& constants,
+    cudaStream_t& stream)
   {
     poseidon2_permutation_kernel<S, T>
       <<<poseidon_number_of_blocks<S, T>(number_of_states), poseidon_block_size, 0, stream>>>(
@@ -24,7 +28,7 @@ namespace poseidon2 {
 
   template <typename S, int T>
   cudaError_t poseidon2_hash(
-    S* states,
+    const S* states,
     S* output,
     size_t number_of_states,
     const Poseidon2Constants<S>& constants,
@@ -34,7 +38,7 @@ namespace poseidon2 {
     cudaStream_t& stream = config.ctx.stream;
     S* d_states;
     if (config.are_states_on_device) {
-      d_states = states;
+      d_states = const_cast<S*>(states);
     } else {
       // allocate memory for {number_of_states} states of {t} scalars each
       CHK_IF_RETURN(cudaMallocAsync(&d_states, number_of_states * T * sizeof(S), stream))

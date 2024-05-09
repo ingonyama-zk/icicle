@@ -4,8 +4,7 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
 use super::{
-    load_optimized_poseidon2_constants, poseidon_hash_many, DiffusionStrategy, Poseidon2, Poseidon2Config,
-    Poseidon2Constants,
+    load_poseidon2_constants, poseidon2_hash_many, DiffusionStrategy, Poseidon2, Poseidon2Config, Poseidon2Constants,
 };
 
 pub fn init_poseidon<'a, F: FieldImpl>(
@@ -17,7 +16,7 @@ where
     <F as FieldImpl>::Config: Poseidon2<F>,
 {
     let ctx = DeviceContext::default();
-    load_optimized_poseidon2_constants::<F>(width, mds_type, diffusion, &ctx).unwrap()
+    load_poseidon2_constants::<F>(width, mds_type, diffusion, &ctx).unwrap()
 }
 
 fn _check_poseidon_hash_many<F: FieldImpl>(width: u32, constants: Poseidon2Constants<F>) -> (F, F)
@@ -32,7 +31,7 @@ where
     let output_slice = HostSlice::from_mut_slice(&mut outputs);
 
     let config = Poseidon2Config::default();
-    poseidon_hash_many::<F>(
+    poseidon2_hash_many::<F>(
         input_slice,
         output_slice,
         test_size as u32,
@@ -86,7 +85,7 @@ where
 
     let mut config = Poseidon2Config::default();
     config.mode = PoseidonMode::Permutation;
-    poseidon_hash_many::<F>(
+    poseidon2_hash_many::<F>(
         input_slice,
         output_slice,
         batch_size as u32,

@@ -21,21 +21,25 @@ CURVES_CONFIG = {
         "ntt_ext.h",
     ],
     "bls12_381": [
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
     ],
     "bls12_377": [
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
     ],
     "bw6_761": [
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
     ],
     "grumpkin": {
+        "poseidon2.h",
         "curve_g2.h",
         "msm_g2.h",
         "ecntt.h",
@@ -56,6 +60,7 @@ FIELDS_CONFIG = {
     },
     "stark252": {
         "poseidon.h",
+        "poseidon2.h",
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
@@ -106,6 +111,8 @@ if __name__ == "__main__":
         if any(header.name.startswith("poseidon") for header in headers):
             includes.append('#include "poseidon/poseidon.cuh"')
             includes.append('#include "poseidon/tree/merkle.cuh"')
+        if any(header.name.startswith("poseidon2") for header in headers):
+            includes.append('#include "poseidon2/poseidon2.cuh"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(curve.upper()) + "\n".join(includes) + "\n\n"
         for header in headers:
@@ -138,6 +145,8 @@ if __name__ == "__main__":
         if any(header.name.startswith("poseidon") for header in headers):
             includes.append('#include "poseidon/poseidon.cuh"')
             includes.append('#include "poseidon/tree/merkle.cuh"')
+        if any(header.name.startswith("poseidon2") for header in headers):
+            includes.append('#include "poseidon2/poseidon2.cuh"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(field.upper()) + "\n".join(includes) + "\n\n"
         for header in headers:

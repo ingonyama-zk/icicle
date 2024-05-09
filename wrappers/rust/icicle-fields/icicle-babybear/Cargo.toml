@@ -15,6 +15,7 @@ icicle-cuda-runtime = { workspace = true }
 cmake = "0.1.50"
 
 [dev-dependencies]
+criterion = "0.3"
 risc0-core = "0.21.0"
 risc0-zkp = "0.21.0"
 p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
@@ -29,3 +30,7 @@ serial_test = "3.0.0"
 [features]
 default = []
 devmode = ["icicle-core/devmode"]
+
+[[bench]]
+name = "poseidon2"
+harness = false
