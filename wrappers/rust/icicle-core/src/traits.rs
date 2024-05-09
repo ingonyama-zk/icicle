@@ -27,6 +27,7 @@ pub trait FieldImpl:
 
     fn to_bytes_le(&self) -> Vec<u8>;
     fn from_bytes_le(bytes: &[u8]) -> Self;
+    fn from_hex(s: &str) -> Self;
     fn zero() -> Self;
     fn one() -> Self;
     fn from_u32(val: u32) -> Self;
