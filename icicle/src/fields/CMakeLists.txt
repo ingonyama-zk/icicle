@@ -32,7 +32,7 @@ endif()
 if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/extern.cu)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/kernel_ntt.cu)
-  # list(APPEND FIELD_SOURCE ${SRC}/poseidon/extern.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/poseidon/extern.cu)
 endif()
 
 add_library(${TARGET} STATIC ${FIELD_SOURCE})

@@ -3,6 +3,7 @@
 using namespace field_config;
 
 #include "constants.cu"
+#include "poseidon/poseidon.cuh"
 
 #include "gpu-utils/device_context.cuh"
 #include "utils/utils.h"
@@ -44,7 +45,7 @@ namespace poseidon {
     int partial_rounds,
     const scalar_t* constants,
     device_context::DeviceContext& ctx,
-    PoseidonConstants<scalar_t>* poseidon_constants)
+    PoseidonConstants<scalar_t>& poseidon_constants)
   {
     return create_optimized_poseidon_constants<scalar_t>(
       arity, full_rounds_half, partial_rounds, constants, ctx, poseidon_constants);

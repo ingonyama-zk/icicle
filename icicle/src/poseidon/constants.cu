@@ -99,21 +99,21 @@ namespace poseidon {
     return CHK_LAST();
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, create_optimized_poseidon_constants_cuda)(
-    int arity,
-    int full_rounds_half,
-    int partial_rounds,
-    const scalar_t* constants,
-    device_context::DeviceContext& ctx,
-    PoseidonConstants<scalar_t>* poseidon_constants)
-  {
-    return create_optimized_poseidon_constants<scalar_t>(
-      arity, full_rounds_half, partial_rounds, constants, ctx, poseidon_constants);
-  }
+  // extern "C" cudaError_t CONCAT_EXPAND(FIELD, create_optimized_poseidon_constants_cuda)(
+  //   int arity,
+  //   int full_rounds_half,
+  //   int partial_rounds,
+  //   const scalar_t* constants,
+  //   device_context::DeviceContext& ctx,
+  //   PoseidonConstants<scalar_t>* poseidon_constants)
+  // {
+  //   return create_optimized_poseidon_constants<scalar_t>(
+  //     arity, full_rounds_half, partial_rounds, constants, ctx, poseidon_constants);
+  // }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, init_optimized_poseidon_constants_cuda)(
-    int arity, device_context::DeviceContext& ctx, PoseidonConstants<scalar_t>* constants)
-  {
-    return init_optimized_poseidon_constants<scalar_t>(arity, ctx, constants);
-  }
+  // extern "C" cudaError_t CONCAT_EXPAND(FIELD, init_optimized_poseidon_constants_cuda)(
+  //   int arity, device_context::DeviceContext& ctx, PoseidonConstants<scalar_t>* constants)
+  // {
+  //   return init_optimized_poseidon_constants<scalar_t>(arity, ctx, constants);
+  // }
 } // namespace poseidon
