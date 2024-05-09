@@ -61,7 +61,7 @@ macro_rules! impl_ecntt {
                 $field,
                 $field_config,
                 ECNTTUnchecked,
-                "_ecntt_",
+                "_ecntt",
                 ProjectiveC
             );
 
@@ -161,6 +161,7 @@ macro_rules! impl_ecntt_bench {
         use icicle_core::ntt::ntt;
         use icicle_core::ntt::NTTDomain;
         use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+        use std::env;
         use std::sync::OnceLock;
 
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
