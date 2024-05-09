@@ -15,6 +15,7 @@
 #include "vec_ops/vec_ops.cuh"
 #include "poseidon/poseidon.cuh"
 #include "poseidon/tree/merkle.cuh"
+#include "poseidon2/poseidon2.cuh"
 
 extern "C" cudaError_t bn254_g2_precompute_msm_bases_cuda(
   bn254::g2_affine_t* bases,

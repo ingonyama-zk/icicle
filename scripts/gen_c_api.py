@@ -111,6 +111,8 @@ if __name__ == "__main__":
         if any(header.name.startswith("poseidon") for header in headers):
             includes.append('#include "poseidon/poseidon.cuh"')
             includes.append('#include "poseidon/tree/merkle.cuh"')
+        if any(header.name.startswith("poseidon2") for header in headers):
+            includes.append('#include "poseidon2/poseidon2.cuh"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(curve.upper()) + "\n".join(includes) + "\n\n"
         for header in headers:
@@ -143,6 +145,8 @@ if __name__ == "__main__":
         if any(header.name.startswith("poseidon") for header in headers):
             includes.append('#include "poseidon/poseidon.cuh"')
             includes.append('#include "poseidon/tree/merkle.cuh"')
+        if any(header.name.startswith("poseidon2") for header in headers):
+            includes.append('#include "poseidon2/poseidon2.cuh"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(field.upper()) + "\n".join(includes) + "\n\n"
         for header in headers:

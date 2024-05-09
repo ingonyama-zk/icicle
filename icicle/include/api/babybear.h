@@ -14,6 +14,7 @@
 #include "vec_ops/vec_ops.cuh"
 #include "poseidon/poseidon.cuh"
 #include "poseidon/tree/merkle.cuh"
+#include "poseidon2/poseidon2.cuh"
 
 extern "C" cudaError_t babybear_extension_ntt_cuda(
   const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
