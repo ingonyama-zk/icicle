@@ -16,13 +16,13 @@ func GetDefaultPoseidonConfig() core.PoseidonConfig {
 }
 
 func PoseidonHash[T any](scalars, results core.HostOrDeviceSlice, numberOfStates, arity int, cfg *core.PoseidonConfig, constants *core.PoseidonConstants[T]) core.IcicleError {
-	scalarsPointer, resultsPointer, cfgPointer := core.PoseidonCheck(scalars, results, cfg)
+	scalarsPointer, resultsPointer, cfgPointer := core.PoseidonCheck(scalars, results, cfg, constants, arity, numberOfStates)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
 	cResults := (*C.scalar_t)(resultsPointer)
 	cNumberOfStates := (C.int)(numberOfStates)
 	cArity := (C.int)(arity)
-	cConstants := (*C.PoseidonConstants)(unsafe.Pointer(&constants))
+	cConstants := (*C.PoseidonConstants)(unsafe.Pointer(constants))
 	cCfg := (*C.PoseidonConfig)(cfgPointer)
 
 	__ret := C.bls12_377_poseidon_hash_cuda(cScalars, cResults, cNumberOfStates, cArity, cConstants, cCfg)
@@ -31,14 +31,14 @@ func PoseidonHash[T any](scalars, results core.HostOrDeviceSlice, numberOfStates
 	return core.FromCudaError(err)
 }
 
-func CreateOptimizedPoseidonConstants[T any](arity, fullRoundsHalfs, partialRounds int, constants core.HostOrDeviceSlice, ctx cr.DeviceContext, poseidonConstants core.PoseidonConstants[T]) core.IcicleError {
+func CreateOptimizedPoseidonConstants[T any](arity, fullRoundsHalfs, partialRounds int, constants core.HostOrDeviceSlice, ctx cr.DeviceContext, poseidonConstants *core.PoseidonConstants[T]) core.IcicleError {
 
 	cArity := (C.int)(arity)
 	cFullRoundsHalfs := (C.int)(fullRoundsHalfs)
 	cPartialRounds := (C.int)(partialRounds)
 	cConstants := (*C.scalar_t)(constants.AsUnsafePointer())
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	cPoseidonConstants := (*C.PoseidonConstants)(unsafe.Pointer(&poseidonConstants))
+	cPoseidonConstants := (*C.PoseidonConstants)(unsafe.Pointer(poseidonConstants))
 
 	__ret := C.bls12_377_create_optimized_poseidon_constants_cuda(cArity, cFullRoundsHalfs, cPartialRounds, cConstants, cCtx, cPoseidonConstants)
 	err := (cr.CudaError)(__ret)
