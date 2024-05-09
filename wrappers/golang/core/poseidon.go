@@ -51,15 +51,37 @@ func GetDefaultPoseidonConfig() PoseidonConfig {
 	}
 }
 
-func PoseidonCheck(input, output HostOrDeviceSlice, cfg *PoseidonConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) {
+func PoseidonCheck[T any](input, output HostOrDeviceSlice, cfg *PoseidonConfig, constants *PoseidonConstants[T], arity, numberOfStates int) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) {
+	inputLen, outputLen := input.Len(), output.Len()
 
+	if arity != int(constants.Arity) {
+		errorString := fmt.Sprintf(
+			"arity: %d does not match Poseidon Constants: %d",
+			arity,
+			outputLen,
+		)
+		panic(errorString)
+	}
+
+	if inputLen != arity*numberOfStates {
+		errorString := fmt.Sprintf(
+			"input is not the right length for the given paramaters:%d, should be: %d",
+			inputLen,
+			arity*numberOfStates,
+		)
+		panic(errorString)
+	}
+
+	if outputLen != numberOfStates {
+		errorString := fmt.Sprintf(
+			"output is not the right length for the given paramaters:%d, should be: %d",
+			outputLen,
+			numberOfStates,
+		)
+		panic(errorString)
+	}
 	cfg.areInputsOnDevice = input.IsOnDevice()
 	cfg.areOutputsOnDevice = output.IsOnDevice()
-
-	fmt.Println("TODO: PoseidonCheck")
-	fmt.Println("input is on device", input.IsOnDevice())
-	fmt.Println("output is on device", output.IsOnDevice())
-	fmt.Println("cfg says input:", cfg.areInputsOnDevice, " and output:", cfg.areOutputsOnDevice)
 
 	if input.IsOnDevice() {
 		input.(DeviceSlice).CheckDevice()
@@ -68,7 +90,6 @@ func PoseidonCheck(input, output HostOrDeviceSlice, cfg *PoseidonConfig) (unsafe
 
 	if output.IsOnDevice() {
 		output.(DeviceSlice).CheckDevice()
-
 	}
 
 	cfgPointer := unsafe.Pointer(cfg)
