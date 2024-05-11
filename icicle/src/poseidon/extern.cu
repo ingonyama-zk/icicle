@@ -2,8 +2,9 @@
 
 using namespace field_config;
 
+#include "poseidon.cu"
 #include "constants.cu"
-#include "poseidon/poseidon.cuh"
+
 
 #include "gpu-utils/device_context.cuh"
 #include "utils/utils.h"
@@ -16,12 +17,12 @@ namespace poseidon {
    * stand-alone "STARK field";
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-    extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_hash_cuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_hash_cuda)(
     scalar_t* input,
     scalar_t* output,
     int number_of_states,
     int arity,
-    const PoseidonConstants<scalar_t>* constants,
+    const PoseidonConstants<scalar_t>& constants,
     PoseidonConfig& config)
   {
     switch (arity) {
@@ -45,7 +46,7 @@ namespace poseidon {
     int partial_rounds,
     const scalar_t* constants,
     device_context::DeviceContext& ctx,
-    PoseidonConstants<scalar_t>& poseidon_constants)
+    PoseidonConstants<scalar_t>* poseidon_constants)
   {
     return create_optimized_poseidon_constants<scalar_t>(
       arity, full_rounds_half, partial_rounds, constants, ctx, poseidon_constants);
