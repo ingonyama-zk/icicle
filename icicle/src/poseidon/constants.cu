@@ -1,21 +1,21 @@
-#include "poseidon/poseidon.cuh"
+#include "../../include/poseidon/poseidon.cuh"
 
 /// These are pre-calculated constants for different curves
-#include "fields/id.h"
+#include "../../include/fields/id.h"
 #if FIELD_ID == BN254
-#include "poseidon/constants/bn254_poseidon.h"
+#include "../../include/poseidon/constants/bn254_poseidon.h"
 using namespace poseidon_constants_bn254;
 #elif FIELD_ID == BLS12_381
-#include "poseidon/constants/bls12_381_poseidon.h"
+#include "../../include/poseidon/constants/bls12_381_poseidon.h"
 using namespace poseidon_constants_bls12_381;
 #elif FIELD_ID == BLS12_377
-#include "poseidon/constants/bls12_377_poseidon.h"
+#include "../../include/poseidon/constants/bls12_377_poseidon.h"
 using namespace poseidon_constants_bls12_377;
 #elif FIELD_ID == BW6_761
-#include "poseidon/constants/bw6_761_poseidon.h"
+#include "../../include/poseidon/constants/bw6_761_poseidon.h"
 using namespace poseidon_constants_bw6_761;
 #elif FIELD_ID == GRUMPKIN
-#include "poseidon/constants/grumpkin_poseidon.h"
+#include "../../include/poseidon/constants/grumpkin_poseidon.h"
 using namespace poseidon_constants_grumpkin;
 #endif
 
@@ -29,8 +29,8 @@ namespace poseidon {
     device_context::DeviceContext& ctx,
     PoseidonConstants<S>* poseidon_constants)
   {
-    CHK_INIT_IF_RETURN();
-    cudaStream_t& stream = ctx.stream;
+    // CHK_INIT_IF_RETURN();
+    int& stream = ctx.stream;
     int width = arity + 1;
     int round_constants_len = width * full_rounds_half * 2 + partial_rounds;
     int mds_matrix_len = width * width;
@@ -39,10 +39,10 @@ namespace poseidon {
 
     // Malloc memory for copying constants
     S* d_constants;
-    CHK_IF_RETURN(cudaMallocAsync(&d_constants, sizeof(S) * constants_len, stream));
+    // CHK_IF_RETURN(cudaMallocAsync(&d_constants, sizeof(S) * constants_len, stream));
 
     // Copy constants
-    CHK_IF_RETURN(cudaMemcpyAsync(d_constants, constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream));
+    // CHK_IF_RETURN(cudaMemcpyAsync(d_constants, constants, sizeof(S) * constants_len, cudaMemcpyHostToDevice, stream));
 
     S* round_constants = d_constants;
     S* mds_matrix = round_constants + round_constants_len;
@@ -56,18 +56,18 @@ namespace poseidon {
     S domain_tag = S::from(tree_domain_tag_value);
 
     // Make sure all the constants have been copied
-    CHK_IF_RETURN(cudaStreamSynchronize(stream));
+    // CHK_IF_RETURN(cudaStreamSynchronize(stream));
     *poseidon_constants = {arity,      partial_rounds,    full_rounds_half, round_constants,
                            mds_matrix, non_sparse_matrix, sparse_matrices,  domain_tag};
 
-    return CHK_LAST();
+    return 0;
   }
 
   template <typename S>
   cudaError_t init_optimized_poseidon_constants(
     int arity, device_context::DeviceContext& ctx, PoseidonConstants<S>* poseidon_constants)
   {
-    CHK_INIT_IF_RETURN();
+    //CHK_INIT_IF_RETURN();
     int full_rounds_half = FULL_ROUNDS_DEFAULT;
     int partial_rounds;
     unsigned char* constants;
@@ -96,7 +96,7 @@ namespace poseidon {
 
     create_optimized_poseidon_constants(arity, full_rounds_half, partial_rounds, h_constants, ctx, poseidon_constants);
 
-    return CHK_LAST();
+    return 0; //CHK_LAST();
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, create_optimized_poseidon_constants_cuda)(
