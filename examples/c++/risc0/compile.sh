@@ -8,7 +8,7 @@ mkdir -p build/icicle
 
 # Configure and build Icicle
 # cmake -S ../../../icicle/ -B build/icicle -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DG2=OFF
-cmake -S ../../../icicle/ -B build/icicle -DCMAKE_BUILD_TYPE=Release -DCURVE=babybear -DG2=OFF
+cmake -S ../../../icicle/ -B build/icicle -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DG2=OFF
 cmake --build build/icicle
 
 # Configure and build the example application
