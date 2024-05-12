@@ -202,8 +202,7 @@ namespace polynomials {
 
   // Evaluates a polynomial on a ROU domain.
   // p: Pointer to the polynomial instance.
-  // domain: Array of points constituting the domain.
-  // domain_size: Number of points in the domain.
+  // domain_log_size: log size of the domain to evaluate
   // evals: Output array for the evaluations.
   void CONCAT_EXPAND(FIELD, polynomial_evaluate_on_rou_domain)(
     const PolynomialInst* p, uint64_t domain_log_size, scalar_t* evals /*OUT*/)
