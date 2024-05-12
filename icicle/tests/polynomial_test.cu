@@ -199,20 +199,20 @@ TEST_F(PolynomialTest, evaluateOnRouDomain)
   };
 
   // test f (in coeffs state)
-  test(f, logsize + 2); // evalute on larger domain
+  test(f, logsize + 2); // evaluate on larger domain
   test(f, logsize - 3); // evaluate on smaller domain
-  test(f, logsize);     // evalute on domain with size like poly
+  test(f, logsize);     // evaluate on domain with size like poly
   // test g (in evals state)
-  test(g, logsize + 2); // evalute on larger domain
+  test(g, logsize + 2); // evaluate on larger domain
   test(g, logsize - 3); // evaluate on smaller domain
-  test(g, logsize);     // evalute on domain with size like poly
+  test(g, logsize);     // evaluate on domain with size like poly
 
   // test f*f (in reversed evals state)
   auto f_squared = f * f;
   auto new_logsize = logsize + 1;   // f_squared is twice the degree and size of f
-  test(f_squared, new_logsize + 2); // evalute on larger domain
+  test(f_squared, new_logsize + 2); // evaluate on larger domain
   test(f_squared, new_logsize - 3); // evaluate on smaller domain
-  test(f_squared, new_logsize);     // evalute on domain with size like poly
+  test(f_squared, new_logsize);     // evaluate on domain with size like poly
 }
 
 TEST_F(PolynomialTest, fromEvaluations)

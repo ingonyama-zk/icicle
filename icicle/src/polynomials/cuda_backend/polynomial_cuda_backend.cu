@@ -773,7 +773,7 @@ namespace polynomials {
       ntt_config.ordering = ntt::Ordering::kNM;
       ntt::ntt(numerator_evals_reversed_p, N, ntt::NTTDir::kForward, ntt_config, out_evals_reversed_p);
 
-      // (2) divide by constant value (that V(x) evalutes to on the coset)
+      // (2) divide by constant value (that V(x) evaluates to on the coset)
       D v_coset_eval = D::inverse(D::pow(ntt_config.coset_gen, N) - D::one());
 
       const int NOF_THREADS = 128;
