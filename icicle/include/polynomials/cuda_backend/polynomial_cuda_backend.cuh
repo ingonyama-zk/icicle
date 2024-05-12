@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gpu-utils/device_context.cuh"
-#include "fields/field_config.cuh"
-#include "polynomials/polynomials.h"
+#include "../../gpu-utils/device_context.cuh"
+#include "../../fields/field_config.cuh"
+#include "../polynomials.h"
 
 using device_context::DeviceContext;
 
@@ -11,7 +11,7 @@ namespace polynomials {
   class CUDAPolynomialFactory : public AbstractPolynomialFactory<C, D, I>
   {
     std::vector<DeviceContext> m_device_contexts; // device-id --> device context
-    std::vector<cudaStream_t> m_device_streams;   // device-id --> device stream. Storing the streams here as workaround
+    std::vector<int> m_device_streams;   // device-id --> device stream. Storing the streams here as workaround
                                                   // since DeviceContext has a reference to a stream.
 
   public:

@@ -6,7 +6,7 @@
 #include <algorithm> // for std::max
 #include <cstdint>   // for uint64_t, etc.
 #include <memory>
-#include "utils/integrity_pointer.h"
+#include "../utils/integrity_pointer.h"
 
 namespace polynomials {
 

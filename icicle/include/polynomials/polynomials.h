@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include <memory>
-#include "utils/integrity_pointer.h"
-#include "fields/field_config.cuh"
+#include "../utils/integrity_pointer.h"
+#include "../fields/field_config.cuh"
 
 #include "polynomial_context.h"
 #include "polynomial_backend.h"
