@@ -128,12 +128,13 @@ auto H = (A*B-C).divide_by_vanishing_polynomial(N);
 
 ### Evaluation
 
-Evaluate polynomials at arbitrary domain points or across a domain.
+Evaluate polynomials at arbitrary domain points, across a domain or on a roots-of-unity domain.
 
 ```cpp
 Image operator()(const Domain& x) const; // evaluate f(x)
 void evaluate(const Domain* x, Image* evals /*OUT*/) const;
 void evaluate_on_domain(Domain* domain, uint64_t size, Image* evals /*OUT*/) const; // caller allocates memory
+void evaluate_on_rou_domain(uint64_t domain_log_size, Image* evals /*OUT*/) const;  // caller allocate memory
 ```
 
 Example:
@@ -147,17 +148,12 @@ uint64_t domain_size = ...;
 auto domain = /*build domain*/; // host or device memory
 auto evaluations = std::make_unique<scalar_t[]>(domain_size); // can be device memory too
 f.evaluate_on_domain(domain, domain_size, evaluations);
+
+// evaluate f(x) on roots of unity domain
+uint64_t domain_log_size = ...;
+auto evaluations_rou_domain = std::make_unique<scalar_t[]>(1 << domain_log_size); // can be device memory too
+f.evaluate_on_rou_domain(domain_log_size, evaluations_rou_domain);
 ```
-
-:::note
-For special domains such as roots of unity, this method is not the most efficient for two reasons:
-
-- Need to build the domain of size N.
-- The implementation is not trying to identify this special domain.
-
-Therefore the computation is typically $O(n^2)$ rather than $O(nlogn)$.
-See the 'device views' section for more details.
-:::
 
 ### Manipulations
 
