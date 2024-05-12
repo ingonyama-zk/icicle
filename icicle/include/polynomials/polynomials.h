@@ -68,6 +68,7 @@ namespace polynomials {
     Image operator()(const Domain& x) const;
     void evaluate(const Domain* x, Image* eval /*OUT*/) const;
     void evaluate_on_domain(Domain* domain, uint64_t size, Image* evals /*OUT*/) const; // caller allocates memory
+    void evaluate_on_rou_domain(uint64_t domain_log_size, Image* evals /*OUT*/) const;  // caller allocate memory
 
     // Method to obtain the degree of the polynomial
     int64_t degree();

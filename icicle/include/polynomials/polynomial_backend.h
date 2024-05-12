@@ -56,6 +56,7 @@ namespace polynomials {
     // Evaluation methods
     virtual void evaluate(PolyContext op, const D* domain_x, I* eval /*OUT*/) = 0;
     virtual void evaluate_on_domain(PolyContext op, const D* domain, uint64_t size, I* evaluations /*OUT*/) = 0;
+    virtual void evaluate_on_rou_domain(PolyContext op, uint64_t domain_log_size, I* evals /*OUT*/) = 0;
 
     // Methods to copy coefficients to host memory
     virtual C get_coeff(PolyContext op, uint64_t coeff_idx) = 0;

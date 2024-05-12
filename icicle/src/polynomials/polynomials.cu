@@ -166,6 +166,12 @@ namespace polynomials {
   }
 
   template <typename C, typename D, typename I>
+  void Polynomial<C, D, I>::evaluate_on_rou_domain(uint64_t domain_log_size, I* evals /*OUT*/) const
+  {
+    return m_backend->evaluate_on_rou_domain(m_context, domain_log_size, evals);
+  }
+
+  template <typename C, typename D, typename I>
   int64_t Polynomial<C, D, I>::degree()
   {
     return m_backend->degree(m_context);
