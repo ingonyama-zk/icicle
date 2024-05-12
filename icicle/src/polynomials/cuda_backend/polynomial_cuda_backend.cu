@@ -584,10 +584,9 @@ namespace polynomials {
 
       const int64_t deg_a = degree(a);
       const int64_t deg_b = degree(b);
-      if (deg_a < deg_b || deg_b < 0) {
+      if (deg_b < 0) {
         THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "Polynomial division (CUDA backend): numerator degree must be "
-                                          "greater-or-equal to denumerator degree and denumerator must not be zero");
+          IcicleError_t::InvalidArgument, "Polynomial division (CUDA backend): divide by zeropolynomial ");
       }
 
       // init: Q=0, R=a
