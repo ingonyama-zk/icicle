@@ -200,6 +200,17 @@ namespace polynomials {
     return p->evaluate_on_domain(domain, domain_size, evals);
   }
 
+  // Evaluates a polynomial on a ROU domain.
+  // p: Pointer to the polynomial instance.
+  // domain: Array of points constituting the domain.
+  // domain_size: Number of points in the domain.
+  // evals: Output array for the evaluations.
+  void CONCAT_EXPAND(FIELD, polynomial_evaluate_on_rou_domain)(
+    const PolynomialInst* p, uint64_t domain_log_size, scalar_t* evals /*OUT*/)
+  {
+    return p->evaluate_on_rou_domain(domain_log_size, evals);
+  }
+
   // Returns the degree of a polynomial.
   // p: Pointer to the polynomial instance.
   // Returns the degree of the polynomial.
