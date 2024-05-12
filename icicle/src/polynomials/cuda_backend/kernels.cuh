@@ -38,18 +38,6 @@ namespace polynomials {
   }
 
   /*============================== evaluate ==============================*/
-  template <typename T>
-  __device__ T pow(T base, int exp)
-  {
-    T result = T::one();
-    while (exp > 0) {
-      if (exp & 1) result = result * base;
-      base = base * base;
-      exp >>= 1;
-    }
-    return result;
-  }
-
   // TODO Yuval: implement efficient reduction and support batch evaluation
   template <typename T>
   __global__ void dummy_reduce(const T* arr, int size, T* output)
@@ -67,7 +55,7 @@ namespace polynomials {
   __global__ void evaluate_polynomial_without_reduction(const T* x, const T* coeffs, int num_coeffs, T* tmp)
   {
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * pow(*x, tid); }
+    if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * T::pow(*x, tid); }
   }
 
   /*============================== division ==============================*/
