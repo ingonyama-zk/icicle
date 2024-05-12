@@ -63,8 +63,8 @@ public:
       incremental_values(elements.get(), size);
     }
 
-    return from_evals ? Polynomial_t::from_coefficients(elements.get(), size)
-                      : Polynomial_t::from_rou_evaluations(elements.get(), size);
+    return from_evals ? Polynomial_t::from_rou_evaluations(elements.get(), size)
+                      : Polynomial_t::from_coefficients(elements.get(), size);
   }
 
   static void random_samples(scalar_t* res, uint32_t count)
