@@ -2,7 +2,7 @@
 
 using namespace field_config;
 
-#include "thread_ntt.cu"
+// #include "thread_ntt.cu"
 #include "gpu-utils/sharedmem.cuh"
 #include "ntt/ntt.cuh" // for ntt::Ordering
 
@@ -10,25 +10,8 @@ namespace mxntt {
 
   static inline uint32_t dig_rev(uint32_t num, uint32_t log_size, bool dit, bool fast_tw)
   {
-    uint32_t rev_num = 0, temp, dig_len;
-    if (dit) {
-      for (int i = 4; i >= 0; i--) {
-        dig_len = fast_tw ? STAGE_SIZES_DEVICE_FT[log_size][i] : STAGE_SIZES_DEVICE[log_size][i];
-        temp = num & ((1 << dig_len) - 1);
-        num = num >> dig_len;
-        rev_num = rev_num << dig_len;
-        rev_num = rev_num | temp;
-      }
-    } else {
-      for (int i = 0; i < 5; i++) {
-        dig_len = fast_tw ? STAGE_SIZES_DEVICE_FT[log_size][i] : STAGE_SIZES_DEVICE[log_size][i];
-        temp = num & ((1 << dig_len) - 1);
-        num = num >> dig_len;
-        rev_num = rev_num << dig_len;
-        rev_num = rev_num | temp;
-      }
-    }
-    return rev_num;
+    return 0;
+    
   }
 
   static inline uint32_t bit_rev(uint32_t num, uint32_t log_size) { return __brev(num) >> (32 - log_size); }
@@ -57,7 +40,7 @@ namespace mxntt {
 
   // Note: the following reorder kernels are fused with normalization for INTT
   template <typename E, typename S, uint32_t MAX_GROUP_SIZE = 80>
-  static __global__ void reorder_digits_inplace_and_normalize_kernel(
+  static void reorder_digits_inplace_and_normalize_kernel(
     E* arr,
     uint32_t log_size,
     bool columns_batch,
@@ -101,7 +84,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  __launch_bounds__(64) __global__ void reorder_digits_and_normalize_kernel(
+  __launch_bounds__(64) void reorder_digits_and_normalize_kernel(
     const E* arr,
     E* arr_reordered,
     uint32_t log_size,
@@ -123,7 +106,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  static __global__ void batch_elementwise_mul_with_reorder_kernel(
+  static void batch_elementwise_mul_with_reorder_kernel(
     const E* in_vec,
     uint32_t size,
     bool columns_batch,
@@ -155,7 +138,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  __launch_bounds__(64) __global__ void ntt64(
+  __launch_bounds__(64) void ntt64(
     const E* in,
     E* out,
     S* external_twiddles,
@@ -238,7 +221,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  __launch_bounds__(64) __global__ void ntt32(
+  __launch_bounds__(64) void ntt32(
     const E* in,
     E* out,
     S* external_twiddles,
@@ -309,7 +292,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  __launch_bounds__(64) __global__ void ntt32dit(
+  __launch_bounds__(64) void ntt32dit(
     const E* in,
     E* out,
     S* external_twiddles,
@@ -379,7 +362,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  __launch_bounds__(64) __global__ void ntt16(
+  __launch_bounds__(64) void ntt16(
     const E* in,
     E* out,
     S* external_twiddles,
@@ -451,7 +434,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  __launch_bounds__(64) __global__ void ntt16dit(
+  __launch_bounds__(64) void ntt16dit(
     const E* in,
     E* out,
     S* external_twiddles,
@@ -523,7 +506,7 @@ namespace mxntt {
   }
 
   template <typename E, typename S>
-  __global__ void normalize_kernel(E* data, S norm_factor, uint32_t size)
+  void normalize_kernel(E* data, S norm_factor, uint32_t size)
   {
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= size) return;
@@ -531,7 +514,7 @@ namespace mxntt {
   }
 
   template <typename S>
-  __global__ void generate_base_table(S basic_root, S* base_table, uint32_t skip)
+  void generate_base_table(S basic_root, S* base_table, uint32_t skip)
   {
     S w = basic_root;
     S t = S::one();
@@ -543,7 +526,7 @@ namespace mxntt {
 
   // Generic twiddles: 1N twiddles for forward and inverse NTT
   template <typename S>
-  __global__ void generate_basic_twiddles_generic(S basic_root, S* w6_table, S* basic_twiddles)
+  void generate_basic_twiddles_generic(S basic_root, S* w6_table, S* basic_twiddles)
   {
     S w0 = basic_root * basic_root;
     S w1 = (basic_root + w0 * basic_root) * S::inv_log_size(1);
@@ -561,7 +544,7 @@ namespace mxntt {
   }
 
   template <typename S>
-  __global__ void generate_twiddle_combinations_generic(
+  void generate_twiddle_combinations_generic(
     S* w6_table, S* w12_table, S* w18_table, S* w24_table, S* w30_table, S* external_twiddles, uint32_t log_size)
   {
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -577,7 +560,7 @@ namespace mxntt {
   }
 
   template <typename S>
-  __global__ void set_value(S* arr, int idx, S val)
+  void set_value(S* arr, int idx, S val)
   {
     arr[idx] = val;
   }
@@ -657,7 +640,7 @@ namespace mxntt {
 
   // Fast-twiddles: 2N twiddles for forward, 2N for inverse
   template <typename S>
-  __global__ void generate_basic_twiddles_fast_twiddles_mode(S basic_root, S* basic_twiddles)
+  void generate_basic_twiddles_fast_twiddles_mode(S basic_root, S* basic_twiddles)
   {
     S w0 = basic_root * basic_root;
     S w1 = (basic_root + w0 * basic_root) * S::inv_log_size(1);
@@ -668,7 +651,7 @@ namespace mxntt {
   }
 
   template <typename S>
-  __global__ void generate_twiddle_combinations_fast_twiddles_mode(
+  void generate_twiddle_combinations_fast_twiddles_mode(
     S* w6_table,
     S* w12_table,
     S* w18_table,

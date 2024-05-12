@@ -1,8 +1,8 @@
 #pragma once
 
-#include "fields/storage.cuh"
-#include "fields/field.cuh"
-#include "fields/quartic_extension.cuh"
+#include "../storage.cuh"
+#include "../field.cuh"
+#include "../quartic_extension.cuh"
 
 namespace babybear {
   struct fp_config {

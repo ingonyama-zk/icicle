@@ -40,7 +40,7 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  __device__ S vecs_mul_matrix(S element, S* matrix, int element_number, int vec_number, S* shared_states)
+  S vecs_mul_matrix(S element, S* matrix, int element_number, int vec_number, S* shared_states)
   {
     __syncthreads();
     shared_states[threadIdx.x] = element;
@@ -56,7 +56,7 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  __device__ S full_round(
+  S full_round(
     S element,
     size_t rc_offset,
     int local_state_number,
@@ -108,7 +108,7 @@ namespace poseidon {
   }
 
   template <typename S, int T>
-  __device__ S partial_round(S state[T], size_t rc_offset, int round_number, const PoseidonConstants<S>& constants)
+  S partial_round(S state[T], size_t rc_offset, int round_number, const PoseidonConstants<S>& constants)
   {
     S element = state[0];
     element = sbox_alpha_five(element);

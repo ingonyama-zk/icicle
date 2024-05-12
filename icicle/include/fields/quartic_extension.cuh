@@ -1,8 +1,8 @@
 #pragma once
 
 #include "field.cuh"
-#include "gpu-utils/modifiers.cuh"
-#include "gpu-utils/sharedmem.cuh"
+#include "../gpu-utils/modifiers.cuh"
+#include "../gpu-utils/sharedmem.cuh"
 
 template <typename CONFIG>
 class ExtensionField
@@ -249,9 +249,9 @@ public:
 
 template <class CONFIG>
 struct SharedMemory<ExtensionField<CONFIG>> {
-  __device__ ExtensionField<CONFIG>* getPointer()
+  ExtensionField<CONFIG>* getPointer()
   {
-    ExtensionField<CONFIG> s_ext4_scalar_[];
+    ExtensionField<CONFIG> *s_ext4_scalar_=nullptr;
     return s_ext4_scalar_;
   }
 };

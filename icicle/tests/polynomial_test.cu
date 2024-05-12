@@ -514,20 +514,20 @@ namespace msm {
 class dummy_g2_t : public scalar_t
 {
 public:
-  static constexpr __host__ __device__ dummy_g2_t to_affine(const dummy_g2_t& point) { return point; }
+  static constexpr __host__ dummy_g2_t to_affine(const dummy_g2_t& point) { return point; }
 
-  static constexpr __host__ __device__ dummy_g2_t from_affine(const dummy_g2_t& point) { return point; }
+  static constexpr __host__ dummy_g2_t from_affine(const dummy_g2_t& point) { return point; }
 
-  static constexpr __host__ __device__ dummy_g2_t generator() { return dummy_g2_t{scalar_t::one()}; }
+  static constexpr __host__ dummy_g2_t generator() { return dummy_g2_t{scalar_t::one()}; }
 
-  static __host__ __device__ dummy_g2_t zero() { return dummy_g2_t{scalar_t::zero()}; }
+  static __host__ dummy_g2_t zero() { return dummy_g2_t{scalar_t::zero()}; }
 
-  friend __host__ __device__ dummy_g2_t operator*(const scalar_t& xs, const dummy_g2_t& ys)
+  friend __host__ dummy_g2_t operator*(const scalar_t& xs, const dummy_g2_t& ys)
   {
     return dummy_g2_t{scalar_t::reduce(scalar_t::mul_wide(xs, ys))};
   }
 
-  friend __host__ __device__ dummy_g2_t operator+(const dummy_g2_t& xs, const dummy_g2_t& ys)
+  friend __host__ dummy_g2_t operator+(const dummy_g2_t& xs, const dummy_g2_t& ys)
   {
     scalar_t rs = {};
     scalar_t::add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);

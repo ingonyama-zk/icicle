@@ -3,8 +3,9 @@
 #define _NTT_IMPL_H
 
 #include <stdint.h>
-#include "ntt/ntt.cuh" // for enum Ordering
-
+#include "ntt.cuh" // for enum Ordering
+typedef int cudaError_t;
+typedef int cudaStream_t;
 namespace mxntt {
 
   template <typename S>

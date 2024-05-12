@@ -39,7 +39,7 @@ namespace polynomials {
 
   /*============================== evaluate ==============================*/
   template <typename T>
-  __device__ T pow(T base, int exp)
+  T pow(T base, int exp)
   {
     T result = T::one();
     while (exp > 0) {

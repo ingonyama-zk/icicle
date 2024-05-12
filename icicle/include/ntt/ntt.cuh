@@ -2,13 +2,11 @@
 #ifndef NTT_H
 #define NTT_H
 
-#include <cuda_runtime.h>
-
-#include "gpu-utils/device_context.cuh"
-#include "gpu-utils/error_handler.cuh"
-#include "gpu-utils/sharedmem.cuh"
-#include "utils/utils_kernels.cuh"
-#include "utils/utils.h"
+#include "../gpu-utils/device_context.cuh"
+#include "../gpu-utils/error_handler.cuh"
+#include "../gpu-utils/sharedmem.cuh"
+#include "../utils/utils_kernels.cuh"
+#include "../utils/utils.h"
 
 /**
  * @namespace ntt
@@ -36,6 +34,8 @@ namespace ntt {
    * primitive_root).
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
+  typedef int cudaError_t;
+
   template <typename S>
   cudaError_t init_domain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
 
