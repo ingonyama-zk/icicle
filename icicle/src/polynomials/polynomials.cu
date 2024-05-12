@@ -190,13 +190,6 @@ namespace polynomials {
     return m_backend->get_coefficients_view(m_context);
   }
 
-  template <typename C, typename D, typename I>
-  std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
-  Polynomial<C, D, I>::get_rou_evaluations_view(uint64_t nof_evaluations, bool is_reversed)
-  {
-    return m_backend->get_rou_evaluations_view(m_context, nof_evaluations, is_reversed);
-  }
-
   // explicit instantiation for default type (scalar field)
   template class Polynomial<scalar_t>;
   template Polynomial<scalar_t> operator*(const scalar_t& c, const Polynomial<scalar_t>& rhs);

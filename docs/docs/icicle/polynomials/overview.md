@@ -255,7 +255,7 @@ auto rv = msm::MSM(coeffs_device, points, msm_size, cfg, results);
 
 #### Views
 
-The Polynomial API supports efficient data handling through the use of memory views. These views provide direct access to the polynomial's internal state, such as coefficients or evaluations without the need to copy data. This feature is particularly useful for operations that require direct access to device memory, enhancing both performance and memory efficiency.
+The Polynomial API supports efficient data handling through the use of memory views. These views provide direct access to the polynomial's internal state without the need to copy data. This feature is particularly useful for operations that require direct access to device memory, enhancing both performance and memory efficiency.
 
 ##### What is a Memory View?
 
@@ -265,7 +265,7 @@ A memory view is essentially a pointer to data stored in device memory. By provi
 
 Memory views are extremely versatile and can be employed in various computational contexts such as:
 
-- **Commitments**: Views can be used to commit polynomial states in cryptographic schemes, such as Multi-Scalar Multiplications (MSM), or for constructing Merkle trees without duplicating the underlying data.
+- **Commitments**: Views can be used to commit polynomial states in cryptographic schemes, such as Multi-Scalar Multiplications (MSM).
 - **External Computations**: They allow external functions or algorithms to utilize the polynomial's data directly, facilitating operations outside the core polynomial API. This is useful for custom operations that are not covered by the API.
 
 ##### Obtaining and Using Views
@@ -275,9 +275,6 @@ To create and use views within the Polynomial API, functions are provided to obt
 ```cpp
 // Obtain a view of the polynomial's coefficients
 std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view();
-// obtain a view of the evaluations. Can specify the domain size and whether to compute reversed evaluations.
-std::tuple<IntegrityPointer<Image>, uint64_t /*size*/, uint64_t /*device_id*/>
-get_rou_evaluations_view(uint64_t nof_evaluations = 0, bool is_reversed = false);
 ```
 
 Example usage:
@@ -328,22 +325,7 @@ if (coeff_view.isValid()) {
 }
 ```
 
-#### Evaluations View: Accessing Polynomial Evaluations Efficiently
 
-The Polynomial API offers a specialized method, `get_rou_evaluations_view(...)`, which facilitates direct access to the evaluations of a polynomial. This method is particularly useful for scenarios where polynomial evaluations need to be accessed frequently or manipulated externally without the overhead of copying data.
-This method provides a memory view into the device memory where polynomial evaluations are stored. It allows for efficient interpolation on larger domains, leveraging the raw evaluations directly from memory.
-
-:::warning
-Invalid request: requesting evaluations on a domain smaller than the degree of the polynomial is not supported and is considered invalid.
-:::
-
-```cpp
-// Assume a polynomial `p` of degree N
-auto [evals_view, size, device_id] = p.get_rou_evaluations_view(4*N); // expanding the evaluation domain
-
-// Use the evaluations view to perform further computations or visualizations
-process_polynomial_evaluations(evals_view.get(), size, device_id);
-```
 
 ## Multi-GPU Support with CUDA Backend
 

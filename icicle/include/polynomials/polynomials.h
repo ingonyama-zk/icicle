@@ -77,10 +77,8 @@ namespace polynomials {
     // caller is allocating output memory. If coeff==nullptr, returning nof_coeff only
     uint64_t copy_coeffs(Coeff* host_coeffs, uint64_t start_idx, uint64_t end_idx) const;
 
-    // Methods for obtaining a view of the coefficients or evaluations
+    // Methods for obtaining a view of the coefficients
     std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view();
-    std::tuple<IntegrityPointer<Image>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_rou_evaluations_view(uint64_t nof_evaluations = 0, bool is_reversed = false);
 
     // Overload stream insertion operator for printing.
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)

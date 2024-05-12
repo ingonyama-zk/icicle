@@ -245,22 +245,6 @@ namespace polynomials {
     return new IntegrityPointer<scalar_t>(std::move(coeffs));
   }
 
-  // Retrieves a device-memory view of the polynomial's evaluations on the roots of unity.
-  // p: Pointer to the polynomial instance.
-  // nof_evals: Number of evaluations.
-  // is_reversed: Whether the evaluations are in reversed order.
-  // size: Output parameter for the size of the view.
-  // device_id: Output parameter for the device ID.
-  // Returns a pointer to an integrity pointer encapsulating the evaluations view.
-  IntegrityPointer<scalar_t>* CONCAT_EXPAND(FIELD, polynomial_get_rou_evaluations_view)(
-    PolynomialInst* p, uint64_t nof_evals, bool is_reversed, uint64_t* size /*OUT*/, uint64_t* device_id /*OUT*/)
-  {
-    auto [rou_evals, _size, _device_id] = p->get_rou_evaluations_view(nof_evals, is_reversed);
-    *size = _size;
-    *device_id = _device_id;
-    return new IntegrityPointer<scalar_t>(std::move(rou_evals));
-  }
-
   // Reads the pointer from an integrity pointer.
   // p: Pointer to the integrity pointer.
   // Returns the raw pointer if still valid, otherwise NULL.

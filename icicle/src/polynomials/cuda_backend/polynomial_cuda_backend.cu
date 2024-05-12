@@ -201,20 +201,6 @@ namespace polynomials {
       return {std::move(integrity_pointer), N, m_device_context.device_id};
     }
 
-    std::tuple<IntegrityPointer<I>, uint64_t, uint64_t>
-    get_rou_evaluations_view(uint64_t nof_evaluations, bool is_reversed)
-    {
-      if (nof_evaluations != 0 && nof_evaluations < get_nof_elements()) {
-        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "get_rou_evaluations_view() can only expand #evals");
-      }
-      transform_to_evaluations(nof_evaluations, is_reversed);
-      auto [evals, N] = get_rou_evaluations();
-      // when reading the pointer, if the counter was modified, the pointer is invalid
-      IntegrityPointer<I> integrity_pointer(evals, m_integrity_counter, *m_integrity_counter);
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream));
-      return {std::move(integrity_pointer), N, m_device_context.device_id};
-    }
-
     std::pair<const I*, uint64_t> get_rou_evaluations() override
     {
       const bool is_reversed = this->m_state == State::EvaluationsOnRou_Reversed;

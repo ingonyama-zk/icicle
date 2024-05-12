@@ -419,40 +419,16 @@ TEST_F(PolynomialTest, View)
   const int size = 1 << 6;
 
   auto f = randomize_polynomial(size);
-  {
-    auto [d_coeff, N, device_id] = f.get_coefficients_view();
+  auto [d_coeff, N, device_id] = f.get_coefficients_view();
 
-    EXPECT_EQ(d_coeff.isValid(), true);
-    auto g = f + f;
-    // expecting the view to remain valid in that case
-    EXPECT_EQ(d_coeff.isValid(), true);
+  EXPECT_EQ(d_coeff.isValid(), true);
+  auto g = f + f;
+  // expecting the view to remain valid in that case
+  EXPECT_EQ(d_coeff.isValid(), true);
 
-    f += f;
-    // expecting view to be invalidated since f is modified
-    EXPECT_EQ(d_coeff.isValid(), false);
-  }
-
-  auto [d_evals, N, device_id] = f.get_rou_evaluations_view();
-  auto g = Polynomial_t::from_rou_evaluations(d_evals.get(), N);
-  assert_equal(f, g);
-}
-
-TEST_F(PolynomialTest, interpolation)
-{
-  const int size = 1 << 4;
-  const int interpolation_size = 1 << 6;
-
-  const auto x = scalar_t::rand_host();
-
-  auto f = randomize_polynomial(size);
-  auto [evals, N, device_id] = f.get_rou_evaluations_view(interpolation_size); // interpolate from 16 to 64 evaluations
-
-  auto g = Polynomial_t::from_rou_evaluations(evals.get(), N); // note the evals is a view to f
-  const auto fx = f(x);
-  ASSERT_EQ(evals.isValid(), false); // invaidated since f(x) transforms f to coefficients
-
-  const auto gx = g(x); // evaluating g which was constructed from interpolation of f
-  ASSERT_EQ(fx, gx);
+  f += f;
+  // expecting view to be invalidated since f is modified
+  EXPECT_EQ(d_coeff.isValid(), false);
 }
 
 TEST_F(PolynomialTest, slicing)
