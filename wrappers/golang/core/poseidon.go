@@ -65,7 +65,7 @@ func PoseidonCheck[T any](input, output HostOrDeviceSlice, cfg *PoseidonConfig, 
 
 	if inputLen != arity*numberOfStates {
 		errorString := fmt.Sprintf(
-			"input is not the right length for the given paramaters:%d, should be: %d",
+			"input is not the right length for the given parameters:%d, should be: %d",
 			inputLen,
 			arity*numberOfStates,
 		)
@@ -74,7 +74,7 @@ func PoseidonCheck[T any](input, output HostOrDeviceSlice, cfg *PoseidonConfig, 
 
 	if outputLen != numberOfStates {
 		errorString := fmt.Sprintf(
-			"output is not the right length for the given paramaters:%d, should be: %d",
+			"output is not the right length for the given parameters:%d, should be: %d",
 			outputLen,
 			numberOfStates,
 		)
