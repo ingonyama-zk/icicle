@@ -2,7 +2,7 @@
 #ifndef LDE_H
 #define LDE_H
 
-#include "gpu-utils/device_context.cuh"
+#include "../gpu-utils/device_context.cuh"
 
 /**
  * @namespace vec_ops
@@ -57,6 +57,7 @@ namespace vec_ops {
    * @tparam E The type of elements `vec_b` and `result`. Often (but not always) `E=S`.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
+  typedef int cudaError_t;
   template <typename E, typename S>
   cudaError_t Mul(const S* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result);
 
