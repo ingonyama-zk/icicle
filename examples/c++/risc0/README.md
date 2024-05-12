@@ -1,4 +1,4 @@
-# ICICLE example: computationally-intensive elements of RISC0 protocol
+# ICICLE example: RISC0's Fibonacci sequence proof using Polynomial API
 
 ## Why RISC0?
 
@@ -6,12 +6,9 @@
 The proofs are created for sequences of values in RISC-V registers, called execution traces.
 This approach is transparent to developers and enables the use of general purpose languages.
 
-Our [analysis of RISC0 protocol](https://www.ingonyama.com/blog/risc-zero-prover-protocol-analysis) shows that the most computationally-intensive part of the protocol is Fast Reed-Solomon Interactive Oracle Proof (FRI).
-Our example will focus on FRI.
-
 ## Best-Practices
 
-This example builds on [ICICLE Polynomial API](../polynomial-api/README.md) and [Poseidon hashes](../poseidon/README.md) so we recommend to run them first.
+This example builds on [ICICLE Polynomial API](../polynomial-api/README.md) so we recommend to run it first.
 
 ## Key-Takeaway
 
@@ -19,38 +16,29 @@ RISC0 encodes execution traces into very large polynomials and commits them usin
 FRI speeds-up validation of such commitments by recursively generating smaller polynomials (and trees) from larger ones.
 The key enabler for *recursion* is the *redundancy* of polynomial commitments, hence the use of Reed-Solomon codes.
 
-
 ## Running the example
-
-Make sure you have compiled a curve-specific ICICLE library. For example, for bn254 curve execute the following from the project root directory:
-
-```sh
-cd icicle
-mkdir -p build
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=bn254 -DG2=ON -S . -B build 
-cmake --build build
-```
 
 To run example, from project root directory:
 
 ```sh
-cd examples/c++/polynomial-api
+cd examples/c++/risc0
 ./compile.sh
 ./run.sh
 ```
 
-To change the curve, edit CURVE_ID in CMakeLists.txt
-
 ## What's in the example
 
-This is a **toy** example executing just the first round of FRI
+The example follows [STARK by Hand](https://dev.risczero.com/proof-system/stark-by-hand), structured in teh following Lessons:
 
-1. Initialize ICICLE: NTT, Polynomials, Poseidon, and Merkle tree
-2. Generate random execution trace data
-3. Reconstruct polynomial from the trace data
-4. Generate Reed-Solomon codeword by interpolating the trace
-5. Reconstruct polynomial from the codeword
-6. Commit to the codeword polynomial: evaluate at shifted points and encode into Merkle tree
-7. FRI Protocol (Commit Phase)
-8. FRI Protocol (Query Phase)
-
+1. The Execution Trace
+2. Rule checks to validate a computation
+3. Padding the Trace
+4. Constructing Trace Polynomials
+5. ZK Commitments of the Trace Data
+6. Constraint Polynomials
+7. Mixing Constraint Polynomials
+8. The Core of the RISC Zero STARK
+9. The DEEP Technique
+10. Mixing (Batching) for FRI
+11. FRI Protocol (Commit Phase)
+12. FRI Protocol (Query Phase)

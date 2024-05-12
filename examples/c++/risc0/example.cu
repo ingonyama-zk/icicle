@@ -12,11 +12,6 @@
 using namespace polynomials;
 using namespace merkle;
 
-using namespace polynomials;
-using namespace merkle;
-
-// using namespace ntt;
-
 // define the polynomial type
 typedef Polynomial<scalar_t> Polynomial_t;
 
@@ -182,30 +177,30 @@ int main(int argc, char** argv)
 
   const int logn=3;
   const int n = 1 << logn;
-
-  std::cout << std::endl << "1. Initialize ICICLE" << std::endl;
-  std::cout << "NTT" << std::endl;
+  
+  std::cout << "Initializing NTT" << std::endl;
   static const int MAX_NTT_LOG_SIZE = 24;
   auto ntt_config = ntt::default_ntt_config<scalar_t>();
   const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
   ntt::init_domain(basic_root, ntt_config.ctx);
-  std::cout << "Polynomials" << std::endl;
+  std::cout << "Initializing Polynomials" << std::endl;
   // Virtual factory design pattern: initializing polynomimals factory for CUDA backend
   Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
 
-  std::cout << std::endl << "2. Generate execution trace data" << std::endl; 
+  std::cout << std::endl << "Lesson 1: The Execution Trace" << std::endl; 
   // Trace: Data Columns
   rv_t rv_d1_trace[] = {24, 30, 54,  84, 78, 15, 29, 50};
   rv_t rv_d2_trace[] = {30, 54, 84,  138, 2, 77, 21, 36};
   rv_t rv_d3_trace[] = {54, 84, 138, 222, 71, 17, 92, 33};
 
-  scalar_t* d1_trace = new scalar_t[n];
-  scalar_t* d2_trace = new scalar_t[n];
-  scalar_t* d3_trace = new scalar_t[n];
 
-  to_ff(rv_d1_trace, d1_trace, n);
-  to_ff(rv_d2_trace, d2_trace, n);
-  to_ff(rv_d3_trace, d3_trace, n);
+  auto d1_trace = std::make_unique<scalar_t[]>(n);
+  auto d2_trace = std::make_unique<scalar_t[]>(n);
+  auto d3_trace = std::make_unique<scalar_t[]>(n);
+
+  to_ff(rv_d1_trace, d1_trace.get(), n);
+  to_ff(rv_d2_trace, d2_trace.get(), n);
+  to_ff(rv_d3_trace, d3_trace.get(), n);
 
   // Trace: Control Columns
   // Init steps are flagged in c1_trace
@@ -217,13 +212,21 @@ int main(int argc, char** argv)
   rv_t rv_c2_trace[] = {0, 1, 1, 1, 0, 0, 0, 0};
   rv_t rv_c3_trace[] = {0, 0, 0, 1, 0, 0, 0, 0};
 
-  scalar_t* c1_trace = new scalar_t[n];
-  scalar_t* c2_trace = new scalar_t[n];
-  scalar_t* c3_trace = new scalar_t[n];
+  auto c1_trace = std::make_unique<scalar_t[]>(n);
+  auto c2_trace = std::make_unique<scalar_t[]>(n);
+  auto c3_trace = std::make_unique<scalar_t[]>(n);
 
-  to_ff(rv_c1_trace, c1_trace, n);
-  to_ff(rv_c2_trace, c2_trace, n);
-  to_ff(rv_c3_trace, c3_trace, n);
+  to_ff(rv_c1_trace, c1_trace.get(), n);
+  to_ff(rv_c2_trace, c2_trace.get(), n);
+  to_ff(rv_c3_trace, c3_trace.get(), n);
+
+  std::cout << "Lesson 2: Rule checks to validate a computation" << std::endl;
+  std::cout << "We defined functions to create rule-checking polynomials. Their names start with p_rule_check." << std::endl;
+
+
+  std::cout << "Lesson 3: Padding the Trace" << std::endl;
+  // The trace is padded to a power of 2 size to allow for efficient NTT operations.
+  // we already did this in the initialization of the trace data
 
   // We will construct a zero-knowledge proof that:
   // this trace represents a program that satisfies these 6 rules:
@@ -236,33 +239,17 @@ int main(int argc, char** argv)
 
   std::cout << "Lesson 4: Constructing Trace Polynomials" << std::endl;
 
-  auto p_d1 = Polynomial_t::from_rou_evaluations(d1_trace, n);
-  auto p_d2 = Polynomial_t::from_rou_evaluations(d2_trace, n);
-  auto p_d3 = Polynomial_t::from_rou_evaluations(d3_trace, n);
-  auto p_c1 = Polynomial_t::from_rou_evaluations(c1_trace, n);
-  auto p_c2 = Polynomial_t::from_rou_evaluations(c2_trace, n);
-  auto p_c3 = Polynomial_t::from_rou_evaluations(c3_trace, n);
+  auto p_d1 = Polynomial_t::from_rou_evaluations(d1_trace.get(), n);
+  auto p_d2 = Polynomial_t::from_rou_evaluations(d2_trace.get(), n);
+  auto p_d3 = Polynomial_t::from_rou_evaluations(d3_trace.get(), n);
+  auto p_c1 = Polynomial_t::from_rou_evaluations(c1_trace.get(), n);
+  auto p_c2 = Polynomial_t::from_rou_evaluations(c2_trace.get(), n);
+  auto p_c3 = Polynomial_t::from_rou_evaluations(c3_trace.get(), n);
 
-  // Evaluating Trace Polynomials over rou powers would return the original trace data
-  
-  auto d1_degree = p_d1.degree();
-  std::cout << "Degree: " << d1_degree << std::endl;
-
-  auto omega = scalar_t::omega(logn);
-  auto domain = initialize_domain(logn);
-
-  // Sanity check: evaluate on the domain (equivalent to NTT) 
-  auto evaluations = std::make_unique<scalar_t[]>(n);
-  p_d1.evaluate_on_domain(domain.get(), n, evaluations.get());
-  // TBD: use auto evaluations = rou_evaluations(&p_d1, 1*n);
-
-  for (int i = 0; i < n; ++i) {
-    std::cout << "trace: " << d1_trace[i] << " evaluation " << evaluations[i] << std::endl;
-  }
-
-  std::cout << std::endl << "4. Generate Reed-Solomon traces" << std::endl;
+  std::cout << std::endl << "Generate Reed-Solomon traces" << std::endl;
 
   // Interpolate trace polynomials on 4x expanded rou domain (Reed Solomon) 
+  // TBD: I don't need to keep their evaluations since I have the polynomials
 
   auto d1_trace_rs = InterpolateRootsOfUnity(&p_d1, 4*n);
   auto d2_trace_rs = InterpolateRootsOfUnity(&p_d2, 4*n);
@@ -271,17 +258,12 @@ int main(int argc, char** argv)
   auto c2_trace_rs = InterpolateRootsOfUnity(&p_c2, 4*n);
   auto c3_trace_rs = InterpolateRootsOfUnity(&p_c3, 4*n);
 
-  auto omega_rs = scalar_t::omega(2+logn);
-
   std::cout << "Note that every 4th entry matches the original trace data." << std::endl;
   std::cout << "This is a degree 4 Reed Solomon expansion of the original trace." << std::endl;
 
   std::cout << "Lesson 5: ZK Commitments of the Trace Data" << std::endl;
-  std::cout << "To maintain a zero-knowledge protocol, the trace polynomials are evaluated over a zk commitment domain" << std::endl;
-  std::cout << std::endl << "5. Reconstruct polynomial for the codeword" << std::endl;
-
-  std::cout << std::endl << "6. Commit to the codeword polynomial" << std::endl;
-  std::cout << "Evaluate with a shift " << std::endl;
+  std::cout << "To maintain a zk protocol, the trace polynomials are evaluated over a zk commitment domain" << std::endl;
+  std::cout << "zk commitment domain is a coset of Reed Solomon domain shifted by a basic root of unity" << std::endl;
 
   // auto shift = basic_root;
   scalar_t xzk = basic_root;
@@ -297,7 +279,7 @@ int main(int argc, char** argv)
     std::cout << i << ": " << d1_zkcommitment[i] << std::endl;
   }
     
-  std::cout << "Build Merkle Tree (TBD)" << std::endl;
+  std::cout << "Build Merkle Tree (outside the scope of this example)" << std::endl;
 
   std::cout << "Lesson 6: Constraint Polynomials" << std::endl;
   std::cout << "The constraints are used to check the correctness of the trace. In this example, we check 6 rules to establish the validity of the trace." << std::endl;
@@ -311,14 +293,11 @@ int main(int argc, char** argv)
 
 
   scalar_t fib_constraint[n];
-  compute_fib_constraint(d1_trace, d2_trace, d3_trace, c1_trace, c2_trace, c3_trace, fib_constraint, n);
+  compute_fib_constraint(d1_trace.get(), d2_trace.get(), d3_trace.get(), c1_trace.get(), c2_trace.get(), c3_trace.get(), fib_constraint, n);
   auto p_fib_constraint =  (p_d3 - p_d2 - p_d1) * (p_c1 + p_c2 + p_c3);
   std::cout <<  "Applied to the original trace data, the constraint yields all 0s: " << std::endl;
   print_vector(fib_constraint,n);
 
-  // scalar_t fib_constraint_rs[4*n];
-  // compute_fib_constraint(d1_trace_rs.get(), d2_trace_rs.get(), d3_trace_rs.get(), c1_trace_rs.get(), c2_trace_rs.get(), c3_trace_rs.get(), fib_constraint_rs, 4*n);
-  // this line gives an error, need to debug
   auto fib_constraint_rs = InterpolateRootsOfUnity(&p_fib_constraint, 4*n);
 
   std::cout <<  "Applied to the Reed-Solomon expanded trace blocks, the constraint yields 0s in every 4th row: " << std::endl;
@@ -327,7 +306,7 @@ int main(int argc, char** argv)
   print_vector(fib_constraint_zkcommitment.get(),4*n, "Applied to zk-commitment domain, no 0s");
     
   scalar_t init1_constraint[n];
-  compute_value_constraint(d1_trace, scalar_t::from(24), c1_trace, init1_constraint, n);
+  compute_value_constraint(d1_trace.get(), scalar_t::from(24), c1_trace.get(), init1_constraint, n);
 
   auto p_init1_constraint = (p_d1 - p_value(scalar_t::from(24))) * p_c1;
   std::cout << "Original Init 1 constraint gives 0s" << std::endl;
@@ -342,7 +321,7 @@ int main(int argc, char** argv)
   print_vector(init1_constraint_zkcommitment.get(), 4*n, "ZK Commitment Init 1 constraint gives no 0s");
 
   scalar_t init2_constraint[n];
-  compute_value_constraint(d2_trace, scalar_t::from(30), c1_trace, init2_constraint, n);
+  compute_value_constraint(d2_trace.get(), scalar_t::from(30), c1_trace.get(), init2_constraint, n);
   auto p_init2_constraint = (p_d2 - p_value(scalar_t::from(30))) * p_c1;
   print_vector(init2_constraint, n, "Original Init 2 constraint gives 0s");
   // TBD: show this for p_init2_constraint evals of size n
@@ -354,7 +333,7 @@ int main(int argc, char** argv)
   print_vector(init2_constraint_zkcommitment.get(), 4*n, "ZK Commitment Init 2 constraint gives no 0s");
 
   scalar_t termination_constraint[n];
-  compute_value_constraint(d3_trace, scalar_t::from(222), c3_trace, termination_constraint, n);
+  compute_value_constraint(d3_trace.get(), scalar_t::from(222), c3_trace.get(), termination_constraint, n);
   auto p_termination_constraint = (p_d3 - p_value(scalar_t::from(222))) * p_c3;
 
   print_vector(termination_constraint, n, "Original Termination constraint gives 0s");
@@ -367,7 +346,7 @@ int main(int argc, char** argv)
 
   // TBD: I had issues with recursion constraints. Need to debug. But not now.
   scalar_t recursion_constraint1[n];
-  compute_recursion_constraint(d1_trace, d2_trace, c2_trace, recursion_constraint1, n, 1);
+  compute_recursion_constraint(d1_trace.get(), d2_trace.get(), c2_trace.get(), recursion_constraint1, n, 1);
   std::cout << "Original Recursion constraint gives 0s" << std::endl;
   print_vector(recursion_constraint1, n);
 
@@ -381,7 +360,7 @@ int main(int argc, char** argv)
   print_vector(recursion_constraint1_zkcommitment, 4*n);
 
   scalar_t recursion_constraint2[n];
-  compute_recursion_constraint(d2_trace, d3_trace, c2_trace, recursion_constraint2, n, 1);
+  compute_recursion_constraint(d2_trace.get(), d3_trace.get(), c2_trace.get(), recursion_constraint2, n, 1);
   std::cout << "Original Recursion constraint gives 0s" << std::endl;
   print_vector(recursion_constraint2, n);
 
@@ -469,6 +448,7 @@ int main(int argc, char** argv)
   std::cout << "The DEEP d1 degree is: " << p_d1_DEEP.degree() << std::endl;
 
   // d2, d3 use recursion constraints and need the point corresponding to the previous state (clock cycle)
+  auto omega = scalar_t::omega(logn);
   auto DEEP_prev_point = DEEP_point*scalar_t::inverse(omega); 
   auto coeffs2 = std::make_unique<scalar_t[]>(2);
   coeffs2[0] = scalar_t::zero() - DEEP_prev_point;
@@ -556,15 +536,6 @@ int main(int argc, char** argv)
     lhs[i] = fri[i+1](xp*xp);
     std::cout << "Round " << i << std::endl << "rhs: " << rhs[i] << std::endl << "lhs: " << lhs[i] << std::endl;
   }
-
-  // Clean up
-
-  delete[] d1_trace;
-  delete[] d2_trace;
-  delete[] d3_trace;
-  delete[] c1_trace;
-  delete[] c2_trace;
-  delete[] c3_trace;
 
   return 0;
 }
