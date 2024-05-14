@@ -5,7 +5,7 @@
 #include "gpu-utils/device_context.cuh"
 #include "gpu-utils/error_handler.cuh"
 #include "utils/utils.h"
-#include "poseidon/poseidon.cuh"
+#include "hash/hash.cuh"
 
 #include <iostream>
 #include <math.h>
@@ -14,10 +14,10 @@ using namespace poseidon;
 
 /**
  * @namespace merkle
- * Implementation of the [Poseidon](@ref poseidon) [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) builder,
+ * Implementation of the [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) builder,
  * parallelized for the use on GPU
  */
-namespace merkle {
+namespace merkle_tree {
   static constexpr size_t GIGA = 1024 * 1024 * 1024;
 
   /// Bytes per stream
@@ -50,7 +50,6 @@ namespace merkle {
   }
 
   /**
-   * DEPRECATED. This function is deprected and will be removed in future versions.
    * Builds the Poseidon Merkle tree
    *
    * @param leaves a pointer to the leaves layer. May be allocated on device or on host, regulated by the config
@@ -63,12 +62,13 @@ namespace merkle {
    * Each subtree is build in it's own stream (there is a maximum number of streams)
    * After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
    */
-  template <typename S, int T>
+  template <typename T, int WIDTH>
   cudaError_t build_merkle_tree(
-    const S* leaves,
-    S* digests,
+    const T* leaves,
+    T* digests,
     uint32_t height,
-    const PoseidonConstants<S>& poseidon,
+    const SpongeHasher<T, WIDTH>& hasher,
+    const CompressionHasher<T, WIDTH>& hasher,
     const TreeBuilderConfig& config);
 } // namespace merkle
 

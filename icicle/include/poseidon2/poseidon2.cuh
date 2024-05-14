@@ -7,6 +7,7 @@
 #include "gpu-utils/device_context.cuh"
 #include "gpu-utils/error_handler.cuh"
 #include "utils/utils.h"
+#include "hash/hash.cuh"
 
 /**
  * @namespace poseidon2
@@ -126,6 +127,15 @@ namespace poseidon2 {
     size_t number_of_states,
     const Poseidon2Constants<S>& constants,
     const Poseidon2Config& config);
+
+  template <typename S, int WIDTH>
+  class Poseidon2Permutation : Permutation<S, WIDTH>;
+
+  template <typename S, int WIDTH, int RATE>
+  class Poseidon2SpongeHasher : SpongeHasher<S, S, WIDTH, RATE>;
+
+  template <typename S, int WIDTH>
+  class Poseidon2CompressionHasher : CompressionHasher<S, WIDTH>;
 } // namespace poseidon2
 
 #endif
