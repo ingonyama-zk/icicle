@@ -19,3 +19,4 @@ cpp:
   - .github/workflows/cpp_cuda.yml
 examples:
   - examples/**/*
+  - .github/workflows/examples.yml
