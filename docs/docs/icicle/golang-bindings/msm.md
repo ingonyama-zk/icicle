@@ -6,52 +6,53 @@
 package main
 
 import (
-  "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-  cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-  bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	bn254_msm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
 )
 
 func main() {
-  // Obtain the default MSM configuration.
-  cfg := bn254.GetDefaultMSMConfig()
+	// Obtain the default MSM configuration.
+	cfg := core.GetDefaultMSMConfig()
 
-  // Define the size of the problem, here 2^18.
-  size := 1 << 18
+	// Define the size of the problem, here 2^18.
+	size := 1 << 18
 
-  // Generate scalars and points for the MSM operation.
-  scalars := bn254.GenerateScalars(size)
-  points := bn254.GenerateAffinePoints(size)
+	// Generate scalars and points for the MSM operation.
+	scalars := bn254.GenerateScalars(size)
+	points := bn254.GenerateAffinePoints(size)
 
-  // Create a CUDA stream for asynchronous operations.
-  stream, _ := cr.CreateStream()
-  var p bn254.Projective
+	// Create a CUDA stream for asynchronous operations.
+	stream, _ := cr.CreateStream()
+	var p bn254.Projective
 
-  // Allocate memory on the device for the result of the MSM operation.
-  var out core.DeviceSlice
-  _, e := out.MallocAsync(p.Size(), p.Size(), stream)
+	// Allocate memory on the device for the result of the MSM operation.
+	var out core.DeviceSlice
+	_, e := out.MallocAsync(p.Size(), p.Size(), stream)
 
-  if e != cr.CudaSuccess {
-    panic(e)
-  }
+	if e != cr.CudaSuccess {
+		panic(e)
+	}
 
-  // Set the CUDA stream in the MSM configuration.
-  cfg.Ctx.Stream = &stream
-  cfg.IsAsync = true
+	// Set the CUDA stream in the MSM configuration.
+	cfg.Ctx.Stream = &stream
+	cfg.IsAsync = true
 
-  // Perform the MSM operation.
-  e = bn254.Msm(scalars, points, &cfg, out)
+	// Perform the MSM operation.
+	e = bn254_msm.Msm(scalars, points, &cfg, out)
 
-  if e != cr.CudaSuccess {
-    panic(e)
-  }
+	if e != cr.CudaSuccess {
+		panic(e)
+	}
 
-  // Allocate host memory for the results and copy the results from the device.
-  outHost := make(core.HostSlice[bn254.Projective], 1)
-  cr.SynchronizeStream(&stream)
-  outHost.CopyFromDevice(&out)
+	// Allocate host memory for the results and copy the results from the device.
+	outHost := make(core.HostSlice[bn254.Projective], 1)
+	cr.SynchronizeStream(&stream)
+	outHost.CopyFromDevice(&out)
 
-  // Free the device memory allocated for the results.
-  out.Free()
+	// Free the device memory allocated for the results.
+	out.Free()
 }
 
 ```
@@ -169,23 +170,23 @@ This package include `G2Projective` and `G2Affine` points as well as a `G2Msm` m
 package main
 
 import (
-  "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-  bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-  g2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	g2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
 )
 
 func main() {
-  cfg := bn254.GetDefaultMSMConfig()
-  size := 1 << 12
-  batchSize := 3
-  totalSize := size * batchSize
-  scalars := bn254.GenerateScalars(totalSize)
-  points := g2.G2GenerateAffinePoints(totalSize)
+	cfg := core.GetDefaultMSMConfig()
+	size := 1 << 12
+	batchSize := 3
+	totalSize := size * batchSize
+	scalars := bn254.GenerateScalars(totalSize)
+	points := g2.G2GenerateAffinePoints(totalSize)
 
-  var p g2.G2Projective
-  var out core.DeviceSlice
-  out.Malloc(batchSize*p.Size(), p.Size())
-  g2.G2Msm(scalars, points, &cfg, out)
+	var p g2.G2Projective
+	var out core.DeviceSlice
+	out.Malloc(batchSize*p.Size(), p.Size())
+	g2.G2Msm(scalars, points, &cfg, out)
 }
 
 ```
