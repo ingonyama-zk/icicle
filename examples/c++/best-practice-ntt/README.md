@@ -8,7 +8,7 @@ When you have to run several NTTs, consider Concurrent Data Download, Upload, an
 
 Typically, you concurrently
 
-1. Downlod the output of a previous NTT back to the host
+1. Download the output of a previous NTT back to the host
 2. Upload the input for a next NTT on the device
 3. Run current NTT
 
@@ -22,7 +22,7 @@ Drawback: The approach requires two on-device memory vectors, decreasing the max
 
 ## Running the example
 
-To change the defaul curve BN254, edit `compile.sh` and `CMakeLists.txt`
+To change the default curve BN254, edit `compile.sh` and `CMakeLists.txt`
 
 ```sh
 ./compile.sh
