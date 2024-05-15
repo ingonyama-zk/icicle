@@ -33,7 +33,7 @@ jobs:
       uses: actions/checkout@v4
     - name: c++ examples
       working-directory: ./examples/c++
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.cpp_cuda == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |
         # loop over all directories in the current directory
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
@@ -47,7 +47,7 @@ jobs:
         done    
     - name: Rust examples
       working-directory: ./examples/rust
-      if: needs.check-changed-files.outputs.rust == 'true'
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |
         # loop over all directories in the current directory
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
