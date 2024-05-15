@@ -67,6 +67,9 @@ where
         evals: &mut E,
     );
 
+    // Method to evaluate the polynomial over the roots-of-unity domain for power-of-two sized domain
+    fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, domain_log_size: u64, evals: &mut E);
+
     // Method to retrieve a coefficient at a specific index.
     fn get_coeff(&self, idx: u64) -> Self::Field;
 
@@ -228,6 +231,11 @@ let f_x = f.eval(&x);  // Evaluate f at x
 let domain = [one, two, three];
 let mut host_evals = vec![ScalarField::zero(); domain.len()];
 f.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut host_evals));
+
+// Evaluate on roots-of-unity-domain
+let domain_log_size = 4;
+let mut device_evals = DeviceVec::<ScalarField>::cuda_malloc(1 << domain_log_size).unwrap();
+f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
 ```
 
 ### Read coefficients

@@ -27,6 +27,7 @@ where
         domain: &D,
         evals: &mut E,
     );
+    fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, domain_log_size: u64, evals: &mut E);
     fn get_nof_coeffs(&self) -> u64;
     fn get_coeff(&self, idx: u64) -> Self::Field;
     fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
@@ -114,6 +115,9 @@ macro_rules! impl_univariate_polynomial_api {
 
             #[link_name = concat!($field_prefix, "_polynomial_evaluate_on_domain")]
             fn eval_on_domain(a: PolynomialHandle, domain: *const $field, domain_size: u64, evals: *mut $field);
+
+            #[link_name = concat!($field_prefix, "_polynomial_evaluate_on_rou_domain")]
+            fn eval_on_rou_domain(a: PolynomialHandle, domain_log_size: u64, evals: *mut $field);
 
             #[link_name = concat!($field_prefix, "_polynomial_degree")]
             fn degree(a: PolynomialHandle) -> i64;
@@ -252,6 +256,20 @@ macro_rules! impl_univariate_polynomial_api {
                         domain.len() as u64,
                         evals.as_mut_ptr(),
                     );
+                }
+            }
+
+            fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Field> + ?Sized>(
+                &self,
+                domain_log_size: u64,
+                evals: &mut E,
+            ) {
+                assert!(
+                    evals.len() >= 1 << domain_log_size,
+                    "eval_on_rou_domain(): eval size must not be smaller than domain"
+                );
+                unsafe {
+                    eval_on_rou_domain(self.handle, domain_log_size, evals.as_mut_ptr());
                 }
             }
 
@@ -730,6 +748,25 @@ macro_rules! impl_polynomial_tests {
             assert_eq!(f.eval(&host_evals_from_device[0]), host_evals[0]);
             assert_eq!(f.eval(&host_evals_from_device[1]), host_evals[1]);
             assert_eq!(f.eval(&host_evals_from_device[2]), host_evals[2]);
+        }
+
+        #[test]
+        #[ignore]
+        fn test_eval_on_rou_domain() {
+            setup();
+
+            let poly_log_size = 10;
+            let domain_log_size = poly_log_size + 2; // interpolate 4 times
+            let f = randomize_poly(1 << poly_log_size);
+
+            // evaluate f on rou domain of size 4n
+            let mut device_evals = DeviceVec::<ScalarField>::cuda_malloc(1 << domain_log_size).unwrap();
+            f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
+
+            // construct g from f's evals and assert they are equal
+            let g = Poly::from_rou_evals(&device_evals[..], 1 << domain_log_size);
+            let diff = &f - &g;
+            assert_eq!(diff.degree(), -1); // diff is the zero poly
         }
 
         #[test]
