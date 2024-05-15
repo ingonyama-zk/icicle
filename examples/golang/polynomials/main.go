@@ -44,13 +44,13 @@ func init() {
 	e := initBn254Domain()
 	if e.IcicleErrorCode != core.IcicleSuccess {
 		errorString := fmt.Sprint(
-			"Bn254 Domain initilization failed: ", e)
+			"Bn254 Domain initialization failed: ", e)
 		panic(errorString)
 	}
 	e = initBabybearDomain()
 	if e.IcicleErrorCode != core.IcicleSuccess {
 		errorString := fmt.Sprint(
-			"Babybear Domain initilization failed: ", e)
+			"Babybear Domain initialization failed: ", e)
 		panic(errorString)
 	}
 
