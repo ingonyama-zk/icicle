@@ -1001,6 +1001,17 @@ public:
     }
     return (u == one) ? b : c;
   }
+
+  static constexpr HOST_DEVICE_INLINE Field pow(Field base, int exp)
+  {
+    Field res = one();
+    while (exp > 0) {
+      if (exp & 1) res = res * base;
+      base = base * base;
+      exp >>= 1;
+    }
+    return res;
+  }
 };
 
 template <class CONFIG>
