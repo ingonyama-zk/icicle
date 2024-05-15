@@ -22,8 +22,8 @@ func main() {
 	var logSizeMin int
 	var logSizeMax int
 
-	flag.IntVar(&logSizeMin, "logSizeMin", 17, "")
-	flag.IntVar(&logSizeMax, "logSizeMax", 22, "")
+	flag.IntVar(&logSizeMin, "l", 17, "Minimum log size")
+	flag.IntVar(&logSizeMax, "u", 22, "Maximum log size")
 	flag.Parse()
 
 	sizeMax := 1 << logSizeMax
@@ -58,7 +58,7 @@ func main() {
 	pointsBls12377G2Max := bls12377G2.G2GenerateProjectivePoints(sizeMax)
 	println(time.Since(startTime).String())
 
-	for logSize := logSizeMin; logSize < logSizeMax; logSize++ {
+	for logSize := logSizeMin; logSize <= logSizeMax; logSize++ {
 
 		// Define the size of the problem, here 2^18.
 		size := 1 << logSize

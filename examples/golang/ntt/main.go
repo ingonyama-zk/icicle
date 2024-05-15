@@ -20,18 +20,18 @@ import (
 )
 
 func main() {
-	var logSizeMin int
-	var logSizeMax int
+	var logSize int
 
-	flag.IntVar(&logSizeMin, "logSizeMin", 17, "")
-	flag.IntVar(&logSizeMax, "logSizeMax", 22, "")
+	flag.IntVar(&logSize, "s", 20, "Log size")
 	flag.Parse()
 
-	size := 1 << logSizeMax
+	size := 1 << logSize
+
+	fmt.Printf("---------------------- NTT size 2^%d=%d ------------------------\n", logSize, size)
 
 	print("Generating BN254 scalars ... ")
 	startTime := time.Now()
-	scalarsBn254Max := bn254.GenerateScalars(size)
+	scalarsBn254 := bn254.GenerateScalars(size)
 	println(time.Since(startTime).String())
 
 	cfgBn254 := bn254Ntt.GetDefaultNttConfig()
@@ -39,7 +39,7 @@ func main() {
 
 	print("Generating BLS12_377 scalars ... ")
 	startTime = time.Now()
-	scalarsBls12377Max := bls12377.GenerateScalars(size)
+	scalarsBls12377 := bls12377.GenerateScalars(size)
 	println(time.Since(startTime).String())
 
 	cfgBls12377 := bls12377Ntt.GetDefaultNttConfig()
@@ -59,87 +59,73 @@ func main() {
 	rouIcicleBls12377.FromLimbs(limbsBls12377)
 	bls12377Ntt.InitDomain(rouIcicleBls12377, cfgBls12377.Ctx, false)
 
-	for logSize := logSizeMin; logSize < logSizeMax; logSize++ {
+	print("Configuring bn254 NTT ... ")
+	startTime = time.Now()
 
-		// Define the size of the problem, here 2^18.
-		size := 1 << logSize
+	streamBn254, _ := cr.CreateStream()
 
-		fmt.Printf("---------------------- NTT size 2^%d=%d ------------------------\n", logSize, size)
+	cfgBn254.Ctx.Stream = &streamBn254
 
-		print("Configuring bn254 NTT ... ")
-		startTime = time.Now()
+	var nttResultBn254 core.DeviceSlice
 
-		scalarsBn254 := scalarsBn254Max[:size]
-
-		streamBn254, _ := cr.CreateStream()
-
-		cfgBn254.Ctx.Stream = &streamBn254
-
-		var nttResultBn254 core.DeviceSlice
-
-		_, e := nttResultBn254.MallocAsync(size*scalarsBn254.SizeOfElement(), scalarsBn254.SizeOfElement(), streamBn254)
-		if e != cr.CudaSuccess {
-			errorString := fmt.Sprint(
-				"Bn254 Malloc failed: ", e)
-			panic(errorString)
-		}
-
-		println(time.Since(startTime).String())
-
-		print("Configuring Bls12377 NTT ... ")
-		startTime = time.Now()
-
-		scalarsBls12377 := scalarsBls12377Max[:size]
-
-		streamBls12377, _ := cr.CreateStream()
-
-		cfgBls12377.Ctx.Stream = &streamBls12377
-
-		var msmResultBls12377 core.DeviceSlice
-
-		_, e = msmResultBls12377.MallocAsync(size*scalarsBls12377.SizeOfElement(), scalarsBls12377.SizeOfElement(), streamBls12377)
-		if e != cr.CudaSuccess {
-			errorString := fmt.Sprint(
-				"Bls12_377 Malloc failed: ", e)
-			panic(errorString)
-		}
-
-		println(time.Since(startTime).String())
-
-		print("Executing bn254 NTT on device ... ")
-		startTime = time.Now()
-
-		err := bn254Ntt.Ntt(scalarsBn254, core.KForward, &cfgBn254, nttResultBn254)
-		if err.CudaErrorCode != cr.CudaSuccess {
-			errorString := fmt.Sprint(
-				"bn254 Ntt failed: ", e)
-			panic(errorString)
-		}
-
-		nttResultBn254Host := make(core.HostSlice[bn254.ScalarField], size)
-		nttResultBn254Host.CopyFromDeviceAsync(&nttResultBn254, streamBn254)
-		nttResultBn254.FreeAsync(streamBn254)
-		cr.SynchronizeStream(&streamBn254)
-		println(time.Since(startTime).String())
-
-		print("Executing Bls12377 NTT on device ... ")
-		startTime = time.Now()
-
-		err = bls12377Ntt.Ntt(scalarsBls12377, core.KForward, &cfgBls12377, msmResultBls12377)
-		if err.CudaErrorCode != cr.CudaSuccess {
-			errorString := fmt.Sprint(
-				"bls12_377 Ntt failed: ", e)
-			panic(errorString)
-		}
-
-		msmResultBls12377Host := make(core.HostSlice[bls12377.ScalarField], size)
-
-		msmResultBls12377Host.CopyFromDeviceAsync(&msmResultBls12377, streamBls12377)
-
-		msmResultBls12377.FreeAsync(streamBls12377)
-
-		cr.SynchronizeStream(&streamBls12377)
-
-		println(time.Since(startTime).String())
+	_, e := nttResultBn254.MallocAsync(size*scalarsBn254.SizeOfElement(), scalarsBn254.SizeOfElement(), streamBn254)
+	if e != cr.CudaSuccess {
+		errorString := fmt.Sprint(
+			"Bn254 Malloc failed: ", e)
+		panic(errorString)
 	}
+
+	println(time.Since(startTime).String())
+
+	print("Configuring Bls12377 NTT ... ")
+	startTime = time.Now()
+
+	streamBls12377, _ := cr.CreateStream()
+
+	cfgBls12377.Ctx.Stream = &streamBls12377
+
+	var msmResultBls12377 core.DeviceSlice
+
+	_, e = msmResultBls12377.MallocAsync(size*scalarsBls12377.SizeOfElement(), scalarsBls12377.SizeOfElement(), streamBls12377)
+	if e != cr.CudaSuccess {
+		errorString := fmt.Sprint(
+			"Bls12_377 Malloc failed: ", e)
+		panic(errorString)
+	}
+
+	println(time.Since(startTime).String())
+
+	print("Executing bn254 NTT on device ... ")
+	startTime = time.Now()
+
+	err := bn254Ntt.Ntt(scalarsBn254, core.KForward, &cfgBn254, nttResultBn254)
+	if err.CudaErrorCode != cr.CudaSuccess {
+		errorString := fmt.Sprint(
+			"bn254 Ntt failed: ", e)
+		panic(errorString)
+	}
+
+	nttResultBn254Host := make(core.HostSlice[bn254.ScalarField], size)
+	nttResultBn254Host.CopyFromDeviceAsync(&nttResultBn254, streamBn254)
+	nttResultBn254.FreeAsync(streamBn254)
+	cr.SynchronizeStream(&streamBn254)
+	println(time.Since(startTime).String())
+
+	print("Executing Bls12377 NTT on device ... ")
+	startTime = time.Now()
+
+	err = bls12377Ntt.Ntt(scalarsBls12377, core.KForward, &cfgBls12377, msmResultBls12377)
+	if err.CudaErrorCode != cr.CudaSuccess {
+		errorString := fmt.Sprint(
+			"bls12_377 Ntt failed: ", e)
+		panic(errorString)
+	}
+
+	msmResultBls12377Host := make(core.HostSlice[bls12377.ScalarField], size)
+	msmResultBls12377Host.CopyFromDeviceAsync(&msmResultBls12377, streamBls12377)
+	msmResultBls12377.FreeAsync(streamBls12377)
+
+	cr.SynchronizeStream(&streamBls12377)
+
+	println(time.Since(startTime).String())
 }
