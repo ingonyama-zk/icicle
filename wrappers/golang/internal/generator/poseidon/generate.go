@@ -26,9 +26,7 @@ func Generate(baseDir, additionalDirPath, field, fieldPrefix string) {
 		baseDir,
 	}
 
-	testPath := poseidonTemplates["test"]
-
 	generator.GenerateFile(poseidonTemplates["src"], path.Join(baseDir, additionalDirPath, "poseidon"), "", "", data)
 	generator.GenerateFile(poseidonTemplates["header"], path.Join(baseDir, additionalDirPath, "poseidon", "include"), "", "", data)
-	generator.GenerateFile(testPath, path.Join(baseDir, "tests"), "", "", data)
+	generator.GenerateFile(poseidonTemplates["test"], path.Join(baseDir, "tests"), "", "", data)
 }
