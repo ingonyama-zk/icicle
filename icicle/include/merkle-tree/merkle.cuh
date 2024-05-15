@@ -10,10 +10,8 @@
 #include <iostream>
 #include <math.h>
 
-using namespace poseidon;
-
 /**
- * @namespace merkle
+ * @namespace merkle_tree
  * Implementation of the [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) builder,
  * parallelized for the use on GPU
  */
@@ -50,7 +48,7 @@ namespace merkle_tree {
   }
 
   /**
-   * Builds the Poseidon Merkle tree
+   * Builds the Merkle tree
    *
    * @param leaves a pointer to the leaves layer. May be allocated on device or on host, regulated by the config
    * Expected to have arity ^ (height - 1) elements
@@ -62,13 +60,12 @@ namespace merkle_tree {
    * Each subtree is build in it's own stream (there is a maximum number of streams)
    * After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
    */
-  template <typename T, int WIDTH>
+  template <typename T, int ARITY>
   cudaError_t build_merkle_tree(
-    const T* leaves,
+    const T* leaves_digests,
     T* digests,
     uint32_t height,
-    const SpongeHasher<T, WIDTH>& hasher,
-    const CompressionHasher<T, WIDTH>& hasher,
+    const CompressionHasher<T, ARITY, 1>& compression,
     const TreeBuilderConfig& config);
 } // namespace merkle
 

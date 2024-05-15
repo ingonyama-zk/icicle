@@ -27,12 +27,35 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
+  cudaError_t poseidon2_permutation(
+    const S* states,
+    S* output,
+    size_t number_of_states,
+    const Poseidon2Constants<S>& constants,
+    const Poseidon2Config& config
+  ) {
+    CHK_INIT_IF_RETURN();
+    cudaStream_t& stream = config.ctx.stream;
+    S* d_states;
+    if (config.are_states_on_device && config.in_place) {
+      d_states = const_cast<S*>(states);
+    } else {
+      // allocate memory for {number_of_states} states of {t} scalars each
+      CHK_IF_RETURN(cudaMallocAsync(&d_states, number_of_states * T * sizeof(S), stream))
+      CHK_IF_RETURN(cudaMemcpyAsync(d_states, states, number_of_states * T * sizeof(S),
+                                    config.are_states_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice,
+                                    stream))
+    }
+  }
+
+  template <typename S, int T>
   cudaError_t poseidon2_hash(
     const S* states,
     S* output,
     size_t number_of_states,
     const Poseidon2Constants<S>& constants,
-    const Poseidon2Config& config)
+    const Poseidon2Config& config,
+    S* auxiliary=nullptr)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = config.ctx.stream;
@@ -45,8 +68,10 @@ namespace poseidon2 {
       CHK_IF_RETURN(cudaMemcpyAsync(d_states, states, number_of_states * T * sizeof(S), cudaMemcpyHostToDevice, stream))
     }
 
+    // --- permutation ---
     cudaError_t hash_error = permute_many<S, T>(d_states, d_states, number_of_states, constants, stream);
     CHK_IF_RETURN(hash_error);
+    // === permutation ===
 
     if (config.mode == PoseidonMode::COMPRESSION) {
       S* output_device;
@@ -75,6 +100,64 @@ namespace poseidon2 {
     if (!config.are_states_on_device) CHK_IF_RETURN(cudaFreeAsync(d_states, stream));
 
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
+    return CHK_LAST();
+  }
+
+  template <typename S, int WIDTH>
+  Poseidon2<S, WIDTH>::Poseidon2(MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx) {
+    Poseidon2Constants<S> constants;
+    init_poseidon2_constants(WIDTH, mds_type, diffusion, ctx, &constants);
+    this->constants = constants;
+  }
+  
+  template <typename S, int WIDTH>
+  Poseidon2<S, WIDTH>::~Poseidon2() {
+    release_poseidon2_constants(&this->constants);
+  }
+
+  template <typename S, int WIDTH>
+  cudaError_t Poseidon2Compression<S, WIDTH>::compress_many(
+      const S* states,
+      S* output,
+      unsigned int number_of_states,
+      device_context::DeviceContext& ctx,
+      bool is_async,
+      S* perm_output=nullptr
+  ) {
+    CHK_INIT_IF_RETURN();
+    cudaStream_t& stream = config.ctx.stream;
+
+    bool states_on_device = is_host_ptr(states, ctx.device_id);
+    bool output_on_device = is_host_ptr(states, ctx.device_id);
+    if (states_on_device != output_on_device) {
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "States and output should be both on-device or on-host");
+    }
+
+    // Allocate memory for states if needed
+    bool need_allocate_perm_output = perm_output == nullptr;
+    if (need_allocate_perm_output) {
+      CHK_IF_RETURN(cudaMallocAsync(&perm_output, number_of_states * WIDTH * sizeof(S), stream))
+    }
+
+    // Copy states from host if they are on host
+    if (!states_on_device) {
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(perm_output, states, number_of_states * WIDTH * sizeof(S), cudaMemcpyHostToDevice, stream));
+    }
+
+    // Run the permutation
+    cudaError_t hash_error = permute_many<S, T>(
+      states_on_device ? states : perm_output,
+      perm_output,
+      number_of_states,
+      this->constants,
+      stream
+    );
+    CHK_IF_RETURN(hash_error);
+    
+    if (need_allocate_perm_output) CHK_IF_RETURN(cudaFreeAsync(perm_output, stream))
+
+    if (!is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
     return CHK_LAST();
   }
 } // namespace poseidon2

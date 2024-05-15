@@ -60,6 +60,7 @@ namespace poseidon2 {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
     bool are_states_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
+    bool in_place;
     PoseidonMode mode;
     int output_index;
     bool
@@ -76,6 +77,7 @@ namespace poseidon2 {
       ctx,   // ctx
       false, // are_states_on_device
       false, // are_outputs_on_device
+      false,
       PoseidonMode::COMPRESSION,
       1,     // output_index
       false, // is_async
@@ -126,16 +128,40 @@ namespace poseidon2 {
     S* output,
     size_t number_of_states,
     const Poseidon2Constants<S>& constants,
-    const Poseidon2Config& config);
+    const Poseidon2Config& config,
+    S* auxiliary=nullptr);
 
   template <typename S, int WIDTH>
-  class Poseidon2Permutation : Permutation<S, WIDTH>;
+  class Poseidon2 {
+  public: 
+    Poseidon2Constants<S> constants;
+
+    Poseidon2(Poseidon2Constants<S> constants) : constants(constants) {}
+    Poseidon2(MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx);
+    ~Poseidon2();
+  };
+
+  template <typename S, int WIDTH>
+  class Poseidon2Permutation : public Poseidon2<S, WIDTH>,
+                               public Permutation<S, WIDTH> {};
 
   template <typename S, int WIDTH, int RATE>
-  class Poseidon2SpongeHasher : SpongeHasher<S, S, WIDTH, RATE>;
+  class Poseidon2Sponge : public Poseidon2<S, WIDTH>,
+                          public SpongeHasher<S, S, WIDTH, RATE> {};
 
   template <typename S, int WIDTH>
-  class Poseidon2CompressionHasher : CompressionHasher<S, WIDTH>;
+  class Poseidon2Compression : public Poseidon2<S, WIDTH>,
+                               public CompressionHasher<S, S, WIDTH> {
+  public:
+    cudaError_t compress_many(
+        const S* states,
+        S* output,
+        unsigned int number_of_states,
+        device_context::DeviceContext& ctx,
+        bool is_async,
+        S* perm_output=nullptr
+    ) override;
+  };
 } // namespace poseidon2
 
 #endif

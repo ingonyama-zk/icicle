@@ -2,30 +2,42 @@
 #ifndef HASH_H
 #define HASH_H
 
-template <typename T, int WIDTH>
+#include "gpu-utils/device_context.cuh"
+#include "gpu-utils/error_handler.cuh"
+
+template <typename Image, int WIDTH>
 class Permutation {
-    virtual void permute_many(
-        const T* states,
-        T* output,
+    virtual cudaError_t permute_many(
+        const Image* states,
+        Image* output,
         unsigned int number_of_states
+        DeviceContext& ctx,
+        bool is_async
     );
 };
 
-template <typename T, int WIDTH>
+template <typename Image, int WIDTH, int RATE>
 class CompressionHasher {
-    virtual void compress_many(
-        const T* input,
-        T* output,
-        unsigned int number_of_states
+    virtual cudaError_t compress_many(
+        const Image* states,
+        Image* output,
+        unsigned int number_of_states,
+        DeviceContext& ctx,
+        bool is_async,
+        Image* perm_output=nullptr
     );
 };
 
-template <typename PI, typename I, int WIDTH, int RATE>
+template <typename PreImage, typename Image, int WIDTH, int RATE>
 class SpongeHasher {
-    virtual void hash_many(
-        const PI* input,
-        I* output,
+    constexpr static int capacity = WIDTH - RATE;
+
+    virtual cudaError_t hash_many(
+        const PreImage* input,
+        Image* output,
         unsigned int number_of_states
+        DeviceContext& ctx,
+        bool is_async
     );
 };
 
