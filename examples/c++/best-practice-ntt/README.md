@@ -22,7 +22,7 @@ Drawback: The approach requires two on-device memory vectors, decreasing the max
 
 ## Running the example
 
-To change teh defaul curve BN254, edit `compile.sh` and `CMakeLists.txt`
+To change the defaul curve BN254, edit `compile.sh` and `CMakeLists.txt`
 
 ```sh
 ./compile.sh
