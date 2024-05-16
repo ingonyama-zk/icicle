@@ -84,7 +84,7 @@ func main() {
 
 	cfgBls12377.Ctx.Stream = &streamBls12377
 
-	var msmResultBls12377 core.DeviceSlice
+	var nttResultBls12377 core.DeviceSlice
 
 	_, e = msmResultBls12377.MallocAsync(size*scalarsBls12377.SizeOfElement(), scalarsBls12377.SizeOfElement(), streamBls12377)
 	if e != cr.CudaSuccess {
