@@ -74,6 +74,14 @@ func GetDeviceFromPointer(ptr unsafe.Pointer) int {
 	return int(cCudaPointerAttributes.device)
 }
 
+func GetDeviceAttribute(attr DeviceAttribute, device int) int {
+	var res int
+	cRes := (*C.int)(unsafe.Pointer(&res))
+	cDevice := (C.int)(device)
+	C.cudaDeviceGetAttribute(cRes, attr, cDevice)
+	return res
+}
+
 // RunOnDevice forces the provided function to run all GPU related calls within it
 // on the same host thread and therefore the same GPU device.
 //

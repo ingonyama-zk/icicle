@@ -106,6 +106,57 @@ func TestMSM(t *testing.T) {
 
 	}
 }
+
+func TestMSMPinnedHostMemory(t *testing.T) {
+	cfg := msm.GetDefaultMSMConfig()
+	for _, power := range []int{10} {
+		size := 1 << power
+
+		scalars := icicleBls12_377.GenerateScalars(size)
+		points := icicleBls12_377.GenerateAffinePoints(size)
+
+		pinnable := cr.GetDeviceAttribute(cr.CudaDevAttrHostRegisterSupported, 0)
+		lockable := cr.GetDeviceAttribute(cr.CudaDevAttrPageableMemoryAccessUsesHostPageTables, 0)
+
+		pinnableAndLockable := pinnable == 1 && lockable == 0
+
+		var pinnedPoints core.HostSlice[icicleBls12_377.Affine]
+		if pinnableAndLockable {
+			points.Pin(cr.CudaHostRegisterDefault)
+			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+		}
+
+		var p icicleBls12_377.Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		outHost := make(core.HostSlice[icicleBls12_377.Projective], 1)
+
+		e = msm.Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm allocated pinned host mem failed")
+
+		outHost.CopyFromDevice(&out)
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+
+		if pinnableAndLockable {
+			e = msm.Msm(scalars, pinnedPoints, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm registered pinned host mem failed")
+
+			outHost.CopyFromDevice(&out)
+			// Check with gnark-crypto
+			assert.True(t, testAgainstGnarkCryptoMsm(scalars, pinnedPoints, outHost[0]))
+
+		}
+
+		out.Free()
+
+		if pinnableAndLockable {
+			points.Unpin()
+			pinnedPoints.FreePinned()
+		}
+	}
+}
 func TestMSMGnarkCryptoTypes(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	for _, power := range []int{3} {

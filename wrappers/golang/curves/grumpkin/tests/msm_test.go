@@ -40,6 +40,53 @@ func TestMSM(t *testing.T) {
 	}
 }
 
+func TestMSMPinnedHostMemory(t *testing.T) {
+	cfg := msm.GetDefaultMSMConfig()
+	for _, power := range []int{10} {
+		size := 1 << power
+
+		scalars := icicleGrumpkin.GenerateScalars(size)
+		points := icicleGrumpkin.GenerateAffinePoints(size)
+
+		pinnable := cr.GetDeviceAttribute(cr.CudaDevAttrHostRegisterSupported, 0)
+		lockable := cr.GetDeviceAttribute(cr.CudaDevAttrPageableMemoryAccessUsesHostPageTables, 0)
+
+		pinnableAndLockable := pinnable == 1 && lockable == 0
+
+		var pinnedPoints core.HostSlice[icicleGrumpkin.Affine]
+		if pinnableAndLockable {
+			points.Pin(cr.CudaHostRegisterDefault)
+			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+		}
+
+		var p icicleGrumpkin.Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		outHost := make(core.HostSlice[icicleGrumpkin.Projective], 1)
+
+		e = msm.Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm allocated pinned host mem failed")
+
+		outHost.CopyFromDevice(&out)
+
+		if pinnableAndLockable {
+			e = msm.Msm(scalars, pinnedPoints, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm registered pinned host mem failed")
+
+			outHost.CopyFromDevice(&out)
+
+		}
+
+		out.Free()
+
+		if pinnableAndLockable {
+			points.Unpin()
+			pinnedPoints.FreePinned()
+		}
+	}
+}
+
 func TestMSMBatch(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	for _, power := range []int{10, 16} {

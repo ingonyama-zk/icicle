@@ -9,6 +9,7 @@ package cuda_runtime
 import "C"
 
 import (
+	// "runtime"
 	"unsafe"
 )
 
@@ -56,6 +57,39 @@ func FreeAsync(devicePtr unsafe.Pointer, stream Stream) CudaError {
 	ret := C.cudaFreeAsync(devicePtr, cStream)
 	err := (CudaError)(ret)
 	return err
+}
+
+func AllocPinned(size int, flags AllocPinnedFlags) (unsafe.Pointer, CudaError) {
+	cSize := (C.size_t)(size)
+	var hostPtr unsafe.Pointer
+	ret := C.cudaHostAlloc(&hostPtr, cSize, flags)
+	err := (CudaError)(ret)
+	if err != CudaSuccess {
+		return nil, err
+	}
+
+	return hostPtr, CudaSuccess
+}
+
+func FreeAllocPinned(hostPtr unsafe.Pointer) CudaError {
+	return (CudaError)(C.cudaFreeHost(hostPtr))
+}
+
+func RegisterPinned(hostPtr unsafe.Pointer, size int, flags RegisterPinnedFlags) (unsafe.Pointer, CudaError) {
+	cSize := (C.size_t)(size)
+	// This is required since there are greater values of RegisterPinnedFlags which we do not support currently
+	flags = flags & 3
+	ret := C.cudaHostRegister(hostPtr, cSize, flags)
+	err := (CudaError)(ret)
+	if err != CudaSuccess {
+		return nil, err
+	}
+
+	return hostPtr, CudaSuccess
+}
+
+func FreeRegisteredPinned(hostPtr unsafe.Pointer) CudaError {
+	return (CudaError)(C.cudaHostUnregister(hostPtr))
 }
 
 func CopyFromDevice(hostDst, deviceSrc unsafe.Pointer, size uint) (unsafe.Pointer, CudaError) {

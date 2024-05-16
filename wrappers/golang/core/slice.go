@@ -197,6 +197,29 @@ func (h HostSlice[T]) AsUnsafePointer() unsafe.Pointer {
 	return unsafe.Pointer(&h[0])
 }
 
+func (h HostSlice[T]) Pin(flags cr.RegisterPinnedFlags) cr.CudaError {
+	_, err := cr.RegisterPinned(h.AsUnsafePointer(), h.SizeOfElement()*h.Len(), flags)
+	return err
+}
+
+func (h HostSlice[T]) Unpin() cr.CudaError {
+	return cr.FreeRegisteredPinned(h.AsUnsafePointer())
+}
+
+func (h HostSlice[T]) AllocPinned(flags cr.AllocPinnedFlags) (HostSlice[T], cr.CudaError) {
+	pinnedMemPointer, err := cr.AllocPinned(h.SizeOfElement()*h.Len(), flags)
+	if err != cr.CudaSuccess {
+		return nil, err
+	}
+	pinnedMem := unsafe.Slice((*T)(pinnedMemPointer), h.Len())
+	copy(pinnedMem, h)
+	return pinnedMem, cr.CudaSuccess
+}
+
+func (h HostSlice[T]) FreePinned() cr.CudaError {
+	return cr.FreeAllocPinned(h.AsUnsafePointer())
+}
+
 func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *DeviceSlice {
 	size := h.Len() * h.SizeOfElement()
 	if shouldAllocate {
