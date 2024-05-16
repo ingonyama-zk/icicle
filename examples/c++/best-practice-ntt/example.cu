@@ -47,15 +47,20 @@ int main(int argc, char** argv) {
 
   std::cout << "Batch size: " << nof_ntts << std::endl;
 
-  // Create CUDA streams for overlapping data transfers with kernel execution.
-  cudaStream_t stream_compute;
+  // Create separate CUDA streams for overlapping data transfers and kernel execution.
+  cudaStream_t stream_compute, stream_h2d, stream_d2h;
   cudaStreamCreate(&stream_compute); 
+  cudaStreamCreate(&stream_h2d);
+  cudaStreamCreate(&stream_d2h);
+
+  // Create device context for NTT computation
   auto ctx_compute = device_context::DeviceContext{
     stream_compute, // stream
     0,              // device_id
     0,              // mempool
   };
 
+  // Initialize NTT domain and configuration
   bn254_initialize_domain(&basic_root, ctx_compute, /* fast twiddles */ true);
   NTTConfig<S> config_compute = default_ntt_config<S>(ctx_compute);
   config_compute.ntt_algorithm = NttAlgorithm::MixedRadix;
@@ -63,12 +68,7 @@ int main(int argc, char** argv) {
   config_compute.are_inputs_on_device = true;
   config_compute.are_outputs_on_device = true;
   config_compute.is_async = true;
-
-  // separate streams for host-to-device and device-to-host transfers
-  cudaStream_t stream_h2d, stream_d2h; 
-  cudaStreamCreate(&stream_h2d);
-  cudaStreamCreate(&stream_d2h);
-
+  
   std::cout << "Concurrent Download, Upload, and Compute In-place NTT" << std::endl;
   int nof_blocks = 32;
   std::cout << "Number of blocks: " << nof_blocks << std::endl;
@@ -115,9 +115,11 @@ int main(int argc, char** argv) {
       if (i>0) {
         cudaMemcpyAsync(&d_vec[vec_transfer][(i-1)*block_size], &h_inp[vec_transfer][(i-1)*block_size], sizeof(E)*block_size, cudaMemcpyHostToDevice, stream_h2d);
       }
+      // synchronize upload and download at the end of the block to ensure data integrity
       cudaStreamSynchronize(stream_d2h); 
       cudaStreamSynchronize(stream_h2d); 
     }
+    // synchronize compute stream with the end of the computation
     cudaEventSynchronize(compute_stop);
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, compute_start, compute_stop);

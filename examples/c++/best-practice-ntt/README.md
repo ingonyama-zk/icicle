@@ -1,4 +1,4 @@
-# Icicle best practices: Concurrent Data Transfer and NTT Computation
+# ICICLE best practices: Concurrent Data Transfer and NTT Computation
 
 The [Number Theoretic Transform (NTT)](https://dev.ingonyama.com/icicle/primitives/ntt) is an integral component of many cryptographic algorithms, such as polynomial multiplication in Zero Knowledge Proofs. The performance bottleneck of NTT on GPUs is the data transfer between the host (CPU) and the device (GPU). In a typical NVIDIA GPU this transfer dominates the total NTT execution time.
 
@@ -12,7 +12,8 @@ Typically, you concurrently
 2. Upload the input for a next NTT on the device
 3. Run current NTT
 
-Drawback: The approach requires two on-device memory vectors, decreasing the maximum size of NTT by 2x.
+> [!NOTE]
+> This approach requires two on-device memory vectors, decreasing the maximum size of NTT by 2x.
 
 ## Best-Practices
 
@@ -28,3 +29,5 @@ To change the default curve BN254, edit `compile.sh` and `CMakeLists.txt`
 ./compile.sh
 ./run.sh
 ```
+
+To compare with ICICLE baseline (i.e. non-concurrent) NTT, you can run [this example](../ntt/README.md).
