@@ -1,4 +1,4 @@
-# ICICLE example: Number Theoretic Transform (NTT) in Rust
+# ICICLE example: Number Theoretic Transform (NTT) in Golang
 
 ## Key-Takeaway
 

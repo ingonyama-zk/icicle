@@ -1,6 +1,6 @@
 # ICICLE example: Polynomials in Golang
 
-`ICICLE` provides Golang bindings to CUDA-accelerated C++ implementation of [Polynomials](../../../docs/docs/icicle/polynomials/overview.md).
+`ICICLE` provides Golang bindings to CUDA-accelerated C++ implementation of [Polynomials](https://dev.ingonyama.com/icicle/polynomials/overview).
 
 ## Usage
 ### Backend Initialization
