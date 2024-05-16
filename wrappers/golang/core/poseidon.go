@@ -51,18 +51,9 @@ func GetDefaultPoseidonConfig() PoseidonConfig {
 	}
 }
 
-func PoseidonCheck[T any](input, output HostOrDeviceSlice, cfg *PoseidonConfig, constants *PoseidonConstants[T], arity, numberOfStates int) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) {
+func PoseidonCheck[T any](input, output HostOrDeviceSlice, cfg *PoseidonConfig, constants *PoseidonConstants[T], numberOfStates int) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) {
 	inputLen, outputLen := input.Len(), output.Len()
-
-	if arity != int(constants.Arity) {
-		errorString := fmt.Sprintf(
-			"arity: %d does not match Poseidon Constants: %d",
-			arity,
-			outputLen,
-		)
-		panic(errorString)
-	}
-
+	arity := int(constants.Arity)
 	expectedInputLen := arity * numberOfStates
 	if cfg.InputIsAState {
 		expectedInputLen += numberOfStates

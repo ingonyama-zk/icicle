@@ -45,7 +45,7 @@ func TestPoseidon(t *testing.T) {
 	var deviceOutput core.DeviceSlice
 	deviceOutput.MallocAsync(numberOfStates*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
 
-	poseidon.PoseidonHash(deviceInput, deviceOutput, numberOfStates, arity, &cfg, &constants) //run Hash function
+	poseidon.PoseidonHash(deviceInput, deviceOutput, numberOfStates, &cfg, &constants) //run Hash function
 
 	output := make(core.HostSlice[{{.Field}}.{{.FieldPrefix}}Field], numberOfStates)
 	output.CopyFromDeviceAsync(&deviceOutput, stream)
