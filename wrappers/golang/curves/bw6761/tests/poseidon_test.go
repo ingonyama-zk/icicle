@@ -15,11 +15,13 @@ func TestPoseidon(t *testing.T) {
 	numberOfStates := 1
 
 	cfg := poseidon.GetDefaultPoseidonConfig()
+	cfg.IsAsync = true
+	stream, _ := cr.CreateStream()
+	cfg.Ctx.Stream = &stream
 
 	var constants core.PoseidonConstants[bw6_761.ScalarField]
-	ctx, _ := cr.GetDefaultDeviceContext()
 
-	poseidon.InitOptimizedPoseidonConstantsCuda(arity, ctx, &constants) //generate constants
+	poseidon.InitOptimizedPoseidonConstantsCuda(arity, cfg.Ctx, &constants) //generate constants
 
 	scalars := bw6_761.GenerateScalars(numberOfStates * arity)
 	scalars[0] = scalars[0].Zero()
@@ -27,14 +29,12 @@ func TestPoseidon(t *testing.T) {
 
 	scalarsCopy := core.HostSliceFromElements(scalars[:numberOfStates*arity])
 
-	stream, _ := cr.CreateStream()
-
 	var deviceInput core.DeviceSlice
 	scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 	var deviceOutput core.DeviceSlice
 	deviceOutput.MallocAsync(numberOfStates*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
 
-	poseidon.PoseidonHash(deviceInput, deviceOutput, numberOfStates, arity, &cfg, &constants) //run Hash function
+	poseidon.PoseidonHash(deviceInput, deviceOutput, numberOfStates, &cfg, &constants) //run Hash function
 
 	output := make(core.HostSlice[bw6_761.ScalarField], numberOfStates)
 	output.CopyFromDeviceAsync(&deviceOutput, stream)

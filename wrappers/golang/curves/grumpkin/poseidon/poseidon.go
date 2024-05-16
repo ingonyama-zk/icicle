@@ -15,13 +15,13 @@ func GetDefaultPoseidonConfig() core.PoseidonConfig {
 	return core.GetDefaultPoseidonConfig()
 }
 
-func PoseidonHash[T any](scalars, results core.HostOrDeviceSlice, numberOfStates, arity int, cfg *core.PoseidonConfig, constants *core.PoseidonConstants[T]) core.IcicleError {
-	scalarsPointer, resultsPointer, cfgPointer := core.PoseidonCheck(scalars, results, cfg, constants, arity, numberOfStates)
+func PoseidonHash[T any](scalars, results core.HostOrDeviceSlice, numberOfStates int, cfg *core.PoseidonConfig, constants *core.PoseidonConstants[T]) core.IcicleError {
+	scalarsPointer, resultsPointer, cfgPointer := core.PoseidonCheck(scalars, results, cfg, constants, numberOfStates)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
 	cResults := (*C.scalar_t)(resultsPointer)
 	cNumberOfStates := (C.int)(numberOfStates)
-	cArity := (C.int)(arity)
+	cArity := (C.int)(constants.Arity)
 	cConstants := (*C.PoseidonConstants)(unsafe.Pointer(constants))
 	cCfg := (*C.PoseidonConfig)(cfgPointer)
 
