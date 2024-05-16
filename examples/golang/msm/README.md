@@ -1,4 +1,4 @@
-# ICICLE example: MultiScalar Multiplication (MSM) in Rust
+# ICICLE example: MultiScalar Multiplication (MSM) in Golang
 
 `ICICLE` provides Golang bindings to CUDA-accelerated C++ implementation of [Multi-Scalar Multiplication](https://github.com/ingonyama-zk/ingopedia/blob/master/src/msm.md).
 
