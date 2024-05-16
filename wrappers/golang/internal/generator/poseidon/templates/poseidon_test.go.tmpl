@@ -26,19 +26,19 @@ func TestPoseidon(t *testing.T) {
 	numberOfStates := 1
 
 	cfg := poseidon.GetDefaultPoseidonConfig()
+	cfg.IsAsync = true
+	stream, _ := cr.CreateStream()
+	cfg.Ctx.Stream = &stream
 
 	var constants core.PoseidonConstants[{{.Field}}.{{.FieldPrefix}}Field]
-	ctx, _ := cr.GetDefaultDeviceContext()
 
-	poseidon.InitOptimizedPoseidonConstantsCuda(arity, ctx, &constants) //generate constants
+	poseidon.InitOptimizedPoseidonConstantsCuda(arity, cfg.Ctx, &constants) //generate constants
 
 	scalars := {{.Field}}.GenerateScalars(numberOfStates * arity)
 	scalars[0] = scalars[0].Zero()
 	scalars[1] = scalars[0].Zero()
 
 	scalarsCopy := core.HostSliceFromElements(scalars[:numberOfStates*arity])
-
-	stream, _ := cr.CreateStream()
 
 	var deviceInput core.DeviceSlice
 	scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
