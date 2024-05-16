@@ -2,6 +2,9 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
+#include "icicle/device.h"
+#include "icicle/device_api.h"
+
 class IcicleTest : public ::testing::Test
 {
 public:
@@ -14,7 +17,11 @@ public:
   void TearDown() override {}
 };
 
-TEST_F(IcicleTest, deviceAPI) { std::cout << "deviceAPI test" << std::endl; }
+TEST_F(IcicleTest, deviceAPI) { 
+  std::cout << "deviceAPI test" << std::endl; 
+  icicle::Device dev = {"CPU", 0};
+  // getDeviceAPI(&dev);
+  }
 
 int main(int argc, char** argv)
 {
