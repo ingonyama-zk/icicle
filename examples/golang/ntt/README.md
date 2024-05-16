@@ -6,7 +6,7 @@
 
 ## Usage
 
-```rust
+```go
 err := Ntt(
   /* input slice */ scalars,
   /* NTT Direction */ core.KForward,
