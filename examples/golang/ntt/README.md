@@ -2,7 +2,7 @@
 
 ## Key-Takeaway
 
-`ICICLE` provides Rust bindings to CUDA-accelerated C++ implementation of [Number Theoretic Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md).
+`ICICLE` provides Golang bindings to CUDA-accelerated C++ implementation of [Number Theoretic Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md).
 
 ## Usage
 
