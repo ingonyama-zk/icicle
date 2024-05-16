@@ -7,10 +7,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
+option(BUILD_TESTS "Build unit tests" OFF)
+
 # Add the include directory
 include_directories(include)
 
-option(BUILD_TESTS "Build unit tests" OFF)
+add_library(icicle_device STATIC 
+                                    src/device_api.cpp
+                                    src/errors.cpp)
+
 
 if (BUILD_TESTS)
   add_subdirectory(tests)
