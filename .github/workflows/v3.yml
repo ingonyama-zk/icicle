@@ -3,10 +3,10 @@ name: C++/CUDA
 on:
   pull_request:
     branches:
-      - main      
+      - V3      
   push:
     branches:
-      - main      
+      - V3      
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,14 +49,14 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Build curve
-      working-directory: ./icicle
+      working-directory: ./icicle_fe
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.field.build_args }} -S . -B build
         cmake --build build -j
     - name: Run C++ curve Tests
-      working-directory: ./icicle/build/tests
+      working-directory: ./icicle_fe/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: ctest
 
@@ -71,19 +71,17 @@ jobs:
             build_args: -DEXT_FIELD=ON
           - name: stark252
             build_args: -DEXT_FIELD=OFF
-          - name: m31
-            build_args: -DEXT_FIELD=ON
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Build field
-      working-directory: ./icicle
+      working-directory: ./icicle_fe
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -S . -B build
         cmake --build build -j
     - name: Run C++ field Tests
-      working-directory: ./icicle/build/tests
+      working-directory: ./icicle_fe/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: ctest
