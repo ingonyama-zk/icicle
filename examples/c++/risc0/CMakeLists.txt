@@ -10,7 +10,8 @@ else()
 endif ()
 project(example LANGUAGES CUDA CXX)
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -DFIELD_ID=babybear")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -DFIELD_ID=1001")
+# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 
@@ -24,4 +25,4 @@ target_include_directories(example PRIVATE "../../../icicle/include")
 
 # can link to another curve/field by changing the following lib and FIELD_ID
 target_link_libraries(example ${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_field_babybear.a)
-target_compile_definitions(example PUBLIC FIELD_ID babybear)
+# target_compile_definitions(example PUBLIC FIELD_ID babybear)

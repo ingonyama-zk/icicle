@@ -7,17 +7,17 @@
 #include "polynomials/polynomials.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "ntt/ntt.cuh"
-#include "poseidon/tree/merkle.cuh"
+// #include "poseidon/tree/merkle.cuh"
 
 using namespace polynomials;
-using namespace merkle;
+// using namespace merkle;
 
 // define the polynomial type
 typedef Polynomial<scalar_t> Polynomial_t;
 
 // Merkle tree arity
-#define A 2
-#define T (A + 1)
+// #define A 2
+// #define T (A + 1)
 
 // RISC-V register type
 typedef int64_t rv_t;
@@ -44,6 +44,7 @@ Polynomial_t p_value(scalar_t value) {
   return p_value;
 }
 
+// TBD: remove all evaluations and use polynomials
 void compute_value_constraint(
   scalar_t* data,
   scalar_t value,
@@ -171,7 +172,6 @@ std::unique_ptr<scalar_t[]> InterpolateRootsOfUnity(Polynomial_t * p, int n, sca
 
 int main(int argc, char** argv)
 {
-
   std::cout << "This is an ICICLE C++ implementation of the STARK by Hand Explainer." << std::endl;
   std::cout << "https://dev.risczero.com/proof-system/stark-by-hand" << std::endl;
 
@@ -246,8 +246,6 @@ int main(int argc, char** argv)
   auto p_c2 = Polynomial_t::from_rou_evaluations(c2_trace.get(), n);
   auto p_c3 = Polynomial_t::from_rou_evaluations(c3_trace.get(), n);
 
-  std::cout << std::endl << "Generate Reed-Solomon traces" << std::endl;
-
   // Interpolate trace polynomials on 4x expanded rou domain (Reed Solomon) 
   // TBD: I don't need to keep their evaluations since I have the polynomials
 
@@ -265,7 +263,6 @@ int main(int argc, char** argv)
   std::cout << "To maintain a zk protocol, the trace polynomials are evaluated over a zk commitment domain" << std::endl;
   std::cout << "zk commitment domain is a coset of Reed Solomon domain shifted by a basic root of unity" << std::endl;
 
-  // auto shift = basic_root;
   scalar_t xzk = basic_root;
   auto d1_zkcommitment  = InterpolateRootsOfUnity(&p_d1, 4*n, xzk);
   auto d2_zkcommitment  = InterpolateRootsOfUnity(&p_d2, 4*n, xzk);
@@ -283,66 +280,24 @@ int main(int argc, char** argv)
 
   std::cout << "Lesson 6: Constraint Polynomials" << std::endl;
   std::cout << "The constraints are used to check the correctness of the trace. In this example, we check 6 rules to establish the validity of the trace." << std::endl;
-  // TBD: use polynomial math to build constraints
-  // Applying rule checks to trace blocks makes constraint blocks.
-  // A constraint block has 0s in every 4th row -- these 0s indicate the passing of the various rulechecks.
-
-  // Applying rule checks to zk-commitment trace blocks makes zk-commitment constraint blocks.
-  // Similarly, applying rule checks to trace polynomials makes constraint polynomials.
-  // In code, this happens in terms of trace blocks.
 
 
-  scalar_t fib_constraint[n];
-  compute_fib_constraint(d1_trace.get(), d2_trace.get(), d3_trace.get(), c1_trace.get(), c2_trace.get(), c3_trace.get(), fib_constraint, n);
   auto p_fib_constraint =  (p_d3 - p_d2 - p_d1) * (p_c1 + p_c2 + p_c3);
-  std::cout <<  "Applied to the original trace data, the constraint yields all 0s: " << std::endl;
-  print_vector(fib_constraint,n);
 
-  auto fib_constraint_rs = InterpolateRootsOfUnity(&p_fib_constraint, 4*n);
-
-  std::cout <<  "Applied to the Reed-Solomon expanded trace blocks, the constraint yields 0s in every 4th row: " << std::endl;
-
+  // if I comment this line, I get polynomial_cuda_backend.cu:183 error: clone() from non implemented state
   auto fib_constraint_zkcommitment = InterpolateRootsOfUnity(&p_fib_constraint, 4*n, xzk);  
-  print_vector(fib_constraint_zkcommitment.get(),4*n, "Applied to zk-commitment domain, no 0s");
+
     
-  scalar_t init1_constraint[n];
-  compute_value_constraint(d1_trace.get(), scalar_t::from(24), c1_trace.get(), init1_constraint, n);
-
   auto p_init1_constraint = (p_d1 - p_value(scalar_t::from(24))) * p_c1;
-  std::cout << "Original Init 1 constraint gives 0s" << std::endl;
-  print_vector(init1_constraint, n);
-  //  TBD: InterpolateRootsOfUnity runtime error for size n. Fix it.
-  
 
+  // sanity checks printing
   auto init1_constraint_rs = InterpolateRootsOfUnity(&p_init1_constraint, 4*n);
   print_vector(init1_constraint_rs.get(), 4*n, "Reed-Solomon expansion Init 1 constraint gives 0s in every 4th row");
-
   auto init1_constraint_zkcommitment = InterpolateRootsOfUnity(&p_init1_constraint, 4*n, xzk);
   print_vector(init1_constraint_zkcommitment.get(), 4*n, "ZK Commitment Init 1 constraint gives no 0s");
 
-  scalar_t init2_constraint[n];
-  compute_value_constraint(d2_trace.get(), scalar_t::from(30), c1_trace.get(), init2_constraint, n);
   auto p_init2_constraint = (p_d2 - p_value(scalar_t::from(30))) * p_c1;
-  print_vector(init2_constraint, n, "Original Init 2 constraint gives 0s");
-  // TBD: show this for p_init2_constraint evals of size n
-
-  auto init2_constraint_rs = InterpolateRootsOfUnity(&p_init2_constraint, 4*n);
-  print_vector(init2_constraint_rs.get(), 4*n, "Reed-Solomon expansion Init 2 constraint gives 0s in every 4th row");
-
-  auto init2_constraint_zkcommitment = InterpolateRootsOfUnity(&p_init2_constraint, 4*n, xzk);
-  print_vector(init2_constraint_zkcommitment.get(), 4*n, "ZK Commitment Init 2 constraint gives no 0s");
-
-  scalar_t termination_constraint[n];
-  compute_value_constraint(d3_trace.get(), scalar_t::from(222), c3_trace.get(), termination_constraint, n);
   auto p_termination_constraint = (p_d3 - p_value(scalar_t::from(222))) * p_c3;
-
-  print_vector(termination_constraint, n, "Original Termination constraint gives 0s");
-
-  auto termination_constraint_rs = InterpolateRootsOfUnity(&p_termination_constraint, 4*n);
-  print_vector(termination_constraint_rs.get(), 4*n, "Reed-Solomon expansion Termination constraint gives 0s in every 4th row");
-
-  auto termination_constraint_zkcommitment = InterpolateRootsOfUnity(&p_termination_constraint, 4*n, xzk);
-  print_vector(termination_constraint_zkcommitment.get(), 4*n, "ZK Commitment Termination constraint gives no 0s");
 
   // TBD: I had issues with recursion constraints. Need to debug. But not now.
   scalar_t recursion_constraint1[n];
@@ -375,59 +330,29 @@ int main(int argc, char** argv)
   print_vector(recursion_constraint2_zkcommitment, 4*n);
 
   std::cout << std::endl << "Lesson 7: Mixing Constraint Polynomials" << std::endl;
-
+  // TBD: what's wrong with recursion constraints?
   // scalar_t* all_constraints[] = {fib_constraint, init1_constraint, init2_constraint, termination_constraint, recursion_constraint1, recursion_constraint2};
-  scalar_t* all_constraints[] = {fib_constraint, init1_constraint, init2_constraint, termination_constraint};
-  const size_t nmix = sizeof(all_constraints) / sizeof(all_constraints[0]);
-  scalar_t mixed_constraint[n];
-  mix(all_constraints, mixed_constraint, nmix, n, scalar_t::from(5));
-  Polynomial_t * p_all_constraints[nmix] = {&p_fib_constraint, &p_init1_constraint, &p_init2_constraint, &p_termination_constraint};
-  auto p_mixed_constraints = p_mix(p_all_constraints, nmix, scalar_t::from(5));
-  std::cout << "Mixed constraint gives 0s" << std::endl;
-  print_vector(mixed_constraint, n);
 
-  
-  // scalar_t* all_constraints_rs[] = {fib_constraint_rs, init1_constraint_rs, init2_constraint_rs, termination_constraint_rs, recursion_constraint1_rs, recursion_constraint2_rs};
-  scalar_t* all_constraints_rs[] = {fib_constraint_rs.get(), init1_constraint_rs.get(), init2_constraint_rs.get(), termination_constraint_rs.get()};
-  // scalar_t mixed_constraint_rs[4*n];
-  // mix(all_constraints_rs, mixed_constraint_rs, nmix, 4*n, scalar_t::from(5));
+  Polynomial_t * p_all_constraints[] = {&p_fib_constraint, &p_init1_constraint, &p_init2_constraint, &p_termination_constraint};
+  const size_t nmix = sizeof(p_all_constraints) / sizeof(p_all_constraints[0]);
+
+  auto p_mixed_constraints = p_mix(p_all_constraints, nmix, scalar_t::from(5));
+
   auto mixed_constraint_rs = InterpolateRootsOfUnity(&p_mixed_constraints, 4*n);
-  // std::cout << "Mixed constraint gives 0s in every 4th row" << std::endl;
-  // print_vector(mixed_constraint_rs, 4*n);
   print_vector(mixed_constraint_rs.get(), 4*n, "Mixed constraint gives 0s in every 4th row");
-// return 0;
-  // scalar_t* all_constraints_zkcommitment[] = {fib_constraint_zkcommitment, init1_constraint_zkcommitment, init2_constraint_zkcommitment, termination_constraint_zkcommitment, recursion_constraint1_zkcommitment, recursion_constraint2_zkcommitment};
-  // scalar_t* all_constraints_zkcommitment[] = {fib_constraint_zkcommitment.get(), init1_constraint_zkcommitment.get(), init2_constraint_zkcommitment.get(), termination_constraint_zkcommitment.get()};
+
   auto mixed_constraint_zkcommitment = InterpolateRootsOfUnity(&p_mixed_constraints, 4*n, xzk);
   print_vector(mixed_constraint_zkcommitment.get(), 4*n, "Mixed ZK constraint gives no 0s");
-// return 0;
+
   // Issue: recursive constraints have large degree. Is this an issue?
   for( int i = 0; i < nmix; ++i) {
     std::cout << i << ": " << p_all_constraints[i]->degree() << std::endl;
   }
-// return 0;  
 
   std::cout << "Lesson 8: The Core of the RISC Zero STARK" << std::endl;
-
-  std::cout << "Reed-Solomon domain" << std::endl;
-  // auto p_mixed_constraint_rs = Polynomial_t::from_rou_evaluations(mixed_constraint_rs.get(), 4*n);
-  std::cout << "Degree of the mixed constraints polynomial: " << p_mixed_constraints.degree() << std::endl;
-  // auto p_validity_rs = p_mixed_constraint_rs.divide_by_vanishing_polynomial(n);
+  std::cout << "Degree of the mixed constraints polynomial: " << p_mixed_constraints.degree() << std::endl;  
   auto p_validity = p_mixed_constraints.divide_by_vanishing_polynomial(n);
   std::cout << "Degree of the validity polynomial: " << p_validity.degree() << std::endl;
-// return 0;  
-
-  std::cout << "ZK Commitment domain" << std::endl;
-  
-  // auto p_mixed_constraint_zkcommitment = Polynomial_t::from_rou_evaluations(mixed_constraint_zkcommitment, 4*n);
-  // std::cout << "Degree of the mixed constraint polynomial: " << p_mixed_constraint_zkcommitment.degree() << std::endl;
-  // auto p_validity_zkcommitment = p_mixed_constraint_zkcommitment.divide_by_vanishing_polynomial(n);
-  // std::cout << "Degree of the validity polynomial: " << p_validity_zkcommitment.degree() << std::endl;
-
-  std::cout << "Evaluations of Validity Polynomial on zk-commitment domain" << std::endl;
-  auto p_validity_zkcommitment = InterpolateRootsOfUnity(&p_validity, 4*n, xzk);
-  print_vector(p_validity_zkcommitment.get(), 4*n, "Validity polynomial evaluations on zk-commitment domain");
-
   std::cout << "The Verifier should provide the Merke commitment for the above" << std::endl;
 
   std::cout << "Lesson 9: The DEEP Technique" << std::endl;
@@ -496,17 +421,9 @@ int main(int argc, char** argv)
   std::cout << "Lesson 10: Mixing (Batching) for FRI" << std::endl;
   std::cout << "The initial FRI polynomial is the mix of the 7 DEEP polynomials." << std::endl;
 
-  Polynomial_t* all_DEEP[7];
-
-  all_DEEP[0] = &p_d1_DEEP;
-  all_DEEP[1] = &p_d2_DEEP;
-  all_DEEP[2] = &p_d3_DEEP;
-  all_DEEP[3] = &p_c1_DEEP;
-  all_DEEP[4] = &p_c2_DEEP;
-  all_DEEP[5] = &p_c3_DEEP;
-  all_DEEP[6] = &v_DEEP;
-
+  Polynomial_t* all_DEEP[] = {&p_d1_DEEP, &p_d2_DEEP, &p_d3_DEEP, &p_c1_DEEP, &p_c2_DEEP, &p_c3_DEEP, &v_DEEP};
   Polynomial_t fri_input = p_mix(all_DEEP, 7, scalar_t::from(99));
+
   std::cout << "The degree of the mixed DEEP polynomial is: " << fri_input.degree() << std::endl;
 
   std::cout << "Lesson 11: FRI Protocol (Commit Phase)" << std::endl;
