@@ -21,44 +21,33 @@ function(set_gpu_env)
     else()
         find_program(_nvidia_smi "nvidia-smi")
 
-    if(_nvidia_smi)
-        set(DETECT_GPU_COUNT_NVIDIA_SMI 0)
+        if(_nvidia_smi)
+            execute_process(
+                COMMAND ${_nvidia_smi} --query-gpu=compute_cap --format=csv,noheader
+                OUTPUT_VARIABLE GPU_COMPUTE_CAPABILITIES
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            # Process the output to form the CUDA architectures string
+            string(REPLACE "\n" ";" GPU_COMPUTE_CAPABILITIES_LIST "${GPU_COMPUTE_CAPABILITIES}")
 
-        # execute nvidia-smi -L to get a short list of GPUs available
-        exec_program(${_nvidia_smi_path} ARGS -L
-        OUTPUT_VARIABLE _nvidia_smi_out
-        RETURN_VALUE _nvidia_smi_ret)
+            set(CUDA_ARCHITECTURES "")
+            foreach(CAPABILITY ${GPU_COMPUTE_CAPABILITIES_LIST})
+                # Remove the dot in compute capability to match CMake format
+                string(REPLACE "." "" CAPABILITY "${CAPABILITY}")
+                if(CUDA_ARCHITECTURES)
+                    set(CUDA_ARCHITECTURES "${CUDA_ARCHITECTURES};${CAPABILITY}")
+                else()
+                    set(CUDA_ARCHITECTURES "${CAPABILITY}")
+                endif()
+            endforeach()
 
-        # process the stdout of nvidia-smi
-        if(_nvidia_smi_ret EQUAL 0)
-        # convert string with newlines to list of strings
-        string(REGEX REPLACE "\n" ";" _nvidia_smi_out "${_nvidia_smi_out}")
-
-        foreach(_line ${_nvidia_smi_out})
-            if(_line MATCHES "^GPU [0-9]+:")
-            math(EXPR DETECT_GPU_COUNT_NVIDIA_SMI "${DETECT_GPU_COUNT_NVIDIA_SMI}+1")
-
-            # the UUID is not very useful for the user, remove it
-            string(REGEX REPLACE " \\(UUID:.*\\)" "" _gpu_info "${_line}")
-
-            if(NOT _gpu_info STREQUAL "")
-                list(APPEND DETECT_GPU_INFO "${_gpu_info}")
-            endif()
-            endif()
-        endforeach()
-
-        check_num_gpu_info(${DETECT_GPU_COUNT_NVIDIA_SMI} DETECT_GPU_INFO)
-        set(DETECT_GPU_COUNT ${DETECT_GPU_COUNT_NVIDIA_SMI})
+            message("Setting CMAKE_CUDA_ARCHITECTURES to: ${CUDA_ARCHITECTURES}")        
+            set(CMAKE_CUDA_ARCHITECTURES "${CUDA_ARCHITECTURES}" PARENT_SCOPE)                        
+        else()
+            # no GPUs found, like on Github CI runners
+            message("Setting CMAKE_CUDA_ARCHITECTURES to: 50") 
+            set(CMAKE_CUDA_ARCHITECTURES 50 PARENT_SCOPE) # some safe value
         endif()
-    endif()
-
-    # ##
-    if(DETECT_GPU_COUNT GREATER 0)
-        set(CMAKE_CUDA_ARCHITECTURES native PARENT_SCOPE) # do native
-    else()
-        # no GPUs found, like on Github CI runners
-        set(CMAKE_CUDA_ARCHITECTURES 50 PARENT_SCOPE) # some safe value
-    endif()
     endif()
 
     # Check CUDA version and, if possible, enable multi-threaded compilation 
