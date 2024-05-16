@@ -40,7 +40,7 @@ func main() {
 
 	print("Generating BN254 G2 points ... ")
 	startTime = time.Now()
-	pointsBn254G2Max := bn254G2.G2GenerateProjectivePoints(sizeMax)
+	pointsBn254G2Max := bn254G2.G2GenerateAffinePoints(sizeMax)
 	println(time.Since(startTime).String())
 
 	print("Generating BLS12_377 scalars ... ")
@@ -55,7 +55,7 @@ func main() {
 
 	print("Generating BLS12_377 G2 points ... ")
 	startTime = time.Now()
-	pointsBls12377G2Max := bls12377G2.G2GenerateProjectivePoints(sizeMax)
+	pointsBls12377G2Max := bls12377G2.G2GenerateAffinePoints(sizeMax)
 	println(time.Since(startTime).String())
 
 	for logSize := logSizeMin; logSize <= logSizeMax; logSize++ {

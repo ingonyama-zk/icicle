@@ -14,7 +14,6 @@ import (
 	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear"
 	babybearNtt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/ntt"
 	babybearPolynomial "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/polynomial"
-	// babybearVecOps "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/vecOps"
 )
 
 var maxNttLogSize uint

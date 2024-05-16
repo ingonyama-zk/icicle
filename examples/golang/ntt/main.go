@@ -86,7 +86,7 @@ func main() {
 
 	var nttResultBls12377 core.DeviceSlice
 
-	_, e = msmResultBls12377.MallocAsync(size*scalarsBls12377.SizeOfElement(), scalarsBls12377.SizeOfElement(), streamBls12377)
+	_, e = nttResultBls12377.MallocAsync(size*scalarsBls12377.SizeOfElement(), scalarsBls12377.SizeOfElement(), streamBls12377)
 	if e != cr.CudaSuccess {
 		errorString := fmt.Sprint(
 			"Bls12_377 Malloc failed: ", e)
@@ -114,16 +114,16 @@ func main() {
 	print("Executing Bls12377 NTT on device ... ")
 	startTime = time.Now()
 
-	err = bls12377Ntt.Ntt(scalarsBls12377, core.KForward, &cfgBls12377, msmResultBls12377)
+	err = bls12377Ntt.Ntt(scalarsBls12377, core.KForward, &cfgBls12377, nttResultBls12377)
 	if err.CudaErrorCode != cr.CudaSuccess {
 		errorString := fmt.Sprint(
 			"bls12_377 Ntt failed: ", e)
 		panic(errorString)
 	}
 
-	msmResultBls12377Host := make(core.HostSlice[bls12377.ScalarField], size)
-	msmResultBls12377Host.CopyFromDeviceAsync(&msmResultBls12377, streamBls12377)
-	msmResultBls12377.FreeAsync(streamBls12377)
+	nttResultBls12377Host := make(core.HostSlice[bls12377.ScalarField], size)
+	nttResultBls12377Host.CopyFromDeviceAsync(&nttResultBls12377, streamBls12377)
+	nttResultBls12377.FreeAsync(streamBls12377)
 
 	cr.SynchronizeStream(&streamBls12377)
 
