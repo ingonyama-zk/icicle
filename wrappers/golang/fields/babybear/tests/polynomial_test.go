@@ -5,7 +5,6 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear"
-
 	// "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/ntt"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/polynomial"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/vecOps"
