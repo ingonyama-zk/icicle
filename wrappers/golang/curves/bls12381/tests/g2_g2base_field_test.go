@@ -1,11 +1,10 @@
 package tests
 
 import (
-	"testing"
-
 	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/g2"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 const (

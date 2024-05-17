@@ -15,6 +15,7 @@ import (
 	msm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/msm"
 	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/ntt"
 	poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/polynomial"
+	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/poseidon"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/tests"
 	vecops "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/vecOps"
 )
@@ -43,6 +44,7 @@ func generateFiles() {
 		}
 
 		msm.Generate(curveDir, "msm", curve.Curve, "", curve.GnarkImport)
+		poseidon.Generate(curveDir, "", curve.Curve, scalarFieldPrefix)
 		if curve.SupportsG2 {
 			g2BaseDir := path.Join(curveDir, "g2")
 			packageName := "g2"

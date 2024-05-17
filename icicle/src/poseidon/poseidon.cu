@@ -3,7 +3,6 @@
 using namespace field_config;
 
 #include "poseidon/poseidon.cuh"
-#include "constants.cu"
 #include "kernels.cu"
 
 namespace poseidon {
@@ -86,29 +85,6 @@ namespace poseidon {
     }
 
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
-    return CHK_LAST();
-  }
-
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_hash_cuda)(
-    scalar_t* input,
-    scalar_t* output,
-    int number_of_states,
-    int arity,
-    const PoseidonConstants<scalar_t>& constants,
-    PoseidonConfig& config)
-  {
-    switch (arity) {
-    case 2:
-      return poseidon_hash<scalar_t, 3>(input, output, number_of_states, constants, config);
-    case 4:
-      return poseidon_hash<scalar_t, 5>(input, output, number_of_states, constants, config);
-    case 8:
-      return poseidon_hash<scalar_t, 9>(input, output, number_of_states, constants, config);
-    case 11:
-      return poseidon_hash<scalar_t, 12>(input, output, number_of_states, constants, config);
-    default:
-      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "PoseidonHash: #arity must be one of [2, 4, 8, 11]");
-    }
     return CHK_LAST();
   }
 } // namespace poseidon
