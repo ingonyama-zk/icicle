@@ -10,8 +10,8 @@ struct stage_metadata {
   uint32_t th_stride;
   uint32_t ntt_block_size;
   uint32_t batch_id;
-  uint32_t ntt_block_id;
   uint32_t ntt_inp_id;
+  uint64_t ntt_block_id;
 };
 
 #define STAGE_SIZES_DATA                                                                                               \
@@ -194,7 +194,7 @@ public:
   }
 
   DEVICE_INLINE void
-  loadGlobalData(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  loadGlobalData(const E* data, uint64_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -210,7 +210,7 @@ public:
   }
 
   DEVICE_INLINE void loadGlobalDataColumnBatch(
-    const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+    const E* data, uint64_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
@@ -224,7 +224,7 @@ public:
   }
 
   DEVICE_INLINE void
-  storeGlobalData(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  storeGlobalData(E* data, uint64_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
@@ -240,7 +240,7 @@ public:
   }
 
   DEVICE_INLINE void storeGlobalDataColumnBatch(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+    E* data, uint64_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id +
              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
@@ -254,7 +254,7 @@ public:
   }
 
   DEVICE_INLINE void
-  loadGlobalData32(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  loadGlobalData32(const E* data, uint64_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -273,7 +273,7 @@ public:
   }
 
   DEVICE_INLINE void loadGlobalData32ColumnBatch(
-    const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+    const E* data, uint64_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
@@ -290,7 +290,7 @@ public:
   }
 
   DEVICE_INLINE void
-  storeGlobalData32(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  storeGlobalData32(E* data, uint64_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
@@ -309,7 +309,7 @@ public:
   }
 
   DEVICE_INLINE void storeGlobalData32ColumnBatch(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+    E* data, uint64_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 2 +
              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
@@ -326,7 +326,7 @@ public:
   }
 
   DEVICE_INLINE void
-  loadGlobalData16(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  loadGlobalData16(const E* data, uint64_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -345,7 +345,7 @@ public:
   }
 
   DEVICE_INLINE void loadGlobalData16ColumnBatch(
-    const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+    const E* data, uint64_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
@@ -362,7 +362,7 @@ public:
   }
 
   DEVICE_INLINE void
-  storeGlobalData16(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  storeGlobalData16(E* data, uint64_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
@@ -381,7 +381,7 @@ public:
   }
 
   DEVICE_INLINE void storeGlobalData16ColumnBatch(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+    E* data, uint64_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
   {
     data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride * s_meta.ntt_inp_id * 4 +
              (s_meta.ntt_block_id >> log_data_stride) * data_stride * s_meta.ntt_block_size) *
