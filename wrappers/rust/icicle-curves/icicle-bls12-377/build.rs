@@ -21,6 +21,10 @@ fn main() {
     #[cfg(feature = "devmode")]
     config.define("DEVMODE", "ON");
 
+    if let Ok(cuda_arch) = env::var("CUDA_ARCH") {
+        config.define("CUDA_ARCH", Some(&cuda_arch));
+    }
+
     // Build
     let out_dir = config
         .build_target("icicle_curve")
@@ -47,6 +51,10 @@ fn main() {
 
         #[cfg(feature = "devmode")]
         config.define("DEVMODE", "ON");
+
+        if let Ok(cuda_arch) = env::var("CUDA_ARCH") {
+            config.define("CUDA_ARCH", Some(&cuda_arch));
+        }
 
         // Build
         let out_dir = config

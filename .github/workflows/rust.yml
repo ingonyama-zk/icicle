@@ -101,4 +101,5 @@ jobs:
       env:
         CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
       # Building from the root workspace will build all members of the workspace by default
-      run: cargo build --release --verbose
+      # Using CUDA_ARCH=50 env variable since the CI machines have no GPUs
+      run: CUDA_ARCH=50 cargo build --release --verbose
