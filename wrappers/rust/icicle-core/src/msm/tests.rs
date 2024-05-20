@@ -2,7 +2,7 @@ use crate::curve::{Affine, Curve, Projective};
 use crate::msm::{msm, precompute_points, MSMConfig, MSM};
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::device::{get_device_count, set_device, warmup};
-use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
+use icicle_cuda_runtime::memory::{CudaHostRegisterFlags, DeviceVec, HostSlice};
 use icicle_cuda_runtime::stream::CudaStream;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
