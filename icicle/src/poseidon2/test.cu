@@ -12,6 +12,8 @@ using namespace curve_config;
 #include "poseidon2/poseidon2.cuh"
 using namespace poseidon2;
 
+#include "extern.cu"
+
 #define T 3
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -23,11 +25,10 @@ int main(int argc, char* argv[])
   using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
   using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 
-  // Load poseidon constants
+  // Load poseidon
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  Poseidon2Constants<scalar_t> constants;
-  init_poseidon2_constants<scalar_t>(T, MdsType::DEFAULT_MDS, DiffusionStrategy::DEFAULT_DIFFUSION, ctx, &constants);
+  Poseidon2<scalar_t> poseidon = Poseidon2<scalar_t>(T, MdsType::DEFAULT_MDS, DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   START_TIMER(allocation_timer);
@@ -44,8 +45,7 @@ int main(int argc, char* argv[])
   scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
   START_TIMER(poseidon_timer);
-  Poseidon2Config config = default_poseidon2_config(T);
-  poseidon2_hash<curve_config::scalar_t, T>(in_ptr, out_ptr, number_of_blocks, constants, config);
+  bn254_poseidon2_permute_many_cuda(in_ptr, out_ptr, number_of_blocks, &poseidon, ctx);
   END_TIMER(poseidon_timer, "Poseidon")
 
   // for (int i = 0; i < number_of_blocks; i++) {

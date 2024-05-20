@@ -45,5 +45,13 @@ namespace device_context {
     return is_on_host;
   }
 
+  int get_cuda_device(const void* p) {
+    cudaPointerAttributes attributes;
+    CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
+    const bool is_on_host = attributes.type == cudaMemoryTypeHost ||
+                            attributes.type == cudaMemoryTypeUnregistered; // unregistered is host memory
+    return is_on_host ? -1 : attributes.device;
+  }
+
 } // namespace device_context
 #endif

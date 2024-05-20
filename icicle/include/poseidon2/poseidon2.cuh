@@ -27,11 +27,6 @@ namespace poseidon2 {
 
   enum MdsType { DEFAULT_MDS, PLONKY };
 
-  enum PoseidonMode {
-    COMPRESSION,
-    PERMUTATION,
-  };
-
   /**
    * @struct Poseidon2Constants
    * This constants are enough to define a Poseidon2 instantce
@@ -51,39 +46,6 @@ namespace poseidon2 {
     MdsType mds_type;
     DiffusionStrategy diffusion;
   };
-
-  /**
-   * @struct Poseidon2Config
-   * Struct that encodes various Poseidon2 parameters.
-   */
-  struct Poseidon2Config {
-    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    bool are_states_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    bool in_place;
-    PoseidonMode mode;
-    int output_index;
-    bool
-      is_async; /**< Whether to run the Poseidon2 asynchronously. If set to `true`, the poseidon_hash function will be
-                 *   non-blocking and you'd need to synchronize it explicitly by running
-                 *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the poseidon_hash
-                 *   function will block the current CPU thread. */
-  };
-
-  static Poseidon2Config default_poseidon2_config(
-    int t, const device_context::DeviceContext& ctx = device_context::get_default_device_context())
-  {
-    Poseidon2Config config = {
-      ctx,   // ctx
-      false, // are_states_on_device
-      false, // are_outputs_on_device
-      false,
-      PoseidonMode::COMPRESSION,
-      1,     // output_index
-      false, // is_async
-    };
-    return config;
-  }
 
   template <typename S>
   cudaError_t create_poseidon2_constants(
@@ -112,56 +74,52 @@ namespace poseidon2 {
   template <typename S>
   cudaError_t release_poseidon2_constants(Poseidon2Constants<S>* constants, device_context::DeviceContext& ctx);
 
-  /**
-   * Compute the poseidon hash over a sequence of preimages.
-   * Takes {number_of_states * (T-1)} elements of input and computes {number_of_states} hash images
-   * @param T size of the poseidon state, should be equal to {arity + 1}
-   * @param states a pointer to the input data. May be allocated on device or on host, regulated
-   * by the config. May point to a string of preimages or a string of states filled with preimages.
-   * @param output a pointer to the output data. May be allocated on device or on host, regulated
-   * by the config. Must be at least of size [number_of_states](@ref number_of_states)
-   * @param number_of_states number of input blocks of size T-1 (arity)
-   */
-  template <typename S, int T>
-  cudaError_t poseidon2_hash(
-    const S* states,
-    S* output,
-    size_t number_of_states,
-    const Poseidon2Constants<S>& constants,
-    const Poseidon2Config& config,
-    S* auxiliary=nullptr);
-
-  template <typename S, int WIDTH>
-  class Poseidon2 {
-  public: 
+  template <typename S>
+  class Poseidon2 : public Permutation<S>,
+                    public CompressionHasher<S>
+  {
     Poseidon2Constants<S> constants;
 
+    cudaError_t squeeze_states(
+      const S* states,
+      unsigned int number_of_states,
+      unsigned int rate,
+      S* output,
+      device_context::DeviceContext& ctx,
+      unsigned int offset=0
+    );
+
+    cudaError_t run_permutation_kernel(
+          const S* states,
+          S* output,
+          unsigned int number_of_states,
+          device_context::DeviceContext& ctx
+    );
+
+  public: 
+    Poseidon2(Poseidon2& other) : constants(other.constants) {}
     Poseidon2(Poseidon2Constants<S> constants) : constants(constants) {}
-    Poseidon2(MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx);
+    Poseidon2(int width, MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx);
     ~Poseidon2();
-  };
 
-  template <typename S, int WIDTH>
-  class Poseidon2Permutation : public Poseidon2<S, WIDTH>,
-                               public Permutation<S, WIDTH> {};
+    cudaError_t permute_many(
+        const S* states,
+        S* output,
+        unsigned int number_of_states,
+        device_context::DeviceContext& ctx
+    ) override;
 
-  template <typename S, int WIDTH, int RATE>
-  class Poseidon2Sponge : public Poseidon2<S, WIDTH>,
-                          public SpongeHasher<S, S, WIDTH, RATE> {};
-
-  template <typename S, int WIDTH>
-  class Poseidon2Compression : public Poseidon2<S, WIDTH>,
-                               public CompressionHasher<S, S, WIDTH> {
-  public:
     cudaError_t compress_many(
         const S* states,
         S* output,
         unsigned int number_of_states,
+        unsigned int rate,
         device_context::DeviceContext& ctx,
-        bool is_async,
+        unsigned int offset=0,
         S* perm_output=nullptr
     ) override;
   };
+
 } // namespace poseidon2
 
 #endif

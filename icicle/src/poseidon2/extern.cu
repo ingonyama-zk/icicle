@@ -3,9 +3,23 @@
 #include "fields/field_config.cuh"
 using namespace field_config;
 
-#include "poseidon.cu"
+#include "poseidon2/poseidon2.cuh"
+#include "poseidon2.cu"
 
 namespace poseidon2 {
+  template class Poseidon2<scalar_t>;
+
+  template void poseidon2_permutation_kernel<scalar_t, 3>(
+    const scalar_t* states, scalar_t* states_out, unsigned int number_of_states, const Poseidon2Constants<scalar_t> constants);
+
+  template void internal_round<scalar_t, 3>(scalar_t state[3], size_t rc_offset, const Poseidon2Constants<scalar_t>& constants);
+
+  template void add_rc<scalar_t, 3>(scalar_t state[3], size_t rc_offset, const scalar_t* rc);
+
+  template void sbox<scalar_t, 3>(scalar_t state[3], const int alpha);
+
+  template void mds_light<scalar_t, 3>(scalar_t state[3], MdsType mds);
+
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, create_poseidon2_constants_cuda)(
     int width,
     int alpha,
@@ -33,32 +47,27 @@ namespace poseidon2 {
     return init_poseidon2_constants<scalar_t>(width, mds_type, diffusion, ctx, constants);
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_hash_cuda)(
-    const scalar_t* input,
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_permute_many_cuda)(
+    const scalar_t* states,
     scalar_t* output,
     int number_of_states,
-    int width,
-    const Poseidon2Constants<scalar_t>* constants,
-    Poseidon2Config* config)
+    Poseidon2<scalar_t>* poseidon,
+    device_context::DeviceContext& ctx
+  )
   {
-#define P2_HASH_T(width)                                                                                               \
-  case width:                                                                                                          \
-    return poseidon2_hash<scalar_t, width>(input, output, number_of_states, *constants, *config);
+    return poseidon->permute_many(states, output, number_of_states, ctx);
+  }
 
-    switch (width) {
-      P2_HASH_T(2)
-      P2_HASH_T(3)
-      P2_HASH_T(4)
-      P2_HASH_T(8)
-      P2_HASH_T(12)
-      P2_HASH_T(16)
-      P2_HASH_T(20)
-      P2_HASH_T(24)
-    default:
-      THROW_ICICLE_ERR(
-        IcicleError_t::InvalidArgument, "PoseidonHash: #arity must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
-    }
-    return CHK_LAST();
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_compress_many_cuda)(
+    const scalar_t* states,
+    scalar_t* output,
+    int number_of_states,
+    Poseidon2<scalar_t>* poseidon,
+    device_context::DeviceContext& ctx,
+    scalar_t* perm_output
+  )
+  {
+    return poseidon->compress_many(states, output, number_of_states, 1, ctx, 0, perm_output);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, release_poseidon2_constants_cuda)(
