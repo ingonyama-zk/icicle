@@ -100,6 +100,6 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       env:
         CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+        CUDA_ARCH: 50 # Using CUDA_ARCH=50 env variable since the CI machines have no GPUs
       # Building from the root workspace will build all members of the workspace by default
-      # Using CUDA_ARCH=50 env variable since the CI machines have no GPUs
-      run: CUDA_ARCH=50 cargo build --release --verbose
+      run: cargo build --release --verbose

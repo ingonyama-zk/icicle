@@ -40,10 +40,6 @@ fn main() {
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rerun-if-changed={}", cuda_runtime_api_path);
 
-    if let Ok(cuda_arch) = env::var("CUDA_ARCH") {
-        config.define("CUDA_ARCH", Some(&cuda_arch));
-    }
-
     let bindings = bindgen::Builder::default()
         .header(cuda_runtime_api_path)
         .size_t_is_usize(true)
