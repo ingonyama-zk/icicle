@@ -367,7 +367,13 @@ macro_rules! impl_msm_bench {
             use icicle_core::msm::tests::generate_random_affine_points_with_zeroes;
             use icicle_cuda_runtime::stream::CudaStream;
 
-            const MAX_LOG2: u32 = 25; // max length = 2 ^ MAX_LOG2
+            const MIN_LOG2: u32 = 13; // min msm length = 2 ^ MIN_LOG2
+            const MAX_LOG2: u32 = 25; // max msm length = 2 ^ MAX_LOG2
+
+            let min_log2 = env::var("MIN_LOG2")
+                .unwrap_or_else(|_| MIN_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MIN_LOG2);
 
             let max_log2 = env::var("MAX_LOG2")
                 .unwrap_or_else(|_| MAX_LOG2.to_string())
@@ -384,7 +390,7 @@ macro_rules! impl_msm_bench {
 
             warmup(&stream).unwrap();
 
-            for test_size_log2 in (13u32..max_log2 + 1) {
+            for test_size_log2 in (min_log2..=max_log2) {
                 let test_size = 1 << test_size_log2;
 
                 let points = generate_random_affine_points_with_zeroes(test_size, 10);
@@ -413,11 +419,6 @@ macro_rules! impl_msm_bench {
                         let scalars_h = HostSlice::from_slice(&scalars);
 
                         let mut msm_results = DeviceVec::<Projective<C>>::cuda_malloc(batch_size).unwrap();
-                        let mut points_d = DeviceVec::<Affine<C>>::cuda_malloc(full_size).unwrap();
-                        points_d
-                            .copy_from_host_async(HostSlice::from_slice(&points), &stream)
-                            .unwrap();
-
                         cfg.precompute_factor = precompute_factor as i32;
 
                         let bench_descr = format!(
