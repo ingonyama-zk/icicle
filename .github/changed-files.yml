@@ -16,8 +16,7 @@ cpp:
   - icicle/**/*.c
   - icicle/**/*.h
   - icicle/CMakeLists.txt
-  - .github/workflows/cpp_cuda.yml
-  - icicle/CMakeLists.txt
+  - .github/workflows/cpp_cuda.yml  
   - icicle/cmake/Common.cmake
   - icicle/cmake/CurvesCommon.cmake
   - icicle/cmake/FieldsCommon.cmake
