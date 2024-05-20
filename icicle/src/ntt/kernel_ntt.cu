@@ -927,9 +927,10 @@ namespace mxntt {
   {
     CHK_INIT_IF_RETURN();
 
+    const uint64_t total_nof_elements = uint64_t(ntt_size) * batch_size;
     const uint64_t logn = uint64_t(log2(ntt_size));
-    const uint64_t NOF_BLOCKS_64b = (uint64_t(ntt_size) * batch_size + 64 - 1) / 64;
-    const uint32_t NOF_THREADS = min(64UL, uint64_t(ntt_size) * batch_size);
+    const uint64_t NOF_BLOCKS_64b = (total_nof_elements + 64 - 1) / 64;
+    const uint32_t NOF_THREADS = total_nof_elements < 64 ? total_nof_elements : 64;
     // CUDA grid is 32b fields. Assert that I don't need a larger grid.
     const uint32_t NOF_BLOCKS = NOF_BLOCKS_64b;
     if (NOF_BLOCKS != NOF_BLOCKS_64b) {
