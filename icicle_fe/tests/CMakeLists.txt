@@ -15,7 +15,7 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(test_device_api test_device_api.cpp)
 target_include_directories(test_device_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
-target_link_libraries(test_device_api GTest::gtest_main)
+target_link_libraries(test_device_api GTest::gtest_main icicle_device icicle_cpu_backend)
 
 enable_testing()
 gtest_discover_tests(test_device_api)

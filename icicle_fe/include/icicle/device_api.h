@@ -1,20 +1,25 @@
 #pragma once
 
-#include "device.h"
-#include "errors.h"
+#include <stdexcept>
+#include <string>
+#include <memory>
+
+#include "icicle/device.h"
+#include "icicle/errors.h"
 
 namespace icicle {
 
-/**
- * @brief Typedef for an abstract stream used for asynchronous operations.
- */
-typedef void* IcicleStream;
+  /**
+   * @brief Typedef for an abstract stream used for asynchronous operations.
+   */
+  typedef void* IcicleStream;
 
-/**
- * @brief Abstract class representing the API for device operations.
- */
-class DeviceAPI {
-public:
+  /**
+   * @brief Abstract class representing the API for device operations.
+   */
+  class DeviceAPI
+  {
+  public:
     /**
      * @brief Virtual destructor for DeviceAPI.
      */
@@ -24,7 +29,7 @@ public:
 
     /**
      * @brief Allocates memory on the specified device.
-     * 
+     *
      * @param device The device on which to allocate memory.
      * @param ptr Pointer to the allocated memory.
      * @param size Size of the memory to allocate.
@@ -34,7 +39,7 @@ public:
 
     /**
      * @brief Asynchronously allocates memory on the specified device.
-     * 
+     *
      * @param device The device on which to allocate memory.
      * @param ptr Pointer to the allocated memory.
      * @param size Size of the memory to allocate.
@@ -45,7 +50,7 @@ public:
 
     /**
      * @brief Frees memory on the specified device.
-     * 
+     *
      * @param device The device on which to free memory.
      * @param ptr Pointer to the memory to free.
      * @return IcicleError Status of the memory deallocation.
@@ -54,7 +59,7 @@ public:
 
     /**
      * @brief Asynchronously frees memory on the specified device.
-     * 
+     *
      * @param device The device on which to free memory.
      * @param ptr Pointer to the memory to free.
      * @param stream Stream to use for the asynchronous operation.
@@ -64,7 +69,7 @@ public:
 
     /**
      * @brief Gets the total and available memory on the specified device.
-     * 
+     *
      * @param device The device to query.
      * @param total Total memory available on the device (output parameter).
      * @param free Available memory on the device (output parameter).
@@ -76,7 +81,7 @@ public:
 
     /**
      * @brief Copies data from the device to the host.
-     * 
+     *
      * @param device The device to copy data from.
      * @param dst Destination pointer on the host.
      * @param src Source pointer on the device.
@@ -87,7 +92,7 @@ public:
 
     /**
      * @brief Asynchronously copies data from the device to the host.
-     * 
+     *
      * @param device The device to copy data from.
      * @param dst Destination pointer on the host.
      * @param src Source pointer on the device.
@@ -95,11 +100,12 @@ public:
      * @param stream Stream to use for the asynchronous operation.
      * @return IcicleError Status of the data copy.
      */
-    virtual IcicleError copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) = 0;
+    virtual IcicleError
+    copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) = 0;
 
     /**
      * @brief Copies data from the host to the device.
-     * 
+     *
      * @param device The device to copy data to.
      * @param dst Destination pointer on the device.
      * @param src Source pointer on the host.
@@ -110,7 +116,7 @@ public:
 
     /**
      * @brief Asynchronously copies data from the host to the device.
-     * 
+     *
      * @param device The device to copy data to.
      * @param dst Destination pointer on the device.
      * @param src Source pointer on the host.
@@ -118,13 +124,14 @@ public:
      * @param stream Stream to use for the asynchronous operation.
      * @return IcicleError Status of the data copy.
      */
-    virtual IcicleError copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) = 0;
+    virtual IcicleError
+    copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) = 0;
 
     // Synchronization
 
     /**
      * @brief Synchronizes the specified device or stream.
-     * 
+     *
      * @param device The device to synchronize.
      * @param stream The stream to synchronize (nullptr for device synchronization).
      * @return IcicleError Status of the synchronization.
@@ -135,7 +142,7 @@ public:
 
     /**
      * @brief Creates a stream on the specified device.
-     * 
+     *
      * @param device The device to create the stream on.
      * @param stream Pointer to the created stream.
      * @return IcicleError Status of the stream creation.
@@ -144,20 +151,31 @@ public:
 
     /**
      * @brief Destroys a stream on the specified device.
-     * 
+     *
      * @param device The device to destroy the stream on.
      * @param stream The stream to destroy.
      * @return IcicleError Status of the stream destruction.
      */
     virtual IcicleError destroyStream(const Device& device, IcicleStream* stream) = 0;
-};
+  };
 
-/**
- * @brief Factory function to create a DeviceAPI instance based on the device.
- * 
- * @param device The device to create the DeviceAPI instance for.
- * @return DeviceAPI* Pointer to the created DeviceAPI instance.
- */
-extern "C" DeviceAPI* getDeviceAPI(const Device* device);
+  /**
+   * @brief Factory function to create a DeviceAPI instance based on the device.
+   *
+   * @param device The device to create the DeviceAPI instance for.
+   * @return DeviceAPI* Pointer to the created DeviceAPI instance.
+   */
+  extern "C" DeviceAPI* getDeviceAPI(const Device* device);
+
+  extern "C" void registerDeviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
+
+#define REGISTER_DEVICE_API(DEVICE_TYPE, API_CLASS)                                                                    \
+  namespace {                                                                                                          \
+    static bool _reg_device_##API_CLASS = []() -> bool {                                                               \
+      std::shared_ptr<DeviceAPI> apiInstance = std::make_shared<API_CLASS>();                                          \
+      registerDeviceAPI(DEVICE_TYPE, apiInstance);                                                                     \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
 
 } // namespace icicle

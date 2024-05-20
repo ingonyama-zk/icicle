@@ -17,11 +17,12 @@ public:
   void TearDown() override {}
 };
 
-TEST_F(IcicleTest, deviceAPI) { 
-  std::cout << "deviceAPI test" << std::endl; 
+TEST_F(IcicleTest, deviceAPI)
+{
+  std::cout << "deviceAPI test" << std::endl;
   icicle::Device dev = {"CPU", 0};
-  // getDeviceAPI(&dev);
-  }
+  auto cpu_device_api = getDeviceAPI(&dev);
+}
 
 int main(int argc, char** argv)
 {
