@@ -47,7 +47,7 @@ namespace icicle {
      * @return IcicleError Status of the memory allocation.
      */
     virtual IcicleError
-    allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle* stream) = 0;
+    allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle stream) = 0;
 
     /**
      * @brief Frees memory on the specified device.
@@ -66,7 +66,7 @@ namespace icicle {
      * @param stream Stream to use for the asynchronous operation.
      * @return IcicleError Status of the memory deallocation.
      */
-    virtual IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle* stream) = 0;
+    virtual IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle stream) = 0;
 
     /**
      * @brief Gets the total and available memory on the specified device.
@@ -102,7 +102,7 @@ namespace icicle {
      * @return IcicleError Status of the data copy.
      */
     virtual IcicleError
-    copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) = 0;
+    copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) = 0;
 
     /**
      * @brief Copies data from the host to the device.
@@ -126,7 +126,7 @@ namespace icicle {
      * @return IcicleError Status of the data copy.
      */
     virtual IcicleError
-    copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) = 0;
+    copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) = 0;
 
     // Synchronization
 
@@ -137,7 +137,7 @@ namespace icicle {
      * @param stream The stream to synchronize (nullptr for device synchronization).
      * @return IcicleError Status of the synchronization.
      */
-    virtual IcicleError synchronize(const Device& device, IcicleStreamHandle* stream = nullptr) = 0;
+    virtual IcicleError synchronize(const Device& device, IcicleStreamHandle stream = nullptr) = 0;
 
     // Stream management
 
@@ -148,7 +148,7 @@ namespace icicle {
      * @param stream Pointer to the created stream.
      * @return IcicleError Status of the stream creation.
      */
-    virtual IcicleError createStream(const Device& device, IcicleStreamHandle** stream) = 0;
+    virtual IcicleError createStream(const Device& device, IcicleStreamHandle* stream) = 0;
 
     /**
      * @brief Destroys a stream on the specified device.
@@ -157,18 +157,34 @@ namespace icicle {
      * @param stream The stream to destroy.
      * @return IcicleError Status of the stream destruction.
      */
-    virtual IcicleError destroyStream(const Device& device, IcicleStreamHandle* stream) = 0;
+    virtual IcicleError destroyStream(const Device& device, IcicleStreamHandle stream) = 0;
   };
 
+    /**
+   * @brief Retrieve a DeviceAPI instance based on the device.
+   *
+   * @param deviceType The device type to register the DeviceAPI for.
+   * @param api An instance of the derived api type to be used as deviceAPI interface.
+   */
+  extern "C" void registerDeviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
+
   /**
-   * @brief Factory function to create a DeviceAPI instance based on the device.
+   * @brief Register DeviceAPI instance for a device type.
    *
    * @param device The device to create the DeviceAPI instance for.
    * @return DeviceAPI* Pointer to the created DeviceAPI instance.
    */
   extern "C" DeviceAPI* getDeviceAPI(const Device* device);
 
-  extern "C" void registerDeviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
+
+/**
+ * Device API registration macro.
+ * Usage: 
+ * (1) implement the interface:
+ *   Class MyDeviceAPI : public icicle::DeviceAPI {...}
+ * (1) register:
+ *  REGISTER_DEVICE_API("MyDevice", MyDeviceAPI);
+ */
 
 #define REGISTER_DEVICE_API(DEVICE_TYPE, API_CLASS)                                                                    \
   namespace {                                                                                                          \

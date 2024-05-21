@@ -16,6 +16,7 @@ enum class IcicleError {
     SYNCHRONIZATION_FAILED,     ///< Device synchronization failed
     STREAM_CREATION_FAILED,     ///< Stream creation failed
     STREAM_DESTRUCTION_FAILED,  ///< Stream destruction failed
+    API_NOT_IMPLEMENTED,        ///< The API is not implemented for a device
     UNKNOWN_ERROR               ///< An unknown error occurred
 };
 
