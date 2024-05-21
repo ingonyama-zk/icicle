@@ -27,4 +27,16 @@ enum class IcicleError {
  */
 const char* getErrorString(IcicleError error);
 
+#define ICICLE_CHECK(api_call)                                    \
+do {                                                              \
+  using namespace icicle;                                         \
+  IcicleError rv = (api_call);                                    \
+  if (rv != IcicleError::SUCCESS) {                               \
+    throw std::runtime_error("Icicle API failes with code " +     \
+    std::string(getErrorString(rv)) +                             \
+    " in " + __FILE__ + ":" + std::to_string(__LINE__));          \
+  }                                                               \
+} while(0) 
+
+
 } // namespace icicle

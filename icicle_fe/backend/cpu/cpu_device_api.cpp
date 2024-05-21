@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <cstring>
 #include "icicle/device_api.h"
 #include "icicle/errors.h"
 
@@ -11,78 +12,77 @@ public:
   // Memory management
   IcicleError allocateMemory(const Device& device, void** ptr, size_t size) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    *ptr = malloc(size);
+    return (*ptr == nullptr) ? IcicleError::ALLOCATION_FAILED : IcicleError::SUCCESS;
   }
 
-  IcicleError allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStream* stream) override
+  IcicleError allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle* stream) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    return CPUDeviceAPI::allocateMemory(device, ptr, size);
   }
 
   IcicleError freeMemory(const Device& device, void* ptr) override
   {
-    std::cout << "CPU" << std::endl;
+    free(ptr);
     return IcicleError::SUCCESS;
   }
 
-  IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStream* stream) override
+  IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle* stream) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    return CPUDeviceAPI::freeMemory(device, ptr);
   }
+
   IcicleError getAvailableMemory(const Device& device, size_t& total /*OUT*/, size_t& free /*OUT*/) override
+  {    
+    return IcicleError::UNKNOWN_ERROR;
+  }
+
+  IcicleError memCopy(void* dst, const void* src, size_t size)
   {
-    std::cout << "CPU" << std::endl;
+    std::memcpy(dst, src, size);
     return IcicleError::SUCCESS;
   }
 
   // Data transfer
   IcicleError copyToHost(const Device& device, void* dst, const void* src, size_t size) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    return memCopy(dst, src, size);
   }
+
   IcicleError
-  copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) override
+  copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    return memCopy(dst, src, size);
   }
 
   IcicleError copyToDevice(const Device& device, void* dst, const void* src, size_t size) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    return memCopy(dst, src, size);
   }
 
   IcicleError
-  copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) override
+  copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    return memCopy(dst, src, size);
   }
 
   // Synchronization
-  IcicleError synchronize(const Device& device, IcicleStream* stream = nullptr) override
+  IcicleError synchronize(const Device& device, IcicleStreamHandle* stream = nullptr) override
   {
-    std::cout << "CPU" << std::endl;
     return IcicleError::SUCCESS;
   }
 
   // Stream management
-  IcicleError createStream(const Device& device, IcicleStream** stream) override
+  IcicleError createStream(const Device& device, IcicleStreamHandle** stream) override
   {
-    std::cout << "CPU" << std::endl;
+    *stream = nullptr; // no streams for CPU
     return IcicleError::SUCCESS;
   }
 
-  IcicleError destroyStream(const Device& device, IcicleStream* stream) override
+  IcicleError destroyStream(const Device& device, IcicleStreamHandle* stream) override
   {
-    std::cout << "CPU" << std::endl;
-    return IcicleError::SUCCESS;
+    return (nullptr == stream) ? IcicleError::SUCCESS : IcicleError::STREAM_DESTRUCTION_FAILED;
   }
 };
 
-REGISTER_DEVICE_API("CPU", CPUDeviceAPI);
+REGISTER_DEVICE_API({"CPU"}, CPUDeviceAPI);

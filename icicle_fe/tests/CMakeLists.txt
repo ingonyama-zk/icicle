@@ -15,7 +15,9 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(test_device_api test_device_api.cpp)
 target_include_directories(test_device_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
-target_link_libraries(test_device_api GTest::gtest_main icicle_device icicle_cpu_backend)
+target_link_libraries(test_device_api PUBLIC GTest::gtest_main icicle_device)
+# force loading the backend even when no symbols used. TODO Yuval: this is not compatible with windows
+target_link_libraries(test_device_api PRIVATE -Wl,--whole-archive icicle_cpu_backend -Wl,--no-whole-archive)
 
 enable_testing()
 gtest_discover_tests(test_device_api)
