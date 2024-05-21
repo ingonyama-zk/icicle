@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <string>
 #include <memory>
+#include <list>
 
 #include "icicle/device.h"
 #include "icicle/errors.h"
@@ -160,7 +161,7 @@ namespace icicle {
     virtual IcicleError destroyStream(const Device& device, IcicleStreamHandle stream) = 0;
   };
 
-    /**
+  /**
    * @brief Retrieve a DeviceAPI instance based on the device.
    *
    * @param deviceType The device type to register the DeviceAPI for.
@@ -175,6 +176,13 @@ namespace icicle {
    * @return DeviceAPI* Pointer to the created DeviceAPI instance.
    */
   extern "C" DeviceAPI* getDeviceAPI(const Device* device);
+
+  /**
+   * @brief Retrieve a list of registered device types.
+   *
+   * @return A list of registered device types.
+   */
+  extern "C" std::list<std::string> getRegisteredDevices();
 
 
 /**

@@ -86,4 +86,4 @@ public:
   }
 };
 
-REGISTER_DEVICE_API({"CPU"}, CPUDeviceAPI);
+REGISTER_DEVICE_API("CPU", CPUDeviceAPI);

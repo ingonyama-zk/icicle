@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_CPU_BE "Build CPU backend" ON) # TODO Yuval remove from here once seperating the backends from frontend
+option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once seperating the backends from frontend
 
 add_library(icicle_device STATIC 
 src/device_api.cpp 
@@ -21,6 +22,10 @@ include_directories(include)
 
 if (BUILD_CPU_BE) 
   add_subdirectory(backend/cpu)
+endif()
+
+if (BUILD_CUDA_BE) 
+  add_subdirectory(backend/cuda)
 endif()
 
 if (BUILD_TESTS)
