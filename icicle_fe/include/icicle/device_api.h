@@ -12,7 +12,7 @@ namespace icicle {
   /**
    * @brief Typedef for an abstract stream used for asynchronous operations.
    */
-  typedef void* IcicleStream;
+  typedef void* IcicleStreamHandle;
 
   /**
    * @brief Abstract class representing the API for device operations.
@@ -46,7 +46,8 @@ namespace icicle {
      * @param stream Stream to use for the asynchronous operation.
      * @return IcicleError Status of the memory allocation.
      */
-    virtual IcicleError allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStream* stream) = 0;
+    virtual IcicleError
+    allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle* stream) = 0;
 
     /**
      * @brief Frees memory on the specified device.
@@ -65,7 +66,7 @@ namespace icicle {
      * @param stream Stream to use for the asynchronous operation.
      * @return IcicleError Status of the memory deallocation.
      */
-    virtual IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStream* stream) = 0;
+    virtual IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle* stream) = 0;
 
     /**
      * @brief Gets the total and available memory on the specified device.
@@ -101,7 +102,7 @@ namespace icicle {
      * @return IcicleError Status of the data copy.
      */
     virtual IcicleError
-    copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) = 0;
+    copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) = 0;
 
     /**
      * @brief Copies data from the host to the device.
@@ -125,7 +126,7 @@ namespace icicle {
      * @return IcicleError Status of the data copy.
      */
     virtual IcicleError
-    copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStream* stream) = 0;
+    copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) = 0;
 
     // Synchronization
 
@@ -136,7 +137,7 @@ namespace icicle {
      * @param stream The stream to synchronize (nullptr for device synchronization).
      * @return IcicleError Status of the synchronization.
      */
-    virtual IcicleError synchronize(const Device& device, IcicleStream* stream = nullptr) = 0;
+    virtual IcicleError synchronize(const Device& device, IcicleStreamHandle* stream = nullptr) = 0;
 
     // Stream management
 
@@ -147,7 +148,7 @@ namespace icicle {
      * @param stream Pointer to the created stream.
      * @return IcicleError Status of the stream creation.
      */
-    virtual IcicleError createStream(const Device& device, IcicleStream** stream) = 0;
+    virtual IcicleError createStream(const Device& device, IcicleStreamHandle** stream) = 0;
 
     /**
      * @brief Destroys a stream on the specified device.
@@ -156,7 +157,7 @@ namespace icicle {
      * @param stream The stream to destroy.
      * @return IcicleError Status of the stream destruction.
      */
-    virtual IcicleError destroyStream(const Device& device, IcicleStream* stream) = 0;
+    virtual IcicleError destroyStream(const Device& device, IcicleStreamHandle* stream) = 0;
   };
 
   /**
