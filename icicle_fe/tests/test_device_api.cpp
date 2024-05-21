@@ -43,6 +43,7 @@ TEST_F(DeviceApiTest, MemoryCopySync)
     ICICLE_CHECK(device_api->allocateMemory(dev, &dev_mem, sizeof(input)));
     ICICLE_CHECK(device_api->copyToDevice(dev, dev_mem, input, sizeof(input)));
     ICICLE_CHECK(device_api->copyToHost(dev, output, dev_mem, sizeof(input)));
+    ICICLE_CHECK(device_api->freeMemory(dev, dev_mem));
 
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
   }
@@ -63,6 +64,7 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
     ICICLE_CHECK(device_api->allocateMemoryAsync(dev, &dev_mem, sizeof(input), stream));
     ICICLE_CHECK(device_api->copyToDeviceAsync(dev, dev_mem, input, sizeof(input), stream));
     ICICLE_CHECK(device_api->copyToHostAsync(dev, output, dev_mem, sizeof(input), stream));
+    ICICLE_CHECK(device_api->freeMemoryAsync(dev, dev_mem, stream));
     ICICLE_CHECK(device_api->synchronize(dev, stream));
 
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
@@ -81,12 +83,21 @@ TEST_F(DeviceApiTest, ApiError) {
 TEST_F(DeviceApiTest, AvailableMemory) {
   icicle::Device dev = {"CUDA", 0}; // TODO Yuval: implement for CPU too
   auto device_api = getDeviceAPI(&dev);
-  size_t total, free;  
+  size_t total, free;
   ASSERT_EQ(IcicleError::SUCCESS, device_api->getAvailableMemory(dev, total, free));
 
   double total_GB = double(total) / (1<<30);
   double free_GB = double(free) / (1<<30);
   std::cout << std::fixed << std::setprecision(2) << "total=" << total_GB << "[GB], free=" << free_GB << "[GB]" << std::endl;
+}
+
+TEST_F(DeviceApiTest, InvalidDevice) {
+  for (const auto& device_type : s_regsitered_devices) {
+    icicle::Device dev = {device_type.c_str(), 10}; // no such device-id thus expecting an error
+    auto device_api = getDeviceAPI(&dev);
+    void* dev_mem = nullptr;
+    ASSERT_EQ(IcicleError::INVALID_DEVICE, device_api->allocateMemory(dev, &dev_mem, 128));    
+  }
 }
 
 int main(int argc, char** argv)
