@@ -16,7 +16,7 @@ public:
     return (*ptr == nullptr) ? IcicleError::ALLOCATION_FAILED : IcicleError::SUCCESS;
   }
 
-  IcicleError allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle* stream) override
+  IcicleError allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle stream) override
   {
     return CPUDeviceAPI::allocateMemory(device, ptr, size);
   }
@@ -27,14 +27,15 @@ public:
     return IcicleError::SUCCESS;
   }
 
-  IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle* stream) override
+  IcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle stream) override
   {
     return CPUDeviceAPI::freeMemory(device, ptr);
   }
 
   IcicleError getAvailableMemory(const Device& device, size_t& total /*OUT*/, size_t& free /*OUT*/) override
   {    
-    return IcicleError::UNKNOWN_ERROR;
+    // TODO Yuval: implement this
+    return IcicleError::API_NOT_IMPLEMENTED;
   }
 
   IcicleError memCopy(void* dst, const void* src, size_t size)
@@ -50,7 +51,7 @@ public:
   }
 
   IcicleError
-  copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) override
+  copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) override
   {
     return memCopy(dst, src, size);
   }
@@ -61,25 +62,25 @@ public:
   }
 
   IcicleError
-  copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle* stream) override
+  copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) override
   {
     return memCopy(dst, src, size);
   }
 
   // Synchronization
-  IcicleError synchronize(const Device& device, IcicleStreamHandle* stream = nullptr) override
+  IcicleError synchronize(const Device& device, IcicleStreamHandle stream = nullptr) override
   {
     return IcicleError::SUCCESS;
   }
 
   // Stream management
-  IcicleError createStream(const Device& device, IcicleStreamHandle** stream) override
+  IcicleError createStream(const Device& device, IcicleStreamHandle* stream) override
   {
     *stream = nullptr; // no streams for CPU
     return IcicleError::SUCCESS;
   }
 
-  IcicleError destroyStream(const Device& device, IcicleStreamHandle* stream) override
+  IcicleError destroyStream(const Device& device, IcicleStreamHandle stream) override
   {
     return (nullptr == stream) ? IcicleError::SUCCESS : IcicleError::STREAM_DESTRUCTION_FAILED;
   }

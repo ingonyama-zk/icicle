@@ -11,28 +11,30 @@ namespace icicle {
 const char* getErrorString(IcicleError error) {
     switch (error) {
         case IcicleError::SUCCESS:
-            return "Success";
+            return "IcicleError::SUCCESS";
         case IcicleError::INVALID_DEVICE:
-            return "Invalid device";
+            return "IcicleError::INVALID_DEVICE";
         case IcicleError::OUT_OF_MEMORY:
-            return "Out of memory";
+            return "IcicleError::OUT_OF_MEMORY";
         case IcicleError::INVALID_POINTER:
-            return "Invalid pointer";
+            return "IcicleError::INVALID_POINTER";
         case IcicleError::ALLOCATION_FAILED:
-            return "Memory allocation failed";
+            return "IcicleError::ALLOCATION_FAILED";
         case IcicleError::DEALLOCATION_FAILED:
-            return "Memory deallocation failed";
+            return "IcicleError::DEALLOCATION_FAILED";
         case IcicleError::COPY_FAILED:
-            return "Data copy failed";
+            return "IcicleError::COPY_FAILED";
         case IcicleError::SYNCHRONIZATION_FAILED:
-            return "Synchronization failed";
+            return "IcicleError::SYNCHRONIZATION_FAILED";
         case IcicleError::STREAM_CREATION_FAILED:
-            return "Stream creation failed";
+            return "IcicleError::STREAM_CREATION_FAILED";
         case IcicleError::STREAM_DESTRUCTION_FAILED:
-            return "Stream destruction failed";
+            return "IcicleError::STREAM_DESTRUCTION_FAILED";
+        case IcicleError::API_NOT_IMPLEMENTED:
+            return "IcicleError::API_NOT_IMPLEMENTED";
         case IcicleError::UNKNOWN_ERROR:
         default:
-            return "Unknown error";
+            return "IcicleError::UNKNOWN_ERROR";
     }
 }
 
