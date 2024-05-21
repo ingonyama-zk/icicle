@@ -8,5 +8,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # TODO Yuval: handle incdir when backend is seperated from frontend
 # TODO Yuval: dll?
-add_library(icicle_cpu_backend STATIC cpu_device_api.cpp)
-target_link_libraries(icicle_cpu_backend PUBLIC icicle_device)
+add_library(icicle_cpu_device STATIC cpu_device_api.cpp)
+target_link_libraries(icicle_cpu_device PUBLIC icicle_device)
