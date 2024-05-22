@@ -3,9 +3,12 @@
 #include "icicle/errors.h"
 #include "icicle/device.h"
 
+#include "fields/field_config.h"
+
+using namespace field_config;
 using namespace icicle;
 
-IcicleError CpuVectorAdd(const Device& device, const int* vec_a, const int* vec_b, int n, int* output)
+IcicleError CpuVectorAdd(const Device& device, const scalar_t* vec_a, const scalar_t* vec_b, int n, scalar_t* output)
 {
   for (int i = 0; i < n; ++i) {
     output[i] = vec_a[i] + vec_b[i];
