@@ -13,12 +13,21 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# device API test
 add_executable(test_device_api test_device_api.cpp)
 target_include_directories(test_device_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
 target_link_libraries(test_device_api PUBLIC GTest::gtest_main icicle_device)
 # force loading the backend even when no symbols used. TODO Yuval: this is not compatible with windows
 target_link_libraries(test_device_api PRIVATE -Wl,--whole-archive icicle_cpu_device -Wl,--no-whole-archive)
 target_link_libraries(test_device_api PRIVATE -Wl,--whole-archive icicle_cuda_device -Wl,--no-whole-archive)
+
+#field API test
+add_executable(test_field_api test_field_api.cpp)
+target_include_directories(test_field_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
+target_link_libraries(test_field_api PUBLIC GTest::gtest_main icicle_device icicle_field)
+# force loading the backend even when no symbols used. TODO Yuval: this is not compatible with windows
+target_link_libraries(test_field_api PRIVATE -Wl,--whole-archive icicle_cpu_device icicle_cpu_field -Wl,--no-whole-archive)
+# target_link_libraries(test_device_api PRIVATE -Wl,--whole-archive icicle_cuda_device -Wl,--no-whole-archive)
 
 enable_testing()
 gtest_discover_tests(test_device_api)
