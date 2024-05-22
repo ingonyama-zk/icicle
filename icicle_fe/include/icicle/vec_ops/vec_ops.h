@@ -6,8 +6,13 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "icicle/errors.h"
-#include "icicle/device.h"
+#include "errors.h"
+#include "device.h"
+
+#include "fields/field.h"
+#include "fields/field_config.h"
+
+using namespace field_config;
 
 namespace icicle {
 
@@ -18,11 +23,12 @@ namespace icicle {
 
   // Declaration of the vector addition function for integer vectors
   // This function performs element-wise addition of two integer vectors on a specified device
-  extern "C" IcicleError VectorAdd(const Device& device, const int* vec_a, const int* vec_b, int n, int* output);
+  extern "C" IcicleError
+  VectorAdd(const Device& device, const scalar_t* vec_a, const scalar_t* vec_b, int n, scalar_t* output);
 
   // Function to register a vector addition implementation for a specific device type
   // This allows the system to use the appropriate implementation based on the device type
-  extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<int> impl);
+  extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<scalar_t> impl);
 
 // Macro to simplify the registration of a vector addition implementation for a device type
 // Usage: REGISTER_VECTOR_ADD_BACKEND("device_type", implementation_function)

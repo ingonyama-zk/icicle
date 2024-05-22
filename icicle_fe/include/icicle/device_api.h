@@ -5,8 +5,8 @@
 #include <memory>
 #include <list>
 
-#include "icicle/device.h"
-#include "icicle/errors.h"
+#include "device.h"
+#include "errors.h"
 
 namespace icicle {
 
