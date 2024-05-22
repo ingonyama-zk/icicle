@@ -1,4 +1,4 @@
-#include "icicle/vec_ops/vec_ops.h"
+#include "vec_ops/vec_ops.h"
 
 using namespace icicle;
 
@@ -27,13 +27,14 @@ public:
   }
 };
 
-extern "C" IcicleError VectorAdd(const Device& device, const int* vec_a, const int* vec_b, int n, int* output)
+extern "C" IcicleError
+VectorAdd(const Device& device, const scalar_t* vec_a, const scalar_t* vec_b, int n, scalar_t* output)
 {
-  return VectorAddDispatcher<int>::executeVectorAdd(device, vec_a, vec_b, n, output);
+  return VectorAddDispatcher<scalar_t>::executeVectorAdd(device, vec_a, vec_b, n, output);
 }
 
-extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<int> impl)
+extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<scalar_t> impl)
 {
   std::cout << "vectorAdd registered for " << deviceType << std::endl;
-  VectorAddDispatcher<int>::registerVectorAdd(deviceType, impl);
+  VectorAddDispatcher<scalar_t>::registerVectorAdd(deviceType, impl);
 }
