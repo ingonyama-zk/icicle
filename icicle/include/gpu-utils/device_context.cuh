@@ -31,8 +31,8 @@ namespace device_context {
     };
   }
 
-  // checking whether a pointer is on host or device and asserts devic matches provided device
-  bool is_host_ptr(const void* p, int device_id=0)
+  // checking whether a pointer is on host or device and asserts device matches provided device
+  static bool is_host_ptr(const void* p, int device_id = 0)
   {
     cudaPointerAttributes attributes;
     CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
@@ -45,7 +45,8 @@ namespace device_context {
     return is_on_host;
   }
 
-  int get_cuda_device(const void* p) {
+  static int get_cuda_device(const void* p)
+  {
     cudaPointerAttributes attributes;
     CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
     const bool is_on_host = attributes.type == cudaMemoryTypeHost ||

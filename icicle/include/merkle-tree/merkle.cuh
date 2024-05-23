@@ -27,6 +27,7 @@ namespace merkle_tree {
    */
   struct TreeBuilderConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
+    int arity;
     int keep_rows; /**< How many rows of the Merkle tree rows should be written to output. '0' means all of them */
     bool are_inputs_on_device; /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool is_async; /**< Whether to run the tree builder asynchronously. If set to `true`, the build_merkle_tree
@@ -39,7 +40,8 @@ namespace merkle_tree {
   default_merkle_config(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
   {
     TreeBuilderConfig config = {
-      ctx,   // ctx
+      ctx, // ctx
+      2,
       0,     // keep_rows
       false, // are_inputes_on_device
       false, // is_async
@@ -60,13 +62,16 @@ namespace merkle_tree {
    * Each subtree is build in it's own stream (there is a maximum number of streams)
    * After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
    */
-  template <typename T, int ARITY>
+  template <typename Leaf, typename Digest>
   cudaError_t build_merkle_tree(
-    const T* leaves_digests,
-    T* digests,
+    const Leaf* leaves,
+    Digest* digests,
     uint32_t height,
-    const CompressionHasher<T, ARITY, 1>& compression,
+    uint32_t arity,
+    const SpongeHasher<Leaf, Digest>& sponge,
+    const CompressionHasher<Digest>& compression,
+    const SpongeConfig& sponge_config,
     const TreeBuilderConfig& config);
-} // namespace merkle
+} // namespace merkle_tree
 
 #endif

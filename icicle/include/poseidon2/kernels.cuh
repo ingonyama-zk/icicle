@@ -223,21 +223,18 @@ namespace poseidon2 {
   /**
    * Squeeze states to extract the results.
    * 1 GPU thread operates on 1 state.
-   * 
+   *
    * @param states the states to squeeze
    * @param number_of_states number of states to squeeze
    * @param rate Squeeze rate. How many elements to extract from each state
    * @param offset Squeeze offset. Start squeezing from Oth element of the state
    * @param out pointer for squeeze results. Can be equal to states to do in-place squeeze
-   * 
+   *
    * @tparam S Type of the state element
    * @tparam T Width of the state
    */
-  template <typename S, int T, int R, int O=0>
-  __global__ void squeeze_states_kernel(
-    const S* states,
-    unsigned int number_of_states,
-    S* out)
+  template <typename S, int T, int R, int O>
+  __global__ void squeeze_states_kernel(const S* states, unsigned int number_of_states, S* out)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }

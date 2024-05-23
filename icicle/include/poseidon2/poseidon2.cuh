@@ -9,12 +9,16 @@
 #include "utils/utils.h"
 #include "hash/hash.cuh"
 
+#include "constants.cuh"
+#include "kernels.cuh"
+
 /**
  * @namespace poseidon2
  * Implementation of the [Poseidon2 hash function](https://eprint.iacr.org/2019/458.pdf)
  * Specifically, the optimized [Filecoin version](https://spec.filecoin.io/algorithms/crypto/poseidon/)
  */
 namespace poseidon2 {
+
   /**
    * For most of the Poseidon2 configurations this is the case
    */
@@ -48,36 +52,18 @@ namespace poseidon2 {
   };
 
   template <typename S>
-  cudaError_t create_poseidon2_constants(
-    int width,
-    int alpha,
-    int internal_rounds,
-    int external_rounds,
-    const S* round_constants,
-    const S* internal_matrix_diag,
-    MdsType mds_type,
-    DiffusionStrategy diffusion,
-    device_context::DeviceContext& ctx,
-    Poseidon2Constants<S>* poseidon_constants);
-
-  /**
-   * Loads pre-calculated optimized constants, moves them to the device
-   */
-  template <typename S>
-  cudaError_t init_poseidon2_constants(
-    int width,
-    MdsType mds_type,
-    DiffusionStrategy diffusion,
-    device_context::DeviceContext& ctx,
-    Poseidon2Constants<S>* constants);
-
-  template <typename S>
   cudaError_t release_poseidon2_constants(Poseidon2Constants<S>* constants, device_context::DeviceContext& ctx);
 
   template <typename S>
-  class Poseidon2 : public Permutation<S>,
-                    public CompressionHasher<S>
+  class Poseidon2 : public Permutation<S>, public CompressionHasher<S>, public SpongeHasher<S, S>
   {
+    static const int POSEIDON_BLOCK_SIZE = 128;
+
+    static inline int poseidon_number_of_blocks(size_t number_of_states)
+    {
+      return number_of_states / POSEIDON_BLOCK_SIZE + static_cast<bool>(number_of_states % POSEIDON_BLOCK_SIZE);
+    }
+
     Poseidon2Constants<S> constants;
 
     cudaError_t squeeze_states(
@@ -86,38 +72,94 @@ namespace poseidon2 {
       unsigned int rate,
       S* output,
       device_context::DeviceContext& ctx,
-      unsigned int offset=0
-    );
+      unsigned int offset = 0) const override
+    {
+#define P2_SQUEEZE_T(width)                                                                                            \
+  case width:                                                                                                          \
+    squeeze_states_kernel<S, width, 1, 0>                                                                              \
+      <<<poseidon_number_of_blocks(number_of_states), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(                           \
+        states, number_of_states, output);                                                                             \
+    break;
+
+      switch (this->width) {
+        P2_SQUEEZE_T(2)
+        P2_SQUEEZE_T(3)
+        P2_SQUEEZE_T(4)
+        P2_SQUEEZE_T(8)
+        P2_SQUEEZE_T(12)
+        P2_SQUEEZE_T(16)
+        P2_SQUEEZE_T(20)
+        P2_SQUEEZE_T(24)
+      default:
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "PoseidonSqueeze: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
+      }
+      // Squeeze states to get results
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      return CHK_LAST();
+    }
 
     cudaError_t run_permutation_kernel(
-          const S* states,
-          S* output,
-          unsigned int number_of_states,
-          device_context::DeviceContext& ctx
-    );
+      const S* states, S* output, unsigned int number_of_states, device_context::DeviceContext& ctx) const override
+    {
+#define P2_PERM_T(width)                                                                                               \
+  case width:                                                                                                          \
+    poseidon2_permutation_kernel<S, width>                                                                             \
+      <<<poseidon_number_of_blocks(number_of_states), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(                           \
+        states, output, number_of_states, this->constants);                                                            \
+    break;
 
-  public: 
-    Poseidon2(Poseidon2& other) : constants(other.constants) {}
-    Poseidon2(Poseidon2Constants<S> constants) : constants(constants) {}
-    Poseidon2(int width, MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx);
-    ~Poseidon2();
+      switch (this->width) {
+        P2_PERM_T(2)
+        P2_PERM_T(3)
+        P2_PERM_T(4)
+        P2_PERM_T(8)
+        P2_PERM_T(12)
+        P2_PERM_T(16)
+        P2_PERM_T(20)
+        P2_PERM_T(24)
+      default:
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "PoseidonPermutation: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
+      }
 
-    cudaError_t permute_many(
-        const S* states,
-        S* output,
-        unsigned int number_of_states,
-        device_context::DeviceContext& ctx
-    ) override;
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      return CHK_LAST();
+    }
 
-    cudaError_t compress_many(
-        const S* states,
-        S* output,
-        unsigned int number_of_states,
-        unsigned int rate,
-        device_context::DeviceContext& ctx,
-        unsigned int offset=0,
-        S* perm_output=nullptr
-    ) override;
+  public:
+    Poseidon2(
+      unsigned int width,
+      unsigned int alpha,
+      unsigned int internal_rounds,
+      unsigned int external_rounds,
+      const S* round_constants,
+      const S* internal_matrix_diag,
+      MdsType mds_type,
+      DiffusionStrategy diffusion,
+      device_context::DeviceContext& ctx)
+    {
+      Poseidon2Constants<S> constants;
+      CHK_STICKY(create_poseidon2_constants(
+        width, alpha, internal_rounds, external_rounds, round_constants, internal_matrix_diag, mds_type, diffusion, ctx,
+        &constants));
+      this->constants = constants;
+      this->width = width;
+    }
+
+    Poseidon2(int width, MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx)
+    {
+      Poseidon2Constants<S> constants;
+      CHK_STICKY(init_poseidon2_constants(width, mds_type, diffusion, ctx, &constants));
+      this->constants = constants;
+      this->width = width;
+    }
+
+    ~Poseidon2()
+    {
+      auto ctx = device_context::get_default_device_context();
+      CHK_STICKY(release_poseidon2_constants<S>(&this->constants, ctx));
+    }
   };
 
 } // namespace poseidon2

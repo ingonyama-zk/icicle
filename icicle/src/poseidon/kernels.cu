@@ -155,6 +155,16 @@ namespace poseidon {
     }
   }
 
+  // These function is just doing copy from the states to the output
+  template <typename S, int T>
+  __global__ void get_hash_results(S* states, size_t number_of_states, S* out)
+  {
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= number_of_states) { return; }
+
+    out[idx] = states[idx * T + 1];
+  }
+
   template <typename S, int T>
   __global__ void copy_recursive(S* state, size_t number_of_states, S* out)
   {

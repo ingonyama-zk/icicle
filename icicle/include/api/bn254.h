@@ -73,10 +73,10 @@ extern "C" cudaError_t bn254_projective_convert_montgomery(
   bn254::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bn254_create_poseidon2_constants_cuda(
-  int width,
-  int alpha,
-  int internal_rounds,
-  int external_rounds,
+  unsigned int width,
+  unsigned int alpha,
+  unsigned int internal_rounds,
+  unsigned int external_rounds,
   const bn254::scalar_t* round_constants,
   const bn254::scalar_t* internal_matrix_diag,
   poseidon2::MdsType mds_type,
@@ -85,19 +85,30 @@ extern "C" cudaError_t bn254_create_poseidon2_constants_cuda(
   poseidon2::Poseidon2Constants<bn254::scalar_t>* poseidon_constants);
 
 extern "C" cudaError_t bn254_init_poseidon2_constants_cuda(
-  int width,
+  unsigned int width,
   poseidon2::MdsType mds_type,
   poseidon2::DiffusionStrategy diffusion,
   device_context::DeviceContext& ctx,
   poseidon2::Poseidon2Constants<bn254::scalar_t>* poseidon_constants);
 
-extern "C" cudaError_t bn254_poseidon2_hash_cuda(
-  const bn254::scalar_t* input,
+extern "C" cudaError_t bn254_poseidon2_permute_many_cuda(
+  const bn254::scalar_t* states,
   bn254::scalar_t* output,
-  int number_of_states,
-  int width,
-  const poseidon2::Poseidon2Constants<bn254::scalar_t>& constants,
-  poseidon2::Poseidon2Config& config);
+  unsigned int number_of_states,
+  const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
+  device_context::DeviceContext& ctx
+);
+
+extern "C" cudaError_t bn254_poseidon2_compress_many_cuda(
+  const bn254::scalar_t* states,
+  bn254::scalar_t* output,
+  unsigned int number_of_states,
+  unsigned int rate,
+  const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
+  device_context::DeviceContext& ctx,
+  unsigned int offset,
+  bn254::scalar_t* perm_output
+);
 
 extern "C" cudaError_t bn254_release_poseidon2_constants_cuda(
   poseidon2::Poseidon2Constants<bn254::scalar_t>* constants,

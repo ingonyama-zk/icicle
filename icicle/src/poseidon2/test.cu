@@ -1,6 +1,3 @@
-#include "curves/curve_config.cuh"
-using namespace curve_config;
-
 #include "gpu-utils/device_context.cuh"
 
 #ifndef __CUDA_ARCH__
@@ -12,7 +9,8 @@ using namespace curve_config;
 #include "poseidon2/poseidon2.cuh"
 using namespace poseidon2;
 
-#include "extern.cu"
+#include "api/bn254.h"
+using namespace bn254;
 
 #define T 3
 
@@ -28,7 +26,7 @@ int main(int argc, char* argv[])
   // Load poseidon
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  Poseidon2<scalar_t> poseidon = Poseidon2<scalar_t>(T, MdsType::DEFAULT_MDS, DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
+  Poseidon2<scalar_t> poseidon(T, MdsType::DEFAULT_MDS, DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   START_TIMER(allocation_timer);
@@ -42,7 +40,7 @@ int main(int argc, char* argv[])
   }
   END_TIMER(allocation_timer, "Allocate mem and fill input");
 
-  scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
+  scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * T * sizeof(scalar_t)));
 
   START_TIMER(poseidon_timer);
   bn254_poseidon2_permute_many_cuda(in_ptr, out_ptr, number_of_blocks, &poseidon, ctx);

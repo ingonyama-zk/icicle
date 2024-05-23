@@ -6,6 +6,8 @@
 #include "gpu-utils/device_context.cuh"
 #include "gpu-utils/error_handler.cuh"
 
+#include "kernels.cuh"
+
 namespace keccak {
   /**
    * @struct KeccakConfig
@@ -51,6 +53,44 @@ namespace keccak {
   template <int C, int D>
   cudaError_t
   keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config);
+
+  template <int C, int D>
+  class Keccak : public Permutation<uint_64_t>,
+                 public CompressionHasher<uint64_t>,
+                 public SpongeHasher<uint8_t, uint64_t>
+  {
+    const int KECCAK_BLOCK_SIZE = 512;
+
+    cudaError_t squeeze_states(
+      const S* states,
+      unsigned int number_of_states,
+      unsigned int rate,
+      S* output,
+      device_context::DeviceContext& ctx,
+      unsigned int offset = 0) const override
+    {
+      squeeze_states_kernel<S, width, 1, 0>
+        <<<poseidon_number_of_blocks(number_of_states), KECCAK_BLOCK_SIZE, 0, ctx.stream>>>(
+          states, number_of_states, output);
+
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      return CHK_LAST();
+    }
+
+    cudaError_t run_permutation_kernel(
+      const S* states, S* output, unsigned int number_of_states, device_context::DeviceContext& ctx) const override
+    {
+      keccak_permutation_kernel<C, D>
+        <<<poseidon_number_of_blocks(number_of_states), KECCAK_BLOCK_SIZE, 0, ctx.stream>>>(
+          states, output, number_of_states, this->constants);
+
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      return CHK_LAST();
+    }
+  };
+
+  using Keccak256 = Keccak<512, 256>;
+  using Keccak512 = Keccak<1024, 512>;
 } // namespace keccak
 
 #endif

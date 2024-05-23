@@ -50,7 +50,7 @@ namespace merkle {
   }
 
   /**
-   * DEPRECATED. This function is deprected and will be removed in future versions.
+   * DEPRECATED. This function is deprecated and will be removed in future versions.
    * Builds the Poseidon Merkle tree
    *
    * @param leaves a pointer to the leaves layer. May be allocated on device or on host, regulated by the config

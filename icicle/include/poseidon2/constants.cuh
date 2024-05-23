@@ -121,7 +121,6 @@ namespace poseidon2 {
   cudaError_t release_poseidon2_constants(Poseidon2Constants<S>* constants, device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
-    CHK_IF_RETURN(cudaFreeAsync(constants->round_constants, ctx.stream));
     CHK_IF_RETURN(cudaFreeAsync(constants->internal_matrix_diag, ctx.stream));
 
     constants->alpha = 0;
