@@ -46,12 +46,12 @@ namespace icicle {
 
   // Template alias for a function implementing vector addition for a specific device and type T
   template <typename T>
-  using VectorAddImpl = std::function<IcicleError(
+  using VectorAddImpl = std::function<eIcicleError(
     const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)>;
 
   // Declaration of the vector addition function for integer vectors
   // This function performs element-wise addition of two integer vectors on a specified device
-  extern "C" IcicleError VectorAdd(
+  extern "C" eIcicleError VectorAdd(
     const Device& device,
     const scalar_t* vec_a,
     const scalar_t* vec_b,

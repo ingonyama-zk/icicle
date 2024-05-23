@@ -27,7 +27,7 @@ target_include_directories(test_field_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
 target_link_libraries(test_field_api PUBLIC GTest::gtest_main icicle_device icicle_field)
 # force loading the backend even when no symbols used. TODO Yuval: this is not compatible with windows
 target_link_libraries(test_field_api PRIVATE -Wl,--whole-archive icicle_cpu_device icicle_cpu_field -Wl,--no-whole-archive)
-# target_link_libraries(test_device_api PRIVATE -Wl,--whole-archive icicle_cuda_device -Wl,--no-whole-archive)
+target_link_libraries(test_field_api PRIVATE -Wl,--whole-archive icicle_cuda_device icicle_cuda_field -Wl,--no-whole-archive)
 
 enable_testing()
 gtest_discover_tests(test_device_api)

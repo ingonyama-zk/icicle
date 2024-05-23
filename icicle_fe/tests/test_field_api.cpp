@@ -11,15 +11,24 @@
 using namespace field_config;
 using namespace icicle;
 
+using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
+#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
+#define END_TIMER(timer, msg, enable)                                                                                  \
+  if (enable)                                                                                                          \
+    printf(                                                                                                            \
+      "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
+
 class FieldApiTest : public ::testing::Test
 {
 public:
+  static inline bool VERBOSE = true;
   static inline std::list<std::string> s_regsitered_devices;
+
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
     s_regsitered_devices = getRegisteredDevices();
-    // ASSERT_EQ(s_regsitered_devices.size(), 2); // "CPU" and "CUDA"
+    ASSERT_EQ(s_regsitered_devices.size(), 2); // "CPU" and "CUDA"
   }
   static void TearDownTestSuite() {}
 
@@ -28,18 +37,86 @@ public:
   void TearDown() override {}
 };
 
-TEST_F(FieldApiTest, vectorAdd)
+TEST_F(FieldApiTest, vectorAddSync)
 {
-  Device dev = {"CPU", 0};
-  scalar_t in_a[2] = {1, 2};
-  scalar_t in_b[2] = {5, 7};
-  scalar_t out[2] = {0, 0};
+  const int N = 1 << 15;
+  auto in_a = std::make_unique<scalar_t[]>(N);
+  auto in_b = std::make_unique<scalar_t[]>(N);
+  scalar_t::rand_host_many(in_a.get(), N);
+  scalar_t::rand_host_many(in_b.get(), N);
 
-  auto config = DefaultVecOpsConfig();
-  VectorAdd(dev, in_a, in_b, 2, config, out);
+  auto out_cpu = std::make_unique<scalar_t[]>(N);
+  auto out_cuda = std::make_unique<scalar_t[]>(N);
 
-  scalar_t expected[2] = {6, 9};
-  ASSERT_EQ(0, memcmp(expected, out, sizeof(out)));
+  auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    auto config = DefaultVecOpsConfig();
+
+    START_TIMER(VECADD_sync)
+    for (int i = 0; i < iters; ++i)
+      VectorAdd(dev, in_a.get(), in_b.get(), N, config, out);
+    END_TIMER(VECADD_sync, msg, measure);
+  };
+
+  run("CUDA", out_cuda.get(), "CUDA vector add", false /*=measure*/, 1 /*=iters*/); // warmup
+
+  run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
+  run("CUDA", out_cuda.get(), "CUDA vector add (host mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
+
+  ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
+}
+
+TEST_F(FieldApiTest, vectorAddAsync)
+{
+  const int N = 1 << 15;
+  auto in_a = std::make_unique<scalar_t[]>(N);
+  auto in_b = std::make_unique<scalar_t[]>(N);
+  scalar_t::rand_host_many(in_a.get(), N);
+  scalar_t::rand_host_many(in_b.get(), N);
+
+  auto out_cpu = std::make_unique<scalar_t[]>(N);
+  auto out_cuda = std::make_unique<scalar_t[]>(N);
+
+  auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    auto dev_api = getDeviceAPI(dev);
+    // const bool is_cpu = std::string("CPU") == dev.type;
+
+    scalar_t *d_in_a, *d_in_b, *d_out;
+    IcicleStreamHandle stream;
+    dev_api->createStream(dev, &stream); // --> createStream(&stream);
+    dev_api->allocateMemoryAsync(
+      dev, (void**)&d_in_a, N * sizeof(scalar_t),
+      stream); // --> allocateMemoryAsync((void**)&d_in_a, N * sizeof(scalar_t), stream);
+    dev_api->allocateMemoryAsync(dev, (void**)&d_in_b, N * sizeof(scalar_t), stream);
+    dev_api->allocateMemoryAsync(dev, (void**)&d_out, N * sizeof(scalar_t), stream);
+    dev_api->copyToDeviceAsync(dev, d_in_a, in_a.get(), N * sizeof(scalar_t), stream);
+
+    auto config = DefaultVecOpsConfig();
+    config.is_a_on_device = true;
+    config.is_b_on_device = true;
+    config.is_result_on_device = true;
+    config.is_async = true;
+    config.stream = stream;
+
+    START_TIMER(VECADD_async);
+    for (int i = 0; i < iters; ++i) {
+      VectorAdd(dev, d_in_a, d_in_b, N, config, d_out);
+    }
+    END_TIMER(VECADD_async, msg, measure);
+
+    dev_api->copyToHostAsync(dev, out, d_out, N * sizeof(scalar_t), stream);
+    dev_api->synchronize(dev, stream);
+
+    dev_api->freeMemoryAsync(dev, d_in_a, stream);
+    dev_api->freeMemoryAsync(dev, d_in_b, stream);
+    dev_api->freeMemoryAsync(dev, d_out, stream);
+  };
+
+  run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
+  run("CUDA", out_cuda.get(), "CUDA vector add (device mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
+
+  ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
 }
 
 int main(int argc, char** argv)
