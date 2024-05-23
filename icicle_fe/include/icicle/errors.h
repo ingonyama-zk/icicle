@@ -8,7 +8,7 @@ namespace icicle {
   /**
    * @brief Enum representing various error codes for Icicle library operations.
    */
-  enum class IcicleError {
+  enum class eIcicleError {
     SUCCESS = 0,               ///< Operation completed successfully
     INVALID_DEVICE,            ///< The specified device is invalid
     OUT_OF_MEMORY,             ///< Memory allocation failed due to insufficient memory
@@ -25,18 +25,18 @@ namespace icicle {
   };
 
   /**
-   * @brief Returns a human-readable string representation of an IcicleError.
+   * @brief Returns a human-readable string representation of an eIcicleError.
    *
-   * @param error The IcicleError to get the string representation for.
+   * @param error The eIcicleError to get the string representation for.
    * @return const char* A string describing the error.
    */
-  const char* getErrorString(IcicleError error);
+  const char* getErrorString(eIcicleError error);
 
 #define ICICLE_CHECK(api_call)                                                                                         \
   do {                                                                                                                 \
     using namespace icicle;                                                                                            \
-    IcicleError rv = (api_call);                                                                                       \
-    if (rv != IcicleError::SUCCESS) {                                                                                  \
+    eIcicleError rv = (api_call);                                                                                      \
+    if (rv != eIcicleError::SUCCESS) {                                                                                 \
       throw std::runtime_error(                                                                                        \
         "Icicle API failes with code " + std::string(getErrorString(rv)) + " in " + __FILE__ + ":" +                   \
         std::to_string(__LINE__));                                                                                     \
@@ -44,7 +44,7 @@ namespace icicle {
   } while (0)
 
   void inline throwIcicleErr(
-    IcicleError err, const char* const reason, const char* const func, const char* const file, const int line)
+    eIcicleError err, const char* const reason, const char* const func, const char* const file, const int line)
   {
     std::string err_msg = std::string{getErrorString(err)} + " : by: " + func + " at: " + file + ":" +
                           std::to_string(line) + " error: " + reason;

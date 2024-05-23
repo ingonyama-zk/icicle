@@ -33,7 +33,8 @@ public:
     }
   }
 
-  static std::list<std::string> getRegisteredDevices() {
+  static std::list<std::string> getRegisteredDevices()
+  {
     std::list<std::string> registered_devices;
     for (const auto& device : apiMap) {
       registered_devices.push_back(device.first);
@@ -42,7 +43,7 @@ public:
   }
 };
 
-extern "C" DeviceAPI* getDeviceAPI(const Device* device) { return DeviceAPIRegistry::getDeviceAPI(*device).get(); }
+extern "C" DeviceAPI* getDeviceAPI(const Device& device) { return DeviceAPIRegistry::getDeviceAPI(device).get(); }
 
 extern "C" void registerDeviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
 {
@@ -50,6 +51,4 @@ extern "C" void registerDeviceAPI(const std::string& deviceType, std::shared_ptr
   DeviceAPIRegistry::registerDeviceAPI(deviceType, api);
 }
 
-extern "C" std::list<std::string> getRegisteredDevices() {
-  return DeviceAPIRegistry::getRegisteredDevices();
-}
+extern "C" std::list<std::string> getRegisteredDevices() { return DeviceAPIRegistry::getRegisteredDevices(); }
