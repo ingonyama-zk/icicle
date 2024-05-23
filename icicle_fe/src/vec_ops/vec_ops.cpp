@@ -1,4 +1,5 @@
 #include "vec_ops/vec_ops.h"
+#include "device_api.h"
 
 using namespace icicle;
 
@@ -16,9 +17,9 @@ public:
     apiMap[deviceType] = func;
   }
 
-  static eIcicleError
-  executeVectorAdd(const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)
+  static eIcicleError executeVectorAdd(const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)
   {
+    const Device& device = DeviceAPI::getThreadLocalDevice();
     auto it = apiMap.find(device.type);
     if (it != apiMap.end()) {
       return it->second(device, vec_a, vec_b, n, config, output);
@@ -28,15 +29,10 @@ public:
   }
 };
 
-extern "C" eIcicleError VectorAdd(
-  const Device& device,
-  const scalar_t* vec_a,
-  const scalar_t* vec_b,
-  int n,
-  const VecOpsConfig& config,
-  scalar_t* output)
+extern "C" eIcicleError
+VectorAdd(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
 {
-  return VectorAddDispatcher<scalar_t>::executeVectorAdd(device, vec_a, vec_b, n, config, output);
+  return VectorAddDispatcher<scalar_t>::executeVectorAdd(vec_a, vec_b, n, config, output);
 }
 
 extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<scalar_t> impl)

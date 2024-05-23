@@ -17,6 +17,7 @@ option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once
 add_library(icicle_device STATIC 
 src/device_api.cpp 
 src/errors.cpp
+src/runtime.cpp
 )
 
 # Add the include directory
