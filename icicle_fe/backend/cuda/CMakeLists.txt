@@ -11,7 +11,7 @@ find_package(CUDA REQUIRED)
 
 include_directories(include)
 
-# TODO Yuval: handle incdir when backend is seperated from frontend
+# TODO Yuval: handle incdir when backend is separated from frontend
 # TODO Yuval: dll?
 add_library(icicle_cuda_device STATIC src/cuda_device_api.cu)
 target_link_libraries(icicle_cuda_device PUBLIC icicle_device)

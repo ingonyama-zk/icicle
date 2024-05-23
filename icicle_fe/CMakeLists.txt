@@ -10,8 +10,8 @@ include(cmake/field.cmake)
 include(cmake/curve.cmake)
 
 option(BUILD_TESTS "Build unit tests" OFF)
-option(BUILD_CPU_BE "Build CPU backend" ON) # TODO Yuval remove from here once seperating the backends from frontend
-option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once seperating the backends from frontend
+option(BUILD_CPU_BE "Build CPU backend" ON) # TODO Yuval remove from here once separating the backends from frontend
+option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once separating the backends from frontend
 
 # device API library
 add_library(icicle_device STATIC 

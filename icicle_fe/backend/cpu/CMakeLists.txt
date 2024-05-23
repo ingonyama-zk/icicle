@@ -6,7 +6,7 @@ project(icicle_cpu_backend)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# TODO Yuval: handle incdir when backend is seperated from frontend
+# TODO Yuval: handle incdir when backend is separated from frontend
 # TODO Yuval: dll?
 
 # device API library
