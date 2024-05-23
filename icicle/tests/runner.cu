@@ -10,6 +10,7 @@
 #endif
 #include "error_handler_test.cu"
 #include "device_error_test.cu"
+#include "acc_test.cu"
 
 int main(int argc, char** argv)
 {
