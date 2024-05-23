@@ -3,6 +3,7 @@
 #pragma once
 
 #ifdef __CUDACC__
+#include <cuda_runtime.h>
 #if defined(DEVMODE) || defined(DEBUG)
 #define INLINE_MACRO
 #define UNROLL
@@ -20,4 +21,6 @@
 #define HOST_INLINE
 #define DEVICE_INLINE
 #define HOST_DEVICE_INLINE
+#define __host__
+#define __device__
 #endif

@@ -31,3 +31,4 @@ target_link_libraries(test_field_api PRIVATE -Wl,--whole-archive icicle_cuda_dev
 
 enable_testing()
 gtest_discover_tests(test_device_api)
+gtest_discover_tests(test_field_api)

@@ -3,7 +3,6 @@
 #define HOST_MATH_H
 
 #include <cstdint>
-#include <cuda_runtime.h>
 #include "utils/modifiers.h"
 namespace host_math {
 
