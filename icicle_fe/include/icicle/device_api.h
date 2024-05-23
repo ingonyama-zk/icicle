@@ -13,7 +13,7 @@ namespace icicle {
   /**
    * @brief Typedef for an abstract stream used for asynchronous operations.
    */
-  typedef void* IcicleStreamHandle;
+  typedef void* icicleStreamHandle;
 
   /**
    * @brief Abstract class representing the API for device operations.
@@ -26,100 +26,97 @@ namespace icicle {
      */
     virtual ~DeviceAPI() {}
 
+    /**
+     * @brief Set active device for thread
+     *
+     * @param device The device
+     * @return eIcicleError Status of the device set
+     */
+    virtual eIcicleError setDevice(const Device& device) = 0;
+
     // Memory management
 
     /**
      * @brief Allocates memory on the specified device.
      *
-     * @param device The device on which to allocate memory.
      * @param ptr Pointer to the allocated memory.
      * @param size Size of the memory to allocate.
      * @return eIcicleError Status of the memory allocation.
      */
-    virtual eIcicleError allocateMemory(const Device& device, void** ptr, size_t size) = 0;
+    virtual eIcicleError allocateMemory(void** ptr, size_t size) const = 0;
 
     /**
      * @brief Asynchronously allocates memory on the specified device.
      *
-     * @param device The device on which to allocate memory.
      * @param ptr Pointer to the allocated memory.
      * @param size Size of the memory to allocate.
      * @param stream Stream to use for the asynchronous operation.
      * @return eIcicleError Status of the memory allocation.
      */
-    virtual eIcicleError
-    allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle stream) = 0;
+    virtual eIcicleError allocateMemoryAsync(void** ptr, size_t size, icicleStreamHandle stream) const = 0;
 
     /**
      * @brief Frees memory on the specified device.
      *
-     * @param device The device on which to free memory.
      * @param ptr Pointer to the memory to free.
      * @return eIcicleError Status of the memory deallocation.
      */
-    virtual eIcicleError freeMemory(const Device& device, void* ptr) = 0;
+    virtual eIcicleError freeMemory(void* ptr) const = 0;
 
     /**
      * @brief Asynchronously frees memory on the specified device.
      *
-     * @param device The device on which to free memory.
      * @param ptr Pointer to the memory to free.
      * @param stream Stream to use for the asynchronous operation.
      * @return eIcicleError Status of the memory deallocation.
      */
-    virtual eIcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle stream) = 0;
+    virtual eIcicleError freeMemoryAsync(void* ptr, icicleStreamHandle stream) const = 0;
 
     /**
      * @brief Gets the total and available memory on the specified device.
      *
-     * @param device The device to query.
      * @param total Total memory available on the device (output parameter).
      * @param free Available memory on the device (output parameter).
      * @return eIcicleError Status of the memory query.
      */
-    virtual eIcicleError getAvailableMemory(const Device& device, size_t& total /*OUT*/, size_t& free /*OUT*/) = 0;
+    virtual eIcicleError getAvailableMemory(size_t& total /*OUT*/, size_t& free /*OUT*/) const = 0;
 
     // Data transfer
 
     /**
      * @brief Copies data from the device to the host.
      *
-     * @param device The device to copy data from.
      * @param dst Destination pointer on the host.
      * @param src Source pointer on the device.
      * @param size Size of the data to copy.
      * @return eIcicleError Status of the data copy.
      */
-    virtual eIcicleError copyToHost(const Device& device, void* dst, const void* src, size_t size) = 0;
+    virtual eIcicleError copyToHost(void* dst, const void* src, size_t size) const = 0;
 
     /**
      * @brief Asynchronously copies data from the device to the host.
      *
-     * @param device The device to copy data from.
      * @param dst Destination pointer on the host.
      * @param src Source pointer on the device.
      * @param size Size of the data to copy.
      * @param stream Stream to use for the asynchronous operation.
      * @return eIcicleError Status of the data copy.
      */
-    virtual eIcicleError
-    copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) = 0;
+    virtual eIcicleError copyToHostAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream) const = 0;
 
     /**
      * @brief Copies data from the host to the device.
      *
-     * @param device The device to copy data to.
      * @param dst Destination pointer on the device.
      * @param src Source pointer on the host.
      * @param size Size of the data to copy.
      * @return eIcicleError Status of the data copy.
      */
-    virtual eIcicleError copyToDevice(const Device& device, void* dst, const void* src, size_t size) = 0;
+    virtual eIcicleError copyToDevice(void* dst, const void* src, size_t size) const = 0;
 
     /**
      * @brief Asynchronously copies data from the host to the device.
      *
-     * @param device The device to copy data to.
      * @param dst Destination pointer on the device.
      * @param src Source pointer on the host.
      * @param size Size of the data to copy.
@@ -127,38 +124,44 @@ namespace icicle {
      * @return eIcicleError Status of the data copy.
      */
     virtual eIcicleError
-    copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) = 0;
+    copyToDeviceAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream) const = 0;
 
     // Synchronization
 
     /**
      * @brief Synchronizes the specified device or stream.
      *
-     * @param device The device to synchronize.
      * @param stream The stream to synchronize (nullptr for device synchronization).
      * @return eIcicleError Status of the synchronization.
      */
-    virtual eIcicleError synchronize(const Device& device, IcicleStreamHandle stream = nullptr) = 0;
+    virtual eIcicleError synchronize(icicleStreamHandle stream = nullptr) const = 0;
 
     // Stream management
 
     /**
      * @brief Creates a stream on the specified device.
      *
-     * @param device The device to create the stream on.
      * @param stream Pointer to the created stream.
      * @return eIcicleError Status of the stream creation.
      */
-    virtual eIcicleError createStream(const Device& device, IcicleStreamHandle* stream) = 0;
+    virtual eIcicleError createStream(icicleStreamHandle* stream) const = 0;
 
     /**
      * @brief Destroys a stream on the specified device.
      *
-     * @param device The device to destroy the stream on.
      * @param stream The stream to destroy.
      * @return eIcicleError Status of the stream destruction.
      */
-    virtual eIcicleError destroyStream(const Device& device, IcicleStreamHandle stream) = 0;
+    virtual eIcicleError destroyStream(icicleStreamHandle stream) const = 0;
+
+  private:
+    thread_local static inline Device sCurDevice = {nullptr, -1}; // device that is currently active for this thread
+    thread_local static inline const DeviceAPI* sCurDeviceAPI;    // API for the currently active device of this thread
+
+  public:
+    static eIcicleError setThreadLocalDevice(const Device& device);
+    static const Device& getThreadLocalDevice();
+    static const DeviceAPI* getThreadLocalDeviceAPI();
   };
 
   /**

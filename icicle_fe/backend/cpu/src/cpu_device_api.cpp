@@ -9,91 +9,73 @@ using namespace icicle;
 class CPUDeviceAPI : public DeviceAPI
 {
 public:
-  // Memory management
-  eIcicleError allocateMemory(const Device& device, void** ptr, size_t size) override
+  eIcicleError setDevice(const Device& device) override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
+    return (device.id == 0) ? eIcicleError::SUCCESS : eIcicleError::INVALID_DEVICE;
+  }
+
+  // Memory management
+  eIcicleError allocateMemory(void** ptr, size_t size) const override
+  {
     *ptr = malloc(size);
     return (*ptr == nullptr) ? eIcicleError::ALLOCATION_FAILED : eIcicleError::SUCCESS;
   }
 
-  eIcicleError allocateMemoryAsync(const Device& device, void** ptr, size_t size, IcicleStreamHandle stream) override
+  eIcicleError allocateMemoryAsync(void** ptr, size_t size, icicleStreamHandle stream) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
-    return CPUDeviceAPI::allocateMemory(device, ptr, size);
+    return CPUDeviceAPI::allocateMemory(ptr, size);
   }
 
-  eIcicleError freeMemory(const Device& device, void* ptr) override
+  eIcicleError freeMemory(void* ptr) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
     free(ptr);
     return eIcicleError::SUCCESS;
   }
 
-  eIcicleError freeMemoryAsync(const Device& device, void* ptr, IcicleStreamHandle stream) override
+  eIcicleError freeMemoryAsync(void* ptr, icicleStreamHandle stream) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
-    return CPUDeviceAPI::freeMemory(device, ptr);
+    return CPUDeviceAPI::freeMemory(ptr);
   }
 
-  eIcicleError getAvailableMemory(const Device& device, size_t& total /*OUT*/, size_t& free /*OUT*/) override
+  eIcicleError getAvailableMemory(size_t& total /*OUT*/, size_t& free /*OUT*/) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
     // TODO Yuval: implement this
     return eIcicleError::API_NOT_IMPLEMENTED;
   }
 
-  eIcicleError memCopy(void* dst, const void* src, size_t size)
+  eIcicleError memCopy(void* dst, const void* src, size_t size) const
   {
     std::memcpy(dst, src, size);
     return eIcicleError::SUCCESS;
   }
 
   // Data transfer
-  eIcicleError copyToHost(const Device& device, void* dst, const void* src, size_t size) override
+  eIcicleError copyToHost(void* dst, const void* src, size_t size) const override { return memCopy(dst, src, size); }
+
+  eIcicleError copyToHostAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
     return memCopy(dst, src, size);
   }
 
-  eIcicleError
-  copyToHostAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) override
-  {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
-    return memCopy(dst, src, size);
-  }
+  eIcicleError copyToDevice(void* dst, const void* src, size_t size) const override { return memCopy(dst, src, size); }
 
-  eIcicleError copyToDevice(const Device& device, void* dst, const void* src, size_t size) override
+  eIcicleError copyToDeviceAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
-    return memCopy(dst, src, size);
-  }
-
-  eIcicleError
-  copyToDeviceAsync(const Device& device, void* dst, const void* src, size_t size, IcicleStreamHandle stream) override
-  {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
     return memCopy(dst, src, size);
   }
 
   // Synchronization
-  eIcicleError synchronize(const Device& device, IcicleStreamHandle stream = nullptr) override
-  {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
-    return eIcicleError::SUCCESS;
-  }
+  eIcicleError synchronize(icicleStreamHandle stream = nullptr) const override { return eIcicleError::SUCCESS; }
 
   // Stream management
-  eIcicleError createStream(const Device& device, IcicleStreamHandle* stream) override
+  eIcicleError createStream(icicleStreamHandle* stream) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
     *stream = nullptr; // no streams for CPU
     return eIcicleError::SUCCESS;
   }
 
-  eIcicleError destroyStream(const Device& device, IcicleStreamHandle stream) override
+  eIcicleError destroyStream(icicleStreamHandle stream) const override
   {
-    if (device.id != 0) return eIcicleError::INVALID_DEVICE;
     return (nullptr == stream) ? eIcicleError::SUCCESS : eIcicleError::STREAM_DESTRUCTION_FAILED;
   }
 };

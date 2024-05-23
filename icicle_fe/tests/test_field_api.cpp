@@ -2,8 +2,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-#include "icicle/device.h"
-#include "icicle/device_api.h"
+#include "icicle/runtime.h"
 #include "icicle/vec_ops/vec_ops.h"
 
 #include "icicle/fields/field_config.h"
@@ -50,11 +49,12 @@ TEST_F(FieldApiTest, vectorAddSync)
 
   auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
+    icicleSetDevice(dev);
     auto config = DefaultVecOpsConfig();
 
     START_TIMER(VECADD_sync)
     for (int i = 0; i < iters; ++i)
-      VectorAdd(dev, in_a.get(), in_b.get(), N, config, out);
+      VectorAdd(in_a.get(), in_b.get(), N, config, out);
     END_TIMER(VECADD_sync, msg, measure);
   };
 
@@ -79,18 +79,16 @@ TEST_F(FieldApiTest, vectorAddAsync)
 
   auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
-    auto dev_api = getDeviceAPI(dev);
+    icicleSetDevice(dev);
     // const bool is_cpu = std::string("CPU") == dev.type;
 
     scalar_t *d_in_a, *d_in_b, *d_out;
-    IcicleStreamHandle stream;
-    dev_api->createStream(dev, &stream); // --> createStream(&stream);
-    dev_api->allocateMemoryAsync(
-      dev, (void**)&d_in_a, N * sizeof(scalar_t),
-      stream); // --> allocateMemoryAsync((void**)&d_in_a, N * sizeof(scalar_t), stream);
-    dev_api->allocateMemoryAsync(dev, (void**)&d_in_b, N * sizeof(scalar_t), stream);
-    dev_api->allocateMemoryAsync(dev, (void**)&d_out, N * sizeof(scalar_t), stream);
-    dev_api->copyToDeviceAsync(dev, d_in_a, in_a.get(), N * sizeof(scalar_t), stream);
+    icicleStreamHandle stream;
+    icicleCreateStream(&stream);
+    icicleMallocAsync((void**)&d_in_a, N * sizeof(scalar_t), stream);
+    icicleMallocAsync((void**)&d_in_b, N * sizeof(scalar_t), stream);
+    icicleMallocAsync((void**)&d_out, N * sizeof(scalar_t), stream);
+    icicleCopyToDeviceAsync(d_in_a, in_a.get(), N * sizeof(scalar_t), stream);
 
     auto config = DefaultVecOpsConfig();
     config.is_a_on_device = true;
@@ -101,16 +99,16 @@ TEST_F(FieldApiTest, vectorAddAsync)
 
     START_TIMER(VECADD_async);
     for (int i = 0; i < iters; ++i) {
-      VectorAdd(dev, d_in_a, d_in_b, N, config, d_out);
+      VectorAdd(d_in_a, d_in_b, N, config, d_out);
     }
     END_TIMER(VECADD_async, msg, measure);
 
-    dev_api->copyToHostAsync(dev, out, d_out, N * sizeof(scalar_t), stream);
-    dev_api->synchronize(dev, stream);
+    icicleCopyToHostAsync(out, d_out, N * sizeof(scalar_t), stream);
+    icicleStreamSynchronize(stream);
 
-    dev_api->freeMemoryAsync(dev, d_in_a, stream);
-    dev_api->freeMemoryAsync(dev, d_in_b, stream);
-    dev_api->freeMemoryAsync(dev, d_out, stream);
+    icicleFreeAsync(d_in_a, stream);
+    icicleFreeAsync(d_in_b, stream);
+    icicleFreeAsync(d_out, stream);
   };
 
   run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
