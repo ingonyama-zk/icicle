@@ -16,7 +16,7 @@ public:
     apiMap[deviceType] = func;
   }
 
-  static IcicleError
+  static eIcicleError
   executeVectorAdd(const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)
   {
     auto it = apiMap.find(device.type);
@@ -28,7 +28,7 @@ public:
   }
 };
 
-extern "C" IcicleError VectorAdd(
+extern "C" eIcicleError VectorAdd(
   const Device& device,
   const scalar_t* vec_a,
   const scalar_t* vec_b,

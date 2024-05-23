@@ -19,9 +19,11 @@
 #pragma once
 
 // #include "gpu-utils/error_handler.h"
-// #include "gpu-utils/modifiers.h"
-// #include "gpu-utils/sharedmem.h"
-// #include "ptx.h"
+
+#ifdef __CUDACC__
+#include "gpu-utils/sharedmem.h"
+#include "ptx.h"
+#endif // __CUDACC__
 
 #include "errors.h"
 #include "host_math.h"
@@ -60,7 +62,7 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 
-    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError::INVALID_ARGUMENT, "Field: Invalid omega index"); }
+    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega index"); }
 
     storage_array<CONFIG::omegas_count, TLC> const omega = CONFIG::omega;
     return Field{omega.storages[logn - 1]};
@@ -71,7 +73,7 @@ public:
     if (logn == 0) { return Field{CONFIG::one}; }
 
     if (logn > CONFIG::omegas_count) {
-      THROW_ICICLE_ERR(IcicleError::INVALID_ARGUMENT, "Field: Invalid omega_inv index");
+      THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega_inv index");
     }
 
     storage_array<CONFIG::omegas_count, TLC> const omega_inv = CONFIG::omega_inv;
@@ -82,7 +84,7 @@ public:
   {
     if (logn == 0) { return Field{CONFIG::one}; }
 #ifndef __CUDA_ARCH__
-    if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError::INVALID_ARGUMENT, "Field: Invalid inv index");
+    if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid inv index");
 #else
     if (logn > CONFIG::omegas_count) {
       printf(
