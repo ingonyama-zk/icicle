@@ -2,8 +2,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-#include "icicle/device.h"
-#include "icicle/device_api.h"
+#include "icicle/runtime.h"
 
 using namespace icicle;
 
@@ -38,12 +37,13 @@ TEST_F(DeviceApiTest, MemoryCopySync)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type.c_str(), 0};
-    auto device_api = getDeviceAPI(dev);
+    icicleSetDevice(dev);
+
     void* dev_mem = nullptr;
-    ICICLE_CHECK(device_api->allocateMemory(dev, &dev_mem, sizeof(input)));
-    ICICLE_CHECK(device_api->copyToDevice(dev, dev_mem, input, sizeof(input)));
-    ICICLE_CHECK(device_api->copyToHost(dev, output, dev_mem, sizeof(input)));
-    ICICLE_CHECK(device_api->freeMemory(dev, dev_mem));
+    ICICLE_CHECK(icicleMalloc(&dev_mem, sizeof(input)));
+    ICICLE_CHECK(icicleCopyToDevice(dev_mem, input, sizeof(input)));
+    ICICLE_CHECK(icicleCopyToHost(output, dev_mem, sizeof(input)));
+    ICICLE_CHECK(icicleFree(dev_mem));
 
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
   }
@@ -56,16 +56,16 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type.c_str(), 0};
-    auto device_api = getDeviceAPI(dev);
+    icicleSetDevice(dev);
     void* dev_mem = nullptr;
 
-    IcicleStreamHandle stream;
-    ICICLE_CHECK(device_api->createStream(dev, &stream));
-    ICICLE_CHECK(device_api->allocateMemoryAsync(dev, &dev_mem, sizeof(input), stream));
-    ICICLE_CHECK(device_api->copyToDeviceAsync(dev, dev_mem, input, sizeof(input), stream));
-    ICICLE_CHECK(device_api->copyToHostAsync(dev, output, dev_mem, sizeof(input), stream));
-    ICICLE_CHECK(device_api->freeMemoryAsync(dev, dev_mem, stream));
-    ICICLE_CHECK(device_api->synchronize(dev, stream));
+    icicleStreamHandle stream;
+    ICICLE_CHECK(icicleCreateStream(&stream));
+    ICICLE_CHECK(icicleMallocAsync(&dev_mem, sizeof(input), stream));
+    ICICLE_CHECK(icicleCopyToDeviceAsync(dev_mem, input, sizeof(input), stream));
+    ICICLE_CHECK(icicleCopyToHostAsync(output, dev_mem, sizeof(input), stream));
+    ICICLE_CHECK(icicleFreeAsync(dev_mem, stream));
+    ICICLE_CHECK(icicleStreamSynchronize(stream));
 
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
   }
@@ -75,18 +75,18 @@ TEST_F(DeviceApiTest, ApiError)
 {
   for (const auto& device_type : s_regsitered_devices) {
     icicle::Device dev = {device_type.c_str(), 0};
-    auto device_api = getDeviceAPI(dev);
+    icicleSetDevice(dev);
     void* dev_mem = nullptr;
-    EXPECT_ANY_THROW(ICICLE_CHECK(device_api->allocateMemory(dev, &dev_mem, -1)));
+    EXPECT_ANY_THROW(ICICLE_CHECK(icicleMalloc(&dev_mem, -1)));
   }
 }
 
 TEST_F(DeviceApiTest, AvailableMemory)
 {
   icicle::Device dev = {"CUDA", 0}; // TODO Yuval: implement for CPU too
-  auto device_api = getDeviceAPI(dev);
+  icicleSetDevice(dev);
   size_t total, free;
-  ASSERT_EQ(eIcicleError::SUCCESS, device_api->getAvailableMemory(dev, total, free));
+  ASSERT_EQ(eIcicleError::SUCCESS, icicleGetAvailableMemory(total, free));
 
   double total_GB = double(total) / (1 << 30);
   double free_GB = double(free) / (1 << 30);
@@ -98,9 +98,7 @@ TEST_F(DeviceApiTest, InvalidDevice)
 {
   for (const auto& device_type : s_regsitered_devices) {
     icicle::Device dev = {device_type.c_str(), 10}; // no such device-id thus expecting an error
-    auto device_api = getDeviceAPI(dev);
-    void* dev_mem = nullptr;
-    ASSERT_EQ(eIcicleError::INVALID_DEVICE, device_api->allocateMemory(dev, &dev_mem, 128));
+    ASSERT_EQ(eIcicleError::INVALID_DEVICE, icicleSetDevice(dev));
   }
 }
 

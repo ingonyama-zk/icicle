@@ -5,10 +5,34 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "device.h"
+#include "runtime.h"
 #include "device_api.h"
 
 using namespace icicle;
+
+eIcicleError DeviceAPI::setThreadLocalDevice(const Device& device)
+{
+  DeviceAPI* device_api = getDeviceAPI(device);
+  if (nullptr == device_api) return eIcicleError::INVALID_DEVICE;
+
+  auto err = device_api->setDevice(device); // notifying the device backend about the device set
+  if (err == eIcicleError::SUCCESS) {
+    sCurDevice = device;
+    sCurDeviceAPI = device_api;
+  }
+  return err;
+}
+
+const Device& DeviceAPI::getThreadLocalDevice()
+{
+  const bool is_valid_device = sCurDevice.id >= 0 && sCurDevice.type != nullptr;
+  if (!is_valid_device) {
+    throw std::runtime_error("icicle Device is not set. Make sure to initialize the device via call to "
+                             "icicleSetDevice(const icicle::Device& device)");
+  }
+  return sCurDevice;
+}
+const DeviceAPI* DeviceAPI::getThreadLocalDeviceAPI() { return sCurDeviceAPI; }
 
 class DeviceAPIRegistry
 {
