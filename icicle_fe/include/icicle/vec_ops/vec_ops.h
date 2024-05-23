@@ -7,8 +7,7 @@
 #include <iostream>
 
 #include "errors.h"
-#include "device.h"
-#include "device_api.h"
+#include "runtime.h"
 
 #include "fields/field.h"
 #include "fields/field_config.h"
@@ -25,7 +24,7 @@ namespace icicle {
                     *   non-blocking and you'd need to synchronize it explicitly by running
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
                     *   function will block the current CPU thread. */
-    IcicleStreamHandle stream; /**< stream for async execution. */
+    icicleStreamHandle stream; /**< stream for async execution. */
   };
 
   /**
@@ -51,13 +50,8 @@ namespace icicle {
 
   // Declaration of the vector addition function for integer vectors
   // This function performs element-wise addition of two integer vectors on a specified device
-  extern "C" eIcicleError VectorAdd(
-    const Device& device,
-    const scalar_t* vec_a,
-    const scalar_t* vec_b,
-    int n,
-    const VecOpsConfig& config,
-    scalar_t* output);
+  extern "C" eIcicleError
+  VectorAdd(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
 
   // Function to register a vector addition implementation for a specific device type
   // This allows the system to use the appropriate implementation based on the device type
