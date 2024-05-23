@@ -38,7 +38,7 @@ namespace icicle {
     eIcicleError rv = (api_call);                                                                                      \
     if (rv != eIcicleError::SUCCESS) {                                                                                 \
       throw std::runtime_error(                                                                                        \
-        "Icicle API failes with code " + std::string(getErrorString(rv)) + " in " + __FILE__ + ":" +                   \
+        "Icicle API fails with code " + std::string(getErrorString(rv)) + " in " + __FILE__ + ":" +                    \
         std::to_string(__LINE__));                                                                                     \
     }                                                                                                                  \
   } while (0)
