@@ -35,7 +35,8 @@ TEST_F(FieldApiTest, vectorAdd)
   scalar_t in_b[2] = {5, 7};
   scalar_t out[2] = {0, 0};
 
-  VectorAdd(dev, in_a, in_b, 2, out);
+  auto config = DefaultVecOpsConfig();
+  VectorAdd(dev, in_a, in_b, 2, config, out);
 
   scalar_t expected[2] = {6, 9};
   ASSERT_EQ(0, memcmp(expected, out, sizeof(out)));

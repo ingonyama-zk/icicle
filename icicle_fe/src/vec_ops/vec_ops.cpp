@@ -16,21 +16,27 @@ public:
     apiMap[deviceType] = func;
   }
 
-  static IcicleError executeVectorAdd(const Device& device, const T* vec_a, const T* vec_b, int n, T* output)
+  static IcicleError
+  executeVectorAdd(const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)
   {
     auto it = apiMap.find(device.type);
     if (it != apiMap.end()) {
-      return it->second(device, vec_a, vec_b, n, output);
+      return it->second(device, vec_a, vec_b, n, config, output);
     } else {
       throw std::runtime_error("VectorAdd operation not supported on device " + std::string(device.type));
     }
   }
 };
 
-extern "C" IcicleError
-VectorAdd(const Device& device, const scalar_t* vec_a, const scalar_t* vec_b, int n, scalar_t* output)
+extern "C" IcicleError VectorAdd(
+  const Device& device,
+  const scalar_t* vec_a,
+  const scalar_t* vec_b,
+  int n,
+  const VecOpsConfig& config,
+  scalar_t* output)
 {
-  return VectorAddDispatcher<scalar_t>::executeVectorAdd(device, vec_a, vec_b, n, output);
+  return VectorAddDispatcher<scalar_t>::executeVectorAdd(device, vec_a, vec_b, n, config, output);
 }
 
 extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<scalar_t> impl)
