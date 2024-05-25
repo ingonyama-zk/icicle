@@ -14,12 +14,12 @@ protected:
 };
 
 TEST(AccumulateTest, BasicTest) {
-    int packed_len = 1024;
+    int packed_len = 777;
     std::vector<float> column_data(packed_len, 1.0f);
     std::vector<float> other_data(packed_len, 2.0f);
 
-    vec_ops::SecureColumn column;
-    vec_ops::SecureColumn other;
+    vec_ops::SecureColumn<float> column;
+    vec_ops::SecureColumn<float> other;
 
     column.data = column_data.data();
     column.packed_len = packed_len;
@@ -27,7 +27,7 @@ TEST(AccumulateTest, BasicTest) {
     other.data = other_data.data();
     other.packed_len = packed_len;
 
-    vec_ops::accumulate(column, other);
+    vec_ops::accumulate_async(column, other);
 
     for (int i = 0; i < packed_len; ++i) {
         EXPECT_FLOAT_EQ(column.data[i], 3.0f);
