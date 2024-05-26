@@ -52,9 +52,6 @@ namespace poseidon2 {
   };
 
   template <typename S>
-  cudaError_t release_poseidon2_constants(Poseidon2Constants<S>* constants, device_context::DeviceContext& ctx);
-
-  template <typename S>
   class Poseidon2 : public Permutation<S>, public CompressionHasher<S>, public SpongeHasher<S, S>
   {
     static const int POSEIDON_BLOCK_SIZE = 128;

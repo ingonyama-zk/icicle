@@ -1,3 +1,7 @@
+#pragma once
+#ifndef POSEIDON2_CONSTANTS_H
+#define POSEIDON2_CONSTANTS_H
+
 #include "poseidon2/poseidon2.cuh"
 
 /// These are pre-calculated constants for different curves
@@ -132,3 +136,5 @@ namespace poseidon2 {
     return CHK_LAST();
   }
 } // namespace poseidon2
+
+#endif

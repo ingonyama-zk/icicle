@@ -1,6 +1,13 @@
-#include "hash/keccak/keccak.cuh"
+#pragma once
+#ifndef KECCAK_KERNELS_H
+#define KECCAK_KERNELS_H
+
+#include <cstdint>
+#include "gpu-utils/modifiers.cuh"
 
 namespace keccak {
+  using u64 = uint64_t;
+
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
 
 #define TH_ELT(t, c0, c1, c2, c3, c4, d0, d1, d2, d3, d4)                                                              \
@@ -144,17 +151,15 @@ namespace keccak {
     element ^= rc;                                                                                                     \
   }
 
-  __device__ const uint64_t RC[24] = {0x0000000000000001, 0x0000000000008082, 0x800000000000808a, 0x8000000080008000,
-                                      0x000000000000808b, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
-                                      0x000000000000008a, 0x0000000000000088, 0x0000000080008009, 0x000000008000000a,
-                                      0x000000008000808b, 0x800000000000008b, 0x8000000000008089, 0x8000000000008003,
-                                      0x8000000000008002, 0x8000000000000080, 0x000000000000800a, 0x800000008000000a,
-                                      0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008};
+  __device__ const u64 RC[24] = {0x0000000000000001, 0x0000000000008082, 0x800000000000808a, 0x8000000080008000,
+                                 0x000000000000808b, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
+                                 0x000000000000008a, 0x0000000000000088, 0x0000000080008009, 0x000000008000000a,
+                                 0x000000008000808b, 0x800000000000008b, 0x8000000000008089, 0x8000000000008003,
+                                 0x8000000000008002, 0x8000000000000080, 0x000000000000800a, 0x800000008000000a,
+                                 0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008};
 
-  __device__ void keccakf(uint64_t s[25])
+  __device__ void keccakf(u64 s[25])
   {
-    uint64_t t0, t1, t2, t3, t4;
-
     for (int i = 0; i < 24; i++) {
       THETA(
         s[0], s[5], s[10], s[15], s[20], s[1], s[6], s[11], s[16], s[21], s[2], s[7], s[12], s[17], s[22], s[3], s[8],
@@ -169,95 +174,65 @@ namespace keccak {
     }
   }
 
-  template <int C, int D>
-  __global__ void keccak_permutation_kernel(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output)
+  __global__ void
+  keccak_10_1_pad_kernel(u64* states, unsigned int input_len, unsigned int rate, unsigned int number_of_states)
   {
-    int bid = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (bid >= number_of_blocks) { return; }
+    int sid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (sid >= number_of_states) { return; }
 
-    const int r_bits = 1600 - C;
-    const int r_bytes = r_bits / 8;
-    const int d_bytes = D / 8;
-
-    uint8_t* b_input = input + bid * input_block_size;
-    uint8_t* b_output = output + bid * d_bytes;
-    uint64_t state[25] = {}; // Initialize with zeroes
-
-    int input_len = input_block_size;
-
-    // absorb
-    while (input_len >= r_bytes) {
-      // #pragma unroll
-      for (int i = 0; i < r_bytes; i += 8) {
-        state[i / 8] ^= *(uint64_t*)(b_input + i);
-      }
-      keccakf(state);
-      b_input += r_bytes;
-      input_len -= r_bytes;
-    }
-
-    // last block (if any)
-    uint8_t last_block[r_bytes];
-    for (int i = 0; i < input_len; i++) {
-      last_block[i] = b_input[i];
-    }
+    uint8_t* state = (uint8_t*)(&states[sid * 25]);
+    unsigned int r_bytes = rate * 8;
 
     // pad 10*1
-    last_block[input_len] = 1;
+    state[input_len] = 1;
     for (int i = 0; i < r_bytes - input_len - 1; i++) {
-      last_block[input_len + i + 1] = 0;
+      state[input_len + i + 1] = 0;
     }
     // last bit
-    last_block[r_bytes - 1] |= 0x80;
-
-    // #pragma unroll
-    for (int i = 0; i < r_bytes; i += 8) {
-      state[i / 8] ^= *(uint64_t*)(last_block + i);
-    }
-    keccakf(state);
-
-#pragma unroll
-    for (int i = 0; i < d_bytes; i += 8) {
-      *(uint64_t*)(b_output + i) = state[i / 8];
-    }
+    state[r_bytes - 1] |= 0x80;
   }
 
-  template <int C, int D>
-  cudaError_t
-  keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config)
+  __global__ void keccak_permutation_kernel(const u64* states, u64* output, unsigned int number_of_blocks)
   {
-    CHK_INIT_IF_RETURN();
-    cudaStream_t& stream = config.ctx.stream;
+    int sid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (sid >= number_of_blocks) { return; }
 
-    uint8_t* input_device;
-    if (config.are_inputs_on_device) {
-      input_device = input;
-    } else {
-      CHK_IF_RETURN(cudaMallocAsync(&input_device, number_of_blocks * input_block_size, stream));
-      CHK_IF_RETURN(
-        cudaMemcpyAsync(input_device, input, number_of_blocks * input_block_size, cudaMemcpyHostToDevice, stream));
+    const u64* state = &states[sid * 25];
+    u64* out_state = &output[sid * 25];
+    u64 local_state[25];
+
+    UNROLL
+    for (int i = 0; i < 25; i++) {
+      local_state[i] = state[i];
     }
 
-    uint8_t* output_device;
-    if (config.are_outputs_on_device) {
-      output_device = output;
-    } else {
-      CHK_IF_RETURN(cudaMallocAsync(&output_device, number_of_blocks * (D / 8), stream));
+    keccakf(local_state);
+
+    UNROLL
+    for (int i = 0; i < 25; i++) {
+      out_state[i] = local_state[i];
     }
-
-    int number_of_gpu_blocks = (number_of_blocks - 1) / number_of_threads + 1;
-    keccak_hash_blocks<C, D><<<number_of_gpu_blocks, number_of_threads, 0, stream>>>(
-      input_device, input_block_size, number_of_blocks, output_device);
-
-    if (!config.are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(input_device, stream));
-
-    if (!config.are_outputs_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(output, output_device, number_of_blocks * (D / 8), cudaMemcpyDeviceToHost, stream));
-      CHK_IF_RETURN(cudaFreeAsync(output_device, stream));
-    }
-
-    if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
-    return CHK_LAST();
   }
 
+  /**
+   * Squeeze states to extract the results.
+   * 1 GPU thread operates on 1 state.
+   *
+   * @param states the states to squeeze
+   * @param number_of_states number of states to squeeze
+   * @param out pointer for squeeze results. Can be equal to states to do in-place squeeze
+   */
+  template <int R>
+  __global__ void squeeze_states_kernel(const u64* states, unsigned int number_of_states, u64* out)
+  {
+    int sid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (sid >= number_of_states) { return; }
+
+    UNROLL
+    for (int i = 0; i < R; i++) {
+      out[i] = states[i];
+    }
+  }
 } // namespace keccak
+
+#endif

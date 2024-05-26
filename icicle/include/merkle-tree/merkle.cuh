@@ -10,6 +10,8 @@
 #include <iostream>
 #include <math.h>
 
+using namespace hash;
+
 /**
  * @namespace merkle_tree
  * Implementation of the [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) builder,

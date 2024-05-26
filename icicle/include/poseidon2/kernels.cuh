@@ -1,3 +1,7 @@
+#pragma once
+#ifndef POSEIDON2_KERNELS_H
+#define POSEIDON2_KERNELS_H
+
 #include "poseidon2/poseidon2.cuh"
 #include "gpu-utils/modifiers.cuh"
 
@@ -245,3 +249,5 @@ namespace poseidon2 {
     }
   }
 } // namespace poseidon2
+
+#endif
