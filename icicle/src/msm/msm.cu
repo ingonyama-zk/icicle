@@ -969,6 +969,7 @@ __global__ void segments_reduce_kernel2(PointXYZ<Field1>* results, PointXYZ<Fiel
       cudaEvent_t event_large_buckets_accumulated;
       // ---------------- This is where handling of large buckets happens (if there are any) -------------
       if (h_nof_large_buckets > 0 && bucket_th > 0) {
+        printf("large buckets found\n");
         CHK_IF_RETURN(cudaStreamCreate(&stream_large_buckets));
         CHK_IF_RETURN(cudaEventCreateWithFlags(&event_large_buckets_accumulated, cudaEventDisableTiming));
 
@@ -1073,7 +1074,8 @@ __global__ void segments_reduce_kernel2(PointXYZ<Field1>* results, PointXYZ<Fiel
       if (!are_results_on_device)
         CHK_IF_RETURN(cudaMallocAsync(&d_allocated_final_result, sizeof(P) * batch_size, stream));
 
-      // return CHK_LAST();
+      return CHK_LAST();
+      printf("starting reduction phase...\n");
 
       // --- Reduction of buckets happens here, after this we'll get a single sum for each bucket module/window ---
       unsigned nof_empty_bms_per_batch = 0; // for non-triangle accumluation this may be >0

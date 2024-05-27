@@ -203,7 +203,7 @@ int main(int argc, char** argv)
     precomp_factor,     // precompute_factor
     user_c,     // c
     0,     // bitsize
-    10,    // large_bucket_factor
+    100,    // large_bucket_factor
     batch_size,     // batch_size
     false, // are_scalars_on_device
     false, // are_scalars_montgomery_form
@@ -212,7 +212,7 @@ int main(int argc, char** argv)
     true,  // are_results_on_device
     false, // is_big_triangle
     true,  // is_async
-    true,  // segments_reduction
+    false,  // segments_reduction
   };
 
   cudaEventCreate(&start);
