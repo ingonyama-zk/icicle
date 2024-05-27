@@ -49,14 +49,14 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Build curve
-      working-directory: ./icicle_fe
+      working-directory: ./icicle_v3
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.field.build_args }} -S . -B build
         cmake --build build -j
     - name: Run C++ curve Tests
-      working-directory: ./icicle_fe/build/tests
+      working-directory: ./icicle_v3/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: ctest
 
@@ -75,13 +75,13 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Build field
-      working-directory: ./icicle_fe
+      working-directory: ./icicle_v3
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -S . -B build
         cmake --build build -j
     - name: Run C++ field Tests
-      working-directory: ./icicle_fe/build/tests
+      working-directory: ./icicle_v3/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: ctest
