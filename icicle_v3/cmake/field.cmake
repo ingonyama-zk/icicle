@@ -19,5 +19,6 @@ endfunction()
 
 function(setup_field_target)    
     add_library(icicle_field STATIC 
-    src/vec_ops/vec_ops.cpp)
+    src/vec_ops/vec_ops.cpp
+    src/ntt/ntt.cpp)
 endfunction()
