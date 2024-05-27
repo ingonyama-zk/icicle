@@ -54,6 +54,29 @@ namespace vec_ops {
       if (tid >= row_size * column_size) return;
       out[(tid % row_size) * column_size + (tid / row_size)] = in[tid];
     }
+
+    template <typename E>
+    __global__ void bit_reverse_kernel(const E* input, unsigned n, unsigned shift, E* output) {
+      int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      // Handling arbitrary vector size
+      if (tid < n) {
+        int reversed_index = __brev(tid) >> shift;
+        output[reversed_index] = input[tid];
+      }
+    }
+    template <typename E>
+    __global__ void bit_reverse_inplace_kernel(E* input, unsigned n, unsigned shift) {
+      int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      // Handling arbitrary vector size
+      if (tid < n) {
+        int reversed_index = __brev(tid) >> shift;
+        if(reversed_index > tid) {
+          E temp = input[tid];
+          input[tid] = input[reversed_index];
+          input[reversed_index] = temp;
+        }
+      }
+    }
   } // namespace
 
   template <typename E, void (*Kernel)(const E*, const E*, int, E*)>
@@ -162,6 +185,69 @@ namespace vec_ops {
     }
     if (!is_async) return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
 
+    return CHK_LAST();
+  }
+
+  template <typename E>
+  cudaError_t bit_reverse_inplace(E* input, unsigned size, BitReverseConfig& cfg) {
+    if (size & (size - 1))
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
+    E* d_input;
+    if (cfg.is_input_on_device) {
+      d_input = input;
+    }
+    else {
+      // copy input to gpu
+      CHK_IF_RETURN(cudaMallocAsync(&d_input, sizeof(E) * size, cfg.ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
+    }
+    unsigned shift = __builtin_clz(size) + 1;
+    unsigned num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
+    bit_reverse_inplace_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_input, size, shift);
+    if (!cfg.is_input_on_device) {
+      CHK_IF_RETURN(cudaMemcpyAsync(input, d_input, sizeof(E) * size, cudaMemcpyDeviceToHost, cfg.ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_input, cfg.ctx.stream));
+    }
+    if (!cfg.is_async) 
+      CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
+    return CHK_LAST();
+  }
+
+  template <typename E>
+  cudaError_t bit_reverse(const E* input, unsigned size, BitReverseConfig& cfg, E* output) {
+    if (size & (size - 1))
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
+    const E* d_input;
+    E* d_alloc_input;
+    if (cfg.is_input_on_device) {
+      d_input = input;
+    }
+    else {
+      // copy input to gpu
+      CHK_IF_RETURN(cudaMallocAsync(&d_alloc_input, sizeof(E) * size, cfg.ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_input, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
+      d_input = d_alloc_input;
+    }
+    E* d_output;
+    if (cfg.is_output_on_device) {
+      d_output = output;
+    }
+    else {
+      // allocate output on gpu
+      CHK_IF_RETURN(cudaMallocAsync(&d_output, sizeof(E) * size, cfg.ctx.stream));
+    }
+    unsigned shift = __builtin_clz(size) + 1;
+    unsigned num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
+    bit_reverse_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_input, size, shift, d_output);
+    if (!cfg.is_input_on_device) {
+      CHK_IF_RETURN(cudaFreeAsync(d_alloc_input, cfg.ctx.stream));
+    }
+    if (!cfg.is_output_on_device) {
+      CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, sizeof(E) * size, cudaMemcpyDeviceToHost, cfg.ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_output, cfg.ctx.stream));
+    }
+    if (!cfg.is_async) 
+      CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
     return CHK_LAST();
   }
 } // namespace vec_ops

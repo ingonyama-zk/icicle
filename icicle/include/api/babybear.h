@@ -68,6 +68,17 @@ extern "C" cudaError_t babybear_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
+extern "C" cudaError_t babybear_bit_reverse_cuda(
+  const babybear::scalar_t* input,
+  unsigned n,
+  vec_ops::BitReverseConfig& config,
+  babybear::scalar_t* output);
+
+extern "C" cudaError_t babybear_bit_reverse_inplace_cuda(
+  babybear::scalar_t* input,
+  unsigned n,
+  vec_ops::BitReverseConfig& config);
+
 extern "C" void babybear_generate_scalars(babybear::scalar_t* scalars, int size);
 
 extern "C" cudaError_t babybear_scalar_convert_montgomery(
