@@ -3,7 +3,7 @@ use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
 use icicle_core::error::IcicleResult;
 use icicle_core::impl_vec_ops_field;
 use icicle_core::traits::IcicleResultWrap;
-use icicle_core::vec_ops::{VecOps, VecOpsConfig, BitReverseConfig};
+use icicle_core::vec_ops::{BitReverseConfig, VecOps, VecOpsConfig};
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
@@ -52,13 +52,13 @@ extern "C" {
         input: *const ScalarField,
         size: u32,
         config: &BitReverseConfig,
-        output: *mut ScalarField
+        output: *mut ScalarField,
     ) -> CudaError;
 
     pub(crate) fn babybear_bit_reverse_inplace_cuda(
         input: *mut ScalarField,
         size: u32,
-        config: &BitReverseConfig
+        config: &BitReverseConfig,
     ) -> CudaError;
 }
 

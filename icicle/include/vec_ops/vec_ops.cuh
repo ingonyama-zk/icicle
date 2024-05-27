@@ -115,22 +115,24 @@ namespace vec_ops {
     bool is_async);
 
   struct BitReverseConfig {
-      device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream. */
-      bool is_input_on_device; /**< True if `input` is on device and false if it is not. Default value: false. */
-      bool is_output_on_device; /**< True if `output` is on device and false if it is not. Default value: false. */
-      bool is_async; /**< Whether to run the vector operations asynchronously. If set to `true`, the function will be
-                  *   non-blocking and you'd need to synchronize it explicitly by running
-                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
-                  *   function will block the current CPU thread. */
+    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream. */
+    bool is_input_on_device;  /**< True if `input` is on device and false if it is not. Default value: false. */
+    bool is_output_on_device; /**< True if `output` is on device and false if it is not. Default value: false. */
+    bool is_async; /**< Whether to run the vector operations asynchronously. If set to `true`, the function will be
+                    *   non-blocking and you'd need to synchronize it explicitly by running
+                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
+                    *   function will block the current CPU thread. */
   };
-  static BitReverseConfig DefaultBitReverseConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context()) {
-      BitReverseConfig config = {
-          ctx,   // ctx
-          false, // is_input_on_device
-          false, // is_output_on_device
-          false, // is_async
-      };
-      return config;
+  static BitReverseConfig
+  DefaultBitReverseConfig(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
+  {
+    BitReverseConfig config = {
+      ctx,   // ctx
+      false, // is_input_on_device
+      false, // is_output_on_device
+      false, // is_async
+    };
+    return config;
   }
 } // namespace vec_ops
 

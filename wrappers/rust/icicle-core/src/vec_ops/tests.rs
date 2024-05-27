@@ -1,5 +1,8 @@
 use crate::traits::GenerateRandom;
-use crate::vec_ops::{add_scalars, bit_reverse, bit_reverse_inplace, mul_scalars, sub_scalars, BitReverseConfig, FieldImpl, VecOps, VecOpsConfig};
+use crate::vec_ops::{
+    add_scalars, bit_reverse, bit_reverse_inplace, mul_scalars, sub_scalars, BitReverseConfig, FieldImpl, VecOps,
+    VecOpsConfig,
+};
 use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
 
 pub fn check_vec_ops_scalars<F: FieldImpl>()
@@ -62,12 +65,16 @@ where
     let input = F::Config::generate_random(TEST_SIZE);
     let input = HostSlice::from_slice(&input);
     let mut intermediate = DeviceVec::<F>::cuda_malloc(TEST_SIZE).unwrap();
-    intermediate.copy_from_host(&input).unwrap();
+    intermediate
+        .copy_from_host(&input)
+        .unwrap();
     let mut cfg = BitReverseConfig::default();
     cfg.are_inputs_on_device = true;
     bit_reverse_inplace(&mut intermediate[..], &cfg).unwrap();
     bit_reverse_inplace(&mut intermediate[..], &cfg).unwrap();
-    let mut result_host = vec![F::one(); TEST_SIZE]; 
-    intermediate.copy_to_host(HostSlice::from_mut_slice(&mut result_host[..])).unwrap();
+    let mut result_host = vec![F::one(); TEST_SIZE];
+    intermediate
+        .copy_to_host(HostSlice::from_mut_slice(&mut result_host[..]))
+        .unwrap();
     assert_eq!(input.as_slice(), result_host.as_slice());
 }

@@ -248,8 +248,8 @@ macro_rules! impl_vec_ops_field {
     ) => {
         mod $field_prefix_ident {
             use crate::vec_ops::{$field, CudaError, DeviceContext, HostOrDeviceSlice};
-            use icicle_core::vec_ops::VecOpsConfig;
             use icicle_core::vec_ops::BitReverseConfig;
+            use icicle_core::vec_ops::VecOpsConfig;
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_add_cuda")]

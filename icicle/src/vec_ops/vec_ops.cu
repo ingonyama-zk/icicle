@@ -56,7 +56,8 @@ namespace vec_ops {
     }
 
     template <typename E>
-    __global__ void bit_reverse_kernel(const E* input, unsigned n, unsigned shift, E* output) {
+    __global__ void bit_reverse_kernel(const E* input, unsigned n, unsigned shift, E* output)
+    {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       // Handling arbitrary vector size
       if (tid < n) {
@@ -65,12 +66,13 @@ namespace vec_ops {
       }
     }
     template <typename E>
-    __global__ void bit_reverse_inplace_kernel(E* input, unsigned n, unsigned shift) {
+    __global__ void bit_reverse_inplace_kernel(E* input, unsigned n, unsigned shift)
+    {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       // Handling arbitrary vector size
       if (tid < n) {
         int reversed_index = __brev(tid) >> shift;
-        if(reversed_index > tid) {
+        if (reversed_index > tid) {
           E temp = input[tid];
           input[tid] = input[reversed_index];
           input[reversed_index] = temp;
@@ -189,14 +191,13 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t bit_reverse_inplace(E* input, unsigned size, BitReverseConfig& cfg) {
-    if (size & (size - 1))
-      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
+  cudaError_t bit_reverse_inplace(E* input, unsigned size, BitReverseConfig& cfg)
+  {
+    if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
     E* d_input;
     if (cfg.is_input_on_device) {
       d_input = input;
-    }
-    else {
+    } else {
       // copy input to gpu
       CHK_IF_RETURN(cudaMallocAsync(&d_input, sizeof(E) * size, cfg.ctx.stream));
       CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
@@ -208,21 +209,19 @@ namespace vec_ops {
       CHK_IF_RETURN(cudaMemcpyAsync(input, d_input, sizeof(E) * size, cudaMemcpyDeviceToHost, cfg.ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(d_input, cfg.ctx.stream));
     }
-    if (!cfg.is_async) 
-      CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
+    if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
     return CHK_LAST();
   }
 
   template <typename E>
-  cudaError_t bit_reverse(const E* input, unsigned size, BitReverseConfig& cfg, E* output) {
-    if (size & (size - 1))
-      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
+  cudaError_t bit_reverse(const E* input, unsigned size, BitReverseConfig& cfg, E* output)
+  {
+    if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
     const E* d_input;
     E* d_alloc_input;
     if (cfg.is_input_on_device) {
       d_input = input;
-    }
-    else {
+    } else {
       // copy input to gpu
       CHK_IF_RETURN(cudaMallocAsync(&d_alloc_input, sizeof(E) * size, cfg.ctx.stream));
       CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_input, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
@@ -231,23 +230,19 @@ namespace vec_ops {
     E* d_output;
     if (cfg.is_output_on_device) {
       d_output = output;
-    }
-    else {
+    } else {
       // allocate output on gpu
       CHK_IF_RETURN(cudaMallocAsync(&d_output, sizeof(E) * size, cfg.ctx.stream));
     }
     unsigned shift = __builtin_clz(size) + 1;
     unsigned num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
     bit_reverse_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_input, size, shift, d_output);
-    if (!cfg.is_input_on_device) {
-      CHK_IF_RETURN(cudaFreeAsync(d_alloc_input, cfg.ctx.stream));
-    }
+    if (!cfg.is_input_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_input, cfg.ctx.stream)); }
     if (!cfg.is_output_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, sizeof(E) * size, cudaMemcpyDeviceToHost, cfg.ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(d_output, cfg.ctx.stream));
     }
-    if (!cfg.is_async) 
-      CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
+    if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
     return CHK_LAST();
   }
 } // namespace vec_ops
