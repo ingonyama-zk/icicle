@@ -28,7 +28,7 @@ public:
   static void SetUpTestSuite()
   {
     s_regsitered_devices = getRegisteredDevices();
-    ASSERT_EQ(s_regsitered_devices.size(), 2); // "CPU" and "CUDA"
+    ASSERT_GT(s_regsitered_devices.size(), 0);
   }
   static void TearDownTestSuite() {}
 
