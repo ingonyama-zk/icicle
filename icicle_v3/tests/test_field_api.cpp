@@ -4,6 +4,7 @@
 
 #include "icicle/runtime.h"
 #include "icicle/vec_ops/vec_ops.h"
+#include "icicle/ntt/ntt.h"
 
 #include "icicle/fields/field_config.h"
 
@@ -115,6 +116,32 @@ TEST_F(FieldApiTest, vectorAddAsync)
   run("CUDA", out_cuda.get(), "CUDA vector add (device mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
 
   ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
+}
+
+TEST_F(FieldApiTest, Ntt)
+{
+  const int N = 1 << 15;
+  auto scalars = std::make_unique<scalar_t[]>(N);
+  scalar_t::rand_host_many(scalars.get(), N);
+
+  auto out_cpu = std::make_unique<scalar_t[]>(N);
+  auto out_cuda = std::make_unique<scalar_t[]>(N);
+
+  auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicleSetDevice(dev);
+    auto config = default_ntt_config<scalar_t>();
+
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i)
+      ntt(scalars.get(), N, NTTDir::kForward, config, out);
+    END_TIMER(NTT_sync, msg, measure);
+  };
+
+  run("CPU", out_cpu.get(), "CPU ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // run("CUDA", out_cuda.get(), "CUDA ntt (host mem)", VERBOSE /*=measure*/, 1 /*=iters*/);
+
+  // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
 }
 
 int main(int argc, char** argv)

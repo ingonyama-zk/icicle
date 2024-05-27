@@ -1,5 +1,4 @@
 #include "vec_ops/vec_ops.h"
-#include "device_api.h"
 
 using namespace icicle;
 
