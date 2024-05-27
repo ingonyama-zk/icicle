@@ -8,13 +8,9 @@
 using namespace field_config;
 using namespace icicle;
 
-eIcicleError CpuVectorAdd(
-  const Device& device,
-  const scalar_t* vec_a,
-  const scalar_t* vec_b,
-  int n,
-  const VecOpsConfig& config,
-  scalar_t* output)
+template <typename T>
+eIcicleError
+CpuVectorAdd(const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)
 {
   for (int i = 0; i < n; ++i) {
     output[i] = vec_a[i] + vec_b[i];
@@ -22,4 +18,4 @@ eIcicleError CpuVectorAdd(
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_VECTOR_ADD_BACKEND("CPU", CpuVectorAdd);
+REGISTER_VECTOR_ADD_BACKEND("CPU", CpuVectorAdd<scalar_t>);
