@@ -24,6 +24,9 @@
 #include "host_math.cuh"
 #include "ptx.cuh"
 #include "storage.cuh"
+#include "asm.cu"
+#include "Chain.cu"
+#include "MP.cu"
 
 #include <iomanip>
 #include <iostream>
@@ -828,7 +831,7 @@ public:
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
     if (num_of_reductions() == 2) {
       carry = sub_limbs<true>(r.limbs_storage, get_modulus<2>(), r_reduced);
-      if (carry == 0) r = Field{r_reduced};
+      if (carry == 0) r = Field{r_reduced}; //r=c*r+(1-c)*r_red
     }
     carry = sub_limbs<true>(r.limbs_storage, get_modulus<1>(), r_reduced);
     if (carry == 0) r = Field{r_reduced};
@@ -839,7 +842,21 @@ public:
   friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
+    // return Wide::get_higher(xy);          // reduce mod p
     return reduce(xy);          // reduce mod p
+  }
+
+  friend DEVICE_INLINE Field modmul(const Field& xs, const Field& ys)
+  {
+    Field    r;
+    Field    localN;
+    uint64_t evenOdd[TLC];
+    bool     carry;
+
+    localN = Field{get_modulus()}; 
+    carry=mp_mul_red_cl<TLC>(evenOdd, xs.limbs_storage.limbs, ys.limbs_storage.limbs, localN.limbs_storage.limbs);  //generalize qterm
+    mp_merge_cl<TLC>(r.limbs_storage.limbs, evenOdd, carry);
+    return r;
   }
 
   friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys)
@@ -872,6 +889,7 @@ public:
     for (unsigned i = 1; i < TLC; i++)
       is_u32 &= (mul.limbs_storage.limbs[i] == 0);
 
+    // return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
     if (is_u32) return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
     return mul * xs;
   }

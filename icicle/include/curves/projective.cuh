@@ -74,8 +74,13 @@ public:
     return {X3, Y3, Z3};
   }
 
-  friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2)
+   friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2)
   {
+    // FF X3 = p1.x * p2.x;
+    // FF Y3 = p1.y * p2.y;
+    // FF Z3 = p1.y * p2.z;
+
+
     const FF X1 = p1.x;                                                                //                   < 2
     const FF Y1 = p1.y;                                                                //                   < 2
     const FF Z1 = p1.z;                                                                //                   < 2
@@ -109,14 +114,173 @@ public:
     const auto t24 = FF::mul_wide(t12, t23);                                           // t24 ← t12 · t23   < 2
     const auto t25 = FF::mul_wide(t07, t22);                                           // t25 ← t07 · t22   < 2
     const FF X3 = FF::reduce(t25 - t24);                                               // X3 ← t25 − t24    < 2
+    // const FF X3 = FF::Wide::get_higher(t25 - t24);                                               // X3 ← t25 − t24    < 2
     const auto t27 = FF::mul_wide(t23, t19);                                           // t27 ← t23 · t19   < 2
     const auto t28 = FF::mul_wide(t22, t21);                                           // t28 ← t22 · t21   < 2
     const FF Y3 = FF::reduce(t28 + t27);                                               // Y3 ← t28 + t27    < 2
+    // const FF Y3 = FF::Wide::get_higher(t28 + t27);                                               // Y3 ← t28 + t27    < 2
     const auto t30 = FF::mul_wide(t19, t07);                                           // t30 ← t19 · t07   < 2
     const auto t31 = FF::mul_wide(t21, t12);                                           // t31 ← t21 · t12   < 2
     const FF Z3 = FF::reduce(t31 + t30);                                               // Z3 ← t31 + t30    < 2
+    // const FF Z3 = FF::Wide::get_higher(t31 + t30);                                               // Z3 ← t31 + t30    < 2
     return {X3, Y3, Z3};
   }
+
+  friend DEVICE_INLINE Projective ec_add(Projective p1, const Projective& p2)
+  {
+    // FF X3 = modmul(p1.x,p2.x);
+    // FF Y3 = modmul(p1.y,p2.y);
+    // FF Z3 = modmul(p1.y,p2.z);
+    
+    FF t00 = modmul(p1.x,p2.x);                                                            // t00 ← X1 · X2     < 2
+    FF t01 = modmul(p1.y,p2.y);                                                            // t01 ← Y1 · Y2     < 2
+    FF t02 = modmul(p1.y,p2.z);                                                            // t02 ← Z1 · Z2     < 2
+    FF t03 = p1.x + p1.y;                                                            // t03 ← X1 + Y1     < 4
+    FF t04 = p2.x + p2.y;                                                            // t04 ← X2 + Y2     < 4
+    t03 = modmul(t03, t04);                                                          // t03 ← t03 · t04   < 3
+    t04 = t00 + t01;                                                          // t06 ← t00 + t01   < 4
+    FF t07 = t03 - t04;                                                          // t05 ← t05 − t06   < 2
+    FF t08 = p1.y + p1.z;                                                            // t08 ← Y1 + Z1     < 4
+    FF t09 = p2.y + p2.z;                                                            // t09 ← Y2 + Z2     < 4
+    t08 = modmul(t08, t09);                                                          // t10 ← t08 · t09   < 3
+    t09 = t01 + t02;                                                          // t11 ← t01 + t02   < 4
+    FF t12 = t08 - t09;                                                          // t12 ← t10 − t11   < 2
+    FF t13 = p1.x + p1.z;                                                            // t13 ← X1 + Z1     < 4
+    FF t14 = p2.x + p2.z;                                                            // t14 ← X2 + Z2     < 4
+    t13 = modmul(t13, t14);                                                          // t15 ← t13 · t14   < 3
+    t14 = t00 + t02;                                                          // t16 ← t00 + t02   < 4
+    FF t17 = t13 - t14;                                                          // t17 ← t15 − t16   < 2
+    FF t18 = t00 + t00;                                                          // t18 ← t00 + t00   < 2
+    FF t19 = t18 + t00;                                                          // t19 ← t18 + t00   < 2
+    t00 = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(t02)); // t20 ← b3 · t02    < 2
+    FF t21 = t01 + t00;                                                          // t21 ← t01 + t20   < 2
+    FF t22 = t01 - t00;                                                          // t22 ← t01 − t20   < 2
+    FF t23 = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(t17)); // t23 ← b3 · t17    < 2
+    
+    // auto t24 = FF::mul_wide(t12, t23);                                           // t24 ← t12 · t23   < 2
+    // auto t25 = FF::mul_wide(t07, t22);                                           // t25 ← t07 · t22   < 2
+    // FF X3 = FF::reduce(t25 - t24);                                               // X3 ← t25 − t24    < 2
+    // auto t27 = FF::mul_wide(t23, t19);                                           // t27 ← t23 · t19   < 2
+    // auto t28 = FF::mul_wide(t22, t21);                                           // t28 ← t22 · t21   < 2
+    // FF Y3 = FF::reduce(t28 + t27);                                               // Y3 ← t28 + t27    < 2
+    // auto t30 = FF::mul_wide(t19, t07);                                           // t30 ← t19 · t07   < 2
+    // auto t31 = FF::mul_wide(t21, t12);                                           // t31 ← t21 · t12   < 2
+    // FF Z3 = FF::reduce(t31 + t30);                                               // Z3 ← t31 + t30    < 2
+
+    FF X3 = modmul(t12,t23)-modmul(t07,t22);                                               // X3 ← t25 − t24    < 2
+    FF Y3 = modmul(t19,t23)+modmul(t22,t21);                                               // Y3 ← t28 + t27    < 2
+    FF Z3 = modmul(t07,t19)+modmul(t21,t12);                                               // Z3 ← t31 + t30    < 2
+    
+    // FF X3 = t21;
+    // FF Y3 = t22;
+    // FF Z3 = t23;
+    return {X3, Y3, Z3};
+  }
+
+  static HOST_DEVICE_INLINE void accumulate_proj(Projective &p1, const Projective& p2)
+  {
+    FF T1,T2,T3,T4,T5,T6;
+    typename FF::Wide W1,W2;
+    T1 = p1.x + p1.y;                                                            // t03 ← X1 + Y1     < 4
+    T2 = p2.x + p2.y;                                                            // t04 ← X2 + Y2     < 4
+    T1 = T1 * T2;                                                          // t03 ← t03 · t04   < 3
+    T2 = p1.y + p1.z;                                                            // t08 ← Y1 + Z1     < 4
+    T3 = p2.y + p2.z;                                                            // t09 ← Y2 + Z2     < 4
+    T2 = T2 * T3;                                                          // t10 ← t08 · t09   < 3
+
+    p1.x = p1.x * p2.x;                                                            // t00 ← X1 · X2     < 2
+
+    T3 = p1.x + p1.z;                                                            // t13 ← X1 + Z1     < 4
+    T4 = p2.x + p2.z;                                                            // t14 ← X2 + Z2     < 4
+    T3 = T3 * T4;                                                          // t15 ← t13 · t14   < 3
+
+
+    p1.y = p1.y * p2.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p2.z;                                                            // t02 ← Z1 · Z2     < 2
+    
+    T4 = p1.x + p1.y;                                                          // t06 ← t00 + t01   < 4
+    T5 = p1.x + p1.z;                                                          // t16 ← t00 + t02   < 4
+    T6 = p1.y + p1.z;                                                          // t11 ← t01 + t02   < 4
+    
+    
+    T1 = T1 - T4;                                                          // t05 ← t05 − t06   < 2
+    T2 = T2 - T5;                                                          // t12 ← t10 − t11   < 2
+    T3 = T3 - T6;                                                          // t17 ← t15 − t16   < 2
+    T3 = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(T3)); // t23 ← b3 · t17    < 2
+
+    T4 = p1.y + p1.z;                                                          // t21 ← t01 + t20   < 2
+    T5 = p1.y - p1.z;                                                          // t22 ← t01 − t20   < 2
+    p1.x = p1.x + p1.x;                                                          // t18 ← t00 + t00   < 2
+    T6 = p1.x + p1.x;                                                          // t19 ← t18 + t00   < 2
+    p1.z = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(p1.z)); // t20 ← b3 · t02    < 2
+
+    W1 = FF::mul_wide(T1, T5);                                           // t24 ← t12 · t23   < 2
+    W2 = FF::mul_wide(T2, T3);                                           // t25 ← t07 · t22   < 2
+    p1.x = FF::reduce(W1 - W2);                                               // X3 ← t25 − t24    < 2
+    W1 = FF::mul_wide(T4, T5);                                           // t27 ← t23 · t19   < 2
+    W2 = FF::mul_wide(T2, T6);                                           // t28 ← t22 · t21   < 2
+    p1.y = FF::reduce(W1 + W2);                                               // Y3 ← t28 + t27    < 2
+    W1 = FF::mul_wide(T3, T4);                                           // t30 ← t19 · t07   < 2
+    W2 = FF::mul_wide(T1, T6);                                           // t31 ← t21 · t12   < 2
+    p1.z = FF::reduce(W1 + W2);                                               // Z3 ← t31 + t30    < 2
+    // return {X3, Y3, Z3};
+  }
+
+  static HOST_DEVICE_INLINE void accumulate_simple(Projective &p1, const Projective& p2)
+  {
+    p1.x = p1.x * p2.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p2.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p2.z;                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = p1.x * p1.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p1.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p1.z;                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = p1.x * p2.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p2.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p2.z;                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = p1.x * p2.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p2.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p2.z;                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = p1.x * p2.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p2.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p2.z;                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = p1.x * p1.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p1.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p1.z;                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = p1.x * p2.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p2.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p2.z;                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = p1.x * p2.x;                                                            // t00 ← X1 · X2     < 2
+    p1.y = p1.y * p2.y;                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = p1.z * p2.z;                                                            // t02 ← Z1 · Z2     < 2
+  }
+  static HOST_DEVICE_INLINE void accumulate_simple_zpmul(Projective &p1, const Projective& p2)
+  {
+    p1.x = modmul(p1.x,p2.x);                                                            // t00 ← X1 · X2     < 2
+    p1.y = modmul(p1.y,p2.y);                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = modmul(p1.z,p2.z);                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = modmul(p1.x,p1.x);                                                            // t00 ← X1 · X2     < 2
+    p1.y = modmul(p1.y,p1.y);                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = modmul(p1.z,p1.z);                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = modmul(p1.x,p2.x);                                                            // t00 ← X1 · X2     < 2
+    p1.y = modmul(p1.y,p2.y);                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = modmul(p1.z,p2.z);                                                            // t02 ← Z1 · Z2     < 2
+    p1.x = modmul(p1.x,p2.x);                                                            // t00 ← X1 · X2     < 2
+    p1.y = modmul(p1.y,p2.y);                                                            // t01 ← Y1 · Y2     < 2
+    p1.z = modmul(p1.z,p2.z);                                                            // t02 ← Z1 · Z2     < 2
+    // p1.x = modmul(p1.x,p2.x);                                                            // t00 ← X1 · X2     < 2
+    // p1.y = modmul(p1.y,p2.y);                                                            // t01 ← Y1 · Y2     < 2
+    // p1.z = modmul(p1.z,p2.z);                                                            // t02 ← Z1 · Z2     < 2
+    // p1.x = modmul(p1.x,p1.x);                                                            // t00 ← X1 · X2     < 2
+    // p1.y = modmul(p1.y,p1.y);                                                            // t01 ← Y1 · Y2     < 2
+    // p1.z = modmul(p1.z,p1.z);                                                            // t02 ← Z1 · Z2     < 2
+    // p1.x = modmul(p1.x,p2.x);                                                            // t00 ← X1 · X2     < 2
+    // p1.y = modmul(p1.y,p2.y);                                                            // t01 ← Y1 · Y2     < 2
+    // p1.z = modmul(p1.z,p2.z);                                                            // t02 ← Z1 · Z2     < 2
+    // p1.x = modmul(p1.x,p2.x);                                                            // t00 ← X1 · X2     < 2
+    // p1.y = modmul(p1.y,p2.y);                                                            // t01 ← Y1 · Y2     < 2
+    // p1.z = modmul(p1.z,p2.z);                                                            // t02 ← Z1 · Z2     < 2
+  }
+
 
   friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Projective& p2) { return p1 + neg(p2); }
 

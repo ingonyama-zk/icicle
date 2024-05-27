@@ -1,6 +1,6 @@
 #include "fields/id.h"
 // #define FIELD_ID 2
-#define CURVE_ID 2
+#define CURVE_ID 3
 #include "curves/curve_config.cuh"
 // #include "fields/field_config.cuh"
 
@@ -13,6 +13,9 @@
 
 #include "curves/params/bn254.cuh"
 #include "fields/field.cuh"
+// #include "fields/asm.cu"
+// #include "fields/Chain.cu"
+// #include "fields/MP.cu"
 #include "curves/projective.cuh"
 #include "gpu-utils/device_context.cuh"
 
@@ -144,7 +147,7 @@ int main(int argc, char** argv)
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
   int user_c = (argc > 4) ? atoi(argv[4]) : 16;
 
-  printf("running msm 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n",msm_log_size, batch_size, precomp_factor, user_c);
+  printf("running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n",CURVE_ID,msm_log_size, batch_size, precomp_factor, user_c);
 
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];

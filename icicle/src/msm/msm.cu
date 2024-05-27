@@ -16,6 +16,132 @@
 #include "gpu-utils/error_handler.cuh"
 #include "utils/mont.cuh"
 
+typedef uint32_t Field1[12];
+template<class Field>
+class PointXYZ {
+  public:
+  Field x, y, z;
+};
+
+__device__ __forceinline__ void setZero(uint32_t* r) {
+  #pragma unroll
+  for(int32_t i=0;i<12;i++)
+    r[i]=0;
+}
+
+__device__ __forceinline__ void initializeXYZ(PointXYZ<Field1>& acc) {
+  setZero(acc.x);
+  setZero(acc.y);
+  setZero(acc.z);
+}
+
+
+template <typename FF>
+__device__ __forceinline__ void accumulate_xyz(FF &x1,FF &y1,FF &z1, const FF& x2, const FF& y2, const FF& z2)
+  {
+    // FF B_VALUE{0x00000001, 0x00000000, 0x00000000, 0x00000000,
+    //                                                                 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+    //                                                                 0x00000000, 0x00000000, 0x00000000, 0x00000000};
+    FF T1,T2,T3,T4,T5,T6;
+    typename FF::Wide W1,W2;
+    T1 = x1 + y1;                                                            // t03 ← X1 + Y1     < 4
+    T2 = x2 + y2;                                                            // t04 ← X2 + Y2     < 4
+    T1 = T1 * T2;                                                          // t03 ← t03 · t04   < 3
+    T2 = y1 + z1;                                                            // t08 ← Y1 + Z1     < 4
+    T3 = y2 + z2;                                                            // t09 ← Y2 + Z2     < 4
+    T2 = T2 * T3;                                                          // t10 ← t08 · t09   < 3
+
+    x1 = x1 * x2;                                                            // t00 ← X1 · X2     < 2
+
+    T3 = x1 + z1;                                                            // t13 ← X1 + Z1     < 4
+    T4 = x2 + z2;                                                            // t14 ← X2 + Z2     < 4
+    T3 = T3 * T4;                                                          // t15 ← t13 · t14   < 3
+
+
+    y1 = y1 * y2;                                                            // t01 ← Y1 · Y2     < 2
+    z1 = z1 * z2;                                                            // t02 ← Z1 · Z2     < 2
+    
+    T4 = x1 + y1;                                                          // t06 ← t00 + t01   < 4
+    T5 = x1 + z1;                                                          // t16 ← t00 + t02   < 4
+    T6 = y1 + z1;                                                          // t11 ← t01 + t02   < 4
+    
+    
+    T1 = T1 - T4;                                                          // t05 ← t05 − t06   < 2
+    T2 = T2 - T5;                                                          // t12 ← t10 − t11   < 2
+    T3 = T3 - T6;                                                          // t17 ← t15 − t16   < 2
+    // T3 = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(T3)); // t23 ← b3 · t17    < 2
+
+    T4 = y1 + z1;                                                          // t21 ← t01 + t20   < 2
+    T5 = y1 - z1;                                                          // t22 ← t01 − t20   < 2
+    x1 = x1 + x1;                                                          // t18 ← t00 + t00   < 2
+    T6 = x1 + x1;                                                          // t19 ← t18 + t00   < 2
+    // z1 = FF::template mul_unsigned<3>(FF::template mul_const<B_VALUE>(z1)); // t20 ← b3 · t02    < 2
+
+    W1 = FF::mul_wide(T1, T5);                                           // t24 ← t12 · t23   < 2
+    W2 = FF::mul_wide(T2, T3);                                           // t25 ← t07 · t22   < 2
+    x1 = FF::reduce(W1 - W2);                                               // X3 ← t25 − t24    < 2
+    W1 = FF::mul_wide(T4, T5);                                           // t27 ← t23 · t19   < 2
+    W2 = FF::mul_wide(T2, T6);                                           // t28 ← t22 · t21   < 2
+    y1 = FF::reduce(W1 + W2);                                               // Y3 ← t28 + t27    < 2
+    W1 = FF::mul_wide(T3, T4);                                           // t30 ← t19 · t07   < 2
+    W2 = FF::mul_wide(T1, T6);                                           // t31 ← t21 · t12   < 2
+    z1 = FF::reduce(W1 + W2);                                               // Z3 ← t31 + t30    < 2
+    // return {X3, Y3, Z3};
+  }
+
+__device__ __forceinline__ void setN(Field1& r) {
+  r[0]=0x00000001; r[1]=0x8508C000; r[2]=0x30000000; r[3]=0x170B5D44;
+  r[4]=0xBA094800; r[5]=0x1EF3622F; r[6]=0x00F5138F; r[7]=0x1A22D9F3;
+  r[8]=0x6CA1493B; r[9]=0xC63B05C0; r[10]=0x17C510EA; r[11]=0x01AE3A46;
+}
+
+__device__ __forceinline__ void modmul2(Field1& r, const Field1& a, const Field1& b)
+{
+  Field1 localN; //={0x00000001, 0x8508c000, 0x30000000, 0x170b5d44,
+                  //                                   0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3,
+                    //                                 0x6ca1493b, 0xc63b05c0, 0x17c510ea, 0x01ae3a46};
+  uint64_t evenOdd[12];
+  bool     carry;
+
+  setN(localN);
+  carry=mp_mul_red_cl<12>(evenOdd, a, b, localN);
+  mp_merge_cl<12>(r, evenOdd, carry);
+}
+
+__device__ __forceinline__ void accumulate_xyz_simple2(PointXYZ<Field1>& acc, const PointXYZ<Field1>& pt) {
+  modmul2(acc.x, acc.x, pt.x);                                                            // t00 ← X1 · X2     < 2
+  modmul2(acc.y, acc.y, pt.y);                                                            // t01 ← Y1 · Y2     < 2
+  modmul2(acc.z, acc.z, pt.z);                                                            // t02 ← Z1 · Z2     < 2
+  modmul2(acc.x, acc.x, pt.x);                                                            // t00 ← X1 · X2     < 2
+  modmul2(acc.y, acc.y, pt.y);                                                            // t01 ← Y1 · Y2     < 2
+  modmul2(acc.z, acc.z, pt.z);                                                            // t02 ← Z1 · Z2     < 2
+  modmul2(acc.x, acc.x, pt.x);                                                            // t00 ← X1 · X2     < 2
+  modmul2(acc.y, acc.y, pt.y);                                                            // t01 ← Y1 · Y2     < 2
+  modmul2(acc.z, acc.z, pt.z);                                                            // t02 ← Z1 · Z2     < 2
+  modmul2(acc.x, acc.x, pt.x);                                                            // t00 ← X1 · X2     < 2
+  modmul2(acc.y, acc.y, pt.y);                                                            // t01 ← Y1 · Y2     < 2
+  modmul2(acc.z, acc.z, pt.z);                                                            // t02 ← Z1 · Z2     < 2
+}
+
+__device__ __forceinline__ void accumulate_xyz_simple(Field1 &x1,Field1 &y1,Field1 &z1, const Field1& x2, const Field1& y2, const Field1& z2)
+  {
+    modmul2(x1,x1,x2);                                                            // t00 ← X1 · X2     < 2
+    modmul2(y1,y1,y2);                                                            // t01 ← Y1 · Y2     < 2
+    modmul2(z1,z1,z2);                                                            // t02 ← Z1 · Z2     < 2
+    modmul2(x1,x1,x2);                                                            // t00 ← X1 · X2     < 2
+    modmul2(y1,y1,y2);                                                            // t01 ← Y1 · Y2     < 2
+    modmul2(z1,z1,z2);                                                            // t02 ← Z1 · Z2     < 2
+    modmul2(x1,x1,x2);                                                            // t00 ← X1 · X2     < 2
+    modmul2(y1,y1,y2);                                                            // t01 ← Y1 · Y2     < 2
+    modmul2(z1,z1,z2);                                                            // t02 ← Z1 · Z2     < 2
+    modmul2(x1,x1,x2);                                                            // t00 ← X1 · X2     < 2
+    modmul2(y1,y1,y2);                                                            // t01 ← Y1 · Y2     < 2
+    modmul2(z1,z1,z2);                                                            // t02 ← Z1 · Z2     < 2
+  }
+
+
+
+
 namespace msm {
 
   namespace {
@@ -142,12 +268,40 @@ namespace msm {
     }
 
 
+template <class T1, class T2, int N_REP>
+__global__ void add_elements_kernel(const T1* x, const T2* y, T1* result, const unsigned count)
+{
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= count) return;
+  T1 res = x[gid];
+  T2 y_gid = y[gid];
+  for (int i = 0; i < N_REP; i++)
+  {
+    T1::accumulate_proj(res,y_gid);
+    // res = ec_add(res,y_gid);
+    // res = res + y_gid;
+  }
+  result[gid] = res;
+}
+
+template <class F, int N_REP>
+__global__ void mul_elements_kernel(const F* x, const F* y, F* result, const unsigned count)
+{
+  const unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= count) return;
+  F x_gid = x[gid];
+  F res = y[gid];
+  for (int i = 0; i < N_REP; i++)
+    res = res * x_gid;
+  result[gid] = res;
+}
 
 template<typename P>
 __launch_bounds__(256,1)
 __global__ void segments_reduce_kernel(P* results, P* buckets, uint32_t nof_bms, uint32_t bucketBits) {
   const uint32_t BUCKET_COUNT=1<<bucketBits;  
 
+  // uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x;
   uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x, warpThread=threadIdx.x & 0x1F;
   uint32_t threads_per_bm=(gridDim.x*blockDim.x)/nof_bms;
   uint32_t bucketsPerThread=(BUCKET_COUNT+threads_per_bm-1)/threads_per_bm;
@@ -164,48 +318,171 @@ __global__ void segments_reduce_kernel(P* results, P* buckets, uint32_t nof_bms,
 
   if (globalTID == 0) printf("bucket count %d\n", BUCKET_COUNT);
 
+  // loadIndex=bm_tid*bucketsPerThread;
+  // pt = buckets[loadIndex];
+  // for(int32_t i=194;i>=0;i--) {
+
   for(int32_t i=bucketsPerThread-1;i>=0;i--) {
     loadIndex=bm_tid*bucketsPerThread + i;
     if(loadIndex<BUCKET_COUNT) {
       pt = buckets[bm_index*BUCKET_COUNT + loadIndex];
-      sum = sum + pt;
+      // sum = ec_add(sum,pt);
+      accumulate_xyz_simple(sum.x.limbs_storage.limbs, sum.y.limbs_storage.limbs, sum.z.limbs_storage.limbs,pt.x.limbs_storage.limbs, pt.y.limbs_storage.limbs, pt.z.limbs_storage.limbs);
+      // P::accumulate_simple(sum,pt);
+      // P::accumulate_simple_zpmul(sum,pt);
+      // P::accumulate_proj(sum,pt);
+      // sum = sum+pt;
+      // sum = sum + sum;
     }
-    sumOfSums = sumOfSums + sum;
+    // accumulate_xyz_simple(sumOfSums.x.limbs_storage.limbs, sumOfSums.y.limbs_storage.limbs, sumOfSums.z.limbs_storage.limbs,sum.x.limbs_storage.limbs, sum.y.limbs_storage.limbs, sum.z.limbs_storage.limbs);
+    // accumulate_xyz(sumOfSums.x, sumOfSums.y, sumOfSums.z,sum.x, sum.y, sum.z);
+    // sumOfSums = ec_add(sumOfSums,sum);
+    // P::accumulate_proj(sumOfSums,sum);
+    // P::accumulate_simple(sumOfSums,sum);
+    // sumOfSums = sumOfSums + sum;
   }
 
-  scale=bm_tid * bucketsPerThread; 
+  // scale=bm_tid * bucketsPerThread; 
   
-  // compute sum=scale*sum
-  pt = sum;
-  infinity=true;
-  for(int32_t i=31;i>=0;i--) {
-    if(!infinity) 
-      sum = sum + sum;
-    bit=(scale & (1<<i))!=0;
-    if(infinity && bit) 
-      infinity=false;
-    else if(!infinity && bit)
-      sum = sum + pt;
+  // // compute sum=scale*sum
+  // pt = sum;
+  // infinity=true;
+  // for(int32_t i=31;i>=0;i--) {
+  //   if(!infinity) 
+  //     sum = sum + sum;
+  //   bit=(scale & (1<<i))!=0;
+  //   if(infinity && bit) 
+  //     infinity=false;
+  //   else if(!infinity && bit)
+  //     sum = sum + pt;
 
-    __syncwarp(0xFFFFFFFF);
-  }
+  //   __syncwarp(0xFFFFFFFF);
+  // }
 
-  if(infinity)
-    sum = sumOfSums;
-  else
-    sum = sum + sumOfSums;
+  // if(infinity)
+  //   sum = sumOfSums;
+  // else
+  //   sum = sum + sumOfSums;
 
   // sum across the warp
-  #pragma unroll 1
-  for(int32_t i=1;i<32;i=i+i) {
-    P::warpShuffleProjective(pt, sum, threadIdx.x ^ i); //TODO: implement
-    sum = sum + pt;
-  }
+  // #pragma unroll 1
+  // for(int32_t i=1;i<32;i=i+i) {
+  //   P::warpShuffleProjective(pt, sum, threadIdx.x ^ i); //TODO: implement
+  //   sum = sum + pt;
+  // }
 
   // since all threads in the warp have the same sum, we can use a trick!
+  // buckets[globalTID] = sum;
   storeIndex=globalTID>>5;
   if(warpThread==0) {
     results[storeIndex] = sum;
+    // results[storeIndex] = sumOfSums;
+  }
+}
+
+template<typename P>
+__global__ void point_format_switch(PointXYZ<Field1>* zip_buckets, P* ice_buckets, uint32_t bucketBits){
+  const uint32_t BUCKET_COUNT=1<<bucketBits;  
+
+  // uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x;
+  uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x, warpThread=threadIdx.x & 0x1F;
+
+  if (globalTID >= BUCKET_COUNT) return;
+
+  for (int i = 0; i < 12; i++)
+  {
+    zip_buckets[globalTID].x[i] = ice_buckets[globalTID].x.limbs_storage.limbs[i];
+    zip_buckets[globalTID].y[i] = ice_buckets[globalTID].y.limbs_storage.limbs[i];
+    zip_buckets[globalTID].z[i] = ice_buckets[globalTID].z.limbs_storage.limbs[i];
+  }
+}
+
+// template<typename P>
+__launch_bounds__(256,1)
+__global__ void segments_reduce_kernel2(PointXYZ<Field1>* results, PointXYZ<Field1>* buckets, uint32_t nof_bms, uint32_t bucketBits) {
+  const uint32_t BUCKET_COUNT=1<<bucketBits;  
+
+  uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x, warpThread=threadIdx.x & 0x1F;
+  uint32_t bucketsPerThread=(BUCKET_COUNT+gridDim.x*blockDim.x-1)/(gridDim.x*blockDim.x);
+  uint32_t loadIndex, storeIndex, scale;
+  bool     infinity, bit;
+  // uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x;
+  // uint32_t globalTID=blockIdx.x*blockDim.x+threadIdx.x, warpThread=threadIdx.x & 0x1F;
+  // uint32_t threads_per_bm=(gridDim.x*blockDim.x)/nof_bms;
+  // uint32_t bucketsPerThread=(BUCKET_COUNT+threads_per_bm-1)/threads_per_bm;
+  // uint32_t bm_index = globalTID/threads_per_bm;
+  // uint32_t bm_tid = globalTID%threads_per_bm;
+  // uint32_t loadIndex, storeIndex, scale;
+  // bool     infinity, bit;
+
+  // if (globalTID >= threads_per_bm*nof_bms) return;
+
+  PointXYZ<Field1> sum, sumOfSums, pt; 
+  initializeXYZ(sum);
+  initializeXYZ(sumOfSums);
+  initializeXYZ(pt);
+
+  // if (globalTID == 0) printf("bucket count %d\n", BUCKET_COUNT);
+
+  // loadIndex=bm_tid*bucketsPerThread;
+  // pt = buckets[loadIndex];
+  // for(int32_t i=194;i>=0;i--) {
+
+  for(int32_t i=bucketsPerThread-1;i>=0;i--) {
+    loadIndex=globalTID*bucketsPerThread + i;
+    if(loadIndex<BUCKET_COUNT) {
+      pt = buckets[loadIndex];
+      // sum = ec_add(sum,pt);
+      // accumulate_xyz_simple2(sum, pt);
+      // P::accumulate_simple(sum,pt);
+      // P::accumulate_simple_zpmul(sum,pt);
+      // P::accumulate_proj(sum,pt);
+      // sum = sum+pt;
+      // sum = sum + sum;
+    }
+    // accumulate_xyz_simple2(sumOfSums, sum);
+    // accumulate_xyz(sumOfSums.x, sumOfSums.y, sumOfSums.z,sum.x, sum.y, sum.z);
+    // sumOfSums = ec_add(sumOfSums,sum);
+    // P::accumulate_proj(sumOfSums,sum);
+    // P::accumulate_simple(sumOfSums,sum);
+    // sumOfSums = sumOfSums + sum;
+  }
+
+  // scale=bm_tid * bucketsPerThread; 
+  
+  // // compute sum=scale*sum
+  // pt = sum;
+  // infinity=true;
+  // for(int32_t i=31;i>=0;i--) {
+  //   if(!infinity) 
+  //     sum = sum + sum;
+  //   bit=(scale & (1<<i))!=0;
+  //   if(infinity && bit) 
+  //     infinity=false;
+  //   else if(!infinity && bit)
+  //     sum = sum + pt;
+
+  //   __syncwarp(0xFFFFFFFF);
+  // }
+
+  // if(infinity)
+  //   sum = sumOfSums;
+  // else
+  //   sum = sum + sumOfSums;
+
+  // sum across the warp
+  // #pragma unroll 1
+  // for(int32_t i=1;i<32;i=i+i) {
+  //   P::warpShuffleProjective(pt, sum, threadIdx.x ^ i); //TODO: implement
+  //   sum = sum + pt;
+  // }
+
+  // since all threads in the warp have the same sum, we can use a trick!
+  // buckets[globalTID] = sum;
+  storeIndex=globalTID>>5;
+  if(warpThread==0) {
+    // results[storeIndex] = sum;
+    results[storeIndex] = sumOfSums;
   }
 }
 
@@ -801,13 +1078,31 @@ __global__ void segments_reduce_kernel(P* results, P* buckets, uint32_t nof_bms,
       // --- Reduction of buckets happens here, after this we'll get a single sum for each bucket module/window ---
       unsigned nof_empty_bms_per_batch = 0; // for non-triangle accumluation this may be >0
       P* final_results;
+      PointXYZ<Field1> *final_results_temp, *buckets_temp;
 
       if (segments_reduction){
         int32_t ec, smCount;
         ec=cudaDeviceGetAttribute(&smCount, cudaDevAttrMultiProcessorCount, 0);
         if(ec!=0) return CHK_LAST();
-        CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch * 8 * smCount, stream));
-        segments_reduce_kernel<<<smCount, 256, 0, stream>>>(final_results, buckets, nof_bms_in_batch, c);
+        // CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch * 8 * smCount, stream));
+        CHK_IF_RETURN(cudaMallocAsync(&final_results_temp, sizeof(PointXYZ<Field1>) * nof_bms_in_batch * 8 * smCount, stream));
+        CHK_IF_RETURN(cudaMallocAsync(&buckets_temp, sizeof(PointXYZ<Field1>) * (total_nof_buckets + nof_bms_in_batch), stream));
+        printf("nof_total buckets %d\n", total_nof_buckets + nof_bms_in_batch);
+        // segments_reduce_kernel<<<smCount, 256, 0, stream>>>(final_results, buckets, nof_bms_in_batch, c);
+
+
+        point_format_switch<<<(1<<14), 256, 0, stream>>>(buckets_temp, buckets, c);
+        cudaDeviceSynchronize();
+        printf("cuda err f %d\n", cudaGetLastError());
+        segments_reduce_kernel2<<<smCount, 256, 0, stream>>>(final_results_temp, buckets_temp, nof_bms_in_batch, c);
+        cudaDeviceSynchronize();
+        printf("cuda err s %d\n", cudaGetLastError());
+        return CHK_LAST();
+        // add_elements_kernel<P,P,256><<<4096, 256, 0, stream>>>(buckets, buckets, buckets, 4096*256);
+        // S* scalars_temp;
+        // CHK_IF_RETURN(cudaMallocAsync(&scalars_temp, sizeof(S) * nof_scalars, stream));
+        // printf("nof scalars %d\n", nof_scalars);
+        // mul_elements_kernel<S,256><<<4096, 256, 0, stream>>>(scalars, scalars, scalars_temp, 4096*256);
       }
 
 
