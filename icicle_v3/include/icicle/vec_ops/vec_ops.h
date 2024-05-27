@@ -11,11 +11,13 @@
 
 #include "fields/field.h"
 #include "fields/field_config.h"
+#include "utils/utils.h"
 
 using namespace field_config;
 
 namespace icicle {
 
+  /*************************** CONFIG ***************************/
   struct VecOpsConfig {
     bool is_a_on_device;      /**< True if `a` is on device and false if it is not. Default value: false. */
     bool is_b_on_device;      /**< True if `b` is on device and false if it is not. Default value: false. */
@@ -43,6 +45,7 @@ namespace icicle {
     return config;
   }
 
+  /*************************** APIs ***************************/
   // Template alias for a function implementing vector addition for a specific device and type T
   template <typename T>
   using VectorAddImpl = std::function<eIcicleError(
@@ -50,9 +53,17 @@ namespace icicle {
 
   // Declaration of the vector addition function for integer vectors
   // This function performs element-wise addition of two integer vectors on a specified device
-  extern "C" eIcicleError
-  VectorAdd(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, VectorAdd)(
+    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
 
+  // This function allows C++ code to call to VectorAdd agnostic of the field
+  static inline eIcicleError
+  VectorAdd(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, VectorAdd)(vec_a, vec_b, n, config, output);
+  }
+
+  /*************************** REGISTRATION ***************************/
   // Function to register a vector addition implementation for a specific device type
   // This allows the system to use the appropriate implementation based on the device type
   extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<scalar_t> impl);
