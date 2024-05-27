@@ -29,8 +29,8 @@ public:
   }
 };
 
-extern "C" eIcicleError
-VectorAdd(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+extern "C" eIcicleError CONCAT_EXPAND(FIELD, VectorAdd)(
+  const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
 {
   return VectorAddDispatcher<scalar_t>::executeVectorAdd(vec_a, vec_b, n, config, output);
 }
