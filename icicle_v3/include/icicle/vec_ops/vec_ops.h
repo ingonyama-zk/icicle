@@ -33,7 +33,7 @@ namespace icicle {
    * A function that returns the default value of [VecOpsConfig](@ref VecOpsConfig).
    * @return Default value of [VecOpsConfig](@ref VecOpsConfig).
    */
-  static VecOpsConfig DefaultVecOpsConfig()
+  static VecOpsConfig default_vec_ops_config()
   {
     VecOpsConfig config = {
       false,   // is_a_on_device
@@ -48,32 +48,32 @@ namespace icicle {
   /*************************** APIs ***************************/
   // Template alias for a function implementing vector addition for a specific device and type T
   template <typename T>
-  using VectorAddImpl = std::function<eIcicleError(
+  using vector_addImpl = std::function<eIcicleError(
     const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)>;
 
   // Declaration of the vector addition function for integer vectors
   // This function performs element-wise addition of two integer vectors on a specified device
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, VectorAdd)(
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add)(
     const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
 
-  // This function allows C++ code to call to VectorAdd agnostic of the field
+  // This function allows C++ code to call to vector_add agnostic of the field
   static inline eIcicleError
-  VectorAdd(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  vector_add(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, VectorAdd)(vec_a, vec_b, n, config, output);
+    return CONCAT_EXPAND(FIELD, vector_add)(vec_a, vec_b, n, config, output);
   }
 
   /*************************** REGISTRATION ***************************/
   // Function to register a vector addition implementation for a specific device type
   // This allows the system to use the appropriate implementation based on the device type
-  extern "C" void registerVectorAdd(const std::string& deviceType, VectorAddImpl<scalar_t> impl);
+  extern "C" void register_vector_add(const std::string& deviceType, vector_addImpl<scalar_t> impl);
 
 // Macro to simplify the registration of a vector addition implementation for a device type
 // Usage: REGISTER_VECTOR_ADD_BACKEND("device_type", implementation_function)
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool _reg_vec_add = []() -> bool {                                                                          \
-      registerVectorAdd(DEVICE_TYPE, FUNC);                                                                            \
+      register_vector_add(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
