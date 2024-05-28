@@ -45,13 +45,16 @@ namespace icicle {
     return config;
   }
 
-  /*************************** APIs ***************************/
-  // Template alias for a function implementing vector addition for a specific device and type T
-  template <typename T>
-  using vectorOpImpl = std::function<eIcicleError(
-    const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)>;
+  /*************************** API TYPE ***************************/
+  using scalarVectorOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* vec_a,
+    const scalar_t* vec_b,
+    int n,
+    const VecOpsConfig& config,
+    scalar_t* output)>;
 
-  // ADD
+  /*************************** ADD ***************************/
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add)(
     const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
 
@@ -61,30 +64,7 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, vector_add)(vec_a, vec_b, n, config, output);
   }
 
-  // SUB
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sub)(
-    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
-
-  static inline eIcicleError
-  vector_sub(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
-  {
-    return CONCAT_EXPAND(FIELD, vector_sub)(vec_a, vec_b, n, config, output);
-  }
-
-  // MUL
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul)(
-    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
-
-  static inline eIcicleError
-  vector_mul(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
-  {
-    return CONCAT_EXPAND(FIELD, vector_mul)(vec_a, vec_b, n, config, output);
-  }
-
-  /*************************** REGISTRATION ***************************/
-  extern "C" void register_vector_add(const std::string& deviceType, vectorOpImpl<scalar_t> impl);
-  extern "C" void register_vector_sub(const std::string& deviceType, vectorOpImpl<scalar_t> impl);
-  extern "C" void register_vector_mul(const std::string& deviceType, vectorOpImpl<scalar_t> impl);
+  extern "C" void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
 
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -94,6 +74,17 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+  /*************************** SUB ***************************/
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sub)(
+    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
+
+  static inline eIcicleError
+  vector_sub(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, vector_sub)(vec_a, vec_b, n, config, output);
+  }
+
+  extern "C" void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool _reg_vec_sub = []() -> bool {                                                                          \
@@ -101,6 +92,18 @@ namespace icicle {
       return true;                                                                                                     \
     }();                                                                                                               \
   }
+
+  /*************************** MUL ***************************/
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul)(
+    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
+
+  static inline eIcicleError
+  vector_mul(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, vector_mul)(vec_a, vec_b, n, config, output);
+  }
+
+  extern "C" void register_vector_mul(const std::string& deviceType, scalarVectorOpImpl impl);
 
 #define REGISTER_VECTOR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
