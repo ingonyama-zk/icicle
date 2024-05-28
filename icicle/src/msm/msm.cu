@@ -384,11 +384,6 @@ namespace msm {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
       }
-      if ((precompute_factor & (precompute_factor - 1)) != 0) {
-        THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument,
-          "bucket_method_msm: precompute factors that are not powers of 2 currently unsupported");
-      }
 
       const S* d_scalars;
       S* d_allocated_scalars = nullptr;
@@ -586,7 +581,7 @@ namespace msm {
       CHK_IF_RETURN(cudaFreeAsync(single_bucket_indices, stream));
 
       // find large buckets
-      unsigned average_bucket_size = single_msm_size / (1 << c);
+      unsigned average_bucket_size = (single_msm_size / (1 << c)) * precompute_factor;
       // how large a bucket must be to qualify as a "large bucket"
       unsigned bucket_th = large_bucket_factor * average_bucket_size;
       unsigned* nof_large_buckets;
