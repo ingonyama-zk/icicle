@@ -160,6 +160,8 @@ namespace keccak {
 
   __device__ void keccakf(u64 s[25])
   {
+    u64 t0, t1, t2, t3, t4;
+
     for (int i = 0; i < 24; i++) {
       THETA(
         s[0], s[5], s[10], s[15], s[20], s[1], s[6], s[11], s[16], s[21], s[2], s[7], s[12], s[17], s[22], s[3], s[8],
@@ -230,7 +232,7 @@ namespace keccak {
 
     UNROLL
     for (int i = 0; i < R; i++) {
-      out[i] = states[i];
+      out[sid * R + i] = states[sid * 25 + i];
     }
   }
 } // namespace keccak

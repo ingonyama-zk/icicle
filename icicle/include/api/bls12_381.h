@@ -71,32 +71,44 @@ extern "C" cudaError_t bls12_381_affine_convert_montgomery(
 extern "C" cudaError_t bls12_381_projective_convert_montgomery(
   bls12_381::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bls12_381_create_optimized_poseidon_constants_cuda(
-  int arity,
-  int full_rounds_half,
-  int partial_rounds,
-  const bls12_381::scalar_t* constants,
-  device_context::DeviceContext& ctx,
-  poseidon::PoseidonConstants<bls12_381::scalar_t>* poseidon_constants);
+extern "C" cudaError_t bls12_381_poseidon_create_cuda(
+  poseidon::Poseidon<bls12_381::scalar_t>** poseidon,
+  unsigned int arity,
+  unsigned int alpha,
+  unsigned int partial_rounds,
+  unsigned int full_rounds_half,
+  const bls12_381::scalar_t* round_constants,
+  const bls12_381::scalar_t* mds_matrix,
+  const bls12_381::scalar_t* non_sparse_matrix,
+  const bls12_381::scalar_t* sparse_matrices,
+  const bls12_381::scalar_t domain_tag,
+  device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bls12_381_init_optimized_poseidon_constants_cuda(
-  int arity, device_context::DeviceContext& ctx, poseidon::PoseidonConstants<bls12_381::scalar_t>* constants);
+extern "C" cudaError_t bls12_381_poseidon_load_cuda(
+  poseidon::Poseidon<bls12_381::scalar_t>** poseidon,
+  unsigned int arity,
+  device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bls12_381_poseidon_hash_cuda(
-  bls12_381::scalar_t* input,
+extern "C" cudaError_t bls12_381_poseidon_permute_many_cuda(
+  const poseidon::Poseidon<bls12_381::scalar_t>* poseidon,
+  const bls12_381::scalar_t* states,
   bls12_381::scalar_t* output,
-  int number_of_states,
-  int arity,
-  const poseidon::PoseidonConstants<bls12_381::scalar_t>& constants,
-  poseidon::PoseidonConfig& config);
+  unsigned int number_of_states,
+  device_context::DeviceContext& ctx,
+  bool is_async);
 
-extern "C" cudaError_t bls12_381_build_poseidon_merkle_tree(
-  const bls12_381::scalar_t* leaves,
-  bls12_381::scalar_t* digests,
-  uint32_t height,
-  int arity,
-  poseidon::PoseidonConstants<bls12_381::scalar_t>& constants,
-  merkle::TreeBuilderConfig& config);
+extern "C" cudaError_t bls12_381_poseidon_compress_many_cuda(
+  const poseidon::Poseidon<bls12_381::scalar_t>* poseidon,
+  const bls12_381::scalar_t* states,
+  bls12_381::scalar_t* output,
+  unsigned int number_of_states,
+  unsigned int offset,
+  bls12_381::scalar_t* perm_output,
+  device_context::DeviceContext& ctx,
+  bool is_async);
+
+extern "C" cudaError_t
+bls12_381_poseidon_delete_cuda(Poseidon<bls12_381::scalar_t>* poseidon, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bls12_381_mul_cuda(
   bls12_381::scalar_t* vec_a, bls12_381::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_381::scalar_t* result);

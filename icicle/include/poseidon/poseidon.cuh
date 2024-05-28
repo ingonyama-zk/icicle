@@ -8,76 +8,17 @@
 #include "gpu-utils/error_handler.cuh"
 #include "utils/utils.h"
 
+#include "poseidon/kernels.cuh"
+#include "poseidon/constants.cuh"
+#include "hash/hash.cuh"
+using namespace hash;
+
 /**
  * @namespace poseidon
  * Implementation of the [Poseidon hash function](https://eprint.iacr.org/2019/458.pdf)
  * Specifically, the optimized [Filecoin version](https://spec.filecoin.io/algorithms/crypto/poseidon/)
  */
 namespace poseidon {
-#define FIRST_FULL_ROUNDS  true
-#define SECOND_FULL_ROUNDS false
-
-  /**
-   * For most of the Poseidon configurations this is the case
-   * TODO: Add support for different full rounds numbers
-   */
-  const int FULL_ROUNDS_DEFAULT = 4;
-
-  /**
-   * @struct PoseidonConstants
-   * This constants are enough to define a Poseidon instantce
-   * @param round_constants A pointer to round constants allocated on the device
-   * @param mds_matrix A pointer to an mds matrix allocated on the device
-   * @param non_sparse_matrix A pointer to non sparse matrix allocated on the device
-   * @param sparse_matrices A pointer to sparse matrices allocated on the device
-   */
-  template <typename S>
-  struct PoseidonConstants {
-    int arity;
-    int partial_rounds;
-    int full_rounds_half;
-    S* round_constants = nullptr;
-    S* mds_matrix = nullptr;
-    S* non_sparse_matrix = nullptr;
-    S* sparse_matrices = nullptr;
-    S domain_tag;
-  };
-
-  /**
-   * @class PoseidonKernelsConfiguration
-   * Describes the logic of deriving CUDA kernels parameters
-   * such as the number of threads and the number of blocks
-   */
-  template <int T>
-  class PoseidonKernelsConfiguration
-  {
-  public:
-    // The logic behind this is that 1 thread only works on 1 element
-    // We have {T} elements in each state, and {number_of_states} states total
-    static const int number_of_threads = 256 / T * T;
-
-    // The partial rounds operates on the whole state, so we define
-    // the parallelism params for processing a single hash preimage per thread
-    static const int singlehash_block_size = 128;
-
-    static const int hashes_per_block = number_of_threads / T;
-
-    static int number_of_full_blocks(size_t number_of_states)
-    {
-      int total_number_of_threads = number_of_states * T;
-      return total_number_of_threads / number_of_threads +
-             static_cast<bool>(total_number_of_threads % number_of_threads);
-    }
-
-    static int number_of_singlehash_blocks(size_t number_of_states)
-    {
-      return number_of_states / singlehash_block_size + static_cast<bool>(number_of_states % singlehash_block_size);
-    }
-  };
-
-  template <int T>
-  using PKC = PoseidonKernelsConfiguration<T>;
-
   /**
    * @struct PoseidonConfig
    * Struct that encodes various Poseidon parameters.
@@ -114,12 +55,15 @@ namespace poseidon {
     return config;
   }
 
-  /**
-   * Loads pre-calculated optimized constants, moves them to the device
-   */
-  template <typename S>
-  cudaError_t
-  init_optimized_poseidon_constants(int arity, device_context::DeviceContext& ctx, PoseidonConstants<S>* constants);
+  static SpongeConfig default_poseidon_sponge_config(
+    int width, const device_context::DeviceContext& ctx = device_context::get_default_device_context())
+  {
+    SpongeConfig cfg = default_sponge_config(ctx);
+    cfg.input_rate = width - 1;
+    cfg.output_rate = cfg.input_rate;
+    cfg.offset = 1;
+    return cfg;
+  }
 
   /**
    * Compute the poseidon hash over a sequence of preimages.
@@ -134,6 +78,88 @@ namespace poseidon {
   template <typename S, int T>
   cudaError_t poseidon_hash(
     S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config);
+
+  template <typename S>
+  class Poseidon : public Hash<S>, public SpongeHasher<Poseidon<S>, S, S>
+  {
+  public:
+    PoseidonConstants<S> constants;
+
+    cudaError_t squeeze_states(
+      const S* states,
+      unsigned int number_of_states,
+      unsigned int rate,
+      unsigned int offset,
+      S* output,
+      device_context::DeviceContext& ctx) const override
+    {
+      generic_squeeze_states_kernel<S>
+        <<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, ctx.stream>>>(
+          states, number_of_states, this->width, rate, offset, output);
+      // Squeeze states to get results
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      return CHK_LAST();
+    }
+
+    cudaError_t run_permutation_kernel(
+      const S* states, S* output, unsigned int number_of_states, device_context::DeviceContext& ctx) const override
+    {
+      cudaError_t permutation_error;
+#define P_PERM_T(width)                                                                                                \
+  case width:                                                                                                          \
+    permutation_error =                                                                                                \
+      poseidon_permutation_kernel<S, width>(states, output, number_of_states, this->constants, ctx.stream);            \
+    break;
+
+      switch (this->width) {
+        P_PERM_T(3)
+        P_PERM_T(5)
+        P_PERM_T(9)
+        P_PERM_T(12)
+      default:
+        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "PoseidonPermutation: #width must be one of [3, 5, 9, 12]");
+      }
+
+      CHK_IF_RETURN(permutation_error);
+      return CHK_LAST();
+    }
+
+    Poseidon(
+      unsigned int arity,
+      unsigned int alpha,
+      unsigned int partial_rounds,
+      unsigned int full_rounds_half,
+      const S* round_constants,
+      const S* mds_matrix,
+      const S* non_sparse_matrix,
+      const S* sparse_matrices,
+      const S domain_tag,
+      device_context::DeviceContext& ctx)
+    {
+      PoseidonConstants<S> constants;
+      CHK_STICKY(create_optimized_poseidon_constants(
+        arity, alpha, partial_rounds, full_rounds_half, round_constants, mds_matrix, non_sparse_matrix, sparse_matrices,
+        domain_tag, &constants, ctx));
+      this->constants = constants;
+      this->preimage_max_length = arity;
+      this->width = arity + 1;
+    }
+
+    Poseidon(int arity, device_context::DeviceContext& ctx)
+    {
+      PoseidonConstants<S> constants{};
+      CHK_STICKY(init_optimized_poseidon_constants(arity, ctx, &constants));
+      this->constants = constants;
+      this->preimage_max_length = arity;
+      this->width = arity + 1;
+    }
+
+    ~Poseidon()
+    {
+      auto ctx = device_context::get_default_device_context();
+      CHK_STICKY(release_optimized_poseidon_constants<S>(&this->constants, ctx));
+    }
+  };
 } // namespace poseidon
 
 #endif

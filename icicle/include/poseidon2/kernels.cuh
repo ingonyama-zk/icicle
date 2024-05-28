@@ -2,7 +2,7 @@
 #ifndef POSEIDON2_KERNELS_H
 #define POSEIDON2_KERNELS_H
 
-#include "poseidon2/poseidon2.cuh"
+#include "poseidon2/constants.cuh"
 #include "gpu-utils/modifiers.cuh"
 
 namespace poseidon2 {
@@ -221,31 +221,6 @@ namespace poseidon2 {
     UNROLL
     for (int i = 0; i < T; i++) {
       states_out[idx * T + i] = state[i];
-    }
-  }
-
-  /**
-   * Squeeze states to extract the results.
-   * 1 GPU thread operates on 1 state.
-   *
-   * @param states the states to squeeze
-   * @param number_of_states number of states to squeeze
-   * @param rate Squeeze rate. How many elements to extract from each state
-   * @param offset Squeeze offset. Start squeezing from Oth element of the state
-   * @param out pointer for squeeze results. Can be equal to states to do in-place squeeze
-   *
-   * @tparam S Type of the state element
-   * @tparam T Width of the state
-   */
-  template <typename S, int T, int R, int O>
-  __global__ void squeeze_states_kernel(const S* states, unsigned int number_of_states, S* out)
-  {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (idx >= number_of_states) { return; }
-
-    UNROLL
-    for (int i = 0; i < R; i++) {
-      out[idx * R + i] = states[idx * T + O];
     }
   }
 } // namespace poseidon2

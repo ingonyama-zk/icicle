@@ -4,12 +4,15 @@ pub mod tests;
 use std::{ffi::c_void, marker::PhantomData};
 
 use icicle_cuda_runtime::{
-    device::check_device,
     device_context::DeviceContext,
-    memory::{HostOrDeviceSlice, HostSlice},
+    memory::{DeviceSlice, HostOrDeviceSlice},
 };
 
-use crate::{error::IcicleResult, traits::FieldImpl};
+use crate::{
+    error::IcicleResult,
+    hash::{sponge_check_input, sponge_check_outputs, sponge_check_states, SpongeConfig, SpongeHash},
+    traits::FieldImpl,
+};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -91,80 +94,112 @@ where
             })
         })
     }
+}
 
-    pub fn permute_many(
+impl<F> SpongeHash<F, F> for Poseidon2<F>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: Poseidon2Impl<F>,
+{
+    fn absorb_many(
         &self,
-        states: &(impl HostOrDeviceSlice<F> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
+        states: &mut DeviceSlice<F>,
         number_of_states: usize,
-        ctx: &DeviceContext,
+        input_block_len: usize,
+        cfg: &SpongeConfig,
     ) -> IcicleResult<()> {
-        poseidon_checks(
-            states,
-            number_of_states * self.width,
-            output,
-            number_of_states * self.width,
-            ctx,
+        sponge_check_input(
+            inputs,
+            number_of_states,
+            input_block_len,
+            cfg.input_rate as usize,
+            &cfg.ctx,
         );
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::permute_many(
+        sponge_check_states(states, number_of_states, self.width, &cfg.ctx);
+
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_inputs_on_device = inputs.is_on_device();
+
+        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::absorb_many(
+            inputs,
             states,
-            output,
             number_of_states as u32,
+            input_block_len as u32,
             self.handle,
-            ctx,
+            &local_cfg,
         )
     }
 
-    pub fn compress_many(
+    fn squeeze_many(
         &self,
-        states: &(impl HostOrDeviceSlice<F> + ?Sized),
+        states: &DeviceSlice<F>,
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         number_of_states: usize,
-        ctx: &DeviceContext,
+        output_len: usize,
+        cfg: &SpongeConfig,
     ) -> IcicleResult<()> {
-        poseidon_checks(
-            states,
-            number_of_states as usize * self.width,
+        sponge_check_outputs(
             output,
-            number_of_states as usize,
-            ctx,
+            number_of_states,
+            output_len,
+            self.width,
+            cfg.recursive_squeeze,
+            &cfg.ctx,
         );
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::compress_many(
+        sponge_check_states(states, number_of_states, self.width, &cfg.ctx);
+
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_outputs_on_device = output.is_on_device();
+
+        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::squeeze_many(
             states,
             output,
             number_of_states as u32,
-            0,
+            output_len as u32,
             self.handle,
-            None::<&mut HostSlice<F>>,
-            ctx,
+            &local_cfg,
         )
     }
 
-    pub fn compress_many_advanced(
+    fn hash_many(
         &self,
-        states: &(impl HostOrDeviceSlice<F> + ?Sized),
+        inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         number_of_states: usize,
-        offset: u32,
-        perm_output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        ctx: &DeviceContext,
+        input_block_len: usize,
+        output_len: usize,
+        cfg: &SpongeConfig,
     ) -> IcicleResult<()> {
-        poseidon_checks(
-            states,
-            number_of_states as usize * self.width,
-            output,
-            number_of_states as usize,
-            ctx,
+        sponge_check_input(
+            inputs,
+            number_of_states,
+            input_block_len,
+            cfg.input_rate as usize,
+            &cfg.ctx,
         );
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::compress_many(
-            states,
+        sponge_check_outputs(output, number_of_states, output_len, self.width, false, &cfg.ctx);
+
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_inputs_on_device = inputs.is_on_device();
+        local_cfg.are_outputs_on_device = output.is_on_device();
+
+        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::hash_many(
+            inputs,
             output,
             number_of_states as u32,
-            offset,
+            input_block_len as u32,
+            output_len as u32,
             self.handle,
-            Some(perm_output),
-            ctx,
+            &local_cfg,
         )
+    }
+
+    fn default_config<'a>(&self) -> SpongeConfig<'a> {
+        let mut cfg = SpongeConfig::default();
+        cfg.input_rate = self.width as u32;
+        cfg.output_rate = self.width as u32;
+        cfg
     }
 }
 
@@ -188,8 +223,8 @@ pub trait Poseidon2Impl<F: FieldImpl> {
         alpha: u32,
         internal_rounds: u32,
         external_rounds: u32,
-        round_constants: &mut [F],
-        internal_matrix_diag: &mut [F],
+        round_constants: &[F],
+        internal_matrix_diag: &[F],
         mds_type: MdsType,
         diffusion: DiffusionStrategy,
         ctx: &DeviceContext,
@@ -202,67 +237,35 @@ pub trait Poseidon2Impl<F: FieldImpl> {
         ctx: &DeviceContext,
     ) -> IcicleResult<Poseidon2Handle>;
 
-    fn permute_many(
-        states: &(impl HostOrDeviceSlice<F> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    fn absorb_many(
+        inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
+        states: &mut DeviceSlice<F>,
         number_of_states: u32,
+        input_block_len: u32,
         poseidon: Poseidon2Handle,
-        ctx: &DeviceContext,
+        cfg: &SpongeConfig,
     ) -> IcicleResult<()>;
 
-    fn compress_many(
-        states: &(impl HostOrDeviceSlice<F> + ?Sized),
+    fn squeeze_many(
+        states: &DeviceSlice<F>,
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         number_of_states: u32,
-        offset: u32,
+        output_len: u32,
         poseidon: Poseidon2Handle,
-        perm_output: Option<&mut (impl HostOrDeviceSlice<F> + ?Sized)>,
-        ctx: &DeviceContext,
+        cfg: &SpongeConfig,
+    ) -> IcicleResult<()>;
+
+    fn hash_many(
+        inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        number_of_states: u32,
+        input_block_len: u32,
+        output_len: u32,
+        poseidon: Poseidon2Handle,
+        cfg: &SpongeConfig,
     ) -> IcicleResult<()>;
 
     fn delete(poseidon: Poseidon2Handle, ctx: &DeviceContext) -> IcicleResult<()>;
-}
-
-fn poseidon_checks<F>(
-    states: &(impl HostOrDeviceSlice<F> + ?Sized),
-    states_size_expected: usize,
-    output: &(impl HostOrDeviceSlice<F> + ?Sized),
-    output_size_expected: usize,
-    ctx: &DeviceContext,
-) where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: Poseidon2Impl<F>,
-{
-    if states.len() < states_size_expected {
-        panic!(
-            "input len is {}; but needs to be at least {}",
-            states.len(),
-            states_size_expected,
-        );
-    }
-    if output.len() < output_size_expected {
-        panic!(
-            "output len is {}; but needs to be at least {}",
-            output.len(),
-            output_size_expected,
-        );
-    }
-
-    let ctx_device_id = ctx.device_id;
-    if let Some(device_id) = states.device_id() {
-        assert_eq!(
-            device_id, ctx_device_id,
-            "Device ids in input and context are different"
-        );
-    }
-
-    if let Some(device_id) = output.device_id() {
-        assert_eq!(
-            device_id, ctx_device_id,
-            "Device ids in output and context are different"
-        );
-    }
-    check_device(ctx_device_id);
 }
 
 #[macro_export]
@@ -276,6 +279,7 @@ macro_rules! impl_poseidon2 {
         mod $field_prefix_ident {
             use crate::poseidon2::{
                 $field, $field_config, CudaError, DeviceContext, DiffusionStrategy, MdsType, Poseidon2Handle,
+                SpongeConfig,
             };
             use icicle_core::error::IcicleError;
             extern "C" {
@@ -286,8 +290,8 @@ macro_rules! impl_poseidon2 {
                     alpha: u32,
                     internal_rounds: u32,
                     external_rounds: u32,
-                    constants: *mut $field,
-                    internal_matrix_diag: *mut $field,
+                    constants: *const $field,
+                    internal_matrix_diag: *const $field,
                     mds_type: MdsType,
                     diffusion: DiffusionStrategy,
                     ctx: &DeviceContext,
@@ -305,24 +309,35 @@ macro_rules! impl_poseidon2 {
                 #[link_name = concat!($field_prefix, "_poseidon2_delete_cuda")]
                 pub(crate) fn delete(poseidon: Poseidon2Handle, ctx: &DeviceContext) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "_poseidon2_permute_many_cuda")]
-                pub(crate) fn permute_many(
+                #[link_name = concat!($field_prefix, "_poseidon2_absorb_many_cuda")]
+                pub(crate) fn absorb_many(
                     poseidon: Poseidon2Handle,
-                    states: *const $field,
-                    output: *mut $field,
+                    inputs: *const $field,
+                    states: *mut $field,
                     number_of_states: u32,
-                    ctx: &DeviceContext,
+                    input_block_len: u32,
+                    cfg: &SpongeConfig,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "_poseidon2_compress_many_cuda")]
-                pub(crate) fn compress_many(
+                #[link_name = concat!($field_prefix, "_poseidon2_squeeze_many_cuda")]
+                pub(crate) fn squeeze_many(
                     poseidon: Poseidon2Handle,
                     states: *const $field,
                     output: *mut $field,
                     number_of_states: u32,
-                    offset: u32,
-                    perm_output: *mut $field,
-                    ctx: &DeviceContext,
+                    output_len: u32,
+                    cfg: &SpongeConfig,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "_poseidon2_hash_many_cuda")]
+                pub(crate) fn hash_many(
+                    poseidon: Poseidon2Handle,
+                    inputs: *const $field,
+                    output: *mut $field,
+                    number_of_states: u32,
+                    input_block_len: u32,
+                    output_len: u32,
+                    cfg: &SpongeConfig,
                 ) -> CudaError;
             }
         }
@@ -333,8 +348,8 @@ macro_rules! impl_poseidon2 {
                 alpha: u32,
                 internal_rounds: u32,
                 external_rounds: u32,
-                round_constants: &mut [$field],
-                internal_matrix_diag: &mut [$field],
+                round_constants: &[$field],
+                internal_matrix_diag: &[$field],
                 mds_type: MdsType,
                 diffusion: DiffusionStrategy,
                 ctx: &DeviceContext,
@@ -347,8 +362,8 @@ macro_rules! impl_poseidon2 {
                         alpha,
                         internal_rounds,
                         external_rounds,
-                        round_constants as *mut _ as *mut $field,
-                        internal_matrix_diag as *mut _ as *mut $field,
+                        round_constants as *const _ as *const $field,
+                        internal_matrix_diag as *const _ as *const $field,
                         mds_type,
                         diffusion,
                         ctx,
@@ -372,46 +387,66 @@ macro_rules! impl_poseidon2 {
                 }
             }
 
-            fn permute_many(
-                states: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            fn absorb_many(
+                inputs: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                states: &mut DeviceSlice<$field>,
                 number_of_states: u32,
+                input_block_len: u32,
                 poseidon: Poseidon2Handle,
-                ctx: &DeviceContext,
+                cfg: &SpongeConfig,
             ) -> IcicleResult<()> {
                 unsafe {
-                    $field_prefix_ident::permute_many(
+                    $field_prefix_ident::absorb_many(
                         poseidon,
-                        states.as_ptr(),
-                        output.as_mut_ptr(),
+                        inputs.as_ptr(),
+                        states.as_mut_ptr(),
                         number_of_states,
-                        ctx,
+                        input_block_len,
+                        cfg,
                     )
                     .wrap()
                 }
             }
 
-            fn compress_many(
-                states: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            fn squeeze_many(
+                states: &DeviceSlice<$field>,
                 output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 number_of_states: u32,
-                offset: u32,
+                output_len: u32,
                 poseidon: Poseidon2Handle,
-                perm_output: Option<&mut (impl HostOrDeviceSlice<$field> + ?Sized)>,
-                ctx: &DeviceContext,
+                cfg: &SpongeConfig,
             ) -> IcicleResult<()> {
                 unsafe {
-                    $field_prefix_ident::compress_many(
+                    $field_prefix_ident::squeeze_many(
                         poseidon,
                         states.as_ptr(),
                         output.as_mut_ptr(),
                         number_of_states,
-                        offset,
-                        match perm_output {
-                            Some(perm_output) => perm_output.as_mut_ptr(),
-                            None => std::ptr::null_mut(),
-                        },
-                        ctx,
+                        output_len,
+                        cfg,
+                    )
+                    .wrap()
+                }
+            }
+
+            fn hash_many(
+                inputs: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                number_of_states: u32,
+                input_block_len: u32,
+                output_len: u32,
+                poseidon: Poseidon2Handle,
+                cfg: &SpongeConfig,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::hash_many(
+                        poseidon,
+                        inputs.as_ptr(),
+                        output.as_mut_ptr(),
+                        number_of_states,
+                        input_block_len,
+                        output_len,
+                        cfg,
                     )
                     .wrap()
                 }
@@ -444,6 +479,7 @@ pub mod bench {
     };
 
     use crate::{
+        hash::SpongeHash,
         ntt::FieldImpl,
         poseidon2::{DiffusionStrategy, MdsType, Poseidon2, Poseidon2Impl},
         traits::GenerateRandom,
@@ -461,8 +497,16 @@ pub mod bench {
     ) where
         <F as FieldImpl>::Config: Poseidon2Impl<F> + GenerateRandom<F>,
     {
+        let cfg = poseidon.default_config();
         poseidon
-            .permute_many(states, poseidon2_result, number_of_states, ctx)
+            .hash_many(
+                states,
+                poseidon2_result,
+                number_of_states,
+                poseidon.width,
+                poseidon.width,
+                &cfg,
+            )
             .unwrap();
     }
 

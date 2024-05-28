@@ -19,7 +19,8 @@
 extern "C" cudaError_t babybear_extension_ntt_cuda(
   const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
 
-extern "C" cudaError_t babybear_create_poseidon2_constants_cuda(
+extern "C" cudaError_t babybear_create_poseidon2_cuda(
+  poseidon2::Poseidon2<babybear::scalar_t>** poseidon,
   unsigned int width,
   unsigned int alpha,
   unsigned int internal_rounds,
@@ -28,33 +29,35 @@ extern "C" cudaError_t babybear_create_poseidon2_constants_cuda(
   const babybear::scalar_t* internal_matrix_diag,
   poseidon2::MdsType mds_type,
   poseidon2::DiffusionStrategy diffusion,
-  device_context::DeviceContext& ctx,
-  poseidon2::Poseidon2Constants<babybear::scalar_t>* poseidon_constants);
-
-extern "C" cudaError_t babybear_init_poseidon2_constants_cuda(
-  unsigned int width,
-  poseidon2::MdsType mds_type,
-  poseidon2::DiffusionStrategy diffusion,
-  device_context::DeviceContext& ctx,
-  poseidon2::Poseidon2Constants<babybear::scalar_t>* poseidon_constants);
-
-extern "C" cudaError_t babybear_poseidon2_permute_many_cuda(
-  const babybear::scalar_t* states,
-  babybear::scalar_t* output,
-  unsigned int number_of_states,
-  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t babybear_poseidon2_compress_many_cuda(
+extern "C" cudaError_t babybear_init_poseidon2_cuda(
+  poseidon2::Poseidon2<babybear::scalar_t>** poseidon,
+  unsigned int width,
+  poseidon2::MdsType mds_type,
+  poseidon2::DiffusionStrategy diffusion,
+  device_context::DeviceContext& ctx
+);
+
+extern "C" cudaError_t babybear_poseidon2_permute_many_cuda(
+  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
   const babybear::scalar_t* states,
   babybear::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int rate,
-  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
   device_context::DeviceContext& ctx,
+  bool is_async
+);
+
+extern "C" cudaError_t babybear_poseidon2_compress_many_cuda(
+  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
+  const babybear::scalar_t* states,
+  babybear::scalar_t* output,
+  unsigned int number_of_states,
   unsigned int offset,
-  babybear::scalar_t* perm_output
+  babybear::scalar_t* perm_output,
+  device_context::DeviceContext& ctx,
+  bool is_async
 );
 
 extern "C" cudaError_t babybear_release_poseidon2_constants_cuda(

@@ -1,9 +1,14 @@
-#include "poseidon/poseidon.cuh"
+#pragma once
+#ifndef POSEIDON_KERNELS_H
+#define POSEIDON_KERNELS_H
+
 #include "gpu-utils/modifiers.cuh"
+#include "poseidon/constants.cuh"
 
 namespace poseidon {
   template <typename S, int T>
-  __global__ void prepare_poseidon_states(S* states, size_t number_of_states, S domain_tag, bool aligned)
+  __global__ void
+  prepare_poseidon_states(const S* states, S* out, unsigned int number_of_states, const S domain_tag, bool aligned)
   {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int state_number = idx / T;
@@ -25,18 +30,26 @@ namespace poseidon {
 
     // We need __syncthreads here if the state is not aligned
     // because then we need to shift the vector [A, B, 0] -> [D, A, B]
-    if (!aligned) { __syncthreads(); }
+    if (!aligned || states != out) { __syncthreads(); }
 
     // Store element in state
-    states[idx] = prepared_element;
+    out[idx] = prepared_element;
   }
 
   template <typename S>
-  DEVICE_INLINE S sbox_alpha_five(S element)
+  DEVICE_INLINE S sbox_el(S element, const int alpha)
   {
-    S result = S::sqr(element);
-    result = S::sqr(result);
-    return result * element;
+    S result2 = S::sqr(element);
+    switch (alpha) {
+    case 3:
+      return result2 * element;
+    case 5:
+      return S::sqr(result2) * element;
+    case 7:
+      return S::sqr(result2) * result2 * element;
+    case 11:
+      return S::sqr(S::sqr(result2)) * result2 * element;
+    }
   }
 
   template <typename S, int T>
@@ -71,7 +84,7 @@ namespace poseidon {
       element = element + constants.round_constants[rc_offset + element_number];
       rc_offset += T;
     }
-    element = sbox_alpha_five(element);
+    element = sbox_el(element, constants.alpha);
     if (!skip_rc) { element = element + constants.round_constants[rc_offset + element_number]; }
 
     // Multiply all the states by mds matrix
@@ -111,7 +124,7 @@ namespace poseidon {
   __device__ S partial_round(S state[T], size_t rc_offset, int round_number, const PoseidonConstants<S>& constants)
   {
     S element = state[0];
-    element = sbox_alpha_five(element);
+    element = sbox_el(element, constants.alpha);
     element = element + constants.round_constants[rc_offset];
 
     S* sparse_matrix = &constants.sparse_matrices[(T * 2 - 1) * round_number];
@@ -155,14 +168,30 @@ namespace poseidon {
     }
   }
 
-  // These function is just doing copy from the states to the output
   template <typename S, int T>
-  __global__ void get_hash_results(S* states, size_t number_of_states, S* out)
+  cudaError_t poseidon_permutation_kernel(
+    const S* states, S* out, unsigned int number_of_states, const PoseidonConstants<S>& constants, cudaStream_t& stream)
   {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (idx >= number_of_states) { return; }
+    prepare_poseidon_states<S, T>
+      <<<PKC::number_of_full_blocks(T, number_of_states), PKC::number_of_threads(T), 0, stream>>>(
+        states, out, number_of_states, constants.domain_tag, false);
 
-    out[idx] = states[idx * T + 1];
+    size_t rc_offset = 0;
+    full_rounds<S, T><<<
+      PKC::number_of_full_blocks(T, number_of_states), PKC::number_of_threads(T),
+      sizeof(S) * PKC::hashes_per_block(T) * T, stream>>>(
+      out, number_of_states, rc_offset, FIRST_FULL_ROUNDS, constants);
+    rc_offset += T * (constants.full_rounds_half + 1);
+
+    partial_rounds<S, T><<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, stream>>>(
+      out, number_of_states, rc_offset, constants);
+    rc_offset += constants.partial_rounds;
+
+    full_rounds<S, T><<<
+      PKC::number_of_full_blocks(T, number_of_states), PKC::number_of_threads(T),
+      sizeof(S) * PKC::hashes_per_block(T) * T, stream>>>(
+      out, number_of_states, rc_offset, SECOND_FULL_ROUNDS, constants);
+    return CHK_LAST();
   }
 
   template <typename S, int T>
@@ -174,3 +203,5 @@ namespace poseidon {
     state[(idx / (T - 1) * T) + (idx % (T - 1)) + 1] = out[idx];
   }
 } // namespace poseidon
+
+#endif

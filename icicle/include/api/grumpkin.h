@@ -41,32 +41,44 @@ extern "C" cudaError_t grumpkin_affine_convert_montgomery(
 extern "C" cudaError_t grumpkin_projective_convert_montgomery(
   grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t grumpkin_create_optimized_poseidon_constants_cuda(
-  int arity,
-  int full_rounds_half,
-  int partial_rounds,
-  const grumpkin::scalar_t* constants,
-  device_context::DeviceContext& ctx,
-  poseidon::PoseidonConstants<grumpkin::scalar_t>* poseidon_constants);
+extern "C" cudaError_t grumpkin_poseidon_create_cuda(
+  poseidon::Poseidon<grumpkin::scalar_t>** poseidon,
+  unsigned int arity,
+  unsigned int alpha,
+  unsigned int partial_rounds,
+  unsigned int full_rounds_half,
+  const grumpkin::scalar_t* round_constants,
+  const grumpkin::scalar_t* mds_matrix,
+  const grumpkin::scalar_t* non_sparse_matrix,
+  const grumpkin::scalar_t* sparse_matrices,
+  const grumpkin::scalar_t domain_tag,
+  device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t grumpkin_init_optimized_poseidon_constants_cuda(
-  int arity, device_context::DeviceContext& ctx, poseidon::PoseidonConstants<grumpkin::scalar_t>* constants);
+extern "C" cudaError_t grumpkin_poseidon_load_cuda(
+  poseidon::Poseidon<grumpkin::scalar_t>** poseidon,
+  unsigned int arity,
+  device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t grumpkin_poseidon_hash_cuda(
-  grumpkin::scalar_t* input,
+extern "C" cudaError_t grumpkin_poseidon_permute_many_cuda(
+  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
+  const grumpkin::scalar_t* states,
   grumpkin::scalar_t* output,
-  int number_of_states,
-  int arity,
-  const poseidon::PoseidonConstants<grumpkin::scalar_t>& constants,
-  poseidon::PoseidonConfig& config);
+  unsigned int number_of_states,
+  device_context::DeviceContext& ctx,
+  bool is_async);
 
-extern "C" cudaError_t grumpkin_build_poseidon_merkle_tree(
-  const grumpkin::scalar_t* leaves,
-  grumpkin::scalar_t* digests,
-  uint32_t height,
-  int arity,
-  poseidon::PoseidonConstants<grumpkin::scalar_t>& constants,
-  merkle::TreeBuilderConfig& config);
+extern "C" cudaError_t grumpkin_poseidon_compress_many_cuda(
+  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
+  const grumpkin::scalar_t* states,
+  grumpkin::scalar_t* output,
+  unsigned int number_of_states,
+  unsigned int offset,
+  grumpkin::scalar_t* perm_output,
+  device_context::DeviceContext& ctx,
+  bool is_async);
+
+extern "C" cudaError_t
+grumpkin_poseidon_delete_cuda(Poseidon<grumpkin::scalar_t>* poseidon, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t grumpkin_mul_cuda(
   grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);

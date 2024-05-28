@@ -5,7 +5,7 @@ using namespace field_config;
 
 #include "gpu-utils/error_handler.cuh"
 #include "poseidon2/poseidon2.cuh"
-#include "poseidon2.cu"
+#include "constants.cu"
 
 namespace poseidon2 {
   template class Poseidon2<scalar_t>;
@@ -47,28 +47,38 @@ namespace poseidon2 {
     }
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_permute_many_cuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_absorb_many_cuda)(
     const Poseidon2<scalar_t>* poseidon,
-    const scalar_t* states,
-    scalar_t* output,
+    const scalar_t* inputs,
+    scalar_t* states,
     unsigned int number_of_states,
-    device_context::DeviceContext& ctx,
-    bool is_async)
+    unsigned int input_block_len,
+    SpongeConfig& cfg)
   {
-    return poseidon->permute_many(states, output, number_of_states, ctx, is_async);
+    return poseidon->absorb_many(inputs, states, number_of_states, input_block_len, cfg);
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_compress_many_cuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_squeeze_many_cuda)(
     const Poseidon2<scalar_t>* poseidon,
     const scalar_t* states,
     scalar_t* output,
     unsigned int number_of_states,
-    unsigned int offset,
-    scalar_t* perm_output,
-    device_context::DeviceContext& ctx,
-    bool is_async)
+    unsigned int output_len,
+    SpongeConfig& cfg)
   {
-    return poseidon->compress_many(states, output, number_of_states, offset, perm_output, ctx, is_async);
+    return poseidon->squeeze_many(states, output, number_of_states, output_len, cfg);
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_hash_many_cuda)(
+    const Poseidon2<scalar_t>* poseidon,
+    const scalar_t* inputs,
+    scalar_t* output,
+    unsigned int number_of_states,
+    unsigned int input_block_len,
+    unsigned int output_len,
+    SpongeConfig& cfg)
+  {
+    return poseidon->hash_many(inputs, output, number_of_states, input_block_len, output_len, cfg);
   }
 
   extern "C" cudaError_t
