@@ -144,6 +144,35 @@ TEST_F(FieldApiTest, Ntt)
   // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
 }
 
+TEST_F(FieldApiTest, CpuVecAPIs)
+{
+  const int N = 1 << 15;
+  auto in_a = std::make_unique<scalar_t[]>(N);
+  auto in_b = std::make_unique<scalar_t[]>(N);
+  scalar_t::rand_host_many(in_a.get(), N);
+  scalar_t::rand_host_many(in_b.get(), N);
+
+  auto out_cpu_add = std::make_unique<scalar_t[]>(N);
+  auto out_cpu_sub = std::make_unique<scalar_t[]>(N);
+  auto out_cpu_mul = std::make_unique<scalar_t[]>(N);
+
+  Device dev = {"CPU", 0};
+  icicle_set_device(dev);
+  auto config = default_vec_ops_config();
+
+  START_TIMER(VEC_OPS)
+  vector_add(in_a.get(), in_b.get(), N, config, out_cpu_add.get());
+  vector_sub(in_a.get(), in_b.get(), N, config, out_cpu_sub.get());
+  vector_mul(in_a.get(), in_b.get(), N, config, out_cpu_mul.get());
+  END_TIMER(VEC_OPS, "CPU vec ops took", VERBOSE);
+
+  // TODO real test
+  const int test_idx = N >> 1;
+  ASSERT_EQ(out_cpu_add[test_idx], in_a[test_idx] + in_b[test_idx]);
+  ASSERT_EQ(out_cpu_sub[test_idx], in_a[test_idx] - in_b[test_idx]);
+  ASSERT_EQ(out_cpu_mul[test_idx], in_a[test_idx] * in_b[test_idx]);
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
