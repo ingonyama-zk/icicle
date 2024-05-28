@@ -1,8 +1,8 @@
 #pragma once
 
-#include "fields/storage.h"
-#include "fields/field.h"
-#include "fields/quartic_extension.h"
+#include "icicle/fields/storage.h"
+#include "icicle/fields/field.h"
+#include "icicle/fields/quartic_extension.h"
 
 namespace babybear {
   struct fp_config {

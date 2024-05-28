@@ -1,8 +1,8 @@
 #include <cuda.h>
 #include <stdexcept>
 
-#include "errors.h"
-#include "icicle/vec_ops/vec_ops.h"
+#include "icicle/errors.h"
+#include "icicle/vec_ops.h"
 #include "gpu-utils/error_handler.h"
 
 #define MAX_THREADS_PER_BLOCK 256
@@ -163,7 +163,7 @@ cudaError_t transpose_matrix(
 
 /************************************ REGISTRATION ************************************/
 
-#include "fields/field_config.h"
+#include "icicle/fields/field_config.h"
 using namespace field_config;
 
 /**

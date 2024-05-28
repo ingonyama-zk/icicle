@@ -1,5 +1,5 @@
-#include "ntt/ntt.h"
-#include "dispatcher.h"
+#include "icicle/ntt.h"
+#include "icicle/dispatcher.h"
 
 using namespace icicle;
 

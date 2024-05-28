@@ -1,4 +1,4 @@
-#include "errors.h"
+#include "icicle/errors.h"
 
 namespace icicle {
 

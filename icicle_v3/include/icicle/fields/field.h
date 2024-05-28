@@ -25,7 +25,7 @@
 #include "ptx.h"
 #endif // __CUDACC__
 
-#include "errors.h"
+#include "icicle/errors.h"
 #include "host_math.h"
 #include "storage.h"
 
