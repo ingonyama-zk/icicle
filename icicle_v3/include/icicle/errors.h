@@ -30,7 +30,7 @@ namespace icicle {
    * @param error The eIcicleError to get the string representation for.
    * @return const char* A string describing the error.
    */
-  const char* getErrorString(eIcicleError error);
+  const char* get_error_string(eIcicleError error);
 
 #define ICICLE_CHECK(api_call)                                                                                         \
   do {                                                                                                                 \
@@ -38,20 +38,20 @@ namespace icicle {
     eIcicleError rv = (api_call);                                                                                      \
     if (rv != eIcicleError::SUCCESS) {                                                                                 \
       throw std::runtime_error(                                                                                        \
-        "Icicle API fails with code " + std::string(getErrorString(rv)) + " in " + __FILE__ + ":" +                    \
+        "Icicle API fails with code " + std::string(get_error_string(rv)) + " in " + __FILE__ + ":" +                  \
         std::to_string(__LINE__));                                                                                     \
     }                                                                                                                  \
   } while (0)
 
-  void inline throwIcicleErr(
+  void inline throw_icicle_error(
     eIcicleError err, const char* const reason, const char* const func, const char* const file, const int line)
   {
-    std::string err_msg = std::string{getErrorString(err)} + " : by: " + func + " at: " + file + ":" +
+    std::string err_msg = std::string{get_error_string(err)} + " : by: " + func + " at: " + file + ":" +
                           std::to_string(line) + " error: " + reason;
     std::cerr << err_msg << std::endl; // TODO: Logging
     throw std::runtime_error(err_msg);
   }
 
-#define THROW_ICICLE_ERR(val, reason) throwIcicleErr(val, reason, __FUNCTION__, __FILE__, __LINE__)
+#define THROW_ICICLE_ERR(val, reason) throw_icicle_error(val, reason, __FUNCTION__, __FILE__, __LINE__)
 
 } // namespace icicle
