@@ -92,10 +92,10 @@ extern "C" cudaError_t grumpkin_bit_reverse_cuda(
   vec_ops::BitReverseConfig& config,
   grumpkin::scalar_t* output);
 
-extern "C" cudaError_t grumpkin_bit_reverse_inplace_cuda(
-  grumpkin::scalar_t* input,
-  unsigned n,
-  vec_ops::BitReverseConfig& config);
+// extern "C" cudaError_t grumpkin_bit_reverse_inplace_cuda(
+//   grumpkin::scalar_t* input,
+//   unsigned n,
+//   vec_ops::BitReverseConfig& config);
 
 extern "C" void grumpkin_generate_scalars(grumpkin::scalar_t* scalars, int size);
 

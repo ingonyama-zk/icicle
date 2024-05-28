@@ -154,10 +154,10 @@ extern "C" cudaError_t bn254_bit_reverse_cuda(
   vec_ops::BitReverseConfig& config,
   bn254::scalar_t* output);
 
-extern "C" cudaError_t bn254_bit_reverse_inplace_cuda(
-  bn254::scalar_t* input,
-  unsigned n,
-  vec_ops::BitReverseConfig& config);
+// extern "C" cudaError_t bn254_bit_reverse_inplace_cuda(
+//   bn254::scalar_t* input,
+//   unsigned n,
+//   vec_ops::BitReverseConfig& config);
 
 extern "C" void bn254_generate_scalars(bn254::scalar_t* scalars, int size);
 

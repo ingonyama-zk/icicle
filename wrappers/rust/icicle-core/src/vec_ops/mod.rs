@@ -47,10 +47,10 @@ pub struct BitReverseConfig<'a> {
     pub ctx: DeviceContext<'a>,
 
     /// True if inputs are on device and false if they're on host. Default value: false.
-    pub are_inputs_on_device: bool,
+    pub is_input_on_device: bool,
 
     /// If true, output is preserved on device, otherwise on host. Default value: false.
-    pub are_outputs_on_device: bool,
+    pub is_output_on_device: bool,
 
     /// Whether to run the vector operations asynchronously. If set to `true`, the functions will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the functions will block the current CPU thread.
@@ -67,8 +67,8 @@ impl<'a> BitReverseConfig<'a> {
     pub fn default_for_device(device_id: usize) -> Self {
         BitReverseConfig {
             ctx: DeviceContext::default_for_device(device_id),
-            are_inputs_on_device: false,
-            are_outputs_on_device: false,
+            is_input_on_device: false,
+            is_output_on_device: false,
             is_async: false,
         }
     }
@@ -156,6 +156,36 @@ fn check_vec_ops_args<'a, F>(
     res_cfg.is_result_on_device = result.is_on_device();
     res_cfg
 }
+fn check_bit_reverse_args<'a, F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &BitReverseConfig<'a>,
+    output: &(impl HostOrDeviceSlice<F> + ?Sized),
+) -> BitReverseConfig<'a> {
+    if input.len() & (input.len() - 1) != 0 {
+        panic!("input length must be a power of 2, input length: {}", input.len());
+    }
+    if input.len() != output.len() {
+        panic!(
+            "input and output lengths {}; {} do not match",
+            input.len(),
+            output.len()
+        );
+    }
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+    if let Some(device_id) = input.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in input and context are different");
+    }
+    if let Some(device_id) = output.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in output and context are different");
+    }
+    check_device(ctx_device_id);
+    let mut res_cfg = cfg.clone();
+    res_cfg.is_input_on_device = input.is_on_device();
+    res_cfg.is_output_on_device = output.is_on_device();
+    res_cfg
+}
 
 pub fn add_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -224,7 +254,8 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse(input, cfg, output)
+    let cfg = check_bit_reverse_args(input, cfg, output);
+    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse(input, &cfg, output)
 }
 
 pub fn bit_reverse_inplace<F>(
@@ -235,7 +266,8 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse_inplace(input, cfg)
+    let cfg = check_bit_reverse_args(input, cfg, input);
+    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse_inplace(input, &cfg)
 }
 
 #[macro_export]
@@ -298,12 +330,12 @@ macro_rules! impl_vec_ops_field {
                     output: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat!($field_prefix, "_bit_reverse_inplace_cuda")]
-                pub(crate) fn bit_reverse_inplace_cuda(
-                    input: *mut $field,
-                    size: u32,
-                    config: *const BitReverseConfig,
-                ) -> CudaError;
+                // #[link_name = concat!($field_prefix, "_bit_reverse_inplace_cuda")]
+                // pub(crate) fn bit_reverse_inplace_cuda(
+                //     input: *mut $field,
+                //     size: u32,
+                //     config: *const BitReverseConfig,
+                // ) -> CudaError;
             }
         }
 
@@ -406,10 +438,11 @@ macro_rules! impl_vec_ops_field {
                 cfg: &BitReverseConfig,
             ) -> IcicleResult<()> {
                 unsafe {
-                    $field_prefix_ident::bit_reverse_inplace_cuda(
-                        input.as_mut_ptr(),
+                    $field_prefix_ident::bit_reverse_cuda(
+                        input.as_ptr(),
                         input.len() as u32,
                         cfg as *const BitReverseConfig,
+                        input.as_mut_ptr(),
                     )
                     .wrap()
                 }

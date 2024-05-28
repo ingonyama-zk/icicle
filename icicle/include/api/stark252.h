@@ -37,10 +37,10 @@ extern "C" cudaError_t stark252_bit_reverse_cuda(
   vec_ops::BitReverseConfig& config,
   stark252::scalar_t* output);
 
-extern "C" cudaError_t stark252_bit_reverse_inplace_cuda(
-  stark252::scalar_t* input,
-  unsigned n,
-  vec_ops::BitReverseConfig& config);
+// extern "C" cudaError_t stark252_bit_reverse_inplace_cuda(
+//   stark252::scalar_t* input,
+//   unsigned n,
+//   vec_ops::BitReverseConfig& config);
 
 extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
 

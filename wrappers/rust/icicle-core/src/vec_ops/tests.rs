@@ -44,15 +44,12 @@ where
     let input = F::Config::generate_random(TEST_SIZE);
     let input = HostSlice::from_slice(&input);
     let mut intermediate_result = DeviceVec::<F>::cuda_malloc(TEST_SIZE).unwrap();
-    let mut cfg = BitReverseConfig::default();
-    cfg.are_outputs_on_device = true;
+    let cfg = BitReverseConfig::default();
     bit_reverse(input, &cfg, &mut intermediate_result[..]).unwrap();
 
     let mut result = vec![F::one(); TEST_SIZE];
     let result = HostSlice::from_mut_slice(&mut result);
-    let mut cfg = BitReverseConfig::default();
-    cfg.are_outputs_on_device = false;
-    cfg.are_inputs_on_device = true;
+    let cfg = BitReverseConfig::default();
     bit_reverse(&intermediate_result[..], &cfg, result).unwrap();
     assert_eq!(input.as_slice(), result.as_slice());
 }
@@ -68,8 +65,7 @@ where
     intermediate
         .copy_from_host(&input)
         .unwrap();
-    let mut cfg = BitReverseConfig::default();
-    cfg.are_inputs_on_device = true;
+    let cfg = BitReverseConfig::default();
     bit_reverse_inplace(&mut intermediate[..], &cfg).unwrap();
     bit_reverse_inplace(&mut intermediate[..], &cfg).unwrap();
     let mut result_host = vec![F::one(); TEST_SIZE];
