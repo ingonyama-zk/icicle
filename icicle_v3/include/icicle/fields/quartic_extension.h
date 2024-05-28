@@ -1,7 +1,7 @@
 #pragma once
 
-#include "field.h"
-#include "utils/modifiers.h"
+#include "icicle/fields/field.h"
+#include "icicle/utils/modifiers.h"
 
 #if __CUDACC__
 #include "gpu-utils/sharedmem.h"

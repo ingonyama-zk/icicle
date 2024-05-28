@@ -3,7 +3,7 @@
 #define HOST_MATH_H
 
 #include <cstdint>
-#include "utils/modifiers.h"
+#include "icicle/utils/modifiers.h"
 namespace host_math {
 
   // return x + y with uint32_t operands
