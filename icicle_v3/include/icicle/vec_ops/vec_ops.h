@@ -12,6 +12,7 @@
 #include "fields/field.h"
 #include "fields/field_config.h"
 #include "utils/utils.h"
+#include "config_extension.h"
 
 using namespace field_config;
 
@@ -19,14 +20,16 @@ namespace icicle {
 
   /*************************** CONFIG ***************************/
   struct VecOpsConfig {
-    bool is_a_on_device;      /**< True if `a` is on device and false if it is not. Default value: false. */
-    bool is_b_on_device;      /**< True if `b` is on device and false if it is not. Default value: false. */
-    bool is_result_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
+    icicleStreamHandle stream; /**< stream for async execution. */
+    bool is_a_on_device;       /**< True if `a` is on device and false if it is not. Default value: false. */
+    bool is_b_on_device;       /**< True if `b` is on device and false if it is not. Default value: false. */
+    bool is_result_on_device;  /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     bool is_async; /**< Whether to run the vector operations asynchronously. If set to `true`, the function will be
                     *   non-blocking and you'd need to synchronize it explicitly by running
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
                     *   function will block the current CPU thread. */
-    icicleStreamHandle stream; /**< stream for async execution. */
+
+    ConfigExtension ext; /** backend specific extensions*/
   };
 
   /**
@@ -36,11 +39,11 @@ namespace icicle {
   static VecOpsConfig default_vec_ops_config()
   {
     VecOpsConfig config = {
+      nullptr, // stream
       false,   // is_a_on_device
       false,   // is_b_on_device
       false,   // is_result_on_device
       false,   // is_async
-      nullptr, // stream
     };
     return config;
   }

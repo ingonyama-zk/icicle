@@ -12,6 +12,7 @@
 #include "fields/field.h"
 #include "fields/field_config.h"
 #include "utils/utils.h"
+#include "config_extension.h"
 
 using namespace field_config;
 
@@ -54,6 +55,7 @@ namespace icicle {
    */
   enum class Ordering { kNN, kNR, kRN, kRR, kNM, kMN };
 
+  // TODO Yuval: move to cuda backend
   /**
    * @enum NttAlgorithm
    * Which NTT algorithm to use. options are:
@@ -61,7 +63,7 @@ namespace icicle {
    * - Radix2: explicitly select radix-2 NTT algorithm
    * - MixedRadix: explicitly select mixed-radix NTT algorithm
    */
-  enum class NttAlgorithm { Auto, Radix2, MixedRadix };
+  // enum class NttAlgorithm { Auto, Radix2, MixedRadix };
 
   /**
    * @struct NTTConfig
@@ -83,8 +85,8 @@ namespace icicle {
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
                                  *   function will block the current CPU thread. */
-    NttAlgorithm ntt_algorithm; /**< Explicitly select the NTT algorithm. Default value: Auto (the implementation
-                             selects radix-2 or mixed-radix algorithm based on heuristics). */
+
+    ConfigExtension ext; /** backend specific extensions*/
   };
 
   /**
@@ -95,15 +97,14 @@ namespace icicle {
   NTTConfig<S> default_ntt_config()
   {
     NTTConfig<S> config = {
-      nullptr,            // stream
-      S::one(),           // coset_gen
-      1,                  // batch_size
-      false,              // columns_batch
-      Ordering::kNN,      // ordering
-      false,              // are_inputs_on_device
-      false,              // are_outputs_on_device
-      false,              // is_async
-      NttAlgorithm::Auto, // ntt_algorithm
+      nullptr,       // stream
+      S::one(),      // coset_gen
+      1,             // batch_size
+      false,         // columns_batch
+      Ordering::kNN, // ordering
+      false,         // are_inputs_on_device
+      false,         // are_outputs_on_device
+      false,         // is_async
     };
     return config;
   }
