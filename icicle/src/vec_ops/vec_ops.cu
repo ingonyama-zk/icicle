@@ -227,11 +227,10 @@ namespace vec_ops {
     unsigned shift = __builtin_clz(size) + 1;
     unsigned num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
     if (input == output) {
-      if (cfg.is_input_on_device) 
+      if (cfg.is_input_on_device)
         CHK_IF_RETURN(cudaMemcpyAsync(d_output, output, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
       bit_reverse_inplace_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_output, size, shift);
-    }
-    else {
+    } else {
       const E* d_input;
       E* d_alloc_input;
       if (cfg.is_input_on_device) {

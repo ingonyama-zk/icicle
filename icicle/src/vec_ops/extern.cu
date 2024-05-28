@@ -60,8 +60,8 @@ namespace vec_ops {
     return transpose_matrix<scalar_t>(input, output, row_size, column_size, ctx, on_device, is_async);
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, bit_reverse_cuda)(
-    const scalar_t* input, unsigned n, BitReverseConfig& config, scalar_t* output)
+  extern "C" cudaError_t
+    CONCAT_EXPAND(FIELD, bit_reverse_cuda)(const scalar_t* input, unsigned n, BitReverseConfig& config, scalar_t* output)
   {
     return bit_reverse<scalar_t>(input, n, config, output);
   }

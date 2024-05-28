@@ -11,7 +11,6 @@ use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 impl_vec_ops_field!("babybear", babybear, ScalarField, ScalarCfg);
 impl_vec_ops_field!("babybear_extension", babybear_extension, ExtensionField, ExtensionCfg);
 
-
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::field::{ExtensionField, ScalarField};

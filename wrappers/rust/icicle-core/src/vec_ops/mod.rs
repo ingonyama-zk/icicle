@@ -175,10 +175,16 @@ fn check_bit_reverse_args<'a, F>(
         .ctx
         .device_id;
     if let Some(device_id) = input.device_id() {
-        assert_eq!(device_id, ctx_device_id, "Device ids in input and context are different");
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in input and context are different"
+        );
     }
     if let Some(device_id) = output.device_id() {
-        assert_eq!(device_id, ctx_device_id, "Device ids in output and context are different");
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in output and context are different"
+        );
     }
     check_device(ctx_device_id);
     let mut res_cfg = cfg.clone();
