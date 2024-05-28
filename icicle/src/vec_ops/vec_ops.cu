@@ -191,29 +191,6 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t bit_reverse_inplace(E* input, unsigned size, BitReverseConfig& cfg)
-  {
-    if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
-    E* d_input;
-    if (cfg.is_input_on_device) {
-      d_input = input;
-    } else {
-      // copy input to gpu
-      CHK_IF_RETURN(cudaMallocAsync(&d_input, sizeof(E) * size, cfg.ctx.stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(d_input, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
-    }
-    unsigned shift = __builtin_clz(size) + 1;
-    unsigned num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
-    bit_reverse_inplace_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_input, size, shift);
-    if (!cfg.is_input_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(input, d_input, sizeof(E) * size, cudaMemcpyDeviceToHost, cfg.ctx.stream));
-      CHK_IF_RETURN(cudaFreeAsync(d_input, cfg.ctx.stream));
-    }
-    if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
-    return CHK_LAST();
-  }
-
-  template <typename E>
   cudaError_t bit_reverse(const E* input, unsigned size, BitReverseConfig& cfg, E* output)
   {
     if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
