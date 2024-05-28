@@ -13,7 +13,7 @@ using namespace icicle;
 
  * @return eIcicleError Status of the device set
  */
-extern "C" eIcicleError icicleSetDevice(const icicle::Device& device);
+extern "C" eIcicleError icicle_set_device(const icicle::Device& device);
 
 /**
  * @brief Allocates memory on the specified device.
@@ -22,7 +22,7 @@ extern "C" eIcicleError icicleSetDevice(const icicle::Device& device);
  * @param size Size of the memory to allocate.
  * @return eIcicleError Status of the memory allocation.
  */
-extern "C" eIcicleError icicleMalloc(void** ptr, size_t size);
+extern "C" eIcicleError icicle_malloc(void** ptr, size_t size);
 
 /**
  * @brief Asynchronously allocates memory on the specified device.
@@ -33,7 +33,7 @@ extern "C" eIcicleError icicleMalloc(void** ptr, size_t size);
  * @param stream Stream to use for the asynchronous operation.
  * @return eIcicleError Status of the memory allocation.
  */
-extern "C" eIcicleError icicleMallocAsync(void** ptr, size_t size, icicleStreamHandle stream);
+extern "C" eIcicleError icicle_malloc_async(void** ptr, size_t size, icicleStreamHandle stream);
 
 /**
  * @brief Frees memory on the specified device.
@@ -41,7 +41,7 @@ extern "C" eIcicleError icicleMallocAsync(void** ptr, size_t size, icicleStreamH
  * @param ptr Pointer to the memory to free.
  * @return eIcicleError Status of the memory deallocation.
  */
-extern "C" eIcicleError icicleFree(void* ptr);
+extern "C" eIcicleError icicle_free(void* ptr);
 
 /**
  * @brief Asynchronously frees memory on the specified device.
@@ -50,7 +50,7 @@ extern "C" eIcicleError icicleFree(void* ptr);
  * @param stream Stream to use for the asynchronous operation.
  * @return eIcicleError Status of the memory deallocation.
  */
-extern "C" eIcicleError icicleFreeAsync(void* ptr, icicleStreamHandle stream);
+extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream);
 
 /**
  * @brief Gets the total and available memory on the specified device.
@@ -59,7 +59,7 @@ extern "C" eIcicleError icicleFreeAsync(void* ptr, icicleStreamHandle stream);
  * @param free Available memory on the device (output parameter).
  * @return eIcicleError Status of the memory query.
  */
-extern "C" eIcicleError icicleGetAvailableMemory(size_t& total /*OUT*/, size_t& free /*OUT*/);
+extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/);
 
 // Data transfer
 
@@ -71,7 +71,7 @@ extern "C" eIcicleError icicleGetAvailableMemory(size_t& total /*OUT*/, size_t& 
  * @param size Size of the data to copy.
  * @return eIcicleError Status of the data copy.
  */
-extern "C" eIcicleError icicleCopyToHost(void* dst, const void* src, size_t size);
+extern "C" eIcicleError icicle_copy_to_host(void* dst, const void* src, size_t size);
 
 /**
  * @brief Asynchronously copies data from the device to the host.
@@ -82,7 +82,7 @@ extern "C" eIcicleError icicleCopyToHost(void* dst, const void* src, size_t size
  * @param stream Stream to use for the asynchronous operation.
  * @return eIcicleError Status of the data copy.
  */
-extern "C" eIcicleError icicleCopyToHostAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream);
+extern "C" eIcicleError icicle_copy_to_host_async(void* dst, const void* src, size_t size, icicleStreamHandle stream);
 
 /**
  * @brief Copies data from the host to the device.
@@ -92,7 +92,7 @@ extern "C" eIcicleError icicleCopyToHostAsync(void* dst, const void* src, size_t
  * @param size Size of the data to copy.
  * @return eIcicleError Status of the data copy.
  */
-extern "C" eIcicleError icicleCopyToDevice(void* dst, const void* src, size_t size);
+extern "C" eIcicleError icicle_copy_to_device(void* dst, const void* src, size_t size);
 
 /**
  * @brief Asynchronously copies data from the host to the device.
@@ -103,7 +103,7 @@ extern "C" eIcicleError icicleCopyToDevice(void* dst, const void* src, size_t si
  * @param stream Stream to use for the asynchronous operation.
  * @return eIcicleError Status of the data copy.
  */
-extern "C" eIcicleError icicleCopyToDeviceAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream);
+extern "C" eIcicleError icicle_copy_to_device_async(void* dst, const void* src, size_t size, icicleStreamHandle stream);
 
 // Stream management
 
@@ -114,7 +114,7 @@ extern "C" eIcicleError icicleCopyToDeviceAsync(void* dst, const void* src, size
  * @param stream Pointer to the created stream.
  * @return eIcicleError Status of the stream creation.
  */
-extern "C" eIcicleError icicleCreateStream(icicleStreamHandle* stream);
+extern "C" eIcicleError icicle_create_stream(icicleStreamHandle* stream);
 
 /**
  * @brief Destroys a stream on the specified device.
@@ -123,7 +123,7 @@ extern "C" eIcicleError icicleCreateStream(icicleStreamHandle* stream);
  * @param stream The stream to destroy.
  * @return eIcicleError Status of the stream destruction.
  */
-extern "C" eIcicleError icicleDestroyStream(icicleStreamHandle stream);
+extern "C" eIcicleError icicle_destroy_stream(icicleStreamHandle stream);
 
 // Synchronization
 
@@ -133,11 +133,11 @@ extern "C" eIcicleError icicleDestroyStream(icicleStreamHandle stream);
  * @param stream The stream to synchronize
  * @return eIcicleError Status of the synchronization.
  */
-extern "C" eIcicleError icicleStreamSynchronize(icicleStreamHandle stream);
+extern "C" eIcicleError icicle_stream_synchronize(icicleStreamHandle stream);
 
 /**
  * @brief Synchronizes the current device.
  *
  * @return eIcicleError Status of the synchronization.
  */
-extern "C" eIcicleError icicleDeviceSynchronize();
+extern "C" eIcicleError icicle_device_synchronize();

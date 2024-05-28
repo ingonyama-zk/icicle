@@ -27,7 +27,7 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
-    s_regsitered_devices = getRegisteredDevices();
+    s_regsitered_devices = get_registered_devices();
     ASSERT_GT(s_regsitered_devices.size(), 0);
   }
   static void TearDownTestSuite() {}
@@ -50,12 +50,12 @@ TEST_F(FieldApiTest, vectorAddSync)
 
   auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
-    icicleSetDevice(dev);
-    auto config = DefaultVecOpsConfig();
+    icicle_set_device(dev);
+    auto config = default_vec_ops_config();
 
     START_TIMER(VECADD_sync)
     for (int i = 0; i < iters; ++i)
-      VectorAdd(in_a.get(), in_b.get(), N, config, out);
+      vector_add(in_a.get(), in_b.get(), N, config, out);
     END_TIMER(VECADD_sync, msg, measure);
   };
 
@@ -80,18 +80,18 @@ TEST_F(FieldApiTest, vectorAddAsync)
 
   auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
-    icicleSetDevice(dev);
+    icicle_set_device(dev);
     // const bool is_cpu = std::string("CPU") == dev.type;
 
     scalar_t *d_in_a, *d_in_b, *d_out;
     icicleStreamHandle stream;
-    icicleCreateStream(&stream);
-    icicleMallocAsync((void**)&d_in_a, N * sizeof(scalar_t), stream);
-    icicleMallocAsync((void**)&d_in_b, N * sizeof(scalar_t), stream);
-    icicleMallocAsync((void**)&d_out, N * sizeof(scalar_t), stream);
-    icicleCopyToDeviceAsync(d_in_a, in_a.get(), N * sizeof(scalar_t), stream);
+    icicle_create_stream(&stream);
+    icicle_malloc_async((void**)&d_in_a, N * sizeof(scalar_t), stream);
+    icicle_malloc_async((void**)&d_in_b, N * sizeof(scalar_t), stream);
+    icicle_malloc_async((void**)&d_out, N * sizeof(scalar_t), stream);
+    icicle_copy_to_device_async(d_in_a, in_a.get(), N * sizeof(scalar_t), stream);
 
-    auto config = DefaultVecOpsConfig();
+    auto config = default_vec_ops_config();
     config.is_a_on_device = true;
     config.is_b_on_device = true;
     config.is_result_on_device = true;
@@ -100,16 +100,16 @@ TEST_F(FieldApiTest, vectorAddAsync)
 
     START_TIMER(VECADD_async);
     for (int i = 0; i < iters; ++i) {
-      VectorAdd(d_in_a, d_in_b, N, config, d_out);
+      vector_add(d_in_a, d_in_b, N, config, d_out);
     }
     END_TIMER(VECADD_async, msg, measure);
 
-    icicleCopyToHostAsync(out, d_out, N * sizeof(scalar_t), stream);
-    icicleStreamSynchronize(stream);
+    icicle_copy_to_host_async(out, d_out, N * sizeof(scalar_t), stream);
+    icicle_stream_synchronize(stream);
 
-    icicleFreeAsync(d_in_a, stream);
-    icicleFreeAsync(d_in_b, stream);
-    icicleFreeAsync(d_out, stream);
+    icicle_free_async(d_in_a, stream);
+    icicle_free_async(d_in_b, stream);
+    icicle_free_async(d_out, stream);
   };
 
   run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
@@ -129,7 +129,7 @@ TEST_F(FieldApiTest, Ntt)
 
   auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
-    icicleSetDevice(dev);
+    icicle_set_device(dev);
     auto config = default_ntt_config<scalar_t>();
 
     START_TIMER(NTT_sync)
