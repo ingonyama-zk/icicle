@@ -8,7 +8,7 @@ namespace icicle {
    * @param error The eIcicleError to get the string representation for.
    * @return const char* A string describing the error.
    */
-  const char* getErrorString(eIcicleError error)
+  const char* get_error_string(eIcicleError error)
   {
     switch (error) {
     case eIcicleError::SUCCESS:

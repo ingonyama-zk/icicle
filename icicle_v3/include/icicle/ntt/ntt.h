@@ -124,12 +124,12 @@ namespace icicle {
   }
 
   /*************************** REGISTRATION ***************************/
-  extern "C" void registerNtt(const std::string& deviceType, NttImpl<scalar_t, scalar_t> impl);
+  extern "C" void register_ntt(const std::string& deviceType, NttImpl<scalar_t, scalar_t> impl);
 
 #define REGISTER_NTT_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
     static bool _reg_vec_add = []() -> bool {                                                                          \
-      registerNtt(DEVICE_TYPE, FUNC);                                                                                  \
+      register_ntt(DEVICE_TYPE, FUNC);                                                                                 \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

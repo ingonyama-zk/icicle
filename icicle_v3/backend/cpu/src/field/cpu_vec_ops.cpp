@@ -10,7 +10,7 @@ using namespace icicle;
 
 template <typename T>
 eIcicleError
-CpuVectorAdd(const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)
+cpu_vector_add(const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)
 {
   for (int i = 0; i < n; ++i) {
     output[i] = vec_a[i] + vec_b[i];
@@ -18,4 +18,4 @@ CpuVectorAdd(const Device& device, const T* vec_a, const T* vec_b, int n, const 
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_VECTOR_ADD_BACKEND("CPU", CpuVectorAdd<scalar_t>);
+REGISTER_VECTOR_ADD_BACKEND("CPU", cpu_vector_add<scalar_t>);

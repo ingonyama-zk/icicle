@@ -5,63 +5,66 @@
 
 using namespace icicle;
 
-extern "C" eIcicleError icicleSetDevice(const Device& device) { return DeviceAPI::setThreadLocalDevice(device); }
+extern "C" eIcicleError icicle_set_device(const Device& device) { return DeviceAPI::set_thread_local_device(device); }
 
-extern "C" eIcicleError icicleMalloc(void** ptr, size_t size)
+extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->allocateMemory(ptr, size);
+  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory(ptr, size);
 }
 
-extern "C" eIcicleError icicleMallocAsync(void** ptr, size_t size, icicleStreamHandle stream)
+extern "C" eIcicleError icicle_malloc_async(void** ptr, size_t size, icicleStreamHandle stream)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->allocateMemoryAsync(ptr, size, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory_async(ptr, size, stream);
 }
 
-extern "C" eIcicleError icicleFree(void* ptr) { return DeviceAPI::getThreadLocalDeviceAPI()->freeMemory(ptr); }
+extern "C" eIcicleError icicle_free(void* ptr) { return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr); }
 
-extern "C" eIcicleError icicleFreeAsync(void* ptr, icicleStreamHandle stream)
+extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->freeMemoryAsync(ptr, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->free_memory_async(ptr, stream);
 }
 
-extern "C" eIcicleError icicleGetAvailableMemory(size_t& total /*OUT*/, size_t& free /*OUT*/)
+extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->getAvailableMemory(total, free);
+  return DeviceAPI::get_thread_local_deviceAPI()->get_available_memory(total, free);
 }
 
-extern "C" eIcicleError icicleCopyToHost(void* dst, const void* src, size_t size)
+extern "C" eIcicleError icicle_copy_to_host(void* dst, const void* src, size_t size)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->copyToHost(dst, src, size);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_host(dst, src, size);
 }
 
-extern "C" eIcicleError icicleCopyToHostAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream)
+extern "C" eIcicleError icicle_copy_to_host_async(void* dst, const void* src, size_t size, icicleStreamHandle stream)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->copyToHostAsync(dst, src, size, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_host_async(dst, src, size, stream);
 }
 
-extern "C" eIcicleError icicleCopyToDevice(void* dst, const void* src, size_t size)
+extern "C" eIcicleError icicle_copy_to_device(void* dst, const void* src, size_t size)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->copyToDevice(dst, src, size);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_device(dst, src, size);
 }
 
-extern "C" eIcicleError icicleCopyToDeviceAsync(void* dst, const void* src, size_t size, icicleStreamHandle stream)
+extern "C" eIcicleError icicle_copy_to_device_async(void* dst, const void* src, size_t size, icicleStreamHandle stream)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->copyToDeviceAsync(dst, src, size, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_device_async(dst, src, size, stream);
 }
 
-extern "C" eIcicleError icicleStreamSynchronize(icicleStreamHandle stream)
+extern "C" eIcicleError icicle_stream_synchronize(icicleStreamHandle stream)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->synchronize(stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->synchronize(stream);
 }
 
-extern "C" eIcicleError icicleDeviceSynchronize() { return DeviceAPI::getThreadLocalDeviceAPI()->synchronize(nullptr); }
-
-extern "C" eIcicleError icicleCreateStream(icicleStreamHandle* stream)
+extern "C" eIcicleError icicle_device_synchronize()
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->createStream(stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->synchronize(nullptr);
 }
 
-extern "C" eIcicleError icicleDestroyStream(icicleStreamHandle stream)
+extern "C" eIcicleError icicle_create_stream(icicleStreamHandle* stream)
 {
-  return DeviceAPI::getThreadLocalDeviceAPI()->destroyStream(stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->create_stream(stream);
+}
+
+extern "C" eIcicleError icicle_destroy_stream(icicleStreamHandle stream)
+{
+  return DeviceAPI::get_thread_local_deviceAPI()->destroy_stream(stream);
 }

@@ -98,9 +98,9 @@ void inline throwIcicleCudaErr(
   throw IcicleError{err, err_msg};
 }
 
-#define THROW_ICICLE(val, reason, func, file, line) throwIcicleErr(val, reason, func, file, line)
-#define THROW_ICICLE_ERR(val, reason)               throwIcicleErr(val, reason, __FUNCTION__, __FILE__, __LINE__)
-void inline throwIcicleErr(
+#define THROW_ICICLE(val, reason, func, file, line) throw_icicle_error(val, reason, func, file, line)
+#define THROW_ICICLE_ERR(val, reason)               throw_icicle_error(val, reason, __FUNCTION__, __FILE__, __LINE__)
+void inline throw_icicle_error(
   IcicleError_t err, const char* const reason, const char* const func, const char* const file, const int line)
 {
   std::string err_msg = std::string{IcicleGetErrorString(err)} + " : by: " + func + " at: " + file + ":" +

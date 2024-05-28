@@ -13,7 +13,7 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
-    s_regsitered_devices = getRegisteredDevices();
+    s_regsitered_devices = get_registered_devices();
     ASSERT_GT(s_regsitered_devices.size(), 0);
   }
   static void TearDownTestSuite() {}
@@ -26,7 +26,7 @@ public:
 TEST_F(DeviceApiTest, UnregisteredDeviceError)
 {
   icicle::Device dev = {"INVALID_DEVICE", 2};
-  EXPECT_ANY_THROW(getDeviceAPI(dev));
+  EXPECT_ANY_THROW(get_deviceAPI(dev));
 }
 
 TEST_F(DeviceApiTest, MemoryCopySync)
@@ -37,13 +37,13 @@ TEST_F(DeviceApiTest, MemoryCopySync)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type.c_str(), 0};
-    icicleSetDevice(dev);
+    icicle_set_device(dev);
 
     void* dev_mem = nullptr;
-    ICICLE_CHECK(icicleMalloc(&dev_mem, sizeof(input)));
-    ICICLE_CHECK(icicleCopyToDevice(dev_mem, input, sizeof(input)));
-    ICICLE_CHECK(icicleCopyToHost(output, dev_mem, sizeof(input)));
-    ICICLE_CHECK(icicleFree(dev_mem));
+    ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(input)));
+    ICICLE_CHECK(icicle_copy_to_device(dev_mem, input, sizeof(input)));
+    ICICLE_CHECK(icicle_copy_to_host(output, dev_mem, sizeof(input)));
+    ICICLE_CHECK(icicle_free(dev_mem));
 
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
   }
@@ -56,16 +56,16 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type.c_str(), 0};
-    icicleSetDevice(dev);
+    icicle_set_device(dev);
     void* dev_mem = nullptr;
 
     icicleStreamHandle stream;
-    ICICLE_CHECK(icicleCreateStream(&stream));
-    ICICLE_CHECK(icicleMallocAsync(&dev_mem, sizeof(input), stream));
-    ICICLE_CHECK(icicleCopyToDeviceAsync(dev_mem, input, sizeof(input), stream));
-    ICICLE_CHECK(icicleCopyToHostAsync(output, dev_mem, sizeof(input), stream));
-    ICICLE_CHECK(icicleFreeAsync(dev_mem, stream));
-    ICICLE_CHECK(icicleStreamSynchronize(stream));
+    ICICLE_CHECK(icicle_create_stream(&stream));
+    ICICLE_CHECK(icicle_malloc_async(&dev_mem, sizeof(input), stream));
+    ICICLE_CHECK(icicle_copy_to_device_async(dev_mem, input, sizeof(input), stream));
+    ICICLE_CHECK(icicle_copy_to_host_async(output, dev_mem, sizeof(input), stream));
+    ICICLE_CHECK(icicle_free_async(dev_mem, stream));
+    ICICLE_CHECK(icicle_stream_synchronize(stream));
 
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
   }
@@ -75,18 +75,18 @@ TEST_F(DeviceApiTest, ApiError)
 {
   for (const auto& device_type : s_regsitered_devices) {
     icicle::Device dev = {device_type.c_str(), 0};
-    icicleSetDevice(dev);
+    icicle_set_device(dev);
     void* dev_mem = nullptr;
-    EXPECT_ANY_THROW(ICICLE_CHECK(icicleMalloc(&dev_mem, -1)));
+    EXPECT_ANY_THROW(ICICLE_CHECK(icicle_malloc(&dev_mem, -1)));
   }
 }
 
 TEST_F(DeviceApiTest, AvailableMemory)
 {
   icicle::Device dev = {"CUDA", 0}; // TODO Yuval: implement for CPU too
-  icicleSetDevice(dev);
+  icicle_set_device(dev);
   size_t total, free;
-  ASSERT_EQ(eIcicleError::SUCCESS, icicleGetAvailableMemory(total, free));
+  ASSERT_EQ(eIcicleError::SUCCESS, icicle_get_available_memory(total, free));
 
   double total_GB = double(total) / (1 << 30);
   double free_GB = double(free) / (1 << 30);
@@ -98,7 +98,7 @@ TEST_F(DeviceApiTest, InvalidDevice)
 {
   for (const auto& device_type : s_regsitered_devices) {
     icicle::Device dev = {device_type.c_str(), 10}; // no such device-id thus expecting an error
-    ASSERT_EQ(eIcicleError::INVALID_DEVICE, icicleSetDevice(dev));
+    ASSERT_EQ(eIcicleError::INVALID_DEVICE, icicle_set_device(dev));
   }
 }
 

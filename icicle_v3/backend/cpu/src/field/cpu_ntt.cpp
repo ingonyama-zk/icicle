@@ -9,10 +9,10 @@ using namespace field_config;
 using namespace icicle;
 
 template <typename S = scalar_t, typename E = scalar_t>
-eIcicleError CpuNtt(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
+eIcicleError cpu_ntt(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
 {
-  std::cerr << "CpuNtt() not implemented" << std::endl;
+  std::cerr << "cpu_ntt() not implemented" << std::endl;
   return eIcicleError::API_NOT_IMPLEMENTED;
 }
 
-REGISTER_NTT_BACKEND("CPU", (CpuNtt<scalar_t, scalar_t>));
+REGISTER_NTT_BACKEND("CPU", (cpu_ntt<scalar_t, scalar_t>));
