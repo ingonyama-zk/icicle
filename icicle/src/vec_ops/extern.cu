@@ -13,7 +13,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t
-    CONCAT_EXPAND(FIELD, mul_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+  CONCAT_EXPAND(FIELD, mul_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
   {
     return mul<scalar_t>(vec_a, vec_b, n, config, result);
   }
@@ -25,7 +25,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t
-    CONCAT_EXPAND(FIELD, add_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+  CONCAT_EXPAND(FIELD, add_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
   {
     return add<scalar_t>(vec_a, vec_b, n, config, result);
   }
@@ -37,7 +37,7 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t
-    CONCAT_EXPAND(FIELD, sub_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+  CONCAT_EXPAND(FIELD, sub_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
   {
     return sub<scalar_t>(vec_a, vec_b, n, config, result);
   }
@@ -61,7 +61,7 @@ namespace vec_ops {
   }
 
   extern "C" cudaError_t
-    CONCAT_EXPAND(FIELD, bit_reverse_cuda)(const scalar_t* input, unsigned n, BitReverseConfig& config, scalar_t* output)
+  CONCAT_EXPAND(FIELD, bit_reverse_cuda)(const scalar_t* input, unsigned n, BitReverseConfig& config, scalar_t* output)
   {
     return bit_reverse<scalar_t>(input, n, config, output);
   }
