@@ -48,32 +48,64 @@ namespace icicle {
   /*************************** APIs ***************************/
   // Template alias for a function implementing vector addition for a specific device and type T
   template <typename T>
-  using vector_addImpl = std::function<eIcicleError(
+  using vectorOpImpl = std::function<eIcicleError(
     const Device& device, const T* vec_a, const T* vec_b, int n, const VecOpsConfig& config, T* output)>;
 
-  // Declaration of the vector addition function for integer vectors
-  // This function performs element-wise addition of two integer vectors on a specified device
+  // ADD
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add)(
     const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
 
-  // This function allows C++ code to call to vector_add agnostic of the field
   static inline eIcicleError
   vector_add(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, vector_add)(vec_a, vec_b, n, config, output);
   }
 
-  /*************************** REGISTRATION ***************************/
-  // Function to register a vector addition implementation for a specific device type
-  // This allows the system to use the appropriate implementation based on the device type
-  extern "C" void register_vector_add(const std::string& deviceType, vector_addImpl<scalar_t> impl);
+  // SUB
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sub)(
+    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
 
-// Macro to simplify the registration of a vector addition implementation for a device type
-// Usage: REGISTER_VECTOR_ADD_BACKEND("device_type", implementation_function)
+  static inline eIcicleError
+  vector_sub(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, vector_sub)(vec_a, vec_b, n, config, output);
+  }
+
+  // MUL
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul)(
+    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
+
+  static inline eIcicleError
+  vector_mul(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, vector_mul)(vec_a, vec_b, n, config, output);
+  }
+
+  /*************************** REGISTRATION ***************************/
+  extern "C" void register_vector_add(const std::string& deviceType, vectorOpImpl<scalar_t> impl);
+  extern "C" void register_vector_sub(const std::string& deviceType, vectorOpImpl<scalar_t> impl);
+  extern "C" void register_vector_mul(const std::string& deviceType, vectorOpImpl<scalar_t> impl);
+
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool _reg_vec_add = []() -> bool {                                                                          \
       register_vector_add(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+#define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool _reg_vec_sub = []() -> bool {                                                                          \
+      register_vector_sub(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+#define REGISTER_VECTOR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool _reg_vec_mul = []() -> bool {                                                                          \
+      register_vector_mul(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
