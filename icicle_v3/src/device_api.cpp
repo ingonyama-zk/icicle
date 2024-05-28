@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "runtime.h"
-#include "device_api.h"
+#include "icicle/runtime.h"
+#include "icicle/device_api.h"
 
 using namespace icicle;
 

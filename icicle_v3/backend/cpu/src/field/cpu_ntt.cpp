@@ -1,9 +1,9 @@
 
-#include "icicle/ntt/ntt.h"
+#include "icicle/ntt.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 
-#include "fields/field_config.h"
+#include "icicle/fields/field_config.h"
 
 using namespace field_config;
 using namespace icicle;
