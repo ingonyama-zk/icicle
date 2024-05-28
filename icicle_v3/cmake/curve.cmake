@@ -21,6 +21,10 @@ endfunction()
 
 function(setup_curve_target)
   set(FIELD ${CURVE})
-  setup_field_target()
+  setup_field_target()  
+
+  # Make sure CURVE is defined in the cache for backends to see
+  set(CURVE "${CURVE}" CACHE STRING "")
+  
   # TODO Yuval: curve target
 endfunction()

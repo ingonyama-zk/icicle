@@ -14,8 +14,8 @@ option(BUILD_CPU_BE "Build CPU backend" ON) # TODO Yuval remove from here once s
 option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once separating the backends from frontend
 
 # device API library
-add_library(icicle_device STATIC 
-src/device_api.cpp 
+add_library(icicle_device STATIC
+src/device_api.cpp
 src/errors.cpp
 src/runtime.cpp
 )
@@ -37,15 +37,15 @@ endif()
 
 if(DEFINED CURVE)
   check_curve()
-  setup_curve_target()  
+  setup_curve_target()
 endif ()
 
 
-if (BUILD_CPU_BE) 
+if (BUILD_CPU_BE)
   add_subdirectory(backend/cpu)
 endif()
 
-if (BUILD_CUDA_BE) 
+if (BUILD_CUDA_BE)
   add_subdirectory(backend/cuda)
 endif()
 
