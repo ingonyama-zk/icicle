@@ -194,6 +194,8 @@ namespace vec_ops {
   cudaError_t bit_reverse(const E* input, unsigned size, BitReverseConfig& cfg, E* output)
   {
     if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
+    if ((input == output) ^ (cfg.is_input_on_device == cfg.is_output_on_device)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: equal devices should have same is_on_device parameters");
+
     E* d_output;
     if (cfg.is_output_on_device) {
       d_output = output;
@@ -201,25 +203,17 @@ namespace vec_ops {
       // allocate output on gpu
       CHK_IF_RETURN(cudaMallocAsync(&d_output, sizeof(E) * size, cfg.ctx.stream));
     }
+
     unsigned shift = __builtin_clz(size) + 1;
     unsigned num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
-    if (input == output) {
-      if (cfg.is_input_on_device)
-        CHK_IF_RETURN(cudaMemcpyAsync(d_output, output, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
-      bit_reverse_inplace_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_output, size, shift);
+
+    if ((input != output) & cfg.is_input_on_device) {
+      bit_reverse_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(input, size, shift, d_output);
     } else {
-      const E* d_input;
-      E* d_alloc_input;
-      if (cfg.is_input_on_device) {
-        d_input = input;
-      } else {
-        // copy input to gpu
-        CHK_IF_RETURN(cudaMallocAsync(&d_alloc_input, sizeof(E) * size, cfg.ctx.stream));
-        CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_input, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
-        d_input = d_alloc_input;
+      if (!cfg.is_input_on_device) {
+        CHK_IF_RETURN(cudaMemcpyAsync(d_output, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
       }
-      bit_reverse_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_input, size, shift, d_output);
-      if (!cfg.is_input_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_input, cfg.ctx.stream)); }
+      bit_reverse_inplace_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_output, size, shift);
     }
     if (!cfg.is_output_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, sizeof(E) * size, cudaMemcpyDeviceToHost, cfg.ctx.stream));
