@@ -2,9 +2,9 @@
 #ifndef BN254_SCALAR_PARAMS_H
 #define BN254_SCALAR_PARAMS_H
 
-#include "fields/storage.h"
-#include "fields/field.h"
-#include "fields/quadratic_extension.h"
+#include "icicle/fields/storage.h"
+#include "icicle/fields/field.h"
+#include "icicle/fields/quadratic_extension.h"
 
 namespace bn254 {
   struct fp_config {

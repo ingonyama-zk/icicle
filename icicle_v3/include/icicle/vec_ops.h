@@ -9,10 +9,10 @@
 #include "errors.h"
 #include "runtime.h"
 
-#include "fields/field.h"
-#include "fields/field_config.h"
-#include "utils/utils.h"
-#include "config_extension.h"
+#include "icicle/fields/field.h"
+#include "icicle/fields/field_config.h"
+#include "icicle/utils/utils.h"
+#include "icicle/config_extension.h"
 
 using namespace field_config;
 

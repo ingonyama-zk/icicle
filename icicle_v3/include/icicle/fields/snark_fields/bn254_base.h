@@ -2,7 +2,7 @@
 #ifndef BN254_BASE_PARAMS_H
 #define BN254_BASE_PARAMS_H
 
-#include "fields/storage.h"
+#include "icicle/fields/storage.h"
 
 namespace bn254 {
   struct fq_config {

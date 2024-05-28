@@ -1,7 +1,7 @@
 #pragma once
 
-#include "fields/storage.h"
-#include "fields/field.h"
+#include "icicle/fields/storage.h"
+#include "icicle/fields/field.h"
 
 // modulus = 3618502788666131213697322783095070105623107215331596699973092056135872020481 (2^251+17*2^192+1)
 namespace stark252 {

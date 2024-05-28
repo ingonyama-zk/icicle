@@ -23,7 +23,6 @@ src/runtime.cpp
 # Add the include directory
 target_include_directories(icicle_device PUBLIC include)
 include_directories(include)
-include_directories(include/icicle)
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
   message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )

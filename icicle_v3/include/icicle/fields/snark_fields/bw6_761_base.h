@@ -2,7 +2,7 @@
 #ifndef BW6_761_BASE_BASE_H
 #define BW6_761_BASE_BASE_H
 
-#include "fields/storage.h"
+#include "icicle/fields/storage.h"
 
 namespace bw6_761 {
   struct fq_config {

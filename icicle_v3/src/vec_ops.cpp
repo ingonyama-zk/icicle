@@ -1,5 +1,5 @@
-#include "vec_ops/vec_ops.h"
-#include "dispatcher.h"
+#include "icicle/vec_ops.h"
+#include "icicle/dispatcher.h"
 
 using namespace icicle;
 

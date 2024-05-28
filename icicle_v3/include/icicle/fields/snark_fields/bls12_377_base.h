@@ -2,7 +2,7 @@
 #ifndef BLS12_377_BASE_PARAMS_H
 #define BLS12_377_BASE_PARAMS_H
 
-#include "fields/storage.h"
+#include "icicle/fields/storage.h"
 
 namespace bls12_377 {
   struct fq_config {

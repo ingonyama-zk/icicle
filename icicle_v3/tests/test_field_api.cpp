@@ -3,8 +3,8 @@
 #include <iostream>
 
 #include "icicle/runtime.h"
-#include "icicle/vec_ops/vec_ops.h"
-#include "icicle/ntt/ntt.h"
+#include "icicle/vec_ops.h"
+#include "icicle/ntt.h"
 
 #include "icicle/fields/field_config.h"
 
