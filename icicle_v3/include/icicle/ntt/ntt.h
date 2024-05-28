@@ -108,11 +108,10 @@ namespace icicle {
     return config;
   }
 
-  /*************************** APIs ***************************/
+  /*************************** NTT ***************************/
 
-  template <typename S, typename E>
   using NttImpl = std::function<eIcicleError(
-    const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)>;
+    const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt)(
     const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output);
@@ -123,8 +122,7 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, ntt)(input, size, dir, config, output);
   }
 
-  /*************************** REGISTRATION ***************************/
-  extern "C" void register_ntt(const std::string& deviceType, NttImpl<scalar_t, scalar_t> impl);
+  extern "C" void register_ntt(const std::string& deviceType, NttImpl impl);
 
 #define REGISTER_NTT_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
