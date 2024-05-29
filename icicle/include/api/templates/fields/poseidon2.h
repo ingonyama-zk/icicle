@@ -1,4 +1,4 @@
-extern "C" cudaError_t ${FIELD}_create_poseidon2_cuda(
+extern "C" cudaError_t ${FIELD}_poseidon2_create_cuda(
   poseidon2::Poseidon2<${FIELD}::scalar_t>** poseidon,
   unsigned int width,
   unsigned int alpha,
@@ -11,7 +11,7 @@ extern "C" cudaError_t ${FIELD}_create_poseidon2_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t ${FIELD}_init_poseidon2_cuda(
+extern "C" cudaError_t ${FIELD}_poseidon2_load_cuda(
   poseidon2::Poseidon2<${FIELD}::scalar_t>** poseidon,
   unsigned int width,
   poseidon2::MdsType mds_type,
@@ -19,26 +19,39 @@ extern "C" cudaError_t ${FIELD}_init_poseidon2_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t ${FIELD}_poseidon2_permute_many_cuda(
+extern "C" cudaError_t ${FIELD}_poseidon2_absorb_many_cuda(
+  const poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon,
+  const ${FIELD}::scalar_t* inputs,
+  ${FIELD}::scalar_t* states,
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  hash::SpongeConfig& cfg);
+
+extern "C" cudaError_t ${FIELD}_poseidon2_squeeze_many_cuda(
   const poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon,
   const ${FIELD}::scalar_t* states,
   ${FIELD}::scalar_t* output,
   unsigned int number_of_states,
-  device_context::DeviceContext& ctx,
-  bool is_async
-);
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t ${FIELD}_poseidon2_compress_many_cuda(
+extern "C" cudaError_t ${FIELD}_poseidon2_hash_many_cuda(
   const poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon,
-  const ${FIELD}::scalar_t* states,
+  const ${FIELD}::scalar_t* inputs,
   ${FIELD}::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int offset,
-  ${FIELD}::scalar_t* perm_output,
-  device_context::DeviceContext& ctx,
-  bool is_async
-);
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t ${FIELD}_release_poseidon2_constants_cuda(
-  poseidon2::Poseidon2Constants<${FIELD}::scalar_t>* constants,
-  device_context::DeviceContext& ctx);
+extern "C" cudaError_t
+  ${FIELD}_poseidon2_delete_cuda(poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t ${FIELD}_build_poseidon2_merkle_tree(
+  const ${FIELD}::scalar_t* leaves,
+  ${FIELD}::scalar_t* digests,
+  unsigned int height,
+  unsigned int input_block_len, 
+  const poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon_compression,
+  const poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon_sponge,
+  const merkle_tree::TreeBuilderConfig& tree_config);

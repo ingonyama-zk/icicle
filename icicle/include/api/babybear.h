@@ -9,17 +9,17 @@
 
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
+#include "merkle-tree/merkle.cuh"
 #include "fields/stark_fields/babybear.cuh"
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
 #include "poseidon/poseidon.cuh"
-#include "poseidon/tree/merkle.cuh"
 #include "poseidon2/poseidon2.cuh"
 
 extern "C" cudaError_t babybear_extension_ntt_cuda(
   const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
 
-extern "C" cudaError_t babybear_create_poseidon2_cuda(
+extern "C" cudaError_t babybear_poseidon2_create_cuda(
   poseidon2::Poseidon2<babybear::scalar_t>** poseidon,
   unsigned int width,
   unsigned int alpha,
@@ -32,7 +32,7 @@ extern "C" cudaError_t babybear_create_poseidon2_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t babybear_init_poseidon2_cuda(
+extern "C" cudaError_t babybear_poseidon2_load_cuda(
   poseidon2::Poseidon2<babybear::scalar_t>** poseidon,
   unsigned int width,
   poseidon2::MdsType mds_type,
@@ -40,39 +40,41 @@ extern "C" cudaError_t babybear_init_poseidon2_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t babybear_poseidon2_permute_many_cuda(
+extern "C" cudaError_t babybear_poseidon2_absorb_many_cuda(
+  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
+  const babybear::scalar_t* inputs,
+  babybear::scalar_t* states,
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  hash::SpongeConfig& cfg);
+
+extern "C" cudaError_t babybear_poseidon2_squeeze_many_cuda(
   const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
   const babybear::scalar_t* states,
   babybear::scalar_t* output,
   unsigned int number_of_states,
-  device_context::DeviceContext& ctx,
-  bool is_async
-);
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t babybear_poseidon2_compress_many_cuda(
+extern "C" cudaError_t babybear_poseidon2_hash_many_cuda(
   const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
-  const babybear::scalar_t* states,
+  const babybear::scalar_t* inputs,
   babybear::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int offset,
-  babybear::scalar_t* perm_output,
-  device_context::DeviceContext& ctx,
-  bool is_async
-);
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t babybear_release_poseidon2_constants_cuda(
-  poseidon2::Poseidon2Constants<babybear::scalar_t>* constants,
-  device_context::DeviceContext& ctx);
+extern "C" cudaError_t
+  babybear_poseidon2_delete_cuda(poseidon2::Poseidon2<babybear::scalar_t>* poseidon, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t babybear_build_poseidon_merkle_tree(
+extern "C" cudaError_t babybear_build_poseidon2_merkle_tree(
   const babybear::scalar_t* leaves,
   babybear::scalar_t* digests,
   unsigned int height,
-  unsigned int arity,
   unsigned int input_block_len, 
-  const poseidon::Poseidon<babybear::scalar_t>* poseidon_compression,
-  const poseidon::Poseidon<babybear::scalar_t>* poseidon_sponge,
-  const hash::SpongeConfig& sponge_config,
+  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon_compression,
+  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon_sponge,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t babybear_mul_cuda(

@@ -9,20 +9,10 @@
 
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
+#include "merkle-tree/merkle.cuh"
 #include "fields/stark_fields/stark252.cuh"
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
-
-extern "C" cudaError_t stark252_build_poseidon_merkle_tree(
-  const stark252::scalar_t* leaves,
-  stark252::scalar_t* digests,
-  unsigned int height,
-  unsigned int arity,
-  unsigned int input_block_len, 
-  const poseidon::Poseidon<stark252::scalar_t>* poseidon_compression,
-  const poseidon::Poseidon<stark252::scalar_t>* poseidon_sponge,
-  const hash::SpongeConfig& sponge_config,
-  const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t stark252_mul_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);

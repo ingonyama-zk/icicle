@@ -9,11 +9,11 @@
 
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
+#include "merkle-tree/merkle.cuh"
 #include "curves/params/grumpkin.cuh"
 #include "msm/msm.cuh"
 #include "vec_ops/vec_ops.cuh"
 #include "poseidon/poseidon.cuh"
-#include "poseidon/tree/merkle.cuh"
 
 extern "C" cudaError_t grumpkin_precompute_msm_bases_cuda(
   grumpkin::affine_t* bases,
@@ -41,17 +41,6 @@ extern "C" cudaError_t grumpkin_affine_convert_montgomery(
 extern "C" cudaError_t grumpkin_projective_convert_montgomery(
   grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t grumpkin_build_poseidon_merkle_tree(
-  const grumpkin::scalar_t* leaves,
-  grumpkin::scalar_t* digests,
-  unsigned int height,
-  unsigned int arity,
-  unsigned int input_block_len, 
-  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_compression,
-  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_sponge,
-  const hash::SpongeConfig& sponge_config,
-  const merkle_tree::TreeBuilderConfig& tree_config);
-
 extern "C" cudaError_t grumpkin_poseidon_create_cuda(
   poseidon::Poseidon<grumpkin::scalar_t>** poseidon,
   unsigned int arity,
@@ -70,26 +59,42 @@ extern "C" cudaError_t grumpkin_poseidon_load_cuda(
   unsigned int arity,
   device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t grumpkin_poseidon_permute_many_cuda(
+extern "C" cudaError_t grumpkin_poseidon_absorb_many_cuda(
   const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
-  const grumpkin::scalar_t* states,
-  grumpkin::scalar_t* output,
+  const grumpkin::scalar_t* inputs,
+  grumpkin::scalar_t* states,
   unsigned int number_of_states,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int input_block_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t grumpkin_poseidon_compress_many_cuda(
+extern "C" cudaError_t grumpkin_poseidon_squeeze_many_cuda(
   const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
   const grumpkin::scalar_t* states,
   grumpkin::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int offset,
-  grumpkin::scalar_t* perm_output,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
+
+extern "C" cudaError_t grumpkin_poseidon_hash_many_cuda(
+  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
+  const grumpkin::scalar_t* inputs,
+  grumpkin::scalar_t* output,
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
-grumpkin_poseidon_delete_cuda(Poseidon<grumpkin::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+  grumpkin_poseidon_delete_cuda(poseidon::Poseidon<grumpkin::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t grumpkin_build_poseidon_merkle_tree(
+  const grumpkin::scalar_t* leaves,
+  grumpkin::scalar_t* digests,
+  unsigned int height,
+  unsigned int input_block_len, 
+  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_compression,
+  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_sponge,
+  const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t grumpkin_mul_cuda(
   grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);

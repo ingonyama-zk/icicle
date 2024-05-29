@@ -9,7 +9,6 @@
 #include "utils/utils.h"
 
 #include "hash/hash.cuh"
-using namespace hash;
 
 #include "poseidon2/constants.cuh"
 #include "poseidon2/kernels.cuh"
@@ -20,18 +19,8 @@ using namespace hash;
  * Specifically, the optimized [Filecoin version](https://spec.filecoin.io/algorithms/crypto/poseidon/)
  */
 namespace poseidon2 {
-  static SpongeConfig default_poseidon2_sponge_config(
-    int width, const device_context::DeviceContext& ctx = device_context::get_default_device_context())
-  {
-    SpongeConfig cfg = default_sponge_config(ctx);
-    cfg.input_rate = width;
-    cfg.output_rate = cfg.input_rate;
-    cfg.offset = 0;
-    return cfg;
-  }
-
   template <typename S>
-  class Poseidon2 : public Hash<S>, public SpongeHasher<Poseidon2<S>, S, S>, public CompressionHasher<Poseidon2<S>, S>
+  class Poseidon2 : public hash::SpongeHasher<S, S>
   {
     static const int POSEIDON_BLOCK_SIZE = 128;
 
@@ -46,22 +35,24 @@ namespace poseidon2 {
     cudaError_t squeeze_states(
       const S* states,
       unsigned int number_of_states,
-      unsigned int rate,
-      unsigned int offset,
-      bool align,
+      unsigned int output_len,
       S* output,
       const device_context::DeviceContext& ctx) const override
     {
-      generic_squeeze_states_kernel<S>
+      hash::generic_squeeze_states_kernel<S>
         <<<poseidon_number_of_blocks(number_of_states), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(
-          states, number_of_states, this->width, rate, offset, output);
+          states, number_of_states, this->width, this->rate, this->offset, output);
       // Squeeze states to get results
       CHK_IF_RETURN(cudaPeekAtLastError());
       return CHK_LAST();
     }
 
     cudaError_t run_permutation_kernel(
-      const S* states, S* output, unsigned int number_of_states, bool aligned, device_context::DeviceContext& ctx) const override
+      const S* states,
+      S* output,
+      unsigned int number_of_states,
+      bool aligned,
+      const device_context::DeviceContext& ctx) const override
     {
 #define P2_PERM_T(width)                                                                                               \
   case width:                                                                                                          \
@@ -98,23 +89,21 @@ namespace poseidon2 {
       MdsType mds_type,
       DiffusionStrategy diffusion,
       device_context::DeviceContext& ctx)
+        : hash::SpongeHasher<S, S>(width, width, width, 0)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(create_poseidon2_constants(
         width, alpha, internal_rounds, external_rounds, round_constants, internal_matrix_diag, mds_type, diffusion, ctx,
         &constants));
       this->constants = constants;
-      this->width = width;
-      this->preimage_max_length = width;
     }
 
     Poseidon2(int width, MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx)
+        : hash::SpongeHasher<S, S>(width, width, width, 0)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(init_poseidon2_constants(width, mds_type, diffusion, ctx, &constants));
       this->constants = constants;
-      this->width = width;
-      this->preimage_max_length = width;
     }
 
     ~Poseidon2()

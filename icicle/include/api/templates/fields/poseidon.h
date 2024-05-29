@@ -16,23 +16,39 @@ extern "C" cudaError_t ${FIELD}_poseidon_load_cuda(
   unsigned int arity,
   device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t ${FIELD}_poseidon_permute_many_cuda(
+extern "C" cudaError_t ${FIELD}_poseidon_absorb_many_cuda(
   const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon,
-  const ${FIELD}::scalar_t* states,
-  ${FIELD}::scalar_t* output,
+  const ${FIELD}::scalar_t* inputs,
+  ${FIELD}::scalar_t* states,
   unsigned int number_of_states,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int input_block_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t ${FIELD}_poseidon_compress_many_cuda(
+extern "C" cudaError_t ${FIELD}_poseidon_squeeze_many_cuda(
   const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon,
   const ${FIELD}::scalar_t* states,
   ${FIELD}::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int offset,
-  ${FIELD}::scalar_t* perm_output,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
+
+extern "C" cudaError_t ${FIELD}_poseidon_hash_many_cuda(
+  const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon,
+  const ${FIELD}::scalar_t* inputs,
+  ${FIELD}::scalar_t* output,
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
-${FIELD}_poseidon_delete_cuda(Poseidon<${FIELD}::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+  ${FIELD}_poseidon_delete_cuda(poseidon::Poseidon<${FIELD}::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t ${FIELD}_build_poseidon_merkle_tree(
+  const ${FIELD}::scalar_t* leaves,
+  ${FIELD}::scalar_t* digests,
+  unsigned int height,
+  unsigned int input_block_len, 
+  const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon_compression,
+  const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon_sponge,
+  const merkle_tree::TreeBuilderConfig& tree_config);

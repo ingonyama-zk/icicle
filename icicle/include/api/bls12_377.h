@@ -9,12 +9,12 @@
 
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
+#include "merkle-tree/merkle.cuh"
 #include "curves/params/bls12_377.cuh"
 #include "ntt/ntt.cuh"
 #include "msm/msm.cuh"
 #include "vec_ops/vec_ops.cuh"
 #include "poseidon/poseidon.cuh"
-#include "poseidon/tree/merkle.cuh"
 
 extern "C" cudaError_t bls12_377_g2_precompute_msm_bases_cuda(
   bls12_377::g2_affine_t* bases,
@@ -71,17 +71,6 @@ extern "C" cudaError_t bls12_377_affine_convert_montgomery(
 extern "C" cudaError_t bls12_377_projective_convert_montgomery(
   bls12_377::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bls12_377_build_poseidon_merkle_tree(
-  const bls12_377::scalar_t* leaves,
-  bls12_377::scalar_t* digests,
-  unsigned int height,
-  unsigned int arity,
-  unsigned int input_block_len, 
-  const poseidon::Poseidon<bls12_377::scalar_t>* poseidon_compression,
-  const poseidon::Poseidon<bls12_377::scalar_t>* poseidon_sponge,
-  const hash::SpongeConfig& sponge_config,
-  const merkle_tree::TreeBuilderConfig& tree_config);
-
 extern "C" cudaError_t bls12_377_poseidon_create_cuda(
   poseidon::Poseidon<bls12_377::scalar_t>** poseidon,
   unsigned int arity,
@@ -100,26 +89,42 @@ extern "C" cudaError_t bls12_377_poseidon_load_cuda(
   unsigned int arity,
   device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bls12_377_poseidon_permute_many_cuda(
+extern "C" cudaError_t bls12_377_poseidon_absorb_many_cuda(
   const poseidon::Poseidon<bls12_377::scalar_t>* poseidon,
-  const bls12_377::scalar_t* states,
-  bls12_377::scalar_t* output,
+  const bls12_377::scalar_t* inputs,
+  bls12_377::scalar_t* states,
   unsigned int number_of_states,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int input_block_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t bls12_377_poseidon_compress_many_cuda(
+extern "C" cudaError_t bls12_377_poseidon_squeeze_many_cuda(
   const poseidon::Poseidon<bls12_377::scalar_t>* poseidon,
   const bls12_377::scalar_t* states,
   bls12_377::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int offset,
-  bls12_377::scalar_t* perm_output,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
+
+extern "C" cudaError_t bls12_377_poseidon_hash_many_cuda(
+  const poseidon::Poseidon<bls12_377::scalar_t>* poseidon,
+  const bls12_377::scalar_t* inputs,
+  bls12_377::scalar_t* output,
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
-bls12_377_poseidon_delete_cuda(Poseidon<bls12_377::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+  bls12_377_poseidon_delete_cuda(poseidon::Poseidon<bls12_377::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t bls12_377_build_poseidon_merkle_tree(
+  const bls12_377::scalar_t* leaves,
+  bls12_377::scalar_t* digests,
+  unsigned int height,
+  unsigned int input_block_len, 
+  const poseidon::Poseidon<bls12_377::scalar_t>* poseidon_compression,
+  const poseidon::Poseidon<bls12_377::scalar_t>* poseidon_sponge,
+  const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t bls12_377_mul_cuda(
   bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_377::scalar_t* result);

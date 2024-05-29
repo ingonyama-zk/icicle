@@ -30,7 +30,7 @@ namespace poseidon {
 
     // We need __syncthreads here if the state is not aligned
     // because then we need to shift the vector [A, B, 0] -> [D, A, B]
-    if (!aligned  && states == out) { __syncthreads(); }
+    if (!aligned && states == out) { __syncthreads(); }
 
     // Store element in state
     out[idx] = prepared_element;
@@ -170,7 +170,12 @@ namespace poseidon {
 
   template <typename S, int T>
   cudaError_t poseidon_permutation_kernel(
-    const S* states, S* out, unsigned int number_of_states, bool aligned, const PoseidonConstants<S>& constants, cudaStream_t& stream)
+    const S* states,
+    S* out,
+    unsigned int number_of_states,
+    bool aligned,
+    const PoseidonConstants<S>& constants,
+    cudaStream_t& stream)
   {
     prepare_poseidon_states<S, T>
       <<<PKC::number_of_full_blocks(T, number_of_states), PKC::number_of_threads(T), 0, stream>>>(
@@ -195,20 +200,12 @@ namespace poseidon {
   }
 
   template <typename S>
-  __global__ void squeeze_states_kernel(
-    const S* states, unsigned int number_of_states, unsigned int width, S* out)
+  __global__ void copy_recursive(const S* state, unsigned int width, unsigned int number_of_states, S* out)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }
 
-    int out_idx = (idx / (width - 1) * width) + (idx % (width - 1)) + 1;
-    if (states == out) {
-      S element = states[idx * width + 1];
-      __syncthreads();
-      out[out_idx] = element;
-    } else {
-      out[out_idx] = states[idx * width + 1];
-    }
+    out[(idx / (width - 1) * width) + (idx % (width - 1)) + 1] = state[idx];
   }
 } // namespace poseidon
 

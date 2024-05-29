@@ -9,12 +9,12 @@
 
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
+#include "merkle-tree/merkle.cuh"
 #include "curves/params/bn254.cuh"
 #include "ntt/ntt.cuh"
 #include "msm/msm.cuh"
 #include "vec_ops/vec_ops.cuh"
 #include "poseidon/poseidon.cuh"
-#include "poseidon/tree/merkle.cuh"
 #include "poseidon2/poseidon2.cuh"
 
 extern "C" cudaError_t bn254_g2_precompute_msm_bases_cuda(
@@ -72,7 +72,7 @@ extern "C" cudaError_t bn254_affine_convert_montgomery(
 extern "C" cudaError_t bn254_projective_convert_montgomery(
   bn254::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bn254_create_poseidon2_cuda(
+extern "C" cudaError_t bn254_poseidon2_create_cuda(
   poseidon2::Poseidon2<bn254::scalar_t>** poseidon,
   unsigned int width,
   unsigned int alpha,
@@ -85,7 +85,7 @@ extern "C" cudaError_t bn254_create_poseidon2_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t bn254_init_poseidon2_cuda(
+extern "C" cudaError_t bn254_poseidon2_load_cuda(
   poseidon2::Poseidon2<bn254::scalar_t>** poseidon,
   unsigned int width,
   poseidon2::MdsType mds_type,
@@ -93,39 +93,41 @@ extern "C" cudaError_t bn254_init_poseidon2_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t bn254_poseidon2_permute_many_cuda(
+extern "C" cudaError_t bn254_poseidon2_absorb_many_cuda(
+  const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
+  const bn254::scalar_t* inputs,
+  bn254::scalar_t* states,
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  hash::SpongeConfig& cfg);
+
+extern "C" cudaError_t bn254_poseidon2_squeeze_many_cuda(
   const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
   const bn254::scalar_t* states,
   bn254::scalar_t* output,
   unsigned int number_of_states,
-  device_context::DeviceContext& ctx,
-  bool is_async
-);
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t bn254_poseidon2_compress_many_cuda(
+extern "C" cudaError_t bn254_poseidon2_hash_many_cuda(
   const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
-  const bn254::scalar_t* states,
+  const bn254::scalar_t* inputs,
   bn254::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int offset,
-  bn254::scalar_t* perm_output,
-  device_context::DeviceContext& ctx,
-  bool is_async
-);
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t bn254_release_poseidon2_constants_cuda(
-  poseidon2::Poseidon2Constants<bn254::scalar_t>* constants,
-  device_context::DeviceContext& ctx);
+extern "C" cudaError_t
+  bn254_poseidon2_delete_cuda(poseidon2::Poseidon2<bn254::scalar_t>* poseidon, device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bn254_build_poseidon_merkle_tree(
+extern "C" cudaError_t bn254_build_poseidon2_merkle_tree(
   const bn254::scalar_t* leaves,
   bn254::scalar_t* digests,
   unsigned int height,
-  unsigned int arity,
   unsigned int input_block_len, 
-  const poseidon::Poseidon<bn254::scalar_t>* poseidon_compression,
-  const poseidon::Poseidon<bn254::scalar_t>* poseidon_sponge,
-  const hash::SpongeConfig& sponge_config,
+  const poseidon2::Poseidon2<bn254::scalar_t>* poseidon_compression,
+  const poseidon2::Poseidon2<bn254::scalar_t>* poseidon_sponge,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t bn254_poseidon_create_cuda(
@@ -146,26 +148,42 @@ extern "C" cudaError_t bn254_poseidon_load_cuda(
   unsigned int arity,
   device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t bn254_poseidon_permute_many_cuda(
+extern "C" cudaError_t bn254_poseidon_absorb_many_cuda(
   const poseidon::Poseidon<bn254::scalar_t>* poseidon,
-  const bn254::scalar_t* states,
-  bn254::scalar_t* output,
+  const bn254::scalar_t* inputs,
+  bn254::scalar_t* states,
   unsigned int number_of_states,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int input_block_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t bn254_poseidon_compress_many_cuda(
+extern "C" cudaError_t bn254_poseidon_squeeze_many_cuda(
   const poseidon::Poseidon<bn254::scalar_t>* poseidon,
   const bn254::scalar_t* states,
   bn254::scalar_t* output,
   unsigned int number_of_states,
-  unsigned int offset,
-  bn254::scalar_t* perm_output,
-  device_context::DeviceContext& ctx,
-  bool is_async);
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
+
+extern "C" cudaError_t bn254_poseidon_hash_many_cuda(
+  const poseidon::Poseidon<bn254::scalar_t>* poseidon,
+  const bn254::scalar_t* inputs,
+  bn254::scalar_t* output,
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
-bn254_poseidon_delete_cuda(Poseidon<bn254::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+  bn254_poseidon_delete_cuda(poseidon::Poseidon<bn254::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t bn254_build_poseidon_merkle_tree(
+  const bn254::scalar_t* leaves,
+  bn254::scalar_t* digests,
+  unsigned int height,
+  unsigned int input_block_len, 
+  const poseidon::Poseidon<bn254::scalar_t>* poseidon_compression,
+  const poseidon::Poseidon<bn254::scalar_t>* poseidon_sponge,
+  const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t bn254_mul_cuda(
   bn254::scalar_t* vec_a, bn254::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bn254::scalar_t* result);

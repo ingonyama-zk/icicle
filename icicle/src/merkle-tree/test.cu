@@ -6,10 +6,8 @@
 #include <math.h>
 
 #include "merkle-tree/merkle.cuh"
-using namespace merkle_tree;
 
 #include "poseidon/poseidon.cuh"
-using namespace poseidon;
 
 #include "api/bls12_381.h"
 using namespace bls12_381;
@@ -28,7 +26,7 @@ int main(int argc, char* argv[])
   // Load poseidon constants
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  Poseidon<scalar_t> poseidon(A, ctx);
+  poseidon::Poseidon<scalar_t> poseidon(A, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   /// Tree of height N and arity A contains \sum{A^i} for i in 0..N-1 elements
@@ -38,7 +36,7 @@ int main(int argc, char* argv[])
 
   /// Use keep_rows to specify how many rows do you want to store
   int keep_rows = argc > 2 ? atoi(argv[2]) : 7;
-  size_t digests_len = get_digests_len(keep_rows, A);
+  size_t digests_len = merkle_tree::get_digests_len(keep_rows - 1, A);
 
   /// Fill leaves with scalars [0, 1, ... 2^tree_height - 1]
   START_TIMER(timer_allocation);
@@ -68,22 +66,16 @@ int main(int argc, char* argv[])
   std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
             << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
 
-  SpongeConfig sponge_config = default_poseidon_sponge_config(T);
-  TreeBuilderConfig tree_config = default_merkle_config();
+  merkle_tree::TreeBuilderConfig tree_config = merkle_tree::default_merkle_config();
+  tree_config.arity = 2;
   tree_config.keep_rows = keep_rows;
   START_TIMER(timer_merkle);
-  bls12_381_build_poseidon_merkle_tree(
-    leaves,
-    digests,
-    tree_height,
-    A,
-    A,
-    &poseidon,
-    &poseidon,
-    sponge_config,
-    tree_config
-  );
+  bls12_381_build_poseidon_merkle_tree(leaves, digests, tree_height, A, &poseidon, &poseidon, tree_config);
   END_TIMER(timer_merkle, "Merkle tree built: ")
+
+  for (int i = 0; i < digests_len; i++) {
+    std::cout << digests[i] << std::endl;
+  }
 
   // Use this to generate test vectors
   // for (int i = 0; i < digests_len; i++) {
