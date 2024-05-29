@@ -150,7 +150,7 @@ extern "C" cudaError_t bn254_transpose_matrix_cuda(
 
 extern "C" cudaError_t bn254_bit_reverse_cuda(
   const bn254::scalar_t* input,
-  unsigned n,
+  uint64_t n,
   vec_ops::BitReverseConfig& config,
   bn254::scalar_t* output);
 

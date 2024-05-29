@@ -56,22 +56,22 @@ namespace vec_ops {
     }
 
     template <typename E>
-    __global__ void bit_reverse_kernel(const E* input, unsigned n, unsigned shift, E* output)
+    __global__ void bit_reverse_kernel(const E* input, uint64_t n, unsigned shift, E* output)
     {
-      int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      uint64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
       // Handling arbitrary vector size
       if (tid < n) {
-        int reversed_index = __brev(tid) >> shift;
+        int reversed_index = __brevll(tid) >> shift;
         output[reversed_index] = input[tid];
       }
     }
     template <typename E>
-    __global__ void bit_reverse_inplace_kernel(E* input, unsigned n, unsigned shift)
+    __global__ void bit_reverse_inplace_kernel(E* input, uint64_t n, unsigned shift)
     {
-      int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      uint64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
       // Handling arbitrary vector size
       if (tid < n) {
-        int reversed_index = __brev(tid) >> shift;
+        int reversed_index = __brevll(tid) >> shift;
         if (reversed_index > tid) {
           E temp = input[tid];
           input[tid] = input[reversed_index];
@@ -191,7 +191,7 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t bit_reverse(const E* input, unsigned size, BitReverseConfig& cfg, E* output)
+  cudaError_t bit_reverse(const E* input, uint64_t size, BitReverseConfig& cfg, E* output)
   {
     if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
     if ((input == output) & (cfg.is_input_on_device != cfg.is_output_on_device))
@@ -206,8 +206,8 @@ namespace vec_ops {
       CHK_IF_RETURN(cudaMallocAsync(&d_output, sizeof(E) * size, cfg.ctx.stream));
     }
 
-    unsigned shift = __builtin_clz(size) + 1;
-    unsigned num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
+    uint64_t shift = __builtin_clzll(size) + 1;
+    uint64_t num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
 
     if ((input != output) & cfg.is_input_on_device) {
       bit_reverse_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(input, size, shift, d_output);

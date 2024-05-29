@@ -70,7 +70,7 @@ extern "C" cudaError_t babybear_transpose_matrix_cuda(
 
 extern "C" cudaError_t babybear_bit_reverse_cuda(
   const babybear::scalar_t* input,
-  unsigned n,
+  uint64_t n,
   vec_ops::BitReverseConfig& config,
   babybear::scalar_t* output);
 

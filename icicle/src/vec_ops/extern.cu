@@ -61,7 +61,7 @@ namespace vec_ops {
   }
 
   extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, bit_reverse_cuda)(const scalar_t* input, unsigned n, BitReverseConfig& config, scalar_t* output)
+  CONCAT_EXPAND(FIELD, bit_reverse_cuda)(const scalar_t* input, uint64_t n, BitReverseConfig& config, scalar_t* output)
   {
     return bit_reverse<scalar_t>(input, n, config, output);
   }

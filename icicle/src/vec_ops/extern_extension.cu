@@ -58,7 +58,7 @@ namespace vec_ops {
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, extension_bit_reverse_cuda)(
-    const extension_t* input, unsigned n, BitReverseConfig& config, extension_t* output)
+    const extension_t* input, uint64_t n, BitReverseConfig& config, extension_t* output)
   {
     return bit_reverse<extension_t>(input, n, config, output);
   }

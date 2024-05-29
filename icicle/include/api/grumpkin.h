@@ -88,7 +88,7 @@ extern "C" cudaError_t grumpkin_transpose_matrix_cuda(
 
 extern "C" cudaError_t grumpkin_bit_reverse_cuda(
   const grumpkin::scalar_t* input,
-  unsigned n,
+  uint64_t n,
   vec_ops::BitReverseConfig& config,
   grumpkin::scalar_t* output);
 

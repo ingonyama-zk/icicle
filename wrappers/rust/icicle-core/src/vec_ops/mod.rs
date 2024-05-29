@@ -331,7 +331,7 @@ macro_rules! impl_vec_ops_field {
                 #[link_name = concat!($field_prefix, "_bit_reverse_cuda")]
                 pub(crate) fn bit_reverse_cuda(
                     input: *const $field,
-                    size: u32,
+                    size: u64,
                     config: *const BitReverseConfig,
                     output: *mut $field,
                 ) -> CudaError;
@@ -424,7 +424,7 @@ macro_rules! impl_vec_ops_field {
                 unsafe {
                     $field_prefix_ident::bit_reverse_cuda(
                         input.as_ptr(),
-                        input.len() as u32,
+                        input.len() as u64,
                         cfg as *const BitReverseConfig,
                         output.as_mut_ptr(),
                     )
@@ -439,7 +439,7 @@ macro_rules! impl_vec_ops_field {
                 unsafe {
                     $field_prefix_ident::bit_reverse_cuda(
                         input.as_ptr(),
-                        input.len() as u32,
+                        input.len() as u64,
                         cfg as *const BitReverseConfig,
                         input.as_mut_ptr(),
                     )

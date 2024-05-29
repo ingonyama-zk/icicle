@@ -33,7 +33,7 @@ extern "C" cudaError_t stark252_transpose_matrix_cuda(
 
 extern "C" cudaError_t stark252_bit_reverse_cuda(
   const stark252::scalar_t* input,
-  unsigned n,
+  uint64_t n,
   vec_ops::BitReverseConfig& config,
   stark252::scalar_t* output);
 

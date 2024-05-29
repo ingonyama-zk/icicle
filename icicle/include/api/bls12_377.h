@@ -118,7 +118,7 @@ extern "C" cudaError_t bls12_377_transpose_matrix_cuda(
 
 extern "C" cudaError_t bls12_377_bit_reverse_cuda(
   const bls12_377::scalar_t* input,
-  unsigned n,
+  uint64_t n,
   vec_ops::BitReverseConfig& config,
   bls12_377::scalar_t* output);
 
