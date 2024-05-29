@@ -335,13 +335,6 @@ macro_rules! impl_vec_ops_field {
                     config: *const BitReverseConfig,
                     output: *mut $field,
                 ) -> CudaError;
-
-                // #[link_name = concat!($field_prefix, "_bit_reverse_inplace_cuda")]
-                // pub(crate) fn bit_reverse_inplace_cuda(
-                //     input: *mut $field,
-                //     size: u32,
-                //     config: *const BitReverseConfig,
-                // ) -> CudaError;
             }
         }
 

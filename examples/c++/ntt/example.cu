@@ -60,8 +60,8 @@ int validate_output(const unsigned ntt_size, const unsigned nof_ntts, E* element
 
 using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg) printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
-
+#define END_TIMER(timer, msg)                                                                                          \
+  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int main(int argc, char* argv[])
 {
@@ -89,16 +89,16 @@ int main(int argc, char* argv[])
   bn254_initialize_domain(&basic_root, ctx, true);
   // Create an NTTConfig instance
   NTTConfig<S> config = default_ntt_config<S>();
-  config.ntt_algorithm = NttAlgorithm::MixedRadix; 
+  config.ntt_algorithm = NttAlgorithm::MixedRadix;
   config.batch_size = nof_ntts;
   START_TIMER(MixedRadix);
   cudaError_t err = bn254_ntt_cuda(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(MixedRadix, "MixedRadix NTT");
-  
+
   std::cout << "Validating output" << std::endl;
   validate_output(ntt_size, nof_ntts, output);
 
-  config.ntt_algorithm = NttAlgorithm::Radix2; 
+  config.ntt_algorithm = NttAlgorithm::Radix2;
   START_TIMER(Radix2);
   err = bn254_ntt_cuda(input, ntt_size, NTTDir::kForward, config, output);
   END_TIMER(Radix2, "Radix2 NTT");

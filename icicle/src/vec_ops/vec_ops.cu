@@ -194,7 +194,9 @@ namespace vec_ops {
   cudaError_t bit_reverse(const E* input, unsigned size, BitReverseConfig& cfg, E* output)
   {
     if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
-    if ((input == output) & (cfg.is_input_on_device != cfg.is_output_on_device)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: equal devices should have same is_on_device parameters");
+    if ((input == output) & (cfg.is_input_on_device != cfg.is_output_on_device))
+      THROW_ICICLE_ERR(
+        IcicleError_t::InvalidArgument, "bit_reverse: equal devices should have same is_on_device parameters");
 
     E* d_output;
     if (cfg.is_output_on_device) {

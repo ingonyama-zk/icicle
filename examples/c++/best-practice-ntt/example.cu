@@ -15,20 +15,23 @@ typedef scalar_t E;
 
 const unsigned max_log_ntt_size = 27;
 
-void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, E * elements ) {
+void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, E* elements)
+{
   for (unsigned i = 0; i < ntt_size * nof_ntts; i++) {
-    elements[i] = E::from(i+1);
+    elements[i] = E::from(i + 1);
   }
 }
 
 using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg) printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+#define END_TIMER(timer, msg)                                                                                          \
+  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   cudaDeviceReset();
   cudaDeviceProp deviceProperties;
-  int deviceId=0;
+  int deviceId = 0;
   cudaGetDeviceProperties(&deviceProperties, deviceId);
   std::string gpu_full_name = deviceProperties.name;
   std::cout << gpu_full_name << std::endl;
@@ -38,7 +41,7 @@ int main(int argc, char** argv) {
 
   S basic_root = S::omega(max_log_ntt_size);
 
-  // change these parameters to match the desired NTT size and batch size  
+  // change these parameters to match the desired NTT size and batch size
   const unsigned log_ntt_size = 22;
   const unsigned nof_ntts = 16;
 
@@ -49,7 +52,7 @@ int main(int argc, char** argv) {
 
   // Create separate CUDA streams for overlapping data transfers and kernel execution.
   cudaStream_t stream_compute, stream_h2d, stream_d2h;
-  cudaStreamCreate(&stream_compute); 
+  cudaStreamCreate(&stream_compute);
   cudaStreamCreate(&stream_h2d);
   cudaStreamCreate(&stream_d2h);
 
@@ -68,27 +71,27 @@ int main(int argc, char** argv) {
   config_compute.are_inputs_on_device = true;
   config_compute.are_outputs_on_device = true;
   config_compute.is_async = true;
-  
+
   std::cout << "Concurrent Download, Upload, and Compute In-place NTT" << std::endl;
   int nof_blocks = 32;
   std::cout << "Number of blocks: " << nof_blocks << std::endl;
-  int block_size = ntt_size*nof_ntts/nof_blocks;
-  
+  int block_size = ntt_size * nof_ntts / nof_blocks;
+
   // on-host pinned data
-  E * h_inp[2];
-  E * h_out[2];
+  E* h_inp[2];
+  E* h_out[2];
   for (int i = 0; i < 2; i++) {
-    cudaHostAlloc((void**)&h_inp[i], sizeof(E)*ntt_size*nof_ntts, cudaHostAllocDefault);
-    cudaHostAlloc((void**)&h_out[i], sizeof(E)*ntt_size*nof_ntts, cudaHostAllocDefault);
+    cudaHostAlloc((void**)&h_inp[i], sizeof(E) * ntt_size * nof_ntts, cudaHostAllocDefault);
+    cudaHostAlloc((void**)&h_out[i], sizeof(E) * ntt_size * nof_ntts, cudaHostAllocDefault);
   }
-  
+
   // on-device in-place data
   // we need two on-device vectors to overlap data transfers with NTT kernel execution
-  E * d_vec[2];
+  E* d_vec[2];
   for (int i = 0; i < 2; i++) {
-    cudaMalloc((void**)&d_vec[i], sizeof(E)*ntt_size*nof_ntts);
+    cudaMalloc((void**)&d_vec[i], sizeof(E) * ntt_size * nof_ntts);
   }
-  
+
   // initialize input data
   initialize_input(ntt_size, nof_ntts, h_inp[0]);
   initialize_input(ntt_size, nof_ntts, h_inp[1]);
@@ -97,7 +100,7 @@ int main(int argc, char** argv) {
   cudaEventCreate(&compute_start);
   cudaEventCreate(&compute_stop);
 
-  for ( int run = 0; run < 10; run++ ) {  
+  for (int run = 0; run < 10; run++) {
     int vec_compute = run % 2;
     int vec_transfer = (run + 1) % 2;
     std::cout << "Run: " << run << std::endl;
@@ -110,14 +113,18 @@ int main(int argc, char** argv) {
     // we have to delay upload to device relative to download from device by one block: preserve write after read
     for (int i = 0; i <= nof_blocks; i++) {
       if (i < nof_blocks) {
-        cudaMemcpyAsync(&h_out[vec_transfer][i*block_size], &d_vec[vec_transfer][i*block_size], sizeof(E)*block_size, cudaMemcpyDeviceToHost, stream_d2h);    
+        cudaMemcpyAsync(
+          &h_out[vec_transfer][i * block_size], &d_vec[vec_transfer][i * block_size], sizeof(E) * block_size,
+          cudaMemcpyDeviceToHost, stream_d2h);
       }
-      if (i>0) {
-        cudaMemcpyAsync(&d_vec[vec_transfer][(i-1)*block_size], &h_inp[vec_transfer][(i-1)*block_size], sizeof(E)*block_size, cudaMemcpyHostToDevice, stream_h2d);
+      if (i > 0) {
+        cudaMemcpyAsync(
+          &d_vec[vec_transfer][(i - 1) * block_size], &h_inp[vec_transfer][(i - 1) * block_size],
+          sizeof(E) * block_size, cudaMemcpyHostToDevice, stream_h2d);
       }
       // synchronize upload and download at the end of the block to ensure data integrity
-      cudaStreamSynchronize(stream_d2h); 
-      cudaStreamSynchronize(stream_h2d); 
+      cudaStreamSynchronize(stream_d2h);
+      cudaStreamSynchronize(stream_h2d);
     }
     // synchronize compute stream with the end of the computation
     cudaEventSynchronize(compute_stop);
@@ -126,12 +133,12 @@ int main(int argc, char** argv) {
     END_TIMER(inplace, "Concurrent In-Place  NTT");
     std::cout << "NTT time: " << milliseconds << " ms" << std::endl;
   };
-  
+
   // Clean-up
   for (int i = 0; i < 2; i++) {
-    cudaFree(d_vec[i]); 
-    cudaFreeHost(h_inp[i]); 
-    cudaFreeHost(h_out[i]); 
+    cudaFree(d_vec[i]);
+    cudaFreeHost(h_inp[i]);
+    cudaFreeHost(h_out[i]);
   }
   cudaEventDestroy(compute_start);
   cudaEventDestroy(compute_stop);

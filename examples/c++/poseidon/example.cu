@@ -14,12 +14,13 @@ inline uint32_t tree_index(uint32_t level, uint32_t offset) { return (1 << level
 
 // We assume the tree has leaves already set, compute all other levels
 void build_tree(
-  const uint32_t tree_height, scalar_t* tree, PoseidonConstants<scalar_t> * constants, PoseidonConfig config)
+  const uint32_t tree_height, scalar_t* tree, PoseidonConstants<scalar_t>* constants, PoseidonConfig config)
 {
   for (uint32_t level = tree_height - 1; level > 0; level--) {
     const uint32_t next_level = level - 1;
     const uint32_t next_level_width = 1 << next_level;
-    bn254_poseidon_hash_cuda(&tree[tree_index(level, 0)], &tree[tree_index(next_level, 0)], next_level_width, 2, *constants, config);
+    bn254_poseidon_hash_cuda(
+      &tree[tree_index(level, 0)], &tree[tree_index(next_level, 0)], next_level_width, 2, *constants, config);
   }
 }
 
@@ -37,11 +38,7 @@ uint32_t query_membership(scalar_t query, scalar_t* tree, const uint32_t tree_he
 }
 
 void generate_proof(
-  uint32_t position,
-  scalar_t* tree,
-  const uint32_t tree_height,
-  uint32_t* proof_lr,
-  scalar_t* proof_hash)
+  uint32_t position, scalar_t* tree, const uint32_t tree_height, uint32_t* proof_lr, scalar_t* proof_hash)
 {
   uint32_t level_index = position;
   for (uint32_t level = tree_height - 1; level > 0; level--) {
@@ -68,7 +65,7 @@ uint32_t validate_proof(
   const uint32_t tree_height,
   const uint32_t* proof_lr,
   const scalar_t* proof_hash,
-  PoseidonConstants<scalar_t> * constants,
+  PoseidonConstants<scalar_t>* constants,
   PoseidonConfig config)
 {
   scalar_t hashes_in[2], hash_out[1], level_hash;
@@ -114,13 +111,13 @@ int main(int argc, char* argv[])
   std::cout << "Hashing blocks into tree leaves..." << std::endl;
   PoseidonConstants<scalar_t> constants;
   bn254_init_optimized_poseidon_constants_cuda(data_arity, ctx, &constants);
-  PoseidonConfig config = default_poseidon_config(data_arity+1); 
+  PoseidonConfig config = default_poseidon_config(data_arity + 1);
   bn254_poseidon_hash_cuda(data, &tree[tree_index(leaf_level, 0)], tree_width, 4, constants, config);
 
   std::cout << "3. Building Merkle tree" << std::endl;
   PoseidonConstants<scalar_t> tree_constants;
   bn254_init_optimized_poseidon_constants_cuda(tree_arity, ctx, &tree_constants);
-  PoseidonConfig tree_config = default_poseidon_config(tree_arity+1);
+  PoseidonConfig tree_config = default_poseidon_config(tree_arity + 1);
   build_tree(tree_height, tree, &tree_constants, tree_config);
 
   std::cout << "4. Generate membership proof" << std::endl;
@@ -142,7 +139,7 @@ int main(int argc, char* argv[])
   std::cout << "6. Tamper the hash" << std::endl;
   const scalar_t tampered_hash = hash + scalar_t::one();
   validated = validate_proof(tampered_hash, tree_height, proof_lr, proof_hash, &tree_constants, tree_config);
-  
+
   std::cout << "7. Invalidate tamper hash membership" << std::endl;
   std::cout << "Validated: " << validated << std::endl;
   return 0;

@@ -122,11 +122,6 @@ extern "C" cudaError_t bw6_761_bit_reverse_cuda(
   vec_ops::BitReverseConfig& config,
   bw6_761::scalar_t* output);
 
-// extern "C" cudaError_t bw6_761_bit_reverse_inplace_cuda(
-//   bw6_761::scalar_t* input,
-//   unsigned n,
-//   vec_ops::BitReverseConfig& config);
-
 extern "C" void bw6_761_generate_scalars(bw6_761::scalar_t* scalars, int size);
 
 extern "C" cudaError_t bw6_761_scalar_convert_montgomery(
