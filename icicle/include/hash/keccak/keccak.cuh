@@ -37,7 +37,7 @@ namespace keccak {
     return config;
   }
 
-  class Keccak : public Hash<uint64_t>, public SpongeHasher<Keccak, uint8_t, uint64_t>
+  class Keccak : public Hash<uint64_t>, public SpongeHasher<Keccak, uint8_t, uint64_t>, public CompressionHasher<Keccak, uint64_t>
   {
   public:
     static const int KECCAK_BLOCK_SIZE = 128;
@@ -59,6 +59,7 @@ namespace keccak {
       unsigned int number_of_states,
       unsigned int rate,
       unsigned int offset,
+      bool align,
       uint64_t* output,
       device_context::DeviceContext& ctx) const override;
 
@@ -66,6 +67,7 @@ namespace keccak {
       const uint64_t* states,
       uint64_t* output,
       unsigned int number_of_states,
+      bool aligned,
       device_context::DeviceContext& ctx) const override;
 
     Keccak() : Hash<uint64_t>(25, 25){};

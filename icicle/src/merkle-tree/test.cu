@@ -1,10 +1,3 @@
-// #define DEBUG
-#define MERKLE_DEBUG
-
-#include "curves/curve_config.cuh"
-#include "../poseidon.cu"
-#include "merkle.cu"
-
 #ifndef __CUDA_ARCH__
 #include <cassert>
 #include <chrono>
@@ -12,15 +5,20 @@
 #include <iostream>
 #include <math.h>
 
+#include "merkle-tree/merkle.cuh"
+using namespace merkle_tree;
+
+#include "poseidon/poseidon.cuh"
 using namespace poseidon;
-using namespace merkle;
-using namespace curve_config;
-using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
+
+#include "api/bls12_381.h"
+using namespace bls12_381;
 
 // Arity
 #define A 2
 #define T (A + 1)
 
+using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
@@ -30,24 +28,24 @@ int main(int argc, char* argv[])
   // Load poseidon constants
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  PoseidonConstants<scalar_t> constants;
-  init_optimized_poseidon_constants<scalar_t>(A, ctx, &constants);
+  Poseidon<scalar_t> poseidon(A, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   /// Tree of height N and arity A contains \sum{A^i} for i in 0..N-1 elements
-  uint32_t tree_height = argc > 1 ? atoi(argv[1]) : 28;
-  uint32_t number_of_leaves = pow(A, (tree_height - 1));
+  uint32_t tree_height = argc > 1 ? atoi(argv[1]) : 26;
+  uint32_t number_of_leaves = pow(A, tree_height);
+  uint32_t total_number_of_leaves = number_of_leaves * A;
 
   /// Use keep_rows to specify how many rows do you want to store
   int keep_rows = argc > 2 ? atoi(argv[2]) : 7;
-  size_t digests_len = get_digests_len<scalar_t>(keep_rows + 1, A);
+  size_t digests_len = get_digests_len(keep_rows, A);
 
-  /// Fill leaves with scalars [0, 1, ... 2^{tree_height - 1} - 1]
+  /// Fill leaves with scalars [0, 1, ... 2^tree_height - 1]
   START_TIMER(timer_allocation);
   scalar_t input = scalar_t::zero();
-  size_t leaves_mem = number_of_leaves * sizeof(scalar_t);
+  size_t leaves_mem = total_number_of_leaves * sizeof(scalar_t);
   scalar_t* leaves = static_cast<scalar_t*>(malloc(leaves_mem));
-  for (uint32_t i = 0; i < number_of_leaves; i++) {
+  for (uint32_t i = 0; i < total_number_of_leaves; i++) {
     leaves[i] = input;
     input = input + scalar_t::one();
   }
@@ -62,6 +60,7 @@ int main(int argc, char* argv[])
   std::cout << "Memory for leaves = " << leaves_mem / 1024 / 1024 << " MB; " << leaves_mem / 1024 / 1024 / 1024 << " GB"
             << std::endl;
   std::cout << "Number of leaves = " << number_of_leaves << std::endl;
+  std::cout << "Total Number of leaves = " << total_number_of_leaves << std::endl;
   std::cout << "Memory for digests = " << digests_mem / 1024 / 1024 << " MB; " << digests_mem / 1024 / 1024 / 1024
             << " GB" << std::endl;
   std::cout << "Number of digest elements = " << digests_len << std::endl;
@@ -69,10 +68,21 @@ int main(int argc, char* argv[])
   std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
             << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
 
-  TreeBuilderConfig config = default_merkle_config();
-  config.keep_rows = keep_rows;
+  SpongeConfig sponge_config = default_poseidon_sponge_config(T);
+  TreeBuilderConfig tree_config = default_merkle_config();
+  tree_config.keep_rows = keep_rows;
   START_TIMER(timer_merkle);
-  build_merkle_tree<scalar_t, T>(leaves, digests, tree_height, constants, config);
+  bls12_381_build_poseidon_merkle_tree(
+    leaves,
+    digests,
+    tree_height,
+    A,
+    A,
+    &poseidon,
+    &poseidon,
+    sponge_config,
+    tree_config
+  );
   END_TIMER(timer_merkle, "Merkle tree built: ")
 
   // Use this to generate test vectors

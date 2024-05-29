@@ -54,7 +54,7 @@ namespace hash {
       unsigned int number_of_states,
       unsigned int input_block_len,
       unsigned int rate,
-      device_context::DeviceContext& ctx) const
+      const device_context::DeviceContext& ctx) const
     {
       return cudaError_t::cudaSuccess;
     };
@@ -64,11 +64,12 @@ namespace hash {
       unsigned int number_of_states,
       unsigned int rate,
       unsigned int offset,
+      bool align,
       Image* output,
-      device_context::DeviceContext& ctx) const = 0;
+      const device_context::DeviceContext& ctx) const = 0;
 
     virtual cudaError_t run_permutation_kernel(
-      const Image* states, Image* output, unsigned int number_of_states, device_context::DeviceContext& ctx) const = 0;
+      const Image* states, Image* output, unsigned int number_of_states, bool aligned, const device_context::DeviceContext& ctx) const = 0;
   };
 
   struct SpongeConfig {
@@ -109,13 +110,21 @@ namespace hash {
   class SpongeHasher
   {
   public:
-    cudaError_t allocate_states(Image** states, unsigned int number_of_states, device_context::DeviceContext& ctx) const
-    {
-      CHK_INIT_IF_RETURN();
-      return cudaMallocAsync(states, number_of_states * static_cast<const H*>(this)->width * sizeof(Image), ctx.stream);
+    unsigned int get_width() const {
+      return static_cast<const H*>(this)->width;
     }
 
-    cudaError_t free_states(Image* states, device_context::DeviceContext& ctx) const
+    unsigned int get_preimage_max_length() const {
+      return static_cast<const H*>(this)->preimage_max_length;
+    }
+
+    cudaError_t allocate_states(Image** states, unsigned int number_of_states, const device_context::DeviceContext& ctx) const
+    {
+      CHK_INIT_IF_RETURN();
+      return cudaMallocAsync(states, number_of_states * get_width() * sizeof(Image), ctx.stream);
+    }
+
+    cudaError_t free_states(Image* states, const device_context::DeviceContext& ctx) const
     {
       CHK_INIT_IF_RETURN();
       return cudaFreeAsync(states, ctx.stream);
@@ -126,11 +135,11 @@ namespace hash {
       Image* states,
       unsigned int number_of_states,
       unsigned int input_block_len,
-      SpongeConfig& cfg) const
+      const SpongeConfig& cfg) const
     {
       CHK_INIT_IF_RETURN();
-      unsigned int width = static_cast<const H*>(this)->width;
-      unsigned int preimage_max_length = static_cast<const H*>(this)->preimage_max_length;
+      unsigned int width = get_width();
+      unsigned int preimage_max_length = get_preimage_max_length();
 
       if (cfg.input_rate * sizeof(PreImage) > preimage_max_length * sizeof(Image))
         THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Input rate can not be bigger than preimage max length");
@@ -150,7 +159,7 @@ namespace hash {
       CHK_IF_RETURN(padding_error);
 
       cudaError_t permutation_error =
-        static_cast<const H*>(this)->run_permutation_kernel(states, states, number_of_states, cfg.ctx);
+        static_cast<const H*>(this)->run_permutation_kernel(states, states, number_of_states, cfg.aligned, cfg.ctx);
       CHK_IF_RETURN(permutation_error);
 
       if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
@@ -163,7 +172,7 @@ namespace hash {
       Image* output,
       unsigned int number_of_states,
       unsigned int output_len,
-      SpongeConfig& cfg) const
+      const SpongeConfig& cfg) const
     {
       if (cfg.output_rate < output_len)
         THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Output len can not be bigger than output rate");
@@ -176,7 +185,7 @@ namespace hash {
       }
 
       cudaError_t squeeze_error = static_cast<const H*>(this)->squeeze_states(
-        states, number_of_states, output_len, cfg.offset, d_output, cfg.ctx);
+        states, number_of_states, output_len, cfg.offset, cfg.recursive_squeeze, d_output, cfg.ctx);
       CHK_IF_RETURN(squeeze_error);
 
       if (!cfg.are_outputs_on_device) {
@@ -196,10 +205,10 @@ namespace hash {
       unsigned int number_of_states,
       unsigned int input_block_len,
       unsigned int output_len,
-      SpongeConfig& cfg) const
+      const SpongeConfig& cfg) const
     {
       CHK_INIT_IF_RETURN();
-      unsigned int width = static_cast<const H*>(this)->width;
+      unsigned int width = get_width();
 
       Image* states;
       CHK_IF_RETURN(allocate_states(&states, number_of_states, cfg.ctx));
@@ -210,6 +219,36 @@ namespace hash {
       CHK_IF_RETURN(free_states(states, cfg.ctx));
       if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
 
+      return CHK_LAST();
+    }
+  };
+
+  template <typename H, typename Image>
+  class CompressionHasher {
+public:
+    unsigned int get_width() const {
+      return static_cast<const H*>(this)->width;
+    }
+
+    unsigned int get_preimage_max_length() const {
+      return static_cast<const H*>(this)->preimage_max_length;
+    }
+
+    cudaError_t compress_many(
+      const Image* states,
+      Image* out,
+      unsigned int number_of_states,
+      unsigned int offset,
+      const device_context::DeviceContext ctx
+    ) const
+    {
+      cudaError_t permutation_error =
+        static_cast<const H*>(this)->run_permutation_kernel(states, out, number_of_states, true, ctx);
+      CHK_IF_RETURN(permutation_error);
+
+      cudaError_t squeeze_error = static_cast<const H*>(this)->squeeze_states(
+        out, number_of_states, 1, offset, true, out, ctx);
+      CHK_IF_RETURN(squeeze_error);
       return CHK_LAST();
     }
   };

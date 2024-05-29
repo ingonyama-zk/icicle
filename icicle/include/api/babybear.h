@@ -64,6 +64,17 @@ extern "C" cudaError_t babybear_release_poseidon2_constants_cuda(
   poseidon2::Poseidon2Constants<babybear::scalar_t>* constants,
   device_context::DeviceContext& ctx);
 
+extern "C" cudaError_t babybear_build_poseidon_merkle_tree(
+  const babybear::scalar_t* leaves,
+  babybear::scalar_t* digests,
+  unsigned int height,
+  unsigned int arity,
+  unsigned int input_block_len, 
+  const poseidon::Poseidon<babybear::scalar_t>* poseidon_compression,
+  const poseidon::Poseidon<babybear::scalar_t>* poseidon_sponge,
+  const hash::SpongeConfig& sponge_config,
+  const merkle_tree::TreeBuilderConfig& tree_config);
+
 extern "C" cudaError_t babybear_mul_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 

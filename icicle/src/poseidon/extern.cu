@@ -51,7 +51,7 @@ namespace poseidon {
     scalar_t* states,
     unsigned int number_of_states,
     unsigned int input_block_len,
-    SpongeConfig& cfg)
+    const SpongeConfig& cfg)
   {
     return poseidon->absorb_many(inputs, states, number_of_states, input_block_len, cfg);
   }
@@ -62,7 +62,7 @@ namespace poseidon {
     scalar_t* output,
     unsigned int number_of_states,
     unsigned int output_len,
-    SpongeConfig& cfg)
+    const SpongeConfig& cfg)
   {
     return poseidon->squeeze_many(states, output, number_of_states, output_len, cfg);
   }
@@ -74,7 +74,7 @@ namespace poseidon {
     unsigned int number_of_states,
     unsigned int input_block_len,
     unsigned int output_len,
-    SpongeConfig& cfg)
+    const SpongeConfig& cfg)
   {
     return poseidon->hash_many(inputs, output, number_of_states, input_block_len, output_len, cfg);
   }

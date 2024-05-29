@@ -80,7 +80,7 @@ namespace poseidon {
     S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config);
 
   template <typename S>
-  class Poseidon : public Hash<S>, public SpongeHasher<Poseidon<S>, S, S>
+  class Poseidon : public Hash<S>, public SpongeHasher<Poseidon<S>, S, S>, public CompressionHasher<Poseidon<S>, S>
   {
   public:
     PoseidonConstants<S> constants;
@@ -90,25 +90,32 @@ namespace poseidon {
       unsigned int number_of_states,
       unsigned int rate,
       unsigned int offset,
+      bool align,
       S* output,
-      device_context::DeviceContext& ctx) const override
+      const device_context::DeviceContext& ctx) const override
     {
-      generic_squeeze_states_kernel<S>
-        <<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, ctx.stream>>>(
-          states, number_of_states, this->width, rate, offset, output);
+      if (align && rate == 1) {
+        squeeze_states_kernel<S>
+          <<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, ctx.stream>>>(
+            states, number_of_states, this->width, output);
+      } else {
+        generic_squeeze_states_kernel<S>
+          <<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, ctx.stream>>>(
+            states, number_of_states, this->width, rate, offset, output);
+      }
       // Squeeze states to get results
       CHK_IF_RETURN(cudaPeekAtLastError());
       return CHK_LAST();
     }
 
     cudaError_t run_permutation_kernel(
-      const S* states, S* output, unsigned int number_of_states, device_context::DeviceContext& ctx) const override
+      const S* states, S* output, unsigned int number_of_states, bool aligned, const device_context::DeviceContext& ctx) const override
     {
       cudaError_t permutation_error;
 #define P_PERM_T(width)                                                                                                \
   case width:                                                                                                          \
     permutation_error =                                                                                                \
-      poseidon_permutation_kernel<S, width>(states, output, number_of_states, this->constants, ctx.stream);            \
+      poseidon_permutation_kernel<S, width>(states, output, number_of_states, aligned, this->constants, ctx.stream);            \
     break;
 
       switch (this->width) {

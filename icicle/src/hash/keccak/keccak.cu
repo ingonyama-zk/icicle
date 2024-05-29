@@ -29,6 +29,7 @@ namespace keccak {
     unsigned int number_of_states,
     unsigned int rate,
     unsigned int offset,
+    bool align,
     uint64_t* output,
     device_context::DeviceContext& ctx) const
   {
@@ -50,7 +51,7 @@ namespace keccak {
   }
 
   cudaError_t Keccak::run_permutation_kernel(
-    const uint64_t* states, uint64_t* output, unsigned int number_of_states, device_context::DeviceContext& ctx) const
+    const uint64_t* states, uint64_t* output, unsigned int number_of_states, bool aligned, device_context::DeviceContext& ctx) const
   {
     keccak_permutation_kernel<<<keccak_number_of_blocks(number_of_states), KECCAK_BLOCK_SIZE, 0, ctx.stream>>>(
       states, output, number_of_states);

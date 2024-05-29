@@ -41,6 +41,17 @@ extern "C" cudaError_t grumpkin_affine_convert_montgomery(
 extern "C" cudaError_t grumpkin_projective_convert_montgomery(
   grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
+extern "C" cudaError_t grumpkin_build_poseidon_merkle_tree(
+  const grumpkin::scalar_t* leaves,
+  grumpkin::scalar_t* digests,
+  unsigned int height,
+  unsigned int arity,
+  unsigned int input_block_len, 
+  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_compression,
+  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_sponge,
+  const hash::SpongeConfig& sponge_config,
+  const merkle_tree::TreeBuilderConfig& tree_config);
+
 extern "C" cudaError_t grumpkin_poseidon_create_cuda(
   poseidon::Poseidon<grumpkin::scalar_t>** poseidon,
   unsigned int arity,

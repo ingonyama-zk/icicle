@@ -71,6 +71,17 @@ extern "C" cudaError_t bw6_761_affine_convert_montgomery(
 extern "C" cudaError_t bw6_761_projective_convert_montgomery(
   bw6_761::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
+extern "C" cudaError_t bw6_761_build_poseidon_merkle_tree(
+  const bw6_761::scalar_t* leaves,
+  bw6_761::scalar_t* digests,
+  unsigned int height,
+  unsigned int arity,
+  unsigned int input_block_len, 
+  const poseidon::Poseidon<bw6_761::scalar_t>* poseidon_compression,
+  const poseidon::Poseidon<bw6_761::scalar_t>* poseidon_sponge,
+  const hash::SpongeConfig& sponge_config,
+  const merkle_tree::TreeBuilderConfig& tree_config);
+
 extern "C" cudaError_t bw6_761_poseidon_create_cuda(
   poseidon::Poseidon<bw6_761::scalar_t>** poseidon,
   unsigned int arity,

@@ -23,6 +23,20 @@ namespace merkle_tree {
   /// Bytes per stream
   static constexpr size_t STREAM_CHUNK_SIZE = 1024 * 1024 * 1024;
 
+  /// Flattens the tree digests and sum them up to get
+  /// the memory needed to contain all the digests
+  static size_t get_digests_len(uint32_t height, uint32_t arity)
+  {
+    size_t digests_len = 0;
+    size_t row_length = 1;
+    for (int i = 0; i < height; i++) {
+      digests_len += row_length;
+      row_length *= arity;
+    }
+
+    return digests_len;
+  }
+
   /**
    * @struct TreeBuilderConfig
    * Struct that encodes various Tree builder parameters.
@@ -64,14 +78,15 @@ namespace merkle_tree {
    * Each subtree is build in it's own stream (there is a maximum number of streams)
    * After all subtrees are constructed - the function will combine the resulting sub-digests into the final top-tree
    */
-  template <typename Leaf, typename Digest>
+  template <typename Hash, typename Leaf, typename Digest>
   cudaError_t build_merkle_tree(
     const Leaf* leaves,
     Digest* digests,
-    uint32_t height,
-    uint32_t arity,
-    const SpongeHasher<Leaf, Digest>& sponge,
-    const CompressionHasher<Digest>& compression,
+    unsigned int height,
+    unsigned int arity,
+    unsigned int input_block_len, 
+    const CompressionHasher<Hash, Digest>& compression,
+    const SpongeHasher<Hash, Leaf, Digest>& sponge,
     const SpongeConfig& sponge_config,
     const TreeBuilderConfig& config);
 } // namespace merkle_tree

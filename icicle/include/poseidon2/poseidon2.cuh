@@ -31,7 +31,7 @@ namespace poseidon2 {
   }
 
   template <typename S>
-  class Poseidon2 : public Hash<S>, public SpongeHasher<Poseidon2<S>, S, S>
+  class Poseidon2 : public Hash<S>, public SpongeHasher<Poseidon2<S>, S, S>, public CompressionHasher<Poseidon2<S>, S>
   {
     static const int POSEIDON_BLOCK_SIZE = 128;
 
@@ -48,8 +48,9 @@ namespace poseidon2 {
       unsigned int number_of_states,
       unsigned int rate,
       unsigned int offset,
+      bool align,
       S* output,
-      device_context::DeviceContext& ctx) const override
+      const device_context::DeviceContext& ctx) const override
     {
       generic_squeeze_states_kernel<S>
         <<<poseidon_number_of_blocks(number_of_states), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(
@@ -60,7 +61,7 @@ namespace poseidon2 {
     }
 
     cudaError_t run_permutation_kernel(
-      const S* states, S* output, unsigned int number_of_states, device_context::DeviceContext& ctx) const override
+      const S* states, S* output, unsigned int number_of_states, bool aligned, device_context::DeviceContext& ctx) const override
     {
 #define P2_PERM_T(width)                                                                                               \
   case width:                                                                                                          \
