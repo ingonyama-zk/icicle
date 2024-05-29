@@ -58,7 +58,7 @@ namespace vec_ops {
     template <typename E>
     __global__ void bit_reverse_kernel(const E* input, uint64_t n, unsigned shift, E* output)
     {
-      uint64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+      uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
       // Handling arbitrary vector size
       if (tid < n) {
         int reversed_index = __brevll(tid) >> shift;
@@ -68,7 +68,7 @@ namespace vec_ops {
     template <typename E>
     __global__ void bit_reverse_inplace_kernel(E* input, uint64_t n, unsigned shift)
     {
-      uint64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+      uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
       // Handling arbitrary vector size
       if (tid < n) {
         int reversed_index = __brevll(tid) >> shift;
