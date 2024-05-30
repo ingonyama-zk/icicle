@@ -82,7 +82,7 @@ extern "C" cudaError_t grumpkin_poseidon_hash_many_cuda(
   unsigned int number_of_states,
   unsigned int input_block_len,
   unsigned int output_len,
-  hash::SpongeConfigconst& cfg);
+  hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
   grumpkin_poseidon_delete_cuda(poseidon::Poseidon<grumpkin::scalar_t>* poseidon, device_context::DeviceContext& ctx);

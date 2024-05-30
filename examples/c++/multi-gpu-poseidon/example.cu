@@ -6,6 +6,9 @@
 #include "api/bn254.h"
 #include "gpu-utils/error_handler.cuh"
 
+#include "poseidon/poseidon.cuh"
+#include "hash/hash.cuh"
+
 using namespace poseidon;
 using namespace bn254;
 
@@ -20,23 +23,15 @@ void checkCudaError(cudaError_t error) {
 const int size_col = 11;
 
 // this function executes the Poseidon thread
-void threadPoseidon(device_context::DeviceContext ctx, unsigned size_partition, scalar_t * layers, scalar_t * column_hashes, PoseidonConstants<scalar_t> * constants) {
+void threadPoseidon(device_context::DeviceContext ctx, unsigned size_partition, scalar_t * layers, scalar_t * column_hashes, Poseidon<scalar_t> * poseidon) {
     cudaError_t err_result =  CHK_STICKY(cudaSetDevice(ctx.device_id));
     if (err_result != cudaSuccess) {
         std::cerr << "CUDA error: " << cudaGetErrorString(err_result) << std::endl;
         return; 
     }
     // CHK_IF_RETURN(); I can't use it in a standard thread function
-    PoseidonConfig column_config = {
-        ctx,   // ctx
-        false, // are_inputes_on_device
-        false, // are_outputs_on_device
-        false, // input_is_a_state
-        false, // aligned
-        false, // loop_state
-        false, // is_async
-        };
-    cudaError_t err = bn254_poseidon_hash_cuda(layers, column_hashes, (size_t) size_partition, size_col, *constants, column_config);
+    SpongeConfig column_config = default_sponge_config(ctx);
+    cudaError_t err = poseidon->hash_many(layers, column_hashes, (size_t) size_partition, size_col, 1, column_config);
     checkCudaError(err);
 }
 
@@ -105,19 +100,18 @@ int main() {
     scalar_t* column_hash1 = static_cast<scalar_t*>(malloc(size_partition * sizeof(scalar_t)));
     CHECK_ALLOC(column_hash1);
 
-    PoseidonConstants<scalar_t> column_constants0, column_constants1;
-    bn254_init_optimized_poseidon_constants_cuda(size_col, ctx0, &column_constants0);
+    Poseidon<scalar_t> column_poseidon0(size_col, ctx0);
     cudaError_t err_result =  CHK_STICKY(cudaSetDevice(ctx1.device_id));
     if (err_result != cudaSuccess) {
         std::cerr << "CUDA error: " << cudaGetErrorString(err_result) << std::endl;
         return; 
     }
-    bn254_init_optimized_poseidon_constants_cuda(size_col, ctx1, &column_constants1);
+    Poseidon<scalar_t> column_poseidon1(size_col, ctx1);
 
     std::cout << "Parallel execution of Poseidon threads" << std::endl;
     START_TIMER(parallel);
-    std::thread thread0(threadPoseidon, ctx0, size_partition, layers0, column_hash0, &column_constants0);
-    std::thread thread1(threadPoseidon, ctx1, size_partition, layers1, column_hash1, &column_constants1);
+    std::thread thread0(threadPoseidon, ctx0, size_partition, layers0, column_hash0, &column_poseidon0);
+    std::thread thread1(threadPoseidon, ctx1, size_partition, layers1, column_hash1, &column_poseidon1);
 
     // Wait for the threads to finish
     thread0.join();
@@ -130,9 +124,9 @@ int main() {
 
     std::cout << "Sequential execution of Poseidon threads" << std::endl;
     START_TIMER(sequential);
-    std::thread thread2(threadPoseidon, ctx0, size_partition, layers0, column_hash0, &column_constants0);
+    std::thread thread2(threadPoseidon, ctx0, size_partition, layers0, column_hash0, &column_poseidon0);
     thread2.join();
-    std::thread thread3(threadPoseidon, ctx0, size_partition, layers1, column_hash1, &column_constants0);
+    std::thread thread3(threadPoseidon, ctx0, size_partition, layers1, column_hash1, &column_poseidon0);
     thread3.join();
     END_TIMER(sequential,"1 GPU");
     std::cout << "Output Data from Thread 2: ";
