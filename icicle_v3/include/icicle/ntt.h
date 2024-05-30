@@ -135,7 +135,7 @@ namespace icicle {
 
 #define REGISTER_NTT_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
-    static bool _reg_vec_add = []() -> bool {                                                                          \
+    static bool _reg_ntt = []() -> bool {                                                                              \
       register_ntt(DEVICE_TYPE, FUNC);                                                                                 \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -149,7 +149,7 @@ namespace icicle {
 
 #define REGISTER_NTT_INIT_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                            \
   namespace {                                                                                                          \
-    static bool _reg_vec_add = []() -> bool {                                                                          \
+    static bool _reg_ntt_init_domain = []() -> bool {                                                                  \
       register_ntt_init_domain(DEVICE_TYPE, FUNC);                                                                     \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -162,7 +162,7 @@ namespace icicle {
 
 #define REGISTER_NTT_RELEASE_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                         \
   namespace {                                                                                                          \
-    static bool _reg_vec_add = []() -> bool {                                                                          \
+    static bool _reg_ntt_release_domain = []() -> bool {                                                               \
       register_ntt_release_domain(DEVICE_TYPE, FUNC);                                                                  \
       return true;                                                                                                     \
     }();                                                                                                               \
