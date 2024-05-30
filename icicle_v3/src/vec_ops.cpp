@@ -7,14 +7,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorAddDispatcher, vector_add, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add)(
-    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
     return VectorAddDispatcher::execute(vec_a, vec_b, n, config, output);
   }
 
   template <>
   eIcicleError
-  vector_add(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  vector_add(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, vector_add)(vec_a, vec_b, n, config, output);
   }
@@ -23,14 +23,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorSubDispatcher, vector_sub, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sub)(
-    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
     return VectorSubDispatcher::execute(vec_a, vec_b, n, config, output);
   }
 
   template <>
   eIcicleError
-  vector_sub(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  vector_sub(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, vector_sub)(vec_a, vec_b, n, config, output);
   }
@@ -39,14 +39,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorMulDispatcher, vector_mul, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul)(
-    const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
     return VectorMulDispatcher::execute(vec_a, vec_b, n, config, output);
   }
 
   template <>
   eIcicleError
-  vector_mul(const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output)
+  vector_mul(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, vector_mul)(vec_a, vec_b, n, config, output);
   }
