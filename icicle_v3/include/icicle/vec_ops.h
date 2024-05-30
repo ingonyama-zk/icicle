@@ -55,6 +55,9 @@ namespace icicle {
   template <typename S>
   eIcicleError vector_mul(const S* vec_a, const S* vec_b, int n, const VecOpsConfig& config, S* output);
 
+  template <typename S>
+  eIcicleError generate_scalars(S* host_scalars, uint64_t size);
+
   // field specific APIs. TODO Yuval move to api headers like icicle V2
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add)(
     const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
@@ -64,6 +67,8 @@ namespace icicle {
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul)(
     const scalar_t* vec_a, const scalar_t* vec_b, int n, const VecOpsConfig& config, scalar_t* output);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, generate_scalars)(scalar_t* host_scalars, uint64_t size);
 
   /*************************** Backend registration ***************************/
 
