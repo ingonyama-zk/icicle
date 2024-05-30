@@ -136,10 +136,6 @@ namespace hash {
       if (input_block_len * sizeof(PreImage) > rate * sizeof(Image))
         THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Input blocks can not be bigger than hash rate");
 
-      std::cout << input_block_len << std::endl;
-      std::cout << width << std::endl;
-      std::cout << rate << std::endl;
-      std::cout << number_of_states << std::endl;
       // This allows to copy hash inputs and apply zero padding
       CHK_IF_RETURN(cudaMemcpy2DAsync(
         states, width * sizeof(Image),      // (Dst) States pointer and pitch

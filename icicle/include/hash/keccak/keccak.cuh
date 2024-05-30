@@ -37,9 +37,7 @@ namespace keccak {
     return config;
   }
 
-  class Keccak : public Hash<uint64_t>,
-                 public SpongeHasher<Keccak, uint8_t, uint64_t>,
-                 public CompressionHasher<Keccak, uint64_t>
+  class Keccak : public SpongeHasher<uint8_t, uint64_t>
   {
   public:
     static const int KECCAK_BLOCK_SIZE = 128;
@@ -53,25 +51,23 @@ namespace keccak {
       uint64_t* states,
       unsigned int number_of_states,
       unsigned int input_block_len,
-      unsigned int rate,
-      device_context::DeviceContext& ctx) const override;
+      const device_context::DeviceContext& ctx) const override;
 
     cudaError_t squeeze_states(
       const uint64_t* states,
       unsigned int number_of_states,
-      unsigned int rate,
-      unsigned int offset,
+      unsigned int output_len,
       uint64_t* output,
-      device_context::DeviceContext& ctx) const override;
+      const device_context::DeviceContext& ctx) const override;
 
     cudaError_t run_permutation_kernel(
       const uint64_t* states,
       uint64_t* output,
       unsigned int number_of_states,
       bool aligned,
-      device_context::DeviceContext& ctx) const override;
+      const device_context::DeviceContext& ctx) const override;
 
-    Keccak() : Hash<uint64_t>(25, 25){};
+    Keccak(unsigned int rate) : SpongeHasher<uint8_t, uint64_t>(25, 25, rate, 0){};
     ~Keccak() = default;
   };
 } // namespace keccak

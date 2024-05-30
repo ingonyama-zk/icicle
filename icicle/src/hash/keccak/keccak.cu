@@ -13,12 +13,11 @@ namespace keccak {
     uint64_t* states,
     unsigned int number_of_states,
     unsigned int input_block_len,
-    unsigned int rate,
-    device_context::DeviceContext& ctx) const
+    const device_context::DeviceContext& ctx) const
   {
-    unsigned int input_len = input_block_len % rate;
+    unsigned int input_len = input_block_len % this->rate;
     keccak_10_1_pad_kernel<<<keccak_number_of_blocks(number_of_states), KECCAK_BLOCK_SIZE, 0, ctx.stream>>>(
-      states, input_len, rate, number_of_states);
+      states, input_len, this->rate, number_of_states);
 
     CHK_IF_RETURN(cudaPeekAtLastError());
     return CHK_LAST();
@@ -27,13 +26,11 @@ namespace keccak {
   cudaError_t Keccak::squeeze_states(
     const uint64_t* states,
     unsigned int number_of_states,
-    unsigned int rate,
-    unsigned int offset,
-    bool align,
+    unsigned int output_len,
     uint64_t* output,
-    device_context::DeviceContext& ctx) const
+    const device_context::DeviceContext& ctx) const
   {
-    switch (rate) {
+    switch (this->rate) {
     case 17:
       squeeze_states_kernel<4><<<keccak_number_of_blocks(number_of_states), KECCAK_BLOCK_SIZE, 0, ctx.stream>>>(
         states, number_of_states, output);
@@ -55,7 +52,7 @@ namespace keccak {
     uint64_t* output,
     unsigned int number_of_states,
     bool aligned,
-    device_context::DeviceContext& ctx) const
+    const device_context::DeviceContext& ctx) const
   {
     keccak_permutation_kernel<<<keccak_number_of_blocks(number_of_states), KECCAK_BLOCK_SIZE, 0, ctx.stream>>>(
       states, output, number_of_states);

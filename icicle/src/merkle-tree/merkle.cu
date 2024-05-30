@@ -114,7 +114,9 @@ namespace merkle_tree {
 
       if (!keep_rows || subtree_height < keep_rows) {
         D* digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_states;
-        std::cout << "Number of states: " << number_of_states << ", Subtree height: " << subtree_height << ", keep_rows: " << keep_rows << ", segment_offset: " << segment_offset << ", segment_size: " << segment_size << std::endl;
+        std::cout << "Number of states: " << number_of_states << ", Subtree height: " << subtree_height
+                  << ", keep_rows: " << keep_rows << ", segment_offset: " << segment_offset
+                  << ", segment_size: " << segment_size << std::endl;
         CHK_IF_RETURN(cudaMemcpyAsync(
           digests_with_offset, digests, number_of_states * sizeof(D), cudaMemcpyDeviceToHost, ctx.stream));
         segment_offset += segment_size;
