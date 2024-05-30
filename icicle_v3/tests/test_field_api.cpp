@@ -121,7 +121,8 @@ TEST_F(FieldApiTest, vectorAddAsync)
 
 TEST_F(FieldApiTest, Ntt)
 {
-  const int N = 1 << 15;
+  const int logn = 15;
+  const int N = 1 << logn;
   auto scalars = std::make_unique<scalar_t[]>(N);
   scalar_t::rand_host_many(scalars.get(), N);
 
@@ -131,12 +132,17 @@ TEST_F(FieldApiTest, Ntt)
   auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
+
+    ntt_init_domain(scalar_t::omega(logn), ConfigExtension());
+
     auto config = default_ntt_config<scalar_t>();
 
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i)
       ntt(scalars.get(), N, NTTDir::kForward, config, out);
     END_TIMER(NTT_sync, msg, measure);
+
+    ntt_release_domain<scalar_t>();
   };
 
   run("CPU", out_cpu.get(), "CPU ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
