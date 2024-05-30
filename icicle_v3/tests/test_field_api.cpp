@@ -5,6 +5,7 @@
 #include "icicle/runtime.h"
 #include "icicle/vec_ops.h"
 #include "icicle/ntt.h"
+#include "icicle/matrix_ops.h"
 
 #include "icicle/fields/field_config.h"
 
@@ -171,6 +172,25 @@ TEST_F(FieldApiTest, CpuVecAPIs)
   ASSERT_EQ(out_cpu_add[test_idx], in_a[test_idx] + in_b[test_idx]);
   ASSERT_EQ(out_cpu_sub[test_idx], in_a[test_idx] - in_b[test_idx]);
   ASSERT_EQ(out_cpu_mul[test_idx], in_a[test_idx] * in_b[test_idx]);
+}
+
+TEST_F(FieldApiTest, CpuMatrixAPIs)
+{
+  const int R = 1 << 10, C = 1 << 6;
+  auto in = std::make_unique<scalar_t[]>(R * C);
+  scalar_t::rand_host_many(in.get(), R * C);
+
+  auto out_cpu_transpose = std::make_unique<scalar_t[]>(R * C);
+
+  Device dev = {"CPU", 0};
+  icicle_set_device(dev);
+  auto config = default_matrix_ops_config();
+
+  START_TIMER(MATRIX_OPS)
+  ICICLE_CHECK(matrix_transpose(in.get(), R, C, config, out_cpu_transpose.get()));
+  END_TIMER(MATRIX_OPS, "CPU matrix ops took", VERBOSE);
+
+  // TODO verify
 }
 
 int main(int argc, char** argv)
