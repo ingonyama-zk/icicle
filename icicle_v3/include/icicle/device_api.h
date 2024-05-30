@@ -171,7 +171,7 @@ namespace icicle {
    * @param deviceType The device type to register the DeviceAPI for.
    * @param api An instance of the derived api type to be used as deviceAPI interface.
    */
-  extern "C" void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
+  void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
 
   /**
    * @brief Register DeviceAPI instance for a device type.
@@ -179,14 +179,14 @@ namespace icicle {
    * @param device The device to create the DeviceAPI instance for.
    * @return DeviceAPI* Pointer to the created DeviceAPI instance.
    */
-  extern "C" DeviceAPI* get_deviceAPI(const Device& device);
+  DeviceAPI* get_deviceAPI(const Device& device);
 
   /**
    * @brief Retrieve a list of registered device types.
    *
    * @return A list of registered device types.
    */
-  extern "C" std::list<std::string> get_registered_devices();
+  std::list<std::string> get_registered_devices();
 
   /**
    * Device API registration macro.

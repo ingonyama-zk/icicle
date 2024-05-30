@@ -75,7 +75,7 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* output)>;
 
-  extern "C" void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
 
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -85,7 +85,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  extern "C" void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool _reg_vec_sub = []() -> bool {                                                                          \
@@ -94,7 +94,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  extern "C" void register_vector_mul(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_vector_mul(const std::string& deviceType, scalarVectorOpImpl impl);
 
 #define REGISTER_VECTOR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
