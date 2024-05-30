@@ -156,8 +156,8 @@ TEST_F(FieldApiTest, CpuVecAPIs)
   const int N = 1 << 15;
   auto in_a = std::make_unique<scalar_t[]>(N);
   auto in_b = std::make_unique<scalar_t[]>(N);
-  scalar_t::rand_host_many(in_a.get(), N);
-  scalar_t::rand_host_many(in_b.get(), N);
+  generate_scalars(in_a.get(), N);
+  generate_scalars(in_b.get(), N);
 
   auto out_cpu_add = std::make_unique<scalar_t[]>(N);
   auto out_cpu_sub = std::make_unique<scalar_t[]>(N);
@@ -168,6 +168,8 @@ TEST_F(FieldApiTest, CpuVecAPIs)
   auto config = default_vec_ops_config();
 
   START_TIMER(VEC_OPS)
+  scalar_convert_montgomery(in_a.get(), N, true /*into montgomery*/, config);
+  scalar_convert_montgomery(in_b.get(), N, true /*into montgomery*/, config);
   vector_add(in_a.get(), in_b.get(), N, config, out_cpu_add.get());
   vector_sub(in_a.get(), in_b.get(), N, config, out_cpu_sub.get());
   vector_mul(in_a.get(), in_b.get(), N, config, out_cpu_mul.get());

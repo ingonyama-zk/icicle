@@ -64,4 +64,21 @@ namespace icicle {
   {
     return CONCAT_EXPAND(FIELD, generate_scalars)(host_scalars, size);
   }
+
+  /*********************************** CONVERT MONTGOMERY ***********************************/
+
+  ICICLE_DISPATCHER_INST(ScalarConvertMontgomeryDispatcher, scalar_convert_montgomery, scalarConvertMontgomeryImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(
+    scalar_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)
+  {
+    return ScalarConvertMontgomeryDispatcher::execute(scalars, size, is_into, config);
+  }
+
+  template <>
+  eIcicleError scalar_convert_montgomery(scalar_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)
+  {
+    return CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(scalars, size, is_into, config);
+  }
+
 } // namespace icicle
