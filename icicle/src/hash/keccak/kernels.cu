@@ -176,6 +176,59 @@ namespace keccak {
     }
   }
 
+  template <int C, int D>
+  __global__ void keccak_hash_blocks(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output)
+  {
+    int bid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (bid >= number_of_blocks) { return; }
+
+    const int r_bits = 1600 - C;
+    const int r_bytes = r_bits / 8;
+    const int d_bytes = D / 8;
+
+    uint8_t* b_input = input + bid * input_block_size;
+    uint8_t* b_output = output + bid * d_bytes;
+    uint64_t state[25] = {}; // Initialize with zeroes
+
+    int input_len = input_block_size;
+
+    // absorb
+    while (input_len >= r_bytes) {
+      // #pragma unroll
+      for (int i = 0; i < r_bytes; i += 8) {
+        state[i / 8] ^= *(uint64_t*)(b_input + i);
+      }
+      keccakf(state);
+      b_input += r_bytes;
+      input_len -= r_bytes;
+    }
+
+    // last block (if any)
+    uint8_t last_block[r_bytes];
+    for (int i = 0; i < input_len; i++) {
+      last_block[i] = b_input[i];
+    }
+
+    // pad 10*1
+    last_block[input_len] = 1;
+    for (int i = 0; i < r_bytes - input_len - 1; i++) {
+      last_block[input_len + i + 1] = 0;
+    }
+    // last bit
+    last_block[r_bytes - 1] |= 0x80;
+
+    // #pragma unroll
+    for (int i = 0; i < r_bytes; i += 8) {
+      state[i / 8] ^= *(uint64_t*)(last_block + i);
+    }
+    keccakf(state);
+
+#pragma unroll
+    for (int i = 0; i < d_bytes; i += 8) {
+      *(uint64_t*)(b_output + i) = state[i / 8];
+    }
+  }
+
   __global__ void
   keccak_10_1_pad_kernel(u64* states, unsigned int input_len, unsigned int rate, unsigned int number_of_states)
   {
@@ -208,7 +261,19 @@ namespace keccak {
       local_state[i] = state[i];
     }
 
+    printf("STATE:\n");
+    for (int i = 0; i < 25; i ++) {
+      printf("%lu\n", local_state[i]);
+    }
+    printf("\n\n");
+
     keccakf(local_state);
+
+    printf("AFTER STATE:\n");
+    for (int i = 0; i < 25; i ++) {
+      printf("%lu\n", local_state[i]);
+    }
+    printf("\n\n");
 
     UNROLL
     for (int i = 0; i < 25; i++) {
