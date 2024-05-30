@@ -57,14 +57,14 @@ namespace merkle_tree {
     L* big_tree_digests,
     size_t start_segment_size,
     size_t start_segment_offset,
-    unsigned int keep_rows,
-    unsigned int input_block_len,
+    uint64_t keep_rows,
+    uint64_t input_block_len,
     const SpongeHasher<L, D>& sponge,
     const SpongeHasher<L, D>& compression,
     const TreeBuilderConfig& tree_config,
     device_context::DeviceContext& ctx)
   {
-    unsigned int arity = tree_config.arity;
+    uint64_t arity = tree_config.arity;
 
     SpongeConfig sponge_config = default_sponge_config(ctx);
     sponge_config.are_inputs_on_device = tree_config.are_inputs_on_device;
@@ -74,9 +74,11 @@ namespace merkle_tree {
     size_t leaves_size = pow(arity, subtree_height);
 
     sponge.absorb_many(leaves, states, leaves_size, input_block_len, sponge_config);
+    std::cout << "absorbed " << std::endl;
     sponge.squeeze_many(states, digests, leaves_size, 1, sponge_config);
+    std::cout << "squeezed " << std::endl;
 
-    uint32_t number_of_states = leaves_size / arity;
+    uint64_t number_of_states = leaves_size / arity;
     size_t segment_size = start_segment_size;
     size_t segment_offset = start_segment_offset;
 
@@ -88,14 +90,17 @@ namespace merkle_tree {
     }
     segment_size /= arity;
     subtree_height--;
+    std::cout << "before prep " << std::endl;
 
     if (compression.width != compression.preimage_max_length) {
       CHK_IF_RETURN(compression.prepare_states(digests, states, leaves_size, ctx));
     } else {
       swap<D>(&digests, &states);
     }
+    std::cout << "prep " << std::endl;
 
     while (number_of_states > 0) {
+      std::cout << number_of_states << std::endl;
       // int size = number_of_states * compression.width;
       // int mem = sizeof(D) * size;
       // D* tmp = (D*)malloc(mem);
@@ -109,9 +114,7 @@ namespace merkle_tree {
 
       if (!keep_rows || subtree_height < keep_rows) {
         D* digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_states;
-        // std::cout << "Number of states: " << number_of_states << ", Subtree height: " << subtree_height << ",
-        // keep_rows: " << keep_rows << ", segment_offset: " << segment_offset << ", segment_size: " << segment_size <<
-        // std::endl;
+        std::cout << "Number of states: " << number_of_states << ", Subtree height: " << subtree_height << ", keep_rows: " << keep_rows << ", segment_offset: " << segment_offset << ", segment_size: " << segment_size << std::endl;
         CHK_IF_RETURN(cudaMemcpyAsync(
           digests_with_offset, digests, number_of_states * sizeof(D), cudaMemcpyDeviceToHost, ctx.stream));
         segment_offset += segment_size;
@@ -151,16 +154,23 @@ namespace merkle_tree {
     if (compression.preimage_max_length != tree_config.arity)
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Hash max preimage length does not match merkle tree arity");
 
-    uint32_t number_of_leaves = pow(tree_config.arity, height);
+    uint64_t number_of_leaves = pow(tree_config.arity, height);
 
     // This will determine how much splitting do we need to do
     // `number_of_streams` subtrees should fit in the device
     // This means each subtree should fit in `STREAM_CHUNK_SIZE` memory
-    uint32_t number_of_subtrees = 1;
-    uint32_t subtree_height = height;
-    uint32_t subtree_leaves_size = number_of_leaves;
-    uint32_t subtree_states_size = subtree_leaves_size * sponge.width;
-    uint32_t subtree_digests_size = subtree_states_size * sponge.preimage_max_length / sponge.width;
+    uint64_t number_of_subtrees = 1;
+    uint64_t subtree_height = height;
+    uint64_t subtree_leaves_size = number_of_leaves;
+    uint64_t subtree_states_size = subtree_leaves_size * sponge.width;
+
+    uint64_t subtree_digests_size;
+    if (compression.width != compression.preimage_max_length) {
+      // In that case, the states on layer 1 will require extending the states by (width / preimage_max_len) factor
+      subtree_digests_size = subtree_states_size * sponge.preimage_max_length / sponge.width;
+    } else {
+      subtree_digests_size = subtree_states_size / sponge.width;
+    }
     size_t subtree_memory_required = sizeof(D) * (subtree_states_size + subtree_digests_size);
     while (subtree_memory_required > STREAM_CHUNK_SIZE) {
       number_of_subtrees *= tree_config.arity;
@@ -179,19 +189,11 @@ namespace merkle_tree {
 
     // We can effectively parallelize memory copy with streams
     // as long as they don't operate on more than `STREAM_CHUNK_SIZE` bytes
-    const size_t number_of_streams = std::min((uint32_t)(available_memory / STREAM_CHUNK_SIZE), number_of_subtrees);
+    const size_t number_of_streams = std::min((uint64_t)(available_memory / STREAM_CHUNK_SIZE), number_of_subtrees);
     cudaStream_t* streams = static_cast<cudaStream_t*>(malloc(sizeof(cudaStream_t) * number_of_streams));
     for (size_t i = 0; i < number_of_streams; i++) {
       CHK_IF_RETURN(cudaStreamCreate(&streams[i]));
     }
-
-    // Allocate memory for the leaves and digests
-    // These are shared by streams in a pool
-    D *states_ptr, *digests_ptr;
-    CHK_IF_RETURN(cudaMallocAsync(&states_ptr, subtree_states_size * number_of_streams * sizeof(D), stream))
-    CHK_IF_RETURN(cudaMallocAsync(&digests_ptr, subtree_digests_size * number_of_streams * sizeof(D), stream))
-    // Wait for these allocations to finish
-    CHK_IF_RETURN(cudaStreamSynchronize(stream));
 
     bool caps_mode = tree_config.keep_rows && tree_config.keep_rows <= cap_height;
     D* caps;
@@ -211,6 +213,14 @@ namespace merkle_tree {
     std::cout << "Cap height = " << cap_height << std::endl;
     std::cout << "Enabling caps mode? " << caps_mode << std::endl;
 #endif
+
+    // Allocate memory for the leaves and digests
+    // These are shared by streams in a pool
+    D *states_ptr, *digests_ptr;
+    CHK_IF_RETURN(cudaMallocAsync(&states_ptr, subtree_states_size * number_of_streams * sizeof(D), stream))
+    CHK_IF_RETURN(cudaMallocAsync(&digests_ptr, subtree_digests_size * number_of_streams * sizeof(D), stream))
+    // Wait for these allocations to finish
+    CHK_IF_RETURN(cudaStreamSynchronize(stream));
 
     // Build subtrees in parallel. This for loop invokes kernels that can run in a pool of size `number_of_streams`
     for (size_t subtree_idx = 0; subtree_idx < number_of_subtrees; subtree_idx++) {
@@ -263,12 +273,12 @@ namespace merkle_tree {
           layer_size /= tree_config.arity;
         }
       }
-      // std::cout << "Start segment size: " << start_segment_size << "; offset: " << start_segment_offset << std::endl;
+      std::cout << "Start segment size: " << start_segment_size << "; offset: " << start_segment_offset << std::endl;
       CHK_IF_RETURN(cudaMemcpyAsync(
         states_ptr, caps_mode ? caps : (digests + start_segment_offset - caps_len), caps_len * sizeof(D),
         (caps_mode || !tree_config.are_outputs_on_device) ? cudaMemcpyHostToDevice : cudaMemcpyDeviceToDevice, stream));
 
-      unsigned int number_of_states = caps_len / tree_config.arity;
+      uint64_t number_of_states = caps_len / tree_config.arity;
       if (compression.width != compression.preimage_max_length) {
         compression.prepare_states(states_ptr, digests_ptr, caps_len, tree_config.ctx);
         swap<D>(&digests_ptr, &states_ptr);

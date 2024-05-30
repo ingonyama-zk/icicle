@@ -13,7 +13,7 @@
 using namespace babybear;
 
 // Arity
-#define T 3
+#define T 2
 
 using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -30,9 +30,9 @@ int main(int argc, char* argv[])
   END_TIMER(timer_const, "Load poseidon constants");
 
   /// Tree of height N and arity A contains \sum{A^i} for i in 0..N-1 elements
-  uint32_t tree_height = argc > 1 ? atoi(argv[1]) : 22;
-  uint32_t number_of_leaves = pow(T, tree_height);
-  uint32_t total_number_of_leaves = number_of_leaves * T;
+  uint64_t tree_height = argc > 1 ? atoi(argv[1]) : 26;
+  uint64_t number_of_leaves = pow(T, tree_height);
+  uint64_t total_number_of_leaves = number_of_leaves * T;
 
   /// Use keep_rows to specify how many rows do you want to store
   int keep_rows = argc > 2 ? atoi(argv[2]) : 6;
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   scalar_t input = scalar_t::zero();
   size_t leaves_mem = total_number_of_leaves * sizeof(scalar_t);
   scalar_t* leaves = static_cast<scalar_t*>(malloc(leaves_mem));
-  for (uint32_t i = 0; i < total_number_of_leaves; i++) {
+  for (uint64_t i = 0; i < total_number_of_leaves; i++) {
     leaves[i] = input;
     input = input + scalar_t::one();
   }
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
   // for (int i = 0; i < digests_len; i++) {
   //   std::cout << "{";
   //   for (int j = 0; j < 8; j++) {
-  //     std::cout << ((uint32_t*)&digests[i].limbs_storage)[j];
+  //     std::cout << ((uint64_t*)&digests[i].limbs_storage)[j];
   //     if (j != 7) { std::cout << ", "; }
   //   }
   //   std::cout << "}," << std::endl;
