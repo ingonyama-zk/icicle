@@ -46,3 +46,13 @@ cpu_vector_mul(const Device& device, const T* vec_a, const T* vec_b, int n, cons
 }
 
 REGISTER_VECTOR_MUL_BACKEND("CPU", cpu_vector_mul<scalar_t>);
+
+/*********************************** CONVERT MONTGOMERY ***********************************/
+template <typename T>
+eIcicleError cpu_convert_montgomery(const Device& device, T* vec, uint64_t n, bool is_into, const VecOpsConfig& config)
+{
+  std::cerr << "cpu_convert_montgomery() not implemented" << std::endl;
+  return eIcicleError::API_NOT_IMPLEMENTED;
+}
+
+REGISTER_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_montgomery<scalar_t>);
