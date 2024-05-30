@@ -115,16 +115,6 @@ namespace icicle {
 
   template <typename S>
   eIcicleError ntt_release_domain();
-
-  // field specific APIs. TODO Yuval move to api headers like icicle V2
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt)(
-    const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output);
-
-  extern "C" eIcicleError
-    CONCAT_EXPAND(FIELD, ntt_init_domain)(const scalar_t& primitive_root, const ConfigExtension& config);
-
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt_release_domain)();
-
   /*************************** Backend registration ***************************/
 
   /*************************** NTT ***************************/
