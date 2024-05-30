@@ -112,7 +112,7 @@ extern "C" cudaError_t bw6_761_poseidon_hash_many_cuda(
   unsigned int number_of_states,
   unsigned int input_block_len,
   unsigned int output_len,
-  hash::SpongeConfig& cfg);
+  hash::SpongeConfigconst& cfg);
 
 extern "C" cudaError_t
   bw6_761_poseidon_delete_cuda(poseidon::Poseidon<bw6_761::scalar_t>* poseidon, device_context::DeviceContext& ctx);

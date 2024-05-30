@@ -13,7 +13,6 @@
 #include "fields/stark_fields/babybear.cuh"
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
-#include "poseidon/poseidon.cuh"
 #include "poseidon2/poseidon2.cuh"
 
 extern "C" cudaError_t babybear_extension_ntt_cuda(

@@ -1,6 +1,8 @@
 #[doc(hidden)]
 pub mod tests;
 
+pub mod tree;
+
 use std::{ffi::c_void, marker::PhantomData};
 
 use icicle_cuda_runtime::{
@@ -35,7 +37,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     width: usize,
-    handle: Poseidon2Handle,
+    pub handle: Poseidon2Handle,
     device_id: usize,
     phantom: PhantomData<F>,
 }

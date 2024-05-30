@@ -74,9 +74,7 @@ namespace merkle_tree {
     size_t leaves_size = pow(arity, subtree_height);
 
     sponge.absorb_many(leaves, states, leaves_size, input_block_len, sponge_config);
-    std::cout << "absorbed " << std::endl;
     sponge.squeeze_many(states, digests, leaves_size, 1, sponge_config);
-    std::cout << "squeezed " << std::endl;
 
     uint64_t number_of_states = leaves_size / arity;
     size_t segment_size = start_segment_size;
@@ -90,33 +88,18 @@ namespace merkle_tree {
     }
     segment_size /= arity;
     subtree_height--;
-    std::cout << "before prep " << std::endl;
 
     if (compression.width != compression.preimage_max_length) {
       CHK_IF_RETURN(compression.prepare_states(digests, states, leaves_size, ctx));
     } else {
       swap<D>(&digests, &states);
     }
-    std::cout << "prep " << std::endl;
 
     while (number_of_states > 0) {
-      std::cout << number_of_states << std::endl;
-      // int size = number_of_states * compression.width;
-      // int mem = sizeof(D) * size;
-      // D* tmp = (D*)malloc(mem);
-      // cudaMemcpy(tmp, states, mem, cudaMemcpyDeviceToHost);
-      // std::cout << "INPUT " << number_of_states << std::endl;
-      // for (int i = 0; i < size; i++) {
-      //   std::cout << tmp[i] << std::endl;
-      // }
-      // free(tmp);
       CHK_IF_RETURN(compression.compress_many(states, digests, number_of_states, ctx));
 
       if (!keep_rows || subtree_height < keep_rows) {
         D* digests_with_offset = big_tree_digests + segment_offset + subtree_idx * number_of_states;
-        std::cout << "Number of states: " << number_of_states << ", Subtree height: " << subtree_height
-                  << ", keep_rows: " << keep_rows << ", segment_offset: " << segment_offset
-                  << ", segment_size: " << segment_size << std::endl;
         CHK_IF_RETURN(cudaMemcpyAsync(
           digests_with_offset, digests, number_of_states * sizeof(D), cudaMemcpyDeviceToHost, ctx.stream));
         segment_offset += segment_size;
@@ -228,7 +211,6 @@ namespace merkle_tree {
     for (size_t subtree_idx = 0; subtree_idx < number_of_subtrees; subtree_idx++) {
       size_t stream_idx = subtree_idx % number_of_streams;
       cudaStream_t subtree_stream = streams[stream_idx];
-      std::cout << "Processing tree #" << subtree_idx << " in stream " << subtree_stream << std::endl;
 
       const L* subtree_leaves = leaves + subtree_idx * subtree_leaves_size * input_block_len;
       D* subtree_state = states_ptr + stream_idx * subtree_states_size;

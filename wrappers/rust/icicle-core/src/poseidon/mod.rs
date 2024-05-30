@@ -1,6 +1,8 @@
 #[doc(hidden)]
 pub mod tests;
 
+pub mod tree;
+
 use std::{ffi::c_void, marker::PhantomData};
 
 use icicle_cuda_runtime::{
@@ -21,7 +23,7 @@ where
     <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
     width: usize,
-    handle: PoseidonHandle,
+    pub handle: PoseidonHandle,
     device_id: usize,
     phantom: PhantomData<F>,
 }
@@ -229,22 +231,6 @@ pub trait PoseidonImpl<F: FieldImpl> {
 
     fn delete(poseidon: PoseidonHandle, ctx: &DeviceContext) -> IcicleResult<()>;
 }
-
-/// Computes the poseidon hashes for multiple preimages.
-///
-/// # Arguments
-///
-/// * `input` - a pointer to the input data. May point to a vector of preimages or a vector of states filled with preimages.
-///
-/// * `output` - a pointer to the output data. Must be at least of size [number_of_states](number_of_states)
-///
-/// * `number_of_states` - number of input blocks of size `arity`
-///
-/// * `arity` - the arity of the hash function (the size of 1 preimage)
-///
-/// * `constants` - Poseidon constants.
-///
-/// * `config` - config used to specify extra arguments of the Poseidon.
 
 #[macro_export]
 macro_rules! impl_poseidon {
