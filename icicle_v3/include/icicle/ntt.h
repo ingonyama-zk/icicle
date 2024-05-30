@@ -119,7 +119,7 @@ namespace icicle {
   using NttImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
 
-  extern "C" void register_ntt(const std::string& deviceType, NttImpl impl);
+  void register_ntt(const std::string& deviceType, NttImpl impl);
 
 #define REGISTER_NTT_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
