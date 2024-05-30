@@ -61,21 +61,6 @@ namespace icicle {
   template <typename S>
   eIcicleError scalar_convert_montgomery(S* scalars, uint64_t size, bool is_into, const VecOpsConfig& config);
 
-  // field specific APIs. TODO Yuval move to api headers like icicle V2
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add)(
-    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output);
-
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sub)(
-    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output);
-
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul)(
-    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output);
-
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, generate_scalars)(scalar_t* host_scalars, uint64_t size);
-
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(
-    scalar_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config);
-
   /*************************** Backend registration ***************************/
 
   using scalarVectorOpImpl = std::function<eIcicleError(
