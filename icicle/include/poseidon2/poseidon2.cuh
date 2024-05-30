@@ -41,7 +41,7 @@ namespace poseidon2 {
     {
       hash::generic_squeeze_states_kernel<S>
         <<<poseidon_number_of_blocks(number_of_states), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(
-          states, number_of_states, this->width, this->rate, this->offset, output);
+          states, number_of_states, this->width, output_len, this->offset, output);
       // Squeeze states to get results
       CHK_IF_RETURN(cudaPeekAtLastError());
       return CHK_LAST();

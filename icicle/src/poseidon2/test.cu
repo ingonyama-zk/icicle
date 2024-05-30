@@ -1086,7 +1086,7 @@ int main(int argc, char* argv[])
   if (number_of_blocks == 1024) {
     for (int i = 0; i < number_of_blocks; i++) {
 #ifdef DEBUG
-      std::cout << out_ptr[i] << std::endl;
+      // std::cout << out_ptr[i] << std::endl;
 #endif
       assert((out_ptr[i] == expected[i]));
     }
