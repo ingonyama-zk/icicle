@@ -18,7 +18,7 @@ using namespace field_config;
 
 namespace icicle {
 
-  /*************************** CONFIG ***************************/
+  /*************************** Frontend APIs ***************************/
   /**
    * @enum NTTDir
    * Whether to perform forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
@@ -109,19 +109,19 @@ namespace icicle {
     return config;
   }
 
-  /*************************** NTT ***************************/
+  // template APIs
 
-  using NttImpl = std::function<eIcicleError(
-    const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
+  template <typename S, typename E>
+  eIcicleError ntt(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
 
+  // field specific APIs. TODO Yuval move to api headers like icicle V2
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt)(
     const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output);
 
-  static inline eIcicleError
-  ntt(const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)
-  {
-    return CONCAT_EXPAND(FIELD, ntt)(input, size, dir, config, output);
-  }
+  /*************************** Backend registration ***************************/
+
+  using NttImpl = std::function<eIcicleError(
+    const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
 
   extern "C" void register_ntt(const std::string& deviceType, NttImpl impl);
 
