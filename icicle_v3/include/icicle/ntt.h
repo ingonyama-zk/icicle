@@ -113,15 +113,21 @@ namespace icicle {
   template <typename S>
   eIcicleError ntt_init_domain(const S& primitive_root, const ConfigExtension& config);
 
+  template <typename S>
+  eIcicleError ntt_release_domain();
+
   // field specific APIs. TODO Yuval move to api headers like icicle V2
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt)(
     const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output);
 
   extern "C" eIcicleError
-    CONCAT_EXPAND(FIELD, init_domain)(const scalar_t& primitive_root, const ConfigExtension& config);
+    CONCAT_EXPAND(FIELD, ntt_init_domain)(const scalar_t& primitive_root, const ConfigExtension& config);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt_release_domain)();
 
   /*************************** Backend registration ***************************/
 
+  /*************************** NTT ***************************/
   using NttImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
 
@@ -135,6 +141,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+  /*************************** INIT DOMAIN ***************************/
   using NttInitDomainImpl =
     std::function<eIcicleError(const Device& device, const scalar_t& primitive_root, const ConfigExtension& config)>;
 
@@ -144,6 +151,19 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool _reg_vec_add = []() -> bool {                                                                          \
       register_ntt_init_domain(DEVICE_TYPE, FUNC);                                                                     \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  /*************************** RELEASE DOMAIN ***************************/
+  using NttReleaseDomainImpl = std::function<eIcicleError(const Device& device)>;
+
+  void register_ntt_release_domain(const std::string& deviceType, NttReleaseDomainImpl);
+
+#define REGISTER_NTT_RELEASE_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                         \
+  namespace {                                                                                                          \
+    static bool _reg_vec_add = []() -> bool {                                                                          \
+      register_ntt_release_domain(DEVICE_TYPE, FUNC);                                                                  \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
