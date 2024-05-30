@@ -262,7 +262,7 @@ namespace keccak {
     }
 
     printf("STATE:\n");
-    for (int i = 0; i < 25; i ++) {
+    for (int i = 0; i < 25; i++) {
       printf("%lu\n", local_state[i]);
     }
     printf("\n\n");
@@ -270,7 +270,7 @@ namespace keccak {
     keccakf(local_state);
 
     printf("AFTER STATE:\n");
-    for (int i = 0; i < 25; i ++) {
+    for (int i = 0; i < 25; i++) {
       printf("%lu\n", local_state[i]);
     }
     printf("\n\n");
