@@ -124,7 +124,7 @@ TEST_F(FieldApiTest, Ntt)
   const int logn = 15;
   const int N = 1 << logn;
   auto scalars = std::make_unique<scalar_t[]>(N);
-  scalar_t::rand_host_many(scalars.get(), N);
+  generate_scalars(scalars.get(), N);
 
   auto out_cpu = std::make_unique<scalar_t[]>(N);
   auto out_cuda = std::make_unique<scalar_t[]>(N);
