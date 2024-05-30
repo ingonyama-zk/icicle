@@ -6,12 +6,25 @@
 #include "gpu-utils/error_handler.cuh"
 #include <cassert>
 
+/**
+ * @namespace hash
+ * Includes classes and methods for describing hash functions.
+ */
 namespace hash {
+
+  /**
+   * @struct SpongeConfig
+   * Encodes sponge hash operations parameters.
+   */
   struct SpongeConfig {
-    device_context::DeviceContext ctx;
-    bool are_inputs_on_device;
-    bool are_outputs_on_device;
-    bool is_async;
+    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
+    bool are_inputs_on_device; /**< True if inputs are on device and false if they're on host. Default value: false. */
+    bool
+      are_outputs_on_device; /**< True if outputs are on device and false if they're on host. Default value: false. */
+    bool is_async; /**< Whether to run the hash operations asynchronously. If set to `true`, the functions will be
+                    *   non-blocking and you'd need to synchronize it explicitly by running
+                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false,
+                    *   functions will block the current CPU thread. */
   };
 
   /**
@@ -39,8 +52,8 @@ namespace hash {
    * @param number_of_states number of states to squeeze
    * @param width Width of the state
    * @param rate Squeeze rate. How many elements to extract from each state
-   * @param offset Squeeze offset. Start squeezing from Oth element of the state
-   * @param out pointer for squeeze results. Can be equal to states to do in-place squeeze
+   * @param offset Squeeze offset
+   * @param out pointer for squeeze results. Warning: out can't be equal to states
    *
    * @tparam S Type of the state element
    */
@@ -56,13 +69,29 @@ namespace hash {
     }
   }
 
+  /**
+   * @class SpongeHasher
+   *
+   * Can be inherited by a cryptographic permutation function to create a
+   * [sponge](https://en.wikipedia.org/wiki/Sponge_function) construction out of it.
+   *
+   * @tparam PreImage type of inputs elements
+   * @tparam Image type of state elements. Also used to describe the type of hash output
+   */
   template <typename PreImage, typename Image>
   class SpongeHasher
   {
   public:
+    /// @brief the width of permutation state
     const unsigned int width;
+
+    /// @brief how many elements a state can fit per 1 permutation. Used with domain separation.
     const unsigned int preimage_max_length;
+
+    /// @brief portion of the state to absorb input into, or squeeze output from
     const unsigned int rate;
+
+    /// @brief start squeezing from this offset. Used with domain separation.
     const unsigned int offset;
 
     SpongeHasher(unsigned int width, unsigned int preimage_max_length, unsigned int rate, unsigned int offset)
@@ -73,6 +102,8 @@ namespace hash {
         "Input rate can not be bigger than preimage max length");
     }
 
+    /// @brief Used to pad input in absorb function.
+    /// @param states pointer to states allocated on-device
     virtual cudaError_t pad_many(
       Image* states,
       unsigned int number_of_states,
@@ -82,6 +113,9 @@ namespace hash {
       return cudaError_t::cudaSuccess;
     };
 
+    /// @brief Squeeze hash output from states
+    /// @param states pointer to states allocated on-device
+    /// @param output pointer to output allocated on-device
     virtual cudaError_t squeeze_states(
       const Image* states,
       unsigned int number_of_states,
@@ -89,6 +123,10 @@ namespace hash {
       Image* output,
       const device_context::DeviceContext& ctx) const = 0;
 
+    /// @brief Run the cryptographic permutation function.
+    /// @param states pointer to states allocated on-device
+    /// @param output pointer to states allocated on-device. Can equal to @ref(states) to run in-place
+    /// @param aligned if set to true, some permutation can skip the alignment step. E.G. poseidon1
     virtual cudaError_t run_permutation_kernel(
       const Image* states,
       Image* output,
@@ -96,12 +134,19 @@ namespace hash {
       bool aligned,
       const device_context::DeviceContext& ctx) const = 0;
 
+    /// @brief Aligns states. Used with domain separation
+    /// @param input pointer to input allocated on-device
+    /// @param out pointer to memory to write the aligned states
+    /// @param number_of_states equals to the number of elements inside input
     virtual cudaError_t prepare_states(
       const Image* input, Image* out, unsigned int number_of_states, const device_context::DeviceContext& ctx) const
     {
       return cudaError_t::cudaSuccess;
     };
 
+    /// @brief Permute aligned input and do squeeze
+    /// @param input pointer to input allocated on-device
+    /// @param out pointer to output allocated on-device
     cudaError_t compress_many(
       Image* input, Image* out, unsigned int number_of_states, const device_context::DeviceContext ctx) const
     {
@@ -124,6 +169,10 @@ namespace hash {
       return cudaFreeAsync(states, ctx.stream);
     }
 
+    /// @brief Copy inputs to states, aligning them if needed. Run the permutation on states
+    /// @param inputs pointer to inputs on-device or on-host
+    /// @param states pointer to states allocated on-device
+    /// @param input_block_len number of input elements for each state
     cudaError_t absorb_many(
       const PreImage* inputs,
       Image* states,
@@ -152,6 +201,10 @@ namespace hash {
       return CHK_LAST();
     }
 
+    /// @brief extract elements from states
+    /// @param states should be on-device
+    /// @param output can be on-host or on-device
+    /// @param output_len number of elements to squeeze per state
     cudaError_t squeeze_many(
       const Image* states,
       Image* output,
@@ -182,6 +235,11 @@ namespace hash {
       return CHK_LAST();
     }
 
+    /// @brief Allocates states on-device and does absorb + squeeze
+    /// @param inputs can be on-host or on-device
+    /// @param output can be on-host or on-device
+    /// @param input_block_len number of elements per state
+    /// @param output_len number of output elements per state
     cudaError_t hash_many(
       const PreImage* inputs,
       Image* output,

@@ -19,7 +19,6 @@ impl_poseidon_tree_builder!("bls12_377", bls12_377_tb, ScalarField, ScalarCfg);
 
 #[cfg(feature = "bw6-761")]
 impl_poseidon!("bw6_761", bw6_761, BaseField, BaseCfg);
-impl_poseidon_tree_builder!("bw6_761", bw6_761, BaseField, BaseCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
