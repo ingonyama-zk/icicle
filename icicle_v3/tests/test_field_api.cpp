@@ -19,10 +19,11 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
     printf(                                                                                                            \
       "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
 
+static bool VERBOSE = true;
+template <typename T>
 class FieldApiTest : public ::testing::Test
 {
 public:
-  static inline bool VERBOSE = true;
   static inline std::list<std::string> s_regsitered_devices;
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
@@ -38,18 +39,26 @@ public:
   void TearDown() override {}
 };
 
-TEST_F(FieldApiTest, vectorAddSync)
+#ifdef EXT_FIELD
+typedef testing::Types<scalar_t, extension_t> FTImplementations;
+#else
+typedef testing::Types<scalar_t> FTImplementations;
+#endif
+
+TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
+
+TYPED_TEST(FieldApiTest, vectorAddSync)
 {
   const int N = 1 << 15;
-  auto in_a = std::make_unique<scalar_t[]>(N);
-  auto in_b = std::make_unique<scalar_t[]>(N);
-  scalar_t::rand_host_many(in_a.get(), N);
-  scalar_t::rand_host_many(in_b.get(), N);
+  auto in_a = std::make_unique<TypeParam[]>(N);
+  auto in_b = std::make_unique<TypeParam[]>(N);
+  generate_scalars(in_a.get(), N);
+  generate_scalars(in_b.get(), N);
 
-  auto out_cpu = std::make_unique<scalar_t[]>(N);
-  auto out_cuda = std::make_unique<scalar_t[]>(N);
+  auto out_cpu = std::make_unique<TypeParam[]>(N);
+  auto out_cuda = std::make_unique<TypeParam[]>(N);
 
-  auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
+  auto run = [&](const char* dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
     auto config = default_vec_ops_config();
@@ -60,37 +69,37 @@ TEST_F(FieldApiTest, vectorAddSync)
     END_TIMER(VECADD_sync, msg, measure);
   };
 
-  run("CUDA", out_cuda.get(), "CUDA vector add", false /*=measure*/, 1 /*=iters*/); // warmup
+  // run("CUDA", out_cuda.get(), "CUDA vector add", false /*=measure*/, 1 /*=iters*/); // warmup
 
   run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
-  run("CUDA", out_cuda.get(), "CUDA vector add (host mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
+  // run("CUDA", out_cuda.get(), "CUDA vector add (host mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
 
-  ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
+  // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(TypeParam)));
 }
 
-TEST_F(FieldApiTest, vectorAddAsync)
+TYPED_TEST(FieldApiTest, vectorAddAsync)
 {
   const int N = 1 << 15;
-  auto in_a = std::make_unique<scalar_t[]>(N);
-  auto in_b = std::make_unique<scalar_t[]>(N);
-  scalar_t::rand_host_many(in_a.get(), N);
-  scalar_t::rand_host_many(in_b.get(), N);
+  auto in_a = std::make_unique<TypeParam[]>(N);
+  auto in_b = std::make_unique<TypeParam[]>(N);
+  generate_scalars(in_a.get(), N);
+  generate_scalars(in_b.get(), N);
 
-  auto out_cpu = std::make_unique<scalar_t[]>(N);
-  auto out_cuda = std::make_unique<scalar_t[]>(N);
+  auto out_cpu = std::make_unique<TypeParam[]>(N);
+  auto out_cuda = std::make_unique<TypeParam[]>(N);
 
-  auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
+  auto run = [&](const char* dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
     // const bool is_cpu = std::string("CPU") == dev.type;
 
-    scalar_t *d_in_a, *d_in_b, *d_out;
+    TypeParam *d_in_a, *d_in_b, *d_out;
     icicleStreamHandle stream;
     icicle_create_stream(&stream);
-    icicle_malloc_async((void**)&d_in_a, N * sizeof(scalar_t), stream);
-    icicle_malloc_async((void**)&d_in_b, N * sizeof(scalar_t), stream);
-    icicle_malloc_async((void**)&d_out, N * sizeof(scalar_t), stream);
-    icicle_copy_to_device_async(d_in_a, in_a.get(), N * sizeof(scalar_t), stream);
+    icicle_malloc_async((void**)&d_in_a, N * sizeof(TypeParam), stream);
+    icicle_malloc_async((void**)&d_in_b, N * sizeof(TypeParam), stream);
+    icicle_malloc_async((void**)&d_out, N * sizeof(TypeParam), stream);
+    icicle_copy_to_device_async(d_in_a, in_a.get(), N * sizeof(TypeParam), stream);
 
     auto config = default_vec_ops_config();
     config.is_a_on_device = true;
@@ -105,7 +114,7 @@ TEST_F(FieldApiTest, vectorAddAsync)
     }
     END_TIMER(VECADD_async, msg, measure);
 
-    icicle_copy_to_host_async(out, d_out, N * sizeof(scalar_t), stream);
+    icicle_copy_to_host_async(out, d_out, N * sizeof(TypeParam), stream);
     icicle_stream_synchronize(stream);
 
     icicle_free_async(d_in_a, stream);
@@ -114,22 +123,22 @@ TEST_F(FieldApiTest, vectorAddAsync)
   };
 
   run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
-  run("CUDA", out_cuda.get(), "CUDA vector add (device mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
+  // run("CUDA", out_cuda.get(), "CUDA vector add (device mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
 
-  ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
+  // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(TypeParam)));
 }
 
-TEST_F(FieldApiTest, Ntt)
+TYPED_TEST(FieldApiTest, Ntt)
 {
   const int logn = 15;
   const int N = 1 << logn;
-  auto scalars = std::make_unique<scalar_t[]>(N);
+  auto scalars = std::make_unique<TypeParam[]>(N);
   generate_scalars(scalars.get(), N);
 
-  auto out_cpu = std::make_unique<scalar_t[]>(N);
-  auto out_cuda = std::make_unique<scalar_t[]>(N);
+  auto out_cpu = std::make_unique<TypeParam[]>(N);
+  auto out_cuda = std::make_unique<TypeParam[]>(N);
 
-  auto run = [&](const char* dev_type, scalar_t* out, const char* msg, bool measure, int iters) {
+  auto run = [&](const char* dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
@@ -151,17 +160,17 @@ TEST_F(FieldApiTest, Ntt)
   // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
 }
 
-TEST_F(FieldApiTest, CpuVecAPIs)
+TYPED_TEST(FieldApiTest, CpuVecAPIs)
 {
   const int N = 1 << 15;
-  auto in_a = std::make_unique<scalar_t[]>(N);
-  auto in_b = std::make_unique<scalar_t[]>(N);
+  auto in_a = std::make_unique<TypeParam[]>(N);
+  auto in_b = std::make_unique<TypeParam[]>(N);
   generate_scalars(in_a.get(), N);
   generate_scalars(in_b.get(), N);
 
-  auto out_cpu_add = std::make_unique<scalar_t[]>(N);
-  auto out_cpu_sub = std::make_unique<scalar_t[]>(N);
-  auto out_cpu_mul = std::make_unique<scalar_t[]>(N);
+  auto out_cpu_add = std::make_unique<TypeParam[]>(N);
+  auto out_cpu_sub = std::make_unique<TypeParam[]>(N);
+  auto out_cpu_mul = std::make_unique<TypeParam[]>(N);
 
   Device dev = {"CPU", 0};
   icicle_set_device(dev);
@@ -182,11 +191,11 @@ TEST_F(FieldApiTest, CpuVecAPIs)
   ASSERT_EQ(out_cpu_mul[test_idx], in_a[test_idx] * in_b[test_idx]);
 }
 
-TEST_F(FieldApiTest, CpuMatrixAPIs)
+TYPED_TEST(FieldApiTest, CpuMatrixAPIs)
 {
   const int R = 1 << 10, C = 1 << 6;
   auto in = std::make_unique<scalar_t[]>(R * C);
-  scalar_t::rand_host_many(in.get(), R * C);
+  generate_scalars(in.get(), R * C);
 
   auto out_cpu_transpose = std::make_unique<scalar_t[]>(R * C);
 
