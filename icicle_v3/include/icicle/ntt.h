@@ -1,10 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <unordered_map>
-#include <string>
-#include <stdexcept>
-#include <iostream>
 
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
