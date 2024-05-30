@@ -18,6 +18,22 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, ntt)(input, size, dir, config, output);
   }
 
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(NttExtFieldDispatcher, ntt_ext_field, NttExtFieldImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt_ext_field)(
+    const extension_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, extension_t* output)
+  {
+    return NttExtFieldDispatcher::execute(input, size, dir, config, output);
+  }
+
+  template <>
+  eIcicleError ntt(const extension_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, ntt_ext_field)(input, size, dir, config, output);
+  }
+#endif // EXT_FIELD
+
   /*************************** INIT DOMAIN ***************************/
   ICICLE_DISPATCHER_INST(NttInitDomainDispatcher, ntt_init_domain, NttInitDomainImpl);
 

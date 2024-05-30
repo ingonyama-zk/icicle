@@ -21,10 +21,13 @@ function(setup_field_target)
     src/vec_ops.cpp
     src/matrix_ops.cpp
     src/ntt.cpp)
+    set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
 
     # Make sure FIELD is defined in the cache for backends to see
     set(FIELD "${FIELD}" CACHE STRING "")
-
-    set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
     target_compile_definitions(icicle_field PUBLIC FIELD=${FIELD})
+    if (EXT_FIELD)
+      set(EXT_FIELD "${EXT_FIELD}" CACHE STRING "")      
+      target_compile_definitions(icicle_field PUBLIC EXT_FIELD=${EXT_FIELD})
+    endif()
 endfunction()

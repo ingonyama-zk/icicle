@@ -113,4 +113,57 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+#ifdef EXT_FIELD
+  using extFieldVectorOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const extension_t* vec_a,
+    const extension_t* vec_b,
+    uint64_t n,
+    const VecOpsConfig& config,
+    extension_t* output)>;
+
+  void register_vector_add_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+
+#define REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
+  namespace {                                                                                                          \
+    static bool _reg_vec_add_ext_field = []() -> bool {                                                                \
+      register_vector_add_ext_field(DEVICE_TYPE, FUNC);                                                                \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_vector_sub_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+#define REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
+  namespace {                                                                                                          \
+    static bool _reg_vec_sub_ext_field = []() -> bool {                                                                \
+      register_vector_sub_ext_field(DEVICE_TYPE, FUNC);                                                                \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_vector_mul_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+
+#define REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
+  namespace {                                                                                                          \
+    static bool _reg_vec_mul_ext_field = []() -> bool {                                                                \
+      register_vector_mul_ext_field(DEVICE_TYPE, FUNC);                                                                \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using extFieldConvertMontgomeryImpl = std::function<eIcicleError(
+    const Device& device, extension_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)>;
+
+  void register_scalar_convert_montgomery_ext_field(const std::string& deviceType, extFieldConvertMontgomeryImpl);
+
+#define REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                               \
+  namespace {                                                                                                          \
+    static bool _reg_scalar_convert_mont_ext_field = []() -> bool {                                                    \
+      register_scalar_convert_montgomery_ext_field(DEVICE_TYPE, FUNC);                                                 \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+#endif // EXT_FIELD
+
 } // namespace icicle
