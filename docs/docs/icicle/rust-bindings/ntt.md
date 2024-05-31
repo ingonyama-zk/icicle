@@ -180,7 +180,7 @@ where
 
 - **`IcicleResult<()>`**: Will return an error if the operation fails.
 
-### Releaseing the domain
+### Releasing the domain
 
 The `release_domain` function is responsible for releasing the resources associated with a specific domain in the CUDA device context.
 
