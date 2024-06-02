@@ -17,7 +17,7 @@ function(check_field)
 endfunction()
 
 function(setup_field_target)    
-    add_library(icicle_field STATIC 
+    add_library(icicle_field SHARED 
       src/vec_ops.cpp
       src/matrix_ops.cpp
       src/ntt.cpp

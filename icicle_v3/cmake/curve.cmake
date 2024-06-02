@@ -7,9 +7,7 @@ function(check_curve)
     math(EXPR I "${I} + 1")
     if (CURVE STREQUAL SUPPORTED_CURVE)      
       add_compile_definitions(FIELD_ID=${I})
-      add_compile_definitions(DCURVE_ID=${I})
-      add_compile_definitions(FIELD=${CURVE})
-      add_compile_definitions(CURVE=${CURVE})
+      add_compile_definitions(CURVE_ID=${I})
       set(IS_CURVE_SUPPORTED TRUE)
     endif ()
   endforeach()
@@ -23,7 +21,7 @@ function(setup_curve_target)
   set(FIELD ${CURVE})
   setup_field_target()
 
-  add_library(icicle_curve STATIC 
+  add_library(icicle_curve SHARED 
     src/msm.cpp
   )
   set_target_properties(icicle_curve PROPERTIES OUTPUT_NAME "icicle_curve_${CURVE}")

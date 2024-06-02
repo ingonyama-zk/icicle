@@ -9,15 +9,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_CPU_BE "Build CPU backend" ON) # TODO Yuval remove from here once separating the backends from frontend
 option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once separating the backends from frontend
 
 # device API library
-add_library(icicle_device STATIC
-src/device_api.cpp
-src/errors.cpp
-src/runtime.cpp
+add_library(icicle_device SHARED
+  src/device_api.cpp
+  src/errors.cpp
+  src/runtime.cpp
 )
 
 # Add the include directory
