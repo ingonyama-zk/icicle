@@ -53,6 +53,21 @@ if(BUILD_CUDA_BE)
     target_link_libraries(test_field_api PRIVATE ${FORCE_LOAD_START} icicle_cuda_field ${FORCE_LOAD_END})    
 endif()
 
+#curve API test
+add_executable(test_curve_api test_curve_api.cpp)
+target_include_directories(test_curve_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
+target_link_libraries(test_curve_api PUBLIC GTest::gtest_main icicle_device icicle_curve)
+# force loading the backend even when no symbols used. TODO Yuval: this is not compatible with windows
+if(BUILD_CPU_BE)    
+    target_link_libraries(test_curve_api PRIVATE ${FORCE_LOAD_START} icicle_cpu_device ${FORCE_LOAD_END})
+    target_link_libraries(test_curve_api PRIVATE ${FORCE_LOAD_START} icicle_cpu_curve ${FORCE_LOAD_END})
+endif()
+if(BUILD_CUDA_BE)    
+    target_link_libraries(test_curve_api PRIVATE ${FORCE_LOAD_START} icicle_cuda_device ${FORCE_LOAD_END})
+    target_link_libraries(test_curve_api PRIVATE ${FORCE_LOAD_START} icicle_cuda_curve ${FORCE_LOAD_END})    
+endif()
+
 enable_testing()
 gtest_discover_tests(test_device_api)
 gtest_discover_tests(test_field_api)
+gtest_discover_tests(test_curve_api)
