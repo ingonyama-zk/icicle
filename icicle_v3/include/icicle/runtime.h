@@ -8,6 +8,15 @@
 using namespace icicle;
 
 /**
+ * @brief Search and load icicle backed to process
+ *
+
+ * @param path Path of the backend library or directory where backend libraries are installed
+ * @return eIcicleError Status of the loaded backend
+ */
+extern "C" eIcicleError icicle_load_backend(const std::string& path);
+
+/**
  * @brief Set active device for thread
  *
 
