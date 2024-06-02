@@ -18,9 +18,10 @@ endfunction()
 
 function(setup_field_target)    
     add_library(icicle_field STATIC 
-    src/vec_ops.cpp
-    src/matrix_ops.cpp
-    src/ntt.cpp)
+      src/vec_ops.cpp
+      src/matrix_ops.cpp
+      src/ntt.cpp
+    )
     set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
 
     # Make sure FIELD is defined in the cache for backends to see
