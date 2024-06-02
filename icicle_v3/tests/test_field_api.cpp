@@ -30,20 +30,7 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
-    dlopen(
-      "/home/administrator/users/yuvals/icicle/icicle_v3/build/backend/cpu/libicicle_cpu_device.so",
-      RTLD_LAZY | RTLD_NOW);
-    dlopen(
-      "/home/administrator/users/yuvals/icicle/icicle_v3/build/backend/cpu/libicicle_cpu_field_bn254.so",
-      RTLD_LAZY | RTLD_NOW);
-
-    dlopen(
-      "/home/administrator/users/yuvals/icicle/icicle_v3/build/backend/cuda/libicicle_cuda_device.so",
-      RTLD_LAZY | RTLD_NOW);
-    dlopen(
-      "/home/administrator/users/yuvals/icicle/icicle_v3/build/backend/cuda/libicicle_cuda_field_bn254.so",
-      RTLD_LAZY | RTLD_NOW);
-
+    icicle_load_backend(BACKEND_BUILD_DIR);
     s_regsitered_devices = get_registered_devices();
     ASSERT_GT(s_regsitered_devices.size(), 0);
   }
