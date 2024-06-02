@@ -136,13 +136,13 @@ int main(int argc, char** argv)
   cudaEvent_t start, stop;
   float msm_time;
 
-  int msm_log_size = (argc > 1) ? atoi(argv[1]) : 18;
+  int msm_log_size = (argc > 1) ? atoi(argv[1]) : 17;
   int msm_size = 1<<msm_log_size;
   int batch_size = (argc > 2) ? atoi(argv[2]) : 1;
   //   unsigned msm_size = 1<<21;
   int N = batch_size * msm_size;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
-  int user_c = (argc > 4) ? atoi(argv[4]) : 16;
+  int user_c = (argc > 4) ? atoi(argv[4]) : 5;
 
   printf("running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n",CURVE_ID,msm_log_size, batch_size, precomp_factor, user_c);
 
@@ -237,10 +237,10 @@ int main(int argc, char** argv)
   //reference
   config.c = 16;
   config.precompute_factor = 1;
+  config.is_big_triangle = true;
   // config.segments_reduction = false;
   msm::msm<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, ref_d);
 
-  // config.is_big_triangle = true;
   // config.are_results_on_device = false;
   // std::cout << test_projective::to_affine(large_res[0]) << std::endl;
   // auto begin = std::chrono::high_resolution_clock::now();

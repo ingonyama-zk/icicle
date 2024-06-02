@@ -91,6 +91,7 @@ namespace msm {
       P* v_r,
       unsigned block_size,
       unsigned write_stride,
+      unsigned buckets_per_bm,
       unsigned write_phase,
       unsigned step,
       unsigned num_of_threads)
@@ -110,7 +111,7 @@ namespace msm {
       const unsigned read_ind = block_size * shifted_block_id + block_tid;
       const unsigned write_ind = jump * shifted_block_id + block_tid;
       const unsigned v_r_key =
-        write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride
+        write_stride ? ((write_ind / buckets_per_bm) * 2 + write_phase) * write_stride + write_ind % buckets_per_bm
                      : write_ind;
       v_r[v_r_key] = v[read_ind] + v[read_ind + jump];
     }
@@ -325,11 +326,22 @@ namespace msm {
     }
 
     template <typename P>
-    __global__ void last_pass_kernel(const P* final_buckets, P* final_sums, unsigned num_sums)
+    __global__ void last_pass_kernel(const P* final_buckets, P* final_sums, unsigned num_sums, unsigned orig_c)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= num_sums) return;
-      final_sums[tid] = final_buckets[2 * tid + 1];
+      unsigned bm_index = tid / orig_c;
+      unsigned bm_tid = tid % orig_c;
+      for (unsigned c = orig_c; c > 1;) {
+        c = (c + 1) >> 1;
+        bm_index <<= 1;
+        if (bm_tid >= c) {
+          bm_index++;
+          bm_tid -= c;
+        }
+      }
+      // printf("tid=%d, bm_index=%d\n", tid, bm_index);
+      final_sums[tid] = final_buckets[2 * bm_index + 1];
     }
 
     // this kernel computes the final result using the double and add algorithm
@@ -739,7 +751,7 @@ namespace msm {
         P* temp_buckets2;
         for (unsigned i = 0;; i++) {
           const unsigned target_bits_count = (source_bits_count + 1) >> 1;                 // half the bits rounded up
-          printf("new c = %d\n", target_bits_count);
+          // printf("new c = %d\n", target_bits_count);
           target_windows_count = source_windows_count << 1;                                // twice the number of bms
           const unsigned target_buckets_count = target_windows_count << target_bits_count; // new_bms*2^new_c
           CHK_IF_RETURN(cudaMallocAsync(
@@ -749,8 +761,13 @@ namespace msm {
           CHK_IF_RETURN(cudaMallocAsync(
             &temp_buckets2, sizeof(P) * source_buckets_count / 2 * batch_size, stream));  // for type2 reduction (serial, top window - odds)
 
+          //debug
+          initialize_buckets_kernel<<<(target_buckets_count * batch_size + 255)/256,256>>>(target_buckets, target_buckets_count * batch_size);
+
+
           if (source_bits_count > 0) {  //why do we need this condition?
             for (unsigned j = 0; j < target_bits_count; j++) {
+              // printf("j = %d\n", j);
               const bool is_first_iter = (j == 0);
               const bool is_second_iter = (j == 1);
               const bool is_last_iter = (j == target_bits_count - 1);
@@ -767,7 +784,7 @@ namespace msm {
               // printf("block size 1 = %d\n", 1 << (source_bits_count - j));
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter || (is_second_iter && is_odd_c) ? source_buckets : temp_buckets1, is_last_iter ? target_buckets : temp_buckets1,
-                1 << (source_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 0 /*=write_phase*/,
+                1 << (source_bits_count - j + (is_odd_c? 1 : 0)), is_last_iter ? 1 << target_bits_count : 0, 1 << target_bits_count, 0 /*=write_phase*/,
                 (1 << target_bits_count) - 1, nof_threads);
               // cudaDeviceSynchronize();
               // printf("cuda err 1: %d\n", cudaGetLastError());
@@ -779,24 +796,35 @@ namespace msm {
               // printf("block size 2 = %d\n", 1 << (target_bits_count - j));
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter ? source_buckets : temp_buckets2, is_last_iter ? target_buckets : temp_buckets2,
-                1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 /*=write_phase*/,
-                (1 << target_bits_count) - 1, nof_threads);
+                1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 << (target_bits_count - (is_odd_c? 1 : 0)), 1 /*=write_phase*/,
+                (1 << (target_bits_count - (is_odd_c? 1 : 0))) - 1, nof_threads);
               // cudaDeviceSynchronize();
               // printf("cuda err 2: %d\n", cudaGetLastError());
             }
+
+              // cudaDeviceSynchronize();
+              // std::vector<P> h_target_buckets;
+              // h_target_buckets.reserve(target_buckets_count);
+              // cudaMemcpy(h_target_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
+              // std::cout<<"buckets summed"<<std::endl;
+              // for (unsigned i = 0; i < 100; i++)
+              // {
+              //   std::cout<<i<<": "<<h_target_buckets[i]<<"\n";
+              // }
+              // std::cout<<std::endl;
           }
           if (target_bits_count == 1) {
             // Note: the reduction ends up with 'target_windows_count' windows per batch element. Some are guaranteed
             // to be empty when target_windows_count>bitsize. for example consider bitsize=253 and c=2. The reduction
             // ends with 254 bms but the most significant one is guaranteed to be zero since the scalars are 253b.
             nof_bms_per_msm = target_windows_count;
-            nof_empty_bms_per_batch = target_windows_count > bitsize ? target_windows_count - bitsize : 0;  //in the general this calculation won't work because we have empty windows in the middle
+            nof_empty_bms_per_batch = target_windows_count > bitsize ? target_windows_count - bitsize : 0;
             nof_bms_in_batch = nof_bms_per_msm * batch_size;
 
             CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch, stream));
             NUM_THREADS = 32;
             NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
-            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_in_batch);
+            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_in_batch, c);
             c = 1;
             CHK_IF_RETURN(cudaFreeAsync(source_buckets, stream));
             CHK_IF_RETURN(cudaFreeAsync(target_buckets, stream));
@@ -819,7 +847,7 @@ namespace msm {
 
       // ------- This is the final stage where bucket modules/window sums get added up with appropriate weights
       // -------
-      NUM_THREADS = min(batch_size, 32);
+      NUM_THREADS = 32;
       NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
       // launch the double and add kernel, a single thread per batch element
       final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
