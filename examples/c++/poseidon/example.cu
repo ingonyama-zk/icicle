@@ -39,11 +39,7 @@ uint32_t query_membership(scalar_t query, scalar_t* tree, const uint32_t tree_he
 }
 
 void generate_proof(
-  uint32_t position,
-  scalar_t* tree,
-  const uint32_t tree_height,
-  uint32_t* proof_lr,
-  scalar_t* proof_hash)
+  uint32_t position, scalar_t* tree, const uint32_t tree_height, uint32_t* proof_lr, scalar_t* proof_hash)
 {
   uint32_t level_index = position;
   for (uint32_t level = tree_height - 1; level > 0; level--) {
@@ -114,6 +110,7 @@ int main(int argc, char* argv[])
     d = d + scalar_t::one();
   }
   std::cout << "Hashing blocks into tree leaves..." << std::endl;
+
   Poseidon<scalar_t> poseidon(data_arity, ctx);
   SpongeConfig config = default_sponge_config(ctx); 
   poseidon.hash_many(data, &tree[tree_index(leaf_level, 0)], tree_width, data_arity, 1, config);

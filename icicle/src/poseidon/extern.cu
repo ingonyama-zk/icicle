@@ -4,6 +4,7 @@ using namespace field_config;
 
 #include "poseidon/poseidon.cuh"
 #include "constants.cu"
+#include "extern_old.cu"
 
 #include "gpu-utils/device_context.cuh"
 #include "utils/utils.h"

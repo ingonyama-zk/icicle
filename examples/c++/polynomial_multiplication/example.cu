@@ -82,10 +82,10 @@ int main(int argc, char** argv)
       CHK_IF_RETURN(cudaMallocAsync(&MulGpu, sizeof(test_data) * NTT_SIZE, ntt_config.ctx.stream));
       vec_ops::VecOpsConfig config{
         ntt_config.ctx,
-        true,  // is_a_on_device
-        true,  // is_b_on_device
-        true,  // is_result_on_device
-        false  // is_async
+        true, // is_a_on_device
+        true, // is_b_on_device
+        true, // is_result_on_device
+        false // is_async
       };
       CHK_IF_RETURN(bn254_mul_cuda(GpuA, GpuB, NTT_SIZE, config, MulGpu));
 

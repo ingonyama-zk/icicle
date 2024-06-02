@@ -203,6 +203,12 @@ extern "C" cudaError_t bn254_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
+extern "C" cudaError_t bn254_bit_reverse_cuda(
+  const bn254::scalar_t* input,
+  uint64_t n,
+  vec_ops::BitReverseConfig& config,
+  bn254::scalar_t* output);
+
 extern "C" void bn254_generate_scalars(bn254::scalar_t* scalars, int size);
 
 extern "C" cudaError_t bn254_scalar_convert_montgomery(
