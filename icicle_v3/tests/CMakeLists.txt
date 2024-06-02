@@ -40,7 +40,7 @@ target_link_libraries(test_field_api PUBLIC GTest::gtest_main icicle_device icic
 #curve API test
 add_executable(test_curve_api test_curve_api.cpp)
 target_include_directories(test_curve_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
-target_link_libraries(test_curve_api PUBLIC GTest::gtest_main icicle_device icicle_curve)
+target_link_libraries(test_curve_api PUBLIC GTest::gtest_main icicle_device icicle_field icicle_curve)
 
 
 if(BUILD_CPU_BE)

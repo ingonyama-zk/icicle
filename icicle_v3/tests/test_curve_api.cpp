@@ -4,6 +4,8 @@
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"
+#include "icicle/msm.h"
+#include "icicle/vec_ops.h"
 #include "icicle/curves/curve_config.h"
 
 #include "dlfcn.h"
@@ -34,6 +36,9 @@ public:
     dlopen(
       "/home/administrator/users/yuvals/icicle/icicle_v3/build/backend/cpu/libicicle_cpu_curve_bn254.so",
       RTLD_LAZY | RTLD_NOW);
+    dlopen(
+      "/home/administrator/users/yuvals/icicle/icicle_v3/build/backend/cpu/libicicle_cpu_field_bn254.so",
+      RTLD_LAZY | RTLD_NOW);
 
     dlopen(
       "/home/administrator/users/yuvals/icicle/icicle_v3/build/backend/cuda/libicicle_cuda_device.so",
@@ -50,11 +55,41 @@ public:
   // SetUp/TearDown are called before and after each test
   void SetUp() override {}
   void TearDown() override {}
+
+  void randomize_bases(affine_t* bases, unsigned size)
+  {
+    for (unsigned i = 0; i < size; ++i) {
+      bases[i] = projective_t::to_affine(projective_t::rand_host());
+    }
+  }
 };
 
 TEST_F(CurveApiTest, MSM)
 {
-  // TODO Yuval
+  const int logn = 5;
+  const int N = 1 << logn;
+  auto scalars = std::make_unique<scalar_t[]>(N);
+  generate_scalars(scalars.get(), N);
+
+  auto bases = std::make_unique<affine_t[]>(N);
+  randomize_bases(bases.get(), N); // TODO use icicle API
+
+  affine_t result{}; // TODO Yuval should be projective
+
+  auto run = [&](const char* dev_type, affine_t* result, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    auto config = default_msm_config();
+
+    START_TIMER(MSM_sync)
+    for (int i = 0; i < iters; ++i)
+      msm(scalars.get(), bases.get(), N, config, result);
+    END_TIMER(MSM_sync, msg, measure);
+  };
+
+  run("CPU", &result, "CPU msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // TODO test something
 }
 
 int main(int argc, char** argv)
