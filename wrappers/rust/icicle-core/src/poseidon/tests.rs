@@ -41,8 +41,8 @@ where
     <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
     for arity in [2, 4, 8, 11] {
-        let constants = init_poseidon::<F>(arity);
+        let poseidon = init_poseidon::<F>(arity);
 
-        _check_poseidon_hash_many(constants);
+        _check_poseidon_hash_many(poseidon);
     }
 }
