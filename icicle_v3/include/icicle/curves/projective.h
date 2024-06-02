@@ -3,6 +3,8 @@
 #ifdef __CUDACC__
 #include "gpu-utils/sharedmem.h"
 #endif // __CUDACC__
+
+#include "icicle/utils/modifiers.h"
 #include "icicle/curves/affine.h"
 
 template <typename FF, class SCALAR_FF, const FF& B_VALUE, const FF& GENERATOR_X, const FF& GENERATOR_Y>
