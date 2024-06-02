@@ -1,4 +1,9 @@
-#include "icicle/runtime.h"
+#include <iostream>
+#include <dlfcn.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <string>
+
 #include "icicle/runtime.h"
 #include "icicle/device_api.h"
 #include "icicle/errors.h"
@@ -67,4 +72,63 @@ extern "C" eIcicleError icicle_create_stream(icicleStreamHandle* stream)
 extern "C" eIcicleError icicle_destroy_stream(icicleStreamHandle stream)
 {
   return DeviceAPI::get_thread_local_deviceAPI()->destroy_stream(stream);
+}
+
+// Determine the shared library extension based on the operating system
+#ifdef __linux__
+const std::string SHARED_LIB_EXTENSION = ".so";
+#elif __APPLE__
+const std::string SHARED_LIB_EXTENSION = ".dylib";
+#else
+#error "Unsupported operating system"
+#endif
+
+extern "C" eIcicleError icicle_load_backend(const std::string& path)
+{
+  auto is_shared_library = [](const std::string& filename) {
+    return filename.size() >= SHARED_LIB_EXTENSION.size() &&
+           filename.compare(
+             filename.size() - SHARED_LIB_EXTENSION.size(), SHARED_LIB_EXTENSION.size(), SHARED_LIB_EXTENSION) == 0;
+  };
+
+  auto load_library = [](const std::string& filePath) {
+    std::cout << "Attempting load: " << filePath << std::endl;
+    void* handle = dlopen(filePath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    if (!handle) { std::cerr << "Failed to load " << filePath << ": " << dlerror() << std::endl; }
+  };
+
+  struct stat pathStat;
+  if (stat(path.c_str(), &pathStat) != 0) {
+    std::cerr << "Cannot access path: " << path << std::endl;
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  if (S_ISDIR(pathStat.st_mode)) {
+    // Path is a directory, recursively search for libraries
+    DIR* dir = opendir(path.c_str());
+    if (!dir) {
+      std::cerr << "Cannot open directory: " << path << std::endl;
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+      std::string entryPath = path + "/" + entry->d_name;
+
+      // Skip "." and ".." entries
+      if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..") { continue; }
+
+      // Recurse into subdirectories and load libraries in files
+      icicle_load_backend(entryPath);
+    }
+
+    closedir(dir);
+  } else if (S_ISREG(pathStat.st_mode)) {
+    // Path is a regular file, check if it is a shared library and load it
+    if (is_shared_library(path)) { load_library(path); }
+  } else {
+    std::cerr << "Unsupported file type: " << path << std::endl;
+  }
+
+  return eIcicleError::SUCCESS;
 }
