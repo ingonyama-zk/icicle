@@ -22,6 +22,7 @@ function(setup_field_target)
       src/matrix_ops.cpp
       src/ntt.cpp
     )
+    target_link_libraries(icicle_field PUBLIC icicle_device) # for thread local device
     set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
 
     # Make sure FIELD is defined in the cache for backends to see
