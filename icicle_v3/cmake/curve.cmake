@@ -21,10 +21,16 @@ endfunction()
 
 function(setup_curve_target)
   set(FIELD ${CURVE})
-  setup_field_target()  
+  setup_field_target()
+
+  add_library(icicle_curve STATIC 
+    src/msm.cpp
+  )
+  set_target_properties(icicle_curve PROPERTIES OUTPUT_NAME "icicle_curve_${CURVE}")
 
   # Make sure CURVE is defined in the cache for backends to see
   set(CURVE "${CURVE}" CACHE STRING "")
+  target_compile_definitions(icicle_curve PUBLIC CURVE=${CURVE})
   
   # TODO Yuval: curve target
 endfunction()
