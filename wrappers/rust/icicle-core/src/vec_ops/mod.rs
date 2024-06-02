@@ -49,6 +49,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
 
+    fn add_inplace(
+        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> IcicleResult<()>;
+
     fn sub(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -124,6 +130,23 @@ where
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::add(a, b, result, &cfg)
+}
+
+pub fn accumulate_scalars<F>(
+    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    assert_eq!(
+        cfg.is_a_on_device, cfg.is_result_on_device,
+        "input vector 'a' must have same 'on device' setting as result, since operation is performed in-place"
+    );
+    let cfg = check_vec_ops_args(a, b, a, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::add_inplace(a, b, &cfg)
 }
 
 pub fn sub_scalars<F>(
@@ -224,6 +247,7 @@ macro_rules! impl_vec_ops_field {
         }
 
         impl VecOps<$field> for $field_config {
+            
             fn add(
                 a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
@@ -237,6 +261,23 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn add_inplace(
+                a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::add_scalars_cuda(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        a.as_mut_ptr(),
                     )
                     .wrap()
                 }
@@ -311,7 +352,8 @@ macro_rules! impl_vec_add_tests {
     ) => {
         #[test]
         pub fn test_vec_add_scalars() {
-            check_vec_ops_scalars::<$field>()
+            check_vec_ops_scalars::<$field>();
+            check_vec_ops_stwo_accumulate::<$field>();
         }
     };
 }
