@@ -56,4 +56,10 @@ namespace vec_ops {
   {
     return transpose_matrix<extension_t>(input, output, row_size, column_size, ctx, on_device, is_async);
   }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, extension_bit_reverse_cuda)(
+    const extension_t* input, uint64_t n, BitReverseConfig& config, extension_t* output)
+  {
+    return bit_reverse<extension_t>(input, n, config, output);
+  }
 } // namespace vec_ops
