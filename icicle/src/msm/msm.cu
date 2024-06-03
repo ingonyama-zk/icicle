@@ -742,6 +742,11 @@ namespace msm {
         big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms_in_batch, c);
       } else {
         printf("recursive\n");
+        cudaStream_t stream_reduction;
+        cudaEvent_t event_finished_reduction;
+        CHK_IF_RETURN(cudaStreamCreate(&stream_reduction));
+        CHK_IF_RETURN(cudaEventCreateWithFlags(&event_finished_reduction, cudaEventDisableTiming));
+
         unsigned source_bits_count = c;
         unsigned source_windows_count = nof_bms_per_msm;
         unsigned source_buckets_count = nof_buckets + nof_bms_per_msm; //nof buckets per msm including zero buckets
@@ -793,13 +798,15 @@ namespace msm {
               NUM_THREADS = max(1, min(MAX_TH, nof_threads));
               NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
               // printf("block size 2 = %d\n", 1 << (target_bits_count - j));
-              single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+              single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_reduction>>>(
                 is_first_iter ? source_buckets : temp_buckets2, is_last_iter ? target_buckets : temp_buckets2,
                 1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 << (target_bits_count - (is_odd_c? 1 : 0)), 1 /*=write_phase*/,
                 (1 << (target_bits_count - (is_odd_c? 1 : 0))) - 1, nof_threads);
               // cudaDeviceSynchronize();
               // printf("cuda err 2: %d\n", cudaGetLastError());
             }
+              CHK_IF_RETURN(cudaEventRecord(event_finished_reduction, stream_reduction));
+              CHK_IF_RETURN(cudaStreamWaitEvent(stream, event_finished_reduction));
               printf("new c = %d\n", target_bits_count);
               // cudaDeviceSynchronize();
               // std::vector<P> h_target_buckets;
@@ -858,6 +865,7 @@ namespace msm {
             CHK_IF_RETURN(cudaFreeAsync(target_buckets, stream));
             CHK_IF_RETURN(cudaFreeAsync(temp_buckets1, stream));
             CHK_IF_RETURN(cudaFreeAsync(temp_buckets2, stream));
+            CHK_IF_RETURN(cudaStreamDestroy(stream_reduction));
             break;
           }
           CHK_IF_RETURN(cudaFreeAsync(source_buckets, stream));
