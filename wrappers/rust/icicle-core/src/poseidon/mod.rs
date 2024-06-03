@@ -53,6 +53,7 @@ where
         mds_matrix: &[F],
         non_sparse_matrix: &[F],
         sparse_matrices: &[F],
+        domain_tag: F,
         ctx: &DeviceContext,
     ) -> IcicleResult<Self> {
         <<F as FieldImpl>::Config as PoseidonImpl<F>>::create(
@@ -64,6 +65,7 @@ where
             mds_matrix,
             non_sparse_matrix,
             sparse_matrices,
+            domain_tag,
             ctx,
         )
         .and_then(|handle| {
@@ -196,6 +198,7 @@ pub trait PoseidonImpl<F: FieldImpl> {
         mds_matrix: &[F],
         non_sparse_matrix: &[F],
         sparse_matrices: &[F],
+        domain_tag: F,
         ctx: &DeviceContext,
     ) -> IcicleResult<PoseidonHandle>;
 
@@ -254,6 +257,7 @@ macro_rules! impl_poseidon {
                     mds_matrix: *const $field,
                     non_sparse_matrix: *const $field,
                     sparse_matrices: *const $field,
+                    domain_tag: $field,
                     ctx: &DeviceContext,
                 ) -> CudaError;
 
@@ -306,6 +310,7 @@ macro_rules! impl_poseidon {
                 mds_matrix: &[$field],
                 non_sparse_matrix: &[$field],
                 sparse_matrices: &[$field],
+                domain_tag: $field,
                 ctx: &DeviceContext,
             ) -> IcicleResult<PoseidonHandle> {
                 unsafe {
@@ -320,6 +325,7 @@ macro_rules! impl_poseidon {
                         mds_matrix as *const _ as *const $field,
                         non_sparse_matrix as *const _ as *const $field,
                         sparse_matrices as *const _ as *const $field,
+                        domain_tag,
                         ctx,
                     )
                     .wrap()
