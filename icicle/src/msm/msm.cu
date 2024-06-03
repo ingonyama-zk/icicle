@@ -734,12 +734,14 @@ namespace msm {
       unsigned nof_empty_bms_per_batch = 0; // for non-triangle accumluation this may be >0
       P* final_results;
       if (is_big_triangle || c == 1) {
+        printf("big triangle\n");
         CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch, stream));
         // launch the bucket module sum kernel - a thread for each bucket module
         NUM_THREADS = 32;
         NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
         big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms_in_batch, c);
       } else {
+        printf("recursive\n");
         unsigned source_bits_count = c;
         unsigned source_windows_count = nof_bms_per_msm;
         unsigned source_buckets_count = nof_buckets + nof_bms_per_msm; //nof buckets per msm including zero buckets
@@ -760,10 +762,7 @@ namespace msm {
             &temp_buckets1, sizeof(P) * source_buckets_count / 2 * batch_size, stream));  // for type1 reduction (strided, bottom window - evens)
           CHK_IF_RETURN(cudaMallocAsync(
             &temp_buckets2, sizeof(P) * source_buckets_count / 2 * batch_size, stream));  // for type2 reduction (serial, top window - odds)
-
-          //debug
           initialize_buckets_kernel<<<(target_buckets_count * batch_size + 255)/256,256>>>(target_buckets, target_buckets_count * batch_size);
-
 
           if (source_bits_count > 0) {  //why do we need this condition?
             for (unsigned j = 0; j < target_bits_count; j++) {
@@ -801,13 +800,13 @@ namespace msm {
               // cudaDeviceSynchronize();
               // printf("cuda err 2: %d\n", cudaGetLastError());
             }
-
+              printf("new c = %d\n", target_bits_count);
               // cudaDeviceSynchronize();
               // std::vector<P> h_target_buckets;
               // h_target_buckets.reserve(target_buckets_count);
               // cudaMemcpy(h_target_buckets.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
-              // std::cout<<"buckets summed"<<std::endl;
-              // for (unsigned i = 0; i < 100; i++)
+              // std::cout<<"buckets summed loop"<<std::endl;
+              // for (unsigned i = 0; i < target_buckets_count; i++)
               // {
               //   std::cout<<i<<": "<<h_target_buckets[i]<<"\n";
               // }
@@ -817,14 +816,43 @@ namespace msm {
             // Note: the reduction ends up with 'target_windows_count' windows per batch element. Some are guaranteed
             // to be empty when target_windows_count>bitsize. for example consider bitsize=253 and c=2. The reduction
             // ends with 254 bms but the most significant one is guaranteed to be zero since the scalars are 253b.
+            // nof_empty_bms_per_batch = target_windows_count > bitsize ? target_windows_count - bitsize : 0;
+            nof_empty_bms_per_batch = target_windows_count - min(c * nof_bms_per_msm, bitsize);
+            printf("nof_empty_bms_per_batch - %d\n", nof_empty_bms_per_batch);
             nof_bms_per_msm = target_windows_count;
-            nof_empty_bms_per_batch = target_windows_count > bitsize ? target_windows_count - bitsize : 0;
             nof_bms_in_batch = nof_bms_per_msm * batch_size;
 
             CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch, stream));
+
+            printf("c = %d, nof_bms_in_batch = %d, target_windows_count = %d\n", c, nof_bms_in_batch, target_windows_count);
+
+            //  cudaDeviceSynchronize();
+            //   std::vector<P> h_final_results;
+            //   h_final_results.reserve(target_buckets_count);
+            //   cudaMemcpy(h_final_results.data(), target_buckets, sizeof(P) * target_buckets_count, cudaMemcpyDeviceToHost);
+            //   std::cout<<"buckets summed final"<<std::endl;
+            //   for (unsigned i = 0; i < target_buckets_count; i++)
+            //   {
+            //     std::cout<<i<<": "<<h_final_results[i]<<"\n";
+            //   }
+            //   std::cout<<std::endl;
+
             NUM_THREADS = 32;
-            NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
-            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_in_batch, c);
+            NUM_BLOCKS = (nof_bms_in_batch - nof_empty_bms_per_batch + NUM_THREADS - 1) / NUM_THREADS;
+            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_in_batch - nof_empty_bms_per_batch, c);
+
+
+            // cudaDeviceSynchronize();
+            //   std::vector<P> h_final_results1;
+            //   h_final_results1.reserve(nof_bms_in_batch - nof_empty_bms_per_batch);
+            //   cudaMemcpy(h_final_results1.data(), final_results, sizeof(P) * (nof_bms_in_batch - nof_empty_bms_per_batch), cudaMemcpyDeviceToHost);
+            //   std::cout<<"buckets summed"<<std::endl;
+            //   for (unsigned i = 0; i < nof_bms_in_batch - nof_empty_bms_per_batch; i++)
+            //   {
+            //     std::cout<<i<<": "<<h_final_results1[i]<<"\n";
+            //   }
+            //   std::cout<<std::endl;
+
             c = 1;
             CHK_IF_RETURN(cudaFreeAsync(source_buckets, stream));
             CHK_IF_RETURN(cudaFreeAsync(target_buckets, stream));
@@ -899,7 +927,7 @@ namespace msm {
     A* bases,
     int bases_size,
     int precompute_factor,
-    int _c,
+    int c,
     bool are_bases_on_device,
     device_context::DeviceContext& ctx,
     A* output_bases)
@@ -912,7 +940,8 @@ namespace msm {
       output_bases, bases, sizeof(A) * bases_size,
       are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
 
-    unsigned c = 16;
+    // unsigned c = 16;
+    printf("precomp c = %d\n", c);
     unsigned total_nof_bms = (P::SCALAR_FF_NBITS - 1) / c + 1;
     unsigned shift = c * ((total_nof_bms - 1) / precompute_factor + 1);
 

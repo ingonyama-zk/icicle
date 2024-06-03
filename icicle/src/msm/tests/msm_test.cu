@@ -141,7 +141,7 @@ int main(int argc, char** argv)
   int batch_size = (argc > 2) ? atoi(argv[2]) : 1;
   //   unsigned msm_size = 1<<21;
   int N = batch_size * msm_size;
-  int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
+  int precomp_factor = (argc > 3) ? atoi(argv[3]) : 2;
   int user_c = (argc > 4) ? atoi(argv[4]) : 5;
 
   printf("running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n",CURVE_ID,msm_log_size, batch_size, precomp_factor, user_c);
