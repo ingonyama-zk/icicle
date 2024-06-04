@@ -91,35 +91,31 @@ namespace icicle {
   template <typename S, typename A, typename P>
   eIcicleError msm(const S* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results);
 
-  /**
-   * A function that precomputes MSM bases by extending them with their shifted copies.
-   * e.g.:
-   * Original points: \f$ P_0, P_1, P_2, ... P_{size} \f$
-   * Extended points: \f$ P_0, P_1, P_2, ... P_{size}, 2^{l}P_0, 2^{l}P_1, ..., 2^{l}P_{size},
-   * 2^{2l}P_0, 2^{2l}P_1, ..., 2^{2cl}P_{size}, ... \f$
-   * @param bases Bases \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
-   * @param bases_size Number of bases.
-   * @param precompute_factor The number of total precomputed points for each base (including the base itself).
-   * @param _c This is currently unused, but in the future precomputation will need to be aware of
-   * the `c` value used in MSM (see [MSMConfig](@ref MSMConfig)). So to avoid breaking your code with this
-   * upcoming change, make sure to use the same value of `c` in this function and in respective MSMConfig.
-   * @param are_bases_on_device Whether the bases are on device.
-   * @param ctx Device context specifying device id and stream to use.
-   * @param output_bases Device-allocated buffer of size bases_size * precompute_factor for the extended bases.
-   * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine
-   * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
-   * @return `SUCCESS` if the execution was successful and an error code otherwise.
-   *
-   */
+  struct MsmPreComputeConfig {
+    icicleStreamHandle stream; /**< stream for async execution. */
+    bool is_input_on_device;
+    bool is_output_on_device;
+    bool is_async;
+
+    ConfigExtension ext; /** backend specific extensions*/
+  };
+
+  static MsmPreComputeConfig default_msm_pre_compute_config()
+  {
+    MsmPreComputeConfig config = {
+      nullptr, // stream
+      false,   // is_input_on_device
+      false,   // is_output_on_device
+      false,   // is_async
+    };
+    // TODO: maybe allow backends to register default values and call it here so they can fill the ext
+    config.ext.set("c", 0);
+    return config;
+  }
+
   template <typename A>
-  eIcicleError precompute_msm_bases(
-    const A* bases,
-    int bases_size,
-    int precompute_factor,
-    int c, // TODO does it make sense for any MSM algorithm?
-    bool are_bases_on_device,
-    icicleStreamHandle stream,
-    A* output_bases);
+  eIcicleError msm_precompute_bases(
+    const A* input_bases, int nof_bases, int precompute_factor, const MsmPreComputeConfig& config, A* output_bases);
 
   /*************************** Backend registration ***************************/
 
@@ -137,6 +133,24 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_msm) = []() -> bool {                                                                      \
       register_msm(DEVICE_TYPE, FUNC);                                                                                 \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using MsmPreComputeImpl = std::function<eIcicleError(
+    const Device& device,
+    const affine_t* input_bases,
+    int nof_bases,
+    int precompute_factor,
+    const MsmPreComputeConfig& config,
+    affine_t* output_bases)>;
+
+  void register_msm_precompute_bases(const std::string& deviceType, MsmPreComputeImpl impl);
+
+#define REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_msm_precompute_bases) = []() -> bool {                                                     \
+      register_msm_precompute_bases(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
