@@ -25,20 +25,19 @@ target_link_libraries(icicle_device PUBLIC dl)
 target_include_directories(icicle_device PUBLIC include)
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
-  message( FATAL_ERROR "CURVE and FIELD cannot be defined at the same time" )
-endif ()
-
-# field library
-if(FIELD)
-  check_field()
-  setup_field_target()
+  if(NOT ("${CURVE}" STREQUAL "${FIELD}"))
+    message(FATAL_ERROR "CURVE and FIELD should be defined at the same time unless they are equal")
+  endif()
 endif()
 
+# curve is building the scalar field too
 if(CURVE)
   check_curve()
   setup_curve_target()
-endif ()
-
+elseif(FIELD)
+  check_field()
+  setup_field_target()
+endif()
 
 if (BUILD_CPU_BE)
   add_subdirectory(backend/cpu)

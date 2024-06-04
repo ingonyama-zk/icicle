@@ -6,6 +6,7 @@
 #include "icicle/runtime.h"
 #include "icicle/msm.h"
 #include "icicle/vec_ops.h"
+#include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
 
 using namespace curve_config;
@@ -68,6 +69,34 @@ TEST_F(CurveApiTest, MSM)
 
   run("CPU", &result, "CPU msm", VERBOSE /*=measure*/, 1 /*=iters*/);
   // TODO test something
+}
+
+TEST_F(CurveApiTest, MontConversion)
+{
+  // Note: this test doesn't really test correct mont conversion (since there is no arithmetic in mont) but checks that
+  // it does some conversion and back to original
+  affine_t affine_point, affine_point_converted;
+  projective_t projective_point, projective_point_converted;
+
+  projective_point = projective_t::rand_host();
+  affine_point = projective_point.to_affine();
+
+  icicle_set_device({"CPU", 0});
+
+  // (1) converting to mont and check not equal to original
+  auto config = default_convert_montgomery_config();
+  points_convert_montgomery(&affine_point, 1, true /*into mont*/, config, &affine_point_converted);
+  points_convert_montgomery(&projective_point, 1, true /*into mont*/, config, &projective_point_converted);
+
+  ASSERT_NE(affine_point, affine_point_converted);             // check that it was converted to mont
+  ASSERT_NE(projective_point.x, projective_point_converted.x); // check that it was converted to mont
+
+  // (2) converting back from mont and check equal
+  points_convert_montgomery(&projective_point_converted, 1, false /*from mont*/, config, &projective_point_converted);
+  points_convert_montgomery(&affine_point_converted, 1, false /*from mont*/, config, &affine_point_converted);
+
+  ASSERT_EQ(affine_point, affine_point_converted);
+  ASSERT_EQ(projective_point, projective_point_converted);
 }
 
 int main(int argc, char** argv)
