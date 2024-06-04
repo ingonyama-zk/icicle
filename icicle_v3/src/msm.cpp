@@ -10,14 +10,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(MsmDispatcher, msm, MsmImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(CURVE, msm)(
-    const scalar_t* scalars, const affine_t* bases, int msm_size, const MSMConfig& config, ResType* results)
+    const scalar_t* scalars, const affine_t* bases, int msm_size, const MSMConfig& config, projective_t* results)
   {
     return MsmDispatcher::execute(scalars, bases, msm_size, config, results);
   }
 
   template <>
   eIcicleError
-  msm(const scalar_t* scalars, const affine_t* bases, int msm_size, const MSMConfig& config, ResType* results)
+  msm(const scalar_t* scalars, const affine_t* bases, int msm_size, const MSMConfig& config, projective_t* results)
   {
     return CONCAT_EXPAND(CURVE, msm)(scalars, bases, msm_size, config, results);
   }

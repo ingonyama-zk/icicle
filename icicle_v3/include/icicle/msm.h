@@ -115,21 +115,19 @@ namespace icicle {
 
   /*************************** Backend registration ***************************/
 
-#define ResType affine_t
-
   using MsmImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* scalars,
     const affine_t* bases,
     int msm_size,
     const MSMConfig& config,
-    ResType* results)>;
+    projective_t* results)>;
 
   void register_msm(const std::string& deviceType, MsmImpl impl);
 
 #define REGISTER_MSM_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
-    static bool _reg_msm = []() -> bool {                                                                              \
+    static bool UNIQUE(_reg_msm) = []() -> bool {                                                                      \
       register_msm(DEVICE_TYPE, FUNC);                                                                                 \
       return true;                                                                                                     \
     }();                                                                                                               \
