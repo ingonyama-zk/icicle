@@ -111,12 +111,12 @@ namespace icicle {
    * @return `SUCCESS` if the execution was successful and an error code otherwise.
    *
    */
-  template <typename A, typename P>
+  template <typename A>
   eIcicleError precompute_msm_bases(
-    A* bases,
+    const A* bases,
     int bases_size,
     int precompute_factor,
-    int c,
+    int c, // TODO does it make sense for any MSM algorithm?
     bool are_bases_on_device,
     icicleStreamHandle stream,
     A* output_bases);

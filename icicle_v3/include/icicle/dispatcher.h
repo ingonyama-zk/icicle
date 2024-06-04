@@ -1,5 +1,7 @@
 #pragma once
 
+#include "icicle/utils/log.h"
+
 // Generalized dispatcher template
 template <typename FuncType, const char* api_name>
 class tIcicleDispatcher
@@ -35,6 +37,6 @@ public:
   using dispatcher_class_name = tIcicleDispatcher<type, ST_name_##api_name>;                                           \
   void register_##api_name(const std::string& deviceType, type impl)                                                   \
   {                                                                                                                    \
-    std::cout << #api_name << " registered for " << deviceType << std::endl;                                           \
+    ICICLE_LOG_DEBUG << #api_name << " registered for " << deviceType;                                                 \
     dispatcher_class_name::_register(deviceType, impl);                                                                \
   }

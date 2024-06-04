@@ -7,6 +7,7 @@
 
 #include "icicle/runtime.h"
 #include "icicle/device_api.h"
+#include "icicle/utils/log.h"
 
 namespace icicle {
 
@@ -71,7 +72,7 @@ namespace icicle {
 
   void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
   {
-    std::cout << "deviceAPI registered for " << deviceType << std::endl;
+    ICICLE_LOG_DEBUG << "deviceAPI registered for " << deviceType;
     DeviceAPIRegistry::register_deviceAPI(deviceType, api);
   }
 

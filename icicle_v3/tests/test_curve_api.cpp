@@ -8,9 +8,7 @@
 #include "icicle/vec_ops.h"
 #include "icicle/curves/curve_config.h"
 
-#include "dlfcn.h"
-
-// using namespace curve_config;
+using namespace curve_config;
 using namespace icicle;
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
