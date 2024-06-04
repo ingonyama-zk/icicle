@@ -20,6 +20,8 @@ target_link_libraries(icicle_cpu_field PUBLIC icicle_device icicle_field)
 set_target_properties(icicle_cpu_field PROPERTIES OUTPUT_NAME "icicle_cpu_field_${FIELD}")
 
 # curve API library
-add_library(icicle_cpu_curve SHARED src/curve/cpu_msm.cpp)
-target_link_libraries(icicle_cpu_curve PUBLIC icicle_device icicle_curve)
-set_target_properties(icicle_cpu_curve PROPERTIES OUTPUT_NAME "icicle_cpu_curve_${CURVE}")
+if (CURVE)
+    add_library(icicle_cpu_curve SHARED src/curve/cpu_msm.cpp)
+    target_link_libraries(icicle_cpu_curve PUBLIC icicle_device icicle_curve)
+    set_target_properties(icicle_cpu_curve PROPERTIES OUTPUT_NAME "icicle_cpu_curve_${CURVE}")
+endif()
