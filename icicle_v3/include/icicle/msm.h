@@ -5,6 +5,7 @@
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "icicle/utils/utils.h"
+#include "icicle/config_extension.h"
 
 #include "icicle/curves/affine.h"
 #include "icicle/curves/projective.h"
@@ -40,6 +41,8 @@ namespace icicle {
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */
+
+    ConfigExtension ext; /** backend specific extensions*/
   };
 
   /**
@@ -60,6 +63,11 @@ namespace icicle {
       false,   // are_results_on_device
       false,   // is_async
     };
+    // TODO: maybe allow backends to register default values and call it here so they can fill the ext
+    config.ext.set("c", 0);
+    config.ext.set("bitsize", 0);
+    config.ext.set("large_bucket_factor", 10);
+    config.ext.set("big_triangle", true);
     return config;
   }
 
