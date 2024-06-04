@@ -15,14 +15,13 @@ eIcicleError cpu_msm(
   const affine_t* bases,
   int msm_size,
   const MSMConfig& config,
-  ResType* results)
+  projective_t* results)
 {
   projective_t res = projective_t::zero();
   for (auto i = 0; i < msm_size; ++i) {
     res = res + projective_t::from_affine(bases[i]) * scalars[i];
   }
-  results[0] =
-    projective_t::to_affine(res); // TODO need to solve the weird linkage issue when output type is projective
+  results[0] = res;
   return eIcicleError::SUCCESS;
 }
 
