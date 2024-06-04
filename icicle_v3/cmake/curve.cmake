@@ -23,6 +23,7 @@ function(setup_curve_target)
 
   add_library(icicle_curve SHARED 
     src/msm.cpp
+    src/curves/ffi_extern.cpp
   )
   target_link_libraries(icicle_curve PUBLIC icicle_device) # for thread local device
   set_target_properties(icicle_curve PROPERTIES OUTPUT_NAME "icicle_curve_${CURVE}")
