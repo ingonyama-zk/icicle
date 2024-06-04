@@ -10,10 +10,10 @@ using namespace field_config;
 #include "utils/utils.h"
 
 namespace poseidon {
-  template class Poseidon<scalar_t>;
+  typedef class Poseidon<scalar_t> PoseidonInst;
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_create_cuda)(
-    Poseidon<scalar_t>** poseidon,
+    PoseidonInst** poseidon,
     unsigned int arity,
     unsigned int alpha,
     unsigned int partial_rounds,
@@ -22,11 +22,11 @@ namespace poseidon {
     const scalar_t* mds_matrix,
     const scalar_t* non_sparse_matrix,
     const scalar_t* sparse_matrices,
-    const scalar_t domain_tag,
+    const scalar_t& domain_tag,
     device_context::DeviceContext& ctx)
   {
     try {
-      *poseidon = new Poseidon<scalar_t>(
+      *poseidon = new PoseidonInst(
         arity, alpha, partial_rounds, full_rounds_half, round_constants, mds_matrix, non_sparse_matrix, sparse_matrices,
         domain_tag, ctx);
       return cudaError_t::cudaSuccess;
@@ -36,10 +36,10 @@ namespace poseidon {
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_load_cuda)(
-    Poseidon<scalar_t>** poseidon, unsigned int arity, device_context::DeviceContext& ctx)
+    PoseidonInst** poseidon, unsigned int arity, device_context::DeviceContext& ctx)
   {
     try {
-      *poseidon = new Poseidon<scalar_t>(arity, ctx);
+      *poseidon = new PoseidonInst(arity, ctx);
       return cudaError_t::cudaSuccess;
     } catch (const IcicleError& _error) {
       return cudaError_t::cudaErrorUnknown;
@@ -47,7 +47,7 @@ namespace poseidon {
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_absorb_many_cuda)(
-    const Poseidon<scalar_t>* poseidon,
+    const PoseidonInst* poseidon,
     const scalar_t* inputs,
     scalar_t* states,
     unsigned int number_of_states,
@@ -58,7 +58,7 @@ namespace poseidon {
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_squeeze_many_cuda)(
-    const Poseidon<scalar_t>* poseidon,
+    const PoseidonInst* poseidon,
     const scalar_t* states,
     scalar_t* output,
     unsigned int number_of_states,
@@ -69,7 +69,7 @@ namespace poseidon {
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_hash_many_cuda)(
-    const Poseidon<scalar_t>* poseidon,
+    const PoseidonInst* poseidon,
     const scalar_t* inputs,
     scalar_t* output,
     unsigned int number_of_states,
@@ -81,7 +81,7 @@ namespace poseidon {
   }
 
   extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, poseidon_delete_cuda)(Poseidon<scalar_t>* poseidon, device_context::DeviceContext& ctx)
+  CONCAT_EXPAND(FIELD, poseidon_delete_cuda)(PoseidonInst* poseidon, device_context::DeviceContext& ctx)
   {
     try {
       poseidon->~Poseidon();

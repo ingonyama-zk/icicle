@@ -140,7 +140,7 @@ extern "C" cudaError_t bn254_poseidon_create_cuda(
   const bn254::scalar_t* mds_matrix,
   const bn254::scalar_t* non_sparse_matrix,
   const bn254::scalar_t* sparse_matrices,
-  const bn254::scalar_t domain_tag,
+  const bn254::scalar_t& domain_tag,
   device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bn254_poseidon_load_cuda(
