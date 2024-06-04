@@ -9,9 +9,7 @@ extern "C" {
 #endif
 
 typedef struct scalar_t scalar_t;
-// typedef struct PoseidonConfig PoseidonConfig;
 typedef struct DeviceContext DeviceContext;
-// typedef struct PoseidonConstants PoseidonConstants;
 typedef struct TreeBuilderConfig TreeBuilderConfig;
 typedef struct PoseidonInst PoseidonInst;
 typedef struct SpongeConfig SpongeConfig;
@@ -61,9 +59,6 @@ cudaError_t bn254_poseidon_hash_many_cuda(
   SpongeConfig* cfg);
 
 cudaError_t bn254_poseidon_delete_cuda(PoseidonInst* poseidon, DeviceContext* ctx);
-
-// cudaError_t bn254_create_optimized_poseidon_constants_cuda(int arity, int full_rounds_halfs, int partial_rounds, const scalar_t* constants, DeviceContext* ctx, PoseidonConstants* poseidon_constants);
-// cudaError_t bn254_init_optimized_poseidon_constants_cuda(int arity, DeviceContext* ctx, PoseidonConstants* constants);
 
 #ifdef __cplusplus
 }

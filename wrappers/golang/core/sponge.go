@@ -46,7 +46,7 @@ func GetDefaultSpongeConfig() SpongeConfig {
 	}
 }
 
-func SpongeInputCheck(inputs HostOrDeviceSlice, numberOfStates, inputBlockLength, inputRate uint, ctx *cr.DeviceContext) {
+func SpongeInputCheck(inputs HostOrDeviceSlice, numberOfStates, inputBlockLength, inputRate uint32, ctx *cr.DeviceContext) {
 	if inputBlockLength > inputRate {
 		errorString := fmt.Sprintf(
 			"Input block (%d) can't be greater than input rate (%d)",
@@ -69,7 +69,7 @@ func SpongeInputCheck(inputs HostOrDeviceSlice, numberOfStates, inputBlockLength
 	}
 }
 
-func SpongeStatesCheck(states HostOrDeviceSlice, numberOfStates, width uint, ctx *cr.DeviceContext) {
+func SpongeStatesCheck(states DeviceSlice, numberOfStates, width uint32, ctx *cr.DeviceContext) {
 
 	statesSizeExpected := width * numberOfStates
 	if states.Len() < int(statesSizeExpected) {
@@ -80,13 +80,11 @@ func SpongeStatesCheck(states HostOrDeviceSlice, numberOfStates, width uint, ctx
 		)
 		panic(errorString)
 	}
-	if states.IsOnDevice() {
-		states.(DeviceSlice).CheckDevice()
-	}
+	states.CheckDevice()
 }
 
-func SpongeOutputsCheck(outputs HostOrDeviceSlice, numberOfStates, outputLen, width uint, recursive bool, ctx *cr.DeviceContext) {
-	var outputsSizeExpected uint
+func SpongeOutputsCheck(outputs HostOrDeviceSlice, numberOfStates, outputLen, width uint32, recursive bool, ctx *cr.DeviceContext) {
+	var outputsSizeExpected uint32
 	if recursive {
 		outputsSizeExpected = width * numberOfStates
 	} else {

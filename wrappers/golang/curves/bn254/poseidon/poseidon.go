@@ -8,7 +8,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
 )
 
 type PoseidonHandler = C.struct_PoseidonInst
@@ -42,6 +42,9 @@ func Load(arity uint32, ctx *cr.DeviceContext) Poseidon {
 }
 
 func (poseidon *Poseidon) AbsorbMany(inputs core.HostOrDeviceSlice, states core.DeviceSlice, numberOfStates uint32, inputBlockLen uint32, cfg *core.SpongeConfig) core.IcicleError {
+	core.SpongeInputCheck(inputs, numberOfStates, inputBlockLen, cfg.InputRate, &cfg.Ctx)
+	core.SpongeStatesCheck(states, numberOfStates, poseidon.width, &cfg.Ctx)
+
 	cInputs := (*C.scalar_t)(inputs.AsUnsafePointer())
 	cStates := (*C.scalar_t)(states.AsUnsafePointer())
 	cNumberOfStates := (C.uint)(numberOfStates)
@@ -53,6 +56,9 @@ func (poseidon *Poseidon) AbsorbMany(inputs core.HostOrDeviceSlice, states core.
 }
 
 func (poseidon *Poseidon) SqueezeMany(states core.DeviceSlice, output core.HostOrDeviceSlice, numberOfStates uint32, outputLen uint32, cfg *core.SpongeConfig) core.IcicleError {
+	core.SpongeOutputsCheck(output, numberOfStates, outputLen, poseidon.width, false, &cfg.Ctx)
+	core.SpongeStatesCheck(states, numberOfStates, poseidon.width, &cfg.Ctx)
+
 	cStates := (*C.scalar_t)(states.AsUnsafePointer())
 	cOutput := (*C.scalar_t)(output.AsUnsafePointer())
 	cNumberOfStates := (C.uint)(numberOfStates)
@@ -64,6 +70,9 @@ func (poseidon *Poseidon) SqueezeMany(states core.DeviceSlice, output core.HostO
 }
 
 func (poseidon *Poseidon) HashMany(inputs core.HostOrDeviceSlice, output core.HostOrDeviceSlice, numberOfStates uint32, inputBlockLen uint32, outputLen uint32, cfg *core.SpongeConfig) core.IcicleError {
+	core.SpongeInputCheck(inputs, numberOfStates, inputBlockLen, cfg.InputRate, &cfg.Ctx)
+	core.SpongeOutputsCheck(output, numberOfStates, outputLen, poseidon.width, false, &cfg.Ctx)
+
 	cInputs := (*C.scalar_t)(inputs.AsUnsafePointer())
 	cOutput := (*C.scalar_t)(output.AsUnsafePointer())
 	cNumberOfStates := (C.uint)(numberOfStates)
@@ -88,48 +97,3 @@ func (poseidon *Poseidon) GetDefaultSpongeConfig() core.SpongeConfig {
 	cfg.OutputRate = poseidon.width
 	return cfg
 }
-
-// func GetDefaultPoseidonConfig() core.PoseidonConfig {
-// 	return core.GetDefaultPoseidonConfig()
-// }
-
-// func PoseidonHash[T any](scalars, results core.HostOrDeviceSlice, numberOfStates int, cfg *core.PoseidonConfig, constants *core.PoseidonConstants[T]) core.IcicleError {
-// 	scalarsPointer, resultsPointer, cfgPointer := core.PoseidonCheck(scalars, results, cfg, constants, numberOfStates)
-
-// 	cScalars := (*C.scalar_t)(scalarsPointer)
-// 	cResults := (*C.scalar_t)(resultsPointer)
-// 	cNumberOfStates := (C.int)(numberOfStates)
-// 	cArity := (C.int)(constants.Arity)
-// 	cConstants := (*C.PoseidonConstants)(unsafe.Pointer(constants))
-// 	cCfg := (*C.PoseidonConfig)(cfgPointer)
-
-// 	__ret := C.bn254_poseidon_hash_cuda(cScalars, cResults, cNumberOfStates, cArity, cConstants, cCfg)
-
-// 	err := (cr.CudaError)(__ret)
-// 	return core.FromCudaError(err)
-// }
-
-// func CreateOptimizedPoseidonConstants[T any](arity, fullRoundsHalfs, partialRounds int, constants core.HostOrDeviceSlice, ctx cr.DeviceContext, poseidonConstants *core.PoseidonConstants[T]) core.IcicleError {
-
-// 	cArity := (C.int)(arity)
-// 	cFullRoundsHalfs := (C.int)(fullRoundsHalfs)
-// 	cPartialRounds := (C.int)(partialRounds)
-// 	cConstants := (*C.scalar_t)(constants.AsUnsafePointer())
-// 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-// 	cPoseidonConstants := (*C.PoseidonConstants)(unsafe.Pointer(poseidonConstants))
-
-// 	__ret := C.bn254_create_optimized_poseidon_constants_cuda(cArity, cFullRoundsHalfs, cPartialRounds, cConstants, cCtx, cPoseidonConstants)
-// 	err := (cr.CudaError)(__ret)
-// 	return core.FromCudaError(err)
-// }
-
-// func InitOptimizedPoseidonConstantsCuda[T any](arity int, ctx cr.DeviceContext, constants *core.PoseidonConstants[T]) core.IcicleError {
-
-// 	cArity := (C.int)(arity)
-// 	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-// 	cConstants := (*C.PoseidonConstants)(unsafe.Pointer(constants))
-
-// 	__ret := C.bn254_init_optimized_poseidon_constants_cuda(cArity, cCtx, cConstants)
-// 	err := (cr.CudaError)(__ret)
-// 	return core.FromCudaError(err)
-// }
