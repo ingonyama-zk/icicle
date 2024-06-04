@@ -19,6 +19,7 @@ endfunction()
 function(setup_field_target)    
     disale_unsupported_apis()
     add_library(icicle_field SHARED 
+      src/fields/ffi_extern.cpp
       src/vec_ops.cpp
       src/matrix_ops.cpp
       src/ntt.cpp

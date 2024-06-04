@@ -85,4 +85,24 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+#ifdef EXT_FIELD
+  using extFieldMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const extension_t* in,
+    uint32_t nof_rows,
+    uint32_t nof_cols,
+    const MatrixOpsConfig& config,
+    extension_t* out)>;
+
+  void register_matrix_transpose_ext_field(const std::string& deviceType, extFieldMatrixOpImpl impl);
+
+#define REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_matrix_transpose_ext_field) = []() -> bool {                                               \
+      register_matrix_transpose_ext_field(DEVICE_TYPE, FUNC);                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+#endif // EXT_FIELD
+
 } // namespace icicle

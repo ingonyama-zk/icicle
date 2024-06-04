@@ -5,7 +5,7 @@ using namespace curve_config;
 
 // extern functions for FFI
 
-// G1
+/********************************** G1 **********************************/
 extern "C" bool CONCAT_EXPAND(CURVE, eq)(projective_t* point1, projective_t* point2)
 {
   return (*point1 == *point2) &&
@@ -30,7 +30,7 @@ extern "C" void CONCAT_EXPAND(CURVE, generate_affine_points)(affine_t* points, i
   projective_t::rand_host_many_affine(points, size);
 }
 
-// G2
+/********************************** G2 **********************************/
 extern "C" bool CONCAT_EXPAND(CURVE, g2_eq)(g2_projective_t* point1, g2_projective_t* point2)
 {
   return (*point1 == *point2) &&
