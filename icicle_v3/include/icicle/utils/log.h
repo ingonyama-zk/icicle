@@ -13,7 +13,10 @@ class Log
 public:
   enum eLogLevel { Debug, Info, Warning, Error };
 
-  Log(eLogLevel level) : level(level) {}
+  Log(eLogLevel level) : level{level}
+  {
+    if (level >= s_min_log_level) { oss << "[" << logLevelToString(level) << "] "; }
+  }
 
   ~Log()
   {
@@ -33,6 +36,23 @@ public:
 private:
   eLogLevel level;
   std::ostringstream oss;
+
+  // Convert log level to string
+  const char* logLevelToString(eLogLevel level) const
+  {
+    switch (level) {
+    case Debug:
+      return "DEBUG";
+    case Info:
+      return "INFO";
+    case Warning:
+      return "WARNING";
+    case Error:
+      return "ERROR";
+    default:
+      return "";
+    }
+  }
 
   // logging message with level>=s_min_log_level
 #if defined(NDEBUG)

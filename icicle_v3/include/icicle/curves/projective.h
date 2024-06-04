@@ -30,6 +30,7 @@ public:
     FF denom = FF::inverse(point.z);
     return {point.x * denom, point.y * denom};
   }
+  HOST_DEVICE_INLINE Affine<FF> to_affine() { return to_affine(*this); }
 
   static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point)
   {

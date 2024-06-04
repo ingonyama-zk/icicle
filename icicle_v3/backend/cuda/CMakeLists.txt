@@ -7,7 +7,7 @@ include(cmake/Common.cmake)
 set_env()
 set_gpu_env()
 
-find_package(CUDA REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 
 # device API library
 add_library(icicle_cuda_device SHARED src/cuda_device_api.cu)
