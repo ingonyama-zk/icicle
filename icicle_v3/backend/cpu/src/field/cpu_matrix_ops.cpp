@@ -33,3 +33,6 @@ eIcicleError cpu_matrix_transpose(
 }
 
 REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
+#ifdef EXT_FIELD
+REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", cpu_matrix_transpose<extension_t>);
+#endif // EXT_FIEL

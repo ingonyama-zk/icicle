@@ -54,8 +54,8 @@ TYPED_TEST(FieldApiTest, vectorAddSync)
   const int N = 1 << 15;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
-  generate_scalars(in_a.get(), N);
-  generate_scalars(in_b.get(), N);
+  TypeParam::rand_host_many(in_a.get(), N);
+  TypeParam::rand_host_many(in_b.get(), N);
 
   auto out_cpu = std::make_unique<TypeParam[]>(N);
   auto out_cuda = std::make_unique<TypeParam[]>(N);
@@ -84,8 +84,8 @@ TYPED_TEST(FieldApiTest, vectorAddAsync)
   const int N = 1 << 15;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
-  generate_scalars(in_a.get(), N);
-  generate_scalars(in_b.get(), N);
+  TypeParam::rand_host_many(in_a.get(), N);
+  TypeParam::rand_host_many(in_b.get(), N);
 
   auto out_cpu = std::make_unique<TypeParam[]>(N);
   auto out_cuda = std::make_unique<TypeParam[]>(N);
@@ -136,7 +136,7 @@ TYPED_TEST(FieldApiTest, Ntt)
   const int logn = 15;
   const int N = 1 << logn;
   auto scalars = std::make_unique<TypeParam[]>(N);
-  generate_scalars(scalars.get(), N);
+  TypeParam::rand_host_many(scalars.get(), N);
 
   auto out_cpu = std::make_unique<TypeParam[]>(N);
   auto out_cuda = std::make_unique<TypeParam[]>(N);
@@ -169,8 +169,8 @@ TYPED_TEST(FieldApiTest, CpuVecAPIs)
   const int N = 1 << 15;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
-  generate_scalars(in_a.get(), N);
-  generate_scalars(in_b.get(), N);
+  TypeParam::rand_host_many(in_a.get(), N);
+  TypeParam::rand_host_many(in_b.get(), N);
 
   auto out_cpu_add = std::make_unique<TypeParam[]>(N);
   auto out_cpu_sub = std::make_unique<TypeParam[]>(N);
@@ -198,10 +198,10 @@ TYPED_TEST(FieldApiTest, CpuVecAPIs)
 TYPED_TEST(FieldApiTest, CpuMatrixAPIs)
 {
   const int R = 1 << 10, C = 1 << 6;
-  auto in = std::make_unique<scalar_t[]>(R * C);
-  generate_scalars(in.get(), R * C);
+  auto in = std::make_unique<TypeParam[]>(R * C);
+  TypeParam::rand_host_many(in.get(), R * C);
 
-  auto out_cpu_transpose = std::make_unique<scalar_t[]>(R * C);
+  auto out_cpu_transpose = std::make_unique<TypeParam[]>(R * C);
 
   Device dev = {"CPU", 0};
   icicle_set_device(dev);
