@@ -58,9 +58,9 @@ TEST_F(CurveApiTest, MSM)
   auto bases = std::make_unique<affine_t[]>(N);
   randomize_bases(bases.get(), N); // TODO use icicle API
 
-  affine_t result{}; // TODO Yuval should be projective
+  projective_t result{};
 
-  auto run = [&](const char* dev_type, affine_t* result, const char* msg, bool measure, int iters) {
+  auto run = [&](const char* dev_type, projective_t* result, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
