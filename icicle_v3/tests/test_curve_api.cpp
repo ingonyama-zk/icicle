@@ -37,13 +37,6 @@ public:
   // SetUp/TearDown are called before and after each test
   void SetUp() override {}
   void TearDown() override {}
-
-  void randomize_bases(affine_t* bases, unsigned size)
-  {
-    for (unsigned i = 0; i < size; ++i) {
-      bases[i] = projective_t::to_affine(projective_t::rand_host());
-    }
-  }
 };
 
 TEST_F(CurveApiTest, MSM)
@@ -51,10 +44,10 @@ TEST_F(CurveApiTest, MSM)
   const int logn = 5;
   const int N = 1 << logn;
   auto scalars = std::make_unique<scalar_t[]>(N);
-  generate_scalars(scalars.get(), N);
-
   auto bases = std::make_unique<affine_t[]>(N);
-  randomize_bases(bases.get(), N); // TODO use icicle API
+
+  scalar_t::rand_host_many(scalars.get(), N);
+  projective_t::rand_host_many_affine(bases.get(), N);
 
   projective_t result{};
 

@@ -56,9 +56,6 @@ namespace icicle {
   eIcicleError vector_mul(const S* vec_a, const S* vec_b, uint64_t n, const VecOpsConfig& config, S* output);
 
   template <typename S>
-  eIcicleError generate_scalars(S* host_scalars, uint64_t size);
-
-  template <typename S>
   eIcicleError scalar_convert_montgomery(S* scalars, uint64_t size, bool is_into, const VecOpsConfig& config);
 
   /*************************** Backend registration ***************************/

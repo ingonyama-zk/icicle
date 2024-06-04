@@ -102,34 +102,6 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
-  /*********************************** GENERATE SCALARS ***********************************/
-
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, generate_scalars)(scalar_t* host_scalars, uint64_t size)
-  {
-    scalar_t::rand_host_many(host_scalars, size);
-    return eIcicleError::SUCCESS;
-  }
-
-  template <>
-  eIcicleError generate_scalars(scalar_t* host_scalars, uint64_t size)
-  {
-    return CONCAT_EXPAND(FIELD, generate_scalars)(host_scalars, size);
-  }
-
-#ifdef EXT_FIELD
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ext_field_generate_scalars)(extension_t* host_scalars, uint64_t size)
-  {
-    extension_t::rand_host_many(host_scalars, size);
-    return eIcicleError::SUCCESS;
-  }
-
-  template <>
-  eIcicleError generate_scalars(extension_t* host_scalars, uint64_t size)
-  {
-    return CONCAT_EXPAND(FIELD, ext_field_generate_scalars)(host_scalars, size);
-  }
-#endif // EXT_FIELD
-
   /*********************************** CONVERT MONTGOMERY ***********************************/
 
   ICICLE_DISPATCHER_INST(ScalarConvertMontgomeryDispatcher, scalar_convert_montgomery, scalarConvertMontgomeryImpl)
