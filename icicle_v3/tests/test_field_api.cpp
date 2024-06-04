@@ -130,6 +130,7 @@ TYPED_TEST(FieldApiTest, vectorAddAsync)
   // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(TypeParam)));
 }
 
+#ifndef NTT_DISABLED
 TYPED_TEST(FieldApiTest, Ntt)
 {
   const int logn = 15;
@@ -161,6 +162,7 @@ TYPED_TEST(FieldApiTest, Ntt)
 
   // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
 }
+#endif // NTT_DISABLED
 
 TYPED_TEST(FieldApiTest, CpuVecAPIs)
 {

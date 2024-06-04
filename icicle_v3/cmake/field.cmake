@@ -17,6 +17,7 @@ function(check_field)
 endfunction()
 
 function(setup_field_target)    
+    disale_unsupported_apis()
     add_library(icicle_field SHARED 
       src/vec_ops.cpp
       src/matrix_ops.cpp
@@ -32,4 +33,13 @@ function(setup_field_target)
       set(EXT_FIELD "${EXT_FIELD}" CACHE STRING "")      
       target_compile_definitions(icicle_field PUBLIC EXT_FIELD=${EXT_FIELD})
     endif()
+endfunction()
+
+function(disale_unsupported_apis)
+  set(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
+  
+  if (FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
+    add_compile_definitions(NTT_DISABLED)
+endif()
+
 endfunction()
