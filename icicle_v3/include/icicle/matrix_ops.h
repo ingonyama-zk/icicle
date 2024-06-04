@@ -79,7 +79,7 @@ namespace icicle {
 
 #define REGISTER_MATRIX_TRANSPOSE_BACKEND(DEVICE_TYPE, FUNC)                                                           \
   namespace {                                                                                                          \
-    static bool _reg_vec_add = []() -> bool {                                                                          \
+    static bool UNIQUE(_reg_matrix_transpose) = []() -> bool {                                                         \
       register_matrix_transpose(DEVICE_TYPE, FUNC);                                                                    \
       return true;                                                                                                     \
     }();                                                                                                               \
