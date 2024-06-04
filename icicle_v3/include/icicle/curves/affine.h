@@ -32,6 +32,11 @@ public:
     return (xs.x == ys.x) && (xs.y == ys.y);
   }
 
+    friend HOST_DEVICE_INLINE bool operator!=(const Affine& xs, const Affine& ys)
+  {
+    return !(xs==ys);
+  }
+
   friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Affine& point)
   {
     os << "x: " << point.x << "; y: " << point.y;
