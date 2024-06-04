@@ -10,26 +10,27 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+enable_testing()
 
 # device API test
 add_executable(test_device_api test_device_api.cpp)
 target_include_directories(test_device_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
 target_link_libraries(test_device_api PUBLIC GTest::gtest_main icicle_device)
+gtest_discover_tests(test_device_api)
 
 #field API test
 add_executable(test_field_api test_field_api.cpp)
 target_include_directories(test_field_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
 target_link_libraries(test_field_api PUBLIC GTest::gtest_main icicle_device icicle_field)
+gtest_discover_tests(test_field_api)
 
 #curve API test
-add_executable(test_curve_api test_curve_api.cpp)
-target_include_directories(test_curve_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
-target_link_libraries(test_curve_api PUBLIC GTest::gtest_main icicle_device icicle_field icicle_curve)
-
+if (CURVE)
+    add_executable(test_curve_api test_curve_api.cpp)
+    target_include_directories(test_curve_api PUBLIC ${CMAKE_SOURCE_DIR}/include/)
+    target_link_libraries(test_curve_api PUBLIC GTest::gtest_main icicle_device icicle_field icicle_curve)
+    gtest_discover_tests(test_curve_api)
+endif()
 
 add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/backend")
 
-enable_testing()
-gtest_discover_tests(test_device_api)
-gtest_discover_tests(test_field_api)
-gtest_discover_tests(test_curve_api)
