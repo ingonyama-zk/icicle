@@ -31,12 +31,12 @@ if((DEFINED CURVE) AND (DEFINED FIELD))
 endif ()
 
 # field library
-if(DEFINED FIELD)
+if(FIELD)
   check_field()
   setup_field_target()
 endif()
 
-if(DEFINED CURVE)
+if(CURVE)
   check_curve()
   setup_curve_target()
 endif ()
