@@ -138,11 +138,11 @@ int main(int argc, char** argv)
 
   int msm_log_size = (argc > 1) ? atoi(argv[1]) : 17;
   int msm_size = 1<<msm_log_size;
-  int batch_size = (argc > 2) ? atoi(argv[2]) : 1;
+  int batch_size = (argc > 2) ? atoi(argv[2]) : 4;
   //   unsigned msm_size = 1<<21;
   int N = batch_size * msm_size;
-  int precomp_factor = (argc > 3) ? atoi(argv[3]) : 2;
-  int user_c = (argc > 4) ? atoi(argv[4]) : 5;
+  int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
+  int user_c = (argc > 4) ? atoi(argv[4]) : 15;
 
   printf("running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n",CURVE_ID,msm_log_size, batch_size, precomp_factor, user_c);
 
@@ -174,13 +174,13 @@ int main(int argc, char** argv)
   test_projective* res_d;
   test_projective* ref_d;
 
-  cudaMalloc(&scalars_d, sizeof(test_scalar) * msm_size);
-  cudaMalloc(&points_d, sizeof(test_affine) * msm_size);
-  cudaMalloc(&precomp_points_d, sizeof(test_affine) * msm_size * precomp_factor);
-  cudaMalloc(&res_d, sizeof(test_projective));
-  cudaMalloc(&ref_d, sizeof(test_projective));
-  cudaMemcpy(scalars_d, scalars, sizeof(test_scalar) * msm_size, cudaMemcpyHostToDevice);
-  cudaMemcpy(points_d, points, sizeof(test_affine) * msm_size, cudaMemcpyHostToDevice);
+  cudaMalloc(&scalars_d, sizeof(test_scalar) * N);
+  cudaMalloc(&points_d, sizeof(test_affine) * N);
+  cudaMalloc(&precomp_points_d, sizeof(test_affine) * N * precomp_factor);
+  cudaMalloc(&res_d, sizeof(test_projective) * batch_size);
+  cudaMalloc(&ref_d, sizeof(test_projective) * batch_size);
+  cudaMemcpy(scalars_d, scalars, sizeof(test_scalar) * N, cudaMemcpyHostToDevice);
+  cudaMemcpy(points_d, points, sizeof(test_affine) * N, cudaMemcpyHostToDevice);
 
   std::cout << "finished copying" << std::endl;
 
@@ -196,7 +196,7 @@ int main(int argc, char** argv)
   };
   msm::MSMConfig config = {
     ctx,   // DeviceContext
-    0,     // points_size
+    N,     // points_size
     precomp_factor,     // precompute_factor
     user_c,     // c
     0,     // bitsize
@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     true, // are_points_on_device
     false, // are_points_montgomery_form
     true,  // are_results_on_device
-    false, // is_big_triangle
+    true, // is_big_triangle
     true,  // is_async
     // false,  // segments_reduction
   };
@@ -215,12 +215,12 @@ int main(int argc, char** argv)
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  if (precomp_factor > 1) msm::precompute_msm_bases<test_affine, test_projective>(points_d, msm_size, precomp_factor, user_c, false, ctx, precomp_points_d);
+  if (precomp_factor > 1) msm::precompute_msm_bases<test_affine, test_projective>(points_d, N, precomp_factor, user_c, false, ctx, precomp_points_d);
   
   
   // warm up
-  msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
-  cudaDeviceSynchronize();
+  // msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
+  // cudaDeviceSynchronize();
 
   // auto begin1 = std::chrono::high_resolution_clock::now();
   cudaEventRecord(start, stream);
@@ -238,8 +238,14 @@ int main(int argc, char** argv)
   config.c = 16;
   config.precompute_factor = 1;
   config.is_big_triangle = true;
+  config.batch_size = 1;
+  config.points_size = msm_size;
   // config.segments_reduction = false;
-  msm::msm<test_scalar, test_affine, test_projective>(scalars, points_d, msm_size, config, ref_d);
+  for (int i = 0; i < batch_size; i++)
+  {
+    msm::msm<test_scalar, test_affine, test_projective>(scalars+i*msm_size, points_d+i*msm_size, msm_size, config, ref_d+i);
+  }
+  
 
   // config.are_results_on_device = false;
   // std::cout << test_projective::to_affine(large_res[0]) << std::endl;
