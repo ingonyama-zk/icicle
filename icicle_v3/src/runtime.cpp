@@ -7,6 +7,7 @@
 #include "icicle/runtime.h"
 #include "icicle/device_api.h"
 #include "icicle/errors.h"
+#include "icicle/utils/log.h"
 
 using namespace icicle;
 
@@ -92,14 +93,14 @@ extern "C" eIcicleError icicle_load_backend(const std::string& path)
   };
 
   auto load_library = [](const std::string& filePath) {
-    std::cout << "Attempting load: " << filePath << std::endl;
+    ICICLE_LOG_DEBUG << "Attempting load: " << filePath;
     void* handle = dlopen(filePath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (!handle) { std::cerr << "Failed to load " << filePath << ": " << dlerror() << std::endl; }
   };
 
   struct stat pathStat;
   if (stat(path.c_str(), &pathStat) != 0) {
-    std::cerr << "Cannot access path: " << path << std::endl;
+    ICICLE_LOG_ERROR << "Cannot access path: " << path;
     return eIcicleError::INVALID_ARGUMENT;
   }
 
@@ -107,7 +108,7 @@ extern "C" eIcicleError icicle_load_backend(const std::string& path)
     // Path is a directory, recursively search for libraries
     DIR* dir = opendir(path.c_str());
     if (!dir) {
-      std::cerr << "Cannot open directory: " << path << std::endl;
+      ICICLE_LOG_ERROR << "Cannot open directory: " << path;
       return eIcicleError::INVALID_ARGUMENT;
     }
 
@@ -127,7 +128,7 @@ extern "C" eIcicleError icicle_load_backend(const std::string& path)
     // Path is a regular file, check if it is a shared library and load it
     if (is_shared_library(path)) { load_library(path); }
   } else {
-    std::cerr << "Unsupported file type: " << path << std::endl;
+    ICICLE_LOG_ERROR << "Unsupported file type: " << path;
   }
 
   return eIcicleError::SUCCESS;
