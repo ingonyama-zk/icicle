@@ -65,8 +65,11 @@ TEST_F(CurveApiTest, MSM)
     auto config = default_msm_config();
 
     START_TIMER(MSM_sync)
-    for (int i = 0; i < iters; ++i)
+    for (int i = 0; i < iters; ++i) {
+      // TODO real test
+      msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
       msm(scalars.get(), bases.get(), N, config, result);
+    }
     END_TIMER(MSM_sync, msg, measure);
   };
 
