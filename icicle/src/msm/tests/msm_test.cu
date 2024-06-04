@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     true, // are_points_on_device
     false, // are_points_montgomery_form
     true,  // are_results_on_device
-    true, // is_big_triangle
+    false, // is_big_triangle
     true,  // is_async
     // false,  // segments_reduction
   };

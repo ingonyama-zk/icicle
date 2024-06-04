@@ -326,12 +326,14 @@ namespace msm {
     }
 
     template <typename P>
-    __global__ void last_pass_kernel(const P* final_buckets, P* final_sums, unsigned num_sums, unsigned orig_c)
+    __global__ void last_pass_kernel(const P* final_buckets, P* final_sums, unsigned num_sums_per_batch, unsigned batch_size, unsigned nof_bms_per_batch, unsigned orig_c)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-      if (tid >= num_sums) return;
-      unsigned bm_index = tid / orig_c;
-      unsigned bm_tid = tid % orig_c;
+      if (tid >= num_sums_per_batch * batch_size) return;
+      unsigned batch_index = tid / num_sums_per_batch;
+      unsigned batch_tid = tid % num_sums_per_batch;
+      unsigned bm_index = batch_tid / orig_c;
+      unsigned bm_tid = batch_tid % orig_c;
       for (unsigned c = orig_c; c > 1;) {
         c = (c + 1) >> 1;
         bm_index <<= 1;
@@ -341,28 +343,28 @@ namespace msm {
         }
       }
       // printf("tid=%d, bm_index=%d\n", tid, bm_index);
-      final_sums[tid] = final_buckets[2 * bm_index + 1];
+      final_sums[tid] = final_buckets[2 * (batch_index * nof_bms_per_batch + bm_index) + 1];
     }
 
     // this kernel computes the final result using the double and add algorithm
     // it is done by a single thread
     template <typename P, typename S>
     __global__ void final_accumulation_kernel(
-      const P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned nof_empty_bms, unsigned c)
+      const P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_results, unsigned c)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_msms) return;
       P final_result = P::zero();
       // Note: in some cases accumulation of bm is implemented such that some bms are known to be empty. Therefore
       // skipping them.
-      for (unsigned i = nof_bms - nof_empty_bms; i > 1; i--) {
-        final_result = final_result + final_sums[i - 1 + tid * nof_bms]; // add
+      for (unsigned i = nof_results; i > 1; i--) {
+        final_result = final_result + final_sums[i - 1 + tid * nof_results]; // add
         for (unsigned j = 0; j < c; j++)                                 // double
         {
           final_result = final_result + final_result;
         }
       }
-      final_results[tid] = final_result + final_sums[tid * nof_bms];
+      final_results[tid] = final_result + final_sums[tid * nof_results];
     }
 
     // this function computes msm using the bucket method
@@ -845,8 +847,8 @@ namespace msm {
             //   std::cout<<std::endl;
 
             NUM_THREADS = 32;
-            NUM_BLOCKS = (nof_bms_in_batch - nof_empty_bms_per_batch + NUM_THREADS - 1) / NUM_THREADS;
-            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_in_batch - nof_empty_bms_per_batch, c);
+            NUM_BLOCKS = ((nof_bms_per_msm - nof_empty_bms_per_batch) * batch_size + NUM_THREADS - 1) / NUM_THREADS;
+            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_per_msm - nof_empty_bms_per_batch, batch_size, nof_bms_per_msm, c);
 
 
             // cudaDeviceSynchronize();
@@ -887,8 +889,8 @@ namespace msm {
       NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
       // launch the double and add kernel, a single thread per batch element
       final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        final_results, are_results_on_device ? final_result : d_allocated_final_result, batch_size, nof_bms_per_msm,
-        nof_empty_bms_per_batch, c);
+        final_results, are_results_on_device ? final_result : d_allocated_final_result, batch_size, nof_bms_per_msm - nof_empty_bms_per_batch,
+        c);
       CHK_IF_RETURN(cudaFreeAsync(final_results, stream));
 
       if (!are_results_on_device)
