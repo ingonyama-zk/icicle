@@ -75,7 +75,7 @@ namespace icicle {
 
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
-    static bool _reg_vec_add = []() -> bool {                                                                          \
+    static bool UNIQUE(_reg_vec_add) = []() -> bool {                                                                  \
       register_vector_add(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -84,7 +84,7 @@ namespace icicle {
   void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
-    static bool _reg_vec_sub = []() -> bool {                                                                          \
+    static bool UNIQUE(_reg_vec_sub) = []() -> bool {                                                                  \
       register_vector_sub(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -94,7 +94,7 @@ namespace icicle {
 
 #define REGISTER_VECTOR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
-    static bool _reg_vec_mul = []() -> bool {                                                                          \
+    static bool UNIQUE(_reg_vec_mul) = []() -> bool {                                                                  \
       register_vector_mul(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -107,7 +107,7 @@ namespace icicle {
 
 #define REGISTER_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                                         \
   namespace {                                                                                                          \
-    static bool _reg_scalar_convert_mont = []() -> bool {                                                              \
+    static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                      \
       register_scalar_convert_montgomery(DEVICE_TYPE, FUNC);                                                           \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -126,7 +126,7 @@ namespace icicle {
 
 #define REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
-    static bool _reg_vec_add_ext_field = []() -> bool {                                                                \
+    static bool UNIQUE(_reg_vec_add_ext_field) = []() -> bool {                                                        \
       register_vector_add_ext_field(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -135,7 +135,7 @@ namespace icicle {
   void register_vector_sub_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
-    static bool _reg_vec_sub_ext_field = []() -> bool {                                                                \
+    static bool UNIQUE(_reg_vec_sub_ext_field) = []() -> bool {                                                        \
       register_vector_sub_ext_field(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -145,7 +145,7 @@ namespace icicle {
 
 #define REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
-    static bool _reg_vec_mul_ext_field = []() -> bool {                                                                \
+    static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                        \
       register_vector_mul_ext_field(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -158,7 +158,7 @@ namespace icicle {
 
 #define REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                               \
   namespace {                                                                                                          \
-    static bool _reg_scalar_convert_mont_ext_field = []() -> bool {                                                    \
+    static bool UNIQUE(_reg_scalar_convert_mont_ext_field) = []() -> bool {                                            \
       register_scalar_convert_montgomery_ext_field(DEVICE_TYPE, FUNC);                                                 \
       return true;                                                                                                     \
     }();                                                                                                               \

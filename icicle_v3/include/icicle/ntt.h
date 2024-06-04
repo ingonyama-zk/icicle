@@ -125,7 +125,7 @@ namespace icicle {
 
 #define REGISTER_NTT_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
-    static bool _reg_ntt = []() -> bool {                                                                              \
+    static bool UNIQUE(_reg_ntt) = []() -> bool {                                                                      \
       register_ntt(DEVICE_TYPE, FUNC);                                                                                 \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -144,7 +144,7 @@ namespace icicle {
 
 #define REGISTER_NTT_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                              \
   namespace {                                                                                                          \
-    static bool _reg_ntt_ext_field = []() -> bool {                                                                    \
+    static bool UNIQUE(_reg_ntt_ext_field) = []() -> bool {                                                            \
       register_ntt_ext_field(DEVICE_TYPE, FUNC);                                                                       \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -159,7 +159,7 @@ namespace icicle {
 
 #define REGISTER_NTT_INIT_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                            \
   namespace {                                                                                                          \
-    static bool _reg_ntt_init_domain = []() -> bool {                                                                  \
+    static bool UNIQUE(_reg_ntt_init_domain) = []() -> bool {                                                          \
       register_ntt_init_domain(DEVICE_TYPE, FUNC);                                                                     \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -172,7 +172,7 @@ namespace icicle {
 
 #define REGISTER_NTT_RELEASE_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                         \
   namespace {                                                                                                          \
-    static bool _reg_ntt_release_domain = []() -> bool {                                                               \
+    static bool UNIQUE(_reg_ntt_release_domain) = []() -> bool {                                                       \
       register_ntt_release_domain(DEVICE_TYPE, FUNC);                                                                  \
       return true;                                                                                                     \
     }();                                                                                                               \
