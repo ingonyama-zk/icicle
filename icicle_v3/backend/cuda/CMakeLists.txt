@@ -25,9 +25,11 @@ target_include_directories(icicle_cuda_field PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUD
 target_link_libraries(icicle_cuda_field PRIVATE ${CUDA_LIBRARIES}) # Link to CUDA
 
 # curve API library
-add_library(icicle_cuda_curve SHARED src/curve/cuda_msm.cu)
-target_include_directories(icicle_cuda_curve PRIVATE include)
-target_link_libraries(icicle_cuda_curve PUBLIC icicle_device icicle_curve)
-set_target_properties(icicle_cuda_curve PROPERTIES OUTPUT_NAME "icicle_cuda_curve_${FIELD}")
-target_include_directories(icicle_cuda_curve PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-target_link_libraries(icicle_cuda_curve PRIVATE ${CUDA_LIBRARIES}) # Link to CUDA
+if (CURVE)
+    add_library(icicle_cuda_curve SHARED src/curve/cuda_msm.cu)
+    target_include_directories(icicle_cuda_curve PRIVATE include)
+    target_link_libraries(icicle_cuda_curve PUBLIC icicle_device icicle_curve)
+    set_target_properties(icicle_cuda_curve PROPERTIES OUTPUT_NAME "icicle_cuda_curve_${FIELD}")
+    target_include_directories(icicle_cuda_curve PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+    target_link_libraries(icicle_cuda_curve PRIVATE ${CUDA_LIBRARIES}) # Link to CUDA
+endif()
