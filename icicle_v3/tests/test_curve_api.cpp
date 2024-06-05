@@ -154,8 +154,11 @@ TEST_F(CurveApiTest, ecntt)
   auto input = std::make_unique<projective_t[]>(N);
   projective_t::rand_host_many(input.get(), N);
 
-  auto out_main = std::make_unique<projective_t[]>(N);
-  auto out_ref = std::make_unique<projective_t[]>(N);
+  scalar_t::rand_host_many(scalars.get(), N);
+  projective_t::rand_host_many_affine(bases.get(), N);
+  projective_t result_cpu{};
+  projective_t result_cpu_dbl_n_add{};
+  projective_t result_cpu_ref{}; // TODO Yuval should be projective
 
   auto run = [&](const std::string& dev_type, projective_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
@@ -174,10 +177,12 @@ TEST_F(CurveApiTest, ecntt)
     ntt_release_domain<scalar_t>();
   };
 
-  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(projective_t))); // TODO ucomment when CPU is
-  // implemented
+  // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
+  run("CPU", &result_cpu, "CPU msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run("CPU_REF", &result_cpu_ref, "CPU_REF msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // TODO test something
+
+  ASSERT_EQ(result_cpu,result_cpu_ref);
 }
 #endif // ECNTT
 

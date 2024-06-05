@@ -22,7 +22,7 @@ public:
   FF x;
   FF y;
   FF z;
-
+  static HOST_DEVICE_INLINE Projective copy(const Projective& other) { return {other.x, other.y, other.z}; }
   static HOST_DEVICE_INLINE Projective zero() { return {FF::zero(), FF::one(), FF::zero()}; }
 
   static HOST_DEVICE_INLINE Affine<FF> to_affine(const Projective& point)
