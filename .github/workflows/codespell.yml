@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - V3
+      - yshekel/V3
 
 jobs:
   spelling-checker:
