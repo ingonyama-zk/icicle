@@ -30,6 +30,17 @@ namespace vec_ops {
   }
 
   /**
+   *  Accumulate (as vec_a[i] += vec_b[i]) function with the template parameter
+   * `E` being the [extension field](@ref extension_t) of the base field given by `-DFIELD` env variable during build.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, extension_accumulate_cuda)(
+    extension_t* vec_a, extension_t* vec_b, int n, VecOpsConfig& config)
+  {
+    return add<extension_t>(vec_a, vec_b, n, config, vec_a);
+  }
+
+  /**
    * Extern version of [Sub](@ref Sub) function with the template parameter
    * `E` being the [extension field](@ref extension_t) of the base field given by `-DFIELD` env variable during build.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
