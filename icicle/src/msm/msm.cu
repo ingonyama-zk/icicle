@@ -94,10 +94,11 @@ namespace msm {
       unsigned buckets_per_bm,
       unsigned write_phase,
       unsigned step,
-      unsigned num_of_threads)
+      unsigned num_of_threads,
+      unsigned nof_source_buckets)
     {
       const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-      if (tid >= num_of_threads) { return; }
+      if (tid >= num_of_threads) return;
 
       // we need shifted tid because we don't want to be reducing into zero buckets, this allows to skip them.
       // for write_phase==1, the read pattern is different so we don't skip over anything.
@@ -113,6 +114,7 @@ namespace msm {
       const unsigned v_r_key =
         write_stride ? ((write_ind / buckets_per_bm) * 2 + write_phase) * write_stride + write_ind % buckets_per_bm
                      : write_ind;
+      if (read_ind + jump >= nof_source_buckets) printf("tid %d, read_ind %d, write_ind %d\n", tid, read_ind, v_r_key);
       v_r[v_r_key] = v[read_ind] + v[read_ind + jump];
     }
 
@@ -770,6 +772,8 @@ namespace msm {
           CHK_IF_RETURN(cudaMallocAsync(
             &temp_buckets2, sizeof(P) * source_buckets_count / 2 * batch_size, stream));  // for type2 reduction (serial, top window - odds)
           initialize_buckets_kernel<<<(target_buckets_count * batch_size + 255)/256,256>>>(target_buckets, target_buckets_count * batch_size);
+          cudaDeviceSynchronize();
+              printf("cuda err 0: %d\n", cudaGetLastError());
 
           if (source_bits_count > 0) {  //why do we need this condition?
             for (unsigned j = 0; j < target_bits_count; j++) {
@@ -787,25 +791,30 @@ namespace msm {
               NUM_THREADS = max(1, min(MAX_TH, nof_threads));
               NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
               if (!is_odd_c || !is_first_iter){  //skip if c is odd and it's the first iteration
-              // printf("block size 1 = %d\n", 1 << (source_bits_count - j));
+              printf("nof_threads 1 = %d\n", nof_threads);
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
                 is_first_iter || (is_second_iter && is_odd_c) ? source_buckets : temp_buckets1, is_last_iter ? target_buckets : temp_buckets1,
                 1 << (source_bits_count - j + (is_odd_c? 1 : 0)), is_last_iter ? 1 << target_bits_count : 0, 1 << target_bits_count, 0 /*=write_phase*/,
-                (1 << target_bits_count) - 1, nof_threads);
-              // cudaDeviceSynchronize();
-              // printf("cuda err 1: %d\n", cudaGetLastError());
+                (1 << target_bits_count) - 1, nof_threads, source_buckets_count);
+              cudaDeviceSynchronize();
+              printf("cuda err 1: %d\n", cudaGetLastError());
               }
 
-              if (is_odd_c) nof_threads = nof_threads >> 1;
+              nof_threads =
+                (((source_windows_count << (source_bits_count - target_bits_count)) - source_windows_count) << (target_bits_count - 1 - j)) * batch_size;
+              // if (is_odd_c) nof_threads = nof_threads >> 1;
               NUM_THREADS = max(1, min(MAX_TH, nof_threads));
               NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
               // printf("block size 2 = %d\n", 1 << (target_bits_count - j));
+              printf("nof_threads 2 = %d\n", nof_threads);
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_reduction>>>(
                 is_first_iter ? source_buckets : temp_buckets2, is_last_iter ? target_buckets : temp_buckets2,
                 1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 << (target_bits_count - (is_odd_c? 1 : 0)), 1 /*=write_phase*/,
+                (1 << (target_bits_count - (is_odd_c? 1 : 0))) - 1, nof_threads, source_buckets_count);
+              cudaDeviceSynchronize();
+              printf("%d %d %d %d %d %d %d %d\n",source_windows_count, source_buckets_count,1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 << (target_bits_count - (is_odd_c? 1 : 0)), 1 /*=write_phase*/,
                 (1 << (target_bits_count - (is_odd_c? 1 : 0))) - 1, nof_threads);
-              // cudaDeviceSynchronize();
-              // printf("cuda err 2: %d\n", cudaGetLastError());
+              printf("cuda err 2: %d\n", cudaGetLastError());
             }
               CHK_IF_RETURN(cudaEventRecord(event_finished_reduction, stream_reduction));
               CHK_IF_RETURN(cudaStreamWaitEvent(stream, event_finished_reduction));
@@ -849,7 +858,8 @@ namespace msm {
             NUM_THREADS = 32;
             NUM_BLOCKS = ((nof_bms_per_msm - nof_empty_bms_per_batch) * batch_size + NUM_THREADS - 1) / NUM_THREADS;
             last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_per_msm - nof_empty_bms_per_batch, batch_size, nof_bms_per_msm, c);
-
+            cudaDeviceSynchronize();
+              printf("cuda err 3: %d\n", cudaGetLastError());
 
             // cudaDeviceSynchronize();
             //   std::vector<P> h_final_results1;
