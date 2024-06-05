@@ -133,7 +133,7 @@ where
     }
 
     let scalars = <<C as Curve>::ScalarField as FieldImpl>::Config::generate_random(largest_size);
-    
+
     let mut scalars_d = DeviceVec::<<C as Curve>::ScalarField>::cuda_malloc(test_size).unwrap();
     let stream = CudaStream::create().unwrap();
     scalars_d
@@ -144,13 +144,7 @@ where
     cfg.ctx
         .stream = &stream;
     cfg.is_async = true;
-    msm(
-        &scalars_d[..],
-        points,
-        &cfg,
-        &mut msm_results[..],
-    )
-    .unwrap();
+    msm(&scalars_d[..], points, &cfg, &mut msm_results[..]).unwrap();
 
     let mut msm_host_result = vec![Projective::<C>::zero(); 1];
     msm_results
@@ -171,13 +165,7 @@ where
             allocated_pinned_points[i] = points[i].clone()
         }
 
-        msm(
-            &scalars_d[..],
-            allocated_pinned_points,
-            &cfg,
-            &mut msm_results[..],
-        )
-        .unwrap();
+        msm(&scalars_d[..], allocated_pinned_points, &cfg, &mut msm_results[..]).unwrap();
 
         let mut msm_host_result = vec![Projective::<C>::zero(); 1];
         msm_results

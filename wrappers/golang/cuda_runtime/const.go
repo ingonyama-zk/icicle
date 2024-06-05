@@ -299,7 +299,7 @@ const (
 	CudaDevAttrReserved94                             DeviceAttribute = 94
 	CudaDevAttrCooperativeLaunch                      DeviceAttribute = 95  /**< Device supports launching cooperative kernels via ::cudaLaunchCooperativeKernel*/
 	CudaDevAttrCooperativeMultiDeviceLaunch           DeviceAttribute = 96  /**< Deprecated cudaLaunchCooperativeKernelMultiDevice is deprecated. */
-	CudaDevAttrMaxSharedMemoryPerBlockOptin           DeviceAttribute = 97  /**< The maximum optin shared memory per block. This value may vary by chip. See ::cudaFuncSetAttribute */
+	CudaDevAttrMaxSharedMemoryPerBlockOptin           DeviceAttribute = 97  /**< The maximum opt-in shared memory per block. This value may vary by chip. See ::cudaFuncSetAttribute */
 	CudaDevAttrCanFlushRemoteWrites                   DeviceAttribute = 98  /**< Device supports flushing of outstanding remote writes. */
 	CudaDevAttrHostRegisterSupported                  DeviceAttribute = 99  /**< Device supports host memory registration via ::cudaHostRegister. */
 	CudaDevAttrPageableMemoryAccessUsesHostPageTables DeviceAttribute = 100 /**< Device accesses pageable memory via the host's page tables. */

@@ -1,10 +1,12 @@
 use crate::bindings::{
-    cudaFree, cudaFreeHost, cudaHostAlloc, cudaHostRegister, cudaHostUnregister, cudaHostGetFlags, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
-    cudaHostAllocDefault, cudaHostAllocPortable, cudaHostRegisterDefault, cudaHostRegisterPortable, cudaDeviceAttr
+    cudaDeviceAttr, cudaFree, cudaFreeHost, cudaHostAlloc, cudaHostAllocDefault, cudaHostAllocPortable,
+    cudaHostGetFlags, cudaHostRegister, cudaHostRegisterDefault, cudaHostRegisterPortable, cudaHostUnregister,
+    cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
 };
-use crate::device::{check_device, get_device_from_pointer, get_device_attribute};
+use crate::device::{check_device, get_device_attribute, get_device_from_pointer};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
+use bitflags::bitflags;
 use std::mem::{size_of, ManuallyDrop, MaybeUninit};
 use std::ops::{
     Deref, DerefMut, Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
@@ -12,7 +14,6 @@ use std::ops::{
 use std::os::raw::{c_uint, c_void};
 use std::slice::from_raw_parts_mut;
 use std::slice::SliceIndex;
-use bitflags::bitflags;
 
 bitflags! {
     pub struct CudaHostAllocFlags: u32 {
@@ -136,7 +137,8 @@ impl<T> HostSlice<T> {
 
     pub fn is_pinnable(&self) -> bool {
         let pinnable = get_device_attribute(cudaDeviceAttr::cudaDevAttrHostRegisterSupported, 0).unwrap();
-		let lockable = get_device_attribute(cudaDeviceAttr::cudaDevAttrPageableMemoryAccessUsesHostPageTables, 0).unwrap();
+        let lockable =
+            get_device_attribute(cudaDeviceAttr::cudaDevAttrPageableMemoryAccessUsesHostPageTables, 0).unwrap();
 
         pinnable == 1 && lockable == 0
     }
@@ -148,8 +150,8 @@ impl<T> HostSlice<T> {
             cudaHostRegister(ptr, self.len(), flags_to_set as c_uint).wrap()
         }
     }
-    
-    pub fn unpin(&self) -> CudaResult<()>{
+
+    pub fn unpin(&self) -> CudaResult<()> {
         unsafe {
             let mut flags = 0;
             let ptr = self.as_ptr() as *mut c_void;
@@ -174,7 +176,7 @@ impl<T> HostSlice<T> {
             Ok(Self::from_mut_slice(pinned_host_slice))
         }
     }
-    
+
     pub fn free_pinned(&self) -> CudaResult<()> {
         unsafe {
             let mut flags: u32 = 0;
@@ -184,7 +186,7 @@ impl<T> HostSlice<T> {
         }
     }
 
-    pub fn get_memory_flags(& self) -> CudaResult<u32> {
+    pub fn get_memory_flags(&self) -> CudaResult<u32> {
         unsafe {
             let mut flags: u32 = 1234;
             let ptr = self.as_ptr() as *mut c_void;
@@ -501,21 +503,29 @@ impl<T> Drop for DeviceVec<T> {
 pub type CudaMemPool = cudaMemPool_t;
 
 pub(crate) mod tests {
-    use crate::memory::{CudaHostAllocFlags, HostOrDeviceSlice};
     use super::{CudaHostRegisterFlags, HostSlice};
     use crate::bindings::cudaError;
+    use crate::memory::{CudaHostAllocFlags, HostOrDeviceSlice};
 
     #[test]
     fn test_pin_memory() {
         let data = vec![1, 2, 3, 4, 5, 7, 8, 9];
         let data_host_slice = HostSlice::from_slice(&data);
 
-        data_host_slice.pin(CudaHostRegisterFlags::DEFAULT).expect("Registering host mem failed");
-        let err = data_host_slice.pin(CudaHostRegisterFlags::DEFAULT).expect_err("Registering already registered memory succeeded");
+        data_host_slice
+            .pin(CudaHostRegisterFlags::DEFAULT)
+            .expect("Registering host mem failed");
+        let err = data_host_slice
+            .pin(CudaHostRegisterFlags::DEFAULT)
+            .expect_err("Registering already registered memory succeeded");
         assert_eq!(err, cudaError::cudaErrorHostMemoryAlreadyRegistered);
-        
-        data_host_slice.unpin().expect("Unregistering pinned memory failed");
-        let err = data_host_slice.unpin().expect_err("Unregistering non-registered pinned memory succeeded");
+
+        data_host_slice
+            .unpin()
+            .expect("Unregistering pinned memory failed");
+        let err = data_host_slice
+            .unpin()
+            .expect_err("Unregistering non-registered pinned memory succeeded");
         assert_eq!(err, cudaError::cudaErrorInvalidValue);
     }
 
@@ -523,9 +533,15 @@ pub(crate) mod tests {
     fn test_allocated_pinned_memory() {
         let data = vec![1, 2, 3, 4, 5, 7, 8, 9];
         let data_host_slice = HostSlice::from_slice(&data);
-        let newly_allocated_pinned_host_slice: &HostSlice<i32> = HostSlice::allocate_pinned(data_host_slice.len(), CudaHostAllocFlags::DEFAULT).expect("Allocating new pinned memory failed");
-        newly_allocated_pinned_host_slice.free_pinned().expect("Freeing pinned memory failed");
-        let err = newly_allocated_pinned_host_slice.free_pinned().expect_err("Freeing non-pinned memory succeeded");
+        let newly_allocated_pinned_host_slice: &HostSlice<i32> =
+            HostSlice::allocate_pinned(data_host_slice.len(), CudaHostAllocFlags::DEFAULT)
+                .expect("Allocating new pinned memory failed");
+        newly_allocated_pinned_host_slice
+            .free_pinned()
+            .expect("Freeing pinned memory failed");
+        let err = newly_allocated_pinned_host_slice
+            .free_pinned()
+            .expect_err("Freeing non-pinned memory succeeded");
         assert_eq!(err, cudaError::cudaErrorInvalidValue);
     }
 }

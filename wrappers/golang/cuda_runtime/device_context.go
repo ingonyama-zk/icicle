@@ -125,13 +125,13 @@ func GetDeviceAttribute(attr DeviceAttribute, device int) int {
 
 // 			outHost := make(core.HostSlice[Projective], 1)
 
-// 			cr.SynchronizeStream(&stream)
-// 			outHost.CopyFromDevice(&out)
-// 			out.Free()
-// 			// Check with gnark-crypto
-// 			assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
-// 		}
-// 	}, i)
+//			cr.SynchronizeStream(&stream)
+//			outHost.CopyFromDevice(&out)
+//			out.Free()
+//			// Check with gnark-crypto
+//			assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+//		}
+//	}, i)
 func RunOnDevice(deviceId int, funcToRun func(args ...any), args ...any) {
 	go func(id int) {
 		defer runtime.UnlockOSThread()
