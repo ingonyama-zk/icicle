@@ -219,8 +219,8 @@ int main(int argc, char** argv)
   
   
   // warm up
-  // msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
-  // cudaDeviceSynchronize();
+  msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
+  cudaDeviceSynchronize();
 
   // auto begin1 = std::chrono::high_resolution_clock::now();
   cudaEventRecord(start, stream);
