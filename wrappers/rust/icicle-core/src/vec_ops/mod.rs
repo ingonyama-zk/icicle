@@ -222,10 +222,6 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    assert_eq!(
-        cfg.is_a_on_device, cfg.is_result_on_device,
-        "input vector 'a' must have same 'on device' setting as result, since operation is performed in-place"
-    );
     let cfg = check_vec_ops_args(a, b, a, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
 }
