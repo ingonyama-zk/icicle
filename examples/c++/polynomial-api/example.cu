@@ -379,31 +379,22 @@ void example_commit_with_device_memory_view()
   std::cout << "Computing Commitments with poly view"<< std::endl;
   start = std::chrono::high_resolution_clock::now();
   msm::MSMConfig config = msm::default_msm_config();
-  //device vars
-  projective_t* L1c = nullptr, *R1c = nullptr, *L2c = nullptr, *R2c = nullptr;
+  config.are_points_on_device = true;
+  config.are_scalars_on_device = true;
+ 
   //host vars (for result)
   projective_t hL1{}, hL2{}, hR1{}, hR2{};
 
-    //Allocate memory on device (scalars)
-  cudaMalloc(&L1c, sizeof(projective_t)), cudaMalloc(&R1c, sizeof(projective_t));
-  cudaMalloc(&L2c, sizeof(projective_t)),cudaMalloc(&R2c, sizeof(projective_t));
-
   //straightforward msm bn254 api: no batching
-  bn254_msm_cuda(viewL1.get(),points_d,N,config,L1c);
-  bn254_msm_cuda(viewL2.get(),points_d,N,config,L2c);
-  bn254_msm_cuda(viewR1.get(),points_d,N,config,R1c);
-  bn254_msm_cuda(viewR2.get(),points_d,N,config,R2c);
+  bn254_msm_cuda(viewL1.get(),points_d,N,config,&hL1);
+  bn254_msm_cuda(viewL2.get(),points_d,N,config,&hL2);
+  bn254_msm_cuda(viewR1.get(),points_d,N,config,&hR1);
+  bn254_msm_cuda(viewR2.get(),points_d,N,config,&hR2);
 
   end = std::chrono::high_resolution_clock::now();
   duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
   std::cout << "Commitments done. Took: " << duration.count() << " milliseconds"<< std::endl;
  
-  //out result and send to host
-  cudaMemcpy(&hL1, L1c, sizeof(projective_t), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&hL2,L2c, sizeof(projective_t), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&hR1,R1c, sizeof(projective_t), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&hR2, R2c, sizeof(projective_t), cudaMemcpyDeviceToHost);
-
   //sanity checks
   auto affL1 = projective_t::to_affine(hL1);
   auto affR1 = projective_t::to_affine(hR1);
@@ -423,8 +414,6 @@ void example_commit_with_device_memory_view()
   std::cout << "[x: " << affL2.x << ", y: " << affL2.y << "]" << std::endl;
   std::cout << "commitment [4 f_1*f_2]_1:"<<std::endl;
   std::cout << "[x: " << affR2.x << ", y: " << affR2.y << "]" << std::endl;
-//clear memory
-cudaFree(L1c),cudaFree(L2c),cudaFree(R1c),cudaFree(R2c);
 }
 
 
