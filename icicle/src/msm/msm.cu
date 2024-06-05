@@ -904,8 +904,6 @@ namespace msm {
       output_bases, bases, sizeof(A) * bases_size,
       are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
 
-    // unsigned c = 16;
-    printf("precomp c = %d\n", c);
     unsigned total_nof_bms = (P::SCALAR_FF_NBITS - 1) / c + 1;
     unsigned shift = c * ((total_nof_bms - 1) / precompute_factor + 1);
 
