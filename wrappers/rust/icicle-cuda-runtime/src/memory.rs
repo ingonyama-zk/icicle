@@ -135,34 +135,35 @@ impl<T> HostSlice<T> {
             .iter_mut()
     }
 
-    pub fn is_pinnable(&self) -> bool {
-        let pinnable = get_device_attribute(cudaDeviceAttr::cudaDevAttrHostRegisterSupported, 0).unwrap();
-        let lockable =
-            get_device_attribute(cudaDeviceAttr::cudaDevAttrPageableMemoryAccessUsesHostPageTables, 0).unwrap();
+    // TODO: @jeremy Fix the issue where ptr pinned by cudaHostRegister cannot be used in primitives
+    // pub fn is_pinnable(&self) -> bool {
+    //     let pinnable = get_device_attribute(cudaDeviceAttr::cudaDevAttrHostRegisterSupported, 0).unwrap();
+    //     let lockable =
+    //         get_device_attribute(cudaDeviceAttr::cudaDevAttrPageableMemoryAccessUsesHostPageTables, 0).unwrap();
 
-        pinnable == 1 && lockable == 0
-    }
+    //     pinnable == 1 && lockable == 0
+    // }
 
-    pub fn pin(&self, flags: CudaHostRegisterFlags) -> CudaResult<()> {
-        if self.is_pinnable() {
-            unsafe {
-                let ptr = self.as_ptr() as *mut c_void;
-                let flags_to_set = flags.bits();
-                cudaHostRegister(ptr, self.len(), flags_to_set as c_uint).wrap()
-            }
-        } else {
-            Ok(())
-        }
-    }
+    // pub fn pin(&self, flags: CudaHostRegisterFlags) -> CudaResult<()> {
+    //     if self.is_pinnable() {
+    //         unsafe {
+    //             let ptr = self.as_ptr() as *mut c_void;
+    //             let flags_to_set = flags.bits();
+    //             cudaHostRegister(ptr, self.len(), flags_to_set as c_uint).wrap()
+    //         }
+    //     } else {
+    //         Ok(())
+    //     }
+    // }
 
-    pub fn unpin(&self) -> CudaResult<()> {
-        unsafe {
-            let mut flags = 0;
-            let ptr = self.as_ptr() as *mut c_void;
-            cudaHostGetFlags(&mut flags, ptr).wrap()?;
-            cudaHostUnregister(ptr).wrap()
-        }
-    }
+    // pub fn unpin(&self) -> CudaResult<()> {
+    //     unsafe {
+    //         let mut flags = 0;
+    //         let ptr = self.as_ptr() as *mut c_void;
+    //         cudaHostGetFlags(&mut flags, ptr).wrap()?;
+    //         cudaHostUnregister(ptr).wrap()
+    //     }
+    // }
 
     pub fn allocate_pinned(count: usize, flags: CudaHostAllocFlags) -> CudaResult<&'static mut Self> {
         let size = count
