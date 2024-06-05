@@ -86,8 +86,6 @@ namespace vec_ops {
   {
     CHK_INIT_IF_RETURN();
 
-    bool is_in_place = vec_a == result;
-
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
