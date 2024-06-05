@@ -87,9 +87,6 @@ namespace vec_ops {
     }
 
     if (!config.is_result_on_device) {
-      // if (is_in_place) {
-      //   d_result = d_vec_a;
-      // } else
         CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
     } else {
       d_result = result;

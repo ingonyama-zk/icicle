@@ -247,7 +247,6 @@ macro_rules! impl_vec_ops_field {
         }
 
         impl VecOps<$field> for $field_config {
-            
             fn add(
                 a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),

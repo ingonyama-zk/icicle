@@ -35,7 +35,7 @@ where
     assert_eq!(a[0], result3[0]);
 
     add_scalars(a, b, result, &cfg).unwrap();
-    
+
     accumulate_scalars(a, b, &cfg).unwrap();
 
     assert_eq!(a[0], result[0]);
