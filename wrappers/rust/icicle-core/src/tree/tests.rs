@@ -23,7 +23,7 @@ pub fn check_build_field_merkle_tree<F, H, T>(
     config.arity = arity as u32;
     let input_block_len = arity;
     let leaves = vec![F::one(); (1 << height) * arity];
-    let mut digests = vec![F::zero(); merkle_tree_digests_len((height + 1) as u32, arity as u32)];
+    let mut digests = vec![F::zero(); merkle_tree_digests_len((height + 1) as u32, arity as u32, 1)];
 
     let leaves_slice = HostSlice::from_slice(&leaves);
     let digests_slice = HostSlice::from_mut_slice(&mut digests);

@@ -30,6 +30,7 @@ namespace poseidon2 {
     }
 
   public:
+    const std::size_t device_id;
     Poseidon2Constants<S> constants;
 
     cudaError_t squeeze_states(
@@ -89,7 +90,7 @@ namespace poseidon2 {
       MdsType mds_type,
       DiffusionStrategy diffusion,
       device_context::DeviceContext& ctx)
-        : hash::SpongeHasher<S, S>(width, width, width, 0)
+        : hash::SpongeHasher<S, S>(width, width, width, 0), device_id(ctx.device_id)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(create_poseidon2_constants(
@@ -99,7 +100,7 @@ namespace poseidon2 {
     }
 
     Poseidon2(int width, MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx)
-        : hash::SpongeHasher<S, S>(width, width, width, 0)
+        : hash::SpongeHasher<S, S>(width, width, width, 0), device_id(ctx.device_id)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(init_poseidon2_constants(width, mds_type, diffusion, ctx, &constants));
@@ -109,6 +110,7 @@ namespace poseidon2 {
     ~Poseidon2()
     {
       auto ctx = device_context::get_default_device_context();
+      ctx.device_id = this->device_id;
       CHK_STICKY(release_poseidon2_constants<S>(&this->constants, ctx));
     }
   };

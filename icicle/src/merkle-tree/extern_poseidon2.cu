@@ -17,10 +17,10 @@ namespace merkle_tree {
     unsigned int height,
     unsigned int input_block_len,
     const poseidon2::Poseidon2<scalar_t>* poseidon_compression,
-    const poseidon2::Poseidon2<scalar_t>* poseidon_sponge,
+    const poseidon2::Poseidon2<scalar_t>* poseidon_bottom_layer,
     const TreeBuilderConfig& tree_config)
   {
     return build_merkle_tree<scalar_t, scalar_t>(
-      leaves_digests, digests, height, input_block_len, *poseidon_compression, *poseidon_sponge, tree_config);
+      leaves_digests, digests, height, input_block_len, *poseidon_compression, *poseidon_bottom_layer, tree_config);
   }
 } // namespace merkle_tree

@@ -65,7 +65,7 @@ namespace hash {
     if (idx >= number_of_states) { return; }
 
     for (int i = 0; i < rate; i++) {
-      out[idx * rate + i] = states[idx * width + offset];
+      out[idx * rate + i] = states[idx * width + offset + i];
     }
   }
 
@@ -148,10 +148,14 @@ namespace hash {
     /// @param input pointer to input allocated on-device
     /// @param out pointer to output allocated on-device
     cudaError_t compress_many(
-      Image* input, Image* out, unsigned int number_of_states, const device_context::DeviceContext ctx) const
+      Image* input,
+      Image* out,
+      unsigned int number_of_states,
+      unsigned int output_len,
+      const device_context::DeviceContext ctx) const
     {
       CHK_IF_RETURN(run_permutation_kernel(input, input, number_of_states, true, ctx));
-      CHK_IF_RETURN(squeeze_states(input, number_of_states, 1, out, ctx));
+      CHK_IF_RETURN(squeeze_states(input, number_of_states, output_len, out, ctx));
 
       return CHK_LAST();
     }
@@ -187,10 +191,10 @@ namespace hash {
 
       // This allows to copy hash inputs and apply zero padding
       CHK_IF_RETURN(cudaMemcpy2DAsync(
-        states, width * sizeof(Image),      // (Dst) States pointer and pitch
-        inputs, rate * sizeof(Image),       // (Src) Inputs pointer and pitch
-        input_block_len * sizeof(PreImage), // Width of the source matrix
-        number_of_states,                   // Height of the source matrix
+        states, width * sizeof(Image),           // (Dst) States pointer and pitch
+        inputs, input_block_len * sizeof(Image), // (Src) Inputs pointer and pitch
+        input_block_len * sizeof(PreImage),      // Width of the source matrix
+        number_of_states,                        // Height of the source matrix
         cfg.are_inputs_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, cfg.ctx.stream));
 
       CHK_IF_RETURN(pad_many(states, number_of_states, input_block_len, cfg.ctx));

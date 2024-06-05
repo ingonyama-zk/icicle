@@ -17,19 +17,25 @@ impl_poseidon2_tree_builder!("babybear", babybear_poseidon2_tb, ScalarField, Sca
 
 #[cfg(test)]
 pub(crate) mod tests {
+
     use super::Poseidon2TreeBuilder;
     use crate::field::ScalarField;
     use icicle_core::impl_poseidon2_tests;
     use icicle_core::poseidon2::{tests::*, DiffusionStrategy, MdsType, Poseidon2};
     use icicle_core::traits::FieldImpl;
     use icicle_core::tree::tests::check_build_field_merkle_tree;
+    use icicle_core::tree::{TreeBuilder, TreeBuilderConfig};
     use icicle_cuda_runtime::device_context::{self, DeviceContext};
 
+    use icicle_cuda_runtime::memory::HostSlice;
     use p3_baby_bear::BabyBear;
     use p3_baby_bear::DiffusionMatrixBabyBear;
-    use p3_field::{AbstractField, PrimeField32};
+    use p3_commit::Mmcs;
+    use p3_field::{AbstractField, Field, PrimeField32};
+    use p3_matrix::dense::RowMajorMatrix;
+    use p3_merkle_tree::FieldMerkleTreeMmcs;
     use p3_poseidon2::{Poseidon2 as PlonkyPoseidon2, Poseidon2ExternalMatrixGeneral};
-    use p3_symmetric::Permutation;
+    use p3_symmetric::{PaddingFreeSponge, Permutation, TruncatedPermutation};
 
     impl_poseidon2_tests!(ScalarField);
 
@@ -74,8 +80,9 @@ pub(crate) mod tests {
         check_poseidon_kats(24, &kats, &poseidon);
     }
 
-    #[test]
-    fn test_poseidon2_plonky3_t16() {
+    type PlonkyPoseidon2T16 = PlonkyPoseidon2<BabyBear, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBabyBear, 16, 7>;
+
+    fn get_plonky3_poseidon2_t16() -> (Poseidon2<ScalarField>, PlonkyPoseidon2T16) {
         let rounds_p = 13;
         let rounds_f = 8;
         const ALPHA: u64 = 7;
@@ -260,18 +267,6 @@ pub(crate) mod tests {
             DiffusionMatrixBabyBear::default(),
         );
 
-        let mut input: [BabyBear; WIDTH] = [BabyBear::zero(); WIDTH];
-        for i in 0..WIDTH {
-            input[i] = BabyBear::from_canonical_u32(i as u32);
-        }
-
-        let output = plonky_poseidon2.permute(input);
-
-        let mut kats: [ScalarField; WIDTH] = [ScalarField::zero(); WIDTH];
-        for i in 0..WIDTH {
-            kats[i] = ScalarField::from_u32(output[i].as_canonical_u32());
-        }
-
         let ctx = DeviceContext::default();
         let mut round_constants = vec![ScalarField::zero(); rounds_f * WIDTH + rounds_p];
         let external_constants_flattened: Vec<ScalarField> = external_constants
@@ -309,6 +304,7 @@ pub(crate) mod tests {
             ScalarField::from_u32(1 << 13),
             ScalarField::from_u32(1 << 15),
         ];
+
         let poseidon = Poseidon2::new(
             WIDTH,
             ALPHA as u32,
@@ -321,6 +317,28 @@ pub(crate) mod tests {
             &ctx,
         )
         .unwrap();
+
+        (poseidon, plonky_poseidon2)
+    }
+
+    #[test]
+    fn test_poseidon2_plonky3_t16() {
+        const WIDTH: usize = 16;
+
+        let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16();
+
+        let mut input: [BabyBear; WIDTH] = [BabyBear::zero(); WIDTH];
+        for i in 0..WIDTH {
+            input[i] = BabyBear::from_canonical_u32(i as u32);
+        }
+
+        let output = plonky_poseidon2.permute(input);
+
+        let mut kats: [ScalarField; WIDTH] = [ScalarField::zero(); WIDTH];
+        for i in 0..WIDTH {
+            kats[i] = ScalarField::from_u32(output[i].as_canonical_u32());
+        }
+
         check_poseidon_kats(WIDTH, &kats, &poseidon);
     }
 
@@ -652,5 +670,69 @@ pub(crate) mod tests {
         )
         .unwrap();
         check_poseidon_kats(WIDTH, &kats, &poseidon);
+    }
+
+    #[test]
+    fn test_poseidon2_tree_plonky3() {
+        const WIDTH: usize = 16;
+        const ARITY: usize = 2;
+        const HEIGHT: usize = 24;
+        const ROWS: usize = 1 << HEIGHT;
+        const COLS: usize = 8;
+
+        let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16();
+
+        type H = PaddingFreeSponge<PlonkyPoseidon2T16, WIDTH, COLS, COLS>;
+        let h = H::new(plonky_poseidon2.clone());
+
+        type C = TruncatedPermutation<PlonkyPoseidon2T16, ARITY, COLS, WIDTH>;
+        let c = C::new(plonky_poseidon2.clone());
+
+        type F = BabyBear;
+
+        let mut input = vec![F::zero(); ROWS * COLS];
+        let mut icicle_input = vec![ScalarField::zero(); ROWS * COLS];
+        for i in 0..ROWS * COLS {
+            input[i] = F::from_canonical_u32(i as u32);
+            icicle_input[i] = ScalarField::from_u32(i as u32);
+        }
+        println!("Input generated");
+
+        let matrix = RowMajorMatrix::new(input, COLS);
+        let leaves = vec![matrix];
+
+        let mmcs = FieldMerkleTreeMmcs::<<F as Field>::Packing, <F as Field>::Packing, H, C, 8>::new(h, c);
+
+        let (commit, _data) = mmcs.commit(leaves);
+
+        let mut config = TreeBuilderConfig::default();
+        config.arity = ARITY as u32;
+        config.keep_rows = 1;
+        config.digest_elements = COLS as u32;
+        let input_block_len = COLS;
+        // let mut digests = vec![ScalarField::zero(); merkle_tree_digests_len(2 as u32, ARITY as u32, COLS as u32)];
+        let mut digests = vec![ScalarField::zero(); COLS];
+
+        let leaves_slice = HostSlice::from_slice(&icicle_input);
+        let digests_slice = HostSlice::from_mut_slice(&mut digests);
+
+        Poseidon2TreeBuilder::build_merkle_tree(
+            leaves_slice,
+            digests_slice,
+            HEIGHT,
+            input_block_len,
+            &poseidon,
+            &poseidon,
+            &config,
+        )
+        .unwrap();
+
+        let mut converted: [BabyBear; COLS] = [BabyBear::zero(); COLS];
+        for i in 0..COLS {
+            let mut scalar_bytes = [0u8; 4];
+            scalar_bytes.copy_from_slice(&digests_slice[i].to_bytes_le());
+            converted[i] = BabyBear::from_canonical_u32(u32::from_le_bytes(scalar_bytes));
+        }
+        assert_eq!(commit, converted);
     }
 }

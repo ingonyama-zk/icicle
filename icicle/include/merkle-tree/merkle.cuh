@@ -25,10 +25,10 @@ namespace merkle_tree {
 
   /// Flattens the tree digests and sum them up to get
   /// the memory needed to contain all the digests
-  static size_t get_digests_len(uint32_t height, uint32_t arity)
+  static size_t get_digests_len(uint32_t height, uint32_t arity, uint32_t digest_elements)
   {
     size_t digests_len = 0;
-    size_t row_length = 1;
+    size_t row_length = digest_elements;
     for (int i = 0; i <= height; i++) {
       digests_len += row_length;
       row_length *= arity;
@@ -43,8 +43,12 @@ namespace merkle_tree {
    */
   struct TreeBuilderConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    int arity;
-    int keep_rows; /**< How many rows of the Merkle tree rows should be written to output. '0' means all of them */
+    unsigned int arity;
+    unsigned int
+      keep_rows; /**< How many rows of the Merkle tree rows should be written to output. '0' means all of them */
+    unsigned int
+      digest_elements;         /** @param digest_elements the size of output for each bottom layer hash and compression.
+                                *  Will also be equal to the size of the root of the tree. Default value 1 */
     bool are_inputs_on_device; /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool
       are_outputs_on_device; /**< True if outputs are on device and false if they're on host. Default value: false. */
@@ -58,9 +62,10 @@ namespace merkle_tree {
   default_merkle_config(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
   {
     TreeBuilderConfig config = {
-      ctx, // ctx
-      2,
+      ctx,   // ctx
+      2,     // arity
       0,     // keep_rows
+      1,     // digest_elements
       false, // are_inputes_on_device
       false, // are_outputs_on_device
       false, // is_async
@@ -72,10 +77,11 @@ namespace merkle_tree {
    * Builds the Merkle tree
    *
    * @param leaves a pointer to the leaves layer. May be allocated on device or on host, regulated by the config
-   * Expected to have arity ^ (height - 1) elements
+   * Expected to have arity ^ (height) * input_block_len elements
    * @param digests a pointer to the digests storage. May only be allocated on the host
-   * Expected to have `sum(arity ^ (i)) for i in [0..height-1]`
+   * Expected to have `sum(digests_len * (arity ^ (i))) for i in [0..keep_rows]`
    * @param height the height of the merkle tree
+   * @param input_block_len the size of input vectors at the bottom layer of the tree
    * # Algorithm
    * The function will split large tree into many subtrees of size that will fit `STREAM_CHUNK_SIZE`.
    * Each subtree is build in it's own stream (there is a maximum number of streams)
@@ -88,7 +94,7 @@ namespace merkle_tree {
     unsigned int height,
     unsigned int input_block_len,
     const SpongeHasher<Leaf, Digest>& compression,
-    const SpongeHasher<Leaf, Digest>& sponge,
+    const SpongeHasher<Leaf, Digest>& bottom_layer,
     const TreeBuilderConfig& config);
 } // namespace merkle_tree
 

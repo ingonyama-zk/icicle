@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 
   /// Use keep_rows to specify how many rows do you want to store
   int keep_rows = argc > 2 ? atoi(argv[2]) : 7;
-  size_t digests_len = merkle_tree::get_digests_len(keep_rows - 1, A);
+  size_t digests_len = merkle_tree::get_digests_len(keep_rows - 1, A, 1);
 
   /// Fill leaves with scalars [0, 1, ... 2^tree_height - 1]
   START_TIMER(timer_allocation);

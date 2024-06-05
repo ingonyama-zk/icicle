@@ -22,6 +22,10 @@ pub struct TreeBuilderConfig<'a> {
     /// How many rows of the Merkle tree rows should be written to output. '0' means all of them
     pub keep_rows: u32,
 
+    /// The size of output for each bottom layer hash and compression.
+    /// Will also be equal to the size of the root of the tree. Default value 1
+    pub digest_elements: u32,
+
     are_inputs_on_device: bool,
 
     are_outputs_on_device: bool,
@@ -44,6 +48,7 @@ impl<'a> TreeBuilderConfig<'a> {
             ctx: DeviceContext::default_for_device(device_id),
             arity: 2,
             keep_rows: 0,
+            digest_elements: 1,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
@@ -51,10 +56,10 @@ impl<'a> TreeBuilderConfig<'a> {
     }
 }
 
-pub fn merkle_tree_digests_len(height: u32, arity: u32) -> usize {
+pub fn merkle_tree_digests_len(height: u32, arity: u32, digest_elements: u32) -> usize {
     let mut digests_len = 0usize;
-    let mut row_length = 1;
-    for _ in 0..height {
+    let mut row_length = digest_elements as usize;
+    for _ in 0..height + 1 {
         digests_len += row_length;
         row_length *= arity as usize;
     }

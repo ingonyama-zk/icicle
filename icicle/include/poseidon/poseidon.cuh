@@ -23,6 +23,7 @@ namespace poseidon {
   class Poseidon : public SpongeHasher<S, S>
   {
   public:
+    const std::size_t device_id;
     PoseidonConstants<S> constants;
 
     cudaError_t prepare_states(
@@ -88,7 +89,7 @@ namespace poseidon {
       const S* sparse_matrices,
       const S domain_tag,
       device_context::DeviceContext& ctx)
-        : SpongeHasher<S, S>(arity + 1, arity, arity, 1)
+        : SpongeHasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
     {
       PoseidonConstants<S> constants;
       CHK_STICKY(create_optimized_poseidon_constants(
@@ -97,7 +98,8 @@ namespace poseidon {
       this->constants = constants;
     }
 
-    Poseidon(int arity, device_context::DeviceContext& ctx) : SpongeHasher<S, S>(arity + 1, arity, arity, 1)
+    Poseidon(int arity, device_context::DeviceContext& ctx)
+        : SpongeHasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
     {
       PoseidonConstants<S> constants{};
       CHK_STICKY(init_optimized_poseidon_constants(arity, ctx, &constants));
@@ -107,6 +109,7 @@ namespace poseidon {
     ~Poseidon()
     {
       auto ctx = device_context::get_default_device_context();
+      ctx.device_id = this->device_id;
       CHK_STICKY(release_optimized_poseidon_constants<S>(&this->constants, ctx));
     }
   };
