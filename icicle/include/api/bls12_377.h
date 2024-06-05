@@ -119,6 +119,12 @@ extern "C" cudaError_t bls12_377_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
+extern "C" cudaError_t bls12_377_bit_reverse_cuda(
+  const bls12_377::scalar_t* input,
+  uint64_t n,
+  vec_ops::BitReverseConfig& config,
+  bls12_377::scalar_t* output);
+
 extern "C" void bls12_377_generate_scalars(bls12_377::scalar_t* scalars, int size);
 
 extern "C" cudaError_t bls12_377_scalar_convert_montgomery(
