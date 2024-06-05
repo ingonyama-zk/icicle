@@ -91,8 +91,8 @@ namespace vec_ops {
     int num_blocks = (n + num_threads - 1) / num_threads;
 
     E *d_result, *d_alloc_vec_a, *d_alloc_vec_b;
-    E *d_vec_a;
-    const E *d_vec_b;
+    E* d_vec_a;
+    const E* d_vec_b;
     if (!config.is_a_on_device) {
       CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(E), config.ctx.stream));
       CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
@@ -110,7 +110,7 @@ namespace vec_ops {
     }
 
     if (!config.is_result_on_device) {
-        CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
     } else {
       d_result = result;
     }
