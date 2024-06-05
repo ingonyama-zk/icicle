@@ -4,6 +4,9 @@ extern "C" cudaError_t ${FIELD}_mul_cuda(
 extern "C" cudaError_t ${FIELD}_add_cuda(
   ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 
+extern "C" cudaError_t ${FIELD}_accumulate_cuda(
+  ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t ${FIELD}_sub_cuda(
   ${FIELD}::scalar_t* vec_a, ${FIELD}::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, ${FIELD}::scalar_t* result);
 

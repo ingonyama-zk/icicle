@@ -10,13 +10,13 @@ where
 {
     let test_size = 1 << 14;
 
-    let a = F::Config::generate_random(test_size);
+    let mut a = F::Config::generate_random(test_size);
     let b = F::Config::generate_random(test_size);
     let ones = vec![F::one(); test_size];
     let mut result = vec![F::zero(); test_size];
     let mut result2 = vec![F::zero(); test_size];
     let mut result3 = vec![F::zero(); test_size];
-    let a = HostSlice::from_slice(&a);
+    let a = HostSlice::from_mut_slice(&mut a);
     let b = HostSlice::from_slice(&b);
     let ones = HostSlice::from_slice(&ones);
     let result = HostSlice::from_mut_slice(&mut result);
@@ -33,24 +33,9 @@ where
     mul_scalars(a, ones, result3, &cfg).unwrap();
 
     assert_eq!(a[0], result3[0]);
-}
 
-pub fn check_vec_ops_stwo_accumulate<F: FieldImpl>()
-where
-    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
-{
-    let test_size = 1 << 14;
-
-    let mut a = F::Config::generate_random(test_size);
-    let b = F::Config::generate_random(test_size);
-    let mut result = vec![F::zero(); test_size];
-    let a = HostSlice::from_mut_slice(&mut a);
-    let b = HostSlice::from_slice(&b);
-    let result = HostSlice::from_mut_slice(&mut result);
-
-    let cfg = VecOpsConfig::default();
     add_scalars(a, b, result, &cfg).unwrap();
-
+    
     accumulate_scalars(a, b, &cfg).unwrap();
 
     assert_eq!(a[0], result[0]);

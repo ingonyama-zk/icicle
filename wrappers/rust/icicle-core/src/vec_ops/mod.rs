@@ -353,7 +353,6 @@ macro_rules! impl_vec_add_tests {
         #[test]
         pub fn test_vec_add_scalars() {
             check_vec_ops_scalars::<$field>();
-            check_vec_ops_stwo_accumulate::<$field>();
         }
     };
 }

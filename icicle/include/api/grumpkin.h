@@ -74,6 +74,9 @@ extern "C" cudaError_t grumpkin_mul_cuda(
 extern "C" cudaError_t grumpkin_add_cuda(
   grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
 
+extern "C" cudaError_t grumpkin_accumulate_cuda(
+  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t grumpkin_sub_cuda(
   grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
 

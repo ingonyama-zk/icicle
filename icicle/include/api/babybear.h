@@ -56,6 +56,9 @@ extern "C" cudaError_t babybear_mul_cuda(
 extern "C" cudaError_t babybear_add_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
+extern "C" cudaError_t babybear_accumulate_cuda(
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t babybear_sub_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
