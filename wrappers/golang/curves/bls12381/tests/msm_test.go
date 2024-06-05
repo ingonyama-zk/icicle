@@ -124,6 +124,7 @@ func TestMSMPinnedHostMemory(t *testing.T) {
 		if pinnableAndLockable {
 			points.Pin(cr.CudaHostRegisterDefault)
 			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+			assert.Equal(t, points, pinnedPoints, "Allocating newly pinned memory resulted in bad points")
 		}
 
 		var p icicleBls12_381.Projective
