@@ -83,7 +83,7 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
 
-    fn add_inplace(
+    fn accumulate(
         a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
@@ -227,7 +227,7 @@ where
         "input vector 'a' must have same 'on device' setting as result, since operation is performed in-place"
     );
     let cfg = check_vec_ops_args(a, b, a, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::add_inplace(a, b, &cfg)
+    <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
 }
 
 pub fn sub_scalars<F>(
@@ -322,6 +322,14 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
+                #[link_name = concat!($field_prefix, "_accumulate_cuda")]
+                pub(crate) fn accumulate_scalars_cuda(
+                    a: *mut $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "_sub_cuda")]
                 pub(crate) fn sub_scalars_cuda(
                     a: *const $field,
@@ -380,18 +388,17 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            fn add_inplace(
+            fn accumulate(
                 a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> IcicleResult<()> {
                 unsafe {
-                    $field_prefix_ident::add_scalars_cuda(
-                        a.as_ptr(),
+                    $field_prefix_ident::accumulate_scalars_cuda(
+                        a.as_mut_ptr(),
                         b.as_ptr(),
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
-                        a.as_mut_ptr(),
                     )
                     .wrap()
                 }
