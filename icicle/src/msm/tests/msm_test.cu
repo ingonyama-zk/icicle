@@ -4,7 +4,6 @@
 #include "curves/curve_config.cuh"
 // #include "fields/field_config.cuh"
 
-
 #include "msm.cu"
 
 #include <chrono>
@@ -132,19 +131,20 @@ typedef curve_config::affine_t test_affine;
 
 int main(int argc, char** argv)
 {
-
   cudaEvent_t start, stop;
   float msm_time;
 
   int msm_log_size = (argc > 1) ? atoi(argv[1]) : 17;
-  int msm_size = 1<<msm_log_size;
+  int msm_size = 1 << msm_log_size;
   int batch_size = (argc > 2) ? atoi(argv[2]) : 4;
   //   unsigned msm_size = 1<<21;
   int N = batch_size * msm_size;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
   int user_c = (argc > 4) ? atoi(argv[4]) : 15;
 
-  printf("running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n",CURVE_ID,msm_log_size, batch_size, precomp_factor, user_c);
+  printf(
+    "running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n", CURVE_ID, msm_log_size, batch_size,
+    precomp_factor, user_c);
 
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];
@@ -195,36 +195,39 @@ int main(int argc, char** argv)
     0,      // mempool
   };
   msm::MSMConfig config = {
-    ctx,   // DeviceContext
-    N,     // points_size
-    precomp_factor,     // precompute_factor
-    user_c,     // c
-    0,     // bitsize
-    10,    // large_bucket_factor
+    ctx,            // DeviceContext
+    N,              // points_size
+    precomp_factor, // precompute_factor
+    user_c,         // c
+    0,              // bitsize
+    10,             // large_bucket_factor
     batch_size,     // batch_size
-    false, // are_scalars_on_device
-    false, // are_scalars_montgomery_form
-    true, // are_points_on_device
-    false, // are_points_montgomery_form
-    true,  // are_results_on_device
-    false, // is_big_triangle
-    true,  // is_async
+    false,          // are_scalars_on_device
+    false,          // are_scalars_montgomery_form
+    true,           // are_points_on_device
+    false,          // are_points_montgomery_form
+    true,           // are_results_on_device
+    false,          // is_big_triangle
+    true,           // is_async
     // false,  // segments_reduction
   };
 
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  if (precomp_factor > 1) msm::precompute_msm_bases<test_affine, test_projective>(points_d, N, precomp_factor, user_c, false, ctx, precomp_points_d);
-  
-  
+  if (precomp_factor > 1)
+    msm::precompute_msm_bases<test_affine, test_projective>(
+      points_d, N, precomp_factor, user_c, false, ctx, precomp_points_d);
+
   // warm up
-  msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
+  msm::msm<test_scalar, test_affine, test_projective>(
+    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size, config, res_d);
   cudaDeviceSynchronize();
 
   // auto begin1 = std::chrono::high_resolution_clock::now();
   cudaEventRecord(start, stream);
-  msm::msm<test_scalar, test_affine, test_projective>(scalars, precomp_factor > 1? precomp_points_d : points_d, msm_size, config, res_d);
+  msm::msm<test_scalar, test_affine, test_projective>(
+    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size, config, res_d);
   cudaEventRecord(stop, stream);
   cudaStreamSynchronize(stream);
   cudaEventElapsedTime(&msm_time, start, stop);
@@ -234,18 +237,17 @@ int main(int argc, char** argv)
   // auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
   printf("msm time : %.3f ms.\n", msm_time);
 
-  //reference
+  // reference
   config.c = 16;
   config.precompute_factor = 1;
   config.is_big_triangle = true;
   config.batch_size = 1;
   config.points_size = msm_size;
   // config.segments_reduction = false;
-  for (int i = 0; i < batch_size; i++)
-  {
-    msm::msm<test_scalar, test_affine, test_projective>(scalars+i*msm_size, points_d+i*msm_size, msm_size, config, ref_d+i);
+  for (int i = 0; i < batch_size; i++) {
+    msm::msm<test_scalar, test_affine, test_projective>(
+      scalars + i * msm_size, points_d + i * msm_size, msm_size, config, ref_d + i);
   }
-  
 
   // config.are_results_on_device = false;
   // std::cout << test_projective::to_affine(large_res[0]) << std::endl;
@@ -270,21 +272,17 @@ int main(int argc, char** argv)
 
   // std::cout<<"final results batched large"<<std::endl;
   bool success = true;
-  for (unsigned i = 0; i < batch_size; i++)
-  {
-    std::cout<<test_projective::to_affine(res[i])<<std::endl;
-    if (test_projective::to_affine(res[i])==test_projective::to_affine(ref[i])){
-      std::cout<<"good"<<std::endl;
-    }
-    else{
-      std::cout<<"miss"<<std::endl;
-      std::cout<<test_projective::to_affine(ref[i])<<std::endl;
+  for (unsigned i = 0; i < batch_size; i++) {
+    std::cout << test_projective::to_affine(res[i]) << std::endl;
+    if (test_projective::to_affine(res[i]) == test_projective::to_affine(ref[i])) {
+      std::cout << "good" << std::endl;
+    } else {
+      std::cout << "miss" << std::endl;
+      std::cout << test_projective::to_affine(ref[i]) << std::endl;
       success = false;
     }
   }
-  if (success){
-    std::cout<<"success!"<<std::endl;
-  }
+  if (success) { std::cout << "success!" << std::endl; }
 
   // std::cout<<batched_large_res[0]<<std::endl;
   // std::cout<<batched_large_res[1]<<std::endl;
