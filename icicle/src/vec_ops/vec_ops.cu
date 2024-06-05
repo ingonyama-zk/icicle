@@ -86,6 +86,8 @@ namespace vec_ops {
   {
     CHK_INIT_IF_RETURN();
 
+    bool is_in_place = vec_a == result;
+
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
@@ -110,21 +112,29 @@ namespace vec_ops {
     }
 
     if (!config.is_result_on_device) {
-      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
+      if (!is_in_place) {
+        CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
+      } else {
+        d_result = d_vec_a;
+      }
     } else {
-      d_result = result;
+      if (!is_in_place) {
+        d_result = result;
+      } else {
+        d_result = result = d_vec_a;
+      }
     }
 
     // Call the kernel to perform element-wise operation
     Kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, n, d_result);
 
-    if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_a, config.ctx.stream)); }
-    if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_b, config.ctx.stream)); }
-
     if (!config.is_result_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(d_result, config.ctx.stream));
     }
+
+    if (!config.is_a_on_device && !is_in_place) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_a, config.ctx.stream)); }
+    if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_b, config.ctx.stream)); }
 
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
 
