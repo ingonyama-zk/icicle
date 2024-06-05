@@ -118,19 +118,20 @@ where
     let random_points = generate_random_affine_points_with_zeroes(largest_size, 2);
     let points: &HostSlice<Affine<C>> = HostSlice::from_slice(&random_points);
 
-    let pin = points.is_pinnable();
-    if pin {
-        // points.pin(CudaHostRegisterFlags::DEFAULT).unwrap();
-        // let flags = points.get_memory_flags().unwrap();
-        // println!("Flags of registered pin: {:?}", flags);
-        // unsafe {
-        //     println!("points address Rust after pin: {:?}", points.as_ptr());
-        // }
-        // points.unpin();
-        // unsafe {
-        //     println!("points address Rust after unpin: {:?}", points.as_ptr());
-        // }
-    }
+    // TODO: implement cudaHostRegister via HostSlice.pin
+    // let pin = points.is_pinnable();
+    // if pin {
+    //     points.pin(CudaHostRegisterFlags::DEFAULT).unwrap();
+    //     let flags = points.get_memory_flags().unwrap();
+    //     println!("Flags of registered pin: {:?}", flags);
+    //     unsafe {
+    //         println!("points address Rust after pin: {:?}", points.as_ptr());
+    //     }
+    //     points.unpin();
+    //     unsafe {
+    //         println!("points address Rust after unpin: {:?}", points.as_ptr());
+    //     }
+    // }
 
     let scalars = <<C as Curve>::ScalarField as FieldImpl>::Config::generate_random(largest_size);
 
@@ -159,27 +160,26 @@ where
         .into();
     assert!(msm_res_affine.is_on_curve());
 
-    if pin {
-        let allocated_pinned_points = HostSlice::allocate_pinned(points.len(), CudaHostAllocFlags::DEFAULT).unwrap();
-        for i in 0..points.len() {
-            allocated_pinned_points[i] = points[i].clone()
-        }
+    let allocated_pinned_points = HostSlice::allocate_pinned(points.len(), CudaHostAllocFlags::DEFAULT).unwrap();
+    allocated_pinned_points
+        .as_mut_slice()
+        .clone_from_slice(points.as_slice());
 
-        msm(&scalars_d[..], allocated_pinned_points, &cfg, &mut msm_results[..]).unwrap();
+    msm(&scalars_d[..], allocated_pinned_points, &cfg, &mut msm_results[..]).unwrap();
 
-        let mut msm_host_result = vec![Projective::<C>::zero(); 1];
-        msm_results
-            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
-            .unwrap();
-        stream
-            .synchronize()
-            .unwrap();
+    let mut msm_host_result = vec![Projective::<C>::zero(); 1];
+    msm_results
+        .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
+        .unwrap();
+    stream
+        .synchronize()
+        .unwrap();
 
-        let msm_res_affine: ark_ec::short_weierstrass::Affine<<C as Curve>::ArkSWConfig> = msm_host_result[0]
-            .to_ark()
-            .into();
-        assert!(msm_res_affine.is_on_curve());
-    }
+    let msm_res_affine: ark_ec::short_weierstrass::Affine<<C as Curve>::ArkSWConfig> = msm_host_result[0]
+        .to_ark()
+        .into();
+    assert!(msm_res_affine.is_on_curve());
+    allocated_pinned_points.free_pinned();
 
     stream
         .destroy()

@@ -30,7 +30,7 @@ bitflags! {
 }
 
 #[derive(Debug)]
-pub struct HostSlice<T: Sized>([T]);
+pub struct HostSlice<T>([T]);
 pub struct DeviceVec<T>(ManuallyDrop<Box<[T]>>);
 pub struct DeviceSlice<T>([T]);
 
@@ -144,10 +144,14 @@ impl<T> HostSlice<T> {
     }
 
     pub fn pin(&self, flags: CudaHostRegisterFlags) -> CudaResult<()> {
-        unsafe {
-            let ptr = self.as_ptr() as *mut c_void;
-            let flags_to_set = flags.bits();
-            cudaHostRegister(ptr, self.len(), flags_to_set as c_uint).wrap()
+        if self.is_pinnable() {
+            unsafe {
+                let ptr = self.as_ptr() as *mut c_void;
+                let flags_to_set = flags.bits();
+                cudaHostRegister(ptr, self.len(), flags_to_set as c_uint).wrap()
+            }
+        } else {
+            Ok(())
         }
     }
 
