@@ -203,6 +203,7 @@ func TestMSM{{.CurvePrefix}}PinnedHostMemory(t *testing.T) {
 		if pinnableAndLockable {
 			points.Pin(cr.CudaHostRegisterDefault)
 			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+			assert.Equal(t, points, pinnedPoints, "Allocating newly pinned memory resulted in bad points")
 		}
 
 		var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective

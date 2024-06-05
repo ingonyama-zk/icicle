@@ -71,6 +71,12 @@ func AllocPinned(size int, flags AllocPinnedFlags) (unsafe.Pointer, CudaError) {
 	return hostPtr, CudaSuccess
 }
 
+func GetHostFlags(ptr unsafe.Pointer) (flag uint) {
+	cFlag := (C.uint)(flag)
+	C.cudaHostGetFlags(&cFlag, ptr)
+	return
+}
+
 func FreeAllocPinned(hostPtr unsafe.Pointer) CudaError {
 	return (CudaError)(C.cudaFreeHost(hostPtr))
 }

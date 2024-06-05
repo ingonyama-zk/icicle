@@ -2,7 +2,7 @@ use crate::curve::{Affine, Curve, Projective};
 use crate::msm::{msm, precompute_points, MSMConfig, MSM};
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::device::{get_device_count, set_device, warmup};
-use icicle_cuda_runtime::memory::{CudaHostRegisterFlags, DeviceVec, HostSlice};
+use icicle_cuda_runtime::memory::{CudaHostAllocFlags, CudaHostRegisterFlags, DeviceVec, HostOrDeviceSlice, HostSlice};
 use icicle_cuda_runtime::stream::CudaStream;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -103,6 +103,99 @@ where
                 assert_eq!(msm_host_result[0].to_ark(), msm_result_ark);
             }
         });
+}
+
+pub fn check_msm_pinned_memory<C: Curve + MSM<C> + 'static>()
+where
+    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
+    C::ScalarField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::ScalarField>,
+    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
+{
+    let largest_size = 1 << 16;
+    // let test_sizes = [1 << 10, largest_size];
+    let test_size = largest_size;
+    let mut msm_results = DeviceVec::<Projective<C>>::cuda_malloc(1).unwrap();
+    let random_points = generate_random_affine_points_with_zeroes(largest_size, 2);
+    let points: &HostSlice<Affine<C>> = HostSlice::from_slice(&random_points);
+
+    let pin = points.is_pinnable();
+    if pin {
+        // points.pin(CudaHostRegisterFlags::DEFAULT).unwrap();
+        // let flags = points.get_memory_flags().unwrap();
+        // println!("Flags of registered pin: {:?}", flags);
+        // unsafe {
+        //     println!("points address Rust after pin: {:?}", points.as_ptr());
+        // }
+        // points.unpin();
+        // unsafe {
+        //     println!("points address Rust after unpin: {:?}", points.as_ptr());
+        // }
+    }
+
+    let scalars = <<C as Curve>::ScalarField as FieldImpl>::Config::generate_random(largest_size);
+    
+    let mut scalars_d = DeviceVec::<<C as Curve>::ScalarField>::cuda_malloc(test_size).unwrap();
+    let stream = CudaStream::create().unwrap();
+    scalars_d
+        .copy_from_host_async(HostSlice::from_slice(&scalars[..test_size]), &stream)
+        .unwrap();
+
+    let mut cfg = MSMConfig::default();
+    cfg.ctx
+        .stream = &stream;
+    cfg.is_async = true;
+    msm(
+        &scalars_d[..],
+        points,
+        &cfg,
+        &mut msm_results[..],
+    )
+    .unwrap();
+
+    let mut msm_host_result = vec![Projective::<C>::zero(); 1];
+    msm_results
+        .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
+        .unwrap();
+    stream
+        .synchronize()
+        .unwrap();
+
+    let msm_res_affine: ark_ec::short_weierstrass::Affine<<C as Curve>::ArkSWConfig> = msm_host_result[0]
+        .to_ark()
+        .into();
+    assert!(msm_res_affine.is_on_curve());
+
+    if pin {
+        let allocated_pinned_points = HostSlice::allocate_pinned(points.len(), CudaHostAllocFlags::DEFAULT).unwrap();
+        for i in 0..points.len() {
+            allocated_pinned_points[i] = points[i].clone()
+        }
+
+        msm(
+            &scalars_d[..],
+            allocated_pinned_points,
+            &cfg,
+            &mut msm_results[..],
+        )
+        .unwrap();
+
+        let mut msm_host_result = vec![Projective::<C>::zero(); 1];
+        msm_results
+            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
+            .unwrap();
+        stream
+            .synchronize()
+            .unwrap();
+
+        let msm_res_affine: ark_ec::short_weierstrass::Affine<<C as Curve>::ArkSWConfig> = msm_host_result[0]
+            .to_ark()
+            .into();
+        assert!(msm_res_affine.is_on_curve());
+    }
+
+    stream
+        .destroy()
+        .unwrap();
 }
 
 pub fn check_msm_batch<C: Curve + MSM<C>>()

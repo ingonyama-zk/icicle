@@ -197,15 +197,20 @@ func (h HostSlice[T]) AsUnsafePointer() unsafe.Pointer {
 	return unsafe.Pointer(&h[0])
 }
 
+// Registers host memory as pinned, allowing the GPU to read data from the host quicker and save GPU memory space.
+// Memory pinned using this function should be unpinned using [Unpin]
 func (h HostSlice[T]) Pin(flags cr.RegisterPinnedFlags) cr.CudaError {
 	_, err := cr.RegisterPinned(h.AsUnsafePointer(), h.SizeOfElement()*h.Len(), flags)
 	return err
 }
 
+// Unregisters host memory as pinned
 func (h HostSlice[T]) Unpin() cr.CudaError {
 	return cr.FreeRegisteredPinned(h.AsUnsafePointer())
 }
 
+// Allocates new host memory as pinned and copies the HostSlice data to the newly allocated area
+// Memory pinned using this function should be unpinned using [FreePinned]
 func (h HostSlice[T]) AllocPinned(flags cr.AllocPinnedFlags) (HostSlice[T], cr.CudaError) {
 	pinnedMemPointer, err := cr.AllocPinned(h.SizeOfElement()*h.Len(), flags)
 	if err != cr.CudaSuccess {
@@ -216,6 +221,7 @@ func (h HostSlice[T]) AllocPinned(flags cr.AllocPinnedFlags) (HostSlice[T], cr.C
 	return pinnedMem, cr.CudaSuccess
 }
 
+// Unpins host memory that was pinned using [AllocPinned]
 func (h HostSlice[T]) FreePinned() cr.CudaError {
 	return cr.FreeAllocPinned(h.AsUnsafePointer())
 }

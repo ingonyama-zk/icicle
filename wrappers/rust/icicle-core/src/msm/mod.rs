@@ -326,10 +326,9 @@ macro_rules! impl_msm {
                 results: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
             ) -> IcicleResult<()> {
                 unsafe {
-                    let points_ptr = points.as_ptr();
                     $curve_prefix_indent::msm_cuda(
                         scalars.as_ptr(),
-                        points_ptr,
+                        points.as_ptr(),
                         (scalars.len() / results.len()) as i32,
                         cfg,
                         results.as_mut_ptr(),
@@ -389,10 +388,10 @@ macro_rules! impl_msm_tests {
             check_msm::<$curve>()
         }
 
-        // #[test]
-        // fn test_msm_pinned() {
-        //     check_msm_pinned_memory::<$curve>()
-        // }
+        #[test]
+        fn test_msm_pinned() {
+            check_msm_pinned_memory::<$curve>()
+        }
 
         #[test]
         fn test_msm_batch() {
