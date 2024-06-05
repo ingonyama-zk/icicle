@@ -2,7 +2,7 @@
 #include "icicle/ecntt.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
-#include "ntt.template"
+#include "ntt_template.h"
 
 #include "icicle/curves/curve_config.h"
 
