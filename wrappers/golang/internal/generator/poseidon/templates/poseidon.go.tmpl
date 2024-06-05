@@ -4,6 +4,7 @@ package {{.PackageName}}
 // #include "poseidon.h"
 import "C"
 import (
+	"runtime"
 	"unsafe"
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
@@ -17,7 +18,7 @@ type Poseidon struct {
 	handle *PoseidonHandler
 }
 
-func Create(arity uint32, alpha uint32, fullRoundsHalf uint32, partialRounds uint32, scalars core.HostOrDeviceSlice, mdsMatrix core.HostOrDeviceSlice, nonSparseMatrix core.HostOrDeviceSlice, sparseMatrices core.HostOrDeviceSlice, domainTag {{.Field}}.ScalarField, ctx *cr.DeviceContext) Poseidon {
+func Create(arity uint32, alpha uint32, fullRoundsHalf uint32, partialRounds uint32, scalars core.HostOrDeviceSlice, mdsMatrix core.HostOrDeviceSlice, nonSparseMatrix core.HostOrDeviceSlice, sparseMatrices core.HostOrDeviceSlice, domainTag {{.Field}}.ScalarField, ctx *cr.DeviceContext) (*Poseidon, core.IcicleError) {
 	var poseidon *PoseidonHandler
 	cArity := (C.uint)(arity)
 	cAlpha := (C.uint)(alpha)
@@ -29,16 +30,28 @@ func Create(arity uint32, alpha uint32, fullRoundsHalf uint32, partialRounds uin
 	cSparseMatrices := (*C.scalar_t)(sparseMatrices.AsUnsafePointer())
 	cDomainTag := (*C.scalar_t)(unsafe.Pointer(&domainTag))
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
-	C.{{.Field}}_poseidon_create_cuda(&poseidon, cArity, cAlpha, cFullRoundsHalf, cPartialRounds, cScalars, cMdsMatrix, cNonSparseMatrix, cSparseMatrices, cDomainTag, cCtx)
-	return Poseidon{handle: poseidon, width: arity + 1}
+	__ret := C.{{.Field}}_poseidon_create_cuda(&poseidon, cArity, cAlpha, cFullRoundsHalf, cPartialRounds, cScalars, cMdsMatrix, cNonSparseMatrix, cSparseMatrices, cDomainTag, cCtx)
+	err := core.FromCudaError((cr.CudaError)(__ret))
+	if err.IcicleErrorCode != core.IcicleSuccess {
+		return nil, err
+	}
+	p := Poseidon{handle: poseidon, width: arity + 1}
+	runtime.SetFinalizer(ctx, p.Delete)
+	return &p, err
 }
 
-func Load(arity uint32, ctx *cr.DeviceContext) Poseidon {
+func Load(arity uint32, ctx *cr.DeviceContext) (*Poseidon, core.IcicleError) {
 	var poseidon *PoseidonHandler
 	cArity := (C.uint)(arity)
 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
-	C.{{.Field}}_poseidon_load_cuda(&poseidon, cArity, cCtx)
-	return Poseidon{handle: poseidon, width: arity + 1}
+	__ret := C.{{.Field}}_poseidon_load_cuda(&poseidon, cArity, cCtx)
+	err := core.FromCudaError((cr.CudaError)(__ret))
+	if err.IcicleErrorCode != core.IcicleSuccess {
+		return nil, err
+	}
+	p := Poseidon{handle: poseidon, width: arity + 1}
+	runtime.SetFinalizer(ctx, p.Delete)
+	return &p, err
 }
 
 func (poseidon *Poseidon) AbsorbMany(inputs core.HostOrDeviceSlice, states core.DeviceSlice, numberOfStates uint32, inputBlockLen uint32, cfg *core.SpongeConfig) core.IcicleError {
