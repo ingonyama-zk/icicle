@@ -1,5 +1,4 @@
-#pragma once
-#include "icicle/backend/ntt_backend.h"
+#include "icicle/ntt.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
@@ -30,16 +29,15 @@ namespace ntt_cpu {
   public:
     static eIcicleError
     cpu_ntt_init_domain(const Device& device, const S& primitive_root, const NTTInitDomainConfig& config);
+
     static eIcicleError cpu_ntt_release_domain(const Device& device);
-    static eIcicleError get_root_of_unity_from_domain(const Device& device, uint64_t logn, S* rou /*OUT*/);
 
     template <typename U, typename E>
     eIcicleError
     cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output);
 
     template <typename U, typename E>
-    eIcicleError
-    cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output);
+    eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output);
 
     const S* get_twiddles() const { return twiddles.get(); }
     const int get_max_size() const { return max_size; }
@@ -105,19 +103,6 @@ namespace ntt_cpu {
     s_ntt_domain.twiddles.reset(); // Set twiddles to nullptr
     s_ntt_domain.max_size = 0;
     s_ntt_domain.max_log_size = 0;
-    return eIcicleError::SUCCESS;
-  }
-
-  template <typename S>
-  eIcicleError CpuNttDomain<S>::get_root_of_unity_from_domain(const Device& device, uint64_t logn, S* rou /*OUT*/)
-  {
-    std::lock_guard<std::mutex> lock(s_ntt_domain.domain_mutex); // not ideal to lock here but safer
-    ICICLE_ASSERT(logn <= s_ntt_domain.max_log_size)
-      << "NTT log_size=" << logn << " is too large for the domain (logsize=" << s_ntt_domain.max_log_size
-      << "). Consider generating your domain with a higher order root of unity";
-
-    const size_t twiddles_idx = 1ULL << (s_ntt_domain.max_log_size - logn);
-    *rou = s_ntt_domain.twiddles[twiddles_idx];
     return eIcicleError::SUCCESS;
   }
 
@@ -232,8 +217,7 @@ namespace ntt_cpu {
   }
 
   template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError
-  cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output)
+  eIcicleError cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     if (size & (size - 1)) {
       ICICLE_LOG_ERROR << "Size must be a power of 2. Size = " << size;
