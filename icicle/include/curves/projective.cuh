@@ -175,7 +175,7 @@ public:
     UNROLL
 #endif
     for (int i = 0; i < SCALAR_FF::NBITS; i++) {
-      if (i > 0) { res = res + res; }
+      if (i > 0) { res = dbl(res); }
       if (scalar.get_scalar_digit(SCALAR_FF::NBITS - i - 1, 1)) { res = res + point; }
     }
     return res;
