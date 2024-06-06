@@ -24,7 +24,6 @@ where
 {
     width: usize,
     pub handle: PoseidonHandle,
-    device_id: usize,
     phantom: PhantomData<F>,
 }
 
@@ -38,7 +37,6 @@ where
             Ok(Self {
                 width: arity + 1,
                 handle,
-                device_id: ctx.device_id,
                 phantom: PhantomData,
             })
         })
@@ -72,7 +70,6 @@ where
             Ok(Self {
                 width: arity + 1,
                 handle,
-                device_id: ctx.device_id,
                 phantom: PhantomData,
             })
         })
@@ -182,7 +179,6 @@ where
     fn drop(&mut self) {
         <<F as FieldImpl>::Config as PoseidonImpl<F>>::delete(
             self.handle,
-            &DeviceContext::default_for_device(self.device_id),
         )
         .unwrap();
     }
@@ -232,7 +228,7 @@ pub trait PoseidonImpl<F: FieldImpl> {
         cfg: &SpongeConfig,
     ) -> IcicleResult<()>;
 
-    fn delete(poseidon: PoseidonHandle, ctx: &DeviceContext) -> IcicleResult<()>;
+    fn delete(poseidon: PoseidonHandle) -> IcicleResult<()>;
 }
 
 #[macro_export]
@@ -265,7 +261,7 @@ macro_rules! impl_poseidon {
                 pub(crate) fn load(poseidon: *mut PoseidonHandle, arity: u32, ctx: &DeviceContext) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_poseidon_delete_cuda")]
-                pub(crate) fn delete(poseidon: PoseidonHandle, ctx: &DeviceContext) -> CudaError;
+                pub(crate) fn delete(poseidon: PoseidonHandle) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_poseidon_absorb_many_cuda")]
                 pub(crate) fn absorb_many(
@@ -407,8 +403,8 @@ macro_rules! impl_poseidon {
                 }
             }
 
-            fn delete(poseidon: PoseidonHandle, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::delete(poseidon, ctx).wrap() }
+            fn delete(poseidon: PoseidonHandle) -> IcicleResult<()> {
+                unsafe { $field_prefix_ident::delete(poseidon).wrap() }
             }
         }
     };
