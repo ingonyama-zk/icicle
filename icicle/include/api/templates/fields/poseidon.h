@@ -42,7 +42,7 @@ extern "C" cudaError_t ${FIELD}_poseidon_hash_many_cuda(
   hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
-  ${FIELD}_poseidon_delete_cuda(poseidon::Poseidon<${FIELD}::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+  ${FIELD}_poseidon_delete_cuda(poseidon::Poseidon<${FIELD}::scalar_t>* poseidon);
 
 extern "C" cudaError_t ${FIELD}_build_poseidon_merkle_tree(
   const ${FIELD}::scalar_t* leaves,

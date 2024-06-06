@@ -15,3 +15,9 @@ extern "C" cudaError_t ${FIELD}_extension_transpose_matrix_cuda(
   device_context::DeviceContext& ctx,
   bool on_device,
   bool is_async);
+
+extern "C" cudaError_t ${FIELD}_extension_bit_reverse_cuda(
+  const ${FIELD}::extension_t* input,
+  uint64_t n,
+  vec_ops::BitReverseConfig& config,
+  ${FIELD}::extension_t* output);
