@@ -46,4 +46,7 @@ namespace bw6_761 {
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
   };
+
+// used to avoid template specialization for G2 affine type
+#define G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
 } // namespace bw6_761
