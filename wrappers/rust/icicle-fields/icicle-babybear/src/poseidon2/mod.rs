@@ -696,7 +696,6 @@ pub(crate) mod tests {
             input[i] = F::from_canonical_u32(i as u32);
             icicle_input[i] = ScalarField::from_u32(i as u32);
         }
-        println!("Input generated");
 
         let matrix = RowMajorMatrix::new(input, COLS);
         let leaves = vec![matrix];

@@ -67,7 +67,7 @@ namespace keccak {
       bool aligned,
       const device_context::DeviceContext& ctx) const override;
 
-    Keccak(unsigned int rate) : SpongeHasher<uint8_t, uint64_t>(25, 25, rate, 0) {};
+    Keccak(unsigned int rate) : SpongeHasher<uint8_t, uint64_t>(25, 25, rate, 0){};
     ~Keccak() = default;
   };
 } // namespace keccak
