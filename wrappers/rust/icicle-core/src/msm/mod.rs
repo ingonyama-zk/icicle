@@ -60,6 +60,10 @@ pub struct MSMConfig<'a> {
     /// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
     /// If set to `false`, the MSM function will block the current CPU thread.
     pub is_async: bool,
+
+    /// Whether to run the MSM usign the signed digit trick. If set to true, the MSM function will use
+	/// about half as much memory and will also be faster
+	pub is_signed: bool,
 }
 
 impl<'a> Default for MSMConfig<'a> {
@@ -85,6 +89,7 @@ impl<'a> MSMConfig<'a> {
             are_results_on_device: false,
             is_big_triangle: false,
             is_async: false,
+            is_signed: false,
         }
     }
 }

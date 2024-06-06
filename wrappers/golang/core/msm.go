@@ -54,6 +54,10 @@ type MSMConfig struct {
 	/// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
 	/// If set to `false`, the MSM function will block the current CPU thread.
 	IsAsync bool
+
+	/// Whether to run the MSM usign the signed digit trick. If set to true, the MSM function will use
+	/// about half as much memory and will also be faster
+	IsSigned bool
 }
 
 func GetDefaultMSMConfig() MSMConfig {
@@ -73,6 +77,7 @@ func GetDefaultMSMConfig() MSMConfig {
 		false, // areResultsOnDevice
 		false, // IsBigTriangle
 		false, // IsAsync
+		false, //IsSigned
 	}
 }
 
