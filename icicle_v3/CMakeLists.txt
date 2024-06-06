@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(icicle_fe)
+project(icicle_v3)
 
 # Specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -11,9 +11,14 @@ include(cmake/curve.cmake)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(NTT "Build NTT" ON)
+option(MSM "Build MSM" ON)
+option(EXT_FIELD "Build extension field" OFF)
+option(ECNTT "Build ECNTT" OFF)
+option(G2 "Build G2" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
-option(BUILD_CPU_BE "Build CPU backend" ON) # TODO Yuval remove from here once separating the backends from frontend
-option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once separating the backends from frontend
+option(BUILD_CPU_BE "Build CPU backend" ON) 
+option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once separating the cuda backend
 
 # device API library
 add_library(icicle_device SHARED
