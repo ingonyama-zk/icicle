@@ -144,12 +144,6 @@ extern "C" cudaError_t bw6_761_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
-extern "C" cudaError_t bw6_761_bit_reverse_cuda(
-  const bw6_761::scalar_t* input,
-  uint64_t n,
-  vec_ops::BitReverseConfig& config,
-  bw6_761::scalar_t* output);
-
 extern "C" void bw6_761_generate_scalars(bw6_761::scalar_t* scalars, int size);
 
 extern "C" cudaError_t bw6_761_scalar_convert_montgomery(

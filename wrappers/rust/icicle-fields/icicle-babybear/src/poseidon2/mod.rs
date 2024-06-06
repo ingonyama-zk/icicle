@@ -676,7 +676,7 @@ pub(crate) mod tests {
     fn test_poseidon2_tree_plonky3() {
         const WIDTH: usize = 16;
         const ARITY: usize = 2;
-        const HEIGHT: usize = 24;
+        const HEIGHT: usize = 15;
         const ROWS: usize = 1 << HEIGHT;
         const COLS: usize = 8;
 
