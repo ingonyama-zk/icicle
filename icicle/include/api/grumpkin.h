@@ -114,7 +114,7 @@ extern "C" cudaError_t grumpkin_poseidon_hash_many_cuda(
   hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
-  grumpkin_poseidon_delete_cuda(poseidon::Poseidon<grumpkin::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+  grumpkin_poseidon_delete_cuda(poseidon::Poseidon<grumpkin::scalar_t>* poseidon);
 
 extern "C" cudaError_t grumpkin_build_poseidon_merkle_tree(
   const grumpkin::scalar_t* leaves,

@@ -36,7 +36,9 @@ func Create(arity uint32, alpha uint32, fullRoundsHalf uint32, partialRounds uin
 		return nil, err
 	}
 	p := Poseidon{handle: poseidon, width: arity + 1}
-	runtime.SetFinalizer(ctx, p.Delete)
+	runtime.SetFinalizer(&p, func(p *Poseidon) {
+		p.Delete()
+	})
 	return &p, err
 }
 
@@ -50,7 +52,9 @@ func Load(arity uint32, ctx *cr.DeviceContext) (*Poseidon, core.IcicleError) {
 		return nil, err
 	}
 	p := Poseidon{handle: poseidon, width: arity + 1}
-	runtime.SetFinalizer(ctx, p.Delete)
+	runtime.SetFinalizer(&p, func(p *Poseidon) {
+		p.Delete()
+	})
 	return &p, err
 }
 
@@ -97,9 +101,8 @@ func (poseidon *Poseidon) HashMany(inputs core.HostOrDeviceSlice, output core.Ho
 	return core.FromCudaError(err)
 }
 
-func (poseidon *Poseidon) Delete(ctx *cr.DeviceContext) core.IcicleError {
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
-	__ret := C.grumpkin_poseidon_delete_cuda(poseidon.handle, cCtx)
+func (poseidon *Poseidon) Delete() core.IcicleError {
+	__ret := C.grumpkin_poseidon_delete_cuda(poseidon.handle)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
 }

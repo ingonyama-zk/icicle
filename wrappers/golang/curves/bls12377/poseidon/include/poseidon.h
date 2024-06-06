@@ -58,7 +58,7 @@ cudaError_t bls12_377_poseidon_hash_many_cuda(
   unsigned int output_len,
   SpongeConfig* cfg);
 
-cudaError_t bls12_377_poseidon_delete_cuda(PoseidonInst* poseidon, DeviceContext* ctx);
+cudaError_t bls12_377_poseidon_delete_cuda(PoseidonInst* poseidon);
 
 #ifdef __cplusplus
 }

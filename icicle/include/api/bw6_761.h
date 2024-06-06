@@ -152,7 +152,7 @@ extern "C" cudaError_t bw6_761_poseidon_hash_many_cuda(
   hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t
-  bw6_761_poseidon_delete_cuda(poseidon::Poseidon<bw6_761::scalar_t>* poseidon, device_context::DeviceContext& ctx);
+  bw6_761_poseidon_delete_cuda(poseidon::Poseidon<bw6_761::scalar_t>* poseidon);
 
 extern "C" cudaError_t bw6_761_build_poseidon_merkle_tree(
   const bw6_761::scalar_t* leaves,

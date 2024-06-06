@@ -80,8 +80,7 @@ namespace poseidon {
     return poseidon->hash_many(inputs, output, number_of_states, input_block_len, output_len, cfg);
   }
 
-  extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, poseidon_delete_cuda)(PoseidonInst* poseidon, device_context::DeviceContext& ctx)
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_delete_cuda)(PoseidonInst* poseidon)
   {
     try {
       poseidon->~Poseidon();
