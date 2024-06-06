@@ -177,10 +177,7 @@ where
     <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
     fn drop(&mut self) {
-        <<F as FieldImpl>::Config as PoseidonImpl<F>>::delete(
-            self.handle,
-        )
-        .unwrap();
+        <<F as FieldImpl>::Config as PoseidonImpl<F>>::delete(self.handle).unwrap();
     }
 }
 
