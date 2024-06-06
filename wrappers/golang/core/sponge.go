@@ -25,9 +25,9 @@ type SpongeConfig struct {
 	/// If true, hash results will also be copied in the input pointer in aligned format
 	Aligned bool
 
-	/// Whether to run the MSM asynchronously. If set to `true`, the MSM function will be non-blocking
+	/// Whether to run the SpongeHash asynchronously. If set to `true`, the SpongeHash function will be non-blocking
 	/// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
-	/// If set to `false`, the MSM function will block the current CPU thread.
+	/// If set to `false`, the SpongeHash function will block the current CPU thread.
 	IsAsync bool
 }
 
