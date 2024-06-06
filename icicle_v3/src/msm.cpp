@@ -22,6 +22,23 @@ namespace icicle {
     return CONCAT_EXPAND(CURVE, msm)(scalars, bases, msm_size, config, results);
   }
 
+#ifdef G2
+  ICICLE_DISPATCHER_INST(MsmG2Dispatcher, msm_g2, MsmG2Impl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(CURVE, msm_g2)(
+    const scalar_t* scalars, const g2_affine_t* bases, int msm_size, const MSMConfig& config, g2_projective_t* results)
+  {
+    return MsmG2Dispatcher::execute(scalars, bases, msm_size, config, results);
+  }
+
+  template <>
+  eIcicleError msm(
+    const scalar_t* scalars, const g2_affine_t* bases, int msm_size, const MSMConfig& config, g2_projective_t* results)
+  {
+    return CONCAT_EXPAND(CURVE, msm_g2)(scalars, bases, msm_size, config, results);
+  }
+#endif // G2
+
   /*************************** MSM PRECOMPUTE BASES ***************************/
   ICICLE_DISPATCHER_INST(MsmPreComputeDispatcher, msm_precompute_bases, MsmPreComputeImpl);
 
@@ -45,5 +62,31 @@ namespace icicle {
   {
     return CONCAT_EXPAND(CURVE, msm_precompute_bases)(input_bases, nof_bases, precompute_factor, config, output_bases);
   }
+
+#ifdef G2
+  ICICLE_DISPATCHER_INST(MsmG2PreComputeDispatcher, msm_g2_precompute_bases, MsmG2PreComputeImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(CURVE, msm_g2_precompute_bases)(
+    const g2_affine_t* input_bases,
+    int nof_bases,
+    int precompute_factor,
+    const MsmPreComputeConfig& config,
+    g2_affine_t* output_bases)
+  {
+    return MsmG2PreComputeDispatcher::execute(input_bases, nof_bases, precompute_factor, config, output_bases);
+  }
+
+  template <>
+  eIcicleError msm_precompute_bases(
+    const g2_affine_t* input_bases,
+    int nof_bases,
+    int precompute_factor,
+    const MsmPreComputeConfig& config,
+    g2_affine_t* output_bases)
+  {
+    return CONCAT_EXPAND(CURVE, msm_g2_precompute_bases)(
+      input_bases, nof_bases, precompute_factor, config, output_bases);
+  }
+#endif // G2
 
 } // namespace icicle

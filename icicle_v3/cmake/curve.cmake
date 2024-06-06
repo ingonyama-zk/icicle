@@ -32,6 +32,8 @@ function(setup_curve_target)
   # Make sure CURVE is defined in the cache for backends to see
   set(CURVE "${CURVE}" CACHE STRING "")
   target_compile_definitions(icicle_curve PUBLIC CURVE=${CURVE})
-  
-  # TODO Yuval: curve target
+  if (G2)
+    set(G2 "${G2}" CACHE STRING "")      
+    target_compile_definitions(icicle_curve PUBLIC G2=${G2})
+  endif()
 endfunction()

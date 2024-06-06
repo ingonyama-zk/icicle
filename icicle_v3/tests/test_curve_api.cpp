@@ -71,6 +71,39 @@ TEST_F(CurveApiTest, MSM)
   // TODO test something
 }
 
+#ifdef G2
+TEST_F(CurveApiTest, MSM_G2)
+{
+  const int logn = 5;
+  const int N = 1 << logn;
+  auto scalars = std::make_unique<scalar_t[]>(N);
+  auto bases = std::make_unique<g2_affine_t[]>(N);
+
+  scalar_t::rand_host_many(scalars.get(), N);
+  g2_projective_t::rand_host_many_affine(bases.get(), N);
+
+  g2_projective_t result{};
+
+  auto run = [&](const char* dev_type, g2_projective_t* result, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    auto config = default_msm_config();
+
+    START_TIMER(MSM_sync)
+    for (int i = 0; i < iters; ++i) {
+      // TODO real test
+      msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
+      msm(scalars.get(), bases.get(), N, config, result);
+    }
+    END_TIMER(MSM_sync, msg, measure);
+  };
+
+  run("CPU", &result, "CPU msm g2", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // TODO test something
+}
+#endif // G2
+
 TEST_F(CurveApiTest, MontConversion)
 {
   // Note: this test doesn't really test correct mont conversion (since there is no arithmetic in mont) but checks that
