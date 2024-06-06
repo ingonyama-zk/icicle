@@ -168,7 +168,7 @@ namespace icicle {
 
 #define REGISTER_MSM_G2_BACKEND(DEVICE_TYPE, FUNC)                                                                     \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_msm) = []() -> bool {                                                                      \
+    static bool UNIQUE(_reg_msm_g2) = []() -> bool {                                                                   \
       register_msm_g2(DEVICE_TYPE, FUNC);                                                                              \
       return true;                                                                                                     \
     }();                                                                                                               \
@@ -186,7 +186,7 @@ namespace icicle {
 
 #define REGISTER_MSM_G2_PRE_COMPUTE_BASES_BACKEND(DEVICE_TYPE, FUNC)                                                   \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_msm_precompute_bases) = []() -> bool {                                                     \
+    static bool UNIQUE(_reg_msm_g2_precompute_bases) = []() -> bool {                                                  \
       register_msm_g2_precompute_bases(DEVICE_TYPE, FUNC);                                                             \
       return true;                                                                                                     \
     }();                                                                                                               \
