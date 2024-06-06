@@ -5,7 +5,7 @@ function(check_curve)
   set(I 0)
   foreach (SUPPORTED_CURVE ${SUPPORTED_CURVES})
     math(EXPR I "${I} + 1")
-    if (CURVE STREQUAL SUPPORTED_CURVE)      
+    if (CURVE STREQUAL SUPPORTED_CURVE)
       add_compile_definitions(FIELD_ID=${I})
       add_compile_definitions(CURVE_ID=${I})
       set(IS_CURVE_SUPPORTED TRUE)
@@ -21,7 +21,7 @@ function(setup_curve_target)
   set(FIELD ${CURVE})
   setup_field_target()
 
-  add_library(icicle_curve SHARED 
+  add_library(icicle_curve SHARED
     src/msm.cpp
     src/curves/ffi_extern.cpp
     src/curves/montgomery_conversion.cpp
@@ -33,7 +33,12 @@ function(setup_curve_target)
   set(CURVE "${CURVE}" CACHE STRING "")
   target_compile_definitions(icicle_curve PUBLIC CURVE=${CURVE})
   if (G2)
-    set(G2 "${G2}" CACHE STRING "")      
+    set(G2 "${G2}" CACHE STRING "")
     target_compile_definitions(icicle_curve PUBLIC G2=${G2})
+  endif()
+  if (ECNTT)
+    target_sources(icicle_curve PRIVATE src/ecntt.cpp)
+    set(ECNTT "${ECNTT}" CACHE STRING "")
+    target_compile_definitions(icicle_curve PUBLIC ECNTT=${ECNTT})
   endif()
 endfunction()
