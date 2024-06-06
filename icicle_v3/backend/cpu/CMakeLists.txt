@@ -16,6 +16,7 @@ add_library(icicle_cpu_field SHARED
     src/field/cpu_ntt.cpp
     src/field/cpu_matrix_ops.cpp
 )
+target_include_directories(icicle_cpu_field PUBLIC include)
 target_link_libraries(icicle_cpu_field PUBLIC icicle_device icicle_field)
 set_target_properties(icicle_cpu_field PROPERTIES OUTPUT_NAME "icicle_cpu_field_${FIELD}")
 
@@ -23,8 +24,12 @@ set_target_properties(icicle_cpu_field PROPERTIES OUTPUT_NAME "icicle_cpu_field_
 if (CURVE)
     add_library(icicle_cpu_curve SHARED 
         src/curve/cpu_msm.cpp
-        src/curve/cpu_mont_conversion.cpp
-        )
+        src/curve/cpu_mont_conversion.cpp        
+    )
+    if (ECNTT)
+        target_sources(icicle_cpu_curve PRIVATE src/curve/cpu_ecntt.cpp)
+    endif()
+    target_include_directories(icicle_cpu_curve PUBLIC include)
     target_link_libraries(icicle_cpu_curve PUBLIC icicle_device icicle_curve)
     set_target_properties(icicle_cpu_curve PROPERTIES OUTPUT_NAME "icicle_cpu_curve_${CURVE}")
 endif()
