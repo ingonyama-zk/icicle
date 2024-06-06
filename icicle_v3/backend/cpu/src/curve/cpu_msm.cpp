@@ -13,7 +13,7 @@ template <typename S, typename A, typename P>
 eIcicleError
 cpu_msm(const Device& device, const S* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
-  P res = projective_t::zero();
+  P res = P::zero();
   for (auto i = 0; i < msm_size; ++i) {
     res = res + P::from_affine(bases[i]) * scalars[i];
   }
@@ -35,3 +35,8 @@ eIcicleError cpu_msm_precompute_bases(
 
 REGISTER_MSM_BACKEND("CPU", (cpu_msm<scalar_t, affine_t, projective_t>));
 REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<affine_t>);
+
+#ifdef G2
+REGISTER_MSM_G2_BACKEND("CPU", (cpu_msm<scalar_t, g2_affine_t, g2_projective_t>));
+REGISTER_MSM_G2_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<g2_affine_t>);
+#endif // G2
