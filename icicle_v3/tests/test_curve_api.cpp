@@ -4,6 +4,7 @@
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"
+#include "icicle/ecntt.h"
 #include "icicle/msm.h"
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
@@ -109,6 +110,37 @@ TEST_F(CurveApiTest, MontConversion) { mont_conversion_test<affine_t, projective
 TEST_F(CurveApiTest, MSM_G2) { MSM_test<g2_affine_t, g2_projective_t>(); }
 TEST_F(CurveApiTest, MontConversionG2) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
 #endif // G2
+
+#ifdef ECNTT
+TEST_F(CurveApiTest, ecntt)
+{
+  const int logn = 15;
+  const int N = 1 << logn;
+  auto input = std::make_unique<projective_t[]>(N);
+  projective_t::rand_host_many(input.get(), N);
+
+  auto out_cpu = std::make_unique<projective_t[]>(N);
+  auto out_cuda = std::make_unique<projective_t[]>(N);
+
+  auto run = [&](const char* dev_type, projective_t* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    ntt_init_domain(scalar_t::omega(logn), ConfigExtension());
+
+    auto config = default_ntt_config<scalar_t>();
+
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i)
+      ntt(input.get(), N, NTTDir::kForward, config, out);
+    END_TIMER(NTT_sync, msg, measure);
+
+    ntt_release_domain<scalar_t>();
+  };
+
+  run("CPU", out_cpu.get(), "CPU ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+}
+#endif // ECNTT
 
 int main(int argc, char** argv)
 {
