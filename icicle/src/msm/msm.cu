@@ -191,7 +191,7 @@ namespace msm {
       }
     }
 
-        // this kernel splits the scalars into digits of size c
+    // this kernel splits the scalars into digits of size c
     // each thread splits a single scalar into nof_bms digits
     template <typename S>
     __global__ void split_scalars_kernel_signed(
@@ -217,7 +217,7 @@ namespace msm {
       bool negate_chunk;
       unsigned msm_index = tid / msm_size;
       const S& scalar = scalars[tid];
-      //if field bit count divides c we need to negate both the point and scalar if the msb is set to avoid overflow
+      // if field bit count divides c we need to negate both the point and scalar if the msb is set to avoid overflow
 
       // if (S::NBITS % c == 0){
       //   if (scalar.get_scalar_digit(S::NBITS, 1)){
@@ -225,7 +225,7 @@ namespace msm {
       //     negate_point = true;
       //   }
       // }
-    
+
       for (unsigned bm = 0; bm < nof_bms; bm++) {
         const unsigned precomputed_index = bm / precomputed_bms_stride;
         const unsigned target_bm = bm % precomputed_bms_stride;
@@ -235,16 +235,14 @@ namespace msm {
         bucket_index += increment;
         increment = 0;
         negate_chunk = false;
-        if (bucket_index>>(c-1)){
-          if (bucket_index>>(c)){
+        if (bucket_index >> (c - 1)) {
+          if (bucket_index >> (c)) {
             bucket_index = 0;
-          }else{
-          bucket_index = ((1<<c) - bucket_index);//& ((1<<(c-1))-1); //TODO: simplify
+          } else {
+            bucket_index = ((1 << c) - bucket_index); //& ((1<<(c-1))-1); //TODO: simplify
           }
           negate_chunk = true;
           increment = 1;
-          
-          
         }
         if (negate_point) negate_chunk = !negate_chunk;
         if (bucket_index != 0) {
@@ -256,7 +254,9 @@ namespace msm {
         }
         point_indices[current_index] =
           tid % points_size + points_size * precomputed_index; // the point index is saved for later
-        if (negate_chunk) point_indices[current_index] += 1 << msm_log_size;  //we add a sign bit to know wether to add P or -P during accumulation
+        if (negate_chunk)
+          point_indices[current_index] +=
+            1 << msm_log_size; // we add a sign bit to know wether to add P or -P during accumulation
       }
     }
     template <typename S>
@@ -277,7 +277,7 @@ namespace msm {
     }
 
     // this kernel adds up the points in each bucket
-        template <typename P, typename A>
+    template <typename P, typename A>
     __global__ void accumulate_buckets_kernel(
       P* __restrict__ buckets,
       unsigned* __restrict__ bucket_offsets,
@@ -296,10 +296,10 @@ namespace msm {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_buckets_to_compute) return;
       unsigned msm_index = single_bucket_indices[tid] >> (bm_bitsize + c);
-      unsigned single_bucket_index = single_bucket_indices[tid] & ((1<<c)-1);
+      unsigned single_bucket_index = single_bucket_indices[tid] & ((1 << c) - 1);
       const unsigned bm_index = ((single_bucket_indices[tid] >> c) & ((1 << bm_bitsize) - 1));
       single_bucket_index += bm_index * nof_buckets_in_bms;
-      
+
       unsigned batch_bucket_index = msm_index * nof_buckets + single_bucket_index;
       const unsigned bucket_offset = bucket_offsets[tid];
       const unsigned bucket_size = bucket_sizes[tid];
@@ -308,8 +308,10 @@ namespace msm {
       bool sign = false;
       for (unsigned i = 0; i < bucket_size;
            i++) { // add the relevant points starting from the relevant offset up to the bucket size
-        unsigned point_ind = point_indices[bucket_offset + i] & ((1<< msm_log_size)-1);
-        if (is_signed) sign = point_indices[bucket_offset + i] >> msm_log_size;  //if msm is signed get the sign bit from point indices
+        unsigned point_ind = point_indices[bucket_offset + i] & ((1 << msm_log_size) - 1);
+        if (is_signed)
+          sign =
+            point_indices[bucket_offset + i] >> msm_log_size; // if msm is signed get the sign bit from point indices
         A point = sign ? A::neg(points[point_ind]) : points[point_ind];
         bucket =
           i ? (point == A::zero() ? bucket : bucket + point) : (point == A::zero() ? P::zero() : P::from_affine(point));
@@ -346,8 +348,10 @@ namespace msm {
       bool sign = false;
       for (unsigned i = 0; i < run_length;
            i++) { // add the relevant points starting from the relevant offset up to the bucket size
-        unsigned point_ind = point_indices[bucket_offset + i] & ((1<< msm_log_size)-1);
-        if (is_signed) sign = point_indices[bucket_offset + i]>> msm_log_size; //if msm is signed get the sign bit from point indices
+        unsigned point_ind = point_indices[bucket_offset + i] & ((1 << msm_log_size) - 1);
+        if (is_signed)
+          sign =
+            point_indices[bucket_offset + i] >> msm_log_size; // if msm is signed get the sign bit from point indices
         A point = sign ? A::neg(points[point_ind]) : points[point_ind];
         bucket =
           i ? (point == A::zero() ? bucket : bucket + point) : (point == A::zero() ? P::zero() : P::from_affine(point));
@@ -371,12 +375,11 @@ namespace msm {
       if (tid >= size) { return; }
 
       unsigned msm_index = single_bucket_indices[tid] >> (bm_bitsize + c);
-      unsigned single_bucket_index = single_bucket_indices[tid] & ((1<<c)-1);
+      unsigned single_bucket_index = single_bucket_indices[tid] & ((1 << c) - 1);
       const unsigned bm_index = ((single_bucket_indices[tid] >> c) & ((1 << bm_bitsize) - 1));
       single_bucket_index += bm_index * nof_buckets_in_bms;
-      
-      unsigned bucket_index = msm_index * nof_buckets + single_bucket_index;
 
+      unsigned bucket_index = msm_index * nof_buckets + single_bucket_index;
 
       unsigned large_bucket_index = sorted_bucket_sizes_sum[tid] + tid;
       buckets[bucket_index] = large_buckets[large_bucket_index];
@@ -385,7 +388,8 @@ namespace msm {
     // this kernel sums the entire bucket module
     // each thread deals with a single bucket module
     template <typename P>
-    __global__ void big_triangle_sum_kernel(const P* buckets, P* final_sums, unsigned nof_bms, unsigned c, unsigned nof_buckets_in_bms)
+    __global__ void
+    big_triangle_sum_kernel(const P* buckets, P* final_sums, unsigned nof_bms, unsigned c, unsigned nof_buckets_in_bms)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_bms) return;
@@ -520,14 +524,14 @@ namespace msm {
       unsigned NUM_THREADS = 1 << 10;
       unsigned NUM_BLOCKS = (nof_scalars + NUM_THREADS - 1) / NUM_THREADS;
 
-      if (is_signed){
+      if (is_signed) {
         split_scalars_kernel_signed<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, msm_log_size, total_bms_per_msm,
-        bm_bitsize, c, nof_bms_per_msm);
-      }else{
+          bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, msm_log_size,
+          total_bms_per_msm, bm_bitsize, c, nof_bms_per_msm);
+      } else {
         split_scalars_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, total_bms_per_msm,
-        bm_bitsize, c, nof_bms_per_msm);
+          bucket_indices, point_indices, d_scalars, nof_scalars, nof_points, single_msm_size, total_bms_per_msm,
+          bm_bitsize, c, nof_bms_per_msm);
       }
       nof_points *= precompute_factor;
 
@@ -556,8 +560,8 @@ namespace msm {
       // compute number of bucket modules and number of buckets in each module
       unsigned nof_bms_in_batch = nof_bms_per_msm * batch_size;
       // minus nof_bms_per_msm because zero bucket is not included in each bucket module
-      const unsigned nof_buckets = is_signed ? (nof_bms_per_msm << (c-1)) : (nof_bms_per_msm << c) - nof_bms_per_msm;
-      const unsigned nof_buckets_in_bms = is_signed ? (1<<(c-1))+1 : (1 << c);
+      const unsigned nof_buckets = is_signed ? (nof_bms_per_msm << (c - 1)) : (nof_bms_per_msm << c) - nof_bms_per_msm;
+      const unsigned nof_buckets_in_bms = is_signed ? (1 << (c - 1)) + 1 : (1 << c);
       const unsigned total_nof_buckets = nof_buckets * batch_size;
 
       // find bucket_sizes
@@ -760,7 +764,8 @@ namespace msm {
         NUM_BLOCKS = (large_buckets_nof_threads + NUM_THREADS - 1) / NUM_THREADS;
         accumulate_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           large_buckets, sorted_bucket_offsets, sorted_bucket_sizes, large_bucket_indices, sorted_point_indices,
-          d_points, h_nof_large_buckets, c, average_bucket_size, log_nof_large_buckets, large_buckets_nof_threads, msm_log_size, is_signed);
+          d_points, h_nof_large_buckets, c, average_bucket_size, log_nof_large_buckets, large_buckets_nof_threads,
+          msm_log_size, is_signed);
 
         NUM_THREADS = max(1, min(MAX_TH, h_nof_large_buckets));
         NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
@@ -801,7 +806,8 @@ namespace msm {
         accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
           buckets, sorted_bucket_offsets + h_nof_large_buckets, sorted_bucket_sizes + h_nof_large_buckets,
           sorted_single_bucket_indices + h_nof_large_buckets, sorted_point_indices, d_points,
-          nof_buckets + nof_bms_per_msm, h_nof_buckets_to_compute - h_nof_large_buckets, nof_buckets_in_bms, bm_bitsize, c, msm_log_size, is_signed);
+          nof_buckets + nof_bms_per_msm, h_nof_buckets_to_compute - h_nof_large_buckets, nof_buckets_in_bms, bm_bitsize,
+          c, msm_log_size, is_signed);
       }
       CHK_IF_RETURN(cudaFreeAsync(sorted_point_indices, stream));
       CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_sizes, stream));
@@ -825,7 +831,8 @@ namespace msm {
         // launch the bucket module sum kernel - a thread for each bucket module
         NUM_THREADS = 32;
         NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
-        big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms_in_batch, c, nof_buckets_in_bms);
+        big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+          buckets, final_results, nof_bms_in_batch, c, nof_buckets_in_bms);
       } else {
         unsigned source_bits_count = c;
         unsigned source_windows_count = nof_bms_per_msm;
@@ -940,10 +947,9 @@ namespace msm {
     bool is_signed = (c == 1) ? false : config.is_signed;
 
     if (config.is_signed || !config.is_big_triangle) {
-        THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument,
-          "bucket_method_msm: signed msm currently only works with big triangle");
-      }
+      THROW_ICICLE_ERR(
+        IcicleError_t::InvalidArgument, "bucket_method_msm: signed msm currently only works with big triangle");
+    }
 
     return CHK_STICKY(bucket_method_msm(
       bitsize, c, scalars, points, config.batch_size, msm_size,

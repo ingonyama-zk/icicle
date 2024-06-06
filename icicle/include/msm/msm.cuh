@@ -79,9 +79,9 @@ namespace msm {
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */
-    bool is_signed;              /**< Whether to run the MSM usign the signed digit trick. If set to true, the MSM function will use
-                                 *   about half as much memory and will also be faster
-                                 *   Default value: false. */
+    bool is_signed; /**< Whether to run the MSM usign the signed digit trick. If set to true, the MSM function will use
+                     *   about half as much memory and will also be faster
+                     *   Default value: false. */
   };
 
   /**
