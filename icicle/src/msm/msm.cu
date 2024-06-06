@@ -255,8 +255,8 @@ namespace msm {
         point_indices[current_index] =
           tid % points_size + points_size * precomputed_index; // the point index is saved for later
         if (negate_chunk)
-          point_indices[current_index] +=
-            1 << msm_log_size; // we add a sign bit to know wether to add P or -P during accumulation
+          point_indices[current_index] |=
+            1 << msm_log_size; // we add a sign bit to know whether to add P or -P during accumulation
       }
     }
     template <typename S>

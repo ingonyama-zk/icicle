@@ -61,7 +61,7 @@ pub struct MSMConfig<'a> {
     /// If set to `false`, the MSM function will block the current CPU thread.
     pub is_async: bool,
 
-    /// Whether to run the MSM usign the signed digit trick. If set to true, the MSM function will use
+    /// Whether to run the MSM using the signed digit trick. If set to true, the MSM function will use
     /// about half as much memory and will also be faster
     pub is_signed: bool,
 }
