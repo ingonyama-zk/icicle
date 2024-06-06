@@ -22,6 +22,22 @@ namespace icicle {
     return CONCAT_EXPAND(CURVE, affine_convert_montgomery)(input, n, is_into, config, output);
   }
 
+#ifdef G2
+  ICICLE_DISPATCHER_INST(AffineG2ConvertMont, affine_g2_convert_montgomery, AffineG2ConvertMontImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(CURVE, affine_g2_convert_montgomery)(
+    const g2_affine_t* input, size_t n, bool is_into, const ConvertMontgomeryConfig& config, g2_affine_t* output)
+  {
+    return AffineG2ConvertMont::execute(input, n, is_into, config, output);
+  }
+
+  template <>
+  eIcicleError points_convert_montgomery(
+    const g2_affine_t* input, size_t n, bool is_into, const ConvertMontgomeryConfig& config, g2_affine_t* output)
+  {
+    return CONCAT_EXPAND(CURVE, affine_g2_convert_montgomery)(input, n, is_into, config, output);
+  }
+#endif // G2
   /*************************** PROJECTIVE CONVERT MONTGOMERY ***************************/
   ICICLE_DISPATCHER_INST(ProjectiveConvertMont, projective_convert_montgomery, ProjectiveConvertMontImpl);
 
@@ -37,4 +53,30 @@ namespace icicle {
   {
     return CONCAT_EXPAND(CURVE, projective_convert_montgomery)(input, n, is_into, config, output);
   }
+
+#ifdef G2
+  ICICLE_DISPATCHER_INST(ProjectiveG2ConvertMont, projective_g2_convert_montgomery, ProjectiveG2ConvertMontImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(CURVE, projective_g2_convert_montgomery)(
+    const g2_projective_t* input,
+    size_t n,
+    bool is_into,
+    const ConvertMontgomeryConfig& config,
+    g2_projective_t* output)
+  {
+    return ProjectiveG2ConvertMont::execute(input, n, is_into, config, output);
+  }
+
+  template <>
+  eIcicleError points_convert_montgomery(
+    const g2_projective_t* input,
+    size_t n,
+    bool is_into,
+    const ConvertMontgomeryConfig& config,
+    g2_projective_t* output)
+  {
+    return CONCAT_EXPAND(CURVE, projective_g2_convert_montgomery)(input, n, is_into, config, output);
+  }
+
+#endif // G2
 } // namespace icicle
