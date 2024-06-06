@@ -946,7 +946,7 @@ namespace msm {
     }
     bool is_signed = (c == 1) ? false : config.is_signed;
 
-    if (config.is_signed || !config.is_big_triangle) {
+    if (config.is_signed && !config.is_big_triangle) {
       THROW_ICICLE_ERR(
         IcicleError_t::InvalidArgument, "bucket_method_msm: signed msm currently only works with big triangle");
     }
