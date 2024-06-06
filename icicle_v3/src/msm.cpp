@@ -76,6 +76,7 @@ namespace icicle {
     return MsmG2PreComputeDispatcher::execute(input_bases, nof_bases, precompute_factor, config, output_bases);
   }
 
+#ifndef G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
   template <>
   eIcicleError msm_precompute_bases(
     const g2_affine_t* input_bases,
@@ -87,6 +88,7 @@ namespace icicle {
     return CONCAT_EXPAND(CURVE, msm_g2_precompute_bases)(
       input_bases, nof_bases, precompute_factor, config, output_bases);
   }
+#endif // !G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
 #endif // G2
 
 } // namespace icicle
