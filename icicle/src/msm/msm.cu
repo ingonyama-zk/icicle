@@ -939,6 +939,12 @@ namespace msm {
     }
     bool is_signed = (c == 1) ? false : config.is_signed;
 
+    if (config.is_signed || !config.is_big_triangle) {
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument,
+          "bucket_method_msm: signed msm currently only works with big triangle");
+      }
+
     return CHK_STICKY(bucket_method_msm(
       bitsize, c, scalars, points, config.batch_size, msm_size,
       (config.points_size == 0) ? msm_size : config.points_size, results, config.are_scalars_on_device,
