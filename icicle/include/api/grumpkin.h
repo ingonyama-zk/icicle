@@ -41,6 +41,35 @@ extern "C" cudaError_t grumpkin_affine_convert_montgomery(
 extern "C" cudaError_t grumpkin_projective_convert_montgomery(
   grumpkin::projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
+extern "C" void grumpkin_generate_scalars(grumpkin::scalar_t* scalars, int size);
+
+extern "C" cudaError_t grumpkin_scalar_convert_montgomery(
+  grumpkin::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t grumpkin_mul_cuda(
+  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
+
+extern "C" cudaError_t grumpkin_add_cuda(
+  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
+
+extern "C" cudaError_t grumpkin_sub_cuda(
+  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
+
+extern "C" cudaError_t grumpkin_transpose_matrix_cuda(
+  const grumpkin::scalar_t* input,
+  uint32_t row_size,
+  uint32_t column_size,
+  grumpkin::scalar_t* output,
+  device_context::DeviceContext& ctx,
+  bool on_device,
+  bool is_async);
+
+extern "C" cudaError_t grumpkin_bit_reverse_cuda(
+  const grumpkin::scalar_t* input,
+  uint64_t n,
+  vec_ops::BitReverseConfig& config,
+  grumpkin::scalar_t* output);
+
 extern "C" cudaError_t grumpkin_poseidon_create_cuda(
   poseidon::Poseidon<grumpkin::scalar_t>** poseidon,
   unsigned int arity,
@@ -95,28 +124,5 @@ extern "C" cudaError_t grumpkin_build_poseidon_merkle_tree(
   const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_compression,
   const poseidon::Poseidon<grumpkin::scalar_t>* poseidon_sponge,
   const merkle_tree::TreeBuilderConfig& tree_config);
-
-extern "C" cudaError_t grumpkin_mul_cuda(
-  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
-
-extern "C" cudaError_t grumpkin_add_cuda(
-  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
-
-extern "C" cudaError_t grumpkin_sub_cuda(
-  grumpkin::scalar_t* vec_a, grumpkin::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, grumpkin::scalar_t* result);
-
-extern "C" cudaError_t grumpkin_transpose_matrix_cuda(
-  const grumpkin::scalar_t* input,
-  uint32_t row_size,
-  uint32_t column_size,
-  grumpkin::scalar_t* output,
-  device_context::DeviceContext& ctx,
-  bool on_device,
-  bool is_async);
-
-extern "C" void grumpkin_generate_scalars(grumpkin::scalar_t* scalars, int size);
-
-extern "C" cudaError_t grumpkin_scalar_convert_montgomery(
-  grumpkin::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 #endif
