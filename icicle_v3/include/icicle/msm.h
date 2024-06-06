@@ -155,4 +155,42 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+#ifdef G2
+  using MsmG2Impl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* scalars,
+    const g2_affine_t* bases,
+    int msm_size,
+    const MSMConfig& config,
+    g2_projective_t* results)>;
+
+  void register_msm_g2(const std::string& deviceType, MsmG2Impl impl);
+
+#define REGISTER_MSM_G2_BACKEND(DEVICE_TYPE, FUNC)                                                                     \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_msm) = []() -> bool {                                                                      \
+      register_msm_g2(DEVICE_TYPE, FUNC);                                                                              \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using MsmG2PreComputeImpl = std::function<eIcicleError(
+    const Device& device,
+    const g2_affine_t* input_bases,
+    int nof_bases,
+    int precompute_factor,
+    const MsmPreComputeConfig& config,
+    g2_affine_t* output_bases)>;
+
+  void register_msm_g2_precompute_bases(const std::string& deviceType, MsmG2PreComputeImpl impl);
+
+#define REGISTER_MSM_G2_PRE_COMPUTE_BASES_BACKEND(DEVICE_TYPE, FUNC)                                                   \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_msm_precompute_bases) = []() -> bool {                                                     \
+      register_msm_g2_precompute_bases(DEVICE_TYPE, FUNC);                                                             \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+#endif // G2
+
 }; // namespace icicle
