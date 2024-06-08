@@ -218,13 +218,13 @@ namespace msm {
       unsigned msm_index = tid / msm_size;
       const S& scalar = scalars[tid];
       // if field bit count divides c we need to negate both the point and scalar if the msb is set to avoid overflow
+      if (S::NBITS % c == 0){
+        if (scalars[tid].get_scalar_digit(S::NBITS - 1, 1)){
+          negate_point = true;
+        }
+      }
 
-      // if (S::NBITS % c == 0){
-      //   if (scalar.get_scalar_digit(S::NBITS, 1)){
-      //     scalar = S::neg(scalar);
-      //     negate_point = true;
-      //   }
-      // }
+      const S& scalar = negate_point ? S::neg(scalars[tid]) : scalars[tid];
 
       for (unsigned bm = 0; bm < nof_bms; bm++) {
         const unsigned precomputed_index = bm / precomputed_bms_stride;
