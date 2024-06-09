@@ -22,8 +22,7 @@ option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once
 
 # device API library
 add_library(icicle_device SHARED
-  src/device_api.cpp
-  src/errors.cpp
+  src/device_api.cpp  
   src/runtime.cpp
 )
 target_link_libraries(icicle_device PUBLIC dl)

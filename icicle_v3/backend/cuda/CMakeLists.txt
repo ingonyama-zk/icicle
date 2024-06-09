@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(icicle_cuda_backend LANGUAGES CUDA CXX)
-
 include(cmake/Common.cmake)
+
+# when built as subdir of icicle it is already defined
+if (NOT DEFINED NTT)
+    option(NTT "Build NTT" ON)
+endif()
+
+project(icicle_cuda_backend LANGUAGES CUDA CXX)
 
 set_env()
 set_gpu_env()
@@ -21,6 +26,9 @@ add_library(icicle_cuda_field SHARED
     src/field/cuda_vec_ops.cu
     src/field/cuda_mont.cu
     )
+if(NTT)
+    target_sources(icicle_cuda_field PUBLIC src/ntt/ntt.cu src/ntt/mixed_radix_ntt.cu)
+endif()
 target_include_directories(icicle_cuda_field PRIVATE include)
 target_link_libraries(icicle_cuda_field PUBLIC icicle_device icicle_field)
 set_target_properties(icicle_cuda_field PROPERTIES OUTPUT_NAME "icicle_cuda_field_${FIELD}")
