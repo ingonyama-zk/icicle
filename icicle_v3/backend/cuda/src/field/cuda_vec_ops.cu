@@ -4,6 +4,7 @@
 #include "icicle/errors.h"
 #include "icicle/vec_ops.h"
 #include "gpu-utils/error_handler.h"
+#include "error_translation.h"
 
 #define MAX_THREADS_PER_BLOCK 256
 
@@ -103,21 +104,24 @@ cudaError_t vec_op(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& co
 }
 
 template <typename E>
-cudaError_t mul(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
+eIcicleError mul(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
 {
-  return vec_op<E, mul_kernel>(vec_a, vec_b, n, config, result);
+  cudaError_t err = vec_op<E, mul_kernel>(vec_a, vec_b, n, config, result);
+  return translateCudaError(err);
 }
 
 template <typename E>
-cudaError_t add(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
+eIcicleError add(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
 {
-  return vec_op<E, add_kernel>(vec_a, vec_b, n, config, result);
+  cudaError_t err = vec_op<E, add_kernel>(vec_a, vec_b, n, config, result);
+  return translateCudaError(err);
 }
 
 template <typename E>
-cudaError_t sub(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
+eIcicleError sub(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
 {
-  return vec_op<E, sub_kernel>(vec_a, vec_b, n, config, result);
+  cudaError_t err = vec_op<E, sub_kernel>(vec_a, vec_b, n, config, result);
+  return translateCudaError(err);
 }
 
 template <typename E>
@@ -166,23 +170,33 @@ cudaError_t transpose_matrix(
 #include "icicle/fields/field_config.h"
 using namespace field_config;
 
-/**
- * Extern version of [Add](@ref Add) function with the template parameter
- * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
- * or standalone "STARK field" given by `-DFIELD`).
- * @return `cudaSuccess` if the execution was successful and an error code otherwise.
- */
-eIcicleError add_cuda(
-  const Device& device,
-  const scalar_t* vec_a,
-  const scalar_t* vec_b,
-  int n,
-  const VecOpsConfig& config,
-  scalar_t* result)
+template <typename F>
+eIcicleError
+add_cuda(const Device& device, const F* vec_a, const F* vec_b, int n, const VecOpsConfig& config, F* result)
 {
-  cudaError_t err = add<scalar_t>(vec_a, vec_b, n, config, result);
-  // TODO Yuval: map cuda errors to icicle errors
-  return (cudaSuccess == err) ? eIcicleError::SUCCESS : eIcicleError::UNKNOWN_ERROR;
+  return add<F>(vec_a, vec_b, n, config, result);
 }
 
-REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda);
+template <typename F>
+eIcicleError
+sub_cuda(const Device& device, const F* vec_a, const F* vec_b, int n, const VecOpsConfig& config, F* result)
+{
+  return sub<F>(vec_a, vec_b, n, config, result);
+}
+
+template <typename F>
+eIcicleError
+mul_cuda(const Device& device, const F* vec_a, const F* vec_b, int n, const VecOpsConfig& config, F* result)
+{
+  return mul<F>(vec_a, vec_b, n, config, result);
+}
+
+REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
+REGISTER_VECTOR_SUB_BACKEND("CUDA", sub_cuda<scalar_t>);
+REGISTER_VECTOR_MUL_BACKEND("CUDA", mul_cuda<scalar_t>);
+
+#ifdef EXT_FIELD
+REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CUDA", add_cuda<extension_t>);
+REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CUDA", sub_cuda<extension_t>);
+REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CUDA", mul_cuda<extension_t>);
+#endif // EXT_FIELD

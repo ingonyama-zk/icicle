@@ -66,6 +66,8 @@ namespace icicle {
       }
       return registered_devices;
     }
+
+    static bool is_device_registered(const char* device_type) { return apiMap.find(device_type) != apiMap.end(); }
   };
 
   DeviceAPI* get_deviceAPI(const Device& device) { return DeviceAPIRegistry::get_deviceAPI(device).get(); }
@@ -77,5 +79,7 @@ namespace icicle {
   }
 
   std::list<std::string> get_registered_devices() { return DeviceAPIRegistry::get_registered_devices(); }
+
+  bool is_device_registered(const char* device_type) { return DeviceAPIRegistry::is_device_registered(device_type); }
 
 } // namespace icicle
