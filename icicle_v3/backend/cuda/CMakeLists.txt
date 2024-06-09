@@ -17,7 +17,10 @@ target_include_directories(icicle_cuda_device PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLU
 target_link_libraries(icicle_cuda_device PRIVATE ${CUDA_LIBRARIES}) # Link to CUDA
 
 # field API library
-add_library(icicle_cuda_field SHARED src/field/cuda_vec_ops.cu)
+add_library(icicle_cuda_field SHARED 
+    src/field/cuda_vec_ops.cu
+    src/field/cuda_mont.cu
+    )
 target_include_directories(icicle_cuda_field PRIVATE include)
 target_link_libraries(icicle_cuda_field PUBLIC icicle_device icicle_field)
 set_target_properties(icicle_cuda_field PROPERTIES OUTPUT_NAME "icicle_cuda_field_${FIELD}")

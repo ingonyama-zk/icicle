@@ -107,15 +107,16 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarConvertMontgomeryDispatcher, scalar_convert_montgomery, scalarConvertMontgomeryImpl)
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(
-    scalar_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)
+    const scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, scalar_t* output)
   {
-    return ScalarConvertMontgomeryDispatcher::execute(scalars, size, is_into, config);
+    return ScalarConvertMontgomeryDispatcher::execute(input, size, is_into, config, output);
   }
 
   template <>
-  eIcicleError scalar_convert_montgomery(scalar_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)
+  eIcicleError scalar_convert_montgomery(
+    const scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(scalars, size, is_into, config);
+    return CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(input, size, is_into, config, output);
   }
 
 #ifdef EXT_FIELD
@@ -123,15 +124,16 @@ namespace icicle {
     ExtFieldConvertMontgomeryDispatcher, scalar_convert_montgomery_ext_field, extFieldConvertMontgomeryImpl)
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, convert_montgomery_ext_field)(
-    extension_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)
+    const extension_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, extension_t* output)
   {
-    return ExtFieldConvertMontgomeryDispatcher::execute(scalars, size, is_into, config);
+    return ExtFieldConvertMontgomeryDispatcher::execute(input, size, is_into, config, output);
   }
 
   template <>
-  eIcicleError scalar_convert_montgomery(extension_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)
+  eIcicleError scalar_convert_montgomery(
+    const extension_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, convert_montgomery_ext_field)(scalars, size, is_into, config);
+    return CONCAT_EXPAND(FIELD, convert_montgomery_ext_field)(input, size, is_into, config, output);
   }
 #endif // EXT_FIELD
 
