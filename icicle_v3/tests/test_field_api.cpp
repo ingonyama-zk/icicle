@@ -168,7 +168,7 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
 
     START_TIMER(MONTGOMERY)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(scalar_convert_montgomery(inout, N, true /*into montgomery*/, config));
+      ICICLE_CHECK(scalar_convert_montgomery(inout, N, true /*into montgomery*/, config, inout));
     }
     END_TIMER(MONTGOMERY, oss.str().c_str(), measure);
   };

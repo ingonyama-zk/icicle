@@ -56,7 +56,8 @@ namespace icicle {
   eIcicleError vector_mul(const S* vec_a, const S* vec_b, uint64_t n, const VecOpsConfig& config, S* output);
 
   template <typename S>
-  eIcicleError scalar_convert_montgomery(S* scalars, uint64_t size, bool is_into, const VecOpsConfig& config);
+  eIcicleError
+  scalar_convert_montgomery(const S* input, uint64_t size, bool is_into, const VecOpsConfig& config, S* output);
 
   /*************************** Backend registration ***************************/
 
@@ -98,7 +99,12 @@ namespace icicle {
   }
 
   using scalarConvertMontgomeryImpl = std::function<eIcicleError(
-    const Device& device, scalar_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)>;
+    const Device& device,
+    const scalar_t* input,
+    uint64_t size,
+    bool is_into,
+    const VecOpsConfig& config,
+    scalar_t* output)>;
 
   void register_scalar_convert_montgomery(const std::string& deviceType, scalarConvertMontgomeryImpl);
 
@@ -149,7 +155,12 @@ namespace icicle {
   }
 
   using extFieldConvertMontgomeryImpl = std::function<eIcicleError(
-    const Device& device, extension_t* scalars, uint64_t size, bool is_into, const VecOpsConfig& config)>;
+    const Device& device,
+    const extension_t* input,
+    uint64_t size,
+    bool is_into,
+    const VecOpsConfig& config,
+    extension_t* output)>;
 
   void register_scalar_convert_montgomery_ext_field(const std::string& deviceType, extFieldConvertMontgomeryImpl);
 
