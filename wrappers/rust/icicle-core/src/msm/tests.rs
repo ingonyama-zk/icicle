@@ -128,7 +128,7 @@ where
         precompute_bases(
             HostSlice::from_slice(&points),
             precompute_factor as i32,
-            0,
+            cfg.c,
             &cfg.ctx,
             &mut precomputed_points_d,
         )

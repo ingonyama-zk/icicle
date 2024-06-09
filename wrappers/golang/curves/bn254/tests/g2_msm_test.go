@@ -224,7 +224,7 @@ func TestPrecomputeBaseG2(t *testing.T) {
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
 
-			e = g2.G2PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+			e = g2.G2PrecomputeBases(points, precomputeFactor, cfg.C, &cfg.Ctx, precomputeOut)
 			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
 
 			var p g2.G2Projective
