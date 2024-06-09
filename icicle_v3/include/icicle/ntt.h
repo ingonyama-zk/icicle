@@ -90,7 +90,7 @@ namespace icicle {
    * @return Default value of [NTTConfig](@ref NTTConfig).
    */
   template <typename S>
-  NTTConfig<S> default_ntt_config()
+  static NTTConfig<S> default_ntt_config()
   {
     NTTConfig<S> config = {
       nullptr,       // stream
@@ -105,16 +105,39 @@ namespace icicle {
     return config;
   }
 
+  struct NTTInitDomainConfig {
+    icicleStreamHandle stream; /**< stream for async execution. */
+    bool is_async;             /**< Whether to run the NTT asynchronously. If set to `true`, the NTT function will be
+                                *   non-blocking and you'd need to synchronize it explicitly by running
+                                *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
+                                *   function will block the current CPU thread. */
+
+    ConfigExtension ext; /** backend specific extensions*/
+  };
+
+  static NTTInitDomainConfig default_ntt_init_domain_config()
+  {
+    NTTInitDomainConfig config = {
+      nullptr, // stream
+      false    // is_async
+    };
+    return config;
+  }
+
   // template APIs
 
   template <typename S, typename E>
   eIcicleError ntt(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
 
   template <typename S>
-  eIcicleError ntt_init_domain(const S& primitive_root, const ConfigExtension& config);
+  eIcicleError ntt_init_domain(const S& primitive_root, const NTTInitDomainConfig& config);
 
   template <typename S>
   eIcicleError ntt_release_domain();
+
+  template <typename S>
+  S get_root_of_unity(uint64_t max_size);
+
   /*************************** Backend registration ***************************/
 
   /*************************** NTT ***************************/
@@ -152,8 +175,8 @@ namespace icicle {
 #endif // EXT_FIELD
 
   /*************************** INIT DOMAIN ***************************/
-  using NttInitDomainImpl =
-    std::function<eIcicleError(const Device& device, const scalar_t& primitive_root, const ConfigExtension& config)>;
+  using NttInitDomainImpl = std::function<eIcicleError(
+    const Device& device, const scalar_t& primitive_root, const NTTInitDomainConfig& config)>;
 
   void register_ntt_init_domain(const std::string& deviceType, NttInitDomainImpl);
 
