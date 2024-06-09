@@ -21,18 +21,27 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
       "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
 
 static bool VERBOSE = true;
+static inline std::string s_main_target;
+static inline std::string s_reference_target;
 template <typename T>
 class FieldApiTest : public ::testing::Test
 {
 public:
-  static inline std::list<std::string> s_regsitered_devices;
-
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
     icicle_load_backend(BACKEND_BUILD_DIR);
-    s_regsitered_devices = get_registered_devices();
-    ASSERT_GT(s_regsitered_devices.size(), 0);
+
+    // check targets are loaded and choose main and reference targets
+    auto regsitered_devices = get_registered_devices();
+    ASSERT_GE(regsitered_devices.size(), 2);
+
+    const bool is_cuda_registered = is_device_registered("CUDA");
+    const bool is_cpu_registered = is_device_registered("CPU");
+    const bool is_cpu_ref_registered = is_device_registered("CPU_REF");
+    // if cuda is available, want main="CUDA", ref="CPU", otherwise main="CPU", ref="CPU_REF".
+    s_main_target = is_cuda_registered ? "CUDA" : "CPU";
+    s_reference_target = is_cuda_registered ? "CPU" : "CPU_REF";
   }
   static void TearDownTestSuite() {}
 
@@ -49,7 +58,7 @@ typedef testing::Types<scalar_t> FTImplementations;
 
 TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 
-TYPED_TEST(FieldApiTest, vectorAddSync)
+TYPED_TEST(FieldApiTest, vectorOps)
 {
   const int N = 1 << 15;
   auto in_a = std::make_unique<TypeParam[]>(N);
@@ -57,26 +66,43 @@ TYPED_TEST(FieldApiTest, vectorAddSync)
   TypeParam::rand_host_many(in_a.get(), N);
   TypeParam::rand_host_many(in_b.get(), N);
 
-  auto out_cpu = std::make_unique<TypeParam[]>(N);
-  auto out_cuda = std::make_unique<TypeParam[]>(N);
+  auto out_main = std::make_unique<TypeParam[]>(N);
+  auto out_ref = std::make_unique<TypeParam[]>(N);
 
-  auto run = [&](const char* dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-    auto config = default_vec_ops_config();
+  auto run =
+    [&](const std::string& dev_type, TypeParam* out, bool measure, auto vec_op_func, const char* msg, int iters) {
+      Device dev = {dev_type.c_str(), 0};
+      icicle_set_device(dev);
+      auto config = default_vec_ops_config();
 
-    START_TIMER(VECADD_sync)
-    for (int i = 0; i < iters; ++i)
-      vector_add(in_a.get(), in_b.get(), N, config, out);
-    END_TIMER(VECADD_sync, msg, measure);
-  };
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
 
-  // run("CUDA", out_cuda.get(), "CUDA vector add", false /*=measure*/, 1 /*=iters*/); // warmup
+      START_TIMER(VECADD_sync)
+      for (int i = 0; i < iters; ++i) {
+        vec_op_func(in_a.get(), in_b.get(), N, config, out);
+      }
+      END_TIMER(VECADD_sync, oss.str().c_str(), measure);
+    };
 
-  run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
-  // run("CUDA", out_cuda.get(), "CUDA vector add (host mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
+  // warmup
+  // run(s_reference_target, out_ref.get(), false /*=measure*/, 16 /*=iters*/);
+  // run(s_main_target, out_main.get(), false /*=measure*/, 1 /*=iters*/);
 
-  // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(TypeParam)));
+  // add
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", 64 /*=iters*/);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", 64 /*=iters*/);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
+
+  // sub
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", 64 /*=iters*/);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", 64 /*=iters*/);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
+
+  // mul
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", 64 /*=iters*/);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", 64 /*=iters*/);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
 }
 
 TYPED_TEST(FieldApiTest, vectorAddAsync)

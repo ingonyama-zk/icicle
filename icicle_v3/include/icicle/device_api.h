@@ -189,6 +189,14 @@ namespace icicle {
   std::list<std::string> get_registered_devices();
 
   /**
+   * @brief Check if a given device type is registered.
+   *
+   * @param device_type The device type to check.
+   * @return true if the device type is registered, false otherwise.
+   */
+  bool is_device_registered(const char* device_type);
+
+  /**
    * Device API registration macro.
    * Usage:
    * (1) implement the interface:
