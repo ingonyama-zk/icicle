@@ -55,7 +55,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.field.build_args }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -S . -B build
         cmake --build build -j
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
