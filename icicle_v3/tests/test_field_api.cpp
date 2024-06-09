@@ -24,6 +24,11 @@ static bool VERBOSE = true;
 static int ITERS = 16;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
+
+// TODO Yuval: better include the CUDA configs and use instead of redefine
+#define CUDA_NTT_FAST_TWIDDLES_MODE "fast_twiddles"
+#define CUDA_NTT_ALGORITHM          "ntt_algorithm"
+
 template <typename T>
 class FieldApiTest : public ::testing::Test
 {
@@ -49,6 +54,12 @@ public:
   // SetUp/TearDown are called before and after each test
   void SetUp() override {}
   void TearDown() override {}
+
+  void random_samples(T* arr, uint64_t count)
+  {
+    for (uint64_t i = 0; i < count; i++)
+      arr[i] = i < 1000 ? T::rand_host() : arr[i - 1000];
+  }
 };
 
 #ifdef EXT_FIELD
@@ -64,8 +75,8 @@ TYPED_TEST(FieldApiTest, vectorOps)
   const int N = 1 << 15;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
-  TypeParam::rand_host_many(in_a.get(), N);
-  TypeParam::rand_host_many(in_b.get(), N);
+  FieldApiTest<TypeParam>::random_samples(in_a.get(), N);
+  FieldApiTest<TypeParam>::random_samples(in_b.get(), N);
 
   auto out_main = std::make_unique<TypeParam[]>(N);
   auto out_ref = std::make_unique<TypeParam[]>(N);
@@ -110,7 +121,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 {
   const int R = 1 << 10, C = 1 << 8;
   auto in = std::make_unique<TypeParam[]>(R * C);
-  TypeParam::rand_host_many(in.get(), R * C);
+  FieldApiTest<TypeParam>::random_samples(in.get(), R * C);
 
   auto out_main = std::make_unique<TypeParam[]>(R * C);
   auto out_ref = std::make_unique<TypeParam[]>(R * C);
@@ -155,7 +166,7 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
   const int N = 1 << 18;
   auto elements_main = std::make_unique<TypeParam[]>(N);
   auto elements_ref = std::make_unique<TypeParam[]>(N);
-  TypeParam::rand_host_many(elements_main.get(), N);
+  FieldApiTest<TypeParam>::random_samples(elements_main.get(), N);
   memcpy(elements_ref.get(), elements_main.get(), N * sizeof(TypeParam));
 
   auto run = [&](const std::string& dev_type, TypeParam* inout, bool measure, const char* msg, int iters) {
@@ -178,39 +189,68 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
   ASSERT_EQ(0, memcmp(elements_main.get(), elements_ref.get(), N * sizeof(TypeParam)));
 }
 
-#ifndef NTT_DISABLED
-TYPED_TEST(FieldApiTest, Ntt)
+#ifdef NTT_ENABLED
+TYPED_TEST(FieldApiTest, ntt)
 {
-  const int logn = 15;
+  const int logn = 20;
   const int N = 1 << logn;
   auto scalars = std::make_unique<TypeParam[]>(N);
-  TypeParam::rand_host_many(scalars.get(), N);
+  FieldApiTest<TypeParam>::random_samples(scalars.get(), N);
 
-  auto out_cpu = std::make_unique<TypeParam[]>(N);
-  auto out_cuda = std::make_unique<TypeParam[]>(N);
+  auto out_main = std::make_unique<TypeParam[]>(N);
+  auto out_ref = std::make_unique<TypeParam[]>(N);
 
-  auto run = [&](const char* dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
-    Device dev = {dev_type, 0};
+  auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type.c_str(), 0};
     icicle_set_device(dev);
 
-    ntt_init_domain(scalar_t::omega(logn), ConfigExtension());
+    icicleStreamHandle stream = nullptr;
+    icicle_create_stream(&stream);
+
+    auto init_domain_config = default_ntt_init_domain_config();
+    init_domain_config.stream = stream;
+    init_domain_config.is_async = false;
+    init_domain_config.ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
+
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(logn), init_domain_config));
 
     auto config = default_ntt_config<scalar_t>();
 
-    START_TIMER(NTT_sync)
-    for (int i = 0; i < iters; ++i)
-      ntt(scalars.get(), N, NTTDir::kForward, config, out);
-    END_TIMER(NTT_sync, msg, measure);
+    TypeParam *d_in, *d_out;
+    icicle_malloc_async((void**)&d_in, N * sizeof(TypeParam), config.stream);
+    icicle_malloc_async((void**)&d_out, N * sizeof(TypeParam), config.stream);
+    icicle_copy_to_device_async(d_in, scalars.get(), N * sizeof(TypeParam), config.stream);
 
-    ntt_release_domain<scalar_t>();
+    config.ordering = Ordering::kNN;
+    config.stream = stream;
+    config.are_inputs_on_device = true;
+    config.are_outputs_on_device = true;
+    // config.ext.set(CUDA_NTT_ALGORITHM, 1); 0: auto, 1: radix2, 2: mixed-radix
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(ntt(d_in, N, NTTDir::kForward, config, d_out));
+    }
+    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+
+    icicle_copy_to_host_async(out, d_out, N * sizeof(TypeParam), config.stream);
+    icicle_stream_synchronize(config.stream);
+    icicle_free_async(d_in, config.stream);
+    icicle_free_async(d_out, config.stream);
+
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
-  run("CPU", out_cpu.get(), "CPU ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  // run("CUDA", out_cuda.get(), "CUDA ntt (host mem)", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  // run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 16 /*=iters*/);
 
-  // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(scalar_t)));
 }
-#endif // NTT_DISABLED
+#endif // NTT_ENABLED
 
 int main(int argc, char** argv)
 {

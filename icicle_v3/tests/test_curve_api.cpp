@@ -126,7 +126,8 @@ TEST_F(CurveApiTest, ecntt)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
-    ntt_init_domain(scalar_t::omega(logn), ConfigExtension());
+    auto init_domain_config = default_ntt_init_domain_config();
+    ntt_init_domain(scalar_t::omega(logn), init_domain_config);
 
     auto config = default_ntt_config<scalar_t>();
 

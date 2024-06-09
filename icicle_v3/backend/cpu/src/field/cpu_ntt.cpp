@@ -16,7 +16,7 @@ REGISTER_NTT_EXT_FIELD_BACKEND("CPU", (cpu_ntt<scalar_t, extension_t>));
 #endif // EXT_FIELD
 
 template <typename S = scalar_t>
-eIcicleError cpu_ntt_init_domain(const Device& device, const S& primitive_root, const ConfigExtension& config)
+eIcicleError cpu_ntt_init_domain(const Device& device, const S& primitive_root, const NTTInitDomainConfig& config)
 {
   ICICLE_LOG_ERROR << "cpu_ntt_init_domain() not implemented";
   return eIcicleError::API_NOT_IMPLEMENTED;

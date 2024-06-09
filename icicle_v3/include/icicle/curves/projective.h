@@ -239,11 +239,11 @@ public:
 };
 
 #ifdef __CUDACC__
-template <typename FF, class SCALAR_FF, const FF& Gen::weierstrass_b, const FF& Gen::gen_x, const FF& Gen::gen_y>
-struct SharedMemory<Projective<FF, SCALAR_FF, Gen::weierstrass_b, Gen::gen_x, Gen::gen_y>> {
-  __device__ Projective<FF, SCALAR_FF, Gen::weierstrass_b, Gen::gen_x, Gen::gen_y>* getPointer()
+template <typename FF, class SCALAR_FF, typename Gen>
+struct SharedMemory<Projective<FF, SCALAR_FF, Gen>> {
+  __device__ Projective<FF, SCALAR_FF, Gen>* getPointer()
   {
-    extern __shared__ Projective<FF, SCALAR_FF, Gen::weierstrass_b, Gen::gen_x, Gen::gen_y> s_projective_[];
+    extern __shared__ Projective<FF, SCALAR_FF, Gen> s_projective_[];
     return s_projective_;
   }
 };
