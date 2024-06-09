@@ -158,23 +158,31 @@ TEST_F(CurveApiTest, ecntt)
   projective_t::rand_host_many_affine(bases.get(), N);
   projective_t result_cpu{};
   projective_t result_cpu_dbl_n_add{};
-  projective_t result_cpu_ref{}; // TODO Yuval should be projective
+  projective_t result_cpu_ref{};
 
   auto run = [&](const std::string& dev_type, projective_t* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
-    auto init_domain_config = default_ntt_init_domain_config();
-    ntt_init_domain(scalar_t::omega(logn), init_domain_config);
+    const int c = 6;
+    const int pcf = 10;
+    auto config = default_msm_config();
+    config.ext.set("c", c);
+    config.precompute_factor = pcf;
 
-    auto config = default_ntt_config<scalar_t>();
+    auto pc_config = default_msm_pre_compute_config();
+    pc_config.ext.set("c", c);
 
-    START_TIMER(NTT_sync)
-    for (int i = 0; i < iters; ++i)
-      ntt(input.get(), N, NTTDir::kForward, config, out);
-    END_TIMER(NTT_sync, msg, measure);
+    auto precomp_bases = std::make_unique<affine_t[]>(N*pcf);
 
-    ntt_release_domain<scalar_t>();
+    START_TIMER(MSM_sync)
+    for (int i = 0; i < iters; ++i) {
+      // TODO real test
+      // msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
+      msm_precompute_bases(bases.get(), N, pcf, pc_config, precomp_bases.get());
+      msm(scalars.get(), precomp_bases.get(), N, config, result);
+    }
+    END_TIMER(MSM_sync, msg, measure);
   };
 
   // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
