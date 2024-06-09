@@ -3,6 +3,7 @@
 
 #include "icicle/errors.h"
 #include "icicle/vec_ops.h"
+#include "icicle/matrix_ops.h"
 #include "gpu-utils/error_handler.h"
 #include "error_translation.h"
 
@@ -191,12 +192,26 @@ mul_cuda(const Device& device, const F* vec_a, const F* vec_b, int n, const VecO
   return mul<F>(vec_a, vec_b, n, config, result);
 }
 
+template <typename F>
+eIcicleError matrix_transpose_cuda(
+  const Device& device, const F* in, uint32_t nof_rows, uint32_t nof_cols, const MatrixOpsConfig& config, F* out)
+{
+  // TODO relax this limitation
+  ICICLE_ASSERT(config.is_input_on_device == config.is_output_on_device)
+    << "CUDA matrix transpose expects both input and output on host or on device";
+  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
+  auto err = transpose_matrix(in, out, nof_cols, nof_rows, cuda_stream, config.is_input_on_device, config.is_async);
+  return translateCudaError(err);
+}
+
 REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
 REGISTER_VECTOR_SUB_BACKEND("CUDA", sub_cuda<scalar_t>);
 REGISTER_VECTOR_MUL_BACKEND("CUDA", mul_cuda<scalar_t>);
+REGISTER_MATRIX_TRANSPOSE_BACKEND("CUDA", matrix_transpose_cuda<scalar_t>);
 
 #ifdef EXT_FIELD
 REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CUDA", add_cuda<extension_t>);
 REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CUDA", sub_cuda<extension_t>);
 REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CUDA", mul_cuda<extension_t>);
+REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CUDA", matrix_transpose_cuda<extension_t>);
 #endif // EXT_FIELD

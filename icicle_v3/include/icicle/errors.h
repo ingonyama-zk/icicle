@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
 
 namespace icicle {
 
@@ -53,5 +54,30 @@ namespace icicle {
   }
 
 #define THROW_ICICLE_ERR(val, reason) throw_icicle_error(val, reason, __FUNCTION__, __FILE__, __LINE__)
+
+  class AssertHelper
+  {
+  public:
+    AssertHelper(const char* condition, const char* function, const char* file, int line) : os()
+    {
+      os << "Assertion failed: (" << condition << "), function " << function << ", file " << file << ", line " << line
+         << ". ";
+    }
+
+    template <typename T>
+    AssertHelper& operator<<(const T& msg)
+    {
+      os << msg;
+      return *this;
+    }
+
+    ~AssertHelper() noexcept(false) { throw std::runtime_error(os.str()); }
+
+  private:
+    std::ostringstream os;
+  };
+
+#define ICICLE_ASSERT(condition)                                                                                       \
+  if (!(condition)) AssertHelper(#condition, __FUNCTION__, __FILE__, __LINE__)
 
 } // namespace icicle

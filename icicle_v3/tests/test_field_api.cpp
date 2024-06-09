@@ -21,6 +21,7 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
       "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
 
 static bool VERBOSE = true;
+static int ITERS = 16;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
 template <typename T>
@@ -80,7 +81,7 @@ TYPED_TEST(FieldApiTest, vectorOps)
 
       START_TIMER(VECADD_sync)
       for (int i = 0; i < iters; ++i) {
-        vec_op_func(in_a.get(), in_b.get(), N, config, out);
+        ICICLE_CHECK(vec_op_func(in_a.get(), in_b.get(), N, config, out));
       }
       END_TIMER(VECADD_sync, oss.str().c_str(), measure);
     };
@@ -90,70 +91,91 @@ TYPED_TEST(FieldApiTest, vectorOps)
   // run(s_main_target, out_main.get(), false /*=measure*/, 1 /*=iters*/);
 
   // add
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", 64 /*=iters*/);
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", 64 /*=iters*/);
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
 
   // sub
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", 64 /*=iters*/);
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", 64 /*=iters*/);
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
 
   // mul
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", 64 /*=iters*/);
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", 64 /*=iters*/);
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
 }
 
-TYPED_TEST(FieldApiTest, vectorAddAsync)
+TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 {
-  const int N = 1 << 15;
-  auto in_a = std::make_unique<TypeParam[]>(N);
-  auto in_b = std::make_unique<TypeParam[]>(N);
-  TypeParam::rand_host_many(in_a.get(), N);
-  TypeParam::rand_host_many(in_b.get(), N);
+  const int R = 1 << 10, C = 1 << 8;
+  auto in = std::make_unique<TypeParam[]>(R * C);
+  TypeParam::rand_host_many(in.get(), R * C);
 
-  auto out_cpu = std::make_unique<TypeParam[]>(N);
-  auto out_cuda = std::make_unique<TypeParam[]>(N);
+  auto out_main = std::make_unique<TypeParam[]>(R * C);
+  auto out_ref = std::make_unique<TypeParam[]>(R * C);
 
-  auto run = [&](const char* dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
-    Device dev = {dev_type, 0};
+  auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type.c_str(), 0};
     icicle_set_device(dev);
-    // const bool is_cpu = std::string("CPU") == dev.type;
+    auto config = default_matrix_ops_config();
 
-    TypeParam *d_in_a, *d_in_b, *d_out;
-    icicleStreamHandle stream;
-    icicle_create_stream(&stream);
-    icicle_malloc_async((void**)&d_in_a, N * sizeof(TypeParam), stream);
-    icicle_malloc_async((void**)&d_in_b, N * sizeof(TypeParam), stream);
-    icicle_malloc_async((void**)&d_out, N * sizeof(TypeParam), stream);
-    icicle_copy_to_device_async(d_in_a, in_a.get(), N * sizeof(TypeParam), stream);
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
 
-    auto config = default_vec_ops_config();
-    config.is_a_on_device = true;
-    config.is_b_on_device = true;
-    config.is_result_on_device = true;
+    TypeParam *d_in, *d_out;
+    icicle_create_stream(&config.stream);
+    icicle_malloc_async((void**)&d_in, R * C * sizeof(TypeParam), config.stream);
+    icicle_malloc_async((void**)&d_out, R * C * sizeof(TypeParam), config.stream);
+    icicle_copy_to_device_async(d_in, in.get(), R * C * sizeof(TypeParam), config.stream);
+
+    config.is_input_on_device = true;
+    config.is_output_on_device = true;
     config.is_async = true;
-    config.stream = stream;
 
-    START_TIMER(VECADD_async);
+    START_TIMER(TRANSPOSE)
     for (int i = 0; i < iters; ++i) {
-      vector_add(d_in_a, d_in_b, N, config, d_out);
+      ICICLE_CHECK(matrix_transpose(d_in, R, C, config, d_out));
     }
-    END_TIMER(VECADD_async, msg, measure);
+    END_TIMER(TRANSPOSE, oss.str().c_str(), measure);
 
-    icicle_copy_to_host_async(out, d_out, N * sizeof(TypeParam), stream);
-    icicle_stream_synchronize(stream);
-
-    icicle_free_async(d_in_a, stream);
-    icicle_free_async(d_in_b, stream);
-    icicle_free_async(d_out, stream);
+    icicle_copy_to_host_async(out, d_out, R * C * sizeof(TypeParam), config.stream);
+    icicle_stream_synchronize(config.stream);
+    icicle_free_async(d_in, config.stream);
+    icicle_free_async(d_out, config.stream);
   };
 
-  run("CPU", out_cpu.get(), "CPU vector add", VERBOSE /*=measure*/, 16 /*=iters*/);
-  // run("CUDA", out_cuda.get(), "CUDA vector add (device mem)", VERBOSE /*=measure*/, 16 /*=iters*/);
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "transpose", ITERS);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "transpose", ITERS);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), R * C * sizeof(TypeParam)));
+}
 
-  // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(TypeParam)));
+TYPED_TEST(FieldApiTest, montgomeryConversion)
+{
+  const int N = 1 << 18;
+  auto elements_main = std::make_unique<TypeParam[]>(N);
+  auto elements_ref = std::make_unique<TypeParam[]>(N);
+  TypeParam::rand_host_many(elements_main.get(), N);
+  memcpy(elements_ref.get(), elements_main.get(), N * sizeof(TypeParam));
+
+  auto run = [&](const std::string& dev_type, TypeParam* inout, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type.c_str(), 0};
+    icicle_set_device(dev);
+    auto config = default_vec_ops_config();
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(MONTGOMERY)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(scalar_convert_montgomery(inout, N, true /*into montgomery*/, config));
+    }
+    END_TIMER(MONTGOMERY, oss.str().c_str(), measure);
+  };
+
+  run(s_reference_target, elements_main.get(), VERBOSE /*=measure*/, "montgomery", 1);
+  run(s_main_target, elements_ref.get(), VERBOSE /*=measure*/, "montgomery", 1);
+  ASSERT_EQ(0, memcmp(elements_main.get(), elements_ref.get(), N * sizeof(TypeParam)));
 }
 
 #ifndef NTT_DISABLED
@@ -189,56 +211,6 @@ TYPED_TEST(FieldApiTest, Ntt)
   // ASSERT_EQ(0, memcmp(out_cpu.get(), out_cuda.get(), N * sizeof(scalar_t)));
 }
 #endif // NTT_DISABLED
-
-TYPED_TEST(FieldApiTest, CpuVecAPIs)
-{
-  const int N = 1 << 15;
-  auto in_a = std::make_unique<TypeParam[]>(N);
-  auto in_b = std::make_unique<TypeParam[]>(N);
-  TypeParam::rand_host_many(in_a.get(), N);
-  TypeParam::rand_host_many(in_b.get(), N);
-
-  auto out_cpu_add = std::make_unique<TypeParam[]>(N);
-  auto out_cpu_sub = std::make_unique<TypeParam[]>(N);
-  auto out_cpu_mul = std::make_unique<TypeParam[]>(N);
-
-  Device dev = {"CPU", 0};
-  icicle_set_device(dev);
-  auto config = default_vec_ops_config();
-
-  START_TIMER(VEC_OPS)
-  scalar_convert_montgomery(in_a.get(), N, true /*into montgomery*/, config);
-  scalar_convert_montgomery(in_b.get(), N, true /*into montgomery*/, config);
-  vector_add(in_a.get(), in_b.get(), N, config, out_cpu_add.get());
-  vector_sub(in_a.get(), in_b.get(), N, config, out_cpu_sub.get());
-  vector_mul(in_a.get(), in_b.get(), N, config, out_cpu_mul.get());
-  END_TIMER(VEC_OPS, "CPU vec ops took", VERBOSE);
-
-  // TODO real test
-  const int test_idx = N >> 1;
-  ASSERT_EQ(out_cpu_add[test_idx], in_a[test_idx] + in_b[test_idx]);
-  ASSERT_EQ(out_cpu_sub[test_idx], in_a[test_idx] - in_b[test_idx]);
-  ASSERT_EQ(out_cpu_mul[test_idx], in_a[test_idx] * in_b[test_idx]);
-}
-
-TYPED_TEST(FieldApiTest, CpuMatrixAPIs)
-{
-  const int R = 1 << 10, C = 1 << 6;
-  auto in = std::make_unique<TypeParam[]>(R * C);
-  TypeParam::rand_host_many(in.get(), R * C);
-
-  auto out_cpu_transpose = std::make_unique<TypeParam[]>(R * C);
-
-  Device dev = {"CPU", 0};
-  icicle_set_device(dev);
-  auto config = default_matrix_ops_config();
-
-  START_TIMER(MATRIX_OPS)
-  ICICLE_CHECK(matrix_transpose(in.get(), R, C, config, out_cpu_transpose.get()));
-  END_TIMER(MATRIX_OPS, "CPU matrix ops took", VERBOSE);
-
-  // TODO verify
-}
 
 int main(int argc, char** argv)
 {
