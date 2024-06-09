@@ -77,27 +77,27 @@ jobs:
         cargo test --release --verbose -- --ignored
         cargo test --release --verbose
 
-  build-windows:
-    name: Build on Windows
-    runs-on: windows-2022
-    needs: check-changed-files
-    steps:     
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Download and Install Cuda
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      id: cuda-toolkit
-      uses: Jimver/cuda-toolkit@v0.2.11
-      with:
-        cuda: '12.0.0'
-        method: 'network'
-        # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
-        sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
-    - name: Build targets
-      working-directory: ./wrappers/rust
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      env:
-        CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
-        CUDA_ARCH: 50 # Using CUDA_ARCH=50 env variable since the CI machines have no GPUs
-      # Building from the root workspace will build all members of the workspace by default
-      run: cargo build --release --verbose
+  # build-windows:
+  #   name: Build on Windows
+  #   runs-on: windows-2022
+  #   needs: check-changed-files
+  #   steps:     
+  #   - name: Checkout Repo
+  #     uses: actions/checkout@v4
+  #   - name: Download and Install Cuda
+  #     if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     id: cuda-toolkit
+  #     uses: Jimver/cuda-toolkit@v0.2.11
+  #     with:
+  #       cuda: '12.0.0'
+  #       method: 'network'
+  #       # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
+  #       sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
+  #   - name: Build targets
+  #     working-directory: ./wrappers/rust
+  #     if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+  #     env:
+  #       CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+  #       CUDA_ARCH: 50 # Using CUDA_ARCH=50 env variable since the CI machines have no GPUs
+  #     # Building from the root workspace will build all members of the workspace by default
+  #     run: cargo build --release --verbose

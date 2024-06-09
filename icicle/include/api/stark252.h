@@ -31,6 +31,12 @@ extern "C" cudaError_t stark252_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
+extern "C" cudaError_t stark252_bit_reverse_cuda(
+  const stark252::scalar_t* input,
+  uint64_t n,
+  vec_ops::BitReverseConfig& config,
+  stark252::scalar_t* output);
+
 extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
 
 extern "C" cudaError_t stark252_scalar_convert_montgomery(
