@@ -14,7 +14,7 @@ using namespace icicle;
  * @param path Path of the backend library or directory where backend libraries are installed
  * @return eIcicleError Status of the loaded backend
  */
-extern "C" eIcicleError icicle_load_backend(const std::string& path);
+extern "C" eIcicleError icicle_load_backend(const std::string& path, bool is_recursive);
 
 /**
  * @brief Set active device for thread

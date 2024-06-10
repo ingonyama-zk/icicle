@@ -6,10 +6,16 @@
 template <typename FuncType, const char* api_name>
 class tIcicleDispatcher
 {
-public:
-  static inline std::unordered_map<std::string /*device type*/, FuncType> apiMap;
+  std::unordered_map<std::string /*device type*/, FuncType> apiMap;
 
-  static void _register(const std::string& deviceType, FuncType func)
+public:
+  static tIcicleDispatcher& Global()
+  {
+    static tIcicleDispatcher instance;
+    return instance;
+  }
+
+  void _register(const std::string& deviceType, FuncType func)
   {
     if (apiMap.find(deviceType) != apiMap.end()) {
       throw std::runtime_error(
@@ -22,6 +28,7 @@ public:
   static auto execute(Args... args) -> decltype(auto)
   {
     const Device& device = DeviceAPI::get_thread_local_device();
+    auto& apiMap = Global().apiMap;
     auto it = apiMap.find(device.type);
     if (it != apiMap.end()) {
       return it->second(device, args...);
@@ -38,5 +45,5 @@ public:
   void register_##api_name(const std::string& deviceType, type impl)                                                   \
   {                                                                                                                    \
     ICICLE_LOG_DEBUG << #api_name << " registered for " << deviceType;                                                 \
-    dispatcher_class_name::_register(deviceType, impl);                                                                \
+    dispatcher_class_name::Global()._register(deviceType, impl);                                                       \
   }
