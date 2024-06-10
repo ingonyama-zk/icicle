@@ -23,5 +23,8 @@ set_target_properties(example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_include_directories(example PRIVATE "../../../icicle/include")
 
 # can link to another curve/field by changing the following lib and FIELD_ID
-target_link_libraries(example ${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_field_bn254.a)
+target_link_libraries(example 
+${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_curve_bn254.a
+${CMAKE_SOURCE_DIR}/build/icicle/lib/libingo_field_bn254.a
+)
 target_compile_definitions(example PUBLIC FIELD_ID BN254)

@@ -1,11 +1,14 @@
 #include <iostream>
-
+#include <cassert>
 #include "polynomials/polynomials.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "ntt/ntt.cuh"
 
-// using namespace field_config;
+#include "api/bn254.h"
+#include <chrono>
+
 using namespace polynomials;
+using namespace bn254;
 
 // define the polynomial type
 typedef Polynomial<scalar_t> Polynomial_t;
@@ -18,6 +21,27 @@ const auto three = scalar_t::from(3);
 const auto four = scalar_t::from(4);
 const auto five = scalar_t::from(5);
 const auto minus_one = zero - one;
+
+static std::unique_ptr<scalar_t[]> generate_pows(scalar_t tau, uint32_t size){
+    auto vec = std::make_unique<scalar_t[]>(size);
+    vec[0] = scalar_t::one();
+    for (size_t i = 1; i < size; ++i) {
+      vec[i] = vec[i-1] * tau;
+  }
+  return std::move(vec);
+}
+
+static std::unique_ptr<affine_t[]> generate_SRS(uint32_t size) {
+  auto secret_scalar = scalar_t::rand_host();
+  auto gen = projective_t::generator();
+  auto pows_of_tau = generate_pows(secret_scalar,size);
+  auto SRS = std::make_unique<affine_t[]>(size);
+  for (size_t i = 0; i < size; ++i) {
+      SRS[i] = projective_t::to_affine(pows_of_tau[i] * gen);
+  }
+  return std::move(SRS);
+}
+
 
 void example_evaluate()
 {
@@ -296,6 +320,102 @@ void example_device_memory_view()
   ntt::ntt(d_coeffs.get(), size, ntt::NTTDir::kForward, ntt_config, coset_evals.get());
 }
 
+
+void example_commit_with_device_memory_view()
+{
+  //declare time vars
+  std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+  std::chrono::milliseconds duration;
+
+  std::cout << std::endl << "Example: a) commit with Polynomial views [(f1+f2)^2 + (f1-f2)^2 ]_1 = [4 (f1^2+ f_2^2)]_1" << std::endl;
+  std::cout<< "Example: b) commit with Polynomial views [(f1+f2)^2 - (f1-f2)^2 ]_1 = [4 f1 *f_2]_1" << std::endl;
+  int N = 1025;
+
+  //generate group elements string of length N: (1, beta,beta^2....,beta^{N-1}). g
+  std::cout << "Setup: Generating mock SRS" << std::endl;
+  start = std::chrono::high_resolution_clock::now();
+  auto SRS = generate_SRS(2*N);
+  //Allocate memory on device (points)
+  affine_t* points_d;
+  cudaMalloc(&points_d, sizeof(affine_t)* 2 * N);
+  // copy SRS to device (could have generated on device, but gives an indicator)
+  cudaMemcpy(points_d, SRS.get(), sizeof(affine_t)* 2 * N, cudaMemcpyHostToDevice);
+  end = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "Setup: SRS of length "<< N << " generated and loaded to device. Took: " << duration.count() << " milliseconds" << std::endl;
+  
+  //goal:
+  //test commitment equality [(f1+f2)^2 + (f1-f2)^2 ]_1 = [4 (f1^2+ f_2^2)]_1
+  //test commitment equality [(f1+f2)^2 - (f1-f2)^2 ]_1 = [4 f1 *f_2]_1
+  //note: using polyapi to gen scalars: already on device. 
+  std::cout << "Setup: Generating polys (on device) f1,f2 of log degree " << log2(N-1) << std::endl;
+  start = std::chrono::high_resolution_clock::now();
+  auto f1 = randomize_polynomial(N);
+  auto f2 = randomize_polynomial(N);
+  end = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "Setup: Gen poly done. Took: " << duration.count() << " milliseconds" << std::endl;
+ 
+  //deg 2N constraints (f1+f2)^2 + (f1-f2)^2 = 2 (f1^2+ f_2^2)
+  std::cout << "Computing constraints..start "<< std::endl;
+  start = std::chrono::high_resolution_clock::now();
+  auto L1 = (f1+f2)*(f1+f2) + (f1-f2)*(f1-f2);
+  auto R1 = scalar_t::from(2) * (f1*f1 + f2*f2);
+  //deg 2N constraints (f1+f2)^2 - (f1-f2)^2 = 4 f1 *f_2
+  auto L2 = (f1+f2)*(f1+f2) - (f1-f2)*(f1-f2);
+  auto R2 = scalar_t::from(4) * f1 * f2;
+  end = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "Computing constraints..done. Took: " << duration.count() << " milliseconds"<< std::endl;
+  
+  // extract coeff using coeff view
+  auto [viewL1, sizeL1, device_idL1] = L1.get_coefficients_view();
+  auto [viewL2, sizeL2, device_idL2] = L2.get_coefficients_view(); 
+  auto [viewR1, sizeR1, device_idR1] = R1.get_coefficients_view();
+  auto [viewR2, sizeR2, device_idR2] = R2.get_coefficients_view();
+  
+  std::cout << "Computing Commitments with poly view"<< std::endl;
+  start = std::chrono::high_resolution_clock::now();
+  msm::MSMConfig config = msm::default_msm_config();
+  config.are_points_on_device = true;
+  config.are_scalars_on_device = true;
+ 
+  //host vars (for result)
+  projective_t hL1{}, hL2{}, hR1{}, hR2{};
+
+  //straightforward msm bn254 api: no batching
+  bn254_msm_cuda(viewL1.get(),points_d,N,config,&hL1);
+  bn254_msm_cuda(viewL2.get(),points_d,N,config,&hL2);
+  bn254_msm_cuda(viewR1.get(),points_d,N,config,&hR1);
+  bn254_msm_cuda(viewR2.get(),points_d,N,config,&hR2);
+
+  end = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "Commitments done. Took: " << duration.count() << " milliseconds"<< std::endl;
+ 
+  //sanity checks
+  auto affL1 = projective_t::to_affine(hL1);
+  auto affR1 = projective_t::to_affine(hR1);
+
+  auto affL2 = projective_t::to_affine(hL2);
+  auto affR2 = projective_t::to_affine(hR2);
+
+ //test commitment equality [(f1+f2)^2 + (f1-f2)^2]_1 = [4 (f_1^2+f_2^2]_1
+  assert(affL1.x==affR1.x && affL1.y==affR1.y);
+  std::cout << "commitment [(f1+f2)^2 + (f1-f2)^2]_1:" << std::endl; 
+  std::cout << "[x: " << affL1.x << ", y: " << affL1.y << "]" << std::endl;
+  std::cout << "commitment [[2 (f_1^2+f_2^2]_1:" <<std::endl;
+  std::cout << "[x: " << affR1.x << ", y: " << affR1.y << "]" << std::endl;
+
+  assert(affL2.x==affR2.x && affL2.y==affR2.y);
+  std::cout << "commitment [(f1+f2)^2 - (f1-f2)^2]_1:"<< std::endl;
+  std::cout << "[x: " << affL2.x << ", y: " << affL2.y << "]" << std::endl;
+  std::cout << "commitment [4 f_1*f_2]_1:"<<std::endl;
+  std::cout << "[x: " << affR2.x << ", y: " << affR2.y << "]" << std::endl;
+}
+
+
+
 int main(int argc, char** argv)
 {
   // Initialize NTT. TODO: can we hide this in the library?
@@ -322,6 +442,7 @@ int main(int argc, char** argv)
   example_even_odd();
   example_slice();
   example_device_memory_view();
+  example_commit_with_device_memory_view();
 
   return 0;
 }
