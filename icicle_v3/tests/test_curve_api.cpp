@@ -149,7 +149,7 @@ TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_proje
 #ifdef ECNTT
 TEST_F(CurveApiTest, ecntt)
 {
-  const int logn = 5;
+  const int logn = 9;
   const int N = 1 << logn;
   auto input = std::make_unique<projective_t[]>(N);
   projective_t::rand_host_many(input.get(), N);
@@ -165,7 +165,7 @@ TEST_F(CurveApiTest, ecntt)
     icicle_set_device(dev);
 
     const int c = 6;
-    const int pcf = 10;
+    const int pcf = 5;
     auto config = default_msm_config();
     config.ext.set("c", c);
     config.precompute_factor = pcf;
