@@ -104,6 +104,9 @@ extern "C" cudaError_t bw6_761_mul_cuda(
 extern "C" cudaError_t bw6_761_add_cuda(
   bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bw6_761::scalar_t* result);
 
+extern "C" cudaError_t bw6_761_accumulate_cuda(
+  bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t bw6_761_sub_cuda(
   bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bw6_761::scalar_t* result);
 

@@ -104,6 +104,9 @@ extern "C" cudaError_t bls12_381_mul_cuda(
 extern "C" cudaError_t bls12_381_add_cuda(
   bls12_381::scalar_t* vec_a, bls12_381::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_381::scalar_t* result);
 
+extern "C" cudaError_t bls12_381_accumulate_cuda(
+  bls12_381::scalar_t* vec_a, bls12_381::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t bls12_381_sub_cuda(
   bls12_381::scalar_t* vec_a, bls12_381::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_381::scalar_t* result);
 

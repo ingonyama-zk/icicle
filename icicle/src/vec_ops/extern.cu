@@ -31,6 +31,18 @@ namespace vec_ops {
   }
 
   /**
+   * Accumulate (as vec_a[i] += vec_b[i]) function with the template parameter
+   * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
+   * or standalone "STARK field" given by `-DFIELD`).
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  extern "C" cudaError_t
+  CONCAT_EXPAND(FIELD, accumulate_cuda)(scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config)
+  {
+    return add<scalar_t>(vec_a, vec_b, n, config, vec_a);
+  }
+
+  /**
    * Extern version of [Sub](@ref Sub) function with the template parameter
    * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
    * or standalone "STARK field" given by `-DFIELD`).
