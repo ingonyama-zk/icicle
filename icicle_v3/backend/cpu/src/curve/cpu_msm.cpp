@@ -12,113 +12,9 @@
 using namespace curve_config;
 using namespace icicle;
 
-// TODO move to test file and add relevant ifdef
-class Dummy_Scalar
-{
-public:
-  static constexpr unsigned NBITS = 32;
-
-  unsigned x;
-  unsigned p = 10;
-  // unsigned p = 1<<30;
-
-  static HOST_DEVICE_INLINE Dummy_Scalar zero() { return {0}; }
-
-  static HOST_DEVICE_INLINE Dummy_Scalar one() { return {1}; }
-
-  friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar)
-  {
-    os << scalar.x;
-    return os;
-  }
-
-  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
-  {
-    return (x >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
-  }
-
-  friend HOST_DEVICE_INLINE Dummy_Scalar operator+(Dummy_Scalar p1, const Dummy_Scalar& p2)
-  {
-    return {(p1.x + p2.x) % p1.p};
-  }
-
-  friend HOST_DEVICE_INLINE bool operator==(const Dummy_Scalar& p1, const Dummy_Scalar& p2) { return (p1.x == p2.x); }
-
-  friend HOST_DEVICE_INLINE bool operator==(const Dummy_Scalar& p1, const unsigned p2) { return (p1.x == p2); }
-
-  static HOST_DEVICE_INLINE Dummy_Scalar neg(const Dummy_Scalar& scalar) { return {scalar.p - scalar.x}; }
-  static HOST_INLINE Dummy_Scalar rand_host()
-  {
-    return {(unsigned)rand() % 10};
-    // return {(unsigned)rand()};
-  }
-};
-
-class Dummy_Projective
-{
-public:
-  Dummy_Scalar x;
-
-  static HOST_DEVICE_INLINE Dummy_Projective zero() { return {0}; }
-
-  static HOST_DEVICE_INLINE Dummy_Projective one() { return {1}; }
-
-  // static HOST_DEVICE_INLINE affine_t to_affine(const Dummy_Projective& point) { return {{FF::from(point.x.x)}}; }
-
-  static HOST_DEVICE_INLINE Dummy_Projective from_affine(const affine_t& point) { return {point.x.get_scalar_digit(0,16)}; }
-
-  static HOST_DEVICE_INLINE Dummy_Projective neg(const Dummy_Projective& point) { return {Dummy_Scalar::neg(point.x)}; }
-
-  friend HOST_DEVICE_INLINE Dummy_Projective operator+(Dummy_Projective p1, const Dummy_Projective& p2)
-  {
-    return {p1.x + p2.x};
-  }
-
-  // friend HOST_DEVICE_INLINE Dummy_Projective operator-(Dummy_Projective p1, const Dummy_Projective& p2) {
-  //   return p1 + neg(p2);
-  // }
-
-  friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Dummy_Projective& point)
-  {
-    os << point.x;
-    return os;
-  }
-
-  friend HOST_DEVICE_INLINE Dummy_Projective operator*(Dummy_Scalar scalar, const Dummy_Projective& point)
-  {
-    Dummy_Projective res = zero();
-    for (int i = 0; i < Dummy_Scalar::NBITS; i++) {
-      if (i > 0) { res = res + res; }
-      if (scalar.get_scalar_digit(Dummy_Scalar::NBITS - i - 1, 1)) { res = res + point; }
-    }
-    return res;
-  }
-
-  friend HOST_DEVICE_INLINE bool operator==(const Dummy_Projective& p1, const Dummy_Projective& p2)
-  {
-    return (p1.x == p2.x);
-  }
-
-  static HOST_DEVICE_INLINE bool is_zero(const Dummy_Projective& point) { return point.x == 0; }
-
-  static HOST_INLINE Dummy_Projective rand_host()
-  {
-    return {(unsigned)rand() % 10};
-    // return {(unsigned)rand()};
-  }
-};
-
-// typedef scalar_t test_scalar;
-// typedef projective_t test_projective;
-// typedef affine_t test_affine;
-
-typedef Dummy_Scalar test_scalar;
-typedef Dummy_Projective test_projective;
-typedef Dummy_Projective test_affine;
-
 // TODO ask for help about memory management before / at C.R.
 // COMMENT maybe switch to 1d array?
-uint32_t** msm_bucket_coeffs(
+uint32_t* msm_bucket_coeffs(
   const scalar_t* scalars,
   const unsigned int msm_size,
   const unsigned int c,
@@ -134,38 +30,27 @@ uint32_t** msm_bucket_coeffs(
    * @param coefficients - output array of the decomposed scalar
    * @return status of function success / failure in the case of invalid arguments
   */
-  uint32_t** coefficients = new uint32_t*[msm_size*pcf];
-  for (int i = 0; i < msm_size*pcf; i++) // TODO split memory initialisation to preprocess
+  uint32_t* coefficients = new uint32_t[msm_size*pcf*num_windows];
+  // std::fill_n(coefficients, msm_size*pcf*num_windows/2, 0); // TODO zero init is required only once / when chaging config (c, pcf)
+
+  uint32_t half_val = 1 << (c - 1);
+  for (int i = 0; i < msm_size; i++)
   {
-    coefficients[i] = new uint32_t[num_windows];
-    std::fill_n(coefficients[i], num_windows, 0);
-  }
-  
-  const int num_full_limbs = scalar_t::NBITS/c;
-  const int last_limb_bits = scalar_t::NBITS - num_full_limbs * c;
-  
-  for (int j = 0; j < msm_size; j++)
-  {  
-    int count = 0;
-    bool did_last_limb = false;
-    for (int i = 0; i < pcf; i++)  
+    uint32_t curr_coeff = scalars[i].get_scalar_digit(0, c);
+    for (int j = 0; j < pcf; j++)  
     {
       for (int w = 0; w < num_windows; w++)
       {
-        if (count < num_full_limbs)
+        if (curr_coeff <= half_val)
         {
-          coefficients[msm_size*i + j][w] = scalars[j].get_scalar_digit(num_windows*i + w, c);
+          coefficients[(msm_size*j + i)*num_windows + w] = curr_coeff;
+          curr_coeff = scalars[i].get_scalar_digit(num_windows*j + w + 1, c);
         }
-        else
+        else if (curr_coeff > half_val)
         {
-          // Last window with non-zero data for this coefficient
-          if (!did_last_limb) coefficients[msm_size*i + j][w] = scalars[j].get_scalar_digit(num_windows*i + w, c) & ((1 << last_limb_bits) - 1); // Remainder is negative
-          did_last_limb = true;
-          // Break both loops
-          i = pcf;
-          break;
-        }
-        count++;
+          coefficients[(msm_size*j + i)*num_windows + w] = -curr_coeff;
+          curr_coeff = scalars[i].get_scalar_digit(num_windows*j + w + 1, c) + 1;
+        }        
       }
     }
   }
@@ -173,7 +58,7 @@ uint32_t** msm_bucket_coeffs(
 }
 
 template <typename P>
-P** msm_bucket_accumulator(
+P* msm_bucket_accumulator(
   const scalar_t* scalars,
   const affine_t* bases,
   const unsigned int c,
@@ -189,41 +74,41 @@ P** msm_bucket_accumulator(
    * @param msm_size - number of scalars to add
    * @param buckets - points array containing all buckets
   */
-  uint32_t** coefficients = msm_bucket_coeffs(scalars, msm_size, c, num_windows, pcf);
+  uint32_t* coefficients = msm_bucket_coeffs(scalars, msm_size, c, num_windows, pcf);
 
-  uint32_t num_buckets = 1<<c;
-  P** buckets = new P*[num_windows];
+  uint32_t num_buckets = 1<<(c-1);
+  P* buckets = new P[num_windows*num_buckets];
+  // std::fill_n(buckets, num_buckets*num_windows, P::zero());
 
-  for (int w = 0; w < num_windows; w++)
+  uint32_t coeff_bit_mask = (1 << (c - 1)) - 1;
+  for (int i = 0; i < msm_size; i++)
   {
-    buckets[w] = new P[num_buckets];
-    std::fill_n(buckets[w], num_buckets, P::zero());
-  }
-  for (int i = 0; i < pcf; i++)
-  {
-    for (int j = 0; j < msm_size; j++)
+    for (int j = 0; j < pcf; j++)
     {
       for (int w = 0; w < num_windows; w++)
       {
-        if (coefficients[msm_size*i + j][w] != 0) // TODO 0 will be used for signed version of msm
+        int coeff = coefficients[(msm_size*j + i)*num_windows + w];
+        if (coeff != 0)
         {
-          if (P::is_zero(buckets[w][coefficients[msm_size*i+j][w]]))
+          int b_index;
+          if (coeff > 0) 
           {
-            buckets[w][coefficients[msm_size*i + j][w]] = P::from_affine(bases[msm_size*i + j]);
+            b_index = num_buckets*w + (coeff & coeff_bit_mask);
+            buckets[b_index] = P::is_zero(buckets[b_index])?  P::from_affine(bases[msm_size*j + i]) :
+                                                              buckets[b_index] + bases[msm_size*j + i];
           }
           else
           {
-            buckets[w][coefficients[msm_size*i + j][w]] = buckets[w][coefficients[msm_size*i + j][w]] + bases[msm_size*i + j];
+            b_index = num_buckets*w + ((-coeff) & coeff_bit_mask);
+            buckets[b_index] = P::is_zero(buckets[b_index])?  P::from_affine(bases[msm_size*j + i]) :
+                                                              buckets[b_index] + bases[msm_size*j + i];
           }
+          
         }
       }
     }
   }
   // TODO memory management
-  for (int i = 0; i < msm_size; i++)
-  {
-    delete[] coefficients[i];
-  }
   delete[] coefficients;
 
   return buckets;
@@ -231,7 +116,7 @@ P** msm_bucket_accumulator(
 
 template <typename P>
 P* msm_window_sum(
-  P** buckets,
+  P* buckets,
   const unsigned int c,
   const unsigned int num_windows)
 {
@@ -241,12 +126,12 @@ P* msm_window_sum(
 
   for (int w = 0; w < num_windows; w++)
   {
-    window_sums[w] = P::copy(buckets[w][num_buckets - 1]);
-    P partial_sum = P::copy(buckets[w][num_buckets - 1]);
+    window_sums[w] = P::copy(buckets[num_buckets*(w+1) - 1]);
+    P partial_sum = P::copy(buckets[num_buckets*(w+1) - 1]);
 
     for (int i = num_buckets-2; i > 0; i--)
     {
-      if (!P::is_zero(buckets[w][i])) partial_sum = partial_sum + buckets[w][i];
+      if (!P::is_zero(buckets[num_buckets*w +i])) partial_sum = partial_sum + buckets[num_buckets*w +i];
       if (!P::is_zero(partial_sum)) window_sums[w] = window_sums[w] + partial_sum;
     }
   }
@@ -279,14 +164,11 @@ P msm_final_sum(
 
 template <typename P>
 void msm_delete_arrays(
-  P** buckets,
+  P* buckets,
   P* windows,
   const unsigned int num_windows)
 {
-  for (int w = 0; w < num_windows; w++)
-  {
-    delete[] buckets[w];
-  }
+  // TODO memory management
   delete[] buckets;
   delete[] windows;
 }
@@ -321,7 +203,7 @@ eIcicleError cpu_msm(
   const unsigned int pcf = config.precompute_factor;
   const int num_windows = ((scalar_t::NBITS-1) / (pcf * c)) + 1;
 
-  P** buckets = msm_bucket_accumulator<P>(scalars, bases, c, num_windows, msm_size, pcf);
+  P* buckets = msm_bucket_accumulator<P>(scalars, bases, c, num_windows, msm_size, pcf);
   P* window_sums = msm_window_sum<P>(buckets, c, num_windows);
   P res = msm_final_sum<P>(window_sums, c, num_windows);
 
