@@ -11,7 +11,7 @@ type MSMConfig struct {
 	/// Details related to the device such as its id and stream.
 	Ctx cr.DeviceContext
 
-	pointsSize int32
+	PointsSize int32
 
 	/// The number of extra points to pre-compute for each point. Larger values decrease the number of computations
 	/// to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute).
@@ -32,19 +32,19 @@ type MSMConfig struct {
 	/// Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10.
 	LargeBucketFactor int32
 
-	batchSize int32
+	BatchSize int32
 
-	areScalarsOnDevice bool
+	AreScalarsOnDevice bool
 
 	/// True if scalars are in Montgomery form and false otherwise. Default value: true.
 	AreScalarsMontgomeryForm bool
 
-	arePointsOnDevice bool
+	ArePointsOnDevice bool
 
 	/// True if coordinates of points are in Montgomery form and false otherwise. Default value: true.
 	ArePointsMontgomeryForm bool
 
-	areResultsOnDevice bool
+	AreResultsOnDevice bool
 
 	/// Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly
 	/// decreases parallelism, so only suitable for large batches of MSMs. Default value: false.
@@ -94,11 +94,11 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 		)
 		panic(errorString)
 	}
-	cfg.pointsSize = int32(pointsLength)
-	cfg.batchSize = int32(resultsLength)
-	cfg.areScalarsOnDevice = scalars.IsOnDevice()
-	cfg.arePointsOnDevice = points.IsOnDevice()
-	cfg.areResultsOnDevice = results.IsOnDevice()
+	cfg.PointsSize = int32(pointsLength)
+	cfg.BatchSize = int32(resultsLength)
+	cfg.AreScalarsOnDevice = scalars.IsOnDevice()
+	cfg.ArePointsOnDevice = points.IsOnDevice()
+	cfg.AreResultsOnDevice = results.IsOnDevice()
 
 	if scalars.IsOnDevice() {
 		scalars.(DeviceSlice).CheckDevice()

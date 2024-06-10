@@ -100,9 +100,8 @@ pub trait MSM<C: Curve> {
 
     fn precompute_bases_unchecked(
         points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
-        precompute_factor: i32,
-        _c: i32,
-        ctx: &DeviceContext,
+        msm_size: i32,
+        cfg: &MSMConfig,
         output_bases: &mut DeviceSlice<Affine<C>>,
     ) -> IcicleResult<()>;
 }
@@ -204,8 +203,8 @@ pub fn msm<C: Curve + MSM<C>>(
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     precompute_factor: i32,
-    _c: i32,
-    ctx: &DeviceContext,
+    msm_size: i32,
+    cfg: &MSMConfig,
     output_bases: &mut DeviceSlice<Affine<C>>,
 ) -> IcicleResult<()> {
     assert_eq!(
@@ -217,7 +216,7 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
     );
     assert!(output_bases.is_on_device());
 
-    C::precompute_bases_unchecked(points, precompute_factor, _c, ctx, output_bases)
+    C::precompute_bases_unchecked(points, msm_size, cfg, output_bases)
 }
 
 #[macro_export]
@@ -243,11 +242,8 @@ macro_rules! impl_msm {
                 #[link_name = concat!($curve_prefix, "_precompute_msm_bases_cuda")]
                 pub(crate) fn precompute_bases_cuda(
                     points: *const Affine<$curve>,
-                    bases_size: i32,
-                    precompute_factor: i32,
-                    _c: i32,
-                    are_bases_on_device: bool,
-                    ctx: &DeviceContext,
+                    msm_size: i32,
+                    config: &MSMConfig,
                     output_bases: *mut Affine<$curve>,
                 ) -> CudaError;
             }
@@ -274,19 +270,15 @@ macro_rules! impl_msm {
 
             fn precompute_bases_unchecked(
                 points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
-                precompute_factor: i32,
-                _c: i32,
-                ctx: &DeviceContext,
+                msm_size: i32,
+                cfg: &MSMConfig,
                 output_bases: &mut DeviceSlice<Affine<$curve>>,
             ) -> IcicleResult<()> {
                 unsafe {
                     $curve_prefix_indent::precompute_bases_cuda(
                         points.as_ptr(),
-                        points.len() as i32,
-                        precompute_factor,
-                        _c,
-                        points.is_on_device(),
-                        ctx,
+                        msm_size,
+                        cfg,
                         output_bases.as_mut_ptr(),
                     )
                     .wrap()
@@ -399,8 +391,8 @@ macro_rules! impl_msm_bench {
                     precompute_bases(
                         HostSlice::from_slice(&points),
                         precompute_factor as i32,
-                        0,
-                        &cfg.ctx,
+                        test_size,
+                        &cfg,
                         &mut precomputed_points_d,
                     )
                     .unwrap();

@@ -18,11 +18,8 @@
 
 extern "C" cudaError_t bls12_377_g2_precompute_msm_bases_cuda(
   bls12_377::g2_affine_t* bases,
-  int bases_size,
-  int precompute_factor,
-  int _c,
-  bool are_bases_on_device,
-  device_context::DeviceContext& ctx,
+  int msm_size,
+  msm::MSMConfig& config,
   bls12_377::g2_affine_t* output_bases);
 
 extern "C" cudaError_t bls12_377_g2_msm_cuda(
@@ -30,11 +27,8 @@ extern "C" cudaError_t bls12_377_g2_msm_cuda(
 
 extern "C" cudaError_t bls12_377_precompute_msm_bases_cuda(
   bls12_377::affine_t* bases,
-  int bases_size,
-  int precompute_factor,
-  int _c,
-  bool are_bases_on_device,
-  device_context::DeviceContext& ctx,
+  int msm_size,
+  msm::MSMConfig& config,
   bls12_377::affine_t* output_bases);
 
 extern "C" cudaError_t bls12_377_msm_cuda(

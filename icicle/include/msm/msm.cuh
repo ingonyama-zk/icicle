@@ -150,11 +150,8 @@ namespace msm {
   template <typename A, typename P>
   cudaError_t precompute_msm_bases(
     A* bases,
-    int bases_size,
-    int precompute_factor,
-    int _c,
-    bool are_bases_on_device,
-    device_context::DeviceContext& ctx,
+    int msm_size,
+    msm::MSMConfig& config,
     A* output_bases);
 
 } // namespace msm

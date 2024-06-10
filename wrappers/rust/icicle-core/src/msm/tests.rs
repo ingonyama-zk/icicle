@@ -119,17 +119,18 @@ where
         .stream = &stream;
     cfg.is_async = true;
     cfg.large_bucket_factor = 5;
-    cfg.c = 4;
     warmup(&stream).unwrap();
     for test_size in test_sizes {
         let precompute_factor = 8;
         let points = generate_random_affine_points_with_zeroes(test_size, 10);
         let mut precomputed_points_d = DeviceVec::cuda_malloc(precompute_factor * test_size).unwrap();
+        cfg.points_size = points.len() as i32;
+        cfg.precompute_factor = precompute_factor as i32;
         precompute_bases(
             HostSlice::from_slice(&points),
             precompute_factor as i32,
-            cfg.c,
-            &cfg.ctx,
+            test_size as i32,
+            &cfg,
             &mut precomputed_points_d,
         )
         .unwrap();

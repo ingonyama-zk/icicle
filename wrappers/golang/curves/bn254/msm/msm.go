@@ -28,18 +28,15 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 	return err
 }
 
-func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
+func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError {
 	pointsPointer, outputBasesPointer := core.PrecomputeBasesCheck(points, precomputeFactor, outputBases)
 
 	cPoints := (*C.affine_t)(pointsPointer)
-	cPointsLen := (C.int)(points.Len())
-	cPrecomputeFactor := (C.int)(precomputeFactor)
-	cC := (C.int)(c)
-	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
+	cMsmSize := (C.int)(msmSize)
+	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
-	__ret := C.bn254_precompute_msm_bases_cuda(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
+	__ret := C.bn254_precompute_msm_bases_cuda(cPoints, cMsmSize, cCfg, cOutputBases)
 	err := (cr.CudaError)(__ret)
 	return err
 }

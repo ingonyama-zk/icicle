@@ -16,15 +16,12 @@ namespace msm {
    */
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, g2_precompute_msm_bases_cuda)(
     g2_affine_t* bases,
-    int bases_size,
-    int precompute_factor,
-    int _c,
-    bool are_bases_on_device,
-    device_context::DeviceContext& ctx,
+    int msm_size,
+    MSMConfig& config,
     g2_affine_t* output_bases)
   {
     return precompute_msm_bases<g2_affine_t, g2_projective_t>(
-      bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
+      bases, msm_size, config, output_bases);
   }
 
   /**

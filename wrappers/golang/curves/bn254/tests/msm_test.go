@@ -184,15 +184,17 @@ func TestPrecomputeBase(t *testing.T) {
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
 
-			e = msm.PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+			cfg.PrecomputeFactor = precomputeFactor
+			cfg.PointsSize = int32(points.Len())
+			cfg.ArePointsOnDevice = points.IsOnDevice()
+
+			e = msm.PrecomputeBases(points, precomputeFactor, size, &cfg, precomputeOut)
 			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
 
 			var p icicleBn254.Projective
 			var out core.DeviceSlice
 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
-
-			cfg.PrecomputeFactor = precomputeFactor
 
 			e = msm.Msm(scalars, precomputeOut, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")

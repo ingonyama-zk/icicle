@@ -264,8 +264,12 @@ func TestPrecomputeBase{{.CurvePrefix}}(t *testing.T) {
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+			
+			cfg.PrecomputeFactor = precomputeFactor
+			cfg.PointsSize = int32(points.Len())
+			cfg.ArePointsOnDevice = points.IsOnDevice()
 
-			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}PrecomputeBases(points, precomputeFactor, size, &cfg, precomputeOut)
 			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
 
 			var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
@@ -273,7 +277,6 @@ func TestPrecomputeBase{{.CurvePrefix}}(t *testing.T) {
 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
 			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
 
-			cfg.PrecomputeFactor = precomputeFactor
 
 			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, precomputeOut, &cfg, out)
 			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")

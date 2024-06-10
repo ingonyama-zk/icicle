@@ -889,29 +889,27 @@ namespace msm {
   template <typename A, typename P>
   cudaError_t precompute_msm_bases(
     A* bases,
-    int bases_size,
-    int precompute_factor,
-    int c,
-    bool are_bases_on_device,
-    device_context::DeviceContext& ctx,
+    int msm_size,
+    MSMConfig& config,
     A* output_bases)
   {
     CHK_INIT_IF_RETURN();
 
-    cudaStream_t& stream = ctx.stream;
-
+    cudaStream_t& stream = config.ctx.stream;
+    unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
+  
     CHK_IF_RETURN(cudaMemcpyAsync(
-      output_bases, bases, sizeof(A) * bases_size,
-      are_bases_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
+      output_bases, bases, sizeof(A) * config.points_size,
+      config.are_points_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
 
     unsigned total_nof_bms = (P::SCALAR_FF_NBITS - 1) / c + 1;
-    unsigned shift = c * ((total_nof_bms - 1) / precompute_factor + 1);
+    unsigned shift = c * ((total_nof_bms - 1) / config.precompute_factor + 1);
 
     unsigned NUM_THREADS = 1 << 8;
-    unsigned NUM_BLOCKS = (bases_size + NUM_THREADS - 1) / NUM_THREADS;
-    for (int i = 1; i < precompute_factor; i++) {
+    unsigned NUM_BLOCKS = (config.points_size + NUM_THREADS - 1) / NUM_THREADS;
+    for (int i = 1; i < config.precompute_factor; i++) {
       left_shift_kernel<A, P><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        &output_bases[(i - 1) * bases_size], shift, bases_size, &output_bases[i * bases_size]);
+        &output_bases[(i - 1) * config.points_size], shift, config.points_size, &output_bases[i * config.points_size]);
     }
 
     return CHK_LAST();

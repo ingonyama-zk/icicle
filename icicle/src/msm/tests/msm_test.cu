@@ -217,7 +217,7 @@ int main(int argc, char** argv)
 
   if (precomp_factor > 1)
     msm::precompute_msm_bases<test_affine, test_projective>(
-      points_d, N, precomp_factor, user_c, false, ctx, precomp_points_d);
+      points_d, msm_size, config, precomp_points_d);
 
   // warm up
   msm::msm<test_scalar, test_affine, test_projective>(
