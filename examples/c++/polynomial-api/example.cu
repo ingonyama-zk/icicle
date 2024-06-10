@@ -3,11 +3,9 @@
 #include "polynomials/polynomials.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "ntt/ntt.cuh"
-#include "poseidon/tree/merkle.cuh"
 
 // using namespace field_config;
 using namespace polynomials;
-using namespace merkle;
 
 // define the polynomial type
 typedef Polynomial<scalar_t> Polynomial_t;
