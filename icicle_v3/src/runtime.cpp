@@ -84,8 +84,14 @@ const std::string SHARED_LIB_EXTENSION = ".dylib";
 #error "Unsupported operating system"
 #endif
 
-extern "C" eIcicleError icicle_load_backend(const std::string& path)
+extern "C" eIcicleError icicle_load_backend(const std::string& path, bool is_recursive)
 {
+  auto is_directory = [](const std::string& path) {
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) != 0) { return false; }
+    return S_ISDIR(pathStat.st_mode);
+  };
+
   auto is_shared_library = [](const std::string& filename) {
     return filename.size() >= SHARED_LIB_EXTENSION.size() &&
            filename.compare(
@@ -95,16 +101,10 @@ extern "C" eIcicleError icicle_load_backend(const std::string& path)
   auto load_library = [](const std::string& filePath) {
     ICICLE_LOG_DEBUG << "Attempting load: " << filePath;
     void* handle = dlopen(filePath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-    if (!handle) { std::cerr << "Failed to load " << filePath << ": " << dlerror() << std::endl; }
+    if (!handle) { ICICLE_LOG_ERROR << "Failed to load " << filePath << ": " << dlerror(); }
   };
 
-  struct stat pathStat;
-  if (stat(path.c_str(), &pathStat) != 0) {
-    ICICLE_LOG_ERROR << "Cannot access path: " << path;
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  if (S_ISDIR(pathStat.st_mode)) {
+  if (is_directory(path)) {
     // Path is a directory, recursively search for libraries
     DIR* dir = opendir(path.c_str());
     if (!dir) {
@@ -120,15 +120,13 @@ extern "C" eIcicleError icicle_load_backend(const std::string& path)
       if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..") { continue; }
 
       // Recurse into subdirectories and load libraries in files
-      icicle_load_backend(entryPath);
+      const bool is_nested_dir = is_directory(entryPath);
+      if (is_recursive || !is_nested_dir) { icicle_load_backend(entryPath, is_recursive); }
     }
 
     closedir(dir);
-  } else if (S_ISREG(pathStat.st_mode)) {
-    // Path is a regular file, check if it is a shared library and load it
-    if (is_shared_library(path)) { load_library(path); }
-  } else {
-    ICICLE_LOG_ERROR << "Unsupported file type: " << path;
+  } else if (is_shared_library(path)) {
+    load_library(path);
   }
 
   return eIcicleError::SUCCESS;
