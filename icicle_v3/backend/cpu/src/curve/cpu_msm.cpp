@@ -186,6 +186,18 @@ eIcicleError not_supported(const MSMConfig& c)
   return eIcicleError::SUCCESS;
 }
 
+// eIcicleError msm_process_config(
+//   const MSMConfig& c,
+//   scalar_t* scalars,
+//   affine_t* bases)
+// {
+//   if (c.are_points_montgomery_form)
+//   {
+//     /* code */
+//   }
+  
+// }
+
 // Pipenger
 template <typename P>
 eIcicleError cpu_msm(

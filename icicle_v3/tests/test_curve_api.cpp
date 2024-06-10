@@ -149,7 +149,7 @@ TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_proje
 #ifdef ECNTT
 TEST_F(CurveApiTest, ecntt)
 {
-  const int logn = 9;
+  const int logn = 17;
   const int N = 1 << logn;
   auto input = std::make_unique<projective_t[]>(N);
   projective_t::rand_host_many(input.get(), N);
