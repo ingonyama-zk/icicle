@@ -56,6 +56,8 @@ namespace bls12_381 {
     // true if nonresidue is negative
     static constexpr bool nonresidue_is_negative = true;
   };
+  // base field for the curve
+  typedef Field<fq_config> base_t;
 } // namespace bls12_381
 
 #endif
