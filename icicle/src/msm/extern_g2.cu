@@ -15,13 +15,9 @@ namespace msm {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(CURVE, g2_precompute_msm_bases_cuda)(
-    g2_affine_t* bases,
-    int msm_size,
-    MSMConfig& config,
-    g2_affine_t* output_bases)
+    g2_affine_t* bases, int msm_size, MSMConfig& config, g2_affine_t* output_bases)
   {
-    return precompute_msm_bases<g2_affine_t, g2_projective_t>(
-      bases, msm_size, config, output_bases);
+    return precompute_msm_bases<g2_affine_t, g2_projective_t>(bases, msm_size, config, output_bases);
   }
 
   /**

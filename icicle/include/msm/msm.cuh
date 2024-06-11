@@ -148,11 +148,7 @@ namespace msm {
    *
    */
   template <typename A, typename P>
-  cudaError_t precompute_msm_bases(
-    A* bases,
-    int msm_size,
-    msm::MSMConfig& config,
-    A* output_bases);
+  cudaError_t precompute_msm_bases(A* bases, int msm_size, msm::MSMConfig& config, A* output_bases);
 
 } // namespace msm
 

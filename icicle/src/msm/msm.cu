@@ -887,17 +887,13 @@ namespace msm {
   }
 
   template <typename A, typename P>
-  cudaError_t precompute_msm_bases(
-    A* bases,
-    int msm_size,
-    MSMConfig& config,
-    A* output_bases)
+  cudaError_t precompute_msm_bases(A* bases, int msm_size, MSMConfig& config, A* output_bases)
   {
     CHK_INIT_IF_RETURN();
 
     cudaStream_t& stream = config.ctx.stream;
     unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
-  
+
     CHK_IF_RETURN(cudaMemcpyAsync(
       output_bases, bases, sizeof(A) * config.points_size,
       config.are_points_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
