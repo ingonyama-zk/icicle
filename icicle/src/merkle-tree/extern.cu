@@ -5,22 +5,21 @@
 #include "merkle.cu"
 
 #include "hash/hash.cuh"
-#include "poseidon/poseidon.cuh"
 
 #include "fields/field_config.cuh"
 using namespace field_config;
 
 namespace merkle_tree {
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, build_poseidon_merkle_tree)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, build_merkle_tree)(
     const scalar_t* leaves_digests,
     scalar_t* digests,
     unsigned int height,
     unsigned int input_block_len,
-    const poseidon::Poseidon<scalar_t>* poseidon_compression,
-    const poseidon::Poseidon<scalar_t>* poseidon_bottom_layer,
+    const hash::SpongeHasher<scalar_t, scalar_t>* compression,
+    const hash::SpongeHasher<scalar_t, scalar_t>* bottom_layer,
     const TreeBuilderConfig& tree_config)
   {
     return build_merkle_tree<scalar_t, scalar_t>(
-      leaves_digests, digests, height, input_block_len, *poseidon_compression, *poseidon_bottom_layer, tree_config);
+      leaves_digests, digests, height, input_block_len, *compression, *bottom_layer, tree_config);
   }
 } // namespace merkle_tree

@@ -244,8 +244,9 @@ namespace merkle_tree {
     // Allocate memory for the leaves and digests
     // These are shared by streams in a pool
     D *states_ptr, *digests_ptr;
-    CHK_IF_RETURN(cudaMallocAsync(&states_ptr, subtree_states_size * number_of_streams * sizeof(D), stream))
-    CHK_IF_RETURN(cudaMallocAsync(&digests_ptr, subtree_digests_size * number_of_streams * sizeof(D), stream))
+    CHK_IF_RETURN(cudaMallocAsync(&states_ptr, subtree_states_size * number_of_streams * sizeof(D), stream));
+    CHK_IF_RETURN(cudaMemsetAsync(states_ptr, 0, subtree_states_size * number_of_streams * sizeof(D), stream));
+    CHK_IF_RETURN(cudaMallocAsync(&digests_ptr, subtree_digests_size * number_of_streams * sizeof(D), stream));
     // Wait for these allocations to finish
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
 
@@ -294,8 +295,9 @@ namespace merkle_tree {
       size_t start_segment_size = caps_len / tree_config.arity;
       size_t start_segment_offset = 0;
       if (!caps_mode) { // Calculate offset
-        size_t layer_size = pow(tree_config.arity, tree_config.keep_rows - 1) * tree_config.digest_elements;
-        for (int i = 0; i < tree_config.keep_rows - cap_height; i++) {
+        size_t keep_rows = tree_config.keep_rows ? tree_config.keep_rows : height + 1;
+        size_t layer_size = pow(tree_config.arity, keep_rows - 1) * tree_config.digest_elements;
+        for (int i = 0; i < keep_rows - cap_height; i++) {
           start_segment_offset += layer_size;
           layer_size /= tree_config.arity;
         }

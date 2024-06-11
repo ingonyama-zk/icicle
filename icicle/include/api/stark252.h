@@ -14,18 +14,14 @@
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
 
-extern "C" cudaError_t stark252_initialize_domain(
-  stark252::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
-
-extern "C" cudaError_t stark252_ntt_cuda(
-  const stark252::scalar_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<stark252::scalar_t>& config, stark252::scalar_t* output);
-
-extern "C" cudaError_t stark252_release_domain(device_context::DeviceContext& ctx);
-
-extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
-
-extern "C" cudaError_t stark252_scalar_convert_montgomery(
-  stark252::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
+extern "C" cudaError_t stark252_build_merkle_tree(
+  const stark252::scalar_t* leaves,
+  stark252::scalar_t* digests,
+  unsigned int height,
+  unsigned int input_block_len, 
+  const hash::SpongeHasher<stark252::scalar_t, stark252::scalar_t>* compression,
+  const hash::SpongeHasher<stark252::scalar_t, stark252::scalar_t>* bottom_layer,
+  const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t stark252_mul_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
@@ -50,5 +46,18 @@ extern "C" cudaError_t stark252_bit_reverse_cuda(
   uint64_t n,
   vec_ops::BitReverseConfig& config,
   stark252::scalar_t* output);
+
+extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
+
+extern "C" cudaError_t stark252_scalar_convert_montgomery(
+  stark252::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
+
+extern "C" cudaError_t stark252_initialize_domain(
+  stark252::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
+
+extern "C" cudaError_t stark252_ntt_cuda(
+  const stark252::scalar_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<stark252::scalar_t>& config, stark252::scalar_t* output);
+
+extern "C" cudaError_t stark252_release_domain(device_context::DeviceContext& ctx);
 
 #endif

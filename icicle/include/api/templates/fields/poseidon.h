@@ -43,12 +43,3 @@ extern "C" cudaError_t ${FIELD}_poseidon_hash_many_cuda(
 
 extern "C" cudaError_t
   ${FIELD}_poseidon_delete_cuda(poseidon::Poseidon<${FIELD}::scalar_t>* poseidon);
-
-extern "C" cudaError_t ${FIELD}_build_poseidon_merkle_tree(
-  const ${FIELD}::scalar_t* leaves,
-  ${FIELD}::scalar_t* digests,
-  unsigned int height,
-  unsigned int input_block_len, 
-  const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon_compression,
-  const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon_sponge,
-  const merkle_tree::TreeBuilderConfig& tree_config);

@@ -8,7 +8,7 @@ use std::ffi::c_void;
 
 use crate::curve::ScalarField;
 
-impl_field_tree_builder!("bls12_381", bls12_381_tb, ScalarField, ScalarCfg, Bls12_381TreeBuilder);
+impl_field_tree_builder!("grumpkin", grumpkin_tb, ScalarField, ScalarCfg, GrumpkinTreeBuilder);
 
 #[cfg(test)]
 pub(crate) mod tests {
@@ -17,13 +17,13 @@ pub(crate) mod tests {
 
     use crate::curve::ScalarField;
 
-    use super::Bls12_381TreeBuilder;
+    use super::GrumpkinTreeBuilder;
 
     #[test]
     fn poseidon_merkle_tree_test() {
         let ctx = device_context::DeviceContext::default();
         let sponge = Poseidon::load(2, &ctx).unwrap();
 
-        check_build_field_merkle_tree::<_, _, Bls12_381TreeBuilder>(25, 2, &sponge, &sponge, ScalarField::zero());
+        check_build_field_merkle_tree::<_, _, GrumpkinTreeBuilder>(25, 2, &sponge, &sponge, ScalarField::zero());
     }
 }

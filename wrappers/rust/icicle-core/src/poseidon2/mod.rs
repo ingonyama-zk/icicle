@@ -1,8 +1,6 @@
 #[doc(hidden)]
 pub mod tests;
 
-pub mod tree;
-
 use std::{ffi::c_void, marker::PhantomData};
 
 use icicle_cuda_runtime::{
@@ -37,8 +35,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     width: usize,
-    pub handle: Poseidon2Handle,
-    device_id: usize,
+    handle: Poseidon2Handle,
     phantom: PhantomData<F>,
 }
 
@@ -58,7 +55,6 @@ where
                 Ok(Self {
                     width,
                     handle,
-                    device_id: ctx.device_id,
                     phantom: PhantomData,
                 })
             },
@@ -91,7 +87,6 @@ where
             Ok(Self {
                 width,
                 handle,
-                device_id: ctx.device_id,
                 phantom: PhantomData,
             })
         })
@@ -103,6 +98,10 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
+    fn get_handle(&self) -> *const c_void {
+        self.handle
+    }
+
     fn absorb_many(
         &self,
         inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -211,11 +210,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     fn drop(&mut self) {
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::delete(
-            self.handle,
-            &DeviceContext::default_for_device(self.device_id),
-        )
-        .unwrap();
+        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::delete(self.handle).unwrap();
     }
 }
 
@@ -267,7 +262,7 @@ pub trait Poseidon2Impl<F: FieldImpl> {
         cfg: &SpongeConfig,
     ) -> IcicleResult<()>;
 
-    fn delete(poseidon: Poseidon2Handle, ctx: &DeviceContext) -> IcicleResult<()>;
+    fn delete(poseidon: Poseidon2Handle) -> IcicleResult<()>;
 }
 
 #[macro_export]
@@ -309,7 +304,7 @@ macro_rules! impl_poseidon2 {
                 ) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_poseidon2_delete_cuda")]
-                pub(crate) fn delete(poseidon: Poseidon2Handle, ctx: &DeviceContext) -> CudaError;
+                pub(crate) fn delete(poseidon: Poseidon2Handle) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_poseidon2_absorb_many_cuda")]
                 pub(crate) fn absorb_many(
@@ -454,8 +449,8 @@ macro_rules! impl_poseidon2 {
                 }
             }
 
-            fn delete(poseidon: Poseidon2Handle, ctx: &DeviceContext) -> IcicleResult<()> {
-                unsafe { $field_prefix_ident::delete(poseidon, ctx).wrap() }
+            fn delete(poseidon: Poseidon2Handle) -> IcicleResult<()> {
+                unsafe { $field_prefix_ident::delete(poseidon).wrap() }
             }
         }
     };

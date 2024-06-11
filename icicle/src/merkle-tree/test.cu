@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
   tree_config.arity = 2;
   tree_config.keep_rows = keep_rows;
   START_TIMER(timer_merkle);
-  bls12_381_build_poseidon_merkle_tree(leaves, digests, tree_height, A, &poseidon, &poseidon, tree_config);
+  bls12_381_build_merkle_tree(leaves, digests, tree_height, A, &poseidon, &poseidon, tree_config);
   END_TIMER(timer_merkle, "Merkle tree built: ")
 
   for (int i = 0; i < digests_len; i++) {

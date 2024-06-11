@@ -3,8 +3,8 @@ use icicle_cuda_runtime::{
     memory::HostOrDeviceSlice,
 };
 
-use crate::error::IcicleResult;
 use crate::hash::SpongeHash;
+use crate::{error::IcicleResult, ntt::FieldImpl};
 
 #[doc(hidden)]
 pub mod tests;
@@ -22,7 +22,7 @@ pub struct TreeBuilderConfig<'a> {
     /// How many rows of the Merkle tree rows should be written to output. '0' means all of them
     pub keep_rows: u32,
 
-    /// The size of output for each bottom layer hash and compression.
+    /// The size of the output for the bottom layer hash and compression.
     /// Will also be equal to the size of the root of the tree. Default value 1
     pub digest_elements: u32,
 
@@ -66,18 +66,79 @@ pub fn merkle_tree_digests_len(height: u32, arity: u32, digest_elements: u32) ->
     digests_len
 }
 
-pub trait TreeBuilder<Compression, Sponge, Leaf, Digest>
+pub trait FieldTreeBuilder<F, Compression, Sponge>
 where
-    Compression: SpongeHash<Leaf, Digest>,
-    Sponge: SpongeHash<Leaf, Digest>,
+    F: FieldImpl,
+    Compression: SpongeHash<F, F>,
+    Sponge: SpongeHash<F, F>,
 {
     fn build_merkle_tree(
-        leaves: &(impl HostOrDeviceSlice<Leaf> + ?Sized),
-        digests: &mut (impl HostOrDeviceSlice<Digest> + ?Sized),
+        leaves: &(impl HostOrDeviceSlice<F> + ?Sized),
+        digests: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         height: usize,
         input_block_len: usize,
         compression: &Compression,
         sponge: &Sponge,
         config: &TreeBuilderConfig,
     ) -> IcicleResult<()>;
+}
+
+#[macro_export]
+macro_rules! impl_field_tree_builder {
+    (
+      $field_prefix:literal,
+      $field_prefix_ident:ident,
+      $field:ident,
+      $field_config:ident,
+      $tree_builder:ident
+    ) => {
+        mod $field_prefix_ident {
+            use super::*;
+            use icicle_cuda_runtime::error::CudaError;
+
+            extern "C" {
+                #[link_name = concat!($field_prefix, "_build_merkle_tree")]
+                pub(crate) fn build_merkle_tree(
+                    leaves: *const $field,
+                    digests: *mut $field,
+                    height: u32,
+                    input_block_len: u32,
+                    compression: *const c_void,
+                    sponge: *const c_void,
+                    config: &TreeBuilderConfig,
+                ) -> CudaError;
+            }
+        }
+
+        struct $tree_builder;
+
+        impl<Compression, Sponge> FieldTreeBuilder<$field, Compression, Sponge> for $tree_builder
+        where
+            Compression: SpongeHash<$field, $field>,
+            Sponge: SpongeHash<$field, $field>,
+        {
+            fn build_merkle_tree(
+                leaves: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                digests: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                height: usize,
+                input_block_len: usize,
+                compression: &Compression,
+                sponge: &Sponge,
+                config: &TreeBuilderConfig,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::build_merkle_tree(
+                        leaves.as_ptr(),
+                        digests.as_mut_ptr(),
+                        height as u32,
+                        input_block_len as u32,
+                        compression.get_handle(),
+                        sponge.get_handle(),
+                        config,
+                    )
+                    .wrap()
+                }
+            }
+        }
+    };
 }

@@ -37,7 +37,6 @@ namespace poseidon2 {
     device_context::DeviceContext& ctx,
     Poseidon2Constants<S>* poseidon_constants)
   {
-    cudaFree(nullptr); // Temporary solution
     if (!(alpha == 3 || alpha == 5 || alpha == 7 || alpha == 11)) {
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid alpha value");
     }
@@ -79,7 +78,6 @@ namespace poseidon2 {
     device_context::DeviceContext& ctx,
     Poseidon2Constants<S>* poseidon2_constants)
   {
-    cudaFree(nullptr); // Temporary solution
     CHK_INIT_IF_RETURN();
 
 #define P2_CONSTANTS_DEF(width)                                                                                        \

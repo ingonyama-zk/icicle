@@ -1,8 +1,6 @@
 #[doc(hidden)]
 pub mod tests;
 
-pub mod tree;
-
 use std::{ffi::c_void, marker::PhantomData};
 
 use icicle_cuda_runtime::{
@@ -23,7 +21,7 @@ where
     <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
     width: usize,
-    pub handle: PoseidonHandle,
+    handle: PoseidonHandle,
     phantom: PhantomData<F>,
 }
 
@@ -81,6 +79,10 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
+    fn get_handle(&self) -> *const c_void {
+        self.handle
+    }
+
     fn absorb_many(
         &self,
         inputs: &(impl HostOrDeviceSlice<F> + ?Sized),

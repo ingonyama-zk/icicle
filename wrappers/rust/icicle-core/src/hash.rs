@@ -1,3 +1,5 @@
+use std::ffi::c_void;
+
 use icicle_cuda_runtime::{
     device::check_device,
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
@@ -82,6 +84,8 @@ pub trait SpongeHash<PreImage, Image> {
     ) -> IcicleResult<()>;
 
     fn default_config<'a>(&self) -> SpongeConfig<'a>;
+
+    fn get_handle(&self) -> *const c_void;
 }
 
 pub(crate) fn sponge_check_input<T>(

@@ -6,7 +6,7 @@ use crate::{
     tree::{merkle_tree_digests_len, TreeBuilderConfig},
 };
 
-use super::TreeBuilder;
+use super::FieldTreeBuilder;
 
 pub fn check_build_field_merkle_tree<F, H, T>(
     height: usize,
@@ -17,7 +17,7 @@ pub fn check_build_field_merkle_tree<F, H, T>(
 ) where
     F: FieldImpl,
     H: SpongeHash<F, F>,
-    T: TreeBuilder<H, H, F, F>,
+    T: FieldTreeBuilder<F, H, H>,
 {
     let mut config = TreeBuilderConfig::default();
     config.arity = arity as u32;
@@ -38,6 +38,5 @@ pub fn check_build_field_merkle_tree<F, H, T>(
         &config,
     )
     .unwrap();
-
-    println!("Root: {:?}", digests[0]);
+    println!("Root: {:?}", digests_slice[0]);
 }
