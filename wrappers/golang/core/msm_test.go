@@ -26,6 +26,7 @@ func TestMSMDefaultConfig(t *testing.T) {
 		false, // areResultsOnDevice
 		false, // IsBigTriangle
 		false, // IsAsync
+		false, // IsSigned
 	}
 
 	actual := GetDefaultMSMConfig()
