@@ -155,6 +155,14 @@ namespace icicle {
      */
     virtual eIcicleError destroy_stream(icicleStreamHandle stream) const = 0;
 
+    /**
+     * @brief Retrieves the properties of the specified device.
+     *
+     * @param properties Structure to be filled with device properties.
+     * @return eIcicleError Status of the properties query.
+     */
+    virtual eIcicleError get_device_properties(DeviceProperties& properties) const = 0;
+
   private:
     thread_local static inline Device sCurDevice = {nullptr, -1}; // device that is currently active for this thread
     thread_local static inline const DeviceAPI* sCurDeviceAPI;    // API for the currently active device of this thread

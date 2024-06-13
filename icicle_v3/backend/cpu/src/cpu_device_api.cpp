@@ -81,6 +81,14 @@ public:
   {
     return (nullptr == stream) ? eIcicleError::SUCCESS : eIcicleError::STREAM_DESTRUCTION_FAILED;
   }
+
+  eIcicleError get_device_properties(DeviceProperties& properties) const override
+  {
+    properties.using_host_memory = true;
+    properties.num_memory_regions = 0;
+    properties.supports_pinned_memory = false;
+    return eIcicleError::SUCCESS;
+  }
 };
 
 REGISTER_DEVICE_API("CPU", CpuDeviceAPI);

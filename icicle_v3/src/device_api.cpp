@@ -37,10 +37,16 @@ namespace icicle {
 
   class DeviceAPIRegistry
   {
-    static inline std::unordered_map<std::string, std::shared_ptr<DeviceAPI>> apiMap;
+    std::unordered_map<std::string, std::shared_ptr<DeviceAPI>> apiMap;
 
   public:
-    static void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
+    static DeviceAPIRegistry& Global()
+    {
+      static DeviceAPIRegistry instance;
+      return instance;
+    }
+
+    void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
     {
       if (apiMap.find(deviceType) != apiMap.end()) {
         throw std::runtime_error("Attempting to register a duplicate API for device type: " + deviceType);
@@ -48,7 +54,7 @@ namespace icicle {
       apiMap[deviceType] = api;
     }
 
-    static std::shared_ptr<DeviceAPI> get_deviceAPI(const Device& device)
+    std::shared_ptr<DeviceAPI> get_deviceAPI(const Device& device)
     {
       auto it = apiMap.find(device.type);
       if (it != apiMap.end()) {
@@ -58,7 +64,7 @@ namespace icicle {
       }
     }
 
-    static std::list<std::string> get_registered_devices()
+    std::list<std::string> get_registered_devices()
     {
       std::list<std::string> registered_devices;
       for (const auto& device : apiMap) {
@@ -67,19 +73,22 @@ namespace icicle {
       return registered_devices;
     }
 
-    static bool is_device_registered(const char* device_type) { return apiMap.find(device_type) != apiMap.end(); }
+    bool is_device_registered(const char* device_type) { return apiMap.find(device_type) != apiMap.end(); }
   };
 
-  DeviceAPI* get_deviceAPI(const Device& device) { return DeviceAPIRegistry::get_deviceAPI(device).get(); }
+  DeviceAPI* get_deviceAPI(const Device& device) { return DeviceAPIRegistry::Global().get_deviceAPI(device).get(); }
 
   void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
   {
     ICICLE_LOG_DEBUG << "deviceAPI registered for " << deviceType;
-    DeviceAPIRegistry::register_deviceAPI(deviceType, api);
+    DeviceAPIRegistry::Global().register_deviceAPI(deviceType, api);
   }
 
-  std::list<std::string> get_registered_devices() { return DeviceAPIRegistry::get_registered_devices(); }
+  std::list<std::string> get_registered_devices() { return DeviceAPIRegistry::Global().get_registered_devices(); }
 
-  bool is_device_registered(const char* device_type) { return DeviceAPIRegistry::is_device_registered(device_type); }
+  bool is_device_registered(const char* device_type)
+  {
+    return DeviceAPIRegistry::Global().is_device_registered(device_type);
+  }
 
 } // namespace icicle

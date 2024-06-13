@@ -65,6 +65,11 @@ extern "C" eIcicleError icicle_device_synchronize()
   return DeviceAPI::get_thread_local_deviceAPI()->synchronize(nullptr);
 }
 
+extern "C" eIcicleError icicle_get_device_properties(DeviceProperties& properties)
+{
+  return DeviceAPI::get_thread_local_deviceAPI()->get_device_properties(properties);
+}
+
 extern "C" eIcicleError icicle_create_stream(icicleStreamHandle* stream)
 {
   return DeviceAPI::get_thread_local_deviceAPI()->create_stream(stream);
