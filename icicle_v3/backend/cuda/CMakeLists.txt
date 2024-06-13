@@ -42,9 +42,11 @@ target_link_libraries(icicle_cuda_field PRIVATE ${CUDA_LIBRARIES}) # Link to CUD
 if (CURVE)
     add_library(icicle_cuda_curve SHARED 
         src/curve/cuda_msm.cu
-        src/curve/cuda_mont.cu
-        src/ntt/cuda_ecntt.cu
+        src/curve/cuda_mont.cu        
     )
+    if(NTT)
+        target_sources(icicle_cuda_curve PUBLIC src/ntt/cuda_ecntt.cu)
+    endif()
     target_include_directories(icicle_cuda_curve PRIVATE include)
     target_link_libraries(icicle_cuda_curve PUBLIC icicle_device icicle_curve)
     set_target_properties(icicle_cuda_curve PROPERTIES OUTPUT_NAME "icicle_cuda_curve_${FIELD}")
