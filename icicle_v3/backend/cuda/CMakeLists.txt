@@ -27,7 +27,10 @@ add_library(icicle_cuda_field SHARED
     src/field/cuda_mont.cu
     )
 if(NTT)
-    target_sources(icicle_cuda_field PUBLIC src/ntt/ntt.cu src/ntt/mixed_radix_ntt.cu)
+    target_sources(icicle_cuda_field PUBLIC 
+        src/ntt/cuda_ntt.cu 
+        src/ntt/mixed_radix_ntt.cu
+    )
 endif()
 target_include_directories(icicle_cuda_field PRIVATE include)
 target_link_libraries(icicle_cuda_field PUBLIC icicle_device icicle_field)
@@ -40,6 +43,7 @@ if (CURVE)
     add_library(icicle_cuda_curve SHARED 
         src/curve/cuda_msm.cu
         src/curve/cuda_mont.cu
+        src/ntt/cuda_ecntt.cu
     )
     target_include_directories(icicle_cuda_curve PRIVATE include)
     target_link_libraries(icicle_cuda_curve PUBLIC icicle_device icicle_curve)
