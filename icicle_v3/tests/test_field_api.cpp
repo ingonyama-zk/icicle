@@ -120,45 +120,57 @@ TYPED_TEST(FieldApiTest, vectorOps)
 TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 {
   const int R = 1 << 10, C = 1 << 8;
-  auto in = std::make_unique<TypeParam[]>(R * C);
-  FieldApiTest<TypeParam>::random_samples(in.get(), R * C);
+  auto h_in = std::make_unique<TypeParam[]>(R * C);
+  FieldApiTest<TypeParam>::random_samples(h_in.get(), R * C);
 
-  auto out_main = std::make_unique<TypeParam[]>(R * C);
-  auto out_ref = std::make_unique<TypeParam[]>(R * C);
+  auto h_out_main = std::make_unique<TypeParam[]>(R * C);
+  auto h_out_ref = std::make_unique<TypeParam[]>(R * C);
 
-  auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
+  auto run = [&](const std::string& dev_type, TypeParam* h_out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type.c_str(), 0};
     icicle_set_device(dev);
+
+    DeviceProperties device_props;
+    icicle_get_device_properties(device_props);
     auto config = default_matrix_ops_config();
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    TypeParam *d_in, *d_out;
-    icicle_create_stream(&config.stream);
-    icicle_malloc_async((void**)&d_in, R * C * sizeof(TypeParam), config.stream);
-    icicle_malloc_async((void**)&d_out, R * C * sizeof(TypeParam), config.stream);
-    icicle_copy_to_device_async(d_in, in.get(), R * C * sizeof(TypeParam), config.stream);
+    // Note: if the device uses host memory, do not allocate device memory and copy
 
-    config.is_input_on_device = true;
-    config.is_output_on_device = true;
-    config.is_async = true;
+    TypeParam *d_in, *d_out;
+    if (!device_props.using_host_memory) {
+      icicle_create_stream(&config.stream);
+      icicle_malloc_async((void**)&d_in, R * C * sizeof(TypeParam), config.stream);
+      icicle_malloc_async((void**)&d_out, R * C * sizeof(TypeParam), config.stream);
+      icicle_copy_to_device_async(d_in, h_in.get(), R * C * sizeof(TypeParam), config.stream);
+
+      config.is_input_on_device = true;
+      config.is_output_on_device = true;
+      config.is_async = true;
+    }
+
+    TypeParam* in = device_props.using_host_memory ? h_in.get() : d_in;
+    TypeParam* out = device_props.using_host_memory ? h_out : d_out;
 
     START_TIMER(TRANSPOSE)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(matrix_transpose(d_in, R, C, config, d_out));
+      ICICLE_CHECK(matrix_transpose(in, R, C, config, out));
     }
     END_TIMER(TRANSPOSE, oss.str().c_str(), measure);
 
-    icicle_copy_to_host_async(out, d_out, R * C * sizeof(TypeParam), config.stream);
-    icicle_stream_synchronize(config.stream);
-    icicle_free_async(d_in, config.stream);
-    icicle_free_async(d_out, config.stream);
+    if (!device_props.using_host_memory) {
+      icicle_copy_to_host_async(h_out, d_out, R * C * sizeof(TypeParam), config.stream);
+      icicle_stream_synchronize(config.stream);
+      icicle_free_async(d_in, config.stream);
+      icicle_free_async(d_out, config.stream);
+    }
   };
 
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "transpose", ITERS);
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "transpose", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), R * C * sizeof(TypeParam)));
+  run(s_reference_target, h_out_ref.get(), VERBOSE /*=measure*/, "transpose", ITERS);
+  run(s_main_target, h_out_main.get(), VERBOSE /*=measure*/, "transpose", ITERS);
+  ASSERT_EQ(0, memcmp(h_out_main.get(), h_out_ref.get(), R * C * sizeof(TypeParam)));
 }
 
 TYPED_TEST(FieldApiTest, montgomeryConversion)

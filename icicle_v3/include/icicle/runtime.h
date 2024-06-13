@@ -150,3 +150,11 @@ extern "C" eIcicleError icicle_stream_synchronize(icicleStreamHandle stream);
  * @return eIcicleError Status of the synchronization.
  */
 extern "C" eIcicleError icicle_device_synchronize();
+
+/**
+ * @brief Retrieves the properties of the specified device.
+ *
+ * @param properties Structure to be filled with device properties.
+ * @return eIcicleError Status of the properties query.
+ */
+extern "C" eIcicleError icicle_get_device_properties(DeviceProperties& properties);

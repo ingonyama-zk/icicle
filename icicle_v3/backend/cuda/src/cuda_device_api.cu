@@ -94,6 +94,14 @@ public:
     cudaError_t err = cudaStreamDestroy(reinterpret_cast<cudaStream_t>(stream));
     return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::STREAM_DESTRUCTION_FAILED;
   }
+
+  eIcicleError get_device_properties(DeviceProperties& properties) const override
+  {
+    properties.using_host_memory = false;
+    properties.num_memory_regions = 1;
+    properties.supports_pinned_memory = false; // TODO support it for compatible devices
+    return eIcicleError::SUCCESS;
+  }
 };
 
 REGISTER_DEVICE_API("CUDA", CudaDeviceAPI);
