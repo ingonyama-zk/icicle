@@ -28,7 +28,7 @@ To generate a secure hash output, the algorithm goes through a series of "full r
 
 ![Alt text](image-1.png)
 
-**Uniform Application of S-box:** In full rounds, the S-box (a non-linear transformation) is applied uniformly to every element of the hash function's internal state. This ensures a high degree of mixing and diffusion, contributing to the hash function's security. The functions S-box involves raising each element of the state to a certain power denoted by `α` a member of the finite field defined by the prime `p`; `α` can be different depending on the the implementation and user configuration.
+**Uniform Application of S-box:** In full rounds, the S-box (a non-linear transformation) is applied uniformly to every element of the hash function's internal state. This ensures a high degree of mixing and diffusion, contributing to the hash function's security. The functions S-box involves raising each element of the state to a certain power denoted by `α` a member of the finite field defined by the prime `p`; `α` can be different depending on the implementation and user configuration.
 
 **Linear Transformation:** After applying the S-box, a linear transformation is performed on the state. This involves multiplying the state by a MDS (Maximum Distance Separable) Matrix. which further diffuses the transformations applied by the S-box across the entire state.
 
