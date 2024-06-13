@@ -21,6 +21,8 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
       "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
 
 static bool VERBOSE = true;
+static inline std::string s_main_target;
+static inline std::string s_reference_target;
 
 class CurveApiTest : public ::testing::Test
 {
@@ -32,14 +34,29 @@ public:
   {
     icicle_load_backend(BACKEND_BUILD_DIR, true);
 
-    s_regsitered_devices = get_registered_devices();
-    ASSERT_GT(s_regsitered_devices.size(), 0);
+    // check targets are loaded and choose main and reference targets
+    auto regsitered_devices = get_registered_devices();
+    ASSERT_GE(regsitered_devices.size(), 2);
+
+    const bool is_cuda_registered = is_device_registered("CUDA");
+    const bool is_cpu_registered = is_device_registered("CPU");
+    const bool is_cpu_ref_registered = is_device_registered("CPU_REF");
+    // if cuda is available, want main="CUDA", ref="CPU", otherwise main="CPU", ref="CPU_REF".
+    s_main_target = is_cuda_registered ? "CUDA" : "CPU";
+    s_reference_target = is_cuda_registered ? "CPU" : "CPU_REF";
   }
   static void TearDownTestSuite() {}
 
   // SetUp/TearDown are called before and after each test
   void SetUp() override {}
   void TearDown() override {}
+
+  template <typename T>
+  void random_scalars(T* arr, uint64_t count)
+  {
+    for (uint64_t i = 0; i < count; i++)
+      arr[i] = i < 1000 ? T::rand_host() : arr[i - 1000];
+  }
 
   template <typename A, typename P>
   void MSM_test()
@@ -50,7 +67,7 @@ public:
     auto bases = std::make_unique<A[]>(N);
 
     scalar_t::rand_host_many(scalars.get(), N);
-    P::rand_host_many_affine(bases.get(), N);
+    P::rand_host_many(bases.get(), N);
 
     P result{};
 
@@ -73,43 +90,56 @@ public:
     // TODO test something
   }
 
-  template <typename A, typename P>
+  template <typename T, typename P>
   void mont_conversion_test()
   {
-    // Note: this test doesn't really test correct mont conversion (since there is no arithmetic in mont) but checks
-    // that
-    // it does some conversion and back to original
-    A affine_point, affine_point_converted;
-    P projective_point, projective_point_converted;
+    const int N = 1 << 6;
+    auto elements = std::make_unique<T[]>(N);
+    auto main_target_output = std::make_unique<T[]>(N);
+    auto ref_target_output = std::make_unique<T[]>(N);
+    P::rand_host_many(elements.get(), N);
 
-    projective_point = P::rand_host();
-    affine_point = projective_point.to_affine();
+    auto run =
+      [&](const std::string& dev_type, T* input, T* output, bool into_mont, bool measure, const char* msg, int iters) {
+        Device dev = {dev_type.c_str(), 0};
+        icicle_set_device(dev);
+        auto config = default_vec_ops_config();
 
-    icicle_set_device({"CPU", 0});
+        std::ostringstream oss;
+        oss << dev_type << " " << msg;
 
-    // (1) converting to mont and check not equal to original
-    auto config = default_convert_montgomery_config();
-    points_convert_montgomery(&affine_point, 1, true /*into mont*/, config, &affine_point_converted);
-    points_convert_montgomery(&projective_point, 1, true /*into mont*/, config, &projective_point_converted);
+        START_TIMER(MONTGOMERY)
+        for (int i = 0; i < iters; ++i) {
+          ICICLE_CHECK(convert_montgomery(input, N, into_mont, config, output));
+        }
+        END_TIMER(MONTGOMERY, oss.str().c_str(), measure);
+      };
 
-    ASSERT_NE(affine_point, affine_point_converted);             // check that it was converted to mont
-    ASSERT_NE(projective_point.x, projective_point_converted.x); // check that it was converted to mont
+    run(
+      s_main_target, elements.get(), main_target_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    run(
+      s_reference_target, elements.get(), ref_target_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery",
+      1);
+    ASSERT_EQ(0, memcmp(main_target_output.get(), ref_target_output.get(), N * sizeof(T)));
 
-    // (2) converting back from mont and check equal
-    points_convert_montgomery(&projective_point_converted, 1, false /*from mont*/, config, &projective_point_converted);
-    points_convert_montgomery(&affine_point_converted, 1, false /*from mont*/, config, &affine_point_converted);
-
-    ASSERT_EQ(affine_point, affine_point_converted);
-    ASSERT_EQ(projective_point, projective_point_converted);
+    run(
+      s_main_target, main_target_output.get(), main_target_output.get(), false /*from*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
+    run(
+      s_reference_target, ref_target_output.get(), ref_target_output.get(), false /*from*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
+    ASSERT_EQ(0, memcmp(main_target_output.get(), ref_target_output.get(), N * sizeof(T)));
   }
 };
 
-TEST_F(CurveApiTest, MSM) { MSM_test<affine_t, projective_t>(); }
-TEST_F(CurveApiTest, MontConversion) { mont_conversion_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, msm) { MSM_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective_t, projective_t>(); }
 
 #ifdef G2
-TEST_F(CurveApiTest, MSM_G2) { MSM_test<g2_affine_t, g2_projective_t>(); }
-TEST_F(CurveApiTest, MontConversionG2) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
+TEST_F(CurveApiTest, msmG2) { MSM_test<g2_affine_t, g2_projective_t>(); }
+TEST_F(CurveApiTest, MontConversionG2Affine) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
+TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_projective_t, g2_projective_t>(); }
 #endif // G2
 
 #ifdef ECNTT
