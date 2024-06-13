@@ -11,6 +11,12 @@
 
 using namespace icicle;
 
+extern "C" eIcicleError icicle_nop()
+{
+  std::cout << "HELLO icicle V3" << std::endl;
+  return eIcicleError::SUCCESS;
+}
+
 extern "C" eIcicleError icicle_set_device(const Device& device) { return DeviceAPI::set_thread_local_device(device); }
 
 extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)
@@ -89,11 +95,11 @@ const std::string SHARED_LIB_EXTENSION = ".dylib";
 #error "Unsupported operating system"
 #endif
 
-extern "C" eIcicleError icicle_load_backend(const std::string& path, bool is_recursive)
+extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
 {
-  auto is_directory = [](const std::string& path) {
+  auto is_directory = [](const char* path) {
     struct stat pathStat;
-    if (stat(path.c_str(), &pathStat) != 0) { return false; }
+    if (stat(path, &pathStat) != 0) { return false; }
     return S_ISDIR(pathStat.st_mode);
   };
 
@@ -103,15 +109,15 @@ extern "C" eIcicleError icicle_load_backend(const std::string& path, bool is_rec
              filename.size() - SHARED_LIB_EXTENSION.size(), SHARED_LIB_EXTENSION.size(), SHARED_LIB_EXTENSION) == 0;
   };
 
-  auto load_library = [](const std::string& filePath) {
+  auto load_library = [](const char* filePath) {
     ICICLE_LOG_DEBUG << "Attempting load: " << filePath;
-    void* handle = dlopen(filePath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    void* handle = dlopen(filePath, RTLD_LAZY | RTLD_GLOBAL);
     if (!handle) { ICICLE_LOG_ERROR << "Failed to load " << filePath << ": " << dlerror(); }
   };
 
   if (is_directory(path)) {
     // Path is a directory, recursively search for libraries
-    DIR* dir = opendir(path.c_str());
+    DIR* dir = opendir(path);
     if (!dir) {
       ICICLE_LOG_ERROR << "Cannot open directory: " << path;
       return eIcicleError::INVALID_ARGUMENT;
@@ -119,14 +125,14 @@ extern "C" eIcicleError icicle_load_backend(const std::string& path, bool is_rec
 
     struct dirent* entry;
     while ((entry = readdir(dir)) != nullptr) {
-      std::string entryPath = path + "/" + entry->d_name;
+      const std::string& entryPath = std::string(path) + "/" + entry->d_name;
 
       // Skip "." and ".." entries
       if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..") { continue; }
 
       // Recurse into subdirectories and load libraries in files
-      const bool is_nested_dir = is_directory(entryPath);
-      if (is_recursive || !is_nested_dir) { icicle_load_backend(entryPath, is_recursive); }
+      const bool is_nested_dir = is_directory(entryPath.c_str());
+      if (is_recursive || !is_nested_dir) { icicle_load_backend(entryPath.c_str(), is_recursive); }
     }
 
     closedir(dir);
