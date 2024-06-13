@@ -13,7 +13,8 @@
 #include "utils/utils_kernels.h"
 #include "gpu-utils/device_context.h"
 #include "gpu-utils/error_handler.h"
-#include "ntt/cuda_ntt.cuh"
+#include "mixed_radix_ntt.cuh"
+#include "ntt/cuda_ntt_config.cuh"
 #include "icicle/utils/utils.h"
 
 #include "icicle/fields/field_config.h"
