@@ -10,8 +10,8 @@ using namespace curve_config;
 using namespace icicle;
 
 template <typename T>
-eIcicleError cpu_convert_mont(
-  const Device& device, const T* input, size_t n, bool is_into, const ConvertMontgomeryConfig& config, T* output)
+eIcicleError
+cpu_convert_mont(const Device& device, const T* input, size_t n, bool is_into, const VecOpsConfig& config, T* output)
 {
   for (size_t i = 0; i < n; ++i) {
     output[i] = is_into ? T::to_montgomery(input[i]) : T::from_montgomery(input[i]);

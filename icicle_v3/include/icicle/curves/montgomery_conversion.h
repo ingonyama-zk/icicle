@@ -9,6 +9,7 @@
 
 #include "icicle/curves/affine.h"
 #include "icicle/curves/projective.h"
+#include "icicle/vec_ops.h"
 #include "icicle/fields/field.h"
 #include "icicle/curves/curve_config.h"
 
@@ -16,41 +17,10 @@ using namespace curve_config;
 
 namespace icicle {
 
-  /*************************** Frontend APIs ***************************/
-
-  struct ConvertMontgomeryConfig {
-    icicleStreamHandle stream; /**< stream for async execution. */
-    bool is_input_on_device;
-    bool is_output_on_device;
-    bool is_async;
-
-    ConfigExtension ext; /** backend specific extensions*/
-  };
-
-  static ConvertMontgomeryConfig default_convert_montgomery_config()
-  {
-    ConvertMontgomeryConfig config = {
-      nullptr, // stream
-      false,   // is_input_on_device
-      false,   // is_output_on_device
-      false,   // is_async
-    };
-    return config;
-  }
-
-  template <typename T>
-  eIcicleError
-  points_convert_montgomery(const T* input, size_t n, bool is_into, const ConvertMontgomeryConfig& config, T* output);
-
   /*************************** Backend registration ***************************/
 
   using AffineConvertMontImpl = std::function<eIcicleError(
-    const Device& device,
-    const affine_t* input,
-    size_t n,
-    bool is_into,
-    const ConvertMontgomeryConfig& config,
-    affine_t* output)>;
+    const Device& device, const affine_t* input, size_t n, bool is_into, const VecOpsConfig& config, affine_t* output)>;
 
   void register_affine_convert_montgomery(const std::string& deviceType, AffineConvertMontImpl);
 
@@ -67,7 +37,7 @@ namespace icicle {
     const projective_t* input,
     size_t n,
     bool is_into,
-    const ConvertMontgomeryConfig& config,
+    const VecOpsConfig& config,
     projective_t* output)>;
 
   void register_projective_convert_montgomery(const std::string& deviceType, ProjectiveConvertMontImpl);
@@ -86,7 +56,7 @@ namespace icicle {
     const g2_affine_t* input,
     size_t n,
     bool is_into,
-    const ConvertMontgomeryConfig& config,
+    const VecOpsConfig& config,
     g2_affine_t* output)>;
 
   void register_affine_g2_convert_montgomery(const std::string& deviceType, AffineG2ConvertMontImpl);
@@ -104,7 +74,7 @@ namespace icicle {
     const g2_projective_t* input,
     size_t n,
     bool is_into,
-    const ConvertMontgomeryConfig& config,
+    const VecOpsConfig& config,
     g2_projective_t* output)>;
 
   void register_projective_g2_convert_montgomery(const std::string& deviceType, ProjectiveG2ConvertMontImpl);
