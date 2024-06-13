@@ -231,7 +231,7 @@ public:
       out[i] = (i % size < 100) ? rand_host() : out[i - 100];
   }
 
-  static void rand_host_many_affine(Affine<FF>* out, int size)
+  static void rand_host_many(Affine<FF>* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];

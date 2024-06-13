@@ -113,8 +113,8 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError scalar_convert_montgomery(
-    const scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, scalar_t* output)
+  eIcicleError
+  convert_montgomery(const scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(input, size, is_into, config, output);
   }
@@ -130,7 +130,7 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError scalar_convert_montgomery(
+  eIcicleError convert_montgomery(
     const extension_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, extension_t* output)
   {
     return CONCAT_EXPAND(FIELD, convert_montgomery_ext_field)(input, size, is_into, config, output);
