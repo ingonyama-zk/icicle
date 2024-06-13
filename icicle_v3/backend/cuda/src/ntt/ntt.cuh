@@ -9,7 +9,6 @@
 #include "icicle/config_extension.h"
 #include "error_translation.h"
 
-// #include "ntt/ntt.cuh"
 #include "gpu-utils/sharedmem.h"
 #include "utils/utils_kernels.h"
 #include "gpu-utils/device_context.h"
@@ -751,49 +750,3 @@ namespace ntt {
   }
 
 } // namespace ntt
-/************************************** BACKEND REGISTRATION **************************************/
-
-namespace icicle {
-
-  eIcicleError
-  ntt_cuda_init_domain(const Device& device, const scalar_t& primitive_root, const NTTInitDomainConfig& config)
-  {
-    using namespace device_context;
-    cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
-    DeviceContext device_context{cuda_stream, (size_t)device.id, nullptr /*mempool*/};
-    device_context.device_id = device.id;
-    bool fast_twiddles = false;
-
-    if (config.ext.has(CUDA_NTT_FAST_TWIDDLES_MODE)) {
-      fast_twiddles = config.ext.get<bool>(CUDA_NTT_FAST_TWIDDLES_MODE);
-    }
-    auto err = ntt::Domain<scalar_t>::init_domain(primitive_root, device_context, fast_twiddles);
-    return translateCudaError(err);
-  }
-
-  eIcicleError ntt_cuda_release_domain(const Device& device)
-  {
-    using namespace device_context;
-    DeviceContext device_context = get_default_device_context();
-    device_context.device_id = device.id;
-    auto err = ntt::Domain<scalar_t>::release_domain(device_context);
-    return translateCudaError(err);
-  }
-
-  template <typename S, typename E>
-  eIcicleError ntt_cuda(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
-  {
-    auto err = ntt::ntt_cuda<S, E>(input, size, dir, config, device.id, output);
-    return translateCudaError(err);
-  }
-
-#ifndef TEST_NOT_LINKING_TO_FRONTEND // avoid registration when not linked to icicle
-  REGISTER_NTT_INIT_DOMAIN_BACKEND("CUDA", ntt_cuda_init_domain)
-  REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CUDA", ntt_cuda_release_domain);
-  REGISTER_NTT_BACKEND("CUDA", (ntt_cuda<scalar_t, scalar_t>));
-#ifdef EXT_FIELD
-  REGISTER_NTT_EXT_FIELD_BACKEND("CUDA", (ntt_cuda<scalar_t, extension_t>));
-#endif
-#endif // TEST_NOT_LINKING_TO_FRONTEND
-
-} // namespace icicle

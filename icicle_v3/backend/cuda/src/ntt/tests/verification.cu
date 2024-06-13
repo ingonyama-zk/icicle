@@ -1,6 +1,5 @@
 #include "icicle/fields/id.h"
 #define FIELD_ID BN254
-#define TEST_NOT_LINKING_TO_FRONTEND
 
 #include "icicle/fields/field_config.h"
 typedef field_config::scalar_t test_scalar;
@@ -12,7 +11,7 @@ typedef field_config::scalar_t test_data;
 #include <iostream>
 #include <vector>
 
-#include "ntt.cu"
+#include "ntt.cuh"
 #include "mixed_radix_ntt.cu"
 #include <memory>
 
@@ -74,7 +73,6 @@ int main(int argc, char** argv)
   ntt_config.columns_batch = COLUMNS_BATCH;
 
   device_context::DeviceContext context = device_context::get_default_device_context();
-  icicle::Device dev = {"CUDA", 0};
 
   CHK_IF_RETURN(cudaEventCreate(&icicle_start));
   CHK_IF_RETURN(cudaEventCreate(&icicle_stop));
@@ -198,7 +196,7 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaFree(GpuOutputOld));
   CHK_IF_RETURN(cudaFree(GpuOutputNew));
 
-  ntt_cuda_release_domain(dev);
+  ntt::Domain<scalar_t>::release_domain(context);
 
   return CHK_LAST();
 }

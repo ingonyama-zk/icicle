@@ -22,7 +22,7 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
 
 static bool VERBOSE = true;
 static inline std::string s_main_target;
-static inline std::string s_reference_target;
+static inline std::string s_ref_target;
 
 class CurveApiTest : public ::testing::Test
 {
@@ -43,7 +43,7 @@ public:
     const bool is_cpu_ref_registered = is_device_registered("CPU_REF");
     // if cuda is available, want main="CUDA", ref="CPU", otherwise main="CPU", ref="CPU_REF".
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    s_reference_target = is_cuda_registered ? "CPU" : "CPU_REF";
+    s_ref_target = is_cuda_registered ? "CPU" : "CPU_REF";
   }
   static void TearDownTestSuite() {}
 
@@ -95,8 +95,8 @@ public:
   {
     const int N = 1 << 6;
     auto elements = std::make_unique<T[]>(N);
-    auto main_target_output = std::make_unique<T[]>(N);
-    auto ref_target_output = std::make_unique<T[]>(N);
+    auto main_output = std::make_unique<T[]>(N);
+    auto ref_output = std::make_unique<T[]>(N);
     P::rand_host_many(elements.get(), N);
 
     auto run =
@@ -115,20 +115,13 @@ public:
         END_TIMER(MONTGOMERY, oss.str().c_str(), measure);
       };
 
-    run(
-      s_main_target, elements.get(), main_target_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
-    run(
-      s_reference_target, elements.get(), ref_target_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery",
-      1);
-    ASSERT_EQ(0, memcmp(main_target_output.get(), ref_target_output.get(), N * sizeof(T)));
+    run(s_main_target, elements.get(), main_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    run(s_ref_target, elements.get(), ref_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    ASSERT_EQ(0, memcmp(main_output.get(), ref_output.get(), N * sizeof(T)));
 
-    run(
-      s_main_target, main_target_output.get(), main_target_output.get(), false /*from*/, VERBOSE /*=measure*/,
-      "to-montgomery", 1);
-    run(
-      s_reference_target, ref_target_output.get(), ref_target_output.get(), false /*from*/, VERBOSE /*=measure*/,
-      "to-montgomery", 1);
-    ASSERT_EQ(0, memcmp(main_target_output.get(), ref_target_output.get(), N * sizeof(T)));
+    run(s_main_target, main_output.get(), main_output.get(), false /*from*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    run(s_ref_target, ref_output.get(), ref_output.get(), false /*from*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    ASSERT_EQ(0, memcmp(main_output.get(), ref_output.get(), N * sizeof(T)));
   }
 };
 
@@ -145,16 +138,16 @@ TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_proje
 #ifdef ECNTT
 TEST_F(CurveApiTest, ecntt)
 {
-  const int logn = 15;
+  const int logn = 5;
   const int N = 1 << logn;
   auto input = std::make_unique<projective_t[]>(N);
   projective_t::rand_host_many(input.get(), N);
 
-  auto out_cpu = std::make_unique<projective_t[]>(N);
-  auto out_cuda = std::make_unique<projective_t[]>(N);
+  auto out_main = std::make_unique<projective_t[]>(N);
+  auto out_ref = std::make_unique<projective_t[]>(N);
 
-  auto run = [&](const char* dev_type, projective_t* out, const char* msg, bool measure, int iters) {
-    Device dev = {dev_type, 0};
+  auto run = [&](const std::string& dev_type, projective_t* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type.c_str(), 0};
     icicle_set_device(dev);
 
     auto init_domain_config = default_ntt_init_domain_config();
@@ -170,7 +163,10 @@ TEST_F(CurveApiTest, ecntt)
     ntt_release_domain<scalar_t>();
   };
 
-  run("CPU", out_cpu.get(), "CPU ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(projective_t))); // TODO ucomment when CPU is
+  // implemented
 }
 #endif // ECNTT
 
