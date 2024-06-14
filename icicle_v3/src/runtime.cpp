@@ -76,6 +76,11 @@ extern "C" eIcicleError icicle_get_device_properties(DeviceProperties& propertie
   return DeviceAPI::get_thread_local_deviceAPI()->get_device_properties(properties);
 }
 
+extern "C" eIcicleError icicle_is_device_avialable(const Device& dev)
+{
+  return is_device_registered(dev.type) ? eIcicleError::SUCCESS : eIcicleError::INVALID_DEVICE;
+}
+
 extern "C" eIcicleError icicle_create_stream(icicleStreamHandle* stream)
 {
   return DeviceAPI::get_thread_local_deviceAPI()->create_stream(stream);
