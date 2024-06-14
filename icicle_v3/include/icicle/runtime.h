@@ -158,3 +158,13 @@ extern "C" eIcicleError icicle_device_synchronize();
  * @return eIcicleError Status of the properties query.
  */
 extern "C" eIcicleError icicle_get_device_properties(DeviceProperties& properties);
+
+/**
+ * @brief Checks if the specified device is available.
+ *
+ * @param dev The device to check for availability.
+ * @return eIcicleError Status of the device availability check.
+ *         - `SUCCESS` if the device is available.
+ *         - `INVALID_DEVICE` if the device is not available.
+ */
+extern "C" eIcicleError icicle_is_device_avialable(const Device& dev);
