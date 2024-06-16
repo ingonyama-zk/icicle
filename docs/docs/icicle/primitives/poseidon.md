@@ -28,7 +28,8 @@ To generate a secure hash output, the algorithm goes through a series of "full r
 
 ### Full rounds
 
-![First Board - 2redone](https://github.com/ingonyama-zk/icicle/assets/122266060/72b54275-d5c5-4b69-b91a-820eed9990a5)
+![First Board - 2redone](https://github.com/ingonyama-zk/icicle/assets/122266060/e4ce0e98-b90b-4261-b83e-3cd8cce069cb)
+
 
 
 **Uniform Application of S-box:** In full rounds, the S-box (a non-linear transformation) is applied uniformly to every element of the hash function's internal state. This ensures a high degree of mixing and diffusion, contributing to the hash function's security. The functions S-box involves raising each element of the state to a certain power denoted by `α` a member of the finite field defined by the prime `p`; `α` can be different depending on the implementation and user configuration.
