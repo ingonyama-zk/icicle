@@ -8,8 +8,15 @@
  */
 
 
-#pragma once
-#include "config.h"
-extern "C" {
-void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE * in, WORD inlen, BYTE * out, WORD n_outbit, WORD n_batch);
-}
+ #pragma once
+ typedef unsigned char BYTE;
+ typedef unsigned int  WORD;
+ typedef unsigned long long LONG;
+ 
+ #include <stdlib.h>
+ #include <string.h>
+ #include <stdio.h>
+ 
+ extern "C" {
+ void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE * in, WORD inlen, BYTE * out, WORD n_outbit, WORD n_batch);
+ }
