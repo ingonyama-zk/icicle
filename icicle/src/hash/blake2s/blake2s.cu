@@ -2,10 +2,10 @@
 extern "C" {
 #include "blake2s.cuh"
 }
-#include <chrono>
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg) \
-  printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+// #include <chrono>
+// #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
+// #define END_TIMER(timer, msg) \
+//   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 #define BLAKE2S_ROUNDS 10
 #define BLAKE2S_BLOCK_LENGTH 64
