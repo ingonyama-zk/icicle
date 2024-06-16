@@ -16,7 +16,9 @@ Poseidon starts with the initialization of its internal state, which is composed
 
 This is done to prevent collisions and to prevent certain cryptographic attacks by ensuring that the internal state is sufficiently mixed and unpredictable.
 
-![Alt text](image.png)
+![First Board - 1redone](https://github.com/ingonyama-zk/icicle/assets/122266060/52257f5d-6097-47c4-8f17-7b6449b9d162)
+
+
 
 ## Applying full and partial rounds
 
@@ -26,7 +28,8 @@ To generate a secure hash output, the algorithm goes through a series of "full r
 
 ### Full rounds
 
-![Alt text](image-1.png)
+![First Board - 2redone](https://github.com/ingonyama-zk/icicle/assets/122266060/72b54275-d5c5-4b69-b91a-820eed9990a5)
+
 
 **Uniform Application of S-box:** In full rounds, the S-box (a non-linear transformation) is applied uniformly to every element of the hash function's internal state. This ensures a high degree of mixing and diffusion, contributing to the hash function's security. The functions S-box involves raising each element of the state to a certain power denoted by `α` a member of the finite field defined by the prime `p`; `α` can be different depending on the implementation and user configuration.
 
@@ -42,7 +45,8 @@ To generate a secure hash output, the algorithm goes through a series of "full r
 
 The user of Poseidon can often choose how many partial or full rounds he wishes to apply; more full rounds will increase security but degrade performance. The choice and balance is highly dependent on the use case.
 
-![Alt text](image-2.png)
+![First Board - 3redone](https://github.com/ingonyama-zk/icicle/assets/122266060/e8c198b4-7aa4-4b4d-9ec4-604e39e07692)
+
 
 ## Using Poseidon
 
