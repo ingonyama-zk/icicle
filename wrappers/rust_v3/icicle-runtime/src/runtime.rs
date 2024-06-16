@@ -7,9 +7,9 @@ use crate::errors::eIcicleError;
 pub type IcicleStreamHandle = *mut c_void;
 
 extern "C" {
-    fn icicle_nop() -> eIcicleError;
     fn icicle_load_backend(path: *const c_char, is_recursive: bool) -> eIcicleError;
     fn icicle_set_device(device: &Device) -> eIcicleError;
+    fn icicle_is_device_avialable(device: &Device) -> eIcicleError;
     // fn icicle_malloc(ptr: *mut *mut c_void, size: usize) -> eIcicleError;
     // fn icicle_malloc_async(ptr: *mut *mut c_void, size: usize, stream: IcicleStreamHandle) -> eIcicleError;
     // fn icicle_free(ptr: *mut c_void) -> eIcicleError;
@@ -32,10 +32,6 @@ extern "C" {
     // fn icicle_get_device_properties(properties: *mut DeviceProperties) -> eIcicleError;
 }
 
-pub fn nop() -> eIcicleError {
-    unsafe { icicle_nop() }
-}
-
 pub fn load_backend(path: &str, is_recursive: bool) -> eIcicleError {
     let c_path = CString::new(path).unwrap();
     unsafe { icicle_load_backend(c_path.as_ptr(), is_recursive) }
@@ -43,6 +39,10 @@ pub fn load_backend(path: &str, is_recursive: bool) -> eIcicleError {
 
 pub fn set_device(device: &Device) -> eIcicleError {
     unsafe { icicle_set_device(device) }
+}
+
+pub fn is_device_available(device: &Device) -> eIcicleError {
+    unsafe { icicle_is_device_avialable(device) }
 }
 
 // pub fn malloc(size: usize) -> Result<*mut c_void, eIcicleError> {
