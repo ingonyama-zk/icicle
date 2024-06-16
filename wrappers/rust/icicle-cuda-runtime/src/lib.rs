@@ -2,7 +2,7 @@
 #![allow(non_camel_case_types)]
 
 #[allow(dead_code, non_snake_case)]
-pub mod bindings;
+mod bindings;
 pub mod device;
 pub mod device_context;
 pub mod error;
