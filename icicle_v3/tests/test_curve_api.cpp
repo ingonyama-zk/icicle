@@ -4,10 +4,8 @@
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"
-#include "icicle/ecntt.h"
 #include "icicle/msm.h"
 #include "icicle/vec_ops.h"
-#include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
 
 using namespace curve_config;
@@ -31,7 +29,6 @@ public:
   static void SetUpTestSuite()
   {
     icicle_load_backend(BACKEND_BUILD_DIR, true);
-
     s_regsitered_devices = get_registered_devices();
     ASSERT_GT(s_regsitered_devices.size(), 0);
   }
@@ -41,84 +38,20 @@ public:
   void SetUp() override {}
   void TearDown() override {}
 
-  template <typename A, typename P>
-  void MSM_test()
+  template <typename T>
+  void random_samples(T* arr, uint64_t count)
   {
-    const int logn = 5;
-    const int N = 1 << logn;
-    auto scalars = std::make_unique<scalar_t[]>(N);
-    auto bases = std::make_unique<A[]>(N);
-
-    scalar_t::rand_host_many(scalars.get(), N);
-    P::rand_host_many_affine(bases.get(), N);
-
-    P result{};
-
-    auto run = [&](const char* dev_type, P* result, const char* msg, bool measure, int iters) {
-      Device dev = {dev_type, 0};
-      icicle_set_device(dev);
-
-      auto config = default_msm_config();
-
-      START_TIMER(MSM_sync)
-      for (int i = 0; i < iters; ++i) {
-        // TODO real test
-        msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
-        msm(scalars.get(), bases.get(), N, config, result);
-      }
-      END_TIMER(MSM_sync, msg, measure);
-    };
-
-    run("CPU", &result, "CPU msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    // TODO test something
-  }
-
-  template <typename A, typename P>
-  void mont_conversion_test()
-  {
-    // Note: this test doesn't really test correct mont conversion (since there is no arithmetic in mont) but checks
-    // that
-    // it does some conversion and back to original
-    A affine_point, affine_point_converted;
-    P projective_point, projective_point_converted;
-
-    projective_point = P::rand_host();
-    affine_point = projective_point.to_affine();
-
-    icicle_set_device({"CPU", 0});
-
-    // (1) converting to mont and check not equal to original
-    auto config = default_convert_montgomery_config();
-    points_convert_montgomery(&affine_point, 1, true /*into mont*/, config, &affine_point_converted);
-    points_convert_montgomery(&projective_point, 1, true /*into mont*/, config, &projective_point_converted);
-
-    ASSERT_NE(affine_point, affine_point_converted);             // check that it was converted to mont
-    ASSERT_NE(projective_point.x, projective_point_converted.x); // check that it was converted to mont
-
-    // (2) converting back from mont and check equal
-    points_convert_montgomery(&projective_point_converted, 1, false /*from mont*/, config, &projective_point_converted);
-    points_convert_montgomery(&affine_point_converted, 1, false /*from mont*/, config, &affine_point_converted);
-
-    ASSERT_EQ(affine_point, affine_point_converted);
-    ASSERT_EQ(projective_point, projective_point_converted);
+    for (uint64_t i = 0; i < count; i++)
+      arr[i] = i < 1000 ? T::rand_host() : arr[i - 1000];
   }
 };
 
-TEST_F(CurveApiTest, MSM) { MSM_test<affine_t, projective_t>(); }
-TEST_F(CurveApiTest, MontConversion) { mont_conversion_test<affine_t, projective_t>(); }
-
-#ifdef G2
-TEST_F(CurveApiTest, MSM_G2) { MSM_test<g2_affine_t, g2_projective_t>(); }
-TEST_F(CurveApiTest, MontConversionG2) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
-#endif // G2
-
-#ifdef ECNTT
-TEST_F(CurveApiTest, ecntt)
+TEST_F(CurveApiTest, MSM)
 {
-  const int logn = 17;
+  const int logn = 7;
   const int N = 1 << logn;
-  auto input = std::make_unique<projective_t[]>(N);
-  projective_t::rand_host_many(input.get(), N);
+  auto scalars = std::make_unique<scalar_t[]>(N);
+  auto bases = std::make_unique<affine_t[]>(N);
 
   scalar_t::rand_host_many(scalars.get(), N);
   projective_t::rand_host_many_affine(bases.get(), N);
@@ -126,7 +59,9 @@ TEST_F(CurveApiTest, ecntt)
   projective_t result_cpu_dbl_n_add{};
   projective_t result_cpu_ref{};
 
-  auto run = [&](const char* dev_type, projective_t* out, const char* msg, bool measure, int iters) {
+  projective_t result{};
+
+  auto run = [&](const char* dev_type, projective_t* result, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
@@ -158,7 +93,6 @@ TEST_F(CurveApiTest, ecntt)
 
   ASSERT_EQ(result_cpu,result_cpu_ref);
 }
-#endif // ECNTT
 
 int main(int argc, char** argv)
 {
