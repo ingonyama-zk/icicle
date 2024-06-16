@@ -43,7 +43,7 @@ namespace msm {
                               *   points, it should be set to the product of MSM size and [batch_size](@ref
                               *   batch_size). Default value: 0 (meaning it's equal to the MSM size). */
     int precompute_factor;   /**< The number of extra points to pre-compute for each point. See the
-                              *   [precompute_msm_bases](@ref precompute_msm_bases) function, `precompute_factor` passed
+                              *   [precompute_msm_points](@ref precompute_msm_points) function, `precompute_factor` passed
                               *   there needs to be equal to the one used here. Larger values decrease the
                               *   number of computations to make, on-line memory footprint, but increase the static
                               *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
@@ -52,7 +52,7 @@ namespace msm {
                               *   means more on-line memory footprint but also more parallelism and less computational
                               *   complexity (up to a certain point). Currently pre-computation is independent of
                               *   \f$ c \f$, however in the future value of \f$ c \f$ here and the one passed into the
-                              *   [precompute_msm_bases](@ref precompute_msm_bases) function will need to be identical.
+                              *   [precompute_msm_points](@ref precompute_msm_points) function will need to be identical.
                               *    Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically).  */
     int bitsize;             /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
                               *   but if a different (better) upper bound is known, it should be reflected in this
@@ -133,6 +133,25 @@ namespace msm {
    * Original points: \f$ P_0, P_1, P_2, ... P_{size} \f$
    * Extended points: \f$ P_0, P_1, P_2, ... P_{size}, 2^{l}P_0, 2^{l}P_1, ..., 2^{l}P_{size},
    * 2^{2l}P_0, 2^{2l}P_1, ..., 2^{2cl}P_{size}, ... \f$
+   * @param points Points \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
+   * @param msm_size MSM size \f$ N \f$. If a batch of MSMs (which all need to have the same size) is computed, this is
+   * the size of 1 MSM.
+   * @param config [MSMConfig](@ref MSMConfig) used in this MSM.
+   * @param output_points Device-allocated buffer of size config.points_size * precompute_factor for the extended points.
+   * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine
+   * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   *
+   */
+  template <typename A, typename P>
+  cudaError_t precompute_msm_points(A* points, int msm_size, msm::MSMConfig& config, A* output_points);
+
+    /**
+   * A function that precomputes MSM bases by extending them with their shifted copies.
+   * e.g.:
+   * Original points: \f$ P_0, P_1, P_2, ... P_{size} \f$
+   * Extended points: \f$ P_0, P_1, P_2, ... P_{size}, 2^{l}P_0, 2^{l}P_1, ..., 2^{l}P_{size},
+   * 2^{2l}P_0, 2^{2l}P_1, ..., 2^{2cl}P_{size}, ... \f$
    * @param bases Bases \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
    * @param bases_size Number of bases.
    * @param precompute_factor The number of total precomputed points for each base (including the base itself).
@@ -148,7 +167,15 @@ namespace msm {
    *
    */
   template <typename A, typename P>
-  cudaError_t precompute_msm_bases(A* bases, int msm_size, msm::MSMConfig& config, A* output_bases);
+  [[deprecated("Use precompute_msm_points instead.")]]
+  cudaError_t precompute_msm_bases(
+    A* bases,
+    int bases_size,
+    int precompute_factor,
+    int _c,
+    bool are_bases_on_device,
+    device_context::DeviceContext& ctx,
+    A* output_bases);
 
 } // namespace msm
 

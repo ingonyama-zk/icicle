@@ -216,7 +216,7 @@ int main(int argc, char** argv)
   cudaEventCreate(&stop);
 
   if (precomp_factor > 1)
-    msm::precompute_msm_bases<test_affine, test_projective>(points_d, msm_size, config, precomp_points_d);
+    msm::precompute_msm_points<test_affine, test_projective>(points_d, msm_size, config, precomp_points_d);
 
   // warm up
   msm::msm<test_scalar, test_affine, test_projective>(
