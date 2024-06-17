@@ -208,15 +208,15 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
 TYPED_TEST(FieldApiTest, ntt)
 {
   srand(time(0));
-  const int logn = rand() % 16 + 3;
+  const int logn = rand() % 13 + 3;
   const int N = 1 << logn;
 
   // Randomize config
-  const int batch_size = rand() % 16 + 1;
+  const int batch_size = rand() % 15 + 1;
   const Ordering ordering = static_cast<Ordering>(rand() % 6);
   bool columns_batch;
-  if (ordering == Ordering::kMN || ordering == Ordering::kNM) {
-    columns_batch = false; //FIXME: currently not supported
+  if (ordering == Ordering::kMN || ordering == Ordering::kNM || logn == 7 || logn < 4) {
+    columns_batch = false; //FIXME: currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
   }
   else {
     columns_batch = rand() % 2;

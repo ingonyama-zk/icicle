@@ -18,10 +18,6 @@ namespace ntt_template {
   template <typename S>
   class CpuNttDomain {
       //TODO - coset, mixed-radix NTT
-      // Mutex for protecting access to the domain/device container array
-      // static inline std::mutex cpu_ntt_domain_mutex; //TODO
-      // The domain-per-device container - assumption is init_domain is called once per device per program.
-
       int max_size = 0;
       int max_log_size = 0;
       S* twiddles = nullptr;
@@ -65,7 +61,7 @@ namespace ntt_template {
   template <typename S = scalar_t>
   eIcicleError cpu_ntt_init_domain(const Device& device, const S& primitive_root, const NTTInitDomainConfig& config)
   {
-      // (1) check if need to refresh domain. If no, return, else build new domain
+      // (1) check if need to refresh domain. TODO - reusing domain for different ntt sizes if possible
       if (s_ntt_domain<S> != nullptr) {
           return eIcicleError::SUCCESS;
       }
@@ -109,99 +105,11 @@ namespace ntt_template {
       return eIcicleError::SUCCESS;
   }
 
-  template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError cpu_ntt_ref(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
-  {
-      ICICLE_LOG_DEBUG << "CPU NTT REF";
-      size = size/config.batch_size;
-      if (size & (size - 1)) {
-          return eIcicleError::INVALID_ARGUMENT; 
-      }
-
-      std::copy(input, input + size, output);
-
-      ICICLE_LOG_DEBUG << "INITIAL OUTPUT (REF)";
-      for (int i = 0; i < size; ++i) {
-          ICICLE_LOG_DEBUG << "output[" << i << "]: " << output[i];
-      }
-
-      // Bit-reversal permutation
-      int logn = 0;
-      for (int n = size; n > 1; n >>= 1) {
-          logn++;
-      }
-
-      for (int i = 0; i < size; ++i) {
-          int rev = 0;
-          for (int j = 0; j < logn; ++j) {
-              if (i & (1 << j)) {
-                  rev |= 1 << (logn - 1 - j);
-              }
-          }
-          if (i < rev) {
-              std::swap(output[i], output[rev]);
-          }
-      }
-
-      ICICLE_LOG_DEBUG << "AFTER BIT REVERSE (REF)";
-      for (int i = 0; i < size; ++i) {
-          ICICLE_LOG_DEBUG << "output[" << i << "]: " << output[i];
-      }
-
-      std::vector<S> twiddles(size / 2); 
-      S omega = (dir == NTTDir::kForward) ? S::omega(logn) : S::omega_inv(logn);
-      ICICLE_LOG_DEBUG << "dir: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
-      twiddles[0] = S::one();
-      for (int i = 1; i < size / 2; ++i) {
-          twiddles[i] = twiddles[i - 1] * omega;
-      }
-
-      // NTT/INTT
-      int ntt_step = 0;
-      for (int len = 2; len <= size; len <<= 1) {
-          ICICLE_LOG_DEBUG << "ntt_step: " << ntt_step++;
-          int half_len = len / 2;
-          int step = size / len;
-          for (int i = 0; i < size; i += len) {
-              for (int j = 0; j < half_len; ++j) {
-                  S u = output[i + j];
-                  S v = output[i + j + half_len] * twiddles[j * step];
-                  ICICLE_LOG_DEBUG << "tw_idx=" << j * step;
-                  ICICLE_LOG_DEBUG << "current_output[" << i + j << "] <-- " << output[i + j] << " + " << output[i + j + half_len] << "*" << twiddles[j * step];
-                  ICICLE_LOG_DEBUG << "current_output[" << i + j + half_len << "] <-- " << output[i + j] << " - " << output[i + j + half_len] << "*" << twiddles[j * step];
-                  output[i + j] = u + v;
-                  output[i + j + half_len] = u - v;
-
-              }
-          }
-      }
-      
-      if (dir == NTTDir::kInverse) {
-          // Normalize results 
-          S inv_size = S::inv_log_size(logn);
-          for (int i = 0; i < size; ++i) {
-              output[i] = output[i] * inv_size;
-          }
-      }
-
-      ICICLE_LOG_DEBUG << "FINAL OUTPUT (REF)";
-      for (int i = 0; i < size; ++i) {
-          ICICLE_LOG_DEBUG << "output[" << i << "]: " << output[i];
-      }
-      
-      return eIcicleError::SUCCESS;
-  }
-
-
-  template <typename S = scalar_t, typename E = scalar_t>
+  template <typename E = scalar_t>
   eIcicleError bit_reverse(int size, int logn, E* output, int batch_size)
   {
       ICICLE_LOG_DEBUG << "BIT REVERSE";
       int total_size = size * batch_size;
-      // ICICLE_LOG_DEBUG << "BEFORE BIT REVERSE";
-      // for (int i = 0; i < total_size; ++i) {
-      //     ICICLE_LOG_DEBUG << "output[" << i << "]: " << output[i];
-      // }
       for (int batch = 0; batch < batch_size; ++batch) {
           E* current_output = output + batch * size;
           for (int i = 0; i < size; ++i) {
@@ -216,16 +124,11 @@ namespace ntt_template {
               }
           }
       }
-      // ICICLE_LOG_DEBUG << "AFTER BIT REVERSE";
-      // for (int i = 0; i < total_size; ++i) {
-      //     ICICLE_LOG_DEBUG << "output[" << i << "]: " << output[i];
-      // }
-
       return eIcicleError::SUCCESS;
   }
 
   template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError cpu_ntt(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
+  eIcicleError cpu_ntt_ref(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
       if (size & (size - 1)) {
           return eIcicleError::INVALID_ARGUMENT; 
@@ -357,5 +260,12 @@ namespace ntt_template {
       
       delete[] temp_elements;
       return eIcicleError::SUCCESS;
+  }
+
+
+  template <typename S = scalar_t, typename E = scalar_t>
+  eIcicleError cpu_ntt(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
+  {
+    return cpu_ntt_ref(device, input, size, dir, config, output);
   }
 } // namespace ntt_template
