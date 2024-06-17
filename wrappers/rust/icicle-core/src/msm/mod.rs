@@ -208,7 +208,7 @@ pub fn msm<C: Curve + MSM<C>>(
 /// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
 ///
 /// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
-#[deprecated(since="2.5.0", note="Please use `precompute_points` instead")]
+#[deprecated(since = "2.5.0", note = "Please use `precompute_points` instead")]
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     precompute_factor: i32,
@@ -307,7 +307,7 @@ macro_rules! impl_msm {
                     ctx: &DeviceContext,
                     output_bases: *mut Affine<$curve>,
                 ) -> CudaError;
-                
+
                 #[link_name = concat!($curve_prefix, "_precompute_msm_points_cuda")]
                 pub(crate) fn precompute_points_cuda(
                     points: *const Affine<$curve>,
@@ -357,7 +357,7 @@ macro_rules! impl_msm {
                     .wrap()
                 }
             }
-            
+
             fn precompute_points_unchecked(
                 points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
                 msm_size: i32,

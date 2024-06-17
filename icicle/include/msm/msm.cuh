@@ -137,7 +137,8 @@ namespace msm {
    * @param msm_size MSM size \f$ N \f$. If a batch of MSMs (which all need to have the same size) is computed, this is
    * the size of 1 MSM.
    * @param config [MSMConfig](@ref MSMConfig) used in this MSM.
-   * @param output_points Device-allocated buffer of size config.points_size * precompute_factor for the extended points.
+   * @param output_points Device-allocated buffer of size config.points_size * precompute_factor for the extended
+   * points.
    * @tparam A The type of points \f$ \{P_i\} \f$ which is typically an [affine
    * Weierstrass](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) point.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
@@ -146,7 +147,7 @@ namespace msm {
   template <typename A, typename P>
   cudaError_t precompute_msm_points(A* points, int msm_size, msm::MSMConfig& config, A* output_points);
 
-    /**
+  /**
    * A function that precomputes MSM bases by extending them with their shifted copies.
    * e.g.:
    * Original points: \f$ P_0, P_1, P_2, ... P_{size} \f$
@@ -167,8 +168,7 @@ namespace msm {
    *
    */
   template <typename A, typename P>
-  [[deprecated("Use precompute_msm_points instead.")]]
-  cudaError_t precompute_msm_bases(
+  [[deprecated("Use precompute_msm_points instead.")]] cudaError_t precompute_msm_bases(
     A* bases,
     int bases_size,
     int precompute_factor,

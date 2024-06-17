@@ -905,15 +905,15 @@ namespace msm {
     unsigned NUM_BLOCKS = (config.points_size + NUM_THREADS - 1) / NUM_THREADS;
     for (int i = 1; i < config.precompute_factor; i++) {
       left_shift_kernel<A, P><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        &output_points[(i - 1) * config.points_size], shift, config.points_size, &output_points[i * config.points_size]);
+        &output_points[(i - 1) * config.points_size], shift, config.points_size,
+        &output_points[i * config.points_size]);
     }
 
     return CHK_LAST();
   }
 
   template <typename A, typename P>
-  [[deprecated("Use precompute_msm_points instead.")]]
-  cudaError_t precompute_msm_bases(
+  [[deprecated("Use precompute_msm_points instead.")]] cudaError_t precompute_msm_bases(
     A* bases,
     int bases_size,
     int precompute_factor,
