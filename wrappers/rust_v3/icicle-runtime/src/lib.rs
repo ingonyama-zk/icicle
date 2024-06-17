@@ -1,5 +1,6 @@
 pub mod device;
 pub mod errors;
+pub mod memory;
 pub mod runtime;
 pub mod tests;
 
