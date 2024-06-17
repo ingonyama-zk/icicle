@@ -1,4 +1,5 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
+use std::fmt;
 use std::os::raw::c_char;
 
 #[repr(C)]
@@ -7,6 +8,7 @@ pub struct Device {
     id: i32,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct DeviceProperties {
     pub using_host_memory: bool,
@@ -37,5 +39,26 @@ impl Drop for Device {
                 self.device_type = std::ptr::null();
             }
         }
+    }
+}
+
+impl fmt::Debug for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let device_type_str = unsafe {
+            if self
+                .device_type
+                .is_null()
+            {
+                "null"
+            } else {
+                CStr::from_ptr(self.device_type)
+                    .to_str()
+                    .unwrap_or("Invalid UTF-8")
+            }
+        };
+        f.debug_struct("Device")
+            .field("device_type", &device_type_str)
+            .field("id", &self.id)
+            .finish()
     }
 }

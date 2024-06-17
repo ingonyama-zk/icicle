@@ -72,12 +72,35 @@ mod tests {
         let mut output = vec![0; input.len()];
         assert_ne!(input, output);
 
+        // ASYNC copy from input_host -> device --> output_host and compare
         let stream = IcicleStream::create().unwrap();
 
-        // copy from input_host -> device --> output_host and compare
-        // let mut d_mem = DeviceVec::device_malloc(input.len()).unwrap();
-        // d_mem.copy_from_host(HostSlice::from_slice(&input));
-        // d_mem.copy_to_host(HostSlice::from_mut_slice(&mut output));
-        // assert_eq!(input, output);
+        let mut d_mem = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
+        d_mem.copy_from_host_async(HostSlice::from_slice(&input), &stream);
+        d_mem.copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream);
+        stream.synchronize();
+        assert_eq!(input, output);
+    }
+
+    #[test]
+    fn test_get_available_memory() {
+        initialize();
+        assert_eq!(set_device(&get_main_target()), eIcicleError::Success);
+
+        let (total, free) = get_available_memory().unwrap();
+        assert!(total > 0 && free > 0 && total >= free);
+    }
+
+    #[test]
+    fn test_get_device_props() {
+        initialize();
+        let device = Device::new("CUDA", 0);
+
+        if is_device_available(&device) == eIcicleError::Success {
+            assert_eq!(set_device(&device), eIcicleError::Success);
+
+            let device_props = get_device_properties().unwrap();
+            assert_eq!(device_props.using_host_memory, false); // for "cuda"
+        }
     }
 }
