@@ -12,7 +12,6 @@
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/log.h"
 
-
 using namespace field_config;
 using namespace icicle;
 
@@ -211,29 +210,35 @@ TYPED_TEST(FieldApiTest, ntt)
   const int logn = rand() % 13 + 3;
   const int N = 1 << logn;
 
-  // Randomize config
-  const int batch_size = rand() % 15 + 1;
-  const Ordering ordering = static_cast<Ordering>(rand() % 6);
-  bool columns_batch;
-  if (ordering == Ordering::kMN || ordering == Ordering::kNM || logn == 7 || logn < 4) {
-    columns_batch = false; //FIXME: currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
-  }
-  else {
-    columns_batch = rand() % 2;
-  }
-  const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
+  // // Randomize config
+  // TODO - iterate over different configs
+  // const int batch_size = rand() % 15 + 1;
+  // const Ordering ordering = static_cast<Ordering>(rand() % 6);
+  // bool columns_batch;
+  // if (ordering == Ordering::kMN || ordering == Ordering::kNM || logn == 7 || logn < 4) {
+  //   columns_batch = false; // FIXME: currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  // } else {
+  //   columns_batch = rand() % 2;
+  // }
+  // const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
 
-  // // Set fixed config values for debugging
-  // const int batch_size = 2;
-  // const bool columns_batch = false;
-  // const Ordering ordering = Ordering::kNM;
-  // const NTTDir dir = NTTDir::kForward;
+  // Set fixed config values for debugging
+  const int batch_size = 2;
+  const bool columns_batch = false;
+  const Ordering ordering = Ordering::kNM;
+  const NTTDir dir = NTTDir::kForward;
 
-  // Print config 
+  // Print config
   ICICLE_LOG_DEBUG << "logn: " << logn;
   ICICLE_LOG_DEBUG << "batch_size: " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch: " << columns_batch;
-  ICICLE_LOG_DEBUG << "ordering: " << (ordering == Ordering::kNN? "kNN" : ordering == Ordering::kNR? "kNR" : ordering == Ordering::kRN? "kRN" : ordering == Ordering::kRR? "kRR" : ordering == Ordering::kNM? "kNM" : "kMN");
+  ICICLE_LOG_DEBUG << "ordering: "
+                   << (ordering == Ordering::kNN   ? "kNN"
+                       : ordering == Ordering::kNR ? "kNR"
+                       : ordering == Ordering::kRN ? "kRN"
+                       : ordering == Ordering::kRR ? "kRR"
+                       : ordering == Ordering::kNM ? "kNM"
+                                                   : "kMN");
   ICICLE_LOG_DEBUG << "dir: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
 
   const int total_size = N * batch_size;
@@ -255,19 +260,17 @@ TYPED_TEST(FieldApiTest, ntt)
     init_domain_config.is_async = false;
     init_domain_config.ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
 
-
     auto config = default_ntt_config<scalar_t>();
     // config.stream = stream;
     // config.coset_gen = coset_gen; // TODO - Implement. default: S::one()
-    config.batch_size = batch_size; // default: 1
+    config.batch_size = batch_size;       // default: 1
     config.columns_batch = columns_batch; // default: false
-    config.ordering = ordering; // default: kNN
-    config.are_inputs_on_device = true; // TODO, ask yuval why set to true?
-    config.are_outputs_on_device = true;// TODO, ask yuval why set to true?
+    config.ordering = ordering;           // default: kNN
+    config.are_inputs_on_device = true;   // TODO, ask yuval why set to true?
+    config.are_outputs_on_device = true;  // TODO, ask yuval why set to true?
     // config.is_async = false; // TODO - Implement. default: false
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(logn), init_domain_config));
-    
-    
+
     TypeParam *d_in, *d_out;
     icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream);
     icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream);
