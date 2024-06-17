@@ -170,9 +170,11 @@ func TestMSMBatch(t *testing.T) {
 	}
 }
 
-func TestPrecomputeBase(t *testing.T) {
+func TestPrecomputePoints(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	const precomputeFactor = 8
+	cfg.PrecomputeFactor = precomputeFactor
+
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
@@ -182,20 +184,18 @@ func TestPrecomputeBase(t *testing.T) {
 
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for PrecomputeBases results failed")
 
-			e = msm.PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
-			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
+			e = msm.PrecomputePoints(points, size, &cfg, precomputeOut)
+			assert.Equal(t, cr.CudaSuccess, e, "PrecomputeBases failed")
 
 			var p icicleBn254.Projective
 			var out core.DeviceSlice
 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
-
-			cfg.PrecomputeFactor = precomputeFactor
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for Projective results failed")
 
 			e = msm.Msm(scalars, precomputeOut, &cfg, out)
-			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Msm failed")
 			outHost := make(core.HostSlice[icicleBn254.Projective], batchSize)
 			outHost.CopyFromDevice(&out)
 			out.Free()

@@ -9,6 +9,17 @@ using namespace field_config;
 
 namespace msm {
   /**
+   * Extern "C" version of [precompute_msm_points](@ref precompute_msm_points) function with the following values of
+   * template parameters (where the curve is given by `-DCURVE` env variable during build):
+   *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  extern "C" cudaError_t CONCAT_EXPAND(CURVE, g2_precompute_msm_points_cuda)(
+    g2_affine_t* points, int msm_size, MSMConfig& config, g2_affine_t* output_points)
+  {
+    return precompute_msm_points<g2_affine_t, g2_projective_t>(points, msm_size, config, output_points);
+  }
+  /**
    * Extern "C" version of [precompute_msm_bases](@ref precompute_msm_bases) function with the following values of
    * template parameters (where the curve is given by `-DCURVE` env variable during build):
    *  - `A` is the [affine representation](@ref g2_affine_t) of G2 curve points;
@@ -26,7 +37,6 @@ namespace msm {
     return precompute_msm_bases<g2_affine_t, g2_projective_t>(
       bases, bases_size, precompute_factor, _c, are_bases_on_device, ctx, output_bases);
   }
-
   /**
    * Extern "C" version of [msm](@ref msm) function with the following values of template parameters
    * (where the curve is given by `-DCURVE` env variable during build):
