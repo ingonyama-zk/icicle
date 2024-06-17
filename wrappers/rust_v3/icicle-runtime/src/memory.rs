@@ -10,7 +10,7 @@ use std::slice::{from_raw_parts_mut, SliceIndex};
 
 #[derive(Debug)]
 pub struct HostSlice<T>([T]);
-pub struct DeviceVec<T>(ManuallyDrop<Box<[T]>>); // TODO Yuval is the ManuallyDrop necesary here?
+pub struct DeviceVec<T>(ManuallyDrop<Box<[T]>>); // TODO Yuval is the ManuallyDrop necessary here?
 pub struct DeviceSlice<T>([T]);
 
 pub trait HostOrDeviceSlice<T> {
