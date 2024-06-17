@@ -1,5 +1,6 @@
 use crate::errors::eIcicleError;
 use crate::runtime;
+use crate::stream::IcicleStream;
 use std::mem::{size_of, ManuallyDrop};
 use std::ops::{
     Deref, DerefMut, Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
@@ -154,7 +155,55 @@ impl<T> DeviceSlice<T> {
         unsafe { runtime::icicle_copy_to_host(val.as_mut_ptr() as *mut c_void, self.as_ptr() as *const c_void, size) }
     }
 
-    // TODO Yuval: copy async
+    pub fn copy_from_host_async(&mut self, val: &HostSlice<T>, stream: &IcicleStream) -> eIcicleError {
+        assert!(
+            self.len() == val.len(),
+            "In copy from host, destination and source slices have different lengths"
+        );
+        // TODO Yuval check device
+        // check_device(
+        //     self.device_id()
+        //         .unwrap(),
+        // );
+        if self.is_empty() {
+            return eIcicleError::Success;
+        }
+
+        let size = size_of::<T>() * self.len();
+        unsafe {
+            runtime::icicle_copy_to_device_async(
+                self.as_mut_ptr() as *mut c_void,
+                val.as_ptr() as *const c_void,
+                size,
+                stream.handle,
+            )
+        }
+    }
+
+    pub fn copy_to_host_async(&self, val: &mut HostSlice<T>, stream: &IcicleStream) -> eIcicleError {
+        assert!(
+            self.len() == val.len(),
+            "In copy to host, destination and source slices have different lengths"
+        );
+        // TODO Yuval check device
+        // check_device(
+        //     self.device_id()
+        //         .unwrap(),
+        // );
+        if self.is_empty() {
+            return eIcicleError::Success;
+        }
+
+        let size = size_of::<T>() * self.len();
+        unsafe {
+            runtime::icicle_copy_to_host_async(
+                val.as_mut_ptr() as *mut c_void,
+                self.as_ptr() as *const c_void,
+                size,
+                stream.handle,
+            )
+        }
+    }
 }
 
 impl<T> DeviceVec<T> {
@@ -168,6 +217,28 @@ impl<T> DeviceVec<T> {
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
         let error = unsafe { runtime::icicle_malloc(&mut device_ptr, size) };
+        if error != eIcicleError::Success {
+            return Err(error);
+        }
+
+        unsafe {
+            Ok(Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
+                device_ptr as *mut T,
+                count,
+            )))))
+        }
+    }
+
+    pub fn device_malloc_async(count: usize, stream: &IcicleStream) -> Result<Self, eIcicleError> {
+        let size = count
+            .checked_mul(size_of::<T>())
+            .unwrap_or(0);
+        if size == 0 {
+            return Err(eIcicleError::AllocationFailed);
+        }
+
+        let mut device_ptr: *mut c_void = std::ptr::null_mut();
+        let error = unsafe { runtime::icicle_malloc_async(&mut device_ptr, size, stream.handle) };
         if error != eIcicleError::Success {
             return Err(error);
         }
