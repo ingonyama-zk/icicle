@@ -170,9 +170,11 @@ func TestMSMG2Batch(t *testing.T) {
 	}
 }
 
-func TestPrecomputeBaseG2(t *testing.T) {
+func TestPrecomputePointsG2(t *testing.T) {
 	cfg := g2.G2GetDefaultMSMConfig()
 	const precomputeFactor = 8
+	cfg.PrecomputeFactor = precomputeFactor
+
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
@@ -182,22 +184,18 @@ func TestPrecomputeBaseG2(t *testing.T) {
 
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for PrecomputeBases results failed")
 
-			cfg.PrecomputeFactor = precomputeFactor
-			cfg.PointsSize = int32(points.Len())
-			cfg.ArePointsOnDevice = points.IsOnDevice()
-
-			e = g2.G2PrecomputeBases(points, precomputeFactor, size, &cfg, precomputeOut)
-			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
+			e = g2.G2PrecomputePoints(points, size, &cfg, precomputeOut)
+			assert.Equal(t, cr.CudaSuccess, e, "PrecomputeBases failed")
 
 			var p g2.G2Projective
 			var out core.DeviceSlice
 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for Projective results failed")
 
 			e = g2.G2Msm(scalars, precomputeOut, &cfg, out)
-			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Msm failed")
 			outHost := make(core.HostSlice[g2.G2Projective], batchSize)
 			outHost.CopyFromDevice(&out)
 			out.Free()

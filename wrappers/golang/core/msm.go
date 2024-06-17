@@ -11,7 +11,7 @@ type MSMConfig struct {
 	/// Details related to the device such as its id and stream.
 	Ctx cr.DeviceContext
 
-	PointsSize int32
+	pointsSize int32
 
 	/// The number of extra points to pre-compute for each point. Larger values decrease the number of computations
 	/// to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute).
@@ -32,19 +32,19 @@ type MSMConfig struct {
 	/// Can be set to 0 to disable separate treatment of large buckets altogether. Default value: 10.
 	LargeBucketFactor int32
 
-	BatchSize int32
+	batchSize int32
 
-	AreScalarsOnDevice bool
+	areScalarsOnDevice bool
 
 	/// True if scalars are in Montgomery form and false otherwise. Default value: true.
 	AreScalarsMontgomeryForm bool
 
-	ArePointsOnDevice bool
+	arePointsOnDevice bool
 
 	/// True if coordinates of points are in Montgomery form and false otherwise. Default value: true.
 	ArePointsMontgomeryForm bool
 
-	AreResultsOnDevice bool
+	areResultsOnDevice bool
 
 	/// Whether to do "bucket accumulation" serially. Decreases computational complexity, but also greatly
 	/// decreases parallelism, so only suitable for large batches of MSMs. Default value: false.
@@ -94,11 +94,11 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 		)
 		panic(errorString)
 	}
-	cfg.PointsSize = int32(pointsLength)
-	cfg.BatchSize = int32(resultsLength)
-	cfg.AreScalarsOnDevice = scalars.IsOnDevice()
-	cfg.ArePointsOnDevice = points.IsOnDevice()
-	cfg.AreResultsOnDevice = results.IsOnDevice()
+	cfg.pointsSize = int32(pointsLength)
+	cfg.batchSize = int32(resultsLength)
+	cfg.areScalarsOnDevice = scalars.IsOnDevice()
+	cfg.arePointsOnDevice = points.IsOnDevice()
+	cfg.areResultsOnDevice = results.IsOnDevice()
 
 	if scalars.IsOnDevice() {
 		scalars.(DeviceSlice).CheckDevice()
@@ -116,13 +116,13 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	return scalars.AsUnsafePointer(), points.AsUnsafePointer(), results.AsUnsafePointer(), size, unsafe.Pointer(cfg)
 }
 
-func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outputBases DeviceSlice) (unsafe.Pointer, unsafe.Pointer) {
+func PrecomputePointsCheck(points HostOrDeviceSlice, cfg *MSMConfig, outputBases DeviceSlice) (unsafe.Pointer, unsafe.Pointer) {
 	outputBasesLength, pointsLength := outputBases.Len(), points.Len()
-	if outputBasesLength != pointsLength*int(precomputeFactor) {
+	if outputBasesLength != pointsLength*int(cfg.PrecomputeFactor) {
 		errorString := fmt.Sprintf(
 			"Precompute factor is probably incorrect: expected %d but got %d",
 			outputBasesLength/pointsLength,
-			precomputeFactor,
+			cfg.PrecomputeFactor,
 		)
 		panic(errorString)
 	}
@@ -130,6 +130,9 @@ func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outp
 	if points.IsOnDevice() {
 		points.(DeviceSlice).CheckDevice()
 	}
+
+	cfg.pointsSize = int32(pointsLength)
+	cfg.arePointsOnDevice = points.IsOnDevice()
 
 	return points.AsUnsafePointer(), outputBases.AsUnsafePointer()
 }
