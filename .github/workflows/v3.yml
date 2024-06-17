@@ -3,7 +3,8 @@ name: C++/CUDA
 on:
   pull_request:
     branches:
-      - V3      
+      - V3
+      - yshekel/V3     # TODO remove when merged to V3
   push:
     branches:
       - V3      
