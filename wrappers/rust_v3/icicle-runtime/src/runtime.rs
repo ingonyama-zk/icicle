@@ -25,9 +25,9 @@ extern "C" {
     //     size: usize,
     //     stream: IcicleStreamHandle,
     // ) -> eIcicleError;
-    // fn icicle_create_stream(stream: *mut IcicleStreamHandle) -> eIcicleError;
-    // fn icicle_destroy_stream(stream: IcicleStreamHandle) -> eIcicleError;
-    // fn icicle_stream_synchronize(stream: IcicleStreamHandle) -> eIcicleError;
+    pub fn icicle_create_stream(stream: *mut IcicleStreamHandle) -> eIcicleError;
+    pub fn icicle_destroy_stream(stream: IcicleStreamHandle) -> eIcicleError;
+    pub fn icicle_stream_synchronize(stream: IcicleStreamHandle) -> eIcicleError;
     fn icicle_device_synchronize() -> eIcicleError;
     // fn icicle_get_device_properties(properties: *mut DeviceProperties) -> eIcicleError;
 }
@@ -44,7 +44,6 @@ pub fn set_device(device: &Device) -> eIcicleError {
 pub fn is_device_available(device: &Device) -> eIcicleError {
     unsafe { icicle_is_device_avialable(device) }
 }
-
 
 // pub fn malloc_async(size: usize, stream: IcicleStreamHandle) -> Result<*mut c_void, eIcicleError> {
 //     let mut ptr: *mut c_void = std::ptr::null_mut();
