@@ -10,15 +10,15 @@ extern "C" {
     fn icicle_load_backend(path: *const c_char, is_recursive: bool) -> eIcicleError;
     fn icicle_set_device(device: &Device) -> eIcicleError;
     fn icicle_is_device_avialable(device: &Device) -> eIcicleError;
-    // fn icicle_malloc(ptr: *mut *mut c_void, size: usize) -> eIcicleError;
+    pub fn icicle_malloc(ptr: *mut *mut c_void, size: usize) -> eIcicleError;
     // fn icicle_malloc_async(ptr: *mut *mut c_void, size: usize, stream: IcicleStreamHandle) -> eIcicleError;
-    // fn icicle_free(ptr: *mut c_void) -> eIcicleError;
+    pub fn icicle_free(ptr: *mut c_void) -> eIcicleError;
     // fn icicle_free_async(ptr: *mut c_void, stream: IcicleStreamHandle) -> eIcicleError;
     // fn icicle_get_available_memory(total: *mut usize, free: *mut usize) -> eIcicleError;
-    // fn icicle_copy_to_host(dst: *mut u8, src: *const u8, size: usize) -> eIcicleError;
+    pub fn icicle_copy_to_host(dst: *mut c_void, src: *const c_void, size: usize) -> eIcicleError;
     // fn icicle_copy_to_host_async(dst: *mut u8, src: *const u8, size: usize, stream: IcicleStreamHandle)
     //     -> eIcicleError;
-    // fn icicle_copy_to_device(dst: *mut u8, src: *const u8, size: usize) -> eIcicleError;
+    pub fn icicle_copy_to_device(dst: *mut c_void, src: *const c_void, size: usize) -> eIcicleError;
     // fn icicle_copy_to_device_async(
     //     dst: *mut u8,
     //     src: *const u8,
@@ -45,15 +45,6 @@ pub fn is_device_available(device: &Device) -> eIcicleError {
     unsafe { icicle_is_device_avialable(device) }
 }
 
-// pub fn malloc(size: usize) -> Result<*mut c_void, eIcicleError> {
-//     let mut ptr: *mut c_void = std::ptr::null_mut();
-//     let result = unsafe { icicle_malloc(&mut ptr, size) };
-//     if result == eIcicleError::Success {
-//         Ok(ptr)
-//     } else {
-//         Err(result)
-//     }
-// }
 
 // pub fn malloc_async(size: usize, stream: IcicleStreamHandle) -> Result<*mut c_void, eIcicleError> {
 //     let mut ptr: *mut c_void = std::ptr::null_mut();
@@ -84,16 +75,8 @@ pub fn is_device_available(device: &Device) -> eIcicleError {
 //     }
 // }
 
-// pub fn copy_to_host(dst: *mut u8, src: *const u8, size: usize) -> eIcicleError {
-//     unsafe { icicle_copy_to_host(dst, src, size) }
-// }
-
 // pub fn copy_to_host_async(dst: *mut u8, src: *const u8, size: usize, stream: IcicleStreamHandle) -> eIcicleError {
 //     unsafe { icicle_copy_to_host_async(dst, src, size, stream) }
-// }
-
-// pub fn copy_to_device(dst: *mut u8, src: *const u8, size: usize) -> eIcicleError {
-//     unsafe { icicle_copy_to_device(dst, src, size) }
 // }
 
 // pub fn copy_to_device_async(dst: *mut u8, src: *const u8, size: usize, stream: IcicleStreamHandle) -> eIcicleError {
