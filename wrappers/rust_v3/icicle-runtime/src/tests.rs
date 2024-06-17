@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::memory::{DeviceVec, HostSlice};
+    use crate::stream::IcicleStream;
     use crate::*;
     use std::sync::Once;
 
@@ -47,7 +48,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sync_memory_alloc() {
+    fn test_sync_memory_copy() {
         initialize();
         assert_eq!(set_device(&get_main_target()), eIcicleError::Success);
 
@@ -60,5 +61,23 @@ mod tests {
         d_mem.copy_from_host(HostSlice::from_slice(&input));
         d_mem.copy_to_host(HostSlice::from_mut_slice(&mut output));
         assert_eq!(input, output);
+    }
+
+    #[test]
+    fn test_async_memory_copy() {
+        initialize();
+        assert_eq!(set_device(&get_main_target()), eIcicleError::Success);
+
+        let input = vec![1, 2, 3, 4];
+        let mut output = vec![0; input.len()];
+        assert_ne!(input, output);
+
+        let stream = IcicleStream::create().unwrap();
+
+        // copy from input_host -> device --> output_host and compare
+        // let mut d_mem = DeviceVec::device_malloc(input.len()).unwrap();
+        // d_mem.copy_from_host(HostSlice::from_slice(&input));
+        // d_mem.copy_to_host(HostSlice::from_mut_slice(&mut output));
+        // assert_eq!(input, output);
     }
 }
