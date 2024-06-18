@@ -73,6 +73,7 @@ We follow the bucket method algorithm. The GPU implementation consists of four p
 Large buckets exist in two cases:
 1. When the scalar distribution isn't uniform.
 2. When `c` does not divide the scalar bit-size.
+
 `large_bucket_factor` that is equal to 10 yields good results for most cases, but it's best to fine tune this parameter per `c` and per scalar distribution.
 The two most important parameters for performance are `c` and the `precompute_factor`. They affect the number of EC additions as well as the memory size. When the points are not known in advance we cannot use precomputation. In this case the best `c` value is usually around log2(msm_size) - 4. However, in most protocols the points are known in advanced and precomputation can be used unless limited by memory. Usually it's best to use maximum precomputation (such that we end up with only a single bucket module) combined we a `c` value around log2(msm_size) - 1.
 
