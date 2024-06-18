@@ -54,9 +54,39 @@ You can learn more about how MSMs work from this [video](https://www.youtube.com
 - [Golang](../golang-bindings/msm.md)
 - [Rust](../rust-bindings//msm.md)
 
-## Supported algorithms
+## Algorithm description
 
-Our MSM implementation supports two algorithms `Bucket accumulation` and `Large triangle accumulation`.
+We follow the bucket method algorithm. The GPU implementation consists of four phases:
+
+1. Preparation phase - The scalars are split into smaller scalars of `c` bits each. These are the bucket indices. The points are grouped according to their corresponding bucket index and the buckets are sorted by size.
+2. Accumulation phase - Each bucket accumulates all of its points using a single thread. More than one thread is assigned to large buckets, in proportion to their size. A bucket is considered large if its size is above the large bucket threshold that is determined by the `large_bucket_factor` parameter. The large bucket threshold is the expected avarage bucket size times the `large_bucket_factor` parameter.
+3. Buckets Reduction phase - bucket results are multiplied by their corresponding bucket number and each bucket module is reduced to a small number of final results. By default this is done by and iterative algorithm which is highly parallel. Setting `is_big_triangle` to `true` will switch this phase to the running sum algorithm described in the above YouTube talk which is much less parallel.
+4. Final accumulation phase - The final results from the last phase are accumulated using the double-and-add algorithm.
+
+## MSM configuration
+
+
+
+## Choosing optimal parameters
+
+`is_big_triangle` should be `false` in almost all cases. It might provide better results only for very small MSMs (smaller than 2^8) with a large batch (larger than 100) but this should be tested per scenario.
+Large buckets exist in two cases:
+1. When the scalar distribution isn't uniform.
+2. When `c` does not divide the scalar bit-size.
+`large_bucket_factor` that is equal to 10 yields good results for most cases, but it's best to fine tune this parameter per `c` and per scalar distribution.
+The two most important parameters for performance are `c` and the `precompute_factor`. They affect the number of EC additions as well as the memory size. When the points are not known in advance we cannot use precomputation. In this case the best `c` value is usually around log2(msm_size) - 4. However, in most protocols the points are known in advanced and precomputation can be used unless limited by memory. Usually it's best to use maximum precomputation (such that we end up with only a single bucket module) combined we a `c` value around log2(msm_size) - 1.
+
+## Memory usage estimation
+
+The main memory requirements of the MSM are the following:
+
+Scalars - scalar_size * msm_size * batch_size
+Scalar indices - unsigned_size * nof_bms * msm_size * batch_size * 6
+Points - affine_size * msm_size * precomp_factor * batch_size
+Buckets - projective_size * nof_bms * 2^c * batch_size
+
+## Example parameters
+
 
 ### Bucket accumulation
 
