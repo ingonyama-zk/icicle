@@ -100,7 +100,7 @@ When performing MSM operations, it's crucial to match the size of the `scalars` 
 
 ## How do I toggle between the supported algorithms?
 
-When creating your MSM Config you may state which algorithm you wish to use. `is_big_triangle=true` will activate Large triangle accumulation and `is_big_triangle=false` will activate Bucket accumulation.
+When creating your MSM Config you may state which algorithm you wish to use. `is_big_triangle=true` will activate Large triangle reduction and `is_big_triangle=false` will activate iterative reduction.
 
 ```rust
 ...
@@ -143,6 +143,10 @@ msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
 ```
 
 Here is a [reference](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961030e4e12bf1c9a78a2dadb2518/wrappers/rust/icicle-core/src/msm/mod.rs#L108) to the code which automatically sets the batch size. For more MSM examples have a look [here](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961030e4e12bf1c9a78a2dadb2518/examples/rust/msm/src/main.rs#L1).
+
+## Parameters for optimal performance
+
+Please reffer to the [primitive description](../primitives/msm.md#choosing-optimal-parameters)
 
 ## Support for G2 group
 
