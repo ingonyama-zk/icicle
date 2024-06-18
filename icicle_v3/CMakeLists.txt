@@ -17,16 +17,28 @@ option(EXT_FIELD "Build extension field" OFF)
 option(ECNTT "Build ECNTT" OFF)
 option(G2 "Build G2" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
-option(BUILD_CPU_BE "Build CPU backend" ON) 
+option(BUILD_CPU_BE "Build CPU backend" ON)
 option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once separating the cuda backend
 
 # device API library
 add_library(icicle_device SHARED
-  src/device_api.cpp  
+  src/device_api.cpp
   src/runtime.cpp
 )
 target_link_libraries(icicle_device PUBLIC dl)
-target_include_directories(icicle_device PUBLIC include)
+include_directories(include)
+
+# Define the install directory (default is /usr/local)
+if(NOT DEFINED CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Install path prefix")
+endif()
+message("CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+
+# Specify the installation rules
+install(TARGETS icicle_device
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
   if(NOT ("${CURVE}" STREQUAL "${FIELD}"))
@@ -54,3 +66,4 @@ endif()
 if (BUILD_TESTS)
   add_subdirectory(tests)
 endif()
+

@@ -68,7 +68,7 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* output)>;
 
-  void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
+  extern "C" void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
 
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -78,7 +78,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
+  extern "C" void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_sub) = []() -> bool {                                                                  \
@@ -87,7 +87,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_mul(const std::string& deviceType, scalarVectorOpImpl impl);
+  extern "C" void register_vector_mul(const std::string& deviceType, scalarVectorOpImpl impl);
 
 #define REGISTER_VECTOR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -105,7 +105,7 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* output)>;
 
-  void register_scalar_convert_montgomery(const std::string& deviceType, scalarConvertMontgomeryImpl);
+  extern "C" void register_scalar_convert_montgomery(const std::string& deviceType, scalarConvertMontgomeryImpl);
 
 #define REGISTER_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                                         \
   namespace {                                                                                                          \
@@ -124,7 +124,7 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
-  void register_vector_add_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+  extern "C" void register_vector_add_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
 
 #define REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
@@ -134,7 +134,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_sub_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+  extern "C" void register_vector_sub_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_sub_ext_field) = []() -> bool {                                                        \
@@ -143,7 +143,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_mul_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+  extern "C" void register_vector_mul_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
 
 #define REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
@@ -161,7 +161,8 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
-  void register_scalar_convert_montgomery_ext_field(const std::string& deviceType, extFieldConvertMontgomeryImpl);
+  extern "C" void
+  register_scalar_convert_montgomery_ext_field(const std::string& deviceType, extFieldConvertMontgomeryImpl);
 
 #define REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                               \
   namespace {                                                                                                          \
