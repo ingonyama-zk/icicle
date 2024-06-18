@@ -146,7 +146,7 @@ Here is a [reference](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961
 
 ## Parameters for optimal performance
 
-Please reffer to the [primitive description](../primitives/msm.md#choosing-optimal-parameters)
+Please refer to the [primitive description](../primitives/msm.md#choosing-optimal-parameters)
 
 ## Support for G2 group
 

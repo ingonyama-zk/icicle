@@ -59,7 +59,7 @@ You can learn more about how MSMs work from this [video](https://www.youtube.com
 We follow the bucket method algorithm. The GPU implementation consists of four phases:
 
 1. Preparation phase - The scalars are split into smaller scalars of `c` bits each. These are the bucket indices. The points are grouped according to their corresponding bucket index and the buckets are sorted by size.
-2. Accumulation phase - Each bucket accumulates all of its points using a single thread. More than one thread is assigned to large buckets, in proportion to their size. A bucket is considered large if its size is above the large bucket threshold that is determined by the `large_bucket_factor` parameter. The large bucket threshold is the expected avarage bucket size times the `large_bucket_factor` parameter.
+2. Accumulation phase - Each bucket accumulates all of its points using a single thread. More than one thread is assigned to large buckets, in proportion to their size. A bucket is considered large if its size is above the large bucket threshold that is determined by the `large_bucket_factor` parameter. The large bucket threshold is the expected average bucket size times the `large_bucket_factor` parameter.
 3. Buckets Reduction phase - bucket results are multiplied by their corresponding bucket number and each bucket module is reduced to a small number of final results. By default this is done by and iterative algorithm which is highly parallel. Setting `is_big_triangle` to `true` will switch this phase to the running sum algorithm described in the above YouTube talk which is much less parallel.
 4. Final accumulation phase - The final results from the last phase are accumulated using the double-and-add algorithm.
 
@@ -144,11 +144,11 @@ Buckets - `sizeof(projective_t) * nof_bucket_modules * 2^c * batch_size`
 
 where `nof_bucket_modules =  ceil(ceil(bitsize / c) / precompute_factor)`
 
-During the MSM computation first the memory for scalars and scalar indices is allocated, then the indices are freed and points and buckets are allocated. This is why a good estimation fot the required memory is the following formula:
+During the MSM computation first the memory for scalars and scalar indices is allocated, then the indices are freed and points and buckets are allocated. This is why a good estimation for the required memory is the following formula:
 
 $max(scalars + scalarIndices, scalars + points + buckets)$
 
-This gives a good approximation within 10% of the actuall required memory for most cases.
+This gives a good approximation within 10% of the actual required memory for most cases.
 
 ## Example parameters
 
@@ -192,4 +192,4 @@ Here are the parameters and the results for the different cases:
 | 24 | 1 | 1 | 18 | 6.58 | 6.61 | 232 |
 | 24 | 1 | 7 | 21 | 12.4 | 13.4 | 199 |
 
-The optimal values can vary per GPU and per curve. It is best to try a few combinations untill you get the best results for your specific case.
+The optimal values can vary per GPU and per curve. It is best to try a few combinations until you get the best results for your specific case.
