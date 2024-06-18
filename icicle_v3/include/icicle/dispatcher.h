@@ -42,7 +42,7 @@ public:
 #define ICICLE_DISPATCHER_INST(dispatcher_class_name, api_name, type)                                                  \
   constexpr char ST_name_##api_name[]{#api_name};                                                                      \
   using dispatcher_class_name = tIcicleDispatcher<type, ST_name_##api_name>;                                           \
-  void register_##api_name(const std::string& deviceType, type impl)                                                   \
+  extern "C" void register_##api_name(const std::string& deviceType, type impl)                                        \
   {                                                                                                                    \
     ICICLE_LOG_DEBUG << #api_name << " registered for " << deviceType;                                                 \
     dispatcher_class_name::Global()._register(deviceType, impl);                                                       \

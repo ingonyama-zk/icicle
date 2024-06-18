@@ -57,5 +57,4 @@ jobs:
     - name: Run tests
       working-directory: ./wrappers/rust_v3
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: |
-        cargo test --workspace --release --verbose
+      run: cargo test --workspace --release --verbose

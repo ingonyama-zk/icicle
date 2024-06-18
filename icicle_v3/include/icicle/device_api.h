@@ -164,8 +164,8 @@ namespace icicle {
     virtual eIcicleError get_device_properties(DeviceProperties& properties) const = 0;
 
   private:
-    thread_local static inline Device sCurDevice = {nullptr, -1}; // device that is currently active for this thread
-    thread_local static inline const DeviceAPI* sCurDeviceAPI;    // API for the currently active device of this thread
+    thread_local static Device sCurDevice;              // device that is currently active for this thread
+    thread_local static const DeviceAPI* sCurDeviceAPI; // API for the currently active device of this thread
 
   public:
     static eIcicleError set_thread_local_device(const Device& device);
@@ -179,7 +179,7 @@ namespace icicle {
    * @param deviceType The device type to register the DeviceAPI for.
    * @param api An instance of the derived api type to be used as deviceAPI interface.
    */
-  void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
+  extern "C" void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
 
   /**
    * @brief Register DeviceAPI instance for a device type.

@@ -24,9 +24,8 @@ function(setup_field_target)
     )
     # handle APIs that are for some curves only
     add_ntt_sources_or_disable()
-
-    target_link_libraries(icicle_field PUBLIC icicle_device) # for thread local device
     set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
+    target_link_libraries(icicle_field PUBLIC icicle_device)
 
     # Make sure FIELD is defined in the cache for backends to see
     set(FIELD "${FIELD}" CACHE STRING "")
@@ -35,6 +34,11 @@ function(setup_field_target)
       set(EXT_FIELD "${EXT_FIELD}" CACHE STRING "")
       target_compile_definitions(icicle_field PUBLIC EXT_FIELD=${EXT_FIELD})
     endif()
+
+    install(TARGETS icicle_field
+      RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+      LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
 endfunction()
 
 function(add_ntt_sources_or_disable)
