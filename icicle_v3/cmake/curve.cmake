@@ -26,7 +26,7 @@ function(setup_curve_target)
     src/curves/ffi_extern.cpp
     src/curves/montgomery_conversion.cpp
   )
-  target_link_libraries(icicle_curve PUBLIC icicle_device icicle_field)
+  target_link_libraries(icicle_curve PUBLIC icicle_device icicle_field)  
   set_target_properties(icicle_curve PROPERTIES OUTPUT_NAME "icicle_curve_${CURVE}")
 
   # Make sure CURVE is defined in the cache for backends to see
@@ -41,4 +41,9 @@ function(setup_curve_target)
     set(ECNTT "${ECNTT}" CACHE STRING "")
     target_compile_definitions(icicle_curve PUBLIC ECNTT=${ECNTT})
   endif()
+
+  install(TARGETS icicle_curve
+    RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
 endfunction()

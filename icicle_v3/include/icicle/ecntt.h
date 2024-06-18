@@ -21,7 +21,7 @@ namespace icicle {
     NTTConfig<scalar_t>& config,
     projective_t* output)>;
 
-  void register_ecntt(const std::string& deviceType, ECNttFieldImpl impl);
+  extern "C" void register_ecntt(const std::string& deviceType, ECNttFieldImpl impl);
 
 #define REGISTER_ECNTT_BACKEND(DEVICE_TYPE, FUNC)                                                                      \
   namespace {                                                                                                          \
