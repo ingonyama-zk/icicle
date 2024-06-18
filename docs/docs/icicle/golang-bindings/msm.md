@@ -154,7 +154,7 @@ out.Malloc(batchSize*p.Size(), p.Size())
 
 ## Parameters for optimal performance
 
-Please refer to the [primitive description](../primitives/msm.md#choosing-optimal-parameters)
+Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
 
 ## Support for G2 group
 
