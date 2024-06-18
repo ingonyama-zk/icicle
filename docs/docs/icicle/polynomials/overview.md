@@ -1,7 +1,8 @@
 # Polynomial API Overview
 
-> **Note:** Read our paper on the Polynomials API in ICICLE v2 by clicking [here](https://eprint.iacr.org/2024/973).
-
+:::note
+Read our paper on the Polynomials API in ICICLE v2 by clicking [here](https://eprint.iacr.org/2024/973).
+:::
 
 ## Introduction
 
