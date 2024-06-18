@@ -116,6 +116,14 @@ func (d *DeviceSlice) RangeFrom(start int) DeviceSlice {
 	return newSlice
 }
 
+func DeviceSliceFromPointer(ptr unsafe.Pointer, size, capacity uint64) DeviceSlice {
+	return DeviceSlice{
+		inner: ptr,
+		capacity: int(capacity),
+		length: int(size),
+	}
+}
+
 // TODO: change signature to be Malloc(element, numElements)
 // calc size internally
 func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cr.CudaError) {
