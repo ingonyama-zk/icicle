@@ -1,5 +1,9 @@
 # Polynomial API Overview
 
+:::note
+Read our paper on the Polynomials API in ICICLE v2 by clicking [here](https://eprint.iacr.org/2024/973).
+:::
+
 ## Introduction
 
 The Polynomial API offers a robust framework for polynomial operations within a computational environment. It's designed for flexibility and efficiency, supporting a broad range of operations like arithmetic, evaluation, and manipulation, all while abstracting from the computation and storage specifics. This enables adaptability to various backend technologies, employing modern C++ practices.
