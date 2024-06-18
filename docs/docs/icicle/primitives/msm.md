@@ -137,10 +137,10 @@ The two most important parameters for performance are `c` and the `precompute_fa
 
 The main memory requirements of the MSM are the following:
 
-Scalars - `sizeof(scalar_t) * msm_size * batch_size`
-Scalar indices - `~6 * sizeof(unsigned) * nof_bucket_modules * msm_size * batch_size`
-Points - `sizeof(affine_t) * msm_size * precomp_factor * batch_size`
-Buckets - `sizeof(projective_t) * nof_bucket_modules * 2^c * batch_size`
+- Scalars - `sizeof(scalar_t) * msm_size * batch_size`
+- Scalar indices - `~6 * sizeof(unsigned) * nof_bucket_modules * msm_size * batch_size`
+- Points - `sizeof(affine_t) * msm_size * precomp_factor * batch_size`
+- Buckets - `sizeof(projective_t) * nof_bucket_modules * 2^c * batch_size`
 
 where `nof_bucket_modules =  ceil(ceil(bitsize / c) / precompute_factor)`
 
@@ -178,9 +178,9 @@ Here are the parameters and the results for the different cases:
 | MSM size | Batch size | Precompute factor | c | Memory estimation (GB) | Actual memory (GB) | Single MSM time (ms) |
 | --- | --- | --- | --- | --- | --- | --- |
 | 10 | 1 | 1 | 9 | 0.00227 | 0.00277 | 9.2 |
-| 10 | 1 | 23 | 11 | 0.00227 | 0.00272 | 1.76 |
-| 10 | 1000 | 1 | 7 | 0.00227 | 1.09 | 0.051 |
-| 10 | 1000 | 23 | 11 | 0.00227 | 2.74 | 0.025 |
+| 10 | 1 | 23 | 11 | 0.00259 | 0.00272 | 1.76 |
+| 10 | 1000 | 1 | 7 | 0.094 | 1.09 | 0.051 |
+| 10 | 1000 | 23 | 11 | 2.59 | 2.74 | 0.025 |
 | 15 | 1 | 1 | 11 | 0.011 | 0.019 | 9.9 |
 | 15 | 1 | 16 | 16 | 0.061 | 0.065 | 2.4 |
 | 15 | 100 | 1 | 11 | 1.91 | 1.92 | 0.84 |
