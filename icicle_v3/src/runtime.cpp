@@ -11,12 +11,6 @@
 
 using namespace icicle;
 
-extern "C" eIcicleError icicle_nop()
-{
-  std::cout << "HELLO icicle V3" << std::endl;
-  return eIcicleError::SUCCESS;
-}
-
 extern "C" eIcicleError icicle_set_device(const Device& device) { return DeviceAPI::set_thread_local_device(device); }
 
 extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)

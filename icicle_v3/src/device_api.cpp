@@ -11,6 +11,10 @@
 
 namespace icicle {
 
+  thread_local Device DeviceAPI::sCurDevice = {nullptr, -1}; // device that is currently active for this thread
+  thread_local const DeviceAPI* DeviceAPI::sCurDeviceAPI =
+    nullptr; // API for the currently active device of this thread
+
   eIcicleError DeviceAPI::set_thread_local_device(const Device& device)
   {
     DeviceAPI* device_api = get_deviceAPI(device);
@@ -78,7 +82,7 @@ namespace icicle {
 
   DeviceAPI* get_deviceAPI(const Device& device) { return DeviceAPIRegistry::Global().get_deviceAPI(device).get(); }
 
-  void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
+  extern "C" void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
   {
     ICICLE_LOG_DEBUG << "deviceAPI registered for " << deviceType;
     DeviceAPIRegistry::Global().register_deviceAPI(deviceType, api);

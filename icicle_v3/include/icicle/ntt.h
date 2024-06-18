@@ -144,7 +144,7 @@ namespace icicle {
   using NttImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
 
-  void register_ntt(const std::string& deviceType, NttImpl impl);
+  extern "C" void register_ntt(const std::string& deviceType, NttImpl impl);
 
 #define REGISTER_NTT_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
@@ -163,7 +163,7 @@ namespace icicle {
     NTTConfig<scalar_t>& config,
     extension_t* output)>;
 
-  void register_ntt_ext_field(const std::string& deviceType, NttExtFieldImpl impl);
+  extern "C" void register_ntt_ext_field(const std::string& deviceType, NttExtFieldImpl impl);
 
 #define REGISTER_NTT_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                              \
   namespace {                                                                                                          \
@@ -178,7 +178,7 @@ namespace icicle {
   using NttInitDomainImpl = std::function<eIcicleError(
     const Device& device, const scalar_t& primitive_root, const NTTInitDomainConfig& config)>;
 
-  void register_ntt_init_domain(const std::string& deviceType, NttInitDomainImpl);
+  extern "C" void register_ntt_init_domain(const std::string& deviceType, NttInitDomainImpl);
 
 #define REGISTER_NTT_INIT_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                            \
   namespace {                                                                                                          \
@@ -191,7 +191,7 @@ namespace icicle {
   /*************************** RELEASE DOMAIN ***************************/
   using NttReleaseDomainImpl = std::function<eIcicleError(const Device& device)>;
 
-  void register_ntt_release_domain(const std::string& deviceType, NttReleaseDomainImpl);
+  extern "C" void register_ntt_release_domain(const std::string& deviceType, NttReleaseDomainImpl);
 
 #define REGISTER_NTT_RELEASE_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                         \
   namespace {                                                                                                          \
