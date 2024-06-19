@@ -2,26 +2,24 @@
 
 To understand the theory behind MSM pre computation technique refer to Niall Emmart's [talk](https://youtu.be/KAWlySN7Hm8?feature=shared&t=1734).
 
-## `precompute_bases`
+## `precompute_points`
 
 Precomputes bases for the multi-scalar multiplication (MSM) by extending each base point with its multiples, facilitating more efficient MSM calculations.
 
 ```rust
-pub fn precompute_bases<C: Curve + MSM<C>>(
-    points: &HostOrDeviceSlice<Affine<C>>,
-    precompute_factor: i32,
-    _c: i32,
-    ctx: &DeviceContext,
-    output_bases: &mut HostOrDeviceSlice<Affine<C>>,
+pub fn precompute_points<C: Curve + MSM<C>>(
+    points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+    msm_size: i32,
+    cfg: &MSMConfig,
+    output_bases: &mut DeviceSlice<Affine<C>>,
 ) -> IcicleResult<()>
 ```
 
 ### Parameters
 
 - **`points`**: The original set of affine points (\(P_1, P_2, ..., P_n\)) to be used in the MSM. For batch MSM operations, this should include all unique points concatenated together.
-- **`precompute_factor`**: Specifies the total number of points to precompute for each base, including the base point itself. This parameter directly influences the memory requirements and the potential speedup of the MSM operation.
-- **`_c`**: Currently unused. Intended for future use to align with the `c` parameter in `MSMConfig`, ensuring the precomputation is compatible with the bucket method's window size used in MSM.
-- **`ctx`**: The device context specifying the device ID and stream for execution. This context determines where the precomputation is performed (e.g., on a specific GPU).
+- **`msm_size`**: The size of a single msm in order to determine optimal parameters.
+- **`cfg`**: The MSM configuration parameters.
 - **`output_bases`**: The output buffer for the extended bases. Its size must be `points.len() * precompute_factor`. This buffer should be allocated on the device for GPU computations.
 
 #### Returns
@@ -37,22 +35,11 @@ The precomputation process is crucial for optimizing MSM operations, especially 
 #### Example Usage
 
 ```rust
-let device_context = DeviceContext::default_for_device(0); // Use the default device
+let cfg = MSMConfig::default();
 let precompute_factor = 4; // Number of points to precompute
 let mut extended_bases = HostOrDeviceSlice::cuda_malloc(expected_size).expect("Failed to allocate memory for extended bases");
 
 // Precompute the bases using the specified factor
-precompute_bases(&points, precompute_factor, 0, &device_context, &mut extended_bases)
+precompute_points(&points, msm_size, &cfg, &mut extended_bases)
     .expect("Failed to precompute bases");
 ```
-
-### Benchmarks
-
-Benchmarks where performed on a Nvidia RTX 3090Ti.
-
-| Pre-computation factor | bn254 size `2^20` MSM, ms.  | bn254 size `2^12` MSM, size `2^10` batch, ms. | bls12-381 size `2^20` MSM, ms. | bls12-381 size `2^12` MSM, size `2^10` batch, ms. |
-| ------------- | ------------- | ------------- | ------------- | ------------- |
-| 1  | 14.1  | 82.8  | 25.5  | 136.7  |
-| 2  | 11.8  | 76.6  | 20.3  | 123.8  |
-| 4  | 10.9  | 73.8  | 18.1  | 117.8  |
-| 8  | 10.6  | 73.7  | 17.2  | 116.0  |

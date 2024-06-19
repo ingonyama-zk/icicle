@@ -122,7 +122,7 @@ func GetDefaultMSMConfig() MSMConfig
 
 ## How do I toggle between the supported algorithms?
 
-When creating your MSM Config you may state which algorithm you wish to use. `cfg.Ctx.IsBigTriangle = true` will activate Large triangle accumulation and `cfg.Ctx.IsBigTriangle = false` will activate Bucket accumulation.
+When creating your MSM Config you may state which algorithm you wish to use. `cfg.Ctx.IsBigTriangle = true` will activate Large triangle reduction and `cfg.Ctx.IsBigTriangle = false` will activate iterative reduction.
 
 ```go
 ...
@@ -151,6 +151,10 @@ out.Malloc(batchSize*p.Size(), p.Size())
 
 ...
 ```
+
+## Parameters for optimal performance
+
+Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
 
 ## Support for G2 group
 
