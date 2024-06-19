@@ -160,12 +160,13 @@ where
         .into();
     assert!(msm_res_affine.is_on_curve());
 
-    let allocated_pinned_points = HostSlice::allocate_pinned(points.len(), CudaHostAllocFlags::DEFAULT).unwrap();
-    allocated_pinned_points
-        .as_mut_slice()
-        .clone_from_slice(points.as_slice());
+    points.allocate_pinned(points.len(), CudaHostAllocFlags::DEFAULT).unwrap();
+    // let allocated_pinned_points = HostSlice::allocate_pinned(points.len(), CudaHostAllocFlags::DEFAULT).unwrap();
+    // allocated_pinned_points
+    //     .as_mut_slice()
+    //     .clone_from_slice(points.as_slice());
 
-    msm(&scalars_d[..], allocated_pinned_points, &cfg, &mut msm_results[..]).unwrap();
+    msm(&scalars_d[..], points, &cfg, &mut msm_results[..]).unwrap();
 
     let mut msm_host_result = vec![Projective::<C>::zero(); 1];
     msm_results
@@ -179,7 +180,7 @@ where
         .to_ark()
         .into();
     assert!(msm_res_affine.is_on_curve());
-    allocated_pinned_points.free_pinned();
+    points.free_pinned();
 
     stream
         .destroy()
