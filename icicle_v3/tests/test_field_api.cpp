@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include "dlfcn.h"
+#include <random>
 
 #include "icicle/runtime.h"
 #include "icicle/vec_ops.h"
@@ -9,6 +10,7 @@
 #include "icicle/matrix_ops.h"
 
 #include "icicle/fields/field_config.h"
+#include "icicle/utils/log.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -204,13 +206,47 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
 #ifdef NTT_ENABLED
 TYPED_TEST(FieldApiTest, ntt)
 {
-  const int logn = 20;
+  srand(time(0));
+  const int logn = rand() % 13 + 3;
   const int N = 1 << logn;
-  auto scalars = std::make_unique<TypeParam[]>(N);
-  FieldApiTest<TypeParam>::random_samples(scalars.get(), N);
 
-  auto out_main = std::make_unique<TypeParam[]>(N);
-  auto out_ref = std::make_unique<TypeParam[]>(N);
+  // // Randomize config
+  // TODO - iterate over different configs
+  // const int batch_size = rand() % 15 + 1;
+  // const Ordering ordering = static_cast<Ordering>(rand() % 6);
+  // bool columns_batch;
+  // if (ordering == Ordering::kMN || ordering == Ordering::kNM || logn == 7 || logn < 4) {
+  //   columns_batch = false; // FIXME: currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  // } else {
+  //   columns_batch = rand() % 2;
+  // }
+  // const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
+
+  // Set fixed config values for debugging
+  const int batch_size = 2;
+  const bool columns_batch = false;
+  const Ordering ordering = Ordering::kNM;
+  const NTTDir dir = NTTDir::kForward;
+
+  // Print config
+  ICICLE_LOG_DEBUG << "logn: " << logn;
+  ICICLE_LOG_DEBUG << "batch_size: " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch: " << columns_batch;
+  ICICLE_LOG_DEBUG << "ordering: "
+                   << (ordering == Ordering::kNN   ? "kNN"
+                       : ordering == Ordering::kNR ? "kNR"
+                       : ordering == Ordering::kRN ? "kRN"
+                       : ordering == Ordering::kRR ? "kRR"
+                       : ordering == Ordering::kNM ? "kNM"
+                                                   : "kMN");
+  ICICLE_LOG_DEBUG << "dir: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
+
+  const int total_size = N * batch_size;
+  auto scalars = std::make_unique<TypeParam[]>(total_size);
+  FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
+
+  auto out_main = std::make_unique<TypeParam[]>(total_size);
+  auto out_ref = std::make_unique<TypeParam[]>(total_size);
 
   auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type.c_str(), 0};
@@ -224,19 +260,22 @@ TYPED_TEST(FieldApiTest, ntt)
     init_domain_config.is_async = false;
     init_domain_config.ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
 
+    auto config = default_ntt_config<scalar_t>();
+    // config.stream = stream;
+    // config.coset_gen = coset_gen; // TODO - Implement. default: S::one()
+    config.batch_size = batch_size;       // default: 1
+    config.columns_batch = columns_batch; // default: false
+    config.ordering = ordering;           // default: kNN
+    config.are_inputs_on_device = true;   // TODO, ask yuval why set to true?
+    config.are_outputs_on_device = true;  // TODO, ask yuval why set to true?
+    // config.is_async = false; // TODO - Implement. default: false
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(logn), init_domain_config));
 
-    auto config = default_ntt_config<scalar_t>();
-
     TypeParam *d_in, *d_out;
-    icicle_malloc_async((void**)&d_in, N * sizeof(TypeParam), config.stream);
-    icicle_malloc_async((void**)&d_out, N * sizeof(TypeParam), config.stream);
-    icicle_copy_to_device_async(d_in, scalars.get(), N * sizeof(TypeParam), config.stream);
+    icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream);
+    icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream);
+    icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream);
 
-    config.ordering = Ordering::kNN;
-    config.stream = stream;
-    config.are_inputs_on_device = true;
-    config.are_outputs_on_device = true;
     // config.ext.set(CUDA_NTT_ALGORITHM, 1); 0: auto, 1: radix2, 2: mixed-radix
 
     std::ostringstream oss;
@@ -244,11 +283,11 @@ TYPED_TEST(FieldApiTest, ntt)
 
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(ntt(d_in, N, NTTDir::kForward, config, d_out));
+      ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
     }
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
-    icicle_copy_to_host_async(out, d_out, N * sizeof(TypeParam), config.stream);
+    icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream);
     icicle_stream_synchronize(config.stream);
     icicle_free_async(d_in, config.stream);
     icicle_free_async(d_out, config.stream);
@@ -257,10 +296,11 @@ TYPED_TEST(FieldApiTest, ntt)
   };
 
   run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  // run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 16 /*=iters*/);
 
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(scalar_t)));
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT_ENABLED
 
