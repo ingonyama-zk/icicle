@@ -1,7 +1,7 @@
 use crate::traits::{FieldConfig, FieldImpl};
 use hex::FromHex;
-use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::DeviceSlice;
+// use icicle_runtime::errors::eIcicleError;
+// use icicle_runtime::memory::DeviceSlice;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
@@ -123,7 +123,7 @@ macro_rules! impl_field {
     (
         $num_limbs:ident,
         $field_name:ident,
-        $field_cfg:ident,        
+        $field_cfg:ident     
     ) => {
         #[doc(hidden)]
         #[derive(Debug, PartialEq, Copy, Clone)]
@@ -141,25 +141,25 @@ macro_rules! impl_scalar_field {
         $field_prefix_ident:ident,
         $num_limbs:ident,
         $field_name:ident,
-        $field_cfg:ident,
+        $field_cfg:ident
     ) => {
-        impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
+        impl_field!($num_limbs, $field_name, $field_cfg);
 
         mod $field_prefix_ident {
-            use super::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
+            use super::{$field_name, HostOrDeviceSlice};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_generate_scalars")]
                 pub(crate) fn generate_scalars(scalars: *mut $field_name, size: usize);
 
-            //     #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
-            //     fn _convert_scalars_montgomery(
-            //         scalars: *mut $field_name,
-            //         size: usize,
-            //         is_into: bool,
-            //         ctx: *const DeviceContext,
-            //     ) -> CudaError;
-            // }
+                // #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
+                // fn _convert_scalars_montgomery(
+                //     scalars: *mut $field_name,
+                //     size: usize,
+                //     is_into: bool,
+                //     ctx: *const DeviceContext,
+                // ) -> CudaError;
+            }
 
             // pub(crate) fn convert_scalars_montgomery(
             //     scalars: *mut $field_name,
@@ -180,35 +180,35 @@ macro_rules! impl_scalar_field {
         }
 
         // impl<'a> MontgomeryConvertibleField<'a, $field_name> for $field_cfg {
-            fn to_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
-                check_device(ctx.device_id);
-                assert_eq!(
-                    values
-                        .device_id()
-                        .unwrap(),
-                    ctx.device_id,
-                    "Device ids are different in slice and context"
-                );
-                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
-            }
+        //     fn to_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
+        //         check_device(ctx.device_id);
+        //         assert_eq!(
+        //             values
+        //                 .device_id()
+        //                 .unwrap(),
+        //             ctx.device_id,
+        //             "Device ids are different in slice and context"
+        //         );
+        //         $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
+        //     }
 
-            fn from_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
-                check_device(ctx.device_id);
-                assert_eq!(
-                    values
-                        .device_id()
-                        .unwrap(),
-                    ctx.device_id,
-                    "Device ids are different in slice and context"
-                );
-                $field_prefix_ident::convert_scalars_montgomery(
-                    unsafe { values.as_mut_ptr() },
-                    values.len(),
-                    false,
-                    ctx,
-                )
-            }
-        }
+        //     fn from_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
+        //         check_device(ctx.device_id);
+        //         assert_eq!(
+        //             values
+        //                 .device_id()
+        //                 .unwrap(),
+        //             ctx.device_id,
+        //             "Device ids are different in slice and context"
+        //         );
+        //         $field_prefix_ident::convert_scalars_montgomery(
+        //             unsafe { values.as_mut_ptr() },
+        //             values.len(),
+        //             false,
+        //             ctx,
+        //         )
+        //     }
+        // }
     };
 }
 
@@ -217,10 +217,10 @@ macro_rules! impl_field_tests {
     (
         $field_name:ident
     ) => {
-        #[test]
-        fn test_field_convert_montgomery() {
-            check_field_convert_montgomery::<$field_name>()
-        }
+        // #[test]
+        // fn test_field_convert_montgomery() {
+        //     check_field_convert_montgomery::<$field_name>()
+        // }
 
         #[test]
         fn test_field_equality() {
