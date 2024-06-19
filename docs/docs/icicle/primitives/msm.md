@@ -154,7 +154,7 @@ This gives a good approximation within 10% of the actual required memory for mos
 
 Here is a useful table showing optimal parameters for different MSMs. They are optimal for BLS12-377 curve when running on NVIDIA GeForce RTX 3090 Ti. This is the configuration used:
 
-```c++
+```cpp
   msm::MSMConfig config = {
     ctx,            // DeviceContext
     N,              // points_size
