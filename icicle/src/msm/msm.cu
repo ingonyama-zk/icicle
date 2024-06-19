@@ -22,6 +22,52 @@ namespace msm {
 
 #define MAX_TH 256
 
+    struct LogEntry {
+      int gidx;
+      int thread_id;
+      int line_number;
+      char kernel_name[64];
+      char message[256];
+    };
+
+    __device__ LogEntry* d_logEntries;
+    __device__ int d_logIndex;
+    __host__ int* g_idx;
+
+    static int glob_indx;
+
+    __device__ char* my_strcpy(char* dest, const char* src)
+    {
+      int i = 0;
+      do {
+        dest[i] = src[i];
+      } while (src[i++] != 0);
+      return dest;
+    }
+
+    std::atomic<int> atomic_counter(0);
+
+    void increment() { atomic_counter.fetch_add(1, std::memory_order_relaxed); }
+
+    void incr()
+    {
+      increment();
+      glob_indx = atomic_counter.load();
+      printf("incremented glob counter: %d\n", glob_indx);
+    }
+
+    __device__ void log_dev(int gidx, int threadIdx_x, const char* message, const char* kernel_name, int line)
+    {
+      int idx = atomicAdd(&d_logIndex, 1);
+      d_logEntries[idx].gidx = gidx; //TODO: crashes here???
+      // d_logEntries[idx].thread_id = threadIdx_x;
+      // d_logEntries[idx].line_number = line;
+      // my_strcpy(d_logEntries[idx].kernel_name, kernel_name);
+      // my_strcpy(d_logEntries[idx].message, message);
+    }
+
+#define LOGV(gidx, threadIdx_x, message) log_dev(gidx, threadIdx_x, message, __FUNCTION__, __LINE__)
+
     // #define SIGNED_DIG //WIP
     // #define SSM_SUM  //WIP
 
@@ -34,6 +80,15 @@ namespace msm {
       for (unsigned i = 0; i < shift; i++)
         point = P::dbl(point);
       points_out[tid] = P::to_affine(point);
+    }
+
+    void print_log_entries(LogEntry* log_entries, int log_counter)
+    {
+      for (int i = 0; i < log_counter; ++i) {
+        LogEntry& entry = log_entries[i];
+        std::cout << "IDX: " << entry.gidx << ", Thread ID: " << entry.thread_id << ", Line: " << entry.line_number
+                  << ", Kernel: " << entry.kernel_name << ", Message: " << entry.message << std::endl;
+      }
     }
 
     unsigned get_optimal_c(int bitsize) { return (unsigned)max(ceil(std::log2(bitsize)) - 4.0, 1.0); }
@@ -144,10 +199,13 @@ namespace msm {
     // this kernel initializes the buckets with zero points
     // each thread initializes a different bucket
     template <typename P>
-    __global__ void initialize_buckets_kernel(P* buckets, unsigned N)
+    __global__ void initialize_buckets_kernel(P* buckets, unsigned N, int d_gidx)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-      if (tid < N) buckets[tid] = P::zero(); // zero point
+      if (tid < N) {
+        buckets[tid] = P::zero(); // zero point
+        LOGV(d_gidx, tid, "test");
+      }
     }
 
     // this kernel splits the scalars into digits of size c
@@ -378,6 +436,20 @@ namespace msm {
     {
       CHK_INIT_IF_RETURN();
 
+      incr();
+
+      int numEntries = 1024; // Number of log entries
+      LogEntry* h_logEntries = new LogEntry[numEntries];
+      int h_logIndex = 0;
+
+      // Allocate device memory
+      cudaMallocAsync(&d_logEntries, numEntries * sizeof(LogEntry), stream);
+      auto dd = (&d_logIndex);
+      cudaMallocAsync(&dd, sizeof(int), stream);
+
+      // // Initialize log index to 0
+      // cudaMemcpy(&d_logIndex, &h_logIndex, sizeof(int), cudaMemcpyHostToDevice);
+
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
       const bool is_nof_points_valid = ((single_msm_size * batch_size) % nof_points == 0);
       if (!is_nof_points_valid) {
@@ -533,7 +605,8 @@ namespace msm {
       // launch the bucket initialization kernel with maximum threads
       NUM_THREADS = 1 << 10;
       NUM_BLOCKS = (total_nof_buckets + nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
-      initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets + nof_bms_in_batch);
+      initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+        buckets, total_nof_buckets + nof_bms_in_batch, glob_indx);
 
       // removing zero bucket, if it exists
       unsigned smallest_bucket_index;
@@ -824,6 +897,8 @@ namespace msm {
 
       if (!is_async) CHK_IF_RETURN(cudaStreamSynchronize(stream));
 
+      printf("*******end**********\n");
+
       return CHK_LAST();
     }
   } // namespace
@@ -833,6 +908,8 @@ namespace msm {
   {
     const int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
     cudaStream_t& stream = config.ctx.stream;
+
+    printf("==========begin==========\n");
 
     unsigned c = config.batch_size > 1 ? ((config.c == 0) ? get_optimal_c(msm_size) : config.c) : 16;
     // reduce c to closest power of two (from below) if not using big_triangle reduction logic
