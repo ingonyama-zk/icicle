@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use crate::config::ConfigExtension;
     use crate::memory::{DeviceVec, HostSlice};
     use crate::stream::IcicleStream;
     use crate::*;
@@ -102,5 +103,16 @@ mod tests {
             let device_props = get_device_properties().unwrap();
             assert_eq!(device_props.using_host_memory, false); // for "cuda"
         }
+    }
+
+    #[test]
+    fn test_config_extension() {
+        let config_ext = ConfigExtension::new();
+
+        config_ext.set_int("example_int", 42);
+        config_ext.set_bool("example_bool", true);
+
+        assert_eq!(config_ext.get_int("example_int"), 42);
+        assert_eq!(config_ext.get_bool("example_bool"), true);
     }
 }

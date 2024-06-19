@@ -24,6 +24,7 @@ option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once
 add_library(icicle_device SHARED
   src/device_api.cpp
   src/runtime.cpp
+  src/config_extension.cpp
 )
 target_link_libraries(icicle_device PUBLIC dl)
 include_directories(include)
