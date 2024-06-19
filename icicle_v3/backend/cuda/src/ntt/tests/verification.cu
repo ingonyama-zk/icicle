@@ -71,6 +71,8 @@ int main(int argc, char** argv)
   ntt_config.are_outputs_on_device = true;
   ntt_config.batch_size = BATCH_SIZE;
   ntt_config.columns_batch = COLUMNS_BATCH;
+  ConfigExtension ext;
+  ntt_config.ext = &ext;
 
   device_context::DeviceContext context = device_context::get_default_device_context();
 
@@ -124,7 +126,7 @@ int main(int argc, char** argv)
   auto benchmark = [&](bool is_print, int iterations) -> cudaError_t {
     // NEW
     CHK_IF_RETURN(cudaEventRecord(new_start, context.stream));
-    ntt_config.ext.set(CUDA_NTT_ALGORITHM, (int)NttAlgorithm::MixedRadix);
+    ntt_config.ext->set(CUDA_NTT_ALGORITHM, (int)NttAlgorithm::MixedRadix);
     for (size_t i = 0; i < iterations; i++) {
       CHK_IF_RETURN(ntt::ntt_cuda(
         INPLACE         ? GpuOutputNew
@@ -138,7 +140,7 @@ int main(int argc, char** argv)
 
     // OLD
     CHK_IF_RETURN(cudaEventRecord(icicle_start, context.stream));
-    ntt_config.ext.set(CUDA_NTT_ALGORITHM, (int)NttAlgorithm::Radix2);
+    ntt_config.ext->set(CUDA_NTT_ALGORITHM, (int)NttAlgorithm::Radix2);
     for (size_t i = 0; i < iterations; i++) {
       CHK_IF_RETURN(ntt::ntt_cuda(
         GpuScalars, NTT_SIZE, INV ? NTTDir::kInverse : NTTDir::kForward, ntt_config, 0 /*device id*/, GpuOutputOld));

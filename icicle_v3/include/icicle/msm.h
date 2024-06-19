@@ -42,7 +42,7 @@ namespace icicle {
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */
 
-    ConfigExtension ext; /** backend specific extensions*/
+    ConfigExtension* ext = nullptr; /** backend specific extensions*/
   };
 
   /**
@@ -63,11 +63,6 @@ namespace icicle {
       false,   // are_results_on_device
       false,   // is_async
     };
-    // TODO: maybe allow backends to register default values and call it here so they can fill the ext
-    config.ext.set("c", 0);
-    config.ext.set("bitsize", 0);
-    config.ext.set("large_bucket_factor", 10);
-    config.ext.set("big_triangle", true);
     return config;
   }
 
@@ -97,7 +92,7 @@ namespace icicle {
     bool is_output_on_device;
     bool is_async;
 
-    ConfigExtension ext; /** backend specific extensions*/
+    ConfigExtension* ext = nullptr; /** backend specific extensions*/
   };
 
   static MsmPreComputeConfig default_msm_pre_compute_config()
@@ -108,8 +103,6 @@ namespace icicle {
       false,   // is_output_on_device
       false,   // is_async
     };
-    // TODO: maybe allow backends to register default values and call it here so they can fill the ext
-    config.ext.set("c", 0);
     return config;
   }
 

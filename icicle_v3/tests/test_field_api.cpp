@@ -222,7 +222,9 @@ TYPED_TEST(FieldApiTest, ntt)
     auto init_domain_config = default_ntt_init_domain_config();
     init_domain_config.stream = stream;
     init_domain_config.is_async = false;
-    init_domain_config.ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    ConfigExtension ext;
+    ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    init_domain_config.ext = &ext;
 
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(logn), init_domain_config));
 
@@ -237,7 +239,6 @@ TYPED_TEST(FieldApiTest, ntt)
     config.stream = stream;
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
-    // config.ext.set(CUDA_NTT_ALGORITHM, 1); 0: auto, 1: radix2, 2: mixed-radix
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;

@@ -13,8 +13,8 @@ namespace icicle {
     device_context.device_id = device.id;
     bool fast_twiddles = false;
 
-    if (config.ext.has(CUDA_NTT_FAST_TWIDDLES_MODE)) {
-      fast_twiddles = config.ext.get<bool>(CUDA_NTT_FAST_TWIDDLES_MODE);
+    if (config.ext && config.ext->has(CUDA_NTT_FAST_TWIDDLES_MODE)) {
+      fast_twiddles = config.ext->get<bool>(CUDA_NTT_FAST_TWIDDLES_MODE);
     }
     auto err = ntt::Domain<scalar_t>::init_domain(primitive_root, device_context, fast_twiddles);
     return translateCudaError(err);
