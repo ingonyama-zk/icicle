@@ -216,7 +216,6 @@ namespace msm {
       bool negate_point = false;
       bool negate_chunk;
       unsigned msm_index = tid / msm_size;
-      const S& scalar = scalars[tid];
       // if field bit count divides c we need to negate both the point and scalar if the msb is set to avoid overflow
       if (S::NBITS % c == 0){
         if (scalars[tid].get_scalar_digit(S::NBITS - 1, 1)){
@@ -509,7 +508,7 @@ namespace msm {
       unsigned input_indexes_count = nof_scalars * total_bms_per_msm;
 
       unsigned bm_bitsize = (unsigned)ceil(std::log2(nof_bms_per_msm));
-      unsigned msm_log_size = (unsigned)ceil(std::log2(nof_points));
+      unsigned msm_log_size = (unsigned)ceil(std::log2(nof_points * precompute_factor));
 
       unsigned* bucket_indices;
       unsigned* point_indices;
