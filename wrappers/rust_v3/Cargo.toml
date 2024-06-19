@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "icicle-runtime",
   "icicle-core",
+  "icicle-fields/icicle-babybear",
 ]
 exclude = []
 
