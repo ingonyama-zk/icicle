@@ -25,7 +25,7 @@ namespace icicle {
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
                     *   function will block the current CPU thread. */
 
-    ConfigExtension ext; /** backend specific extensions*/
+    ConfigExtension* ext = nullptr; /** backend specific extensions*/
   };
 
   /**
