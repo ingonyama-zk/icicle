@@ -69,7 +69,7 @@ The MSM supports batch mode - running multiple MSMs in parallel. It's always bet
 
 ## MSM configuration
 
-```c++
+```cpp
   /**
    * @struct MSMConfig
    * Struct that encodes MSM parameters to be passed into the [MSM](@ref MSM) function. The intended use of this struct
