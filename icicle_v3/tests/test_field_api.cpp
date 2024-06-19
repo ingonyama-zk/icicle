@@ -7,6 +7,7 @@
 #include "icicle/vec_ops.h"
 #include "icicle/ntt.h"
 #include "icicle/matrix_ops.h"
+#include "icicle/hash.h"
 
 #include "icicle/fields/field_config.h"
 
@@ -263,6 +264,55 @@ TYPED_TEST(FieldApiTest, ntt)
   // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(scalar_t)));
 }
 #endif // NTT_ENABLED
+
+TYPED_TEST(FieldApiTest, merkleTree) {
+  Device dev = {"CPU", 0};
+  icicle_set_device(dev);
+  std::cout << "Testing merkle tree" << std::endl;
+  // poseidon hashes pointers for layers
+  Hash *poseidon_layer_0, *poseidon_layer_1, *poseidon_layer_2;
+  poseidon(&poseidon_layer_0, 1, 2, 1);
+  poseidon(&poseidon_layer_1, 1, 3, 1);
+  poseidon(&poseidon_layer_2, 1, 2, 1);
+  const Hash* layer_hashes[3] = {poseidon_layer_0, poseidon_layer_1, poseidon_layer_2};
+  // merkle tree
+  MerkleTree* merkle;
+  TreeBuilderConfig tree_config;
+  unsigned int nof_layers = 3;
+  unsigned int output_store_min_layer = 0;
+  unsigned int output_store_max_layer = 2;
+  merkle_tree(&merkle, nof_layers, layer_hashes, 
+              output_store_min_layer, output_store_max_layer, tree_config);
+  limb_t leaves[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+  std::cout << "Building tree" << std::endl;
+  merkle->build(leaves);
+  std::cout << "Printing saved layers:" << std::endl;
+  merkle->print_tree();
+  std::cout << "Getting node:" << std::endl;
+  limb_t *node = new limb_t[1];
+  merkle->get_node(leaves, 1, 1, node);
+  std::cout << "node value = " << *node << std::endl;
+  delete[] node;
+  std::cout << "Building path" << std::endl;
+  int nof_limbs_for_path = merkle->get_path_nof_limbs();
+  limb_t* path = new limb_t[nof_limbs_for_path];
+  merkle->get_path(leaves, 11, path);
+  merkle->print_path(path);
+}
+
+
+
+TYPED_TEST(FieldApiTest, poseidon) {
+  Device dev = {"CPU", 0};
+  icicle_set_device(dev);
+  Hash* poseidon_inst;
+  std::cout << "Testing single poseidon hash..." << std::endl;
+  poseidon(&poseidon_inst, 1, 2, 1);
+  limb_t input_limbs[2] = {1, 2};
+  limb_t output_limbs[1];
+  poseidon_inst->hash_many(input_limbs, output_limbs, 1);
+  std::cout << "Output limb: " << output_limbs[0] << std::endl;
+}
 
 int main(int argc, char** argv)
 {

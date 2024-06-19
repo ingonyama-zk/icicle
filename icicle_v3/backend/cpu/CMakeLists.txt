@@ -20,6 +20,8 @@ if (FIELD)
     add_library(icicle_cpu_field SHARED 
         src/field/cpu_vec_ops.cpp     
         src/field/cpu_matrix_ops.cpp
+        src/field/cpu_poseidon.cpp
+        src/field/cpu_merkle_tree.cpp
     )
     if (NTT)    
         target_sources(icicle_cpu_field PUBLIC src/field/cpu_ntt.cpp)

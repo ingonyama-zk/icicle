@@ -7,6 +7,7 @@
 
 #include "icicle/device.h"
 #include "icicle/errors.h"
+#include "icicle/utils/utils.h"
 
 namespace icicle {
 
@@ -215,7 +216,7 @@ namespace icicle {
 
 #define REGISTER_DEVICE_API(DEVICE_TYPE, API_CLASS)                                                                    \
   namespace {                                                                                                          \
-    static bool _reg_device_##API_CLASS = []() -> bool {                                                               \
+    static bool UNIQUE(_reg_device_##API_CLASS) = []() -> bool {                                                               \
       std::shared_ptr<DeviceAPI> apiInstance = std::make_shared<API_CLASS>();                                          \
       register_deviceAPI(DEVICE_TYPE, apiInstance);                                                                    \
       return true;                                                                                                     \

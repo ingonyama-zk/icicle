@@ -21,6 +21,7 @@ function(setup_field_target)
       src/fields/ffi_extern.cpp
       src/vec_ops.cpp
       src/matrix_ops.cpp
+      src/hash.cpp
     )
     # handle APIs that are for some curves only
     add_ntt_sources_or_disable()
