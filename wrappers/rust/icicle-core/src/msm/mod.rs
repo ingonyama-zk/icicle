@@ -389,11 +389,6 @@ macro_rules! impl_msm_tests {
         }
 
         #[test]
-        fn test_msm_pinned() {
-            check_msm_pinned_memory::<$curve>()
-        }
-
-        #[test]
         fn test_msm_batch() {
             check_msm_batch::<$curve>()
         }

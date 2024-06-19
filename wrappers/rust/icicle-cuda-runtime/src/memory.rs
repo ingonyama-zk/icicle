@@ -1,33 +1,16 @@
 use crate::bindings::{
-    cudaDeviceAttr, cudaFree, cudaFreeHost, cudaHostAlloc, cudaHostAllocDefault, cudaHostAllocPortable,
-    cudaHostGetFlags, cudaHostRegister, cudaHostRegisterDefault, cudaHostRegisterPortable, cudaHostUnregister,
-    cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
+    cudaFree, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
 };
-use crate::device::{check_device, get_device_attribute, get_device_from_pointer};
+use crate::device::{check_device, get_device_from_pointer};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
 use crate::stream::CudaStream;
-use bitflags::bitflags;
 use std::mem::{size_of, ManuallyDrop, MaybeUninit};
 use std::ops::{
     Deref, DerefMut, Index, IndexMut, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
 };
-use std::os::raw::{c_uint, c_void};
+use std::os::raw::c_void;
 use std::slice::from_raw_parts_mut;
 use std::slice::SliceIndex;
-
-bitflags! {
-    pub struct CudaHostAllocFlags: u32 {
-        const DEFAULT = cudaHostAllocDefault;
-        const PORTABLE = cudaHostAllocPortable;
-    }
-}
-
-bitflags! {
-    pub struct CudaHostRegisterFlags: u32 {
-        const DEFAULT = cudaHostRegisterDefault;
-        const PORTABLE = cudaHostRegisterPortable;
-    }
-}
 
 #[derive(Debug)]
 pub struct HostSlice<T>([T]);
@@ -133,78 +116,6 @@ impl<T> HostSlice<T> {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.0
             .iter_mut()
-    }
-
-    // TODO: @jeremy Fix the issue where ptr pinned by cudaHostRegister cannot be used in primitives
-    // pub fn is_pinnable(&self) -> bool {
-    //     let pinnable = get_device_attribute(cudaDeviceAttr::cudaDevAttrHostRegisterSupported, 0).unwrap();
-    //     let lockable =
-    //         get_device_attribute(cudaDeviceAttr::cudaDevAttrPageableMemoryAccessUsesHostPageTables, 0).unwrap();
-
-    //     pinnable == 1 && lockable == 0
-    // }
-
-    // pub fn pin(&self, flags: CudaHostRegisterFlags) -> CudaResult<()> {
-    //     if self.is_pinnable() {
-    //         unsafe {
-    //             let ptr = self.as_ptr() as *mut c_void;
-    //             let flags_to_set = flags.bits();
-    //             cudaHostRegister(ptr, self.len(), flags_to_set as c_uint).wrap()
-    //         }
-    //     } else {
-    //         Ok(())
-    //     }
-    // }
-
-    // pub fn unpin(&self) -> CudaResult<()> {
-    //     unsafe {
-    //         let mut flags = 0;
-    //         let ptr = self.as_ptr() as *mut c_void;
-    //         cudaHostGetFlags(&mut flags, ptr).wrap()?;
-    //         cudaHostUnregister(ptr).wrap()
-    //     }
-    // }
-
-    pub fn allocate_pinned(&self, count: usize, flags: CudaHostAllocFlags) -> CudaResult<()> {
-        let size = count
-            .checked_mul(size_of::<T>())
-            .unwrap_or(0);
-        if size == 0 {
-            return Err(CudaError::cudaErrorMemoryAllocation); //TODO: only CUDA backend should return CudaError
-        }
-
-        // let mut pinned_host_ptr = MaybeUninit::<*mut c_void>::uninit();
-
-        // unsafe {
-        //     cudaHostAlloc(pinned_host_ptr.as_mut_ptr(), size, flags.bits).wrap()?;
-        //     let pinned_host_slice = from_raw_parts_mut(pinned_host_ptr.assume_init() as *mut T, count);
-        //     Ok(Self::from_mut_slice(pinned_host_slice))
-        // }
-
-        unsafe {
-            let p_host = self.as_ptr() as *mut *mut c_void;
-            cudaHostAlloc(p_host, size, flags.bits()).wrap()?;
-        }
-        
-        Ok(())
-    }
-
-    pub fn free_pinned(&self) -> CudaResult<()> {
-        unsafe {
-            let mut flags: u32 = 0;
-            let ptr = self.as_ptr() as *mut c_void;
-            cudaHostGetFlags(&mut flags, ptr).wrap()?;
-            cudaFreeHost(ptr).wrap()
-        }
-    }
-
-    pub fn get_memory_flags(&self) -> CudaResult<u32> {
-        unsafe {
-            let mut flags: u32 = 1234;
-            let ptr = self.as_ptr() as *mut c_void;
-            cudaHostGetFlags(&mut flags, ptr).wrap()?;
-            Ok(flags)
-        }
     }
 }
 
@@ -513,47 +424,3 @@ impl<T> Drop for DeviceVec<T> {
 
 #[allow(non_camel_case_types)]
 pub type CudaMemPool = cudaMemPool_t;
-
-pub(crate) mod tests {
-    use crate::error::CudaError;
-    use crate::memory::{CudaHostAllocFlags, HostOrDeviceSlice, HostSlice};
-
-    // TODO: @jeremy Fix the issue where ptr pinned by cudaHostRegister cannot be used in primitives
-    // #[test]
-    // fn test_pin_memory() {
-    //     let data = vec![1, 2, 3, 4, 5, 7, 8, 9];
-    //     let data_host_slice = HostSlice::from_slice(&data);
-
-    //     data_host_slice
-    //         .pin(CudaHostRegisterFlags::DEFAULT)
-    //         .expect("Registering host mem failed");
-    //     let err = data_host_slice
-    //         .pin(CudaHostRegisterFlags::DEFAULT)
-    //         .expect_err("Registering already registered memory succeeded");
-    //     assert_eq!(err, CudaError::cudaErrorHostMemoryAlreadyRegistered);
-
-    //     data_host_slice
-    //         .unpin()
-    //         .expect("Unregistering pinned memory failed");
-    //     let err = data_host_slice
-    //         .unpin()
-    //         .expect_err("Unregistering non-registered pinned memory succeeded");
-    //     assert_eq!(err, CudaError::cudaErrorInvalidValue);
-    // }
-
-    // #[test]
-    // fn test_allocated_pinned_memory() {
-    //     let data = vec![1, 2, 3, 4, 5, 7, 8, 9];
-    //     let data_host_slice = HostSlice::from_slice(&data);
-    //     let newly_allocated_pinned_host_slice: &HostSlice<i32> =
-    //         HostSlice::allocate_pinned(data_host_slice.len(), CudaHostAllocFlags::DEFAULT)
-    //             .expect("Allocating new pinned memory failed");
-    //     newly_allocated_pinned_host_slice
-    //         .free_pinned()
-    //         .expect("Freeing pinned memory failed");
-    //     let err = newly_allocated_pinned_host_slice
-    //         .free_pinned()
-    //         .expect_err("Freeing non-pinned memory succeeded");
-    //     assert_eq!(err, CudaError::cudaErrorInvalidValue);
-    // }
-}

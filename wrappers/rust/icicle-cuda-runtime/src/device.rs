@@ -1,7 +1,7 @@
 use crate::{
     bindings::{
-        cudaDeviceAttr, cudaDeviceGetAttribute, cudaFreeAsync, cudaGetDevice, cudaGetDeviceCount, cudaMallocAsync,
-        cudaMemGetInfo, cudaPointerAttributes, cudaPointerGetAttributes, cudaSetDevice,
+        cudaFreeAsync, cudaGetDevice, cudaGetDeviceCount, cudaMallocAsync, cudaMemGetInfo, cudaPointerAttributes,
+        cudaPointerGetAttributes, cudaSetDevice,
     },
     error::{CudaResult, CudaResultWrap},
     stream::CudaStream,
@@ -30,11 +30,6 @@ pub fn get_device_from_pointer(ptr: *const ::std::os::raw::c_void) -> CudaResult
             .assume_init()
             .device as usize)
     }
-}
-
-pub fn get_device_attribute(attr: cudaDeviceAttr, device: usize) -> CudaResult<usize> {
-    let mut res: i32 = 0;
-    unsafe { cudaDeviceGetAttribute(&mut res, attr, device as i32) }.wrap_value(res as usize)
 }
 
 pub fn check_device(device_id: usize) {
