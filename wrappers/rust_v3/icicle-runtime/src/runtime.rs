@@ -41,8 +41,13 @@ pub fn load_backend(path: &str, is_recursive: bool) -> eIcicleError {
     unsafe { icicle_load_backend(c_path.as_ptr(), is_recursive) }
 }
 
-pub fn set_device(device: &Device) -> eIcicleError {
-    unsafe { icicle_set_device(device) }
+pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
+    let result = unsafe { icicle_set_device(device) };
+    if result == eIcicleError::Success {
+        Ok(())
+    } else {
+        Err(result)
+    }
 }
 
 pub fn is_device_available(device: &Device) -> eIcicleError {
