@@ -16,6 +16,8 @@ import (
 
 const (
 	{{toConst .FieldPrefix}}LIMBS int = {{.NUM_LIMBS}}
+	{{.FieldPrefix}}FieldBytes int = {{toConst .FieldPrefix}}LIMBS*4
+
 )
 
 type {{.FieldPrefix}}Field struct {

@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	G2BASE_LIMBS int = 16
+	G2BASE_LIMBS     int = 16
+	G2BaseFieldBytes int = G2BASE_LIMBS * 4
 )
 
 type G2BaseField struct {

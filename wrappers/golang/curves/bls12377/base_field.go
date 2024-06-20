@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	BASE_LIMBS int = 12
+	BASE_LIMBS     int = 12
+	BaseFieldBytes int = BASE_LIMBS * 4
 )
 
 type BaseField struct {

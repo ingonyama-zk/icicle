@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	EXTENSION_LIMBS int = 4
+	EXTENSION_LIMBS     int = 4
+	ExtensionFieldBytes int = EXTENSION_LIMBS * 4
 )
 
 type ExtensionField struct {

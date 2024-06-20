@@ -1,5 +1,10 @@
 package internal
 
+const (
+	ProjectiveBytes int = MockBaseFieldBytes * 3
+	AffineBytes     int = MockBaseFieldBytes * 2
+)
+
 type MockProjective struct {
 	X, Y, Z MockBaseField
 }

@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	SCALAR_LIMBS int = 8
+	SCALAR_LIMBS     int = 8
+	ScalarFieldBytes int = SCALAR_LIMBS * 4
 )
 
 type ScalarField struct {

@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	MOCKBASE_LIMBS int = 4
+	MOCKBASE_LIMBS     int = 4
+	MockBaseFieldBytes int = MOCKBASE_LIMBS * 4
 )
 
 type MockBaseField struct {

@@ -9,8 +9,13 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+){{end}}
+
+const (
+	ProjectiveBytes int = {{.CurvePrefix}}BaseFieldBytes*3
+	AffineBytes int = {{.CurvePrefix}}BaseFieldBytes*2
 )
-{{end}}
+
 type {{.CurvePrefix}}Projective struct {
 	X, Y, Z {{.CurvePrefix}}BaseField
 }

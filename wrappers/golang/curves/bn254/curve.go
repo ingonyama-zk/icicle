@@ -11,6 +11,11 @@ import (
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 )
 
+const (
+	ProjectiveBytes int = BaseFieldBytes * 3
+	AffineBytes     int = BaseFieldBytes * 2
+)
+
 type Projective struct {
 	X, Y, Z BaseField
 }
