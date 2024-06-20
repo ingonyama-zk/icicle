@@ -1,5 +1,5 @@
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{device::Device, runtime, stream::IcicleStream};
+use icicle_runtime::stream::IcicleStream;
 
 #[test]
 fn test_vec_ops_config() {
@@ -16,8 +16,7 @@ fn test_vec_ops_config() {
     );
 
     // just to test the stream can be set and used correctly
-    vec_ops_config.stream = IcicleStream::create().unwrap();
-    vec_ops_config
-        .stream
-        .synchronize();
+    let stream = IcicleStream::create().unwrap();
+    vec_ops_config.stream_handle = (&stream).into();
+    stream.synchronize();
 }
