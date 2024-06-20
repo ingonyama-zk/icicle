@@ -38,7 +38,7 @@ TEST_F(DeviceApiTest, MemoryCopySync)
   for (const auto& device_type : s_regsitered_devices) {
     int output[2] = {0, 0};
 
-    icicle::Device dev = {device_type.c_str(), 0};
+    icicle::Device dev = {device_type, 0};
     icicle_set_device(dev);
 
     void* dev_mem = nullptr;
@@ -57,7 +57,7 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
   for (const auto& device_type : s_regsitered_devices) {
     int output[2] = {0, 0};
 
-    icicle::Device dev = {device_type.c_str(), 0};
+    icicle::Device dev = {device_type, 0};
     icicle_set_device(dev);
     void* dev_mem = nullptr;
 
@@ -76,7 +76,7 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
 TEST_F(DeviceApiTest, ApiError)
 {
   for (const auto& device_type : s_regsitered_devices) {
-    icicle::Device dev = {device_type.c_str(), 0};
+    icicle::Device dev = {device_type, 0};
     icicle_set_device(dev);
     void* dev_mem = nullptr;
     EXPECT_ANY_THROW(ICICLE_CHECK(icicle_malloc(&dev_mem, -1)));
@@ -102,7 +102,7 @@ TEST_F(DeviceApiTest, AvailableMemory)
 TEST_F(DeviceApiTest, InvalidDevice)
 {
   for (const auto& device_type : s_regsitered_devices) {
-    icicle::Device dev = {device_type.c_str(), 10}; // no such device-id thus expecting an error
+    icicle::Device dev = {device_type, 10}; // no such device-id thus expecting an error
     ASSERT_EQ(eIcicleError::INVALID_DEVICE, icicle_set_device(dev));
   }
 }

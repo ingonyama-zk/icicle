@@ -1,9 +1,7 @@
-use crate::{
-    // curve::{Affine, Curve, Projective},
-    field::Field,
-    traits::{FieldConfig, FieldImpl, GenerateRandom},
-};
+use crate::traits::{FieldImpl, GenerateRandom, MontgomeryConvertible};
+use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::runtime;
 
 pub fn check_field_equality<F: FieldImpl>() {
     let left = F::zero();
@@ -44,39 +42,32 @@ pub fn check_field_equality<F: FieldImpl>() {
 //     assert_eq!(left, right);
 // }
 
-// pub fn check_field_convert_montgomery<F>()
-// where
-//     F: FieldImpl + MontgomeryConvertible<'static>,
-//     F::Config: GenerateRandom<F>,
-// {
-//     let size = 1 << 10;
-//     let scalars = F::Config::generate_random(size);
-//     let device_ctx = DeviceContext::default();
+pub fn check_field_convert_montgomery<F>()
+where
+    F: FieldImpl + MontgomeryConvertible,
+    F::Config: GenerateRandom<F>,
+{
+    let size = 1 << 10;
+    let scalars = F::Config::generate_random(size);
+    // runtime::set_device(&Device::new("CPU", 0)).unwrap();
 
-//     let mut d_scalars = DeviceVec::cuda_malloc(size).unwrap();
-//     d_scalars
-//         .copy_from_host(HostSlice::from_slice(&scalars))
-//         .unwrap();
+    let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
+    d_scalars.copy_from_host(HostSlice::from_slice(&scalars));
 
-//     F::to_mont(&mut d_scalars, &device_ctx)
-//         .wrap()
-//         .unwrap();
-//     F::from_mont(&mut d_scalars, &device_ctx)
-//         .wrap()
-//         .unwrap();
+    F::to_mont(&mut d_scalars);
 
-//     let mut scalars_copy = vec![F::zero(); size];
-//     d_scalars
-//         .copy_to_host(HostSlice::from_mut_slice(&mut scalars_copy))
-//         .unwrap();
+    F::from_mont(&mut d_scalars);
 
-//     for (s1, s2) in scalars
-//         .iter()
-//         .zip(scalars_copy.iter())
-//     {
-//         assert_eq!(s1, s2);
-//     }
-// }
+    let mut scalars_copy = vec![F::zero(); size];
+    d_scalars.copy_to_host(HostSlice::from_mut_slice(&mut scalars_copy));
+
+    for (s1, s2) in scalars
+        .iter()
+        .zip(scalars_copy.iter())
+    {
+        assert_eq!(s1, s2);
+    }
+}
 
 // pub fn check_points_convert_montgomery<C: Curve>()
 // where

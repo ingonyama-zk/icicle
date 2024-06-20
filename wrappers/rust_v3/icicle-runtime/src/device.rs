@@ -2,9 +2,10 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::os::raw::c_char;
 
+const MAX_TYPE_SIZE: usize = 64;
 #[repr(C)]
 pub struct Device {
-    device_type: *const c_char,
+    device_type: [c_char; MAX_TYPE_SIZE],
     id: i32,
 }
 
@@ -17,44 +18,41 @@ pub struct DeviceProperties {
 }
 
 impl Device {
-    pub fn new(device_type: &str, id: i32) -> Device {
-        // Note that the CString is released when device is dropped.
-        let c_string = CString::new(device_type).expect("CString::new failed");
-        Device {
-            device_type: c_string.into_raw(),
-            id,
-        }
-    }
-}
+    pub fn new(type_: &str, id: i32) -> Device {
+        // copy the string to a c-string for C++ side
+        let mut device_type = [0 as c_char; MAX_TYPE_SIZE];
+        let c_string = CString::new(type_).expect("CString::new failed");
+        let bytes = c_string.as_bytes_with_nul();
 
-impl Drop for Device {
-    fn drop(&mut self) {
-        if !self
-            .device_type
-            .is_null()
+        for (i, &byte) in bytes
+            .iter()
+            .enumerate()
         {
-            unsafe {
-                // Convert back to CString so it is released
-                let _ = CString::from_raw(self.device_type as *mut c_char);
-                self.device_type = std::ptr::null();
+            if i < MAX_TYPE_SIZE {
+                device_type[i] = byte as c_char;
+            } else {
+                break;
             }
         }
+
+        // Ensure the last character is null if the source string is too long
+        if bytes.len() > MAX_TYPE_SIZE {
+            device_type[MAX_TYPE_SIZE - 1] = 0;
+        }
+
+        Device { device_type, id }
     }
 }
 
 impl fmt::Debug for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let device_type_str = unsafe {
-            if self
-                .device_type
-                .is_null()
-            {
-                "null"
-            } else {
-                CStr::from_ptr(self.device_type)
-                    .to_str()
-                    .unwrap_or("Invalid UTF-8")
-            }
+            CStr::from_ptr(
+                self.device_type
+                    .as_ptr(),
+            )
+            .to_str()
+            .unwrap_or("Invalid UTF-8")
         };
         f.debug_struct("Device")
             .field("device_type", &device_type_str)

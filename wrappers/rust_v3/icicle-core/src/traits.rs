@@ -1,5 +1,5 @@
-// use icicle_runtime::errors::eIcicleError;
-// use icicle_runtime::memory::DeviceSlice;
+use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::memory::DeviceSlice;
 use std::fmt::{Debug, Display};
 
 #[doc(hidden)]
@@ -25,10 +25,10 @@ pub trait FieldImpl:
     fn from_u32(val: u32) -> Self;
 }
 
-// pub trait MontgomeryConvertible<'a>: Sized {
-//     fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError;
-//     fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError;
-// }
+pub trait MontgomeryConvertible: Sized {
+    fn to_mont(values: &mut DeviceSlice<Self>) -> eIcicleError;
+    fn from_mont(values: &mut DeviceSlice<Self>) -> eIcicleError;
+}
 
 // pub trait IcicleResultWrap {
 //     fn wrap(self) -> IcicleResult<()>;

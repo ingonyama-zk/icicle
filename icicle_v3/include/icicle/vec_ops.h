@@ -162,12 +162,12 @@ namespace icicle {
     extension_t* output)>;
 
   extern "C" void
-  register_scalar_convert_montgomery_ext_field(const std::string& deviceType, extFieldConvertMontgomeryImpl);
+  register_extension_scalar_convert_montgomery(const std::string& deviceType, extFieldConvertMontgomeryImpl);
 
 #define REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                               \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_scalar_convert_mont_ext_field) = []() -> bool {                                            \
-      register_scalar_convert_montgomery_ext_field(DEVICE_TYPE, FUNC);                                                 \
+      register_extension_scalar_convert_montgomery(DEVICE_TYPE, FUNC);                                                 \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
