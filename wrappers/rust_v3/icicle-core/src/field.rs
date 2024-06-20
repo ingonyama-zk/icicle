@@ -1,8 +1,9 @@
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
-use crate::vec_ops::VecOpsConfig;
+// use crate::vec_ops::VecOpsConfig;
 use hex::FromHex;
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::DeviceSlice;
+use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
@@ -102,20 +103,20 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
 
 #[doc(hidden)]
 pub trait MontgomeryConvertibleField<F: FieldImpl> {
-    fn to_mont(values: &mut DeviceSlice<F>) -> eIcicleError;
-    fn from_mont(values: &mut DeviceSlice<F>) -> eIcicleError;
+    fn to_mont(values: &mut DeviceSlice<F>, stream: &IcicleStream) -> eIcicleError;
+    fn from_mont(values: &mut DeviceSlice<F>, stream: &IcicleStream) -> eIcicleError;
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
 where
     F: MontgomeryConvertibleField<Self>,
 {
-    fn to_mont(values: &mut DeviceSlice<Self>) -> eIcicleError {
-        F::to_mont(values)
+    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        F::to_mont(values, stream)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self>) -> eIcicleError {
-        F::from_mont(values)
+    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        F::from_mont(values, stream)
     }
 }
 
@@ -150,7 +151,7 @@ macro_rules! impl_scalar_field {
             use super::{$field_name, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
-            use icicle_runtime::stream::IcicleStream;
+            use icicle_runtime::stream::{IcicleStreamHandle,IcicleStream};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_generate_scalars")]
@@ -175,7 +176,8 @@ macro_rules! impl_scalar_field {
                 let mut config = VecOpsConfig::default();
                 config.is_a_on_device = true;
                 config.is_result_on_device = true;
-                // config.stream = stream;                
+                config.is_async = !stream.is_null();
+                config.stream_handle = stream.into();                      
                 unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
             }
         }
@@ -189,7 +191,7 @@ macro_rules! impl_scalar_field {
         }
 
         impl MontgomeryConvertibleField<$field_name> for $field_cfg {
-            fn to_mont(values: &mut DeviceSlice<$field_name>) -> eIcicleError {
+            fn to_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
                 // check_device(ctx.device_id);
                 // assert_eq!(
                 //     values
@@ -197,11 +199,12 @@ macro_rules! impl_scalar_field {
                 //         .unwrap(),
                 //     ctx.device_id,
                 //     "Device ids are different in slice and context"
-                // );
-                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &IcicleStream::default())
+                // );                
+                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
             }
 
-            fn from_mont(values: &mut DeviceSlice<$field_name>) -> eIcicleError {
+
+            fn from_mont(values: &mut DeviceSlice<$field_name>,stream: &IcicleStream) -> eIcicleError {
                 // check_device(ctx.device_id);
                 // assert_eq!(
                 //     values
@@ -209,12 +212,12 @@ macro_rules! impl_scalar_field {
                 //         .unwrap(),
                 //     ctx.device_id,
                 //     "Device ids are different in slice and context"
-                // );
+                // );      
                 $field_prefix_ident::convert_scalars_montgomery(
                     unsafe { values.as_mut_ptr() },
                     values.len(),
                     false,       
-                    &IcicleStream::default()             
+                    stream
                 )
             }
         }

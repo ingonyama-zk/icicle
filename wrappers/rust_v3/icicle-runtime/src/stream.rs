@@ -3,12 +3,12 @@ use crate::runtime;
 use std::os::raw::c_void;
 
 // Define the type alias for IcicleStreamHandle
-type IcicleStreamHandle = *mut c_void;
+pub type IcicleStreamHandle = *mut c_void;
 
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct IcicleStream {
-    pub(crate) handle: IcicleStreamHandle,
+    pub handle: IcicleStreamHandle,
 }
 
 unsafe impl Sync for IcicleStream {}
@@ -32,6 +32,11 @@ impl IcicleStream {
 
     pub fn synchronize(&self) -> eIcicleError {
         unsafe { runtime::icicle_stream_synchronize(self.handle) }
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.handle
+            .is_null()
     }
 }
 

@@ -13,7 +13,7 @@ fn main() {
 
     // Build
     let out_dir = config
-        .build_target("icicle_field")
+        .build_target("all")
         .build();
 
     println!("cargo:rustc-link-search={}/build", out_dir.display());
