@@ -101,7 +101,7 @@ public:
 
     auto run =
       [&](const std::string& dev_type, T* input, T* output, bool into_mont, bool measure, const char* msg, int iters) {
-        Device dev = {dev_type.c_str(), 0};
+        Device dev = {dev_type, 0};
         icicle_set_device(dev);
         auto config = default_vec_ops_config();
 
@@ -147,7 +147,7 @@ TEST_F(CurveApiTest, ecntt)
   auto out_ref = std::make_unique<projective_t[]>(N);
 
   auto run = [&](const std::string& dev_type, projective_t* out, const char* msg, bool measure, int iters) {
-    Device dev = {dev_type.c_str(), 0};
+    Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     auto init_domain_config = default_ntt_init_domain_config();
