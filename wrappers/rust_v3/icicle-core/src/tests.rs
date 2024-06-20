@@ -1,7 +1,8 @@
 use crate::traits::{FieldImpl, GenerateRandom, MontgomeryConvertible};
-use icicle_runtime::device::Device;
+// use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
-use icicle_runtime::runtime;
+// use icicle_runtime::runtime;
+use icicle_runtime::stream::IcicleStream;
 
 pub fn check_field_equality<F: FieldImpl>() {
     let left = F::zero();
@@ -49,14 +50,12 @@ where
 {
     let size = 1 << 10;
     let scalars = F::Config::generate_random(size);
-    // runtime::set_device(&Device::new("CPU", 0)).unwrap();
 
     let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
     d_scalars.copy_from_host(HostSlice::from_slice(&scalars));
 
-    F::to_mont(&mut d_scalars);
-
-    F::from_mont(&mut d_scalars);
+    F::to_mont(&mut d_scalars, &IcicleStream::default());
+    F::from_mont(&mut d_scalars, &IcicleStream::default());
 
     let mut scalars_copy = vec![F::zero(); size];
     d_scalars.copy_to_host(HostSlice::from_mut_slice(&mut scalars_copy));
