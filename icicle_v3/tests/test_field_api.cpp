@@ -83,7 +83,7 @@ TYPED_TEST(FieldApiTest, vectorOps)
 
   auto run =
     [&](const std::string& dev_type, TypeParam* out, bool measure, auto vec_op_func, const char* msg, int iters) {
-      Device dev = {dev_type.c_str(), 0};
+      Device dev = {dev_type, 0};
       icicle_set_device(dev);
       auto config = default_vec_ops_config();
 
@@ -127,7 +127,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
   auto h_out_ref = std::make_unique<TypeParam[]>(R * C);
 
   auto run = [&](const std::string& dev_type, TypeParam* h_out, bool measure, const char* msg, int iters) {
-    Device dev = {dev_type.c_str(), 0};
+    Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     DeviceProperties device_props;
@@ -182,7 +182,7 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
   memcpy(elements_ref.get(), elements_main.get(), N * sizeof(TypeParam));
 
   auto run = [&](const std::string& dev_type, TypeParam* inout, bool measure, const char* msg, int iters) {
-    Device dev = {dev_type.c_str(), 0};
+    Device dev = {dev_type, 0};
     icicle_set_device(dev);
     auto config = default_vec_ops_config();
 
@@ -213,7 +213,7 @@ TYPED_TEST(FieldApiTest, ntt)
   auto out_ref = std::make_unique<TypeParam[]>(N);
 
   auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
-    Device dev = {dev_type.c_str(), 0};
+    Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     icicleStreamHandle stream = nullptr;

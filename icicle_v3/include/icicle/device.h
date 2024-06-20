@@ -1,13 +1,37 @@
 #pragma once
 
+#include <cstring>
+
 namespace icicle {
+
+#define MAX_TYPE_LEN 64
 
   /**
    * @brief Structure representing a device.
    */
   struct Device {
-    const char* type; // Type of the device, such as "CPU" or "CUDA"
-    int id;           // Unique identifier for the device (e.g., GPU-2)
+    char type[MAX_TYPE_LEN]; // Type of the device, such as "CPU" or "CUDA"
+    int id;                  // Unique identifier for the device (e.g., GPU-2)
+
+    Device(const char* _type, int _id) : id{_id} { copy_str(type, _type); }
+    Device(const std::string& _type, int _id) : Device(_type.c_str(), _id) {}
+    void copy(const Device& other)
+    {
+      copy_str(type, other.type);
+      id = other.id;
+    }
+    void copy_str(char* dst, const char* src)
+    {
+      std::strncpy(dst, src, sizeof(type) - 1);
+      dst[sizeof(type) - 1] = 0;
+    }
+    const Device& operator=(const Device& other)
+    {
+      copy(other);
+      return *this;
+    }
+    Device(const Device& other) { copy(other); }
+    Device(const Device&&) = delete;
   };
 
   /**

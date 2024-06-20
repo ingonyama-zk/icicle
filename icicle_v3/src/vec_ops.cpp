@@ -121,9 +121,9 @@ namespace icicle {
 
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(
-    ExtFieldConvertMontgomeryDispatcher, scalar_convert_montgomery_ext_field, extFieldConvertMontgomeryImpl)
+    ExtFieldConvertMontgomeryDispatcher, extension_scalar_convert_montgomery, extFieldConvertMontgomeryImpl)
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, convert_montgomery_ext_field)(
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_scalar_convert_montgomery)(
     const extension_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, extension_t* output)
   {
     return ExtFieldConvertMontgomeryDispatcher::execute(input, size, is_into, config, output);
@@ -133,7 +133,7 @@ namespace icicle {
   eIcicleError convert_montgomery(
     const extension_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, convert_montgomery_ext_field)(input, size, is_into, config, output);
+    return CONCAT_EXPAND(FIELD, extension_scalar_convert_montgomery)(input, size, is_into, config, output);
   }
 #endif // EXT_FIELD
 

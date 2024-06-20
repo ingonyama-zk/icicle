@@ -30,8 +30,8 @@ namespace icicle {
       const bool is_first = apiMap.empty();
       apiMap[deviceType] = api;
       if (is_first) {
-        m_default_device_type = deviceType;
-        Device dev{deviceType.c_str(), 0};
+        Device dev{deviceType, 0};
+        m_default_device = dev;
         api->set_device(dev);
       }
     }
@@ -48,9 +48,12 @@ namespace icicle {
 
     std::shared_ptr<DeviceAPI> get_default_deviceAPI()
     {
-      if (m_default_device_type.empty()) { return nullptr; }
-      return get_deviceAPI(Device{m_default_device_type.c_str(), 0});
+      const bool have_default_device = m_default_device.id >= 0;
+      if (!have_default_device) { return nullptr; }
+      return get_deviceAPI(m_default_device);
     }
+
+    const Device& get_default_device() { return m_default_device; }
 
     std::list<std::string> get_registered_devices()
     {
@@ -63,10 +66,10 @@ namespace icicle {
 
     bool is_device_registered(const char* device_type) { return apiMap.find(device_type) != apiMap.end(); }
 
-    std::string m_default_device_type;
+    Device m_default_device{"", -1};
   };
 
-  thread_local Device DeviceAPI::sCurDevice = {nullptr, -1};
+  thread_local Device DeviceAPI::sCurDevice = {"", -1};
   thread_local const DeviceAPI* DeviceAPI::sCurDeviceAPI = nullptr;
 
   eIcicleError DeviceAPI::set_thread_local_device(const Device& device)
@@ -75,6 +78,7 @@ namespace icicle {
     if (nullptr == device_api) return eIcicleError::INVALID_DEVICE;
 
     auto err = device_api->set_device(device); // notifying the device backend about the device set
+
     if (err == eIcicleError::SUCCESS) {
       sCurDevice = device;
       sCurDeviceAPI = device_api;
@@ -84,13 +88,17 @@ namespace icicle {
 
   const Device& DeviceAPI::get_thread_local_device()
   {
-    const bool is_valid_device = sCurDevice.id >= 0 && sCurDevice.type != nullptr;
-    if (!is_valid_device) {
+    const bool is_device_set = sCurDevice.id >= 0;
+    if (is_device_set) { return sCurDevice; }
+
+    const Device& default_device = DeviceAPIRegistry::Global().get_default_device();
+    if (default_device.id < 0) {
       throw std::runtime_error("icicle Device is not set. Make sure to load and initialize a device via call to "
                                "icicle_set_device(const icicle::Device& device)");
     }
-    return sCurDevice;
+    return default_device;
   }
+
   const DeviceAPI* DeviceAPI::get_thread_local_deviceAPI()
   {
     if (nullptr != sCurDeviceAPI) { return sCurDeviceAPI; }

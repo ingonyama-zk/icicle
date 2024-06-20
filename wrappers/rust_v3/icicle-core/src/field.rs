@@ -1,7 +1,8 @@
-use crate::traits::{FieldConfig, FieldImpl};
+use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
+use crate::vec_ops::VecOpsConfig;
 use hex::FromHex;
-// use icicle_runtime::errors::eIcicleError;
-// use icicle_runtime::memory::DeviceSlice;
+use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::memory::DeviceSlice;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
@@ -99,24 +100,24 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 }
 
-// #[doc(hidden)]
-// pub trait MontgomeryConvertibleField<'a, F: FieldImpl> {
-//     fn to_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
-//     fn from_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
-// }
+#[doc(hidden)]
+pub trait MontgomeryConvertibleField<F: FieldImpl> {
+    fn to_mont(values: &mut DeviceSlice<F>) -> eIcicleError;
+    fn from_mont(values: &mut DeviceSlice<F>) -> eIcicleError;
+}
 
-// impl<'a, const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible<'a> for Field<NUM_LIMBS, F>
-// where
-//     F: MontgomeryConvertibleField<'a, Self>,
-// {
-//     fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-//         F::to_mont(values, ctx)
-//     }
+impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
+where
+    F: MontgomeryConvertibleField<Self>,
+{
+    fn to_mont(values: &mut DeviceSlice<Self>) -> eIcicleError {
+        F::to_mont(values)
+    }
 
-//     fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-//         F::from_mont(values, ctx)
-//     }
-// }
+    fn from_mont(values: &mut DeviceSlice<Self>) -> eIcicleError {
+        F::from_mont(values)
+    }
+}
 
 #[macro_export]
 macro_rules! impl_field {
@@ -147,28 +148,36 @@ macro_rules! impl_scalar_field {
 
         mod $field_prefix_ident {
             use super::{$field_name, HostOrDeviceSlice};
+            use icicle_core::vec_ops::VecOpsConfig;
+            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::stream::IcicleStream;
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_generate_scalars")]
                 pub(crate) fn generate_scalars(scalars: *mut $field_name, size: usize);
 
-                // #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
-                // fn _convert_scalars_montgomery(
-                //     scalars: *mut $field_name,
-                //     size: usize,
-                //     is_into: bool,
-                //     ctx: *const DeviceContext,
-                // ) -> CudaError;
+                #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
+                fn _convert_scalars_montgomery(
+                    scalars: *const $field_name,
+                    size: u64,
+                    is_into: bool,
+                    config: &VecOpsConfig,
+                    output: *mut $field_name
+                ) -> eIcicleError;
             }
 
-            // pub(crate) fn convert_scalars_montgomery(
-            //     scalars: *mut $field_name,
-            //     len: usize,
-            //     is_into: bool,
-            //     ctx: &DeviceContext,
-            // ) -> CudaError {
-            //     unsafe { _convert_scalars_montgomery(scalars, len, is_into, ctx as *const DeviceContext) }
-            // }
+            pub(crate) fn convert_scalars_montgomery(
+                scalars: *mut $field_name,
+                len: usize,
+                is_into: bool,
+                stream: &IcicleStream,
+            ) -> eIcicleError {
+                let mut config = VecOpsConfig::default();
+                config.is_a_on_device = true;
+                config.is_result_on_device = true;
+                // config.stream = stream;                
+                unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
+            }
         }
 
         impl GenerateRandom<$field_name> for $field_cfg {
@@ -179,36 +188,36 @@ macro_rules! impl_scalar_field {
             }
         }
 
-        // impl<'a> MontgomeryConvertibleField<'a, $field_name> for $field_cfg {
-        //     fn to_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
-        //         check_device(ctx.device_id);
-        //         assert_eq!(
-        //             values
-        //                 .device_id()
-        //                 .unwrap(),
-        //             ctx.device_id,
-        //             "Device ids are different in slice and context"
-        //         );
-        //         $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
-        //     }
+        impl MontgomeryConvertibleField<$field_name> for $field_cfg {
+            fn to_mont(values: &mut DeviceSlice<$field_name>) -> eIcicleError {
+                // check_device(ctx.device_id);
+                // assert_eq!(
+                //     values
+                //         .device_id()
+                //         .unwrap(),
+                //     ctx.device_id,
+                //     "Device ids are different in slice and context"
+                // );
+                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &IcicleStream::default())
+            }
 
-        //     fn from_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
-        //         check_device(ctx.device_id);
-        //         assert_eq!(
-        //             values
-        //                 .device_id()
-        //                 .unwrap(),
-        //             ctx.device_id,
-        //             "Device ids are different in slice and context"
-        //         );
-        //         $field_prefix_ident::convert_scalars_montgomery(
-        //             unsafe { values.as_mut_ptr() },
-        //             values.len(),
-        //             false,
-        //             ctx,
-        //         )
-        //     }
-        // }
+            fn from_mont(values: &mut DeviceSlice<$field_name>) -> eIcicleError {
+                // check_device(ctx.device_id);
+                // assert_eq!(
+                //     values
+                //         .device_id()
+                //         .unwrap(),
+                //     ctx.device_id,
+                //     "Device ids are different in slice and context"
+                // );
+                $field_prefix_ident::convert_scalars_montgomery(
+                    unsafe { values.as_mut_ptr() },
+                    values.len(),
+                    false,       
+                    &IcicleStream::default()             
+                )
+            }
+        }
     };
 }
 
@@ -217,10 +226,10 @@ macro_rules! impl_field_tests {
     (
         $field_name:ident
     ) => {
-        // #[test]
-        // fn test_field_convert_montgomery() {
-        //     check_field_convert_montgomery::<$field_name>()
-        // }
+        #[test]
+        fn test_field_convert_montgomery() {
+            check_field_convert_montgomery::<$field_name>()
+        }
 
         #[test]
         fn test_field_equality() {

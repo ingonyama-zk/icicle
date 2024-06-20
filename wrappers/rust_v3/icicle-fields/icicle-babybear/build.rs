@@ -8,8 +8,8 @@ fn main() {
     let mut config = Config::new("../../../../icicle_v3/");
     config
         .define("FIELD", "babybear")
-        .define("CMAKE_BUILD_TYPE", "Release")
-        .define("EXT_FIELD", "ON");
+        .define("EXT_FIELD", "ON")
+        .define("CMAKE_BUILD_TYPE", "Release");
 
     // Build
     let out_dir = config
