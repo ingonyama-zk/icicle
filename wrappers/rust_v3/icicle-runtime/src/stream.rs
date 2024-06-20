@@ -1,6 +1,5 @@
 use crate::errors::eIcicleError;
 use crate::runtime;
-use std::mem::forget;
 use std::os::raw::c_void;
 
 // Define the type alias for IcicleStreamHandle
@@ -31,16 +30,6 @@ impl IcicleStream {
         Ok(Self::from_handle(handle))
     }
 
-    pub fn destroy(self) -> eIcicleError {
-        let handle = self.handle;
-        forget(self);
-        if handle.is_null() {
-            eIcicleError::Success
-        } else {
-            unsafe { runtime::icicle_destroy_stream(handle) }
-        }
-    }
-
     pub fn synchronize(&self) -> eIcicleError {
         unsafe { runtime::icicle_stream_synchronize(self.handle) }
     }
@@ -56,11 +45,12 @@ impl Default for IcicleStream {
 
 impl Drop for IcicleStream {
     fn drop(&mut self) {
-        let handle = self.handle;
-        if handle.is_null() {
-            return;
+        if !self
+            .handle
+            .is_null()
+        {
+            let _ = unsafe { runtime::icicle_destroy_stream(self.handle) };
         }
-        let _ = unsafe { runtime::icicle_destroy_stream(handle) };
     }
 }
 

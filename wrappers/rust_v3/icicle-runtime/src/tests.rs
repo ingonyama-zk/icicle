@@ -44,14 +44,14 @@ mod tests {
     fn test_set_device() {
         initialize();
 
-        assert_eq!(set_device(&get_main_target()), eIcicleError::Success);
-        assert_eq!(set_device(&get_ref_target()), eIcicleError::Success);
+        set_device(&get_main_target()).unwrap();
+        set_device(&get_ref_target()).unwrap();
     }
 
     #[test]
     fn test_sync_memory_copy() {
         initialize();
-        assert_eq!(set_device(&get_main_target()), eIcicleError::Success);
+        set_device(&get_main_target()).unwrap();
 
         let input = vec![1, 2, 3, 4];
         let mut output = vec![0; input.len()];
@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn test_async_memory_copy() {
         initialize();
-        assert_eq!(set_device(&get_main_target()), eIcicleError::Success);
+        set_device(&get_main_target()).unwrap();
 
         let input = vec![1, 2, 3, 4];
         let mut output = vec![0; input.len()];
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn test_get_available_memory() {
         initialize();
-        assert_eq!(set_device(&get_main_target()), eIcicleError::Success);
+        set_device(&get_main_target()).unwrap();
 
         let (total, free) = get_available_memory().unwrap();
         assert!(total > 0 && free > 0 && total >= free);
@@ -98,7 +98,7 @@ mod tests {
         let device = Device::new("CUDA", 0);
 
         if is_device_available(&device) == eIcicleError::Success {
-            assert_eq!(set_device(&device), eIcicleError::Success);
+            set_device(&device).unwrap();
 
             let device_props = get_device_properties().unwrap();
             assert_eq!(device_props.using_host_memory, false); // for "cuda"

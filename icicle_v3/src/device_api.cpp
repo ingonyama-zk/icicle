@@ -11,9 +11,63 @@
 
 namespace icicle {
 
-  thread_local Device DeviceAPI::sCurDevice = {nullptr, -1}; // device that is currently active for this thread
-  thread_local const DeviceAPI* DeviceAPI::sCurDeviceAPI =
-    nullptr; // API for the currently active device of this thread
+  class DeviceAPIRegistry
+  {
+    std::unordered_map<std::string, std::shared_ptr<DeviceAPI>> apiMap;
+
+  public:
+    static DeviceAPIRegistry& Global()
+    {
+      static DeviceAPIRegistry instance;
+      return instance;
+    }
+
+    void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
+    {
+      if (apiMap.find(deviceType) != apiMap.end()) {
+        throw std::runtime_error("Attempting to register a duplicate API for device type: " + deviceType);
+      }
+      const bool is_first = apiMap.empty();
+      apiMap[deviceType] = api;
+      if (is_first) {
+        m_default_device_type = deviceType;
+        Device dev{deviceType.c_str(), 0};
+        api->set_device(dev);
+      }
+    }
+
+    std::shared_ptr<DeviceAPI> get_deviceAPI(const Device& device)
+    {
+      auto it = apiMap.find(device.type);
+      if (it != apiMap.end()) {
+        return it->second;
+      } else {
+        throw std::runtime_error("Device API not found for type: " + std::string(device.type));
+      }
+    }
+
+    std::shared_ptr<DeviceAPI> get_default_deviceAPI()
+    {
+      if (m_default_device_type.empty()) { return nullptr; }
+      return get_deviceAPI(Device{m_default_device_type.c_str(), 0});
+    }
+
+    std::list<std::string> get_registered_devices()
+    {
+      std::list<std::string> registered_devices;
+      for (const auto& device : apiMap) {
+        registered_devices.push_back(device.first);
+      }
+      return registered_devices;
+    }
+
+    bool is_device_registered(const char* device_type) { return apiMap.find(device_type) != apiMap.end(); }
+
+    std::string m_default_device_type;
+  };
+
+  thread_local Device DeviceAPI::sCurDevice = {nullptr, -1};
+  thread_local const DeviceAPI* DeviceAPI::sCurDeviceAPI = nullptr;
 
   eIcicleError DeviceAPI::set_thread_local_device(const Device& device)
   {
@@ -32,53 +86,21 @@ namespace icicle {
   {
     const bool is_valid_device = sCurDevice.id >= 0 && sCurDevice.type != nullptr;
     if (!is_valid_device) {
-      throw std::runtime_error("icicle Device is not set. Make sure to initialize the device via call to "
+      throw std::runtime_error("icicle Device is not set. Make sure to load and initialize a device via call to "
                                "icicle_set_device(const icicle::Device& device)");
     }
     return sCurDevice;
   }
-  const DeviceAPI* DeviceAPI::get_thread_local_deviceAPI() { return sCurDeviceAPI; }
-
-  class DeviceAPIRegistry
+  const DeviceAPI* DeviceAPI::get_thread_local_deviceAPI()
   {
-    std::unordered_map<std::string, std::shared_ptr<DeviceAPI>> apiMap;
-
-  public:
-    static DeviceAPIRegistry& Global()
-    {
-      static DeviceAPIRegistry instance;
-      return instance;
+    if (nullptr != sCurDeviceAPI) { return sCurDeviceAPI; }
+    auto default_deviceAPI = DeviceAPIRegistry::Global().get_default_deviceAPI();
+    if (nullptr == default_deviceAPI) {
+      throw std::runtime_error("icicle Device is not set. Make sure to load and initialize a device via call to "
+                               "icicle_set_device(const icicle::Device& device)");
     }
-
-    void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
-    {
-      if (apiMap.find(deviceType) != apiMap.end()) {
-        throw std::runtime_error("Attempting to register a duplicate API for device type: " + deviceType);
-      }
-      apiMap[deviceType] = api;
-    }
-
-    std::shared_ptr<DeviceAPI> get_deviceAPI(const Device& device)
-    {
-      auto it = apiMap.find(device.type);
-      if (it != apiMap.end()) {
-        return it->second;
-      } else {
-        throw std::runtime_error("Device API not found for type: " + std::string(device.type));
-      }
-    }
-
-    std::list<std::string> get_registered_devices()
-    {
-      std::list<std::string> registered_devices;
-      for (const auto& device : apiMap) {
-        registered_devices.push_back(device.first);
-      }
-      return registered_devices;
-    }
-
-    bool is_device_registered(const char* device_type) { return apiMap.find(device_type) != apiMap.end(); }
-  };
+    return default_deviceAPI.get();
+  }
 
   DeviceAPI* get_deviceAPI(const Device& device) { return DeviceAPIRegistry::Global().get_deviceAPI(device).get(); }
 

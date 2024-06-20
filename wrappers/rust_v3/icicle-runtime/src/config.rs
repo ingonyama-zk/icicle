@@ -2,6 +2,7 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_void};
 
 #[repr(C)]
+#[derive(Debug)] // TODO: implement Debug trait correctly
 pub struct ConfigExtension {
     ext: *mut c_void,
 }
