@@ -119,7 +119,7 @@ impl<T> DeviceSlice<T> {
         &mut *(slice as *mut [T] as *mut Self)
     }
 
-    pub fn copy_from_host(&mut self, val: &HostSlice<T>) -> eIcicleError {
+    pub fn copy_from_host(&mut self, val: &HostSlice<T>) -> Result<(), eIcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
@@ -130,14 +130,16 @@ impl<T> DeviceSlice<T> {
         //         .unwrap(),
         // );
         if self.is_empty() {
-            return eIcicleError::Success;
+            return Ok(());
         }
 
         let size = size_of::<T>() * self.len();
-        unsafe { runtime::icicle_copy_to_device(self.as_mut_ptr() as *mut c_void, val.as_ptr() as *const c_void, size) }
+        unsafe {
+            runtime::icicle_copy_to_device(self.as_mut_ptr() as *mut c_void, val.as_ptr() as *const c_void, size).wrap()
+        }
     }
 
-    pub fn copy_to_host(&self, val: &mut HostSlice<T>) -> eIcicleError {
+    pub fn copy_to_host(&self, val: &mut HostSlice<T>) -> Result<(), eIcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy to host, destination and source slices have different lengths"
@@ -148,14 +150,16 @@ impl<T> DeviceSlice<T> {
         //         .unwrap(),
         // );
         if self.is_empty() {
-            return eIcicleError::Success;
+            return Ok(());
         }
 
         let size = size_of::<T>() * self.len();
-        unsafe { runtime::icicle_copy_to_host(val.as_mut_ptr() as *mut c_void, self.as_ptr() as *const c_void, size) }
+        unsafe {
+            runtime::icicle_copy_to_host(val.as_mut_ptr() as *mut c_void, self.as_ptr() as *const c_void, size).wrap()
+        }
     }
 
-    pub fn copy_from_host_async(&mut self, val: &HostSlice<T>, stream: &IcicleStream) -> eIcicleError {
+    pub fn copy_from_host_async(&mut self, val: &HostSlice<T>, stream: &IcicleStream) -> Result<(), eIcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
@@ -166,7 +170,7 @@ impl<T> DeviceSlice<T> {
         //         .unwrap(),
         // );
         if self.is_empty() {
-            return eIcicleError::Success;
+            return Ok(());
         }
 
         let size = size_of::<T>() * self.len();
@@ -177,10 +181,11 @@ impl<T> DeviceSlice<T> {
                 size,
                 stream.handle,
             )
+            .wrap()
         }
     }
 
-    pub fn copy_to_host_async(&self, val: &mut HostSlice<T>, stream: &IcicleStream) -> eIcicleError {
+    pub fn copy_to_host_async(&self, val: &mut HostSlice<T>, stream: &IcicleStream) -> Result<(), eIcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy to host, destination and source slices have different lengths"
@@ -191,7 +196,7 @@ impl<T> DeviceSlice<T> {
         //         .unwrap(),
         // );
         if self.is_empty() {
-            return eIcicleError::Success;
+            return Ok(());
         }
 
         let size = size_of::<T>() * self.len();
@@ -202,6 +207,7 @@ impl<T> DeviceSlice<T> {
                 size,
                 stream.handle,
             )
+            .wrap()
         }
     }
 }
@@ -238,10 +244,7 @@ impl<T> DeviceVec<T> {
         }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
-        let error = unsafe { runtime::icicle_malloc_async(&mut device_ptr, size, stream.handle) };
-        if error != eIcicleError::Success {
-            return Err(error);
-        }
+        unsafe { runtime::icicle_malloc_async(&mut device_ptr, size, stream.handle).wrap()? };
 
         unsafe {
             Ok(Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(

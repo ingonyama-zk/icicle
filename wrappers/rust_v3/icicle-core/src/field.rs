@@ -125,7 +125,7 @@ macro_rules! impl_field {
     (
         $num_limbs:ident,
         $field_name:ident,
-        $field_cfg:ident     
+        $field_cfg:ident
     ) => {
         #[doc(hidden)]
         #[derive(Debug, PartialEq, Copy, Clone)]
@@ -151,7 +151,7 @@ macro_rules! impl_scalar_field {
             use super::{$field_name, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
-            use icicle_runtime::stream::{IcicleStreamHandle,IcicleStream};
+            use icicle_runtime::stream::{IcicleStream, IcicleStreamHandle};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_generate_scalars")]
@@ -163,7 +163,7 @@ macro_rules! impl_scalar_field {
                     size: u64,
                     is_into: bool,
                     config: &VecOpsConfig,
-                    output: *mut $field_name
+                    output: *mut $field_name,
                 ) -> eIcicleError;
             }
 
@@ -177,7 +177,7 @@ macro_rules! impl_scalar_field {
                 config.is_a_on_device = true;
                 config.is_result_on_device = true;
                 config.is_async = !stream.is_null();
-                config.stream_handle = stream.into();                      
+                config.stream_handle = (&*stream).into();
                 unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
             }
         }
@@ -199,12 +199,16 @@ macro_rules! impl_scalar_field {
                 //         .unwrap(),
                 //     ctx.device_id,
                 //     "Device ids are different in slice and context"
-                // );                
-                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
+                // );
+                $field_prefix_ident::convert_scalars_montgomery(
+                    unsafe { values.as_mut_ptr() },
+                    values.len(),
+                    true,
+                    stream,
+                )
             }
 
-
-            fn from_mont(values: &mut DeviceSlice<$field_name>,stream: &IcicleStream) -> eIcicleError {
+            fn from_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
                 // check_device(ctx.device_id);
                 // assert_eq!(
                 //     values
@@ -212,12 +216,12 @@ macro_rules! impl_scalar_field {
                 //         .unwrap(),
                 //     ctx.device_id,
                 //     "Device ids are different in slice and context"
-                // );      
+                // );
                 $field_prefix_ident::convert_scalars_montgomery(
                     unsafe { values.as_mut_ptr() },
                     values.len(),
-                    false,       
-                    stream
+                    false,
+                    stream,
                 )
             }
         }

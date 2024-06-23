@@ -15,3 +15,19 @@ pub enum eIcicleError {
     InvalidArgument,         // Invalid argument passed
     UnknownError,            // An unknown error occurred
 }
+
+impl eIcicleError {
+    pub fn wrap(self) -> Result<(), eIcicleError> {
+        match self {
+            eIcicleError::Success => Ok(()),
+            _ => Err(self),
+        }
+    }
+
+    pub fn wrap_value<T>(self, val: T) -> Result<T, eIcicleError> {
+        match self {
+            eIcicleError::Success => Ok(val),
+            _ => Err(self),
+        }
+    }
+}

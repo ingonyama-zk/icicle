@@ -59,8 +59,12 @@ mod tests {
 
         // copy from input_host -> device --> output_host and compare
         let mut d_mem = DeviceVec::device_malloc(input.len()).unwrap();
-        d_mem.copy_from_host(HostSlice::from_slice(&input));
-        d_mem.copy_to_host(HostSlice::from_mut_slice(&mut output));
+        d_mem
+            .copy_from_host(HostSlice::from_slice(&input))
+            .unwrap();
+        d_mem
+            .copy_to_host(HostSlice::from_mut_slice(&mut output))
+            .unwrap();
         assert_eq!(input, output);
     }
 
@@ -74,12 +78,21 @@ mod tests {
         assert_ne!(input, output);
 
         // ASYNC copy from input_host -> device --> output_host and compare
-        let stream = IcicleStream::create().unwrap();
+        let mut stream = IcicleStream::create().unwrap();
 
         let mut d_mem = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
-        d_mem.copy_from_host_async(HostSlice::from_slice(&input), &stream);
-        d_mem.copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream);
-        stream.synchronize();
+        d_mem
+            .copy_from_host_async(HostSlice::from_slice(&input), &stream)
+            .unwrap();
+        d_mem
+            .copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream)
+            .unwrap();
+        stream
+            .synchronize()
+            .unwrap();
+        stream
+            .release()
+            .unwrap();
         assert_eq!(input, output);
     }
 

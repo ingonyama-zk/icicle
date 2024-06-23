@@ -1,8 +1,8 @@
 use crate::traits::{FieldImpl, GenerateRandom, MontgomeryConvertible};
-// use icicle_runtime::device::Device;
-use icicle_runtime::memory::{DeviceVec, HostSlice};
-// use icicle_runtime::runtime;
-use icicle_runtime::stream::IcicleStream;
+use icicle_runtime::{
+    memory::{DeviceVec, HostSlice},
+    stream::IcicleStream,
+};
 
 pub fn check_field_equality<F: FieldImpl>() {
     let left = F::zero();
@@ -48,24 +48,31 @@ where
     F: FieldImpl + MontgomeryConvertible,
     F::Config: GenerateRandom<F>,
 {
+    let mut stream = IcicleStream::create().unwrap();
+
     let size = 1 << 10;
     let scalars = F::Config::generate_random(size);
 
     let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
-    d_scalars.copy_from_host(HostSlice::from_slice(&scalars));
+    d_scalars
+        .copy_from_host(HostSlice::from_slice(&scalars))
+        .unwrap();
 
-    F::to_mont(&mut d_scalars, &IcicleStream::default());
-    F::from_mont(&mut d_scalars, &IcicleStream::default());
+    F::to_mont(&mut d_scalars, &stream);
+    F::from_mont(&mut d_scalars, &stream);
 
     let mut scalars_copy = vec![F::zero(); size];
-    d_scalars.copy_to_host(HostSlice::from_mut_slice(&mut scalars_copy));
+    d_scalars
+        .copy_to_host_async(HostSlice::from_mut_slice(&mut scalars_copy), &stream)
+        .unwrap();
+    stream
+        .synchronize()
+        .unwrap();
+    stream
+        .release()
+        .unwrap();
 
-    for (s1, s2) in scalars
-        .iter()
-        .zip(scalars_copy.iter())
-    {
-        assert_eq!(s1, s2);
-    }
+    assert_eq!(scalars_copy, scalars);
 }
 
 // pub fn check_points_convert_montgomery<C: Curve>()
