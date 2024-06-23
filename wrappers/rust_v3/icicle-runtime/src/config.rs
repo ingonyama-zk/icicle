@@ -14,6 +14,7 @@ extern "C" {
     fn config_extension_set_bool(ext: *mut c_void, key: *const c_char, value: bool);
     fn config_extension_get_int(ext: *const c_void, key: *const c_char) -> c_int;
     fn config_extension_get_bool(ext: *const c_void, key: *const c_char) -> bool;
+    fn clone_config_extension(ext: *const c_void) -> *mut c_void;
 }
 
 impl ConfigExtension {
@@ -54,6 +55,16 @@ impl Drop for ConfigExtension {
     fn drop(&mut self) {
         unsafe {
             destroy_config_extension(self.ext);
+        }
+    }
+}
+
+impl Clone for ConfigExtension {
+    fn clone(&self) -> Self {
+        unsafe {
+            ConfigExtension {
+                ext: clone_config_extension(self.ext),
+            }
         }
     }
 }

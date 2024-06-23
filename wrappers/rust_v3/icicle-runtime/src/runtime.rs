@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 
 use crate::device::{Device, DeviceProperties};
@@ -34,11 +34,12 @@ extern "C" {
     pub fn icicle_stream_synchronize(stream: IcicleStreamHandle) -> eIcicleError;
     fn icicle_device_synchronize() -> eIcicleError;
     fn icicle_get_device_properties(properties: *mut DeviceProperties) -> eIcicleError;
+    fn icicle_get_registered_devices(output: *mut c_char, output_size: usize) -> eIcicleError;
 }
 
-pub fn load_backend(path: &str, is_recursive: bool) -> eIcicleError {
+pub fn load_backend(path: &str, is_recursive: bool) -> Result<(), eIcicleError> {
     let c_path = CString::new(path).unwrap();
-    unsafe { icicle_load_backend(c_path.as_ptr(), is_recursive) }
+    unsafe { icicle_load_backend(c_path.as_ptr(), is_recursive).wrap() }
 }
 
 pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
@@ -50,8 +51,9 @@ pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
     }
 }
 
-pub fn is_device_available(device: &Device) -> eIcicleError {
-    unsafe { icicle_is_device_avialable(device) }
+pub fn is_device_available(device: &Device) -> bool {
+    let err = unsafe { icicle_is_device_avialable(device) };
+    err == eIcicleError::Success
 }
 
 pub fn get_available_memory() -> Result<(usize, usize), eIcicleError> {
@@ -65,8 +67,8 @@ pub fn get_available_memory() -> Result<(usize, usize), eIcicleError> {
     }
 }
 
-pub fn device_synchronize() -> eIcicleError {
-    unsafe { icicle_device_synchronize() }
+pub fn device_synchronize() -> Result<(), eIcicleError> {
+    unsafe { icicle_device_synchronize().wrap() }
 }
 
 pub fn get_device_properties() -> Result<DeviceProperties, eIcicleError> {
@@ -80,5 +82,27 @@ pub fn get_device_properties() -> Result<DeviceProperties, eIcicleError> {
         Ok(properties)
     } else {
         Err(result)
+    }
+}
+
+pub fn get_registered_devices() -> Result<Vec<String>, eIcicleError> {
+    const BUFFER_SIZE: usize = 256;
+    let mut buffer = vec![0 as c_char; BUFFER_SIZE];
+
+    unsafe {
+        let result = icicle_get_registered_devices(buffer.as_mut_ptr(), BUFFER_SIZE);
+        if result != eIcicleError::Success {
+            return Err(result);
+        }
+
+        let c_str = CStr::from_ptr(buffer.as_ptr());
+        let str_slice: &str = c_str
+            .to_str()
+            .unwrap();
+        let devices: Vec<String> = str_slice
+            .split(',')
+            .map(|s| s.to_string())
+            .collect();
+        Ok(devices)
     }
 }

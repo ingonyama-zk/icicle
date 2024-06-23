@@ -2,6 +2,7 @@
 #include <memory>
 #include <unordered_map>
 #include <string>
+#include <vector>
 #include <stdexcept>
 #include <iostream>
 
@@ -56,7 +57,7 @@ namespace icicle {
 
     const Device& get_default_device() { return m_default_device; }
 
-    std::list<std::string> get_registered_devices()
+    std::list<std::string> get_registered_devices_list()
     {
       std::list<std::string> registered_devices;
       for (const auto& device : apiMap) {
@@ -119,11 +120,36 @@ namespace icicle {
     DeviceAPIRegistry::Global().register_deviceAPI(deviceType, api);
   }
 
-  std::list<std::string> get_registered_devices() { return DeviceAPIRegistry::Global().get_registered_devices(); }
+  std::list<std::string> get_registered_devices_list()
+  {
+    return DeviceAPIRegistry::Global().get_registered_devices_list();
+  }
 
   bool is_device_registered(const char* device_type)
   {
     return DeviceAPIRegistry::Global().is_device_registered(device_type);
+  }
+
+  eIcicleError get_registered_devices(char* output, size_t output_size)
+  {
+    if (output == nullptr) { return eIcicleError::INVALID_POINTER; }
+
+    std::list<std::string> devices = get_registered_devices_list();
+    std::string concatenated_devices;
+
+    for (const auto& device : devices) {
+      if (!concatenated_devices.empty()) { concatenated_devices += ","; }
+      concatenated_devices += device;
+    }
+
+    if (concatenated_devices.size() + 1 > output_size) { // +1 for null-terminator
+      return eIcicleError::OUT_OF_MEMORY;
+    }
+
+    std::strncpy(output, concatenated_devices.c_str(), output_size - 1);
+    output[output_size - 1] = '\0'; // Ensure null-termination
+
+    return eIcicleError::SUCCESS;
   }
 
 } // namespace icicle

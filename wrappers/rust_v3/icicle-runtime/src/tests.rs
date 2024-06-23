@@ -10,10 +10,11 @@ mod tests {
 
     fn get_main_target() -> Device {
         initialize();
+
         let cuda_device = Device::new("CUDA", 0);
 
         // if cuda is available use it as main target. Otherwise fallback to CPU.
-        if is_device_available(&cuda_device) == eIcicleError::Success {
+        if is_device_available(&cuda_device) {
             return cuda_device;
         }
         Device::new("CPU", 0)
@@ -24,7 +25,7 @@ mod tests {
         let cuda_device = Device::new("CUDA", 0);
 
         // if cuda is available use CPU as reference target. Otherwise use CPU_REF
-        if is_device_available(&cuda_device) == eIcicleError::Success {
+        if is_device_available(&cuda_device) {
             return Device::new("CPU", 0);
         }
         Device::new("CPU_REF", 0)
@@ -33,10 +34,8 @@ mod tests {
     fn initialize() {
         INIT.call_once(|| {
             // load backends to process
-            assert_eq!(
-                load_backend(&env!("DEFAULT_BACKEND_INSTALL_DIR"), true),
-                eIcicleError::Success
-            );
+            load_backend(&env!("DEFAULT_BACKEND_INSTALL_DIR"), true).unwrap();
+            let _ = runtime::get_registered_devices().unwrap();
         });
     }
 
@@ -110,7 +109,7 @@ mod tests {
         initialize();
         let device = Device::new("CUDA", 0);
 
-        if is_device_available(&device) == eIcicleError::Success {
+        if is_device_available(&device) {
             set_device(&device).unwrap();
 
             let device_props = get_device_properties().unwrap();

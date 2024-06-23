@@ -35,7 +35,7 @@ public:
     icicle_load_backend(BACKEND_BUILD_DIR, true);
 
     // check targets are loaded and choose main and reference targets
-    auto regsitered_devices = get_registered_devices();
+    auto regsitered_devices = get_registered_devices_list();
     ASSERT_GE(regsitered_devices.size(), 2);
 
     const bool is_cuda_registered = is_device_registered("CUDA");
