@@ -12,12 +12,7 @@ using namespace icicle;
 
 template <typename T>
 eIcicleError cpu_matrix_transpose(
-  const Device& device,
-  const T* mat_in,
-  uint32_t nof_rows,
-  uint32_t nof_cols,
-  const MatrixOpsConfig& config,
-  T* mat_out)
+  const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
 {
   // Check for invalid arguments
   if (!mat_in || !mat_out || nof_rows == 0 || nof_cols == 0) { return eIcicleError::INVALID_ARGUMENT; }

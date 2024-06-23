@@ -132,7 +132,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 
     DeviceProperties device_props;
     icicle_get_device_properties(device_props);
-    auto config = default_matrix_ops_config();
+    auto config = default_vec_ops_config();
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
@@ -146,8 +146,8 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
       icicle_malloc_async((void**)&d_out, R * C * sizeof(TypeParam), config.stream);
       icicle_copy_to_device_async(d_in, h_in.get(), R * C * sizeof(TypeParam), config.stream);
 
-      config.is_input_on_device = true;
-      config.is_output_on_device = true;
+      config.is_a_on_device = true;
+      config.is_result_on_device = true;
       config.is_async = true;
     }
 

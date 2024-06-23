@@ -194,13 +194,13 @@ mul_cuda(const Device& device, const F* vec_a, const F* vec_b, int n, const VecO
 
 template <typename F>
 eIcicleError matrix_transpose_cuda(
-  const Device& device, const F* in, uint32_t nof_rows, uint32_t nof_cols, const MatrixOpsConfig& config, F* out)
+  const Device& device, const F* in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, F* out)
 {
   // TODO relax this limitation
-  ICICLE_ASSERT(config.is_input_on_device == config.is_output_on_device)
+  ICICLE_ASSERT(config.is_a_on_device == config.is_result_on_device)
     << "CUDA matrix transpose expects both input and output on host or on device";
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
-  auto err = transpose_matrix(in, out, nof_cols, nof_rows, cuda_stream, config.is_input_on_device, config.is_async);
+  auto err = transpose_matrix(in, out, nof_cols, nof_rows, cuda_stream, config.is_a_on_device, config.is_async);
   return translateCudaError(err);
 }
 
