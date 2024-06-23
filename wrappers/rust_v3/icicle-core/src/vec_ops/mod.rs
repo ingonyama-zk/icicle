@@ -52,15 +52,13 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
-    // fn transpose(
-    //     input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    //     row_size: u32,
-    //     column_size: u32,
-    //     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    //     ctx: &DeviceContext,
-    //     on_device: bool,
-    //     is_async: bool,
-    // ) -> Result<(), eIcicleError>;
+    fn transpose(
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        nof_rows: u32,
+        nof_cols: u32,
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
 
     // fn bit_reverse(
     //     input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -154,6 +152,20 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
 }
 
+pub fn transpose_matrix<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    nof_rows: u32,
+    nof_cols: u32,
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, nof_rows, nof_cols, output, &cfg)
+}
+
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -171,7 +183,7 @@ macro_rules! impl_vec_ops_field {
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_vector_add")]
-                pub(crate) fn add_scalars_cuda(
+                pub(crate) fn vector_add(
                     a: *const $field,
                     b: *const $field,
                     size: u32,
@@ -180,7 +192,7 @@ macro_rules! impl_vec_ops_field {
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_sub")]
-                pub(crate) fn sub_scalars_cuda(
+                pub(crate) fn vector_sub(
                     a: *const $field,
                     b: *const $field,
                     size: u32,
@@ -189,7 +201,7 @@ macro_rules! impl_vec_ops_field {
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_mul")]
-                pub(crate) fn mul_scalars_cuda(
+                pub(crate) fn vector_mul(
                     a: *const $field,
                     b: *const $field,
                     size: u32,
@@ -197,16 +209,14 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> eIcicleError;
 
-                // #[link_name = concat!($field_prefix, "_transpose_matrix_cuda")]
-                // pub(crate) fn transpose_cuda(
-                //     input: *const $field,
-                //     row_size: u32,
-                //     column_size: u32,
-                //     output: *mut $field,
-                //     ctx: *const DeviceContext,
-                //     on_device: bool,
-                //     is_async: bool,
-                // ) -> CudaError;
+                #[link_name = concat!($field_prefix, "_matrix_transpose")]
+                pub(crate) fn _matrix_transpose(
+                    input: *const $field,
+                    nof_rows: u32,
+                    nof_cols: u32,
+                    cfg: *const VecOpsConfig,
+                    output: *mut $field,
+                ) -> eIcicleError;
 
                 // #[link_name = concat!($field_prefix, "_bit_reverse_cuda")]
                 // pub(crate) fn bit_reverse_cuda(
@@ -226,7 +236,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::add_scalars_cuda(
+                    $field_prefix_ident::vector_add(
                         a.as_ptr(),
                         b.as_ptr(),
                         a.len() as u32,
@@ -244,7 +254,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::sub_scalars_cuda(
+                    $field_prefix_ident::vector_sub(
                         a.as_ptr(),
                         b.as_ptr(),
                         a.len() as u32,
@@ -262,7 +272,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::mul_scalars_cuda(
+                    $field_prefix_ident::vector_mul(
                         a.as_ptr(),
                         b.as_ptr(),
                         a.len() as u32,
@@ -273,28 +283,24 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            // fn transpose(
-            //     input: &(impl HostOrDeviceSlice<$field> + ?Sized),
-            //     row_size: u32,
-            //     column_size: u32,
-            //     output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-            //     ctx: &DeviceContext,
-            //     on_device: bool,
-            //     is_async: bool,
-            // ) -> Result<(), eIcicleError> {
-            //     unsafe {
-            //         $field_prefix_ident::transpose_cuda(
-            //             input.as_ptr(),
-            //             row_size,
-            //             column_size,
-            //             output.as_mut_ptr(),
-            //             ctx as *const _ as *const DeviceContext,
-            //             on_device,
-            //             is_async,
-            //         )
-            //         .wrap()
-            //     }
-            // }
+            fn transpose(
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                nof_rows: u32,
+                nof_cols: u32,
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::_matrix_transpose(
+                        input.as_ptr(),
+                        nof_rows,
+                        nof_cols,
+                        cfg as *const VecOpsConfig,
+                        output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
 
             //     fn bit_reverse(
             //         input: &(impl HostOrDeviceSlice<$field> + ?Sized),
@@ -359,6 +365,16 @@ macro_rules! impl_vec_ops_tests {
         pub fn test_vec_ops_scalars() {
             initialize();
             check_vec_ops_scalars::<$field>()
+        }
+
+        #[test]
+        pub fn test_matrix_transpose() {
+            initialize();
+            let registered_devices = runtime::get_registered_devices().unwrap();
+            assert!(registered_devices.len() >= 2);
+            let main_dev = Device::new(&registered_devices[0], 0);
+            let ref_dev = Device::new(&registered_devices[1], 0);
+            check_matrix_transpose::<$field>(&main_dev, &ref_dev);
         }
 
         // #[test]

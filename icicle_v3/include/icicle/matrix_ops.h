@@ -9,43 +9,13 @@
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/utils.h"
 #include "icicle/config_extension.h"
+#include "icicle/vec_ops.h"
 
 using namespace field_config;
 
 namespace icicle {
-
+  // TODO Yuval: move to vec_ops like in V2
   /*************************** Frontend APIs ***************************/
-
-  /**
-   * @struct MatrixOpsConfig
-   * Struct that encodes parameters to be passed into matrix ops.
-   */
-  struct MatrixOpsConfig {
-    icicleStreamHandle stream; /**< stream for async execution. */
-    bool is_input_on_device;   /**< True if `a` is on device and false if it is not. Default value: false. */
-    bool is_output_on_device;  /**< True if `b` is on device and false if it is not. Default value: false. */
-    bool is_async; /**< Whether to run the vector operations asynchronously. If set to `true`, the function will be
-                    *   non-blocking and you'd need to synchronize it explicitly by running
-                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
-                    *   function will block the current CPU thread. */
-
-    ConfigExtension* ext = nullptr; /** backend specific extensions*/
-  };
-
-  /**
-   * A function that returns the default value of [MatrixOpsConfig](@ref MatrixOpsConfig).
-   * @return Default value of [MatrixOpsConfig](@ref MatrixOpsConfig).
-   */
-  static MatrixOpsConfig default_matrix_ops_config()
-  {
-    MatrixOpsConfig config = {
-      nullptr, // stream
-      false,   // is_input_on_device
-      false,   // is_output_on_device
-      false,   // is_async
-    };
-    return config;
-  }
 
   /**
    * Transpose a matrix out-of-place.
@@ -59,11 +29,11 @@ namespace icicle {
    */
   template <typename E>
   eIcicleError
-  matrix_transpose(const E* mat_in, uint32_t nof_rows, uint32_t nof_cols, const MatrixOpsConfig& config, E* mat_out);
+  matrix_transpose(const E* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, E* mat_out);
 
   // field specific APIs. TODO Yuval move to api headers like icicle V2
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, matrix_transpose)(
-    const scalar_t* mat_in, uint32_t nof_rows, uint32_t nof_cols, const MatrixOpsConfig& config, scalar_t* mat_out);
+    const scalar_t* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, scalar_t* mat_out);
 
   /*************************** Backend registration ***************************/
 
@@ -72,7 +42,7 @@ namespace icicle {
     const scalar_t* in,
     uint32_t nof_rows,
     uint32_t nof_cols,
-    const MatrixOpsConfig& config,
+    const VecOpsConfig& config,
     scalar_t* out)>;
 
   extern "C" void register_matrix_transpose(const std::string& deviceType, scalarMatrixOpImpl impl);
@@ -91,15 +61,15 @@ namespace icicle {
     const extension_t* in,
     uint32_t nof_rows,
     uint32_t nof_cols,
-    const MatrixOpsConfig& config,
+    const VecOpsConfig& config,
     extension_t* out)>;
 
-  extern "C" void register_matrix_transpose_ext_field(const std::string& deviceType, extFieldMatrixOpImpl impl);
+  extern "C" void register_extension_matrix_transpose(const std::string& deviceType, extFieldMatrixOpImpl impl);
 
 #define REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                 \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_matrix_transpose_ext_field) = []() -> bool {                                               \
-      register_matrix_transpose_ext_field(DEVICE_TYPE, FUNC);                                                          \
+      register_extension_matrix_transpose(DEVICE_TYPE, FUNC);                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
