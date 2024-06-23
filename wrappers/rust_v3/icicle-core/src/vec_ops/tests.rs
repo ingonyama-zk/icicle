@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
-use crate::vec_ops::{add_scalars, mul_scalars, sub_scalars, FieldImpl, VecOps, VecOpsConfig};
+use crate::vec_ops::{add_scalars, mul_scalars, sub_scalars, transpose_matrix, FieldImpl, VecOps, VecOpsConfig};
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_runtime::{runtime, stream::IcicleStream};
@@ -64,6 +64,41 @@ where
     stream
         .release()
         .unwrap();
+}
+
+pub fn check_matrix_transpose<F: FieldImpl>(main_dev: &Device, ref_dev: &Device)
+where
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+{
+    let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
+    let test_size = (r * c) as usize;
+
+    let input_matrix = F::Config::generate_random(test_size);
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::zero(); test_size];
+
+    let cfg = VecOpsConfig::default();
+    runtime::set_device(&main_dev).unwrap();
+    transpose_matrix(
+        HostSlice::from_slice(&input_matrix),
+        r,
+        c,
+        HostSlice::from_mut_slice(&mut result_main),
+        &cfg,
+    )
+    .unwrap();
+
+    runtime::set_device(&ref_dev).unwrap();
+    transpose_matrix(
+        HostSlice::from_slice(&input_matrix),
+        r,
+        c,
+        HostSlice::from_mut_slice(&mut result_ref),
+        &cfg,
+    )
+    .unwrap();
+
+    assert_eq!(result_main, result_ref);
 }
 
 // pub fn check_bit_reverse<F: FieldImpl>()
