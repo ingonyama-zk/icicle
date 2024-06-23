@@ -34,6 +34,8 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Install path prefix")
 endif()
 message("CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # Specify the installation rules
 install(TARGETS icicle_device
