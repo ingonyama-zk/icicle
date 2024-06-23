@@ -194,7 +194,10 @@ namespace icicle {
    *
    * @return A list of registered device types.
    */
-  std::list<std::string> get_registered_devices();
+  std::list<std::string> get_registered_devices_list();
+
+  // Function to get registered devices as a comma-separated string
+  eIcicleError get_registered_devices(char* output, size_t output_size);
 
   /**
    * @brief Check if a given device type is registered.

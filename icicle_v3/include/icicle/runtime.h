@@ -168,3 +168,11 @@ extern "C" eIcicleError icicle_get_device_properties(DeviceProperties& propertie
  *         - `INVALID_DEVICE` if the device is not available.
  */
 extern "C" eIcicleError icicle_is_device_avialable(const Device& dev);
+
+/**
+ * @brief Retrieves the registered devices in comma-separated string.
+ *
+ * @param output buffer for writing registered devices types
+ * @return eIcicleError Status of the properties query.
+ */
+extern "C" eIcicleError icicle_get_registered_devices(char* output, size_t output_size);
