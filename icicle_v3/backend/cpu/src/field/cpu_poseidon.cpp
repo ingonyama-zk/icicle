@@ -12,17 +12,13 @@ class Poseidon : public Hash {
 
   virtual eIcicleError hash_many(const limb_t *input_limbs, limb_t *output_limbs, unsigned int batch) const override {
     // This is just a placeholder, copy first element of each hash group.
+    int input_pointer = 0;
+    int output_pointer = 0;
+    int output_size = this->element_nof_limbs * this->output_nof_elements;
+    int input_size = this->element_nof_limbs * this->input_nof_elements;
     for (int batch_idx = 0; batch_idx<batch; batch_idx++)
     {
-      for (int output_element_idx = 0; output_element_idx < this->output_nof_elements; output_element_idx++)
-      {
-          for (int limb_idx = 0; limb_idx < element_nof_limbs; limb_idx++)
-          {
-             int output_pointer = batch_idx* this->output_nof_elements*this->element_nof_limbs + output_element_idx*this->element_nof_limbs + limb_idx;
-             int input_pointer = batch_idx * this->input_nof_elements * this->element_nof_limbs;
-             output_limbs[output_pointer] = input_limbs[input_pointer];
-          }
-      }
+      std::copy(input_limbs + batch_idx*input_size, input_limbs + batch_idx*input_size + output_size, output_limbs + batch_idx*output_size);
     }
     return eIcicleError::SUCCESS;
   }
