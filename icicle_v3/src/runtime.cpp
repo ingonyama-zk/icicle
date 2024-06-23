@@ -75,6 +75,11 @@ extern "C" eIcicleError icicle_is_device_avialable(const Device& dev)
   return is_device_registered(dev.type) ? eIcicleError::SUCCESS : eIcicleError::INVALID_DEVICE;
 }
 
+extern "C" eIcicleError icicle_get_registered_devices(char* output, size_t output_size)
+{
+  return get_registered_devices(output, output_size);
+}
+
 extern "C" eIcicleError icicle_create_stream(icicleStreamHandle* stream)
 {
   return DeviceAPI::get_thread_local_deviceAPI()->create_stream(stream);

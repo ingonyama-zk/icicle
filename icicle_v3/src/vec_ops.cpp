@@ -20,9 +20,9 @@ namespace icicle {
   }
 
 #ifdef EXT_FIELD
-  ICICLE_DISPATCHER_INST(VectorAddExtFieldDispatcher, vector_add_ext_field, extFieldVectorOpImpl);
+  ICICLE_DISPATCHER_INST(VectorAddExtFieldDispatcher, extension_vector_add, extFieldVectorOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add_ext_field)(
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_add)(
     const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
   {
     return VectorAddExtFieldDispatcher::execute(vec_a, vec_b, n, config, output);
@@ -32,7 +32,7 @@ namespace icicle {
   eIcicleError vector_add(
     const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, vector_add_ext_field)(vec_a, vec_b, n, config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_add)(vec_a, vec_b, n, config, output);
   }
 #endif // EXT_FIELD
 
@@ -53,9 +53,9 @@ namespace icicle {
   }
 
 #ifdef EXT_FIELD
-  ICICLE_DISPATCHER_INST(VectorSubExtFieldDispatcher, vector_sub_ext_field, extFieldVectorOpImpl);
+  ICICLE_DISPATCHER_INST(VectorSubExtFieldDispatcher, extension_vector_sub, extFieldVectorOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sub_ext_field)(
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_sub)(
     const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
   {
     return VectorSubExtFieldDispatcher::execute(vec_a, vec_b, n, config, output);
@@ -65,7 +65,7 @@ namespace icicle {
   eIcicleError vector_sub(
     const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, vector_sub_ext_field)(vec_a, vec_b, n, config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_sub)(vec_a, vec_b, n, config, output);
   }
 #endif // EXT_FIELD
 
@@ -86,9 +86,9 @@ namespace icicle {
   }
 
 #ifdef EXT_FIELD
-  ICICLE_DISPATCHER_INST(VectorMulExtFieldDispatcher, vector_mul_ext_field, extFieldVectorOpImpl);
+  ICICLE_DISPATCHER_INST(VectorMulExtFieldDispatcher, extension_vector_mul, extFieldVectorOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul_ext_field)(
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_mul)(
     const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
   {
     return VectorMulExtFieldDispatcher::execute(vec_a, vec_b, n, config, output);
@@ -98,7 +98,7 @@ namespace icicle {
   eIcicleError vector_mul(
     const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, vector_mul_ext_field)(vec_a, vec_b, n, config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_mul)(vec_a, vec_b, n, config, output);
   }
 #endif // EXT_FIELD
 

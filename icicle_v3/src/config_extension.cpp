@@ -1,4 +1,5 @@
 #include "icicle/config_extension.h"
+#include <iostream>
 
 extern "C" {
 
@@ -25,6 +26,12 @@ int config_extension_get_int(const ConfigExtension* ext, const char* key)
 bool config_extension_get_bool(const ConfigExtension* ext, const char* key)
 {
   if (ext) { return ext->get<bool>(key); }
+  throw std::runtime_error("ConfigExtension is null");
+}
+
+ConfigExtension* clone_config_extension(const ConfigExtension* ext)
+{
+  if (ext) { return ext->clone(); }
   throw std::runtime_error("ConfigExtension is null");
 }
 } // extern "C"

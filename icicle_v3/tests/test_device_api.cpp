@@ -15,7 +15,7 @@ public:
   static void SetUpTestSuite()
   {
     icicle_load_backend(BACKEND_BUILD_DIR, true);
-    s_regsitered_devices = get_registered_devices();
+    s_regsitered_devices = get_registered_devices_list();
     ASSERT_GT(s_regsitered_devices.size(), 0);
   }
   static void TearDownTestSuite() {}

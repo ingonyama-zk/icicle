@@ -124,31 +124,31 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
-  extern "C" void register_vector_add_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+  extern "C" void register_extension_vector_add(const std::string& deviceType, extFieldVectorOpImpl impl);
 
 #define REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_add_ext_field) = []() -> bool {                                                        \
-      register_vector_add_ext_field(DEVICE_TYPE, FUNC);                                                                \
+      register_extension_vector_add(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
 
-  extern "C" void register_vector_sub_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+  extern "C" void register_extension_vector_sub(const std::string& deviceType, extFieldVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_sub_ext_field) = []() -> bool {                                                        \
-      register_vector_sub_ext_field(DEVICE_TYPE, FUNC);                                                                \
+      register_extension_vector_sub(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
 
-  extern "C" void register_vector_mul_ext_field(const std::string& deviceType, extFieldVectorOpImpl impl);
+  extern "C" void register_extension_vector_mul(const std::string& deviceType, extFieldVectorOpImpl impl);
 
 #define REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                        \
-      register_vector_mul_ext_field(DEVICE_TYPE, FUNC);                                                                \
+      register_extension_vector_mul(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
