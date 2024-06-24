@@ -133,11 +133,14 @@ namespace m31 {
       uint32_t a = 1, b = 0, y = xs, z = MersenneField::get_modulus().limbs[0], e, m = z;
       while (1)
       {
-        e = MersenneField::ctz(y);
-        y >>= (1 << e);
+#ifdef __CUDA_ARCH__
+        e = __ffs(y) - 1;
+#else
+        e = __builtin_ctz(y);
+#endif
+        y >>= e;
         if(a >= m)
-          a = (a >> 31) + (a & m);
-          if (a == m) {a = 0;}
+          a = reduce_limbs(a);
         a = ((a >> e) | (a << (CONFIG::modulus_bit_count - e))) & m;
         if(y == 1)
           return a;

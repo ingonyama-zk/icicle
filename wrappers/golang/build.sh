@@ -112,7 +112,7 @@ for FIELD in "${BUILD_FIELDS[@]}"
 do
   echo "FIELD=${FIELD}" > build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DFIELD=$FIELD -DEXT_FIELD=$EXT_FIELD -DDEVMODE=$DEVMODE -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DFIELD=$FIELD -DEXT_FIELD=$EXT_FIELD -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build -j8 && rm build_config.txt
 done
 
