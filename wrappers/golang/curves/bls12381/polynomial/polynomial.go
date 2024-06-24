@@ -25,7 +25,7 @@ func (up *DensePolynomial) Print() {
 	C.bls12_381_polynomial_print(up.handle)
 }
 
-func (up *DensePolynomial) CreateFromCoeffecitients(coeffs core.HostOrDeviceSlice) DensePolynomial {
+func (up *DensePolynomial) CreateFromCoefficients(coeffs core.HostOrDeviceSlice) DensePolynomial {
 	if coeffs.IsOnDevice() {
 		coeffs.(core.DeviceSlice).CheckDevice()
 	}
