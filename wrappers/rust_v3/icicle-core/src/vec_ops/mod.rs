@@ -60,6 +60,7 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
+    // TODO Yuval : bit reverse
     // fn bit_reverse(
     //     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     //     cfg: &BitReverseConfig,
@@ -86,6 +87,8 @@ fn check_vec_ops_args<'a, F>(
             result.len()
         );
     }
+
+    // TODO Yuval : how to check correct device
     // let ctx_device_id = cfg
     //     .ctx
     //     .device_id;
