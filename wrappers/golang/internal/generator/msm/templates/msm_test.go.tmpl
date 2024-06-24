@@ -185,6 +185,61 @@ func TestMSM{{.CurvePrefix}}(t *testing.T) {
 		{{end}}
 	}
 }
+
+func TestMSM{{.CurvePrefix}}PinnedHostMemory(t *testing.T) {
+	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+	for _, power := range []int{10} {
+		size := 1 << power
+
+		scalars := icicle{{capitalize .Curve}}.GenerateScalars(size)
+		points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(size)
+		
+		pinnable := cr.GetDeviceAttribute(cr.CudaDevAttrHostRegisterSupported, 0)
+		lockable := cr.GetDeviceAttribute(cr.CudaDevAttrPageableMemoryAccessUsesHostPageTables, 0)
+
+		pinnableAndLockable := pinnable == 1 && lockable == 0
+
+		var pinnedPoints core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Affine]
+		if pinnableAndLockable {
+			points.Pin(cr.CudaHostRegisterDefault)
+			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+			assert.Equal(t, points, pinnedPoints, "Allocating newly pinned memory resulted in bad points")
+		}
+
+		var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], 1)
+
+		e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm allocated pinned host mem failed")
+		
+		outHost.CopyFromDevice(&out)
+		{{if ne .GnarkImport "" -}}
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars, points, outHost[0]))
+		{{end}}
+		
+		if pinnableAndLockable {
+		e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, pinnedPoints, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm registered pinned host mem failed")
+			
+			outHost.CopyFromDevice(&out)
+			{{if ne .GnarkImport "" -}}
+			// Check with gnark-crypto
+			assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars, pinnedPoints, outHost[0]))
+			{{end}}
+		}
+		
+		out.Free()
+		
+		if pinnableAndLockable {
+			points.Unpin()
+			pinnedPoints.FreePinned()
+		}
+	}
+}
 {{if ne .GnarkImport "" -}}
 func TestMSM{{if eq .CurvePrefix "G2"}}G2{{end}}GnarkCryptoTypes(t *testing.T) {
 	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()

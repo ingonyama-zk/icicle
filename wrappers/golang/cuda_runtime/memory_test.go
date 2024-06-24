@@ -40,3 +40,27 @@ func TestCopyFromToHost(t *testing.T) {
 	assert.Equal(t, CudaSuccess, err, "Couldn't copy to device due to %v", err)
 	assert.Equal(t, someInts, someInts2, "Elements of host slices do not match. Copying from/to host failed")
 }
+
+func TestRegisterUnregisterPinned(t *testing.T) {
+	data := []int{1, 2, 3, 4, 5, 7, 8, 9}
+	dataUnsafe := unsafe.Pointer(&data[0])
+	_, err := RegisterPinned(dataUnsafe, int(unsafe.Sizeof(data[0])*9), CudaHostRegisterDefault)
+	assert.Equal(t, CudaSuccess, err)
+	_, err = RegisterPinned(dataUnsafe, int(unsafe.Sizeof(data[0])*9), CudaHostRegisterDefault)
+	assert.Equal(t, CudaErrorHostMemoryAlreadyRegistered, err)
+
+	err = FreeRegisteredPinned(dataUnsafe)
+	assert.Equal(t, CudaSuccess, err)
+	err = FreeRegisteredPinned(dataUnsafe)
+	assert.Equal(t, CudaErrorHostMemoryNotRegistered, err)
+}
+
+func TestAllocFreePinned(t *testing.T) {
+	pinnedMemPointer, err := AllocPinned(int(unsafe.Sizeof(1)*9), CudaHostAllocDefault)
+	assert.Equal(t, CudaSuccess, err)
+
+	err = FreeAllocPinned(pinnedMemPointer)
+	assert.Equal(t, CudaSuccess, err)
+	err = FreeAllocPinned(pinnedMemPointer)
+	assert.Equal(t, CudaErrorInvalidValue, err)
+}
