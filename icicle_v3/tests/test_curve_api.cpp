@@ -59,13 +59,16 @@ public:
 
 TEST_F(CurveApiTest, MSM)
 {
-  const int logn = 7;
+  const int logn = 10;
   const int N = 1 << logn;
   auto scalars = std::make_unique<scalar_t[]>(N);
   auto bases = std::make_unique<affine_t[]>(N);
 
+  bool conv_mont = false;
+
   scalar_t::rand_host_many(scalars.get(), N);
   projective_t::rand_host_many_affine(bases.get(), N);
+  if (conv_mont) {for (int i=0; i<N; i++) bases[i] = affine_t::to_montgomery(bases[i]); }
   projective_t result_cpu{};
   projective_t result_cpu_dbl_n_add{};
   projective_t result_cpu_ref{};
@@ -76,22 +79,25 @@ TEST_F(CurveApiTest, MSM)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
-    const int c = 6;
-    const int pcf = 5;
+    const int log_p = 2;
+    const int c = std::max(logn, 8) - 1;
+    const int pcf = 1 << log_p;
     auto config = default_msm_config();
     config.ext.set("c", c);
     config.precompute_factor = pcf;
+    config.are_scalars_montgomery_form = false;
+    config.are_points_montgomery_form = conv_mont;
 
     auto pc_config = default_msm_pre_compute_config();
     pc_config.ext.set("c", c);
+    pc_config.ext.set("is_mont", config.are_points_montgomery_form);
 
     auto precomp_bases = std::make_unique<affine_t[]>(N*pcf);
-
+    msm_precompute_bases(bases.get(), N, pcf, pc_config, precomp_bases.get());
     START_TIMER(MSM_sync)
     for (int i = 0; i < iters; ++i) {
       // TODO real test
       // msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
-      msm_precompute_bases(bases.get(), N, pcf, pc_config, precomp_bases.get());
       msm(scalars.get(), precomp_bases.get(), N, config, result);
     }
     END_TIMER(MSM_sync, msg, measure);
@@ -100,9 +106,7 @@ TEST_F(CurveApiTest, MSM)
   // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
   run("CPU", &result_cpu, "CPU msm", VERBOSE /*=measure*/, 1 /*=iters*/);
   run("CPU_REF", &result_cpu_ref, "CPU_REF msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-  // TODO test something
-
-  ASSERT_EQ(result_cpu,result_cpu_ref);
+  ASSERT_EQ((result_cpu),(result_cpu_ref));
 }
 
 int main(int argc, char** argv)
