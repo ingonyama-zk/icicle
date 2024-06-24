@@ -34,9 +34,10 @@ size_t bls12_381_polynomial_degree(PolynomialInst* p);
 size_t bls12_381_polynomial_copy_coeffs_range(PolynomialInst* p, scalar_t* memory, size_t start_idx, size_t end_idx);
 PolynomialInst* bls12_381_polynomial_even(PolynomialInst* p);
 PolynomialInst* bls12_381_polynomial_odd(PolynomialInst* p);
+// PolynomialInst* bn254_polynomial_slice(PolynomialInst* p, size_t offset, size_t stride, size_t size);
+// void bn254_polynomial_evaluate_on_rou_domain(const PolynomialInst* p, uint64_t domain_log_size, scalar_t* evals /*OUT*/);
+scalar_t* bn254_polynomial_get_coeffs_raw_ptr(PolynomialInst* p, size_t* size /*OUT*/, size_t* device_id /*OUT*/);
 
-// scalar_t* bls12_381_polynomial_get_coeffs_raw_ptr(PolynomialInst* p, size_t* size /*OUT*/, size_t* device_id /*OUT*/);
-// PolynomialInst* bls12_381_polynomial_slice(PolynomialInst* p, size_t offset, size_t stride, size_t size);
 // IntegrityPointer* bls12_381_polynomial_get_coeff_view(PolynomialInst* p, size_t* size /*OUT*/, size_t* device_id /*OUT*/);
 // IntegrityPointer* bls12_381_polynomial_get_rou_evaluations_view(PolynomialInst* p, size_t nof_evals, bool is_reversed, size_t* size /*OUT*/, size_t* device_id /*OUT*/);
 // const scalar_t* bls12_381_polynomial_intergrity_ptr_get(IntegrityPointer* p);

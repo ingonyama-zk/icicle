@@ -151,12 +151,11 @@ func TestNttDeviceAsync(t *testing.T) {
 
 func TestNttBatch(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
-	largestTestSize := 12
 	largestBatchSize := 100
 	scalars := bn254.GenerateScalars(1 << largestTestSize * largestBatchSize)
 
 	for _, size := range []int{4, largestTestSize} {
-		for _, batchSize := range []int{2, 16, largestBatchSize} {
+		for _, batchSize := range []int{1, 16, largestBatchSize} {
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 

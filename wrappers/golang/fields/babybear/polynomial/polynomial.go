@@ -38,7 +38,7 @@ func (up *DensePolynomial) CreateFromCoeffecitients(coeffs core.HostOrDeviceSlic
 func (up *DensePolynomial) CreateFromROUEvaluations(evals core.HostOrDeviceSlice) DensePolynomial {
 	evalsPointer := (*C.scalar_t)(evals.AsUnsafePointer())
 	cSize := (C.size_t)(evals.Len())
-	up.handle = C.babybear_polynomial_create_from_coefficients(evalsPointer, cSize)
+	up.handle = C.babybear_polynomial_create_from_rou_evaluations(evalsPointer, cSize)
 	return *up
 }
 
@@ -143,6 +143,13 @@ func (up *DensePolynomial) EvalOnDomain(domain, evals core.HostOrDeviceSlice) co
 	return evals
 }
 
+// func (up *DensePolynomial) EvalOnROUDomain(rou int64, domain, evals core.HostOrDeviceSlice) core.HostOrDeviceSlice {
+// 	cDomainSize := (C.size_t)(rou)
+// 	cEvals := (*C.scalar_t)(evals.AsUnsafePointer())
+// 	C.bn254_polynomial_evaluate_on_rou_domain(up.handle, cDomainSize, cEvals)
+// 	return evals
+// }
+
 func (up *DensePolynomial) Degree() int {
 	return int(C.babybear_polynomial_degree(up.handle))
 }
@@ -174,3 +181,19 @@ func (up *DensePolynomial) Odd() DensePolynomial {
 		handle: oddPoly,
 	}
 }
+
+func (up *DensePolynomial) AsDeviceSlice(sizeOfElem uint64) core.DeviceSlice {
+	var size, deviceId uint64
+	cSize := (*C.size_t)(unsafe.Pointer(&size))
+	cDeviceId := (*C.size_t)(unsafe.Pointer(&deviceId))
+	__rawCoeffsPtr := C.bn254_polynomial_get_coeffs_raw_ptr(up.handle, cSize, cDeviceId)
+
+	return core.DeviceSliceFromPointer(unsafe.Pointer(__rawCoeffsPtr), sizeOfElem*size, size)
+}
+
+// func (up *DensePolynomial) Slice() DensePolynomial {
+// 	slicedPoly := C.bn254_polynomial_slice(up.handle, )
+// 	return DensePolynomial{
+// 		handle: slicedPoly,
+// 	}
+// }
