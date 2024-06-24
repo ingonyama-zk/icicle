@@ -8,5 +8,8 @@ repository.workspace = true
 
 [dependencies]
 icicle-runtime = { workspace = true }
-
 hex = "0.4"
+
+[dev-dependencies]
+criterion = "0.3"
+serial_test = "3.0.0"
