@@ -27,7 +27,7 @@ fn test_vec_ops_config() {
         .synchronize()
         .unwrap();
     stream
-        .release()
+        .destroy()
         .unwrap();
 }
 
@@ -63,7 +63,7 @@ where
     assert_eq!(a[0], result3[0]);
 
     stream
-        .release()
+        .destroy()
         .unwrap();
 }
 

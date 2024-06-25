@@ -3,13 +3,15 @@ use std::fmt;
 use std::os::raw::c_char;
 
 const MAX_TYPE_SIZE: usize = 64;
+
+#[derive(Clone)]
 #[repr(C)]
 pub struct Device {
     device_type: [c_char; MAX_TYPE_SIZE],
-    id: i32,
+    pub id: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[repr(C)]
 pub struct DeviceProperties {
     pub using_host_memory: bool,
@@ -41,6 +43,20 @@ impl Device {
         }
 
         Device { device_type, id }
+    }
+
+    /// Returns the device_type as a Rust String.
+    pub fn get_device_type(&self) -> String {
+        // Find the first null byte in the array to handle C strings
+        let c_str = unsafe {
+            CStr::from_ptr(
+                self.device_type
+                    .as_ptr(),
+            )
+        };
+        c_str
+            .to_string_lossy()
+            .into_owned()
     }
 }
 

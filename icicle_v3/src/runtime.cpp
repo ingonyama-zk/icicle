@@ -13,6 +13,18 @@ using namespace icicle;
 
 extern "C" eIcicleError icicle_set_device(const Device& device) { return DeviceAPI::set_thread_local_device(device); }
 
+extern "C" eIcicleError icicle_get_active_device(icicle::Device& device)
+{
+  const Device& active_device = DeviceAPI::get_thread_local_device();
+  device = active_device;
+  return eIcicleError::SUCCESS;
+}
+
+extern "C" eIcicleError icicle_get_device_count(int& device_count /*OUT*/)
+{
+  return DeviceAPI::get_thread_local_deviceAPI()->get_device_count(device_count);
+}
+
 extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)
 {
   return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory(ptr, size);

@@ -387,56 +387,49 @@ macro_rules! impl_ntt_tests {
         #[parallel]
         fn test_ntt() {
             initialize();
-            check_ntt::<$field>(
-                &test_utilities::TEST_MAIN_DEVICE
-                    .lock()
-                    .unwrap(),
-                &test_utilities::TEST_REF_DEVICE
-                    .lock()
-                    .unwrap(),
-            )
+            check_ntt::<$field>()
         }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_coset_from_subgroup() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_ntt_coset_from_subgroup::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_coset_from_subgroup() {
+            initialize();
+            check_ntt_coset_from_subgroup::<$field>()
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_coset_interpolation_nm() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_ntt_coset_interpolation_nm::<$field>();
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_coset_interpolation_nm() {
+            initialize();
+            check_ntt_coset_interpolation_nm::<$field>();
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_arbitrary_coset() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_ntt_arbitrary_coset::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_arbitrary_coset() {
+            initialize();
+            check_ntt_arbitrary_coset::<$field>()
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_batch() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_ntt_batch::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_batch() {
+            initialize();
+            check_ntt_batch::<$field>()
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_device_async() {
-        //     // init_domain is in this test is performed per-device
-        //     check_ntt_device_async::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_device_async() {
+            initialize();
+            check_ntt_device_async::<$field>()
+        }
 
-        // #[test]
-        // #[serial]
-        // fn test_ntt_release_domain() {
-        //     INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
-        //     check_release_domain::<$field>()
-        // }
+        #[test]
+        #[serial]
+        fn test_ntt_release_domain() {
+            initialize();
+            check_release_domain::<$field>()
+        }
     };
 }

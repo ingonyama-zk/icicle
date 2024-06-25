@@ -2,6 +2,7 @@
 #include <cstring>
 #include "icicle/device_api.h"
 #include "icicle/errors.h"
+#include "icicle/utils/log.h"
 
 #include "cuda_runtime.h"
 
@@ -13,6 +14,12 @@ public:
   eIcicleError set_device(const Device& device) override
   {
     cudaError_t err = cudaSetDevice(device.id);
+    return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::INVALID_DEVICE;
+  }
+
+  eIcicleError get_device_count(int& device_count) const override
+  {
+    cudaError_t err = cudaGetDeviceCount(&device_count);
     return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::INVALID_DEVICE;
   }
 

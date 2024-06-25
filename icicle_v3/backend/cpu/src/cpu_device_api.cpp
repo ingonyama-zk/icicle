@@ -3,6 +3,7 @@
 #include <cstring>
 #include "icicle/device_api.h"
 #include "icicle/errors.h"
+#include "icicle/utils/log.h"
 
 using namespace icicle;
 
@@ -12,6 +13,12 @@ public:
   eIcicleError set_device(const Device& device) override
   {
     return (device.id == 0) ? eIcicleError::SUCCESS : eIcicleError::INVALID_DEVICE;
+  }
+
+  eIcicleError get_device_count(int& device_count) const override
+  {
+    device_count = 1;
+    return eIcicleError::SUCCESS;
   }
 
   // Memory management
