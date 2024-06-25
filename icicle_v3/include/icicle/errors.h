@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
+#include "icicle/utils/log.h"
 
 namespace icicle {
 
@@ -80,8 +81,14 @@ namespace icicle {
   {
     std::string err_msg = std::string{get_error_string(err)} + " : by: " + func + " at: " + file + ":" +
                           std::to_string(line) + " error: " + reason;
-    std::cerr << err_msg << std::endl; // TODO: Logging
+    ICICLE_LOG_ERROR << err_msg; // TODO: Logging
     throw std::runtime_error(err_msg);
+  }
+
+  void inline throw_icicle_error(
+    eIcicleError err, const std::string& reason, const char* const func, const char* const file, const int line)
+  {
+    throw_icicle_error(err, reason.c_str(), func, file, line);
   }
 
 #define THROW_ICICLE_ERR(val, reason) throw_icicle_error(val, reason, __FUNCTION__, __FILE__, __LINE__)
