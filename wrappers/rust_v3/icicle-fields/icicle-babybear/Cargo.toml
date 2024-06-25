@@ -15,7 +15,6 @@ icicle-runtime = { workspace = true }
 [dev-dependencies]
 criterion = "0.3"
 serial_test = "3.0.0"
-once_cell = "1.10.0"
 
 [build-dependencies]
 cmake = "0.1.50"
