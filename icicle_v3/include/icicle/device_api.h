@@ -34,6 +34,14 @@ namespace icicle {
      */
     virtual eIcicleError set_device(const Device& device) = 0;
 
+    /**
+     * @brief Get number of devices for this type
+     *
+     * @param device_count number of available devices of this type (output param)
+     * @return eIcicleError Status of the device set
+     */
+    virtual eIcicleError get_device_count(int& device_count) const = 0;
+
     // Memory management
 
     /**

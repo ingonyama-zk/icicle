@@ -10,6 +10,7 @@ repository.workspace = true
 icicle-runtime = { workspace = true }
 hex = "0.4"
 once_cell = "1.10.0" # how to have it in dev-deps?
+rayon = "1.8.1"
 
 [dev-dependencies]
 criterion = "0.3"

@@ -32,7 +32,7 @@ impl IcicleStream {
             .is_null()
     }
 
-    pub fn release(&mut self) -> Result<(), eIcicleError> {
+    pub fn destroy(&mut self) -> Result<(), eIcicleError> {
         if !self
             .handle
             .is_null()
@@ -59,7 +59,7 @@ impl Drop for IcicleStream {
             .handle
             .is_null()
         {
-            eprintln!("Warning: IcicleStream was not explicitly released. Make sure to call stream.release() to release the stream resource.");
+            eprintln!("Warning: IcicleStream was not explicitly destroyed. Make sure to call stream.destroy() to release the stream resource.");
             // let _ = unsafe { runtime::icicle_destroy_stream(self.handle) };
         }
     }

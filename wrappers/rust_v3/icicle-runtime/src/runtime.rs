@@ -9,6 +9,8 @@ pub type IcicleStreamHandle = *mut c_void;
 extern "C" {
     fn icicle_load_backend(path: *const c_char, is_recursive: bool) -> eIcicleError;
     fn icicle_set_device(device: &Device) -> eIcicleError;
+    fn icicle_get_active_device(device: &mut Device) -> eIcicleError;
+    fn icicle_get_device_count(device_count: &i32) -> eIcicleError;
     fn icicle_is_device_avialable(device: &Device) -> eIcicleError;
     pub fn icicle_malloc(ptr: *mut *mut c_void, size: usize) -> eIcicleError;
     pub fn icicle_malloc_async(ptr: *mut *mut c_void, size: usize, stream: IcicleStreamHandle) -> eIcicleError;
@@ -49,6 +51,16 @@ pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
     } else {
         Err(result)
     }
+}
+
+pub fn get_active_device() -> Result<Device, eIcicleError> {
+    let mut device: Device = Device::new("invalid", -1);
+    unsafe { icicle_get_active_device(&mut device).wrap_value::<Device>(device) }
+}
+
+pub fn get_device_count() -> Result<i32, eIcicleError> {
+    let mut device_count = 0;
+    unsafe { icicle_get_device_count(&mut device_count).wrap_value::<i32>(device_count) }
 }
 
 pub fn is_device_available(device: &Device) -> bool {

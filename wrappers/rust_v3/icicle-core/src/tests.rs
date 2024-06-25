@@ -69,7 +69,7 @@ where
         .synchronize()
         .unwrap();
     stream
-        .release()
+        .destroy()
         .unwrap();
 
     assert_eq!(scalars_copy, scalars);
