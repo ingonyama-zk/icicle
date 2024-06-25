@@ -30,9 +30,3 @@ pub trait MontgomeryConvertible: Sized {
     fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError;
     fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError;
 }
-
-// pub trait IcicleResultWrap {
-//     fn wrap(self) -> IcicleResult<()>;
-//     fn wrap_value<T>(self, value: T) -> IcicleResult<T>;
-//     fn wrap_maybe_uninit<T>(self, value: MaybeUninit<T>) -> IcicleResult<T>;
-// }

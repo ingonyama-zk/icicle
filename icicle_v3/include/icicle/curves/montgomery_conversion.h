@@ -22,7 +22,7 @@ namespace icicle {
   using AffineConvertMontImpl = std::function<eIcicleError(
     const Device& device, const affine_t* input, size_t n, bool is_into, const VecOpsConfig& config, affine_t* output)>;
 
-  extern "C" void register_affine_convert_montgomery(const std::string& deviceType, AffineConvertMontImpl);
+  void register_affine_convert_montgomery(const std::string& deviceType, AffineConvertMontImpl);
 
 #define REGISTER_AFFINE_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                                  \
   namespace {                                                                                                          \
@@ -40,7 +40,7 @@ namespace icicle {
     const VecOpsConfig& config,
     projective_t* output)>;
 
-  extern "C" void register_projective_convert_montgomery(const std::string& deviceType, ProjectiveConvertMontImpl);
+  void register_projective_convert_montgomery(const std::string& deviceType, ProjectiveConvertMontImpl);
 
 #define REGISTER_PROJECTIVE_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                              \
   namespace {                                                                                                          \
@@ -59,7 +59,7 @@ namespace icicle {
     const VecOpsConfig& config,
     g2_affine_t* output)>;
 
-  extern "C" void register_affine_g2_convert_montgomery(const std::string& deviceType, AffineG2ConvertMontImpl);
+  void register_affine_g2_convert_montgomery(const std::string& deviceType, AffineG2ConvertMontImpl);
 
 #define REGISTER_AFFINE_G2_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                               \
   namespace {                                                                                                          \
@@ -77,7 +77,7 @@ namespace icicle {
     const VecOpsConfig& config,
     g2_projective_t* output)>;
 
-  extern "C" void register_projective_g2_convert_montgomery(const std::string& deviceType, ProjectiveG2ConvertMontImpl);
+  void register_projective_g2_convert_montgomery(const std::string& deviceType, ProjectiveG2ConvertMontImpl);
 
 #define REGISTER_PROJECTIVE_G2_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                           \
   namespace {                                                                                                          \

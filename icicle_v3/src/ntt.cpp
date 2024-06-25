@@ -52,7 +52,12 @@ namespace icicle {
   /*************************** RELEASE DOMAIN ***************************/
   ICICLE_DISPATCHER_INST(NttReleaseDomainDispatcher, ntt_release_domain, NttReleaseDomainImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt_release_domain)() { return NttReleaseDomainDispatcher::execute(); }
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt_release_domain)()
+  {
+    // Note: passing zero is a workaround for the function required per field but need to differentiate by type when
+    // calling
+    return NttReleaseDomainDispatcher::execute(scalar_t::zero());
+  }
 
   template <>
   eIcicleError ntt_release_domain<scalar_t>()

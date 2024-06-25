@@ -4,6 +4,7 @@ members = [
   "icicle-runtime",
   "icicle-core",
   "icicle-fields/icicle-babybear",
+  "icicle-fields/icicle-stark252",
 ]
 exclude = []
 
