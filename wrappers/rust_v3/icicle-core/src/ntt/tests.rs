@@ -1,3 +1,4 @@
+use crate::ntt::{NttAlgorithm, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDDLES_MODE};
 use icicle_runtime::{device::Device, memory::HostSlice, runtime};
 // use icicle_runtime::errors::eIcicleError;
 // use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -10,10 +11,6 @@ use crate::{
     traits::{FieldImpl, GenerateRandom},
     // vec_ops::{transpose_matrix, VecOps},
 };
-
-// CUDA backend specific flags
-const CUDA_NTT_FAST_TWIDDLES_MODE: &str = "fast_twiddles";
-const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
 
 pub fn init_domain<F: FieldImpl>(max_size: u64, fast_twiddles_mode: bool)
 where
@@ -56,20 +53,6 @@ where
 //         .map(|(i, _)| l[reverse_bit_order(i as u32, l.len() as u32) as usize])
 //         .collect()
 // }
-
-///Which NTT algorithm to use. options are:
-///- Auto: implementation selects automatically based on heuristic. This value is a good default for most cases.
-///- Radix2: explicitly select radix-2 NTT algorithm
-///- MixedRadix: explicitly select mixed-radix NTT algorithm
-/// NOTE: this is only relevant to CUDA backend
-#[allow(non_camel_case_types)]
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NttAlgorithm {
-    Auto,
-    Radix2,
-    MixedRadix,
-}
 
 // This test is comparing main and reference devices (typically CUDA and CPU) for NTT and inplace-INTT
 pub fn check_ntt<F: FieldImpl>(main_device: &Device, ref_device: &Device)

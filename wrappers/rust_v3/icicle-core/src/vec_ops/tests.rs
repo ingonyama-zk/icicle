@@ -31,10 +31,11 @@ fn test_vec_ops_config() {
         .unwrap();
 }
 
-pub fn check_vec_ops_scalars<F: FieldImpl>()
+pub fn check_vec_ops_scalars<F: FieldImpl>(device: &Device)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
+    runtime::set_device(device).unwrap();
     let test_size = 1 << 14;
 
     let a = F::Config::generate_random(test_size);
