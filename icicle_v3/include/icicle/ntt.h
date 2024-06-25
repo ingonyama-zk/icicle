@@ -144,7 +144,7 @@ namespace icicle {
   using NttImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
 
-  extern "C" void register_ntt(const std::string& deviceType, NttImpl impl);
+  void register_ntt(const std::string& deviceType, NttImpl impl);
 
 #define REGISTER_NTT_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
@@ -163,7 +163,7 @@ namespace icicle {
     NTTConfig<scalar_t>& config,
     extension_t* output)>;
 
-  extern "C" void register_ntt_ext_field(const std::string& deviceType, NttExtFieldImpl impl);
+  void register_ntt_ext_field(const std::string& deviceType, NttExtFieldImpl impl);
 
 #define REGISTER_NTT_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                              \
   namespace {                                                                                                          \
@@ -178,7 +178,7 @@ namespace icicle {
   using NttInitDomainImpl = std::function<eIcicleError(
     const Device& device, const scalar_t& primitive_root, const NTTInitDomainConfig& config)>;
 
-  extern "C" void register_ntt_init_domain(const std::string& deviceType, NttInitDomainImpl);
+  void register_ntt_init_domain(const std::string& deviceType, NttInitDomainImpl);
 
 #define REGISTER_NTT_INIT_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                            \
   namespace {                                                                                                          \
@@ -189,9 +189,11 @@ namespace icicle {
   }
 
   /*************************** RELEASE DOMAIN ***************************/
-  using NttReleaseDomainImpl = std::function<eIcicleError(const Device& device)>;
+  // Note: 'dummy' is a workaround for the function required per field but need to differentiate by type when
+  // calling. TODO Yuval: avoid this param somehow
+  using NttReleaseDomainImpl = std::function<eIcicleError(const Device& device, const scalar_t& dummy)>;
 
-  extern "C" void register_ntt_release_domain(const std::string& deviceType, NttReleaseDomainImpl);
+  void register_ntt_release_domain(const std::string& deviceType, NttReleaseDomainImpl);
 
 #define REGISTER_NTT_RELEASE_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                         \
   namespace {                                                                                                          \
