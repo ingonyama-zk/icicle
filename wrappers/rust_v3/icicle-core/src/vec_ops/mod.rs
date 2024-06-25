@@ -344,40 +344,35 @@ macro_rules! impl_vec_ops_tests {
     (
       $field:ident
     ) => {
+        use icicle_core::test_utilities;
         use icicle_runtime::{device::Device, runtime};
         use std::sync::Once;
 
-        static INIT: Once = Once::new();
-
         fn initialize() {
-            INIT.call_once(|| {
-                // load backends to process
-                runtime::load_backend(&env!("DEFAULT_BACKEND_INSTALL_DIR"), true).unwrap();
-                let _ = runtime::get_registered_devices().unwrap();
-                let cuda_device = Device::new("CUDA", 0);
-                let cpu_device = Device::new("CPU", 0);
-                if runtime::is_device_available(&cuda_device) {
-                    runtime::set_device(&cuda_device).unwrap();
-                } else {
-                    runtime::set_device(&cpu_device).unwrap();
-                }
-            });
+            test_utilities::test_load_and_init_devices();
         }
 
         #[test]
         pub fn test_vec_ops_scalars() {
             initialize();
-            check_vec_ops_scalars::<$field>()
+            check_vec_ops_scalars::<$field>(
+                &test_utilities::TEST_MAIN_DEVICE
+                    .lock()
+                    .unwrap(),
+            )
         }
 
         #[test]
         pub fn test_matrix_transpose() {
             initialize();
-            let registered_devices = runtime::get_registered_devices().unwrap();
-            assert!(registered_devices.len() >= 2);
-            let main_dev = Device::new(&registered_devices[0], 0);
-            let ref_dev = Device::new(&registered_devices[1], 0);
-            check_matrix_transpose::<$field>(&main_dev, &ref_dev);
+            check_matrix_transpose::<$field>(
+                &test_utilities::TEST_MAIN_DEVICE
+                    .lock()
+                    .unwrap(),
+                &test_utilities::TEST_REF_DEVICE
+                    .lock()
+                    .unwrap(),
+            )
         }
 
         // #[test]

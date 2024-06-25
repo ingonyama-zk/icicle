@@ -51,20 +51,24 @@ pub enum Ordering {
     kMN,
 }
 
-// TODO Yuval : this is for CUDA only
 ///Which NTT algorithm to use. options are:
 ///- Auto: implementation selects automatically based on heuristic. This value is a good default for most cases.
 ///- Radix2: explicitly select radix-2 NTT algorithm
 ///- MixedRadix: explicitly select mixed-radix NTT algorithm
 ///
-// #[allow(non_camel_case_types)]
-// #[repr(C)]
-// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-// pub enum NttAlgorithm {
-//     Auto,
-//     Radix2,
-//     MixedRadix,
-// }
+// Note: CUDA specific config to be passed via config-extension
+#[allow(non_camel_case_types)]
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NttAlgorithm {
+    Auto,
+    Radix2,
+    MixedRadix,
+}
+
+// CUDA backend specific flags
+const CUDA_NTT_FAST_TWIDDLES_MODE: &str = "fast_twiddles";
+const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -358,49 +362,39 @@ macro_rules! impl_ntt_tests {
     (
       $field:ident
     ) => {
+        use icicle_core::test_utilities;
         use icicle_runtime::{device::Device, runtime};
-        use once_cell::sync::Lazy;
-        use std::sync::Mutex;
 
         const MAX_SIZE: u64 = 1 << 17;
         static INIT: OnceLock<()> = OnceLock::new();
         static RELEASE: OnceLock<()> = OnceLock::new(); // for release domain test
         const FAST_TWIDDLES_MODE: bool = false;
-        static MAIN_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("", 0)));
-        static REF_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("", 0)));
+
+        pub fn initialize() {
+            // TODO Yuval : probably don't need INIT lock here, if CPU init_domain is thread safe
+            INIT.get_or_init(move || {
+                test_utilities::test_load_and_init_devices();
+                // init domain for both devices
+                test_utilities::test_set_ref_device();
+                init_domain::<$field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+
+                test_utilities::test_set_main_device();
+                init_domain::<$field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+            });
+        }
 
         #[test]
         #[parallel]
         fn test_ntt() {
-            INIT.get_or_init(move || {
-                // load backends to process and choose two to use as main and ref devices
-                runtime::load_backend(&env!("DEFAULT_BACKEND_INSTALL_DIR"), true).unwrap();
-                let registered_devices = runtime::get_registered_devices().unwrap();
-                assert!(registered_devices.len() >= 2);
-                // select main and ref devices
-                let mut main_device = MAIN_DEVICE
+            initialize();
+            check_ntt::<$field>(
+                &test_utilities::TEST_MAIN_DEVICE
                     .lock()
-                    .unwrap();
-                *main_device = Device::new(&registered_devices[0], 0);
-                let mut ref_device = REF_DEVICE
+                    .unwrap(),
+                &test_utilities::TEST_REF_DEVICE
                     .lock()
-                    .unwrap();
-                *ref_device = Device::new(&registered_devices[0] /* TODO YUVAL SHOULD BE 1 */, 0);
-
-                // TODO Yuval: uncomment when CPU ntt PR is integrated
-                // runtime::set_device(&ref_device).unwrap();
-                // init_domain::<$field>(MAX_SIZE, FAST_TWIDDLES_MODE);
-
-                runtime::set_device(&main_device).unwrap();
-                init_domain::<$field>(MAX_SIZE, FAST_TWIDDLES_MODE);
-            });
-            let main_dev = MAIN_DEVICE
-                .lock()
-                .unwrap();
-            let ref_dev = REF_DEVICE
-                .lock()
-                .unwrap();
-            check_ntt::<$field>(&main_dev, &ref_dev)
+                    .unwrap(),
+            )
         }
 
         // #[test]
