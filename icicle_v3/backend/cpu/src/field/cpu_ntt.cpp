@@ -24,10 +24,11 @@ eIcicleError cpu_ntt_init_domain(const Device& device, const S& primitive_root, 
 
 REGISTER_NTT_INIT_DOMAIN_BACKEND("CPU", (cpu_ntt_init_domain<scalar_t>));
 
-eIcicleError cpu_ntt_release_domain(const Device& device)
+template <typename S = scalar_t>
+eIcicleError cpu_ntt_release_domain(const Device& device, const S& dummy)
 {
   ICICLE_LOG_ERROR << "cpu_ntt_release_domain() not implemented";
   return eIcicleError::API_NOT_IMPLEMENTED;
 }
 
-REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CPU", cpu_ntt_release_domain);
+REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CPU", cpu_ntt_release_domain<scalar_t>);

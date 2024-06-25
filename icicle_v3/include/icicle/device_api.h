@@ -187,7 +187,7 @@ namespace icicle {
    * @param deviceType The device type to register the DeviceAPI for.
    * @param api An instance of the derived api type to be used as deviceAPI interface.
    */
-  extern "C" void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
+  void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api);
 
   /**
    * @brief Register DeviceAPI instance for a device type.

@@ -116,7 +116,7 @@ namespace icicle {
 
   DeviceAPI* get_deviceAPI(const Device& device) { return DeviceAPIRegistry::Global().get_deviceAPI(device).get(); }
 
-  extern "C" void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
+  void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
   {
     ICICLE_LOG_DEBUG << "deviceAPI registered for " << deviceType;
     DeviceAPIRegistry::Global().register_deviceAPI(deviceType, api);

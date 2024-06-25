@@ -120,7 +120,7 @@ namespace icicle {
     const MSMConfig& config,
     projective_t* results)>;
 
-  extern "C" void register_msm(const std::string& deviceType, MsmImpl impl);
+  void register_msm(const std::string& deviceType, MsmImpl impl);
 
 #define REGISTER_MSM_BACKEND(DEVICE_TYPE, FUNC)                                                                        \
   namespace {                                                                                                          \
@@ -138,7 +138,7 @@ namespace icicle {
     const MsmPreComputeConfig& config,
     affine_t* output_bases)>;
 
-  extern "C" void register_msm_precompute_bases(const std::string& deviceType, MsmPreComputeImpl impl);
+  void register_msm_precompute_bases(const std::string& deviceType, MsmPreComputeImpl impl);
 
 #define REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND(DEVICE_TYPE, FUNC)                                                      \
   namespace {                                                                                                          \
@@ -157,7 +157,7 @@ namespace icicle {
     const MSMConfig& config,
     g2_projective_t* results)>;
 
-  extern "C" void register_msm_g2(const std::string& deviceType, MsmG2Impl impl);
+  void register_msm_g2(const std::string& deviceType, MsmG2Impl impl);
 
 #define REGISTER_MSM_G2_BACKEND(DEVICE_TYPE, FUNC)                                                                     \
   namespace {                                                                                                          \
@@ -175,7 +175,7 @@ namespace icicle {
     const MsmPreComputeConfig& config,
     g2_affine_t* output_bases)>;
 
-  extern "C" void register_msm_g2_precompute_bases(const std::string& deviceType, MsmG2PreComputeImpl impl);
+  void register_msm_g2_precompute_bases(const std::string& deviceType, MsmG2PreComputeImpl impl);
 
 #define REGISTER_MSM_G2_PRE_COMPUTE_BASES_BACKEND(DEVICE_TYPE, FUNC)                                                   \
   namespace {                                                                                                          \

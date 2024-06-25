@@ -2,7 +2,6 @@ use crate::ntt::{NttAlgorithm, Ordering, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDD
 use crate::test_utilities;
 use crate::vec_ops::{transpose_matrix, VecOps, VecOpsConfig};
 use icicle_runtime::{
-    device::Device,
     memory::{DeviceVec, HostSlice},
     runtime,
     stream::IcicleStream,

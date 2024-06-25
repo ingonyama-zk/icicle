@@ -20,7 +20,7 @@ namespace icicle {
     return translateCudaError(err);
   }
 
-  eIcicleError ntt_cuda_release_domain(const Device& device)
+  eIcicleError ntt_cuda_release_domain(const Device& device, const scalar_t& dummy)
   {
     using namespace device_context;
     DeviceContext device_context = get_default_device_context();

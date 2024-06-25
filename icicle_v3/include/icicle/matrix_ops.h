@@ -45,7 +45,7 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* out)>;
 
-  extern "C" void register_matrix_transpose(const std::string& deviceType, scalarMatrixOpImpl impl);
+  void register_matrix_transpose(const std::string& deviceType, scalarMatrixOpImpl impl);
 
 #define REGISTER_MATRIX_TRANSPOSE_BACKEND(DEVICE_TYPE, FUNC)                                                           \
   namespace {                                                                                                          \
@@ -64,7 +64,7 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* out)>;
 
-  extern "C" void register_extension_matrix_transpose(const std::string& deviceType, extFieldMatrixOpImpl impl);
+  void register_extension_matrix_transpose(const std::string& deviceType, extFieldMatrixOpImpl impl);
 
 #define REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                 \
   namespace {                                                                                                          \
