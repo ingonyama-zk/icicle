@@ -25,6 +25,22 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
 extern "C" eIcicleError icicle_set_device(const icicle::Device& device);
 
 /**
+ * @brief Get active device for thread
+ *
+
+ * @return eIcicleError Status of the device set
+ */
+extern "C" eIcicleError icicle_get_active_device(icicle::Device& device);
+
+/**
+ * @brief Get number of available devices active device for thread
+ *
+
+ * @return eIcicleError Status of the device set
+ */
+extern "C" eIcicleError icicle_get_device_count(int& device_count /*OUT*/);
+
+/**
  * @brief Allocates memory on the specified device.
  *
  * @param ptr Pointer to the allocated memory.

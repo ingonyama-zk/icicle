@@ -90,7 +90,7 @@ mod tests {
             .synchronize()
             .unwrap();
         stream
-            .release()
+            .destroy()
             .unwrap();
         assert_eq!(input, output);
     }
