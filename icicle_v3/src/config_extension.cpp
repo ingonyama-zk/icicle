@@ -1,6 +1,7 @@
 #include "icicle/config_extension.h"
 #include <iostream>
 
+using namespace icicle;
 extern "C" {
 
 ConfigExtension* create_config_extension() { return new ConfigExtension(); }
@@ -19,19 +20,19 @@ void config_extension_set_bool(ConfigExtension* ext, const char* key, bool value
 
 int config_extension_get_int(const ConfigExtension* ext, const char* key)
 {
-  if (ext) { return ext->get<int>(key); }
-  throw std::runtime_error("ConfigExtension is null");
+  if (!ext) { THROW_ICICLE_ERR(eIcicleError::INVALID_DEVICE, "ConfigExtension is null"); }
+  return ext->get<int>(key);
 }
 
 bool config_extension_get_bool(const ConfigExtension* ext, const char* key)
 {
-  if (ext) { return ext->get<bool>(key); }
-  throw std::runtime_error("ConfigExtension is null");
+  if (!ext) { THROW_ICICLE_ERR(eIcicleError::INVALID_DEVICE, "ConfigExtension is null"); }
+  return ext->get<bool>(key);
 }
 
 ConfigExtension* clone_config_extension(const ConfigExtension* ext)
 {
-  if (ext) { return ext->clone(); }
-  throw std::runtime_error("ConfigExtension is null");
+  if (!ext) { THROW_ICICLE_ERR(eIcicleError::INVALID_DEVICE, "ConfigExtension is null"); }
+  return ext->clone();
 }
 } // extern "C"
