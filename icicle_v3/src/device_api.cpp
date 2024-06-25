@@ -8,6 +8,7 @@
 
 #include "icicle/runtime.h"
 #include "icicle/device_api.h"
+#include "icicle/errors.h"
 #include "icicle/utils/log.h"
 
 namespace icicle {
@@ -41,11 +42,10 @@ namespace icicle {
     std::shared_ptr<DeviceAPI> get_deviceAPI(const Device& device)
     {
       auto it = apiMap.find(device.type);
-      if (it != apiMap.end()) {
-        return it->second;
-      } else {
-        throw std::runtime_error("Device API not found for type: " + std::string(device.type));
+      if (it == apiMap.end()) {
+        THROW_ICICLE_ERR(eIcicleError::INVALID_DEVICE, "Device API not found for type: " + std::string(device.type));
       }
+      return it->second;
     }
 
     std::shared_ptr<DeviceAPI> get_default_deviceAPI()
@@ -95,8 +95,9 @@ namespace icicle {
 
     const Device& default_device = DeviceAPIRegistry::Global().get_default_device();
     if (default_device.id < 0) {
-      throw std::runtime_error("icicle Device is not set. Make sure to load and initialize a device via call to "
-                               "icicle_set_device(const icicle::Device& device)");
+      THROW_ICICLE_ERR(
+        eIcicleError::INVALID_DEVICE, "icicle Device is not set. Make sure to load and initialize a device via call to "
+                                      "icicle_set_device(const icicle::Device& device)");
     }
     return default_device;
   }
@@ -106,8 +107,9 @@ namespace icicle {
     if (nullptr != sCurDeviceAPI) { return sCurDeviceAPI; }
     auto default_deviceAPI = DeviceAPIRegistry::Global().get_default_deviceAPI();
     if (nullptr == default_deviceAPI) {
-      throw std::runtime_error("icicle Device is not set. Make sure to load and initialize a device via call to "
-                               "icicle_set_device(const icicle::Device& device)");
+      THROW_ICICLE_ERR(
+        eIcicleError::INVALID_DEVICE, "icicle Device is not set. Make sure to load and initialize a device via call to "
+                                      "icicle_set_device(const icicle::Device& device)");
     }
     return default_deviceAPI.get();
   }

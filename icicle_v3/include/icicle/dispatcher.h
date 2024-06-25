@@ -1,6 +1,9 @@
 #pragma once
 
 #include "icicle/utils/log.h"
+#include "icicle/errors.h"
+
+using namespace icicle;
 
 // Generalized dispatcher template
 template <typename FuncType, const char* api_name>
@@ -18,7 +21,8 @@ public:
   void _register(const std::string& deviceType, FuncType func)
   {
     if (apiMap.find(deviceType) != apiMap.end()) {
-      throw std::runtime_error(
+      THROW_ICICLE_ERR(
+        eIcicleError::INVALID_DEVICE,
         std::string("Attempting to register a duplicate ") + api_name + " operation for device type: " + deviceType);
     }
     apiMap[deviceType] = func;
@@ -33,8 +37,10 @@ public:
     if (it != apiMap.end()) {
       return it->second(device, args...);
     } else {
-      throw std::runtime_error(std::string(api_name) + " operation not supported on device " + device.type);
+      THROW_ICICLE_ERR(
+        eIcicleError::INVALID_DEVICE, std::string(api_name) + " operation not supported on device " + device.type);
     }
+    return eIcicleError::SUCCESS;
   }
 };
 

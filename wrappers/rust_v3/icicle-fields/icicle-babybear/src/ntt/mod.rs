@@ -19,4 +19,4 @@ pub(crate) mod tests {
 }
 
 // TODO Yuval : V2 has tests against plonky3, do we still need it?
-// Note that the NTT tests could not work for babybear since they rely on arkworks which is not implmeneting babybear
+// Note that the NTT tests could not work for babybear since they rely on arkworks which is not implementing babybear

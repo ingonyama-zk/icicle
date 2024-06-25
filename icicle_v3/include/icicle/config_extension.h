@@ -5,36 +5,43 @@
 #include <variant>
 #include <stdexcept>
 
-class ConfigExtension
-{
-public:
-  using ConfigValue = std::variant<int, bool>; // int can represent enums
-  using ConfigMap = std::unordered_map<std::string, ConfigValue>;
+#include "icicle/errors.h"
 
-  ConfigExtension() = default;
+namespace icicle {
 
-  // Copy constructor
-  ConfigExtension(const ConfigExtension& other) : extensions_{other.extensions_} {}
-
-  template <typename T>
-  void set(const std::string& key, T value)
+  class ConfigExtension
   {
-    extensions_[key] = value;
-  }
+  public:
+    using ConfigValue = std::variant<int, bool>; // int can represent enums
+    using ConfigMap = std::unordered_map<std::string, ConfigValue>;
 
-  template <typename T>
-  T get(const std::string& key) const
-  {
-    auto it = extensions_.find(key);
-    if (it != extensions_.end()) { return std::get<T>(it->second); }
-    throw std::runtime_error("Key not found or type mismatch");
-  }
+    ConfigExtension() = default;
 
-  bool has(const std::string& key) const { return extensions_.find(key) != extensions_.end(); }
+    // Copy constructor
+    ConfigExtension(const ConfigExtension& other) : extensions_{other.extensions_} {}
 
-  // Clone method
-  ConfigExtension* clone() const { return new ConfigExtension(*this); }
+    template <typename T>
+    void set(const std::string& key, T value)
+    {
+      extensions_[key] = value;
+    }
 
-private:
-  ConfigMap extensions_;
-};
+    template <typename T>
+    T get(const std::string& key) const
+    {
+      auto it = extensions_.find(key);
+      if (it == extensions_.end()) {
+        THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Key not found or type mismatch");
+      }
+      return std::get<T>(it->second);
+    }
+
+    bool has(const std::string& key) const { return extensions_.find(key) != extensions_.end(); }
+
+    // Clone method
+    ConfigExtension* clone() const { return new ConfigExtension(*this); }
+
+  private:
+    ConfigMap extensions_;
+  };
+}; // namespace icicle
