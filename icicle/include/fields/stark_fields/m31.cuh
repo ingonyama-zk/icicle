@@ -8,10 +8,11 @@ namespace m31 {
   template <class CONFIG>
   class MersenneField: public Field<CONFIG> {
   public:
-    // using Field<CONFIG>::Field;
 
     HOST_DEVICE_INLINE MersenneField(const MersenneField& other) : Field<CONFIG>(other) {}
-    HOST_DEVICE_INLINE MersenneField(uint32_t x) : Field<CONFIG>({x}) {}
+    HOST_DEVICE_INLINE MersenneField(uint32_t x = 0) : Field<CONFIG>({x}) {}
+    HOST_DEVICE_INLINE MersenneField(storage<CONFIG::limbs_count> x) : Field<CONFIG>{x} {}
+    HOST_DEVICE_INLINE MersenneField(const Field<CONFIG>& other) : Field<CONFIG>(other) {}
 
     static constexpr HOST_DEVICE_INLINE MersenneField zero() {
       return MersenneField(CONFIG::zero.limbs[0]);
@@ -20,6 +21,16 @@ namespace m31 {
     static constexpr HOST_DEVICE_INLINE MersenneField one() {
       return MersenneField(CONFIG::one.limbs[0]);
     }
+
+    static constexpr HOST_DEVICE_INLINE MersenneField from(uint32_t value) {
+      return MersenneField(value);
+    }
+
+    static HOST_INLINE MersenneField rand_host() {
+      return MersenneField(Field<CONFIG>::rand_host());
+    }
+
+
     // Define assignment operator
     HOST_DEVICE_INLINE MersenneField& operator=(const Field<CONFIG>& other) {
         if (this != &other) {
@@ -49,25 +60,27 @@ namespace m31 {
         out.storage = xs;
         return out;
       }
-      static constexpr HOST_DEVICE_INLINE MersenneField reduce(Wide xs) {
-        uint32_t tmp = (xs >> 31) + (xs & MersenneField::get_modulus().limbs[0]);
-        return MersenneField(tmp == MersenneField::get_modulus().limbs[0] ? 0 : tmp);
+      template <unsigned MODULUS_MULTIPLE = 1>
+      static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
+      {
+        if (xs.storage == 0) return from_number(0);
+        return from_number(CONFIG::modulus_2.limbs[0] - xs.storage);
       }
       friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
       {
-        const uint64_t tmp = (uint64_t)xs + ys;
-        uint32_t r = (uint32_t)((tmp >> 32) & 1) + (uint32_t)(tmp);
+        const uint64_t tmp = (uint64_t)xs.storage + ys.storage;
+        uint32_t r = ((uint32_t)((tmp >> 32)) << 1) + (uint32_t)(tmp);
         return from_number(r);
       }
       friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys)
       {
-        return xs + from_number(MersenneField::get_modulus().limbs[0]);
+        return xs + neg(ys);
       }
       friend HOST_DEVICE_INLINE Wide operator*(Wide xs, const Wide& ys)
       {
-        uint64_t t1 = xs * ys;
-        t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);
-        return from_number(((t1 >> 32) << 1) + (uint32_t)(t1));
+        uint64_t t1 = (uint64_t)xs.storage * ys.storage;
+        t1 = (uint64_t)((uint32_t)(t1 >> 32) << 1) + (uint32_t)(t1);
+        return from_number((((uint32_t)(t1 >> 32) & 0b11) << 1) + (uint32_t)(t1));
       }
     };
 
@@ -95,6 +108,7 @@ namespace m31 {
 
     static constexpr HOST_DEVICE_INLINE uint32_t neg_limbs(const uint32_t& t)
     {
+      if (t == 0) return t;
       return MersenneField::get_modulus().limbs[0] - t;
     }
 
@@ -108,22 +122,16 @@ namespace m31 {
       return MersenneField{{MersenneField::reduce_limbs(this->get_limb())}};
     }
 
+    template <unsigned MODULUS_MULTIPLE = 1>
+    static constexpr HOST_DEVICE_INLINE MersenneField reduce(Wide xs) {
+      uint32_t tmp = ((xs.storage >> 31) & 1) + (xs.storage & MersenneField::get_modulus().limbs[0]);
+      return MersenneField(tmp == MersenneField::get_modulus().limbs[0] ? 0 : tmp);
+    }
+
     static HOST_DEVICE_INLINE uint32_t reduce_mul_limbs(uint64_t t)
     {
       return reduce_limbs((t >> 31) + (t & MersenneField::get_modulus().limbs[0]));
     }
-
-    static HOST_DEVICE_INLINE uint32_t ctz(uint32_t xs) {
-      uint32_t res = 0;
-      if (xs == 0) {
-        return res;
-      }
-      while (!(xs & 1)) {
-        ++res;
-        xs >>= 1;
-      }
-      return res;
-    } 
 
     static constexpr HOST_DEVICE_INLINE uint32_t inverse_limbs(const uint32_t& xs)
     {
@@ -173,14 +181,38 @@ namespace m31 {
       return MersenneField(MersenneField::reduce_mul_limbs((uint64_t)(xs.get_limb()) * ys.get_limb()));      
     }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField sqr(const MersenneField& xs)
+    static constexpr HOST_DEVICE_INLINE Wide mul_wide(const MersenneField& xs, const MersenneField& ys) {
+      return Wide::from_field(xs) * Wide::from_field(ys);
+    }
+
+    template <unsigned MODULUS_MULTIPLE = 1>
+    static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const MersenneField& xs)
     {
       // TODO: change to a more efficient squaring
+      return mul_wide(xs, xs);
+    }
+
+    static constexpr HOST_DEVICE_INLINE MersenneField sqr(const MersenneField& xs)
+    {
       return xs * xs;
     }
 
-    static constexpr HOST_DEVICE_INLINE Wide mul_wide(const MersenneField& xs, const MersenneField& ys) {
-      return Wide::from_number(xs.get_limb()) * Wide::from_number(ys.get_limb());
+    static constexpr HOST_DEVICE_INLINE MersenneField to_montgomery(const MersenneField& xs) { return xs * MersenneField{CONFIG::montgomery_r}; }
+
+    static constexpr HOST_DEVICE_INLINE MersenneField from_montgomery(const MersenneField& xs)
+    {
+      return xs * MersenneField{CONFIG::montgomery_r_inv};
+    }
+
+    static constexpr HOST_DEVICE_INLINE MersenneField pow(MersenneField base, int exp)
+    {
+      MersenneField res = one();
+      while (exp > 0) {
+        if (exp & 1) res = res * base;
+        base = base * base;
+        exp >>= 1;
+      }
+      return res;
     }
   };
   struct fp_config {
@@ -227,5 +259,5 @@ namespace m31 {
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  // typedef ExtensionField<fp_config> extension_t;
+  typedef ExtensionField<fp_config, scalar_t> extension_t;
 } // namespace babybear
