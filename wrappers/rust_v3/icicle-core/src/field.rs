@@ -1,5 +1,4 @@
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
-// use crate::vec_ops::VecOpsConfig;
 use hex::FromHex;
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::DeviceSlice;
@@ -176,7 +175,7 @@ macro_rules! impl_scalar_field {
                 let mut config = VecOpsConfig::default();
                 config.is_a_on_device = true;
                 config.is_result_on_device = true;
-                config.is_async = !stream.is_null();
+                config.is_async = false;
                 config.stream_handle = (&*stream).into();
                 unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
             }
@@ -233,14 +232,26 @@ macro_rules! impl_field_tests {
     (
         $field_name:ident
     ) => {
-        #[test]
-        fn test_field_convert_montgomery() {
-            check_field_convert_montgomery::<$field_name>()
-        }
+        pub mod test_field {
+            use super::*;
+            use icicle_core::test_utilities;
 
-        #[test]
-        fn test_field_equality() {
-            check_field_equality::<$field_name>()
+            fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            fn test_field_convert_montgomery() {
+                initialize();
+                check_field_convert_montgomery::<$field_name>()
+            }
+
+            #[test]
+            fn test_field_equality() {
+                initialize();
+                check_field_equality::<$field_name>()
+            }
         }
     };
 }

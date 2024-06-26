@@ -16,3 +16,7 @@ rayon = "1.8.1"
 criterion = "0.3"
 serial_test = "3.0.0"
 once_cell = "1.10.0"
+
+[features]
+g2 = []
+ec_ntt = []
