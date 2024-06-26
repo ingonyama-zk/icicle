@@ -1,3 +1,5 @@
+#[cfg(feature = "bw6-761")]
+use crate::curve::{BaseCfg, BaseField};
 use crate::curve::{ScalarCfg, ScalarField};
 use icicle_core::{
     impl_vec_ops_field,
@@ -6,6 +8,9 @@ use icicle_core::{
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 impl_vec_ops_field!("bls12_377", bls12_377, ScalarField, ScalarCfg);
+#[cfg(feature = "bw6-761")]
+impl_vec_ops_field!("bw6_761", bw6_761, BaseField, BaseCfg);
+
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::curve::ScalarField;

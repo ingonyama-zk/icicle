@@ -3,7 +3,7 @@ name = "icicle-bls12-377"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Rust wrapper for the CUDA implementation of BN254 pairing friendly elliptic curve by Ingonyama"
+description = "Rust wrapper for the CUDA implementation of BLS12-377 pairing friendly elliptic curve by Ingonyama"
 homepage.workspace = true
 repository.workspace = true
 
@@ -21,6 +21,8 @@ cmake = "0.1.50"
 
 [features]
 default = []
+bw6-761 = []
+bw6-761-g2 = ["bw6-761"]
 g2 = ["icicle-core/g2"]
 ec_ntt = ["icicle-core/ec_ntt"]
 
