@@ -148,6 +148,13 @@ int main()
   // // printf("cuda error %d\n", cudaGetLastError());
   // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
+  // THREADS = 256;
+  // BLOCKS = (N + THREADS - 1)/THREADS;
+  // bugged_add_elements_kernel<<<BLOCKS, THREADS>>>(A_d, B_d, Cb_d, N);
+  // cudaDeviceSynchronize();
+  // // printf("cuda error %d\n", cudaGetLastError());
+  // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+
   // int THREADS = 128;
   // int BLOCKS = (N/4 + THREADS - 1)/THREADS;
   // // fake_ntt_kernel<<<BLOCKS, THREADS, sizeof(test_t)*THREADS>>>(A_d, C_d, N);
@@ -165,8 +172,8 @@ int main()
   // // printf("cuda error %d\n", cudaGetLastError());
   // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
-  // cudaMemcpy(C_h, C_d, sizeof(test_t) * N, cudaMemcpyDeviceToHost);
-  // cudaMemcpy(Cb_h, Cb_d, sizeof(test_t) * N, cudaMemcpyDeviceToHost);
+  cudaMemcpy(C_h, C_d, sizeof(test_t) * N, cudaMemcpyDeviceToHost);
+  cudaMemcpy(Cb_h, Cb_d, sizeof(test_t) * N, cudaMemcpyDeviceToHost);
 
   // printf("A: ");
   // for (size_t i = 0; i < 8; i++)
@@ -174,17 +181,17 @@ int main()
   //   std::cout << A_h[i] << " ";
   // }
   // printf("\n");
-  // printf("B: ");
+  // printf("C test: ");
   // for (size_t i = 0; i < 8; i++)
   // {
-  //   // std::cout << Cb_d[i] << " ";
   //   std::cout << Cb_h[i] << " ";
   // }
   // printf("\n");
-  // printf("C: ");
+  // printf("C ref: ");
   // for (size_t i = 0; i < 8; i++)
   // {
-  //   std::cout << C_h[i] << " ";
+  //   std::cout << C_d[i] << " ";
+  //   // std::cout << C_h[i] << " ";
   // }
   // printf("\n");
 

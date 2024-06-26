@@ -4,7 +4,6 @@ __global__ void add_elements_kernel(const T* x, const T* y, T* result, const uns
 {
   const unsigned tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid >= count) return;
-  // printf("tid %d\n", tid);
   result[tid] = x[tid] + y[tid];
 }
 
@@ -23,6 +22,16 @@ __global__ void fake_ntt_kernel(const T* x, T* result, const unsigned thread_cou
   result[4*tid+1] = shmem[2*threadIdx.x] + T::neg(shmem[2*threadIdx.x + 4*blockDim.x/2]);
   result[4*tid+2] = shmem[2*threadIdx.x+1] + shmem[2*threadIdx.x + 4*blockDim.x/2+1];
   result[4*tid+3] = shmem[2*threadIdx.x+1] + T::neg(shmem[2*threadIdx.x + 4*blockDim.x/2+1]);
+}
+
+
+template <class T>
+__global__ void bugged_add_elements_kernel(const T* x, const T* y, T* result, const unsigned count)
+{
+  const unsigned tid = blockIdx.x * blockDim.x + threadIdx.x;
+  // if (tid >= count) return;
+  // printf("tid %d\n", tid);
+  result[tid] = x[tid] + y[tid];
 }
 
 template <class T>
