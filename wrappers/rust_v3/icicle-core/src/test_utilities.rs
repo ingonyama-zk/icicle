@@ -10,11 +10,7 @@ pub static TEST_REF_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device
 
 pub fn test_load_and_init_devices() {
     INIT.get_or_init(move || {
-        // let default_backend_install_dir = env!("DEFAULT_BACKEND_INSTALL_DIR");
         runtime::load_backend(env!("DEFAULT_BACKEND_INSTALL_DIR"), true).unwrap();
-        // runtime::load_backend(&format!("{}/cuda", default_backend_install_dir), true).unwrap();
-        // runtime::load_backend(&format!("{}/babybear", default_backend_install_dir), true).unwrap();
-        // runtime::load_backend(&format!("{}/stark252", default_backend_install_dir), true).unwrap();
         let registered_devices = runtime::get_registered_devices().unwrap();
         assert!(registered_devices.len() >= 2);
         // select main and ref devices

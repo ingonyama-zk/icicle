@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+use crate::test_utilities;
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{add_scalars, mul_scalars, sub_scalars, transpose_matrix, FieldImpl, VecOps, VecOpsConfig};
 use icicle_runtime::device::Device;
@@ -31,11 +32,11 @@ fn test_vec_ops_config() {
         .unwrap();
 }
 
-pub fn check_vec_ops_scalars<F: FieldImpl>(device: &Device)
+pub fn check_vec_ops_scalars<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    runtime::set_device(device).unwrap();
+    test_utilities::test_set_main_device();
     let test_size = 1 << 14;
 
     let a = F::Config::generate_random(test_size);
@@ -67,7 +68,7 @@ where
         .unwrap();
 }
 
-pub fn check_matrix_transpose<F: FieldImpl>(main_dev: &Device, ref_dev: &Device)
+pub fn check_matrix_transpose<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
@@ -79,7 +80,7 @@ where
     let mut result_ref = vec![F::zero(); test_size];
 
     let cfg = VecOpsConfig::default();
-    runtime::set_device(&main_dev).unwrap();
+    test_utilities::test_set_main_device();
     transpose_matrix(
         HostSlice::from_slice(&input_matrix),
         r,
@@ -89,7 +90,7 @@ where
     )
     .unwrap();
 
-    runtime::set_device(&ref_dev).unwrap();
+    test_utilities::test_set_ref_device();
     transpose_matrix(
         HostSlice::from_slice(&input_matrix),
         r,
