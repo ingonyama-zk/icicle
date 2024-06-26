@@ -60,9 +60,9 @@ typedef curve_config::scalar_t test_scalar;
 typedef curve_config::projective_t test_projective;
 typedef curve_config::affine_t test_affine;
 
-typedef Dummy_Scalar test_t;
+// typedef Dummy_Scalar test_t;
 // typedef test_projective test_t;
-// typedef test_scalar test_t;
+typedef test_scalar test_t;
 
 void queryGPUProperties() {
     int deviceCount = 0;
@@ -115,8 +115,8 @@ int main()
 
   // queryGPUProperties();
 
-  // int N = 1<<20;
-  int N = 300;
+  int N = 1<<20;
+  // int N = 300;
 
   test_t* A_h = new test_t[N];
   test_t* B_h = new test_t[N];
@@ -141,12 +141,12 @@ int main()
   cudaMemcpy(A_d, A_h, sizeof(test_t) * N, cudaMemcpyHostToDevice);
   cudaMemcpy(B_d, B_h, sizeof(test_t) * N, cudaMemcpyHostToDevice);
 
-  int THREADS = 256;
-  int BLOCKS = (N + THREADS - 1)/THREADS;
-  add_elements_kernel<<<BLOCKS, THREADS>>>(A_d, B_d, C_d, N);
-  cudaDeviceSynchronize();
-  // printf("cuda error %d\n", cudaGetLastError());
-  std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+  // int THREADS = 256;
+  // int BLOCKS = (N + THREADS - 1)/THREADS;
+  // add_elements_kernel<<<BLOCKS, THREADS>>>(A_d, B_d, C_d, N);
+  // cudaDeviceSynchronize();
+  // // printf("cuda error %d\n", cudaGetLastError());
+  // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
   // int THREADS = 128;
   // int BLOCKS = (N/4 + THREADS - 1)/THREADS;

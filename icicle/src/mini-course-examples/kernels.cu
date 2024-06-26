@@ -3,8 +3,8 @@ template <class T>
 __global__ void add_elements_kernel(const T* x, const T* y, T* result, const unsigned count)
 {
   const unsigned tid = blockIdx.x * blockDim.x + threadIdx.x;
-  // if (tid >= count) return;
-  printf("tid %d\n", tid);
+  if (tid >= count) return;
+  // printf("tid %d\n", tid);
   result[tid] = x[tid] + y[tid];
 }
 
