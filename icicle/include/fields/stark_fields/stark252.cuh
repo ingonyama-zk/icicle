@@ -627,5 +627,5 @@ namespace stark252 {
   /**
    * Scalar field. Is always a prime field.
    */
-  typedef ExtensionField<fp_config, scalar_t> extension_t;
+  typedef Field<fp_config> scalar_t;
 } // namespace stark252
