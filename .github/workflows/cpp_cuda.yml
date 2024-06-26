@@ -27,7 +27,14 @@ jobs:
       uses: actions/checkout@v4
     - name: Check clang-format
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]]; then echo "Please run clang-format"; exit 1; fi
+      run: |
+        output=$(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1)
+        if [[ -n "$output" ]]; then
+          echo "Clang-format found issues:"
+          echo "$output"
+          echo "Please run clang-format"
+          exit 1
+        fi
 
   test-linux-curve:
     name: Test on Linux
