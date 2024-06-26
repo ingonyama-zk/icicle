@@ -5,7 +5,14 @@ use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
 impl_ntt!("babybear", babybear, ScalarField, ScalarCfg);
-impl_ntt_without_domain!("babybear_extension", ScalarField, ScalarCfg, NTT, ExtensionField);
+impl_ntt_without_domain!(
+    "babybear_extension",
+    ScalarField,
+    ScalarCfg,
+    NTT,
+    "_ntt",
+    ExtensionField
+);
 
 #[cfg(test)]
 pub(crate) mod tests {

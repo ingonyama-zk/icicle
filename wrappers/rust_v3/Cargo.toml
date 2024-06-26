@@ -6,6 +6,8 @@ members = [
   "icicle-fields/icicle-babybear",
   "icicle-fields/icicle-stark252",
   "icicle-curves/icicle-bn254",
+  "icicle-curves/icicle-bls12-377",
+  "icicle-curves/icicle-bls12-381",
 ]
 exclude = []
 
