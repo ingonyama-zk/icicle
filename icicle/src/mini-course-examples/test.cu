@@ -113,7 +113,7 @@ void queryGPUProperties() {
 int main()
 {
 
-  // queryGPUProperties();
+  queryGPUProperties();
 
   int N = 1<<20;
   // int N = 300;
