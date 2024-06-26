@@ -178,20 +178,20 @@ int main()
   // printf("A: ");
   // for (size_t i = 0; i < 8; i++)
   // {
-  //   std::cout << A_h[i] << " ";
+  //   std::cout << A_h[i] << ", ";
   // }
   // printf("\n");
   // printf("C test: ");
   // for (size_t i = 0; i < 8; i++)
   // {
-  //   std::cout << Cb_h[i] << " ";
+  //   std::cout << Cb_h[i] << ", ";
   // }
   // printf("\n");
   // printf("C ref: ");
   // for (size_t i = 0; i < 8; i++)
   // {
-  //   std::cout << C_d[i] << " ";
-  //   // std::cout << C_h[i] << " ";
+  //   std::cout << C_d[i] << ", ";
+  //   // std::cout << C_h[i] << ", ";
   // }
   // printf("\n");
 
