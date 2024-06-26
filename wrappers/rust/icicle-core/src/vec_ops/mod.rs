@@ -83,6 +83,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
 
+    fn accumulate(
+        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> IcicleResult<()>;
+
     fn sub(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -207,6 +213,19 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::add(a, b, result, &cfg)
 }
 
+pub fn accumulate_scalars<F>(
+    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(a, b, a, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
+}
+
 pub fn sub_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -299,6 +318,14 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
+                #[link_name = concat!($field_prefix, "_accumulate_cuda")]
+                pub(crate) fn accumulate_scalars_cuda(
+                    a: *mut $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "_sub_cuda")]
                 pub(crate) fn sub_scalars_cuda(
                     a: *const $field,
@@ -352,6 +379,22 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn accumulate(
+                a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::accumulate_scalars_cuda(
+                        a.as_mut_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
                     )
                     .wrap()
                 }
@@ -457,7 +500,7 @@ macro_rules! impl_vec_add_tests {
     ) => {
         #[test]
         pub fn test_vec_add_scalars() {
-            check_vec_ops_scalars::<$field>()
+            check_vec_ops_scalars::<$field>();
         }
 
         #[test]

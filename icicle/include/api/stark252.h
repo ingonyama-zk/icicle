@@ -32,6 +32,9 @@ extern "C" cudaError_t stark252_mul_cuda(
 extern "C" cudaError_t stark252_add_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
 
+extern "C" cudaError_t stark252_accumulate_cuda(
+  stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t stark252_sub_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
 

@@ -116,13 +116,13 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	return scalars.AsUnsafePointer(), points.AsUnsafePointer(), results.AsUnsafePointer(), size, unsafe.Pointer(cfg)
 }
 
-func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outputBases DeviceSlice) (unsafe.Pointer, unsafe.Pointer) {
+func PrecomputePointsCheck(points HostOrDeviceSlice, cfg *MSMConfig, outputBases DeviceSlice) (unsafe.Pointer, unsafe.Pointer) {
 	outputBasesLength, pointsLength := outputBases.Len(), points.Len()
-	if outputBasesLength != pointsLength*int(precomputeFactor) {
+	if outputBasesLength != pointsLength*int(cfg.PrecomputeFactor) {
 		errorString := fmt.Sprintf(
 			"Precompute factor is probably incorrect: expected %d but got %d",
 			outputBasesLength/pointsLength,
-			precomputeFactor,
+			cfg.PrecomputeFactor,
 		)
 		panic(errorString)
 	}
@@ -130,6 +130,9 @@ func PrecomputeBasesCheck(points HostOrDeviceSlice, precomputeFactor int32, outp
 	if points.IsOnDevice() {
 		points.(DeviceSlice).CheckDevice()
 	}
+
+	cfg.pointsSize = int32(pointsLength)
+	cfg.arePointsOnDevice = points.IsOnDevice()
 
 	return points.AsUnsafePointer(), outputBases.AsUnsafePointer()
 }

@@ -18,7 +18,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "2.4.0"
+version = "2.6.0"
 edition = "2021"
 authors = [ "Ingonyama" ]
 homepage = "https://www.ingonyama.com"
