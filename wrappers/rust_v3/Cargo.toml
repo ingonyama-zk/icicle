@@ -3,11 +3,12 @@ resolver = "2"
 members = [
   "icicle-runtime",
   "icicle-core",
-  "icicle-fields/icicle-babybear",
-  "icicle-fields/icicle-stark252",
-  "icicle-curves/icicle-bn254",
+  "icicle-curves/icicle-bw6-761",
   "icicle-curves/icicle-bls12-377",
   "icicle-curves/icicle-bls12-381",
+  "icicle-curves/icicle-bn254",  
+  "icicle-fields/icicle-babybear",
+  "icicle-fields/icicle-stark252",
 ]
 exclude = []
 
