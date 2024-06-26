@@ -1,4 +1,8 @@
-use crate::traits::{FieldImpl, GenerateRandom, MontgomeryConvertible};
+use crate::{
+    curve::{Affine, Curve, Projective},
+    field::Field,
+    traits::{FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
+};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     stream::IcicleStream,
@@ -12,36 +16,36 @@ pub fn check_field_equality<F: FieldImpl>() {
     assert_eq!(left, right);
 }
 
-// pub fn check_affine_projective_convert<C: Curve>() {
-//     let size = 1 << 10;
-//     let affine_points = C::generate_random_affine_points(size);
-//     let projective_points = C::generate_random_projective_points(size);
-//     for affine_point in affine_points {
-//         let projective_eqivalent: Projective<C> = affine_point.into();
-//         assert_eq!(affine_point, projective_eqivalent.into());
-//     }
-//     for projective_point in projective_points {
-//         let affine_eqivalent: Affine<C> = projective_point.into();
-//         assert_eq!(projective_point, affine_eqivalent.into());
-//     }
-// }
+pub fn check_affine_projective_convert<C: Curve>() {
+    let size = 1 << 10;
+    let affine_points = C::generate_random_affine_points(size);
+    let projective_points = C::generate_random_projective_points(size);
+    for affine_point in affine_points {
+        let projective_eqivalent: Projective<C> = affine_point.into();
+        assert_eq!(affine_point, projective_eqivalent.into());
+    }
+    for projective_point in projective_points {
+        let affine_eqivalent: Affine<C> = projective_point.into();
+        assert_eq!(projective_point, affine_eqivalent.into());
+    }
+}
 
-// pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
-// where
-//     C: Curve<BaseField = Field<BASE_LIMBS, F>>,
-// {
-//     let left = Projective::<C>::zero();
-//     let right = Projective::<C>::zero();
-//     assert_eq!(left, right);
-//     let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
-//     assert_eq!(left, right);
-//     let mut z = [0; BASE_LIMBS];
-//     z[0] = 2;
-//     let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], z);
-//     assert_ne!(left, right);
-//     let left = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], C::BaseField::one().into());
-//     assert_eq!(left, right);
-// }
+pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
+where
+    C: Curve<BaseField = Field<BASE_LIMBS, F>>,
+{
+    let left = Projective::<C>::zero();
+    let right = Projective::<C>::zero();
+    assert_eq!(left, right);
+    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
+    assert_eq!(left, right);
+    let mut z = [0; BASE_LIMBS];
+    z[0] = 2;
+    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], z);
+    assert_ne!(left, right);
+    let left = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], C::BaseField::one().into());
+    assert_eq!(left, right);
+}
 
 pub fn check_field_convert_montgomery<F>()
 where
@@ -75,61 +79,50 @@ where
     assert_eq!(scalars_copy, scalars);
 }
 
-// pub fn check_points_convert_montgomery<C: Curve>()
-// where
-//     Affine<C>: MontgomeryConvertible<'static>,
-//     Projective<C>: MontgomeryConvertible<'static>,
-// {
-//     let size = 1 << 10;
-//     let device_ctx = DeviceContext::default();
+pub fn check_points_convert_montgomery<C: Curve>()
+where
+    Affine<C>: MontgomeryConvertible,
+    Projective<C>: MontgomeryConvertible,
+{
+    let size = 1 << 10;
 
-//     let affine_points = C::generate_random_affine_points(size);
-//     let mut d_affine = DeviceVec::cuda_malloc(size).unwrap();
-//     d_affine
-//         .copy_from_host(HostSlice::from_slice(&affine_points))
-//         .unwrap();
+    let affine_points = C::generate_random_affine_points(size);
+    let mut d_affine = DeviceVec::device_malloc(size).unwrap();
+    d_affine
+        .copy_from_host(HostSlice::from_slice(&affine_points))
+        .unwrap();
 
-//     Affine::<C>::to_mont(&mut d_affine, &device_ctx)
-//         .wrap()
-//         .unwrap();
-//     Affine::<C>::from_mont(&mut d_affine, &device_ctx)
-//         .wrap()
-//         .unwrap();
+    Affine::<C>::to_mont(&mut d_affine, &IcicleStream::default())
+        .wrap()
+        .unwrap();
+    Affine::<C>::from_mont(&mut d_affine, &IcicleStream::default())
+        .wrap()
+        .unwrap();
 
-//     let mut affine_copy = vec![Affine::<C>::zero(); size];
-//     d_affine
-//         .copy_to_host(HostSlice::from_mut_slice(&mut affine_copy))
-//         .unwrap();
+    let mut affine_copy = vec![Affine::<C>::zero(); size];
+    d_affine
+        .copy_to_host(HostSlice::from_mut_slice(&mut affine_copy))
+        .unwrap();
 
-//     for (p1, p2) in affine_points
-//         .iter()
-//         .zip(affine_copy.iter())
-//     {
-//         assert_eq!(p1, p2);
-//     }
+    assert_eq!(affine_points, affine_copy);
 
-//     let proj_points = C::generate_random_projective_points(size);
-//     let mut d_proj = DeviceVec::cuda_malloc(size).unwrap();
-//     d_proj
-//         .copy_from_host(HostSlice::from_slice(&proj_points))
-//         .unwrap();
+    let proj_points = C::generate_random_projective_points(size);
+    let mut d_proj = DeviceVec::device_malloc(size).unwrap();
+    d_proj
+        .copy_from_host(HostSlice::from_slice(&proj_points))
+        .unwrap();
 
-//     Projective::<C>::to_mont(&mut d_proj, &device_ctx)
-//         .wrap()
-//         .unwrap();
-//     Projective::<C>::from_mont(&mut d_proj, &device_ctx)
-//         .wrap()
-//         .unwrap();
+    Projective::<C>::to_mont(&mut d_proj, &IcicleStream::default())
+        .wrap()
+        .unwrap();
+    Projective::<C>::from_mont(&mut d_proj, &IcicleStream::default())
+        .wrap()
+        .unwrap();
 
-//     let mut projective_copy = vec![Projective::<C>::zero(); size];
-//     d_proj
-//         .copy_to_host(HostSlice::from_mut_slice(&mut projective_copy))
-//         .unwrap();
+    let mut projective_copy = vec![Projective::<C>::zero(); size];
+    d_proj
+        .copy_to_host(HostSlice::from_mut_slice(&mut projective_copy))
+        .unwrap();
 
-//     for (p1, p2) in proj_points
-//         .iter()
-//         .zip(projective_copy.iter())
-//     {
-//         assert_eq!(p1, p2);
-//     }
-// }
+    assert_eq!(proj_points, projective_copy);
+}

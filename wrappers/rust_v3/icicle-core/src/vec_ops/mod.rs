@@ -305,6 +305,8 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
+            // TODO Yuval : implement bit reverse
+
             //     fn bit_reverse(
             //         input: &(impl HostOrDeviceSlice<$field> + ?Sized),
             //         cfg: &BitReverseConfig,
@@ -344,44 +346,36 @@ macro_rules! impl_vec_ops_tests {
     (
       $field:ident
     ) => {
-        use icicle_core::test_utilities;
-        use icicle_runtime::{device::Device, runtime};
-        use std::sync::Once;
+        pub(crate) mod test_vecops {
+            use super::*;
+            use icicle_core::test_utilities;
+            use icicle_runtime::{device::Device, runtime};
+            use std::sync::Once;
 
-        fn initialize() {
-            test_utilities::test_load_and_init_devices();
+            fn initialize() {
+                test_utilities::test_load_and_init_devices();
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars() {
+                initialize();
+                check_vec_ops_scalars::<$field>()
+            }
+
+            #[test]
+            pub fn test_matrix_transpose() {
+                initialize();
+                check_matrix_transpose::<$field>()
+            }
+
+            // #[test]
+            // pub fn test_bit_reverse() {
+            //     check_bit_reverse::<$field>()
+            // }
+            // #[test]
+            // pub fn test_bit_reverse_inplace() {
+            //     check_bit_reverse_inplace::<$field>()
+            // }
         }
-
-        #[test]
-        pub fn test_vec_ops_scalars() {
-            initialize();
-            check_vec_ops_scalars::<$field>(
-                &test_utilities::TEST_MAIN_DEVICE
-                    .lock()
-                    .unwrap(),
-            )
-        }
-
-        #[test]
-        pub fn test_matrix_transpose() {
-            initialize();
-            check_matrix_transpose::<$field>(
-                &test_utilities::TEST_MAIN_DEVICE
-                    .lock()
-                    .unwrap(),
-                &test_utilities::TEST_REF_DEVICE
-                    .lock()
-                    .unwrap(),
-            )
-        }
-
-        // #[test]
-        // pub fn test_bit_reverse() {
-        //     check_bit_reverse::<$field>()
-        // }
-        // #[test]
-        // pub fn test_bit_reverse_inplace() {
-        //     check_bit_reverse_inplace::<$field>()
-        // }
     };
 }

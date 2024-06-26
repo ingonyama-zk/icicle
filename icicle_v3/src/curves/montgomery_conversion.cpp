@@ -24,9 +24,9 @@ namespace icicle {
   }
 
 #ifdef G2
-  ICICLE_DISPATCHER_INST(AffineG2ConvertMont, affine_g2_convert_montgomery, AffineG2ConvertMontImpl);
+  ICICLE_DISPATCHER_INST(AffineG2ConvertMont, g2_affine_convert_montgomery, AffineG2ConvertMontImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(CURVE, affine_g2_convert_montgomery)(
+  extern "C" eIcicleError CONCAT_EXPAND(CURVE, g2_affine_convert_montgomery)(
     const g2_affine_t* input, size_t n, bool is_into, const VecOpsConfig& config, g2_affine_t* output)
   {
     return AffineG2ConvertMont::execute(input, n, is_into, config, output);
@@ -37,7 +37,7 @@ namespace icicle {
   eIcicleError
   convert_montgomery(const g2_affine_t* input, size_t n, bool is_into, const VecOpsConfig& config, g2_affine_t* output)
   {
-    return CONCAT_EXPAND(CURVE, affine_g2_convert_montgomery)(input, n, is_into, config, output);
+    return CONCAT_EXPAND(CURVE, g2_affine_convert_montgomery)(input, n, is_into, config, output);
   }
 #endif //! G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
 #endif // G2
@@ -58,9 +58,9 @@ namespace icicle {
   }
 
 #ifdef G2
-  ICICLE_DISPATCHER_INST(ProjectiveG2ConvertMont, projective_g2_convert_montgomery, ProjectiveG2ConvertMontImpl);
+  ICICLE_DISPATCHER_INST(ProjectiveG2ConvertMont, g2_projective_convert_montgomery, ProjectiveG2ConvertMontImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(CURVE, projective_g2_convert_montgomery)(
+  extern "C" eIcicleError CONCAT_EXPAND(CURVE, g2_projective_convert_montgomery)(
     const g2_projective_t* input, uint64_t n, bool is_into, const VecOpsConfig& config, g2_projective_t* output)
   {
     return ProjectiveG2ConvertMont::execute(input, n, is_into, config, output);
@@ -70,7 +70,7 @@ namespace icicle {
   eIcicleError convert_montgomery(
     const g2_projective_t* input, uint64_t n, bool is_into, const VecOpsConfig& config, g2_projective_t* output)
   {
-    return CONCAT_EXPAND(CURVE, projective_g2_convert_montgomery)(input, n, is_into, config, output);
+    return CONCAT_EXPAND(CURVE, g2_projective_convert_montgomery)(input, n, is_into, config, output);
   }
 
 #endif // G2
