@@ -49,17 +49,14 @@ public:
   static constexpr HOST_DEVICE_INLINE ExtensionField to_montgomery(const ExtensionField& xs)
   {
     return ExtensionField{
-      FF::to_montgomery(xs.real), FF::to_montgomery(xs.im1),
-      FF::to_montgomery(xs.im2), FF::to_montgomery(xs.im3)
-    };
+      FF::to_montgomery(xs.real), FF::to_montgomery(xs.im1), FF::to_montgomery(xs.im2), FF::to_montgomery(xs.im3)};
   }
 
   static constexpr HOST_DEVICE_INLINE ExtensionField from_montgomery(const ExtensionField& xs)
   {
     return ExtensionField{
-      FF::from_montgomery(xs.real), FF::from_montgomery(xs.im1),
-      FF::from_montgomery(xs.im2), FF::from_montgomery(xs.im3)
-    };
+      FF::from_montgomery(xs.real), FF::from_montgomery(xs.im1), FF::from_montgomery(xs.im2),
+      FF::from_montgomery(xs.im3)};
   }
 
   static HOST_INLINE ExtensionField rand_host()

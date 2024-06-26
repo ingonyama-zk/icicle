@@ -23,16 +23,19 @@ extern "C" cudaError_t m31_mul_cuda(
 extern "C" cudaError_t m31_add_cuda(
   m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
 
+extern "C" cudaError_t m31_accumulate_cuda(
+  m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t m31_sub_cuda(
   m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
 
-// extern "C" cudaError_t m31_transpose_matrix_cuda(
-//   const m31::scalar_t* input,
-//   uint32_t row_size,
-//   uint32_t column_size,
-//   m31::scalar_t* output,
-//   device_context::DeviceContext& ctx,
-//   bool on_device,
-//   bool is_async);
+extern "C" cudaError_t m31_transpose_matrix_cuda(
+  const m31::scalar_t* input,
+  uint32_t row_size,
+  uint32_t column_size,
+  m31::scalar_t* output,
+  device_context::DeviceContext& ctx,
+  bool on_device,
+  bool is_async);
 
 #endif

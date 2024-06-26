@@ -38,6 +38,9 @@ extern "C" cudaError_t babybear_extension_mul_cuda(
 extern "C" cudaError_t babybear_extension_add_cuda(
   babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
 
+extern "C" cudaError_t babybear_extension_accumulate_cuda(
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t babybear_extension_sub_cuda(
   babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
 
@@ -60,6 +63,9 @@ extern "C" cudaError_t babybear_mul_cuda(
 
 extern "C" cudaError_t babybear_add_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
+
+extern "C" cudaError_t babybear_accumulate_cuda(
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
 
 extern "C" cudaError_t babybear_sub_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
@@ -103,68 +109,5 @@ extern "C" cudaError_t babybear_poseidon2_hash_cuda(
 extern "C" cudaError_t babybear_release_poseidon2_constants_cuda(
   poseidon2::Poseidon2Constants<babybear::scalar_t>* constants,
   device_context::DeviceContext& ctx);
-
-extern "C" cudaError_t babybear_mul_cuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
-
-extern "C" cudaError_t babybear_add_cuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
-
-extern "C" cudaError_t babybear_accumulate_cuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
-
-extern "C" cudaError_t babybear_sub_cuda(
-  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
-
-extern "C" cudaError_t babybear_transpose_matrix_cuda(
-  const babybear::scalar_t* input,
-  uint32_t row_size,
-  uint32_t column_size,
-  babybear::scalar_t* output,
-  device_context::DeviceContext& ctx,
-  bool on_device,
-  bool is_async);
-
-extern "C" cudaError_t babybear_bit_reverse_cuda(
-  const babybear::scalar_t* input,
-  uint64_t n,
-  vec_ops::BitReverseConfig& config,
-  babybear::scalar_t* output);
-
-extern "C" void babybear_generate_scalars(babybear::scalar_t* scalars, int size);
-
-extern "C" cudaError_t babybear_scalar_convert_montgomery(
-  babybear::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
-
-extern "C" cudaError_t babybear_initialize_domain(
-  babybear::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
-
-extern "C" cudaError_t babybear_ntt_cuda(
-  const babybear::scalar_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::scalar_t* output);
-
-extern "C" cudaError_t babybear_release_domain(device_context::DeviceContext& ctx);
-
-extern "C" void babybear_extension_generate_scalars(babybear::extension_t* scalars, int size);
-
-extern "C" cudaError_t babybear_extension_scalar_convert_montgomery(
-  babybear::extension_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
-
-extern "C" cudaError_t babybear_extension_mul_cuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
-
-extern "C" cudaError_t babybear_extension_add_cuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
-
-extern "C" cudaError_t babybear_extension_sub_cuda(
-  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
-
-extern "C" cudaError_t babybear_extension_transpose_matrix_cuda(
-  const babybear::extension_t* input,
-  uint32_t row_size,
-  uint32_t column_size,
-  babybear::extension_t* output,
-  device_context::DeviceContext& ctx,
-  bool on_device,
-  bool is_async);
 
 #endif
