@@ -67,8 +67,8 @@ pub enum NttAlgorithm {
 }
 
 // CUDA backend specific flags
-const CUDA_NTT_FAST_TWIDDLES_MODE: &str = "fast_twiddles";
-const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
+pub const CUDA_NTT_FAST_TWIDDLES_MODE: &str = "fast_twiddles";
+pub const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -264,10 +264,11 @@ macro_rules! impl_ntt_without_domain {
       $domain_field:ident,
       $domain_config:ident,
       $ntt_type:ident,
+      $ntt_type_lit:literal,
       $inout:ident
     ) => {
         extern "C" {
-            #[link_name = concat!($field_prefix, "_ntt")]
+            #[link_name = concat!($field_prefix, $ntt_type_lit)]
             fn ntt_ffi(
                 input: *const $inout,
                 size: i32,
@@ -352,7 +353,7 @@ macro_rules! impl_ntt {
                 }
             }
 
-            impl_ntt_without_domain!($field_prefix, $field, $field_config, NTT, $field);
+            impl_ntt_without_domain!($field_prefix, $field, $field_config, NTT, "_ntt", $field);
         }
     };
 }

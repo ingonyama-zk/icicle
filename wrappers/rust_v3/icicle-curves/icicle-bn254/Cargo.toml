@@ -22,5 +22,5 @@ cmake = "0.1.50"
 [features]
 default = []
 g2 = ["icicle-core/g2"]
-# ec_ntt = ["icicle-core/ec_ntt"]
+ec_ntt = ["icicle-core/ec_ntt"]
 
