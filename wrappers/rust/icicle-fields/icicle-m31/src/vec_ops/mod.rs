@@ -13,7 +13,7 @@ impl_vec_ops_field!("m31_extension", m31_extension, ExtensionField, ExtensionCfg
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::{ScalarField, ExtensionField};
+    use crate::field::{ExtensionField, ScalarField};
     use icicle_core::impl_vec_add_tests;
     use icicle_core::vec_ops::tests::*;
 
