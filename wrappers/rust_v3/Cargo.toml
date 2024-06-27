@@ -7,6 +7,7 @@ members = [
   "icicle-curves/icicle-bls12-377",
   "icicle-curves/icicle-bls12-381",
   "icicle-curves/icicle-bn254",  
+  "icicle-curves/icicle-grumpkin",
   "icicle-fields/icicle-babybear",
   "icicle-fields/icicle-stark252",
 ]
