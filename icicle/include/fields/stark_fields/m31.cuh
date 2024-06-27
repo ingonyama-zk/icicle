@@ -10,7 +10,7 @@ namespace m31 {
   {
   public:
     HOST_DEVICE_INLINE MersenneField(const MersenneField& other) : Field<CONFIG>(other) {}
-    HOST_DEVICE_INLINE MersenneField(uint32_t x = 0) : Field<CONFIG>({x}) {}
+    HOST_DEVICE_INLINE MersenneField(const uint32_t& x = 0) : Field<CONFIG>({x}) {}
     HOST_DEVICE_INLINE MersenneField(storage<CONFIG::limbs_count> x) : Field<CONFIG>{x} {}
     HOST_DEVICE_INLINE MersenneField(const Field<CONFIG>& other) : Field<CONFIG>(other) {}
 
@@ -33,11 +33,6 @@ namespace m31 {
       if (this != &other) { Field<CONFIG>::operator=(other); }
       return *this;
     }
-
-    // HOST_DEVICE_INLINE MersenneField& operator=(const uint32_t& other) {
-    //     this->limbs_storage.limbs[0] = other;
-    //     return *this;
-    // }
 
     HOST_DEVICE_INLINE uint32_t get_limb() const { return this->limbs_storage.limbs[0]; }
 
