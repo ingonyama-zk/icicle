@@ -14,9 +14,6 @@ icicle-cuda-runtime = { workspace = true }
 [build-dependencies]
 cmake = "0.1.50"
 
-[dev-dependencies]
-lambdaworks-math = "0.6.0"
-
 [features]
 default = []
 devmode = ["icicle-core/devmode"]
