@@ -73,7 +73,6 @@ pub const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct NTTConfig<S> {
-    /// Details related to the device such as its id and stream id. See [DeviceContext](DeviceContext).
     pub stream_handle: IcicleStreamHandle,
     /// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
     pub coset_gen: S,
