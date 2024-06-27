@@ -47,4 +47,8 @@ extern "C" cudaError_t stark252_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
+extern "C" cudaError_t stark252_bit_reverse_cuda(
+  const stark252::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, stark252::scalar_t* output);
+
+
 #endif

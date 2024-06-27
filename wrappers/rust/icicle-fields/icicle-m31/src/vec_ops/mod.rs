@@ -1,4 +1,4 @@
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
 
 use icicle_core::error::IcicleResult;
 use icicle_core::impl_vec_ops_field;
@@ -9,12 +9,18 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 impl_vec_ops_field!("m31", m31, ScalarField, ScalarCfg);
+impl_vec_ops_field!("m31_extension", m31_extension, ExtensionField, ExtensionCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::ScalarField;
+    use crate::field::{ScalarField, ExtensionField};
     use icicle_core::impl_vec_add_tests;
     use icicle_core::vec_ops::tests::*;
 
     impl_vec_add_tests!(ScalarField);
+    mod extension {
+        use super::*;
+
+        impl_vec_add_tests!(ExtensionField);
+    }
 }

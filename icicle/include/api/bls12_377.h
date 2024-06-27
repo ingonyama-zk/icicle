@@ -99,6 +99,10 @@ extern "C" cudaError_t bls12_377_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
+extern "C" cudaError_t bls12_377_bit_reverse_cuda(
+  const bls12_377::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, bls12_377::scalar_t* output);
+
+
 extern "C" cudaError_t bls12_377_create_optimized_poseidon_constants_cuda(
   int arity,
   int full_rounds_half,

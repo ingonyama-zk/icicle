@@ -21,6 +21,11 @@ namespace m31 {
     static constexpr HOST_DEVICE_INLINE MersenneField from(uint32_t value) { return MersenneField(value); }
 
     static HOST_INLINE MersenneField rand_host() { return MersenneField(Field<CONFIG>::rand_host()); }
+    static void rand_host_many(MersenneField* out, int size)
+    {
+      for (int i = 0; i < size; i++)
+        out[i] = rand_host();
+    }
 
     // Define assignment operator
     HOST_DEVICE_INLINE MersenneField& operator=(const Field<CONFIG>& other)

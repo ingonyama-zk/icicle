@@ -53,6 +53,10 @@ extern "C" cudaError_t babybear_extension_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
+extern "C" cudaError_t babybear_extension_bit_reverse_cuda(
+  const babybear::extension_t* input, uint64_t n, vec_ops::BitReverseConfig& config, babybear::extension_t* output);
+
+
 extern "C" void babybear_extension_generate_scalars(babybear::extension_t* scalars, int size);
 
 extern "C" cudaError_t babybear_extension_scalar_convert_montgomery(
@@ -78,6 +82,10 @@ extern "C" cudaError_t babybear_transpose_matrix_cuda(
   device_context::DeviceContext& ctx,
   bool on_device,
   bool is_async);
+
+extern "C" cudaError_t babybear_bit_reverse_cuda(
+  const babybear::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, babybear::scalar_t* output);
+
 
 extern "C" cudaError_t babybear_create_poseidon2_constants_cuda(
   int width,
