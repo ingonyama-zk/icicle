@@ -3,6 +3,7 @@ use std::os::raw::{c_char, c_void};
 
 use crate::device::{Device, DeviceProperties};
 use crate::errors::eIcicleError;
+use crate::stream::IcicleStream;
 
 pub type IcicleStreamHandle = *mut c_void;
 
@@ -116,5 +117,16 @@ pub fn get_registered_devices() -> Result<Vec<String>, eIcicleError> {
             .map(|s| s.to_string())
             .collect();
         Ok(devices)
+    }
+}
+
+// This function pre-allocates default memory pool and warms the GPU up
+// so that subsequent memory allocations and other calls are not slowed down
+pub fn warmup(stream: &IcicleStream) -> Result<(), eIcicleError> {
+    let mut device_ptr: *mut c_void = std::ptr::null_mut();
+    let free_memory: usize = 1 << 28;
+    unsafe {
+        icicle_malloc_async(&mut device_ptr, free_memory >> 1, stream.handle).wrap()?;
+        icicle_free_async(device_ptr, stream.handle).wrap()
     }
 }

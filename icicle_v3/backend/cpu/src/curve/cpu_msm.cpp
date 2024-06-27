@@ -13,28 +13,32 @@ template <typename S, typename A, typename P>
 eIcicleError
 cpu_msm(const Device& device, const S* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
-  P res = P::zero();
-  for (auto i = 0; i < msm_size; ++i) {
-    res = res + P::from_affine(bases[i]) * scalars[i];
+  for (auto batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+    P res = P::zero();
+    const S* batch_scalars = scalars + msm_size * batch_idx;
+    for (auto i = 0; i < msm_size; ++i) {
+      res = res + P::from_affine(bases[i]) * batch_scalars[i];
+    }
+    results[batch_idx] = res;
   }
-  results[0] = res;
   return eIcicleError::SUCCESS;
 }
 
 template <typename A>
 eIcicleError cpu_msm_precompute_bases(
-  const Device& device,
-  const A* input_bases,
-  int nof_bases,
-  int precompute_factor,
-  const MsmPreComputeConfig& config,
-  A* output_bases)
+  const Device& device, const A* input_bases, int nof_bases, const MSMConfig& config, A* output_bases)
 {
-  return eIcicleError::API_NOT_IMPLEMENTED;
+  ICICLE_ASSERT(!config.are_points_on_device && !config.are_scalars_on_device);
+  memcpy(output_bases, input_bases, sizeof(A) * nof_bases);
+  return eIcicleError::SUCCESS;
 }
 
 REGISTER_MSM_BACKEND("CPU", (cpu_msm<scalar_t, affine_t, projective_t>));
 REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<affine_t>);
+
+// TODO Yuval : do not merge!!
+REGISTER_MSM_BACKEND("CUDA", (cpu_msm<scalar_t, affine_t, projective_t>));
+REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CUDA", cpu_msm_precompute_bases<affine_t>);
 
 #ifdef G2
 REGISTER_MSM_G2_BACKEND("CPU", (cpu_msm<scalar_t, g2_affine_t, g2_projective_t>));

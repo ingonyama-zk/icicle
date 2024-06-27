@@ -69,25 +69,29 @@ public:
     scalar_t::rand_host_many(scalars.get(), N);
     P::rand_host_many(bases.get(), N);
 
-    P result{};
+    P result_main{};
+    P result_ref{};
 
-    auto run = [&](const char* dev_type, P* result, const char* msg, bool measure, int iters) {
+    auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
       Device dev = {dev_type, 0};
       icicle_set_device(dev);
 
-      auto config = default_msm_config();
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
 
+      auto config = default_msm_config();
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
         // TODO real test
-        msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
+        msm_precompute_bases(bases.get(), N, config, bases.get());
         msm(scalars.get(), bases.get(), N, config, result);
       }
-      END_TIMER(MSM_sync, msg, measure);
+      END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
 
-    run("CPU", &result, "CPU msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    // TODO test something
+    run(s_main_target, &result_main, "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(s_ref_target, &result_ref, "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    ASSERT_EQ(result_ref, result_main);
   }
 
   template <typename T, typename P>
