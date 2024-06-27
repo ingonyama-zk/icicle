@@ -746,7 +746,7 @@ namespace msm {
         NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
         big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms_in_batch, c);
       } else {
-        // the recursive reduction algorithm works with 2 types of reduction that can run on parallel streams
+        // the iterative reduction algorithm works with 2 types of reduction that can run on parallel streams
         cudaStream_t stream_reduction;
         cudaEvent_t event_finished_reduction;
         CHK_IF_RETURN(cudaStreamCreate(&stream_reduction));
