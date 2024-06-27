@@ -21,14 +21,24 @@ namespace icicle {
     icicleStreamHandle stream; /**< stream for async execution. */
     int nof_bases; /**< Number of bases in the MSM for batched MSM. Set to 0 if all MSMs use the same bases or set to
                     * 'batch X #scalars' otherwise.  Default value: 0 (that is reuse bases for all batch elements). */
-    int precompute_factor;            /**< The number of extra points to pre-compute for each point. See the
-                                       *   [precompute_msm_bases](@ref precompute_msm_bases) function, `precompute_factor` passed
-                                       *   there needs to be equal to the one used here. Larger values decrease the
-                                       *   number of computations to make, on-line memory footprint, but increase the static
-                                       *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
-    int batch_size;                   /**< The number of MSMs to compute. Default value: 1. */
-    bool are_scalars_on_device;       /**< True if scalars are on device and false if they're on host. Default value:
-                                       *   false. */
+    int precompute_factor;      /**< The number of extra points to pre-compute for each point. See the
+                                 *   [precompute_msm_bases](@ref precompute_msm_bases) function, `precompute_factor` passed
+                                 *   there needs to be equal to the one used here. Larger values decrease the
+                                 *   number of computations to make, on-line memory footprint, but increase the static
+                                 *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
+    int c;                      /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket
+                                 *   method" that we use to solve the MSM problem. As a rule of thumb, larger value
+                                 *   means more on-line memory footprint but also more parallelism and less computational
+                                 *   complexity (up to a certain point). Currently pre-computation is independent of
+                                 *   \f$ c \f$, however in the future value of \f$ c \f$ here and the one passed into the
+                                 *   [precompute_msm_points](@ref precompute_msm_points) function will need to be identical.
+                                 *    Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically).  */
+    int bitsize;                /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
+                                 *   but if a different (better) upper bound is known, it should be reflected in this
+                                 *   variable. Default value: 0 (set to the bitsize of scalar field). */
+    int batch_size;             /**< The number of MSMs to compute. Default value: 1. */
+    bool are_scalars_on_device; /**< True if scalars are on device and false if they're on host. Default value:
+                                 *   false. */
     bool are_scalars_montgomery_form; /**< True if scalars are in Montgomery form and false otherwise. Default value:
                                        *   true. */
     bool are_points_on_device; /**< True if points are on device and false if they're on host. Default value: false. */
@@ -55,6 +65,8 @@ namespace icicle {
       nullptr, // stream
       0,       // nof_bases
       1,       // precompute_factor
+      0,       // c
+      0,       // bitsize
       1,       // batch_size
       false,   // are_scalars_on_device
       false,   // are_scalars_montgomery_form
@@ -86,29 +98,8 @@ namespace icicle {
   template <typename S, typename A, typename P>
   eIcicleError msm(const S* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results);
 
-  struct MsmPreComputeConfig {
-    icicleStreamHandle stream; /**< stream for async execution. */
-    bool is_input_on_device;
-    bool is_output_on_device;
-    bool is_async;
-
-    ConfigExtension* ext = nullptr; /** backend specific extensions*/
-  };
-
-  static MsmPreComputeConfig default_msm_pre_compute_config()
-  {
-    MsmPreComputeConfig config = {
-      nullptr, // stream
-      false,   // is_input_on_device
-      false,   // is_output_on_device
-      false,   // is_async
-    };
-    return config;
-  }
-
   template <typename A>
-  eIcicleError msm_precompute_bases(
-    const A* input_bases, int nof_bases, int precompute_factor, const MsmPreComputeConfig& config, A* output_bases);
+  eIcicleError msm_precompute_bases(const A* input_bases, int nof_bases, const MSMConfig& config, A* output_bases);
 
   /*************************** Backend registration ***************************/
 
@@ -131,12 +122,7 @@ namespace icicle {
   }
 
   using MsmPreComputeImpl = std::function<eIcicleError(
-    const Device& device,
-    const affine_t* input_bases,
-    int nof_bases,
-    int precompute_factor,
-    const MsmPreComputeConfig& config,
-    affine_t* output_bases)>;
+    const Device& device, const affine_t* input_bases, int nof_bases, const MSMConfig& config, affine_t* output_bases)>;
 
   void register_msm_precompute_bases(const std::string& deviceType, MsmPreComputeImpl impl);
 
@@ -157,12 +143,12 @@ namespace icicle {
     const MSMConfig& config,
     g2_projective_t* results)>;
 
-  void register_msm_g2(const std::string& deviceType, MsmG2Impl impl);
+  void register_g2_msm(const std::string& deviceType, MsmG2Impl impl);
 
 #define REGISTER_MSM_G2_BACKEND(DEVICE_TYPE, FUNC)                                                                     \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_msm_g2) = []() -> bool {                                                                   \
-      register_msm_g2(DEVICE_TYPE, FUNC);                                                                              \
+      register_g2_msm(DEVICE_TYPE, FUNC);                                                                              \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -171,16 +157,15 @@ namespace icicle {
     const Device& device,
     const g2_affine_t* input_bases,
     int nof_bases,
-    int precompute_factor,
-    const MsmPreComputeConfig& config,
+    const MSMConfig& config,
     g2_affine_t* output_bases)>;
 
-  void register_msm_g2_precompute_bases(const std::string& deviceType, MsmG2PreComputeImpl impl);
+  void register_g2_msm_precompute_bases(const std::string& deviceType, MsmG2PreComputeImpl impl);
 
 #define REGISTER_MSM_G2_PRE_COMPUTE_BASES_BACKEND(DEVICE_TYPE, FUNC)                                                   \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_msm_g2_precompute_bases) = []() -> bool {                                                  \
-      register_msm_g2_precompute_bases(DEVICE_TYPE, FUNC);                                                             \
+      register_g2_msm_precompute_bases(DEVICE_TYPE, FUNC);                                                             \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
