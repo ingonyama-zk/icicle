@@ -10,6 +10,7 @@
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
 #include "merkle-tree/merkle.cuh"
+#include "matrix/matrix.cuh"
 #include "curves/params/grumpkin.cuh"
 #include "msm/msm.cuh"
 #include "vec_ops/vec_ops.cuh"
@@ -49,6 +50,14 @@ extern "C" cudaError_t grumpkin_build_merkle_tree(
   const hash::SpongeHasher<grumpkin::scalar_t, grumpkin::scalar_t>* compression,
   const hash::SpongeHasher<grumpkin::scalar_t, grumpkin::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
+
+  extern "C" cudaError_t grumpkin_mmcs_commit_cuda(
+    const matrix::Matrix<grumpkin::scalar_t>* leaves,
+    unsigned int number_of_inputs,
+    grumpkin::scalar_t* digests,
+    const hash::SpongeHasher<grumpkin::scalar_t, grumpkin::scalar_t>* hasher,
+    const hash::SpongeHasher<grumpkin::scalar_t, grumpkin::scalar_t>* compression,
+    const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t grumpkin_poseidon_create_cuda(
   poseidon::Poseidon<grumpkin::scalar_t>** poseidon,

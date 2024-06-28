@@ -6,6 +6,7 @@ use icicle_cuda_runtime::{
 use crate::hash::SpongeHash;
 use crate::{error::IcicleResult, ntt::FieldImpl};
 
+pub mod mmcs;
 #[doc(hidden)]
 pub mod tests;
 

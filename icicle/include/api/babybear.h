@@ -10,6 +10,7 @@
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
 #include "merkle-tree/merkle.cuh"
+#include "matrix/matrix.cuh"
 #include "fields/stark_fields/babybear.cuh"
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
@@ -21,6 +22,7 @@ extern "C" cudaError_t babybear_extension_ntt_cuda(
 extern "C" cudaError_t babybear_poseidon2_create_cuda(
   poseidon2::Poseidon2<babybear::scalar_t>** poseidon,
   unsigned int width,
+  unsigned int rate,
   unsigned int alpha,
   unsigned int internal_rounds,
   unsigned int external_rounds,
@@ -34,6 +36,7 @@ extern "C" cudaError_t babybear_poseidon2_create_cuda(
 extern "C" cudaError_t babybear_poseidon2_load_cuda(
   poseidon2::Poseidon2<babybear::scalar_t>** poseidon,
   unsigned int width,
+  unsigned int rate,
   poseidon2::MdsType mds_type,
   poseidon2::DiffusionStrategy diffusion,
   device_context::DeviceContext& ctx
@@ -75,6 +78,14 @@ extern "C" cudaError_t babybear_build_merkle_tree(
   const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* compression,
   const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
+
+  extern "C" cudaError_t babybear_mmcs_commit_cuda(
+    const matrix::Matrix<babybear::scalar_t>* leaves,
+    unsigned int number_of_inputs,
+    babybear::scalar_t* digests,
+    const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* hasher,
+    const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* compression,
+    const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t babybear_mul_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);

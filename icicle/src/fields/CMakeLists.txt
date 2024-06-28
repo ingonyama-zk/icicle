@@ -12,6 +12,7 @@ set(SRC ${CMAKE_SOURCE_DIR}/src)
 set(FIELD_SOURCE ${SRC}/fields/extern.cu)
 list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern.cu)
 list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern.cu)
+list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern_mmcs.cu)
 
 if(EXT_FIELD)
   list(APPEND FIELD_SOURCE ${SRC}/fields/extern_extension.cu)

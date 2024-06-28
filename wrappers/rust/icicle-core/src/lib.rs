@@ -1,3 +1,5 @@
+use std::ffi::c_void;
+
 pub mod curve;
 pub mod ecntt;
 pub mod error;
@@ -18,4 +20,12 @@ pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
 where
     <Self::ScalarField as traits::FieldImpl>::Config: ntt::NTT<Self::ScalarField, Self::ScalarField>,
 {
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct Matrix {
+    pub values: *const c_void,
+    pub width: usize,
+    pub height: usize,
 }

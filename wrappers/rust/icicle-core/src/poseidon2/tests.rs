@@ -10,7 +10,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     let ctx = DeviceContext::default();
-    Poseidon2::load(width, mds_type, diffusion, &ctx).unwrap()
+    Poseidon2::load(width, width, mds_type, diffusion, &ctx).unwrap()
 }
 
 fn _check_poseidon_hash_many<F: FieldImpl>(width: usize, poseidon: &Poseidon2<F>) -> (F, F)
@@ -44,7 +44,7 @@ where
     let widths = [2, 3, 4, 8, 12, 16, 20, 24];
     let ctx = DeviceContext::default();
     for width in widths {
-        let poseidon = Poseidon2::<F>::load(width, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
+        let poseidon = Poseidon2::<F>::load(width, width, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
 
         _check_poseidon_hash_many(width, &poseidon);
     }

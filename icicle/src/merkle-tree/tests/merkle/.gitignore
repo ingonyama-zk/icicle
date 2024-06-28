@@ -1,0 +1,3 @@
+merkle.o
+poseidon2.o
+test_merkle_poseidon2
