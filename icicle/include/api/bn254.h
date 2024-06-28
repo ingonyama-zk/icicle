@@ -10,6 +10,7 @@
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
 #include "merkle-tree/merkle.cuh"
+#include "matrix/matrix.cuh"
 #include "curves/params/bn254.cuh"
 #include "ntt/ntt.cuh"
 #include "msm/msm.cuh"
@@ -75,6 +76,7 @@ extern "C" cudaError_t bn254_projective_convert_montgomery(
 extern "C" cudaError_t bn254_poseidon2_create_cuda(
   poseidon2::Poseidon2<bn254::scalar_t>** poseidon,
   unsigned int width,
+  unsigned int rate,
   unsigned int alpha,
   unsigned int internal_rounds,
   unsigned int external_rounds,
@@ -88,6 +90,7 @@ extern "C" cudaError_t bn254_poseidon2_create_cuda(
 extern "C" cudaError_t bn254_poseidon2_load_cuda(
   poseidon2::Poseidon2<bn254::scalar_t>** poseidon,
   unsigned int width,
+  unsigned int rate,
   poseidon2::MdsType mds_type,
   poseidon2::DiffusionStrategy diffusion,
   device_context::DeviceContext& ctx
@@ -129,6 +132,14 @@ extern "C" cudaError_t bn254_build_merkle_tree(
   const hash::SpongeHasher<bn254::scalar_t, bn254::scalar_t>* compression,
   const hash::SpongeHasher<bn254::scalar_t, bn254::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
+
+  extern "C" cudaError_t bn254_mmcs_commit_cuda(
+    const matrix::Matrix<bn254::scalar_t>* leaves,
+    unsigned int number_of_inputs,
+    bn254::scalar_t* digests,
+    const hash::SpongeHasher<bn254::scalar_t, bn254::scalar_t>* hasher,
+    const hash::SpongeHasher<bn254::scalar_t, bn254::scalar_t>* compression,
+    const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t bn254_poseidon_create_cuda(
   poseidon::Poseidon<bn254::scalar_t>** poseidon,

@@ -46,23 +46,24 @@ where
 {
     pub fn load(
         width: usize,
+        rate: usize,
         mds_type: MdsType,
         diffusion: DiffusionStrategy,
         ctx: &DeviceContext,
     ) -> IcicleResult<Self> {
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::load(width as u32, mds_type, diffusion, ctx).and_then(
-            |handle| {
+        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::load(width as u32, rate as u32, mds_type, diffusion, ctx)
+            .and_then(|handle| {
                 Ok(Self {
                     width,
                     handle,
                     phantom: PhantomData,
                 })
-            },
-        )
+            })
     }
 
     pub fn new(
         width: usize,
+        rate: usize,
         alpha: u32,
         internal_rounds: u32,
         external_rounds: u32,
@@ -74,6 +75,7 @@ where
     ) -> IcicleResult<Self> {
         <<F as FieldImpl>::Config as Poseidon2Impl<F>>::create(
             width as u32,
+            rate as u32,
             alpha,
             internal_rounds,
             external_rounds,
@@ -217,6 +219,7 @@ where
 pub trait Poseidon2Impl<F: FieldImpl> {
     fn create(
         width: u32,
+        rate: u32,
         alpha: u32,
         internal_rounds: u32,
         external_rounds: u32,
@@ -229,6 +232,7 @@ pub trait Poseidon2Impl<F: FieldImpl> {
 
     fn load(
         width: u32,
+        rate: u32,
         mds_type: MdsType,
         diffusion: DiffusionStrategy,
         ctx: &DeviceContext,
@@ -284,6 +288,7 @@ macro_rules! impl_poseidon2 {
                 pub(crate) fn create(
                     poseidon: *mut Poseidon2Handle,
                     width: u32,
+                    rate: u32,
                     alpha: u32,
                     internal_rounds: u32,
                     external_rounds: u32,
@@ -298,6 +303,7 @@ macro_rules! impl_poseidon2 {
                 pub(crate) fn load(
                     poseidon: *mut Poseidon2Handle,
                     width: u32,
+                    rate: u32,
                     mds_type: MdsType,
                     diffusion: DiffusionStrategy,
                     ctx: &DeviceContext,
@@ -342,6 +348,7 @@ macro_rules! impl_poseidon2 {
         impl Poseidon2Impl<$field> for $field_config {
             fn create(
                 width: u32,
+                rate: u32,
                 alpha: u32,
                 internal_rounds: u32,
                 external_rounds: u32,
@@ -356,6 +363,7 @@ macro_rules! impl_poseidon2 {
                     $field_prefix_ident::create(
                         poseidon.as_mut_ptr(),
                         width,
+                        rate,
                         alpha,
                         internal_rounds,
                         external_rounds,
@@ -372,13 +380,14 @@ macro_rules! impl_poseidon2 {
 
             fn load(
                 width: u32,
+                rate: u32,
                 mds_type: MdsType,
                 diffusion: DiffusionStrategy,
                 ctx: &DeviceContext,
             ) -> IcicleResult<Poseidon2Handle> {
                 unsafe {
                     let mut poseidon = MaybeUninit::<Poseidon2Handle>::uninit();
-                    $field_prefix_ident::load(poseidon.as_mut_ptr(), width, mds_type, diffusion, ctx)
+                    $field_prefix_ident::load(poseidon.as_mut_ptr(), width, rate, mds_type, diffusion, ctx)
                         .wrap()
                         .and(Ok(poseidon.assume_init()))
                 }
@@ -544,7 +553,7 @@ pub mod bench {
                     (MdsType::Default, DiffusionStrategy::Default),
                     (MdsType::Plonky, DiffusionStrategy::Montgomery),
                 ] {
-                    let poseidon = Poseidon2::<F>::load(t, mds, diffusion, &ctx).unwrap();
+                    let poseidon = Poseidon2::<F>::load(t, t, mds, diffusion, &ctx).unwrap();
                     let bench_descr = format!(
                         "TestSize: 2**{}, Mds::{:?}, Diffusion::{:?}, Width: {}",
                         test_size_log2, mds, diffusion, t

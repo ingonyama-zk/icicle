@@ -2,14 +2,6 @@
 #include "merkle-tree/merkle.cuh"
 
 namespace merkle_tree {
-  template <typename T>
-  void swap(T** r, T** s)
-  {
-    T* t = *r;
-    *r = *s;
-    *s = t;
-  }
-
   /// Constructs merkle subtree without parallelization
   /// The digests are aligned sequentially per row
   /// Example:

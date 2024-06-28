@@ -4,7 +4,10 @@
 
 #include "gpu-utils/device_context.cuh"
 #include "gpu-utils/error_handler.cuh"
+#include "matrix/matrix.cuh"
 #include <cassert>
+
+using matrix::Matrix;
 
 /**
  * @namespace hash
@@ -123,6 +126,17 @@ namespace hash {
       Image* output,
       const device_context::DeviceContext& ctx) const = 0;
 
+    virtual cudaError_t absorb_2d(
+      const Matrix<PreImage>* inputs,
+      Image* states,
+      unsigned int number_of_inputs,
+      uint64_t number_of_rows,
+      const device_context::DeviceContext& ctx) const
+    {
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Absorb 2d is not implemented for this hash");
+      return cudaError_t::cudaSuccess;
+    };
+
     /// @brief Run the cryptographic permutation function.
     /// @param states pointer to states allocated on-device
     /// @param output pointer to states allocated on-device. Can equal to @ref(states) to run in-place
@@ -143,6 +157,19 @@ namespace hash {
     {
       return cudaError_t::cudaSuccess;
     };
+
+    virtual cudaError_t compress_and_inject(
+      const Matrix<PreImage>* matrices_to_inject,
+      unsigned int number_of_inputs,
+      uint64_t number_of_rows,
+      const Image* prev_layer,
+      Image* next_layer,
+      unsigned int digest_elements,
+      const device_context::DeviceContext& ctx) const
+    {
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Compress and inject is not implemented for this hash");
+      return cudaError_t::cudaSuccess;
+    }
 
     /// @brief Permute aligned input and do squeeze
     /// @param input pointer to input allocated on-device

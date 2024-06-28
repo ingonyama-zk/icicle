@@ -13,6 +13,7 @@ namespace poseidon2 {
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_create_cuda)(
     Poseidon2<scalar_t>** poseidon,
     unsigned int width,
+    unsigned int rate,
     unsigned int alpha,
     unsigned int internal_rounds,
     unsigned int external_rounds,
@@ -24,8 +25,8 @@ namespace poseidon2 {
   {
     try {
       *poseidon = new Poseidon2<scalar_t>(
-        width, alpha, internal_rounds, external_rounds, round_constants, internal_matrix_diag, mds_type, diffusion,
-        ctx);
+        width, rate, alpha, internal_rounds, external_rounds, round_constants, internal_matrix_diag, mds_type,
+        diffusion, ctx);
       return cudaError_t::cudaSuccess;
     } catch (const IcicleError& _error) {
       return cudaError_t::cudaErrorUnknown;
@@ -35,12 +36,13 @@ namespace poseidon2 {
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_load_cuda)(
     Poseidon2<scalar_t>** poseidon,
     unsigned int width,
+    unsigned int rate,
     MdsType mds_type,
     DiffusionStrategy diffusion,
     device_context::DeviceContext& ctx)
   {
     try {
-      *poseidon = new Poseidon2<scalar_t>(width, mds_type, diffusion, ctx);
+      *poseidon = new Poseidon2<scalar_t>(width, rate, mds_type, diffusion, ctx);
       return cudaError_t::cudaSuccess;
     } catch (const IcicleError& _error) {
       return cudaError_t::cudaErrorUnknown;

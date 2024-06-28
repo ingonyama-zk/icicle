@@ -64,7 +64,7 @@ pub(crate) mod tests {
 
     type PlonkyPoseidon2T16 = PlonkyPoseidon2<BabyBear, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBabyBear, 16, 7>;
 
-    pub(crate) fn get_plonky3_poseidon2_t16() -> (Poseidon2<ScalarField>, PlonkyPoseidon2T16) {
+    pub(crate) fn get_plonky3_poseidon2_t16(rate: usize) -> (Poseidon2<ScalarField>, PlonkyPoseidon2T16) {
         let rounds_p = 13;
         let rounds_f = 8;
         const ALPHA: u64 = 7;
@@ -289,6 +289,7 @@ pub(crate) mod tests {
 
         let poseidon = Poseidon2::new(
             WIDTH,
+            rate,
             ALPHA as u32,
             rounds_p as u32,
             rounds_f as u32,
@@ -307,7 +308,7 @@ pub(crate) mod tests {
     fn test_poseidon2_plonky3_t16() {
         const WIDTH: usize = 16;
 
-        let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16();
+        let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16(16);
 
         let mut input: [BabyBear; WIDTH] = [BabyBear::zero(); WIDTH];
         for i in 0..WIDTH {
@@ -641,6 +642,7 @@ pub(crate) mod tests {
         ];
         let poseidon = Poseidon2::new(
             WIDTH,
+            24,
             ALPHA as u32,
             rounds_p as u32,
             rounds_f as u32,

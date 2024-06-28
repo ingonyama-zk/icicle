@@ -1,6 +1,7 @@
 extern "C" cudaError_t ${FIELD}_poseidon2_create_cuda(
   poseidon2::Poseidon2<${FIELD}::scalar_t>** poseidon,
   unsigned int width,
+  unsigned int rate,
   unsigned int alpha,
   unsigned int internal_rounds,
   unsigned int external_rounds,
@@ -14,6 +15,7 @@ extern "C" cudaError_t ${FIELD}_poseidon2_create_cuda(
 extern "C" cudaError_t ${FIELD}_poseidon2_load_cuda(
   poseidon2::Poseidon2<${FIELD}::scalar_t>** poseidon,
   unsigned int width,
+  unsigned int rate,
   poseidon2::MdsType mds_type,
   poseidon2::DiffusionStrategy diffusion,
   device_context::DeviceContext& ctx

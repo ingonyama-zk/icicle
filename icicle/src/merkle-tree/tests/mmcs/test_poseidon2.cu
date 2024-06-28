@@ -23,8 +23,9 @@ int main(int argc, char* argv[])
   uint32_t tree_arity = 2;
   uint32_t width = 16;
   uint32_t input_block_len = 8;
+  uint32_t rate = 8;
   uint32_t digest_elements = 8;
-  uint64_t tree_height = argc > 1 ? atoi(argv[1]) : 26;
+  uint64_t tree_height = argc > 1 ? atoi(argv[1]) : 3;
   uint64_t number_of_leaves = pow(tree_arity, tree_height);
   uint64_t total_number_of_leaves = number_of_leaves * input_block_len;
 
@@ -32,7 +33,7 @@ int main(int argc, char* argv[])
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
   poseidon2::Poseidon2<scalar_t> poseidon(
-    width, poseidon2::MdsType::DEFAULT_MDS, poseidon2::DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
+    width, rate, poseidon2::MdsType::DEFAULT_MDS, poseidon2::DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   /// Use keep_rows to specify how many rows do you want to store
@@ -42,12 +43,23 @@ int main(int argc, char* argv[])
   /// Fill leaves with scalars [0, 1, ... 2^tree_height - 1]
   START_TIMER(timer_allocation);
   scalar_t input = scalar_t::zero();
-  size_t leaves_mem = total_number_of_leaves * sizeof(scalar_t);
-  scalar_t* leaves = static_cast<scalar_t*>(malloc(leaves_mem));
+
+  unsigned int number_of_inputs = 1;
+  Matrix<scalar_t>* leaves = static_cast<Matrix<scalar_t>*>(malloc(number_of_inputs * sizeof(Matrix<scalar_t>)));
+  std::vector<scalar_t> matrix;
+  matrix.reserve(total_number_of_leaves);
+
   for (uint64_t i = 0; i < total_number_of_leaves; i++) {
-    leaves[i] = input;
+    matrix[i] = input;
     input = input + scalar_t::one();
   }
+
+  leaves[0] = {
+    matrix.data(),
+    input_block_len,
+    number_of_leaves,
+  };
+
   END_TIMER(timer_allocation, "Allocated memory for leaves: ");
 
   /// Allocate memory for digests of {keep_rows} rows of a tree
@@ -56,24 +68,25 @@ int main(int argc, char* argv[])
   scalar_t* digests = static_cast<scalar_t*>(malloc(digests_mem));
   END_TIMER(timer_digests, "Allocated memory for digests");
 
-  std::cout << "Memory for leaves = " << leaves_mem / 1024 / 1024 << " MB; " << leaves_mem / 1024 / 1024 / 1024 << " GB"
-            << std::endl;
+  // std::cout << "Memory for leaves = " << total_number_of_leaves * sizeof(scalar_t) / 1024 / 1024 << " MB; " <<
+  // leaves_mem / 1024 / 1024 / 1024 << " GB"
+  //           << std::endl;
   std::cout << "Number of leaves = " << number_of_leaves << std::endl;
   std::cout << "Total Number of leaves = " << total_number_of_leaves << std::endl;
   std::cout << "Memory for digests = " << digests_mem / 1024 / 1024 << " MB; " << digests_mem / 1024 / 1024 / 1024
             << " GB" << std::endl;
   std::cout << "Number of digest elements = " << digests_len << std::endl;
+  std::cout << std::endl;
 
-  std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
-            << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
+  // std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
+  //           << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
 
   merkle_tree::TreeBuilderConfig tree_config = merkle_tree::default_merkle_config();
   tree_config.arity = tree_arity;
   tree_config.keep_rows = keep_rows;
   tree_config.digest_elements = digest_elements;
   START_TIMER(timer_merkle);
-  babybear_build_poseidon2_merkle_tree(
-    leaves, digests, tree_height, input_block_len, &poseidon, &poseidon, tree_config);
+  babybear_mmcs_commit_cuda(leaves, number_of_inputs, digests, &poseidon, &poseidon, tree_config);
   END_TIMER(timer_merkle, "Merkle tree built: ")
 
   for (int i = 0; i < digests_len; i++) {

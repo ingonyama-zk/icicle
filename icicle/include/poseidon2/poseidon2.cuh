@@ -9,9 +9,12 @@
 #include "utils/utils.h"
 
 #include "hash/hash.cuh"
+#include "matrix/matrix.cuh"
 
 #include "poseidon2/constants.cuh"
 #include "poseidon2/kernels.cuh"
+
+using matrix::Matrix;
 
 /**
  * @namespace poseidon2
@@ -48,6 +51,37 @@ namespace poseidon2 {
       return CHK_LAST();
     }
 
+    cudaError_t absorb_2d(
+      const Matrix<S>* inputs,
+      S* states,
+      unsigned int number_of_inputs,
+      uint64_t number_of_rows,
+      const device_context::DeviceContext& ctx) const override
+    {
+#define P2_ABSORB_2D_T(width)                                                                                          \
+  case width:                                                                                                          \
+    absorb_2d_kernel<S, width><<<poseidon_number_of_blocks(number_of_rows), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(     \
+      inputs, states, number_of_inputs, this->rate, this->constants);                                                  \
+    break;
+
+      switch (this->width) {
+        P2_ABSORB_2D_T(2)
+        P2_ABSORB_2D_T(3)
+        P2_ABSORB_2D_T(4)
+        P2_ABSORB_2D_T(8)
+        P2_ABSORB_2D_T(12)
+        P2_ABSORB_2D_T(16)
+        P2_ABSORB_2D_T(20)
+        P2_ABSORB_2D_T(24)
+      default:
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "PoseidonAbsorb2d: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
+      }
+
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      return CHK_LAST();
+    }
+
     cudaError_t run_permutation_kernel(
       const S* states,
       S* output,
@@ -57,9 +91,8 @@ namespace poseidon2 {
     {
 #define P2_PERM_T(width)                                                                                               \
   case width:                                                                                                          \
-    poseidon2_permutation_kernel<S, width>                                                                             \
-      <<<poseidon_number_of_blocks(number_of_states), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(                           \
-        states, output, number_of_states, this->constants);                                                            \
+    permutation_kernel<S, width><<<poseidon_number_of_blocks(number_of_states), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>( \
+      states, output, number_of_states, this->constants);                                                              \
     break;
 
       switch (this->width) {
@@ -80,8 +113,43 @@ namespace poseidon2 {
       return CHK_LAST();
     }
 
+    cudaError_t compress_and_inject(
+      const Matrix<S>* matrices_to_inject,
+      unsigned int number_of_inputs,
+      uint64_t number_of_rows,
+      const S* prev_layer,
+      S* next_layer,
+      unsigned int digest_elements,
+      const device_context::DeviceContext& ctx) const override
+    {
+#define P2_COMPRESS_AND_INJECT_T(width)                                                                                \
+  case width:                                                                                                          \
+    compress_and_inject_kernel<S, width>                                                                               \
+      <<<poseidon_number_of_blocks(number_of_rows), POSEIDON_BLOCK_SIZE, 0, ctx.stream>>>(                             \
+        matrices_to_inject, number_of_inputs, prev_layer, next_layer, this->rate, digest_elements, this->constants);   \
+    break;
+
+      switch (this->width) {
+        P2_COMPRESS_AND_INJECT_T(2)
+        P2_COMPRESS_AND_INJECT_T(3)
+        P2_COMPRESS_AND_INJECT_T(4)
+        P2_COMPRESS_AND_INJECT_T(8)
+        P2_COMPRESS_AND_INJECT_T(12)
+        P2_COMPRESS_AND_INJECT_T(16)
+        P2_COMPRESS_AND_INJECT_T(20)
+        P2_COMPRESS_AND_INJECT_T(24)
+      default:
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "PoseidonPermutation: #width must be one of [2, 3, 4, 8, 12, 16, 20, 24]");
+      }
+
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      return CHK_LAST();
+    }
+
     Poseidon2(
       unsigned int width,
+      unsigned int rate,
       unsigned int alpha,
       unsigned int internal_rounds,
       unsigned int external_rounds,
@@ -90,7 +158,7 @@ namespace poseidon2 {
       MdsType mds_type,
       DiffusionStrategy diffusion,
       device_context::DeviceContext& ctx)
-        : hash::SpongeHasher<S, S>(width, width, width, 0), device_id(ctx.device_id)
+        : hash::SpongeHasher<S, S>(width, width, rate, 0), device_id(ctx.device_id)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(create_poseidon2_constants(
@@ -99,8 +167,13 @@ namespace poseidon2 {
       this->constants = constants;
     }
 
-    Poseidon2(int width, MdsType mds_type, DiffusionStrategy diffusion, device_context::DeviceContext& ctx)
-        : hash::SpongeHasher<S, S>(width, width, width, 0), device_id(ctx.device_id)
+    Poseidon2(
+      unsigned int width,
+      unsigned int rate,
+      MdsType mds_type,
+      DiffusionStrategy diffusion,
+      device_context::DeviceContext& ctx)
+        : hash::SpongeHasher<S, S>(width, width, rate, 0), device_id(ctx.device_id)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(init_poseidon2_constants(width, mds_type, diffusion, ctx, &constants));

@@ -6,11 +6,15 @@
 #include "gpu-utils/error_handler.cuh"
 #include "utils/utils.h"
 #include "hash/hash.cuh"
+#include "matrix/matrix.cuh"
 
+#include <vector>
+#include <numeric>
 #include <iostream>
 #include <math.h>
 
 using namespace hash;
+using matrix::Matrix;
 
 /**
  * @namespace merkle_tree
@@ -22,6 +26,7 @@ namespace merkle_tree {
 
   /// Bytes per stream
   static constexpr size_t STREAM_CHUNK_SIZE = 1024 * 1024 * 1024;
+  // static constexpr size_t STREAM_CHUNK_SIZE = 512;
 
   /// Flattens the tree digests and sum them up to get
   /// the memory needed to contain all the digests
@@ -35,6 +40,22 @@ namespace merkle_tree {
     }
 
     return digests_len;
+  }
+
+  template <typename T>
+  void swap(T** r, T** s)
+  {
+    T* t = *r;
+    *r = *s;
+    *s = t;
+  }
+
+  static unsigned int get_height(uint64_t number_of_elements)
+  {
+    unsigned int height = 0;
+    while (number_of_elements >>= 1)
+      ++height;
+    return height;
   }
 
   /**
@@ -89,13 +110,20 @@ namespace merkle_tree {
    */
   template <typename Leaf, typename Digest>
   cudaError_t build_merkle_tree(
-    const Leaf* leaves,
+    const Leaf* inputs,
     Digest* digests,
-    unsigned int height,
-    unsigned int input_block_len,
     const SpongeHasher<Leaf, Digest>& compression,
     const SpongeHasher<Leaf, Digest>& bottom_layer,
     const TreeBuilderConfig& config);
+
+  template <typename Leaf, typename Digest>
+  cudaError_t mmcs_commit(
+    const Matrix<Leaf>* inputs,
+    const unsigned int number_of_inputs,
+    Digest* digests,
+    const SpongeHasher<Leaf, Digest>& hasher,
+    const SpongeHasher<Leaf, Digest>& compression,
+    const TreeBuilderConfig& tree_config);
 } // namespace merkle_tree
 
 #endif

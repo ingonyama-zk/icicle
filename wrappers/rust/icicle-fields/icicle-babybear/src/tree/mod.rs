@@ -8,6 +8,8 @@ use std::ffi::c_void;
 
 use crate::field::ScalarField;
 
+pub mod mmcs;
+
 impl_field_tree_builder!("babybear", babybear_tb, ScalarField, ScalarCfg, BabyBearTreeBuilder);
 
 #[cfg(test)]
@@ -32,7 +34,7 @@ pub(crate) mod tests {
     #[test]
     fn poseidon2_merkle_tree_test() {
         let ctx = device_context::DeviceContext::default();
-        let sponge = Poseidon2::load(2, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
+        let sponge = Poseidon2::load(2, 2, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
 
         check_build_field_merkle_tree::<_, _, BabyBearTreeBuilder>(25, 2, &sponge, &sponge, ScalarField::zero());
     }
@@ -47,7 +49,7 @@ pub(crate) mod tests {
         const ROWS: usize = 1 << HEIGHT;
         const COLS: usize = 8;
 
-        let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16();
+        let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16(8);
 
         type H = PaddingFreeSponge<PlonkyPoseidon2T16, WIDTH, COLS, COLS>;
         let h = H::new(plonky_poseidon2.clone());
