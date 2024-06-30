@@ -9,6 +9,9 @@ endif()
 if (NOT DEFINED ECNTT)
     option(ECNTT "Build NTT" OFF)
 endif()
+if (NOT DEFINED MSM)
+    option(MSM "Build MSM" ON)
+endif()
 
 project(icicle_cuda_backend LANGUAGES CUDA CXX)
 
@@ -53,12 +56,14 @@ endif() # FIELD
 
 # curve API library
 if (CURVE)
-    add_library(icicle_cuda_curve SHARED
-        src/curve/cuda_msm.cu
+    add_library(icicle_cuda_curve SHARED        
         src/curve/cuda_mont.cu
     )
     if(ECNTT)
         target_sources(icicle_cuda_curve PRIVATE src/ntt/cuda_ecntt.cu)
+    endif()
+    if(MSM)
+        target_sources(icicle_cuda_curve PRIVATE src/msm/cuda_msm.cu)
     endif()
     target_include_directories(icicle_cuda_curve PRIVATE include)
     set_target_properties(icicle_cuda_curve PROPERTIES OUTPUT_NAME "icicle_cuda_curve_${CURVE}")

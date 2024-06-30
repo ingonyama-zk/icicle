@@ -36,10 +36,6 @@ eIcicleError cpu_msm_precompute_bases(
 REGISTER_MSM_BACKEND("CPU", (cpu_msm<scalar_t, affine_t, projective_t>));
 REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<affine_t>);
 
-// TODO Yuval : do not merge!!
-REGISTER_MSM_BACKEND("CUDA", (cpu_msm<scalar_t, affine_t, projective_t>));
-REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CUDA", cpu_msm_precompute_bases<affine_t>);
-
 #ifdef G2
 REGISTER_MSM_G2_BACKEND("CPU", (cpu_msm<scalar_t, g2_affine_t, g2_projective_t>));
 REGISTER_MSM_G2_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<g2_affine_t>);
