@@ -58,6 +58,10 @@ namespace icicle {
   template <typename S>
   eIcicleError convert_montgomery(const S* input, uint64_t size, bool is_into, const VecOpsConfig& config, S* output);
 
+  template <typename E>
+  eIcicleError
+  matrix_transpose(const E* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, E* mat_out);
+
   /*************************** Backend registration ***************************/
 
   using scalarVectorOpImpl = std::function<eIcicleError(
@@ -111,6 +115,24 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                      \
       register_scalar_convert_montgomery(DEVICE_TYPE, FUNC);                                                           \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using scalarMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* in,
+    uint32_t nof_rows,
+    uint32_t nof_cols,
+    const VecOpsConfig& config,
+    scalar_t* out)>;
+
+  void register_matrix_transpose(const std::string& deviceType, scalarMatrixOpImpl impl);
+
+#define REGISTER_MATRIX_TRANSPOSE_BACKEND(DEVICE_TYPE, FUNC)                                                           \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_matrix_transpose) = []() -> bool {                                                         \
+      register_matrix_transpose(DEVICE_TYPE, FUNC);                                                                    \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -172,6 +194,23 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+  using extFieldMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const extension_t* in,
+    uint32_t nof_rows,
+    uint32_t nof_cols,
+    const VecOpsConfig& config,
+    extension_t* out)>;
+
+  void register_extension_matrix_transpose(const std::string& deviceType, extFieldMatrixOpImpl impl);
+
+#define REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_matrix_transpose_ext_field) = []() -> bool {                                               \
+      register_extension_matrix_transpose(DEVICE_TYPE, FUNC);                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
 #endif // EXT_FIELD
 
 } // namespace icicle

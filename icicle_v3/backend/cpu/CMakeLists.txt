@@ -7,8 +7,7 @@ target_sources(icicle_device PRIVATE src/cpu_device_api.cpp)
 # field API library
 if (FIELD)
     target_sources(icicle_field PRIVATE
-        src/field/cpu_vec_ops.cpp
-        src/field/cpu_matrix_ops.cpp
+        src/field/cpu_vec_ops.cpp        
     )
     if (NTT)
         target_sources(icicle_field PRIVATE src/field/cpu_ntt.cpp)
@@ -25,7 +24,8 @@ target_sources(icicle_curve PRIVATE
     if (ECNTT)
         target_sources(icicle_curve PRIVATE src/curve/cpu_ecntt.cpp)
     endif()
-    target_include_directories(icicle_curve PRIVATE include)
+    # incdir is PUBLIC because config-extension headers are exposed to app
+    target_include_directories(icicle_curve PUBLIC include)
 endif()
 
-# TODO Yuval: maybe incdirs should be PUBLIC if exposing config-extension headers to app
+

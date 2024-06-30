@@ -88,7 +88,7 @@ fn check_vec_ops_args<'a, F>(
         );
     }
 
-    // TODO Yuval : how to check correct device
+    // TODO Yuval : check device
     // let ctx_device_id = cfg
     //     .ctx
     //     .device_id;
@@ -305,7 +305,7 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            // TODO Yuval : implement bit reverse
+            // TODO Yuval : bit reverse
 
             //     fn bit_reverse(
             //         input: &(impl HostOrDeviceSlice<$field> + ?Sized),

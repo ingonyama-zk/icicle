@@ -3,7 +3,6 @@
 
 #include "icicle/errors.h"
 #include "icicle/vec_ops.h"
-#include "icicle/matrix_ops.h"
 #include "gpu-utils/error_handler.h"
 #include "error_translation.h"
 

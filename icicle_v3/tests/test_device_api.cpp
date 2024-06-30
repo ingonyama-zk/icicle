@@ -87,7 +87,7 @@ TEST_F(DeviceApiTest, AvailableMemory)
 {
   icicle::Device dev = {"CUDA", 0};
   const bool is_cuda_registered = eIcicleError::SUCCESS == icicle_is_device_avialable(dev);
-  if (!is_cuda_registered) { return; } // TODO Yuval: implement for CPU too
+  if (!is_cuda_registered) { return; } // TODO implement for CPU too
 
   icicle_set_device(dev);
   size_t total, free;

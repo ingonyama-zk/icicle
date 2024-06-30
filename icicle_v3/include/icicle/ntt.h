@@ -51,16 +51,6 @@ namespace icicle {
    */
   enum class Ordering { kNN, kNR, kRN, kRR, kNM, kMN };
 
-  // TODO Yuval: move to cuda backend
-  /**
-   * @enum NttAlgorithm
-   * Which NTT algorithm to use. options are:
-   * - Auto: implementation selects automatically based on heuristic. This value is a good default for most cases.
-   * - Radix2: explicitly select radix-2 NTT algorithm
-   * - MixedRadix: explicitly select mixed-radix NTT algorithm
-   */
-  // enum class NttAlgorithm { Auto, Radix2, MixedRadix };
-
   /**
    * @struct NTTConfig
    * Struct that encodes NTT parameters to be passed into the [NTT](@ref NTT) function.
