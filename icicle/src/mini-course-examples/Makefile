@@ -10,7 +10,7 @@ run_test:
 
 build_perf:
 	mkdir -p work
-	nvcc -o work/perf -std=c++17 -arch=sm_80 -I. -I../../include perf_test.cu
+	nvcc -lineinfo -o work/perf -std=c++17 -arch=sm_80 -I. -I../../include perf_test.cu
 
 run_perf:
 	make build_perf
