@@ -563,13 +563,6 @@ namespace ntt {
     return domain.twiddles[twiddles_idx];
   }
 
-  static inline NttAlgorithm get_ntt_alg_from_config(const ConfigExtension* ext)
-  {
-    // for some reason this does not compile without this small function. WHY ??
-    if (ext && ext->has(CUDA_NTT_ALGORITHM)) { return NttAlgorithm(ext->get<int>(CUDA_NTT_ALGORITHM)); }
-    return NttAlgorithm::Auto;
-  }
-
   template <typename S>
   static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {

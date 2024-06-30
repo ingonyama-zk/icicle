@@ -273,18 +273,27 @@ macro_rules! impl_msm_tests {
     (
       $curve:ident
     ) => {
+
+        use icicle_core::test_utilities;
+        pub fn initialize() {
+            test_utilities::test_load_and_init_devices();
+        }
+
         #[test]
         fn test_msm() {
+            initialize();
             check_msm::<$curve>();
         }
 
         #[test]
         fn test_msm_batch() {
+            initialize();
             check_msm_batch::<$curve>()
         }
 
         #[test]
         fn test_msm_skewed_distributions() {
+            initialize();
             check_msm_skewed_distributions::<$curve>()
         }
     };
