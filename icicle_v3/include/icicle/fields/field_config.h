@@ -1,6 +1,4 @@
 #pragma once
-#ifndef FIELD_CONFIG_H
-#define FIELD_CONFIG_H
 
 #include "icicle/fields/id.h"
 #include "icicle/fields/field.h"
@@ -33,6 +31,4 @@ namespace field_config = babybear;
 #elif FIELD_ID == STARK_252
 #include "icicle/fields/stark_fields/stark252.h"
 namespace field_config = stark252;
-#endif
-
 #endif
