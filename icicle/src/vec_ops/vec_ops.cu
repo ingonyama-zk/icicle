@@ -54,19 +54,47 @@ namespace vec_ops {
       if (tid >= row_size * column_size) return;
       out[(tid % row_size) * column_size + (tid / row_size)] = in[tid];
     }
+
+    template <typename E>
+    __global__ void bit_reverse_kernel(const E* input, uint64_t n, unsigned shift, E* output)
+    {
+      uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      // Handling arbitrary vector size
+      if (tid < n) {
+        int reversed_index = __brevll(tid) >> shift;
+        output[reversed_index] = input[tid];
+      }
+    }
+    template <typename E>
+    __global__ void bit_reverse_inplace_kernel(E* input, uint64_t n, unsigned shift)
+    {
+      uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      // Handling arbitrary vector size
+      if (tid < n) {
+        int reversed_index = __brevll(tid) >> shift;
+        if (reversed_index > tid) {
+          E temp = input[tid];
+          input[tid] = input[reversed_index];
+          input[reversed_index] = temp;
+        }
+      }
+    }
   } // namespace
 
   template <typename E, void (*Kernel)(const E*, const E*, int, E*)>
-  cudaError_t vec_op(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t vec_op(E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     CHK_INIT_IF_RETURN();
+
+    bool is_in_place = vec_a == result;
 
     // Set the grid and block dimensions
     int num_threads = MAX_THREADS_PER_BLOCK;
     int num_blocks = (n + num_threads - 1) / num_threads;
 
     E *d_result, *d_alloc_vec_a, *d_alloc_vec_b;
-    const E *d_vec_a, *d_vec_b;
+    E* d_vec_a;
+    const E* d_vec_b;
     if (!config.is_a_on_device) {
       CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(E), config.ctx.stream));
       CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
@@ -84,21 +112,29 @@ namespace vec_ops {
     }
 
     if (!config.is_result_on_device) {
-      CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
+      if (!is_in_place) {
+        CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
+      } else {
+        d_result = d_vec_a;
+      }
     } else {
-      d_result = result;
+      if (!is_in_place) {
+        d_result = result;
+      } else {
+        d_result = result = d_vec_a;
+      }
     }
 
     // Call the kernel to perform element-wise operation
     Kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, n, d_result);
 
-    if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_a, config.ctx.stream)); }
-    if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_b, config.ctx.stream)); }
-
     if (!config.is_result_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(d_result, config.ctx.stream));
     }
+
+    if (!config.is_a_on_device && !is_in_place) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_a, config.ctx.stream)); }
+    if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_b, config.ctx.stream)); }
 
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
 
@@ -106,19 +142,19 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t mul(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t mul(E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     return vec_op<E, mul_kernel>(vec_a, vec_b, n, config, result);
   }
 
   template <typename E>
-  cudaError_t add(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t add(E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     return vec_op<E, add_kernel>(vec_a, vec_b, n, config, result);
   }
 
   template <typename E>
-  cudaError_t sub(const E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t sub(E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     return vec_op<E, sub_kernel>(vec_a, vec_b, n, config, result);
   }
@@ -162,6 +198,41 @@ namespace vec_ops {
     }
     if (!is_async) return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
 
+    return CHK_LAST();
+  }
+
+  template <typename E>
+  cudaError_t bit_reverse(const E* input, uint64_t size, BitReverseConfig& cfg, E* output)
+  {
+    if (size & (size - 1)) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "bit_reverse: size must be a power of 2");
+    if ((input == output) & (cfg.is_input_on_device != cfg.is_output_on_device))
+      THROW_ICICLE_ERR(
+        IcicleError_t::InvalidArgument, "bit_reverse: equal devices should have same is_on_device parameters");
+
+    E* d_output;
+    if (cfg.is_output_on_device) {
+      d_output = output;
+    } else {
+      // allocate output on gpu
+      CHK_IF_RETURN(cudaMallocAsync(&d_output, sizeof(E) * size, cfg.ctx.stream));
+    }
+
+    uint64_t shift = __builtin_clzll(size) + 1;
+    uint64_t num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
+
+    if ((input != output) & cfg.is_input_on_device) {
+      bit_reverse_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(input, size, shift, d_output);
+    } else {
+      if (!cfg.is_input_on_device) {
+        CHK_IF_RETURN(cudaMemcpyAsync(d_output, input, sizeof(E) * size, cudaMemcpyHostToDevice, cfg.ctx.stream));
+      }
+      bit_reverse_inplace_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cfg.ctx.stream>>>(d_output, size, shift);
+    }
+    if (!cfg.is_output_on_device) {
+      CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, sizeof(E) * size, cudaMemcpyDeviceToHost, cfg.ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_output, cfg.ctx.stream));
+    }
+    if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
     return CHK_LAST();
   }
 } // namespace vec_ops

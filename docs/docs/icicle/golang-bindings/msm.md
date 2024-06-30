@@ -1,10 +1,5 @@
 # MSM
 
-
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `grumpkin`
-
 ## MSM Example
 
 ```go
@@ -13,12 +8,13 @@ package main
 import (
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	bn254_msm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
 )
 
 func main() {
 	// Obtain the default MSM configuration.
-	cfg := bn254.GetDefaultMSMConfig()
+	cfg := core.GetDefaultMSMConfig()
 
 	// Define the size of the problem, here 2^18.
 	size := 1 << 18
@@ -44,7 +40,7 @@ func main() {
 	cfg.IsAsync = true
 
 	// Perform the MSM operation.
-	e = bn254.Msm(scalars, points, &cfg, out)
+	e = bn254_msm.Msm(scalars, points, &cfg, out)
 
 	if e != cr.CudaSuccess {
 		panic(e)
@@ -124,10 +120,9 @@ Use `GetDefaultMSMConfig` to obtain a default configuration, which can then be c
 func GetDefaultMSMConfig() MSMConfig
 ```
 
-
 ## How do I toggle between the supported algorithms?
 
-When creating your MSM Config you may state which algorithm you wish to use. `cfg.Ctx.IsBigTriangle = true` will activate Large triangle accumulation and `cfg.Ctx.IsBigTriangle = false` will activate Bucket accumulation.
+When creating your MSM Config you may state which algorithm you wish to use. `cfg.Ctx.IsBigTriangle = true` will activate Large triangle reduction and `cfg.Ctx.IsBigTriangle = false` will activate iterative reduction.
 
 ```go
 ...
@@ -157,17 +152,19 @@ out.Malloc(batchSize*p.Size(), p.Size())
 ...
 ```
 
+## Parameters for optimal performance
+
+Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
+
 ## Support for G2 group
 
 To activate G2 support first you must make sure you are building the static libraries with G2 feature enabled as described in the [Golang building instructions](../golang-bindings.md#using-icicle-golang-bindings-in-your-project).
-
-
 
 Now you may import `g2` package of the specified curve.
 
 ```go
 import (
-    "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls254/g2"
+    "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
 )
 ```
 
@@ -183,7 +180,7 @@ import (
 )
 
 func main() {
-	cfg := bn254.GetDefaultMSMConfig()
+	cfg := core.GetDefaultMSMConfig()
 	size := 1 << 12
 	batchSize := 3
 	totalSize := size * batchSize

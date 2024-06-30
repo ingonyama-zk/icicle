@@ -129,6 +129,17 @@ public:
   struct Wide {
     ff_wide_storage limbs_storage;
 
+    static constexpr Wide HOST_DEVICE_INLINE from_field(const Field& xs)
+    {
+      Wide out{};
+#ifdef __CUDA_ARCH__
+      UNROLL
+#endif
+      for (unsigned i = 0; i < TLC; i++)
+        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
+      return out;
+    }
+
     static constexpr Field HOST_DEVICE_INLINE get_lower(const Wide& xs)
     {
       Field out{};
@@ -956,6 +967,17 @@ public:
       }
     }
     return (u == one) ? b : c;
+  }
+
+  static constexpr HOST_DEVICE_INLINE Field pow(Field base, int exp)
+  {
+    Field res = one();
+    while (exp > 0) {
+      if (exp & 1) res = res * base;
+      base = base * base;
+      exp >>= 1;
+    }
+    return res;
   }
 };
 

@@ -33,3 +33,15 @@ default = []
 g2 = ["icicle-bls12-377/bw6-761-g2"]
 devmode = ["icicle-core/devmode"]
 arkworks = ["ark-bw6-761", "icicle-core/arkworks", "icicle-bls12-377/arkworks"]
+
+# [[bench]]
+# name = "ecntt" #sane compilation times only with the devmode enabled
+# harness = false # Criterion provides own harness
+
+[[bench]]
+name = "ntt"
+harness = false
+
+[[bench]]
+name = "msm"
+harness = false

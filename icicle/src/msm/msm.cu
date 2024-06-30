@@ -22,7 +22,6 @@ namespace msm {
 
 #define MAX_TH 256
 
-    // #define SIGNED_DIG //WIP
     // #define SSM_SUM  //WIP
 
     template <typename A, typename P>
@@ -74,10 +73,10 @@ namespace msm {
       unsigned* bucket_sizes_sum,
       unsigned* bucket_sizes,
       unsigned* large_bucket_thread_indices,
-      unsigned num_of_threads)
+      unsigned nof_threads)
     {
       const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-      if (tid >= num_of_threads) { return; }
+      if (tid >= nof_threads) { return; }
 
       unsigned large_bucket_tid = large_bucket_thread_indices[tid];
       unsigned segment_ind = tid - bucket_sizes_sum[large_bucket_tid] - large_bucket_tid;
@@ -91,12 +90,13 @@ namespace msm {
       P* v_r,
       unsigned block_size,
       unsigned write_stride,
+      unsigned buckets_per_bm,
       unsigned write_phase,
       unsigned step,
-      unsigned num_of_threads)
+      unsigned nof_threads)
     {
       const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-      if (tid >= num_of_threads) { return; }
+      if (tid >= nof_threads) return;
 
       // we need shifted tid because we don't want to be reducing into zero buckets, this allows to skip them.
       // for write_phase==1, the read pattern is different so we don't skip over anything.
@@ -110,7 +110,7 @@ namespace msm {
       const unsigned read_ind = block_size * shifted_block_id + block_tid;
       const unsigned write_ind = jump * shifted_block_id + block_tid;
       const unsigned v_r_key =
-        write_stride ? ((write_ind / write_stride) * 2 + write_phase) * write_stride + write_ind % write_stride
+        write_stride ? ((write_ind / buckets_per_bm) * 2 + write_phase) * write_stride + write_ind % buckets_per_bm
                      : write_ind;
       v_r[v_r_key] = v[read_ind] + v[read_ind + jump];
     }
@@ -325,32 +325,50 @@ namespace msm {
     }
 
     template <typename P>
-    __global__ void last_pass_kernel(const P* final_buckets, P* final_sums, unsigned num_sums)
+    __global__ void last_pass_kernel(
+      const P* final_buckets,
+      P* final_sums,
+      unsigned nof_sums_per_batch,
+      unsigned batch_size,
+      unsigned nof_bms_per_batch,
+      unsigned orig_c)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
-      if (tid >= num_sums) return;
-      final_sums[tid] = final_buckets[2 * tid + 1];
+      if (tid >= nof_sums_per_batch * batch_size) return;
+      unsigned batch_index = tid / nof_sums_per_batch;
+      unsigned batch_tid = tid % nof_sums_per_batch;
+      unsigned bm_index = batch_tid / orig_c;
+      unsigned bm_tid = batch_tid % orig_c;
+      for (unsigned c = orig_c; c > 1;) {
+        c = (c + 1) >> 1;
+        bm_index <<= 1;
+        if (bm_tid >= c) {
+          bm_index++;
+          bm_tid -= c;
+        }
+      }
+      final_sums[tid] = final_buckets[2 * (batch_index * nof_bms_per_batch + bm_index) + 1];
     }
 
     // this kernel computes the final result using the double and add algorithm
     // it is done by a single thread
     template <typename P, typename S>
     __global__ void final_accumulation_kernel(
-      const P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_bms, unsigned nof_empty_bms, unsigned c)
+      const P* final_sums, P* final_results, unsigned nof_msms, unsigned nof_results, unsigned c)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_msms) return;
       P final_result = P::zero();
       // Note: in some cases accumulation of bm is implemented such that some bms are known to be empty. Therefore
       // skipping them.
-      for (unsigned i = nof_bms - nof_empty_bms; i > 1; i--) {
-        final_result = final_result + final_sums[i - 1 + tid * nof_bms]; // add
-        for (unsigned j = 0; j < c; j++)                                 // double
+      for (unsigned i = nof_results; i > 1; i--) {
+        final_result = final_result + final_sums[i - 1 + tid * nof_results]; // add
+        for (unsigned j = 0; j < c; j++)                                     // double
         {
           final_result = final_result + final_result;
         }
       }
-      final_results[tid] = final_result + final_sums[tid * nof_bms];
+      final_results[tid] = final_result + final_sums[tid * nof_results];
     }
 
     // this function computes msm using the bucket method
@@ -383,11 +401,6 @@ namespace msm {
       if (!is_nof_points_valid) {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
-      }
-      if ((precompute_factor & (precompute_factor - 1)) != 0) {
-        THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument,
-          "bucket_method_msm: precompute factors that are not powers of 2 currently unsupported");
       }
 
       const S* d_scalars;
@@ -586,7 +599,7 @@ namespace msm {
       CHK_IF_RETURN(cudaFreeAsync(single_bucket_indices, stream));
 
       // find large buckets
-      unsigned average_bucket_size = single_msm_size / (1 << c);
+      unsigned average_bucket_size = (single_msm_size / (1 << c)) * precompute_factor;
       // how large a bucket must be to qualify as a "large bucket"
       unsigned bucket_th = large_bucket_factor * average_bucket_size;
       unsigned* nof_large_buckets;
@@ -722,7 +735,8 @@ namespace msm {
         CHK_IF_RETURN(cudaMallocAsync(&d_allocated_final_result, sizeof(P) * batch_size, stream));
 
       // --- Reduction of buckets happens here, after this we'll get a single sum for each bucket module/window ---
-      unsigned nof_empty_bms_per_batch = 0; // for non-triangle accumluation this may be >0
+      unsigned nof_final_results_per_msm =
+        nof_bms_per_msm; // for big-triangle accumluation this is the number of bucket modules
       P* final_results;
       if (is_big_triangle || c == 1) {
         CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch, stream));
@@ -731,62 +745,90 @@ namespace msm {
         NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
         big_triangle_sum_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, final_results, nof_bms_in_batch, c);
       } else {
+        // the recursive reduction algorithm works with 2 types of reduction that can run on parallel streams
+        cudaStream_t stream_reduction;
+        cudaEvent_t event_finished_reduction;
+        CHK_IF_RETURN(cudaStreamCreate(&stream_reduction));
+        CHK_IF_RETURN(cudaEventCreateWithFlags(&event_finished_reduction, cudaEventDisableTiming));
+
         unsigned source_bits_count = c;
         unsigned source_windows_count = nof_bms_per_msm;
-        unsigned source_buckets_count = nof_buckets + nof_bms_per_msm;
-        unsigned target_windows_count = 0;
+        unsigned source_buckets_count = nof_buckets + nof_bms_per_msm; // nof buckets per msm including zero buckets
+        unsigned target_windows_count;
         P* source_buckets = buckets;
         buckets = nullptr;
         P* target_buckets;
         P* temp_buckets1;
         P* temp_buckets2;
         for (unsigned i = 0;; i++) {
-          const unsigned target_bits_count = (source_bits_count + 1) >> 1;                 // c/2=8
-          target_windows_count = source_windows_count << 1;                                // nof bms*2 = 32
-          const unsigned target_buckets_count = target_windows_count << target_bits_count; // bms*2^c = 32*2^8
+          const unsigned target_bits_count = (source_bits_count + 1) >> 1;                 // half the bits rounded up
+          target_windows_count = source_windows_count << 1;                                // twice the number of bms
+          const unsigned target_buckets_count = target_windows_count << target_bits_count; // new_bms*2^new_c
+          CHK_IF_RETURN(cudaMallocAsync(&target_buckets, sizeof(P) * target_buckets_count * batch_size, stream));
           CHK_IF_RETURN(cudaMallocAsync(
-            &target_buckets, sizeof(P) * target_buckets_count * batch_size, stream)); // 32*2^8*2^7 buckets
+            &temp_buckets1, sizeof(P) * source_buckets_count / 2 * batch_size,
+            stream)); // for type1 reduction (strided, bottom window - evens)
           CHK_IF_RETURN(cudaMallocAsync(
-            &temp_buckets1, sizeof(P) * source_buckets_count / 2 * batch_size, stream)); // 32*2^8*2^7 buckets
-          CHK_IF_RETURN(cudaMallocAsync(
-            &temp_buckets2, sizeof(P) * source_buckets_count / 2 * batch_size, stream)); // 32*2^8*2^7 buckets
+            &temp_buckets2, sizeof(P) * source_buckets_count / 2 * batch_size,
+            stream)); // for type2 reduction (serial, top window - odds)
+          initialize_buckets_kernel<<<(target_buckets_count * batch_size + 255) / 256, 256>>>(
+            target_buckets, target_buckets_count * batch_size); // initialization is needed for the odd c case
 
-          if (source_bits_count > 0) {
-            for (unsigned j = 0; j < target_bits_count; j++) {
-              const bool is_first_iter = (j == 0);
-              const bool is_last_iter = (j == target_bits_count - 1);
-              unsigned nof_threads =
-                (((target_buckets_count - target_windows_count) >> 1) << (target_bits_count - 1 - j)) * batch_size;
-              NUM_THREADS = max(1, min(MAX_TH, nof_threads));
-              NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+          for (unsigned j = 0; j < target_bits_count; j++) {
+            const bool is_first_iter = (j == 0);
+            const bool is_second_iter = (j == 1);
+            const bool is_last_iter = (j == target_bits_count - 1);
+            const bool is_odd_c = source_bits_count & 1;
+            unsigned nof_threads =
+              (((source_windows_count << target_bits_count) - source_windows_count) << (target_bits_count - 1 - j)) *
+              batch_size; // nof sections to reduce (minus the section that goes to zero buckets) shifted by nof threads
+                          // per section
+            NUM_THREADS = max(1, min(MAX_TH, nof_threads));
+            NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+            if (!is_odd_c || !is_first_iter) { // skip if c is odd and it's the first iteration
               single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-                is_first_iter ? source_buckets : temp_buckets1, is_last_iter ? target_buckets : temp_buckets1,
-                1 << (source_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 0 /*=write_phase*/,
-                (1 << target_bits_count) - 1, nof_threads);
-
-              single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-                is_first_iter ? source_buckets : temp_buckets2, is_last_iter ? target_buckets : temp_buckets2,
-                1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0, 1 /*=write_phase*/,
+                is_first_iter || (is_second_iter && is_odd_c) ? source_buckets : temp_buckets1,
+                is_last_iter ? target_buckets : temp_buckets1, 1 << (source_bits_count - j + (is_odd_c ? 1 : 0)),
+                is_last_iter ? 1 << target_bits_count : 0, 1 << target_bits_count, 0 /*=write_phase*/,
                 (1 << target_bits_count) - 1, nof_threads);
             }
+
+            nof_threads = (((source_windows_count << (source_bits_count - target_bits_count)) - source_windows_count)
+                           << (target_bits_count - 1 - j)) *
+                          batch_size; // nof sections to reduce (minus the section that goes to zero buckets) shifted by
+                                      // nof threads per section
+            NUM_THREADS = max(1, min(MAX_TH, nof_threads));
+            NUM_BLOCKS = (nof_threads + NUM_THREADS - 1) / NUM_THREADS;
+            single_stage_multi_reduction_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_reduction>>>(
+              is_first_iter ? source_buckets : temp_buckets2, is_last_iter ? target_buckets : temp_buckets2,
+              1 << (target_bits_count - j), is_last_iter ? 1 << target_bits_count : 0,
+              1 << (target_bits_count - (is_odd_c ? 1 : 0)), 1 /*=write_phase*/,
+              (1 << (target_bits_count - (is_odd_c ? 1 : 0))) - 1, nof_threads);
           }
+          CHK_IF_RETURN(cudaEventRecord(event_finished_reduction, stream_reduction));
+          CHK_IF_RETURN(
+            cudaStreamWaitEvent(stream, event_finished_reduction)); // sync streams after every write to target_buckets
           if (target_bits_count == 1) {
             // Note: the reduction ends up with 'target_windows_count' windows per batch element. Some are guaranteed
             // to be empty when target_windows_count>bitsize. for example consider bitsize=253 and c=2. The reduction
             // ends with 254 bms but the most significant one is guaranteed to be zero since the scalars are 253b.
+            // precomputation and odd c can cause additional empty windows.
+            nof_final_results_per_msm = min(c * nof_bms_per_msm, bitsize);
             nof_bms_per_msm = target_windows_count;
-            nof_empty_bms_per_batch = target_windows_count > bitsize ? target_windows_count - bitsize : 0;
-            nof_bms_in_batch = nof_bms_per_msm * batch_size;
+            unsigned total_nof_final_results = nof_final_results_per_msm * batch_size;
 
-            CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * nof_bms_in_batch, stream));
+            CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(P) * total_nof_final_results, stream));
+
             NUM_THREADS = 32;
-            NUM_BLOCKS = (nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
-            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(target_buckets, final_results, nof_bms_in_batch);
+            NUM_BLOCKS = (total_nof_final_results + NUM_THREADS - 1) / NUM_THREADS;
+            last_pass_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+              target_buckets, final_results, nof_final_results_per_msm, batch_size, nof_bms_per_msm, c);
             c = 1;
             CHK_IF_RETURN(cudaFreeAsync(source_buckets, stream));
             CHK_IF_RETURN(cudaFreeAsync(target_buckets, stream));
             CHK_IF_RETURN(cudaFreeAsync(temp_buckets1, stream));
             CHK_IF_RETURN(cudaFreeAsync(temp_buckets2, stream));
+            CHK_IF_RETURN(cudaStreamDestroy(stream_reduction));
             break;
           }
           CHK_IF_RETURN(cudaFreeAsync(source_buckets, stream));
@@ -808,8 +850,8 @@ namespace msm {
       NUM_BLOCKS = (batch_size + NUM_THREADS - 1) / NUM_THREADS;
       // launch the double and add kernel, a single thread per batch element
       final_accumulation_kernel<P, S><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        final_results, are_results_on_device ? final_result : d_allocated_final_result, batch_size, nof_bms_per_msm,
-        nof_empty_bms_per_batch, c);
+        final_results, are_results_on_device ? final_result : d_allocated_final_result, batch_size,
+        nof_final_results_per_msm, c);
       CHK_IF_RETURN(cudaFreeAsync(final_results, stream));
 
       if (!are_results_on_device)
@@ -834,13 +876,7 @@ namespace msm {
     const int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
     cudaStream_t& stream = config.ctx.stream;
 
-    unsigned c = config.batch_size > 1 ? ((config.c == 0) ? get_optimal_c(msm_size) : config.c) : 16;
-    // reduce c to closest power of two (from below) if not using big_triangle reduction logic
-    // TODO: support arbitrary values of c
-    if (!config.is_big_triangle) {
-      while ((c & (c - 1)) != 0)
-        c &= (c - 1);
-    }
+    unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
 
     return CHK_STICKY(bucket_method_msm(
       bitsize, c, scalars, points, config.batch_size, msm_size,
@@ -851,7 +887,33 @@ namespace msm {
   }
 
   template <typename A, typename P>
-  cudaError_t precompute_msm_bases(
+  cudaError_t precompute_msm_points(A* points, int msm_size, MSMConfig& config, A* output_points)
+  {
+    CHK_INIT_IF_RETURN();
+
+    cudaStream_t& stream = config.ctx.stream;
+    unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
+
+    CHK_IF_RETURN(cudaMemcpyAsync(
+      output_points, points, sizeof(A) * config.points_size,
+      config.are_points_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
+
+    unsigned total_nof_bms = (P::SCALAR_FF_NBITS - 1) / c + 1;
+    unsigned shift = c * ((total_nof_bms - 1) / config.precompute_factor + 1);
+
+    unsigned NUM_THREADS = 1 << 8;
+    unsigned NUM_BLOCKS = (config.points_size + NUM_THREADS - 1) / NUM_THREADS;
+    for (int i = 1; i < config.precompute_factor; i++) {
+      left_shift_kernel<A, P><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
+        &output_points[(i - 1) * config.points_size], shift, config.points_size,
+        &output_points[i * config.points_size]);
+    }
+
+    return CHK_LAST();
+  }
+
+  template <typename A, typename P>
+  [[deprecated("Use precompute_msm_points instead.")]] cudaError_t precompute_msm_bases(
     A* bases,
     int bases_size,
     int precompute_factor,

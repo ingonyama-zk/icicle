@@ -16,16 +16,16 @@ pub struct KeccakConfig<'a> {
     pub ctx: DeviceContext<'a>,
 
     /// True if inputs are on device and false if they're on host. Default value: false.
-    are_inputs_on_device: bool,
+    pub are_inputs_on_device: bool,
 
     /// If true, output is preserved on device, otherwise on host. Default value: false.
-    are_outputs_on_device: bool,
+    pub are_outputs_on_device: bool,
 
     /// Whether to run the Keccak asynchronously. If set to `true`, the keccak_hash function will be
     /// non-blocking and you'd need to synchronize it explicitly by running
     /// `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, keccak_hash
     /// function will block the current CPU thread.
-    is_async: bool,
+    pub is_async: bool,
 }
 
 impl<'a> Default for KeccakConfig<'a> {
@@ -51,7 +51,7 @@ extern "C" {
         input_block_size: i32,
         number_of_blocks: i32,
         output: *mut u8,
-        config: KeccakConfig,
+        config: &KeccakConfig,
     ) -> CudaError;
 
     pub(crate) fn keccak512_cuda(
@@ -59,7 +59,7 @@ extern "C" {
         input_block_size: i32,
         number_of_blocks: i32,
         output: *mut u8,
-        config: KeccakConfig,
+        config: &KeccakConfig,
     ) -> CudaError;
 }
 
@@ -68,8 +68,10 @@ pub fn keccak256(
     input_block_size: i32,
     number_of_blocks: i32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: KeccakConfig,
+    config: &mut KeccakConfig,
 ) -> IcicleResult<()> {
+    config.are_inputs_on_device = input.is_on_device();
+    config.are_outputs_on_device = output.is_on_device();
     unsafe {
         keccak256_cuda(
             input.as_ptr(),
@@ -87,8 +89,10 @@ pub fn keccak512(
     input_block_size: i32,
     number_of_blocks: i32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: KeccakConfig,
+    config: &mut KeccakConfig,
 ) -> IcicleResult<()> {
+    config.are_inputs_on_device = input.is_on_device();
+    config.are_outputs_on_device = output.is_on_device();
     unsafe {
         keccak512_cuda(
             input.as_ptr(),

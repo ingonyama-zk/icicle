@@ -185,6 +185,61 @@ func TestMSM{{.CurvePrefix}}(t *testing.T) {
 		{{end}}
 	}
 }
+
+func TestMSM{{.CurvePrefix}}PinnedHostMemory(t *testing.T) {
+	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
+	for _, power := range []int{10} {
+		size := 1 << power
+
+		scalars := icicle{{capitalize .Curve}}.GenerateScalars(size)
+		points := {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}GenerateAffinePoints(size)
+		
+		pinnable := cr.GetDeviceAttribute(cr.CudaDevAttrHostRegisterSupported, 0)
+		lockable := cr.GetDeviceAttribute(cr.CudaDevAttrPageableMemoryAccessUsesHostPageTables, 0)
+
+		pinnableAndLockable := pinnable == 1 && lockable == 0
+
+		var pinnedPoints core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Affine]
+		if pinnableAndLockable {
+			points.Pin(cr.CudaHostRegisterDefault)
+			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+			assert.Equal(t, points, pinnedPoints, "Allocating newly pinned memory resulted in bad points")
+		}
+
+		var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], 1)
+
+		e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm allocated pinned host mem failed")
+		
+		outHost.CopyFromDevice(&out)
+		{{if ne .GnarkImport "" -}}
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars, points, outHost[0]))
+		{{end}}
+		
+		if pinnableAndLockable {
+		e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, pinnedPoints, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm registered pinned host mem failed")
+			
+			outHost.CopyFromDevice(&out)
+			{{if ne .GnarkImport "" -}}
+			// Check with gnark-crypto
+			assert.True(t, testAgainstGnarkCryptoMsm{{.CurvePrefix}}(scalars, pinnedPoints, outHost[0]))
+			{{end}}
+		}
+		
+		out.Free()
+		
+		if pinnableAndLockable {
+			points.Unpin()
+			pinnedPoints.FreePinned()
+		}
+	}
+}
 {{if ne .GnarkImport "" -}}
 func TestMSM{{if eq .CurvePrefix "G2"}}G2{{end}}GnarkCryptoTypes(t *testing.T) {
 	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
@@ -251,9 +306,11 @@ func TestMSM{{.CurvePrefix}}Batch(t *testing.T) {
 	}
 }
 
-func TestPrecomputeBase{{.CurvePrefix}}(t *testing.T) {
+func TestPrecomputePoints{{.CurvePrefix}}(t *testing.T) {
 	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
 	const precomputeFactor = 8
+	cfg.PrecomputeFactor = precomputeFactor
+
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
@@ -263,20 +320,18 @@ func TestPrecomputeBase{{.CurvePrefix}}(t *testing.T) {
 
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for PrecomputeBases results failed")
 
-			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
-			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
+			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}PrecomputePoints(points, size, &cfg, precomputeOut)
+			assert.Equal(t, cr.CudaSuccess, e, "PrecomputeBases failed")
 
 			var p {{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective
 			var out core.DeviceSlice
 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
-
-			cfg.PrecomputeFactor = precomputeFactor
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for Projective results failed")
 
 			e = {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}Msm(scalars, precomputeOut, &cfg, out)
-			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Msm failed")
 			outHost := make(core.HostSlice[{{if ne .CurvePrefix "G2"}}icicle{{capitalize .Curve}}{{else}}g2{{end}}.{{.CurvePrefix}}Projective], batchSize)
 			outHost.CopyFromDevice(&out)
 			out.Free()
@@ -325,9 +380,7 @@ func TestMSM{{.CurvePrefix}}SkewedDistribution(t *testing.T) {
 
 func TestMSM{{.CurvePrefix}}MultiDevice(t *testing.T) {
 	numDevices, _ := cr.GetDeviceCount()
-	numDevices = 1 // TODO remove when test env is fixed
 	fmt.Println("There are ", numDevices, " devices available")
-	orig_device, _ := cr.GetDevice()
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < numDevices; i++ {
@@ -361,5 +414,4 @@ func TestMSM{{.CurvePrefix}}MultiDevice(t *testing.T) {
 		})
 	}
 	wg.Wait()
-	cr.SetDevice(orig_device)
 }

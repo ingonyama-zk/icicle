@@ -2,15 +2,11 @@
 
 To understand the theory behind MSM pre computation technique refer to Niall Emmart's [talk](https://youtu.be/KAWlySN7Hm8?feature=shared&t=1734).
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn254`, `bw6-761`, `grumpkin`
-
 ## Core package
 
-## MSM `PrecomputeBases`
+### MSM PrecomputePoints
 
-`PrecomputeBases` and `G2PrecomputeBases` exists for all supported curves. 
+`PrecomputePoints` and `G2PrecomputePoints` exists for all supported curves.
 
 #### Description
 
@@ -18,21 +14,20 @@ This function extends each provided base point $(P)$ with its multiples $(2^lP, 
 
 The precomputation process is crucial for optimizing MSM operations, especially when dealing with large sets of points and scalars. By precomputing and storing multiples of the base points, the MSM function can more efficiently compute the scalar-point multiplications.
 
-#### `PrecomputeBases`
+#### `PrecomputePoints`
 
-Precomputes bases for MSM by extending each base point with its multiples.
+Precomputes points for MSM by extending each base point with its multiples.
 
 ```go
-func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError
+func PrecomputePoints(points core.HostOrDeviceSlice, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError
 ```
 
 ##### Parameters
 
 - **`points`**: A slice of the original affine points to be extended with their multiples.
-- **`precomputeFactor`**: Determines the total number of points to precompute for each base point.
-- **`c`**: Currently unused; reserved for future compatibility.
-- **`ctx`**: CUDA device context specifying the execution environment.
-- **`outputBases`**: The device slice allocated for storing the extended bases.
+- **`msmSize`**: The size of a single msm in order to determine optimal parameters.
+- **`cfg`**: The MSM configuration parameters.
+- **`outputBases`**: The device slice allocated for storing the extended points.
 
 ##### Example
 
@@ -54,28 +49,27 @@ func main() {
 	var precomputeOut core.DeviceSlice
 	precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
 
-	err := bn254.PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+	err := bn254.PrecomputePoints(points, 1024, &cfg, precomputeOut)
 	if err != cr.CudaSuccess {
 		log.Fatalf("PrecomputeBases failed: %v", err)
 	}
 }
 ```
 
-#### `G2PrecomputeBases`
+#### `G2PrecomputePoints`
 
-This method is the same as `PrecomputeBases` but for G2 points. Extends each G2 curve base point with its multiples for optimized MSM computations.
+This method is the same as `PrecomputePoints` but for G2 points. Extends each G2 curve base point with its multiples for optimized MSM computations.
 
 ```go
-func G2PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError
+func G2PrecomputePoints(points core.HostOrDeviceSlice, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError
 ```
 
 ##### Parameters
 
-- **`points`**: A slice of G2 curve points to be extended.
-- **`precomputeFactor`**: The total number of points to precompute for each base.
-- **`c`**: Reserved for future use to ensure compatibility with MSM operations.
-- **`ctx`**: Specifies the CUDA device context for execution.
-- **`outputBases`**: Allocated device slice for the extended bases.
+- **`points`**: A slice of the original affine points to be extended with their multiples.
+- **`msmSize`**: The size of a single msm in order to determine optimal parameters.
+- **`cfg`**: The MSM configuration parameters.
+- **`outputBases`**: The device slice allocated for storing the extended points.
 
 ##### Example
 
@@ -97,20 +91,9 @@ func main() {
 	var precomputeOut core.DeviceSlice
 	precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
 
-	err := g2.G2PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
+	err := g2.G2PrecomputePoints(points, 1024, 0, &cfg, precomputeOut)
 	if err != cr.CudaSuccess {
 		log.Fatalf("PrecomputeBases failed: %v", err)
 	}
 }
 ```
-
-### Benchmarks
-
-Benchmarks where performed on a Nvidia RTX 3090Ti.
-
-| Pre-computation factor | bn254 size `2^20` MSM, ms.  | bn254 size `2^12` MSM, size `2^10` batch, ms. | bls12-381 size `2^20` MSM, ms. | bls12-381 size `2^12` MSM, size `2^10` batch, ms. |
-| ------------- | ------------- | ------------- | ------------- | ------------- |
-| 1  | 14.1  | 82.8  | 25.5  | 136.7  |
-| 2  | 11.8  | 76.6  | 20.3  | 123.8  |
-| 4  | 10.9  | 73.8  | 18.1  | 117.8  |
-| 8  | 10.6  | 73.7  | 17.2  | 116.0  |

@@ -61,7 +61,7 @@ macro_rules! impl_ecntt {
                 $field,
                 $field_config,
                 ECNTTUnchecked,
-                "_ecntt_",
+                "_ecntt",
                 ProjectiveC
             );
 
@@ -161,6 +161,7 @@ macro_rules! impl_ecntt_bench {
         use icicle_core::ntt::ntt;
         use icicle_core::ntt::NTTDomain;
         use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+        use std::env;
         use std::sync::OnceLock;
 
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
@@ -206,23 +207,35 @@ macro_rules! impl_ecntt_bench {
             use icicle_core::ntt::NTTDomain;
             use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
 
-            let group_id = format!("{} EC NTT", $field_prefix);
+            let group_id = format!("{} EC NTT ", $field_prefix);
             let mut group = c.benchmark_group(&group_id);
             group.sampling_mode(SamplingMode::Flat);
             group.sample_size(10);
 
-            const MAX_SIZE: u64 = 1 << 18;
+            const MAX_LOG2: u32 = 9; // max length = 2 ^ MAX_LOG2 //TODO: should be limited by device ram only after fix
+
+            let max_log2 = env::var("MAX_LOG2")
+                .unwrap_or_else(|_| MAX_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MAX_LOG2);
+
             const FAST_TWIDDLES_MODE: bool = false;
 
-            INIT.get_or_init(move || init_domain::<$field>(MAX_SIZE, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
+            INIT.get_or_init(move || init_domain::<$field>(1 << max_log2, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
 
-            let test_sizes = [1 << 4, 1 << 8];
-            let batch_sizes = [1, 1 << 4, 128];
-            for test_size in test_sizes {
-                for batch_size in batch_sizes {
+            for test_size_log2 in [4, 8] {
+                for batch_size_log2 in [1, 1 << 4, 128] {
+                    let test_size = 1 << test_size_log2;
+                    let batch_size = 1 << batch_size_log2;
+                    let full_size = batch_size * test_size;
+
+                    if full_size > 1 << max_log2 {
+                        continue;
+                    }
+
                     let points = C::generate_random_projective_points(test_size);
                     let points = HostSlice::from_slice(&points);
-                    let mut batch_ntt_result = vec![Projective::<C>::zero(); batch_size * test_size];
+                    let mut batch_ntt_result = vec![Projective::<C>::zero(); full_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
                     let mut config = NTTConfig::default();
                     for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {

@@ -1,7 +1,7 @@
 # Golang bindings
 
 Golang bindings allow you to use ICICLE as a golang library.
-The source code for all Golang libraries can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang).
+The source code for all Golang packages can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang).
 
 The Golang bindings are comprised of multiple packages.
 
@@ -9,7 +9,7 @@ The Golang bindings are comprised of multiple packages.
 
 [`cuda-runtime`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/cuda_runtime) which defines abstractions for CUDA methods for allocating memory, initializing and managing streams, and `DeviceContext` which enables users to define and keep track of devices.
 
-Each curve has its own package which you can find [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves). If your project uses BN254 you only need to install that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
+Each supported curve, field, and hash has its own package which you can find in the respective directories [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang). If your project uses BN254 you only need to import that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
 
 ## Using ICICLE Golang bindings in your project
 
@@ -31,22 +31,30 @@ For a specific commit
 go get github.com/ingonyama-zk/icicle@<commit_id>
 ```
 
-To build the shared libraries you can run this script:
+To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/build.sh) script:
 
-```bash
-./build.sh [-curve=<curve> | -field=<field>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+```sh
+./build.sh [-curve=<curve>] [-field=<field>] [-hash=<hash>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+
+curve - The name of the curve to build or "all" to build all supported curves
+field - The name of the field to build or "all" to build all supported fields
+hash - The name of the hash to build or "all" to build all supported hashes
+-g2 - Optional - build with G2 enabled 
+-ecntt - Optional - build with ECNTT enabled
+-devmode - Optional - build in devmode
+-help - Optional - Displays usage information
 ```
-- **`curve`** - The name of the curve to build or "all" to build all curves
-- **`field`** - The name of the field to build or "all" to build all fields
-- **`g2`** - Optional - build with G2 enabled 
-- **`ecntt`** - Optional - build with ECNTT enabled
-- **`devmode`** - Optional - build in devmode
-- Usage can be displayed with the flag `-help`
+
+:::note
+
+If more than one curve or more than one field or more than one hash is supplied, the last one supplied will be built
+
+:::
 
 To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
 ```bash
-./build.sh all -g2 -ecntt
+./build.sh -curve=all -g2 -ecntt
 ```
 
 If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
@@ -73,10 +81,8 @@ import (
 To run all tests, for all curves:
 
 ```bash
-go test --tags=g2 ./... -count=1
+go test ./... -count=1
 ```
-
-If you dont want to include g2 tests then drop `--tags=g2`.
 
 If you wish to run test for a specific curve:
 
@@ -106,3 +112,25 @@ func main() {
 ```
 
 Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
+
+## Supported curves, fields and operations
+
+### Supported curves and operations
+
+| Operation\Curve | bn254 | bls12_377 | bls12_381 | bw6-761 | grumpkin |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| MSM | ✅ | ✅ | ✅ | ✅ | ✅ |
+| G2  | ✅ | ✅ | ✅ | ✅ | ❌ |
+| NTT | ✅ | ✅ | ✅ | ✅ | ❌ |
+| ECNTT | ✅ | ✅ | ✅ | ✅ | ❌ |
+| VecOps | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Polynomials | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+### Supported fields and operations
+
+| Operation\Field | babybear |
+| --- | :---: |
+| VecOps | ✅ |
+| Polynomials | ✅ |
+| NTT | ✅ |
+| Extension Field | ✅ |

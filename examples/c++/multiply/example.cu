@@ -17,7 +17,7 @@ int vector_mult(T* vec_b, T* vec_a, T* vec_result, size_t n_elments, device_cont
   config.is_a_on_device = true;
   config.is_b_on_device = true;
   config.is_result_on_device = true;
-  cudaError_t err =  bn254_mul_cuda(vec_a, vec_b, n_elments, config, vec_result);
+  cudaError_t err = bn254_mul_cuda(vec_a, vec_b, n_elments, config, vec_result);
   if (err != cudaSuccess) {
     std::cerr << "Failed to multiply vectors - " << cudaGetErrorString(err) << std::endl;
     return 0;
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
     std::cerr << "Failed to copy data from host to device - " << cudaGetErrorString(err) << std::endl;
     return 0;
   }
-  
+
   std::cout << "Starting warm-up" << std::endl;
   // Warm-up loop
   for (int i = 0; i < repetitions; i++) {
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
   // validate multiplication here...
 
   // clean up and exit
-  free(host_in1); 
+  free(host_in1);
   free(host_in2);
   free(host_out);
   cudaFree(device_in1);

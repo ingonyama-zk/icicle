@@ -1,9 +1,5 @@
 # MSM
 
-### Supported curves
-
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
-
 ## Example
 
 ```rust
@@ -84,7 +80,7 @@ pub struct MSMConfig<'a> {
 ```
 
 - **`ctx: DeviceContext`**: Specifies the device context, device id and the CUDA stream for asynchronous execution.
-- **`point_size: i32`**: 
+- **`point_size: i32`**:
 - **`precompute_factor: i32`**: Determines the number of extra points to pre-compute for each point, affecting memory footprint and performance.
 - **`c: i32`**: The "window bitsize," a parameter controlling the computational complexity and memory footprint of the MSM operation.
 - **`bitsize: i32`**: The number of bits of the largest scalar, typically equal to the bit size of the scalar field.
@@ -104,7 +100,7 @@ When performing MSM operations, it's crucial to match the size of the `scalars` 
 
 ## How do I toggle between the supported algorithms?
 
-When creating your MSM Config you may state which algorithm you wish to use. `is_big_triangle=true` will activate Large triangle accumulation and `is_big_triangle=false` will activate Bucket accumulation.
+When creating your MSM Config you may state which algorithm you wish to use. `is_big_triangle=true` will activate Large triangle reduction and `is_big_triangle=false` will activate iterative reduction.
 
 ```rust
 ...
@@ -119,7 +115,6 @@ msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
 ```
 
 You may reference the rust code [here](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961030e4e12bf1c9a78a2dadb2518/wrappers/rust/icicle-core/src/msm/mod.rs#L54).
-
 
 ## How do I toggle between MSM modes?
 
@@ -136,7 +131,6 @@ msm::msm(&scalars, &points, &cfg, &mut msm_result).unwrap();
 
 In the example above we allocate a single expected result which the MSM method will interpret as `batch_size=1` and run a single MSM.
 
-
 In the next example, we are expecting 10 results which sets `batch_size=10` and runs 10 MSMs in batch mode.
 
 ```rust
@@ -150,9 +144,13 @@ msm::msm(&scalars, &points, &cfg, &mut msm_results).unwrap();
 
 Here is a [reference](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961030e4e12bf1c9a78a2dadb2518/wrappers/rust/icicle-core/src/msm/mod.rs#L108) to the code which automatically sets the batch size. For more MSM examples have a look [here](https://github.com/ingonyama-zk/icicle/blob/77a7613aa21961030e4e12bf1c9a78a2dadb2518/examples/rust/msm/src/main.rs#L1).
 
+## Parameters for optimal performance
+
+Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
+
 ## Support for G2 group
 
-MSM also supports G2 group. 
+MSM also supports G2 group.
 
 Using MSM in G2 requires a G2 config, and of course your Points should also be G2 Points.
 

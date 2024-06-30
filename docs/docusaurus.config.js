@@ -163,8 +163,17 @@ const config = {
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
+        additionalLanguages: ['rust', 'go'],
       },
       image: 'img/logo.png',
+      announcementBar: {
+        id: 'announcement', // Any value that will identify this message.
+        content:
+          '<strong>🎉 Read our paper on the Polynomials API in ICICLE v2 by clicking <a target="_blank" rel="noopener noreferrer" href="https://eprint.iacr.org/2024/973">here</a>! 🎉</strong>',
+        backgroundColor: '#ADD8E6', // Light blue background color.
+        textColor: '#000000', // Black text color.
+        isCloseable: true, // Defaults to `true`.
+      },
     }),
 };
 

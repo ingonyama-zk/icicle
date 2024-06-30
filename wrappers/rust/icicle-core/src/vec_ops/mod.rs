@@ -40,12 +40,52 @@ impl<'a> VecOpsConfig<'a> {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct BitReverseConfig<'a> {
+    /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
+    pub ctx: DeviceContext<'a>,
+
+    /// True if inputs are on device and false if they're on host. Default value: false.
+    pub is_input_on_device: bool,
+
+    /// If true, output is preserved on device, otherwise on host. Default value: false.
+    pub is_output_on_device: bool,
+
+    /// Whether to run the vector operations asynchronously. If set to `true`, the functions will be non-blocking and you'd need to synchronize
+    /// it explicitly by running `stream.synchronize()`. If set to false, the functions will block the current CPU thread.
+    pub is_async: bool,
+}
+
+impl<'a> Default for BitReverseConfig<'a> {
+    fn default() -> Self {
+        Self::default_for_device(DEFAULT_DEVICE_ID)
+    }
+}
+
+impl<'a> BitReverseConfig<'a> {
+    pub fn default_for_device(device_id: usize) -> Self {
+        BitReverseConfig {
+            ctx: DeviceContext::default_for_device(device_id),
+            is_input_on_device: false,
+            is_output_on_device: false,
+            is_async: false,
+        }
+    }
+}
+
 #[doc(hidden)]
 pub trait VecOps<F> {
     fn add(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> IcicleResult<()>;
+
+    fn accumulate(
+        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
 
@@ -71,6 +111,17 @@ pub trait VecOps<F> {
         ctx: &DeviceContext,
         on_device: bool,
         is_async: bool,
+    ) -> IcicleResult<()>;
+
+    fn bit_reverse(
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &BitReverseConfig,
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    ) -> IcicleResult<()>;
+
+    fn bit_reverse_inplace(
+        input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &BitReverseConfig,
     ) -> IcicleResult<()>;
 }
 
@@ -111,6 +162,42 @@ fn check_vec_ops_args<'a, F>(
     res_cfg.is_result_on_device = result.is_on_device();
     res_cfg
 }
+fn check_bit_reverse_args<'a, F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &BitReverseConfig<'a>,
+    output: &(impl HostOrDeviceSlice<F> + ?Sized),
+) -> BitReverseConfig<'a> {
+    if input.len() & (input.len() - 1) != 0 {
+        panic!("input length must be a power of 2, input length: {}", input.len());
+    }
+    if input.len() != output.len() {
+        panic!(
+            "input and output lengths {}; {} do not match",
+            input.len(),
+            output.len()
+        );
+    }
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+    if let Some(device_id) = input.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in input and context are different"
+        );
+    }
+    if let Some(device_id) = output.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in output and context are different"
+        );
+    }
+    check_device(ctx_device_id);
+    let mut res_cfg = cfg.clone();
+    res_cfg.is_input_on_device = input.is_on_device();
+    res_cfg.is_output_on_device = output.is_on_device();
+    res_cfg
+}
 
 pub fn add_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -124,6 +211,19 @@ where
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::add(a, b, result, &cfg)
+}
+
+pub fn accumulate_scalars<F>(
+    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(a, b, a, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
 }
 
 pub fn sub_scalars<F>(
@@ -170,6 +270,31 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, row_size, column_size, output, ctx, on_device, is_async)
 }
 
+pub fn bit_reverse<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &BitReverseConfig,
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_bit_reverse_args(input, cfg, output);
+    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse(input, &cfg, output)
+}
+
+pub fn bit_reverse_inplace<F>(
+    input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &BitReverseConfig,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_bit_reverse_args(input, cfg, input);
+    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse_inplace(input, &cfg)
+}
+
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -180,6 +305,7 @@ macro_rules! impl_vec_ops_field {
     ) => {
         mod $field_prefix_ident {
             use crate::vec_ops::{$field, CudaError, DeviceContext, HostOrDeviceSlice};
+            use icicle_core::vec_ops::BitReverseConfig;
             use icicle_core::vec_ops::VecOpsConfig;
 
             extern "C" {
@@ -190,6 +316,14 @@ macro_rules! impl_vec_ops_field {
                     size: u32,
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "_accumulate_cuda")]
+                pub(crate) fn accumulate_scalars_cuda(
+                    a: *mut $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
                 ) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_sub_cuda")]
@@ -220,6 +354,14 @@ macro_rules! impl_vec_ops_field {
                     on_device: bool,
                     is_async: bool,
                 ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "_bit_reverse_cuda")]
+                pub(crate) fn bit_reverse_cuda(
+                    input: *const $field,
+                    size: u64,
+                    config: *const BitReverseConfig,
+                    output: *mut $field,
+                ) -> CudaError;
             }
         }
 
@@ -237,6 +379,22 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn accumulate(
+                a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::accumulate_scalars_cuda(
+                        a.as_mut_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
                     )
                     .wrap()
                 }
@@ -300,6 +458,37 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+
+            fn bit_reverse(
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &BitReverseConfig,
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::bit_reverse_cuda(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg as *const BitReverseConfig,
+                        output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn bit_reverse_inplace(
+                input: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &BitReverseConfig,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::bit_reverse_cuda(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg as *const BitReverseConfig,
+                        input.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
         }
     };
 }
@@ -311,7 +500,16 @@ macro_rules! impl_vec_add_tests {
     ) => {
         #[test]
         pub fn test_vec_add_scalars() {
-            check_vec_ops_scalars::<$field>()
+            check_vec_ops_scalars::<$field>();
+        }
+
+        #[test]
+        pub fn test_bit_reverse() {
+            check_bit_reverse::<$field>()
+        }
+        #[test]
+        pub fn test_bit_reverse_inplace() {
+            check_bit_reverse_inplace::<$field>()
         }
     };
 }

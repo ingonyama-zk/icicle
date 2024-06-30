@@ -1,13 +1,6 @@
 # Vector Operations API
 
-Our vector operations API which is part of `icicle-cuda-runtime` package, includes fundamental methods for addition, subtraction, and multiplication of vectors, with support for both host and device memory. 
-
-
-## Supported curves
-
-Vector operations are supported on the following curves:
-
-`bls12-377`, `bls12-381`, `bn-254`, `bw6-761`, `grumpkin`
+Our vector operations API which is part of `icicle-cuda-runtime` package, includes fundamental methods for addition, subtraction, and multiplication of vectors, with support for both host and device memory.
 
 ## Examples
 
@@ -59,7 +52,6 @@ let cfg = VecOpsConfig::default();
 mul_scalars(&a, &ones, &mut result, &cfg).unwrap();
 ```
 
-
 ## Vector Operations Configuration
 
 The `VecOpsConfig` struct encapsulates the settings for vector operations, including device context and operation modes.
@@ -90,7 +82,7 @@ pub struct VecOpsConfig<'a> {
 
 `VecOpsConfig` can be initialized with default settings tailored for a specific device:
 
-```
+```rust
 let cfg = VecOpsConfig::default();
 ```
 
@@ -118,7 +110,7 @@ impl<'a> VecOpsConfig<'a> {
 
 ## Vector Operations
 
-Vector operations are implemented through the `VecOps` trait, these traits are implemented for all [supported curves](#supported-curves) providing methods for addition, subtraction, and multiplication of vectors.
+Vector operations are implemented through the `VecOps` trait, providing methods for addition, subtraction, and multiplication of vectors.
 
 ### `VecOps` Trait
 
@@ -155,7 +147,6 @@ All operations are element-wise operations, and the results placed into the `res
 - **`sub`**: Computes the element-wise difference between two vectors.
 - **`mul`**: Performs element-wise multiplication of two vectors.
 
-
 ## MatrixTranspose API Documentation
 
 This section describes the functionality of the `TransposeMatrix` function used for matrix transposition.
@@ -186,8 +177,8 @@ where
 - **`column_size`**: The number of columns in the input matrix.
 - **`output`**: A mutable slice to store the transposed matrix. The slice can be stored on either the host or the device.
 - **`ctx`**: A reference to the `DeviceContext`, which provides information about the device where the operation will be performed.
-- **`on_device`**: A boolean flag indicating whether the inputs and outputs are on the device. 
-- **`is_async`**: A boolean flag indicating whether the operation should be performed asynchronously. 
+- **`on_device`**: A boolean flag indicating whether the inputs and outputs are on the device.
+- **`is_async`**: A boolean flag indicating whether the operation should be performed asynchronously.
 
 ### Return Value
 
@@ -208,7 +199,6 @@ let ctx: DeviceContext = // ...;
 transpose_matrix(&input, 5, 4, &mut output, &ctx, true, false)
     .expect("Failed to transpose matrix");
 ```
-
 
 The function takes a matrix represented as a 1D slice, transposes it, and stores the result in another 1D slice. The input and output slices can be stored on either the host or the device, and the operation can be performed synchronously or asynchronously.
 

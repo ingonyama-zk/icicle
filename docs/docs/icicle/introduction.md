@@ -165,7 +165,36 @@ cargo bench
 
 #### ICICLE Golang
 
-Golang is WIP in v1, coming soon. Please checkout a previous [release v0.1.0](https://github.com/ingonyama-zk/icicle/releases/tag/v0.1.0) for golang bindings.
+The Golang bindings require compiling ICICLE Core first. We supply a [build script](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/golang/build.sh) to help build what you need.
+
+Script usage:
+
+```sh
+./build.sh [-curve=<curve>] [-field=<field>] [-hash=<hash>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+
+curve - The name of the curve to build or "all" to build all supported curves
+field - The name of the field to build or "all" to build all supported fields
+hash - The name of the hash to build or "all" to build all supported hashes
+-g2 - Optional - build with G2 enabled 
+-ecntt - Optional - build with ECNTT enabled
+-devmode - Optional - build in devmode
+```
+
+:::note
+
+If more than one curve or more than one field or more than one hash is supplied, the last one supplied will be built
+
+:::
+
+Once the library has been built, you can use and test the Golang bindings.
+
+To test a specific curve, field or hash, change to it's directory and then run:
+
+```sh
+go test ./tests -count=1 -failfast -timeout 60m -p 2 -v
+```
+
+You will be able to see each test that runs, how long it takes and whether it passed or failed
 
 ### Running ICICLE examples
 
@@ -185,8 +214,8 @@ Read through the compile.sh and CMakeLists.txt to understand how to link your ow
 
 :::
 
-
 #### Running with Docker
+
 In each example directory, ZK-container files are located in a subdirectory `.devcontainer`.
 
 ```sh

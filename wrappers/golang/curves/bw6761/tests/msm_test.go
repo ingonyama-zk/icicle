@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	bw6761 "github.com/consensys/gnark-crypto/ecc/bw6-761"
+	"github.com/consensys/gnark-crypto/ecc/bw6-761"
 	"github.com/consensys/gnark-crypto/ecc/bw6-761/fp"
 	"github.com/consensys/gnark-crypto/ecc/bw6-761/fr"
 
@@ -106,6 +106,58 @@ func TestMSM(t *testing.T) {
 
 	}
 }
+
+func TestMSMPinnedHostMemory(t *testing.T) {
+	cfg := msm.GetDefaultMSMConfig()
+	for _, power := range []int{10} {
+		size := 1 << power
+
+		scalars := icicleBw6_761.GenerateScalars(size)
+		points := icicleBw6_761.GenerateAffinePoints(size)
+
+		pinnable := cr.GetDeviceAttribute(cr.CudaDevAttrHostRegisterSupported, 0)
+		lockable := cr.GetDeviceAttribute(cr.CudaDevAttrPageableMemoryAccessUsesHostPageTables, 0)
+
+		pinnableAndLockable := pinnable == 1 && lockable == 0
+
+		var pinnedPoints core.HostSlice[icicleBw6_761.Affine]
+		if pinnableAndLockable {
+			points.Pin(cr.CudaHostRegisterDefault)
+			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+			assert.Equal(t, points, pinnedPoints, "Allocating newly pinned memory resulted in bad points")
+		}
+
+		var p icicleBw6_761.Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		outHost := make(core.HostSlice[icicleBw6_761.Projective], 1)
+
+		e = msm.Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm allocated pinned host mem failed")
+
+		outHost.CopyFromDevice(&out)
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
+
+		if pinnableAndLockable {
+			e = msm.Msm(scalars, pinnedPoints, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm registered pinned host mem failed")
+
+			outHost.CopyFromDevice(&out)
+			// Check with gnark-crypto
+			assert.True(t, testAgainstGnarkCryptoMsm(scalars, pinnedPoints, outHost[0]))
+
+		}
+
+		out.Free()
+
+		if pinnableAndLockable {
+			points.Unpin()
+			pinnedPoints.FreePinned()
+		}
+	}
+}
 func TestMSMGnarkCryptoTypes(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	for _, power := range []int{3} {
@@ -170,9 +222,11 @@ func TestMSMBatch(t *testing.T) {
 	}
 }
 
-func TestPrecomputeBase(t *testing.T) {
+func TestPrecomputePoints(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	const precomputeFactor = 8
+	cfg.PrecomputeFactor = precomputeFactor
+
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
@@ -182,20 +236,18 @@ func TestPrecomputeBase(t *testing.T) {
 
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for PrecomputeBases results failed")
 
-			e = msm.PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
-			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
+			e = msm.PrecomputePoints(points, size, &cfg, precomputeOut)
+			assert.Equal(t, cr.CudaSuccess, e, "PrecomputeBases failed")
 
 			var p icicleBw6_761.Projective
 			var out core.DeviceSlice
 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
-
-			cfg.PrecomputeFactor = precomputeFactor
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for Projective results failed")
 
 			e = msm.Msm(scalars, precomputeOut, &cfg, out)
-			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Msm failed")
 			outHost := make(core.HostSlice[icicleBw6_761.Projective], batchSize)
 			outHost.CopyFromDevice(&out)
 			out.Free()
@@ -242,9 +294,7 @@ func TestMSMSkewedDistribution(t *testing.T) {
 
 func TestMSMMultiDevice(t *testing.T) {
 	numDevices, _ := cr.GetDeviceCount()
-	numDevices = 1 // TODO remove when test env is fixed
 	fmt.Println("There are ", numDevices, " devices available")
-	orig_device, _ := cr.GetDevice()
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < numDevices; i++ {
@@ -278,5 +328,4 @@ func TestMSMMultiDevice(t *testing.T) {
 		})
 	}
 	wg.Wait()
-	cr.SetDevice(orig_device)
 }

@@ -29,7 +29,7 @@ class PolynomialTest : public ::testing::Test
 {
 public:
   static inline const int MAX_NTT_LOG_SIZE = 24;
-  static inline const bool MEASURE = true;
+  static inline const bool MEASURE = false;
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
@@ -54,15 +54,17 @@ public:
     // code that executes after each test
   }
 
-  static Polynomial_t randomize_polynomial(uint32_t size, bool random = true)
+  static Polynomial_t randomize_polynomial(uint32_t size, bool random = true, bool from_evals = false)
   {
-    auto coeff = std::make_unique<scalar_t[]>(size);
+    auto elements = std::make_unique<scalar_t[]>(size);
     if (random) {
-      random_samples(coeff.get(), size);
+      random_samples(elements.get(), size);
     } else {
-      incremental_values(coeff.get(), size);
+      incremental_values(elements.get(), size);
     }
-    return Polynomial_t::from_coefficients(coeff.get(), size);
+
+    return from_evals ? Polynomial_t::from_rou_evaluations(elements.get(), size)
+                      : Polynomial_t::from_coefficients(elements.get(), size);
   }
 
   static void random_samples(scalar_t* res, uint32_t count)
@@ -94,12 +96,14 @@ public:
     const int deg_rhs = rhs.degree();
     ASSERT_EQ(deg_lhs, deg_rhs);
 
-    auto lhs_coeffs = std::make_unique<scalar_t[]>(deg_lhs);
-    auto rhs_coeffs = std::make_unique<scalar_t[]>(deg_rhs);
-    lhs.copy_coeffs(lhs_coeffs.get(), 1, deg_lhs - 1);
-    rhs.copy_coeffs(rhs_coeffs.get(), 1, deg_rhs - 1);
+    const int nof_elements_to_compare = (deg_lhs < 0) ? 1 : deg_lhs + 1;
 
-    ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), deg_lhs * sizeof(scalar_t)));
+    auto lhs_coeffs = std::make_unique<scalar_t[]>(nof_elements_to_compare);
+    auto rhs_coeffs = std::make_unique<scalar_t[]>(nof_elements_to_compare);
+    lhs.copy_coeffs(lhs_coeffs.get(), 0, nof_elements_to_compare - 1);
+    rhs.copy_coeffs(rhs_coeffs.get(), 0, nof_elements_to_compare - 1);
+
+    ASSERT_EQ(0, memcmp(lhs_coeffs.get(), rhs_coeffs.get(), nof_elements_to_compare * sizeof(scalar_t)));
   }
 
   static Polynomial_t vanishing_polynomial(int degree)
@@ -159,6 +163,56 @@ TEST_F(PolynomialTest, evaluationOnDomain)
 
   // check that f==g
   ASSERT_EQ((f - g).degree(), -1);
+}
+
+TEST_F(PolynomialTest, evaluateOnRouDomain)
+{
+  const int logsize = 8;
+  const int size = 1 << logsize;
+  auto f = randomize_polynomial(size);
+  auto g = randomize_polynomial(size, true, true /*from_evals*/);
+
+  // build domain
+  auto test = [&](auto& p, int domain_logsize) {
+    const int domain_size = 1 << domain_logsize;
+    device_context::DeviceContext ctx = device_context::get_default_device_context();
+    scalar_t w = ntt::get_root_of_unity_from_domain<scalar_t>(domain_logsize, ctx);
+    auto domain = std::make_unique<scalar_t[]>(domain_size);
+    domain[0] = scalar_t::one();
+    for (int i = 1; i < domain_size; ++i) {
+      domain[i] = domain[i - 1] * w;
+    }
+
+    // evaluation on domain
+    auto evals_naive = std::make_unique<scalar_t[]>(domain_size);
+    START_TIMER(naive_evals);
+    p.evaluate_on_domain(domain.get(), domain_size, evals_naive.get());
+    END_TIMER(naive_evals, "naive evals took", MEASURE);
+
+    // evaluate on rou domain
+    auto evals_rou_domain = std::make_unique<scalar_t[]>(domain_size);
+    START_TIMER(rou_domain_evals);
+    p.evaluate_on_rou_domain(domain_logsize, evals_rou_domain.get());
+    END_TIMER(rou_domain_evals, "evals on rou domain took", MEASURE);
+
+    ASSERT_EQ(0, memcmp(evals_naive.get(), evals_rou_domain.get(), domain_size * sizeof(scalar_t)));
+  };
+
+  // test f (in coeffs state)
+  test(f, logsize + 2); // evaluate on larger domain
+  test(f, logsize - 3); // evaluate on smaller domain
+  test(f, logsize);     // evaluate on domain with size like poly
+  // test g (in evals state)
+  test(g, logsize + 2); // evaluate on larger domain
+  test(g, logsize - 3); // evaluate on smaller domain
+  test(g, logsize);     // evaluate on domain with size like poly
+
+  // test f*f (in reversed evals state)
+  auto f_squared = f * f;
+  auto new_logsize = logsize + 1;   // f_squared is twice the degree and size of f
+  test(f_squared, new_logsize + 2); // evaluate on larger domain
+  test(f_squared, new_logsize - 3); // evaluate on smaller domain
+  test(f_squared, new_logsize);     // evaluate on domain with size like poly
 }
 
 TEST_F(PolynomialTest, fromEvaluations)
@@ -427,24 +481,6 @@ TEST_F(PolynomialTest, View)
   f += f;
   // expecting view to be invalidated since f is modified
   EXPECT_EQ(d_coeff.isValid(), false);
-}
-
-TEST_F(PolynomialTest, interpolation)
-{
-  const int size = 1 << 4;
-  const int interpolation_size = 1 << 6;
-
-  const auto x = scalar_t::rand_host();
-
-  auto f = randomize_polynomial(size);
-  auto [evals, N, device_id] = f.get_rou_evaluations_view(interpolation_size); // interpolate from 16 to 64 evaluations
-
-  auto g = Polynomial_t::from_rou_evaluations(evals.get(), N); // note the evals is a view to f
-  const auto fx = f(x);
-  ASSERT_EQ(evals.isValid(), false); // invaidated since f(x) transforms f to coefficients
-
-  const auto gx = g(x); // evaluating g which was constructed from interpolation of f
-  ASSERT_EQ(fx, gx);
 }
 
 TEST_F(PolynomialTest, slicing)

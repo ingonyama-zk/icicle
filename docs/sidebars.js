@@ -26,6 +26,47 @@ module.exports = {
         },
         {
           type: "category",
+          label: "Primitives",
+          link: {
+            type: `doc`,
+            id: 'icicle/primitives/overview',
+          },
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              label: "MSM",
+              id: "icicle/primitives/msm",
+            },
+            {
+              type: "doc",
+              label: "NTT",
+              id: "icicle/primitives/ntt",
+            },
+            {
+              type: "doc",
+              label: "Keccak Hash",
+              id: "icicle/primitives/keccak",
+            },
+            {
+              type: "doc",
+              label: "Poseidon Hash",
+              id: "icicle/primitives/poseidon",
+            },
+          ],
+        },
+        {
+          type: "doc",
+          label: "Polynomials",
+          id: "icicle/polynomials/overview",
+        },
+        {
+          type: "doc",
+          label: "Multi GPU Support",
+          id: "icicle/multi-gpu",
+        },
+        {
+          type: "category",
           label: "Golang bindings",
           link: {
             type: `doc`,
@@ -63,6 +104,11 @@ module.exports = {
               type: "doc",
               label: "Vector operations",
               id: "icicle/golang-bindings/vec-ops",
+            },
+            {
+              type: "doc",
+              label: "Keccak Hash",
+              id: "icicle/golang-bindings/keccak",
             },
             {
               type: "doc",
@@ -113,6 +159,11 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "Keccak Hash",
+              id: "icicle/rust-bindings/keccak",
+            },
+            {
+              type: "doc",
               label: "Multi GPU Support",
               id: "icicle/rust-bindings/multi-gpu",
             },
@@ -122,42 +173,6 @@ module.exports = {
               id: "icicle/rust-bindings/polynomials",
             },
           ],
-        },
-        {
-          type: "category",
-          label: "Primitives",
-          link: {
-            type: `doc`,
-            id: 'icicle/primitives/overview',
-          },
-          collapsed: true,
-          items: [
-            {
-              type: "doc",
-              label: "MSM",
-              id: "icicle/primitives/msm",
-            },
-            {
-              type: "doc",
-              label: "NTT",
-              id: "icicle/primitives/ntt",
-            },
-            {
-              type: "doc",
-              label: "Poseidon Hash",
-              id: "icicle/primitives/poseidon",
-            },
-          ],
-        },
-        {
-          type: "doc",
-          label: "Polynomials",
-          id: "icicle/polynomials/overview",
-        },
-        {
-          type: "doc",
-          label: "Multi GPU Support",
-          id: "icicle/multi-gpu",
         },
         {
           type: "doc",
@@ -190,6 +205,7 @@ module.exports = {
       type: "category",
       label: "Additional Resources",
       collapsed: false,
+      collapsible: false,
       items: [
         {
           type: "link",

@@ -1,4 +1,5 @@
 use cmake::Config;
+use std::env;
 
 fn main() {
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
@@ -8,6 +9,10 @@ fn main() {
     let mut config = Config::new("../../../icicle/");
     config.define("CMAKE_BUILD_TYPE", "Release");
     config.define("BUILD_HASH", "ON");
+
+    if let Ok(cuda_arch) = env::var("CUDA_ARCH") {
+        config.define("CUDA_ARCH", &cuda_arch);
+    }
 
     // Build
     let out_dir = config

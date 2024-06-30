@@ -34,7 +34,7 @@ jobs:
       run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
 
   build-curves-linux:
-    name: Build curves on Linux
+    name: Build and test curves on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
     needs: [check-changed-files, check-format]
     strategy:
@@ -60,19 +60,18 @@ jobs:
     - name: Build
       working-directory: ./wrappers/golang
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ./build.sh -curve=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} # builds a single curve with G2 and ECNTT enabled
-    - name: Upload ICICLE lib artifacts
-      uses: actions/upload-artifact@v4
+      # builds a single curve with the curve's specified build args
+      run: ./build.sh -curve=${{ matrix.curve.name }} ${{ matrix.curve.build_args }}
+    - name: Test
+      working-directory: ./wrappers/golang/curves
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      with:
-        name: icicle-builds-${{ matrix.curve.name }}-${{ github.workflow }}-${{ github.sha }}
-        path: |
-          icicle/build/lib/libingo_curve_${{ matrix.curve.name }}.a
-          icicle/build/lib/libingo_field_${{ matrix.curve.name }}.a
-        retention-days: 1
+      run: |
+        CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export CPATH=$CPATH:/usr/local/cuda/include
+        go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
  
   build-fields-linux:
-    name: Build fields on Linux
+    name: Build and test fields on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
     needs: [check-changed-files, check-format]
     strategy:
@@ -90,20 +89,25 @@ jobs:
     - name: Build
       working-directory: ./wrappers/golang
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ./build.sh -field=${{ matrix.field.name }} ${{ matrix.field.build_args }} # builds a single field with field-ext enabled
-    - name: Upload ICICLE lib artifacts
-      uses: actions/upload-artifact@v4
+      # builds a single field with the fields specified build args
+      run: ./build.sh -field=${{ matrix.field.name }} ${{ matrix.field.build_args }}
+    - name: Test
+      working-directory: ./wrappers/golang/fields
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      with:
-        name: icicle-builds-${{ matrix.field.name }}-${{ github.workflow }}-${{ github.sha }}
-        path: |
-          icicle/build/lib/libingo_field_${{ matrix.field.name }}.a
-        retention-days: 1
-  
-  test-linux:
-    name: Test on Linux
+      run: |
+        FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        export CPATH=$CPATH:/usr/local/cuda/include
+        go test ./$FIELD/tests -count=1 -failfast -p 2 -timeout 60m -v
+    
+  build-hashes-linux:
+    name: Build and test hashes on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, build-curves-linux, build-fields-linux]
+    needs: [check-changed-files, check-format]
+    strategy:
+      matrix:
+        hash:
+          - name: keccak
+            build_args:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -111,20 +115,18 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.20.0'
-    - name: Download ICICLE lib artifacts
-      uses: actions/download-artifact@v4
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      with:
-        path: ./icicle/build/lib
-        merge-multiple: true
-    - name: Run Tests
+    - name: Build
       working-directory: ./wrappers/golang
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      # -count ensures the test results are not cached
-      # -p controls the number of programs that can be run in parallel
+      # builds a single hash algorithm with the hash's specified build args
+      run: ./build.sh -hash=${{ matrix.hash.name }} ${{ matrix.hash.build_args }}
+    - name: Test
+      working-directory: ./wrappers/golang/hash
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
+        HASH=$(echo ${{ matrix.hash.name }} | sed -e 's/_//g')
         export CPATH=$CPATH:/usr/local/cuda/include
-        go test ./... -count=1 -failfast -p 2 -timeout 60m
+        go test ./$HASH/tests -count=1 -failfast -p 2 -timeout 60m -v
   
   # TODO: bw6 on windows requires more memory than the standard runner has
   # Add a large runner and then enable this job

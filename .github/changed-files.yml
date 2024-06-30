@@ -3,8 +3,11 @@ golang:
   - wrappers/golang/**/*.h
   - wrappers/golang/**/*.tmpl
   - go.mod
+  - .github/workflows/golang.yml
 rust:
   - wrappers/rust/**/*
+  - '!wrappers/rust/README.md'
+  - .github/workflows/rust.yml
 cpp:
   - icicle/**/*.cu
   - icicle/**/*.cuh
@@ -13,3 +16,10 @@ cpp:
   - icicle/**/*.c
   - icicle/**/*.h
   - icicle/CMakeLists.txt
+  - .github/workflows/cpp_cuda.yml  
+  - icicle/cmake/Common.cmake
+  - icicle/cmake/CurvesCommon.cmake
+  - icicle/cmake/FieldsCommon.cmake
+examples:
+  - examples/**/*
+  - .github/workflows/examples.yml

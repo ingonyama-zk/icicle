@@ -105,6 +105,13 @@ pub trait MSM<C: Curve> {
         ctx: &DeviceContext,
         output_bases: &mut DeviceSlice<Affine<C>>,
     ) -> IcicleResult<()>;
+
+    fn precompute_points_unchecked(
+        points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        msm_size: i32,
+        cfg: &MSMConfig,
+        output_bases: &mut DeviceSlice<Affine<C>>,
+    ) -> IcicleResult<()>;
 }
 
 /// Computes the multi-scalar multiplication, or MSM: `s1*P1 + s2*P2 + ... + sn*Pn`, or a batch of several MSMs.
@@ -188,7 +195,7 @@ pub fn msm<C: Curve + MSM<C>>(
 /// Extended points: \f$ P_0, P_1, P_2, ... P_{size}, 2^{l}P_0, 2^{l}P_1, ..., 2^{l}P_{size},
 /// 2^{2l}P_0, 2^{2l}P_1, ..., 2^{2cl}P_{size}, ... \f$
 ///
-/// * `bases` - Bases \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
+/// * `points` - Bases \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
 ///
 /// * `precompute_factor` - The number of total precomputed points for each base (including the base itself).
 ///
@@ -201,6 +208,7 @@ pub fn msm<C: Curve + MSM<C>>(
 /// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
 ///
 /// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
+#[deprecated(since = "2.5.0", note = "Please use `precompute_points` instead")]
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     precompute_factor: i32,
@@ -218,6 +226,55 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
     assert!(output_bases.is_on_device());
 
     C::precompute_bases_unchecked(points, precompute_factor, _c, ctx, output_bases)
+}
+
+/// A function that precomputes MSM bases by extending them with their shifted copies.
+/// e.g.:
+/// Original points: \f$ P_0, P_1, P_2, ... P_{size} \f$
+/// Extended points: \f$ P_0, P_1, P_2, ... P_{size}, 2^{l}P_0, 2^{l}P_1, ..., 2^{l}P_{size},
+/// 2^{2l}P_0, 2^{2l}P_1, ..., 2^{2cl}P_{size}, ... \f$
+///
+/// * `points` - Base points \f$ P_i \f$. In case of batch MSM, all *unique* points are concatenated.
+///
+/// * `msm_size` - The size of a single MSM to compute.
+///
+/// * `cfg` - config used to specify extra arguments of the MSM. NOTE: You should update the precompute_factor
+/// and potentially the c value inside this config. This config should be the same config used in msm.
+///
+/// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
+///
+/// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
+pub fn precompute_points<C: Curve + MSM<C>>(
+    points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+    msm_size: i32,
+    cfg: &MSMConfig,
+    output_bases: &mut DeviceSlice<Affine<C>>,
+) -> IcicleResult<()> {
+    let precompute_factor = cfg.precompute_factor;
+    assert_eq!(
+        output_bases.len(),
+        points.len() * (precompute_factor as usize),
+        "Precompute factor is probably incorrect: expected {} but got {}",
+        output_bases.len() / points.len(),
+        precompute_factor
+    );
+    assert!(output_bases.is_on_device());
+
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+    if let Some(device_id) = points.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in points and context are different"
+        );
+    }
+    check_device(ctx_device_id);
+    let mut local_cfg = cfg.clone();
+    local_cfg.points_size = points.len() as i32;
+    local_cfg.are_points_on_device = points.is_on_device();
+
+    C::precompute_points_unchecked(points, msm_size, &local_cfg, output_bases)
 }
 
 #[macro_export]
@@ -248,6 +305,14 @@ macro_rules! impl_msm {
                     _c: i32,
                     are_bases_on_device: bool,
                     ctx: &DeviceContext,
+                    output_bases: *mut Affine<$curve>,
+                ) -> CudaError;
+
+                #[link_name = concat!($curve_prefix, "_precompute_msm_points_cuda")]
+                pub(crate) fn precompute_points_cuda(
+                    points: *const Affine<$curve>,
+                    msm_size: i32,
+                    cfg: &MSMConfig,
                     output_bases: *mut Affine<$curve>,
                 ) -> CudaError;
             }
@@ -292,6 +357,23 @@ macro_rules! impl_msm {
                     .wrap()
                 }
             }
+
+            fn precompute_points_unchecked(
+                points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
+                msm_size: i32,
+                cfg: &MSMConfig,
+                output_bases: &mut DeviceSlice<Affine<$curve>>,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $curve_prefix_indent::precompute_points_cuda(
+                        points.as_ptr(),
+                        msm_size,
+                        cfg,
+                        output_bases.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
         }
     };
 }
@@ -315,5 +397,140 @@ macro_rules! impl_msm_tests {
         fn test_msm_skewed_distributions() {
             check_msm_skewed_distributions::<$curve>()
         }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_msm_bench {
+    (
+      $field_prefix:literal,
+      $curve:ident
+    ) => {
+        use criterion::criterion_group;
+        use criterion::criterion_main;
+        use criterion::Criterion;
+        use icicle_core::curve::Affine;
+        use icicle_core::curve::Curve;
+        use icicle_core::curve::Projective;
+        use icicle_core::msm::msm;
+        use icicle_core::msm::MSMConfig;
+        use icicle_core::msm::MSM;
+        use icicle_core::traits::FieldImpl;
+        use icicle_core::traits::GenerateRandom;
+        use icicle_cuda_runtime::device::warmup;
+        use icicle_cuda_runtime::memory::DeviceVec;
+        use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+        use icicle_cuda_runtime::memory::HostSlice;
+
+        fn msm_for_bench<C: Curve + MSM<C>>(
+            scalars_h: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
+            precomputed_points_d: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+            cfg: &MSMConfig,
+            msm_results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+            _seed: u32,
+        ) {
+            msm(scalars_h, precomputed_points_d, &cfg, msm_results).unwrap();
+        }
+
+        fn check_msm_batch<C: Curve + MSM<C>>(c: &mut Criterion)
+        where
+            <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
+        {
+            use criterion::black_box;
+            use criterion::SamplingMode;
+            use std::env;
+
+            let group_id = format!("{} MSM ", $field_prefix);
+            let mut group = c.benchmark_group(&group_id);
+            group.sampling_mode(SamplingMode::Flat);
+            group.sample_size(10);
+
+            use icicle_core::msm::precompute_points;
+            use icicle_core::msm::tests::generate_random_affine_points_with_zeroes;
+            use icicle_cuda_runtime::stream::CudaStream;
+
+            const MIN_LOG2: u32 = 13; // min msm length = 2 ^ MIN_LOG2
+            const MAX_LOG2: u32 = 25; // max msm length = 2 ^ MAX_LOG2
+
+            let min_log2 = env::var("MIN_LOG2")
+                .unwrap_or_else(|_| MIN_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MIN_LOG2);
+
+            let max_log2 = env::var("MAX_LOG2")
+                .unwrap_or_else(|_| MAX_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MAX_LOG2);
+
+            let stream = CudaStream::create().unwrap();
+            let mut cfg = MSMConfig::default();
+            cfg.ctx
+                .stream = &stream;
+            cfg.is_async = true;
+            cfg.large_bucket_factor = 5;
+            cfg.c = 4;
+
+            warmup(&stream).unwrap();
+
+            for test_size_log2 in (min_log2..=max_log2) {
+                let test_size = 1 << test_size_log2;
+
+                let points = generate_random_affine_points_with_zeroes(test_size, 10);
+                for precompute_factor in [1, 4, 8] {
+                    let mut precomputed_points_d = DeviceVec::cuda_malloc(precompute_factor * test_size).unwrap();
+                    cfg.precompute_factor = precompute_factor as i32;
+                    precompute_points(
+                        HostSlice::from_slice(&points),
+                        test_size as i32,
+                        &cfg,
+                        &mut precomputed_points_d,
+                    )
+                    .unwrap();
+                    for batch_size_log2 in [0, 4, 7] {
+                        let batch_size = 1 << batch_size_log2;
+                        let full_size = batch_size * test_size;
+
+                        if full_size > 1 << max_log2 {
+                            continue;
+                        }
+
+                        let mut scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
+                        let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
+                        // a version of batched msm without using `cfg.points_size`, requires copying bases
+
+                        let scalars_h = HostSlice::from_slice(&scalars);
+
+                        let mut msm_results = DeviceVec::<Projective<C>>::cuda_malloc(batch_size).unwrap();
+
+                        let bench_descr = format!(
+                            " {} x {} with precomp = {:?}",
+                            test_size, batch_size, precompute_factor
+                        );
+
+                        group.bench_function(&bench_descr, |b| {
+                            b.iter(|| {
+                                msm_for_bench(
+                                    scalars_h,
+                                    &precomputed_points_d[..],
+                                    &cfg,
+                                    &mut msm_results[..],
+                                    black_box(1),
+                                )
+                            })
+                        });
+
+                        stream
+                            .synchronize()
+                            .unwrap();
+                    }
+                }
+            }
+            stream
+                .destroy()
+                .unwrap();
+        }
+
+        criterion_group!(benches, check_msm_batch<$curve>);
+        criterion_main!(benches);
     };
 }

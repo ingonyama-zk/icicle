@@ -18,11 +18,8 @@
 
 extern "C" cudaError_t bls12_377_g2_precompute_msm_bases_cuda(
   bls12_377::g2_affine_t* bases,
-  int bases_size,
-  int precompute_factor,
-  int _c,
-  bool are_bases_on_device,
-  device_context::DeviceContext& ctx,
+  int msm_size,
+  msm::MSMConfig& config,
   bls12_377::g2_affine_t* output_bases);
 
 extern "C" cudaError_t bls12_377_g2_msm_cuda(
@@ -30,11 +27,8 @@ extern "C" cudaError_t bls12_377_g2_msm_cuda(
 
 extern "C" cudaError_t bls12_377_precompute_msm_bases_cuda(
   bls12_377::affine_t* bases,
-  int bases_size,
-  int precompute_factor,
-  int _c,
-  bool are_bases_on_device,
-  device_context::DeviceContext& ctx,
+  int msm_size,
+  msm::MSMConfig& config,
   bls12_377::affine_t* output_bases);
 
 extern "C" cudaError_t bls12_377_msm_cuda(
@@ -104,6 +98,9 @@ extern "C" cudaError_t bls12_377_mul_cuda(
 extern "C" cudaError_t bls12_377_add_cuda(
   bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_377::scalar_t* result);
 
+extern "C" cudaError_t bls12_377_accumulate_cuda(
+  bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t bls12_377_sub_cuda(
   bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_377::scalar_t* result);
 
@@ -115,6 +112,12 @@ extern "C" cudaError_t bls12_377_transpose_matrix_cuda(
   device_context::DeviceContext& ctx,
   bool on_device,
   bool is_async);
+
+extern "C" cudaError_t bls12_377_bit_reverse_cuda(
+  const bls12_377::scalar_t* input,
+  uint64_t n,
+  vec_ops::BitReverseConfig& config,
+  bls12_377::scalar_t* output);
 
 extern "C" void bls12_377_generate_scalars(bls12_377::scalar_t* scalars, int size);
 

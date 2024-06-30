@@ -5,10 +5,9 @@ package msm
 import "C"
 
 import (
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 func GetDefaultMSMConfig() core.MSMConfig {
@@ -29,8 +28,13 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 	return err
 }
 
+// Deprecated: PrecomputeBases exists for backward compatibility.
+// It may cause issues if an MSM with a different `c` value is used with precomputed points and it will be removed in a future version.
+// PrecomputePoints should be used instead.
 func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
-	pointsPointer, outputBasesPointer := core.PrecomputeBasesCheck(points, precomputeFactor, outputBases)
+	cfg := GetDefaultMSMConfig()
+	cfg.PrecomputeFactor = precomputeFactor
+	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, &cfg, outputBases)
 
 	cPoints := (*C.affine_t)(pointsPointer)
 	cPointsLen := (C.int)(points.Len())
@@ -41,6 +45,19 @@ func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c in
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
 	__ret := C.bls12_377_precompute_msm_bases_cuda(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func PrecomputePoints(points core.HostOrDeviceSlice, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError {
+	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, cfg, outputBases)
+
+	cPoints := (*C.affine_t)(pointsPointer)
+	cMsmSize := (C.int)(msmSize)
+	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
+	cOutputBases := (*C.affine_t)(outputBasesPointer)
+
+	__ret := C.bls12_377_precompute_msm_points_cuda(cPoints, cMsmSize, cCfg, cOutputBases)
 	err := (cr.CudaError)(__ret)
 	return err
 }

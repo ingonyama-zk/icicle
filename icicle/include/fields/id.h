@@ -9,5 +9,6 @@
 #define GRUMPKIN  5
 
 #define BABY_BEAR 1001
+#define STARK_252 1002
 
 #endif

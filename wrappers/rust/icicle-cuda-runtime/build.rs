@@ -53,6 +53,8 @@ fn main() {
         .allowlist_function("cudaGetDevice")
         .allowlist_function("cudaSetDevice")
         .allowlist_function("cudaGetDeviceCount")
+        .allowlist_function("cudaDeviceGetAttribute")
+        .rustified_enum("cudaDeviceAttr")
         // error handling
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__ERROR.html
         .allowlist_function("cudaGetLastError")
@@ -79,6 +81,15 @@ fn main() {
         .allowlist_function("cudaDeviceGetDefaultMemPool")
         .allowlist_function("cudaMemGetInfo")
         .rustified_enum("cudaMemcpyKind")
+        .allowlist_function("cudaHostAlloc")
+        .allowlist_var("cudaHostAllocDefault")
+        .allowlist_var("cudaHostAllocPortable")
+        .allowlist_function("cudaFreeHost")
+        .allowlist_function("cudaHostGetFlags")
+        .allowlist_function("cudaHostRegister")
+        .allowlist_var("cudaHostRegisterDefault")
+        .allowlist_var("cudaHostRegisterPortable")
+        .allowlist_function("cudaHostUnregister")
         // Stream Ordered Memory Allocator
         // https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY__POOLS.html
         .allowlist_function("cudaFreeAsync")

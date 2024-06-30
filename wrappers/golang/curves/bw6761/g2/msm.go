@@ -5,10 +5,9 @@ package g2
 import "C"
 
 import (
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"unsafe"
 )
 
 func G2GetDefaultMSMConfig() core.MSMConfig {
@@ -29,8 +28,13 @@ func G2Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *c
 	return err
 }
 
+// Deprecated: G2PrecomputeBases exists for backward compatibility.
+// It may cause issues if an MSM with a different `c` value is used with precomputed points and it will be removed in a future version.
+// G2PrecomputePoints should be used instead.
 func G2PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
-	pointsPointer, outputBasesPointer := core.PrecomputeBasesCheck(points, precomputeFactor, outputBases)
+	cfg := G2GetDefaultMSMConfig()
+	cfg.PrecomputeFactor = precomputeFactor
+	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, &cfg, outputBases)
 
 	cPoints := (*C.g2_affine_t)(pointsPointer)
 	cPointsLen := (C.int)(points.Len())
@@ -41,6 +45,19 @@ func G2PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c 
 	cOutputBases := (*C.g2_affine_t)(outputBasesPointer)
 
 	__ret := C.bw6_761_g2_precompute_msm_bases_cuda(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func G2PrecomputePoints(points core.HostOrDeviceSlice, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError {
+	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, cfg, outputBases)
+
+	cPoints := (*C.g2_affine_t)(pointsPointer)
+	cMsmSize := (C.int)(msmSize)
+	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
+	cOutputBases := (*C.g2_affine_t)(outputBasesPointer)
+
+	__ret := C.bw6_761_g2_precompute_msm_points_cuda(cPoints, cMsmSize, cCfg, cOutputBases)
 	err := (cr.CudaError)(__ret)
 	return err
 }

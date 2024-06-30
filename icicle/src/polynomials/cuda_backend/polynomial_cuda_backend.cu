@@ -201,20 +201,6 @@ namespace polynomials {
       return {std::move(integrity_pointer), N, m_device_context.device_id};
     }
 
-    std::tuple<IntegrityPointer<I>, uint64_t, uint64_t>
-    get_rou_evaluations_view(uint64_t nof_evaluations, bool is_reversed)
-    {
-      if (nof_evaluations != 0 && nof_evaluations < get_nof_elements()) {
-        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "get_rou_evaluations_view() can only expand #evals");
-      }
-      transform_to_evaluations(nof_evaluations, is_reversed);
-      auto [evals, N] = get_rou_evaluations();
-      // when reading the pointer, if the counter was modified, the pointer is invalid
-      IntegrityPointer<I> integrity_pointer(evals, m_integrity_counter, *m_integrity_counter);
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream));
-      return {std::move(integrity_pointer), N, m_device_context.device_id};
-    }
-
     std::pair<const I*, uint64_t> get_rou_evaluations() override
     {
       const bool is_reversed = this->m_state == State::EvaluationsOnRou_Reversed;
@@ -277,7 +263,7 @@ namespace polynomials {
       nof_evaluations = (nof_evaluations == 0) ? this->m_nof_elements : ceil_to_power_of_two(nof_evaluations);
       const bool is_same_nof_evaluations = nof_evaluations == this->m_nof_elements;
       const bool is_same_order = is_reversed && this->m_state == State::EvaluationsOnRou_Reversed ||
-                                 (!is_reversed && State::EvaluationsOnRou_Natural);
+                                 (!is_reversed && this->m_state == State::EvaluationsOnRou_Natural);
       const bool is_already_in_state = is_same_nof_evaluations && is_same_order;
       if (is_already_in_state) { return; }
 
@@ -598,10 +584,9 @@ namespace polynomials {
 
       const int64_t deg_a = degree(a);
       const int64_t deg_b = degree(b);
-      if (deg_a < deg_b || deg_b < 0) {
+      if (deg_b < 0) {
         THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "Polynomial division (CUDA backend): numerator degree must be "
-                                          "greater-or-equal to denumerator degree and denumerator must not be zero");
+          IcicleError_t::InvalidArgument, "Polynomial division (CUDA backend): divide by zeropolynomial ");
       }
 
       // init: Q=0, R=a
@@ -649,10 +634,45 @@ namespace polynomials {
     {
       assert_device_compatability(numerator, out);
 
-      // TODO Yuval: vanishing polynomial x^n-1 evaluates to zero on ROU
-      // Therefore constant on coset with u as coset generator ((wu)^n-1 = w^n*u^n-1 = u^n-1)
-      // This is true for a coset of size n but if numerator is of size >n, then I need a larger coset and it
-      // doesn't hold. Need to use this fact to optimize division
+      // vanishing polynomial of degree N is the polynomial V(x) such that V(r)=0 for r Nth root-of-unity.
+      // For example for N=4 it vanishes on the group [1,W,W^2,W^3] where W is the 4th root of unity. In that
+      // case V(x)=(x-1)(x-w)(x-w^2)(x-w^3). It can be easily shown that V(x)=x^N-1. This holds since x^N=1 on this
+      // domain (since x is the Nth root of unity).
+
+      // Note that we always represent polynomials with N elements for N a power of two. This is required for NTTs.
+      // In addition we consider deg(P) to be this number of elements N even though the real degree may be lower. for
+      // example 1+x-2x^2 is degree 2 but we store 4 elements and consider it degree 3.
+
+      // when dividing a polynomial  P(x)/V(x) (The vanishing polynomial) the output is of degree deg(P)-deg(V). There
+      // are three cases where V(x) divides P(x) (this is assumed since otherwise the output polynomial does not
+      // exist!):
+      // (1) deg(P)=2*deg(V): in that case deg(P/V)=deg(V)=N. This is an efficient case since on a domain of size N, the
+      // vanishing polynomial evaluates to a constant value.
+      // (2) deg(P)=deg(V)=N: in that case the output is a degree 0 polynomial.
+      // polynomial (i.e. scalar). (3) general case: deg(P)>2*deg(V): in that case deg(P) is a least 4*deg(V) since N is
+      // a power of two. This means that deg(P/V)=deg(P). For example deg(P)=16, deg(V)=4 --> deg(P/V)=12 ceiled to 16.
+
+      // When computing we want to divide P(x)'s evals by V(x)'s evals. Since V(x)=0 on this domain we have to compute
+      // on a coset.
+      // for case (3) we must evaluate V(x) on deg(P) domain size and compute elementwise division on a coset.
+      // case (1) is more efficient because we need N evaluations of V(x) on a coset. Note that V(x)=constant on a coset
+      // of rou. This is because V(wu)=(wu)^N-1=W^N*u^N-1 = 1*u^N-1 (as w^N=1 for w Nth root of unity). case (2) can be
+      // computed like case (1).
+
+      const bool is_case_2N = numerator->get_nof_elements() == 2 * vanishing_poly_degree;
+      const bool is_case_N = numerator->get_nof_elements() == vanishing_poly_degree;
+      if (is_case_2N) {
+        divide_by_vanishing_case_2N(out, numerator, vanishing_poly_degree);
+      } else if (is_case_N) {
+        divide_by_vanishing_case_N(out, numerator, vanishing_poly_degree);
+      } else {
+        divide_by_vanishing_general_case(out, numerator, vanishing_poly_degree);
+      }
+    }
+
+    void divide_by_vanishing_general_case(PolyContext out, PolyContext numerator, uint64_t vanishing_poly_degree)
+    {
+      // General case: P(x)/V(x) where v is of degree N and p of any degree>N
 
       // (1) allocate vanishing polynomial in coefficients form
       // TODO Yuval: maybe instead of taking numerator memory and modiyfing it diretcly add a state for evaluations
@@ -688,10 +708,87 @@ namespace polynomials {
       div_element_wise_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
         numerator_coeffs, out_coeffs, N, out_coeffs);
 
-      // (4) INTT back both a and out
+      // (4) INTT back both numerator and out
       ntt_config.ordering = ntt::Ordering::kMN;
       CHK_STICKY(ntt::ntt(out_coeffs, N, ntt::NTTDir::kInverse, ntt_config, out_coeffs));
       CHK_STICKY(ntt::ntt(numerator_coeffs, N, ntt::NTTDir::kInverse, ntt_config, numerator_coeffs));
+    }
+
+    void divide_by_vanishing_case_2N(PolyContext out, PolyContext numerator, uint64_t vanishing_poly_degree)
+    {
+      // in that special case the numertaor has 2N elements and output will be N elements
+      if (numerator->get_nof_elements() != 2 * vanishing_poly_degree) {
+        THROW_ICICLE_ERR(IcicleError_t::UndefinedError, "invalid input size. Expecting numerator to be of size 2N");
+      }
+
+      // In the case where deg(P)=2N, I can transform numerator to Reversed-evals -> The second half is
+      // a reversed-coset of size N with coset-gen the 2N-th root of unity.
+      const int N = vanishing_poly_degree;
+      numerator->transform_to_evaluations(2 * N, true /*=reversed*/);
+      // allocate output in coeffs because it will be calculated on a coset but I don't have such a state so will have
+      // to INTT back to coeffs
+      auto numerator_evals_reversed_p = get_context_storage_immutable<I>(numerator);
+      out->allocate(N, State::Coefficients, false /*=set zeros*/);
+      auto out_evals_reversed_p = get_context_storage_mutable<I>(out);
+
+      auto ntt_config = ntt::default_ntt_config<C>(m_device_context);
+      ntt_config.coset_gen = ntt::get_root_of_unity_from_domain<D>((uint64_t)log2(2 * N), ntt_config.ctx);
+      // compute inv(u^N-1);
+      D v_coset_eval = D::inverse(D::pow(ntt_config.coset_gen, N) - D::one());
+
+      const int NOF_THREADS = 128;
+      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
+      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        numerator_evals_reversed_p + N /*second half is the reversed coset*/, v_coset_eval, N, out_evals_reversed_p);
+
+      // INTT back from reversed evals on coset to coeffs
+      ntt_config.are_inputs_on_device = true;
+      ntt_config.are_outputs_on_device = true;
+      ntt_config.is_async = true;
+      ntt_config.ordering = ntt::Ordering::kRN;
+      ntt::ntt(out_evals_reversed_p, N, ntt::NTTDir::kInverse, ntt_config, out_evals_reversed_p);
+
+      CHK_LAST();
+    }
+
+    void divide_by_vanishing_case_N(PolyContext out, PolyContext numerator, uint64_t vanishing_poly_degree)
+    {
+      // in that special case the numertaor has N elements and output will be N elements
+      if (numerator->get_nof_elements() != vanishing_poly_degree) {
+        THROW_ICICLE_ERR(IcicleError_t::UndefinedError, "invalid input size. Expecting numerator to be of size N");
+      }
+
+      const int N = vanishing_poly_degree;
+      numerator->transform_to_coefficients(N);
+      auto numerator_evals_reversed_p = get_context_storage_immutable<I>(numerator);
+      out->allocate(N, State::Coefficients, false /*=set zeros*/);
+      auto out_evals_reversed_p = get_context_storage_mutable<I>(out);
+
+      // (1) NTT numerator to coset evals (directly to out)
+      auto ntt_config = ntt::default_ntt_config<C>(m_device_context);
+      ntt_config.coset_gen = ntt::get_root_of_unity_from_domain<D>((uint64_t)log2(2 * N), ntt_config.ctx);
+      ntt_config.are_inputs_on_device = true;
+      ntt_config.are_outputs_on_device = true;
+      ntt_config.is_async = true;
+      ntt_config.ordering = ntt::Ordering::kNM;
+      ntt::ntt(numerator_evals_reversed_p, N, ntt::NTTDir::kForward, ntt_config, out_evals_reversed_p);
+
+      // (2) divide by constant value (that V(x) evaluates to on the coset)
+      D v_coset_eval = D::inverse(D::pow(ntt_config.coset_gen, N) - D::one());
+
+      const int NOF_THREADS = 128;
+      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
+      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        out_evals_reversed_p, v_coset_eval, N, out_evals_reversed_p);
+
+      // (3) INTT back from coset to coeffs
+      ntt_config.are_inputs_on_device = true;
+      ntt_config.are_outputs_on_device = true;
+      ntt_config.is_async = true;
+      ntt_config.ordering = ntt::Ordering::kMN;
+      ntt::ntt(out_evals_reversed_p, N, ntt::NTTDir::kInverse, ntt_config, out_evals_reversed_p);
+
+      CHK_LAST();
     }
 
     // arithmetic with monomials
@@ -776,6 +873,72 @@ namespace polynomials {
       }
     }
 
+    void evaluate_on_rou_domain(PolyContext p, uint64_t domain_log_size, I* evals /*OUT*/) override
+    {
+      const uint64_t poly_size = p->get_nof_elements();
+      const uint64_t domain_size = 1 << domain_log_size;
+      const bool is_evals_on_host = is_host_ptr(evals, m_device_context.device_id);
+
+      I* d_evals = evals;
+      // if evals on host, allocate CUDA memory
+      if (is_evals_on_host) { CHK_STICKY(cudaMallocAsync(&d_evals, domain_size * sizeof(I), m_device_context.stream)); }
+
+      // If domain size is smaller the polynomial size -> transform to evals and copy the evals with stride.
+      // Else, if in coeffs copy coeffs to evals mem and NTT inplace to compute the evals, else INTT to d_evals and back
+      // inplace to larger domain
+      const bool is_domain_size_smaller_than_poly_size = domain_size <= poly_size;
+      if (is_domain_size_smaller_than_poly_size) {
+        // TODO Yuval: in reversed evals, can reverse the first 'domain_size' elements to d_evals instead of
+        // transforming back to evals.
+        p->transform_to_evaluations();
+        const auto stride = poly_size / domain_size;
+        const int NOF_THREADS = 128;
+        const int NOF_BLOCKS = (domain_size + NOF_THREADS - 1) / NOF_THREADS;
+        slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+          get_context_storage_immutable<I>(p), d_evals, 0 /*offset*/, stride, domain_size);
+      } else {
+        CHK_STICKY(cudaMemset(d_evals, 0, domain_size * sizeof(I)));
+        auto ntt_config = ntt::default_ntt_config<D>(m_device_context);
+        ntt_config.are_inputs_on_device = true;
+        ntt_config.are_outputs_on_device = true;
+        ntt_config.is_async = true;
+        // TODO Yuval: in evals I can NTT directly to d_evals without changing my state
+        switch (p->get_state()) {
+        case State::Coefficients: {
+          // copy to evals memory and inplace NTT of domain size
+          CHK_STICKY(
+            cudaMemcpy(d_evals, get_context_storage_immutable<I>(p), poly_size * sizeof(I), cudaMemcpyDeviceToDevice));
+          ntt_config.ordering = ntt::Ordering::kNN;
+          ntt::ntt(d_evals, domain_size, ntt::NTTDir::kForward, ntt_config, d_evals);
+        } break;
+        case State::EvaluationsOnRou_Natural:
+        case State::EvaluationsOnRou_Reversed: {
+          const bool is_from_natrual = p->get_state() == State::EvaluationsOnRou_Natural;
+          // INTT to coeffs and back to evals
+          ntt_config.ordering = is_from_natrual ? ntt::Ordering::kNM : ntt::Ordering::kRN;
+          ntt::ntt(get_context_storage_immutable<I>(p), poly_size, ntt::NTTDir::kInverse, ntt_config, d_evals);
+          ntt_config.ordering = is_from_natrual ? ntt::Ordering::kMN : ntt::Ordering::kNN;
+          ntt::ntt(d_evals, poly_size, ntt::NTTDir::kForward, ntt_config, d_evals);
+        } break;
+        default:
+          THROW_ICICLE_ERR(IcicleError_t::UndefinedError, "Invalid state to compute evaluations");
+          break;
+        }
+      }
+
+      // release CUDA memory if allocated
+      if (is_evals_on_host) {
+        CHK_STICKY(
+          cudaMemcpyAsync(evals, d_evals, domain_size * sizeof(I), cudaMemcpyDeviceToHost, m_device_context.stream));
+        CHK_STICKY(cudaFreeAsync(d_evals, m_device_context.stream));
+      }
+
+      // sync since user cannot reuse this stream so need to make sure evals are computed
+      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
+
+      CHK_LAST();
+    }
+
     uint64_t copy_coeffs(PolyContext op, C* out_coeffs, uint64_t start_idx, uint64_t end_idx) override
     {
       const uint64_t nof_coeffs = op->get_nof_elements();
@@ -809,16 +972,14 @@ namespace polynomials {
       return host_coeff;
     }
 
-    std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
+    std::tuple<
+      IntegrityPointer<C>,
+      uint64_t /*size*/
+      ,
+      uint64_t /*device_id*/>
     get_coefficients_view(PolyContext p) override
     {
       return p->get_coefficients_view();
-    }
-
-    std::tuple<IntegrityPointer<I>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_rou_evaluations_view(PolyContext p, uint64_t nof_evaluations, bool is_reversed) override
-    {
-      return p->get_rou_evaluations_view(nof_evaluations, is_reversed);
     }
 
     inline void assert_device_compatability(PolyContext a, PolyContext b) const
