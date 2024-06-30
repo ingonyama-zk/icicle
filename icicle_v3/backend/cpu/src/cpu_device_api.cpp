@@ -46,7 +46,7 @@ public:
 
   eIcicleError get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/) const override
   {
-    // TODO Yuval: implement this
+    // TODO implement this
     return eIcicleError::API_NOT_IMPLEMENTED;
   }
 

@@ -128,7 +128,6 @@ macro_rules! impl_ecntt_tests {
             static INIT: OnceLock<()> = OnceLock::new();
 
             pub fn initialize() {
-                // TODO Yuval : probably don't need INIT lock here, if CPU init_domain is thread safe
                 INIT.get_or_init(move || {
                     test_utilities::test_load_and_init_devices();
                     // init domain for both devices

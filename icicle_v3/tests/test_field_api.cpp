@@ -6,7 +6,6 @@
 #include "icicle/runtime.h"
 #include "icicle/vec_ops.h"
 #include "icicle/ntt.h"
-#include "icicle/matrix_ops.h"
 
 #include "icicle/fields/field_config.h"
 

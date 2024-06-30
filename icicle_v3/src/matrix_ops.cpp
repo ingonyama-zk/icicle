@@ -1,4 +1,4 @@
-#include "icicle/matrix_ops.h"
+#include "icicle/vec_ops.h"
 #include "icicle/dispatcher.h"
 
 namespace icicle {

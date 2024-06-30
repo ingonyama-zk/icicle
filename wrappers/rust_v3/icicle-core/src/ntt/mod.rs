@@ -106,7 +106,6 @@ impl<S: FieldImpl> NTTConfig<S> {
     }
 }
 
-// TODO Yuval : maybe just reuse NTTConfig for init_domain() too?
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct NTTInitDomainConfig {
@@ -175,7 +174,7 @@ where
             output.len()
         );
     }
-    // TODO Yuval : how to check that?
+    // TODO Yuval : check device
     // let ctx_device_id = cfg
     //     .ctx
     //     .device_id;
@@ -370,8 +369,7 @@ macro_rules! impl_ntt_tests {
         static RELEASE: OnceLock<()> = OnceLock::new(); // for release domain test
         const FAST_TWIDDLES_MODE: bool = false;
 
-        pub fn initialize() {
-            // TODO Yuval : probably don't need INIT lock here, if CPU init_domain is thread safe
+        pub fn initialize() {            
             INIT.get_or_init(move || {
                 test_utilities::test_load_and_init_devices();
                 // init domain for both devices

@@ -10,7 +10,7 @@ use std::slice::{from_raw_parts_mut, SliceIndex};
 
 #[derive(Debug)]
 pub struct HostSlice<T>([T]);
-pub struct DeviceVec<T>(ManuallyDrop<Box<[T]>>); // TODO Yuval is the ManuallyDrop necessary here?
+pub struct DeviceVec<T>(ManuallyDrop<Box<[T]>>);
 pub struct DeviceSlice<T>([T]);
 
 pub trait HostOrDeviceSlice<T> {
@@ -56,7 +56,9 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
     }
 
     fn device_id(&self) -> Option<usize> {
-        Some(0) // TODO Yuval implement
+        // TODO Yuval implement
+        assert!(false, "not implemented");
+        Some(0) 
     }
 
     unsafe fn as_ptr(&self) -> *const T {
