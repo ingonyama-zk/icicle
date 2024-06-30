@@ -847,6 +847,14 @@ public:
     return r;
   }
 
+  HOST_DEVICE_INLINE Field& operator=(Field const& other)
+  {
+    for (int i = 0; i < TLC; i++) {
+      this->limbs_storage.limbs[i] = other.limbs_storage.limbs[i];
+    }
+    return *this;
+  }
+
   friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult

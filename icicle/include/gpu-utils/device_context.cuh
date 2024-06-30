@@ -3,6 +3,7 @@
 #define DEVICE_CONTEXT_H
 
 #include <cuda_runtime.h>
+#include "gpu-utils/error_handler.cuh"
 
 namespace device_context {
 
@@ -30,6 +31,28 @@ namespace device_context {
     };
   }
 
-} // namespace device_context
+  // checking whether a pointer is on host or device and asserts device matches provided device
+  static bool is_host_ptr(const void* p, int device_id = 0)
+  {
+    cudaPointerAttributes attributes;
+    CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
+    const bool is_on_host = attributes.type == cudaMemoryTypeHost ||
+                            attributes.type == cudaMemoryTypeUnregistered; // unregistered is host memory
+    const bool is_on_cur_device = !is_on_host && attributes.device == device_id;
+    const bool is_valid_ptr = is_on_host || is_on_cur_device;
+    if (!is_valid_ptr) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid ptr"); }
 
+    return is_on_host;
+  }
+
+  static int get_cuda_device(const void* p)
+  {
+    cudaPointerAttributes attributes;
+    CHK_STICKY(cudaPointerGetAttributes(&attributes, p));
+    const bool is_on_host = attributes.type == cudaMemoryTypeHost ||
+                            attributes.type == cudaMemoryTypeUnregistered; // unregistered is host memory
+    return is_on_host ? -1 : attributes.device;
+  }
+
+} // namespace device_context
 #endif

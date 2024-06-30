@@ -6,6 +6,10 @@
 #include "gpu-utils/device_context.cuh"
 #include "gpu-utils/error_handler.cuh"
 
+#include "hash/hash.cuh"
+
+using namespace hash;
+
 namespace keccak {
   /**
    * @struct KeccakConfig
@@ -33,24 +37,39 @@ namespace keccak {
     return config;
   }
 
-  /**
-   * Compute the keccak hash over a sequence of preimages.
-   * Takes {number_of_blocks * input_block_size} u64s of input and computes {number_of_blocks} outputs, each of size {D
-   * / 64} u64
-   * @tparam C - number of bits of capacity (c = b - r = 1600 - r). Only multiples of 64 are supported.
-   * @tparam D - number of bits of output. Only multiples of 64 are supported.
-   * @param input a pointer to the input data. May be allocated on device or on host, regulated
-   * by the config. Must be of size [input_block_size](@ref input_block_size) * [number_of_blocks](@ref
-   * number_of_blocks)}.
-   * @param input_block_size - size of each input block in bytes. Should be divisible by 8.
-   * @param number_of_blocks number of input and output blocks. One GPU thread processes one block
-   * @param output a pointer to the output data. May be allocated on device or on host, regulated
-   * by the config. Must be of size [output_block_size](@ref output_block_size) * [number_of_blocks](@ref
-   * number_of_blocks)}
-   */
-  template <int C, int D>
-  cudaError_t
-  keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config);
+  class Keccak : public SpongeHasher<uint8_t, uint64_t>
+  {
+  public:
+    static const int KECCAK_BLOCK_SIZE = 128;
+
+    static inline int keccak_number_of_blocks(size_t number_of_states)
+    {
+      return (number_of_states - 1) / KECCAK_BLOCK_SIZE + 1;
+    }
+
+    cudaError_t pad_many(
+      uint64_t* states,
+      unsigned int number_of_states,
+      unsigned int input_block_len,
+      const device_context::DeviceContext& ctx) const override;
+
+    cudaError_t squeeze_states(
+      const uint64_t* states,
+      unsigned int number_of_states,
+      unsigned int output_len,
+      uint64_t* output,
+      const device_context::DeviceContext& ctx) const override;
+
+    cudaError_t run_permutation_kernel(
+      const uint64_t* states,
+      uint64_t* output,
+      unsigned int number_of_states,
+      bool aligned,
+      const device_context::DeviceContext& ctx) const override;
+
+    Keccak(unsigned int rate) : SpongeHasher<uint8_t, uint64_t>(25, 25, rate, 0){};
+    ~Keccak() = default;
+  };
 } // namespace keccak
 
 #endif

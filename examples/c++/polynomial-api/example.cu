@@ -3,13 +3,11 @@
 #include "polynomials/polynomials.h"
 #include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
 #include "ntt/ntt.cuh"
-#include "poseidon/tree/merkle.cuh"
+
 #include "api/bn254.h"
 #include <chrono>
 
-// using namespace field_config;
 using namespace polynomials;
-using namespace merkle;
 using namespace bn254;
 
 // define the polynomial type

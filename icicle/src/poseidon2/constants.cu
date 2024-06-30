@@ -1,4 +1,5 @@
-#include "poseidon2/poseidon2.cuh"
+#include "poseidon2/constants.cuh"
+#include "gpu-utils/device_context.cuh"
 
 /// These are pre-calculated constants for different curves
 #include "fields/id.h"
@@ -36,7 +37,6 @@ namespace poseidon2 {
     device_context::DeviceContext& ctx,
     Poseidon2Constants<S>* poseidon_constants)
   {
-    cudaFree(nullptr); // Temporary solution
     if (!(alpha == 3 || alpha == 5 || alpha == 7 || alpha == 11)) {
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Invalid alpha value");
     }
@@ -78,7 +78,6 @@ namespace poseidon2 {
     device_context::DeviceContext& ctx,
     Poseidon2Constants<S>* poseidon2_constants)
   {
-    cudaFree(nullptr); // Temporary solution
     CHK_INIT_IF_RETURN();
 
 #define P2_CONSTANTS_DEF(width)                                                                                        \
@@ -121,7 +120,6 @@ namespace poseidon2 {
   cudaError_t release_poseidon2_constants(Poseidon2Constants<S>* constants, device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
-    CHK_IF_RETURN(cudaFreeAsync(constants->round_constants, ctx.stream));
     CHK_IF_RETURN(cudaFreeAsync(constants->internal_matrix_diag, ctx.stream));
 
     constants->alpha = 0;

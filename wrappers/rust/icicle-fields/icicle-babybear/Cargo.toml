@@ -25,6 +25,8 @@ p3-poseidon2 = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfae
 p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
 p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
 p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
+p3-merkle-tree = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
+p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
 serial_test = "3.0.0"
 
 [features]

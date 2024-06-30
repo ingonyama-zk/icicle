@@ -1,4 +1,8 @@
-#include "poseidon/poseidon.cuh"
+#pragma once
+#ifndef POSEIDON2_KERNELS_H
+#define POSEIDON2_KERNELS_H
+
+#include "poseidon2/constants.cuh"
 #include "gpu-utils/modifiers.cuh"
 
 namespace poseidon2 {
@@ -19,7 +23,7 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  DEVICE_INLINE S sbox(S state[T], const int alpha)
+  DEVICE_INLINE void sbox(S state[T], const int alpha)
   {
     for (int i = 0; i < T; i++) {
       state[i] = sbox_el(state[i], alpha);
@@ -27,7 +31,7 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  DEVICE_INLINE S add_rc(S state[T], size_t rc_offset, const S* rc)
+  DEVICE_INLINE void add_rc(S state[T], size_t rc_offset, const S* rc)
   {
     for (int i = 0; i < T; i++) {
       state[i] = state[i] + rc[rc_offset + i];
@@ -35,7 +39,7 @@ namespace poseidon2 {
   }
 
   template <typename S>
-  __device__ S mds_light_4x4(S s[4])
+  __device__ void mds_light_4x4(S s[4])
   {
     S t0 = s[0] + s[1];
     S t1 = s[2] + s[3];
@@ -56,7 +60,7 @@ namespace poseidon2 {
   // [ 3 1 1 2 ].
   // https://github.com/Plonky3/Plonky3/blob/main/poseidon2/src/matrix.rs#L36
   template <typename S>
-  __device__ S mds_light_plonky_4x4(S s[4])
+  __device__ void mds_light_plonky_4x4(S s[4])
   {
     S t01 = s[0] + s[1];
     S t23 = s[2] + s[3];
@@ -70,7 +74,7 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  __device__ S mds_light(S state[T], MdsType mds)
+  __device__ void mds_light(S state[T], MdsType mds)
   {
     S sum;
     switch (T) {
@@ -123,7 +127,7 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  __device__ S internal_round(S state[T], size_t rc_offset, const Poseidon2Constants<S>& constants)
+  __device__ void internal_round(S state[T], size_t rc_offset, const Poseidon2Constants<S>& constants)
   {
     S element = state[0];
     element = element + constants.round_constants[rc_offset];
@@ -177,7 +181,7 @@ namespace poseidon2 {
 
   template <typename S, int T>
   __global__ void poseidon2_permutation_kernel(
-    const S* states, S* states_out, size_t number_of_states, const Poseidon2Constants<S> constants)
+    const S* states, S* states_out, unsigned int number_of_states, const Poseidon2Constants<S> constants)
   {
     int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= number_of_states) { return; }
@@ -219,14 +223,6 @@ namespace poseidon2 {
       states_out[idx * T + i] = state[i];
     }
   }
-
-  // These function is just doing copy from the states to the output
-  template <typename S, int T>
-  __global__ void get_hash_results(const S* states, size_t number_of_states, int index, S* out)
-  {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (idx >= number_of_states) { return; }
-
-    out[idx] = states[idx * T + index];
-  }
 } // namespace poseidon2
+
+#endif
