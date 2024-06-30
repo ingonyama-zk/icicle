@@ -61,16 +61,18 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 5;
+    const int logn = 8;
+    const int batch = 3;
     const int N = 1 << logn;
-    auto scalars = std::make_unique<scalar_t[]>(N);
+    const int total_nof_elemets = batch * N;
+    auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
 
-    scalar_t::rand_host_many(scalars.get(), N);
+    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
     P::rand_host_many(bases.get(), N);
 
-    P result_main{};
-    P result_ref{};
+    auto result_main = std::make_unique<P[]>(batch);
+    auto result_ref = std::make_unique<P[]>(batch);
 
     auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
       Device dev = {dev_type, 0};
@@ -80,18 +82,20 @@ public:
       oss << dev_type << " " << msg;
 
       auto config = default_msm_config();
+      config.batch_size = batch;
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
-        // TODO real test
-        msm_precompute_bases(bases.get(), N, config, bases.get());
         msm(scalars.get(), bases.get(), N, config, result);
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
 
-    run(s_main_target, &result_main, "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    run(s_ref_target, &result_ref, "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    ASSERT_EQ(result_ref, result_main);
+    run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    // Note: avoid memcmp here because projective points may have different z but be equivalent
+    for (int res_idx = 0; res_idx < batch; ++res_idx) {
+      ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
+    }
   }
 
   template <typename T, typename P>

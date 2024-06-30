@@ -26,7 +26,7 @@ where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
     C::ScalarField: MontgomeryConvertible,
 {
-    // test_utilities::test_set_main_device_with_id(device_id);
+    test_utilities::test_set_main_device();
     let device_count = runtime::get_device_count().unwrap();
     (0..device_count) // TODO: this is proto-loadbalancer
         .into_par_iter()
@@ -46,7 +46,7 @@ where
                 let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
 
                 // (1) async msm on main device, in montogemory form
-                // test_utilities::test_set_main_device_with_id(device_id); // TODO Yuval uncomment
+                test_utilities::test_set_main_device_with_id(device_id);
                 let mut scalars_d = DeviceVec::<C::ScalarField>::device_malloc_async(test_size, &stream).unwrap();
                 scalars_d
                     .copy_from_host_async(HostSlice::from_slice(&scalars), &stream)
@@ -76,7 +76,7 @@ where
                     .unwrap();
 
                 // (2) compute on ref device (not montgomery) and compare
-                // test_utilities::test_set_main_device_with_id(device_id); // TODO Yuval uncomment
+                test_utilities::test_set_main_device_with_id(device_id);
                 let mut ref_msm_host_result = vec![Projective::<C>::zero(); 1];
                 msm(
                     HostSlice::from_slice(&scalars),
@@ -115,7 +115,7 @@ where
         .unwrap();
     for test_size in test_sizes {
         // (1) compute MSM with and w/o precompute on main device
-        // test_utilities::test_set_main_device(); // TODO Yuval: uncomment
+        test_utilities::test_set_main_device();
         cfg.precompute_factor = precompute_factor;
         let points = generate_random_affine_points_with_zeroes::<C>(test_size, 10);
         let mut precomputed_points_d =
@@ -155,7 +155,7 @@ where
                 .unwrap();
 
             // (2) compute on ref device and compare to both cases (with or w/o precompute)
-            // test_utilities::test_set_ref_device(); // TODO Yuval: uncomment
+            test_utilities::test_set_ref_device();
             let mut msm_ref_result = vec![Projective::<C>::zero(); batch_size];
             let mut ref_msm_config = MSMConfig::default();
             ref_msm_config.c = 4;
@@ -203,7 +203,7 @@ where
             if test_size < test_threshold {
                 cfg.bitsize = 1;
             }
-            // test_utilities::test_set_main_device(); // TODO Yuval: uncomment
+            test_utilities::test_set_main_device();
             let mut msm_results = vec![Projective::<C>::zero(); batch_size];
             msm(
                 HostSlice::from_slice(&scalars),
@@ -213,7 +213,7 @@ where
             )
             .unwrap();
 
-            // test_utilities::test_set_ref_device(); // TODO Yuval: uncomment
+            test_utilities::test_set_ref_device();
             let mut msm_results_ref = vec![Projective::<C>::zero(); batch_size];
             msm(
                 HostSlice::from_slice(&scalars),

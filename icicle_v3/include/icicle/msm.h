@@ -19,8 +19,8 @@ namespace icicle {
   /*************************** Frontend APIs ***************************/
   struct MSMConfig {
     icicleStreamHandle stream; /**< stream for async execution. */
-    int nof_bases; /**< Number of bases in the MSM for batched MSM. Set to 0 if all MSMs use the same bases or set to
-                    * 'batch X #scalars' otherwise.  Default value: 0 (that is reuse bases for all batch elements). */
+    int bases_size; /**< Number of bases in the MSM for batched MSM. Set to 0 if all MSMs use the same bases or set to
+                     * 'batch X #scalars' otherwise.  Default value: 0 (that is reuse bases for all batch elements). */
     int precompute_factor;      /**< The number of extra points to pre-compute for each point. See the
                                  *   [precompute_msm_bases](@ref precompute_msm_bases) function, `precompute_factor` passed
                                  *   there needs to be equal to the one used here. Larger values decrease the
@@ -63,7 +63,7 @@ namespace icicle {
   {
     MSMConfig config = {
       nullptr, // stream
-      0,       // nof_bases
+      0,       // bases_size
       1,       // precompute_factor
       0,       // c
       0,       // bitsize
@@ -99,7 +99,7 @@ namespace icicle {
   eIcicleError msm(const S* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results);
 
   template <typename A>
-  eIcicleError msm_precompute_bases(const A* input_bases, int nof_bases, const MSMConfig& config, A* output_bases);
+  eIcicleError msm_precompute_bases(const A* input_bases, int bases_size, const MSMConfig& config, A* output_bases);
 
   /*************************** Backend registration ***************************/
 
@@ -122,7 +122,11 @@ namespace icicle {
   }
 
   using MsmPreComputeImpl = std::function<eIcicleError(
-    const Device& device, const affine_t* input_bases, int nof_bases, const MSMConfig& config, affine_t* output_bases)>;
+    const Device& device,
+    const affine_t* input_bases,
+    int bases_size,
+    const MSMConfig& config,
+    affine_t* output_bases)>;
 
   void register_msm_precompute_bases(const std::string& deviceType, MsmPreComputeImpl impl);
 
@@ -156,7 +160,7 @@ namespace icicle {
   using MsmG2PreComputeImpl = std::function<eIcicleError(
     const Device& device,
     const g2_affine_t* input_bases,
-    int nof_bases,
+    int bases_size,
     const MSMConfig& config,
     g2_affine_t* output_bases)>;
 
