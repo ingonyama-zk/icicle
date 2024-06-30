@@ -37,15 +37,14 @@ where
             //      3) Perform all operations (without changing device on the thread)
             //      4) If necessary - export results to parent host thread
 
-            // let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18]; // TODO Yuval : uncomment
-            let test_sizes = [4, 8, 16, 32, 64, 128, 256];
+            let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
             let mut stream = IcicleStream::create().unwrap();
             let mut msm_results = DeviceVec::<Projective<C>>::device_malloc_async(1, &stream).unwrap();
             for test_size in test_sizes {
                 let points = generate_random_affine_points_with_zeroes::<C>(test_size, 2);
                 let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
 
-                // (1) async msm on main device, in montogemory form
+                // (1) async msm on main device
                 test_utilities::test_set_main_device_with_id(device_id);
                 let mut scalars_d = DeviceVec::<C::ScalarField>::device_malloc_async(test_size, &stream).unwrap();
                 scalars_d
@@ -55,10 +54,6 @@ where
                 let mut cfg = MSMConfig::default();
                 cfg.stream_handle = *stream;
                 cfg.is_async = true;
-
-                // TODO Yuval: uncomment
-                // C::ScalarField::to_mont(&mut scalars_d, &stream);
-                // cfg.are_scalars_montgomery_form = true;
                 msm(
                     &scalars_d[..],
                     HostSlice::from_slice(&points),
@@ -75,7 +70,7 @@ where
                     .synchronize()
                     .unwrap();
 
-                // (2) compute on ref device (not montgomery) and compare
+                // (2) compute on ref device and compare
                 test_utilities::test_set_main_device_with_id(device_id);
                 let mut ref_msm_host_result = vec![Projective::<C>::zero(); 1];
                 msm(
@@ -98,11 +93,10 @@ pub fn check_msm_batch<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
-    // let test_sizes = [1000, 1 << 16];
-    let test_sizes = [16]; // TODO Yuval remove
+    let test_sizes = [1000, 1 << 16];
     let batch_sizes = [1, 3, 1 << 4];
     let mut stream = IcicleStream::create().unwrap();
-    let precompute_factor = 8; // TODO Yuval : should be 8
+    let precompute_factor = 8;
     let mut cfg = MSMConfig::default();
     cfg.stream_handle = *stream;
     cfg.is_async = true;
@@ -180,13 +174,11 @@ pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
-    // let test_sizes = [1 << 10, 10000];
-    // let test_threshold = 1 << 11;
-    let test_sizes = [10];
+    let test_sizes = [1 << 10, 10000];
+    let test_threshold = 1 << 11;
     let batch_sizes = [1, 3, 1 << 4];
     let rng = &mut thread_rng();
     for test_size in test_sizes {
-        let test_threshold = test_size / 2;
         for batch_size in batch_sizes {
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 100);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];

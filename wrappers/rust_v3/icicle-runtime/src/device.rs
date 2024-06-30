@@ -77,7 +77,7 @@ impl fmt::Debug for Device {
     }
 }
 
-// TODO Yuval : how to have that?
+// TODO Yuval : how to implement?
 // pub fn get_device_from_pointer(ptr: *const ::std::os::raw::c_void) -> CudaResult<usize> {
 //     let mut ptr_attributes = MaybeUninit::<cudaPointerAttributes>::uninit();
 //     unsafe {

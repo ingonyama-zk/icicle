@@ -2,6 +2,7 @@
 
 #include "icicle/utils/log.h"
 #include "icicle/errors.h"
+#include <unordered_map>
 
 using namespace icicle;
 
