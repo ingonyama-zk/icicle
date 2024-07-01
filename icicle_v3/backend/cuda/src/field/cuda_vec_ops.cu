@@ -165,6 +165,68 @@ cudaError_t transpose_matrix(
   return CHK_LAST();
 }
 
+template <typename E>
+__global__ void bit_reverse_kernel(const E* input, uint64_t n, unsigned shift, E* output)
+{
+  uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+  // Handling arbitrary vector size
+  if (tid < n) {
+    int reversed_index = __brevll(tid) >> shift;
+    output[reversed_index] = input[tid];
+  }
+}
+template <typename E>
+__global__ void bit_reverse_inplace_kernel(E* input, uint64_t n, unsigned shift)
+{
+  uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+  // Handling arbitrary vector size
+  if (tid < n) {
+    int reversed_index = __brevll(tid) >> shift;
+    if (reversed_index > tid) {
+      E temp = input[tid];
+      input[tid] = input[reversed_index];
+      input[reversed_index] = temp;
+    }
+  }
+}
+
+template <typename E>
+cudaError_t bit_reverse_cuda_impl(const E* input, uint64_t size, const VecOpsConfig& cfg, E* output)
+{
+  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(cfg.stream);
+
+  if (size & (size - 1)) THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "bit_reverse: size must be a power of 2");
+  if ((input == output) & (cfg.is_a_on_device != cfg.is_result_on_device))
+    THROW_ICICLE_ERR(
+      eIcicleError::INVALID_ARGUMENT, "bit_reverse: equal devices should have same is_on_device parameters");
+
+  E* d_output;
+  if (cfg.is_result_on_device) {
+    d_output = output;
+  } else {
+    // allocate output on gpu
+    CHK_IF_RETURN(cudaMallocAsync(&d_output, sizeof(E) * size, cuda_stream));
+  }
+
+  uint64_t shift = __builtin_clzll(size) + 1;
+  uint64_t num_blocks = (size + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
+
+  if ((input != output) & cfg.is_a_on_device) {
+    bit_reverse_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cuda_stream>>>(input, size, shift, d_output);
+  } else {
+    if (!cfg.is_a_on_device) {
+      CHK_IF_RETURN(cudaMemcpyAsync(d_output, input, sizeof(E) * size, cudaMemcpyHostToDevice, cuda_stream));
+    }
+    bit_reverse_inplace_kernel<<<num_blocks, MAX_THREADS_PER_BLOCK, 0, cuda_stream>>>(d_output, size, shift);
+  }
+  if (!cfg.is_result_on_device) {
+    CHK_IF_RETURN(cudaMemcpyAsync(output, d_output, sizeof(E) * size, cudaMemcpyDeviceToHost, cuda_stream));
+    CHK_IF_RETURN(cudaFreeAsync(d_output, cuda_stream));
+  }
+  if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cuda_stream));
+  return CHK_LAST();
+}
+
 /************************************ REGISTRATION ************************************/
 
 #include "icicle/fields/field_config.h"
@@ -203,14 +265,23 @@ eIcicleError matrix_transpose_cuda(
   return translateCudaError(err);
 }
 
+template <typename T>
+eIcicleError bit_reverse_cuda(const Device& device, const T* in, uint64_t size, const VecOpsConfig& config, T* out)
+{
+  auto err = bit_reverse_cuda_impl<T>(in, size, config, out);
+  return translateCudaError(err);
+}
+
 REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
 REGISTER_VECTOR_SUB_BACKEND("CUDA", sub_cuda<scalar_t>);
 REGISTER_VECTOR_MUL_BACKEND("CUDA", mul_cuda<scalar_t>);
 REGISTER_MATRIX_TRANSPOSE_BACKEND("CUDA", matrix_transpose_cuda<scalar_t>);
+REGISTER_BIT_REVERSE_BACKEND("CUDA", bit_reverse_cuda<scalar_t>);
 
 #ifdef EXT_FIELD
 REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CUDA", add_cuda<extension_t>);
 REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CUDA", sub_cuda<extension_t>);
 REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CUDA", mul_cuda<extension_t>);
 REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CUDA", matrix_transpose_cuda<extension_t>);
+REGISTER_BIT_REVERSE_EXT_FIELD_BACKEND("CUDA", bit_reverse_cuda<extension_t>);
 #endif // EXT_FIELD

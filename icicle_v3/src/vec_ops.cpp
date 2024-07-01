@@ -137,4 +137,36 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
+  /*********************************** BIT REVERSE ***********************************/
+
+  ICICLE_DISPATCHER_INST(ScalarBitReverseDispatcher, scalar_bit_reverse, scalarBitReverseOpImpl)
+
+  extern "C" eIcicleError
+  CONCAT_EXPAND(FIELD, bit_reverse)(const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  {
+    return ScalarBitReverseDispatcher::execute(input, size, config, output);
+  }
+
+  template <>
+  eIcicleError bit_reverse(const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, bit_reverse)(input, size, config, output);
+  }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(ExtFieldBitReverseDispatcher, extension_bit_reverse, extFieldBitReverseOpImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_bit_reverse)(
+    const extension_t* input, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return ExtFieldBitReverseDispatcher::execute(input, size, config, output);
+  }
+
+  template <>
+  eIcicleError bit_reverse(const extension_t* input, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_bit_reverse)(input, size, config, output);
+  }
+#endif // EXT_FIELD
+
 } // namespace icicle
