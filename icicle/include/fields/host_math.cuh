@@ -13,7 +13,10 @@ namespace host_math {
   static constexpr __host__ uint32_t add(const uint32_t x, const uint32_t y) { return x + y; }
 
   // return x + y + carry with uint32_t operands
-  static constexpr __host__ uint32_t addc(const uint32_t x, const uint32_t y, const uint32_t carry) { return x + y + carry; }
+  static constexpr __host__ uint32_t addc(const uint32_t x, const uint32_t y, const uint32_t carry)
+  {
+    return x + y + carry;
+  }
 
   // return x + y and carry out with uint32_t operands
   static constexpr __host__ uint32_t add_cc(const uint32_t x, const uint32_t y, uint32_t& carry)
@@ -34,10 +37,13 @@ namespace host_math {
   // return x - y with uint32_t operands
   static constexpr __host__ uint32_t sub(const uint32_t x, const uint32_t y) { return x - y; }
 
-  // 	return x - y - borrow with uint32_t operands
-  static constexpr __host__ uint32_t subc(const uint32_t x, const uint32_t y, const uint32_t borrow) { return x - y - borrow; }
+  //    return x - y - borrow with uint32_t operands
+  static constexpr __host__ uint32_t subc(const uint32_t x, const uint32_t y, const uint32_t borrow)
+  {
+    return x - y - borrow;
+  }
 
-  //	return x - y and borrow out with uint32_t operands
+  //    return x - y and borrow out with uint32_t operands
   static constexpr __host__ uint32_t sub_cc(const uint32_t x, const uint32_t y, uint32_t& borrow)
   {
     uint32_t result = x - y;
@@ -45,7 +51,7 @@ namespace host_math {
     return result;
   }
 
-  //	return x - y - borrow and borrow out with uint32_t operands
+  //    return x - y - borrow and borrow out with uint32_t operands
   static constexpr __host__ uint32_t subc_cc(const uint32_t x, const uint32_t y, uint32_t& borrow)
   {
     const uint32_t result = x - y - borrow;
@@ -127,7 +133,8 @@ namespace host_math {
   template <unsigned NLIMBS, unsigned BITS>
   static constexpr HOST_INLINE storage<NLIMBS> left_shift(const storage<NLIMBS>& xs)
   {
-    if constexpr (BITS == 0) return xs;
+    if constexpr (BITS == 0)
+      return xs;
     else {
       constexpr unsigned BITS32 = BITS % 32;
       constexpr unsigned LIMBS_GAP = BITS / 32;
@@ -144,7 +151,8 @@ namespace host_math {
   template <unsigned NLIMBS, unsigned BITS>
   static constexpr HOST_INLINE storage<NLIMBS> right_shift(const storage<NLIMBS>& xs)
   {
-    if constexpr (BITS == 0) return xs;
+    if constexpr (BITS == 0)
+      return xs;
     else {
       constexpr unsigned BITS32 = BITS % 32;
       constexpr unsigned LIMBS_GAP = BITS / 32;
@@ -153,15 +161,14 @@ namespace host_math {
         for (unsigned i = 0; i < NLIMBS - LIMBS_GAP - 1; i++)
           out.limbs[i] = (xs.limbs[i + LIMBS_GAP] >> BITS32) + (xs.limbs[i + LIMBS_GAP + 1] << (32 - BITS32));
       }
-      if constexpr (LIMBS_GAP < NLIMBS)
-        out.limbs[NLIMBS - LIMBS_GAP - 1] = (xs.limbs[NLIMBS - 1] >> BITS32);
+      if constexpr (LIMBS_GAP < NLIMBS) out.limbs[NLIMBS - LIMBS_GAP - 1] = (xs.limbs[NLIMBS - 1] >> BITS32);
       return out;
     }
   }
 
   template <unsigned NLIMBS_NUM, unsigned NLIMBS_DENOM, unsigned NLIMBS_Q = (NLIMBS_NUM - NLIMBS_DENOM)>
-  static constexpr HOST_INLINE void
-  integer_division_host(const storage<NLIMBS_NUM>& num, const storage<NLIMBS_DENOM>& denom, storage<NLIMBS_Q>& q, storage<NLIMBS_DENOM>& r)
+  static constexpr HOST_INLINE void integer_division_host(
+    const storage<NLIMBS_NUM>& num, const storage<NLIMBS_DENOM>& denom, storage<NLIMBS_Q>& q, storage<NLIMBS_DENOM>& r)
   {
     storage<NLIMBS_DENOM> temp = {};
     for (int limb_idx = NLIMBS_NUM - 1; limb_idx >= 0; limb_idx--) {

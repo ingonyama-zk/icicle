@@ -44,7 +44,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field from(uint32_t value)
   {
-    storage<TLC> scalar {};
+    storage<TLC> scalar{};
     scalar.limbs[0] = value;
     for (int i = 1; i < TLC; i++) {
       scalar.limbs[i] = 0;
@@ -58,7 +58,7 @@ public:
 
     if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega index"); }
 
-    Field omega = Field {CONFIG::rou};
+    Field omega = Field{CONFIG::rou};
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
@@ -72,7 +72,7 @@ public:
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid omega_inv index");
     }
 
-    Field omega = inverse(Field {CONFIG::rou});
+    Field omega = inverse(Field{CONFIG::rou});
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
@@ -234,7 +234,8 @@ public:
 
   // return m
   template <unsigned MULTIPLIER = 1>
-  static constexpr HOST_DEVICE_INLINE ff_storage get_m() {
+  static constexpr HOST_DEVICE_INLINE ff_storage get_m()
+  {
     switch (MULTIPLIER) {
     case 1:
       return CONFIG::m;
@@ -272,8 +273,7 @@ public:
   }
 
   template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
-  static constexpr DEVICE_INLINE uint32_t
-  add_sub_u32_device(const uint32_t* x, const uint32_t* y, uint32_t* r)
+  static constexpr DEVICE_INLINE uint32_t add_sub_u32_device(const uint32_t* x, const uint32_t* y, uint32_t* r)
   {
     r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
     for (unsigned i = 1; i < NLIMBS; i++)
@@ -296,7 +296,8 @@ public:
   }
 
   template <unsigned NLIMBS, bool CARRY_OUT>
-  static constexpr HOST_DEVICE_INLINE uint32_t add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
+  static constexpr HOST_DEVICE_INLINE uint32_t
+  add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
 #ifdef __CUDA_ARCH__
     return add_sub_limbs_device<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
@@ -306,7 +307,8 @@ public:
   }
 
   template <unsigned NLIMBS, bool CARRY_OUT>
-  static constexpr HOST_DEVICE_INLINE uint32_t sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
+  static constexpr HOST_DEVICE_INLINE uint32_t
+  sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
 #ifdef __CUDA_ARCH__
     return add_sub_limbs_device<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
@@ -626,7 +628,8 @@ public:
       multiply_and_add_short_raw_device(diffs, &diffs[TLC >> 1], middle_part, r, &r[TLC]);
       // Corrections that need to be performed when differences are negative.
       // Again, carry doesn't need to be propagated due to unset high bits of `a` and `b`.
-      if (carry1) add_sub_u32_device<(TLC >> 1), true, false>(&middle_part[TLC >> 1], &diffs[TLC >> 1], &middle_part[TLC >> 1]);
+      if (carry1)
+        add_sub_u32_device<(TLC >> 1), true, false>(&middle_part[TLC >> 1], &diffs[TLC >> 1], &middle_part[TLC >> 1]);
       if (carry2) add_sub_u32_device<(TLC >> 1), true, false>(&middle_part[TLC >> 1], diffs, &middle_part[TLC >> 1]);
       // Now that middle part is fully correct, it can be added to the result.
       add_sub_u32_device<TLC, false, true>(&r[TLC >> 1], middle_part, &r[TLC >> 1]);

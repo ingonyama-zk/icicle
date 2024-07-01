@@ -17,7 +17,8 @@ namespace params_gen {
   }
 
   template <unsigned NLIMBS>
-  static constexpr HOST_INLINE storage<NLIMBS> get_difference_no_carry(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
+  static constexpr HOST_INLINE storage<NLIMBS>
+  get_difference_no_carry(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
   {
     storage<NLIMBS> rs = {};
     add_sub_limbs_host<NLIMBS, true, false>(xs, ys, rs);
@@ -41,8 +42,7 @@ namespace params_gen {
     storage<NLIMBS> rs = {1};
     for (int i = 0; i < 32 * NLIMBS; i++) {
       if (INV) {
-        if (rs.limbs[0] & 1)
-          add_sub_limbs_host<NLIMBS, false, false>(rs, modulus, rs);
+        if (rs.limbs[0] & 1) add_sub_limbs_host<NLIMBS, false, false>(rs, modulus, rs);
         rs = right_shift<NLIMBS, 1>(rs);
       } else {
         rs = left_shift<NLIMBS, 1>(rs);
@@ -53,10 +53,7 @@ namespace params_gen {
     return rs;
   }
 
-  constexpr unsigned floorlog2(uint32_t x)
-  {
-    return x == 1 ? 0 : 1 + floorlog2(x >> 1);
-  }
+  constexpr unsigned floorlog2(uint32_t x) { return x == 1 ? 0 : 1 + floorlog2(x >> 1); }
 
   template <unsigned NLIMBS, unsigned NBITS>
   constexpr unsigned num_of_reductions(const storage<NLIMBS>& modulus, const storage<NLIMBS>& m)
@@ -90,12 +87,12 @@ namespace params_gen {
   }
 
   template <unsigned NLIMBS, unsigned TWO_ADICITY>
-  constexpr storage_array<TWO_ADICITY, NLIMBS> get_invs(const storage<NLIMBS>& modulus) {
+  constexpr storage_array<TWO_ADICITY, NLIMBS> get_invs(const storage<NLIMBS>& modulus)
+  {
     storage_array<TWO_ADICITY, NLIMBS> invs = {};
     storage<NLIMBS> rs = {1};
     for (int i = 0; i < TWO_ADICITY; i++) {
-      if (rs.limbs[0] & 1)
-        add_sub_limbs_host<NLIMBS, false, false>(rs, modulus, rs);
+      if (rs.limbs[0] & 1) add_sub_limbs_host<NLIMBS, false, false>(rs, modulus, rs);
       rs = right_shift<NLIMBS, 1>(rs);
       invs.storages[i] = rs;
     }
@@ -103,29 +100,47 @@ namespace params_gen {
   }
 } // namespace params_gen
 
-#define PARAMS(modulus) static constexpr unsigned limbs_count = modulus.LC; \
-                        static constexpr unsigned modulus_bit_count = 32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1; \
-                        static constexpr storage<limbs_count> zero = {}; \
-                        static constexpr storage<limbs_count> one = {1}; \
-                        static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus); \
-                        static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2); \
-                        static constexpr storage<limbs_count> neg_modulus = params_gen::template get_difference_no_carry<limbs_count>(zero, modulus); \
-                        static constexpr storage<2 * limbs_count> modulus_squared = params_gen::template get_square<limbs_count, 0>(modulus); \
-                        static constexpr storage<2 * limbs_count> modulus_squared_2 = host_math::template left_shift<2 * limbs_count, 1>(modulus_squared); \
-                        static constexpr storage<2 * limbs_count> modulus_squared_4 = host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_2); \
-                        static constexpr storage<2 * limbs_count> modulus_squared_8 = host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_4); \
-                        static constexpr storage<2 * limbs_count> modulus_squared_16 = host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_8); \
-                        static constexpr storage<limbs_count> m = params_gen::template get_m<limbs_count, 2 * modulus_bit_count>(modulus); \
-                        static constexpr storage<limbs_count> m_2 = params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 1>(modulus); \
-                        static constexpr storage<limbs_count> m_4 = params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 2>(modulus); \
-                        static constexpr storage<limbs_count> m_8 = params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 3>(modulus); \
-                        static constexpr storage<limbs_count> m_16 = params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 4>(modulus); \
-                        static constexpr storage<limbs_count> m_32 = params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 5>(modulus); \
-                        static constexpr storage<limbs_count> montgomery_r = params_gen::template get_montgomery_constant<limbs_count, false>(modulus); \
-                        static constexpr storage<limbs_count> montgomery_r_inv = params_gen::template get_montgomery_constant<limbs_count, true>(modulus); \
-                        static constexpr unsigned num_of_reductions = params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);
+#define PARAMS(modulus)                                                                                                \
+  static constexpr unsigned limbs_count = modulus.LC;                                                                  \
+  static constexpr unsigned modulus_bit_count =                                                                        \
+    32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1;                                \
+  static constexpr storage<limbs_count> zero = {};                                                                     \
+  static constexpr storage<limbs_count> one = {1};                                                                     \
+  static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);           \
+  static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2);         \
+  static constexpr storage<limbs_count> neg_modulus =                                                                  \
+    params_gen::template get_difference_no_carry<limbs_count>(zero, modulus);                                          \
+  static constexpr storage<2 * limbs_count> modulus_squared =                                                          \
+    params_gen::template get_square<limbs_count, 0>(modulus);                                                          \
+  static constexpr storage<2 * limbs_count> modulus_squared_2 =                                                        \
+    host_math::template left_shift<2 * limbs_count, 1>(modulus_squared);                                               \
+  static constexpr storage<2 * limbs_count> modulus_squared_4 =                                                        \
+    host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_2);                                             \
+  static constexpr storage<2 * limbs_count> modulus_squared_8 =                                                        \
+    host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_4);                                             \
+  static constexpr storage<2 * limbs_count> modulus_squared_16 =                                                       \
+    host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_8);                                             \
+  static constexpr storage<limbs_count> m = params_gen::template get_m<limbs_count, 2 * modulus_bit_count>(modulus);   \
+  static constexpr storage<limbs_count> m_2 =                                                                          \
+    params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 1>(modulus);                                       \
+  static constexpr storage<limbs_count> m_4 =                                                                          \
+    params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 2>(modulus);                                       \
+  static constexpr storage<limbs_count> m_8 =                                                                          \
+    params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 3>(modulus);                                       \
+  static constexpr storage<limbs_count> m_16 =                                                                         \
+    params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 4>(modulus);                                       \
+  static constexpr storage<limbs_count> m_32 =                                                                         \
+    params_gen::template get_m<limbs_count, 2 * modulus_bit_count + 5>(modulus);                                       \
+  static constexpr storage<limbs_count> montgomery_r =                                                                 \
+    params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
+  static constexpr storage<limbs_count> montgomery_r_inv =                                                             \
+    params_gen::template get_montgomery_constant<limbs_count, true>(modulus);                                          \
+  static constexpr unsigned num_of_reductions =                                                                        \
+    params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);
 
-#define TWIDDLES(modulus, rou) static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus); \
-                               static constexpr storage_array<omegas_count, limbs_count> inv = params_gen::template get_invs<limbs_count, omegas_count>(modulus);
+#define TWIDDLES(modulus, rou)                                                                                         \
+  static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \
+  static constexpr storage_array<omegas_count, limbs_count> inv =                                                      \
+    params_gen::template get_invs<limbs_count, omegas_count>(modulus);
 
 #endif

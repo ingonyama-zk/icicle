@@ -7,9 +7,8 @@
 
 namespace bls12_381 {
   struct fq_config {
-    static constexpr storage<12> modulus = {0xffffaaab, 0xb9feffff, 0xb153ffff, 0x1eabfffe,
-                                            0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84,
-                                            0x434bacd7, 0x4b1ba7b6, 0x397fe69a, 0x1a0111ea};
+    static constexpr storage<12> modulus = {0xffffaaab, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0,
+                                            0xf38512bf, 0x64774b84, 0x434bacd7, 0x4b1ba7b6, 0x397fe69a, 0x1a0111ea};
     PARAMS(modulus)
 
     // nonresidue to generate the extension field
