@@ -36,23 +36,15 @@ void p_print(Polynomial_t * p, int logn, scalar_t shift, std::string header = "P
 
 // value to polynomial
 Polynomial_t p_value(scalar_t value) {
-  auto coeff = std::make_unique<scalar_t[]>(1);
-  coeff[0] = value;
-  auto p_value = Polynomial_t::from_coefficients(coeff.get() , 1);
+  auto p_value = Polynomial_t::from_coefficients(&value , 1);
   return p_value;
 }
 
 Polynomial_t p_rotate(Polynomial_t* p, int logn) {
+  // rotate polynomial coefficients right by one position
   auto n = 1 << logn;
   auto evaluations_rou_domain = std::make_unique<scalar_t[]>(n);
-  // TBD: rebase to use evaluate_on_rou_domain
-  // p->evaluate_on_rou_domain(logn, evaluations_rou_domain);
-  auto omega = scalar_t::omega(logn);
-  auto x = scalar_t::one();
-  for (int i = 0; i < n; ++i) {
-    evaluations_rou_domain[i] = (*p)(x);
-    x = x*omega;
-  }
+  p->evaluate_on_rou_domain(logn, evaluations_rou_domain.get() );
   scalar_t tmp  = evaluations_rou_domain[n-1];
   for (int i = n-1; i > 0; --i) {
     evaluations_rou_domain[i] = evaluations_rou_domain[i-1];
@@ -77,7 +69,7 @@ void solve_linear(scalar_t xa, scalar_t ya, scalar_t xb, scalar_t yb, scalar_t *
   coeffs[0] = ya - coeffs[1] * xa;
 }
 
-std::unique_ptr<scalar_t[]> InterpolateRootsOfUnity(Polynomial_t * p, int n, scalar_t shift = scalar_t::one()) {
+std::unique_ptr<scalar_t[]> InterpolateOnLargerDomain(Polynomial_t * p, int n, scalar_t shift = scalar_t::one()) {
   const int deg = p->degree();
   auto input = std::make_unique<scalar_t[]>(n);
   // TBD: check if scalar_t constructor initializes to zero
@@ -136,7 +128,7 @@ int main(int argc, char** argv)
   to_ff(rv_c3_trace, c3_trace.get(), n);
 
   std::cout << "Lesson 2: Rule checks to validate a computation" << std::endl;
-  std::cout << "We defined functions to create rule-checking polynomials. Their names start with p_rule_check." << std::endl;
+  std::cout << "We use rule-checking polynomials." << std::endl;
 
   std::cout << "Lesson 3: Padding the Trace" << std::endl;
   // The trace is padded to a power of 2 size to allow for efficient NTT operations.
@@ -168,8 +160,7 @@ int main(int argc, char** argv)
   std::cout << "Lesson 6: Constraint Polynomials" << std::endl;
   std::cout << "The constraints are used to check the correctness of the trace. In this example, we check 6 rules to establish the validity of the trace." << std::endl;
   auto p_fib_constraint =  (p_d3 - p_d2 - p_d1) * (p_c1 + p_c2 + p_c3);
-  // TBD: if I comment this line, I get polynomial_cuda_backend.cu:183 error: clone() from non implemented state
-  auto fib_constraint_zkcommitment = InterpolateRootsOfUnity(&p_fib_constraint, 4*n, xzk);  
+  auto fib_constraint_zkcommitment = InterpolateOnLargerDomain(&p_fib_constraint, 4*n, xzk);  
     
   auto p_init1_constraint = (p_d1 - p_value(scalar_t::from(24))) * p_c1;
   // sanity checks printing
