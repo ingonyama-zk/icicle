@@ -132,7 +132,7 @@ namespace host_math {
       constexpr unsigned BITS32 = BITS % 32;
       constexpr unsigned LIMBS_GAP = BITS / 32;
       storage<NLIMBS> out{};
-      if (LIMBS_GAP < NLIMBS) {
+      if constexpr (LIMBS_GAP < NLIMBS) {
         out.limbs[LIMBS_GAP] = xs.limbs[0] << BITS32;
         for (unsigned i = 1; i < NLIMBS - LIMBS_GAP; i++)
           out.limbs[i + LIMBS_GAP] = (xs.limbs[i] << BITS32) + (xs.limbs[i - 1] >> (32 - BITS32));
@@ -149,11 +149,12 @@ namespace host_math {
       constexpr unsigned BITS32 = BITS % 32;
       constexpr unsigned LIMBS_GAP = BITS / 32;
       storage<NLIMBS> out{};
-      if (LIMBS_GAP < NLIMBS) {
+      if constexpr (LIMBS_GAP < NLIMBS - 1) {
         for (unsigned i = 0; i < NLIMBS - LIMBS_GAP - 1; i++)
           out.limbs[i] = (xs.limbs[i + LIMBS_GAP] >> BITS32) + (xs.limbs[i + LIMBS_GAP + 1] << (32 - BITS32));
-        out.limbs[NLIMBS - LIMBS_GAP - 1] = (xs.limbs[NLIMBS - 1] >> BITS32);
       }
+      if constexpr (LIMBS_GAP < NLIMBS)
+        out.limbs[NLIMBS - LIMBS_GAP - 1] = (xs.limbs[NLIMBS - 1] >> BITS32);
       return out;
     }
   }

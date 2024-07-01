@@ -44,7 +44,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field from(uint32_t value)
   {
-    storage<TLC> scalar;
+    storage<TLC> scalar {};
     scalar.limbs[0] = value;
     for (int i = 1; i < TLC; i++) {
       scalar.limbs[i] = 0;
