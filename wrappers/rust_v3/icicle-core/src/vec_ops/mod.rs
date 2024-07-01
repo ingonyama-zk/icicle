@@ -60,17 +60,16 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
-    // TODO Yuval : bit reverse
-    // fn bit_reverse(
-    //     input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    //     cfg: &BitReverseConfig,
-    //     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    // ) -> Result<(), eIcicleError>;
+    fn bit_reverse(
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    ) -> Result<(), eIcicleError>;
 
-    // fn bit_reverse_inplace(
-    //     input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    //     cfg: &BitReverseConfig,
-    // ) -> Result<(), eIcicleError>;
+    fn bit_reverse_inplace(
+        input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
 }
 
 fn check_vec_ops_args<'a, F>(
@@ -169,6 +168,31 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, nof_rows, nof_cols, output, &cfg)
 }
 
+pub fn bit_reverse<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(input, input /*dummy*/, output, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse(input, &cfg, output)
+}
+
+pub fn bit_reverse_inplace<F>(
+    input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(input, input /*dummy*/, input, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse_inplace(input, &cfg)
+}
+
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -179,14 +203,13 @@ macro_rules! impl_vec_ops_field {
     ) => {
         mod $field_prefix_ident {
 
-            use crate::vec_ops::{$field, HostOrDeviceSlice};
-            // use icicle_core::vec_ops::BitReverseConfig;
+            use crate::vec_ops::{$field, HostOrDeviceSlice};            
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_vector_add")]
-                pub(crate) fn vector_add(
+                pub(crate) fn vector_add_ffi(
                     a: *const $field,
                     b: *const $field,
                     size: u32,
@@ -195,7 +218,7 @@ macro_rules! impl_vec_ops_field {
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_sub")]
-                pub(crate) fn vector_sub(
+                pub(crate) fn vector_sub_ffi(
                     a: *const $field,
                     b: *const $field,
                     size: u32,
@@ -204,7 +227,7 @@ macro_rules! impl_vec_ops_field {
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_mul")]
-                pub(crate) fn vector_mul(
+                pub(crate) fn vector_mul_ffi(
                     a: *const $field,
                     b: *const $field,
                     size: u32,
@@ -213,7 +236,7 @@ macro_rules! impl_vec_ops_field {
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_matrix_transpose")]
-                pub(crate) fn _matrix_transpose(
+                pub(crate) fn matrix_transpose_ffi(
                     input: *const $field,
                     nof_rows: u32,
                     nof_cols: u32,
@@ -221,13 +244,13 @@ macro_rules! impl_vec_ops_field {
                     output: *mut $field,
                 ) -> eIcicleError;
 
-                // #[link_name = concat!($field_prefix, "_bit_reverse_cuda")]
-                // pub(crate) fn bit_reverse_cuda(
-                //     input: *const $field,
-                //     size: u64,
-                //     config: *const BitReverseConfig,
-                //     output: *mut $field,
-                // ) -> CudaError;
+                #[link_name = concat!($field_prefix, "_bit_reverse")]
+                pub(crate) fn bit_reverse_ffi(
+                    input: *const $field,
+                    size: u64,
+                    config: *const VecOpsConfig,
+                    output: *mut $field,
+                ) -> eIcicleError;
             }
         }
 
@@ -239,7 +262,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::vector_add(
+                    $field_prefix_ident::vector_add_ffi(
                         a.as_ptr(),
                         b.as_ptr(),
                         a.len() as u32,
@@ -257,7 +280,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::vector_sub(
+                    $field_prefix_ident::vector_sub_ffi(
                         a.as_ptr(),
                         b.as_ptr(),
                         a.len() as u32,
@@ -275,7 +298,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::vector_mul(
+                    $field_prefix_ident::vector_mul_ffi(
                         a.as_ptr(),
                         b.as_ptr(),
                         a.len() as u32,
@@ -294,7 +317,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::_matrix_transpose(
+                    $field_prefix_ident::matrix_transpose_ffi(
                         input.as_ptr(),
                         nof_rows,
                         nof_cols,
@@ -305,38 +328,36 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            // TODO Yuval : bit reverse
+            fn bit_reverse(
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::bit_reverse_ffi(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg as *const VecOpsConfig,
+                        output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
 
-            //     fn bit_reverse(
-            //         input: &(impl HostOrDeviceSlice<$field> + ?Sized),
-            //         cfg: &BitReverseConfig,
-            //         output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-            //     ) -> Result<(), eIcicleError> {
-            //         unsafe {
-            //             $field_prefix_ident::bit_reverse_cuda(
-            //                 input.as_ptr(),
-            //                 input.len() as u64,
-            //                 cfg as *const BitReverseConfig,
-            //                 output.as_mut_ptr(),
-            //             )
-            //             .wrap()
-            //         }
-            //     }
-
-            //     fn bit_reverse_inplace(
-            //         input: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-            //         cfg: &BitReverseConfig,
-            //     ) -> Result<(), eIcicleError> {
-            //         unsafe {
-            //             $field_prefix_ident::bit_reverse_cuda(
-            //                 input.as_ptr(),
-            //                 input.len() as u64,
-            //                 cfg as *const BitReverseConfig,
-            //                 input.as_mut_ptr(),
-            //             )
-            //             .wrap()
-            //         }
-            //     }
+            fn bit_reverse_inplace(
+                input: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::bit_reverse_ffi(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg as *const VecOpsConfig,
+                        input.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
         }
     };
 }
@@ -368,14 +389,17 @@ macro_rules! impl_vec_ops_tests {
                 check_matrix_transpose::<$field>()
             }
 
-            // #[test]
-            // pub fn test_bit_reverse() {
-            //     check_bit_reverse::<$field>()
-            // }
-            // #[test]
-            // pub fn test_bit_reverse_inplace() {
-            //     check_bit_reverse_inplace::<$field>()
-            // }
+            #[test]
+            pub fn test_bit_reverse() {
+                initialize();
+                check_bit_reverse::<$field>()
+            }
+
+            #[test]
+            pub fn test_bit_reverse_inplace() {
+                initialize();
+                check_bit_reverse_inplace::<$field>()
+            }
         }
     };
 }
