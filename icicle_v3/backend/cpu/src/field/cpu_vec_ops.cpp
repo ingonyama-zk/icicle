@@ -90,3 +90,42 @@ REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
 #ifdef EXT_FIELD
 REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", cpu_matrix_transpose<extension_t>);
 #endif // EXT_FIELD
+
+/*********************************** BIT REVERSE ***********************************/
+
+template <typename T>
+eIcicleError
+cpu_bit_reverse(const Device& device, const T* vec_in, uint64_t size, const VecOpsConfig& config, T* vec_out)
+{
+  // Check for invalid arguments
+  if (!vec_in || !vec_out || size == 0) { return eIcicleError::INVALID_ARGUMENT; }
+
+  // Calculate log2(size)
+  int logn = static_cast<int>(std::floor(std::log2(size)));
+  if ((1ULL << logn) != size) {
+    return eIcicleError::INVALID_ARGUMENT; // Ensure size is a power of 2
+  }
+
+  // If vec_in and vec_out are not the same, copy input to output
+  if (vec_in != vec_out) {
+    for (uint64_t i = 0; i < size; ++i) {
+      vec_out[i] = vec_in[i];
+    }
+  }
+
+  // Perform the bit reverse
+  for (uint64_t i = 0; i < size; ++i) {
+    uint64_t rev = 0;
+    for (int j = 0; j < logn; ++j) {
+      if (i & (1ULL << j)) { rev |= 1ULL << (logn - 1 - j); }
+    }
+    if (i < rev) { std::swap(vec_out[i], vec_out[rev]); }
+  }
+
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_BIT_REVERSE_BACKEND("CPU", cpu_bit_reverse<scalar_t>);
+#ifdef EXT_FIELD
+REGISTER_BIT_REVERSE_EXT_FIELD_BACKEND("CPU", cpu_bit_reverse<extension_t>);
+#endif // EXT_FIELD

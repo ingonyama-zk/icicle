@@ -25,7 +25,7 @@ namespace icicle {
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
                     *   function will block the current CPU thread. */
 
-    ConfigExtension* ext = nullptr; /** backend specific extensions*/
+    ConfigExtension* ext = nullptr; /** backend specific extensionT*/
   };
 
   /**
@@ -46,21 +46,24 @@ namespace icicle {
 
   // template APIs
 
-  template <typename S>
-  eIcicleError vector_add(const S* vec_a, const S* vec_b, uint64_t n, const VecOpsConfig& config, S* output);
+  template <typename T>
+  eIcicleError vector_add(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
-  template <typename S>
-  eIcicleError vector_sub(const S* vec_a, const S* vec_b, uint64_t n, const VecOpsConfig& config, S* output);
+  template <typename T>
+  eIcicleError vector_sub(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
-  template <typename S>
-  eIcicleError vector_mul(const S* vec_a, const S* vec_b, uint64_t n, const VecOpsConfig& config, S* output);
+  template <typename T>
+  eIcicleError vector_mul(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
-  template <typename S>
-  eIcicleError convert_montgomery(const S* input, uint64_t size, bool is_into, const VecOpsConfig& config, S* output);
+  template <typename T>
+  eIcicleError convert_montgomery(const T* input, uint64_t size, bool is_into, const VecOpsConfig& config, T* output);
 
-  template <typename E>
+  template <typename T>
   eIcicleError
-  matrix_transpose(const E* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, E* mat_out);
+  matrix_transpose(const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out);
+
+  template <typename T>
+  eIcicleError bit_reverse(const T* vec_in, uint64_t size, const VecOpsConfig& config, T* vec_out);
 
   /*************************** Backend registration ***************************/
 
@@ -137,6 +140,19 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+  using scalarBitReverseOpImpl = std::function<eIcicleError(
+    const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
+
+  void register_scalar_bit_reverse(const std::string& deviceType, scalarBitReverseOpImpl);
+
+#define REGISTER_BIT_REVERSE_BACKEND(DEVICE_TYPE, FUNC)                                                                \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                      \
+      register_scalar_bit_reverse(DEVICE_TYPE, FUNC);                                                                  \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
 #ifdef EXT_FIELD
   using extFieldVectorOpImpl = std::function<eIcicleError(
     const Device& device,
@@ -208,6 +224,19 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_matrix_transpose_ext_field) = []() -> bool {                                               \
       register_extension_matrix_transpose(DEVICE_TYPE, FUNC);                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using extFieldBitReverseOpImpl = std::function<eIcicleError(
+    const Device& device, const extension_t* input, uint64_t size, const VecOpsConfig& config, extension_t* output)>;
+
+  void register_extension_bit_reverse(const std::string& deviceType, extFieldBitReverseOpImpl);
+
+#define REGISTER_BIT_REVERSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                      \
+      register_extension_bit_reverse(DEVICE_TYPE, FUNC);                                                               \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
