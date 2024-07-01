@@ -260,6 +260,11 @@ eIcicleError matrix_transpose_cuda(
   // TODO relax this limitation
   ICICLE_ASSERT(config.is_a_on_device == config.is_result_on_device)
     << "CUDA matrix transpose expects both input and output on host or on device";
+
+  // assert that it is not an inplace computation
+  const bool is_on_device = config.is_a_on_device;
+  const bool is_inplace = in == out;
+  ICICLE_ASSERT(!is_on_device || !is_inplace) << "(CUDA) matrix-transpose-inplace not implemented";
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
   auto err = transpose_matrix(in, out, nof_cols, nof_rows, cuda_stream, config.is_a_on_device, config.is_async);
   return translateCudaError(err);
