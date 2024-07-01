@@ -200,6 +200,34 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
   ASSERT_EQ(0, memcmp(elements_main.get(), elements_ref.get(), N * sizeof(TypeParam)));
 }
 
+TYPED_TEST(FieldApiTest, bitReverse)
+{
+  const int N = 1 << 18;
+  auto elements_main = std::make_unique<TypeParam[]>(N);
+  auto elements_ref = std::make_unique<TypeParam[]>(N);
+  FieldApiTest<TypeParam>::random_samples(elements_main.get(), N);
+  memcpy(elements_ref.get(), elements_main.get(), N * sizeof(TypeParam));
+
+  auto run = [&](const std::string& dev_type, TypeParam* inout, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    auto config = default_vec_ops_config();
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(BIT_REVERSE)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(bit_reverse(inout, N, config, inout));
+    }
+    END_TIMER(BIT_REVERSE, oss.str().c_str(), measure);
+  };
+
+  run(s_reference_target, elements_main.get(), VERBOSE /*=measure*/, "bit-reverse", 1);
+  run(s_main_target, elements_ref.get(), VERBOSE /*=measure*/, "bit-reverse", 1);
+  ASSERT_EQ(0, memcmp(elements_main.get(), elements_ref.get(), N * sizeof(TypeParam)));
+}
+
 #ifdef NTT_ENABLED
 TYPED_TEST(FieldApiTest, ntt)
 {
