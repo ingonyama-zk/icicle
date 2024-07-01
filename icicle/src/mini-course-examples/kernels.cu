@@ -100,6 +100,13 @@ __global__ void bucket_acc_memory_baseline(T* buckets1, T* buckets2, unsigned* i
 }
 
 template <class T>
+__global__ void simple_memory_copy(T* buckets1, T* buckets2, unsigned nof_buckets){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= nof_buckets) return;
+  buckets2[tid] = buckets1[tid];
+}
+
+template <class T>
 __global__ void bucket_acc_compute_baseline(T* buckets, unsigned* indices, unsigned* sizes, unsigned nof_buckets){
   int tid = blockDim.x*blockIdx.x + threadIdx.x;
   if (tid >= nof_buckets) return;

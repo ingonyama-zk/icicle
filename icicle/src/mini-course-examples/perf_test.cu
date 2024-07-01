@@ -62,9 +62,9 @@ typedef curve_config::scalar_t test_scalar;
 typedef curve_config::projective_t test_projective;
 typedef curve_config::affine_t test_affine;
 
-// typedef Dummy_Scalar test_t;
+typedef Dummy_Scalar test_t;
 // typedef test_projective test_t;
-typedef test_scalar test_t;
+// typedef test_scalar test_t;
 
 int main()
 {
@@ -148,9 +148,11 @@ int main()
   // bucket_acc_naive<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
   // bucket_acc_reg<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
   // bucket_acc_reg<<<BLOCKS, THREADS>>>(buckets_d, sorted_indices, sorted_sizes, N);
-  bucket_acc_reg<<<BLOCKS, THREADS>>>(sorted_buckets, indices_d, sorted_sizes, N);
+  // bucket_acc_reg<<<BLOCKS, THREADS>>>(sorted_buckets, indices_d, sorted_sizes, N);
   // bucket_acc_compute_baseline<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
   // bucket_acc_memory_baseline<<<BLOCKS, THREADS>>>(buckets_d, buckets2_d, indices_d, N);
+
+  simple_memory_copy<<<BLOCKS, THREADS>>>(buckets_d, buckets2_d, N);
   
   cudaDeviceSynchronize();
   std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
