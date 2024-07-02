@@ -19,9 +19,9 @@ namespace icicle {
   }
 
 #ifdef EXT_FIELD
-  ICICLE_DISPATCHER_INST(NttExtFieldDispatcher, ntt_ext_field, NttExtFieldImpl);
+  ICICLE_DISPATCHER_INST(NttExtFieldDispatcher, extension_ntt, NttExtFieldImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt_ext_field)(
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_ntt)(
     const extension_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, extension_t* output)
   {
     return NttExtFieldDispatcher::execute(input, size, dir, config, output);
@@ -30,7 +30,7 @@ namespace icicle {
   template <>
   eIcicleError ntt(const extension_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, ntt_ext_field)(input, size, dir, config, output);
+    return CONCAT_EXPAND(FIELD, extension_ntt)(input, size, dir, config, output);
   }
 #endif // EXT_FIELD
 

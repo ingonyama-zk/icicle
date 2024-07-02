@@ -44,4 +44,8 @@ jobs:
     - name: Run tests
       working-directory: ./wrappers/rust_v3
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: cargo build --release --verbose --features=g2,ec_ntt && cargo test --workspace --release --verbose --features=g2,ec_ntt
+      # tests are split to phases since NTT domain is global but tests have conflicting requirements
+      run: |
+        cargo build --release --verbose --features=g2,ec_ntt
+        cargo test --workspace --release --verbose --features=g2,ec_ntt -- --skip phase
+        cargo test phase2 --workspace --release --verbose --features=g2,ec_ntt
