@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 include(cmake/Common.cmake)
+find_cuda_compiler()
 
 # when built as subdir of icicle it is already defined
 if (NOT DEFINED NTT)
