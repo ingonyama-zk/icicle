@@ -10,7 +10,7 @@ BUILD_FIELDS=( )
 BUILD_HASHES=( )
 
 SUPPORTED_CURVES=("bn254" "bls12_377" "bls12_381" "bw6_761", "grumpkin")
-SUPPORTED_FIELDS=("babybear", "m31")
+SUPPORTED_FIELDS=("babybear")
 SUPPORTED_HASHES=("keccak")
 
 if [[ $1 == "-help" ]]; then
