@@ -4,7 +4,6 @@ pub(crate) mod tests {
     use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
     use serial_test::{parallel, serial};
-    use std::sync::OnceLock;
 
     impl_ntt_tests!(ScalarField);
 }

@@ -10,8 +10,7 @@ pub(crate) mod tests {
     use crate::curve::{CurveCfg, ScalarField};
 
     use icicle_core::ecntt::tests::*;
-    use icicle_core::impl_ecntt_tests;
-    use std::sync::OnceLock;
+    use icicle_core::impl_ecntt_tests;    
 
     impl_ecntt_tests!(ScalarField, CurveCfg);
 }

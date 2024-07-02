@@ -15,6 +15,7 @@ icicle-runtime = { workspace = true }
 [dev-dependencies]
 criterion = "0.3"
 serial_test = "3.0.0"
+lambdaworks-math = "0.6.0"
 
 [build-dependencies]
 cmake = "0.1.50"

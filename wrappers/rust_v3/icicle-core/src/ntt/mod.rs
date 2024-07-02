@@ -363,13 +363,14 @@ macro_rules! impl_ntt_tests {
     ) => {
         use icicle_core::test_utilities;
         use icicle_runtime::{device::Device, runtime};
+        use std::sync::{Once};
 
         const MAX_SIZE: u64 = 1 << 17;
-        static INIT: OnceLock<()> = OnceLock::new();        
+        static INIT: Once = Once::new();
         const FAST_TWIDDLES_MODE: bool = false;
 
-        pub fn initialize() {            
-            INIT.get_or_init(move || {
+        pub fn initialize() {
+            INIT.call_once(move || {
                 test_utilities::test_load_and_init_devices();
                 // init domain for both devices
                 test_utilities::test_set_ref_device();
@@ -427,8 +428,8 @@ macro_rules! impl_ntt_tests {
         #[test]
         #[serial]
         fn test_ntt_release_domain() {
-            initialize();
-        //     check_release_domain::<$field>()
+            // initialize();
+            // check_release_domain::<$field>()
         }
     };
 }
