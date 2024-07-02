@@ -69,6 +69,22 @@ typedef testing::Types<scalar_t> FTImplementations;
 
 TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 
+// Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
+TYPED_TEST(FieldApiTest, FieldSanityTest)
+{
+  auto a = TypeParam::rand_host();
+  auto b = TypeParam::rand_host();
+  auto b_inv = TypeParam::inverse(b);
+  auto a_neg = TypeParam::neg(a);
+  ASSERT_EQ(a + TypeParam::zero(), a);
+  ASSERT_EQ(a + b - a, b);
+  ASSERT_EQ(b * a * b_inv, a);
+  ASSERT_EQ(a + a_neg, TypeParam::zero());
+  ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
+  ASSERT_EQ(b * b_inv, TypeParam::one());
+  ASSERT_EQ(a * TypeParam::from(2), a + a);
+}
+
 TYPED_TEST(FieldApiTest, vectorOps)
 {
   const int N = 1 << 15;
