@@ -123,12 +123,13 @@ macro_rules! impl_ecntt_tests {
             use super::*;
             use icicle_core::ntt::tests::init_domain;
             use icicle_core::test_utilities;
+            use std::sync::Once;
 
             const MAX_SIZE: u64 = 1 << 18;
-            static INIT: OnceLock<()> = OnceLock::new();
+            static INIT: Once = Once::new();
 
             pub fn initialize() {
-                INIT.get_or_init(move || {
+                INIT.call_once(move || {
                     test_utilities::test_load_and_init_devices();
                     // init domain for both devices
                     test_utilities::test_set_ref_device();
@@ -150,12 +151,6 @@ macro_rules! impl_ecntt_tests {
                 initialize();
                 check_ecntt_batch::<$curve>()
             }
-
-            // #[test] //TODO: multi-device test
-            // fn test_ntt_device_async() {
-            //     // init_domain is in this test is performed per-device
-            //     check_ecntt_device_async::<$field>()
-            // }
         }
     };
 }
