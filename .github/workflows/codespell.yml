@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-      - V2
+      - V3
 
 jobs:
   spelling-checker:

@@ -10,12 +10,10 @@ name: Examples
 on:
   pull_request:
     branches:
-      - main
-      - V2
+      - main      
   push:
     branches:
-      - main
-      - V2
+      - main      
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

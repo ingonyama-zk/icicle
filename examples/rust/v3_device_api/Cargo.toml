@@ -1,0 +1,9 @@
+[package]
+name = "v3_device_api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+icicle-runtime = {path = "../../../wrappers/rust_v3/icicle-runtime" }
