@@ -178,6 +178,34 @@ TEST_F(CurveApiTest, ecntt)
 }
 #endif // ECNTT
 
+template <typename T>
+class CurveSanity : public ::testing::Test
+{
+};
+
+#ifdef G2
+typedef testing::Types<projective_t, g2_projective_t> CTImplementations;
+#else
+typedef testing::Types<projective_t> CTImplementations;
+#endif
+
+TYPED_TEST_SUITE(CurveSanity, CTImplementations);
+
+// Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
+TYPED_TEST(CurveSanity, CurveSanityTest)
+{
+  auto a = TypeParam::rand_host();
+  auto b = TypeParam::rand_host();
+  ASSERT_EQ(true, TypeParam::is_on_curve(a) && TypeParam::is_on_curve(b));               // rand is on curve
+  ASSERT_EQ(a + TypeParam::zero(), a);                                                   // zero addition
+  ASSERT_EQ(a + b - a, b);                                                               // addition,subtraction cancel
+  ASSERT_EQ(a + TypeParam::neg(a), TypeParam::zero());                                   // addition with neg cancel
+  ASSERT_EQ(a + a + a, scalar_t::from(3) * a);                                           // scalar multiplication
+  ASSERT_EQ(scalar_t::from(3) * (a + b), scalar_t::from(3) * a + scalar_t::from(3) * b); // distributive
+  ASSERT_EQ(a + b, a + TypeParam::to_affine(b)); // mixed addition projective+affine
+  ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
