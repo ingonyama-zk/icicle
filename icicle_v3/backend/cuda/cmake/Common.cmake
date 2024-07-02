@@ -61,3 +61,15 @@ function(set_gpu_env)
     set(CMAKE_CUDA_FLAGS_RELEASE "" PARENT_SCOPE)
     set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -lineinfo" PARENT_SCOPE)
 endfunction()
+
+function(find_cuda_compiler)
+    # Find the CUDA compiler
+    execute_process(
+        COMMAND which nvcc
+        OUTPUT_VARIABLE CUDA_COMPILER_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Set the CUDA compiler
+    set(CMAKE_CUDA_COMPILER ${CUDA_COMPILER_PATH} PARENT_SCOPE)    
+endfunction()
