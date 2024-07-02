@@ -1,5 +1,5 @@
 function(check_field)
-  set(SUPPORTED_FIELDS babybear;stark252)
+  set(SUPPORTED_FIELDS babybear;stark252;m31)
 
   set(IS_FIELD_SUPPORTED FALSE)
   set(I 1000)

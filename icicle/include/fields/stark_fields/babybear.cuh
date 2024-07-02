@@ -58,5 +58,5 @@ namespace babybear {
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  typedef ExtensionField<fp_config> extension_t;
+  typedef ExtensionField<fp_config, scalar_t> extension_t;
 } // namespace babybear
