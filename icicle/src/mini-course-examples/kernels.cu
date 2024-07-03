@@ -72,7 +72,7 @@ __global__ void bugged_fake_ntt_kernel(const T* x, T* result, const unsigned thr
 
 template <class T>
 __global__ void bucket_acc_naive(T* buckets, unsigned* indices, unsigned* sizes, unsigned nof_buckets){
-  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  int tid = blockDim.x * blockIdx.x + threadIdx.x;
   if (tid >= nof_buckets) return;
   for (int i = 0; i < sizes[tid]; i++)
   {
@@ -81,29 +81,10 @@ __global__ void bucket_acc_naive(T* buckets, unsigned* indices, unsigned* sizes,
 }
 
 template <class T>
-__global__ void bucket_acc_reg(T* buckets, unsigned* indices, unsigned* sizes, unsigned nof_buckets){
-  int tid = blockDim.x*blockIdx.x + threadIdx.x;
-  if (tid >= nof_buckets) return;
-  T bucket = buckets[indices[tid]];
-  for (int i = 0; i < sizes[tid]; i++)
-  {
-    bucket = bucket + bucket;
-  }
-  buckets[indices[tid]] = bucket;
-}
-
-template <class T>
 __global__ void bucket_acc_memory_baseline(T* buckets1, T* buckets2, unsigned* indices, unsigned nof_buckets){
   int tid = blockDim.x*blockIdx.x + threadIdx.x;
   if (tid >= nof_buckets) return;
   buckets2[indices[tid]] = buckets1[indices[tid]];
-}
-
-template <class T>
-__global__ void simple_memory_copy(T* buckets1, T* buckets2, unsigned nof_buckets){
-  int tid = blockDim.x*blockIdx.x + threadIdx.x;
-  if (tid >= nof_buckets) return;
-  buckets2[tid] = buckets1[tid];
 }
 
 template <class T>
@@ -119,4 +100,86 @@ __global__ void bucket_acc_compute_baseline(T* buckets, unsigned* indices, unsig
     }
   }
   buckets[indices[tid]] = bucket;
+}
+
+template <class T>
+__global__ void bucket_acc_reg(T* buckets, unsigned* indices, unsigned* sizes, unsigned nof_buckets){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= nof_buckets) return;
+  T bucket = buckets[indices[tid]];
+  for (int i = 0; i < sizes[tid]; i++)
+  {
+    bucket = bucket + bucket;
+  }
+  buckets[indices[tid]] = bucket;
+}
+
+
+// #define NOF_TH 32*64
+
+template <class T>
+__global__ void simple_memory_copy(T* buckets1, T* buckets2, unsigned nof_buckets){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= nof_buckets/2) return;
+    // buckets2[8*tid+i] = buckets1[8*tid+i];
+    // buckets2[tid] = buckets1[tid];
+    buckets2[tid] = buckets1[tid];
+    buckets2[tid+nof_buckets/2] = buckets1[tid+nof_buckets/2];
+}
+
+
+
+template <class T, int SIZE_T>
+__global__ void device_memory_copy(void* arr1_raw, void* arr2_raw, unsigned size){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= size/SIZE_T) return;
+  T* arr1=(T*)arr1_raw;
+  T* arr2=(T*)arr2_raw;
+  arr2[tid] = arr1[tid];
+}
+
+template <class T, int SIZE_T>
+__global__ void segmented_memory_copy(void* arr1_raw, void* arr2_raw, unsigned size, unsigned read_segment_length, unsigned nof_write_segments){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  int nof_elements = size/SIZE_T;
+  int write_segment_length = nof_elements / nof_write_segments;
+  int r_segment_idx = tid / read_segment_length;
+  int r_segment_tid = tid % read_segment_length;
+  int w_segment_idx = r_segment_idx % nof_write_segments;
+  int w_segment_tid = r_segment_idx / nof_write_segments;
+  int addr = w_segment_idx * write_segment_length + w_segment_tid * read_segment_length + r_segment_tid;
+  // if (tid < 50) printf("tid %d, addr %d\n", tid, addr);
+  if (tid >= nof_elements) return;
+  T* arr1=(T*)arr1_raw;
+  T* arr2=(T*)arr2_raw;
+  arr2[addr] = arr1[addr];
+}
+
+
+template <class T, int SIZE_T>
+__global__ void multi_memory_copy(void* arr1_raw, void* arr2_raw, unsigned size, unsigned nof_elements_per_thread){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  int nof_elements = size/SIZE_T;
+  int segment_length = nof_elements / nof_elements_per_thread;
+  if (tid >= segment_length) return;
+  T* arr1=(T*)arr1_raw;
+  T* arr2=(T*)arr2_raw;
+  for (int i = 0; i < nof_elements_per_thread; i++)
+  {
+    arr2[tid + i*segment_length] = arr1[tid + i*segment_length];
+  }
+}
+
+template <class T, int SIZE_T>
+__global__ void multi_memory_copy_bad(void* arr1_raw, void* arr2_raw, unsigned size, unsigned nof_elements_per_thread){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  int nof_elements = size/SIZE_T;
+  int nof_threads = nof_elements / nof_elements_per_thread;
+  if (tid >= nof_threads) return;
+  T* arr1=(T*)arr1_raw;
+  T* arr2=(T*)arr2_raw;
+  for (int i = 0; i < nof_elements_per_thread; i++)
+  {
+    arr2[tid*nof_elements_per_thread + i] = arr1[tid*nof_elements_per_thread + i];
+  }
 }
