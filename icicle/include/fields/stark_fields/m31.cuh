@@ -51,25 +51,27 @@ namespace m31 {
         out.storage = xs;
         return out;
       }
+      friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
+      {
+        uint64_t tmp = (uint64_t)xs.storage + ys.storage; // max: 2^33 - 2 = 2^32(1) + (2^32 - 2)
+        tmp = ((tmp >> 32) << 1) + (uint32_t)(tmp); // 2(1)+(2^32-2) = 2^32(1)+(0)
+        return from_number((uint32_t)((tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(1) + 0 = 2
+      }
+      friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys) { 
+        uint64_t tmp = CONFIG::modulus_3 + xs.storage - ys.storage; // max: 3(2^31-1) + 2^32-1 - 0 = 2^33 + 2^31-4 = 2^32(2) + (2^31-4)
+        return from_number(((uint32_t)(tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(2)+(2^31-4) = 2^31
+      }
       template <unsigned MODULUS_MULTIPLE = 1>
       static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
       {
-        uint32_t module_2 = CONFIG::modulus_2.limbs[0];
-        if (xs.storage == 0) return xs;
-        if (xs.storage > module_2) return from_number(module_2 - (xs.storage - module_2));
-        return from_number(module_2 - xs.storage);
+        uint64_t tmp = CONFIG::modulus_3 - xs.storage; // max: 3(2^31-1) - 0 = 2^32(1) + (2^31 - 3)
+        return from_number(((uint32_t)(tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(1)+(2^31-3) = 2^31 - 1      
       }
-      friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
-      {
-        const uint32_t tmp = xs.storage + ys.storage;
-        return from_number(tmp < xs.storage ? 2 + tmp : tmp);
-      }
-      friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys) { return xs + neg(ys); }
       friend HOST_DEVICE_INLINE Wide operator*(Wide xs, const Wide& ys)
       {
-        uint64_t t1 = (uint64_t)xs.storage * ys.storage;
-        t1 = (uint64_t)((uint32_t)(t1 >> 32) << 1) + (uint32_t)(t1);
-        return from_number((((uint32_t)(t1 >> 32) & 0b11) << 1) + (uint32_t)(t1));
+        uint64_t t1 = (uint64_t)xs.storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
+        t1 = ((t1 >> 32) << 1) + (uint32_t)(t1); // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
+        return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
       }
     };
 
@@ -88,8 +90,10 @@ namespace m31 {
     template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE MersenneField reduce(Wide xs)
     {
-      uint32_t tmp = ((xs.storage >> 31) & 1) + (xs.storage & MersenneField::get_modulus().limbs[0]);
-      return MersenneField{{tmp == MersenneField::get_modulus().limbs[0] ? 0 : tmp}};
+      const uint32_t modulus = MersenneField::get_modulus().limbs[0];
+      uint32_t tmp = (xs.storage >> 31) + (xs.storage & modulus); // max: 1 + 2^31-1 = 2^31
+      tmp = (xs.storage >> 31) + (xs.storage & modulus); // max: 1 + 0 = 1
+      return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
     static constexpr HOST_DEVICE_INLINE MersenneField inverse(const MersenneField& x)
@@ -180,6 +184,7 @@ namespace m31 {
 
     static constexpr storage<limbs_count> modulus = {0x7fffffff};
     static constexpr storage<limbs_count> modulus_2 = {0xfffffffe};
+    static constexpr uint64_t modulus_3 = 0x17ffffffd;
     static constexpr storage<limbs_count> modulus_4 = {0xfffffffc};
     static constexpr storage<limbs_count> neg_modulus = {0x87ffffff};
     static constexpr storage<2 * limbs_count> modulus_wide = {0x7fffffff, 0x00000000};
