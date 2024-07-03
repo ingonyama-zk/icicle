@@ -43,9 +43,15 @@ func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.Cur
 	z := {{.CurvePrefix}}BaseField{}
 	z.One()
 
+	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
+		p.X = z.Zero()
+		p.Y = z.One()
+		p.Z = z.Zero()
+	}else{
 	p.X = a.X
 	p.Y = a.Y
-	p.Z = z
+	p.Z = z.One()
+	}
 
 	return *p
 }
@@ -108,6 +114,14 @@ func (a *{{.CurvePrefix}}Affine) FromLimbs(x, y []uint32) {{.CurvePrefix}}Affine
 
 func (a {{.CurvePrefix}}Affine) ToProjective() {{.CurvePrefix}}Projective {
 	var z {{.CurvePrefix}}BaseField
+
+	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
+		return {{.CurvePrefix}}Projective{
+			X: z.Zero(),
+			Y: z.One(),
+			Z: z.Zero(),
+		}
+	}
 
 	return {{.CurvePrefix}}Projective{
 		X: a.X,
