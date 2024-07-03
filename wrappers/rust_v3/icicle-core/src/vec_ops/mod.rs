@@ -87,23 +87,16 @@ fn check_vec_ops_args<'a, F>(
         );
     }
 
-    // TODO Yuval : check device
-    // let ctx_device_id = cfg
-    //     .ctx
-    //     .device_id;
-    // if let Some(device_id) = a.device_id() {
-    //     assert_eq!(device_id, ctx_device_id, "Device ids in a and context are different");
-    // }
-    // if let Some(device_id) = b.device_id() {
-    //     assert_eq!(device_id, ctx_device_id, "Device ids in b and context are different");
-    // }
-    // if let Some(device_id) = result.device_id() {
-    //     assert_eq!(
-    //         device_id, ctx_device_id,
-    //         "Device ids in result and context are different"
-    //     );
-    // }
-    // check_device(ctx_device_id);
+    // check device slices are on active device
+    if a.is_on_device() && !a.is_on_active_device(){
+        panic!("input a is allocated on an inactive device");
+    }
+    if b.is_on_device() && !b.is_on_active_device(){
+        panic!("input b is allocated on an inactive device");
+    }
+    if result.is_on_device() && !result.is_on_active_device(){
+        panic!("output is allocated on an inactive device");
+    }
 
     let mut res_cfg = cfg.clone();
     res_cfg.is_a_on_device = a.is_on_device();

@@ -32,6 +32,11 @@ namespace icicle {
     }
     Device(const Device& other) { copy(other); }
     Device(const Device&&) = delete;
+    bool operator==(const Device& other) const
+    {
+      return (id == other.id) && (0 == strncmp(type, other.type, MAX_TYPE_LEN));
+    }
+    bool operator!=(const Device& other) const { return !(*this == other); }
   };
 
   /**

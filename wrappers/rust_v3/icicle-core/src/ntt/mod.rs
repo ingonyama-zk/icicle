@@ -174,23 +174,15 @@ where
             output.len()
         );
     }
-    // TODO Yuval : check device
-    // let ctx_device_id = cfg
-    //     .ctx
-    //     .device_id;
-    // if let Some(device_id) = input.device_id() {
-    //     assert_eq!(
-    //         device_id, ctx_device_id,
-    //         "Device ids in input and context are different"
-    //     );
-    // }
-    // if let Some(device_id) = output.device_id() {
-    //     assert_eq!(
-    //         device_id, ctx_device_id,
-    //         "Device ids in output and context are different"
-    //     );
-    // }
-    // check_device(ctx_device_id);
+
+    // check device slices are on active device
+    if input.is_on_device() && !input.is_on_active_device(){
+        panic!("input not allocated on an inactive device");
+    }
+    if output.is_on_device() && !output.is_on_active_device(){
+        panic!("output not allocated on an inactive device");
+    }    
+    
     let mut local_cfg = cfg.clone();
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
@@ -433,3 +425,5 @@ macro_rules! impl_ntt_tests {
         }
     };
 }
+
+// TODO Yuval : becnhmarks

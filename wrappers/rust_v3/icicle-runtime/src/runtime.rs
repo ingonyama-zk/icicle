@@ -11,6 +11,8 @@ extern "C" {
     fn icicle_load_backend(path: *const c_char, is_recursive: bool) -> eIcicleError;
     fn icicle_set_device(device: &Device) -> eIcicleError;
     fn icicle_get_active_device(device: &mut Device) -> eIcicleError;
+    fn icicle_is_host_memory(ptr: *const c_void) -> eIcicleError;
+    fn icicle_is_active_device_memory(ptr: *const c_void) -> eIcicleError;
     fn icicle_get_device_count(device_count: &i32) -> eIcicleError;
     fn icicle_is_device_avialable(device: &Device) -> eIcicleError;
     pub fn icicle_malloc(ptr: *mut *mut c_void, size: usize) -> eIcicleError;
@@ -57,6 +59,14 @@ pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
 pub fn get_active_device() -> Result<Device, eIcicleError> {
     let mut device: Device = Device::new("invalid", -1);
     unsafe { icicle_get_active_device(&mut device).wrap_value::<Device>(device) }
+}
+
+pub fn is_host_memory(ptr: *const c_void) -> bool{
+    unsafe {eIcicleError::Success == icicle_is_host_memory(ptr)}
+}
+
+pub fn is_active_device_memory(ptr: *const c_void) -> bool {
+    unsafe {eIcicleError::Success == icicle_is_active_device_memory(ptr)}
 }
 
 pub fn get_device_count() -> Result<i32, eIcicleError> {

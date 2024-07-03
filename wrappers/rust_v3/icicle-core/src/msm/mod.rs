@@ -130,29 +130,18 @@ pub fn msm<C: Curve + MSM<C>>(
             scalars.len()
         );
     }
-    // TODO Yuval : check device
-    // let ctx_device_id = cfg
-    //     .ctx
-    //     .device_id;
-    // if let Some(device_id) = scalars.device_id() {
-    //     assert_eq!(
-    //         device_id, ctx_device_id,
-    //         "Device ids in scalars and context are different"
-    //     );
-    // }
-    // if let Some(device_id) = bases.device_id() {
-    //     assert_eq!(
-    //         device_id, ctx_device_id,
-    //         "Device ids in bases and context are different"
-    //     );
-    // }
-    // if let Some(device_id) = results.device_id() {
-    //     assert_eq!(
-    //         device_id, ctx_device_id,
-    //         "Device ids in results and context are different"
-    //     );
-    // }
-    // check_device(ctx_device_id);
+
+    // check device slices are on active device
+    if scalars.is_on_device() && !scalars.is_on_active_device(){
+        panic!("scalars not allocated on an inactive device");
+    }
+    if bases.is_on_device() && !bases.is_on_active_device(){
+        panic!("bases not allocated on an inactive device");
+    }
+    if results.is_on_device() && !results.is_on_active_device(){
+        panic!("results not allocated on an inactive device");
+    }
+
     let mut local_cfg = cfg.clone();
     local_cfg.bases_size = bases_size as i32;
     local_cfg.batch_size = results.len() as i32;
@@ -298,3 +287,5 @@ macro_rules! impl_msm_tests {
         }
     };
 }
+
+// TODO Yuval : becnhmarks

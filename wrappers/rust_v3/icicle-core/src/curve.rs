@@ -118,56 +118,32 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
 
 impl<C: Curve> MontgomeryConvertible for Affine<C> {
     fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        // TODO Yuval : check device
-        // check_device(ctx.device_id);
-        // assert_eq!(
-        //     values
-        //         .device_id()
-        //         .unwrap(),
-        //     ctx.device_id,
-        //     "Device ids are different in slice and context"
-        // );        
+        if !values.is_on_active_device(){
+            panic!("values not allocated on an inactive device");
+        }
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
     fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        // TODO Yuval : check device
-        // check_device(ctx.device_id);
-        // assert_eq!(
-        //     values
-        //         .device_id()
-        //         .unwrap(),
-        //     ctx.device_id,
-        //     "Device ids are different in slice and context"
-        // );        
+        if !values.is_on_active_device(){
+            panic!("values not allocated on an inactive device");
+        }
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
     }
 }
 
 impl<C: Curve> MontgomeryConvertible for Projective<C> {
     fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        // TODO Yuval : check device
-        // check_device(ctx.device_id);
-        // assert_eq!(
-        //     values
-        //         .device_id()
-        //         .unwrap(),
-        //     ctx.device_id,
-        //     "Device ids are different in slice and context"
-        // );
+        if !values.is_on_active_device(){
+            panic!("values not allocated on an inactive device");
+        }
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
     fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        // TODO Yuval : check device
-        // check_device(ctx.device_id);
-        // assert_eq!(
-        //     values
-        //         .device_id()
-        //         .unwrap(),
-        //     ctx.device_id,
-        //     "Device ids are different in slice and context"
-        // );
+        if !values.is_on_active_device(){
+            panic!("values not allocated on an inactive device");
+        }
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
     }
 }
@@ -179,7 +155,7 @@ macro_rules! impl_curve {
         $curve_prefix_ident:ident,
         $curve:ident,
         $scalar_field:ident,
-        $base_field:ident,        
+        $base_field:ident,
         $affine_type:ident,
         $projective_type:ident
     ) => {
@@ -254,8 +230,8 @@ macro_rules! impl_curve {
             fn convert_affine_montgomery(
                 points: *mut $affine_type,
                 len: usize,
-                is_into: bool,                
-                stream: &IcicleStream,    
+                is_into: bool,
+                stream: &IcicleStream,
             ) -> eIcicleError {
                 let mut config = VecOpsConfig::default();
                 config.is_a_on_device = true;
@@ -270,14 +246,14 @@ macro_rules! impl_curve {
                         &config,
                         points
                     )
-                }                
+                }
             }
 
             fn convert_projective_montgomery(
                 points: *mut $projective_type,
                 len: usize,
                 is_into: bool,
-                stream: &IcicleStream,                
+                stream: &IcicleStream,
             ) -> eIcicleError {
                 let mut config = VecOpsConfig::default();
                 config.is_a_on_device = true;
@@ -312,7 +288,7 @@ macro_rules! impl_curve_tests {
             }
 
             #[test]
-            fn test_affine_projective_convert() {            
+            fn test_affine_projective_convert() {
                 initialize();
                 check_affine_projective_convert::<$curve>()
             }
