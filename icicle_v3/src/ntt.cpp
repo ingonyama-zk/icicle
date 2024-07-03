@@ -77,4 +77,19 @@ namespace icicle {
   {
     return CONCAT_EXPAND(FIELD, get_root_of_unity)(max_size);
   }
+
+  /*************************** GET ROOT OF UNITY FROM DOMAIN ***************************/
+  ICICLE_DISPATCHER_INST(NttRouFromDomainDispatcher, ntt_get_rou_from_domain, NttGetRouFromDomainImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, get_root_of_unity_from_domain)(uint64_t logn, scalar_t& rou)
+  {
+    return NttRouFromDomainDispatcher::execute(logn, rou);
+  }
+
+  template <>
+  eIcicleError get_root_of_unity_from_domain<scalar_t>(uint64_t logn, scalar_t& rou)
+  {
+    return CONCAT_EXPAND(FIELD, get_root_of_unity_from_domain)(logn, rou);
+  }
+
 } // namespace icicle

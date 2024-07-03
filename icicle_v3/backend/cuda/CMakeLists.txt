@@ -42,6 +42,7 @@ if (FIELD)
         target_sources(icicle_cuda_field PRIVATE
             src/ntt/cuda_ntt.cu
             src/ntt/mixed_radix_ntt.cu
+            src/polynomials/cuda_polynomial_backend.cu
         )
     endif()
     target_include_directories(icicle_cuda_field PRIVATE include)

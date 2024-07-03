@@ -34,6 +34,12 @@ if (FIELD)
     target_include_directories(test_field_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
     target_link_libraries(test_field_api PRIVATE GTest::gtest_main icicle_device icicle_field)
     gtest_discover_tests(test_field_api)
+
+    add_executable(test_polynomial_api test_polynomial_api.cpp)
+    target_include_directories(test_polynomial_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
+    target_link_libraries(test_polynomial_api PRIVATE GTest::gtest_main icicle_field)
+    gtest_discover_tests(test_polynomial_api)
+    # TODO Yuval : polynomials should link to curve too
 endif()
 
 #curve API test
