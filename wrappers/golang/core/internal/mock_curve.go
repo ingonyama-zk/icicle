@@ -33,7 +33,9 @@ func (p *MockProjective) FromAffine(a MockAffine) MockProjective {
 	z.One()
 
 	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		p.Zero()
+		p.X = z.Zero()
+		p.Y = z.One()
+		p.Z = z.Zero()
 	} else {
 		p.X = a.X
 		p.Y = a.Y
@@ -73,8 +75,11 @@ func (a MockAffine) ToProjective() MockProjective {
 	var z MockBaseField
 
 	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		var p MockProjective
-		return p.Zero()
+		return MockProjective{
+			X: z.Zero(),
+			Y: z.One(),
+			Z: z.Zero(),
+		}
 	}
 
 	return MockProjective{
