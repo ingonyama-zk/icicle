@@ -44,9 +44,7 @@ func (p *Projective) FromAffine(a Affine) Projective {
 	z.One()
 
 	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		p.X = z.Zero()
-		p.Y = z.One()
-		p.Z = z.Zero()
+		p.Zero()
 	} else {
 		p.X = a.X
 		p.Y = a.Y
@@ -116,11 +114,8 @@ func (a Affine) ToProjective() Projective {
 	var z BaseField
 
 	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		return Projective{
-			X: z.Zero(),
-			Y: z.One(),
-			Z: z.Zero(),
-		}
+		var p Projective
+		return p.Zero()
 	}
 
 	return Projective{

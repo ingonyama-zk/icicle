@@ -44,9 +44,7 @@ func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
 	z.One()
 
 	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		p.X = z.Zero()
-		p.Y = z.One()
-		p.Z = z.Zero()
+		p.Zero()
 	} else {
 		p.X = a.X
 		p.Y = a.Y
@@ -116,11 +114,8 @@ func (a G2Affine) ToProjective() G2Projective {
 	var z G2BaseField
 
 	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		return G2Projective{
-			X: z.Zero(),
-			Y: z.One(),
-			Z: z.Zero(),
-		}
+		var p G2Projective
+		return p.Zero()
 	}
 
 	return G2Projective{
