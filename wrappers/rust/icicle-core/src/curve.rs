@@ -79,6 +79,9 @@ impl<C: Curve> Affine<C> {
     }
 
     pub fn to_projective(&self) -> Projective<C> {
+        if *self == Self::zero() {
+            return Projective::<C>::zero();
+        }
         Projective {
             x: self.x,
             y: self.y,
