@@ -20,6 +20,19 @@ extern "C" eIcicleError icicle_get_active_device(icicle::Device& device)
   return eIcicleError::SUCCESS;
 }
 
+extern "C" eIcicleError icicle_is_host_memory(const void* ptr)
+{
+  auto it = DeviceAPI::get_global_memory_tracker().identify_device(ptr);
+  return (it == std::nullopt) ? eIcicleError::SUCCESS : eIcicleError::INVALID_POINTER;
+}
+
+extern "C" eIcicleError icicle_is_active_device_memory(const void* ptr)
+{
+  auto it = DeviceAPI::get_global_memory_tracker().identify_device(ptr);
+  if (it == std::nullopt) { return eIcicleError::INVALID_POINTER; }
+  return (**it == DeviceAPI::get_thread_local_device()) ? eIcicleError::SUCCESS : eIcicleError::INVALID_POINTER;
+}
+
 extern "C" eIcicleError icicle_get_device_count(int& device_count /*OUT*/)
 {
   return DeviceAPI::get_thread_local_deviceAPI()->get_device_count(device_count);
@@ -27,19 +40,24 @@ extern "C" eIcicleError icicle_get_device_count(int& device_count /*OUT*/)
 
 extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory(ptr, size);
+  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory(ptr, size, DeviceAPI::get_global_memory_tracker());
 }
 
 extern "C" eIcicleError icicle_malloc_async(void** ptr, size_t size, icicleStreamHandle stream)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory_async(ptr, size, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory_async(
+    ptr, size, stream, DeviceAPI::get_global_memory_tracker());
 }
 
-extern "C" eIcicleError icicle_free(void* ptr) { return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr); }
+extern "C" eIcicleError icicle_free(void* ptr)
+{
+  return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr, DeviceAPI::get_global_memory_tracker());
+}
 
 extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->free_memory_async(ptr, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->free_memory_async(
+    ptr, stream, DeviceAPI::get_global_memory_tracker());
 }
 
 extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/)

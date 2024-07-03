@@ -33,6 +33,22 @@ extern "C" eIcicleError icicle_set_device(const icicle::Device& device);
 extern "C" eIcicleError icicle_get_active_device(icicle::Device& device);
 
 /**
+ * @brief Check pointer is allocated on the host memory
+ *
+
+ * @return eIcicleError::SUCCESS if true, otherwise eIcicleErrors::INVALID_POINTER
+ */
+extern "C" eIcicleError icicle_is_host_memory(const void* ptr);
+
+/**
+ * @brief Check pointer is allocated on the active device
+ *
+
+ * @return eIcicleError::SUCCESS if true, otherwise eIcicleErrors::INVALID_POINTER
+ */
+extern "C" eIcicleError icicle_is_active_device_memory(const void* ptr);
+
+/**
  * @brief Get number of available devices active device for thread
  *
 

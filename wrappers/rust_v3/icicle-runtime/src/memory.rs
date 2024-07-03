@@ -15,7 +15,7 @@ pub struct DeviceSlice<T>([T]);
 
 pub trait HostOrDeviceSlice<T> {
     fn is_on_device(&self) -> bool;
-    fn device_id(&self) -> Option<usize>;
+    fn is_on_active_device(&self) -> bool;
     unsafe fn as_ptr(&self) -> *const T;
     unsafe fn as_mut_ptr(&mut self) -> *mut T;
     fn len(&self) -> usize;
@@ -27,8 +27,8 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
         false
     }
 
-    fn device_id(&self) -> Option<usize> {
-        None
+    fn is_on_active_device(&self) -> bool {
+        false
     }
 
     unsafe fn as_ptr(&self) -> *const T {
@@ -55,10 +55,9 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         true
     }
 
-    fn device_id(&self) -> Option<usize> {
-        // TODO Yuval implement
-        assert!(false, "not implemented");
-        Some(0) 
+
+    fn is_on_active_device(&self) -> bool {
+        runtime::is_active_device_memory(self.0.as_ptr() as *const c_void)
     }
 
     unsafe fn as_ptr(&self) -> *const T {
@@ -126,13 +125,12 @@ impl<T> DeviceSlice<T> {
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
         );
-        // TODO Yuval check device
-        // check_device(
-        //     self.device_id()
-        //         .unwrap(),
-        // );
+        
         if self.is_empty() {
             return Ok(());
+        }
+        if !self.is_on_active_device(){
+            panic!("not allocated on an inactive device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -146,13 +144,12 @@ impl<T> DeviceSlice<T> {
             self.len() == val.len(),
             "In copy to host, destination and source slices have different lengths"
         );
-        // TODO Yuval check device
-        // check_device(
-        //     self.device_id()
-        //         .unwrap(),
-        // );
+
         if self.is_empty() {
             return Ok(());
+        }
+        if !self.is_on_active_device(){
+            panic!("not allocated on an inactive device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -166,13 +163,11 @@ impl<T> DeviceSlice<T> {
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
         );
-        // TODO Yuval check device
-        // check_device(
-        //     self.device_id()
-        //         .unwrap(),
-        // );
         if self.is_empty() {
             return Ok(());
+        }
+        if !self.is_on_active_device(){
+            panic!("not allocated on an inactive device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -192,15 +187,13 @@ impl<T> DeviceSlice<T> {
             self.len() == val.len(),
             "In copy to host, destination and source slices have different lengths"
         );
-        // TODO Yuval check device
-        // check_device(
-        //     self.device_id()
-        //         .unwrap(),
-        // );
         if self.is_empty() {
             return Ok(());
         }
-
+        if !self.is_on_active_device(){
+            panic!("not allocated on an inactive device");
+        }
+        
         let size = size_of::<T>() * self.len();
         unsafe {
             runtime::icicle_copy_to_host_async(
@@ -270,7 +263,10 @@ impl<T> Drop for DeviceVec<T> {
             let ptr = self
                 .0
                 .as_mut_ptr() as *mut c_void;
-            runtime::icicle_free(ptr);
+            let err = runtime::icicle_free(ptr);
+            if err != eIcicleError::Success {
+                panic!("releasing memory failed due to invalid active device");
+            }
         }
     }
 }

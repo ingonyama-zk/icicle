@@ -7,6 +7,7 @@
 
 #include "icicle/device.h"
 #include "icicle/errors.h"
+#include "icicle/memory_tracker.h"
 
 namespace icicle {
 
@@ -52,6 +53,7 @@ namespace icicle {
      * @return eIcicleError Status of the memory allocation.
      */
     virtual eIcicleError allocate_memory(void** ptr, size_t size) const = 0;
+    eIcicleError allocate_memory(void** ptr, size_t size, MemoryTracker& tracker) const;
 
     /**
      * @brief Asynchronously allocates memory on the specified device.
@@ -62,6 +64,8 @@ namespace icicle {
      * @return eIcicleError Status of the memory allocation.
      */
     virtual eIcicleError allocate_memory_async(void** ptr, size_t size, icicleStreamHandle stream) const = 0;
+    eIcicleError
+    allocate_memory_async(void** ptr, size_t size, icicleStreamHandle stream, MemoryTracker& tracker) const;
 
     /**
      * @brief Frees memory on the specified device.
@@ -70,6 +74,7 @@ namespace icicle {
      * @return eIcicleError Status of the memory deallocation.
      */
     virtual eIcicleError free_memory(void* ptr) const = 0;
+    eIcicleError free_memory(void* ptr, MemoryTracker& tracker) const;
 
     /**
      * @brief Asynchronously frees memory on the specified device.
@@ -79,6 +84,7 @@ namespace icicle {
      * @return eIcicleError Status of the memory deallocation.
      */
     virtual eIcicleError free_memory_async(void* ptr, icicleStreamHandle stream) const = 0;
+    eIcicleError free_memory_async(void* ptr, icicleStreamHandle stream, MemoryTracker& tracker) const;
 
     /**
      * @brief Gets the total and available memory on the specified device.
@@ -172,6 +178,7 @@ namespace icicle {
     virtual eIcicleError get_device_properties(DeviceProperties& properties) const = 0;
 
   private:
+    static MemoryTracker sMemTracker;                   // tracks memory allocations and can find device given address
     thread_local static Device sCurDevice;              // device that is currently active for this thread
     thread_local static const DeviceAPI* sCurDeviceAPI; // API for the currently active device of this thread
 
@@ -179,6 +186,7 @@ namespace icicle {
     static eIcicleError set_thread_local_device(const Device& device);
     static const Device& get_thread_local_device();
     static const DeviceAPI* get_thread_local_deviceAPI();
+    static MemoryTracker& get_global_memory_tracker() { return sMemTracker; }
   };
 
   /**

@@ -3,7 +3,15 @@
 #include <iostream>
 
 #include "icicle/runtime.h"
+#include "icicle/memory_tracker.h"
 #include "dlfcn.h"
+
+using FpNanoseconds = std::chrono::duration<float, std::chrono::nanoseconds::period>;
+#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
+#define END_TIMER(timer, msg, enable, iters)                                                                           \
+  if (enable)                                                                                                          \
+    printf(                                                                                                            \
+      "%s: %.3f ns\n", msg, FpNanoseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / iters);
 
 using namespace icicle;
 
@@ -105,6 +113,51 @@ TEST_F(DeviceApiTest, InvalidDevice)
     icicle::Device dev = {device_type, 10}; // no such device-id thus expecting an error
     ASSERT_EQ(eIcicleError::INVALID_DEVICE, icicle_set_device(dev));
   }
+}
+
+TEST_F(DeviceApiTest, memoryTracker)
+{
+  const int NOF_ALLOCS = 1000;
+  const int ALLOC_SIZE = 1 << 20;
+
+  MemoryTracker tracker{};
+  Device device_cuda = {"CUDA", 0};
+  icicle_set_device(device_cuda);
+
+  std::vector<void*> allocated_addresses(NOF_ALLOCS, nullptr);
+
+  START_TIMER(allocation);
+  for (auto& it : allocated_addresses) {
+    icicle_malloc(&it, ALLOC_SIZE);
+  }
+  END_TIMER(allocation, "memory-tracker: malloc average", true, NOF_ALLOCS);
+
+  START_TIMER(insertion);
+  for (auto& it : allocated_addresses) {
+    tracker.add_allocation(it, ALLOC_SIZE, device_cuda);
+  }
+  END_TIMER(insertion, "memory-tracker: insert average", true, NOF_ALLOCS);
+
+  START_TIMER(lookup);
+  for (auto& it : allocated_addresses) {
+    // identify addresses identified correctly (to active device)
+    const void* addr = (void*)((size_t)it + rand() % ALLOC_SIZE);
+    ICICLE_CHECK(icicle_is_active_device_memory(addr));
+  }
+  END_TIMER(lookup, "memory-tracker: lookup (and compare) average", true, NOF_ALLOCS);
+
+  // test host pointers are identified as host memory
+  auto host_mem = std::make_unique<int>();
+  ICICLE_CHECK(icicle_is_host_memory(host_mem.get()));
+  ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
+
+  // test that we still identify correctly after switching device
+  icicle_set_device({"CPU", 0});
+  const void* addr = (void*)((size_t)*allocated_addresses.begin() + rand() % ALLOC_SIZE);
+  ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(addr));
+  ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
+  auto dev = tracker.identify_device(addr);
+  ASSERT_EQ(**dev, device_cuda);
 }
 
 int main(int argc, char** argv)
