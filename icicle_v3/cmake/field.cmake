@@ -46,7 +46,12 @@ function(add_ntt_sources_or_disable)
 
   if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
     add_compile_definitions(NTT_ENABLED)
-    target_sources(icicle_field PUBLIC src/ntt.cpp)
+    target_sources(icicle_field PRIVATE  
+      src/ntt.cpp 
+      src/polynomials/polynomials.cpp 
+      src/polynomials/polynomials_c_api.cpp
+      src/polynomials/polynomials_abstract_factory.cpp
+    )
   else()
     set(NTT OFF CACHE BOOL "NTT not available for field" FORCE)
   endif()

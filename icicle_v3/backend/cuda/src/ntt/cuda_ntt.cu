@@ -36,9 +36,20 @@ namespace icicle {
     return translateCudaError(err);
   }
 
+  template <typename S>
+  eIcicleError get_root_of_unity_from_domain_cuda(const Device& device, uint64_t logn, S& rou)
+  {
+    using namespace device_context;
+    DeviceContext device_context = get_default_device_context();
+    device_context.device_id = device.id;
+    rou = ntt::Domain<S>::get_root_of_unity_from_domain(logn, device_context);
+    return eIcicleError::SUCCESS;
+  }
+
   REGISTER_NTT_INIT_DOMAIN_BACKEND("CUDA", ntt_cuda_init_domain)
   REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CUDA", ntt_cuda_release_domain);
   REGISTER_NTT_BACKEND("CUDA", (ntt_cuda<scalar_t, scalar_t>));
+  REGISTER_NTT_GET_ROU_FROM_DOMAIN_BACKEND("CUDA", get_root_of_unity_from_domain_cuda<scalar_t>)
 #ifdef EXT_FIELD
   REGISTER_NTT_EXT_FIELD_BACKEND("CUDA", (ntt_cuda<scalar_t, extension_t>));
 #endif // EXT_FIELD

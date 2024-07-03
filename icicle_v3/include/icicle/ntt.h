@@ -128,6 +128,9 @@ namespace icicle {
   template <typename S>
   S get_root_of_unity(uint64_t max_size);
 
+  template <typename S>
+  eIcicleError get_root_of_unity_from_domain(uint64_t logn, S& rou /*OUT*/);
+
   /*************************** Backend registration ***************************/
 
   /*************************** NTT ***************************/
@@ -189,6 +192,19 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_ntt_release_domain) = []() -> bool {                                                       \
       register_ntt_release_domain(DEVICE_TYPE, FUNC);                                                                  \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  /*************************** GET ROU FROM DOMAIN ***************************/
+  using NttGetRouFromDomainImpl = std::function<eIcicleError(const Device& device, uint64_t logn, scalar_t& rou)>;
+
+  void register_ntt_get_rou_from_domain(const std::string& deviceType, NttGetRouFromDomainImpl);
+
+#define REGISTER_NTT_GET_ROU_FROM_DOMAIN_BACKEND(DEVICE_TYPE, FUNC)                                                    \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_ntt_get_rou_from_domain) = []() -> bool {                                                  \
+      register_ntt_get_rou_from_domain(DEVICE_TYPE, FUNC);                                                             \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
