@@ -1,5 +1,5 @@
 #include "fields/id.h"
-// #define FIELD_ID 2
+// #define FIELD_ID 1001
 #define CURVE_ID 3
 #include "curves/curve_config.cuh"
 // #include "fields/field_config.cuh"
@@ -58,13 +58,16 @@ public:
 };
 
 
+// typedef field_config::scalar_t test_scalar;
 typedef curve_config::scalar_t test_scalar;
 typedef curve_config::projective_t test_projective;
 typedef curve_config::affine_t test_affine;
 
-typedef Dummy_Scalar test_t;
+// typedef int test_t;
+// typedef int4 test_t;
+// typedef Dummy_Scalar test_t;
 // typedef test_projective test_t;
-// typedef test_scalar test_t;
+typedef test_scalar test_t;
 
 int main()
 {
@@ -88,7 +91,12 @@ int main()
     sizes_h[i] = static_cast<unsigned>(std::rand())%20;
     // sizes_h[i] = 10;
     buckets_h[i] = i<100? test_t::rand_host() : buckets_h[i-100];
-    if (i<10) std::cout << indices_h[i] << " " << sizes_h[i] << " " << buckets_h[i] << std::endl;
+    // buckets_h[i] = i<100? rand() : buckets_h[i-100];
+    // buckets_h[i].x = i<100? rand() : buckets_h[i-100].x;
+    // buckets_h[i].y = i<100? rand() : buckets_h[i-100].y;
+    // buckets_h[i].z = i<100? rand() : buckets_h[i-100].z;
+    // buckets_h[i].w = i<100? rand() : buckets_h[i-100].w;
+    // if (i<10) std::cout << indices_h[i] << " " << sizes_h[i] << " " << buckets_h[i] << std::endl;
   }
   
   test_t *buckets_d, *buckets2_d;
@@ -111,48 +119,49 @@ int main()
   cudaDeviceSynchronize();
   std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
-  // cudaEventRecord(start, 0);
-
-  
-  unsigned* sorted_sizes;
-  cudaMalloc(&sorted_sizes, sizeof(unsigned) * N);
-
-  unsigned* sorted_indices;
-  cudaMalloc(&sorted_indices, sizeof(unsigned) * N);
-  unsigned* sort_indices_temp_storage{};
-  size_t sort_indices_temp_storage_bytes = 0;
-  cub::DeviceRadixSort::SortPairsDescending(
-    sort_indices_temp_storage, sort_indices_temp_storage_bytes, sizes_d,
-    sorted_sizes, indices_d, sorted_indices, N, 0);
-  cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
-  cub::DeviceRadixSort::SortPairsDescending(
-    sort_indices_temp_storage, sort_indices_temp_storage_bytes, sizes_d,
-    sorted_sizes, indices_d, sorted_indices, N, 0);
-  cudaFree(sort_indices_temp_storage);
-  
-  test_t* sorted_buckets;
-  cudaMalloc(&sorted_buckets, sizeof(test_t) * N);
-  unsigned* sort_buckets_temp_storage{};
-  size_t sort_buckets_temp_storage_bytes = 0;
-  cub::DeviceRadixSort::SortPairsDescending(
-    sort_buckets_temp_storage, sort_buckets_temp_storage_bytes, sizes_d,
-    sorted_sizes, buckets_d, sorted_buckets, N, 0);
-  cudaMalloc(&sort_buckets_temp_storage, sort_buckets_temp_storage_bytes);
-  cub::DeviceRadixSort::SortPairsDescending(
-    sort_buckets_temp_storage, sort_buckets_temp_storage_bytes, sizes_d,
-    sorted_sizes, buckets_d, sorted_buckets, N, 0);
-  cudaFree(sort_buckets_temp_storage);
-
   cudaEventRecord(start, 0);
 
-  // bucket_acc_naive<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
+  
+  // unsigned* sorted_sizes;
+  // cudaMalloc(&sorted_sizes, sizeof(unsigned) * N);
+
+  // unsigned* sorted_indices;
+  // cudaMalloc(&sorted_indices, sizeof(unsigned) * N);
+  // unsigned* sort_indices_temp_storage{};
+  // size_t sort_indices_temp_storage_bytes = 0;
+  // cub::DeviceRadixSort::SortPairsDescending(
+  //   sort_indices_temp_storage, sort_indices_temp_storage_bytes, sizes_d,
+  //   sorted_sizes, indices_d, sorted_indices, N, 0);
+  // cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
+  // cub::DeviceRadixSort::SortPairsDescending(
+  //   sort_indices_temp_storage, sort_indices_temp_storage_bytes, sizes_d,
+  //   sorted_sizes, indices_d, sorted_indices, N, 0);
+  // cudaFree(sort_indices_temp_storage);
+  
+  // test_t* sorted_buckets;
+  // cudaMalloc(&sorted_buckets, sizeof(test_t) * N);
+  // unsigned* sort_buckets_temp_storage{};
+  // size_t sort_buckets_temp_storage_bytes = 0;
+  // cub::DeviceRadixSort::SortPairsDescending(
+  //   sort_buckets_temp_storage, sort_buckets_temp_storage_bytes, sizes_d,
+  //   sorted_sizes, buckets_d, sorted_buckets, N, 0);
+  // cudaMalloc(&sort_buckets_temp_storage, sort_buckets_temp_storage_bytes);
+  // cub::DeviceRadixSort::SortPairsDescending(
+  //   sort_buckets_temp_storage, sort_buckets_temp_storage_bytes, sizes_d,
+  //   sorted_sizes, buckets_d, sorted_buckets, N, 0);
+  // cudaFree(sort_buckets_temp_storage);
+
+  // cudaEventRecord(start, 0);
+
+  bucket_acc_naive<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
+  // bucket_acc_compute_baseline<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
+  // bucket_acc_memory_baseline<<<BLOCKS, THREADS>>>(buckets_d, buckets2_d, indices_d, N);
   // bucket_acc_reg<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
   // bucket_acc_reg<<<BLOCKS, THREADS>>>(buckets_d, sorted_indices, sorted_sizes, N);
   // bucket_acc_reg<<<BLOCKS, THREADS>>>(sorted_buckets, indices_d, sorted_sizes, N);
-  // bucket_acc_compute_baseline<<<BLOCKS, THREADS>>>(buckets_d, indices_d, sizes_d, N);
-  // bucket_acc_memory_baseline<<<BLOCKS, THREADS>>>(buckets_d, buckets2_d, indices_d, N);
 
-  simple_memory_copy<<<BLOCKS, THREADS>>>(buckets_d, buckets2_d, N);
+  // simple_memory_copy<<<64, 32>>>(buckets_d, buckets2_d, N);
+  // simple_memory_copy<<<BLOCKS, THREADS>>>(buckets_d, buckets2_d, N);
   
   cudaDeviceSynchronize();
   std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
