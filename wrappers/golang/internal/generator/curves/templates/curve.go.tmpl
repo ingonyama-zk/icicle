@@ -44,9 +44,7 @@ func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.Cur
 	z.One()
 
 	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		p.X = z.Zero()
-		p.Y = z.One()
-		p.Z = z.Zero()
+		p.Zero()
 	}else{
 	p.X = a.X
 	p.Y = a.Y
