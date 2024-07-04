@@ -220,7 +220,8 @@ namespace msm {
       const unsigned nof_buckets,
       const unsigned nof_buckets_to_compute,
       const unsigned msm_idx_shift,
-      const unsigned c)
+      const unsigned c,
+      bool init_buckets)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_buckets_to_compute) return;
@@ -231,12 +232,13 @@ namespace msm {
       const unsigned bucket_size = bucket_sizes[tid];
 
       P bucket; // get rid of init buckets? no.. because what about buckets with no points
+      if (!init_buckets) bucket = buckets[bucket_index];
       for (unsigned i = 0; i < bucket_size;
            i++) { // add the relevant points starting from the relevant offset up to the bucket size
         unsigned point_ind = point_indices[bucket_offset + i];
         A point = points[point_ind];
         bucket =
-          i ? (point == A::zero() ? bucket : bucket + point) : (point == A::zero() ? P::zero() : P::from_affine(point));
+          i || !init_buckets ? (point == A::zero() ? bucket : bucket + point) : (point == A::zero() ? P::zero() : P::from_affine(point));
       }
       buckets[bucket_index] = bucket;
     }
@@ -283,7 +285,8 @@ namespace msm {
       const unsigned* single_bucket_indices,
       const unsigned size,
       const unsigned nof_buckets,
-      const unsigned msm_idx_shift)
+      const unsigned msm_idx_shift,
+      bool init_buckets)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= size) { return; }
@@ -291,7 +294,8 @@ namespace msm {
       unsigned msm_index = single_bucket_indices[tid] >> msm_idx_shift;
       unsigned bucket_index = msm_index * nof_buckets + (single_bucket_indices[tid] & ((1 << msm_idx_shift) - 1));
       unsigned large_bucket_index = sorted_bucket_sizes_sum[tid] + tid;
-      buckets[bucket_index] = large_buckets[large_bucket_index];
+      buckets[bucket_index] = init_buckets ? large_buckets[large_bucket_index] : buckets[bucket_index] + large_buckets[large_bucket_index];
+      // buckets[bucket_index] = large_buckets[large_bucket_index];
     }
 
     // this kernel sums the entire bucket module
@@ -382,6 +386,9 @@ namespace msm {
       unsigned single_msm_size, // number of elements per MSM (a.k.a N)
       unsigned nof_points,      // number of EC points in 'points' array. Must be either (1) single_msm_size if MSMs are
                                 // sharing points or (2) single_msm_size*batch_size otherwise
+      P** buckets_external,
+      bool init_buckets,
+      bool return_buckets,
       P* final_result,
       bool are_scalars_on_device,
       bool are_scalars_montgomery_form,
@@ -540,13 +547,22 @@ namespace msm {
         CHK_IF_RETURN(cudaEventRecord(event_points_uploaded, stream_points));
       }
 
+      printf("before init buckets\n");
       P* buckets;
-      CHK_IF_RETURN(cudaMallocAsync(&buckets, sizeof(P) * (total_nof_buckets + nof_bms_in_batch), stream));
+      if (init_buckets){
+        CHK_IF_RETURN(cudaMallocAsync(&buckets, sizeof(P) * (total_nof_buckets + nof_bms_in_batch), stream));
+        
+        // launch the bucket initialization kernel with maximum threads
+        NUM_THREADS = 1 << 10;
+        NUM_BLOCKS = (total_nof_buckets + nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
+        initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets + nof_bms_in_batch);
+        printf("init buckets\n");
+      }
+      else{
+        buckets = *buckets_external;
+        printf("assign buckets\n");
+      }
 
-      // launch the bucket initialization kernel with maximum threads
-      NUM_THREADS = 1 << 10;
-      NUM_BLOCKS = (total_nof_buckets + nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
-      initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets + nof_bms_in_batch);
 
       // removing zero bucket, if it exists
       unsigned smallest_bucket_index;
@@ -697,18 +713,30 @@ namespace msm {
             large_buckets_nof_threads);
         }
         CHK_IF_RETURN(cudaFreeAsync(large_bucket_indices, stream_large_buckets));
+        cudaDeviceSynchronize();
+        std::cout << "1 cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
         // distribute
         NUM_THREADS = max(1, min(MAX_TH, h_nof_large_buckets));
         NUM_BLOCKS = (h_nof_large_buckets + NUM_THREADS - 1) / NUM_THREADS;
         distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           large_buckets, buckets, sorted_bucket_sizes_sum, sorted_single_bucket_indices, h_nof_large_buckets,
-          nof_buckets + nof_bms_per_msm, c + bm_bitsize);
+          nof_buckets + nof_bms_per_msm, c + bm_bitsize, init_buckets);
+        cudaDeviceSynchronize();
+        std::cout << "2 cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
         CHK_IF_RETURN(cudaFreeAsync(large_buckets, stream_large_buckets));
         CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_sizes_sum, stream_large_buckets));
 
         CHK_IF_RETURN(cudaEventRecord(event_large_buckets_accumulated, stream_large_buckets));
       }
+
+  // printf("buckets pre acc:\n");
+  // P* buckets_h = new P[8];
+  // cudaMemcpy(buckets_h, buckets, sizeof(P) * 8, cudaMemcpyDeviceToHost);
+  // for (int i = 0; i < 8; i++)
+  // {
+  //   std::cout << buckets_h[i] << "\n";
+  // }
 
       // ------------------------- Accumulation of (non-large) buckets ---------------------------------
       if (h_nof_buckets_to_compute > h_nof_large_buckets) {
@@ -718,8 +746,18 @@ namespace msm {
         accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
           buckets, sorted_bucket_offsets + h_nof_large_buckets, sorted_bucket_sizes + h_nof_large_buckets,
           sorted_single_bucket_indices + h_nof_large_buckets, sorted_point_indices, d_points,
-          nof_buckets + nof_bms_per_msm, h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c);
+          nof_buckets + nof_bms_per_msm, h_nof_buckets_to_compute - h_nof_large_buckets, c + bm_bitsize, c, init_buckets);
       }
+
+  // printf("buckets post acc:\n");
+  // // P* buckets_h = new P[8];
+  // cudaMemcpy(buckets_h, buckets, sizeof(P) * 8, cudaMemcpyDeviceToHost);
+  // for (int i = 0; i < 8; i++)
+  // {
+  //   std::cout << buckets_h[i] << "\n";
+  // }
+
+
       CHK_IF_RETURN(cudaFreeAsync(sorted_point_indices, stream));
       CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_sizes, stream));
       CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_offsets, stream));
@@ -729,6 +767,13 @@ namespace msm {
         CHK_IF_RETURN(cudaStreamWaitEvent(stream, event_large_buckets_accumulated));
         CHK_IF_RETURN(cudaStreamDestroy(stream_large_buckets));
       }
+
+
+      if (return_buckets) {
+        *buckets_external = buckets;
+        return CHK_LAST();
+      }
+
 
       P* d_allocated_final_result = nullptr;
       if (!are_results_on_device)
@@ -871,7 +916,7 @@ namespace msm {
   } // namespace
 
   template <typename S, typename A, typename P>
-  cudaError_t msm(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results)
+  cudaError_t msm(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results, P** buckets)
   {
     const int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
     cudaStream_t& stream = config.ctx.stream;
@@ -880,7 +925,7 @@ namespace msm {
 
     return CHK_STICKY(bucket_method_msm(
       bitsize, c, scalars, points, config.batch_size, msm_size,
-      (config.points_size == 0) ? msm_size : config.points_size, results, config.are_scalars_on_device,
+      (config.points_size == 0) ? msm_size : config.points_size, buckets, config.init_buckets, config.return_buckets ,results, config.are_scalars_on_device,
       config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
       config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.precompute_factor,
       config.is_async, stream));

@@ -1,6 +1,6 @@
 #include "fields/id.h"
 // #define FIELD_ID 2
-#define CURVE_ID 3
+#define CURVE_ID 1
 #include "curves/curve_config.cuh"
 // #include "fields/field_config.cuh"
 
@@ -134,13 +134,13 @@ int main(int argc, char** argv)
   cudaEvent_t start, stop;
   float msm_time;
 
-  int msm_log_size = (argc > 1) ? atoi(argv[1]) : 17;
+  int msm_log_size = (argc > 1) ? atoi(argv[1]) : 3;
   int msm_size = 1 << msm_log_size;
-  int batch_size = (argc > 2) ? atoi(argv[2]) : 4;
+  int batch_size = (argc > 2) ? atoi(argv[2]) : 1;
   //   unsigned msm_size = 1<<21;
   int N = batch_size * msm_size;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
-  int user_c = (argc > 4) ? atoi(argv[4]) : 15;
+  int user_c = (argc > 4) ? atoi(argv[4]) : 11;
 
   printf(
     "running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n", CURVE_ID, msm_log_size, batch_size,
@@ -151,6 +151,14 @@ int main(int argc, char** argv)
 
   test_scalar::rand_host_many(scalars, N);
   test_projective::rand_host_many_affine(points, N);
+  // for (int i = 0; i < N; i++)
+  // {
+  //   // scalars[i] = i? scalars[i-1] + test_scalar::one() : test_scalar::zero();
+  //   scalars[i] = i? scalars[i-1] : test_scalar::rand_host();
+  //   points[i] = test_projective::to_affine(test_projective::generator());
+  //   std::cout << i << ": "<< scalars[i] << "\n";
+  // }
+  
 
   std::cout << "finished generating" << std::endl;
 
@@ -172,6 +180,7 @@ int main(int argc, char** argv)
   test_affine* points_d;
   test_affine* precomp_points_d;
   test_projective* res_d;
+  test_projective* buckets_d;
   test_projective* ref_d;
 
   cudaMalloc(&scalars_d, sizeof(test_scalar) * N);
@@ -209,6 +218,8 @@ int main(int argc, char** argv)
     true,           // are_results_on_device
     false,          // is_big_triangle
     true,           // is_async
+    true,           // init_buckets
+    false,          // return_buckets
     // false,  // segments_reduction
   };
 
@@ -220,15 +231,41 @@ int main(int argc, char** argv)
 
   // warm up
   msm::msm<test_scalar, test_affine, test_projective>(
-    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size, config, res_d);
+    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size, config, res_d, &buckets_d);
   cudaDeviceSynchronize();
 
   // auto begin1 = std::chrono::high_resolution_clock::now();
   cudaEventRecord(start, stream);
+  config.points_size = config.points_size/2;
+  config.return_buckets = true;
   msm::msm<test_scalar, test_affine, test_projective>(
-    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size, config, res_d);
+    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size/2, config, res_d, &buckets_d);
+  // cudaDeviceSynchronize();
+  // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+  // printf("first half done\n");
+  // test_projective* buckets_h = new test_projective[N];
+  // cudaMemcpy(buckets_h, buckets_d, sizeof(test_projective) * N, cudaMemcpyDeviceToHost);
+  // for (int i = 0; i < N; i++)
+  // {
+  //   std::cout << buckets_h[i] << "\n";
+  // }
+  
+  // cudaMalloc(&buckets_d, sizeof(test_projective) * (17<<15));
+  config.init_buckets = false;
+  config.return_buckets = false;
+  msm::msm<test_scalar, test_affine, test_projective>(
+    scalars + msm_size/2, precomp_factor > 1 ? precomp_points_d + (msm_size/2)*precomp_factor: points_d + msm_size/2, msm_size/2, config, res_d, &buckets_d);
+  // cudaDeviceSynchronize();
+  // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+  // printf("second half done\n");
   cudaEventRecord(stop, stream);
   cudaStreamSynchronize(stream);
+    // test_projective* buckets_h = new test_projective[N];
+  // cudaMemcpy(buckets_h, buckets_d, sizeof(test_projective) * N, cudaMemcpyDeviceToHost);
+  // for (int i = 0; i < N; i++)
+  // {
+  //   std::cout << test_projective::to_affine(buckets_h[i]) << "\n";
+  // }
   cudaEventElapsedTime(&msm_time, start, stop);
   // cudaEvent_t msm_end_event;
   // cudaEventCreate(&msm_end_event);
@@ -242,10 +279,12 @@ int main(int argc, char** argv)
   config.is_big_triangle = true;
   config.batch_size = 1;
   config.points_size = msm_size;
+  config.init_buckets = true;
+  config.return_buckets = false;
   // config.segments_reduction = false;
   for (int i = 0; i < batch_size; i++) {
     msm::msm<test_scalar, test_affine, test_projective>(
-      scalars + i * msm_size, points_d + i * msm_size, msm_size, config, ref_d + i);
+      scalars + i * msm_size, points_d + i * msm_size, msm_size, config, ref_d + i, &buckets_d);
   }
 
   // config.are_results_on_device = false;
