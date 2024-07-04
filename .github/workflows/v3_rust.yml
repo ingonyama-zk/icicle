@@ -49,3 +49,4 @@ jobs:
         cargo build --release --verbose --features=g2,ec_ntt
         cargo test --workspace --release --verbose --features=g2,ec_ntt -- --skip phase
         cargo test phase2 --workspace --release --verbose --features=g2,ec_ntt
+        cargo test phase3 --workspace --release --verbose --features=g2,ec_ntt

@@ -371,6 +371,7 @@ macro_rules! impl_ntt_tests {
                 test_utilities::test_set_main_device();
                 init_domain::<$field>(MAX_SIZE, FAST_TWIDDLES_MODE);
             });
+            test_utilities::test_set_main_device();
         }
 
         #[test]

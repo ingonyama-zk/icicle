@@ -80,7 +80,7 @@ namespace polynomials {
       const uint64_t nof_elements_nearset_power_of_two = ceil_to_power_of_two(nof_elements);
       const uint64_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
 
-      CHK_STICKY(cudaMallocAsync(storage, mem_size, m_device_context.stream));
+      ICICLE_CHECK(icicle_malloc_async((void**)storage, mem_size, m_device_context.stream));
 
       if (is_memset_zeros) {
         memset_zeros(*storage, 0, nof_elements_nearset_power_of_two);
@@ -377,7 +377,7 @@ namespace polynomials {
     const DeviceContext& m_device_context;
     CUDAPolynomialBackend(const DeviceContext& dev_context) : m_device_context{dev_context}
     {
-      CHK_STICKY(cudaMallocAsync(&d_degree, sizeof(int64_t), m_device_context.stream));
+      ICICLE_CHECK(icicle_malloc_async((void**)&d_degree, sizeof(int64_t), m_device_context.stream));
     }
     ~CUDAPolynomialBackend() { CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream)); }
 
@@ -838,16 +838,16 @@ namespace polynomials {
       const D* d_x = x;
       D* allocated_x = nullptr;
       if (is_x_on_host) {
-        CHK_STICKY(cudaMallocAsync(&allocated_x, sizeof(I), m_device_context.stream));
+        ICICLE_CHECK(icicle_malloc_async((void**)&allocated_x, sizeof(I), m_device_context.stream));
         CHK_STICKY(cudaMemcpyAsync(allocated_x, x, sizeof(I), cudaMemcpyHostToDevice, m_device_context.stream));
         d_x = allocated_x;
       }
       I* d_eval = eval;
-      if (is_eval_on_host) { CHK_STICKY(cudaMallocAsync(&d_eval, sizeof(I), m_device_context.stream)); }
+      if (is_eval_on_host) { ICICLE_CHECK(icicle_malloc_async((void**)&d_eval, sizeof(I), m_device_context.stream)); }
 
       // TODO Yuval: other methods can avoid this allocation. Also for eval_on_domain() no need to reallocate every time
       I* d_tmp = nullptr;
-      CHK_STICKY(cudaMallocAsync(&d_tmp, sizeof(I) * nof_coeff, m_device_context.stream));
+      ICICLE_CHECK(icicle_malloc_async((void**)&d_tmp, sizeof(I) * nof_coeff, m_device_context.stream));
       const int NOF_THREADS = 32;
       const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
       evaluate_polynomial_without_reduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
@@ -879,7 +879,9 @@ namespace polynomials {
 
       I* d_evals = evals;
       // if evals on host, allocate CUDA memory
-      if (is_evals_on_host) { CHK_STICKY(cudaMallocAsync(&d_evals, domain_size * sizeof(I), m_device_context.stream)); }
+      if (is_evals_on_host) {
+        ICICLE_CHECK(icicle_malloc_async((void**)&d_evals, domain_size * sizeof(I), m_device_context.stream));
+      }
 
       // If domain size is smaller the polynomial size -> transform to evals and copy the evals with stride.
       // Else, if in coeffs copy coeffs to evals mem and NTT inplace to compute the evals, else INTT to d_evals and back
