@@ -9,7 +9,7 @@ fi
 DIRECTORY="$1"
 
 # Find and format all C, C++, header, and other relevant files
-find "$DIRECTORY" -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' | while read -r file; do
+find "$DIRECTORY" -name '*.c' -o -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' -o -name '*.cu' -o -name '*.cuh' | while read -r file; do
     echo "Formatting $file"
     clang-format -i "$file"
 done

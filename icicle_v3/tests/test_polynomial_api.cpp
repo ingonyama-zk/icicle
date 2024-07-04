@@ -517,35 +517,14 @@ TEST_F(PolynomialTest, slicing)
 }
 
 #ifdef CURVE
-#include "msm/msm.cuh"
-#include "curves/curve_config.cuh"
+#include "icicle/msm.h"
+#include "icicle/curves/curve_config.h"
 using curve_config::affine_t;
 using curve_config::projective_t;
-
-// using the MSM C-API directly since msm::MSM() symbol is hidden in icicle lib and I cannot understand why
-namespace msm {
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, msm_cuda)(
-    const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out);
-  cudaError_t _msm(const scalar_t* scalars, const affine_t* points, int msm_size, MSMConfig& config, projective_t* out)
-  {
-    return CONCAT_EXPAND(CURVE, msm_cuda)(scalars, points, msm_size, config, out);
-  }
-} // namespace msm
 
 #ifdef G2
 using curve_config::g2_affine_t;
 using curve_config::g2_projective_t;
-
-namespace msm {
-  extern "C" cudaError_t CONCAT_EXPAND(CURVE, g2_msm_cuda)(
-    const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out);
-
-  cudaError_t
-  _g2_msm(const scalar_t* scalars, const g2_affine_t* points, int msm_size, MSMConfig& config, g2_projective_t* out)
-  {
-    return CONCAT_EXPAND(CURVE, g2_msm_cuda)(scalars, points, msm_size, config, out);
-  }
-} // namespace msm
 #endif // G2
 
 class dummy_g2_t : public scalar_t
@@ -571,20 +550,21 @@ public:
     return dummy_g2_t{scalar_t::sub_modulus<1>(rs)};
   }
 };
-namespace msm {
-  cudaError_t
-  _g2_msm(const scalar_t* scalars, const dummy_g2_t* points, int msm_size, MSMConfig& config, dummy_g2_t* out)
+
+namespace icicle {
+  template <>
+  eIcicleError
+  msm(const scalar_t* scalars, const dummy_g2_t* points, int msm_size, const MSMConfig& config, dummy_g2_t* out)
   {
     scalar_t* scalars_host = static_cast<scalar_t*>(malloc(msm_size * sizeof(scalar_t)));
-    cudaMemcpyAsync(scalars_host, scalars, msm_size * sizeof(scalar_t), cudaMemcpyDeviceToHost, config.ctx.stream);
+    ICICLE_CHECK(icicle_copy_to_host(scalars_host, scalars, msm_size * sizeof(scalar_t)));
     *out = dummy_g2_t::zero();
     for (int i = 0; i < msm_size; i++)
       *out = *out + scalars_host[i] * points[i];
     free(scalars_host);
-    return cudaSuccess;
+    return eIcicleError::SUCCESS;
   }
-
-} // namespace msm
+} // namespace icicle
 #endif // CURVE
 
 // Following examples are randomizing N private numbers and proving that I know N numbers such that their product is
@@ -838,14 +818,14 @@ public:
     const int vanishing_poly_deg = n;
     Polynomial_t h = (U * V - W).divide_by_vanishing_polynomial(vanishing_poly_deg);
 
-    auto msm_config = msm::default_msm_config();
+    auto msm_config = default_msm_config();
     msm_config.are_scalars_on_device = true;
 
     // compute [A]1
     {
       G1P U_commited;
       auto [U_coeff, N, device_id] = U.get_coefficients_view();
-      CHK_STICKY(msm::_msm(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
+      ICICLE_CHECK(msm(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
       proof.A = G1P::to_affine(U_commited + G1P::from_affine(pk.g1.alpha) + r * G1P::from_affine(pk.g1.delta));
     }
 
@@ -854,11 +834,11 @@ public:
     {
       G2P V_commited_g2;
       auto [V_coeff, N, device_id] = V.get_coefficients_view();
-      CHK_STICKY(msm::_g2_msm(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
+      ICICLE_CHECK(msm(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
       proof.B = G2P::to_affine(V_commited_g2 + pk.g2.beta + s * G2P::from_affine(pk.g2.delta));
 
       G1P V_commited_g1;
-      CHK_STICKY(msm::_msm(V_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
+      ICICLE_CHECK(msm(V_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
       B1 = V_commited_g1 + pk.g1.beta + G1P::from_affine(pk.g1.delta) * s;
     }
 
@@ -867,12 +847,12 @@ public:
       auto [H_coeff, N, device_id] = h.get_coefficients_view();
 
       G1P HT_commited;
-      CHK_STICKY(msm::_msm(H_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
+      ICICLE_CHECK(msm(H_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
 
       G1P private_inputs_commited;
       msm_config.are_scalars_on_device = false;
-      CHK_STICKY(msm::_msm(
-        witness.data() + l + 1, pk.g1.private_witness_points.data(), m - l, msm_config, &private_inputs_commited));
+      ICICLE_CHECK(
+        msm(witness.data() + l + 1, pk.g1.private_witness_points.data(), m - l, msm_config, &private_inputs_commited));
 
       proof.C = G1P::to_affine(
         private_inputs_commited + HT_commited + G1P::from_affine(proof.A) * s + B1 * r -
@@ -959,7 +939,7 @@ TEST_F(PolynomialTest, commitMSM)
   auto f = randomize_polynomial(size);
 
   auto [d_coeff, N, device_id] = f.get_coefficients_view();
-  auto msm_config = msm::default_msm_config();
+  auto msm_config = default_msm_config();
   msm_config.are_scalars_on_device = true;
 
   auto points = std::make_unique<affine_t[]>(size);
@@ -970,7 +950,7 @@ TEST_F(PolynomialTest, commitMSM)
   compute_powers_of_tau(g, tau, points.get(), size);
 
   EXPECT_EQ(d_coeff.isValid(), true);
-  CHK_STICKY(msm::_msm(d_coeff.get(), points.get(), size, msm_config, &result));
+  ICICLE_CHECK(msm(d_coeff.get(), points.get(), size, msm_config, &result));
 
   EXPECT_EQ(result, f(tau) * g);
 
@@ -984,8 +964,8 @@ TEST_F(PolynomialTest, DummyGroth16)
   // (1) construct R1CS and QAP for circuit with N inputs
   Groth16Example<scalar_t, affine_t, projective_t, dummy_g2_t, dummy_g2_t> groth16_example(30 /*=N*/);
 
-  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate
-  values...] auto witness = groth16_example.random_witness_inputs();
+  // (2) compute witness: randomize inputs and compute other entries [1,out,...N inputs..., ... intermediate values...]
+  auto witness = groth16_example.random_witness_inputs();
   groth16_example.compute_witness(witness);
 
   groth16_example.setup();

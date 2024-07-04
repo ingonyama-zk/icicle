@@ -35,11 +35,12 @@ if (FIELD)
     target_link_libraries(test_field_api PRIVATE GTest::gtest_main icicle_device icicle_field)
     gtest_discover_tests(test_field_api)
 
-    add_executable(test_polynomial_api test_polynomial_api.cpp)
-    target_include_directories(test_polynomial_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
-    target_link_libraries(test_polynomial_api PRIVATE GTest::gtest_main icicle_field)
-    gtest_discover_tests(test_polynomial_api)
-    # TODO Yuval : polynomials should link to curve too
+    if (NTT)
+        add_executable(test_polynomial_api test_polynomial_api.cpp)
+        target_include_directories(test_polynomial_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
+        target_link_libraries(test_polynomial_api PRIVATE GTest::gtest_main icicle_field)
+        gtest_discover_tests(test_polynomial_api)    
+    endif()
 endif()
 
 #curve API test
@@ -48,6 +49,10 @@ if (CURVE)
     target_include_directories(test_curve_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
     target_link_libraries(test_curve_api PRIVATE GTest::gtest_main icicle_device icicle_field icicle_curve)
     gtest_discover_tests(test_curve_api)
+
+    if (NTT)        
+        target_link_libraries(test_polynomial_api PRIVATE GTest::gtest_main icicle_curve)
+    endif()
 endif()
 
 add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/backend")
