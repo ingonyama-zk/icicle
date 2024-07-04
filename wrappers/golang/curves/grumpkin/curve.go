@@ -43,9 +43,13 @@ func (p *Projective) FromAffine(a Affine) Projective {
 	z := BaseField{}
 	z.One()
 
-	p.X = a.X
-	p.Y = a.Y
-	p.Z = z
+	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
+		p.Zero()
+	} else {
+		p.X = a.X
+		p.Y = a.Y
+		p.Z = z.One()
+	}
 
 	return *p
 }
@@ -108,6 +112,11 @@ func (a *Affine) FromLimbs(x, y []uint32) Affine {
 
 func (a Affine) ToProjective() Projective {
 	var z BaseField
+
+	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
+		var p Projective
+		return p.Zero()
+	}
 
 	return Projective{
 		X: a.X,

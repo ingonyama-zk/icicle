@@ -43,9 +43,13 @@ func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
 	z := G2BaseField{}
 	z.One()
 
-	p.X = a.X
-	p.Y = a.Y
-	p.Z = z
+	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
+		p.Zero()
+	} else {
+		p.X = a.X
+		p.Y = a.Y
+		p.Z = z.One()
+	}
 
 	return *p
 }
@@ -108,6 +112,11 @@ func (a *G2Affine) FromLimbs(x, y []uint32) G2Affine {
 
 func (a G2Affine) ToProjective() G2Projective {
 	var z G2BaseField
+
+	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
+		var p G2Projective
+		return p.Zero()
+	}
 
 	return G2Projective{
 		X: a.X,
