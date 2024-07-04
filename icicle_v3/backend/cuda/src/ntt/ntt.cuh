@@ -555,8 +555,8 @@ namespace ntt {
     Domain& domain = domains_for_devices[ctx.device_id];
     if (logn > domain.max_log_size) {
       std::ostringstream oss;
-      oss << "NTT log_size=" << logn
-          << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n ";
+      oss << "NTT log_size=" << logn << " is too large for the domain (logsize=" << domain.max_log_size
+          << "). Consider generating your domain with a higher order root of unity.\n ";
       THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, oss.str().c_str());
     }
     const size_t twiddles_idx = 1ULL << (domain.max_log_size - logn);
@@ -648,8 +648,8 @@ namespace ntt {
 
     if (size > domain.max_size) {
       std::ostringstream oss;
-      oss << "NTT size=" << size
-          << " is too large for the domain. Consider generating your domain with a higher order root of unity.\n ";
+      oss << "NTT size=" << size << " is too large for the domain (size=" << domain.max_size
+          << "). Consider generating your domain with a higher order root of unity.\n ";
       THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, oss.str().c_str());
     }
 

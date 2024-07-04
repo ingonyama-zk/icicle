@@ -176,13 +176,13 @@ where
     }
 
     // check device slices are on active device
-    if input.is_on_device() && !input.is_on_active_device(){
+    if input.is_on_device() && !input.is_on_active_device() {
         panic!("input not allocated on an inactive device");
     }
-    if output.is_on_device() && !output.is_on_active_device(){
+    if output.is_on_device() && !output.is_on_active_device() {
         panic!("output not allocated on an inactive device");
-    }    
-    
+    }
+
     let mut local_cfg = cfg.clone();
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
@@ -357,7 +357,7 @@ macro_rules! impl_ntt_tests {
         use icicle_runtime::{device::Device, runtime};
         use std::sync::Once;
 
-        const MAX_SIZE: u64 = 1 << 17;
+        const MAX_SIZE: u64 = 1 << 18;
         static INIT: Once = Once::new();
         const FAST_TWIDDLES_MODE: bool = false;
 

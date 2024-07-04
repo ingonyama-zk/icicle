@@ -138,6 +138,7 @@ macro_rules! impl_ecntt_tests {
                     test_utilities::test_set_main_device();
                     init_domain::<$field>(MAX_SIZE, false);
                 });
+                test_utilities::test_set_main_device();
             }
 
             #[test]

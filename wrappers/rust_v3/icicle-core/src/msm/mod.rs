@@ -132,13 +132,13 @@ pub fn msm<C: Curve + MSM<C>>(
     }
 
     // check device slices are on active device
-    if scalars.is_on_device() && !scalars.is_on_active_device(){
+    if scalars.is_on_device() && !scalars.is_on_active_device() {
         panic!("scalars not allocated on an inactive device");
     }
-    if bases.is_on_device() && !bases.is_on_active_device(){
+    if bases.is_on_device() && !bases.is_on_active_device() {
         panic!("bases not allocated on an inactive device");
     }
-    if results.is_on_device() && !results.is_on_active_device(){
+    if results.is_on_device() && !results.is_on_active_device() {
         panic!("results not allocated on an inactive device");
     }
 
@@ -262,10 +262,10 @@ macro_rules! impl_msm_tests {
     (
       $curve:ident
     ) => {
-
         use icicle_core::test_utilities;
         pub fn initialize() {
             test_utilities::test_load_and_init_devices();
+            test_utilities::test_set_main_device();
         }
 
         #[test]
