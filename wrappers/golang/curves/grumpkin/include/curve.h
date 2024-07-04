@@ -14,6 +14,7 @@ typedef struct DeviceContext DeviceContext;
 
 bool grumpkin_eq(projective_t* point1, projective_t* point2);
 void grumpkin_to_affine(projective_t* point, affine_t* point_out);
+void grumpkin_from_affine(affine_t* point, projective_t* point_out);
 void grumpkin_generate_projective_points(projective_t* points, int size);
 void grumpkin_generate_affine_points(affine_t* points, int size);
 cudaError_t grumpkin_affine_convert_montgomery(affine_t* points, size_t n, bool is_into, DeviceContext* ctx);
