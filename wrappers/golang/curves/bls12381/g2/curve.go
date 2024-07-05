@@ -105,11 +105,12 @@ func (a *G2Affine) FromLimbs(x, y []uint32) G2Affine {
 
 func (a G2Affine) ToProjective() G2Projective {
 	var p G2Projective
-
+  
 	cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
 	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
 	C.bls12_381_g2_from_affine(cA, cP)
 	return p
+
 }
 
 func G2AffineFromProjective(p *G2Projective) G2Affine {

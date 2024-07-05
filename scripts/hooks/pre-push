@@ -23,6 +23,8 @@ then
     echo "find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -style=file"
     echo ""
     status=1
+else
+    echo "🟩 Icicle Core format is fine"
 fi
 
 # Run go fmt across all Golang packages
@@ -32,6 +34,8 @@ then
     echo "Please commit the formatted files"
     echo ""
     status=1
+else
+    echo "🟩 Golang files format is fine"
 fi
 
 # Run cargo fmt on Rust files
@@ -42,6 +46,8 @@ then
     echo "Please go to wrappers/rust and format the Rust files using the following command:"
     echo "find . -path ./icicle-curves/icicle-curve-template -prune -o -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --"
     status=1
+else
+    echo "🟩 Rust files format is fine"
 fi
 
 exit $status
