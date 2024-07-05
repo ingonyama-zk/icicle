@@ -41,7 +41,6 @@ func (p *Projective) FromLimbs(x, y, z []uint32) Projective {
 
 func (p *Projective) FromAffine(a Affine) Projective {
 
-
 	cA := (*C.affine_t)(unsafe.Pointer(&a))
 	cP := (*C.projective_t)(unsafe.Pointer(p))
 	C.bn254_from_affine(cA, cP)
