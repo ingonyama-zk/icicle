@@ -233,26 +233,7 @@ public:
   }
 
   // return m
-  template <unsigned MULTIPLIER = 1>
-  static constexpr HOST_DEVICE_INLINE ff_storage get_m()
-  {
-    switch (MULTIPLIER) {
-    case 1:
-      return CONFIG::m;
-    case 2:
-      return CONFIG::m_2;
-    case 3:
-      return CONFIG::m_4;
-    case 4:
-      return CONFIG::m_8;
-    case 5:
-      return CONFIG::m_16;
-    case 6:
-      return CONFIG::m_32;
-    default:
-      return {};
-    }
-  }
+  static constexpr HOST_DEVICE_INLINE ff_storage get_m() { return CONFIG::m; }
 
   // return modulus^2, helpful for ab +/- cd
   template <unsigned MULTIPLIER = 1>
@@ -265,8 +246,6 @@ public:
       return CONFIG::modulus_squared_2;
     case 4:
       return CONFIG::modulus_squared_4;
-    case 16:
-      return CONFIG::modulus_squared_16;
     default:
       return {};
     }
@@ -302,7 +281,7 @@ public:
 #ifdef __CUDA_ARCH__
     return add_sub_limbs_device<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
 #else
-    return host_math::template add_sub_limbs_host<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
+    return host_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
 #endif
   }
 
@@ -313,7 +292,7 @@ public:
 #ifdef __CUDA_ARCH__
     return add_sub_limbs_device<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
 #else
-    return host_math::template add_sub_limbs_host<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
+    return host_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
 #endif
   }
 
@@ -661,7 +640,7 @@ public:
 #ifdef __CUDA_ARCH__
     return multiply_raw_device(as, bs, rs);
 #else
-    return host_math::template multiply_raw_host<TLC>(as, bs, rs);
+    return host_math::template multiply_raw<TLC>(as, bs, rs);
 #endif
   }
 
@@ -672,7 +651,7 @@ public:
     return multiply_and_add_lsb_neg_modulus_raw_device(as, cs, rs);
 #else
     Wide r_wide = {};
-    host_math::template multiply_raw_host<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
+    host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
     Field r = Wide::get_lower(r_wide);
     add_limbs<TLC, false>(cs, r.limbs_storage, rs);
 #endif
@@ -683,7 +662,7 @@ public:
 #ifdef __CUDA_ARCH__
     return multiply_msb_raw_device(as, bs, rs);
 #else
-    return host_math::template multiply_raw_host<TLC>(as, bs, rs);
+    return host_math::template multiply_raw<TLC>(as, bs, rs);
 #endif
   }
 

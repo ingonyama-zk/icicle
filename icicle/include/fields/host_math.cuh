@@ -103,7 +103,7 @@ namespace host_math {
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static constexpr HOST_INLINE void
-  multiply_raw_host(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
+  multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
@@ -118,7 +118,7 @@ namespace host_math {
 
   template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
   static constexpr HOST_INLINE uint32_t
-  add_sub_limbs_host(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
+  add_sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
     const uint32_t* x = xs.limbs;
     const uint32_t* y = ys.limbs;
@@ -167,7 +167,7 @@ namespace host_math {
   }
 
   template <unsigned NLIMBS_NUM, unsigned NLIMBS_DENOM, unsigned NLIMBS_Q = (NLIMBS_NUM - NLIMBS_DENOM)>
-  static constexpr HOST_INLINE void integer_division_host(
+  static constexpr HOST_INLINE void integer_division(
     const storage<NLIMBS_NUM>& num, const storage<NLIMBS_DENOM>& denom, storage<NLIMBS_Q>& q, storage<NLIMBS_DENOM>& r)
   {
     storage<NLIMBS_DENOM> temp = {};
@@ -175,7 +175,7 @@ namespace host_math {
       for (int bit_idx = 31; bit_idx >= 0; bit_idx--) {
         r = left_shift<NLIMBS_DENOM, 1>(r);
         r.limbs[0] |= ((num.limbs[limb_idx] >> bit_idx) & 1);
-        uint32_t c = add_sub_limbs_host<NLIMBS_DENOM, true, true>(r, denom, temp);
+        uint32_t c = add_sub_limbs<NLIMBS_DENOM, true, true>(r, denom, temp);
         if (limb_idx < NLIMBS_Q & !c) {
           r = temp;
           q.limbs[limb_idx] |= 1 << bit_idx;
