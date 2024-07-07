@@ -188,7 +188,7 @@ func (up *DensePolynomial) AsDeviceSlice(sizeOfElem uint64) core.DeviceSlice {
 	cDeviceId := (*C.size_t)(unsafe.Pointer(&deviceId))
 	__rawCoeffsPtr := C.bn254_polynomial_get_coeffs_raw_ptr(up.handle, cSize, cDeviceId)
 
-	return core.DeviceSliceFromPointer(unsafe.Pointer(__rawCoeffsPtr), sizeOfElem*size, size)
+	return core.DeviceSliceFromPointer(unsafe.Pointer(__rawCoeffsPtr), size, sizeOfElem*size)
 }
 
 // func (up *DensePolynomial) Slice() DensePolynomial {
