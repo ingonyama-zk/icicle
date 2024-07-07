@@ -7,8 +7,7 @@
 
 namespace poseidon {
   template <typename S, int T>
-  __global__ void
-  prepare_poseidon_states(const S* states, S* out, unsigned int number_of_states, const S domain_tag, bool aligned)
+  __global__ void prepare_poseidon_states(const S* input, S* states, unsigned int number_of_states, const S domain_tag)
   {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int state_number = idx / T;
@@ -21,19 +20,11 @@ namespace poseidon {
     if (element_number == 0) {
       prepared_element = domain_tag;
     } else {
-      if (aligned) {
-        prepared_element = states[idx];
-      } else {
-        prepared_element = states[idx - 1];
-      }
+      prepared_element = input[idx - state_number - 1];
     }
 
-    // We need __syncthreads here if the state is not aligned
-    // because then we need to shift the vector [A, B, 0] -> [D, A, B]
-    if (!aligned && states == out) { __syncthreads(); }
-
     // Store element in state
-    out[idx] = prepared_element;
+    states[idx] = prepared_element;
   }
 
   template <typename S>
@@ -169,43 +160,56 @@ namespace poseidon {
   }
 
   template <typename S, int T>
+  __global__ void
+  squeeze_states_kernel(const S* states, unsigned int number_of_states, unsigned int rate, unsigned int offset, S* out)
+  {
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= number_of_states) { return; }
+
+    for (int i = 0; i < rate; i++) {
+      out[idx * rate + i] = states[idx * T + offset + i];
+    }
+  }
+
+  template <typename S, int T>
   cudaError_t poseidon_permutation_kernel(
-    const S* states,
+    const S* input,
     S* out,
     unsigned int number_of_states,
-    bool aligned,
+    unsigned int input_len,
+    unsigned int output_len,
     const PoseidonConstants<S>& constants,
     cudaStream_t& stream)
   {
+    S* states;
+    CHK_IF_RETURN(cudaMallocAsync(&states, number_of_states * T * sizeof(S), stream));
+
     prepare_poseidon_states<S, T>
       <<<PKC::number_of_full_blocks(T, number_of_states), PKC::number_of_threads(T), 0, stream>>>(
-        states, out, number_of_states, constants.domain_tag, aligned);
+        input, states, number_of_states, constants.domain_tag);
 
     size_t rc_offset = 0;
     full_rounds<S, T><<<
       PKC::number_of_full_blocks(T, number_of_states), PKC::number_of_threads(T),
       sizeof(S) * PKC::hashes_per_block(T) * T, stream>>>(
-      out, number_of_states, rc_offset, FIRST_FULL_ROUNDS, constants);
+      states, number_of_states, rc_offset, FIRST_FULL_ROUNDS, constants);
     rc_offset += T * (constants.full_rounds_half + 1);
 
     partial_rounds<S, T><<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, stream>>>(
-      out, number_of_states, rc_offset, constants);
+      states, number_of_states, rc_offset, constants);
     rc_offset += constants.partial_rounds;
 
     full_rounds<S, T><<<
       PKC::number_of_full_blocks(T, number_of_states), PKC::number_of_threads(T),
       sizeof(S) * PKC::hashes_per_block(T) * T, stream>>>(
-      out, number_of_states, rc_offset, SECOND_FULL_ROUNDS, constants);
+      states, number_of_states, rc_offset, SECOND_FULL_ROUNDS, constants);
+
+    squeeze_states_kernel<S, T>
+      <<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, stream>>>(
+        states, number_of_states, output_len, 1, out);
+
+    CHK_IF_RETURN(cudaFreeAsync(states, stream));
     return CHK_LAST();
-  }
-
-  template <typename S>
-  __global__ void copy_recursive(const S* state, unsigned int width, unsigned int number_of_states, S* out)
-  {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (idx >= number_of_states) { return; }
-
-    out[(idx / (width - 1) * width) + (idx % (width - 1)) + 1] = state[idx];
   }
 } // namespace poseidon
 

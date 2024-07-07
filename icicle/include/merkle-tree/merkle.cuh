@@ -25,8 +25,7 @@ namespace merkle_tree {
   static constexpr size_t GIGA = 1024 * 1024 * 1024;
 
   /// Bytes per stream
-  static constexpr size_t STREAM_CHUNK_SIZE = 1024 * 1024 * 1024;
-  // static constexpr size_t STREAM_CHUNK_SIZE = 512;
+  static constexpr uint64_t STREAM_CHUNK_SIZE = GIGA;
 
   /// Flattens the tree digests and sum them up to get
   /// the memory needed to contain all the digests

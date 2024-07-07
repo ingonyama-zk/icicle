@@ -3,14 +3,11 @@ pub mod tests;
 
 use std::{ffi::c_void, marker::PhantomData};
 
-use icicle_cuda_runtime::{
-    device_context::DeviceContext,
-    memory::{DeviceSlice, HostOrDeviceSlice},
-};
+use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSlice};
 
 use crate::{
     error::IcicleResult,
-    hash::{sponge_check_input, sponge_check_outputs, sponge_check_states, SpongeConfig, SpongeHash},
+    hash::{sponge_check_input, sponge_check_outputs, SpongeConfig, SpongeHash},
     traits::FieldImpl,
 };
 
@@ -104,67 +101,6 @@ where
         self.handle
     }
 
-    fn absorb_many(
-        &self,
-        inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
-        states: &mut DeviceSlice<F>,
-        number_of_states: usize,
-        input_block_len: usize,
-        cfg: &SpongeConfig,
-    ) -> IcicleResult<()> {
-        sponge_check_input(
-            inputs,
-            number_of_states,
-            input_block_len,
-            cfg.input_rate as usize,
-            &cfg.ctx,
-        );
-        sponge_check_states(states, number_of_states, self.width, &cfg.ctx);
-
-        let mut local_cfg = cfg.clone();
-        local_cfg.are_inputs_on_device = inputs.is_on_device();
-
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::absorb_many(
-            inputs,
-            states,
-            number_of_states as u32,
-            input_block_len as u32,
-            self.handle,
-            &local_cfg,
-        )
-    }
-
-    fn squeeze_many(
-        &self,
-        states: &DeviceSlice<F>,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        number_of_states: usize,
-        output_len: usize,
-        cfg: &SpongeConfig,
-    ) -> IcicleResult<()> {
-        sponge_check_outputs(
-            output,
-            number_of_states,
-            output_len,
-            self.width,
-            cfg.recursive_squeeze,
-            &cfg.ctx,
-        );
-        sponge_check_states(states, number_of_states, self.width, &cfg.ctx);
-
-        let mut local_cfg = cfg.clone();
-        local_cfg.are_outputs_on_device = output.is_on_device();
-
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::squeeze_many(
-            states,
-            output,
-            number_of_states as u32,
-            output_len as u32,
-            self.handle,
-            &local_cfg,
-        )
-    }
-
     fn hash_many(
         &self,
         inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -238,24 +174,6 @@ pub trait Poseidon2Impl<F: FieldImpl> {
         ctx: &DeviceContext,
     ) -> IcicleResult<Poseidon2Handle>;
 
-    fn absorb_many(
-        inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
-        states: &mut DeviceSlice<F>,
-        number_of_states: u32,
-        input_block_len: u32,
-        poseidon: Poseidon2Handle,
-        cfg: &SpongeConfig,
-    ) -> IcicleResult<()>;
-
-    fn squeeze_many(
-        states: &DeviceSlice<F>,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        number_of_states: u32,
-        output_len: u32,
-        poseidon: Poseidon2Handle,
-        cfg: &SpongeConfig,
-    ) -> IcicleResult<()>;
-
     fn hash_many(
         inputs: &(impl HostOrDeviceSlice<F> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
@@ -311,26 +229,6 @@ macro_rules! impl_poseidon2 {
 
                 #[link_name = concat!($field_prefix, "_poseidon2_delete_cuda")]
                 pub(crate) fn delete(poseidon: Poseidon2Handle) -> CudaError;
-
-                #[link_name = concat!($field_prefix, "_poseidon2_absorb_many_cuda")]
-                pub(crate) fn absorb_many(
-                    poseidon: Poseidon2Handle,
-                    inputs: *const $field,
-                    states: *mut $field,
-                    number_of_states: u32,
-                    input_block_len: u32,
-                    cfg: &SpongeConfig,
-                ) -> CudaError;
-
-                #[link_name = concat!($field_prefix, "_poseidon2_squeeze_many_cuda")]
-                pub(crate) fn squeeze_many(
-                    poseidon: Poseidon2Handle,
-                    states: *const $field,
-                    output: *mut $field,
-                    number_of_states: u32,
-                    output_len: u32,
-                    cfg: &SpongeConfig,
-                ) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_poseidon2_hash_many_cuda")]
                 pub(crate) fn hash_many(
@@ -390,48 +288,6 @@ macro_rules! impl_poseidon2 {
                     $field_prefix_ident::load(poseidon.as_mut_ptr(), width, rate, mds_type, diffusion, ctx)
                         .wrap()
                         .and(Ok(poseidon.assume_init()))
-                }
-            }
-
-            fn absorb_many(
-                inputs: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                states: &mut DeviceSlice<$field>,
-                number_of_states: u32,
-                input_block_len: u32,
-                poseidon: Poseidon2Handle,
-                cfg: &SpongeConfig,
-            ) -> IcicleResult<()> {
-                unsafe {
-                    $field_prefix_ident::absorb_many(
-                        poseidon,
-                        inputs.as_ptr(),
-                        states.as_mut_ptr(),
-                        number_of_states,
-                        input_block_len,
-                        cfg,
-                    )
-                    .wrap()
-                }
-            }
-
-            fn squeeze_many(
-                states: &DeviceSlice<$field>,
-                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-                number_of_states: u32,
-                output_len: u32,
-                poseidon: Poseidon2Handle,
-                cfg: &SpongeConfig,
-            ) -> IcicleResult<()> {
-                unsafe {
-                    $field_prefix_ident::squeeze_many(
-                        poseidon,
-                        states.as_ptr(),
-                        output.as_mut_ptr(),
-                        number_of_states,
-                        output_len,
-                        cfg,
-                    )
-                    .wrap()
                 }
             }
 

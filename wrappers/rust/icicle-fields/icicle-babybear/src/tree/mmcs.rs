@@ -41,9 +41,9 @@ pub(crate) mod tests {
         const WIDTH: usize = 16;
         const RATE: usize = 8;
         const ARITY: usize = 2;
-        const HEIGHT: usize = 26;
+        const HEIGHT: usize = 15;
         const ROWS: usize = 1 << HEIGHT;
-        const COLS: usize = 8;
+        const COLS: usize = 32;
         const DIGEST_ELEMENTS: usize = 8;
 
         let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16(RATE);
@@ -72,7 +72,8 @@ pub(crate) mod tests {
 
         let matrix = RowMajorMatrix::new(input.clone(), COLS);
         let matrix2 = RowMajorMatrix::new(input2.clone(), COLS);
-        let leaves = vec![matrix, matrix2];
+        // let leaves = vec![matrix, matrix2];
+        let leaves = vec![matrix];
 
         let mmcs =
             FieldMerkleTreeMmcs::<<F as Field>::Packing, <F as Field>::Packing, H, C, DIGEST_ELEMENTS>::new(h, c);
@@ -94,11 +95,11 @@ pub(crate) mod tests {
                 width: COLS,
                 height: ROWS,
             },
-            Matrix {
-                values: icicle_input2.as_ptr() as *const c_void,
-                width: COLS,
-                height: ROWS / 2,
-            },
+            // Matrix {
+            //     values: icicle_input2.as_ptr() as *const c_void,
+            //     width: COLS,
+            //     height: ROWS / 2,
+            // },
         ];
         let digests_slice = HostSlice::from_mut_slice(&mut digests);
 

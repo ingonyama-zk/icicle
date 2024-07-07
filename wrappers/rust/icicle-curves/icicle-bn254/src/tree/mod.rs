@@ -1,3 +1,5 @@
+pub mod mmcs;
+
 use icicle_core::error::IcicleResult;
 use icicle_core::hash::SpongeHash;
 use icicle_core::impl_field_tree_builder;
@@ -35,7 +37,7 @@ pub(crate) mod tests {
     #[test]
     fn poseidon2_merkle_tree_test() {
         let ctx = device_context::DeviceContext::default();
-        let sponge = Poseidon2::load(2, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
+        let sponge = Poseidon2::load(2, 2, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
 
         check_build_field_merkle_tree::<_, _, Bn254TreeBuilder>(28, 2, &sponge, &sponge, ScalarField::zero());
     }

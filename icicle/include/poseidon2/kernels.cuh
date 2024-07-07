@@ -11,7 +11,7 @@
 using matrix::Matrix;
 
 namespace poseidon2 {
-  DEVICE_INLINE unsigned int d_next_pow_of_two(unsigned int v)
+  static DEVICE_INLINE unsigned int d_next_pow_of_two(unsigned int v)
   {
     v--;
     v |= v >> 1;
@@ -248,10 +248,29 @@ namespace poseidon2 {
     }
   }
 
-  template <typename S>
-  __device__ void print_scalar_u32(S element)
+  template <typename S, int T>
+  __global__ void compress_many_kernel(
+    const S* input,
+    S* output,
+    unsigned int number_of_states,
+    unsigned int output_len,
+    const Poseidon2Constants<S> constants)
   {
-    printf("%d", element.limbs_storage.limbs[0]);
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= number_of_states) { return; }
+
+    S state[T];
+    UNROLL
+    for (int i = 0; i < T; i++) {
+      state[i] = input[idx * T + i];
+    }
+
+    permute_state<S, T>(state, constants);
+
+    UNROLL
+    for (int i = 0; i < output_len; i++) {
+      output[idx * output_len + i] = state[i];
+    }
   }
 
   template <typename S, int T>
@@ -265,25 +284,58 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
+  __global__ void hash_many_kernel(
+    const S* input,
+    S* output,
+    uint64_t number_of_states,
+    unsigned int input_len,
+    unsigned int output_len,
+    const Poseidon2Constants<S> constants)
+  {
+    uint64_t idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= number_of_states) { return; }
+
+    S state[T] = {0};
+    UNROLL
+    for (int i = 0; i < input_len; i++) {
+      state[i] = input[idx * input_len + i];
+    }
+
+    permute_state<S, T>(state, constants);
+
+    UNROLL
+    for (int i = 0; i < output_len; i++) {
+      output[idx * output_len + i] = state[i];
+    }
+  }
+
+  template <typename S>
+  __device__ void print_scalar_u32(S element)
+  {
+    printf("%d", element.limbs_storage.limbs[0]);
+  }
+
+  template <typename S, int T>
   __device__ void absorb_2d_state(
     const Matrix<S>* inputs,
     S state[T],
     unsigned int number_of_inputs,
     unsigned int rate,
-    unsigned int row_idx,
+    uint64_t row_idx,
     const Poseidon2Constants<S>& constants)
   {
     unsigned int index = 0;
     for (int i = 0; i < number_of_inputs; i++) {
-      const Matrix<S> input = inputs[i];
-      unsigned int row_len = input.width;
-      for (int j = 0; j < row_len; j++) {
-        state[index] = input.values[row_idx * row_len + j];
+      const Matrix<S>* input = inputs + i;
+      for (int j = 0; j < input->width; j++) {
+        // col-major
+        // state[index] = input->values[j * input->height + row_idx];
+
+        // row-major
+        state[index] = input->values[row_idx * input->width + j];
         index++;
         if (index == rate) {
-          // print_state<S, T>(state);
           permute_state<S, T>(state, constants);
-
           index = 0;
         }
       }
@@ -293,14 +345,15 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  __global__ void absorb_2d_kernel(
+  __global__ void hash_2d_kernel(
     const Matrix<S>* inputs,
-    S* states,
+    S* output,
     unsigned int number_of_inputs,
     unsigned int rate,
+    unsigned int output_len,
     const Poseidon2Constants<S> constants)
   {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    uint64_t idx = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (idx >= inputs[0].height) { return; }
 
     S state[T] = {0};
@@ -308,8 +361,8 @@ namespace poseidon2 {
     absorb_2d_state<S, T>(inputs, state, number_of_inputs, rate, idx, constants);
 
     UNROLL
-    for (int i = 0; i < T; i++) {
-      states[idx * T + i] = state[i];
+    for (int i = 0; i < output_len; i++) {
+      output[idx * output_len + i] = state[i];
     }
   }
 
@@ -348,9 +401,7 @@ namespace poseidon2 {
         injected_state[i] = state_to_compress[i];
       }
     }
-    // print_state<S, T>(injected_state);
     permute_state<S, T>(injected_state, constants);
-    // print_state<S, T>(injected_state);
 
     for (int i = 0; i < digest_elements; i++) {
       next_layer[idx * digest_elements + i] = injected_state[i];

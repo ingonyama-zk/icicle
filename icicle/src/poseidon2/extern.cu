@@ -5,7 +5,7 @@ using namespace field_config;
 
 #include "gpu-utils/error_handler.cuh"
 #include "poseidon2/poseidon2.cuh"
-#include "constants.cu"
+#include "./constants.cu"
 
 namespace poseidon2 {
   template class Poseidon2<scalar_t>;
@@ -47,28 +47,6 @@ namespace poseidon2 {
     } catch (const IcicleError& _error) {
       return cudaError_t::cudaErrorUnknown;
     }
-  }
-
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_absorb_many_cuda)(
-    const Poseidon2<scalar_t>* poseidon,
-    const scalar_t* inputs,
-    scalar_t* states,
-    unsigned int number_of_states,
-    unsigned int input_block_len,
-    hash::SpongeConfig& cfg)
-  {
-    return poseidon->absorb_many(inputs, states, number_of_states, input_block_len, cfg);
-  }
-
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_squeeze_many_cuda)(
-    const Poseidon2<scalar_t>* poseidon,
-    const scalar_t* states,
-    scalar_t* output,
-    unsigned int number_of_states,
-    unsigned int output_len,
-    hash::SpongeConfig& cfg)
-  {
-    return poseidon->squeeze_many(states, output, number_of_states, output_len, cfg);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon2_hash_many_cuda)(

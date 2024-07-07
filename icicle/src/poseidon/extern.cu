@@ -45,28 +45,6 @@ namespace poseidon {
     }
   }
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_absorb_many_cuda)(
-    const PoseidonInst* poseidon,
-    const scalar_t* inputs,
-    scalar_t* states,
-    unsigned int number_of_states,
-    unsigned int input_block_len,
-    const SpongeConfig& cfg)
-  {
-    return poseidon->absorb_many(inputs, states, number_of_states, input_block_len, cfg);
-  }
-
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_squeeze_many_cuda)(
-    const PoseidonInst* poseidon,
-    const scalar_t* states,
-    scalar_t* output,
-    unsigned int number_of_states,
-    unsigned int output_len,
-    const SpongeConfig& cfg)
-  {
-    return poseidon->squeeze_many(states, output, number_of_states, output_len, cfg);
-  }
-
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, poseidon_hash_many_cuda)(
     const PoseidonInst* poseidon,
     const scalar_t* inputs,

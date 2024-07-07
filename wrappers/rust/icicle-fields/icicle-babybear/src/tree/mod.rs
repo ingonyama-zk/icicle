@@ -17,7 +17,7 @@ pub(crate) mod tests {
     use icicle_core::{
         ntt::FieldImpl,
         poseidon2::{DiffusionStrategy, MdsType, Poseidon2},
-        tree::{tests::check_build_field_merkle_tree, FieldTreeBuilder, TreeBuilderConfig},
+        tree::{merkle_tree_digests_len, tests::check_build_field_merkle_tree, FieldTreeBuilder, TreeBuilderConfig},
     };
     use icicle_cuda_runtime::device_context;
     use icicle_cuda_runtime::memory::HostSlice;
@@ -78,7 +78,8 @@ pub(crate) mod tests {
         config.keep_rows = 1;
         config.digest_elements = COLS as u32;
         let input_block_len = COLS;
-        // let mut digests = vec![ScalarField::zero(); merkle_tree_digests_len(2 as u32, ARITY as u32, COLS as u32)];
+        // let digests_len = merkle_tree_digests_len(2 as u32, ARITY as u32, COLS as u32);
+        // let mut digests = vec![ScalarField::zero(); digests_len];
         let mut digests = vec![ScalarField::zero(); COLS];
 
         let leaves_slice = HostSlice::from_slice(&icicle_input);

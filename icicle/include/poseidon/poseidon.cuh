@@ -26,43 +26,19 @@ namespace poseidon {
     const std::size_t device_id;
     PoseidonConstants<S> constants;
 
-    cudaError_t prepare_states(
-      const S* input, S* out, unsigned int number_of_states, const device_context::DeviceContext& ctx) const
-    {
-      copy_recursive<S>
-        <<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, ctx.stream>>>(
-          input, this->width, number_of_states, out);
-      CHK_IF_RETURN(cudaPeekAtLastError());
-      return CHK_LAST();
-    }
-
-    cudaError_t squeeze_states(
-      const S* states,
+    cudaError_t run_hash_many_kernel(
+      const S* input,
+      S* output,
       unsigned int number_of_states,
+      unsigned int input_len,
       unsigned int output_len,
-      S* output,
-      const device_context::DeviceContext& ctx) const override
-    {
-      generic_squeeze_states_kernel<S>
-        <<<PKC::number_of_singlehash_blocks(number_of_states), PKC::singlehash_block_size, 0, ctx.stream>>>(
-          states, number_of_states, this->width, output_len, this->offset, output);
-      // Squeeze states to get results
-      CHK_IF_RETURN(cudaPeekAtLastError());
-      return CHK_LAST();
-    }
-
-    cudaError_t run_permutation_kernel(
-      const S* states,
-      S* output,
-      unsigned int number_of_states,
-      bool aligned,
       const device_context::DeviceContext& ctx) const override
     {
       cudaError_t permutation_error;
 #define P_PERM_T(width)                                                                                                \
   case width:                                                                                                          \
-    permutation_error =                                                                                                \
-      poseidon_permutation_kernel<S, width>(states, output, number_of_states, aligned, this->constants, ctx.stream);   \
+    permutation_error = poseidon_permutation_kernel<S, width>(                                                         \
+      input, output, number_of_states, input_len, output_len, this->constants, ctx.stream);                            \
     break;
 
       switch (this->width) {

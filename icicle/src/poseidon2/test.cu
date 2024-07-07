@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
   // Load poseidon
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  Poseidon2<scalar_t> poseidon(T, MdsType::DEFAULT_MDS, DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
+  Poseidon2<scalar_t> poseidon(T, T, MdsType::DEFAULT_MDS, DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   START_TIMER(allocation_timer);
