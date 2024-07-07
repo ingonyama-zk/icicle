@@ -51,7 +51,28 @@ extern "C" eIcicleError icicle_malloc_async(void** ptr, size_t size, icicleStrea
 
 extern "C" eIcicleError icicle_free(void* ptr)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr, DeviceAPI::get_global_memory_tracker());
+  // If releasing memory of non-active device, switch device, release and switch back
+  // Alternatively I would have to consider it an error but it means that user has to switch device before dropping
+  // (when scope is closed)
+
+  auto& tracker = DeviceAPI::get_global_memory_tracker();
+  const auto& ptr_dev = tracker.identify_device(ptr);
+  const auto& cur_device = DeviceAPI::get_thread_local_device();
+
+  if (ptr_dev == std::nullopt) {
+    ICICLE_LOG_ERROR << "Trying to release host memory from device " << cur_device.type << " " << cur_device.id;
+    return eIcicleError::INVALID_DEVICE;
+  }
+  const bool is_active_device = **ptr_dev == cur_device;
+  if (is_active_device) {
+    return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr, DeviceAPI::get_global_memory_tracker());
+  }
+
+  // Getting here means memory does not belong to active device
+  auto err = icicle_set_device(**ptr_dev);
+  if (err == eIcicleError::SUCCESS) err = icicle_free(ptr);
+  err = icicle_set_device(cur_device);
+  return err;
 }
 
 extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream)
