@@ -17,7 +17,7 @@ pub(crate) mod tests {
     use icicle_core::{
         ntt::FieldImpl,
         poseidon2::{DiffusionStrategy, MdsType, Poseidon2},
-        tree::{merkle_tree_digests_len, tests::check_build_field_merkle_tree, FieldTreeBuilder, TreeBuilderConfig},
+        tree::{tests::check_build_field_merkle_tree, FieldTreeBuilder, TreeBuilderConfig},
     };
     use icicle_cuda_runtime::device_context;
     use icicle_cuda_runtime::memory::HostSlice;

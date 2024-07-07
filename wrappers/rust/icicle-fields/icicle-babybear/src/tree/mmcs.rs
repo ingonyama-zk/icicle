@@ -72,8 +72,8 @@ pub(crate) mod tests {
 
         let matrix = RowMajorMatrix::new(input.clone(), COLS);
         let matrix2 = RowMajorMatrix::new(input2.clone(), COLS);
-        // let leaves = vec![matrix, matrix2];
-        let leaves = vec![matrix];
+        let leaves = vec![matrix, matrix2];
+        // let leaves = vec![matrix];
 
         let mmcs =
             FieldMerkleTreeMmcs::<<F as Field>::Packing, <F as Field>::Packing, H, C, DIGEST_ELEMENTS>::new(h, c);
@@ -85,7 +85,6 @@ pub(crate) mod tests {
         config.keep_rows = HEIGHT as u32 + 1;
         config.digest_elements = DIGEST_ELEMENTS as u32;
         let digests_len = merkle_tree_digests_len(HEIGHT as u32, ARITY as u32, DIGEST_ELEMENTS as u32);
-        println!("Digests len: {}", digests_len);
         let mut digests = vec![ScalarField::zero(); digests_len];
         // let mut digests = vec![ScalarField::zero(); COLS];
 
@@ -95,11 +94,11 @@ pub(crate) mod tests {
                 width: COLS,
                 height: ROWS,
             },
-            // Matrix {
-            //     values: icicle_input2.as_ptr() as *const c_void,
-            //     width: COLS,
-            //     height: ROWS / 2,
-            // },
+            Matrix {
+                values: icicle_input2.as_ptr() as *const c_void,
+                width: COLS,
+                height: ROWS / 2,
+            },
         ];
         let digests_slice = HostSlice::from_mut_slice(&mut digests);
 

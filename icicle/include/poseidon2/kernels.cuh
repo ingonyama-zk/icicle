@@ -274,16 +274,6 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  __device__ void print_state(S state[T])
-  {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    printf(
-      "IDX: %d. State: [%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d]\n", idx, state[0], state[1],
-      state[2], state[3], state[4], state[5], state[6], state[7], state[8], state[9], state[10], state[11], state[12],
-      state[13], state[14], state[15]);
-  }
-
-  template <typename S, int T>
   __global__ void hash_many_kernel(
     const S* input,
     S* output,
@@ -309,12 +299,6 @@ namespace poseidon2 {
     }
   }
 
-  template <typename S>
-  __device__ void print_scalar_u32(S element)
-  {
-    printf("%d", element.limbs_storage.limbs[0]);
-  }
-
   template <typename S, int T>
   __device__ void absorb_2d_state(
     const Matrix<S>* inputs,
@@ -328,10 +312,6 @@ namespace poseidon2 {
     for (int i = 0; i < number_of_inputs; i++) {
       const Matrix<S>* input = inputs + i;
       for (int j = 0; j < input->width; j++) {
-        // col-major
-        // state[index] = input->values[j * input->height + row_idx];
-
-        // row-major
         state[index] = input->values[row_idx * input->width + j];
         index++;
         if (index == rate) {

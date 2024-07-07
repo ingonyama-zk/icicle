@@ -26,19 +26,7 @@ namespace merkle_tree {
 
     uint64_t number_of_rows_padded = next_pow_of_two(number_of_rows);
 
-    std::cout << "Absorbing 2d" << std::endl;
     CHK_IF_RETURN(hasher.hash_2d(leaves, digests, number_of_inputs, digest_elements, number_of_rows, ctx));
-    std::cout << "Absorbed" << std::endl;
-
-    // size_t size = number_of_rows * digest_elements;
-    // D* tmp = (D*)malloc(size * sizeof(D));
-    // cudaMemcpy(tmp, digests, size * sizeof(D), cudaMemcpyDeviceToHost);
-    // for (int i = 0; i < 10; i++) {
-    //   std::cout << tmp[i] << std::endl;
-    // }
-    // for (int i = 0; i < 100; i++) {
-    //   std::cout << tmp[size - 101 - i] << std::endl;
-    // }
 
     if (number_of_rows_padded - number_of_rows) {
       // Pad with default digests
@@ -87,21 +75,12 @@ namespace merkle_tree {
     if (params.number_of_leaves_to_inject) {
       size_t rows_offset = params.subtree_idx * params.number_of_rows_padded;
       size_t actual_layer_rows = leaves[params.leaves_offset - params.number_of_leaves_to_inject].height;
-      std::cout << "Leaves size: " << leaves.size() << "; Leaves ptr: " << &leaves
-                << "; Actual layer rows = " << actual_layer_rows << "; rows_offset = " << rows_offset
-                << "; number_of_rows_padded = " << params.number_of_rows_padded << std::endl;
       params.number_of_rows = std::min(actual_layer_rows - rows_offset, params.number_of_rows_padded);
 
       Matrix<L>* leaves_info = static_cast<Matrix<L>*>(malloc(params.number_of_leaves_to_inject * sizeof(Matrix<L>)));
       L* d_leaves_ptr = d_leaves;
       for (auto i = 0; i < params.number_of_leaves_to_inject; i++) {
         Matrix<L> leaf = leaves[params.leaves_offset - params.number_of_leaves_to_inject + i];
-        std::cout << "leaf pointer: " << leaf.values << "; leaf.width = " << leaf.width
-                  << "; leaf.height = " << leaf.height << std::endl;
-        std::cout << "Matrix " << params.leaves_offset - params.number_of_leaves_to_inject + i
-                  << "; number of rows: " << params.number_of_rows << "; Copying " << params.number_of_rows * leaf.width
-                  << " elements from " << leaf.values + rows_offset * leaf.width << " to " << d_leaves_ptr << std::endl;
-
         if (!params.are_inputs_on_device) {
           CHK_IF_RETURN(cudaMemcpyAsync(
             d_leaves_ptr, leaf.values + rows_offset * leaf.width, params.number_of_rows * leaf.width * sizeof(L),
@@ -128,12 +107,6 @@ namespace merkle_tree {
     if (!params.keep_rows || params.subtree_height < params.keep_rows + (int)params.caps_mode) {
       D* digests_with_offset = big_tree_digests + params.segment_offset +
                                params.subtree_idx * params.number_of_rows_padded * params.digest_elements;
-      std::cout << "Copying " << params.number_of_rows_padded * params.digest_elements << " digests to host "
-                << digests_with_offset << "; offset = "
-                << params.segment_offset + params.subtree_idx * params.number_of_rows_padded * params.digest_elements
-                << std::endl;
-
-      std::cout << "Digests: " << digests << "; digests_with_offset: " << digests_with_offset << std::endl;
       CHK_IF_RETURN(cudaMemcpyAsync(
         digests_with_offset, digests, params.number_of_rows_padded * params.digest_elements * sizeof(D),
         cudaMemcpyDeviceToHost, params.ctx->stream));
@@ -154,13 +127,10 @@ namespace merkle_tree {
     CHK_IF_RETURN(slice_and_copy_leaves<L>(leaves, aux_leaves_mem, d_leaves_info, params));
 
     if (params.number_of_leaves_to_inject) {
-      std::cout << "D leaves info: " << d_leaves_info << "; states: " << prev_layer << "; digests: " << next_layer
-                << std::endl;
       CHK_IF_RETURN(params.compression->compress_and_inject(
         d_leaves_info, params.number_of_leaves_to_inject, params.number_of_rows, prev_layer, next_layer,
         params.digest_elements, *params.ctx));
     } else {
-      std::cout << "Compressing " << params.number_of_rows_padded << std::endl;
       CHK_IF_RETURN(params.compression->run_hash_many_kernel(
         prev_layer, next_layer, params.number_of_rows_padded, params.compression->width, params.digest_elements,
         *params.ctx));
@@ -187,11 +157,9 @@ namespace merkle_tree {
     // Reuse leaves memory
     D* digests = (D*)d_leaves;
 
-    std::cout << "Hashing bottom layer leaves " << params.number_of_rows << std::endl;
     CHK_IF_RETURN(hash_leaves(
       d_leaves_info, params.number_of_leaves_to_inject, params.number_of_rows, states, params.digest_elements,
       *params.hasher, *params.ctx));
-    std::cout << "Hashed bottom layer leaves" << std::endl;
 
     CHK_IF_RETURN(maybe_copy_digests(digests, big_tree_digests, params));
 
@@ -203,21 +171,6 @@ namespace merkle_tree {
     D* next_layer = digests;
     while (params.number_of_rows_padded > 0) {
       CHK_IF_RETURN(fold_layer(leaves, prev_layer, next_layer, aux_leaves_mem, d_leaves_info, params));
-
-      // std::cout << "LAYER " << params.number_of_rows_padded / params.arity << std::endl;
-      // size_t size = params.number_of_rows_padded / params.arity / params.arity;
-      // D* tmp = (D*)malloc(size * sizeof(D));
-      // cudaMemcpy(tmp, next_layer, size * sizeof(D), cudaMemcpyDeviceToHost);
-      // for (int i = 0; i < 10; i++) {
-      //   std::cout << tmp[i] << std::endl;
-      // }
-      // std::cout << "======" << std::endl;
-      // for (int i = 0; i < 10; i++) {
-      //   std::cout << tmp[size - 11 - i] << std::endl;
-      // }
-      // free(tmp);
-      // std::cout << std::endl;
-
       CHK_IF_RETURN(maybe_copy_digests(next_layer, big_tree_digests, params));
       swap<D>(&prev_layer, &next_layer);
       params.segment_size /= params.arity;
@@ -262,17 +215,6 @@ namespace merkle_tree {
           IcicleError_t::InvalidArgument, "Matrix heights that round up to the same power of two must be equal");
     }
 
-    // for (int i = 0; i < number_of_inputs; i++) {
-    //   std::cout << "Orig Matrix " << i << ": " << inputs[i].width << ", " << inputs[i].height << std::endl;
-    //   for (int j = 0; j < inputs[i].height; j++) {
-    //     for (int k = 0; k < inputs[i].width; k++) {
-    //       std::cout << inputs[i].values[j * inputs[i].width + k] << " ";
-    //     }
-    //     std::cout << std::endl;
-    //   }
-    //   std::cout << "Matrix " << i << ": " << sorted_inputs[i].width << ", " << sorted_inputs[i].height << std::endl;
-    // }
-
     uint64_t max_height = sorted_inputs[0].height;
 
     // Calculate maximum additional memory needed for injected matrices
@@ -298,7 +240,6 @@ namespace merkle_tree {
           max_aux_total_elements = current_aux_total_elements;
         }
       }
-      std::cout << "Max aux total elements " << max_aux_total_elements << std::endl;
     }
 
     uint64_t number_of_bottom_layer_rows = next_pow_of_two(max_height);
@@ -354,7 +295,7 @@ namespace merkle_tree {
     D* caps;
     if (caps_mode) { caps = static_cast<D*>(malloc(caps_len * sizeof(D))); }
 
-    // #ifdef MERKLE_DEBUG
+#ifdef MERKLE_DEBUG
     std::cout << "MMCS DEBUG" << std::endl;
     std::cout << "====================================" << std::endl;
     std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;
@@ -369,8 +310,12 @@ namespace merkle_tree {
     std::cout << "Size of 1 subtree digests = " << subtree_digests_size * sizeof(D) / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Cap height = " << cap_height << std::endl;
     std::cout << "Enabling caps mode? " << caps_mode << std::endl;
+
+    std::cout << "Allocating " << subtree_states_size * number_of_streams << " elements for states" << std::endl;
+    std::cout << "Allocating " << subtree_leaves_memory * number_of_streams << " bytes for leaves" << std::endl;
+    std::cout << "Allocating " << subtree_aux_elements * number_of_streams << " elements for aux leaves" << std::endl;
     std::cout << std::endl;
-    // #endif
+#endif
 
     // Allocate memory for the states, injected leaves and digests
     // These are shared by streams in a pool
@@ -382,10 +327,6 @@ namespace merkle_tree {
     CHK_IF_RETURN(cudaMallocAsync(&aux_ptr, subtree_aux_elements * number_of_streams * sizeof(L), stream));
     // Wait for these allocations to finish
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
-
-    std::cout << "Allocated " << subtree_states_size * number_of_streams << " elements for states" << std::endl;
-    std::cout << "Allocated " << subtree_leaves_memory * number_of_streams << " bytes for leaves" << std::endl;
-    std::cout << "Allocated " << subtree_aux_elements * number_of_streams << " elements for aux leaves" << std::endl;
 
     // Build subtrees in parallel. This for loop invokes kernels that can run in a pool of size `number_of_streams`
     for (size_t subtree_idx = 0; subtree_idx < number_of_subtrees; subtree_idx++) {
@@ -421,8 +362,6 @@ namespace merkle_tree {
       params.hasher = &hasher;
       params.compression = &compression;
       params.ctx = &subtree_context;
-
-      std::cout << "SubTree " << params.subtree_idx << "; bottom_layer_rows: " << params.number_of_rows << std::endl;
 
       cudaError_t subtree_result = build_mmcs_subtree<L, D>(
         sorted_inputs,
