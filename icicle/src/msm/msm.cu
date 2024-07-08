@@ -405,6 +405,7 @@ namespace msm {
 
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
       const bool is_nof_points_valid = ((single_msm_size * batch_size) % nof_points == 0);
+        // printf("%d %d\n", single_msm_size, nof_points);
       if (!is_nof_points_valid) {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
@@ -935,23 +936,24 @@ namespace msm {
   cudaError_t precompute_msm_points(A* points, int msm_size, MSMConfig& config, A* output_points)
   {
     CHK_INIT_IF_RETURN();
+    const int bases_size = config.points_size != 0 ? config.points_size : msm_size;
 
     cudaStream_t& stream = config.ctx.stream;
     unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
 
     CHK_IF_RETURN(cudaMemcpyAsync(
-      output_points, points, sizeof(A) * config.points_size,
+      output_points, points, sizeof(A) * bases_size,
       config.are_points_on_device ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, stream));
 
     unsigned total_nof_bms = (P::SCALAR_FF_NBITS - 1) / c + 1;
     unsigned shift = c * ((total_nof_bms - 1) / config.precompute_factor + 1);
 
     unsigned NUM_THREADS = 1 << 8;
-    unsigned NUM_BLOCKS = (config.points_size + NUM_THREADS - 1) / NUM_THREADS;
+    unsigned NUM_BLOCKS = (bases_size + NUM_THREADS - 1) / NUM_THREADS;
     for (int i = 1; i < config.precompute_factor; i++) {
       left_shift_kernel<A, P><<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(
-        &output_points[(i - 1) * config.points_size], shift, config.points_size,
-        &output_points[i * config.points_size]);
+        &output_points[(i - 1) * bases_size], shift, bases_size,
+        &output_points[i * bases_size]);
     }
 
     return CHK_LAST();
