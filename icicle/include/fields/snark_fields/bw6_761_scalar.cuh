@@ -4,7 +4,6 @@
 
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
-#include "fields/quadratic_extension.cuh"
 #include "fields/snark_fields/bls12_377_base.cuh"
 
 namespace bw6_761 {
