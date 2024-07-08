@@ -116,39 +116,6 @@ namespace icicle {
     return default_deviceAPI.get();
   }
 
-  eIcicleError DeviceAPI::allocate_memory(void** ptr, size_t size, MemoryTracker& tracker) const
-  {
-    auto err = allocate_memory(ptr, size);
-    if (err == eIcicleError::SUCCESS) { tracker.add_allocation(*ptr, size, get_thread_local_device()); }
-    return err;
-  }
-
-  eIcicleError
-  DeviceAPI::allocate_memory_async(void** ptr, size_t size, icicleStreamHandle stream, MemoryTracker& tracker) const
-  {
-    auto err = allocate_memory_async(ptr, size, stream);
-    if (err == eIcicleError::SUCCESS) { tracker.add_allocation(*ptr, size, get_thread_local_device()); }
-    return err;
-  }
-
-  eIcicleError DeviceAPI::free_memory(void* ptr, MemoryTracker& tracker) const
-  {
-    auto dev = tracker.identify_device(ptr);
-    if (dev == std::nullopt || **dev != get_thread_local_device()) { return eIcicleError::INVALID_DEVICE; }
-    auto err = free_memory(ptr);
-    if (err == eIcicleError::SUCCESS) { tracker.remove_allocation(ptr); }
-    return err;
-  }
-
-  eIcicleError DeviceAPI::free_memory_async(void* ptr, icicleStreamHandle stream, MemoryTracker& tracker) const
-  {
-    auto dev = tracker.identify_device(ptr);
-    if (dev == std::nullopt || **dev != get_thread_local_device()) { return eIcicleError::INVALID_DEVICE; }
-    auto err = free_memory_async(ptr, stream);
-    if (err == eIcicleError::SUCCESS) { tracker.remove_allocation(ptr); }
-    return err;
-  }
-
   /********************************************************************************** */
 
   DeviceAPI* get_deviceAPI(const Device& device) { return DeviceAPIRegistry::Global().get_deviceAPI(device).get(); }

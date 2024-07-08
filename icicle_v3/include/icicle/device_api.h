@@ -53,7 +53,6 @@ namespace icicle {
      * @return eIcicleError Status of the memory allocation.
      */
     virtual eIcicleError allocate_memory(void** ptr, size_t size) const = 0;
-    eIcicleError allocate_memory(void** ptr, size_t size, MemoryTracker& tracker) const;
 
     /**
      * @brief Asynchronously allocates memory on the specified device.
@@ -64,8 +63,6 @@ namespace icicle {
      * @return eIcicleError Status of the memory allocation.
      */
     virtual eIcicleError allocate_memory_async(void** ptr, size_t size, icicleStreamHandle stream) const = 0;
-    eIcicleError
-    allocate_memory_async(void** ptr, size_t size, icicleStreamHandle stream, MemoryTracker& tracker) const;
 
     /**
      * @brief Frees memory on the specified device.
@@ -74,7 +71,6 @@ namespace icicle {
      * @return eIcicleError Status of the memory deallocation.
      */
     virtual eIcicleError free_memory(void* ptr) const = 0;
-    eIcicleError free_memory(void* ptr, MemoryTracker& tracker) const;
 
     /**
      * @brief Asynchronously frees memory on the specified device.
@@ -84,7 +80,6 @@ namespace icicle {
      * @return eIcicleError Status of the memory deallocation.
      */
     virtual eIcicleError free_memory_async(void* ptr, icicleStreamHandle stream) const = 0;
-    eIcicleError free_memory_async(void* ptr, icicleStreamHandle stream, MemoryTracker& tracker) const;
 
     /**
      * @brief Gets the total and available memory on the specified device.

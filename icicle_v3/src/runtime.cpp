@@ -40,13 +40,20 @@ extern "C" eIcicleError icicle_get_device_count(int& device_count /*OUT*/)
 
 extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory(ptr, size, DeviceAPI::get_global_memory_tracker());
+  auto err = DeviceAPI::get_thread_local_deviceAPI()->allocate_memory(ptr, size);
+  if (err == eIcicleError::SUCCESS) {
+    DeviceAPI::get_global_memory_tracker().add_allocation(*ptr, size, DeviceAPI::get_thread_local_device());
+  }
+  return err;
 }
 
 extern "C" eIcicleError icicle_malloc_async(void** ptr, size_t size, icicleStreamHandle stream)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->allocate_memory_async(
-    ptr, size, stream, DeviceAPI::get_global_memory_tracker());
+  auto err = DeviceAPI::get_thread_local_deviceAPI()->allocate_memory_async(ptr, size, stream);
+  if (err == eIcicleError::SUCCESS) {
+    DeviceAPI::get_global_memory_tracker().add_allocation(*ptr, size, DeviceAPI::get_thread_local_device());
+  }
+  return err;
 }
 
 extern "C" eIcicleError icicle_free(void* ptr)
@@ -64,9 +71,7 @@ extern "C" eIcicleError icicle_free(void* ptr)
     return eIcicleError::INVALID_DEVICE;
   }
   const bool is_active_device = **ptr_dev == cur_device;
-  if (is_active_device) {
-    return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr, DeviceAPI::get_global_memory_tracker());
-  }
+  if (is_active_device) { return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr); }
 
   // Getting here means memory does not belong to active device
   auto err = icicle_set_device(**ptr_dev);
@@ -77,8 +82,24 @@ extern "C" eIcicleError icicle_free(void* ptr)
 
 extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->free_memory_async(
-    ptr, stream, DeviceAPI::get_global_memory_tracker());
+  auto& tracker = DeviceAPI::get_global_memory_tracker();
+  const auto& ptr_dev = tracker.identify_device(ptr);
+  const auto& cur_device = DeviceAPI::get_thread_local_device();
+
+  if (ptr_dev == std::nullopt) {
+    ICICLE_LOG_ERROR << "Trying to release host memory from device " << cur_device.type << " " << cur_device.id;
+    return eIcicleError::INVALID_DEVICE;
+  }
+
+  // Note that in that case, not switching device, since the stream may be wrong too. User has to handle it.
+  const bool is_active_device = **ptr_dev == cur_device;
+  if (!is_active_device) {
+    ICICLE_LOG_ERROR << "Trying to release memory allocated by " << (**ptr_dev).type << "(" << (**ptr_dev).id
+                     << ") from device " << cur_device.type << "(" << cur_device.id << ")";
+    return eIcicleError::INVALID_DEVICE;
+  }
+
+  return DeviceAPI::get_thread_local_deviceAPI()->free_memory_async(ptr, stream);
 }
 
 extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/)
