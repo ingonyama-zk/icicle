@@ -547,7 +547,7 @@ namespace msm {
         CHK_IF_RETURN(cudaEventRecord(event_points_uploaded, stream_points));
       }
 
-      printf("before init buckets\n");
+      // printf("before init buckets\n");
       P* buckets;
       if (init_buckets){
         CHK_IF_RETURN(cudaMallocAsync(&buckets, sizeof(P) * (total_nof_buckets + nof_bms_in_batch), stream));
@@ -556,11 +556,11 @@ namespace msm {
         NUM_THREADS = 1 << 10;
         NUM_BLOCKS = (total_nof_buckets + nof_bms_in_batch + NUM_THREADS - 1) / NUM_THREADS;
         initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>(buckets, total_nof_buckets + nof_bms_in_batch);
-        printf("init buckets\n");
+        // printf("init buckets\n");
       }
       else{
         buckets = *buckets_external;
-        printf("assign buckets\n");
+        // printf("assign buckets\n");
       }
 
 
