@@ -400,14 +400,14 @@ namespace polynomials {
     }
 
     template <typename T = C>
-    const T* get_context_storage_immutable(PolyContext& p)
+    const T* get_context_storage_immutable(PolyContext p) const
     {
       return static_cast<const T*>(IPolynomialBackend<C, D, I>::get_context_storage_immutable(p));
     }
 
     void slice(PolyContext out, PolyContext in, uint64_t offset, uint64_t stride, uint64_t size) override
     {
-      assert_device_compatability(out, in);
+      assert_device_compatability({in});
       auto [in_coeffs, in_size] = in->get_coefficients();
       // size=0 means take as much as elements as there are to take
       uint64_t out_size = (size > 0) ? size : (1 + (in_size - 1 - offset) / stride);
@@ -425,8 +425,7 @@ namespace polynomials {
 
     void add_sub(PolyContext& res, PolyContext a, PolyContext b, bool add1_sub0)
     {
-      assert_device_compatability(a, b);
-      assert_device_compatability(a, res);
+      assert_device_compatability({a, b});
 
       // add/sub can be done in both coefficients or evaluations, but operands must be in the same state.
       // For evaluations, same state also means same number of evaluations (and on same domain).
@@ -461,8 +460,7 @@ namespace polynomials {
 
     void multiply(PolyContext c, PolyContext a, PolyContext b) override
     {
-      assert_device_compatability(a, b);
-      assert_device_compatability(a, c);
+      assert_device_compatability({a, b});
 
       const bool is_a_scalar = a->get_nof_elements() == 1;
       const bool is_b_scalar = b->get_nof_elements() == 1;
@@ -481,7 +479,7 @@ namespace polynomials {
 
     void multiply(PolyContext out, PolyContext p, D scalar) override
     {
-      assert_device_compatability(out, p);
+      assert_device_compatability({p});
 
       // element wise multiplication is similar both in coefficients and evaluations (regardless of order too)
       const auto state = p->get_state();
@@ -573,9 +571,7 @@ namespace polynomials {
 
     void divide(PolyContext Q /*OUT*/, PolyContext R /*OUT*/, PolyContext a, PolyContext b) override
     {
-      assert_device_compatability(a, b);
-      assert_device_compatability(a, Q);
-      assert_device_compatability(a, R);
+      assert_device_compatability({a, b});
 
       auto [a_coeffs, a_N] = a->get_coefficients();
       auto [b_coeffs, b_N] = b->get_coefficients();
@@ -630,7 +626,7 @@ namespace polynomials {
 
     void divide_by_vanishing_polynomial(PolyContext out, PolyContext numerator, uint64_t vanishing_poly_degree) override
     {
-      assert_device_compatability(numerator, out);
+      assert_device_compatability({numerator});
 
       // vanishing polynomial of degree N is the polynomial V(x) such that V(r)=0 for r Nth root-of-unity.
       // For example for N=4 it vanishes on the group [1,W,W^2,W^3] where W is the 4th root of unity. In that
@@ -982,15 +978,11 @@ namespace polynomials {
       return p->get_coefficients_view();
     }
 
-    inline void assert_device_compatability(PolyContext a, PolyContext b) const
+    inline void assert_device_compatability(const std::list<PolyContext>& polys) const
     {
-      CUDAPolynomialContext<C, D, I>* a_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(a.get());
-      CUDAPolynomialContext<C, D, I>* b_cuda = static_cast<CUDAPolynomialContext<C, D, I>*>(b.get());
-
-      const bool is_same_device = a_cuda->m_device_context.device_id == b_cuda->m_device_context.device_id;
-      if (!is_same_device) {
-        THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "CUDA backend: incompatible polynomials, on different devices");
+      // TODO Yuval : move to context class
+      for (const PolyContext& p : polys) {
+        ICICLE_CHECK(icicle_is_active_device_memory(get_context_storage_immutable(p)));
       }
     }
   };

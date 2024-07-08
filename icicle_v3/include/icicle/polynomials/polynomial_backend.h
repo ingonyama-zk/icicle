@@ -51,7 +51,7 @@ namespace icicle {
 
     // Method to access mutable storage within the context
     void* get_context_storage_mutable(PolyContext ctxt) { return ctxt->get_storage_mutable(); }
-    const void* get_context_storage_immutable(PolyContext ctxt) { return ctxt->get_storage_immutable(); }
+    const void* get_context_storage_immutable(PolyContext ctxt) const { return ctxt->get_storage_immutable(); }
 
     // Evaluation methods
     virtual void evaluate(PolyContext op, const D* domain_x, I* eval /*OUT*/) = 0;
