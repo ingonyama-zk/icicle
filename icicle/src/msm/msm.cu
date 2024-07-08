@@ -713,8 +713,8 @@ namespace msm {
             large_buckets_nof_threads);
         }
         CHK_IF_RETURN(cudaFreeAsync(large_bucket_indices, stream_large_buckets));
-        cudaDeviceSynchronize();
-        std::cout << "1 cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+        // cudaDeviceSynchronize();
+        // std::cout << "1 cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
 
         // distribute
         NUM_THREADS = max(1, min(MAX_TH, h_nof_large_buckets));
@@ -722,8 +722,8 @@ namespace msm {
         distribute_large_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream_large_buckets>>>(
           large_buckets, buckets, sorted_bucket_sizes_sum, sorted_single_bucket_indices, h_nof_large_buckets,
           nof_buckets + nof_bms_per_msm, c + bm_bitsize, init_buckets);
-        cudaDeviceSynchronize();
-        std::cout << "2 cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+        // cudaDeviceSynchronize();
+        // std::cout << "2 cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
         CHK_IF_RETURN(cudaFreeAsync(large_buckets, stream_large_buckets));
         CHK_IF_RETURN(cudaFreeAsync(sorted_bucket_sizes_sum, stream_large_buckets));
 

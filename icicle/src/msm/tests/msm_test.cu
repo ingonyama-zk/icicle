@@ -134,17 +134,18 @@ int main(int argc, char** argv)
   cudaEvent_t start, stop;
   float msm_time;
 
-  int msm_log_size = (argc > 1) ? atoi(argv[1]) : 3;
+  int msm_log_size = (argc > 1) ? atoi(argv[1]) : 17;
   int msm_size = 1 << msm_log_size;
   int batch_size = (argc > 2) ? atoi(argv[2]) : 1;
   //   unsigned msm_size = 1<<21;
   int N = batch_size * msm_size;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
   int user_c = (argc > 4) ? atoi(argv[4]) : 11;
+  int nof_chunks = (argc > 5) ? atoi(argv[5]) : 1;
 
   printf(
-    "running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d\n", CURVE_ID, msm_log_size, batch_size,
-    precomp_factor, user_c);
+    "running msm curve=%d, 2^%d, batch_size=%d, precomp_factor=%d, c=%d, nof_chunks=%d\n", CURVE_ID, msm_log_size, batch_size,
+    precomp_factor, user_c, nof_chunks);
 
   test_scalar* scalars = new test_scalar[N];
   test_affine* points = new test_affine[N];
@@ -211,7 +212,7 @@ int main(int argc, char** argv)
     0,              // bitsize
     10,             // large_bucket_factor
     batch_size,     // batch_size
-    false,          // are_scalars_on_device
+    true,          // are_scalars_on_device
     false,          // are_scalars_montgomery_form
     true,           // are_points_on_device
     false,          // are_points_montgomery_form
@@ -231,15 +232,48 @@ int main(int argc, char** argv)
 
   // warm up
   msm::msm<test_scalar, test_affine, test_projective>(
-    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size, config, res_d, &buckets_d);
+    scalars_d, precomp_factor > 1 ? precomp_points_d : points_d, msm_size, config, res_d, &buckets_d);
   cudaDeviceSynchronize();
 
-  // auto begin1 = std::chrono::high_resolution_clock::now();
+  cudaStream_t transfer_stream;
+  cudaStreamCreate(&transfer_stream);
+  
+  // cudaEvent_t finish_calc;
+  // cudaEventCreateWithFlags(&finish_calc, cudaEventDisableTiming);
+  // cudaEventRecord(finish_calc, stream);
+
+  int chunk_size = (config.points_size + nof_chunks - 1) / nof_chunks;
   cudaEventRecord(start, stream);
-  config.points_size = config.points_size/2;
-  config.return_buckets = true;
-  msm::msm<test_scalar, test_affine, test_projective>(
-    scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size/2, config, res_d, &buckets_d);
+  config.points_size = 0;
+  for (int i = 0; i < nof_chunks; i++)
+  {
+    bool is_last_iter = i == nof_chunks - 1; 
+    int sub_msm_size = is_last_iter? config.points_size % chunk_size : chunk_size;
+    if (sub_msm_size == 0) sub_msm_size = chunk_size;
+    config.init_buckets = i == 0;
+    config.return_buckets = !is_last_iter;
+    config.are_scalars_on_device = i;
+    config.are_points_on_device = i;
+    //wait for finish run event, and destroy event
+    // cudaStreamWaitEvent(transfer_stream, finish_calc);
+    // cudaEventDestroy(finish_calc);
+    msm::msm<test_scalar, test_affine, test_projective>(
+    (config.are_scalars_on_device? scalars_d : scalars) + chunk_size * i, (config.are_points_on_device? points_d : points) + chunk_size * i, sub_msm_size, config, res_d, &buckets_d);
+    if (is_last_iter) break;
+    cudaMemcpyAsync(scalars_d + chunk_size * i, scalars + chunk_size * i, sizeof(test_scalar) * sub_msm_size, cudaMemcpyHostToDevice, transfer_stream);
+    cudaMemcpyAsync(points_d + chunk_size * i, points + chunk_size * i, sizeof(test_affine) * sub_msm_size, cudaMemcpyHostToDevice, transfer_stream);
+    cudaEvent_t finish_transfer;
+    cudaEventCreateWithFlags(&finish_transfer, cudaEventDisableTiming);
+    cudaEventRecord(finish_transfer, transfer_stream);
+    cudaStreamWaitEvent(stream, finish_transfer);
+    cudaEventDestroy(finish_transfer);
+    printf("finished iter %d\n", i);
+  }
+  
+  // config.points_size = config.points_size/2;
+  // config.return_buckets = true;
+  // msm::msm<test_scalar, test_affine, test_projective>(
+  //   scalars, precomp_factor > 1 ? precomp_points_d : points_d, msm_size/2, config, res_d, &buckets_d);
   // cudaDeviceSynchronize();
   // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
   // printf("first half done\n");
@@ -251,10 +285,10 @@ int main(int argc, char** argv)
   // }
   
   // cudaMalloc(&buckets_d, sizeof(test_projective) * (17<<15));
-  config.init_buckets = false;
-  config.return_buckets = false;
-  msm::msm<test_scalar, test_affine, test_projective>(
-    scalars + msm_size/2, precomp_factor > 1 ? precomp_points_d + (msm_size/2)*precomp_factor: points_d + msm_size/2, msm_size/2, config, res_d, &buckets_d);
+  // config.init_buckets = false;
+  // config.return_buckets = false;
+  // msm::msm<test_scalar, test_affine, test_projective>(
+  //   scalars + msm_size/2, precomp_factor > 1 ? precomp_points_d: points_d + msm_size/2, msm_size/2, config, res_d, &buckets_d);
   // cudaDeviceSynchronize();
   // std::cout << "cuda err: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
   // printf("second half done\n");
@@ -284,7 +318,7 @@ int main(int argc, char** argv)
   // config.segments_reduction = false;
   for (int i = 0; i < batch_size; i++) {
     msm::msm<test_scalar, test_affine, test_projective>(
-      scalars + i * msm_size, points_d + i * msm_size, msm_size, config, ref_d + i, &buckets_d);
+      scalars_d + i * msm_size, points_d + i * msm_size, msm_size, config, ref_d + i, &buckets_d);
   }
 
   // config.are_results_on_device = false;
