@@ -38,6 +38,9 @@ extern "C" cudaError_t stark252_mul_cuda(
 extern "C" cudaError_t stark252_add_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
 
+extern "C" cudaError_t stark252_accumulate_cuda(
+  stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t stark252_sub_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
 
@@ -51,10 +54,8 @@ extern "C" cudaError_t stark252_transpose_matrix_cuda(
   bool is_async);
 
 extern "C" cudaError_t stark252_bit_reverse_cuda(
-  const stark252::scalar_t* input,
-  uint64_t n,
-  vec_ops::BitReverseConfig& config,
-  stark252::scalar_t* output);
+  const stark252::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, stark252::scalar_t* output);
+
 
 extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
 

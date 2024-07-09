@@ -93,6 +93,9 @@ extern "C" cudaError_t babybear_mul_cuda(
 extern "C" cudaError_t babybear_add_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
+extern "C" cudaError_t babybear_accumulate_cuda(
+  babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t babybear_sub_cuda(
   babybear::scalar_t* vec_a, babybear::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::scalar_t* result);
 
@@ -106,10 +109,8 @@ extern "C" cudaError_t babybear_transpose_matrix_cuda(
   bool is_async);
 
 extern "C" cudaError_t babybear_bit_reverse_cuda(
-  const babybear::scalar_t* input,
-  uint64_t n,
-  vec_ops::BitReverseConfig& config,
-  babybear::scalar_t* output);
+  const babybear::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, babybear::scalar_t* output);
+
 
 extern "C" void babybear_generate_scalars(babybear::scalar_t* scalars, int size);
 
@@ -135,6 +136,9 @@ extern "C" cudaError_t babybear_extension_mul_cuda(
 extern "C" cudaError_t babybear_extension_add_cuda(
   babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
 
+extern "C" cudaError_t babybear_extension_accumulate_cuda(
+  babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t babybear_extension_sub_cuda(
   babybear::extension_t* vec_a, babybear::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, babybear::extension_t* result);
 
@@ -148,9 +152,7 @@ extern "C" cudaError_t babybear_extension_transpose_matrix_cuda(
   bool is_async);
 
 extern "C" cudaError_t babybear_extension_bit_reverse_cuda(
-  const babybear::extension_t* input,
-  uint64_t n,
-  vec_ops::BitReverseConfig& config,
-  babybear::extension_t* output);
+  const babybear::extension_t* input, uint64_t n, vec_ops::BitReverseConfig& config, babybear::extension_t* output);
+
 
 #endif

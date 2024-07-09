@@ -64,6 +64,12 @@ FIELDS_CONFIG = {
         "field_ext.h",
         "vec_ops_ext.h",
         "ntt_ext.h",
+    },
+    "m31": {
+        "ntt_ext.h",
+        "ntt.h",
+        "poseidon.h",
+        "poseidon2.h",
     }
 }
 

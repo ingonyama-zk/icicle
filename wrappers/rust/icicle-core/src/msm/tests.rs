@@ -1,5 +1,5 @@
 use crate::curve::{Affine, Curve, Projective};
-use crate::msm::{msm, precompute_bases, MSMConfig, MSM};
+use crate::msm::{msm, precompute_points, MSMConfig, MSM};
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_cuda_runtime::device::{get_device_count, set_device, warmup};
 use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
@@ -120,16 +120,16 @@ where
     cfg.is_async = true;
     cfg.large_bucket_factor = 5;
     cfg.c = 4;
+    let precompute_factor = 8;
     warmup(&stream).unwrap();
     for test_size in test_sizes {
-        let precompute_factor = 8;
         let points = generate_random_affine_points_with_zeroes(test_size, 10);
         let mut precomputed_points_d = DeviceVec::cuda_malloc(precompute_factor * test_size).unwrap();
-        precompute_bases(
+        cfg.precompute_factor = precompute_factor as i32;
+        precompute_points(
             HostSlice::from_slice(&points),
-            precompute_factor as i32,
-            0,
-            &cfg.ctx,
+            test_size as i32,
+            &cfg,
             &mut precomputed_points_d,
         )
         .unwrap();

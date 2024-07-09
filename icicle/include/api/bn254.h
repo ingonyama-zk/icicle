@@ -20,11 +20,8 @@
 
 extern "C" cudaError_t bn254_g2_precompute_msm_bases_cuda(
   bn254::g2_affine_t* bases,
-  int bases_size,
-  int precompute_factor,
-  int _c,
-  bool are_bases_on_device,
-  device_context::DeviceContext& ctx,
+  int msm_size,
+  msm::MSMConfig& config,
   bn254::g2_affine_t* output_bases);
 
 extern "C" cudaError_t bn254_g2_msm_cuda(
@@ -32,11 +29,8 @@ extern "C" cudaError_t bn254_g2_msm_cuda(
 
 extern "C" cudaError_t bn254_precompute_msm_bases_cuda(
   bn254::affine_t* bases,
-  int bases_size,
-  int precompute_factor,
-  int _c,
-  bool are_bases_on_device,
-  device_context::DeviceContext& ctx,
+  int msm_size,
+  msm::MSMConfig& config,
   bn254::affine_t* output_bases);
 
 extern "C" cudaError_t bn254_msm_cuda(
@@ -193,6 +187,9 @@ extern "C" cudaError_t bn254_mul_cuda(
 extern "C" cudaError_t bn254_add_cuda(
   bn254::scalar_t* vec_a, bn254::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bn254::scalar_t* result);
 
+extern "C" cudaError_t bn254_accumulate_cuda(
+  bn254::scalar_t* vec_a, bn254::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+
 extern "C" cudaError_t bn254_sub_cuda(
   bn254::scalar_t* vec_a, bn254::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bn254::scalar_t* result);
 
@@ -206,10 +203,8 @@ extern "C" cudaError_t bn254_transpose_matrix_cuda(
   bool is_async);
 
 extern "C" cudaError_t bn254_bit_reverse_cuda(
-  const bn254::scalar_t* input,
-  uint64_t n,
-  vec_ops::BitReverseConfig& config,
-  bn254::scalar_t* output);
+  const bn254::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, bn254::scalar_t* output);
+
 
 extern "C" void bn254_generate_scalars(bn254::scalar_t* scalars, int size);
 
