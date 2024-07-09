@@ -249,31 +249,6 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  __global__ void compress_many_kernel(
-    const S* input,
-    S* output,
-    unsigned int number_of_states,
-    unsigned int output_len,
-    const Poseidon2Constants<S> constants)
-  {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (idx >= number_of_states) { return; }
-
-    S state[T];
-    UNROLL
-    for (int i = 0; i < T; i++) {
-      state[i] = input[idx * T + i];
-    }
-
-    permute_state<S, T>(state, constants);
-
-    UNROLL
-    for (int i = 0; i < output_len; i++) {
-      output[idx * output_len + i] = state[i];
-    }
-  }
-
-  template <typename S, int T>
   __global__ void hash_many_kernel(
     const S* input,
     S* output,
