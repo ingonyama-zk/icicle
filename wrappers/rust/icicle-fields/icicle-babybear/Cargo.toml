@@ -19,16 +19,6 @@ criterion = "0.3"
 risc0-core = "0.21.0"
 risc0-zkp = "0.21.0"
 
-#p3-baby-bear = { path = "/home/administrator/users/roman/Plonky3/baby-bear" }
-#p3-symmetric = { path = "/home/administrator/users/roman/Plonky3/symmetric" }
-#p3-mds = { path = "/home/administrator/users/roman/Plonky3/mds" }
-#p3-poseidon2 = { path = "/home/administrator/users/roman/Plonky3/poseidon2" }
-#p3-field = { path = "/home/administrator/users/roman/Plonky3/field" }
-#p3-dft = { path = "/home/administrator/users/roman/Plonky3/dft" }
-#p3-matrix = { path = "/home/administrator/users/roman/Plonky3/matrix" }
-#p3-merkle-tree = { path = "/home/administrator/users/roman/Plonky3/merkle-tree" }
-#p3-commit = { path = "/home/administrator/users/roman/Plonky3/commit" }
-
 p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
 p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }
 p3-mds = { git = "https://github.com/Plonky3/Plonky3", rev = "1e87146ebfaedc2150b635b10a096b733795fdce" }

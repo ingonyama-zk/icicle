@@ -27,16 +27,6 @@ icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
 icicle-bn254 = { path = ".", features = ["arkworks"] }
 serial_test = "3.0.0"
 
-p3-bn254-fr = { path = "/home/administrator/users/roman/Plonky3/bn254-fr" }
-p3-symmetric = { path = "/home/administrator/users/roman/Plonky3/symmetric" }
-p3-mds = { path = "/home/administrator/users/roman/Plonky3/mds" }
-p3-poseidon2 = { path = "/home/administrator/users/roman/Plonky3/poseidon2" }
-p3-field = { path = "/home/administrator/users/roman/Plonky3/field" }
-p3-dft = { path = "/home/administrator/users/roman/Plonky3/dft" }
-p3-matrix = { path = "/home/administrator/users/roman/Plonky3/matrix" }
-p3-merkle-tree = { path = "/home/administrator/users/roman/Plonky3/merkle-tree" }
-p3-commit = { path = "/home/administrator/users/roman/Plonky3/commit" }
-
 [features]
 default = []
 g2 = ["icicle-core/g2"]
