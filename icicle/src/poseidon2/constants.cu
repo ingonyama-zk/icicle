@@ -21,6 +21,9 @@ using namespace poseidon2_constants_grumpkin;
 #elif FIELD_ID == BABY_BEAR
 #include "poseidon2/constants/babybear_poseidon2.h"
 using namespace poseidon2_constants_babybear;
+#elif FIELD_ID == M31
+#include "poseidon2/constants/m31_poseidon2.h"
+using namespace poseidon2_constants_m31;
 #endif
 
 namespace poseidon2 {
