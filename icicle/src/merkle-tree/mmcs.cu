@@ -40,19 +40,21 @@ namespace merkle_tree {
 
   template <typename L, typename D>
   struct SubtreeParams {
-    unsigned int number_of_inputs;
-    unsigned int arity;
-    unsigned int digest_elements;
-    size_t number_of_rows;
-    size_t number_of_rows_padded;
-    size_t subtree_idx;
-    size_t number_of_subtrees;
-    uint64_t subtree_height;
-    size_t segment_size;
-    size_t segment_offset;
-    unsigned int leaves_offset;
-    unsigned int number_of_leaves_to_inject;
-    unsigned int keep_rows;
+    unsigned int number_of_inputs; // Number of input matrices
+    unsigned int arity;            // Arity of the tree
+    unsigned int digest_elements;  // Number of output elements per hash
+    size_t number_of_rows;         // Current number of input rows to operate on
+    size_t number_of_rows_padded;  // next power of arity for number_of_rows
+    size_t subtree_idx;            // The subtree id
+    size_t number_of_subtrees;     // Total number of subtrees
+    uint64_t subtree_height;       // Height of one subtree
+
+    /// One segment corresponds to one layer of output digests
+    size_t segment_size;                     // The size of current segment.
+    size_t segment_offset;                   // An offset for the current segment
+    unsigned int leaves_offset;              // An offset in the sorted list of input matrices
+    unsigned int number_of_leaves_to_inject; // Number of leaves to inject in current level
+    unsigned int keep_rows;                  // Number of rows to keep
     bool are_inputs_on_device;
     bool caps_mode;
     const SpongeHasher<L, D>* hasher = nullptr;
@@ -101,6 +103,8 @@ namespace merkle_tree {
     return CHK_LAST();
   }
 
+  /// Checks if the current row needs to be copied out to the resulting digests array
+  /// Computes the needed offsets using segments model
   template <typename L, typename D>
   cudaError_t maybe_copy_digests(D* digests, L* big_tree_digests, SubtreeParams<L, D>& params)
   {
@@ -218,7 +222,6 @@ namespace merkle_tree {
     uint64_t max_height = sorted_inputs[0].height;
 
     // Calculate maximum additional memory needed for injected matrices
-
     uint64_t max_aux_total_elements = 0;
     uint64_t current_aux_total_elements = 0;
     uint64_t current_height = 0;
@@ -281,16 +284,24 @@ namespace merkle_tree {
 
     size_t available_memory, _total_memory;
     CHK_IF_RETURN(cudaMemGetInfo(&available_memory, &_total_memory));
+    if (available_memory < (GIGA / 8 + STREAM_CHUNK_SIZE)) {
+      THROW_ICICLE_ERR(
+        IcicleError_t::InvalidArgument,
+        "Not enough GPU memory to build a tree. At least 1.125 GB of GPU memory required");
+    }
     available_memory -= GIGA / 8; // Leave 128 MB just in case
 
     // We can effectively parallelize memory copy with streams
     // as long as they don't operate on more than `STREAM_CHUNK_SIZE` bytes
     const size_t number_of_streams = std::min((uint64_t)(available_memory / STREAM_CHUNK_SIZE), number_of_subtrees);
-    cudaStream_t* streams = static_cast<cudaStream_t*>(malloc(sizeof(cudaStream_t) * number_of_streams));
+    std::vector<cudaStream_t> streams(number_of_streams);
     for (size_t i = 0; i < number_of_streams; i++) {
       CHK_IF_RETURN(cudaStreamCreate(&streams[i]));
     }
 
+    // If keep_rows is smaller then the remaining top-tree height
+    // we need to allocate additional memory to store the roots
+    // of subtrees, in order to proceed from there
     bool caps_mode = tree_config.keep_rows && tree_config.keep_rows <= cap_height;
     D* caps;
     if (caps_mode) { caps = static_cast<D*>(malloc(caps_len * sizeof(D))); }
@@ -317,7 +328,7 @@ namespace merkle_tree {
     std::cout << std::endl;
 #endif
 
-    // Allocate memory for the states, injected leaves and digests
+    // Allocate memory for the states, injected leaves (aux) and digests
     // These are shared by streams in a pool
     D* states_ptr;
     L *aux_ptr, *leaves_ptr;
@@ -438,7 +449,6 @@ namespace merkle_tree {
     for (size_t i = 0; i < number_of_streams; i++) {
       CHK_IF_RETURN(cudaStreamDestroy(streams[i]));
     }
-    free(streams);
     if (!tree_config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
     return CHK_LAST();
   }
