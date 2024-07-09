@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use icicle_cuda_runtime::{
     device::check_device,
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
-    memory::{DeviceSlice, HostOrDeviceSlice},
+    memory::HostOrDeviceSlice,
 };
 
 use crate::ntt::IcicleResult;
@@ -55,24 +55,6 @@ impl<'a> SpongeConfig<'a> {
 }
 
 pub trait SpongeHash<PreImage, Image> {
-    fn absorb_many(
-        &self,
-        inputs: &(impl HostOrDeviceSlice<PreImage> + ?Sized),
-        states: &mut DeviceSlice<Image>,
-        number_of_states: usize,
-        input_block_len: usize,
-        cfg: &SpongeConfig,
-    ) -> IcicleResult<()>;
-
-    fn squeeze_many(
-        &self,
-        states: &DeviceSlice<Image>,
-        output: &mut (impl HostOrDeviceSlice<Image> + ?Sized),
-        number_of_states: usize,
-        output_len: usize,
-        cfg: &SpongeConfig,
-    ) -> IcicleResult<()>;
-
     fn hash_many(
         &self,
         inputs: &(impl HostOrDeviceSlice<PreImage> + ?Sized),
@@ -116,31 +98,6 @@ pub(crate) fn sponge_check_input<T>(
         assert_eq!(
             device_id, ctx_device_id,
             "Device ids in inputs and context are different"
-        );
-    }
-    check_device(ctx_device_id);
-}
-
-pub(crate) fn sponge_check_states<T>(
-    states: &DeviceSlice<T>,
-    number_of_states: usize,
-    width: usize,
-    ctx: &DeviceContext,
-) {
-    let states_size_expected = width * number_of_states;
-    if states.len() < states_size_expected {
-        panic!(
-            "states len is {}; but needs to be at least {}",
-            states.len(),
-            states_size_expected,
-        );
-    }
-
-    let ctx_device_id = ctx.device_id;
-    if let Some(device_id) = states.device_id() {
-        assert_eq!(
-            device_id, ctx_device_id,
-            "Device ids in states and context are different"
         );
     }
     check_device(ctx_device_id);

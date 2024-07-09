@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
   uint32_t width = 16;
   uint32_t input_block_len = 8;
   uint32_t digest_elements = 8;
-  uint64_t tree_height = argc > 1 ? atoi(argv[1]) : 26;
+  uint64_t tree_height = argc > 1 ? atoi(argv[1]) : 23;
   uint64_t number_of_leaves = pow(tree_arity, tree_height);
   uint64_t total_number_of_leaves = number_of_leaves * input_block_len;
 
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
   poseidon2::Poseidon2<scalar_t> poseidon(
-    width, poseidon2::MdsType::DEFAULT_MDS, poseidon2::DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
+    width, input_block_len, poseidon2::MdsType::DEFAULT_MDS, poseidon2::DiffusionStrategy::DEFAULT_DIFFUSION, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   /// Use keep_rows to specify how many rows do you want to store
@@ -72,30 +72,30 @@ int main(int argc, char* argv[])
   tree_config.keep_rows = keep_rows;
   tree_config.digest_elements = digest_elements;
   START_TIMER(timer_merkle);
-  babybear_build_poseidon2_merkle_tree(
-    leaves, digests, tree_height, input_block_len, &poseidon, &poseidon, tree_config);
+  babybear_build_merkle_tree(leaves, digests, tree_height, input_block_len, &poseidon, &poseidon, tree_config);
   END_TIMER(timer_merkle, "Merkle tree built: ")
 
   for (int i = 0; i < digests_len; i++) {
-    std::cout << digests[i] << std::endl;
+    // std::cout << digests[i] << std::endl;
   }
 
   // Use this to generate test vectors
   // for (int i = 0; i < digests_len; i++) {
   //   std::cout << "{";
-  //   for (int j = 0; j < 8; j++) {
-  //     std::cout << ((uint64_t*)&digests[i].limbs_storage)[j];
-  //     if (j != 7) { std::cout << ", "; }
+  //   for (int j = 0; j < 1; j++) {
+  //     std::cout << ((uint32_t*)&digests[i].limbs_storage)[j];
   //   }
   //   std::cout << "}," << std::endl;
   // }
 
-  /// These scalars are digests of top-7 rows of a Merkle tree.
-  /// Arity = 2, Tree height = 28, keep_rows = 7
-  /// They are aligned in the following format:
-  ///  L-7      L-6     L-5       L-4       L-3       L-2    L-1
-  /// [0..63, 64..95, 96..111, 112..119, 120..123, 124..125, 126]
-  scalar_t expected[0] = {};
+  scalar_t expected[64] = {
+    {1198029810}, {1114813365}, {241588005},  {735332587},  {201392606},  {623383436},  {60086186},   {1225304654},
+    {1501472115}, {891216097},  {184481194},  {855632748},  {1503541944}, {1483537725}, {1023563730}, {698957505},
+    {1322038939}, {1132881200}, {104782797},  {68847168},   {420051722},  {126069919},  {1350263697}, {1711085395},
+    {1322038939}, {1132881200}, {104782797},  {68847168},   {420051722},  {126069919},  {1350263697}, {1711085395},
+    {1019525203}, {127215304},  {1199733491}, {1473997036}, {548538385},  {364347137},  {570748364},  {426431873},
+    {926562920},  {6278762},    {1894248581}, {1304248433}, {1635020421}, {719342960},  {1373719279}, {700539301},
+    {708916911},  {925660920},  {994927540},  {1925434995}, {208534303},  {69614512},   {1701199215}, {1825115630}};
 
   for (int i = 0; i < digests_len; i++) {
     scalar_t root = digests[i];

@@ -154,7 +154,7 @@ namespace vec_ops {
     E* mat_out,
     uint32_t row_size,
     uint32_t column_size,
-    device_context::DeviceContext& ctx,
+    const device_context::DeviceContext& ctx,
     bool on_device,
     bool is_async)
   {

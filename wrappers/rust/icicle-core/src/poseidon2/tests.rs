@@ -1,7 +1,7 @@
 use crate::hash::SpongeHash;
 use crate::traits::FieldImpl;
 use icicle_cuda_runtime::device_context::DeviceContext;
-use icicle_cuda_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
+use icicle_cuda_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
 use super::{DiffusionStrategy, MdsType, Poseidon2, Poseidon2Impl};
 
@@ -10,7 +10,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     let ctx = DeviceContext::default();
-    Poseidon2::load(width, mds_type, diffusion, &ctx).unwrap()
+    Poseidon2::load(width, width, mds_type, diffusion, &ctx).unwrap()
 }
 
 fn _check_poseidon_hash_many<F: FieldImpl>(width: usize, poseidon: &Poseidon2<F>) -> (F, F)
@@ -44,7 +44,7 @@ where
     let widths = [2, 3, 4, 8, 12, 16, 20, 24];
     let ctx = DeviceContext::default();
     for width in widths {
-        let poseidon = Poseidon2::<F>::load(width, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
+        let poseidon = Poseidon2::<F>::load(width, width, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
 
         _check_poseidon_hash_many(width, &poseidon);
     }
@@ -74,12 +74,8 @@ where
 
     let cfg = poseidon.default_config();
 
-    let mut states = DeviceVec::cuda_malloc(width * batch_size).unwrap();
     poseidon
-        .absorb_many(input_slice, &mut states, batch_size, width, &cfg)
-        .unwrap();
-    states
-        .copy_to_host(output_slice)
+        .hash_many(input_slice, output_slice, batch_size, width, width, &cfg)
         .unwrap();
 
     for (i, val) in output_slice

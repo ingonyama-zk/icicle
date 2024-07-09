@@ -72,6 +72,7 @@ COMMON_INCLUDES = [
     '#include <cuda_runtime.h>',
     '#include "gpu-utils/device_context.cuh"',
     '#include "merkle-tree/merkle.cuh"',
+    '#include "matrix/matrix.cuh"'
 ]
 
 WARN_TEXT = """\

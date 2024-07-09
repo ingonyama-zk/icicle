@@ -2,10 +2,27 @@
 #ifndef POSEIDON2_KERNELS_H
 #define POSEIDON2_KERNELS_H
 
+#include "utils/utils.h"
+#include "hash/hash.cuh"
+#include "matrix/matrix.cuh"
 #include "poseidon2/constants.cuh"
 #include "gpu-utils/modifiers.cuh"
 
+using matrix::Matrix;
+
 namespace poseidon2 {
+  static DEVICE_INLINE unsigned int d_next_pow_of_two(unsigned int v)
+  {
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+  }
+
   template <typename S>
   DEVICE_INLINE S sbox_el(S element, const int alpha)
   {
@@ -180,17 +197,8 @@ namespace poseidon2 {
   }
 
   template <typename S, int T>
-  __global__ void poseidon2_permutation_kernel(
-    const S* states, S* states_out, unsigned int number_of_states, const Poseidon2Constants<S> constants)
+  __device__ void permute_state(S state[T], const Poseidon2Constants<S>& constants)
   {
-    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (idx >= number_of_states) { return; }
-
-    S state[T];
-    UNROLL
-    for (int i = 0; i < T; i++) {
-      state[i] = states[idx * T + i];
-    }
     unsigned int rn;
 
     mds_light<S, T>(state, constants.mds_type);
@@ -217,10 +225,141 @@ namespace poseidon2 {
       mds_light<S, T>(state, constants.mds_type);
       rc_offset += T;
     }
+  }
+
+  template <typename S, int T>
+  __global__ void permutation_kernel(
+    const S* states, S* states_out, unsigned int number_of_states, const Poseidon2Constants<S> constants)
+  {
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= number_of_states) { return; }
+
+    S state[T];
+    UNROLL
+    for (int i = 0; i < T; i++) {
+      state[i] = states[idx * T + i];
+    }
+
+    permute_state<S, T>(state, constants);
 
     UNROLL
     for (int i = 0; i < T; i++) {
       states_out[idx * T + i] = state[i];
+    }
+  }
+
+  template <typename S, int T>
+  __global__ void hash_many_kernel(
+    const S* input,
+    S* output,
+    uint64_t number_of_states,
+    unsigned int input_len,
+    unsigned int output_len,
+    const Poseidon2Constants<S> constants)
+  {
+    uint64_t idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= number_of_states) { return; }
+
+    S state[T] = {0};
+    UNROLL
+    for (int i = 0; i < input_len; i++) {
+      state[i] = input[idx * input_len + i];
+    }
+
+    permute_state<S, T>(state, constants);
+
+    UNROLL
+    for (int i = 0; i < output_len; i++) {
+      output[idx * output_len + i] = state[i];
+    }
+  }
+
+  template <typename S, int T>
+  __device__ void absorb_2d_state(
+    const Matrix<S>* inputs,
+    S state[T],
+    unsigned int number_of_inputs,
+    unsigned int rate,
+    uint64_t row_idx,
+    const Poseidon2Constants<S>& constants)
+  {
+    unsigned int index = 0;
+    for (int i = 0; i < number_of_inputs; i++) {
+      const Matrix<S>* input = inputs + i;
+      for (int j = 0; j < input->width; j++) {
+        state[index] = input->values[row_idx * input->width + j];
+        index++;
+        if (index == rate) {
+          permute_state<S, T>(state, constants);
+          index = 0;
+        }
+      }
+    }
+
+    if (index) { permute_state<S, T>(state, constants); }
+  }
+
+  template <typename S, int T>
+  __global__ void hash_2d_kernel(
+    const Matrix<S>* inputs,
+    S* output,
+    unsigned int number_of_inputs,
+    unsigned int rate,
+    unsigned int output_len,
+    const Poseidon2Constants<S> constants)
+  {
+    uint64_t idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= inputs[0].height) { return; }
+
+    S state[T] = {0};
+
+    absorb_2d_state<S, T>(inputs, state, number_of_inputs, rate, idx, constants);
+
+    UNROLL
+    for (int i = 0; i < output_len; i++) {
+      output[idx * output_len + i] = state[i];
+    }
+  }
+
+  template <typename S, int T>
+  __global__ void compress_and_inject_kernel(
+    const Matrix<S>* matrices_to_inject,
+    unsigned int number_of_inputs,
+    const S* prev_layer,
+    S* next_layer,
+    unsigned int rate,
+    unsigned int digest_elements,
+    const Poseidon2Constants<S> constants)
+  {
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    uint64_t number_of_rows = d_next_pow_of_two(matrices_to_inject[0].height);
+    if (idx >= number_of_rows) { return; }
+
+    size_t next_layer_len = matrices_to_inject[0].height;
+    S state_to_compress[T] = {S::zero()};
+
+    for (int i = 0; i < digest_elements * 2; i++) {
+      state_to_compress[i] = prev_layer[idx * 2 * digest_elements + i];
+    }
+    permute_state<S, T>(state_to_compress, constants);
+
+    S injected_state[T] = {S::zero()};
+    if (idx < next_layer_len) {
+      absorb_2d_state<S, T>(matrices_to_inject, injected_state, number_of_inputs, rate, idx, constants);
+
+      for (int i = 0; i < digest_elements; i++) {
+        injected_state[digest_elements + i] = injected_state[i];
+        injected_state[i] = state_to_compress[i];
+      }
+    } else {
+      for (int i = 0; i < digest_elements; i++) {
+        injected_state[i] = state_to_compress[i];
+      }
+    }
+    permute_state<S, T>(injected_state, constants);
+
+    for (int i = 0; i < digest_elements; i++) {
+      next_layer[idx * digest_elements + i] = injected_state[i];
     }
   }
 } // namespace poseidon2

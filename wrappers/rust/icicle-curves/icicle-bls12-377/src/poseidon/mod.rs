@@ -9,7 +9,7 @@ use icicle_core::poseidon::{PoseidonHandle, PoseidonImpl};
 use icicle_core::traits::IcicleResultWrap;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use core::mem::MaybeUninit;
 
