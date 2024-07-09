@@ -42,22 +42,6 @@ extern "C" cudaError_t babybear_poseidon2_load_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t babybear_poseidon2_absorb_many_cuda(
-  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
-  const babybear::scalar_t* inputs,
-  babybear::scalar_t* states,
-  unsigned int number_of_states,
-  unsigned int input_block_len,
-  hash::SpongeConfig& cfg);
-
-extern "C" cudaError_t babybear_poseidon2_squeeze_many_cuda(
-  const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
-  const babybear::scalar_t* states,
-  babybear::scalar_t* output,
-  unsigned int number_of_states,
-  unsigned int output_len,
-  hash::SpongeConfig& cfg);
-
 extern "C" cudaError_t babybear_poseidon2_hash_many_cuda(
   const poseidon2::Poseidon2<babybear::scalar_t>* poseidon,
   const babybear::scalar_t* inputs,

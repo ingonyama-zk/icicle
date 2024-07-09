@@ -90,22 +90,6 @@ extern "C" cudaError_t bn254_poseidon2_load_cuda(
   device_context::DeviceContext& ctx
 );
 
-extern "C" cudaError_t bn254_poseidon2_absorb_many_cuda(
-  const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
-  const bn254::scalar_t* inputs,
-  bn254::scalar_t* states,
-  unsigned int number_of_states,
-  unsigned int input_block_len,
-  hash::SpongeConfig& cfg);
-
-extern "C" cudaError_t bn254_poseidon2_squeeze_many_cuda(
-  const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
-  const bn254::scalar_t* states,
-  bn254::scalar_t* output,
-  unsigned int number_of_states,
-  unsigned int output_len,
-  hash::SpongeConfig& cfg);
-
 extern "C" cudaError_t bn254_poseidon2_hash_many_cuda(
   const poseidon2::Poseidon2<bn254::scalar_t>* poseidon,
   const bn254::scalar_t* inputs,
@@ -152,22 +136,6 @@ extern "C" cudaError_t bn254_poseidon_load_cuda(
   poseidon::Poseidon<bn254::scalar_t>** poseidon,
   unsigned int arity,
   device_context::DeviceContext& ctx);
-
-extern "C" cudaError_t bn254_poseidon_absorb_many_cuda(
-  const poseidon::Poseidon<bn254::scalar_t>* poseidon,
-  const bn254::scalar_t* inputs,
-  bn254::scalar_t* states,
-  unsigned int number_of_states,
-  unsigned int input_block_len,
-  hash::SpongeConfig& cfg);
-
-extern "C" cudaError_t bn254_poseidon_squeeze_many_cuda(
-  const poseidon::Poseidon<bn254::scalar_t>* poseidon,
-  const bn254::scalar_t* states,
-  bn254::scalar_t* output,
-  unsigned int number_of_states,
-  unsigned int output_len,
-  hash::SpongeConfig& cfg);
 
 extern "C" cudaError_t bn254_poseidon_hash_many_cuda(
   const poseidon::Poseidon<bn254::scalar_t>* poseidon,

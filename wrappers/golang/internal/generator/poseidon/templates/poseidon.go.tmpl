@@ -58,34 +58,6 @@ func Load(arity uint32, ctx *cr.DeviceContext) (*Poseidon, core.IcicleError) {
 	return &p, err
 }
 
-func (poseidon *Poseidon) AbsorbMany(inputs core.HostOrDeviceSlice, states core.DeviceSlice, numberOfStates uint32, inputBlockLen uint32, cfg *core.SpongeConfig) core.IcicleError {
-	core.SpongeInputCheck(inputs, numberOfStates, inputBlockLen, cfg.InputRate, &cfg.Ctx)
-	core.SpongeStatesCheck(states, numberOfStates, poseidon.width, &cfg.Ctx)
-
-	cInputs := (*C.scalar_t)(inputs.AsUnsafePointer())
-	cStates := (*C.scalar_t)(states.AsUnsafePointer())
-	cNumberOfStates := (C.uint)(numberOfStates)
-	cInputBlockLen := (C.uint)(inputBlockLen)
-	cCfg := (*C.SpongeConfig)(unsafe.Pointer(cfg))
-	__ret := C.{{.Field}}_poseidon_absorb_many_cuda(poseidon.handle, cInputs, cStates, cNumberOfStates, cInputBlockLen, cCfg)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
-}
-
-func (poseidon *Poseidon) SqueezeMany(states core.DeviceSlice, output core.HostOrDeviceSlice, numberOfStates uint32, outputLen uint32, cfg *core.SpongeConfig) core.IcicleError {
-	core.SpongeOutputsCheck(output, numberOfStates, outputLen, poseidon.width, false, &cfg.Ctx)
-	core.SpongeStatesCheck(states, numberOfStates, poseidon.width, &cfg.Ctx)
-
-	cStates := (*C.scalar_t)(states.AsUnsafePointer())
-	cOutput := (*C.scalar_t)(output.AsUnsafePointer())
-	cNumberOfStates := (C.uint)(numberOfStates)
-	cOutputLen := (C.uint)(outputLen)
-	cCfg := (*C.SpongeConfig)(unsafe.Pointer(cfg))
-	__ret := C.{{.Field}}_poseidon_absorb_many_cuda(poseidon.handle, cStates, cOutput, cNumberOfStates, cOutputLen, cCfg)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
-}
-
 func (poseidon *Poseidon) HashMany(inputs core.HostOrDeviceSlice, output core.HostOrDeviceSlice, numberOfStates uint32, inputBlockLen uint32, outputLen uint32, cfg *core.SpongeConfig) core.IcicleError {
 	core.SpongeInputCheck(inputs, numberOfStates, inputBlockLen, cfg.InputRate, &cfg.Ctx)
 	core.SpongeOutputsCheck(output, numberOfStates, outputLen, poseidon.width, false, &cfg.Ctx)

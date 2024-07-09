@@ -33,22 +33,6 @@ cudaError_t {{.Field}}_poseidon_load_cuda(
   unsigned int arity,
   DeviceContext* ctx);
 
-cudaError_t {{.Field}}_poseidon_absorb_many_cuda(
-  const PoseidonInst* poseidon,
-  const scalar_t* inputs,
-  scalar_t* states,
-  unsigned int number_of_states,
-  unsigned int input_block_len,
-  SpongeConfig* cfg);
-
-cudaError_t {{.Field}}_poseidon_squeeze_many_cuda(
-  const PoseidonInst* poseidon,
-  const scalar_t* states,
-  scalar_t* output,
-  unsigned int number_of_states,
-  unsigned int output_len,
-  SpongeConfig* cfg);
-
 cudaError_t {{.Field}}_poseidon_hash_many_cuda(
   const PoseidonInst* poseidon,
   const scalar_t* inputs,

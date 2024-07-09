@@ -16,22 +16,6 @@ extern "C" cudaError_t ${FIELD}_poseidon_load_cuda(
   unsigned int arity,
   device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t ${FIELD}_poseidon_absorb_many_cuda(
-  const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon,
-  const ${FIELD}::scalar_t* inputs,
-  ${FIELD}::scalar_t* states,
-  unsigned int number_of_states,
-  unsigned int input_block_len,
-  hash::SpongeConfig& cfg);
-
-extern "C" cudaError_t ${FIELD}_poseidon_squeeze_many_cuda(
-  const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon,
-  const ${FIELD}::scalar_t* states,
-  ${FIELD}::scalar_t* output,
-  unsigned int number_of_states,
-  unsigned int output_len,
-  hash::SpongeConfig& cfg);
-
 extern "C" cudaError_t ${FIELD}_poseidon_hash_many_cuda(
   const poseidon::Poseidon<${FIELD}::scalar_t>* poseidon,
   const ${FIELD}::scalar_t* inputs,

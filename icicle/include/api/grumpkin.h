@@ -74,22 +74,6 @@ extern "C" cudaError_t grumpkin_poseidon_load_cuda(
   unsigned int arity,
   device_context::DeviceContext& ctx);
 
-extern "C" cudaError_t grumpkin_poseidon_absorb_many_cuda(
-  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
-  const grumpkin::scalar_t* inputs,
-  grumpkin::scalar_t* states,
-  unsigned int number_of_states,
-  unsigned int input_block_len,
-  hash::SpongeConfig& cfg);
-
-extern "C" cudaError_t grumpkin_poseidon_squeeze_many_cuda(
-  const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
-  const grumpkin::scalar_t* states,
-  grumpkin::scalar_t* output,
-  unsigned int number_of_states,
-  unsigned int output_len,
-  hash::SpongeConfig& cfg);
-
 extern "C" cudaError_t grumpkin_poseidon_hash_many_cuda(
   const poseidon::Poseidon<grumpkin::scalar_t>* poseidon,
   const grumpkin::scalar_t* inputs,
