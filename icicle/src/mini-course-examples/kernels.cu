@@ -201,7 +201,7 @@ __global__ void naive_transpose_read(T *in, T *out, int row_length){
 
 template <class T>
 __global__ void shmem_transpose(T *in, T *out, int row_length){
-  __shared__ T shmem[16][17];
+  __shared__ T shmem[16][16];
   int tid = blockDim.x*blockIdx.x + threadIdx.x;
   if (tid >= row_length * row_length) return;
   int shmem_col_id = threadIdx.x / 16;
