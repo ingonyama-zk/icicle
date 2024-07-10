@@ -917,6 +917,43 @@ namespace msm {
   } // namespace
 
   template <typename S, typename A, typename P>
+  cudaError_t chunked_msm(const S* scalars, const A* points, int msm_size, int nof_chunks, MSMConfig& config, P* result){
+    cudaStream_t transfer_stream;
+    cudaStreamCreate(&transfer_stream);
+    int scalar_chunk_size = (msm_size + nof_chunks - 1) / nof_chunks;
+    int points_chunk_size = scalar_chunk_size * config.precompute_factor;
+    A* points_d, points_h;
+    S* scalars_d, scalars_h;
+    P* buckets_d;
+    if (!config.are_scalars_on_device) cudaMalloc(&scalars_d, sizeof(test_scalar) * scalar_chunk_size*2);
+    if (!config.are_points_on_device) cudaMalloc(&points_d, sizeof(test_affine) * points_chunk_size*2);
+    for (int i = 0; i < nof_chunks; i++)
+    {
+      bool is_last_iter = i == nof_chunks - 1; 
+      int sub_msm_size = is_last_iter? msm_size % scalar_chunk_size : scalar_chunk_size;
+      if (sub_msm_size == 0) sub_msm_size = scalar_chunk_size;
+      config.init_buckets = i == 0;
+      config.return_buckets = !is_last_iter;
+      config.are_scalars_on_device = i;
+      config.are_points_on_device = i;
+      // config.points_size = sub_msm_size;
+      // printf("sub_msm_size %d\n", sub_msm_size);
+      msm::msm<test_scalar, test_affine, test_projective>(
+      (config.are_scalars_on_device? scalars_d : scalars) + (i%2)*scalar_chunk_size, precomp_factor > 1 ? (config.are_points_on_device? points_precomputed_d : points_precomputed) + (i%2)*chunk_size*precomp_factor :  (config.are_points_on_device? points_d : points) + (i%2)*chunk_size, sub_msm_size, config, result, &buckets_d);
+      if (is_last_iter) break;
+      if (!config.are_scalars_on_device) cudaMemcpyAsync(scalars_d + ((i+1)%2)*chunk_size, scalars + (i+1)*chunk_size, sizeof(test_scalar) * sub_msm_size, cudaMemcpyHostToDevice, transfer_stream);
+      if (!config.are_points_on_device) cudaMemcpyAsync(precomp_factor > 1 ? points_precomputed_d + ((i+1)%2)*chunk_size*precomp_factor : points_d + ((i+1)%2)*chunk_size, precomp_factor > 1 ? points_precomputed + (i+1)*chunk_size*precomp_factor : points + (i+1)*chunk_size, sizeof(test_affine) * sub_msm_size * config.precompute_factor, cudaMemcpyHostToDevice, transfer_stream);
+      cudaEvent_t finish_transfer;
+      cudaEventCreateWithFlags(&finish_transfer, cudaEventDisableTiming);
+      cudaEventRecord(finish_transfer, transfer_stream);
+      cudaStreamWaitEvent(config.ctx.stream, finish_transfer);
+      cudaEventDestroy(finish_transfer);
+      // printf("finished iter %d\n", i);
+    }
+    cudaStreamDestroy(transfer_stream);
+  }
+
+  template <typename S, typename A, typename P>
   cudaError_t msm(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results, P** buckets)
   {
     const int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
