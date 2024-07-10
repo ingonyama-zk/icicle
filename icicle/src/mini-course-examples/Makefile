@@ -24,3 +24,12 @@ build_mem:
 run_mem:
 	make build_mem
 	work/mem
+
+
+build_transpose:
+	mkdir -p work
+	nvcc -lineinfo -o work/transpose -std=c++17 -arch=sm_80 -I. -I../../include transpose_test.cu
+
+run_transpose:
+	make build_transpose
+	work/transpose

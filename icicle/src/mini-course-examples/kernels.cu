@@ -117,17 +117,6 @@ __global__ void bucket_acc_reg(T* buckets, unsigned* indices, unsigned* sizes, u
 
 // #define NOF_TH 32*64
 
-template <class T>
-__global__ void simple_memory_copy(T* buckets1, T* buckets2, unsigned nof_buckets){
-  int tid = blockDim.x*blockIdx.x + threadIdx.x;
-  if (tid >= nof_buckets/2) return;
-    // buckets2[8*tid+i] = buckets1[8*tid+i];
-    // buckets2[tid] = buckets1[tid];
-    buckets2[tid] = buckets1[tid];
-    buckets2[tid+nof_buckets/2] = buckets1[tid+nof_buckets/2];
-}
-
-
 
 template <class T, int SIZE_T>
 __global__ void device_memory_copy(void* arr1_raw, void* arr2_raw, unsigned size){
@@ -157,7 +146,7 @@ __global__ void segmented_memory_copy(void* arr1_raw, void* arr2_raw, unsigned s
 
 
 template <class T, int SIZE_T>
-__global__ void multi_memory_copy(void* arr1_raw, void* arr2_raw, unsigned size, unsigned nof_elements_per_thread){
+__global__ void multi_memory_copy1(void* arr1_raw, void* arr2_raw, unsigned size, unsigned nof_elements_per_thread){
   int tid = blockDim.x*blockIdx.x + threadIdx.x;
   int nof_elements = size/SIZE_T;
   int segment_length = nof_elements / nof_elements_per_thread;
@@ -171,7 +160,7 @@ __global__ void multi_memory_copy(void* arr1_raw, void* arr2_raw, unsigned size,
 }
 
 template <class T, int SIZE_T>
-__global__ void multi_memory_copy_bad(void* arr1_raw, void* arr2_raw, unsigned size, unsigned nof_elements_per_thread){
+__global__ void multi_memory_copy2(void* arr1_raw, void* arr2_raw, unsigned size, unsigned nof_elements_per_thread){
   int tid = blockDim.x*blockIdx.x + threadIdx.x;
   int nof_elements = size/SIZE_T;
   int nof_threads = nof_elements / nof_elements_per_thread;
@@ -182,4 +171,47 @@ __global__ void multi_memory_copy_bad(void* arr1_raw, void* arr2_raw, unsigned s
   {
     arr2[tid*nof_elements_per_thread + i] = arr1[tid*nof_elements_per_thread + i];
   }
+}
+
+template <class T>
+__global__ void simple_memory_copy(T* in, T* out, unsigned size){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= size) return;
+  out[tid] = in[tid];
+}
+
+template <class T>
+__global__ void naive_transpose_write(T *in, T *out, int row_length){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= row_length * row_length) return;
+  int row_id = tid / row_length;
+  int col_id = tid % row_length;
+  out[col_id * row_length + row_id] = in[tid];
+}
+
+template <class T>
+__global__ void naive_transpose_read(T *in, T *out, int row_length){
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= row_length * row_length) return;
+  int row_id = tid / row_length;
+  int col_id = tid % row_length;
+  out[tid] = in[col_id * row_length + row_id];
+}
+
+
+template <class T>
+__global__ void shmem_transpose(T *in, T *out, int row_length){
+  __shared__ T shmem[16][17];
+  int tid = blockDim.x*blockIdx.x + threadIdx.x;
+  if (tid >= row_length * row_length) return;
+  int shmem_col_id = threadIdx.x / 16;
+  int shmem_row_id = threadIdx.x % 16;
+  int blocks_per_row = row_length / 16;
+  int block_row_id = blockIdx.x / blocks_per_row;
+  int block_col_id = blockIdx.x % blocks_per_row;
+  // shmem[shmem_col_id][shmem_row_id] = in[block_row_id*row_length*16 + block_col_id*16 + shmem_col_id*row_length + shmem_row_id];
+  shmem[shmem_row_id][shmem_col_id] = in[block_row_id*row_length*16 + block_col_id*16 + shmem_col_id*row_length + shmem_row_id];
+  __syncthreads();
+  // out[block_col_id*row_length*16 + block_row_id*16 + shmem_col_id*row_length + shmem_row_id] = shmem[shmem_row_id][shmem_col_id];
+  out[block_col_id*row_length*16 + block_row_id*16 + shmem_col_id*row_length + shmem_row_id] = shmem[shmem_col_id][shmem_row_id];
 }
