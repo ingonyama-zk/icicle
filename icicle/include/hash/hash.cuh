@@ -16,10 +16,10 @@ using matrix::Matrix;
 namespace hash {
 
   /**
-   * @struct SpongeConfig
-   * Encodes sponge hash operations parameters.
+   * @struct HashConfig
+   * Encodes hash operations parameters.
    */
-  struct SpongeConfig {
+  struct HashConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
     bool are_inputs_on_device; /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool
@@ -31,14 +31,14 @@ namespace hash {
   };
 
   /**
-   * A function that returns the default value of [SpongeConfig](@ref SpongeConfig) for the [SpongeHasher](@ref
-   * SpongeHasher) class.
-   * @return Default value of [SpongeConfig](@ref SpongeConfig).
+   * A function that returns the default value of [HashConfig](@ref HashConfig) for the [Hasher](@ref
+   * Hasher) class.
+   * @return Default value of [HashConfig](@ref HashConfig).
    */
-  static SpongeConfig
-  default_sponge_config(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
+  static HashConfig
+  default_hash_config(const device_context::DeviceContext& ctx = device_context::get_default_device_context())
   {
-    SpongeConfig config = {
+    HashConfig config = {
       ctx,   // ctx
       false, // are_inputs_on_device
       false, // are_outputs_on_device
@@ -48,16 +48,15 @@ namespace hash {
   }
 
   /**
-   * @class SpongeHasher
+   * @class Hasher
    *
-   * Can be inherited by a cryptographic permutation function to create a
-   * [sponge](https://en.wikipedia.org/wiki/Sponge_function) construction out of it.
+   * An interface containing methods for hashing
    *
    * @tparam PreImage type of inputs elements
    * @tparam Image type of state elements. Also used to describe the type of hash output
    */
   template <typename PreImage, typename Image>
-  class SpongeHasher
+  class Hasher
   {
   public:
     /// @brief the width of permutation state
@@ -72,7 +71,7 @@ namespace hash {
     /// @brief start squeezing from this offset. Used with domain separation.
     const unsigned int offset;
 
-    SpongeHasher(unsigned int width, unsigned int preimage_max_length, unsigned int rate, unsigned int offset)
+    Hasher(unsigned int width, unsigned int preimage_max_length, unsigned int rate, unsigned int offset)
         : width(width), preimage_max_length(preimage_max_length), rate(rate), offset(offset)
     {
       assert(
@@ -105,7 +104,6 @@ namespace hash {
       return cudaError_t::cudaSuccess;
     }
 
-    /// @brief Permute aligned input and do squeeze
     /// @param input pointer to input allocated on-device
     /// @param out pointer to output allocated on-device
     cudaError_t compress_many(
@@ -113,7 +111,7 @@ namespace hash {
       Image* out,
       unsigned int number_of_states,
       unsigned int output_len,
-      const SpongeConfig& cfg) const
+      const HashConfig& cfg) const
     {
       return hash_many((const PreImage*)input, out, number_of_states, width, output_len, cfg);
     }
@@ -136,7 +134,7 @@ namespace hash {
       unsigned int number_of_states,
       unsigned int input_len,
       unsigned int output_len,
-      const SpongeConfig& cfg) const
+      const HashConfig& cfg) const
     {
       const PreImage* d_input;
       PreImage* d_alloc_input;

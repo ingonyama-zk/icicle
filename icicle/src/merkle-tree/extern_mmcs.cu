@@ -17,8 +17,8 @@ namespace merkle_tree {
     const Matrix<scalar_t>* leaves,
     unsigned int number_of_inputs,
     scalar_t* digests,
-    const hash::SpongeHasher<scalar_t, scalar_t>* hasher,
-    const hash::SpongeHasher<scalar_t, scalar_t>* compression,
+    const hash::Hasher<scalar_t, scalar_t>* hasher,
+    const hash::Hasher<scalar_t, scalar_t>* compression,
     const TreeBuilderConfig& tree_config)
   {
     return mmcs_commit<scalar_t, scalar_t>(leaves, number_of_inputs, digests, *hasher, *compression, tree_config);

@@ -4,7 +4,7 @@
 
 ```rust
 use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
-use icicle_hash::keccak::{keccak256, KeccakConfig};
+use icicle_hash::keccak::{keccak256, HashConfig};
 use rand::{self, Rng};
 
 fn main() {
@@ -14,7 +14,7 @@ fn main() {
     let input = HostSlice::<u8>::from_slice(initial_data.as_slice());
     let mut output = DeviceVec::<u8>::cuda_malloc(32).unwrap();
 
-    let mut config = KeccakConfig::default();
+    let mut config = HashConfig::default();
     keccak256(input, initial_data.len() as i32, 1, &mut output[..], &mut config).expect("Failed to execute keccak256 hashing");
 
     let mut output_host = vec![0_u8; 32];
@@ -32,7 +32,7 @@ pub fn keccak256(
     input_block_size: i32,
     number_of_blocks: i32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: &mut KeccakConfig,
+    config: &mut HashConfig,
 ) -> IcicleResult<()>
 
 pub fn keccak512(
@@ -40,7 +40,7 @@ pub fn keccak512(
     input_block_size: i32,
     number_of_blocks: i32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: &mut KeccakConfig,
+    config: &mut HashConfig,
 ) -> IcicleResult<()> 
 ```
 
@@ -50,18 +50,18 @@ pub fn keccak512(
 - **`input_block_size`**: An integer specifying the size of the input data for a single hash.
 - **`number_of_blocks`**: An integer specifying the number of results in the hash batch.
 - **`output`**: A slice where the resulting hash will be stored. This slice can be in host or device memory.
-- **`config`**: A pointer to a `KeccakConfig` object, which contains various configuration options for the Keccak256 operation.
+- **`config`**: A pointer to a `HashConfig` object, which contains various configuration options for the Keccak256 operation.
 
 ### Return Value
 
 - **`IcicleResult`**: Returns a CUDA error code indicating the success or failure of the Keccak256/Keccak512 operation.
 
-## KeccakConfig
+## HashConfig
 
-The `KeccakConfig` structure holds configuration parameters for the Keccak256/Keccak512 operation, allowing customization of its behavior to optimize performance based on the specifics of the operation or the underlying hardware.
+The `HashConfig` structure holds configuration parameters for the Keccak256/Keccak512 operation, allowing customization of its behavior to optimize performance based on the specifics of the operation or the underlying hardware.
 
 ```rust
-pub struct KeccakConfig<'a> {
+pub struct HashConfig<'a> {
     pub ctx: DeviceContext<'a>,
     pub are_inputs_on_device: bool,
     pub are_outputs_on_device: bool,
@@ -81,7 +81,7 @@ pub struct KeccakConfig<'a> {
 Example initialization with default settings:
 
 ```rust
-let default_config = KeccakConfig::default();
+let default_config = HashConfig::default();
 ```
 
 Customizing the configuration:

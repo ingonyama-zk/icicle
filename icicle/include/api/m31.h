@@ -19,16 +19,16 @@ extern "C" cudaError_t m31_build_merkle_tree(
   m31::scalar_t* digests,
   unsigned int height,
   unsigned int input_block_len, 
-  const hash::SpongeHasher<m31::scalar_t, m31::scalar_t>* compression,
-  const hash::SpongeHasher<m31::scalar_t, m31::scalar_t>* bottom_layer,
+  const hash::Hasher<m31::scalar_t, m31::scalar_t>* compression,
+  const hash::Hasher<m31::scalar_t, m31::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
   extern "C" cudaError_t m31_mmcs_commit_cuda(
     const matrix::Matrix<m31::scalar_t>* leaves,
     unsigned int number_of_inputs,
     m31::scalar_t* digests,
-    const hash::SpongeHasher<m31::scalar_t, m31::scalar_t>* hasher,
-    const hash::SpongeHasher<m31::scalar_t, m31::scalar_t>* compression,
+    const hash::Hasher<m31::scalar_t, m31::scalar_t>* hasher,
+    const hash::Hasher<m31::scalar_t, m31::scalar_t>* compression,
     const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t m31_mul_cuda(

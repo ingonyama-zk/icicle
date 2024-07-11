@@ -23,7 +23,7 @@ using matrix::Matrix;
  */
 namespace poseidon2 {
   template <typename S>
-  class Poseidon2 : public hash::SpongeHasher<S, S>
+  class Poseidon2 : public hash::Hasher<S, S>
   {
     static const int POSEIDON_BLOCK_SIZE = 32;
 
@@ -144,7 +144,7 @@ namespace poseidon2 {
       MdsType mds_type,
       DiffusionStrategy diffusion,
       device_context::DeviceContext& ctx)
-        : hash::SpongeHasher<S, S>(width, width, rate, 0), device_id(ctx.device_id)
+        : hash::Hasher<S, S>(width, width, rate, 0), device_id(ctx.device_id)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(create_poseidon2_constants(
@@ -159,7 +159,7 @@ namespace poseidon2 {
       MdsType mds_type,
       DiffusionStrategy diffusion,
       device_context::DeviceContext& ctx)
-        : hash::SpongeHasher<S, S>(width, width, rate, 0), device_id(ctx.device_id)
+        : hash::Hasher<S, S>(width, width, rate, 0), device_id(ctx.device_id)
     {
       Poseidon2Constants<S> constants;
       CHK_STICKY(init_poseidon2_constants(width, mds_type, diffusion, ctx, &constants));

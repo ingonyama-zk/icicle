@@ -15,8 +15,8 @@ namespace merkle_tree {
     scalar_t* digests,
     unsigned int height,
     unsigned int input_block_len,
-    const hash::SpongeHasher<scalar_t, scalar_t>* compression,
-    const hash::SpongeHasher<scalar_t, scalar_t>* bottom_layer,
+    const hash::Hasher<scalar_t, scalar_t>* compression,
+    const hash::Hasher<scalar_t, scalar_t>* bottom_layer,
     const TreeBuilderConfig& tree_config)
   {
     return build_merkle_tree<scalar_t, scalar_t>(

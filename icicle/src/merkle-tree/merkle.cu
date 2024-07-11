@@ -78,37 +78,37 @@ namespace merkle_tree {
   template <typename L, typename D>
   cudaError_t build_merkle_subtree(
     const L* leaves,
-    D* states,
+    L* d_leaves,
     D* digests,
     size_t subtree_idx,
     size_t subtree_height,
-    L* big_tree_digests,
+    D* big_tree_digests,
     size_t start_segment_size,
     size_t start_segment_offset,
     uint64_t keep_rows,
     uint64_t input_block_len,
-    const SpongeHasher<L, D>& bottom_layer,
-    const SpongeHasher<L, D>& compression,
+    const Hasher<L, D>& bottom_layer,
+    const Hasher<L, D>& compression,
     const TreeBuilderConfig& tree_config,
     device_context::DeviceContext& ctx)
   {
     uint64_t arity = tree_config.arity;
 
-    SpongeConfig sponge_config = default_sponge_config(ctx);
-    sponge_config.are_inputs_on_device = true;
-    sponge_config.are_outputs_on_device = true;
-    sponge_config.is_async = true;
+    HashConfig hash_config = default_hash_config(ctx);
+    hash_config.are_inputs_on_device = true;
+    hash_config.are_outputs_on_device = true;
+    hash_config.is_async = true;
 
     size_t bottom_layer_states = pow(arity, subtree_height);
 
     if (!tree_config.are_inputs_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(
-        states, leaves, bottom_layer_states * input_block_len * sizeof(L), cudaMemcpyHostToDevice, ctx.stream));
+        d_leaves, leaves, bottom_layer_states * input_block_len * sizeof(L), cudaMemcpyHostToDevice, ctx.stream));
     }
 
     bottom_layer.hash_many(
-      tree_config.are_inputs_on_device ? leaves : states, digests, bottom_layer_states, input_block_len,
-      tree_config.digest_elements, sponge_config);
+      tree_config.are_inputs_on_device ? leaves : d_leaves, digests, bottom_layer_states, input_block_len,
+      tree_config.digest_elements, hash_config);
 
     uint64_t number_of_states = bottom_layer_states / arity;
     size_t segment_size = start_segment_size;
@@ -123,21 +123,24 @@ namespace merkle_tree {
     }
     segment_size /= arity;
     subtree_height--;
-    swap<D>(&digests, &states);
+
+    D* prev_layer = digests;
+    D* next_layer = (D*)d_leaves;
 
     while (number_of_states > 0) {
-      CHK_IF_RETURN(
-        compression.compress_many(states, digests, number_of_states, tree_config.digest_elements, sponge_config));
+      CHK_IF_RETURN(compression.run_hash_many_kernel(
+        (L*)prev_layer, next_layer, number_of_states, tree_config.digest_elements * tree_config.arity,
+        tree_config.digest_elements, hash_config.ctx));
 
       if (!keep_rows || subtree_height < keep_rows) {
         D* digests_with_offset =
           big_tree_digests + segment_offset + subtree_idx * number_of_states * tree_config.digest_elements;
         CHK_IF_RETURN(cudaMemcpyAsync(
-          digests_with_offset, digests, number_of_states * tree_config.digest_elements * sizeof(D),
+          digests_with_offset, next_layer, number_of_states * tree_config.digest_elements * sizeof(D),
           cudaMemcpyDeviceToHost, ctx.stream));
         segment_offset += segment_size;
       }
-      if (number_of_states > 1) { swap<D>(&digests, &states); }
+      swap<D>(&prev_layer, &next_layer);
       segment_size /= arity;
       subtree_height--;
       number_of_states /= arity;
@@ -152,17 +155,13 @@ namespace merkle_tree {
     D* digests,
     unsigned int height,
     unsigned int input_block_len,
-    const SpongeHasher<L, D>& compression,
-    const SpongeHasher<L, D>& bottom_layer,
+    const Hasher<L, D>& compression,
+    const Hasher<L, D>& bottom_layer,
     const TreeBuilderConfig& tree_config)
   {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = tree_config.ctx.stream;
 
-    if (input_block_len * sizeof(L) > bottom_layer.rate * sizeof(D))
-      THROW_ICICLE_ERR(
-        IcicleError_t::InvalidArgument,
-        "Sponge construction at the bottom of the tree doesn't support inputs bigger than hash rate");
     if (compression.preimage_max_length < tree_config.arity * tree_config.digest_elements)
       THROW_ICICLE_ERR(
         IcicleError_t::InvalidArgument,
@@ -176,24 +175,21 @@ namespace merkle_tree {
     uint64_t number_of_subtrees = 1;
     uint64_t subtree_height = height;
     uint64_t subtree_bottom_layer_states = number_of_bottom_layer_states;
-    uint64_t subtree_states_size = subtree_bottom_layer_states * bottom_layer.width;
+    uint64_t subtree_leaves_size = subtree_bottom_layer_states * input_block_len;
+    uint64_t subtree_digests_size = subtree_bottom_layer_states * tree_config.digest_elements;
 
-    uint64_t subtree_digests_size;
-    if (compression.width != compression.preimage_max_length) {
-      // In that case, the states on layer 1 will require extending the states by (width / preimage_max_len) factor
-      subtree_digests_size =
-        subtree_states_size * bottom_layer.preimage_max_length / bottom_layer.width * tree_config.digest_elements;
-    } else {
-      subtree_digests_size = subtree_states_size / bottom_layer.width * tree_config.digest_elements;
-    }
-    size_t subtree_memory_required = sizeof(D) * (subtree_states_size + subtree_digests_size);
+    size_t subtree_d_leaves_memory = std::max(
+      tree_config.are_inputs_on_device ? 0 : (sizeof(L) * subtree_leaves_size),
+      subtree_digests_size * sizeof(D) / tree_config.arity);
+    size_t subtree_memory_required = sizeof(D) * subtree_digests_size + subtree_d_leaves_memory;
     while (subtree_memory_required > STREAM_CHUNK_SIZE) {
       number_of_subtrees *= tree_config.arity;
       subtree_height--;
       subtree_bottom_layer_states /= tree_config.arity;
-      subtree_states_size /= tree_config.arity;
       subtree_digests_size /= tree_config.arity;
-      subtree_memory_required = sizeof(D) * (subtree_states_size + subtree_digests_size);
+      subtree_leaves_size /= tree_config.arity;
+      subtree_d_leaves_memory /= tree_config.arity;
+      subtree_memory_required = sizeof(D) * subtree_digests_size + subtree_d_leaves_memory;
     }
     int cap_height = height - subtree_height;
     size_t caps_len = pow(tree_config.arity, cap_height) * tree_config.digest_elements;
@@ -221,19 +217,18 @@ namespace merkle_tree {
     std::cout << "Height of a subtree = " << subtree_height << std::endl;
     std::cout << "Cutoff height = " << height - subtree_height << std::endl;
     std::cout << "Number of leaves in a subtree = " << subtree_bottom_layer_states << std::endl;
-    std::cout << "State of a subtree = " << subtree_states_size << std::endl;
     std::cout << "Digest elements for a subtree = " << subtree_digests_size << std::endl;
-    std::cout << "Size of 1 subtree states = " << subtree_states_size * sizeof(D) / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Size of 1 subtree digests = " << subtree_digests_size * sizeof(D) / 1024 / 1024 << " MB" << std::endl;
     std::cout << "Cap height = " << cap_height << std::endl;
     std::cout << "Enabling caps mode? " << caps_mode << std::endl;
+    std::cout << "Allocated " << subtree_d_leaves_memory << " bytes for d_leaves" << std::endl;
 #endif
 
     // Allocate memory for the leaves and digests
     // These are shared by streams in a pool
-    D *states_ptr, *digests_ptr;
-    CHK_IF_RETURN(cudaMallocAsync(&states_ptr, subtree_states_size * number_of_streams * sizeof(D), stream));
-    CHK_IF_RETURN(cudaMemsetAsync(states_ptr, 0, subtree_states_size * number_of_streams * sizeof(D), stream));
+    L* d_leaves_ptr;
+    D* digests_ptr;
+    CHK_IF_RETURN(cudaMallocAsync(&d_leaves_ptr, subtree_d_leaves_memory * number_of_streams, stream));
     CHK_IF_RETURN(cudaMallocAsync(&digests_ptr, subtree_digests_size * number_of_streams * sizeof(D), stream));
     // Wait for these allocations to finish
     CHK_IF_RETURN(cudaStreamSynchronize(stream));
@@ -244,7 +239,7 @@ namespace merkle_tree {
       cudaStream_t subtree_stream = streams[stream_idx];
 
       const L* subtree_leaves = leaves + subtree_idx * subtree_bottom_layer_states * input_block_len;
-      D* subtree_state = states_ptr + stream_idx * subtree_states_size;
+      L* subtree_d_leaves = (L*)((unsigned char*)d_leaves_ptr + stream_idx * subtree_d_leaves_memory);
       D* subtree_digests = digests_ptr + stream_idx * subtree_digests_size;
 
       int subtree_keep_rows = 0;
@@ -257,7 +252,7 @@ namespace merkle_tree {
       uint64_t start_segment_size = number_of_bottom_layer_states * tree_config.digest_elements;
       cudaError_t subtree_result = build_merkle_subtree<L, D>(
         subtree_leaves,             // leaves
-        subtree_state,              // state
+        subtree_d_leaves,           // d_leves
         subtree_digests,            // digests
         subtree_idx,                // subtree_idx
         subtree_height,             // subtree_height
@@ -278,10 +273,6 @@ namespace merkle_tree {
       CHK_IF_RETURN(cudaStreamSynchronize(streams[i]));
     }
 
-    SpongeConfig sponge_config = default_sponge_config(tree_config.ctx);
-    sponge_config.are_inputs_on_device = tree_config.are_inputs_on_device;
-    sponge_config.are_outputs_on_device = true;
-    sponge_config.is_async = true;
     // Finish the top-level tree if any
     if (cap_height > 0) {
       size_t start_segment_size = caps_len / tree_config.arity;
@@ -295,25 +286,29 @@ namespace merkle_tree {
         }
       }
       CHK_IF_RETURN(cudaMemcpyAsync(
-        states_ptr, caps_mode ? caps : (digests + start_segment_offset - caps_len), caps_len * sizeof(D),
+        d_leaves_ptr, caps_mode ? caps : (digests + start_segment_offset - caps_len), caps_len * sizeof(D),
         (caps_mode || !tree_config.are_outputs_on_device) ? cudaMemcpyHostToDevice : cudaMemcpyDeviceToDevice, stream));
 
       uint64_t number_of_states = caps_len / tree_config.arity / tree_config.digest_elements;
 
+      D* prev_layer = (D*)d_leaves_ptr;
+      D* next_layer = digests_ptr;
+
       size_t segment_size = start_segment_size;
       size_t segment_offset = start_segment_offset;
       while (number_of_states > 0) {
-        CHK_IF_RETURN(compression.compress_many(
-          states_ptr, digests_ptr, number_of_states, tree_config.digest_elements, sponge_config));
+        CHK_IF_RETURN(compression.run_hash_many_kernel(
+          (L*)prev_layer, next_layer, number_of_states, tree_config.digest_elements * tree_config.arity,
+          tree_config.digest_elements, tree_config.ctx));
         if (!tree_config.keep_rows || cap_height < tree_config.keep_rows + (int)caps_mode) {
           D* digests_with_offset = digests + segment_offset;
           CHK_IF_RETURN(cudaMemcpyAsync(
-            digests_with_offset, digests_ptr, number_of_states * tree_config.digest_elements * sizeof(D),
+            digests_with_offset, next_layer, number_of_states * tree_config.digest_elements * sizeof(D),
             cudaMemcpyDeviceToHost, stream));
           segment_offset += segment_size;
         }
 
-        if (number_of_states > 1) { swap<D>(&digests_ptr, &states_ptr); }
+        swap<D>(&prev_layer, &next_layer);
 
         segment_size /= tree_config.arity;
         cap_height--;
@@ -322,7 +317,7 @@ namespace merkle_tree {
       if (caps_mode) { free(caps); }
     }
 
-    CHK_IF_RETURN(cudaFreeAsync(states_ptr, stream));
+    CHK_IF_RETURN(cudaFreeAsync(d_leaves_ptr, stream));
     CHK_IF_RETURN(cudaFreeAsync(digests_ptr, stream));
     if (!tree_config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
     for (size_t i = 0; i < number_of_streams; i++) {

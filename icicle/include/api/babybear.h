@@ -49,7 +49,7 @@ extern "C" cudaError_t babybear_poseidon2_hash_many_cuda(
   unsigned int number_of_states,
   unsigned int input_block_len,
   unsigned int output_len,
-  hash::SpongeConfig& cfg);
+  hash::HashConfig& cfg);
 
 extern "C" cudaError_t
   babybear_poseidon2_delete_cuda(poseidon2::Poseidon2<babybear::scalar_t>* poseidon, device_context::DeviceContext& ctx);
@@ -59,16 +59,16 @@ extern "C" cudaError_t babybear_build_merkle_tree(
   babybear::scalar_t* digests,
   unsigned int height,
   unsigned int input_block_len, 
-  const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* compression,
-  const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* bottom_layer,
+  const hash::Hasher<babybear::scalar_t, babybear::scalar_t>* compression,
+  const hash::Hasher<babybear::scalar_t, babybear::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
   extern "C" cudaError_t babybear_mmcs_commit_cuda(
     const matrix::Matrix<babybear::scalar_t>* leaves,
     unsigned int number_of_inputs,
     babybear::scalar_t* digests,
-    const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* hasher,
-    const hash::SpongeHasher<babybear::scalar_t, babybear::scalar_t>* compression,
+    const hash::Hasher<babybear::scalar_t, babybear::scalar_t>* hasher,
+    const hash::Hasher<babybear::scalar_t, babybear::scalar_t>* compression,
     const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t babybear_mul_cuda(

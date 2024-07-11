@@ -19,16 +19,16 @@ const (
 	Hash512 HashSize = 512
 )
 
-type KeccakConfig struct {
+type HashConfig struct {
 	Ctx                cr.DeviceContext
 	areInputsOnDevice  bool
 	areOutputsOnDevice bool
 	IsAsync            bool
 }
 
-func GetDefaultKeccakConfig() KeccakConfig {
+func GetDefaultHashConfig() HashConfig {
 	ctx, _ := cr.GetDefaultDeviceContext()
-	return KeccakConfig{
+	return HashConfig{
 		ctx,
 		false,
 		false,
@@ -36,7 +36,7 @@ func GetDefaultKeccakConfig() KeccakConfig {
 	}
 }
 
-func keccakCheck(input core.HostOrDeviceSlice, output core.HostOrDeviceSlice, cfg *KeccakConfig, hashSize HashSize, numberOfBlocks int32) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) {
+func keccakCheck(input core.HostOrDeviceSlice, output core.HostOrDeviceSlice, cfg *HashConfig, hashSize HashSize, numberOfBlocks int32) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) {
 	cfg.areInputsOnDevice = input.IsOnDevice()
 	cfg.areOutputsOnDevice = output.IsOnDevice()
 
@@ -61,13 +61,13 @@ func keccakCheck(input core.HostOrDeviceSlice, output core.HostOrDeviceSlice, cf
 	return input.AsUnsafePointer(), output.AsUnsafePointer(), unsafe.Pointer(cfg)
 }
 
-func keccak(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *KeccakConfig, hashSize HashSize) (ret core.IcicleError) {
+func keccak(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *HashConfig, hashSize HashSize) (ret core.IcicleError) {
 	inputPointer, outputPointer, cfgPointer := keccakCheck(input, output, config, hashSize, numberOfBlocks)
 	cInput := (*C.uint8_t)(inputPointer)
 	cOutput := (*C.uint8_t)(outputPointer)
 	cInputBlockSize := (C.int)(inputBlockSize)
 	cNumberOfBlocks := (C.int)(numberOfBlocks)
-	cConfig := (*C.KeccakConfig)(cfgPointer)
+	cConfig := (*C.HashConfig)(cfgPointer)
 
 	switch hashSize {
 	case Hash256:
@@ -79,10 +79,10 @@ func keccak(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, 
 	return ret
 }
 
-func Keccak256(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *KeccakConfig) core.IcicleError {
+func Keccak256(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *HashConfig) core.IcicleError {
 	return keccak(input, inputBlockSize, numberOfBlocks, output, config, Hash256)
 }
 
-func Keccak512(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *KeccakConfig) core.IcicleError {
+func Keccak512(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *HashConfig) core.IcicleError {
 	return keccak(input, inputBlockSize, numberOfBlocks, output, config, Hash512)
 }

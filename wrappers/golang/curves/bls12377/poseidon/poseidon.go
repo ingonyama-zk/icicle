@@ -58,7 +58,7 @@ func Load(arity uint32, ctx *cr.DeviceContext) (*Poseidon, core.IcicleError) {
 	return &p, err
 }
 
-func (poseidon *Poseidon) HashMany(inputs core.HostOrDeviceSlice, output core.HostOrDeviceSlice, numberOfStates uint32, inputBlockLen uint32, outputLen uint32, cfg *core.SpongeConfig) core.IcicleError {
+func (poseidon *Poseidon) HashMany(inputs core.HostOrDeviceSlice, output core.HostOrDeviceSlice, numberOfStates uint32, inputBlockLen uint32, outputLen uint32, cfg *core.HashConfig) core.IcicleError {
 	core.SpongeInputCheck(inputs, numberOfStates, inputBlockLen, cfg.InputRate, &cfg.Ctx)
 	core.SpongeOutputsCheck(output, numberOfStates, outputLen, poseidon.width, false, &cfg.Ctx)
 
@@ -67,7 +67,7 @@ func (poseidon *Poseidon) HashMany(inputs core.HostOrDeviceSlice, output core.Ho
 	cNumberOfStates := (C.uint)(numberOfStates)
 	cInputBlockLen := (C.uint)(inputBlockLen)
 	cOutputLen := (C.uint)(outputLen)
-	cCfg := (*C.SpongeConfig)(unsafe.Pointer(cfg))
+	cCfg := (*C.HashConfig)(unsafe.Pointer(cfg))
 	__ret := C.bls12_377_poseidon_hash_many_cuda(poseidon.handle, cInputs, cOutput, cNumberOfStates, cInputBlockLen, cOutputLen, cCfg)
 	err := (cr.CudaError)(__ret)
 	return core.FromCudaError(err)
@@ -79,8 +79,8 @@ func (poseidon *Poseidon) Delete() core.IcicleError {
 	return core.FromCudaError(err)
 }
 
-func (poseidon *Poseidon) GetDefaultSpongeConfig() core.SpongeConfig {
-	cfg := core.GetDefaultSpongeConfig()
+func (poseidon *Poseidon) GetDefaultHashConfig() core.HashConfig {
+	cfg := core.GetDefaultHashConfig()
 	cfg.InputRate = poseidon.width - 1
 	cfg.OutputRate = poseidon.width
 	return cfg

@@ -1,7 +1,7 @@
 use crate::curve::{ScalarCfg, ScalarField};
 
 use icicle_core::error::IcicleResult;
-use icicle_core::hash::SpongeConfig;
+use icicle_core::hash::HashConfig;
 use icicle_core::impl_poseidon;
 use icicle_core::poseidon::{PoseidonHandle, PoseidonImpl};
 use icicle_core::traits::IcicleResultWrap;

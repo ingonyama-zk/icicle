@@ -111,8 +111,10 @@ namespace merkle_tree {
   cudaError_t build_merkle_tree(
     const Leaf* inputs,
     Digest* digests,
-    const SpongeHasher<Leaf, Digest>& compression,
-    const SpongeHasher<Leaf, Digest>& bottom_layer,
+    unsigned int height,
+    unsigned int input_block_len,
+    const Hasher<Leaf, Digest>& compression,
+    const Hasher<Leaf, Digest>& bottom_layer,
     const TreeBuilderConfig& config);
 
   template <typename Leaf, typename Digest>
@@ -120,8 +122,8 @@ namespace merkle_tree {
     const Matrix<Leaf>* inputs,
     const unsigned int number_of_inputs,
     Digest* digests,
-    const SpongeHasher<Leaf, Digest>& hasher,
-    const SpongeHasher<Leaf, Digest>& compression,
+    const Hasher<Leaf, Digest>& hasher,
+    const Hasher<Leaf, Digest>& compression,
     const TreeBuilderConfig& tree_config);
 } // namespace merkle_tree
 

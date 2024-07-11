@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
   scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
   scalar_t input = scalar_t::zero();
 
-  hash::SpongeConfig cfg = hash::default_sponge_config();
+  hash::HashConfig cfg = hash::default_hash_config();
 
   size_t number_of_repetitions = argc > 2 ? 1 << atoi(argv[2]) : 32;
 

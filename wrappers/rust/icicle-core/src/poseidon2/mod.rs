@@ -7,7 +7,7 @@ use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSli
 
 use crate::{
     error::IcicleResult,
-    hash::{sponge_check_input, sponge_check_outputs, SpongeConfig, SpongeHash},
+    hash::{sponge_check_input, sponge_check_outputs, HashConfig, SpongeHash},
     traits::FieldImpl,
 };
 
@@ -32,6 +32,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     width: usize,
+    rate: usize,
     handle: Poseidon2Handle,
     phantom: PhantomData<F>,
 }
@@ -52,6 +53,7 @@ where
             .and_then(|handle| {
                 Ok(Self {
                     width,
+                    rate,
                     handle,
                     phantom: PhantomData,
                 })
@@ -85,6 +87,7 @@ where
         .and_then(|handle| {
             Ok(Self {
                 width,
+                rate,
                 handle,
                 phantom: PhantomData,
             })
@@ -108,15 +111,9 @@ where
         number_of_states: usize,
         input_block_len: usize,
         output_len: usize,
-        cfg: &SpongeConfig,
+        cfg: &HashConfig,
     ) -> IcicleResult<()> {
-        sponge_check_input(
-            inputs,
-            number_of_states,
-            input_block_len,
-            cfg.input_rate as usize,
-            &cfg.ctx,
-        );
+        sponge_check_input(inputs, number_of_states, input_block_len, self.rate, &cfg.ctx);
         sponge_check_outputs(output, number_of_states, output_len, self.width, false, &cfg.ctx);
 
         let mut local_cfg = cfg.clone();
@@ -134,11 +131,8 @@ where
         )
     }
 
-    fn default_config<'a>(&self) -> SpongeConfig<'a> {
-        let mut cfg = SpongeConfig::default();
-        cfg.input_rate = self.width as u32;
-        cfg.output_rate = self.width as u32;
-        cfg
+    fn default_config<'a>(&self) -> HashConfig<'a> {
+        HashConfig::default()
     }
 }
 
@@ -181,7 +175,7 @@ pub trait Poseidon2Impl<F: FieldImpl> {
         input_block_len: u32,
         output_len: u32,
         poseidon: Poseidon2Handle,
-        cfg: &SpongeConfig,
+        cfg: &HashConfig,
     ) -> IcicleResult<()>;
 
     fn delete(poseidon: Poseidon2Handle) -> IcicleResult<()>;
@@ -197,8 +191,8 @@ macro_rules! impl_poseidon2 {
     ) => {
         mod $field_prefix_ident {
             use crate::poseidon2::{
-                $field, $field_config, CudaError, DeviceContext, DiffusionStrategy, MdsType, Poseidon2Handle,
-                SpongeConfig,
+                $field, $field_config, CudaError, DeviceContext, DiffusionStrategy, HashConfig, MdsType,
+                Poseidon2Handle,
             };
             use icicle_core::error::IcicleError;
             extern "C" {
@@ -238,7 +232,7 @@ macro_rules! impl_poseidon2 {
                     number_of_states: u32,
                     input_block_len: u32,
                     output_len: u32,
-                    cfg: &SpongeConfig,
+                    cfg: &HashConfig,
                 ) -> CudaError;
             }
         }
@@ -298,7 +292,7 @@ macro_rules! impl_poseidon2 {
                 input_block_len: u32,
                 output_len: u32,
                 poseidon: Poseidon2Handle,
-                cfg: &SpongeConfig,
+                cfg: &HashConfig,
             ) -> IcicleResult<()> {
                 unsafe {
                     $field_prefix_ident::hash_many(

@@ -2,7 +2,7 @@ use icicle_bls12_381::curve::ScalarField as F;
 
 use icicle_cuda_runtime::device_context::DeviceContext;
 
-use icicle_core::hash::{SpongeHash, SpongeConfig};
+use icicle_core::hash::{SpongeHash, HashConfig};
 use icicle_core::poseidon::Poseidon;
 use icicle_core::traits::FieldImpl;
 use icicle_cuda_runtime::memory::HostSlice;
@@ -32,7 +32,7 @@ fn main() {
     );
     let ctx = DeviceContext::default();
     let poseidon = Poseidon::load(arity, &ctx).unwrap();
-    let config = SpongeConfig::default();
+    let config = HashConfig::default();
 
     println!(
         "---------------------- Input size 2^{}={} ------------------------",

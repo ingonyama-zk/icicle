@@ -23,7 +23,7 @@ func TestSimpleHash256(t *testing.T) {
 	input := createHostSliceFromHexString("1725b6679911bfe75ad7e248fbeec4a01034feace99aca43cd95d338a37db8d04b4aa5d83c8f8f5bdb8f7f98cec9a658f7f8061a6de07dcfd61db169cc7e666e1971adb4c7e97c43361c9a9eed8bb7b5c33cfe576a383a7440803996fd28148b")
 	outHost := make(core.HostSlice[uint8], 32)
 
-	cfg := keccak.GetDefaultKeccakConfig()
+	cfg := keccak.GetDefaultHashConfig()
 	e := keccak.Keccak256(input, int32(input.Len()), 1, outHost, &cfg)
 	assert.Equal(t, e.CudaErrorCode, cr.CudaSuccess, "Hashing failed")
 	t.Log(outHost)
@@ -34,7 +34,7 @@ func TestBatchHash256(t *testing.T) {
 	input := createHostSliceFromHexString("1725b6679911bfe75ad7e248fbeec4a01034feace99aca43cd95d338a37db8d04b4aa5d83c8f8f5bdb8f7f98cec9a658f7f8061a6de07dcfd61db169cc7e666e1971adb4c7e97c43361c9a9eed8bb7b5c33cfe576a383a7440803996fd28148b")
 	outHost := make(core.HostSlice[uint8], 32*2)
 
-	cfg := keccak.GetDefaultKeccakConfig()
+	cfg := keccak.GetDefaultHashConfig()
 	e := keccak.Keccak256(input, int32(input.Len()/2), 2, outHost, &cfg)
 	assert.Equal(t, e.CudaErrorCode, cr.CudaSuccess, "Hashing failed")
 	t.Log(outHost)
@@ -46,7 +46,7 @@ func TestSimpleHash512(t *testing.T) {
 	input := createHostSliceFromHexString("1725b6679911bfe75ad7e248fbeec4a01034feace99aca43cd95d338a37db8d04b4aa5d83c8f8f5bdb8f7f98cec9a658f7f8061a6de07dcfd61db169cc7e666e1971adb4c7e97c43361c9a9eed8bb7b5c33cfe576a383a7440803996fd28148b")
 	outHost := make(core.HostSlice[uint8], 64)
 
-	cfg := keccak.GetDefaultKeccakConfig()
+	cfg := keccak.GetDefaultHashConfig()
 	e := keccak.Keccak512(input, int32(input.Len()), 1, outHost, &cfg)
 	assert.Equal(t, e.CudaErrorCode, cr.CudaSuccess, "Hashing failed")
 	t.Log(outHost)
@@ -57,7 +57,7 @@ func TestBatchHash512(t *testing.T) {
 	input := createHostSliceFromHexString("1725b6679911bfe75ad7e248fbeec4a01034feace99aca43cd95d338a37db8d04b4aa5d83c8f8f5bdb8f7f98cec9a658f7f8061a6de07dcfd61db169cc7e666e1971adb4c7e97c43361c9a9eed8bb7b5c33cfe576a383a7440803996fd28148b")
 	outHost := make(core.HostSlice[uint8], 64*2)
 
-	cfg := keccak.GetDefaultKeccakConfig()
+	cfg := keccak.GetDefaultHashConfig()
 	e := keccak.Keccak512(input, int32(input.Len()/2), 2, outHost, &cfg)
 	assert.Equal(t, e.CudaErrorCode, cr.CudaSuccess, "Hashing failed")
 	t.Log(outHost)
