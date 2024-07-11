@@ -11,6 +11,9 @@ set(SRC ${CMAKE_SOURCE_DIR}/src)
 
 set(FIELD_SOURCE ${SRC}/fields/extern.cu)
 list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern.cu)
+list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern.cu)
+list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern_mmcs.cu)
+
 if(EXT_FIELD)
   list(APPEND FIELD_SOURCE ${SRC}/fields/extern_extension.cu)
   if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
@@ -27,8 +30,6 @@ set(POLYNOMIAL_SOURCE_FILES
 # TODO: impl poseidon for small fields. note that it needs to be defined over the extension field!
 if (DEFINED CURVE)
   list(APPEND FIELD_SOURCE ${SRC}/poseidon/extern.cu)
-  list(APPEND FIELD_SOURCE ${SRC}/poseidon/poseidon.cu)
-  list(APPEND FIELD_SOURCE ${SRC}/poseidon/tree/merkle.cu)
 endif()
 
 if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_POSEIDON2)

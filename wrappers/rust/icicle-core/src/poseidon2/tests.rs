@@ -1,27 +1,21 @@
-use crate::poseidon2::{MdsType, PoseidonMode};
+use crate::hash::SpongeHash;
 use crate::traits::FieldImpl;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
-use super::{
-    load_poseidon2_constants, poseidon2_hash_many, DiffusionStrategy, Poseidon2, Poseidon2Config, Poseidon2Constants,
-};
+use super::{DiffusionStrategy, MdsType, Poseidon2, Poseidon2Impl};
 
-pub fn init_poseidon<'a, F: FieldImpl>(
-    width: u32,
-    mds_type: MdsType,
-    diffusion: DiffusionStrategy,
-) -> Poseidon2Constants<'a, F>
+pub fn init_poseidon<F: FieldImpl>(width: usize, mds_type: MdsType, diffusion: DiffusionStrategy) -> Poseidon2<F>
 where
-    <F as FieldImpl>::Config: Poseidon2<F>,
+    <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     let ctx = DeviceContext::default();
-    load_poseidon2_constants::<F>(width, mds_type, diffusion, &ctx).unwrap()
+    Poseidon2::load(width, width, mds_type, diffusion, &ctx).unwrap()
 }
 
-fn _check_poseidon_hash_many<F: FieldImpl>(width: u32, constants: Poseidon2Constants<F>) -> (F, F)
+fn _check_poseidon_hash_many<F: FieldImpl>(width: usize, poseidon: &Poseidon2<F>) -> (F, F)
 where
-    <F as FieldImpl>::Config: Poseidon2<F>,
+    <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     let test_size = 1 << 10;
     let mut inputs = vec![F::one(); test_size * width as usize];
@@ -30,16 +24,10 @@ where
     let input_slice = HostSlice::from_mut_slice(&mut inputs);
     let output_slice = HostSlice::from_mut_slice(&mut outputs);
 
-    let config = Poseidon2Config::default();
-    poseidon2_hash_many::<F>(
-        input_slice,
-        output_slice,
-        test_size as u32,
-        width as u32,
-        &constants,
-        &config,
-    )
-    .unwrap();
+    let cfg = poseidon.default_config();
+    poseidon
+        .hash_many(input_slice, output_slice, test_size, width, 1, &cfg)
+        .unwrap();
 
     let a1 = output_slice[0];
     let a2 = output_slice[output_slice.len() - 2];
@@ -49,21 +37,22 @@ where
     (a1, a2)
 }
 
-pub fn check_poseidon_hash_many<'a, F: FieldImpl + 'a>()
+pub fn check_poseidon_hash_many<F: FieldImpl>()
 where
-    <F as FieldImpl>::Config: Poseidon2<F>,
+    <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     let widths = [2, 3, 4, 8, 12, 16, 20, 24];
+    let ctx = DeviceContext::default();
     for width in widths {
-        let constants = init_poseidon::<'a, F>(width as u32, MdsType::Default, DiffusionStrategy::Default);
+        let poseidon = Poseidon2::<F>::load(width, width, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
 
-        _check_poseidon_hash_many(width, constants);
+        _check_poseidon_hash_many(width, &poseidon);
     }
 }
 
-pub fn check_poseidon_kats<'a, F: FieldImpl>(width: usize, kats: &[F], constants: &Poseidon2Constants<'a, F>)
+pub fn check_poseidon_kats<F: FieldImpl>(width: usize, kats: &[F], poseidon: &Poseidon2<F>)
 where
-    <F as FieldImpl>::Config: Poseidon2<F>,
+    <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     assert_eq!(width, kats.len());
 
@@ -83,17 +72,11 @@ where
     let input_slice = HostSlice::from_mut_slice(&mut inputs);
     let output_slice = HostSlice::from_mut_slice(&mut outputs);
 
-    let mut config = Poseidon2Config::default();
-    config.mode = PoseidonMode::Permutation;
-    poseidon2_hash_many::<F>(
-        input_slice,
-        output_slice,
-        batch_size as u32,
-        width as u32,
-        &constants,
-        &config,
-    )
-    .unwrap();
+    let cfg = poseidon.default_config();
+
+    poseidon
+        .hash_many(input_slice, output_slice, batch_size, width, width, &cfg)
+        .unwrap();
 
     for (i, val) in output_slice
         .iter()

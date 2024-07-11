@@ -14,7 +14,7 @@ namespace m31 {
     HOST_DEVICE_INLINE MersenneField(storage<CONFIG::limbs_count> x) : Field<CONFIG>{x} {}
     HOST_DEVICE_INLINE MersenneField(const Field<CONFIG>& other) : Field<CONFIG>(other) {}
 
-    static constexpr HOST_DEVICE_INLINE MersenneField zero() { return MersenneField(CONFIG::zero.limbs[0]); }
+    static constexpr HOST_DEVICE_INLINE MersenneField zero() { return MersenneField(CONFIG::zero); }
 
     static constexpr HOST_DEVICE_INLINE MersenneField one() { return MersenneField(CONFIG::one.limbs[0]); }
 

@@ -1,30 +1,34 @@
-extern "C" cudaError_t ${FIELD}_create_poseidon2_constants_cuda(
-  int width,
-  int alpha,
-  int internal_rounds,
-  int external_rounds,
+extern "C" cudaError_t ${FIELD}_poseidon2_create_cuda(
+  poseidon2::Poseidon2<${FIELD}::scalar_t>** poseidon,
+  unsigned int width,
+  unsigned int rate,
+  unsigned int alpha,
+  unsigned int internal_rounds,
+  unsigned int external_rounds,
   const ${FIELD}::scalar_t* round_constants,
   const ${FIELD}::scalar_t* internal_matrix_diag,
   poseidon2::MdsType mds_type,
   poseidon2::DiffusionStrategy diffusion,
-  device_context::DeviceContext& ctx,
-  poseidon2::Poseidon2Constants<${FIELD}::scalar_t>* poseidon_constants);
+  device_context::DeviceContext& ctx
+);
 
-extern "C" cudaError_t ${FIELD}_init_poseidon2_constants_cuda(
-  int width,
+extern "C" cudaError_t ${FIELD}_poseidon2_load_cuda(
+  poseidon2::Poseidon2<${FIELD}::scalar_t>** poseidon,
+  unsigned int width,
+  unsigned int rate,
   poseidon2::MdsType mds_type,
   poseidon2::DiffusionStrategy diffusion,
-  device_context::DeviceContext& ctx,
-  poseidon2::Poseidon2Constants<${FIELD}::scalar_t>* poseidon_constants);
+  device_context::DeviceContext& ctx
+);
 
-extern "C" cudaError_t ${FIELD}_poseidon2_hash_cuda(
-  const ${FIELD}::scalar_t* input,
+extern "C" cudaError_t ${FIELD}_poseidon2_hash_many_cuda(
+  const poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon,
+  const ${FIELD}::scalar_t* inputs,
   ${FIELD}::scalar_t* output,
-  int number_of_states,
-  int width,
-  const poseidon2::Poseidon2Constants<${FIELD}::scalar_t>& constants,
-  poseidon2::Poseidon2Config& config);
+  unsigned int number_of_states,
+  unsigned int input_block_len,
+  unsigned int output_len,
+  hash::SpongeConfig& cfg);
 
-extern "C" cudaError_t ${FIELD}_release_poseidon2_constants_cuda(
-  poseidon2::Poseidon2Constants<${FIELD}::scalar_t>* constants,
-  device_context::DeviceContext& ctx);
+extern "C" cudaError_t
+  ${FIELD}_poseidon2_delete_cuda(poseidon2::Poseidon2<${FIELD}::scalar_t>* poseidon, device_context::DeviceContext& ctx);

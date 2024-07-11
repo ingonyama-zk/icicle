@@ -1,5 +1,5 @@
 #include "gpu-utils/device_context.cuh"
-#include "keccak.cu"
+#include "extern.cu"
 
 // #define DEBUG
 

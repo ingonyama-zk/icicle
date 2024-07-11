@@ -77,6 +77,8 @@ FIELDS_CONFIG = {
 COMMON_INCLUDES = [
     '#include <cuda_runtime.h>',
     '#include "gpu-utils/device_context.cuh"',
+    '#include "merkle-tree/merkle.cuh"',
+    '#include "matrix/matrix.cuh"'
 ]
 
 WARN_TEXT = """\
@@ -114,10 +116,9 @@ if __name__ == "__main__":
             includes.append('#include "msm/msm.cuh"')
         if any(header.name.startswith("vec_ops") for header in headers):
             includes.append('#include "vec_ops/vec_ops.cuh"')
-        if any(header.name.startswith("poseidon") for header in headers):
+        if any(header.name.startswith("poseidon.h") for header in headers):
             includes.append('#include "poseidon/poseidon.cuh"')
-            includes.append('#include "poseidon/tree/merkle.cuh"')
-        if any(header.name.startswith("poseidon2") for header in headers):
+        if any(header.name.startswith("poseidon2.h") for header in headers):
             includes.append('#include "poseidon2/poseidon2.cuh"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(curve.upper()) + "\n".join(includes) + "\n\n"
@@ -148,10 +149,9 @@ if __name__ == "__main__":
             includes.append('#include "ntt/ntt.cuh"')
         if any(header.name.startswith("vec_ops") for header in headers):
             includes.append('#include "vec_ops/vec_ops.cuh"')
-        if any(header.name.startswith("poseidon") for header in headers):
+        if any(header.name.startswith("poseidon.h") for header in headers):
             includes.append('#include "poseidon/poseidon.cuh"')
-            includes.append('#include "poseidon/tree/merkle.cuh"')
-        if any(header.name.startswith("poseidon2") for header in headers):
+        if any(header.name.startswith("poseidon2.h") for header in headers):
             includes.append('#include "poseidon2/poseidon2.cuh"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(field.upper()) + "\n".join(includes) + "\n\n"
