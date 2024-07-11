@@ -1,17 +1,18 @@
 
-#include "icicle/backend/msm_backend.h"
-#include "icicle/errors.h"
-#include "icicle/runtime.h"
-
-#include "icicle/curves/projective.h"
-#include "icicle/curves/curve_config.h"
+#include "cpu_msm.hpp"
 
 // #define NDEBUG
 
 #include <chrono>
 #include <string>
-#include <format>
+#include <iostream>
+#include <fstream>
+#include <cassert>
+#include <iostream>
 
+#include <atomic>
+
+// TODO remove / revise when finished testing
 class Timer
 {
   private:
@@ -41,163 +42,109 @@ class Timer
     }
 };
 
-using namespace curve_config;
-using namespace icicle;
 
 // TODO ask for help about memory management before / at C.R.
-// COMMENT maybe switch to 1d array?
-uint32_t* msm_bucket_coeffs(
-  const scalar_t* scalars,
-  const unsigned int msm_size,
-  const unsigned int c,
-  const unsigned int num_bms,
-  const unsigned int pcf)
-{
-  /**
-   * Split msm scalars to c-wide coefficients for use in the bucket method
-   * @param scalars - original scalar array
-   * @param msm_size - length of the above array
-   * @param c - Bucket module address width (inverse to number of buckets)
-   * @param num_bms - NBITS/c
-   * @param coefficients - output array of the decomposed scalar
-   * @return status of function success / failure in the case of invalid arguments
-  */
-  uint32_t* coefficients = new uint32_t[msm_size*pcf*num_bms];
-  // std::fill_n(coefficients, msm_size*pcf*num_bms/2, 0); // TODO zero init is required only once / when chaging config (c, pcf)
-
-  uint32_t half_val = 1 << (c - 1);
-  for (int i = 0; i < msm_size; i++)
-  {
-    uint32_t curr_coeff = scalars[i].get_scalar_digit(0, c);
-    for (int j = 0; j < pcf; j++)  
-    {
-      for (int k = 0; k < num_bms; k++)
-      {
-        if (curr_coeff <= half_val)
-        {
-          coefficients[(msm_size*j + i)*num_bms + k] = curr_coeff;
-          curr_coeff = scalars[i].get_scalar_digit(num_bms*j + k + 1, c);
-        }
-        else
-        {
-          coefficients[(msm_size*j + i)*num_bms + k] = -curr_coeff;
-          curr_coeff = scalars[i].get_scalar_digit(num_bms*j + k + 1, c) + 1;
-        }        
-      }
-    }
-  }
-  return coefficients;
-}
-
-template <typename P>
-std::vector<P>* sort_buckets(
-  const scalar_t* scalars,
-  const affine_t* bases,
-  const unsigned int msm_size,
-  const unsigned int c,
-  const unsigned int num_bms,
-  const unsigned int pcf
-)
-{
-  /**
-   * Split msm scalars to c-wide coefficients for use in the bucket method
-   * @param scalars - original scalar array
-   * @param bases - points to be added
-   * @param msm_size - length of the scalar array (and 1/pcf of the length of bases)
-   * @param c - Bucket module address width (inverse to number of buckets)
-   * @param num_bms - NBITS/c
-   * @return p2buckets - sorted array of points to be added to each bucket
-  */
-  uint32_t num_buckets = 1<<(c-1);
-  auto p2buckets = new std::vector<P>[num_buckets*num_bms];
-  // std::fill_n(coefficients, msm_size*pcf*num_bms/2, 0); // TODO zero init is required only once / when chaging config (c, pcf)
-
-  for (int i = 0; i < msm_size; i++)
-  {
-    uint32_t curr_coeff = scalars[i].get_scalar_digit(0, c);
-    for (int j = 0; j < pcf; j++)  
-    {
-      for (int k = 0; k < num_bms; k++)
-      {
-        if (curr_coeff <= num_buckets)
-        {
-          // p2buckets[k*num_buckets + curr_coeff].push_back(bases[i]);
-          curr_coeff = scalars[i].get_scalar_digit(num_bms*j + k + 1, c);
-        }
-        else
-        {
-          uint32_t truncated_coeff = (curr_coeff&(num_bms-1));
-          // p2buckets[k*num_buckets + truncated_coeff].push_back(-bases[i]);
-          curr_coeff = scalars[i].get_scalar_digit(num_bms*j + k + 1, c) + 1;
-        }        
-      }
-    }
-  }
-  return p2buckets;
-}
-
-template <typename P>
-P* msm_bucket_accumulator(
-  const scalar_t* scalars,
-  const affine_t* bases,
+template <typename Point>
+Point* msm_bucket_accumulator(
+  const sca_test* scalars,
+  const aff_test* bases,
   const unsigned int c,
   const unsigned int num_bms,
   const unsigned int msm_size,
-  const unsigned int pcf,
+  const unsigned int precomp_f,
   const bool is_s_mont,
   const bool is_b_mont)
 {
   /**
-   * Accumulate into the different buckets
+   * Accumulate into the different bkts
    * @param scalars - original scalars given from the msm result
    * @param bases - point bases to add
    * @param c - address width of bucket modules to split scalars above
    * @param msm_size - number of scalars to add
    * @param is_s_mont - flag indicating input scalars are in Montgomery form
    * @param is_b_mont - flag indicating input bases are in Montgomery form
-   * @return buckets - points array containing all buckets
+   * @return bkts - points array containing all bkts
   */
   auto t = Timer("P1:bucket-accumulator");
-  uint32_t num_buckets = 1<<(c-1);
-  P* buckets;
+  uint32_t num_bkts = 1<<(c-1);
+  Point* bkts;
   {
     auto t2 = Timer("P1:memory_allocation");
-    buckets = new P[num_bms*num_buckets];
+    bkts = new Point[num_bms*num_bkts];
   }
   {
     auto t3 = Timer("P1:memory_init");
-    std::fill_n(buckets, num_buckets*num_bms, P::zero());
+    std::fill_n(bkts, num_bkts*num_bms, Point::zero());
   }
-  uint32_t coeff_bit_mask = num_buckets - 1;
-  const int num_windows_m1 = (scalar_t::NBITS -1) / c;
+  uint32_t coeff_bit_mask = num_bkts - 1;
+  const int num_windows_m1 = (sca_test::NBITS -1) / c;
   int carry;
+
+  std::string b_fname = "buckets_single.txt";
+  std::ofstream bkts_f_single(b_fname);
+  if (!bkts_f_single.good()) { std::cout << "ERROR: can't open file:\t" << b_fname << std::endl; return nullptr;}  // TODO remove log
+
+  std::string trace_fname = "trace_bucket_single.txt";
+  std::ofstream trace_f(trace_fname);
+  if (!trace_f.good()) { std::cout << "ERROR: can't open file:\t" << trace_fname << std::endl; return nullptr;}  // TODO remove log
+
+  // std::cout << "\n\nc=" << c << "\tpcf=" << precomp_f << "\tnum bms=" << num_bms << "\n\n\n";
   for (int i = 0; i < msm_size; i++)
   {
     carry = 0;
-    scalar_t scalar = is_s_mont?  scalar_t::from_montgomery(scalars[i]) : 
+    sca_test scalar = is_s_mont?  sca_test::from_montgomery(scalars[i]) : 
                                   scalars[i];
-    for (int j = 0; j < pcf; j++)  
+    bool negate_p_and_s = scalar.get_scalar_digit(sca_test::NBITS - 1, 1) > 0;
+    if (negate_p_and_s) scalar = sca_test::neg(scalar);
+    for (int j = 0; j < precomp_f; j++)  
     {
-      affine_t point = is_b_mont? affine_t::from_montgomery(bases[msm_size*j + i]) : 
+      aff_test point = is_b_mont? aff_test::from_montgomery(bases[msm_size*j + i]) : 
                                   bases[msm_size*j + i];
+      if (negate_p_and_s) point = aff_test::neg(point);
       for (int k = 0; k < num_bms; k++)
       {
-        // In case pcf*c exceeds the scalar width
+        // In case precomp_f*c exceeds the scalar width
         if (num_bms*j + k > num_windows_m1) { break; }
 
         uint32_t curr_coeff = scalar.get_scalar_digit(num_bms*j + k, c) + carry;
         if ((curr_coeff & ((1 << c) - 1)) != 0)
         {
-          if (curr_coeff < num_buckets)
+          if (curr_coeff < num_bkts)
           {
-            buckets[num_buckets*k + curr_coeff] = P::is_zero(buckets[num_buckets*k + curr_coeff])?  P::from_affine(point) :
-                                                                                                    buckets[num_buckets*k + curr_coeff] + point;
+            int bkt_idx = num_bkts*k + curr_coeff;
+            
+            if (Point::is_zero(bkts[bkt_idx])) 
+            { 
+              trace_f << bkt_idx << ":\tWrite free cell:\t" << point.x << '\n'; 
+            }
+            else 
+            {
+              trace_f << bkt_idx << ":\tRead for addition:\t" << Point::to_affine(bkts[bkt_idx]).x << "\t(With new point:\t" << point.x << " = " << Point::to_affine(bkts[bkt_idx] + point).x << ")\n";
+              trace_f << bkt_idx << ":\tWrite (res) free cell:\t" << Point::to_affine(bkts[bkt_idx] + point).x << '\n';
+            } // TODO remove double addition
+            
+            // if (!Point::is_zero(bkts[num_bkts*k + curr_coeff])) bkts_f_single << '(' << k << ',' << curr_coeff << "):\t" << Point::to_affine(bkts[num_bkts*k + curr_coeff]).x << '\n';
+            bkts[num_bkts*k + curr_coeff] = Point::is_zero(bkts[num_bkts*k + curr_coeff])?  Point::from_affine(point) :
+                                                                                                    bkts[num_bkts*k + curr_coeff] + point;
             carry = 0;
           }
           else
           {
-            buckets[num_buckets*k + ((-curr_coeff)&coeff_bit_mask)] = P::is_zero(buckets[num_buckets*k + ((-curr_coeff)&coeff_bit_mask)])?  P::neg(P::from_affine(point)) :
-                                                                                                                                      buckets[num_buckets*k + ((-curr_coeff)&coeff_bit_mask)] - point;
+            int bkt_idx = num_bkts*k + ((-curr_coeff)&coeff_bit_mask);
+            
+            if (Point::is_zero(bkts[bkt_idx])) 
+            { 
+              trace_f << bkt_idx << ":\tWrite free cell:\t" << aff_test::neg(point).x << '\n';
+            }
+            else 
+            {
+              trace_f << bkt_idx << ":\tRead for subtraction:\t" << Point::to_affine(bkts[bkt_idx]).x << "\t(With new point:\t" << point.x << " = " << Point::to_affine(bkts[bkt_idx] - point).x << ")\n";
+              trace_f << bkt_idx << ":\tWrite (res) free cell:\t" << Point::to_affine(bkts[bkt_idx] - point).x << '\n';
+            } // TODO remove double addition
+            
+            // if (!Point::is_zero(bkts[num_bkts*k + ((-curr_coeff)&coeff_bit_mask)])) bkts_f_single << '(' << k << ',' << ((-curr_coeff)&coeff_bit_mask) << "):\t" << Point::to_affine(bkts[num_bkts*k + ((-curr_coeff)&coeff_bit_mask)]).x << '\n';
+            bkts[num_bkts*k + ((-curr_coeff)&coeff_bit_mask)] = Point::is_zero(bkts[num_bkts*k + ((-curr_coeff)&coeff_bit_mask)])?  Point::neg(Point::from_affine(point)) :
+                                                                                                                                      bkts[num_bkts*k + ((-curr_coeff)&coeff_bit_mask)] - point;
             carry = 1;
           }
         }
@@ -207,46 +154,50 @@ P* msm_bucket_accumulator(
         }
       }
     }
-    // COMMENT what happens if the carry is needed in the last BM?
   }
-  return buckets;
+  for (int i=0; i < num_bms; i++) 
+    for (int j = 0; j < num_bkts; j++)    
+      bkts_f_single << '(' << i << ',' << j << "):\t" << Point::to_affine(bkts[num_bkts*i+j]).x << '\n';
+  bkts_f_single.close();
+  trace_f.close();
+  return bkts;
 }
 
-template <typename P>
-P* msm_bm_sum(
-  P* buckets,
+template <typename Point>
+Point* msm_bm_sum(
+  Point* bkts,
   const unsigned int c,
   const unsigned int num_bms)
 {
   /**
    * Sum bucket modules to one point each
-   * @param buckets - point array containing all buckets ordered by bucket module
+   * @param bkts - point array containing all bkts ordered by bucket module
    * @param c - bucket width
    * @param num_bms - number of bucket modules
    * @return bm_sums - point array containing the bucket modules' sums
    */
   auto t = Timer("P2:bucket-module-sum");
-  uint32_t num_buckets = 1<<(c-1); // NOTE implicitly assuming that c<32
+  uint32_t num_bkts = 1<<(c-1); // NOTE implicitly assuming that c<32
 
-  P* bm_sums = new P[num_bms];
+  Point* bm_sums = new Point[num_bms];
 
   for (int k = 0; k < num_bms; k++)
   {
-    bm_sums[k] = P::copy(buckets[num_buckets*k]); // Start with bucket zero that holds the weight <num_buckets>
-    P partial_sum = P::copy(buckets[num_buckets*k]);
+    bm_sums[k] = Point::copy(bkts[num_bkts*k]); // Start with bucket zero that holds the weight <num_bkts>
+    Point partial_sum = Point::copy(bkts[num_bkts*k]);
 
-    for (int i = num_buckets-1; i > 0; i--)
+    for (int i = num_bkts-1; i > 0; i--)
     {
-      if (!P::is_zero(buckets[num_buckets*k +i])) partial_sum = partial_sum + buckets[num_buckets*k +i];
-      if (!P::is_zero(partial_sum)) bm_sums[k] = bm_sums[k] + partial_sum;
+      if (!Point::is_zero(bkts[num_bkts*k +i])) partial_sum = partial_sum + bkts[num_bkts*k +i];
+      if (!Point::is_zero(partial_sum)) bm_sums[k] = bm_sums[k] + partial_sum;
     }
   }
   return bm_sums;
 }
 
-template <typename P>
-P msm_final_sum(
-  P* bm_sums,
+template <typename Point>
+Point msm_final_sum(
+  Point* bm_sums,
   const unsigned int c,
   const unsigned int num_bms,
   const bool is_b_mont)
@@ -254,38 +205,38 @@ P msm_final_sum(
   /**
    * Sum the bucket module sums to the final result
    * @param bm_sums - point array containing bucket module sums
-   * @param c - bucket module width / shift between subsequent buckets
+   * @param c - bucket module width / shift between subsequent bkts
    * @param is_b_mont - flag indicating input bases are in Montgomery form
    * @return result - msm calculation
    */
   auto t = Timer("P3:final-accumulator");
-  P result = bm_sums[num_bms - 1];
+  Point result = bm_sums[num_bms - 1];
   for (int k = num_bms - 2; k >= 0; k--)
   {
-    if (P::is_zero(result)){
-      if (!P::is_zero(bm_sums[k])) result = P::copy(bm_sums[k]);
+    if (Point::is_zero(result)){
+      if (!Point::is_zero(bm_sums[k])) result = Point::copy(bm_sums[k]);
     }
     else
     {
       for (int dbl = 0; dbl < c; dbl++)
       {
-        result = P::dbl(result);
+        result = Point::dbl(result);
       }
-      if (!P::is_zero(bm_sums[k])) result = result + bm_sums[k];
+      if (!Point::is_zero(bm_sums[k])) result = result + bm_sums[k];
     }
   }
-  // auto result_converted = is_b_mont? P::to_montgomery(result) : result;
+  // auto result_converted = is_b_mont? Point::to_montgomery(result) : result;
   return result;
 }
 
-template <typename P>
+template <typename Point>
 void msm_delete_arrays(
-  P* buckets,
-  P* bms,
+  Point* bkts,
+  Point* bms,
   const unsigned int num_bms)
 {
   // TODO memory management
-  delete[] buckets;
+  delete[] bkts;
   delete[] bms;
 }
 
@@ -302,54 +253,477 @@ eIcicleError not_supported(const MSMConfig& c)
 }
 
 // Pipenger
-template <typename P>
-eIcicleError cpu_msm(
+template <typename Point>
+eIcicleError cpu_msm_single_thread(
   const Device& device,
-  const scalar_t* scalars, // COMMENT it assumes no negative scalar inputs
-  const affine_t* bases,
+  const sca_test* scalars, // COMMENT it assumes no negative scalar inputs
+  const aff_test* bases,
   int msm_size,
   const MSMConfig& config,
-  P* results)
+  Point* results)
 {
   auto t = Timer("total-msm");
   // TODO remove at the end
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
   const unsigned int c = config.ext.get<int>("c"); // TODO calculate instead of param
-  const unsigned int pcf = config.precompute_factor;
-  const int num_bms = ((scalar_t::NBITS-1) / (pcf * c)) + 1;
+  const unsigned int precomp_f = config.precompute_factor;
+  const int num_bms = ((sca_test::NBITS-1) / (precomp_f * c)) + 1;
 
-  P* buckets = msm_bucket_accumulator<P>(scalars, bases, c, num_bms, msm_size, pcf, config.are_scalars_montgomery_form, config.are_points_montgomery_form);
-  P* bm_sums = msm_bm_sum<P>(buckets, c, num_bms);
-  P res = msm_final_sum<P>(bm_sums, c, num_bms, config.are_points_montgomery_form);
+  Point* bkts = msm_bucket_accumulator<Point>(scalars, bases, c, num_bms, msm_size, precomp_f, config.are_scalars_montgomery_form, config.are_points_montgomery_form);
+  Point* bm_sums = msm_bm_sum<Point>(bkts, c, num_bms);
+  Point res = msm_final_sum<Point>(bm_sums, c, num_bms, config.are_points_montgomery_form);
 
   results[0] = res;
-  msm_delete_arrays(buckets, bm_sums, num_bms);
+  msm_delete_arrays(bkts, bm_sums, num_bms);
   return eIcicleError::SUCCESS;
 }
 
-template <typename P>
-eIcicleError cpu_msm_ref(
+template<typename Point>
+ThreadTask<Point>::ThreadTask()
+: bkt_idx(-1),
+  p1(Point::zero()),
+  p2(Point::zero()),
+  result(Point::zero())
+{
+}
+
+template<typename Point>
+ThreadTask<Point>::ThreadTask(const ThreadTask<Point>& other)
+: bkt_idx(-1),
+  p1(Point::zero()),
+  p2(Point::zero()),
+  result(Point::zero())
+{
+}
+
+template<typename Point>
+inline void ThreadTask<Point>::run()
+{
+  // std::cout << in_ready.load(std::memory_order_acquire) << ',' << out_done.load(std::memory_order_acquire) << '\n';
+  // std::cout << (in_ready.load(std::memory_order_acquire) && out_done.load(std::memory_order_acquire)) << '\n';
+  // assert(!(out_done.load(std::memory_order_acquire) && in_ready.load(std::memory_order_acquire)));
+  if (in_ready.load(std::memory_order_acquire))
+  {
+    assert(!out_done.load(std::memory_order_acquire) );
+     in_ready.store(false, std::memory_order_relaxed);
+    result = p1 + p2;
+    out_done.store(true, std::memory_order_release);
+  }
+}
+
+template<typename Point>
+inline void ThreadTask<Point>::new_task(int in_idx, const Point& in_p1, const Point& in_p2)
+{
+  // assert(!(out_done.load(std::memory_order_acquire) && in_ready.load(std::memory_order_acquire)));
+  out_done.store(false, std::memory_order_relaxed);
+  bkt_idx = in_idx;
+  p1 = in_p1; // Copied by value to not be linked to the original bucket
+  p2 = in_p2;
+  in_ready.store(true, std::memory_order_release);
+}
+
+template<typename Point>
+inline void ThreadTask<Point>::chain_task(const Point& in_p2)
+{
+  // assert(!(out_done.load(std::memory_order_acquire) && in_ready.load(std::memory_order_acquire)));
+  // Add new value to the result stored in p1
+  out_done.store(false, std::memory_order_relaxed);
+  p2 = in_p2;
+  p1 = result;
+  in_ready.store(true, std::memory_order_release);
+}
+
+template<typename Point>
+void ec_add_thread(int tid, std::vector<ThreadTask<Point>>& tasks, bool& kill_thread)
+{
+  /**
+   * Working function of the work threads - 
+   * handles EC addition if given valid inputs in one of the threads interfaces
+   * @param com_a - thread interface (see struct definition above)
+   * @param com_b - second thread interface
+   * @param kill_thread - flag to finish the function (and the thread)
+   */
+  while (true)
+  {
+    for (ThreadTask<Point>& task : tasks)
+    {
+      task.run();
+    }
+    if (kill_thread) break;
+  }
+  // outFile << "\n\n\t\tDONE!\n";
+  // outFile.close(); // Close the file when done
+}
+
+template <typename Point>
+Msm<Point>::Msm(const MSMConfig& config)
+: n_threads(config.ext.get<int>("n_threads")),
+  tasks_per_thread(config.ext.get<int>("tasks_per_thread")), // TODO add tp config?
+  c(config.ext.get<int>("c")), // TODO calculate instead of param
+  num_bkts(1 << (c - 1)),
+  precomp_f(config.precompute_factor),
+  num_bms(((sca_test::NBITS - 1) / (config.precompute_factor * c)) + 1),
+  are_scalars_mont(config.are_scalars_montgomery_form),
+  are_points_mont(config.are_points_montgomery_form),
+  kill_threads(false),
+  // bkts_f("buckets_multi.txt"), // TODO delete
+  trace_f("trace_bucket_multi.txt"), // TODO delete
+  thread_round_robin(0)
+{
+  bkts = new Point[num_bms*num_bkts];
+  std::fill_n(bkts, num_bkts*num_bms, Point::zero()); // TODO remove as occupancy removes the need of initial value
+  bkts_occupancy = new bool[num_bms*num_bkts];
+  std::fill_n(bkts_occupancy, num_bkts*num_bms, false);
+  threads = new WorkThread<Point>[n_threads];
+  for (int i = 0; i < n_threads; i++)
+  {
+    threads[i].tid = i;
+    // threads[i].tasks.resize(tasks_per_thread);
+    // for (int j = 0; j < tasks_per_thread; j++) threads[i].tasks[j] = new ThreadTask<Point>();
+    // for (int j = 0; j < tasks_per_thread; j++) threads[i].tasks.push_back(std::make_unique<ThreadTask<Point>>());
+    for (int j = 0; j < tasks_per_thread; j++) threads[i].tasks.push_back(ThreadTask<Point>());
+    std::cout << "NUm tasks of thread " << i << " is " << threads[i].tasks.size();
+    threads[i].thread = std::thread(ec_add_thread<Point>, threads[i].tid, std::ref(threads[i].tasks), std::ref(kill_threads));
+  }
+  if (!trace_f.good()) { throw std::invalid_argument("Can't open file"); }  // TODO remove log
+}
+
+template <typename Point>
+Msm<Point>::~Msm()
+{
+  std::cout << "\n\nDestroying msm object at the end of the run\n\n"; // COMMENT why am I not seeing it one the console? Isn't the destructor automatically called when msm goes out of scope?
+  kill_threads = true;
+  for (int i = 0; i < n_threads; i++) threads[i].thread.join();
+  trace_f.close();
+  delete[] threads;
+  delete[] bkts;
+  delete[] bkts_occupancy;
+}
+
+template<typename Point>
+void Msm<Point>::bkt_file()
+{
+  bkts_f.open("buckets_multi.txt");
+  if (!bkts_f.good()) { throw std::invalid_argument("Can't open file"); }  // TODO remove log
+
+  for (int i=0; i < num_bms; i++) 
+    for (int j = 0; j < num_bkts; j++)    
+      bkts_f << '(' << i << ',' << j << "):\t" << Point::to_affine(bkts[num_bkts*i+j]).x << '\n';
+  bkts_f.close();
+}
+
+template <typename Point>
+void Msm<Point>::wait_for_idle()
+{
+  /**
+   * Handle thread outputs and possible collisions between results and occupied bkts
+   * @param threads - working threads array
+   * @param n_threads - size of the above array
+   * @param bkts - bucket array to store results / add stored value with result
+   * @param bkts_occupancy - boolean array holding the bkts_occupancy of each bucket
+   * @return boolean, a flag indicating all threads are idle
+   */
+  bool all_threads_idle = false;
+  while (!all_threads_idle)
+  {
+    all_threads_idle = true;
+    for (int i = 0; i < n_threads; i++)
+    {
+      int task_idx = 0;
+      for (ThreadTask<Point>& task : threads[i].tasks)
+      {
+        if (task.out_done.load(std::memory_order_acquire))
+        {
+          if (task.bkt_idx >= 0)
+          {
+            if (bkts_occupancy[task.bkt_idx])
+            {
+              trace_f << task.bkt_idx << ":\tFCollision addition - bkts' cell:\t" << Point::to_affine(bkts[task.bkt_idx]).x << "\t(With add res point:\t" << Point::to_affine(task.result).x << " = " << Point::to_affine(bkts[task.bkt_idx] + task.result).x << ")\t(" << i << ',' << task_idx << ")\n";
+              bkts_occupancy[task.bkt_idx] = false;
+              task.chain_task(bkts[task.bkt_idx]);
+              all_threads_idle = false;
+            }
+            else
+            {
+              bkts[task.bkt_idx] = Point::copy(task.result);
+              trace_f << task.bkt_idx << ":\tFWrite (res) free cell:\t" << Point::to_affine(bkts[task.bkt_idx]).x << "\t(" << i << ',' << task_idx << ")\n";
+              bkts_occupancy[task.bkt_idx] = true;
+              task.bkt_idx = -1; // To ensure no repeated handling of outputs
+            }
+          }
+        }
+        else all_threads_idle = false; 
+        task_idx++;
+      }
+    }
+  }
+  trace_f.flush();
+  std::cout << "\nDone waiting\n";
+}
+
+template<typename Point>
+template<typename Base>
+void Msm<Point>::push_addition(
+  const unsigned int task_bkt_idx,
+  const Point bkt,
+  const Base& base
+) // TODO add option of adding different types
+{
+  /**
+   * Assign EC addition to a free thread
+   * @param task_bkt_idx - results address in the bkts array
+   * @param bkt - bkt to be added. it is passed by value to allow the appropriate cell in the bucket array to be "free" an overwritten without affecting the working thread
+   * @param p2 - point to be added
+   */
+  bool assigned_to_thread = false;
+  int task_idx = 0;
+  while (!assigned_to_thread)
+  {
+    task_idx = 0;
+    for (ThreadTask<Point>& task : threads[thread_round_robin].tasks)
+    {
+      if (task.out_done.load(std::memory_order_relaxed))
+      {
+        if (task.bkt_idx >= 0)
+        {
+          if (bkts_occupancy[task.bkt_idx])
+          {
+            trace_f << task.bkt_idx << ":\tCollision addition - bkts' cell:\t" << Point::to_affine(bkts[task.bkt_idx]).x << "\t(With add res point:\t" << Point::to_affine(task.result).x << " = " << Point::to_affine(bkts[task.bkt_idx] + task.result).x << ")\t(" << thread_round_robin << ',' << task_idx << ")\n";
+            bkts_occupancy[task.bkt_idx] = false;
+            task.chain_task(bkts[task.bkt_idx]);
+          }
+          else
+          {
+            trace_f << task.bkt_idx << ":\tWrite (res) free cell:\t" << Point::to_affine(task.result).x << "\t(" << thread_round_robin << ',' << task_idx << ")\n";
+            bkts[task.bkt_idx] = task.result;
+            // trace_f << task.bkt_idx << ":\tSanity:\t" << Point::to_affine(bkts[task.bkt_idx]).x << '\n';
+            bkts_occupancy[task.bkt_idx] = true;
+
+            task.new_task(task_bkt_idx, bkt, Point::from_affine(base)); // TODO support multiple types
+            assigned_to_thread = true;
+            break;
+          }
+        }
+        else
+        {
+          task.new_task(task_bkt_idx, bkt, Point::from_affine(base)); // TODO support multiple types
+          assigned_to_thread = true;
+          break;
+        }
+      }
+      task_idx++;
+    }
+    
+    if (thread_round_robin == n_threads - 1) thread_round_robin = 0;
+    else thread_round_robin++;
+  }
+  trace_f << task_bkt_idx << ":\tAssigned to:\t(" << (thread_round_robin-1) << ',' << task_idx << ")\n";
+}
+
+
+template <typename Point>
+Point* Msm<Point>::bucket_accumulator(
+  const sca_test* scalars,
+  const aff_test* bases,
+  const unsigned int msm_size
+)
+{
+  // TODO In class function definition
+  /**
+   * Accumulate into the different bkts
+   * @param scalars - original scalars given from the msm result
+   * @param bases - point bases to add
+   * @param msm_size - number of scalars to add
+   * @return bkts - points array containing all bkts
+  */
+  auto t = Timer("P1:bucket-accumulator");
+  uint32_t coeff_bit_mask = num_bkts - 1;
+  const int num_windows_m1 = (sca_test::NBITS -1) / c; // +1 for ceiling than -1 for m1
+  int carry = 0;
+
+  std::cout << "\n\nc=" << c << "\tpcf=" << precomp_f << "\tnum bms=" << num_bms << "\n\n\n";
+  for (int i = 0; i < msm_size; i++)
+  {
+    // std::cout << "Point: " << i << std::endl;
+    carry = 0;
+    sca_test scalar = are_scalars_mont? sca_test::from_montgomery(scalars[i]) : 
+                                        scalars[i];
+    bool negate_p_and_s = scalar.get_scalar_digit(sca_test::NBITS - 1, 1) > 0;
+    if (negate_p_and_s) scalar = sca_test::neg(scalar);
+    for (int j = 0; j < precomp_f; j++)  
+    {
+      aff_test point = are_points_mont? aff_test::from_montgomery(bases[msm_size*j + i]) : 
+                                        bases[msm_size*j + i];
+      if (negate_p_and_s) point = aff_test::neg(point);
+      for (int k = 0; k < num_bms; k++)
+      {
+        if (num_bms*j + k > num_windows_m1) { break; } // Avoid seg fault in case precomp_f*c exceeds the scalar width
+        // std::cout << (num_bms * j + k) << '\n';
+        uint32_t curr_coeff = scalar.get_scalar_digit(num_bms*j + k, c) + carry;
+        int bkt_idx = 0;
+        if ((curr_coeff & ((1 << c) - 1)) != 0)
+        {
+          if (curr_coeff < num_bkts)
+          {
+            bkt_idx = num_bkts*k + curr_coeff;
+            carry = 0;
+          }
+          else
+          {
+            bkt_idx = num_bkts*k + ((-curr_coeff)&coeff_bit_mask);
+            carry = 1;
+          }
+          if (bkts_occupancy[bkt_idx]) 
+          {
+            // std::cout << '(' << i << ',' << j << ',' << k << ") Bidx:\t" << bkt_idx << ":\tOccupied - looking for thread\n";
+            bkts_occupancy[bkt_idx] = false;
+            trace_f << bkt_idx << ":\tRead for addition:\t" << Point::to_affine(bkts[bkt_idx]).x << "\t(With new point:\t" << (carry > 0? aff_test::neg(point) : point).x << " = " << Point::to_affine(bkts[bkt_idx] + (carry > 0? aff_test::neg(point) : point)).x << ")\n";
+            push_addition<aff_test>(bkt_idx, bkts[bkt_idx], carry > 0? aff_test::neg(point) : point);
+          }
+          else
+          {
+            // std::cout << '(' << i << ',' << j << ',' << k << ") Bidx:\t" << bkt_idx << ":\tFree - storing\n";
+            bkts_occupancy[bkt_idx] = true;
+            bkts[bkt_idx] = carry > 0? Point::neg(Point::from_affine(point)) : Point::from_affine(point);
+            trace_f << bkt_idx << ":\tWrite free cell:\t" << (carry > 0? aff_test::neg(point) : point).x << '\n';
+          }
+        }
+        else carry = curr_coeff >> c; // Edge case for coeff = 1 << c due to carry overflow
+      }
+    }
+  }
+
+  // std::cout << "\nWait!\n";
+  wait_for_idle();
+  bkt_file();
+  return bkts;
+}
+
+template <typename Point>
+Point* Msm<Point>::bm_sum(
+  Point* bkts,
+  const unsigned int c,
+  const unsigned int num_bms)
+{
+  /**
+   * Sum bucket modules to one point each
+   * @param bkts - point array containing all bkts ordered by bucket module
+   * @param c - bucket width
+   * @param num_bms - number of bucket modules
+   * @return bm_sums - point array containing the bucket modules' sums
+   */
+  auto t = Timer("P2:bucket-module-sum");
+  uint32_t num_bkts = 1<<(c-1); // NOTE implicitly assuming that c<32
+
+  Point* bm_sums = new Point[num_bms];
+  // std::cout << "\n\nStarting P2\n\n";
+  for (int k = 0; k < num_bms; k++)
+  {
+    bm_sums[k] = Point::copy(bkts[num_bkts*k]); // Start with bucket zero that holds the weight <num_bkts>
+    Point partial_sum = Point::copy(bkts[num_bkts*k]);
+
+    for (int i = num_bkts-1; i > 0; i--)
+    {
+      if (bkts_occupancy[num_bkts*k + i] && !Point::is_zero(bkts[num_bkts*k + i])) partial_sum = partial_sum + bkts[num_bkts*k +i];
+      if (!Point::is_zero(partial_sum)) bm_sums[k] = bm_sums[k] + partial_sum;
+    }
+  }
+  return bm_sums;
+}
+
+// template <typename Point>
+// eIcicleError cpu_msm_multithreaded(
+//   const Device& device,
+//   Msm<Point>& msm,
+//   const sca_test* scalars, // COMMENT it assumes no negative scalar inputs
+//   const aff_test* bases,
+//   int msm_size,
+//   const MSMConfig& config,
+//   Point* results)
+// {
+//   auto t = Timer("total-msm");
+//   // TODO remove at the end
+//   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
+
+//   const unsigned int c = config.ext.get<int>("c"); // TODO calculate instead of param
+//   const unsigned int precomp_f = config.precompute_factor;
+//   const int num_bms = ((sca_test::NBITS-1) / (precomp_f * c)) + 1;
+
+//   Point* bkts = msm.bucket_accumulator(scalars, bases, msm_size);
+//   Point* bm_sums = msm.bm_sum(bkts, c, num_bms);
+//   Point res = msm_final_sum<Point>(bm_sums, c, num_bms, config.are_points_montgomery_form);
+
+//   results[0] = res;
+
+//   // Todo mem management (smart pointer?)
+//   msm_delete_arrays(bkts, bm_sums, num_bms);
+//   return eIcicleError::SUCCESS;
+// }
+
+template <typename Point>
+eIcicleError cpu_msm(
   const Device& device,
-  const scalar_t* scalars,
-  const affine_t* bases,
+  const sca_test* scalars, // COMMENT it assumes no negative scalar inputs
+  const aff_test* bases,
   int msm_size,
   const MSMConfig& config,
-  P* results)
+  Point* results)
 {
-  P res = P::zero();
-  for (auto i = 0; i < msm_size; ++i) {
-    scalar_t scalar = config.are_scalars_montgomery_form? scalar_t::from_montgomery(scalars[i]) : 
-                                                          scalars[i];
-    affine_t point = config.are_points_montgomery_form? affine_t::from_montgomery(bases[i]) : 
-                                                        bases[i];
-    res = res + P::from_affine(point) * scalar;
+  auto msm = new Msm<Point>(config);
+  // TODO move the function here instead of redundant call
+  // return cpu_msm_multithreaded<Point>(device, msm, scalars, bases, msm_size, config, results);
+  auto t = Timer("total-msm");
+  // TODO remove at the end
+  if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
+
+  const unsigned int c = config.ext.get<int>("c"); // TODO calculate instead of param
+  const unsigned int precomp_f = config.precompute_factor;
+  const int num_bms = ((sca_test::NBITS-1) / (precomp_f * c)) + 1;
+  if (config.ext.get<int>("n_threads") > 0) {
+    // std::cout << "\n\n\nmultithreaded\n\n\n";
+  Point* bkts = msm->bucket_accumulator(scalars, bases, msm_size);
+  Point* bm_sums = msm->bm_sum(bkts, c, num_bms);
+  Point res = msm_final_sum<Point>(bm_sums, c, num_bms, config.are_points_montgomery_form);
+  results[0] = res;
+  delete[] bm_sums;
+  delete msm;
   }
-  // results[0] = config.are_points_montgomery_form? P::to_montgomery(res) : res;
+  else {
+    // std::cout << "\n\n\nSinglethreaded\n\n\n";
+    cpu_msm_single_thread(
+      device, // NOTE Comment when switching to my environment
+      scalars, bases, msm_size, config, results);
+  } // TODO remove single threaded when multithreaded works
+
+  // Todo mem management (smart pointer?)
+  return eIcicleError::SUCCESS;
+}
+
+template <typename Point>
+eIcicleError cpu_msm_ref(
+  const Device& device,
+  const sca_test* scalars,
+  const aff_test* bases,
+  int msm_size,
+  const MSMConfig& config,
+  Point* results)
+{
+  // std::cout << "\n\nYuval's reference\n\n";
+  Point res = Point::zero();
+  for (auto i = 0; i < msm_size; ++i) {
+    sca_test scalar = config.are_scalars_montgomery_form? sca_test::from_montgomery(scalars[i]) : 
+                                                          scalars[i];
+    aff_test point = config.are_points_montgomery_form? aff_test::from_montgomery(bases[i]) : 
+                                                        bases[i];
+    res = res + scalar * Point::from_affine(point);
+  }
+  // results[0] = config.are_points_montgomery_form? Point::to_montgomery(res) : res;
   results[0] = res;
   return eIcicleError::SUCCESS;
 }
 
+// COMMENT should I add it to the class
 template <typename A>
 eIcicleError cpu_msm_precompute_bases(
   const Device& device,
@@ -361,27 +735,133 @@ eIcicleError cpu_msm_precompute_bases(
 {
   bool is_mont = config.ext.get<bool>("is_mont");
   const unsigned int c = config.ext.get<int>("c");
-  const unsigned int num_bms_no_precomp = (scalar_t::NBITS - 1) / c + 1;
+  const unsigned int num_bms_no_precomp = (sca_test::NBITS - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
-
   for (int i = 0; i < nof_bases; i++)
   {
     output_bases[i] = input_bases[i]; // COMMENT Should I copy? (not by reference)
-    projective_t point = projective_t::from_affine(is_mont? A::from_montgomery(input_bases[i]) : input_bases[i]);
+    proj_test point = proj_test::from_affine(is_mont? A::from_montgomery(input_bases[i]) : input_bases[i]);
     for (int j = 1; j < precompute_factor; j++)
     {
       for (int k = 0; k < shift; k++)
       {
-        point = projective_t::dbl(point);
+        point = proj_test::dbl(point);
       }
-      output_bases[nof_bases*j + i] = is_mont? A::to_montgomery(projective_t::to_affine(point)) : projective_t::to_affine(point);
+      output_bases[nof_bases*j + i] = is_mont? A::to_montgomery(proj_test::to_affine(point)) : proj_test::to_affine(point);
     }
   }
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<affine_t>);
-REGISTER_MSM_BACKEND("CPU", cpu_msm<projective_t>);
+// BUG I think there's a memory leak somewhere as vscode crashes after a long run
 
-REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU_REF", cpu_msm_precompute_bases<affine_t>);
-REGISTER_MSM_BACKEND("CPU_REF", cpu_msm_ref<projective_t>);
+
+#ifndef STANDALONE
+
+REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<aff_test>);
+REGISTER_MSM_BACKEND("CPU", cpu_msm<proj_test>);
+// REGISTER_MSM_BACKEND("CPU", cpu_msm_single_thread<proj_test>);
+
+REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU_REF", cpu_msm_precompute_bases<aff_test>);
+// REGISTER_MSM_BACKEND("CPU_REF", cpu_msm_ref<proj_test>); // TODO revert to yuval's ref when testing batched msm
+REGISTER_MSM_BACKEND("CPU_REF", cpu_msm_single_thread<proj_test>);
+# else 
+
+  static MSMConfig default_msm_config()
+  {
+    MSMConfig config = {   
+      0,       // nof_bases
+      1,       // precompute_factor
+      1,       // batch_size
+      false,   // are_scalars_on_device
+      false,   // are_scalars_montgomery_form
+      false,   // are_points_on_device
+      false,   // are_points_montgomery_form
+      false,   // are_results_on_device
+      false,   // is_async
+    };
+    // TODO: maybe allow backends to register default values and call it here so they can fill the ext
+    config.ext.set("c", 0);
+    config.ext.set("bitsize", 0);
+    config.ext.set("large_bucket_factor", 10);
+    config.ext.set("big_triangle", true);
+    return config;
+  }
+
+  static MsmPreComputeConfig default_msm_pre_compute_config()
+  {
+    MsmPreComputeConfig config = {   
+      false,   // is_input_on_device
+      false,   // is_output_on_device
+      false,   // is_async
+    };
+    // TODO: maybe allow backends to register default values and call it here so they can fill the ext
+    config.ext.set("c", 0);
+    return config;
+  }
+
+int main() {
+  int seed = 0;
+  auto t = Timer("Time till failure");
+  while (true){
+  const int logn = 17;
+  const int N = 1 << logn;
+  auto scalars = std::make_unique<sca_test[]>(N);
+  auto bases = std::make_unique<aff_test[]>(N);
+
+  bool conv_mont = false;
+
+  std::mt19937_64 generator(seed);
+  sca_test::rand_host_many(scalars.get(), N, generator);
+  proj_test::rand_host_many_affine(bases.get(), N, generator);
+  if (conv_mont) {for (int i=0; i<N; i++) bases[i] = aff_test::to_montgomery(bases[i]); }
+  proj_test result_cpu{};
+  proj_test result_cpu_dbl_n_add{};
+  proj_test result_cpu_ref{};
+
+  proj_test result{};
+
+  auto run = [&](const char* dev_type, proj_test* result, const char* msg, bool measure, int iters,auto cpu_msm) {
+    const int log_p = 0;
+    const int c = std::max(logn, 8) - 1;
+    const int pcf = 1 << log_p;
+
+    const int n_threads = 1;
+    const int tasks_per_thread = 1;
+
+    auto config = default_msm_config();
+    config.ext.set("c", c);
+    config.ext.set("n_threads", n_threads);
+    config.ext.set("tasks_per_thread", tasks_per_thread);
+    config.precompute_factor = pcf;
+    config.are_scalars_montgomery_form = false;
+    config.are_points_montgomery_form = conv_mont;
+
+    auto pc_config = default_msm_pre_compute_config();
+    pc_config.ext.set("c", c);
+    pc_config.ext.set("is_mont", config.are_points_montgomery_form);
+
+    auto precomp_bases = std::make_unique<aff_test[]>(N*pcf);
+    cpu_msm_precompute_bases<aff_test>({}, bases.get(), N, pcf, pc_config, precomp_bases.get());
+    // START_TIMER(MSM_sync)
+    for (int i = 0; i < iters; ++i) {
+      // TODO real test
+      // msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
+      cpu_msm({}, scalars.get(), precomp_bases.get(), N, config, result);
+    }
+    // END_TIMER(MSM_sync, msg, measure);
+  };
+
+  // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
+  run("CPU", &result_cpu, "CPU msm", true /*=measure*/, 1 /*=iters*/, cpu_msm<proj_test>);
+  run("CPU_REF", &result_cpu_ref, "CPU_REF msm", true /*=measure*/, 1 /*=iters*/, cpu_msm_single_thread<proj_test>);
+  std::cout << proj_test::to_affine(result_cpu) << std::endl;
+  std::cout << proj_test::to_affine(result_cpu_ref) << std::endl;
+  std::cout << "Seed is: " << seed << '\n';  
+  assert(result_cpu==result_cpu_ref);
+  std::cout << "HERE\n";
+  }
+  
+  return 0;
+}
+#endif
