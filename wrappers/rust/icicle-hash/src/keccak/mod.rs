@@ -11,16 +11,16 @@ pub mod tests;
 extern "C" {
     pub(crate) fn keccak256_cuda(
         input: *const u8,
-        input_block_size: i32,
-        number_of_blocks: i32,
+        input_block_size: u32,
+        number_of_blocks: u32,
         output: *mut u8,
         config: &HashConfig,
     ) -> CudaError;
 
     pub(crate) fn keccak512_cuda(
         input: *const u8,
-        input_block_size: i32,
-        number_of_blocks: i32,
+        input_block_size: u32,
+        number_of_blocks: u32,
         output: *mut u8,
         config: &HashConfig,
     ) -> CudaError;
@@ -44,20 +44,21 @@ extern "C" {
 
 pub fn keccak256(
     input: &(impl HostOrDeviceSlice<u8> + ?Sized),
-    input_block_size: i32,
-    number_of_blocks: i32,
+    input_block_size: u32,
+    number_of_blocks: u32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: &mut HashConfig,
+    config: &HashConfig,
 ) -> IcicleResult<()> {
-    config.are_inputs_on_device = input.is_on_device();
-    config.are_outputs_on_device = output.is_on_device();
+    let mut local_cfg = config.clone();
+    local_cfg.are_inputs_on_device = input.is_on_device();
+    local_cfg.are_outputs_on_device = output.is_on_device();
     unsafe {
         keccak256_cuda(
             input.as_ptr(),
             input_block_size,
             number_of_blocks,
             output.as_mut_ptr(),
-            config,
+            &local_cfg,
         )
         .wrap()
     }
@@ -65,20 +66,21 @@ pub fn keccak256(
 
 pub fn keccak512(
     input: &(impl HostOrDeviceSlice<u8> + ?Sized),
-    input_block_size: i32,
-    number_of_blocks: i32,
+    input_block_size: u32,
+    number_of_blocks: u32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: &mut HashConfig,
+    config: &HashConfig,
 ) -> IcicleResult<()> {
-    config.are_inputs_on_device = input.is_on_device();
-    config.are_outputs_on_device = output.is_on_device();
+    let mut local_cfg = config.clone();
+    local_cfg.are_inputs_on_device = input.is_on_device();
+    local_cfg.are_outputs_on_device = output.is_on_device();
     unsafe {
         keccak512_cuda(
             input.as_ptr(),
             input_block_size,
             number_of_blocks,
             output.as_mut_ptr(),
-            config,
+            &local_cfg,
         )
         .wrap()
     }
