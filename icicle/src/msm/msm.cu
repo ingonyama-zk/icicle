@@ -405,7 +405,7 @@ namespace msm {
 
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
       const bool is_nof_points_valid = ((single_msm_size * batch_size) % nof_points == 0);
-        // printf("%d %d\n", single_msm_size, nof_points);
+        printf("%d %d\n", single_msm_size, nof_points);
       if (!is_nof_points_valid) {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
@@ -1003,8 +1003,8 @@ namespace msm {
     // int scalar_chunk_size = (msm_size + nof_chunks - 1) / nof_chunks;
     int batch_chunk_size = ((config.batch_size + nof_chunks - 1) / nof_chunks);
     int scalar_chunk_size = batch_chunk_size * msm_size;
-    int points_chunk_size = scalar_chunk_size * config.precompute_factor;
-    int total_scalar_size = config.batch_size * msm_size;
+    int points_chunk_size = scalar_chunk_size * config.precompute_factor; //assume different points
+    // int total_scalar_size = config.batch_size * msm_size;
     // int total_points_size = (config.points_size? config.points_size : msm_size) * config.precompute_factor;
     A* points_d, *points_h;
     S* scalars_d, *scalars_h;
@@ -1028,8 +1028,9 @@ namespace msm {
     {
       bool is_last_iter = i == nof_chunks - 1; 
       // int sub_msm_size = is_last_iter? msm_size % scalar_chunk_size : scalar_chunk_size;
-      int sub_msm_size = is_last_iter? total_scalar_size % scalar_chunk_size : scalar_chunk_size;
-      if (sub_msm_size == 0) sub_msm_size = scalar_chunk_size;
+      int sub_batch_size = is_last_iter? config.batch_size % batch_chunk_size : batch_chunk_size;
+      if (sub_batch_size == 0) sub_batch_size = batch_chunk_size;
+      int sub_msm_size = msm_size * sub_batch_size;
       // config.init_buckets = i == 0;
       // config.return_buckets = !is_last_iter;
       if (i){
@@ -1039,6 +1040,8 @@ namespace msm {
       // config.points_size = sub_msm_size;
       // printf("sub_msm_size %d\n", sub_msm_size);
       // printf("%d %d\n", config.are_scalars_on_device, config.are_points_on_device);
+      config.batch_size = sub_batch_size;
+      config.points_size = sub_msm_size;
       msm<S, A, P>(
       (config.are_scalars_on_device? scalars_d : scalars_h) + (init_scalars_on_device? i : i%2)*scalar_chunk_size, (config.are_points_on_device? points_d : points_h) + (init_points_on_device? i : i%2)*points_chunk_size, sub_msm_size, config, results + i * batch_chunk_size, &buckets_d);
       // printf("finished iter %d\n", i);
