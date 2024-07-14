@@ -1,7 +1,7 @@
 #ifndef CPU_MSM
 #define CPU_MSM
 
-#define STANDALONE
+// #define STANDALONE
 
 #include "icicle/errors.h"
 #include <atomic>
@@ -224,7 +224,7 @@ public:
     ThreadTask(const ThreadTask<Point>& other);
     void run();
     void new_task(int in_idx, const Point& in_p1, const Point& in_p2);
-    void chain_task(const Point& in_p2);
+    void chain_task(const Point in_p2);
 };
 
 template<typename Point>
@@ -245,14 +245,22 @@ private:
     int thread_round_robin;
     bool any_thread_free;
 
-    Point* bkts;
-    bool* bkts_occupancy;
     const unsigned int c;
     const unsigned int num_bkts;
     const unsigned int num_bms;
     const unsigned int precomp_f;
     const bool are_scalars_mont;
     const bool are_points_mont;
+
+    // Phase 1
+    Point* bkts;
+    bool* bkts_occupancy;
+    // Phase 2
+    Point* bm_sums;
+    // Phase 3
+    bool mid_phase3;
+    int num_valid_results;
+    Point* results;
 
     std::ofstream bkts_f; // TODO remove files
     std::ofstream trace_f;
