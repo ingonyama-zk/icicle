@@ -72,4 +72,4 @@ let digests_slice = HostSlice::from_mut_slice(&mut digests);
 build_keccak256_merkle_tree(leaves_slice, digests_slice, height, input_block_len, &config).unwrap();
 ```
 
-In the example above, a binary tree of height 22 is being built. Each leave is considered to be a 136 bytes long array. The leaves and digests are aligned in a flat array. You can also use keccak512 in `build_keccak512_merkle_tree` function.
+In the example above, a binary tree of height 22 is being built. Each leaf is considered to be a 136 byte long array. The leaves and digests are aligned in a flat array. You can also use keccak512 in `build_keccak512_merkle_tree` function.
