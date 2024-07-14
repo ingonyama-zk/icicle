@@ -50,7 +50,7 @@ poseidon.hash_many::<F>(
 .unwrap();
 ```
 
-In the example above `Poseidon2::load(width, rate, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();` is used which will load the correct constants based on width and curve. Here, the default MDS matrices and diffusion are used. If you want to get a Plonky3 compliant version - set them to `MdsType::Plonky` and `DiffusionStrategy::Montgomery` respectively.
+In the example above `Poseidon2::load(width, rate, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();` is used to load the correct constants based on width and curve. Here, the default MDS matrices and diffusion are used. If you want to get a Plonky3 compliant version, set them to `MdsType::Plonky` and `DiffusionStrategy::Montgomery` respectively.
 
 ## The Tree Builder
 
