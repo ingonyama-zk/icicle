@@ -8,7 +8,7 @@
 ICICLE Poseidon2 is implemented for GPU and parallelization is performed for each state.
 We calculate multiple hash-sums over multiple pre-images in parallel, rather than going block by block over the input vector.
 
-So for Poseidon2 of width 16, input rate 8, output elements 8 and input of size 1024 * 8, we would expect 1024 * 8 elements of output. Which means each input block would be of size 8 and that would result in 1024 Poseidon2 hashes being performed.
+For example, for Poseidon2 of width 16, input rate 8, output elements 8 and input of size 1024 * 8, we would expect 1024 * 8 elements of output. Which means each input block would be of size 8, resulting in 1024 Poseidon2 hashes being performed.
 
 ### Supported Bindings
 
