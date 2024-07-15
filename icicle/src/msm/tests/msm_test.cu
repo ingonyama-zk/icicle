@@ -152,8 +152,8 @@ int main(int argc, char** argv)
   test_scalar* scalars_h = new test_scalar[N];
   test_affine* points_h = new test_affine[N];
   test_affine* points_precomputed_h = new test_affine[N*precomp_factor];
-  // int chunk_size = batch_size > 1? N : (msm_size + nof_chunks - 1) / nof_chunks;
-  int chunk_size = N;
+  int chunk_size = batch_size > 1? N : (msm_size + nof_chunks - 1) / nof_chunks;
+  // int chunk_size = N;
 
   // test_scalar::rand_host_many(scalars, N);
   // test_projective::rand_host_many_affine(points, N);
@@ -235,16 +235,17 @@ int main(int argc, char** argv)
   cudaEventCreate(&stop);
 
   if (precomp_factor > 1){
-    for (int i = 0; i < nof_chunks; i++)
-    {
-      bool is_last_iter = i == nof_chunks - 1; 
-      int sub_msm_size = is_last_iter? msm_size % chunk_size : chunk_size;
-      if (sub_msm_size == 0) sub_msm_size = chunk_size;
-      // config.points_size = sub_msm_size;
-      cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(test_affine) * sub_msm_size, cudaMemcpyHostToDevice);
-      msm::precompute_msm_points<test_affine, test_projective>(points_d + (i%2)*chunk_size, sub_msm_size, config, precomp_points_d + (i%2)*chunk_size*precomp_factor);
-      cudaMemcpyAsync(points_precomputed_h + i*chunk_size*precomp_factor, precomp_points_d + (i%2)*chunk_size*precomp_factor, sizeof(test_affine) * sub_msm_size*precomp_factor, cudaMemcpyDeviceToHost);
-    }
+    // for (int i = 0; i < nof_chunks; i++)
+    // {
+    //   bool is_last_iter = i == nof_chunks - 1; 
+    //   int sub_msm_size = is_last_iter? N % chunk_size : chunk_size;
+    //   if (sub_msm_size == 0) sub_msm_size = chunk_size;
+    //   // config.points_size = sub_msm_size;
+    //   cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(test_affine) * sub_msm_size, cudaMemcpyHostToDevice);
+    //   msm::precompute_msm_points<test_affine, test_projective>(points_d + (i%2)*chunk_size, sub_msm_size, config, precomp_points_d + (i%2)*chunk_size*precomp_factor);
+    //   cudaMemcpyAsync(points_precomputed_h + i*chunk_size*precomp_factor, precomp_points_d + (i%2)*chunk_size*precomp_factor, sizeof(test_affine) * sub_msm_size*precomp_factor, cudaMemcpyDeviceToHost);
+    // }
+    msm::chunked_precompute<test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h, nof_chunks);
   }
   // warm up
   // config.points_size = chunk_size;
@@ -263,8 +264,8 @@ int main(int argc, char** argv)
   cudaEventRecord(start, stream);
   // config.points_size = 0;
   // chunked_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
-  // multi_batch_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
-  msm::msm<test_scalar, test_affine, test_projective>(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d, &buckets_d);
+  multi_batch_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
+  // msm::msm<test_scalar, test_affine, test_projective>(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d, &buckets_d);
   // config.points_size = config.points_size/2;
   // config.return_buckets = true;
   // msm::msm<test_scalar, test_affine, test_projective>(
