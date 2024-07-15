@@ -2,12 +2,14 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include "dlfcn.h"
+#include <random>
 
 #include "icicle/runtime.h"
 #include "icicle/vec_ops.h"
 #include "icicle/ntt.h"
 
 #include "icicle/fields/field_config.h"
+#include "icicle/utils/log.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -87,7 +89,7 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
 
 TYPED_TEST(FieldApiTest, vectorOps)
 {
-  const int N = 1 << 15;
+  const uint64_t N = 1 << 15;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
   FieldApiTest<TypeParam>::random_samples(in_a.get(), N);
@@ -190,7 +192,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 
 TYPED_TEST(FieldApiTest, montgomeryConversion)
 {
-  const int N = 1 << 18;
+  const uint64_t N = 1 << 18;
   auto elements_main = std::make_unique<TypeParam[]>(N);
   auto elements_ref = std::make_unique<TypeParam[]>(N);
   FieldApiTest<TypeParam>::random_samples(elements_main.get(), N);
@@ -218,7 +220,7 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
 
 TYPED_TEST(FieldApiTest, bitReverse)
 {
-  const int N = 1 << 18;
+  const uint64_t N = 1 << 18;
   auto elements_main = std::make_unique<TypeParam[]>(N);
   auto elements_ref = std::make_unique<TypeParam[]>(N);
   FieldApiTest<TypeParam>::random_samples(elements_main.get(), N);
@@ -247,13 +249,36 @@ TYPED_TEST(FieldApiTest, bitReverse)
 #ifdef NTT_ENABLED
 TYPED_TEST(FieldApiTest, ntt)
 {
-  const int logn = 20;
-  const int N = 1 << logn;
-  auto scalars = std::make_unique<TypeParam[]>(N);
-  FieldApiTest<TypeParam>::random_samples(scalars.get(), N);
+  srand(time(0));
 
-  auto out_main = std::make_unique<TypeParam[]>(N);
-  auto out_ref = std::make_unique<TypeParam[]>(N);
+  // Randomize config
+  const int logn = rand() % 10 + 3;
+  const uint64_t N = 1 << logn;
+  const int log_ntt_domain_size = 17;
+  const int log_batch_size = rand() % 10 + 3;
+  const int batch_size = 1 << log_batch_size;
+  const Ordering ordering = static_cast<Ordering>(rand() % 4);
+  bool columns_batch;
+  if (logn == 7 || logn < 4) {
+    columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  } else {
+    columns_batch = rand() % 2;
+  }
+
+  const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
+  const int log_coset_stride = rand() % 4;
+  scalar_t coset_gen;
+  if (log_coset_stride) {
+    coset_gen = scalar_t::omega(logn + log_coset_stride);
+  } else {
+    coset_gen = scalar_t::one();
+  }
+
+  const int total_size = N * batch_size;
+  auto scalars = std::make_unique<TypeParam[]>(total_size);
+  FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
+  auto out_main = std::make_unique<TypeParam[]>(total_size);
+  auto out_ref = std::make_unique<TypeParam[]>(total_size);
 
   auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
@@ -269,30 +294,32 @@ TYPED_TEST(FieldApiTest, ntt)
     ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
 
-    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(logn), init_domain_config));
-
     auto config = default_ntt_config<scalar_t>();
-
-    TypeParam *d_in, *d_out;
-    icicle_malloc_async((void**)&d_in, N * sizeof(TypeParam), config.stream);
-    icicle_malloc_async((void**)&d_out, N * sizeof(TypeParam), config.stream);
-    icicle_copy_to_device_async(d_in, scalars.get(), N * sizeof(TypeParam), config.stream);
-
-    config.ordering = Ordering::kNN;
     config.stream = stream;
+    config.coset_gen = coset_gen;
+    config.batch_size = batch_size;       // default: 1
+    config.columns_batch = columns_batch; // default: false
+    config.ordering = ordering;           // default: kNN
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
+    config.is_async = true; // default: false
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+
+    TypeParam *d_in, *d_out;
+    icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream);
+    icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream);
+    icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream);
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(ntt(d_in, N, NTTDir::kForward, config, d_out));
+      ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
     }
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
-    icicle_copy_to_host_async(out, d_out, N * sizeof(TypeParam), config.stream);
+    icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream);
     icicle_stream_synchronize(config.stream);
     icicle_free_async(d_in, config.stream);
     icicle_free_async(d_out, config.stream);
@@ -301,10 +328,11 @@ TYPED_TEST(FieldApiTest, ntt)
   };
 
   run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  // run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 16 /*=iters*/);
 
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(scalar_t)));
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT_ENABLED
 

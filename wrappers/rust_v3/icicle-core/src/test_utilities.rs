@@ -6,7 +6,7 @@ use std::sync::{Mutex, OnceLock};
 
 static INIT: OnceLock<()> = OnceLock::new();
 pub static TEST_MAIN_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("CUDA", 0)));
-pub static TEST_REF_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("CUDA", 0))); // TODO Yuval: should be CPU
+pub static TEST_REF_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("CPU", 0)));
 
 pub fn test_load_and_init_devices() {
     INIT.get_or_init(move || {
