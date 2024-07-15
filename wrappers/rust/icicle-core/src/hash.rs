@@ -11,44 +11,28 @@ use crate::ntt::IcicleResult;
 /// Struct that encodes Sponge hash parameters.
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct SpongeConfig<'a> {
+pub struct HashConfig<'a> {
     /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
     pub ctx: DeviceContext<'a>,
-    pub(crate) are_inputs_on_device: bool,
-    pub(crate) are_outputs_on_device: bool,
-    pub input_rate: u32,
-    pub output_rate: u32,
-    pub offset: u32,
-
-    /// If true - input should be already aligned for poseidon permutation.
-    /// Aligned format: [0, A, B, 0, C, D, ...] (as you might get by using loop_state)
-    /// not aligned format: [A, B, 0, C, D, 0, ...] (as you might get from cudaMemcpy2D)
-    pub recursive_squeeze: bool,
-
-    /// If true, hash results will also be copied in the input pointer in aligned format
-    pub aligned: bool,
+    pub are_inputs_on_device: bool,
+    pub are_outputs_on_device: bool,
     /// Whether to run the sponge operations asynchronously. If set to `true`, the functions will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the functions will block the current CPU thread.
     pub is_async: bool,
 }
 
-impl<'a> Default for SpongeConfig<'a> {
+impl<'a> Default for HashConfig<'a> {
     fn default() -> Self {
         Self::default_for_device(DEFAULT_DEVICE_ID)
     }
 }
 
-impl<'a> SpongeConfig<'a> {
+impl<'a> HashConfig<'a> {
     pub(crate) fn default_for_device(device_id: usize) -> Self {
-        SpongeConfig {
+        HashConfig {
             ctx: DeviceContext::default_for_device(device_id),
             are_inputs_on_device: false,
             are_outputs_on_device: false,
-            input_rate: 0,
-            output_rate: 0,
-            offset: 0,
-            recursive_squeeze: false,
-            aligned: false,
             is_async: false,
         }
     }
@@ -62,10 +46,10 @@ pub trait SpongeHash<PreImage, Image> {
         number_of_states: usize,
         input_block_len: usize,
         output_len: usize,
-        cfg: &SpongeConfig,
+        cfg: &HashConfig,
     ) -> IcicleResult<()>;
 
-    fn default_config<'a>(&self) -> SpongeConfig<'a>;
+    fn default_config<'a>(&self) -> HashConfig<'a>;
 
     fn get_handle(&self) -> *const c_void;
 }

@@ -16,10 +16,10 @@ namespace merkle_tree {
     uint64_t number_of_rows,
     D* digests,
     unsigned int digest_elements,
-    const SpongeHasher<L, D>& hasher,
+    const Hasher<L, D>& hasher,
     const device_context::DeviceContext& ctx)
   {
-    SpongeConfig sponge_config = default_sponge_config(ctx);
+    HashConfig sponge_config = default_hash_config(ctx);
     sponge_config.are_inputs_on_device = true;
     sponge_config.are_outputs_on_device = true;
     sponge_config.is_async = true;
@@ -57,8 +57,8 @@ namespace merkle_tree {
     unsigned int keep_rows;                  // Number of rows to keep
     bool are_inputs_on_device;
     bool caps_mode;
-    const SpongeHasher<L, D>* hasher = nullptr;
-    const SpongeHasher<L, D>* compression = nullptr;
+    const Hasher<L, D>* hasher = nullptr;
+    const Hasher<L, D>* compression = nullptr;
     const device_context::DeviceContext* ctx = nullptr;
   };
 
@@ -189,8 +189,8 @@ namespace merkle_tree {
     const Matrix<L>* inputs,
     const unsigned int number_of_inputs,
     D* digests,
-    const SpongeHasher<L, D>& hasher,
-    const SpongeHasher<L, D>& compression,
+    const Hasher<L, D>& hasher,
+    const Hasher<L, D>& compression,
     const TreeBuilderConfig& tree_config)
   {
     CHK_INIT_IF_RETURN();

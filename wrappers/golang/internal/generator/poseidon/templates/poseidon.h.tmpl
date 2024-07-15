@@ -12,7 +12,7 @@ typedef struct scalar_t scalar_t;
 typedef struct DeviceContext DeviceContext;
 typedef struct TreeBuilderConfig TreeBuilderConfig;
 typedef struct PoseidonInst PoseidonInst;
-typedef struct SpongeConfig SpongeConfig;
+typedef struct HashConfig HashConfig;
 
 
 cudaError_t {{.Field}}_poseidon_create_cuda(
@@ -40,7 +40,7 @@ cudaError_t {{.Field}}_poseidon_hash_many_cuda(
   unsigned int number_of_states,
   unsigned int input_block_len,
   unsigned int output_len,
-  SpongeConfig* cfg);
+  HashConfig* cfg);
 
 cudaError_t {{.Field}}_poseidon_delete_cuda(PoseidonInst* poseidon);
 

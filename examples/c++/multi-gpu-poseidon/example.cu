@@ -35,7 +35,7 @@ void threadPoseidon(
     std::cerr << "CUDA error: " << cudaGetErrorString(err_result) << std::endl;
     return;
   }
-  SpongeConfig column_config = default_sponge_config(ctx);
+  HashConfig column_config = default_hash_config(ctx);
   cudaError_t err = poseidon->hash_many(layers, column_hashes, (size_t) size_partition, size_col, 1, column_config);
   checkCudaError(err);
 }

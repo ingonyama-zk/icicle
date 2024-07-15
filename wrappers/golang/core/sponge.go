@@ -6,7 +6,7 @@ import (
 	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 )
 
-type SpongeConfig struct {
+type HashConfig struct {
 	/// Details related to the device such as its id and stream.
 	Ctx cr.DeviceContext
 
@@ -31,9 +31,9 @@ type SpongeConfig struct {
 	IsAsync bool
 }
 
-func GetDefaultSpongeConfig() SpongeConfig {
+func GetDefaultHashConfig() HashConfig {
 	ctx, _ := cr.GetDefaultDeviceContext()
-	return SpongeConfig{
+	return HashConfig{
 		ctx,
 		false,
 		false,

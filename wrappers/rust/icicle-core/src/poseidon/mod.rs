@@ -7,7 +7,7 @@ use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSli
 
 use crate::{
     error::IcicleResult,
-    hash::{sponge_check_input, sponge_check_outputs, SpongeConfig, SpongeHash},
+    hash::{sponge_check_input, sponge_check_outputs, HashConfig, SpongeHash},
     traits::FieldImpl,
 };
 
@@ -87,7 +87,7 @@ where
         number_of_states: usize,
         input_block_len: usize,
         output_len: usize,
-        cfg: &SpongeConfig,
+        cfg: &HashConfig,
     ) -> IcicleResult<()> {
         sponge_check_input(inputs, number_of_states, input_block_len, self.width - 1, &cfg.ctx);
         sponge_check_outputs(output, number_of_states, output_len, self.width, false, &cfg.ctx);
@@ -107,11 +107,8 @@ where
         )
     }
 
-    fn default_config<'a>(&self) -> SpongeConfig<'a> {
-        let mut cfg = SpongeConfig::default();
-        cfg.input_rate = self.width as u32 - 1;
-        cfg.output_rate = self.width as u32;
-        cfg
+    fn default_config<'a>(&self) -> HashConfig<'a> {
+        HashConfig::default()
     }
 }
 
@@ -148,7 +145,7 @@ pub trait PoseidonImpl<F: FieldImpl> {
         input_block_len: u32,
         output_len: u32,
         poseidon: PoseidonHandle,
-        cfg: &SpongeConfig,
+        cfg: &HashConfig,
     ) -> IcicleResult<()>;
 
     fn delete(poseidon: PoseidonHandle) -> IcicleResult<()>;
@@ -163,7 +160,7 @@ macro_rules! impl_poseidon {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon::{$field, $field_config, CudaError, DeviceContext, PoseidonHandle, SpongeConfig};
+            use crate::poseidon::{$field, $field_config, CudaError, DeviceContext, HashConfig, PoseidonHandle};
             extern "C" {
                 #[link_name = concat!($field_prefix, "_poseidon_create_cuda")]
                 pub(crate) fn create(
@@ -194,7 +191,7 @@ macro_rules! impl_poseidon {
                     number_of_states: u32,
                     input_block_len: u32,
                     output_len: u32,
-                    cfg: &SpongeConfig,
+                    cfg: &HashConfig,
                 ) -> CudaError;
             }
         }
@@ -248,7 +245,7 @@ macro_rules! impl_poseidon {
                 input_block_len: u32,
                 output_len: u32,
                 poseidon: PoseidonHandle,
-                cfg: &SpongeConfig,
+                cfg: &HashConfig,
             ) -> IcicleResult<()> {
                 unsafe {
                     $field_prefix_ident::hash_many(

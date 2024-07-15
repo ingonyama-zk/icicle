@@ -20,7 +20,7 @@ using namespace hash;
  */
 namespace poseidon {
   template <typename S>
-  class Poseidon : public SpongeHasher<S, S>
+  class Poseidon : public Hasher<S, S>
   {
   public:
     const std::size_t device_id;
@@ -65,7 +65,7 @@ namespace poseidon {
       const S* sparse_matrices,
       const S domain_tag,
       device_context::DeviceContext& ctx)
-        : SpongeHasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
+        : Hasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
     {
       PoseidonConstants<S> constants;
       CHK_STICKY(create_optimized_poseidon_constants(
@@ -75,7 +75,7 @@ namespace poseidon {
     }
 
     Poseidon(int arity, device_context::DeviceContext& ctx)
-        : SpongeHasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
+        : Hasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
     {
       PoseidonConstants<S> constants{};
       CHK_STICKY(init_optimized_poseidon_constants(arity, ctx, &constants));

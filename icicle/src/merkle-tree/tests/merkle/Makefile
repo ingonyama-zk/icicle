@@ -8,8 +8,7 @@ merkle_bls.o: ../../extern.cu ../../merkle.cu
 poseidon.o: ../../../poseidon/extern.cu
 	nvcc -o poseidon.o -I../../../../include -DFIELD=bls12_381 -DFIELD_ID=2 -DCURVE=bls12_381 -c ../../../poseidon/extern.cu
 
-
-test_merkle: poseidon2.o merkle.o 
+test_merkle: test_poseidon2.cu poseidon2.o merkle.o 
 	nvcc -o test_merkle -I../../../../include -DFIELD=babybear -DFIELD_ID=1001 -DMERKLE_DEBUG poseidon2.o merkle.o test_poseidon2.cu
 	./test_merkle
 

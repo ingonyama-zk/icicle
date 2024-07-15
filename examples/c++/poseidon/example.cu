@@ -16,7 +16,7 @@ inline uint32_t tree_index(uint32_t level, uint32_t offset) { return (1 << level
 
 // We assume the tree has leaves already set, compute all other levels
 void build_tree(
-  const uint32_t tree_height, scalar_t* tree, Poseidon<scalar_t> &poseidon, SpongeConfig &config)
+  const uint32_t tree_height, scalar_t* tree, Poseidon<scalar_t> &poseidon, HashConfig &config)
 {
   for (uint32_t level = tree_height - 1; level > 0; level--) {
     const uint32_t next_level = level - 1;
@@ -67,7 +67,7 @@ uint32_t validate_proof(
   const uint32_t* proof_lr,
   const scalar_t* proof_hash,
   Poseidon<scalar_t> &poseidon,
-  SpongeConfig &config)
+  HashConfig &config)
 {
   scalar_t hashes_in[2], hash_out[1], level_hash;
   level_hash = hash;
@@ -112,12 +112,12 @@ int main(int argc, char* argv[])
   std::cout << "Hashing blocks into tree leaves..." << std::endl;
 
   Poseidon<scalar_t> poseidon(data_arity, ctx);
-  SpongeConfig config = default_sponge_config(ctx); 
+  HashConfig config = default_hash_config(ctx); 
   poseidon.hash_many(data, &tree[tree_index(leaf_level, 0)], tree_width, data_arity, 1, config);
 
   std::cout << "3. Building Merkle tree" << std::endl;
   Poseidon<scalar_t> tree_poseidon(tree_arity, ctx);
-  SpongeConfig tree_config = default_sponge_config(ctx);
+  HashConfig tree_config = default_hash_config(ctx);
   build_tree(tree_height, tree, tree_poseidon, tree_config);
 
   std::cout << "4. Generate membership proof" << std::endl;

@@ -71,16 +71,16 @@ extern "C" cudaError_t bls12_381_build_merkle_tree(
   bls12_381::scalar_t* digests,
   unsigned int height,
   unsigned int input_block_len, 
-  const hash::SpongeHasher<bls12_381::scalar_t, bls12_381::scalar_t>* compression,
-  const hash::SpongeHasher<bls12_381::scalar_t, bls12_381::scalar_t>* bottom_layer,
+  const hash::Hasher<bls12_381::scalar_t, bls12_381::scalar_t>* compression,
+  const hash::Hasher<bls12_381::scalar_t, bls12_381::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
   extern "C" cudaError_t bls12_381_mmcs_commit_cuda(
     const matrix::Matrix<bls12_381::scalar_t>* leaves,
     unsigned int number_of_inputs,
     bls12_381::scalar_t* digests,
-    const hash::SpongeHasher<bls12_381::scalar_t, bls12_381::scalar_t>* hasher,
-    const hash::SpongeHasher<bls12_381::scalar_t, bls12_381::scalar_t>* compression,
+    const hash::Hasher<bls12_381::scalar_t, bls12_381::scalar_t>* hasher,
+    const hash::Hasher<bls12_381::scalar_t, bls12_381::scalar_t>* compression,
     const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t bls12_381_poseidon_create_cuda(
@@ -108,7 +108,7 @@ extern "C" cudaError_t bls12_381_poseidon_hash_many_cuda(
   unsigned int number_of_states,
   unsigned int input_block_len,
   unsigned int output_len,
-  hash::SpongeConfig& cfg);
+  hash::HashConfig& cfg);
 
 extern "C" cudaError_t
   bls12_381_poseidon_delete_cuda(poseidon::Poseidon<bls12_381::scalar_t>* poseidon);

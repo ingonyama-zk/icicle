@@ -11,31 +11,19 @@
 using namespace hash;
 
 namespace keccak {
-  /**
-   * @struct KeccakConfig
-   * Struct that encodes various Keccak parameters.
-   */
-  struct KeccakConfig {
-    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    bool is_async; /**< Whether to run the Keccak asynchronously. If set to `true`, the keccak_hash function will be
-                    *   non-blocking and you'd need to synchronize it explicitly by running
-                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, keccak_hash
-                    *   function will block the current CPU thread. */
-  };
-
-  KeccakConfig default_keccak_config()
+  class Keccak : public Hasher<uint8_t, uint64_t>
   {
-    device_context::DeviceContext ctx = device_context::get_default_device_context();
-    KeccakConfig config = {
-      ctx,   // ctx
-      false, // are_inputes_on_device
-      false, // are_outputs_on_device
-      false, // is_async
-    };
-    return config;
-  }
+  public:
+    cudaError_t run_hash_many_kernel(
+      const uint8_t* input,
+      uint64_t* output,
+      unsigned int number_of_states,
+      unsigned int input_len,
+      unsigned int output_len,
+      const device_context::DeviceContext& ctx) const override;
+
+    Keccak(unsigned int rate) : Hasher<uint8_t, uint64_t>(25, 25, rate, 0) {}
+  };
 } // namespace keccak
 
 #endif

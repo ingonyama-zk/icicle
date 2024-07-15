@@ -25,7 +25,7 @@ func main() {
 	input := createHostSliceFromHexString("1725b6")
 	outHost256 := make(core.HostSlice[uint8], 32)
 
-	cfg := keccak.GetDefaultKeccakConfig()
+	cfg := keccak.GetDefaultHashConfig()
 	e := keccak.Keccak256(input, int32(input.Len()), 1, outHost256, &cfg)
 	if e.CudaErrorCode != cr.CudaSuccess {
 		panic("Keccak256 hashing failed")
@@ -49,8 +49,8 @@ func main() {
 ## Keccak Methods
 
 ```go
-func Keccak256(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *KeccakConfig) core.IcicleError
-func Keccak512(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *KeccakConfig) core.IcicleError
+func Keccak256(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *HashConfig) core.IcicleError
+func Keccak512(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int32, output core.HostOrDeviceSlice, config *HashConfig) core.IcicleError
 ```
 
 ### Parameters
@@ -59,18 +59,18 @@ func Keccak512(input core.HostOrDeviceSlice, inputBlockSize, numberOfBlocks int3
 - **`inputBlockSize`**: An integer specifying the size of the input data for a single hash.
 - **`numberOfBlocks`**: An integer specifying the number of results in the hash batch.
 - **`output`**: A slice where the resulting hash will be stored. This slice can be in host or device memory.
-- **`config`**: A pointer to a `KeccakConfig` object, which contains various configuration options for the Keccak256 operation.
+- **`config`**: A pointer to a `HashConfig` object, which contains various configuration options for the Keccak256 operation.
 
 ### Return Value
 
 - **`CudaError`**: Returns a CUDA error code indicating the success or failure of the Keccak256/Keccak512 operation.
 
-## KeccakConfig
+## HashConfig
 
-The `KeccakConfig` structure holds configuration parameters for the Keccak256/Keccak512 operation, allowing customization of its behavior to optimize performance based on the specifics of the operation or the underlying hardware.
+The `HashConfig` structure holds configuration parameters for the Keccak256/Keccak512 operation, allowing customization of its behavior to optimize performance based on the specifics of the operation or the underlying hardware.
 
 ```go
-type KeccakConfig struct {
+type HashConfig struct {
 	Ctx                cr.DeviceContext
 	areInputsOnDevice  bool
 	areOutputsOnDevice bool
@@ -87,8 +87,8 @@ type KeccakConfig struct {
 
 ### Default Configuration
 
-Use `GetDefaultKeccakConfig` to obtain a default configuration, which can then be customized as needed.
+Use `GetDefaultHashConfig` to obtain a default configuration, which can then be customized as needed.
 
 ```go
-func GetDefaultKeccakConfig() KeccakConfig
+func GetDefaultHashConfig() HashConfig
 ```

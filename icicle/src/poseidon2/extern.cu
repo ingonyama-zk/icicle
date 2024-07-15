@@ -56,7 +56,7 @@ namespace poseidon2 {
     unsigned int number_of_states,
     unsigned int input_block_len,
     unsigned int output_len,
-    hash::SpongeConfig& cfg)
+    hash::HashConfig& cfg)
   {
     return poseidon->hash_many(inputs, output, number_of_states, input_block_len, output_len, cfg);
   }

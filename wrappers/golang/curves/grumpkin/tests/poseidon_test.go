@@ -19,7 +19,7 @@ func TestPoseidon(t *testing.T) {
 	p, err := poseidon.Load(uint32(arity), &ctx)
 	assert.Equal(t, core.IcicleSuccess, err.IcicleErrorCode)
 
-	cfg := p.GetDefaultSpongeConfig()
+	cfg := p.GetDefaultHashConfig()
 
 	scalars := grumpkin.GenerateScalars(numberOfStates * arity)
 	scalars[0] = scalars[0].Zero()

@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 
   scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
-  SpongeConfig cfg = default_sponge_config();
+  HashConfig cfg = default_hash_config();
 
   START_TIMER(poseidon_timer);
   poseidon.hash_many(in_ptr, out_ptr, number_of_blocks, T, 1, cfg);

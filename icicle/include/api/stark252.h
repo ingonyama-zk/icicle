@@ -20,16 +20,16 @@ extern "C" cudaError_t stark252_build_merkle_tree(
   stark252::scalar_t* digests,
   unsigned int height,
   unsigned int input_block_len, 
-  const hash::SpongeHasher<stark252::scalar_t, stark252::scalar_t>* compression,
-  const hash::SpongeHasher<stark252::scalar_t, stark252::scalar_t>* bottom_layer,
+  const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* compression,
+  const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
   extern "C" cudaError_t stark252_mmcs_commit_cuda(
     const matrix::Matrix<stark252::scalar_t>* leaves,
     unsigned int number_of_inputs,
     stark252::scalar_t* digests,
-    const hash::SpongeHasher<stark252::scalar_t, stark252::scalar_t>* hasher,
-    const hash::SpongeHasher<stark252::scalar_t, stark252::scalar_t>* compression,
+    const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* hasher,
+    const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* compression,
     const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t stark252_mul_cuda(

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <math.h>
 
+#define DEBUG
 #include "merkle-tree/merkle.cuh"
 
 #include "poseidon/poseidon.cuh"

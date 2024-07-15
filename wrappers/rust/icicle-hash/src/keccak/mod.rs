@@ -1,84 +1,64 @@
+use icicle_core::hash::HashConfig;
+use icicle_core::tree::TreeBuilderConfig;
 use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::{
-    device_context::{DeviceContext, DEFAULT_DEVICE_ID},
-    memory::HostOrDeviceSlice,
-};
+use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use icicle_core::error::IcicleResult;
 use icicle_core::traits::IcicleResultWrap;
 
 pub mod tests;
 
-#[repr(C)]
-#[derive(Debug, Clone)]
-pub struct KeccakConfig<'a> {
-    /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
-    pub ctx: DeviceContext<'a>,
-
-    /// True if inputs are on device and false if they're on host. Default value: false.
-    pub are_inputs_on_device: bool,
-
-    /// If true, output is preserved on device, otherwise on host. Default value: false.
-    pub are_outputs_on_device: bool,
-
-    /// Whether to run the Keccak asynchronously. If set to `true`, the keccak_hash function will be
-    /// non-blocking and you'd need to synchronize it explicitly by running
-    /// `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, keccak_hash
-    /// function will block the current CPU thread.
-    pub is_async: bool,
-}
-
-impl<'a> Default for KeccakConfig<'a> {
-    fn default() -> Self {
-        Self::default_for_device(DEFAULT_DEVICE_ID)
-    }
-}
-
-impl<'a> KeccakConfig<'a> {
-    pub fn default_for_device(device_id: usize) -> Self {
-        KeccakConfig {
-            ctx: DeviceContext::default_for_device(device_id),
-            are_inputs_on_device: false,
-            are_outputs_on_device: false,
-            is_async: false,
-        }
-    }
-}
-
 extern "C" {
     pub(crate) fn keccak256_cuda(
         input: *const u8,
-        input_block_size: i32,
-        number_of_blocks: i32,
+        input_block_size: u32,
+        number_of_blocks: u32,
         output: *mut u8,
-        config: &KeccakConfig,
+        config: &HashConfig,
     ) -> CudaError;
 
     pub(crate) fn keccak512_cuda(
         input: *const u8,
-        input_block_size: i32,
-        number_of_blocks: i32,
+        input_block_size: u32,
+        number_of_blocks: u32,
         output: *mut u8,
-        config: &KeccakConfig,
+        config: &HashConfig,
+    ) -> CudaError;
+
+    pub(crate) fn build_keccak256_merkle_tree_cuda(
+        leaves: *const u8,
+        digests: *mut u64,
+        height: u32,
+        input_block_len: u32,
+        config: &TreeBuilderConfig,
+    ) -> CudaError;
+
+    pub(crate) fn build_keccak512_merkle_tree_cuda(
+        leaves: *const u8,
+        digests: *mut u64,
+        height: u32,
+        input_block_len: u32,
+        config: &TreeBuilderConfig,
     ) -> CudaError;
 }
 
 pub fn keccak256(
     input: &(impl HostOrDeviceSlice<u8> + ?Sized),
-    input_block_size: i32,
-    number_of_blocks: i32,
+    input_block_size: u32,
+    number_of_blocks: u32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: &mut KeccakConfig,
+    config: &HashConfig,
 ) -> IcicleResult<()> {
-    config.are_inputs_on_device = input.is_on_device();
-    config.are_outputs_on_device = output.is_on_device();
+    let mut local_cfg = config.clone();
+    local_cfg.are_inputs_on_device = input.is_on_device();
+    local_cfg.are_outputs_on_device = output.is_on_device();
     unsafe {
         keccak256_cuda(
             input.as_ptr(),
             input_block_size,
             number_of_blocks,
             output.as_mut_ptr(),
-            config,
+            &local_cfg,
         )
         .wrap()
     }
@@ -86,19 +66,58 @@ pub fn keccak256(
 
 pub fn keccak512(
     input: &(impl HostOrDeviceSlice<u8> + ?Sized),
-    input_block_size: i32,
-    number_of_blocks: i32,
+    input_block_size: u32,
+    number_of_blocks: u32,
     output: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    config: &mut KeccakConfig,
+    config: &HashConfig,
 ) -> IcicleResult<()> {
-    config.are_inputs_on_device = input.is_on_device();
-    config.are_outputs_on_device = output.is_on_device();
+    let mut local_cfg = config.clone();
+    local_cfg.are_inputs_on_device = input.is_on_device();
+    local_cfg.are_outputs_on_device = output.is_on_device();
     unsafe {
         keccak512_cuda(
             input.as_ptr(),
             input_block_size,
             number_of_blocks,
             output.as_mut_ptr(),
+            &local_cfg,
+        )
+        .wrap()
+    }
+}
+
+pub fn build_keccak256_merkle_tree(
+    leaves: &(impl HostOrDeviceSlice<u8> + ?Sized),
+    digests: &mut (impl HostOrDeviceSlice<u64> + ?Sized),
+    height: usize,
+    input_block_len: usize,
+    config: &TreeBuilderConfig,
+) -> IcicleResult<()> {
+    unsafe {
+        build_keccak256_merkle_tree_cuda(
+            leaves.as_ptr(),
+            digests.as_mut_ptr(),
+            height as u32,
+            input_block_len as u32,
+            config,
+        )
+        .wrap()
+    }
+}
+
+pub fn build_keccak512_merkle_tree(
+    leaves: &(impl HostOrDeviceSlice<u8> + ?Sized),
+    digests: &mut (impl HostOrDeviceSlice<u64> + ?Sized),
+    height: usize,
+    input_block_len: usize,
+    config: &TreeBuilderConfig,
+) -> IcicleResult<()> {
+    unsafe {
+        build_keccak512_merkle_tree_cuda(
+            leaves.as_ptr(),
+            digests.as_mut_ptr(),
+            height as u32,
+            input_block_len as u32,
             config,
         )
         .wrap()
