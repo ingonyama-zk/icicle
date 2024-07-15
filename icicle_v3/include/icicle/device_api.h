@@ -95,6 +95,27 @@ namespace icicle {
      */
     virtual eIcicleError get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/) const = 0;
 
+    /**
+     * @brief Sets memory on the specified device to a given value.
+     *
+     * @param ptr Pointer to the memory.
+     * @param value Value to set.
+     * @param size Size of the memory to set.
+     * @return eIcicleError Status of the memory set.
+     */
+    virtual eIcicleError memset(void* ptr, int value, size_t size) const = 0;
+
+    /**
+     * @brief Asynchronously sets memory on the specified device to a given value.
+     *
+     * @param ptr Pointer to the memory.
+     * @param value Value to set.
+     * @param size Size of the memory to set.
+     * @param stream Stream to use for the asynchronous operation.
+     * @return eIcicleError Status of the memory set.
+     */
+    virtual eIcicleError memset_async(void* ptr, int value, size_t size, icicleStreamHandle stream) const = 0;
+
     // Data transfer
 
     /**

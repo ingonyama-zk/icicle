@@ -113,6 +113,24 @@ extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_
   return DeviceAPI::get_thread_local_deviceAPI()->get_available_memory(total, free);
 }
 
+extern "C" eIcicleError icicle_memset(void* ptr, int value, size_t size)
+{
+  if (eIcicleError::SUCCESS == icicle_is_active_device_memory(ptr)) {
+    return DeviceAPI::get_thread_local_deviceAPI()->memset(ptr, value, size);
+  }
+  ICICLE_LOG_ERROR << "icicle_memset API not expecting host memory";
+  return eIcicleError::INVALID_POINTER;
+}
+
+extern "C" eIcicleError icicle_memset_async(void* ptr, int value, size_t size, icicleStreamHandle stream)
+{
+  if (eIcicleError::SUCCESS == icicle_is_active_device_memory(ptr)) {
+    return DeviceAPI::get_thread_local_deviceAPI()->memset_async(ptr, value, size, stream);
+  }
+  ICICLE_LOG_ERROR << "icicle_memset_async API not expecting host memory";
+  return eIcicleError::INVALID_POINTER;
+}
+
 /**
  * @brief Enum for specifying the type of memory.
  */
@@ -154,6 +172,8 @@ static eIcicleError _determine_copy_direction(void* dst, const void* src, eCopyD
               : srcType == MemoryType::ActiveDevice && dstType == MemoryType::ActiveDevice
                 ? eCopyDirection::DeviceToDevice
                 : eCopyDirection::HostToDevice; // This line should never be reached
+
+  return eIcicleError::SUCCESS;
 }
 
 extern "C" eIcicleError icicle_copy(void* dst, const void* src, size_t size)

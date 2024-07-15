@@ -81,6 +81,43 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
   }
 }
 
+TEST_F(DeviceApiTest, CopyDeviceInference)
+{
+  int input[2] = {1, 2};
+  for (const auto& device_type : s_regsitered_devices) {
+    int output[2] = {0, 0};
+
+    icicle::Device dev = {device_type, 0};
+    icicle_set_device(dev);
+    void* dev_mem = nullptr;
+
+    ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(input)));
+    ICICLE_CHECK(icicle_copy(dev_mem, input, sizeof(input)));  // implicit host to device
+    ICICLE_CHECK(icicle_copy(output, dev_mem, sizeof(input))); // implicit device to host
+
+    ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
+  }
+}
+
+TEST_F(DeviceApiTest, Memest)
+{
+  char expected[2] = {1, 1};
+  for (const auto& device_type : s_regsitered_devices) {
+    char host_mem[2] = {0, 0};
+
+    // icicle::Device dev = {device_type, 0};
+    icicle::Device dev = {"CPU", 0};
+    icicle_set_device(dev);
+    void* dev_mem = nullptr;
+
+    ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(host_mem)));
+    ICICLE_CHECK(icicle_memset(dev_mem, 1, sizeof(host_mem)));      // implicit on device
+    ICICLE_CHECK(icicle_copy(host_mem, dev_mem, sizeof(host_mem))); // implicit device to host
+
+    ASSERT_EQ(0, memcmp(expected, host_mem, sizeof(host_mem)));
+  }
+}
+
 TEST_F(DeviceApiTest, ApiError)
 {
   for (const auto& device_type : s_regsitered_devices) {

@@ -50,6 +50,18 @@ public:
     return eIcicleError::API_NOT_IMPLEMENTED;
   }
 
+  eIcicleError memset(void* ptr, int value, size_t size) const override
+  {
+    std::memset(ptr, value, size);
+    return eIcicleError::SUCCESS;
+  }
+
+  eIcicleError memset_async(void* ptr, int value, size_t size, icicleStreamHandle stream) const override
+  {
+    std::memset(ptr, value, size);
+    return eIcicleError::SUCCESS;
+  }
+
   eIcicleError memCopy(void* dst, const void* src, size_t size) const
   {
     std::memcpy(dst, src, size);

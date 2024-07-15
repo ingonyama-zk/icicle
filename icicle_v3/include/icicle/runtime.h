@@ -102,6 +102,32 @@ extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream);
  */
 extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/);
 
+/**
+ * @brief Sets memory on the active device to a given value.
+ *
+ * This function sets a block of memory on the specified device to the specified value.
+ *
+ * @param ptr Pointer to the memory.
+ * @param value Value to set.
+ * @param size Size of the memory to set.
+ * @return eIcicleError Status of the memory set.
+ */
+extern "C" eIcicleError icicle_memset(void* ptr, int value, size_t size);
+
+/**
+ * @brief Asynchronously sets memory on the specified device to a given value.
+ *
+ * This function sets a block of memory on the specified device to the specified value using the given stream for the
+ * operation.
+ *
+ * @param ptr Pointer to the memory.
+ * @param value Value to set.
+ * @param size Size of the memory to set.
+ * @param stream Stream to use for the asynchronous operation.
+ * @return eIcicleError Status of the memory set.
+ */
+extern "C" eIcicleError icicle_memset_async(void* ptr, int value, size_t size, icicleStreamHandle stream);
+
 // Data transfer
 
 /**

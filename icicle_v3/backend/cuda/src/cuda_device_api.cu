@@ -54,6 +54,18 @@ public:
     return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::UNKNOWN_ERROR;
   }
 
+  eIcicleError memset(void* ptr, int value, size_t size) const override
+  {
+    cudaError_t err = cudaMemset(ptr, value, size);
+    return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::UNKNOWN_ERROR;
+  }
+
+  eIcicleError memset_async(void* ptr, int value, size_t size, icicleStreamHandle stream) const override
+  {
+    cudaError_t err = cudaMemsetAsync(ptr, value, size, reinterpret_cast<cudaStream_t>(stream));
+    return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::UNKNOWN_ERROR;
+  }
+
   // Data transfer
   eIcicleError copy(void* dst, const void* src, size_t size, eCopyDirection direction) const override
   {
