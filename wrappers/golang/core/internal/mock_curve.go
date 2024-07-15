@@ -28,7 +28,6 @@ func (p *MockProjective) FromLimbs(x, y, z []uint32) MockProjective {
 	return *p
 }
 
-
 type MockAffine struct {
 	X, Y MockBaseField
 }
@@ -54,4 +53,3 @@ func (a *MockAffine) FromLimbs(x, y []uint32) MockAffine {
 
 	return *a
 }
-
