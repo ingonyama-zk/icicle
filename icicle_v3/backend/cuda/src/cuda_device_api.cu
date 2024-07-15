@@ -55,27 +55,22 @@ public:
   }
 
   // Data transfer
-  eIcicleError copy_to_host(void* dst, const void* src, size_t size) const override
+  eIcicleError copy(void* dst, const void* src, size_t size, eCopyDirection direction) const override
   {
-    cudaError_t err = cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
+    cudaMemcpyKind cuda_copy_kind = direction == eCopyDirection::HostToDevice   ? cudaMemcpyHostToDevice
+                                    : direction == eCopyDirection::DeviceToHost ? cudaMemcpyDeviceToHost
+                                                                                : cudaMemcpyDeviceToDevice;
+    cudaError_t err = cudaMemcpy(dst, src, size, cuda_copy_kind);
     return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::COPY_FAILED;
   }
 
-  eIcicleError copy_to_host_async(void* dst, const void* src, size_t size, icicleStreamHandle stream) const override
+  eIcicleError copy_async(
+    void* dst, const void* src, size_t size, eCopyDirection direction, icicleStreamHandle stream) const override
   {
-    cudaError_t err = cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, reinterpret_cast<cudaStream_t>(stream));
-    return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::COPY_FAILED;
-  }
-
-  eIcicleError copy_to_device(void* dst, const void* src, size_t size) const override
-  {
-    cudaError_t err = cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice);
-    return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::COPY_FAILED;
-  }
-
-  eIcicleError copy_to_device_async(void* dst, const void* src, size_t size, icicleStreamHandle stream) const override
-  {
-    cudaError_t err = cudaMemcpyAsync(dst, src, size, cudaMemcpyHostToDevice, reinterpret_cast<cudaStream_t>(stream));
+    cudaMemcpyKind cuda_copy_kind = direction == eCopyDirection::HostToDevice   ? cudaMemcpyHostToDevice
+                                    : direction == eCopyDirection::DeviceToHost ? cudaMemcpyDeviceToHost
+                                                                                : cudaMemcpyDeviceToDevice;
+    cudaError_t err = cudaMemcpyAsync(dst, src, size, cuda_copy_kind, reinterpret_cast<cudaStream_t>(stream));
     return (err == cudaSuccess) ? eIcicleError::SUCCESS : eIcicleError::COPY_FAILED;
   }
 

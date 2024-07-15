@@ -27,7 +27,7 @@ namespace icicle {
       allocations_.erase(address);
     }
 
-    // Check if an address is allocated by this tracker and get the device info
+    // Check if an address is allocated by this tracker and get the device
     std::optional<const Device*> identify_device(const void* address)
     {
       std::lock_guard<std::mutex> lock(mutex_);

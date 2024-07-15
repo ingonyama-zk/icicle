@@ -57,19 +57,13 @@ public:
   }
 
   // Data transfer
-  eIcicleError copy_to_host(void* dst, const void* src, size_t size) const override { return memCopy(dst, src, size); }
-
-  eIcicleError copy_to_host_async(void* dst, const void* src, size_t size, icicleStreamHandle stream) const override
+  eIcicleError copy(void* dst, const void* src, size_t size, eCopyDirection direction) const override
   {
     return memCopy(dst, src, size);
   }
 
-  eIcicleError copy_to_device(void* dst, const void* src, size_t size) const override
-  {
-    return memCopy(dst, src, size);
-  }
-
-  eIcicleError copy_to_device_async(void* dst, const void* src, size_t size, icicleStreamHandle stream) const override
+  eIcicleError copy_async(
+    void* dst, const void* src, size_t size, eCopyDirection direction, icicleStreamHandle stream) const override
   {
     return memCopy(dst, src, size);
   }

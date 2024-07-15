@@ -71,7 +71,11 @@ extern "C" eIcicleError icicle_free(void* ptr)
     return eIcicleError::INVALID_DEVICE;
   }
   const bool is_active_device = **ptr_dev == cur_device;
-  if (is_active_device) { return DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr); }
+  if (is_active_device) {
+    auto err = DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr);
+    if (err == eIcicleError::SUCCESS) { DeviceAPI::get_global_memory_tracker().remove_allocation(ptr); }
+    return err;
+  }
 
   // Getting here means memory does not belong to active device
   auto err = icicle_set_device(**ptr_dev);
@@ -99,7 +103,9 @@ extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream)
     return eIcicleError::INVALID_DEVICE;
   }
 
-  return DeviceAPI::get_thread_local_deviceAPI()->free_memory_async(ptr, stream);
+  auto err = DeviceAPI::get_thread_local_deviceAPI()->free_memory_async(ptr, stream);
+  if (err == eIcicleError::SUCCESS) { DeviceAPI::get_global_memory_tracker().remove_allocation(ptr); }
+  return err;
 }
 
 extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_t& free /*OUT*/)
@@ -107,24 +113,85 @@ extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_
   return DeviceAPI::get_thread_local_deviceAPI()->get_available_memory(total, free);
 }
 
+/**
+ * @brief Enum for specifying the type of memory.
+ */
+enum class MemoryType {
+  Untracked,       ///< Memory is not tracked, assumed to be host memory
+  ActiveDevice,    ///< Memory is on the active device
+  NonActiveDevice, ///< Memory is on a non-active device
+};
+
+static MemoryType _get_memory_type(const void* ptr)
+{
+  auto it = DeviceAPI::get_global_memory_tracker().identify_device(ptr);
+  // Untracked address assumed to be host memory but could be invalid
+  if (it == std::nullopt) { return MemoryType::Untracked; }
+
+  const bool is_active_device_ptr = (**it == DeviceAPI::get_thread_local_device());
+  return is_active_device_ptr ? MemoryType::ActiveDevice : MemoryType::NonActiveDevice;
+}
+
+static eIcicleError _determine_copy_direction(void* dst, const void* src, eCopyDirection& direction)
+{
+  // Determine the type of memory for dst and src
+  MemoryType dstType = _get_memory_type(dst);
+  MemoryType srcType = _get_memory_type(src);
+
+  // Validate memory combinations
+  if (dstType == MemoryType::Untracked && srcType == MemoryType::Untracked) {
+    ICICLE_LOG_ERROR << "Host to Host copy, not handled by DeviceAPI";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (dstType == MemoryType::NonActiveDevice || srcType == MemoryType::NonActiveDevice) {
+    ICICLE_LOG_ERROR << "Either dst or src is on a non-active device memory";
+    return eIcicleError::INVALID_POINTER;
+  }
+
+  // Determine the copy direction
+  direction = srcType == MemoryType::ActiveDevice && dstType == MemoryType::Untracked   ? eCopyDirection::DeviceToHost
+              : srcType == MemoryType::Untracked && dstType == MemoryType::ActiveDevice ? eCopyDirection::HostToDevice
+              : srcType == MemoryType::ActiveDevice && dstType == MemoryType::ActiveDevice
+                ? eCopyDirection::DeviceToDevice
+                : eCopyDirection::HostToDevice; // This line should never be reached
+}
+
+extern "C" eIcicleError icicle_copy(void* dst, const void* src, size_t size)
+{
+  eCopyDirection direction;
+  auto err = _determine_copy_direction(dst, src, direction);
+  if (eIcicleError::SUCCESS != err) { return err; }
+  // Call the appropriate copy method
+  return DeviceAPI::get_thread_local_deviceAPI()->copy(dst, src, size, direction);
+}
+
+extern "C" eIcicleError icicle_copy_async(void* dst, const void* src, size_t size, icicleStreamHandle stream)
+{
+  eCopyDirection direction;
+  auto err = _determine_copy_direction(dst, src, direction);
+  if (eIcicleError::SUCCESS != err) { return err; }
+  // Call the appropriate copy method
+  return DeviceAPI::get_thread_local_deviceAPI()->copy_async(dst, src, size, direction, stream);
+}
+
 extern "C" eIcicleError icicle_copy_to_host(void* dst, const void* src, size_t size)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_host(dst, src, size);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy(dst, src, size, eCopyDirection::DeviceToHost);
 }
 
 extern "C" eIcicleError icicle_copy_to_host_async(void* dst, const void* src, size_t size, icicleStreamHandle stream)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_host_async(dst, src, size, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy_async(dst, src, size, eCopyDirection::DeviceToHost, stream);
 }
 
 extern "C" eIcicleError icicle_copy_to_device(void* dst, const void* src, size_t size)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_device(dst, src, size);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy(dst, src, size, eCopyDirection::HostToDevice);
 }
 
 extern "C" eIcicleError icicle_copy_to_device_async(void* dst, const void* src, size_t size, icicleStreamHandle stream)
 {
-  return DeviceAPI::get_thread_local_deviceAPI()->copy_to_device_async(dst, src, size, stream);
+  return DeviceAPI::get_thread_local_deviceAPI()->copy_async(dst, src, size, eCopyDirection::HostToDevice, stream);
 }
 
 extern "C" eIcicleError icicle_stream_synchronize(icicleStreamHandle stream)

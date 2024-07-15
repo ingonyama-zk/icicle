@@ -12,6 +12,11 @@
 namespace icicle {
 
   /**
+   * @brief Enum for specifying the direction of data copy.
+   */
+  enum eCopyDirection { HostToDevice, DeviceToHost, DeviceToDevice };
+
+  /**
    * @brief Typedef for an abstract stream used for asynchronous operations.
    */
   typedef void* icicleStreamHandle;
@@ -93,48 +98,28 @@ namespace icicle {
     // Data transfer
 
     /**
-     * @brief Copies data from the device to the host.
+     * @brief Copies data between host and device or between devices.
      *
-     * @param dst Destination pointer on the host.
-     * @param src Source pointer on the device.
+     * @param dst Destination pointer.
+     * @param src Source pointer.
      * @param size Size of the data to copy.
+     * @param direction Direction of the data copy (HostToDevice, DeviceToHost, DeviceToDevice).
      * @return eIcicleError Status of the data copy.
      */
-    virtual eIcicleError copy_to_host(void* dst, const void* src, size_t size) const = 0;
+    virtual eIcicleError copy(void* dst, const void* src, size_t size, eCopyDirection direction) const = 0;
 
     /**
-     * @brief Asynchronously copies data from the device to the host.
+     * @brief Asynchronously copies data between host and device or between devices.
      *
-     * @param dst Destination pointer on the host.
-     * @param src Source pointer on the device.
+     * @param dst Destination pointer.
+     * @param src Source pointer.
      * @param size Size of the data to copy.
+     * @param direction Direction of the data copy (HostToDevice, DeviceToHost, DeviceToDevice).
      * @param stream Stream to use for the asynchronous operation.
      * @return eIcicleError Status of the data copy.
      */
     virtual eIcicleError
-    copy_to_host_async(void* dst, const void* src, size_t size, icicleStreamHandle stream) const = 0;
-
-    /**
-     * @brief Copies data from the host to the device.
-     *
-     * @param dst Destination pointer on the device.
-     * @param src Source pointer on the host.
-     * @param size Size of the data to copy.
-     * @return eIcicleError Status of the data copy.
-     */
-    virtual eIcicleError copy_to_device(void* dst, const void* src, size_t size) const = 0;
-
-    /**
-     * @brief Asynchronously copies data from the host to the device.
-     *
-     * @param dst Destination pointer on the device.
-     * @param src Source pointer on the host.
-     * @param size Size of the data to copy.
-     * @param stream Stream to use for the asynchronous operation.
-     * @return eIcicleError Status of the data copy.
-     */
-    virtual eIcicleError
-    copy_to_device_async(void* dst, const void* src, size_t size, icicleStreamHandle stream) const = 0;
+    copy_async(void* dst, const void* src, size_t size, eCopyDirection direction, icicleStreamHandle stream) const = 0;
 
     // Synchronization
 

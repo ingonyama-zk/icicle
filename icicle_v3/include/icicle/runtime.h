@@ -105,6 +105,29 @@ extern "C" eIcicleError icicle_get_available_memory(size_t& total /*OUT*/, size_
 // Data transfer
 
 /**
+ * @brief Copies data from the host/device to host/device. Data location is inferred from ptrs.
+ *
+ * @param dst Destination pointer.
+ * @param src Source pointer.
+ * @param size Size of the data to copy.
+ * @return eIcicleError Status of the data copy.
+ */
+extern "C" eIcicleError icicle_copy(void* dst, const void* src, size_t size);
+
+/**
+ * @brief Copies data from the host/device to host/device async. Data location is inferred from ptrs.
+ *
+ * @param dst Destination pointer.
+ * @param src Source pointer.
+ * @param size Size of the data to copy.
+ * @param stream Stream to use for the asynchronous operation.
+ * @return eIcicleError Status of the data copy.
+ */
+extern "C" eIcicleError icicle_copy_async(void* dst, const void* src, size_t size, icicleStreamHandle stream);
+
+// Note: the following APIs can be used to avoid overhead of device inference (given ptr)
+
+/**
  * @brief Copies data from the device to the host.
  *
  * @param dst Destination pointer on the host.
