@@ -71,8 +71,8 @@ namespace icicle {
     virtual std::pair<const C*, uint64_t> get_coefficients() = 0;
     virtual std::pair<const I*, uint64_t> get_rou_evaluations() = 0;
 
-    // Methods to get views of coefficients
-    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view() = 0;
+    // get view of coefficients
+    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/> get_coefficients_view() = 0;
 
     // Method for printing the context state to an output stream.
     virtual void print(std::ostream& os) = 0;

@@ -123,7 +123,7 @@ macro_rules! impl_univariate_polynomial_api {
             fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: u64, end_idx: u64) -> u64;
 
             #[link_name = concat!($field_prefix, "_polynomial_get_coeffs_raw_ptr")]
-            fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64, device_id: *mut u64) -> *mut $field;
+            fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64) -> *mut $field;
         }
 
         pub struct DensePolynomial {
@@ -140,9 +140,8 @@ macro_rules! impl_univariate_polynomial_api {
 
             pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<$field> {
                 unsafe {
-                    let mut len: u64 = 0;
-                    let mut device_id: u64 = 0;
-                    let mut coeffs_mut = get_coeffs_ptr(self.handle, &mut len, &mut device_id);
+                    let mut len: u64 = 0;                    
+                    let mut coeffs_mut = get_coeffs_ptr(self.handle, &mut len);
                     let s = slice::from_raw_parts_mut(coeffs_mut, len as usize);
                     DeviceSlice::from_mut_slice(s)
                 }

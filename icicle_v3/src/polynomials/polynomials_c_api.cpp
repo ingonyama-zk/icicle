@@ -224,12 +224,10 @@ namespace icicle {
   // size: Output parameter for the size of the view.
   // device_id: Output parameter for the device ID.
   // Returns a raw mutable pointer to the coefficients.
-  scalar_t* CONCAT_EXPAND(FIELD, polynomial_get_coeffs_raw_ptr)(
-    PolynomialInst* p, uint64_t* size /*OUT*/, uint64_t* device_id /*OUT*/)
+  scalar_t* CONCAT_EXPAND(FIELD, polynomial_get_coeffs_raw_ptr)(PolynomialInst* p, uint64_t* size /*OUT*/)
   {
-    auto [coeffs, _size, _device_id] = p->get_coefficients_view();
+    auto [coeffs, _size] = p->get_coefficients_view();
     *size = _size;
-    *device_id = _device_id;
     return const_cast<scalar_t*>(coeffs.get());
   }
 
@@ -238,12 +236,10 @@ namespace icicle {
   // size: Output parameter for the size of the view.
   // device_id: Output parameter for the device ID.
   // Returns a pointer to an integrity pointer encapsulating the coefficients view.
-  IntegrityPointer<scalar_t>* CONCAT_EXPAND(FIELD, polynomial_get_coeff_view)(
-    PolynomialInst* p, uint64_t* size /*OUT*/, uint64_t* device_id /*OUT*/)
+  IntegrityPointer<scalar_t>* CONCAT_EXPAND(FIELD, polynomial_get_coeff_view)(PolynomialInst* p, uint64_t* size /*OUT*/)
   {
-    auto [coeffs, _size, _device_id] = p->get_coefficients_view();
+    auto [coeffs, _size] = p->get_coefficients_view();
     *size = _size;
-    *device_id = _device_id;
     return new IntegrityPointer<scalar_t>(std::move(coeffs));
   }
 

@@ -472,7 +472,7 @@ TEST_F(PolynomialTest, View)
   const int size = 1 << 6;
 
   auto f = randomize_polynomial(size);
-  auto [d_coeff, N, device_id] = f.get_coefficients_view();
+  auto [d_coeff, N] = f.get_coefficients_view();
 
   EXPECT_EQ(d_coeff.isValid(), true);
   auto g = f + f;
@@ -824,7 +824,7 @@ public:
     // compute [A]1
     {
       G1P U_commited;
-      auto [U_coeff, N, device_id] = U.get_coefficients_view();
+      auto [U_coeff, N] = U.get_coefficients_view();
       ICICLE_CHECK(msm(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
       proof.A = G1P::to_affine(U_commited + G1P::from_affine(pk.g1.alpha) + r * G1P::from_affine(pk.g1.delta));
     }
@@ -833,7 +833,7 @@ public:
     G1P B1;
     {
       G2P V_commited_g2;
-      auto [V_coeff, N, device_id] = V.get_coefficients_view();
+      auto [V_coeff, N] = V.get_coefficients_view();
       ICICLE_CHECK(msm(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
       proof.B = G2P::to_affine(V_commited_g2 + pk.g2.beta + s * G2P::from_affine(pk.g2.delta));
 
@@ -844,7 +844,7 @@ public:
 
     // compute [C]1
     {
-      auto [H_coeff, N, device_id] = h.get_coefficients_view();
+      auto [H_coeff, N] = h.get_coefficients_view();
 
       G1P HT_commited;
       ICICLE_CHECK(msm(H_coeff.get(), pk.g1.vanishing_poly_points.data(), n - 1, msm_config, &HT_commited));
@@ -938,7 +938,7 @@ TEST_F(PolynomialTest, commitMSM)
   const int size = 1 << 6;
   auto f = randomize_polynomial(size);
 
-  auto [d_coeff, N, device_id] = f.get_coefficients_view();
+  auto [d_coeff, N] = f.get_coefficients_view();
   auto msm_config = default_msm_config();
   msm_config.are_scalars_on_device = true;
 

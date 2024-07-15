@@ -62,9 +62,8 @@ namespace icicle {
     virtual C get_coeff(PolyContext op, uint64_t coeff_idx) = 0;
     virtual uint64_t copy_coeffs(PolyContext op, C* coeffs, uint64_t start_idx, uint64_t end_idx) = 0;
 
-    // Methods to get views of coefficients and evaluations, including device id
-    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-    get_coefficients_view(PolyContext p) = 0;
+    // get view of coefficients
+    virtual std::tuple<IntegrityPointer<C>, uint64_t /*size*/> get_coefficients_view(PolyContext p) = 0;
   };
 
 } // namespace icicle

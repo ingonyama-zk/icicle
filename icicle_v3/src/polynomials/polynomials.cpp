@@ -190,8 +190,7 @@ namespace icicle {
   }
 
   template <typename C, typename D, typename I>
-  std::tuple<IntegrityPointer<C>, uint64_t /*size*/, uint64_t /*device_id*/>
-  Polynomial<C, D, I>::get_coefficients_view()
+  std::tuple<IntegrityPointer<C>, uint64_t /*size*/> Polynomial<C, D, I>::get_coefficients_view()
   {
     return m_backend->get_coefficients_view(m_context);
   }

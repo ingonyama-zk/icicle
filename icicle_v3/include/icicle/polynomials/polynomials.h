@@ -79,7 +79,7 @@ namespace icicle {
     uint64_t copy_coeffs(Coeff* host_coeffs, uint64_t start_idx, uint64_t end_idx) const;
 
     // Methods for obtaining a view of the coefficients
-    std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/, uint64_t /*device_id*/> get_coefficients_view();
+    std::tuple<IntegrityPointer<Coeff>, uint64_t /*size*/> get_coefficients_view();
 
     // Overload stream insertion operator for printing.
     friend std::ostream& operator<<(std::ostream& os, Polynomial& poly)
