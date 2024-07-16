@@ -175,9 +175,13 @@ namespace polynomials {
       c->allocate(c_N, State::EvaluationsOnRou_Reversed, false /*=memset zeros*/);
       auto c_evals_p = get_context_storage_mutable<I>(c);
 
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (c_N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = true;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+      ICICLE_CHECK(icicle::vector_mul(a_evals_p, b_evals_p, c_N, config, c_evals_p));
 
       CHK_LAST();
     }
@@ -211,9 +215,14 @@ namespace polynomials {
       ICICLE_CHECK(ntt(b_coeff_p, N, NTTDir::kForward, ntt_config, c_evals_high_p)); // b_H1
 
       // (4) compute a_H1 * b_H1 inplace
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = true;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+      ICICLE_CHECK(icicle::vector_mul(c_evals_low_p, c_evals_high_p, N, config, c_evals_high_p));
+
       // (5) transform a,b to evaluations
       a->transform_to_evaluations(N, true /*=reversed*/);
       b->transform_to_evaluations(N, true /*=reversed*/);
@@ -221,7 +230,7 @@ namespace polynomials {
       auto [b_evals_p, b_nof_evals] = b->get_rou_evaluations();
 
       // (6) compute a_H0 * b_H0
-      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
+      ICICLE_CHECK(icicle::vector_mul(a_evals_p, b_evals_p, N, config, c_evals_low_p));
 
       CHK_LAST();
     }

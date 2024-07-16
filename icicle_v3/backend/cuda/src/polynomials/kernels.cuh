@@ -3,14 +3,6 @@
 // #include "../../../src/vec_ops/vec_ops.cu" // TODO Yuval: avoid this
 
 namespace polynomials {
-  // TODO Yuval remove vec_ops kernels from here
-
-  template <typename E>
-  __global__ void mul_kernel(const E* scalar_vec, const E* element_vec, int n, E* result)
-  {
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    if (tid < n) { result[tid] = scalar_vec[tid] * element_vec[tid]; }
-  }
 
   template <typename E>
   __global__ void div_element_wise_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
