@@ -286,7 +286,7 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
-  /*********************************** SLICE ***********************************/
+  /*********************************** HIGHEST NON ZERO IDX ***********************************/
 
   ICICLE_DISPATCHER_INST(ScalarHighestNonZeroIdxDispatcher, highest_non_zero_idx, scalarHighNonZeroIdxOpImpl)
 
@@ -303,4 +303,30 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, highest_non_zero_idx)(input, size, config, out_idx);
   }
 
+  /*********************************** POLY EVAL ***********************************/
+
+  ICICLE_DISPATCHER_INST(ScalarPolyEvalDispatcher, poly_eval, scalarPolyEvalImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, poly_eval)(
+    const scalar_t* coeffs,
+    uint64_t coeffs_size,
+    const scalar_t* domain,
+    uint64_t domain_size,
+    const VecOpsConfig& config,
+    scalar_t* evals /*OUT*/)
+  {
+    return ScalarPolyEvalDispatcher::execute(coeffs, coeffs_size, domain, domain_size, config, evals);
+  }
+
+  template <>
+  eIcicleError polynomial_eval(
+    const scalar_t* coeffs,
+    uint64_t coeffs_size,
+    const scalar_t* domain,
+    uint64_t domain_size,
+    const VecOpsConfig& config,
+    scalar_t* evals /*OUT*/)
+  {
+    return CONCAT_EXPAND(FIELD, poly_eval)(coeffs, coeffs_size, domain, domain_size, config, evals);
+  }
 } // namespace icicle

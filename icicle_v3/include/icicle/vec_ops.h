@@ -89,6 +89,15 @@ namespace icicle {
   eIcicleError
   highest_non_zero_idx(const T* vec_in, uint64_t size, const VecOpsConfig& config, int64_t* out_idx /*OUT*/);
 
+  template <typename T>
+  eIcicleError polynomial_eval(
+    const T* coeffs,
+    uint64_t coeffs_size,
+    const T* domain,
+    uint64_t domain_size,
+    const VecOpsConfig& config,
+    T* evals /*OUT*/);
+
   /*************************** Backend registration ***************************/
 
   using scalarVectorOpImpl = std::function<eIcicleError(
@@ -245,6 +254,34 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_scalar_highest_non_zero_idx) = []() -> bool {                                              \
       register_highest_non_zero_idx(DEVICE_TYPE, FUNC);                                                                \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  template <typename T>
+  eIcicleError polynomial_eval(
+    const T* coeffs,
+    uint64_t coeffs_size,
+    const T* domain,
+    uint64_t domain_size,
+    const VecOpsConfig& config,
+    T* evals /*OUT*/);
+
+  using scalarPolyEvalImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* coeffs,
+    uint64_t coeffs_size,
+    const scalar_t* domain,
+    uint64_t domain_size,
+    const VecOpsConfig& config,
+    scalar_t* evals /*OUT*/)>;
+
+  void register_poly_eval(const std::string& deviceType, scalarPolyEvalImpl);
+
+#define REGISTER_POLYNOMIAL_EVAL(DEVICE_TYPE, FUNC)                                                                    \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_poly_eval) = []() -> bool {                                                                \
+      register_poly_eval(DEVICE_TYPE, FUNC);                                                                           \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

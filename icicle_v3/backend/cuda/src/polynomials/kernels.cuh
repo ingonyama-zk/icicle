@@ -3,27 +3,6 @@
 
 namespace polynomials {
 
-  /*============================== evaluate ==============================*/
-  // TODO Yuval: implement efficient reduction and support batch evaluation
-  template <typename T>
-  __global__ void dummy_reduce(const T* arr, int size, T* output)
-  {
-    const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid > 0) return;
-
-    *output = arr[0];
-    for (int i = 1; i < size; ++i) {
-      *output = *output + arr[i];
-    }
-  }
-
-  template <typename T>
-  __global__ void evaluate_polynomial_without_reduction(const T* x, const T* coeffs, int num_coeffs, T* tmp)
-  {
-    const int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * T::pow(*x, tid); }
-  }
-
   /*============================== division ==============================*/
   template <typename T>
   __global__ void school_book_division_step(T* r, T* q, const T* b, int deg_r, int deg_b, T lc_b_inv)

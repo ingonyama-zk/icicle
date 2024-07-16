@@ -422,6 +422,97 @@ eIcicleError highest_non_zero_idx_cuda(
   cudaError_t err = _highest_non_zero_idx<E>(vec_a, size, config, out_idx);
   return translateCudaError(err);
 }
+
+/*============================== polynomial evaluation ==============================*/
+// TODO Yuval: implement efficient reduction and support batch evaluation
+template <typename T>
+__global__ void dummy_reduce(const T* arr, int size, T* output)
+{
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid > 0) return;
+
+  *output = arr[0];
+  for (int i = 1; i < size; ++i) {
+    *output = *output + arr[i];
+  }
+}
+
+template <typename T>
+__global__ void evaluate_polynomial_without_reduction(const T* x, const T* coeffs, int num_coeffs, T* tmp)
+{
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid < num_coeffs) { tmp[tid] = coeffs[tid] * T::pow(*x, tid); }
+}
+
+template <typename E>
+cudaError_t _poly_eval(
+  const scalar_t* coeffs,
+  uint64_t coeffs_size,
+  const scalar_t* domain,
+  uint64_t domain_size,
+  const VecOpsConfig& config,
+  scalar_t* evals /*OUT*/)
+{
+  // TODO: implement fast version
+
+  CHK_INIT_IF_RETURN();
+
+  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
+
+  // allocate device memory and copy if input/output not on device already
+  // need to copy consecutive memory where output elements reside in vec_a
+  coeffs = config.is_a_on_device ? coeffs : allocate_and_copy_to_device(coeffs, coeffs_size * sizeof(E), cuda_stream);
+  domain = config.is_b_on_device ? domain : allocate_and_copy_to_device(domain, domain_size * sizeof(E), cuda_stream);
+  scalar_t* d_evals = config.is_result_on_device ? evals : allocate_on_device<E>(domain_size * sizeof(E), cuda_stream);
+  scalar_t* d_tmp = allocate_on_device<E>(coeffs_size * sizeof(E), cuda_stream);
+
+  // Call the kernel to perform element-wise operation
+  // TODO Yuval: other methods can avoid this allocation. Also for eval_on_domain() no need to reallocate every
+  // time
+  // TODO Yuval: maybe use Horner's rule and just evaluate each domain point per thread. Alternatively Need to
+  // reduce in parallel.
+
+  int num_threads = MAX_THREADS_PER_BLOCK;
+  int num_blocks = (coeffs_size + num_threads - 1) / num_threads;
+  // TODO Yuval : replace stupid loop with cuda parallelism but need to avoid the d_tmp since it's O(n) for poly of
+  // degree n
+  for (uint64_t i = 0; i < domain_size; ++i) {
+    evaluate_polynomial_without_reduction<<<num_blocks, num_threads, 0, cuda_stream>>>(
+      &domain[i], coeffs, coeffs_size, d_tmp); // TODO Yuval: parallelize kernel
+    dummy_reduce<<<1, 1, 0, cuda_stream>>>(d_tmp, coeffs_size, &d_evals[i]);
+  }
+
+  // copy back result to host if need to
+  if (!config.is_result_on_device) {
+    CHK_IF_RETURN(cudaMemcpyAsync(evals, d_evals, domain_size * sizeof(E), cudaMemcpyDeviceToHost, cuda_stream));
+    CHK_IF_RETURN(cudaFreeAsync(d_evals, cuda_stream));
+  }
+
+  // release device memory, if allocated
+  // the cast is ugly but it makes the code more compact
+  if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)coeffs, cuda_stream)); }
+  if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)domain, cuda_stream)); }
+  CHK_IF_RETURN(cudaFreeAsync(d_tmp, cuda_stream));
+
+  // wait for stream to empty is not async
+  if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(cuda_stream));
+
+  return CHK_LAST();
+}
+
+template <typename E>
+eIcicleError poly_eval_cuda(
+  const Device& device,
+  const scalar_t* coeffs,
+  uint64_t coeffs_size,
+  const scalar_t* domain,
+  uint64_t domain_size,
+  const VecOpsConfig& config,
+  scalar_t* evals /*OUT*/)
+{
+  cudaError_t err = _poly_eval<E>(coeffs, coeffs_size, domain, domain_size, config, evals);
+  return translateCudaError(err);
+}
 /************************************ REGISTRATION ************************************/
 
 REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
@@ -435,6 +526,7 @@ REGISTER_MATRIX_TRANSPOSE_BACKEND("CUDA", matrix_transpose_cuda<scalar_t>);
 REGISTER_BIT_REVERSE_BACKEND("CUDA", bit_reverse_cuda<scalar_t>);
 REGISTER_SLICE_BACKEND("CUDA", slice_cuda<scalar_t>);
 REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CUDA", highest_non_zero_idx_cuda<scalar_t>)
+REGISTER_POLYNOMIAL_EVAL("CUDA", poly_eval_cuda<scalar_t>);
 
 #ifdef EXT_FIELD
 REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CUDA", add_cuda<extension_t>);

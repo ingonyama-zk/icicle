@@ -539,51 +539,19 @@ namespace polynomials {
     }
 
   public:
-    void evaluate(PolyContext p, const D* x, I* eval) override
-    {
-      // TODO Yuval: maybe use Horner's rule and just evaluate each domain point per thread. Alternatively Need to
-      // reduce in parallel.
-
-      auto [coeff, nof_coeff] = p->get_coefficients();
-
-      const bool is_x_on_host = is_host_ptr(x);
-      const bool is_eval_on_host = is_host_ptr(eval);
-
-      const D* d_x = x;
-      D* allocated_x = nullptr;
-      if (is_x_on_host) {
-        ICICLE_CHECK(icicle_malloc_async((void**)&allocated_x, sizeof(I), m_stream));
-        ICICLE_CHECK(icicle_copy_async(allocated_x, x, sizeof(I), m_stream));
-        d_x = allocated_x;
-      }
-      I* d_eval = eval;
-      if (is_eval_on_host) { ICICLE_CHECK(icicle_malloc_async((void**)&d_eval, sizeof(I), m_stream)); }
-
-      // TODO Yuval: other methods can avoid this allocation. Also for eval_on_domain() no need to reallocate every
-      // time
-      I* d_tmp = nullptr;
-      ICICLE_CHECK(icicle_malloc_async((void**)&d_tmp, sizeof(I) * nof_coeff, m_stream));
-      const int NOF_THREADS = 32;
-      const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
-      evaluate_polynomial_without_reduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
-        d_x, coeff, nof_coeff, d_tmp); // TODO Yuval: parallelize kernel
-      dummy_reduce<<<1, 1, 0, m_stream>>>(d_tmp, nof_coeff, d_eval);
-
-      if (is_eval_on_host) {
-        ICICLE_CHECK(icicle_copy_async(eval, d_eval, sizeof(I), m_stream));
-        ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // sync to make sure return value is copied to host
-        ICICLE_CHECK(icicle_free_async(d_eval, m_stream));
-      }
-      if (allocated_x) { ICICLE_CHECK(icicle_free_async(allocated_x, m_stream)); }
-      ICICLE_CHECK(icicle_free_async(d_tmp, m_stream));
-    }
+    void evaluate(PolyContext p, const D* x, I* eval) override { evaluate_on_domain(p, x, 1, eval); }
 
     void evaluate_on_domain(PolyContext p, const D* domain, uint64_t size, I* evaluations /*OUT*/) override
     {
-      // TODO Yuval: implement more efficiently ??
-      for (uint64_t i = 0; i < size; ++i) {
-        evaluate(p, &domain[i], &evaluations[i]);
-      }
+      auto [coeff, nof_coeff] = p->get_coefficients();
+
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = true;
+      config.is_b_on_device = !is_host_ptr(domain);
+      config.is_result_on_device = !is_host_ptr(evaluations);
+      config.is_async = true;
+      config.stream = m_stream;
+      ICICLE_CHECK(icicle::polynomial_eval(coeff, nof_coeff, domain, size, config, evaluations));
     }
 
     void evaluate_on_rou_domain(PolyContext p, uint64_t domain_log_size, I* evals /*OUT*/) override
