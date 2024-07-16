@@ -33,32 +33,32 @@ const E* allocate_and_copy_to_device(const E* host_mem, size_t byte_size, cudaSt
 }
 
 template <typename E, void (*Kernel)(const E*, const E*, int, E*)>
-cudaError_t vec_op(const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
+cudaError_t vec_op(const E* a, const E* b, int size_a, int size_b, const VecOpsConfig& config, E* result, int size_res)
 {
   CHK_INIT_IF_RETURN();
 
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
 
   // allocate device memory and copy if input/output not on device already
-  const E* d_vec_a = config.is_a_on_device ? vec_a : allocate_and_copy_to_device(vec_a, n * sizeof(E), cuda_stream);
-  const E* d_vec_b = config.is_b_on_device ? vec_b : allocate_and_copy_to_device(vec_b, n * sizeof(E), cuda_stream);
-  E* d_result = config.is_result_on_device ? result : allocate_on_device<E>(n * sizeof(E), cuda_stream);
+  a = config.is_a_on_device ? a : allocate_and_copy_to_device(a, size_a * sizeof(E), cuda_stream);
+  b = config.is_b_on_device ? b : allocate_and_copy_to_device(b, size_b * sizeof(E), cuda_stream);
+  E* d_result = config.is_result_on_device ? result : allocate_on_device<E>(size_res * sizeof(E), cuda_stream);
 
   // Call the kernel to perform element-wise operation
   int num_threads = MAX_THREADS_PER_BLOCK;
-  int num_blocks = (n + num_threads - 1) / num_threads;
-  Kernel<<<num_blocks, num_threads, 0, cuda_stream>>>(d_vec_a, d_vec_b, n, d_result);
+  int num_blocks = (size_res + num_threads - 1) / num_threads;
+  Kernel<<<num_blocks, num_threads, 0, cuda_stream>>>(a, b, size_res, d_result);
 
   // copy back result to host if need to
   if (!config.is_result_on_device) {
-    CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, cuda_stream));
+    CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, size_res * sizeof(E), cudaMemcpyDeviceToHost, cuda_stream));
     CHK_IF_RETURN(cudaFreeAsync(d_result, cuda_stream));
   }
 
   // release device memory, if allocated
   // the cast is ugly but it makes the code more compact
-  if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)d_vec_a, cuda_stream)); }
-  if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)d_vec_b, cuda_stream)); }
+  if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)a, cuda_stream)); }
+  if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)b, cuda_stream)); }
 
   // wait for stream to empty is not async
   if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(cuda_stream));
@@ -78,7 +78,7 @@ template <typename E>
 eIcicleError
 add_cuda(const Device& device, const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
 {
-  cudaError_t err = vec_op<E, add_kernel>(vec_a, vec_b, n, config, result);
+  cudaError_t err = vec_op<E, add_kernel>(vec_a, vec_b, n, n, config, result, n);
   return translateCudaError(err);
 }
 
@@ -94,31 +94,39 @@ template <typename E>
 eIcicleError
 sub_cuda(const Device& device, const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
 {
-  cudaError_t err = vec_op<E, sub_kernel>(vec_a, vec_b, n, config, result);
+  cudaError_t err = vec_op<E, sub_kernel>(vec_a, vec_b, n, n, config, result, n);
   return translateCudaError(err);
 }
 
 /*============================== mul ==============================*/
 template <typename E>
-__global__ void mul_kernel(const E* scalar_vec, const E* element_vec, int n, E* result)
+__global__ void mul_kernel(const E* vec_a, const E* vec_b, int n, E* result)
 {
   int tid = blockDim.x * blockIdx.x + threadIdx.x;
-  if (tid < n) { result[tid] = scalar_vec[tid] * element_vec[tid]; }
+  if (tid < n) { result[tid] = vec_a[tid] * vec_b[tid]; }
 }
 
 template <typename E>
 eIcicleError
 mul_cuda(const Device& device, const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
 {
-  cudaError_t err = vec_op<E, mul_kernel>(vec_a, vec_b, n, config, result);
+  cudaError_t err = vec_op<E, mul_kernel>(vec_a, vec_b, n, n, config, result, n);
   return translateCudaError(err);
 }
 
 template <typename E, typename S>
-__global__ void mul_scalar_kernel(const E* element_vec, const S scalar, int n, E* result)
+__global__ void mul_scalar_kernel(const S* scalar, const E* element_vec, int n, E* result)
 {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  if (tid < n) { result[tid] = element_vec[tid] * (scalar); }
+  if (tid < n) { result[tid] = element_vec[tid] * (*scalar); }
+}
+
+template <typename E>
+eIcicleError
+mul_scalar_cuda(const Device& device, const E* scalar_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
+{
+  cudaError_t err = vec_op<E, mul_scalar_kernel>(scalar_a, vec_b, 1, n, config, result, n);
+  return translateCudaError(err);
 }
 
 /*============================== div ==============================*/
@@ -326,6 +334,7 @@ eIcicleError slice_cuda(
 REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
 REGISTER_VECTOR_SUB_BACKEND("CUDA", sub_cuda<scalar_t>);
 REGISTER_VECTOR_MUL_BACKEND("CUDA", mul_cuda<scalar_t>);
+REGISTER_SCALAR_MUL_BACKEND("CUDA", mul_scalar_cuda<scalar_t>);
 REGISTER_MATRIX_TRANSPOSE_BACKEND("CUDA", matrix_transpose_cuda<scalar_t>);
 REGISTER_BIT_REVERSE_BACKEND("CUDA", bit_reverse_cuda<scalar_t>);
 REGISTER_SLICE_BACKEND("CUDA", slice_cuda<scalar_t>);

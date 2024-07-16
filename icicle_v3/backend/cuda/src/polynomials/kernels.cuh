@@ -12,13 +12,6 @@ namespace polynomials {
     if (tid < n) { result[tid] = scalar_vec[tid] * element_vec[tid]; }
   }
 
-  template <typename E, typename S>
-  __global__ void mul_scalar_kernel(const E* element_vec, const S scalar, int n, E* result)
-  {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < n) { result[tid] = element_vec[tid] * (scalar); }
-  }
-
   template <typename E>
   __global__ void div_element_wise_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
   {

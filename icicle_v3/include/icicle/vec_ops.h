@@ -46,6 +46,7 @@ namespace icicle {
 
   // template APIs
 
+  // element wise vec ops
   template <typename T>
   eIcicleError vector_add(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
@@ -58,10 +59,16 @@ namespace icicle {
   template <typename T>
   eIcicleError convert_montgomery(const T* input, uint64_t size, bool is_into, const VecOpsConfig& config, T* output);
 
+  // scalar-vec ops
+  template <typename T>
+  eIcicleError scalar_mul(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+
+  // matrix ops
   template <typename T>
   eIcicleError
   matrix_transpose(const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out);
 
+  // misc
   template <typename T>
   eIcicleError bit_reverse(const T* vec_in, uint64_t size, const VecOpsConfig& config, T* vec_out);
 
@@ -104,6 +111,16 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_mul) = []() -> bool {                                                                  \
       register_vector_mul(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_scalar_mul(const std::string& deviceType, scalarVectorOpImpl impl);
+
+#define REGISTER_SCALAR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_mul) = []() -> bool {                                                               \
+      register_scalar_mul(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

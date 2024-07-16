@@ -102,6 +102,22 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
+  /*********************************** MUL BY SCALAR ***********************************/
+  ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul, scalarVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_mul)(
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return ScalarMulDispatcher::execute(scalar_a, vec_b, n, config, output);
+  }
+
+  template <>
+  eIcicleError
+  scalar_mul(const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, scalar_mul)(scalar_a, vec_b, n, config, output);
+  }
+
   /*********************************** CONVERT MONTGOMERY ***********************************/
 
   ICICLE_DISPATCHER_INST(ScalarConvertMontgomeryDispatcher, scalar_convert_montgomery, scalarConvertMontgomeryImpl)

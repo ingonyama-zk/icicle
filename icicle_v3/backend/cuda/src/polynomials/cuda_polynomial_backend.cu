@@ -72,6 +72,7 @@ namespace polynomials {
       config.is_a_on_device = true;
       config.is_result_on_device = true;
       config.is_async = true;
+      config.stream = m_stream;
 
       ICICLE_CHECK(icicle::slice(in_coeffs, offset, stride, out_size, config, out_coeffs));
     }
@@ -145,9 +146,13 @@ namespace polynomials {
       auto out_evals_p =
         state == State::Coefficients ? get_context_storage_mutable<C>(out) : get_context_storage_mutable<I>(out);
 
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(p_elements_p, scalar, N, out_evals_p);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = false;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+      icicle::scalar_mul(&scalar, p_elements_p, N, config, out_evals_p);
 
       CHK_LAST();
     }
@@ -377,10 +382,15 @@ namespace polynomials {
       // compute inv(u^N-1);
       D v_coset_eval = D::inverse(D::pow(ntt_config.coset_gen, N) - D::one());
 
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
-        numerator_evals_reversed_p + N /*second half is the reversed coset*/, v_coset_eval, N, out_evals_reversed_p);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = false;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+      icicle::scalar_mul(
+        &v_coset_eval, numerator_evals_reversed_p + N /*second half is the reversed coset*/, N, config,
+        out_evals_reversed_p);
 
       // INTT back from reversed evals on coset to coeffs
       ntt_config.are_inputs_on_device = true;
@@ -417,10 +427,13 @@ namespace polynomials {
       // (2) divide by constant value (that V(x) evaluates to on the coset)
       D v_coset_eval = D::inverse(D::pow(ntt_config.coset_gen, N) - D::one());
 
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
-        out_evals_reversed_p, v_coset_eval, N, out_evals_reversed_p);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = false;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+      icicle::scalar_mul(&v_coset_eval, out_evals_reversed_p, N, config, out_evals_reversed_p);
 
       // (3) INTT back from coset to coeffs
       ntt_config.are_inputs_on_device = true;
@@ -532,10 +545,14 @@ namespace polynomials {
         // transforming back to evals.
         p->transform_to_evaluations();
         const auto stride = poly_size / domain_size;
-        const int NOF_THREADS = 128;
-        const int NOF_BLOCKS = (domain_size + NOF_THREADS - 1) / NOF_THREADS;
-        slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
-          get_context_storage_immutable<I>(p), d_evals, 0 /*offset*/, stride, domain_size);
+
+        auto config = default_vec_ops_config();
+        config.is_a_on_device = true;
+        config.is_result_on_device = true;
+        config.is_async = true;
+        config.stream = m_stream;
+        ICICLE_CHECK(
+          icicle::slice(get_context_storage_immutable<I>(p), 0 /*offset*/, stride, domain_size, config, d_evals));
       } else {
         ICICLE_CHECK(icicle_memset(d_evals, 0, domain_size * sizeof(I)));
         auto ntt_config = default_ntt_config<D>();
