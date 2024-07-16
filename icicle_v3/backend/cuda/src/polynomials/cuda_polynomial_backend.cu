@@ -1,7 +1,6 @@
 
 #include "icicle/polynomials/polynomials.h"
 
-#include "gpu-utils/device_context.h"
 #include "gpu-utils/error_handler.h"
 #include "cuda_runtime.h"
 #include "icicle/ntt.h"
@@ -9,18 +8,16 @@
 #include "icicle/runtime.h"
 #include "icicle/errors.h"
 
-using device_context::DeviceContext;
-
 namespace polynomials {
 
   // TODO Yuval : CPU polynomials don't need need to be copied to device
   //              actually it's true for any device that shares memory with host
 
   static uint64_t ceil_to_power_of_two(uint64_t x) { return 1ULL << uint64_t(ceil(log2(x))); }
-  /*============================== Polynomial CUDA-context ==============================*/
+  /*============================== Polynomial Default-context ==============================*/
 
   // checking whether a pointer is on host or device and asserts device matches the polynmoial device
-  static bool is_host_ptr(const void* ptr, int device_id)
+  static bool is_host_ptr(const void* ptr)
   {
     if (eIcicleError::SUCCESS == icicle_is_host_memory(ptr)) return true;
 
@@ -29,7 +26,7 @@ namespace polynomials {
   }
 
   template <typename C = scalar_t, typename D = C, typename I = C>
-  class CUDAPolynomialContext : public IPolynomialContext<C, D, I>
+  class DefaultPolynomialContext : public IPolynomialContext<C, D, I>
   {
     typedef IPolynomialContext<C, D, I> PolyContext;
     using typename IPolynomialContext<C, D, I>::State;
@@ -40,13 +37,14 @@ namespace polynomials {
     uint64_t m_nof_elements = 0;    // Number of elements managed by the context.
 
   public:
-    const DeviceContext& m_device_context;
+    cudaStream_t m_stream;
+    // icicleStreamHandle m_stream;
 
-    CUDAPolynomialContext(const DeviceContext& dev_context) : m_device_context{dev_context}
+    DefaultPolynomialContext(const icicleStreamHandle stream) : m_stream{reinterpret_cast<cudaStream_t>(stream)}
     {
       m_integrity_counter = std::make_shared<int>(0);
     }
-    ~CUDAPolynomialContext() { release(); }
+    ~DefaultPolynomialContext() { release(); }
 
     void allocate(uint64_t nof_elements, State init_state, bool is_memset_zeros) override
     {
@@ -72,7 +70,7 @@ namespace polynomials {
       modified();
 
       const auto offset = (void*)((uint64_t)storage + element_start_idx * ElementSize);
-      CHK_STICKY(cudaMemsetAsync(offset, 0, size, m_device_context.stream));
+      ICICLE_CHECK(icicle_memset_async(offset, 0, size, m_stream));
     }
 
     uint64_t allocate_mem(uint64_t nof_elements, void** storage /*OUT*/, bool is_memset_zeros)
@@ -80,7 +78,7 @@ namespace polynomials {
       const uint64_t nof_elements_nearset_power_of_two = ceil_to_power_of_two(nof_elements);
       const uint64_t mem_size = nof_elements_nearset_power_of_two * ElementSize;
 
-      ICICLE_CHECK(icicle_malloc_async((void**)storage, mem_size, m_device_context.stream));
+      ICICLE_CHECK(icicle_malloc_async((void**)storage, mem_size, m_stream));
 
       if (is_memset_zeros) {
         memset_zeros(*storage, 0, nof_elements_nearset_power_of_two);
@@ -117,15 +115,14 @@ namespace polynomials {
       const uint64_t new_nof_elements = allocate_mem(nof_elements, &new_storage, true /*=memset zeros*/);
       const uint64_t old_mem_size = this->m_nof_elements * ElementSize;
 
-      CHK_STICKY(
-        cudaMemcpyAsync(new_storage, m_storage, old_mem_size, cudaMemcpyDeviceToDevice, m_device_context.stream));
+      ICICLE_CHECK(icicle_copy_async(new_storage, m_storage, old_mem_size, m_stream));
 
       set_storage(new_storage, new_nof_elements);
     }
 
     void release() override
     {
-      if (m_storage != nullptr) { CHK_STICKY(cudaFreeAsync(m_storage, m_device_context.stream)); }
+      if (m_storage != nullptr) { ICICLE_CHECK(icicle_free_async(m_storage, m_stream)); }
 
       m_storage = nullptr;
       this->m_nof_elements = 0;
@@ -142,13 +139,8 @@ namespace polynomials {
       const bool is_memset_zeros = coefficients == nullptr;
       allocate(nof_coefficients, State::Coefficients, is_memset_zeros);
       if (coefficients) {
-        const bool is_ptr_on_host = is_host_ptr(coefficients, m_device_context.device_id);
-
-        CHK_STICKY(cudaMemcpyAsync(
-          m_storage, coefficients, nof_coefficients * sizeof(C),
-          is_ptr_on_host ? cudaMemcpyHostToDevice : cudaMemcpyDeviceToDevice, m_device_context.stream));
-        CHK_STICKY(
-          cudaStreamSynchronize(m_device_context.stream)); // protect against coefficients being released too soon
+        ICICLE_CHECK(icicle_copy_async(m_storage, coefficients, nof_coefficients * sizeof(C), m_stream));
+        ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // protect against coefficients being released too soon
       }
     }
 
@@ -157,13 +149,8 @@ namespace polynomials {
       const bool is_memset_zeros = evaluations == nullptr;
       allocate(nof_evaluations, State::EvaluationsOnRou_Natural, is_memset_zeros);
       if (evaluations) {
-        const bool is_ptr_on_host = is_host_ptr(evaluations, m_device_context.device_id);
-
-        CHK_STICKY(cudaMemcpyAsync(
-          m_storage, evaluations, nof_evaluations * sizeof(C),
-          is_ptr_on_host ? cudaMemcpyHostToDevice : cudaMemcpyDeviceToDevice, m_device_context.stream));
-        CHK_STICKY(
-          cudaStreamSynchronize(m_device_context.stream)); // protect against evaluations being released too soon
+        ICICLE_CHECK(icicle_copy_async(m_storage, evaluations, nof_evaluations * sizeof(C), m_stream));
+        ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // protect against evaluations being released too soon
       }
     }
 
@@ -191,13 +178,13 @@ namespace polynomials {
       return std::make_pair(static_cast<const C*>(m_storage), this->m_nof_elements);
     }
 
-    std::tuple<IntegrityPointer<C>, uint64_t, uint64_t> get_coefficients_view() override
+    std::tuple<IntegrityPointer<C>, uint64_t> get_coefficients_view() override
     {
       auto [coeffs, N] = get_coefficients();
       // when reading the pointer, if the counter was modified, the pointer is invalid
       IntegrityPointer<C> integrity_pointer(coeffs, m_integrity_counter, *m_integrity_counter);
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream));
-      return {std::move(integrity_pointer), N, m_device_context.device_id};
+      ICICLE_CHECK(icicle_stream_synchronize(m_stream));
+      return {std::move(integrity_pointer), N};
     }
 
     std::pair<const I*, uint64_t> get_rou_evaluations() override
@@ -319,10 +306,8 @@ namespace polynomials {
       transform_to_coefficients();
       auto host_coeffs = std::make_unique<C[]>(this->m_nof_elements);
       // using stream since previous ops may still be in progress. Sync stream before reading CPU mem
-      CHK_STICKY(cudaMemcpyAsync(
-        host_coeffs.get(), m_storage, this->m_nof_elements * sizeof(C), cudaMemcpyDeviceToHost,
-        m_device_context.stream));
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream));
+      ICICLE_CHECK(icicle_copy_async(host_coeffs.get(), m_storage, this->m_nof_elements * sizeof(C), m_stream));
+      ICICLE_CHECK(icicle_stream_synchronize(m_stream));
 
       os << "(id=" << PolyContext::m_id << ")[";
       for (size_t i = 0; i < this->m_nof_elements; ++i) {
@@ -337,10 +322,8 @@ namespace polynomials {
       transform_to_evaluations();
       auto host_evals = std::make_unique<I[]>(this->m_nof_elements);
       // using stream since previous ops may still be in progress. Sync stream before reading CPU mem
-      CHK_STICKY(cudaMemcpyAsync(
-        host_evals.get(), m_storage, this->m_nof_elements * sizeof(I), cudaMemcpyDeviceToHost,
-        m_device_context.stream));
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream));
+      ICICLE_CHECK(icicle_copy_async(host_evals.get(), m_storage, this->m_nof_elements * sizeof(I), m_stream));
+      ICICLE_CHECK(icicle_stream_synchronize(m_stream));
 
       os << "(id=" << PolyContext::m_id << ")[";
       for (size_t i = 0; i < this->m_nof_elements; ++i) {
@@ -363,10 +346,10 @@ namespace polynomials {
     void modified() { (*m_integrity_counter)++; }
   };
 
-  /*============================== Polynomial CUDA-backend ==============================*/
+  /*============================== Polynomial Default-backend ==============================*/
 
   template <typename C = scalar_t, typename D = C, typename I = C>
-  class CUDAPolynomialBackend : public IPolynomialBackend<C, D, I>
+  class DefaultPolynomialBackend : public IPolynomialBackend<C, D, I>
   {
     typedef std::shared_ptr<IPolynomialContext<C, D, I>> PolyContext;
     typedef typename IPolynomialContext<C, D, I>::State State;
@@ -374,12 +357,12 @@ namespace polynomials {
     int64_t* d_degree = nullptr; // used to avoid alloc/release every time
 
   public:
-    const DeviceContext& m_device_context;
-    CUDAPolynomialBackend(const DeviceContext& dev_context) : m_device_context{dev_context}
+    cudaStream_t m_stream; // TODO Yuval make it icicleStreamHandle
+    DefaultPolynomialBackend(const icicleStreamHandle stream) : m_stream{reinterpret_cast<cudaStream_t>(stream)}
     {
-      ICICLE_CHECK(icicle_malloc_async((void**)&d_degree, sizeof(int64_t), m_device_context.stream));
+      ICICLE_CHECK(icicle_malloc_async((void**)&d_degree, sizeof(int64_t), m_stream));
     }
-    ~CUDAPolynomialBackend() { CHK_STICKY(cudaFreeAsync(d_degree, m_device_context.stream)); }
+    ~DefaultPolynomialBackend() noexcept { icicle_free_async(d_degree, m_stream); }
 
     void from_coefficients(PolyContext p, uint64_t nof_coefficients, const C* coefficients) override
     {
@@ -417,8 +400,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (out_size + NOF_THREADS - 1) / NOF_THREADS;
-      slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-        in_coeffs, out_coeffs, offset, stride, out_size);
+      slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(in_coeffs, out_coeffs, offset, stride, out_size);
 
       CHK_LAST();
     }
@@ -449,7 +431,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (output_size + NOF_THREADS - 1) / NOF_THREADS;
-      add_sub_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      add_sub_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
         a_mem_p, b_mem_p, a->get_nof_elements(), b->get_nof_elements(), add1_sub0, res_mem_p);
 
       CHK_LAST();
@@ -494,7 +476,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(p_elements_p, scalar, N, out_evals_p);
+      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(p_elements_p, scalar, N, out_evals_p);
 
       CHK_LAST();
     }
@@ -519,7 +501,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (c_N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
+      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(a_evals_p, b_evals_p, c_N, c_evals_p);
 
       CHK_LAST();
     }
@@ -555,8 +537,7 @@ namespace polynomials {
       // (4) compute a_H1 * b_H1 inplace
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-        c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
+      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(c_evals_low_p, c_evals_high_p, N, c_evals_high_p);
       // (5) transform a,b to evaluations
       a->transform_to_evaluations(N, true /*=reversed*/);
       b->transform_to_evaluations(N, true /*=reversed*/);
@@ -564,7 +545,7 @@ namespace polynomials {
       auto [b_evals_p, b_nof_evals] = b->get_rou_evaluations();
 
       // (6) compute a_H0 * b_H0
-      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
+      mul_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(a_evals_p, b_evals_p, N, c_evals_low_p);
 
       CHK_LAST();
     }
@@ -578,10 +559,7 @@ namespace polynomials {
 
       const int64_t deg_a = degree(a);
       const int64_t deg_b = degree(b);
-      if (deg_b < 0) {
-        THROW_ICICLE_ERR(
-          IcicleError_t::InvalidArgument, "Polynomial division (CUDA backend): divide by zeropolynomial ");
-      }
+      ICICLE_ASSERT(deg_b >= 0) << "Polynomial division:  divide by zero polynomial";
 
       // init: Q=0, R=a
       Q->allocate(deg_a - deg_b + 1, State::Coefficients, true /*=memset zeros*/);
@@ -590,8 +568,7 @@ namespace polynomials {
       //    TODO Yuval: Can do better in terms of memory allocation? deg(R) <= deg(b) by definition but it starts as
       R->allocate(a_N, State::Coefficients, false /*=memset_zeros*/);
       auto R_coeffs = get_context_storage_mutable(R);
-      CHK_STICKY(
-        cudaMemcpyAsync(R_coeffs, a_coeffs, a_N * sizeof(C), cudaMemcpyDeviceToDevice, m_device_context.stream));
+      ICICLE_CHECK(icicle_copy_async(R_coeffs, a_coeffs, a_N * sizeof(C), m_stream));
 
       const C& lc_b_inv = C::inverse(get_coeff(b, deg_b)); // largest coeff of b
 
@@ -600,7 +577,7 @@ namespace polynomials {
         // each iteration is removing the largest monomial in r until deg(r)<deg(b)
         const int NOF_THREADS = 128;
         const int NOF_BLOCKS = ((deg_r + 1) + NOF_THREADS - 1) / NOF_THREADS; // 'deg_r+1' is number of elements in R
-        school_book_division_step<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        school_book_division_step<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
           R_coeffs, Q_coeffs, b_coeffs, deg_r, deg_b, lc_b_inv);
 
         // faster than degree(R) based on the fact that degree is decreasing
@@ -613,14 +590,14 @@ namespace polynomials {
     void quotient(PolyContext Q, PolyContext op_a, PolyContext op_b) override
     {
       // TODO: can implement more efficiently?
-      auto R = std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_context);
+      auto R = std::make_shared<DefaultPolynomialContext<C, D, I>>(m_stream);
       divide(Q, R, op_a, op_b);
     }
 
     void remainder(PolyContext R, PolyContext op_a, PolyContext op_b) override
     {
       // TODO: can implement more efficiently?
-      auto Q = std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_context);
+      auto Q = std::make_shared<DefaultPolynomialContext<C, D, I>>(m_stream);
       divide(Q, R, op_a, op_b);
     }
 
@@ -699,8 +676,7 @@ namespace polynomials {
       // (3) element wise division
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      div_element_wise_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
-        numerator_coeffs, out_coeffs, N, out_coeffs);
+      div_element_wise_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(numerator_coeffs, out_coeffs, N, out_coeffs);
 
       // (4) INTT back both numerator and out
       ntt_config.ordering = Ordering::kMN;
@@ -732,7 +708,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
         numerator_evals_reversed_p + N /*second half is the reversed coset*/, v_coset_eval, N, out_evals_reversed_p);
 
       // INTT back from reversed evals on coset to coeffs
@@ -772,7 +748,7 @@ namespace polynomials {
 
       const int NOF_THREADS = 128;
       const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      mul_scalar_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
         out_evals_reversed_p, v_coset_eval, N, out_evals_reversed_p);
 
       // (3) INTT back from coset to coeffs
@@ -791,7 +767,7 @@ namespace polynomials {
       const uint64_t new_nof_elements = max(poly->get_nof_elements(), monomial + 1);
       poly->transform_to_coefficients(new_nof_elements);
       auto coeffs = get_context_storage_mutable(poly);
-      add_single_element_inplace<<<1, 1, 0, m_device_context.stream>>>(coeffs + monomial, monomial_coeff);
+      add_single_element_inplace<<<1, 1, 0, m_stream>>>(coeffs + monomial, monomial_coeff);
 
       CHK_LAST();
     }
@@ -812,10 +788,9 @@ namespace polynomials {
       auto [coeff, _] = p->get_coefficients();
 
       int64_t h_degree;
-      highest_non_zero_idx<<<1, 1, 0, m_device_context.stream>>>(coeff, len, d_degree);
-      CHK_STICKY(
-        cudaMemcpyAsync(&h_degree, d_degree, sizeof(int64_t), cudaMemcpyDeviceToHost, m_device_context.stream));
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
+      highest_non_zero_idx<<<1, 1, 0, m_stream>>>(coeff, len, d_degree);
+      ICICLE_CHECK(icicle_copy_async(&h_degree, d_degree, sizeof(int64_t), m_stream));
+      ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // sync to make sure return value is copied to host
 
       return h_degree;
     }
@@ -828,35 +803,35 @@ namespace polynomials {
 
       auto [coeff, nof_coeff] = p->get_coefficients();
 
-      const bool is_x_on_host = is_host_ptr(x, m_device_context.device_id);
-      const bool is_eval_on_host = is_host_ptr(eval, m_device_context.device_id);
+      const bool is_x_on_host = is_host_ptr(x);
+      const bool is_eval_on_host = is_host_ptr(eval);
 
       const D* d_x = x;
       D* allocated_x = nullptr;
       if (is_x_on_host) {
-        ICICLE_CHECK(icicle_malloc_async((void**)&allocated_x, sizeof(I), m_device_context.stream));
-        CHK_STICKY(cudaMemcpyAsync(allocated_x, x, sizeof(I), cudaMemcpyHostToDevice, m_device_context.stream));
+        ICICLE_CHECK(icicle_malloc_async((void**)&allocated_x, sizeof(I), m_stream));
+        ICICLE_CHECK(icicle_copy_async(allocated_x, x, sizeof(I), m_stream));
         d_x = allocated_x;
       }
       I* d_eval = eval;
-      if (is_eval_on_host) { ICICLE_CHECK(icicle_malloc_async((void**)&d_eval, sizeof(I), m_device_context.stream)); }
+      if (is_eval_on_host) { ICICLE_CHECK(icicle_malloc_async((void**)&d_eval, sizeof(I), m_stream)); }
 
       // TODO Yuval: other methods can avoid this allocation. Also for eval_on_domain() no need to reallocate every time
       I* d_tmp = nullptr;
-      ICICLE_CHECK(icicle_malloc_async((void**)&d_tmp, sizeof(I) * nof_coeff, m_device_context.stream));
+      ICICLE_CHECK(icicle_malloc_async((void**)&d_tmp, sizeof(I) * nof_coeff, m_stream));
       const int NOF_THREADS = 32;
       const int NOF_BLOCKS = (nof_coeff + NOF_THREADS - 1) / NOF_THREADS;
-      evaluate_polynomial_without_reduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+      evaluate_polynomial_without_reduction<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
         d_x, coeff, nof_coeff, d_tmp); // TODO Yuval: parallelize kernel
-      dummy_reduce<<<1, 1, 0, m_device_context.stream>>>(d_tmp, nof_coeff, d_eval);
+      dummy_reduce<<<1, 1, 0, m_stream>>>(d_tmp, nof_coeff, d_eval);
 
       if (is_eval_on_host) {
-        CHK_STICKY(cudaMemcpyAsync(eval, d_eval, sizeof(I), cudaMemcpyDeviceToHost, m_device_context.stream));
-        CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
-        CHK_STICKY(cudaFreeAsync(d_eval, m_device_context.stream));
+        ICICLE_CHECK(icicle_copy_async(eval, d_eval, sizeof(I), m_stream));
+        ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // sync to make sure return value is copied to host
+        ICICLE_CHECK(icicle_free_async(d_eval, m_stream));
       }
-      if (allocated_x) { CHK_STICKY(cudaFreeAsync(allocated_x, m_device_context.stream)); }
-      CHK_STICKY(cudaFreeAsync(d_tmp, m_device_context.stream));
+      if (allocated_x) { ICICLE_CHECK(icicle_free_async(allocated_x, m_stream)); }
+      ICICLE_CHECK(icicle_free_async(d_tmp, m_stream));
     }
 
     void evaluate_on_domain(PolyContext p, const D* domain, uint64_t size, I* evaluations /*OUT*/) override
@@ -871,13 +846,11 @@ namespace polynomials {
     {
       const uint64_t poly_size = p->get_nof_elements();
       const uint64_t domain_size = 1 << domain_log_size;
-      const bool is_evals_on_host = is_host_ptr(evals, m_device_context.device_id);
+      const bool is_evals_on_host = is_host_ptr(evals);
 
       I* d_evals = evals;
-      // if evals on host, allocate CUDA memory
-      if (is_evals_on_host) {
-        ICICLE_CHECK(icicle_malloc_async((void**)&d_evals, domain_size * sizeof(I), m_device_context.stream));
-      }
+      // if evals on host, allocate memory
+      if (is_evals_on_host) { ICICLE_CHECK(icicle_malloc_async((void**)&d_evals, domain_size * sizeof(I), m_stream)); }
 
       // If domain size is smaller the polynomial size -> transform to evals and copy the evals with stride.
       // Else, if in coeffs copy coeffs to evals mem and NTT inplace to compute the evals, else INTT to d_evals and back
@@ -890,10 +863,10 @@ namespace polynomials {
         const auto stride = poly_size / domain_size;
         const int NOF_THREADS = 128;
         const int NOF_BLOCKS = (domain_size + NOF_THREADS - 1) / NOF_THREADS;
-        slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_device_context.stream>>>(
+        slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
           get_context_storage_immutable<I>(p), d_evals, 0 /*offset*/, stride, domain_size);
       } else {
-        CHK_STICKY(cudaMemset(d_evals, 0, domain_size * sizeof(I)));
+        ICICLE_CHECK(icicle_memset(d_evals, 0, domain_size * sizeof(I)));
         auto ntt_config = default_ntt_config<D>();
         ntt_config.are_inputs_on_device = true;
         ntt_config.are_outputs_on_device = true;
@@ -902,8 +875,7 @@ namespace polynomials {
         switch (p->get_state()) {
         case State::Coefficients: {
           // copy to evals memory and inplace NTT of domain size
-          CHK_STICKY(
-            cudaMemcpy(d_evals, get_context_storage_immutable<I>(p), poly_size * sizeof(I), cudaMemcpyDeviceToDevice));
+          ICICLE_CHECK(icicle_copy(d_evals, get_context_storage_immutable<I>(p), poly_size * sizeof(I)));
           ntt_config.ordering = Ordering::kNN;
           ntt(d_evals, domain_size, NTTDir::kForward, ntt_config, d_evals);
         } break;
@@ -922,15 +894,14 @@ namespace polynomials {
         }
       }
 
-      // release CUDA memory if allocated
+      // release memory if allocated
       if (is_evals_on_host) {
-        CHK_STICKY(
-          cudaMemcpyAsync(evals, d_evals, domain_size * sizeof(I), cudaMemcpyDeviceToHost, m_device_context.stream));
-        CHK_STICKY(cudaFreeAsync(d_evals, m_device_context.stream));
+        ICICLE_CHECK(icicle_copy_async(evals, d_evals, domain_size * sizeof(I), m_stream));
+        ICICLE_CHECK(icicle_free_async(d_evals, m_stream));
       }
 
       // sync since user cannot reuse this stream so need to make sure evals are computed
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied to host
+      ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // sync to make sure return value is copied to host
 
       CHK_LAST();
     }
@@ -951,11 +922,8 @@ namespace polynomials {
       op->transform_to_coefficients();
       auto [device_coeffs, _] = op->get_coefficients();
       const size_t nof_coeffs_to_copy = end_idx - start_idx + 1;
-      const bool is_copy_to_host = is_host_ptr(out_coeffs, m_device_context.device_id);
-      CHK_STICKY(cudaMemcpyAsync(
-        out_coeffs, device_coeffs + start_idx, nof_coeffs_to_copy * sizeof(C),
-        is_copy_to_host ? cudaMemcpyDeviceToHost : cudaMemcpyDeviceToDevice, m_device_context.stream));
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream)); // sync to make sure return value is copied
+      ICICLE_CHECK(icicle_copy_async(out_coeffs, device_coeffs + start_idx, nof_coeffs_to_copy * sizeof(C), m_stream));
+      ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // sync to make sure return value is copied
 
       return nof_coeffs_to_copy;
     }
@@ -968,12 +936,7 @@ namespace polynomials {
       return host_coeff;
     }
 
-    std::tuple<
-      IntegrityPointer<C>,
-      uint64_t /*size*/
-      ,
-      uint64_t /*device_id*/>
-    get_coefficients_view(PolyContext p) override
+    std::tuple<IntegrityPointer<C>, uint64_t /*size*/> get_coefficients_view(PolyContext p) override
     {
       return p->get_coefficients_view();
     }
@@ -989,17 +952,12 @@ namespace polynomials {
 
   /*============================== Polynomial CUDA-factory ==============================*/
 
-#include "gpu-utils/device_context.h"
 #include "icicle/fields/field_config.h"
-
-  using device_context::DeviceContext;
 
   template <typename C = scalar_t, typename D = C, typename I = C>
   class CUDAPolynomialFactory : public AbstractPolynomialFactory<C, D, I>
   {
-    std::vector<DeviceContext> m_device_contexts; // device-id --> device context
-    std::vector<cudaStream_t> m_device_streams;   // device-id --> device stream. Storing the streams here as workaround
-                                                  // since DeviceContext has a reference to a stream.
+    std::vector<cudaStream_t> m_device_streams; // device-id --> device stream
 
   public:
     CUDAPolynomialFactory();
@@ -1021,8 +979,6 @@ namespace polynomials {
     for (int dev_id = 0; dev_id < nof_cuda_devices; ++dev_id) {
       CHK_STICKY(cudaSetDevice(dev_id));
       CHK_STICKY(cudaStreamCreate(&m_device_streams[dev_id]));
-      DeviceContext context = {m_device_streams[dev_id], (size_t)dev_id, 0x0 /*mempool*/};
-      m_device_contexts.push_back(context);
     }
     CHK_STICKY(cudaSetDevice(orig_device)); // setting back original device
   }
@@ -1040,7 +996,7 @@ namespace polynomials {
   {
     int cuda_device_id = -1;
     CHK_STICKY(cudaGetDevice(&cuda_device_id));
-    return std::make_shared<CUDAPolynomialContext<C, D, I>>(m_device_contexts[cuda_device_id]);
+    return std::make_shared<DefaultPolynomialContext<C, D, I>>(m_device_streams[cuda_device_id]);
   }
 
   template <typename C, typename D, typename I>
@@ -1048,7 +1004,7 @@ namespace polynomials {
   {
     int cuda_device_id = -1;
     CHK_STICKY(cudaGetDevice(&cuda_device_id));
-    return std::make_shared<CUDAPolynomialBackend<C, D, I>>(m_device_contexts[cuda_device_id]);
+    return std::make_shared<DefaultPolynomialBackend<C, D, I>>(m_device_streams[cuda_device_id]);
   }
 
   /************************************** BACKEND REGISTRATION **************************************/
