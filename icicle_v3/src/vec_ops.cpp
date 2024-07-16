@@ -286,4 +286,21 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
+  /*********************************** SLICE ***********************************/
+
+  ICICLE_DISPATCHER_INST(ScalarHighestNonZeroIdxDispatcher, highest_non_zero_idx, scalarHighNonZeroIdxOpImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, highest_non_zero_idx)(
+    const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx /*OUT*/)
+  {
+    return ScalarHighestNonZeroIdxDispatcher::execute(input, size, config, out_idx);
+  }
+
+  template <>
+  eIcicleError
+  highest_non_zero_idx(const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx /*OUT*/)
+  {
+    return CONCAT_EXPAND(FIELD, highest_non_zero_idx)(input, size, config, out_idx);
+  }
+
 } // namespace icicle

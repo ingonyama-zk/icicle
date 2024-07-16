@@ -85,6 +85,10 @@ namespace icicle {
   eIcicleError
   slice(const T* vec_in, uint64_t offset, uint64_t stride, uint64_t size, const VecOpsConfig& config, T* vec_out);
 
+  template <typename T>
+  eIcicleError
+  highest_non_zero_idx(const T* vec_in, uint64_t size, const VecOpsConfig& config, int64_t* out_idx /*OUT*/);
+
   /*************************** Backend registration ***************************/
 
   using scalarVectorOpImpl = std::function<eIcicleError(
@@ -228,6 +232,19 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_scalar_slice) = []() -> bool {                                                             \
       register_slice(DEVICE_TYPE, FUNC);                                                                               \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using scalarHighNonZeroIdxOpImpl = std::function<eIcicleError(
+    const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx /*OUT*/)>;
+
+  void register_highest_non_zero_idx(const std::string& deviceType, scalarHighNonZeroIdxOpImpl);
+
+#define REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND(DEVICE_TYPE, FUNC)                                                       \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_highest_non_zero_idx) = []() -> bool {                                              \
+      register_highest_non_zero_idx(DEVICE_TYPE, FUNC);                                                                \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

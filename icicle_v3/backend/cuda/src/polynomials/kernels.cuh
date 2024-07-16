@@ -12,19 +12,6 @@ namespace polynomials {
     *self = *self + v;
   }
 
-  /*============================== degree ==============================*/
-  template <typename T>
-  __global__ void highest_non_zero_idx(const T* vec, int len, int64_t* idx)
-  {
-    *idx = -1; // zero polynomial is defined with degree -1
-    for (int64_t i = len - 1; i >= 0; --i) {
-      if (vec[i] != T::zero()) {
-        *idx = i;
-        return;
-      }
-    }
-  }
-
   /*============================== evaluate ==============================*/
   // TODO Yuval: implement efficient reduction and support batch evaluation
   template <typename T>

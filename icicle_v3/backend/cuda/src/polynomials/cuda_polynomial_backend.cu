@@ -515,7 +515,15 @@ namespace polynomials {
       auto [coeff, _] = p->get_coefficients();
 
       int64_t h_degree;
-      highest_non_zero_idx<<<1, 1, 0, m_stream>>>(coeff, len, d_degree);
+
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+
+      ICICLE_CHECK(icicle::highest_non_zero_idx(coeff, len, config, d_degree));
+      // sync copy to make sure return value is copied to host
       ICICLE_CHECK(icicle_copy_async(&h_degree, d_degree, sizeof(int64_t), m_stream));
       ICICLE_CHECK(icicle_stream_synchronize(m_stream)); // sync to make sure return value is copied to host
 

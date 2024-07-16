@@ -367,6 +367,61 @@ eIcicleError slice_cuda(
   return translateCudaError(err);
 }
 
+/*============================== highest non-zero idx ==============================*/
+template <typename T>
+__global__ void highest_non_zero_idx_kernel(const T* vec, uint64_t len, int64_t* idx)
+{
+  *idx = -1; // -1 for all zeros vec
+  for (int64_t i = len - 1; i >= 0; --i) {
+    if (vec[i] != T::zero()) {
+      *idx = i;
+      return;
+    }
+  }
+}
+
+template <typename E>
+cudaError_t _highest_non_zero_idx(const E* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)
+{
+  // TODO: implement fast version
+
+  CHK_INIT_IF_RETURN();
+
+  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
+
+  // allocate device memory and copy if input/output not on device already
+  // need to copy consecutive memory where output elements reside in vec_a
+  input = config.is_a_on_device ? input : allocate_and_copy_to_device(input, size * sizeof(E), cuda_stream);
+  int64_t* d_out_idx = config.is_result_on_device ? out_idx : allocate_on_device<int64_t>(sizeof(int64_t), cuda_stream);
+
+  // Call the kernel to perform element-wise operation
+  int num_threads = MAX_THREADS_PER_BLOCK;
+  int num_blocks = (size + num_threads - 1) / num_threads;
+  highest_non_zero_idx_kernel<<<num_blocks, num_threads>>>(input, size, d_out_idx);
+
+  // copy back result to host if need to
+  if (!config.is_result_on_device) {
+    CHK_IF_RETURN(cudaMemcpyAsync(out_idx, d_out_idx, sizeof(int64_t), cudaMemcpyDeviceToHost, cuda_stream));
+    CHK_IF_RETURN(cudaFreeAsync(d_out_idx, cuda_stream));
+  }
+
+  // release device memory, if allocated
+  // the cast is ugly but it makes the code more compact
+  if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)input, cuda_stream)); }
+
+  // wait for stream to empty is not async
+  if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(cuda_stream));
+
+  return CHK_LAST();
+}
+
+template <typename E>
+eIcicleError highest_non_zero_idx_cuda(
+  const Device& device, const E* vec_a, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)
+{
+  cudaError_t err = _highest_non_zero_idx<E>(vec_a, size, config, out_idx);
+  return translateCudaError(err);
+}
 /************************************ REGISTRATION ************************************/
 
 REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
@@ -379,6 +434,7 @@ REGISTER_SCALAR_SUB_VEC_BACKEND("CUDA", sub_scalar_cuda<scalar_t>);
 REGISTER_MATRIX_TRANSPOSE_BACKEND("CUDA", matrix_transpose_cuda<scalar_t>);
 REGISTER_BIT_REVERSE_BACKEND("CUDA", bit_reverse_cuda<scalar_t>);
 REGISTER_SLICE_BACKEND("CUDA", slice_cuda<scalar_t>);
+REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CUDA", highest_non_zero_idx_cuda<scalar_t>)
 
 #ifdef EXT_FIELD
 REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CUDA", add_cuda<extension_t>);
