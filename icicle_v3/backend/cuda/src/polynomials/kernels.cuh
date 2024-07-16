@@ -3,15 +3,6 @@
 
 namespace polynomials {
 
-  /*============================== add/sub ==============================*/
-
-  // Note: must be called with 1 block, 1 thread
-  template <typename T>
-  __global__ void add_single_element_inplace(T* self, T v)
-  {
-    *self = *self + v;
-  }
-
   /*============================== evaluate ==============================*/
   // TODO Yuval: implement efficient reduction and support batch evaluation
   template <typename T>

@@ -494,7 +494,15 @@ namespace polynomials {
       const uint64_t new_nof_elements = max(poly->get_nof_elements(), monomial + 1);
       poly->transform_to_coefficients(new_nof_elements);
       auto coeffs = get_context_storage_mutable(poly);
-      add_single_element_inplace<<<1, 1, 0, m_stream>>>(coeffs + monomial, monomial_coeff);
+
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = true;
+      config.is_b_on_device = false;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+
+      ICICLE_CHECK(icicle::vector_add(coeffs + monomial, &monomial_coeff, 1, config, coeffs + monomial));
 
       CHK_LAST();
     }
