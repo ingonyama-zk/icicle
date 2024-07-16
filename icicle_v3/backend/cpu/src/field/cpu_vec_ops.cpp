@@ -48,6 +48,32 @@ cpu_vector_mul(const Device& device, const T* vec_a, const T* vec_b, uint64_t n,
 
 REGISTER_VECTOR_MUL_BACKEND("CPU", cpu_vector_mul<scalar_t>);
 
+/*********************************** DIV ***********************************/
+template <typename T>
+eIcicleError
+cpu_vector_div(const Device& device, const T* vec_a, const T* vec_b, uint64_t n, const VecOpsConfig& config, T* output)
+{
+  for (uint64_t i = 0; i < n; ++i) {
+    output[i] = vec_a[i] * T::inverse(vec_b[i]);
+  }
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_VECTOR_DIV_BACKEND("CPU", cpu_vector_div<scalar_t>);
+
+/*********************************** MUL BY SCALAR***********************************/
+template <typename T>
+eIcicleError cpu_scalar_mul(
+  const Device& device, const T* scalar_a, const T* vec_b, uint64_t n, const VecOpsConfig& config, T* output)
+{
+  for (uint64_t i = 0; i < n; ++i) {
+    output[i] = *scalar_a * vec_b[i];
+  }
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_SCALAR_MUL_BACKEND("CPU", cpu_scalar_mul<scalar_t>);
+
 /*********************************** CONVERT MONTGOMERY ***********************************/
 template <typename T>
 eIcicleError cpu_convert_montgomery(

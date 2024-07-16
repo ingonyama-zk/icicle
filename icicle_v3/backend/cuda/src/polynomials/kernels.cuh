@@ -1,6 +1,5 @@
 #pragma once
 #include "stdint.h"
-// #include "../../../src/vec_ops/vec_ops.cu" // TODO Yuval: avoid this
 
 namespace polynomials {
 
@@ -86,14 +85,6 @@ namespace polynomials {
 
     T b_coeff = b[tid - monomial];
     r[tid] = r[tid] - monomial_coeff * b_coeff;
-  }
-
-  /*============================== slice ==============================*/
-  template <typename T>
-  __global__ void slice_kernel(const T* in, T* out, int offset, int stride, int size)
-  {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < size) { out[tid] = in[offset + tid * stride]; }
   }
 
 } // namespace polynomials

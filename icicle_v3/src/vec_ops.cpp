@@ -102,6 +102,21 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
+  /*********************************** DIV ***********************************/
+  ICICLE_DISPATCHER_INST(VectorDivDispatcher, vector_div, scalarVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_div)(
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return VectorDivDispatcher::execute(vec_a, vec_b, n, config, output);
+  }
+
+  template <>
+  eIcicleError
+  vector_div(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, vector_div)(vec_a, vec_b, n, config, output);
+  }
   /*********************************** MUL BY SCALAR ***********************************/
   ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul, scalarVectorOpImpl);
 

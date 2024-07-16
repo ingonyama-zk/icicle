@@ -57,6 +57,9 @@ namespace icicle {
   eIcicleError vector_mul(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   template <typename T>
+  eIcicleError vector_div(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+
+  template <typename T>
   eIcicleError convert_montgomery(const T* input, uint64_t size, bool is_into, const VecOpsConfig& config, T* output);
 
   // scalar-vec ops
@@ -111,6 +114,16 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_mul) = []() -> bool {                                                                  \
       register_vector_mul(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_vector_div(const std::string& deviceType, scalarVectorOpImpl impl);
+
+#define REGISTER_VECTOR_DIV_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_vec_div) = []() -> bool {                                                                  \
+      register_vector_div(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
