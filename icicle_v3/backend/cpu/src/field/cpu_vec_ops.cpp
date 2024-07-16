@@ -72,7 +72,33 @@ eIcicleError cpu_scalar_mul(
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_SCALAR_MUL_BACKEND("CPU", cpu_scalar_mul<scalar_t>);
+REGISTER_SCALAR_MUL_VEC_BACKEND("CPU", cpu_scalar_mul<scalar_t>);
+
+/*********************************** Scalar + Vector***********************************/
+template <typename T>
+eIcicleError cpu_scalar_add(
+  const Device& device, const T* scalar_a, const T* vec_b, uint64_t n, const VecOpsConfig& config, T* output)
+{
+  for (uint64_t i = 0; i < n; ++i) {
+    output[i] = *scalar_a + vec_b[i];
+  }
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_SCALAR_ADD_VEC_BACKEND("CPU", cpu_scalar_add<scalar_t>);
+
+/*********************************** Scalar - Vector***********************************/
+template <typename T>
+eIcicleError cpu_scalar_sub(
+  const Device& device, const T* scalar_a, const T* vec_b, uint64_t n, const VecOpsConfig& config, T* output)
+{
+  for (uint64_t i = 0; i < n; ++i) {
+    output[i] = *scalar_a - vec_b[i];
+  }
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_SCALAR_SUB_VEC_BACKEND("CPU", cpu_scalar_sub<scalar_t>);
 
 /*********************************** CONVERT MONTGOMERY ***********************************/
 template <typename T>

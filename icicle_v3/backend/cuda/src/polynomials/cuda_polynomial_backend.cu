@@ -101,12 +101,42 @@ namespace polynomials {
       res->allocate(output_size, output_state);
       auto res_mem_p = get_context_storage_mutable(res);
 
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (output_size + NOF_THREADS - 1) / NOF_THREADS;
-      add_sub_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(
-        a_mem_p, b_mem_p, a->get_nof_elements(), b->get_nof_elements(), add1_sub0, res_mem_p);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = true;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
 
-      CHK_LAST();
+      const bool a_is_larger_than_b = a->get_nof_elements() > b->get_nof_elements();
+      const bool b_is_larger_than_a = a->get_nof_elements() < b->get_nof_elements();
+
+      uint64_t min_op_size = std::min(a->get_nof_elements(), b->get_nof_elements());
+      if (add1_sub0) {
+        ICICLE_CHECK(icicle::vector_add(a_mem_p, b_mem_p, min_op_size, config, res_mem_p));
+
+        if (a_is_larger_than_b) {
+          ICICLE_CHECK(icicle_copy(
+            res_mem_p + min_op_size, a_mem_p + min_op_size, sizeof(C) * (a->get_nof_elements() - min_op_size)));
+        } else if (b_is_larger_than_a) {
+          ICICLE_CHECK(icicle_copy(
+            res_mem_p + min_op_size, b_mem_p + min_op_size, sizeof(C) * (b->get_nof_elements() - min_op_size)));
+        }
+        return;
+      }
+
+      // sub case
+      ICICLE_CHECK(icicle::vector_sub(a_mem_p, b_mem_p, min_op_size, config, res_mem_p));
+
+      if (a_is_larger_than_b) {
+        ICICLE_CHECK(icicle_copy(
+          res_mem_p + min_op_size, a_mem_p + min_op_size, sizeof(C) * (a->get_nof_elements() - min_op_size)));
+      } else if (b_is_larger_than_a) {
+        C zero = C::zero();
+        config.is_a_on_device = false;
+        ICICLE_CHECK(
+          scalar_sub_vec(&zero, b_mem_p + min_op_size, b->get_nof_elements() - min_op_size, config, res_mem_p));
+      }
     }
 
     void add(PolyContext& res, PolyContext a, PolyContext b) override { add_sub(res, a, b, true /*=add*/); }
@@ -152,7 +182,7 @@ namespace polynomials {
       config.is_result_on_device = true;
       config.is_async = true;
       config.stream = m_stream;
-      icicle::scalar_mul(&scalar, p_elements_p, N, config, out_evals_p);
+      icicle::scalar_mul_vec(&scalar, p_elements_p, N, config, out_evals_p);
 
       CHK_LAST();
     }
@@ -302,18 +332,18 @@ namespace polynomials {
       // when dividing a polynomial  P(x)/V(x) (The vanishing polynomial) the output is of degree deg(P)-deg(V). There
       // are three cases where V(x) divides P(x) (this is assumed since otherwise the output polynomial does not
       // exist!):
-      // (1) deg(P)=2*deg(V): in that case deg(P/V)=deg(V)=N. This is an efficient case since on a domain of size N, the
-      // vanishing polynomial evaluates to a constant value.
-      // (2) deg(P)=deg(V)=N: in that case the output is a degree 0 polynomial.
-      // polynomial (i.e. scalar). (3) general case: deg(P)>2*deg(V): in that case deg(P) is a least 4*deg(V) since N is
-      // a power of two. This means that deg(P/V)=deg(P). For example deg(P)=16, deg(V)=4 --> deg(P/V)=12 ceiled to 16.
+      // (1) deg(P)=2*deg(V): in that case deg(P/V)=deg(V)=N. This is an efficient case since on a domain of size N,
+      // the vanishing polynomial evaluates to a constant value. (2) deg(P)=deg(V)=N: in that case the output is a
+      // degree 0 polynomial. polynomial (i.e. scalar). (3) general case: deg(P)>2*deg(V): in that case deg(P) is a
+      // least 4*deg(V) since N is a power of two. This means that deg(P/V)=deg(P). For example deg(P)=16, deg(V)=4
+      // --> deg(P/V)=12 ceiled to 16.
 
       // When computing we want to divide P(x)'s evals by V(x)'s evals. Since V(x)=0 on this domain we have to compute
       // on a coset.
       // for case (3) we must evaluate V(x) on deg(P) domain size and compute elementwise division on a coset.
-      // case (1) is more efficient because we need N evaluations of V(x) on a coset. Note that V(x)=constant on a coset
-      // of rou. This is because V(wu)=(wu)^N-1=W^N*u^N-1 = 1*u^N-1 (as w^N=1 for w Nth root of unity). case (2) can be
-      // computed like case (1).
+      // case (1) is more efficient because we need N evaluations of V(x) on a coset. Note that V(x)=constant on a
+      // coset of rou. This is because V(wu)=(wu)^N-1=W^N*u^N-1 = 1*u^N-1 (as w^N=1 for w Nth root of unity). case (2)
+      // can be computed like case (1).
 
       const bool is_case_2N = numerator->get_nof_elements() == 2 * vanishing_poly_degree;
       const bool is_case_N = numerator->get_nof_elements() == vanishing_poly_degree;
@@ -401,7 +431,7 @@ namespace polynomials {
       config.is_result_on_device = true;
       config.is_async = true;
       config.stream = m_stream;
-      icicle::scalar_mul(
+      icicle::scalar_mul_vec(
         &v_coset_eval, numerator_evals_reversed_p + N /*second half is the reversed coset*/, N, config,
         out_evals_reversed_p);
 
@@ -446,7 +476,7 @@ namespace polynomials {
       config.is_result_on_device = true;
       config.is_async = true;
       config.stream = m_stream;
-      icicle::scalar_mul(&v_coset_eval, out_evals_reversed_p, N, config, out_evals_reversed_p);
+      icicle::scalar_mul_vec(&v_coset_eval, out_evals_reversed_p, N, config, out_evals_reversed_p);
 
       // (3) INTT back from coset to coeffs
       ntt_config.are_inputs_on_device = true;
@@ -513,7 +543,8 @@ namespace polynomials {
       I* d_eval = eval;
       if (is_eval_on_host) { ICICLE_CHECK(icicle_malloc_async((void**)&d_eval, sizeof(I), m_stream)); }
 
-      // TODO Yuval: other methods can avoid this allocation. Also for eval_on_domain() no need to reallocate every time
+      // TODO Yuval: other methods can avoid this allocation. Also for eval_on_domain() no need to reallocate every
+      // time
       I* d_tmp = nullptr;
       ICICLE_CHECK(icicle_malloc_async((void**)&d_tmp, sizeof(I) * nof_coeff, m_stream));
       const int NOF_THREADS = 32;
@@ -550,8 +581,8 @@ namespace polynomials {
       if (is_evals_on_host) { ICICLE_CHECK(icicle_malloc_async((void**)&d_evals, domain_size * sizeof(I), m_stream)); }
 
       // If domain size is smaller the polynomial size -> transform to evals and copy the evals with stride.
-      // Else, if in coeffs copy coeffs to evals mem and NTT inplace to compute the evals, else INTT to d_evals and back
-      // inplace to larger domain
+      // Else, if in coeffs copy coeffs to evals mem and NTT inplace to compute the evals, else INTT to d_evals and
+      // back inplace to larger domain
       const bool is_domain_size_smaller_than_poly_size = domain_size <= poly_size;
       if (is_domain_size_smaller_than_poly_size) {
         // TODO Yuval: in reversed evals, can reverse the first 'domain_size' elements to d_evals instead of

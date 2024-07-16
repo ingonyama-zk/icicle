@@ -62,9 +62,15 @@ namespace icicle {
   template <typename T>
   eIcicleError convert_montgomery(const T* input, uint64_t size, bool is_into, const VecOpsConfig& config, T* output);
 
-  // scalar-vec ops
+  // scalar-vec ops: (Scalar) op (Vector)
   template <typename T>
-  eIcicleError scalar_mul(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+  eIcicleError scalar_add_vec(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+
+  template <typename T>
+  eIcicleError scalar_sub_vec(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+
+  template <typename T>
+  eIcicleError scalar_mul_vec(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   // matrix ops
   template <typename T>
@@ -128,12 +134,32 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_scalar_mul(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_scalar_mul_vec(const std::string& deviceType, scalarVectorOpImpl impl);
 
-#define REGISTER_SCALAR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+#define REGISTER_SCALAR_MUL_VEC_BACKEND(DEVICE_TYPE, FUNC)                                                             \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_scalar_mul) = []() -> bool {                                                               \
-      register_scalar_mul(DEVICE_TYPE, FUNC);                                                                          \
+    static bool UNIQUE(_reg_scalar_mul_vec) = []() -> bool {                                                           \
+      register_scalar_mul_vec(DEVICE_TYPE, FUNC);                                                                      \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_scalar_add_vec(const std::string& deviceType, scalarVectorOpImpl impl);
+
+#define REGISTER_SCALAR_ADD_VEC_BACKEND(DEVICE_TYPE, FUNC)                                                             \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_add_vec) = []() -> bool {                                                           \
+      register_scalar_add_vec(DEVICE_TYPE, FUNC);                                                                      \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_scalar_sub_vec(const std::string& deviceType, scalarVectorOpImpl impl);
+
+#define REGISTER_SCALAR_SUB_VEC_BACKEND(DEVICE_TYPE, FUNC)                                                             \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_sub_vec) = []() -> bool {                                                           \
+      register_scalar_sub_vec(DEVICE_TYPE, FUNC);                                                                      \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

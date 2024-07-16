@@ -117,20 +117,52 @@ namespace icicle {
   {
     return CONCAT_EXPAND(FIELD, vector_div)(vec_a, vec_b, n, config, output);
   }
-  /*********************************** MUL BY SCALAR ***********************************/
-  ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul, scalarVectorOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_mul)(
+  /*********************************** (Scalar + Vector) ELEMENT WISE ***********************************/
+  ICICLE_DISPATCHER_INST(ScalarAddDispatcher, scalar_add_vec, scalarVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_add_vec)(
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return ScalarAddDispatcher::execute(scalar_a, vec_b, n, config, output);
+  }
+
+  template <>
+  eIcicleError scalar_add_vec(
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, scalar_add_vec)(scalar_a, vec_b, n, config, output);
+  }
+
+  /*********************************** (Scalar - Vector) ELEMENT WISE ***********************************/
+  ICICLE_DISPATCHER_INST(ScalarSubDispatcher, scalar_sub_vec, scalarVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_sub_vec)(
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return ScalarSubDispatcher::execute(scalar_a, vec_b, n, config, output);
+  }
+
+  template <>
+  eIcicleError scalar_sub_vec(
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, scalar_sub_vec)(scalar_a, vec_b, n, config, output);
+  }
+  /*********************************** MUL BY SCALAR ***********************************/
+  ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul_vec, scalarVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_mul_vec)(
     const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
     return ScalarMulDispatcher::execute(scalar_a, vec_b, n, config, output);
   }
 
   template <>
-  eIcicleError
-  scalar_mul(const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  eIcicleError scalar_mul_vec(
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_mul)(scalar_a, vec_b, n, config, output);
+    return CONCAT_EXPAND(FIELD, scalar_mul_vec)(scalar_a, vec_b, n, config, output);
   }
 
   /*********************************** CONVERT MONTGOMERY ***********************************/

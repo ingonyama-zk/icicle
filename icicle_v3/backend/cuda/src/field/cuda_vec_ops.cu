@@ -82,6 +82,21 @@ add_cuda(const Device& device, const E* vec_a, const E* vec_b, int n, const VecO
   return translateCudaError(err);
 }
 
+template <typename E, typename S>
+__global__ void add_scalar_kernel(const S* scalar, const E* element_vec, int n, E* result)
+{
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid < n) { result[tid] = element_vec[tid] + (*scalar); }
+}
+
+template <typename E>
+eIcicleError
+add_scalar_cuda(const Device& device, const E* scalar_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
+{
+  cudaError_t err = vec_op<E, add_scalar_kernel>(scalar_a, vec_b, 1, n, config, result, n);
+  return translateCudaError(err);
+}
+
 /*============================== sub ==============================*/
 template <typename E>
 __global__ void sub_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
@@ -95,6 +110,21 @@ eIcicleError
 sub_cuda(const Device& device, const E* vec_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
 {
   cudaError_t err = vec_op<E, sub_kernel>(vec_a, vec_b, n, n, config, result, n);
+  return translateCudaError(err);
+}
+
+template <typename E, typename S>
+__global__ void sub_scalar_kernel(const S* scalar, const E* element_vec, int n, E* result)
+{
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid < n) { result[tid] = element_vec[tid] - (*scalar); }
+}
+
+template <typename E>
+eIcicleError
+sub_scalar_cuda(const Device& device, const E* scalar_a, const E* vec_b, int n, const VecOpsConfig& config, E* result)
+{
+  cudaError_t err = vec_op<E, sub_scalar_kernel>(scalar_a, vec_b, 1, n, config, result, n);
   return translateCudaError(err);
 }
 
@@ -343,7 +373,9 @@ REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
 REGISTER_VECTOR_SUB_BACKEND("CUDA", sub_cuda<scalar_t>);
 REGISTER_VECTOR_MUL_BACKEND("CUDA", mul_cuda<scalar_t>);
 REGISTER_VECTOR_DIV_BACKEND("CUDA", div_cuda<scalar_t>);
-REGISTER_SCALAR_MUL_BACKEND("CUDA", mul_scalar_cuda<scalar_t>);
+REGISTER_SCALAR_MUL_VEC_BACKEND("CUDA", mul_scalar_cuda<scalar_t>);
+REGISTER_SCALAR_ADD_VEC_BACKEND("CUDA", add_scalar_cuda<scalar_t>);
+REGISTER_SCALAR_SUB_VEC_BACKEND("CUDA", sub_scalar_cuda<scalar_t>);
 REGISTER_MATRIX_TRANSPOSE_BACKEND("CUDA", matrix_transpose_cuda<scalar_t>);
 REGISTER_BIT_REVERSE_BACKEND("CUDA", bit_reverse_cuda<scalar_t>);
 REGISTER_SLICE_BACKEND("CUDA", slice_cuda<scalar_t>);
