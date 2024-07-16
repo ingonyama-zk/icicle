@@ -246,6 +246,40 @@ TYPED_TEST(FieldApiTest, bitReverse)
   ASSERT_EQ(0, memcmp(elements_main.get(), elements_ref.get(), N * sizeof(TypeParam)));
 }
 
+TYPED_TEST(FieldApiTest, Slice)
+{
+  const uint64_t N = 1 << 18;
+  const uint64_t offset = 2;
+  const uint64_t stride = 3;
+  const uint64_t size = 4;
+
+  auto elements_main = std::make_unique<TypeParam[]>(N);
+  auto elements_ref = std::make_unique<TypeParam[]>(size);
+  auto elements_out = std::make_unique<TypeParam[]>(size);
+
+  FieldApiTest<TypeParam>::random_samples(elements_main.get(), N);
+
+  auto run =
+    [&](const std::string& dev_type, const TypeParam* in, TypeParam* out, bool measure, const char* msg, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
+      auto config = VecOpsConfig(); // Adjust configuration as needed
+
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
+
+      START_TIMER(SLICE)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(slice(in, offset, stride, size, config, out));
+      }
+      END_TIMER(SLICE, oss.str().c_str(), measure);
+    };
+
+  run(s_reference_target, elements_main.get(), elements_ref.get(), true /*=measure*/, "slice", 1);
+  run(s_main_target, elements_main.get(), elements_out.get(), true /*=measure*/, "slice", 1);
+  ASSERT_EQ(0, memcmp(elements_ref.get(), elements_out.get(), size * sizeof(TypeParam)));
+}
+
 #ifdef NTT_ENABLED
 TYPED_TEST(FieldApiTest, ntt)
 {

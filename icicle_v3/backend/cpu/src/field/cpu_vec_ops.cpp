@@ -2,6 +2,7 @@
 #include "icicle/vec_ops.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
+#include "icicle/utils/log.h"
 
 #include "icicle/fields/field_config.h"
 
@@ -128,4 +129,34 @@ cpu_bit_reverse(const Device& device, const T* vec_in, uint64_t size, const VecO
 REGISTER_BIT_REVERSE_BACKEND("CPU", cpu_bit_reverse<scalar_t>);
 #ifdef EXT_FIELD
 REGISTER_BIT_REVERSE_EXT_FIELD_BACKEND("CPU", cpu_bit_reverse<extension_t>);
+#endif // EXT_FIELD
+
+/*********************************** SLICE ***********************************/
+
+template <typename T>
+eIcicleError cpu_slice(
+  const Device& device,
+  const T* vec_in,
+  uint64_t offset,
+  uint64_t stride,
+  uint64_t size,
+  const VecOpsConfig& config,
+  T* vec_out)
+{
+  if (vec_in == nullptr || vec_out == nullptr) {
+    ICICLE_LOG_ERROR << "Error: Invalid argument - input or output vector is null";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  for (uint64_t i = 0; i < size; ++i) {
+    uint64_t index = offset + i * stride;
+    vec_out[i] = vec_in[index];
+  }
+
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_SLICE_BACKEND("CPU", cpu_slice<scalar_t>);
+#ifdef EXT_FIELD
+REGISTER_SLICE_EXT_FIELD_BACKEND("CPU", cpu_slice<extension_t>);
 #endif // EXT_FIELD

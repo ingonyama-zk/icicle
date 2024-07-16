@@ -5,6 +5,7 @@
 #include "gpu-utils/error_handler.h"
 #include "cuda_runtime.h"
 #include "icicle/ntt.h"
+#include "icicle/vec_ops.h"
 #include "kernels.cuh"
 #include "icicle/runtime.h"
 #include "icicle/errors.h"
@@ -67,11 +68,12 @@ namespace polynomials {
       out->allocate(out_size, State::Coefficients, false /*=memset zeros*/);
       auto out_coeffs = get_context_storage_mutable(out);
 
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (out_size + NOF_THREADS - 1) / NOF_THREADS;
-      slice_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(in_coeffs, out_coeffs, offset, stride, out_size);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
 
-      CHK_LAST();
+      ICICLE_CHECK(icicle::slice(in_coeffs, offset, stride, out_size, config, out_coeffs));
     }
 
     void add_sub(PolyContext& res, PolyContext a, PolyContext b, bool add1_sub0)

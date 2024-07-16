@@ -169,4 +169,58 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
+  /*********************************** SLICE ***********************************/
+
+  ICICLE_DISPATCHER_INST(ScalarSliceDispatcher, slice, scalarSliceOpImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, slice)(
+    const scalar_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size,
+    const VecOpsConfig& config,
+    scalar_t* output)
+  {
+    return ScalarSliceDispatcher::execute(input, offset, stride, size, config, output);
+  }
+
+  template <>
+  eIcicleError slice(
+    const scalar_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size,
+    const VecOpsConfig& config,
+    scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, slice)(input, offset, stride, size, config, output);
+  }
+
+#ifdef EXT_FIELD_
+  ICICLE_DISPATCHER_INST(ExtFieldSliceDispatcher, extension_slice, extFieldSliceOpImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_slice)(
+    const extension_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)
+  {
+    return ExtFieldSliceDispatcher::execute(input, offset, stride, size, config, output);
+  }
+
+  template <>
+  eIcicleError slice(
+    const extension_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_slice)(input, offset, stride, size, config, output);
+  }
+#endif // EXT_FIELD
+
 } // namespace icicle

@@ -18,14 +18,14 @@ namespace icicle {
   struct VecOpsConfig {
     icicleStreamHandle stream; /**< stream for async execution. */
     bool is_a_on_device;       /**< True if `a` is on device and false if it is not. Default value: false. */
-    bool is_b_on_device;       /**< True if `b` is on device and false if it is not. Default value: false. */
+    bool is_b_on_device;       /**< True if `b` is on device and false if it is not. Default value: false. OPTIONAL*/
     bool is_result_on_device;  /**< If true, output is preserved on device, otherwise on host. Default value: false. */
     bool is_async; /**< Whether to run the vector operations asynchronously. If set to `true`, the function will be
                     *   non-blocking and you'd need to synchronize it explicitly by running
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
                     *   function will block the current CPU thread. */
 
-    ConfigExtension* ext = nullptr; /** backend specific extensionT*/
+    ConfigExtension* ext = nullptr; /** backend specific extension */
   };
 
   /**
@@ -64,6 +64,10 @@ namespace icicle {
 
   template <typename T>
   eIcicleError bit_reverse(const T* vec_in, uint64_t size, const VecOpsConfig& config, T* vec_out);
+
+  template <typename T>
+  eIcicleError
+  slice(const T* vec_in, uint64_t offset, uint64_t stride, uint64_t size, const VecOpsConfig& config, T* vec_out);
 
   /*************************** Backend registration ***************************/
 
@@ -147,8 +151,27 @@ namespace icicle {
 
 #define REGISTER_BIT_REVERSE_BACKEND(DEVICE_TYPE, FUNC)                                                                \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                      \
+    static bool UNIQUE(_reg_scalar_bit_reverse) = []() -> bool {                                                       \
       register_scalar_bit_reverse(DEVICE_TYPE, FUNC);                                                                  \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using scalarSliceOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size,
+    const VecOpsConfig& config,
+    scalar_t* output)>;
+
+  void register_slice(const std::string& deviceType, scalarSliceOpImpl);
+
+#define REGISTER_SLICE_BACKEND(DEVICE_TYPE, FUNC)                                                                      \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_slice) = []() -> bool {                                                             \
+      register_slice(DEVICE_TYPE, FUNC);                                                                               \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -237,6 +260,25 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                      \
       register_extension_bit_reverse(DEVICE_TYPE, FUNC);                                                               \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using extFieldSliceOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const extension_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)>;
+
+  void register_extension_slice(const std::string& deviceType, extFieldSliceOpImpl);
+
+#define REGISTER_SLICE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_scalar_slice) = []() -> bool {                                                             \
+      register_extension_slice(DEVICE_TYPE, FUNC);                                                                     \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
