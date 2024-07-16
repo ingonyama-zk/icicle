@@ -3,14 +3,6 @@
 
 namespace polynomials {
 
-  template <typename E>
-  __global__ void div_element_wise_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
-  {
-    // TODO:implement better based on https://eprint.iacr.org/2008/199
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < n) { result[tid] = element_vec1[tid] * E::inverse(element_vec2[tid]); }
-  }
-
   /*============================== add/sub ==============================*/
   template <typename T>
   __global__ void add_sub_kernel(const T* a_vec, const T* b_vec, int a_len, int b_len, bool add1_sub0, T* result)

@@ -359,9 +359,13 @@ namespace polynomials {
       ICICLE_CHECK(ntt(numerator_coeffs, N, NTTDir::kForward, ntt_config, numerator_coeffs));
 
       // (3) element wise division
-      const int NOF_THREADS = 128;
-      const int NOF_BLOCKS = (N + NOF_THREADS - 1) / NOF_THREADS;
-      div_element_wise_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, m_stream>>>(numerator_coeffs, out_coeffs, N, out_coeffs);
+      auto config = default_vec_ops_config();
+      config.is_a_on_device = false;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+      config.is_async = true;
+      config.stream = m_stream;
+      ICICLE_CHECK(icicle::vector_div(numerator_coeffs, out_coeffs, N, config, out_coeffs));
 
       // (4) INTT back both numerator and out
       ntt_config.ordering = Ordering::kMN;
