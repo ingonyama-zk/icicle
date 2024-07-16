@@ -53,6 +53,11 @@ module.exports = {
               label: "Poseidon Hash",
               id: "icicle/primitives/poseidon",
             },
+            {
+              type: "doc",
+              label: "Poseidon2 Hash",
+              id: "icicle/primitives/poseidon2",
+            },
           ],
         },
         {

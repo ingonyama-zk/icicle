@@ -161,7 +161,7 @@ namespace keccak {
                                  0x8000000000008002, 0x8000000000000080, 0x000000000000800a, 0x800000008000000a,
                                  0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008};
 
-  __device__ void keccakf(u64 s[25])
+  __device__ void keccakf(u64 s[KECCAK_STATE_SIZE])
   {
     u64 t0, t1, t2, t3, t4;
 
@@ -188,7 +188,7 @@ namespace keccak {
 
     const uint8_t* b_input = input + sid * input_block_size;
     uint64_t* b_output = output + sid * output_len;
-    uint64_t state[25] = {}; // Initialize with zeroes
+    uint64_t state[KECCAK_STATE_SIZE] = {}; // Initialize with zeroes
 
     int input_len = input_block_size;
 
@@ -238,12 +238,12 @@ namespace keccak {
     int number_of_gpu_blocks = (number_of_states - 1) / number_of_threads + 1;
 
     switch (rate) {
-    case 136:
-      keccak_hash_blocks<136><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
+    case KECCAK_256_RATE:
+      keccak_hash_blocks<KECCAK_256_RATE><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
         input, input_len, output_len, number_of_states, output);
       break;
-    case 72:
-      keccak_hash_blocks<72><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
+    case KECCAK_512_RATE:
+      keccak_hash_blocks<KECCAK_512_RATE><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
         input, input_len, output_len, number_of_states, output);
       break;
     default:

@@ -24,6 +24,6 @@ pub(crate) mod tests {
         let ctx = device_context::DeviceContext::default();
         let sponge = Poseidon::load(2, &ctx).unwrap();
 
-        check_build_field_merkle_tree::<_, _, Bls12_381TreeBuilder>(25, 2, &sponge, &sponge, ScalarField::zero());
+        check_build_field_merkle_tree::<_, _, Bls12_381TreeBuilder>(18, 2, &sponge, &sponge, ScalarField::zero());
     }
 }

@@ -11,13 +11,15 @@ namespace keccak {
   extern "C" cudaError_t
   keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, HashConfig& config)
   {
-    return Keccak(136).hash_many(input, (uint64_t*)output, number_of_blocks, input_block_size, 4, config);
+    return Keccak(KECCAK_256_RATE)
+      .hash_many(input, (uint64_t*)output, number_of_blocks, input_block_size, KECCAK_256_DIGEST, config);
   }
 
   extern "C" cudaError_t
   keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, HashConfig& config)
   {
-    return Keccak(72).hash_many(input, (uint64_t*)output, number_of_blocks, input_block_size, 8, config);
+    return Keccak(KECCAK_512_RATE)
+      .hash_many(input, (uint64_t*)output, number_of_blocks, input_block_size, KECCAK_512_DIGEST, config);
   }
 
   extern "C" cudaError_t build_keccak256_merkle_tree_cuda(
@@ -27,7 +29,7 @@ namespace keccak {
     unsigned int input_block_len,
     const merkle_tree::TreeBuilderConfig& tree_config)
   {
-    Keccak keccak(136);
+    Keccak keccak(KECCAK_256_RATE);
     return merkle_tree::build_merkle_tree<uint8_t, uint64_t>(
       leaves, digests, height, input_block_len, keccak, keccak, tree_config);
   }
@@ -39,7 +41,7 @@ namespace keccak {
     unsigned int input_block_len,
     const merkle_tree::TreeBuilderConfig& tree_config)
   {
-    Keccak keccak(72);
+    Keccak keccak(KECCAK_512_RATE);
     return merkle_tree::build_merkle_tree<uint8_t, uint64_t>(
       leaves, digests, height, input_block_len, keccak, keccak, tree_config);
   }

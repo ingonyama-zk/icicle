@@ -53,6 +53,7 @@ So for Poseidon of arity 2 and input of size 1024 * 2, we would expect 1024 elem
 
 ### Supported Bindings
 
+[`Go`](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/golang/curves/bn254/poseidon/poseidon.go)
 [`Rust`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-core/src/poseidon)
 
 ### Constants
@@ -91,8 +92,6 @@ primitive_element = 7 # bls12-381
 # primitive_element = 15 # bw6-761
 ```
 
-We only support `alpha = 5` so if you want to use another alpha for S-box please reach out on discord or open a github issue.
-
 ### Rust API
 
 This is the most basic way to use the Poseidon API.
@@ -101,71 +100,58 @@ This is the most basic way to use the Poseidon API.
 let test_size = 1 << 10;
 let arity = 2u32;
 let ctx = get_default_device_context();
-let constants = load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap();
-let config = PoseidonConfig::default();
+let poseidon = Poseidon::load(arity, &ctx).unwrap();
+let config = HashConfig::default();
 
 let inputs = vec![F::one(); test_size * arity as usize];
 let outputs = vec![F::zero(); test_size];
 let mut input_slice = HostOrDeviceSlice::on_host(inputs);
 let mut output_slice = HostOrDeviceSlice::on_host(outputs);
 
-poseidon_hash_many::<F>(
+poseidon.hash_many::<F>(
     &mut input_slice,
     &mut output_slice,
     test_size as u32,
     arity as u32,
-    &constants,
+    1, // Output length
     &config,
 )
 .unwrap();
 ```
 
-The `PoseidonConfig::default()` can be modified, by default the inputs and outputs are set to be on `Host` for example.
+The `HashConfig` can be modified, by default the inputs and outputs are set to be on `Host` for example.
 
 ```rust
-impl<'a> Default for PoseidonConfig<'a> {
+impl<'a> Default for HashConfig<'a> {
     fn default() -> Self {
         let ctx = get_default_device_context();
         Self {
             ctx,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
-            input_is_a_state: false,
-            aligned: false,
-            loop_state: false,
             is_async: false,
         }
     }
 }
 ```
 
-In the example above `load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap();` is used which will load the correct constants based on arity and curve. Its possible to [generate](#constants) your own constants and load them.
+In the example above `Poseidon::load(arity, &ctx).unwrap();` is used which will load the correct constants based on arity and curve. Its possible to [generate](#constants) your own constants and load them.
 
 ```rust
 let ctx = get_default_device_context();
-    let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let constants_file = PathBuf::from(cargo_manifest_dir)
-        .join("tests")
-        .join(format!("{}_constants.bin", field_prefix));
-    let mut constants_buf = vec![];
-    File::open(constants_file)
-        .unwrap()
-        .read_to_end(&mut constants_buf)
-        .unwrap();
-
-    let mut custom_constants = vec![];
-    for chunk in constants_buf.chunks(field_bytes) {
-        custom_constants.push(F::from_bytes_le(chunk));
-    }
-
-    let custom_constants = create_optimized_poseidon_constants::<F>(
-        arity as u32,
-        &ctx,
-        full_rounds_half,
-        partial_rounds,
-        &mut custom_constants,
-    )
-    .unwrap();
+let custom_poseidon = Poseidon::new(
+    arity, // The arity of poseidon hash. The width will be equal to arity + 1
+    alpha, // The S-box power
+    full_rounds_half,
+    partial_rounds,
+    round_constants,
+    mds_matrix, 
+    non_sparse_matrix,
+    sparse_matrices,
+    domain_tag,
+    ctx,
+)
+.unwrap();
 ```
 
 ## The Tree Builder
@@ -175,21 +161,34 @@ The tree builder allows you to build Merkle trees using Poseidon.
 You can define both the tree's `height` and its `arity`. The tree `height` determines the number of layers in the tree, including the root and the leaf layer. The `arity` determines how many children each internal node can have.
 
 ```rust
-let height = 20;
-let arity = 2;
-let leaves = vec![F::one(); 1 << (height - 1)];
-let mut digests = vec![F::zero(); merkle_tree_digests_len(height, arity)];
-
-let mut leaves_slice = HostOrDeviceSlice::on_host(leaves);
-
-let ctx = get_default_device_context();
-let constants = load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap()
+use icicle_bn254::tree::Bn254TreeBuilder;
+use icicle_bn254::poseidon::Poseidon;
 
 let mut config = TreeBuilderConfig::default();
-config.keep_rows = 1;
-build_poseidon_merkle_tree::<F>(&mut leaves_slice, &mut digests, height, arity, &constants, &config).unwrap();
+let arity = 2;
+config.arity = arity as u32;
+let input_block_len = arity;
+let leaves = vec![F::one(); (1 << height) * arity];
+let mut digests = vec![F::zero(); merkle_tree_digests_len((height + 1) as u32, arity as u32, 1)];
 
-println!("Root: {:?}", digests[0..1][0]);
+let leaves_slice = HostSlice::from_slice(&leaves);
+let digests_slice = HostSlice::from_mut_slice(&mut digests);
+
+let ctx = device_context::DeviceContext::default();
+let hash = Poseidon::load(2, &ctx).unwrap();
+
+let mut config = TreeBuilderConfig::default();
+config.keep_rows = 5;
+Bn254TreeBuilder::build_merkle_tree(
+    leaves_slice,
+    digests_slice,
+    height,
+    input_block_len,
+    &hash,
+    &hash,
+    &config,
+)
+.unwrap();
 ```
 
 Similar to Poseidon, you can also configure the Tree Builder `TreeBuilderConfig::default()`
