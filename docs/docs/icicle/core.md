@@ -34,6 +34,24 @@ The Core is split into logical modules that can be compiled into static librarie
 | --- | :---: |
 | Keccak | 256, 512 |
 
+## Enhanced MSM Support
+
+Since v2.1.0, ICICLE introduces enhanced support for various window sizes in Multi-Scalar Multiplication (MSM). This feature allows for optimized performance by adjusting the window size based on the application's needs.
+
+### Example: Enhanced MSM Support in Rust
+```rust
+extern crate icicle;
+
+fn main() {
+    let msm = icicle::Msm::new();
+    let result = msm.compute_with_window_size(8);
+    println!("{:?}", result);
+}
+```
+
+This example demonstrates how to initialize the MSM module and perform a computation with a specified window size. The **compute_with_window_size** function allows for optimized performance by adjusting the window size based on the application's needs.
+
+
 ## Compilation strategies
 
 Most of the codebase is curve/field agnostic, which means it can be compiled for different curves and fields. When you build ICICLE Core you choose a single curve or field. If you need multiple curves or fields, you compile ICICLE once per curve or field that is needed. It's that simple. Currently, the following choices are supported:
