@@ -1125,13 +1125,16 @@ namespace msm {
   template <typename A, typename P>
   cudaError_t chunked_precompute(A* points, int msm_size, MSMConfig& config, A* points_precomputed, int nof_chunks){
     A *points_d, *points_h, *points_precomputed_d, *points_precomputed_h;
-    if (config.are_points_on_device){
+    bool init_points_on_device = config.are_points_on_device;
+    int points_size = config.points_size? config.points_size : msm_size;
+    // bool multi_points = config.points_size > msm_size
+    if (init_points_on_device){
       points_d = points;
       points_precomputed_d = points_precomputed;
     }
     else{
-      cudaMalloc(&points_d, sizeof(A) * msm_size);
-      cudaMalloc(&points_d, sizeof(A) * msm_size*config.precompute_factor);
+      cudaMalloc(&points_d, sizeof(A) * points_size);
+      cudaMalloc(&points_precomputed_d, sizeof(A) * points_size*config.precompute_factor);
       points_h = points;
       points_precomputed_h = points_precomputed;
     }
@@ -1141,10 +1144,12 @@ namespace msm {
       int sub_msm_size = is_last_iter? msm_size % chunk_size : chunk_size;
       if (sub_msm_size == 0) sub_msm_size = chunk_size;
       // config.points_size = sub_msm_size;
-      if (!config.are_points_on_device) cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(A) * sub_msm_size, cudaMemcpyHostToDevice);
+      if (!init_points_on_device) cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(A) * sub_msm_size, cudaMemcpyHostToDevice);
+      config.are_points_on_device = true;
       msm::precompute_msm_points<A, P>(points_d + (i%2)*chunk_size, sub_msm_size, config, points_precomputed_d + (i%2)*chunk_size*config.precompute_factor);
-      if (!config.are_points_on_device) cudaMemcpyAsync(points_precomputed_h + i*chunk_size*config.precompute_factor, points_precomputed_d + (i%2)*chunk_size*config.precompute_factor, sizeof(A) * sub_msm_size*config.precompute_factor, cudaMemcpyDeviceToHost);
+      if (!init_points_on_device) cudaMemcpyAsync(points_precomputed_h + i*chunk_size*config.precompute_factor, points_precomputed_d + (i%2)*chunk_size*config.precompute_factor, sizeof(A) * sub_msm_size*config.precompute_factor, cudaMemcpyDeviceToHost);
     }
+    config.are_points_on_device = init_points_on_device;
     return CHK_LAST(); //TODO: forward precompute function return
   }
 
