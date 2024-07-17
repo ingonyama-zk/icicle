@@ -30,21 +30,27 @@ class PolynomialTest : public ::testing::Test
 public:
   static inline const int MAX_NTT_LOG_SIZE = 24;
   static inline const bool MEASURE = true;
-  static inline std::string s_target;
+  static inline std::vector<std::string> s_registered_devices;
 
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
     icicle_load_backend(BACKEND_BUILD_DIR, true);
-
-    // check targets are loaded and choose main and reference targets
-    auto regsitered_devices = get_registered_devices_list();
-    s_target = is_device_registered("CUDA") ? "CUDA" : "CPU";
-    icicle_set_device({s_target, 0});
+    s_registered_devices = get_registered_devices_list();
 
     // init NTT domain
-    auto init_domain_config = default_ntt_init_domain_config();
-    ntt_init_domain(scalar_t::omega(MAX_NTT_LOG_SIZE), init_domain_config);
+    for (const auto& dev_type : s_registered_devices) {
+      icicle_set_device({dev_type, 0});
+      auto init_domain_config = default_ntt_init_domain_config();
+      ntt_init_domain(scalar_t::omega(MAX_NTT_LOG_SIZE), init_domain_config);
+    }
+
+    // choose random device for testing
+    srand(time(NULL));
+    auto r = rand();
+    const int dev_idx = r % s_registered_devices.size();
+    icicle_set_device(s_registered_devices.at(dev_idx));
+    ICICLE_LOG_INFO << "setting device " << s_registered_devices.at(dev_idx) << " for polynomial tests";
   }
 
   static void TearDownTestSuite() {}

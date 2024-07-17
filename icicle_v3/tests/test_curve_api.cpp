@@ -1,6 +1,7 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <list>
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"

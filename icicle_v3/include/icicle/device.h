@@ -13,8 +13,8 @@ namespace icicle {
     char type[MAX_TYPE_LEN]; // Type of the device, such as "CPU" or "CUDA"
     int id;                  // Unique identifier for the device (e.g., GPU-2)
 
-    Device(const char* _type, int _id) : id{_id} { copy_str(type, _type); }
-    Device(const std::string& _type, int _id) : Device(_type.c_str(), _id) {}
+    Device(const char* _type, int _id = 0) : id{_id} { copy_str(type, _type); }
+    Device(const std::string& _type, int _id = 0) : Device(_type.c_str(), _id) {}
     void copy(const Device& other)
     {
       copy_str(type, other.type);

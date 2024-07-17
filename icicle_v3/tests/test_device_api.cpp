@@ -18,7 +18,7 @@ using namespace icicle;
 class DeviceApiTest : public ::testing::Test
 {
 public:
-  static inline std::list<std::string> s_regsitered_devices;
+  static inline std::vector<std::string> s_regsitered_devices;
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {

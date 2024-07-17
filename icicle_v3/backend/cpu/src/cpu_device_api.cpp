@@ -105,4 +105,3 @@ public:
 };
 
 REGISTER_DEVICE_API("CPU", CpuDeviceAPI);
-REGISTER_DEVICE_API("CPU_REF", CpuDeviceAPI);

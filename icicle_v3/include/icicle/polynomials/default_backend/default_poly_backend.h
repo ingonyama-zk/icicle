@@ -1,5 +1,6 @@
 
 
+#include <list>
 #include "icicle/runtime.h"
 #include "icicle/errors.h"
 #include "icicle/ntt.h"

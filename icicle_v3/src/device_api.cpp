@@ -58,9 +58,9 @@ namespace icicle {
 
     const Device& get_default_device() { return m_default_device; }
 
-    std::list<std::string> get_registered_devices_list()
+    std::vector<std::string> get_registered_devices_list()
     {
-      std::list<std::string> registered_devices;
+      std::vector<std::string> registered_devices;
       for (const auto& device : apiMap) {
         registered_devices.push_back(device.first);
       }
@@ -126,7 +126,7 @@ namespace icicle {
     DeviceAPIRegistry::Global().register_deviceAPI(deviceType, api);
   }
 
-  std::list<std::string> get_registered_devices_list()
+  std::vector<std::string> get_registered_devices_list()
   {
     return DeviceAPIRegistry::Global().get_registered_devices_list();
   }
@@ -140,7 +140,7 @@ namespace icicle {
   {
     if (output == nullptr) { return eIcicleError::INVALID_POINTER; }
 
-    std::list<std::string> devices = get_registered_devices_list();
+    std::vector<std::string> devices = get_registered_devices_list();
     std::string concatenated_devices;
 
     for (const auto& device : devices) {

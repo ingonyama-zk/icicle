@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 #include <memory>
-#include <list>
+#include <vector>
 
 #include "icicle/utils/utils.h"
 #include "icicle/device.h"
@@ -208,11 +208,11 @@ namespace icicle {
   DeviceAPI* get_deviceAPI(const Device& device);
 
   /**
-   * @brief Retrieve a list of registered device types.
+   * @brief Retrieve a vector of registered device types.
    *
-   * @return A list of registered device types.
+   * @return A vector of registered device types.
    */
-  std::list<std::string> get_registered_devices_list();
+  std::vector<std::string> get_registered_devices_list();
 
   // Function to get registered devices as a comma-separated string
   eIcicleError get_registered_devices(char* output, size_t output_size);
