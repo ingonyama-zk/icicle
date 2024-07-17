@@ -33,3 +33,12 @@ build_transpose:
 run_transpose:
 	make build_transpose
 	work/transpose
+
+
+build_compute:
+	mkdir -p work
+	nvcc -lineinfo -o work/compute -std=c++17 -arch=sm_80 -I. -I../../include compute_test.cu
+
+run_compute:
+	make build_compute
+	work/compute
