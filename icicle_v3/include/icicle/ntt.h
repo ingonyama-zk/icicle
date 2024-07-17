@@ -15,69 +15,62 @@ using namespace field_config;
 namespace icicle {
 
   /*************************** Frontend APIs ***************************/
+
   /**
    * @enum NTTDir
-   * Whether to perform forward NTT, or inverse NTT (iNTT). Mathematically, forward NTT computes polynomial
-   * evaluations from coefficients while inverse NTT computes coefficients from evaluations.
-   */
-  enum class NTTDir { kForward, kInverse };
-
-  /**
-   * @enum Ordering
-   * How to order inputs and outputs of the NTT. If needed, use this field to specify decimation: decimation in time
-   * (DIT) corresponds to `Ordering::kRN` while decimation in frequency (DIF) to `Ordering::kNR`. Also, to specify
-   * butterfly to be used, select `Ordering::kRN` for Cooley-Tukey and `Ordering::kNR` for Gentleman-Sande. There's
-   * no implication that a certain decimation or butterfly will actually be used under the hood, this is just for
-   * compatibility with codebases that use "decimation" and "butterfly" to denote ordering of inputs and outputs.
+   * @brief Specifies whether to perform forward NTT or inverse NTT (iNTT).
    *
-   * Ordering options are:
-   * - kNN: inputs and outputs are natural-order (example of natural ordering: \f$ \{a_0, a_1, a_2, a_3, a_4, a_5, a_6,
-   * a_7\} \f$).
-   * - kNR: inputs are natural-order and outputs are bit-reversed-order (example of bit-reversed ordering: \f$ \{a_0,
-   * a_4, a_2, a_6, a_1, a_5, a_3, a_7\} \f$).
-   * - kRN: inputs are bit-reversed-order and outputs are natural-order.
-   * - kRR: inputs and outputs are bit-reversed-order.
-   *
-   * Mixed-Radix NTT: digit-reversal is a generalization of bit-reversal where the latter is a special case with 1b
-   * digits. Mixed-radix NTTs of different sizes would generate different reordering of inputs/outputs. Having said
-   * that, for a given size N it is guaranteed that every two mixed-radix NTTs of size N would have the same
-   * digit-reversal pattern. The following orderings kNM and kMN are conceptually like kNR and kRN but for
-   * mixed-digit-reordering. Note that for the cases '(1) NTT, (2) elementwise ops and (3) INTT' kNM and kMN are most
-   * efficient.
-   * Note: kNR, kRN, kRR refer to the radix-2 NTT reversal pattern. Those cases are supported by mixed-radix NTT with
-   * reduced efficiency compared to kNM and kMN.
-   * - kNM: inputs are natural-order and outputs are digit-reversed-order (=mixed).
-   * - kMN: inputs are digit-reversed-order (=mixed) and outputs are natural-order.
+   * Forward NTT computes polynomial evaluations from coefficients while inverse NTT computes coefficients from
+   * evaluations.
    */
-  enum class Ordering { kNN, kNR, kRN, kRR, kNM, kMN };
-
-  /**
-   * @struct NTTConfig
-   * Struct that encodes NTT parameters to be passed into the [NTT](@ref NTT) function.
-   */
-  template <typename S>
-  struct NTTConfig {
-    icicleStreamHandle stream;  /**< stream for async execution. */
-    S coset_gen;                /**< Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()`
-                                 *   (corresponding to no coset being used). */
-    int batch_size;             /**< The number of NTTs to compute. Default value: 1. */
-    bool columns_batch;         /**< True if the batches are the columns of an input matrix
-                                (they are strided in memory with a stride of ntt size) Default value: false.  */
-    Ordering ordering;          /**< Ordering of inputs and outputs. See [Ordering](@ref Ordering). Default value:
-                                 *   `Ordering::kNN`. */
-    bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    bool is_async;              /**< Whether to run the NTT asynchronously. If set to `true`, the NTT function will be
-                                 *   non-blocking and you'd need to synchronize it explicitly by running
-                                 *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
-                                 *   function will block the current CPU thread. */
-
-    ConfigExtension* ext = nullptr; /** backend specific extensions*/
+  enum class NTTDir {
+    kForward, /**< Perform forward NTT. */
+    kInverse  /**< Perform inverse NTT (iNTT). */
   };
 
   /**
-   * A function that returns the default value of [NTTConfig](@ref NTTConfig) for the [NTT](@ref NTT) function.
-   * @return Default value of [NTTConfig](@ref NTTConfig).
+   * @enum Ordering
+   * @brief Specifies the ordering of inputs and outputs for the NTT.
+   *
+   * Note: kNM, kMN are efficient when using the Mixed-Radix NTT algorithm. For Radix2, kNM==kNR, kMN==kRN.
+   * M stands for 'mixed' order. More precisely the vector is in digit-reverse order but the digits are internal to the
+   * implementation, thus should be considered mixed.
+   * This is useful when multiplying polynomials or doing element-wise operations such that the order is agnostic.
+   */
+  enum class Ordering {
+    kNN, /**< Inputs and outputs are in natural-order. */
+    kNR, /**< Inputs are in natural-order and outputs are in bit-reversed-order. */
+    kRN, /**< Inputs are in bit-reversed-order and outputs are in natural-order. */
+    kRR, /**< Inputs and outputs are in bit-reversed-order. */
+    kNM, /**< Inputs are in natural-order and outputs are in digit-reversed-order. */
+    kMN  /**< Inputs are in digit-reversed-order and outputs are in natural-order. */
+  };
+
+  /**
+   * @struct NTTConfig
+   * @brief Encodes NTT parameters to be passed into the NTT function.
+   *
+   * @tparam S Type of the coset generator.
+   */
+  template <typename S>
+  struct NTTConfig {
+    icicleStreamHandle stream; /**< Stream for asynchronous execution. */
+    S coset_gen;               /**< Coset generator. Default value is `S::one()` (no coset). */
+    int batch_size;            /**< Number of NTTs to compute. Default value is 1. */
+    bool
+      columns_batch; /**< True if batches are columns of an input matrix (strided in memory). Default value is false. */
+    Ordering ordering;              /**< Ordering of inputs and outputs. Default value is `Ordering::kNN`. */
+    bool are_inputs_on_device;      /**< True if inputs are on device, false if on host. Default value is false. */
+    bool are_outputs_on_device;     /**< True if outputs are on device, false if on host. Default value is false. */
+    bool is_async;                  /**< True if operation is asynchronous. Default value is false. */
+    ConfigExtension* ext = nullptr; /**< Backend-specific extensions. */
+  };
+
+  /**
+   * @brief Returns the default value of NTTConfig for the NTT function.
+   *
+   * @tparam S Type of the coset generator.
+   * @return Default value of NTTConfig.
    */
   template <typename S>
   static NTTConfig<S> default_ntt_config()
@@ -95,16 +88,21 @@ namespace icicle {
     return config;
   }
 
+  /**
+   * @struct NTTInitDomainConfig
+   * @brief Configuration for initializing the NTT domain.
+   */
   struct NTTInitDomainConfig {
-    icicleStreamHandle stream; /**< stream for async execution. */
-    bool is_async;             /**< Whether to run the NTT asynchronously. If set to `true`, the NTT function will be
-                                *   non-blocking and you'd need to synchronize it explicitly by running
-                                *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the NTT
-                                *   function will block the current CPU thread. */
-
-    ConfigExtension* ext = nullptr; /** backend specific extensions*/
+    icicleStreamHandle stream;      /**< Stream for asynchronous execution. */
+    bool is_async;                  /**< True if operation is asynchronous. Default value is false. */
+    ConfigExtension* ext = nullptr; /**< Backend-specific extensions. */
   };
 
+  /**
+   * @brief Returns the default value of NTTInitDomainConfig.
+   *
+   * @return Default value of NTTInitDomainConfig.
+   */
   static NTTInitDomainConfig default_ntt_init_domain_config()
   {
     NTTInitDomainConfig config = {
@@ -114,23 +112,61 @@ namespace icicle {
     return config;
   }
 
-  // template APIs
-
+  /**
+   * @brief Performs the Number Theoretic Transform (NTT).
+   *
+   * @tparam S Type of the coset generator.
+   * @tparam E Type of the elements.
+   * @param input Pointer to the input array.
+   * @param size Size of the input array.
+   * @param dir Direction of the NTT (forward or inverse).
+   * @param config Configuration for the NTT operation.
+   * @param output Pointer to the output array.
+   * @return eIcicleError Error code indicating success or failure.
+   */
   template <typename S, typename E>
   eIcicleError ntt(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
 
+  /**
+   * @brief Initializes the NTT domain.
+   *
+   * @tparam S Type of the primitive root.
+   * @param primitive_root Primitive root of unity.
+   * @param config Configuration for initializing the NTT domain.
+   * @return eIcicleError Error code indicating success or failure.
+   */
   template <typename S>
   eIcicleError ntt_init_domain(const S& primitive_root, const NTTInitDomainConfig& config);
 
+  /**
+   * @brief Releases the NTT domain resources.
+   *
+   * @tparam S Type of the domain.
+   * @return eIcicleError Error code indicating success or failure.
+   */
   template <typename S>
   eIcicleError ntt_release_domain();
 
+  /**
+   * @brief Gets the root of unity for a given maximum size.
+   *
+   * @tparam S Type of the domain.
+   * @param max_size Maximum size for the root of unity.
+   * @return S Root of unity.
+   */
   template <typename S>
   S get_root_of_unity(uint64_t max_size);
 
+  /**
+   * @brief Gets the root of unity from the NTT domain for a given logarithmic size.
+   *
+   * @tparam S Type of the domain.
+   * @param logn Logarithmic size.
+   * @param rou Pointer to store the root of unity. This is an output parameter.
+   * @return eIcicleError Error code indicating success or failure.
+   */
   template <typename S>
   eIcicleError get_root_of_unity_from_domain(uint64_t logn, S* rou /*OUT*/);
-
   /*************************** Backend registration ***************************/
 
   /*************************** NTT ***************************/

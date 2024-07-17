@@ -259,7 +259,7 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, slice)(input, offset, stride, size, config, output);
   }
 
-#ifdef EXT_FIELD_
+#ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(ExtFieldSliceDispatcher, extension_slice, extFieldSliceOpImpl)
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_slice)(

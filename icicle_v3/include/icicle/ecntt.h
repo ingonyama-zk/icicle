@@ -12,7 +12,7 @@
 using namespace curve_config;
 
 namespace icicle {
-  /*************************** ECNTT ***************************/
+  /*************************** Backend registration***************************/
   using ECNttFieldImpl = std::function<eIcicleError(
     const Device& device,
     const projective_t* input,
