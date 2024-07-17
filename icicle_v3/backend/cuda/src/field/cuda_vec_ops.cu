@@ -383,7 +383,8 @@ __global__ void highest_non_zero_idx_kernel(const T* vec, uint64_t len, int64_t*
 template <typename E>
 cudaError_t _highest_non_zero_idx(const E* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)
 {
-  // TODO: implement fast version
+  // TODO: parallelize kernel? Note that when used for computing degree of polynomial, typically the largest coefficient
+  // is expected in the higher half since memory is allocate based on #coefficients
 
   CHK_INIT_IF_RETURN();
 
@@ -397,7 +398,7 @@ cudaError_t _highest_non_zero_idx(const E* input, uint64_t size, const VecOpsCon
   // Call the kernel to perform element-wise operation
   int num_threads = MAX_THREADS_PER_BLOCK;
   int num_blocks = (size + num_threads - 1) / num_threads;
-  highest_non_zero_idx_kernel<<<num_blocks, num_threads>>>(input, size, d_out_idx);
+  highest_non_zero_idx_kernel<<<num_blocks, num_threads, 0, cuda_stream>>>(input, size, d_out_idx);
 
   // copy back result to host if need to
   if (!config.is_result_on_device) {
@@ -513,6 +514,116 @@ eIcicleError poly_eval_cuda(
   cudaError_t err = _poly_eval<E>(coeffs, coeffs_size, domain, domain_size, config, evals);
   return translateCudaError(err);
 }
+
+/*============================== polynomial division ==============================*/
+
+template <typename T>
+__global__ void school_book_division_step(T* r, T* q, const T* b, int deg_r, int denumerator_deg, T lc_b_inv)
+{
+  // computing one step 'r = r-sb' (for 'a = q*b+r') where s is a monomial such that 'r-sb' removes the highest degree
+  // of r.
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int64_t monomial = deg_r - denumerator_deg; // monomial=1 is 'x', monomial=2 is x^2 etc.
+  if (tid > deg_r) return;
+
+  T lc_r = r[deg_r];
+  T monomial_coeff = lc_r * lc_b_inv; // lc_r / lc_b
+  if (tid == 0) {
+    // adding monomial s to q (q=q+s)
+    q[monomial] = monomial_coeff;
+  }
+
+  if (tid < monomial) return;
+
+  T b_coeff = b[tid - monomial];
+  r[tid] = r[tid] - monomial_coeff * b_coeff;
+}
+
+template <typename T>
+cudaError_t _poly_divide_cuda(
+  const T* numerator,
+  int64_t numerator_deg,
+  const T* denumerator,
+  int64_t denumerator_deg,
+  const VecOpsConfig& config,
+  T* q_out /*OUT*/,
+  uint64_t q_size,
+  T* r_out /*OUT*/,
+  uint64_t r_size)
+{
+  CHK_INIT_IF_RETURN();
+
+  ICICLE_ASSERT(r_size >= (1 + denumerator_deg))
+    << "polynomial division expects r(x) size to be similar to numerator(x)";
+  ICICLE_ASSERT(q_size >= (numerator_deg - denumerator_deg + 1))
+    << "polynomial division expects q(x) size to be at least deg(numerator)-deg(denumerator)+1";
+
+  auto cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
+  // copy denum to device if need to.
+  denumerator = config.is_b_on_device
+                  ? denumerator
+                  : allocate_and_copy_to_device(denumerator, (1 + denumerator_deg) * sizeof(T), cuda_stream);
+  T* d_r_out = config.is_result_on_device ? r_out : allocate_on_device<T>(r_size * sizeof(T), cuda_stream);
+  T* d_q_out = config.is_result_on_device ? q_out : allocate_on_device<T>(q_size * sizeof(T), cuda_stream);
+  // note that no need to copy numerator to device since we copy it to r already
+  ICICLE_CHECK(icicle_copy_async(d_r_out, numerator, (1 + numerator_deg) * sizeof(T), config.stream));
+
+  // invert largest coeff of b
+  T denum_highest_coeff;
+  ICICLE_CHECK(icicle_copy(&denum_highest_coeff, denumerator + denumerator_deg, sizeof(T)));
+  const T& lc_b_inv = T::inverse(denum_highest_coeff);
+
+  int64_t deg_r = numerator_deg;
+  while (deg_r >= denumerator_deg) {
+    // each iteration is removing the largest monomial in r until deg(r)<deg(b)
+    const int NOF_THREADS = 128;
+    const int NOF_BLOCKS = ((deg_r + 1) + NOF_THREADS - 1) / NOF_THREADS; // 'deg_r+1' is number of elements in R
+    school_book_division_step<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+      d_r_out, d_q_out, denumerator, deg_r, denumerator_deg, lc_b_inv);
+
+    // compute degree of r
+    auto degree_config = default_vec_ops_config();
+    degree_config.is_a_on_device = true;
+    degree_config.stream = config.stream;
+    degree_config.is_async = config.is_async;
+    _highest_non_zero_idx(d_r_out, deg_r + 1 /*size of R*/, degree_config, &deg_r);
+  }
+
+  // copy back output to host if need to
+  if (!config.is_result_on_device) {
+    CHK_IF_RETURN(cudaMemcpyAsync(r_out, d_r_out, r_size * sizeof(T), cudaMemcpyDeviceToHost, cuda_stream));
+    CHK_IF_RETURN(cudaMemcpyAsync(q_out, d_q_out, q_size * sizeof(T), cudaMemcpyDeviceToHost, cuda_stream));
+    CHK_IF_RETURN(cudaFreeAsync(d_r_out, cuda_stream));
+    CHK_IF_RETURN(cudaFreeAsync(d_q_out, cuda_stream));
+  }
+
+  // release device memory, if allocated
+  if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync((void*)denumerator, cuda_stream)); }
+
+  // wait for stream to empty is not async
+  if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(cuda_stream));
+
+  return CHK_LAST();
+}
+
+template <typename T>
+eIcicleError poly_divide_cuda(
+  const Device& device,
+  const T* numerator,
+  int64_t numerator_deg,
+  const T* denumerator,
+  int64_t denumerator_deg,
+  const VecOpsConfig& config,
+  T* q_out /*OUT*/,
+  uint64_t q_size,
+  T* r_out /*OUT*/,
+  uint64_t r_size)
+{
+  cudaError_t err = _poly_divide_cuda<T>(
+    numerator, numerator_deg, denumerator, denumerator_deg, config, q_out /*OUT*/, q_size, r_out /*OUT*/, r_size);
+  return translateCudaError(err);
+}
+
 /************************************ REGISTRATION ************************************/
 
 REGISTER_VECTOR_ADD_BACKEND("CUDA", add_cuda<scalar_t>);
@@ -527,6 +638,7 @@ REGISTER_BIT_REVERSE_BACKEND("CUDA", bit_reverse_cuda<scalar_t>);
 REGISTER_SLICE_BACKEND("CUDA", slice_cuda<scalar_t>);
 REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CUDA", highest_non_zero_idx_cuda<scalar_t>)
 REGISTER_POLYNOMIAL_EVAL("CUDA", poly_eval_cuda<scalar_t>);
+REGISTER_POLYNOMIAL_DIVISION("CUDA", poly_divide_cuda<scalar_t>);
 
 #ifdef EXT_FIELD
 REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CUDA", add_cuda<extension_t>);

@@ -17,6 +17,13 @@ eIcicleError cpu_ntt_release_domain(const Device& device, const S& dummy)
   return err;
 }
 
+template <typename S = scalar_t>
+eIcicleError cpu_get_root_of_unity_from_domain(const Device& device, uint64_t logn, S* rou)
+{
+  auto err = ntt_cpu::CpuNttDomain<scalar_t>::get_root_of_unity_from_domain(device, logn, rou);
+  return err;
+}
+
 template <typename S, typename E>
 eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output)
 {
@@ -50,6 +57,9 @@ REGISTER_NTT_INIT_DOMAIN_BACKEND("CPU_REF", (cpu_ntt_init_domain));
 
 REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CPU", cpu_ntt_release_domain<scalar_t>);
 REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CPU_REF", cpu_ntt_release_domain<scalar_t>);
+
+REGISTER_NTT_GET_ROU_FROM_DOMAIN_BACKEND("CPU", cpu_get_root_of_unity_from_domain<scalar_t>);
+REGISTER_NTT_GET_ROU_FROM_DOMAIN_BACKEND("CPU_REF", cpu_get_root_of_unity_from_domain<scalar_t>);
 
 REGISTER_NTT_BACKEND("CPU", (cpu_ntt<scalar_t, scalar_t>));
 REGISTER_NTT_BACKEND("CPU_REF", (cpu_ntt_ref));

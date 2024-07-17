@@ -212,3 +212,101 @@ REGISTER_SLICE_BACKEND("CPU", cpu_slice<scalar_t>);
 #ifdef EXT_FIELD
 REGISTER_SLICE_EXT_FIELD_BACKEND("CPU", cpu_slice<extension_t>);
 #endif // EXT_FIELD
+
+/*********************************** Polynomial evaluation ***********************************/
+
+template <typename T>
+eIcicleError cpu_poly_eval(
+  const Device& device,
+  const T* coeffs,
+  uint64_t coeffs_size,
+  const T* domain,
+  uint64_t domain_size,
+  const VecOpsConfig& config,
+  T* evals /*OUT*/)
+{
+  // using Horner's method
+  // example: ax^2+bx+c is computed as (1) r=a, (2) r=r*x+b, (3) r=r*x+c
+  for (uint64_t eval_idx = 0; eval_idx < domain_size; ++eval_idx) {
+    evals[eval_idx] = coeffs[coeffs_size - 1];
+    for (int64_t coeff_idx = coeffs_size - 2; coeff_idx >= 0; --coeff_idx) {
+      evals[eval_idx] = evals[eval_idx] * domain[eval_idx] + coeffs[coeff_idx];
+    }
+  }
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_POLYNOMIAL_EVAL("CPU", cpu_poly_eval<scalar_t>);
+
+/*********************************** Highest non-zero idx ***********************************/
+template <typename T>
+eIcicleError cpu_highest_non_zero_idx(
+  const Device& device, const T* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx /*OUT*/)
+{
+  *out_idx = -1; // zero vector is considered '-1' since 0 would be zero in vec[0]
+  for (int64_t i = size - 1; i >= 0; --i) {
+    if (input[i] != T::zero()) {
+      *out_idx = i;
+      break;
+    }
+  }
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CPU", cpu_highest_non_zero_idx<scalar_t>);
+
+/*============================== polynomial division ==============================*/
+template <typename T>
+void school_book_division_step_cpu(T* r, T* q, const T* b, int deg_r, int deg_b, const T& lc_b_inv)
+{
+  int64_t monomial = deg_r - deg_b; // monomial=1 is 'x', monomial=2 is x^2 etc.
+
+  T lc_r = r[deg_r];
+  T monomial_coeff = lc_r * lc_b_inv; // lc_r / lc_b
+
+  // adding monomial s to q (q=q+s)
+  q[monomial] = monomial_coeff;
+
+  for (int i = monomial; i <= deg_r; ++i) {
+    T b_coeff = b[i - monomial];
+    r[i] = r[i] - monomial_coeff * b_coeff;
+  }
+}
+
+template <typename T>
+eIcicleError cpu_poly_divide(
+  const Device& device,
+  const T* numerator,
+  int64_t numerator_deg,
+  const T* denumerator,
+  int64_t denumerator_deg,
+  const VecOpsConfig& config,
+  T* q_out /*OUT*/,
+  uint64_t q_size,
+  T* r_out /*OUT*/,
+  uint64_t r_size)
+{
+  ICICLE_ASSERT(r_size >= (1 + denumerator_deg))
+    << "polynomial division expects r(x) size to be similar to numerator(x)";
+  ICICLE_ASSERT(q_size >= (numerator_deg - denumerator_deg + 1))
+    << "polynomial division expects q(x) size to be at least deg(numerator)-deg(denumerator)+1";
+
+  ICICLE_CHECK(icicle_copy_async(r_out, numerator, (1 + numerator_deg) * sizeof(T), config.stream));
+
+  // invert largest coeff of b
+  const T& lc_b_inv = T::inverse(denumerator[denumerator_deg]);
+
+  int64_t deg_r = numerator_deg;
+  while (deg_r >= denumerator_deg) {
+    // each iteration is removing the largest monomial in r until deg(r)<deg(b)
+    school_book_division_step_cpu(r_out, q_out, denumerator, deg_r, denumerator_deg, lc_b_inv);
+
+    // compute degree of r
+    auto degree_config = default_vec_ops_config();
+    cpu_highest_non_zero_idx(device, r_out, deg_r + 1 /*size of R*/, degree_config, &deg_r);
+  }
+
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_POLYNOMIAL_DIVISION("CPU", cpu_poly_divide<scalar_t>);

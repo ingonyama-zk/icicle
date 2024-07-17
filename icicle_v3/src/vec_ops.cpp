@@ -329,4 +329,40 @@ namespace icicle {
   {
     return CONCAT_EXPAND(FIELD, poly_eval)(coeffs, coeffs_size, domain, domain_size, config, evals);
   }
+
+  /*********************************** POLY DIVISION ***********************************/
+
+  ICICLE_DISPATCHER_INST(ScalarPolyDivDispatcher, poly_division, scalarPolyDivImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, poly_division)(
+    const scalar_t* numerator,
+    int64_t numerator_deg,
+    const scalar_t* denumerator,
+    int64_t denumerator_deg,
+    const VecOpsConfig& config,
+    scalar_t* q_out /*OUT*/,
+    uint64_t q_size,
+    scalar_t* r_out /*OUT*/,
+    uint64_t r_size)
+  {
+    return ScalarPolyDivDispatcher::execute(
+      numerator, numerator_deg, denumerator, denumerator_deg, config, q_out, q_size, r_out, r_size);
+  }
+
+  template <>
+  eIcicleError polynomial_division(
+    const scalar_t* numerator,
+    int64_t numerator_deg,
+    const scalar_t* denumerator,
+    int64_t denumerator_deg,
+    const VecOpsConfig& config,
+    scalar_t* q_out /*OUT*/,
+    uint64_t q_size,
+    scalar_t* r_out /*OUT*/,
+    uint64_t r_size)
+  {
+    return CONCAT_EXPAND(FIELD, poly_division)(
+      numerator, numerator_deg, denumerator, denumerator_deg, config, q_out, q_size, r_out, r_size);
+  }
+
 } // namespace icicle

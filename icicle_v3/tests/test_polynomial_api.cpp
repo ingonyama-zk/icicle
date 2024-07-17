@@ -143,7 +143,7 @@ TEST_F(PolynomialTest, evaluationOnDomain)
 
   size *= 2; // evaluating on a larger domain
   scalar_t w;
-  ICICLE_CHECK(get_root_of_unity_from_domain<scalar_t>((int)log2(size), w));
+  ICICLE_CHECK(get_root_of_unity_from_domain<scalar_t>((int)log2(size), &w));
 
   // construct domain as rou
   scalar_t x = one;
@@ -176,7 +176,7 @@ TEST_F(PolynomialTest, evaluateOnRouDomain)
     const int domain_size = 1 << domain_logsize;
 
     scalar_t w;
-    ICICLE_CHECK(get_root_of_unity_from_domain<scalar_t>(domain_logsize, w));
+    ICICLE_CHECK(get_root_of_unity_from_domain<scalar_t>(domain_logsize, &w));
 
     auto domain = std::make_unique<scalar_t[]>(domain_size);
     domain[0] = scalar_t::one();
@@ -912,7 +912,7 @@ TEST_F(PolynomialTest, QAP)
   //  (4) sanity check: verify AB=C at the evaluation points
   {
     scalar_t w;
-    ICICLE_CHECK(get_root_of_unity_from_domain<scalar_t>((int)ceil(log2(nof_constraints)), w));
+    ICICLE_CHECK(get_root_of_unity_from_domain<scalar_t>((int)ceil(log2(nof_constraints)), &w));
 
     auto x = scalar_t::one();
     for (int i = 0; i < vanishing_poly_deg; ++i) {

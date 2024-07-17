@@ -10,7 +10,7 @@ if (FIELD)
         src/field/cpu_vec_ops.cpp        
     )
     if (NTT)
-        target_sources(icicle_field PRIVATE src/field/cpu_ntt.cpp)
+        target_sources(icicle_field PRIVATE src/field/cpu_ntt.cpp src/polynomials/cpu_polynomial_backend.cpp)
     endif()    
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD

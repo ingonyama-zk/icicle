@@ -129,7 +129,7 @@ namespace icicle {
   S get_root_of_unity(uint64_t max_size);
 
   template <typename S>
-  eIcicleError get_root_of_unity_from_domain(uint64_t logn, S& rou /*OUT*/);
+  eIcicleError get_root_of_unity_from_domain(uint64_t logn, S* rou /*OUT*/);
 
   /*************************** Backend registration ***************************/
 
@@ -197,7 +197,7 @@ namespace icicle {
   }
 
   /*************************** GET ROU FROM DOMAIN ***************************/
-  using NttGetRouFromDomainImpl = std::function<eIcicleError(const Device& device, uint64_t logn, scalar_t& rou)>;
+  using NttGetRouFromDomainImpl = std::function<eIcicleError(const Device& device, uint64_t logn, scalar_t* rou)>;
 
   void register_ntt_get_rou_from_domain(const std::string& deviceType, NttGetRouFromDomainImpl);
 

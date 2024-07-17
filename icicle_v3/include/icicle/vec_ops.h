@@ -98,6 +98,18 @@ namespace icicle {
     const VecOpsConfig& config,
     T* evals /*OUT*/);
 
+  template <typename T>
+  eIcicleError polynomial_division(
+    const T* numerator,
+    int64_t numerator_deg,
+    const T* denumerator,
+    int64_t denumerator_deg,
+    const VecOpsConfig& config,
+    T* q_out /*OUT*/,
+    uint64_t q_size,
+    T* r_out /*OUT*/,
+    uint64_t r_size);
+
   /*************************** Backend registration ***************************/
 
   using scalarVectorOpImpl = std::function<eIcicleError(
@@ -282,6 +294,28 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_poly_eval) = []() -> bool {                                                                \
       register_poly_eval(DEVICE_TYPE, FUNC);                                                                           \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  using scalarPolyDivImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* numerator,
+    int64_t numerator_deg,
+    const scalar_t* denumerator,
+    int64_t denumerator_deg,
+    const VecOpsConfig& config,
+    scalar_t* q_out /*OUT*/,
+    uint64_t q_size,
+    scalar_t* r_out /*OUT*/,
+    uint64_t r_size)>;
+
+  void register_poly_division(const std::string& deviceType, scalarPolyDivImpl);
+
+#define REGISTER_POLYNOMIAL_DIVISION(DEVICE_TYPE, FUNC)                                                                \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_poly_division) = []() -> bool {                                                            \
+      register_poly_division(DEVICE_TYPE, FUNC);                                                                       \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

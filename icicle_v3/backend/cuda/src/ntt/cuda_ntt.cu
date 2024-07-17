@@ -37,12 +37,12 @@ namespace icicle {
   }
 
   template <typename S>
-  eIcicleError get_root_of_unity_from_domain_cuda(const Device& device, uint64_t logn, S& rou)
+  eIcicleError get_root_of_unity_from_domain_cuda(const Device& device, uint64_t logn, S* rou)
   {
     using namespace device_context;
     DeviceContext device_context = get_default_device_context();
     device_context.device_id = device.id;
-    rou = ntt::Domain<S>::get_root_of_unity_from_domain(logn, device_context);
+    *rou = ntt::Domain<S>::get_root_of_unity_from_domain(logn, device_context);
     return eIcicleError::SUCCESS;
   }
 
