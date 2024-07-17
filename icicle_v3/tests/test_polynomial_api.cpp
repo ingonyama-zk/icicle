@@ -47,8 +47,7 @@ public:
 
     // choose random device for testing
     srand(time(NULL));
-    auto r = rand();
-    const int dev_idx = r % s_registered_devices.size();
+    const int dev_idx = rand() % s_registered_devices.size();
     icicle_set_device(s_registered_devices.at(dev_idx));
     ICICLE_LOG_INFO << "setting device " << s_registered_devices.at(dev_idx) << " for polynomial tests";
   }

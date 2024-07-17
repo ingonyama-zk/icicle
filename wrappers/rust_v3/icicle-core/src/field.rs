@@ -190,15 +190,11 @@ macro_rules! impl_scalar_field {
         }
 
         impl MontgomeryConvertibleField<$field_name> for $field_cfg {
-            fn to_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
-                // check_device(ctx.device_id);
-                // assert_eq!(
-                //     values
-                //         .device_id()
-                //         .unwrap(),
-                //     ctx.device_id,
-                //     "Device ids are different in slice and context"
-                // );
+            fn to_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {                
+                // check device slice is on active device
+                if !values.is_on_active_device() {
+                    panic!("input not allocated on an inactive device");
+                }
                 $field_prefix_ident::convert_scalars_montgomery(
                     unsafe { values.as_mut_ptr() },
                     values.len(),
@@ -208,14 +204,10 @@ macro_rules! impl_scalar_field {
             }
 
             fn from_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
-                // check_device(ctx.device_id);
-                // assert_eq!(
-                //     values
-                //         .device_id()
-                //         .unwrap(),
-                //     ctx.device_id,
-                //     "Device ids are different in slice and context"
-                // );
+                // check device slice is on active device
+                if !values.is_on_active_device() {
+                    panic!("input not allocated on an inactive device");
+                }
                 $field_prefix_ident::convert_scalars_montgomery(
                     unsafe { values.as_mut_ptr() },
                     values.len(),

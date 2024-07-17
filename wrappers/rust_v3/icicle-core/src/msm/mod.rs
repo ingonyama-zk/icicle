@@ -149,8 +149,6 @@ pub fn msm<C: Curve + MSM<C>>(
     local_cfg.are_bases_on_device = bases.is_on_device();
     local_cfg.are_results_on_device = results.is_on_device();
 
-    println!{"{:?}",local_cfg};
-
     C::msm_unchecked(scalars, bases, &local_cfg, results)
 }
 

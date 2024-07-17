@@ -382,7 +382,7 @@ namespace msm {
       config.is_result_on_device = true;
       config.is_async = stream != nullptr;
       config.stream = stream;
-      return montgomery::ConvertMontgomery<E, true>(d_input, n, config, d_output);
+      return montgomery::ConvertMontgomery<E, false>(d_input, n, config, d_output);
     }
 
     // this function computes msm using the bucket method

@@ -53,8 +53,12 @@ where
                     .copy_from_host_async(HostSlice::from_slice(&scalars), &stream)
                     .unwrap();
 
+                // convert to mont for testing MSM in this case
+                C::ScalarField::to_mont(&mut scalars_d, &stream);
+
                 let mut cfg = MSMConfig::default();
                 cfg.stream_handle = *stream;
+                cfg.are_scalars_montgomery_form = true;
                 cfg.is_async = true;
                 msm(
                     &scalars_d[..],
@@ -73,7 +77,7 @@ where
                     .unwrap();
 
                 // (2) compute on ref device and compare
-                test_utilities::test_set_main_device_with_id(device_id);
+                test_utilities::test_set_ref_device();
                 let mut ref_msm_host_result = vec![Projective::<C>::zero(); 1];
                 msm(
                     HostSlice::from_slice(&scalars),
