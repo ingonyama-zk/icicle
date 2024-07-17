@@ -51,6 +51,24 @@ The Polynomial class encapsulates a polynomial, providing a variety of operation
 - **Manipulation**: Features like slicing polynomials, adding or subtracting monomials inplace, and computing polynomial degrees.
 - **Memory Access**: Access internal states or obtain device-memory views of polynomials.
 
+## Polynomial API Improvements
+
+Since v2.3.0, ICICLE includes various fixes and performance enhancements for the Polynomial API, making it more robust and efficient for polynomial operations.
+
+### Example: Polynomial API Improvements in C++
+```cpp
+#include <icicle/polynomial.h>
+
+void improved_polynomial() {
+    icicle::Polynomial p;
+    p.coefficients = {4, 5, 6}; // p(x) = 6x^2 + 5x + 4
+    p.print();
+}
+```
+
+### Explanation
+This example illustrates how to define and print a polynomial using the improved Polynomial API. The coefficients are set, and the polynomial is printed to the console.
+
 ## Usage
 
 This section outlines how to use the Polynomial API in C++. Bindings for Rust and Go are detailed under the Bindings sections.
