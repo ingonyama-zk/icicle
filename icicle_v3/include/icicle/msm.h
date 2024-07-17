@@ -23,13 +23,11 @@ namespace icicle {
    */
   struct MSMConfig {
     icicleStreamHandle stream; /**< Stream for asynchronous execution. */
-    int bases_size; /**< Number of bases in the MSM for batched MSM. Set to 0 if all MSMs use the same bases or set to
-                     * 'batch X #scalars' otherwise. Default value: 0 (reuse bases for all batch elements). */
-    int precompute_factor; /**< Number of extra points to pre-compute for each point. See the
-                            *   precompute_msm_bases function; precompute_factor passed there needs to be equal to the
-                            * one used here. Larger values decrease the number of computations to make, on-line memory
-                            * footprint, but increase the static memory footprint. Default value: 1 (i.e., don't
-                            * pre-compute). */
+    int precompute_factor;     /**< Number of extra points to pre-compute for each point. See the
+                                *   precompute_msm_bases function; precompute_factor passed there needs to be equal to the
+                                * one used here. Larger values decrease the number of computations to make, on-line memory
+                                * footprint, but increase the static memory footprint. Default value: 1 (i.e., don't
+                                * pre-compute). */
     int c; /**< \f$ c \f$ value, or "window bitsize", which is the main parameter of the "bucket method" used to solve
             * the MSM problem. Larger value means more on-line memory footprint but also more parallelism and less
             * computational complexity (up to a certain point). Default value: 0 (the optimal value of \f$ c \f$ is
@@ -38,6 +36,8 @@ namespace icicle {
                                  *   but if a different (better) upper bound is known, it should be reflected in this variable.
                                  *   Default value: 0 (set to the bitsize of scalar field). */
     int batch_size;             /**< Number of MSMs to compute. Default value: 1. */
+    bool are_bases_shared;      /**< Bases are shared for batch. Set to true if all MSMs use the same bases. Otherwise
+                                   expecting #bases==#scalars. Default value: true. */
     bool are_scalars_on_device; /**< True if scalars are on device, false if they're on host. Default value: false. */
     bool
       are_scalars_montgomery_form; /**< True if scalars are in Montgomery form, false otherwise. Default value: true. */
@@ -63,11 +63,11 @@ namespace icicle {
   {
     MSMConfig config = {
       nullptr, // stream
-      0,       // bases_size
       1,       // precompute_factor
       0,       // c
       0,       // bitsize
       1,       // batch_size
+      true,    // are_bases_shared
       false,   // are_scalars_on_device
       false,   // are_scalars_montgomery_form
       false,   // are_points_on_device

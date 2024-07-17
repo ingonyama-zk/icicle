@@ -14,7 +14,6 @@ pub mod tests;
 #[derive(Debug, Clone)]
 pub struct MSMConfig {
     pub stream_handle: IcicleStreamHandle,
-    bases_size: i32,
 
     /// The number of extra bases to pre-compute for each point. See the `precompute_bases` function, `precompute_factor` passed
     /// there needs to be equal to the one used here. Larger values decrease the number of computations
@@ -34,6 +33,7 @@ pub struct MSMConfig {
     pub bitsize: i32,
 
     batch_size: i32,
+    are_bases_shared: bool, /// MSMs in batch share the bases. If false, expecting #bases==#scalars
     are_scalars_on_device: bool,
     pub are_scalars_montgomery_form: bool,
     are_bases_on_device: bool,
@@ -54,12 +54,12 @@ pub const IS_BIG_TRIANGLE: &str = "is_big_triangle";
 impl Default for MSMConfig {
     fn default() -> Self {
         Self {
-            stream_handle: std::ptr::null_mut(),
-            bases_size: 0,
+            stream_handle: std::ptr::null_mut(),            
             precompute_factor: 1,
             c: 0,
             bitsize: 0,
             batch_size: 1,
+            are_bases_shared: true,
             are_scalars_on_device: false,
             are_scalars_montgomery_form: false,
             are_bases_on_device: false,
@@ -143,11 +143,13 @@ pub fn msm<C: Curve + MSM<C>>(
     }
 
     let mut local_cfg = cfg.clone();
-    local_cfg.bases_size = bases_size as i32;
+    local_cfg.are_bases_shared = bases_size < scalars.len();
     local_cfg.batch_size = results.len() as i32;
     local_cfg.are_scalars_on_device = scalars.is_on_device();
     local_cfg.are_bases_on_device = bases.is_on_device();
     local_cfg.are_results_on_device = results.is_on_device();
+
+    println!{"{:?}",local_cfg};
 
     C::msm_unchecked(scalars, bases, &local_cfg, results)
 }

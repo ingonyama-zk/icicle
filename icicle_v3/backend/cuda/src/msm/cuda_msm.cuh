@@ -893,19 +893,20 @@ namespace msm {
     unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
     const bool _is_big_triangle = is_big_triangle(config.ext);
     const int _large_bucket_factor = get_large_bucket_factor(config.ext);
+    const int bases_size = config.are_bases_shared ? msm_size : msm_size * config.batch_size;
 
     return CHK_STICKY(bucket_method_msm(
-      bitsize, c, scalars, points, config.batch_size, msm_size, (config.bases_size == 0) ? msm_size : config.bases_size,
-      results, config.are_scalars_on_device, config.are_scalars_montgomery_form, config.are_points_on_device,
-      config.are_points_montgomery_form, config.are_results_on_device, _is_big_triangle, _large_bucket_factor,
-      config.precompute_factor, config.is_async, stream));
+      bitsize, c, scalars, points, config.batch_size, msm_size, bases_size, results, config.are_scalars_on_device,
+      config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
+      config.are_results_on_device, _is_big_triangle, _large_bucket_factor, config.precompute_factor, config.is_async,
+      stream));
   }
 
   template <typename A, typename P>
   cudaError_t cuda_precompute_msm_points(const A* points, int msm_size, const MSMConfig& config, A* output_points)
   {
     CHK_INIT_IF_RETURN();
-    const int bases_size = config.bases_size != 0 ? config.bases_size : msm_size;
+    const int bases_size = config.are_bases_shared ? msm_size : msm_size * config.batch_size;
 
     cudaStream_t stream = reinterpret_cast<cudaStream_t>(config.stream);
     unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
