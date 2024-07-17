@@ -263,8 +263,8 @@ int main(int argc, char** argv)
 
   cudaEventRecord(start, stream);
   // config.points_size = 0;
-  chunked_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
-  // multi_batch_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
+  // chunked_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
+  multi_batch_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
   // msm::msm<test_scalar, test_affine, test_projective>(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d, &buckets_d);
   // config.points_size = config.points_size/2;
   // config.return_buckets = true;

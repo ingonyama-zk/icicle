@@ -1003,6 +1003,7 @@ namespace msm {
     cudaStreamCreate(&transfer_stream);
     // int scalar_chunk_size = (msm_size + nof_chunks - 1) / nof_chunks;
     int batch_chunk_size = ((init_batch_size + nof_chunks - 1) / nof_chunks);
+    printf("batch_chunk_size %d\n",batch_chunk_size);
     int scalar_chunk_size = batch_chunk_size * msm_size;
     int points_chunk_size = scalar_chunk_size * config.precompute_factor; //assume different points
     // int total_scalar_size = config.batch_size * msm_size;
@@ -1138,10 +1139,10 @@ namespace msm {
       points_h = points;
       points_precomputed_h = points_precomputed;
     }
-    int chunk_size = (msm_size + nof_chunks - 1) / nof_chunks;
+    int chunk_size = (points_size + nof_chunks - 1) / nof_chunks;
     for (int i = 0; i < nof_chunks; i++){
       bool is_last_iter = i == nof_chunks - 1; 
-      int sub_msm_size = is_last_iter? msm_size % chunk_size : chunk_size;
+      int sub_msm_size = is_last_iter? points_size % chunk_size : chunk_size;
       if (sub_msm_size == 0) sub_msm_size = chunk_size;
       // config.points_size = sub_msm_size;
       if (!init_points_on_device) cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(A) * sub_msm_size, cudaMemcpyHostToDevice);
