@@ -134,3 +134,25 @@ Replace `/path/to/shared/libs` with the actual path where the shared libraries a
 | Polynomials | ✅ |
 | NTT | ✅ |
 | Extension Field | ✅ |
+
+## Poseidon API
+
+Since v2.2.0, ICICLE introduces the Poseidon hash function in the Golang bindings. This update allows developers to utilize Poseidon for efficient cryptographic hashing in their Go applications.
+
+package main
+
+import (
+    "fmt"
+    "github.com/ingonyama-zk/icicle"
+)
+
+func main() {
+    hash := icicle.NewPoseidonHash()
+    result := hash.Hash([]byte("example data"))
+    fmt.Println(result)
+}
+
+### Explanation:
+
+This example shows how to create a new Poseidon hash instance and use it to hash a byte array. The NewPoseidonHash function initializes the hash, and the Hash method computes the hash of the input data.
+
