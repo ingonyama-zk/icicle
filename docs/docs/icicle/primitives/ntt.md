@@ -56,7 +56,7 @@ Choosing an algorithm is heavily dependent on your use case. For example Cooley-
 
 NTT also supports two different modes `Batch NTT` and `Single NTT`
 
-Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
+Deciding whether to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
 
 #### Single NTT
 
