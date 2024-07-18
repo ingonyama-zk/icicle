@@ -27,7 +27,7 @@ fn main() {
         .define("FIELD", "babybear")
         .define("EXT_FIELD", "ON")
         .define("CMAKE_BUILD_TYPE", "Release")
-        .define("CUDA_BACKEND", "main")
+        .define("CUDA_BACKEND", "local")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // Build

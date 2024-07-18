@@ -18,7 +18,7 @@ option(ECNTT "Build ECNTT" OFF)
 option(G2 "Build G2" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(CPU_BACKEND "Build CPU backend" ON)
-option(CUDA_BACKEND "Branch or commit to pull for CUDA backend, or OFF to disable pulling" OFF)
+option(CUDA_BACKEND "Branch/commit to pull for CUDA backend, local path or OFF to disable pulling" OFF)
 
 # device API library
 add_library(icicle_device SHARED
@@ -63,16 +63,28 @@ if (CPU_BACKEND)
 endif()
 
 if (CUDA_BACKEND)
-  set(CUDA_BACKEND_URL "git@github.com:ingonyama-zk/icicle-cuda-backend.git")
+  string(TOLOWER "${CUDA_BACKEND}" CUDA_BACKEND_LOWER)
+  if (CUDA_BACKEND_LOWER STREQUAL "local")
+    # CUDA backend is local, no need to pull    
+    message(STATUS "Adding CUDA backend from local path: icicle/backend/cuda")
+    add_subdirectory(backend/cuda)
 
-  include(FetchContent)
-  message("-- Fetching cuda backend")
-  FetchContent_Declare(
-    cuda_backend
-    GIT_REPOSITORY ${CUDA_BACKEND_URL}
-    GIT_TAG ${CUDA_BACKEND}
-  )
-  FetchContent_MakeAvailable(cuda_backend)
+    # Set the compile definition for the backend build directory
+    add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/backend")
+  else()
+    set(CUDA_BACKEND_URL "git@github.com:ingonyama-zk/icicle-cuda-backend.git")
+
+    include(FetchContent)
+    message("-- Fetching cuda backend from ${CUDA_BACKEND_URL}:${CUDA_BACKEND}")
+    FetchContent_Declare(
+      cuda_backend
+      GIT_REPOSITORY ${CUDA_BACKEND_URL}
+      GIT_TAG ${CUDA_BACKEND}
+    )
+    FetchContent_MakeAvailable(cuda_backend)
+    # Set the compile definition for the backend build directory
+    add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/_deps/cuda_backend-build")
+    endif()
 endif()
 
 if (BUILD_TESTS)

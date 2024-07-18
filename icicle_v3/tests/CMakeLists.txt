@@ -55,9 +55,4 @@ if (CURVE)
     endif()
 endif()
 
-if (CUDA_BACKEND)
-    add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/_deps/cuda_backend-build")
-else()
-    add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/backend")
-endif()
 
