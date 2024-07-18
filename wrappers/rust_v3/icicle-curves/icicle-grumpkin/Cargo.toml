@@ -22,4 +22,5 @@ cmake = "0.1.50"
 [features]
 default = []
 ec_ntt = ["icicle-core/ec_ntt"] # why?
-
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]

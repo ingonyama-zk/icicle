@@ -23,4 +23,5 @@ cmake = "0.1.50"
 default = []
 g2 = ["icicle-core/g2"]
 ec_ntt = ["icicle-core/ec_ntt"]
-
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]

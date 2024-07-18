@@ -12,3 +12,7 @@ repository.workspace = true
 
 [build-dependencies]
 cmake = "0.1.50"
+
+[features]
+cuda_backend = []
+pull_cuda_backend = []

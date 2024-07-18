@@ -27,8 +27,13 @@ fn main() {
         .define("FIELD", "babybear")
         .define("EXT_FIELD", "ON")
         .define("CMAKE_BUILD_TYPE", "Release")
-        .define("CUDA_BACKEND", "local")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+
+    #[cfg(feature = "cuda_backend")]
+    config.define("CUDA_BACKEND", "local");
+
+    #[cfg(feature = "pull_cuda_backend")]
+    config.define("CUDA_BACKEND", "main");
 
     // Build
     let _ = config

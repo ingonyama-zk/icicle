@@ -19,3 +19,7 @@ lambdaworks-math = "0.6.0"
 
 [build-dependencies]
 cmake = "0.1.50"
+
+[features]
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]

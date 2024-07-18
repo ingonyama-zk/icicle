@@ -26,8 +26,13 @@ fn main() {
     config
         .define("CURVE", "bls12_381")
         .define("CMAKE_BUILD_TYPE", "Release")
-        .define("CUDA_BACKEND", "local")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+
+    #[cfg(feature = "cuda_backend")]
+    config.define("CUDA_BACKEND", "local");
+
+    #[cfg(feature = "pull_cuda_backend")]
+    config.define("CUDA_BACKEND", "main");
 
     // Optional Features
     #[cfg(feature = "g2")]

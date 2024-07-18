@@ -27,8 +27,13 @@ fn main() {
         .define("CURVE", "bls12_377")
         .define("FIELD", "bls12_377")
         .define("CMAKE_BUILD_TYPE", "Release")
-        .define("CUDA_BACKEND", "local")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+
+    #[cfg(feature = "cuda_backend")]
+    config.define("CUDA_BACKEND", "local");
+
+    #[cfg(feature = "pull_cuda_backend")]
+    config.define("CUDA_BACKEND", "main");
 
     // Optional Features
     #[cfg(feature = "g2")]
@@ -53,8 +58,13 @@ fn main() {
             .define("CURVE", "bw6_761")
             .define("FIELD", "bw6_761")
             .define("CMAKE_BUILD_TYPE", "Release")
-            .define("CUDA_BACKEND", "local")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+
+        #[cfg(feature = "cuda_backend")]
+        config_bw.define("CUDA_BACKEND", "local");
+
+        #[cfg(feature = "pull_cuda_backend")]
+        config_bw.define("CUDA_BACKEND", "main");
 
         // Optional Features
         #[cfg(feature = "bw6-761-g2")]
