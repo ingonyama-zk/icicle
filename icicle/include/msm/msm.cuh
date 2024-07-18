@@ -62,6 +62,7 @@ namespace msm {
                               *   scalars and "top windows" with few bits. Can be set to 0 to disable separate
                               *   treatment of large buckets altogether. Default value: 10. */
     int batch_size;          /**< The number of MSMs to compute. Default value: 1. */
+    int nof_chunks;
     bool are_scalars_on_device;       /**< True if scalars are on device and false if they're on host. Default value:
                                        *   false. */
     bool are_scalars_montgomery_form; /**< True if scalars are in Montgomery form and false otherwise. Default value:
@@ -98,6 +99,7 @@ namespace msm {
       0,     // bitsize
       10,    // large_bucket_factor
       1,     // batch_size
+      1,     // nof_chunks
       false, // are_scalars_on_device
       false, // are_scalars_montgomery_form
       false, // are_points_on_device
@@ -105,8 +107,8 @@ namespace msm {
       false, // are_results_on_device
       false, // is_big_triangle
       false, // is_async
-      true,  // init_buckets
-      false, // return_buckets
+      true,  // init_buckets  //TODO - remove
+      false, // return_buckets //TODO - remove
     };
     return config;
   }

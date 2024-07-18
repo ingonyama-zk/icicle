@@ -36,6 +36,7 @@ namespace msm {
     }
 
     unsigned get_optimal_c(int bitsize) { return (unsigned)max(ceil(std::log2(bitsize)) - 4.0, 1.0); }
+    unsigned get_optimal_nof_chunks() { return 0; }
 
     template <typename E>
     __global__ void normalize_kernel(E* inout, E factor, int n)
@@ -932,6 +933,84 @@ namespace msm {
       config.is_async, stream));
   }
 
+    template <typename S, typename A, typename P>
+  cudaError_t msm_new(S* scalars, A* points, int msm_size, MSMConfig& config, P* results) //todo-fix consts
+  {
+    const int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
+    cudaStream_t& stream = config.ctx.stream;
+
+    unsigned c = (config.c == 0) ? get_optimal_c(msm_size) : config.c;
+    int nof_chunks = config.nof_chunks == 0 ? get_optimal_nof_chunks() : config.nof_chunks;
+
+    return CHK_STICKY(multi_chunked_msm(scalars, points, msm_size, nof_chunks, config, results, bitsize, c, stream));
+  }
+
+  template <typename S, typename A, typename P>
+  cudaError_t multi_chunked_msm(S* scalars, A* points, int msm_size, int nof_chunks, const MSMConfig& config, P* results, int bitsize, int c, cudaStream_t stream){ //TODO: solve const problems
+    printf("multi chunked\n");
+    // MSMConfig internal_config = config;
+    bool internal_are_scalars_on_device = config.are_scalars_on_device;
+    bool internal_are_points_on_device = config.are_points_on_device;
+    cudaStream_t transfer_stream;
+    cudaStreamCreate(&transfer_stream);
+    int scalar_chunk_size = (msm_size + nof_chunks - 1) / nof_chunks;
+    int points_chunk_size = scalar_chunk_size * config.precompute_factor;
+    A* points_d, *points_h;
+    S* scalars_d, *scalars_h;
+    P* buckets_d;
+    if (config.are_scalars_on_device){
+      scalars_d = scalars;
+    }
+    else{
+      cudaMalloc(&scalars_d, sizeof(S) * scalar_chunk_size*2);
+      scalars_h = scalars;
+    }
+    if (config.are_points_on_device){
+      points_d = points;
+    }
+    else{
+      cudaMalloc(&points_d, sizeof(A) * points_chunk_size*2);
+      points_h = points;
+    }
+    // printf("pre-loop\n");
+    for (int i = 0; i < nof_chunks; i++)
+    {
+      bool is_last_iter = i == nof_chunks - 1; 
+      int sub_msm_size = is_last_iter? msm_size % scalar_chunk_size : scalar_chunk_size;
+      if (sub_msm_size == 0) sub_msm_size = scalar_chunk_size;
+      bool init_buckets = i == 0;
+      bool return_buckets = !is_last_iter;
+      if (i){
+        internal_are_scalars_on_device = true;
+        internal_are_points_on_device = true;
+      }
+      // config.points_size = sub_msm_size;
+      // printf("sub_msm_size %d\n", sub_msm_size);
+      // printf("%d %d\n", config.are_scalars_on_device, config.are_points_on_device);
+      // msm<S, A, P>(
+      // (config.are_scalars_on_device? scalars_d : scalars_h) + (init_scalars_on_device? i : i%2)*scalar_chunk_size, (config.are_points_on_device? points_d : points_h) + (init_points_on_device? i : i%2)*points_chunk_size, sub_msm_size, config, results, &buckets_d);
+      bucket_method_msm(
+      bitsize, c, (internal_are_scalars_on_device? scalars_d : scalars_h) + (config.are_scalars_on_device? i : i%2)*scalar_chunk_size, (internal_are_points_on_device? points_d : points_h) + (config.are_points_on_device? i : i%2)*points_chunk_size, config.batch_size, sub_msm_size,
+      sub_msm_size, &buckets_d, init_buckets, return_buckets ,results, config.are_scalars_on_device,
+      config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
+      config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.precompute_factor,
+      config.is_async, stream);
+      // printf("finished iter %d\n", i);
+      if (is_last_iter) break;
+      // printf("pre-copy\n");
+      // cudaMemcpyAsync(scalars_d + ((i+1)%2)*scalar_chunk_size, scalars_h + (i+1)*scalar_chunk_size, sizeof(S) * sub_msm_size, cudaMemcpyHostToDevice, transfer_stream);
+      // cudaMemcpyAsync(points_d + ((i+1)%2)*points_chunk_size, points_h + (i+1)*points_chunk_size, sizeof(A) * sub_msm_size * config.precompute_factor, cudaMemcpyHostToDevice, transfer_stream);
+      if (!config.are_scalars_on_device) cudaMemcpyAsync(scalars_d + ((i+1)%2)*scalar_chunk_size, scalars_h + (i+1)*scalar_chunk_size, sizeof(S) * sub_msm_size, cudaMemcpyHostToDevice, transfer_stream);
+      if (!config.are_points_on_device) cudaMemcpyAsync(points_d + ((i+1)%2)*points_chunk_size, points_h + (i+1)*points_chunk_size, sizeof(A) * sub_msm_size * config.precompute_factor, cudaMemcpyHostToDevice, transfer_stream);
+      cudaEvent_t finish_transfer;
+      cudaEventCreateWithFlags(&finish_transfer, cudaEventDisableTiming);
+      cudaEventRecord(finish_transfer, transfer_stream);
+      cudaStreamWaitEvent(config.ctx.stream, finish_transfer);
+      cudaEventDestroy(finish_transfer);
+    }
+    cudaStreamDestroy(transfer_stream);
+    return CHK_LAST();
+  }
 
   template <typename S, typename A, typename P>
   cudaError_t chunked_msm(S* scalars, A* points, int msm_size, int nof_chunks, MSMConfig& config, P* result){ //TODO: solve const problems
@@ -1127,8 +1206,11 @@ namespace msm {
   cudaError_t chunked_precompute(A* points, int msm_size, MSMConfig& config, A* points_precomputed, int nof_chunks){
     A *points_d, *points_h, *points_precomputed_d, *points_precomputed_h;
     bool init_points_on_device = config.are_points_on_device;
+    int init_points_size = config.points_size;
     int points_size = config.points_size? config.points_size : msm_size;
-    // bool multi_points = config.points_size > msm_size
+    bool multi_batch_mode = config.batch_size > 1;
+    bool multi_points = config.points_size > msm_size;
+    if (multi_batch_mode && !multi_points) nof_chunks = 1;
     if (init_points_on_device){
       points_d = points;
       points_precomputed_d = points_precomputed;
@@ -1140,17 +1222,25 @@ namespace msm {
       points_precomputed_h = points_precomputed;
     }
     int chunk_size = (points_size + nof_chunks - 1) / nof_chunks;
+    if (multi_batch_mode) chunk_size = ((config.batch_size + nof_chunks - 1) / nof_chunks) * msm_size;
     for (int i = 0; i < nof_chunks; i++){
       bool is_last_iter = i == nof_chunks - 1; 
       int sub_msm_size = is_last_iter? points_size % chunk_size : chunk_size;
       if (sub_msm_size == 0) sub_msm_size = chunk_size;
-      // config.points_size = sub_msm_size;
-      if (!init_points_on_device) cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(A) * sub_msm_size, cudaMemcpyHostToDevice);
+      config.points_size = sub_msm_size;
       config.are_points_on_device = true;
-      msm::precompute_msm_points<A, P>(points_d + (i%2)*chunk_size, sub_msm_size, config, points_precomputed_d + (i%2)*chunk_size*config.precompute_factor);
-      if (!init_points_on_device) cudaMemcpyAsync(points_precomputed_h + i*chunk_size*config.precompute_factor, points_precomputed_d + (i%2)*chunk_size*config.precompute_factor, sizeof(A) * sub_msm_size*config.precompute_factor, cudaMemcpyDeviceToHost);
+      printf("prec sub_msm_size %d\n", sub_msm_size);
+      if (!init_points_on_device) {
+        cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(A) * sub_msm_size, cudaMemcpyHostToDevice);
+        msm::precompute_msm_points<A, P>(points_d + (i%2)*chunk_size, sub_msm_size, config, points_precomputed_d + (i%2)*chunk_size*config.precompute_factor);
+        cudaMemcpyAsync(points_precomputed_h + i*chunk_size*config.precompute_factor, points_precomputed_d + (i%2)*chunk_size*config.precompute_factor, sizeof(A) * sub_msm_size*config.precompute_factor, cudaMemcpyDeviceToHost);
+      }
+      else{
+        msm::precompute_msm_points<A, P>(points_d + i*chunk_size, sub_msm_size, config, points_precomputed_d + i*chunk_size*config.precompute_factor);
+      }
     }
     config.are_points_on_device = init_points_on_device;
+    config.points_size = init_points_size;
     return CHK_LAST(); //TODO: forward precompute function return
   }
 

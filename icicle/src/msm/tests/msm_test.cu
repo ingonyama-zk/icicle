@@ -138,30 +138,32 @@ int main(int argc, char** argv)
   int msm_size = (1 << msm_log_size) - 1;
   int batch_size = (argc > 2) ? atoi(argv[2]) : 6;
   //   unsigned msm_size = 1<<21;
-  int N = batch_size * msm_size;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
   int user_c = (argc > 4) ? atoi(argv[4]) : 15;
   int nof_chunks = (argc > 5) ? atoi(argv[5]) : 3;
   bool scalars_on_device = (argc > 6) ? atoi(argv[6]) : 0;
   bool points_on_device = (argc > 7) ? atoi(argv[7]) : 0;
+  bool same_points = (argc > 8) ? atoi(argv[8]) : 0;
+  int scalars_size = batch_size * msm_size;
+  int points_size = same_points? msm_size : batch_size * msm_size;
 
   printf(
-    "running msm curve=%d, size=%d, batch_size=%d, precomp_factor=%d, c=%d, nof_chunks=%d, scalars_on_device=%d, points_on_device=%d\n", CURVE_ID, msm_size, batch_size,
-    precomp_factor, user_c, nof_chunks, scalars_on_device, points_on_device);
+    "running msm curve=%d, size=%d, batch_size=%d, precomp_factor=%d, c=%d, nof_chunks=%d, scalars_on_device=%d, points_on_device=%d, same_points=%d\n", CURVE_ID, msm_size, batch_size,
+    precomp_factor, user_c, nof_chunks, scalars_on_device, points_on_device, same_points);
 
-  test_scalar* scalars_h = new test_scalar[N];
-  test_affine* points_h = new test_affine[N];
-  test_affine* points_precomputed_h = new test_affine[N*precomp_factor];
-  int chunk_size = batch_size > 1? N : (msm_size + nof_chunks - 1) / nof_chunks;
+  test_scalar* scalars_h = new test_scalar[scalars_size];
+  test_affine* points_h = new test_affine[points_size];
+  test_affine* points_precomputed_h = new test_affine[points_size*precomp_factor];
+  int chunk_size = batch_size > 1? scalars_size : (msm_size + nof_chunks - 1) / nof_chunks;
   // int chunk_size = N;
 
   // test_scalar::rand_host_many(scalars, N);
   // test_projective::rand_host_many_affine(points, N);
-  for (int i = 0; i < N; i++)
+  for (int i = 0; i < scalars_size; i++)
   {
     // scalars[i] = i? scalars[i-1] + test_scalar::one() : test_scalar::zero();
     scalars_h[i] = i>chunk_size-1? scalars_h[i-chunk_size+1] : test_scalar::rand_host();
-    points_h[i] = i>100? points_h[i-100] : test_projective::to_affine(test_projective::rand_host());
+    if (i<points_size) points_h[i] = i>100? points_h[i-100] : test_projective::to_affine(test_projective::rand_host());
     // points[i] = test_projective::to_affine(test_projective::generator());
     // std::cout << i << ": "<< points[i] << "\n";
   }
@@ -191,13 +193,13 @@ int main(int argc, char** argv)
   test_projective* buckets_d;
   test_projective* ref_d;
 
-  cudaMalloc(&scalars_d, sizeof(test_scalar) * N);
-  cudaMalloc(&points_d, sizeof(test_affine) * N);
-  cudaMalloc(&precomp_points_d, sizeof(test_affine) * N * precomp_factor);
+  cudaMalloc(&scalars_d, sizeof(test_scalar) * scalars_size);
+  cudaMalloc(&points_d, sizeof(test_affine) * points_size);
+  cudaMalloc(&precomp_points_d, sizeof(test_affine) * points_size * precomp_factor);
   cudaMalloc(&res_d, sizeof(test_projective) * batch_size);
   cudaMalloc(&ref_d, sizeof(test_projective) * batch_size);
-  cudaMemcpy(scalars_d, scalars_h, sizeof(test_scalar) * N, cudaMemcpyHostToDevice);
-  cudaMemcpy(points_d, points_h, sizeof(test_affine) * N, cudaMemcpyHostToDevice);
+  cudaMemcpy(scalars_d, scalars_h, sizeof(test_scalar) * scalars_size, cudaMemcpyHostToDevice);
+  cudaMemcpy(points_d, points_h, sizeof(test_affine) * points_size, cudaMemcpyHostToDevice);
 
   std::cout << "finished copying" << std::endl;
 
@@ -213,12 +215,13 @@ int main(int argc, char** argv)
   };
   msm::MSMConfig config = {
     ctx,            // DeviceContext
-    batch_size > 1? N : 0,              // points_size
+    batch_size>1? points_size : 0,              // points_size
     precomp_factor, // precompute_factor
     user_c,         // c
     0,              // bitsize
     10,             // large_bucket_factor
     batch_size,     // batch_size
+    nof_chunks,     // nof_chunks
     scalars_on_device,          // are_scalars_on_device
     false,          // are_scalars_montgomery_form
     points_on_device,           // are_points_on_device
@@ -263,8 +266,13 @@ int main(int argc, char** argv)
 
   cudaEventRecord(start, stream);
   // config.points_size = 0;
-  // chunked_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
+  if (batch_size > 1){
   multi_batch_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
+  }
+  else{
+  // chunked_msm(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, nof_chunks, config, res_d);
+  msm::msm_new<test_scalar, test_affine, test_projective>(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d);
+  }
   // msm::msm<test_scalar, test_affine, test_projective>(scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d, &buckets_d);
   // config.points_size = config.points_size/2;
   // config.return_buckets = true;
