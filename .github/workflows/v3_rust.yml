@@ -14,7 +14,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pull-cuda-backend:
+    name: Pull CUDA backend
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Pull
+        working-directory: ./icicle_v3
+        run: ../scripts/pull_cuda_backend.sh
+
   check-changed-files:
+    needs: pull-cuda-backend
     uses: ./.github/workflows/check-changed-files.yml
 
   check-format:
