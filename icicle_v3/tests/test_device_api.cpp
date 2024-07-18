@@ -22,7 +22,9 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
+#ifdef BACKEND_BUILD_DIR
     icicle_load_backend(BACKEND_BUILD_DIR, true);
+#endif
     s_regsitered_devices = get_registered_devices_list();
     ASSERT_GT(s_regsitered_devices.size(), 0);
   }

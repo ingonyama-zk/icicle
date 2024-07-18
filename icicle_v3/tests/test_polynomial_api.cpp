@@ -35,7 +35,9 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
+#ifdef BACKEND_BUILD_DIR
     icicle_load_backend(BACKEND_BUILD_DIR, true);
+#endif
     s_registered_devices = get_registered_devices_list();
 
     // init NTT domain
@@ -112,10 +114,14 @@ public:
 
   static Polynomial_t vanishing_polynomial(int degree)
   {
-    scalar_t coeffs_v[degree + 1] = {0};
+    // scalar_t coeffs_v[degree + 1] = {0};
+    auto coeffs_v = std::make_unique<scalar_t[]>(degree + 1);
+    for (int i = 0; i < degree + 1; ++i) {
+      coeffs_v[i] = scalar_t::zero();
+    }
     coeffs_v[0] = minus_one; // -1
     coeffs_v[degree] = one;  // +x^n
-    auto v = Polynomial_t::from_coefficients(coeffs_v, degree + 1);
+    auto v = Polynomial_t::from_coefficients(coeffs_v.get(), degree + 1);
     return v;
   }
 
@@ -230,7 +236,7 @@ TEST_F(PolynomialTest, fromEvaluations)
 
   // evaluate f on roots of unity
   scalar_t omega = scalar_t::omega(log_size);
-  scalar_t evals[nof_evals] = {0};
+  auto evals = std::make_unique<scalar_t[]>(nof_evals);
   scalar_t x = one;
   for (int i = 0; i < nof_evals; ++i) {
     evals[i] = f(x);
@@ -238,7 +244,7 @@ TEST_F(PolynomialTest, fromEvaluations)
   }
 
   // construct g from f's evaluations
-  auto g = Polynomial_t::from_rou_evaluations(evals, nof_evals);
+  auto g = Polynomial_t::from_rou_evaluations(evals.get(), nof_evals);
 
   // make sure they are equal, that is f-g=0
   auto h = f - g;
@@ -389,7 +395,7 @@ TEST_F(PolynomialTest, ReadCoeffsToHost)
   auto nof_coeffs = h.copy_coeffs(h_coeffs, 0, 2); // read the coefficients
   EXPECT_EQ(nof_coeffs, 3);                        // expecting 3 due to specified indices
 
-  scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
+  scalar_t expected_h_coeffs[3] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
     EXPECT_EQ(expected_h_coeffs[i], h_coeffs[i]);
   }
