@@ -17,8 +17,8 @@ option(EXT_FIELD "Build extension field" OFF)
 option(ECNTT "Build ECNTT" OFF)
 option(G2 "Build G2" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
-option(BUILD_CPU_BE "Build CPU backend" ON)
-option(BUILD_CUDA_BE "Build CUDA backend" ON) # TODO Yuval remove from here once separating the cuda backend
+option(CPU_BACKEND "Build CPU backend" ON)
+option(CUDA_BACKEND "Branch or commit to pull for CUDA backend, or OFF to disable pulling" OFF)
 
 # device API library
 add_library(icicle_device SHARED
@@ -58,12 +58,21 @@ elseif(FIELD)
   setup_field_target()
 endif()
 
-if (BUILD_CPU_BE)
+if (CPU_BACKEND)
   add_subdirectory(backend/cpu)
 endif()
 
-if (BUILD_CUDA_BE)
-  add_subdirectory(backend/cuda)
+if (CUDA_BACKEND)
+  set(CUDA_BACKEND_URL "git@github.com:ingonyama-zk/icicle-cuda-backend.git")
+
+  include(FetchContent)
+  message("-- Fetching cuda backend")
+  FetchContent_Declare(
+    cuda_backend
+    GIT_REPOSITORY ${CUDA_BACKEND_URL}
+    GIT_TAG ${CUDA_BACKEND}
+  )
+  FetchContent_MakeAvailable(cuda_backend)
 endif()
 
 if (BUILD_TESTS)

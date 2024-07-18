@@ -18,7 +18,7 @@ if [ "$CUDA_BACKEND" != "OFF" ]; then
         echo "Directory ${BACKEND_DIR} is empty or does not exist. Cloning..."
         mkdir -p ${BACKEND_DIR}
         cd ${BACKEND_DIR}
-        git clone https://github.com/ingonyama-zk/icicle-cuda-backend.git .
+        git clone https://github.com/ingonyama-zk/icicle-cuda-backend.git ${ABS_BACKEND_DIR}
         git checkout ${CUDA_BACKEND}
     fi
 fi

@@ -26,6 +26,7 @@ fn main() {
     config
         .define("CURVE", "bn254")
         .define("CMAKE_BUILD_TYPE", "Release")
+        .define("CUDA_BACKEND", "main")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // Optional Features

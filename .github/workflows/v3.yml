@@ -14,18 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pull-cuda-backend:
-    name: Pull CUDA backend
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-      - name: Pull
-        working-directory: ./icicle_v3
-        run: ../scripts/pull_cuda_backend.sh
-
-  check-changed-files:
-    needs: pull-cuda-backend
+  check-changed-files:    
     uses: ./.github/workflows/check-changed-files.yml
 
   check-format:
@@ -65,7 +54,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -DCUDA_BACKEND=main -S . -B build
         cmake --build build -j
     - name: Run C++ curve Tests
       working-directory: ./icicle_v3/build/tests
@@ -91,7 +80,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -DCUDA_BACKEND=main -S . -B build
         cmake --build build -j
     - name: Run C++ field Tests
       working-directory: ./icicle_v3/build/tests

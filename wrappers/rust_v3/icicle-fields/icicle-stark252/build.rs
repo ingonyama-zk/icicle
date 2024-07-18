@@ -26,6 +26,7 @@ fn main() {
     config
         .define("FIELD", "stark252")
         .define("CMAKE_BUILD_TYPE", "Release")
+        .define("CUDA_BACKEND", "main")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // Build
