@@ -476,6 +476,7 @@ namespace ntt {
         primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
         ctx.stream));
 
+      fast_twiddles_mode &= domain.max_log_size >= 4; // fast twiddles cannot be built for smaller domain
       if (fast_twiddles_mode) {
         // generating fast-twiddles (note that this cost 4N additional memory)
         CHK_IF_RETURN(cudaMallocAsync(&domain.fast_external_twiddles, domain.max_size * sizeof(S) * 2, ctx.stream));
