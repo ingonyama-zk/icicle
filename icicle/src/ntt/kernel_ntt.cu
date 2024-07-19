@@ -706,7 +706,7 @@ namespace mxntt {
       // TODO: should throw exception
       // TODO: fast twiddles should be used only with mixed radix ntt
       // THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "log_size must be >= 4");
-      printf("warning: log_size must be at least 4, got %d\n", log_size); // TODO: logging
+      printf("warning: when using fast twiddles, log_size must be at least 4, got %d\n", log_size); // TODO: logging
       return cudaSuccess;
     }
 
