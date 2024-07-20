@@ -513,3 +513,91 @@ macro_rules! impl_vec_add_tests {
         }
     };
 }
+
+#[macro_export]
+macro_rules! impl_vec_ops_bench {
+    (
+      $field_prefix:literal,
+      $field:ident
+    ) => {
+        use criterion::{black_box, criterion_group, criterion_main, Criterion};
+        use icicle_core::{
+            ntt::{FieldImpl, NTTConfig, NTTDir, NttAlgorithm, Ordering},
+        };
+
+        use icicle_cuda_runtime::memory::HostSlice;
+        use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+        use icicle_core::traits::GenerateRandom;
+        use icicle_core::vec_ops::VecOps;
+
+        fn benchmark_vec_ops<T, F: FieldImpl>(c: &mut Criterion)
+        where
+        F: FieldImpl,
+        <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+        {
+            use criterion::SamplingMode;
+            use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
+            use std::env;
+
+            let group_id = format!("{} VecOps ", $field_prefix);
+            let mut group = c.benchmark_group(&group_id);
+            group.sampling_mode(SamplingMode::Flat);
+            group.sample_size(10);
+
+            const MAX_LOG2: u32 = 25; // max length = 2 ^ MAX_LOG2
+
+            let max_log2 = env::var("MAX_LOG2")
+                .unwrap_or_else(|_| MAX_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MAX_LOG2);
+
+            for test_size_log2 in (13u32..max_log2 + 1) {
+                let test_size = 1 << test_size_log2;
+
+                if test_size > 1 << max_log2 {
+                    continue;
+                }
+
+                use icicle_core::traits::GenerateRandom;
+                use icicle_core::vec_ops::{accumulate_scalars, VecOpsConfig};
+                use icicle_cuda_runtime::memory::{HostSlice, DeviceSlice, DeviceVec};
+
+                let mut a = F::Config::generate_random(test_size);
+                let b = F::Config::generate_random(test_size);
+
+                let a_host = HostSlice::from_mut_slice(&mut a);
+                let b_host = HostSlice::from_slice(&b);
+
+                let cfg = VecOpsConfig::default();
+
+                let bench_descr = format!(" accumulate - data on host {}", test_size);
+                group.bench_function(&bench_descr, |bb| {
+                    bb.iter(|| {
+                        accumulate_scalars(a_host, b_host, &cfg).unwrap();
+                    })
+                });
+
+                let cfg = VecOpsConfig::default();
+                let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
+                a_device
+                    .copy_from_host(HostSlice::from_slice(&a))
+                    .unwrap();
+                let mut b_device = DeviceVec::cuda_malloc(test_size).unwrap();
+                b_device
+                    .copy_from_host(HostSlice::from_slice(&b))
+                    .unwrap();
+
+                let bench_descr = format!(" accumulate - data on device {}", test_size);
+                group.bench_function(&bench_descr, |bb| {
+                    bb.iter(|| {
+                        accumulate_scalars(&mut a_device[..], &b_device[..], &cfg).unwrap();
+                    })
+                });
+            }
+            group.finish();
+        }
+
+        criterion_group!(benches, benchmark_vec_ops<$field, $field>);
+        criterion_main!(benches);
+    };
+}
