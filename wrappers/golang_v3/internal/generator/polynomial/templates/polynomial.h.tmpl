@@ -12,7 +12,6 @@ typedef struct scalar_t scalar_t;
 typedef struct PolynomialInst PolynomialInst;
 typedef struct IntegrityPointer IntegrityPointer;
 
-bool {{.Field}}_polynomial_init_cuda_backend();
 PolynomialInst* {{.Field}}_polynomial_create_from_coefficients(scalar_t* coeffs, size_t size);
 PolynomialInst* {{.Field}}_polynomial_create_from_rou_evaluations(scalar_t* evals, size_t size);
 PolynomialInst* {{.Field}}_polynomial_clone(const PolynomialInst* p);

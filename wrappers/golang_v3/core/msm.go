@@ -39,24 +39,24 @@ type MSMConfig struct {
 	/// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
 	/// If set to `false`, the MSM function will block the current CPU thread.
 	IsAsync bool
-	Ext     runtime.ConfigExtension
+	Ext     runtime.ConfigExtensionHandler
 }
 
 func GetDefaultMSMConfig() MSMConfig {
 	return MSMConfig{
-		unsafe.Pointer(nil),              // StreamHandle
-		0,                                // basesSize
-		1,                                // PrecomputeFactor
-		0,                                // C
-		0,                                // Bitsize
-		1,                                // 	batchSize
-		false,                            // areScalarsOnDevice
-		false,                            // AreScalarsMontgomeryForm
-		false,                            // areBasesOnDevice
-		false,                            // AreBasesMontgomeryForm
-		false,                            // areResultsOnDevice
-		false,                            // 	IsAsync
-		*runtime.CreateConfigExtension(), // Ext
+		nil,   // StreamHandle
+		0,     // basesSize
+		1,     // PrecomputeFactor
+		0,     // C
+		0,     // Bitsize
+		1,     // 	batchSize
+		false, // areScalarsOnDevice
+		false, // AreScalarsMontgomeryForm
+		false, // areBasesOnDevice
+		false, // AreBasesMontgomeryForm
+		false, // areResultsOnDevice
+		false, // 	IsAsync
+		nil,   // Ext
 	}
 }
 

@@ -7,18 +7,14 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381"
 )
 
 type PolynomialHandle = C.struct_PolynomialInst
 
 type DensePolynomial struct {
 	handle *PolynomialHandle
-}
-
-func InitPolyBackend() bool {
-	return (bool)(C.bls12_381_polynomial_init_cuda_backend())
 }
 
 func (up *DensePolynomial) Print() {

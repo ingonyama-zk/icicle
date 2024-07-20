@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/test_helpers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -100,7 +100,7 @@ func TestBls12_381GenerateScalars(t *testing.T) {
 }
 
 func TestBls12_381MongtomeryConversion(t *testing.T) {
-	size := 1 << 15
+	size := 1 << 20
 	scalars := bls12_381.GenerateScalars(size)
 
 	var deviceScalars core.DeviceSlice
@@ -108,7 +108,7 @@ func TestBls12_381MongtomeryConversion(t *testing.T) {
 
 	bls12_381.ToMontgomery(&deviceScalars)
 
-	scalarsMontHost := bls12_381.GenerateScalars(size)
+	scalarsMontHost := make(core.HostSlice[bls12_381.ScalarField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)

@@ -6,11 +6,11 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bls12_377 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377"
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377/ntt"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	bls12_377 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12377"
+	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12377/ntt"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/test_helpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,7 +65,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 
 func TestInitDomain(t *testing.T) {
 	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	cfg := ntt.GetDefaultNttConfig()
+	cfg := core.GetDefaultNTTInitDomainConfig()
 	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
 }
 
@@ -125,11 +125,11 @@ func TestNttDeviceAsync(t *testing.T) {
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[bls12_377.ScalarField](scalars[:testSize])
 
-				stream, _ := cr.CreateStream()
+				stream, _ := runtime.CreateStream()
 
 				cfg.Ordering = v
 				cfg.IsAsync = true
-				cfg.Ctx.Stream = &stream
+				cfg.StreamHandle = stream
 
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
@@ -141,7 +141,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				output := make(core.HostSlice[bls12_377.ScalarField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
-				cr.SynchronizeStream(&stream)
+				runtime.SynchronizeStream(stream)
 				// Compare with gnark-crypto
 				assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, direction))
 			}
@@ -195,9 +195,8 @@ func TestNttBatch(t *testing.T) {
 
 func TestReleaseDomain(t *testing.T) {
 	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	cfg := ntt.GetDefaultNttConfig()
-	e := ntt.ReleaseDomain(cfg.Ctx)
-	assert.Equal(t, core.IcicleErrorCode(0), e.IcicleErrorCode, "ReleasDomain failed")
+	e := ntt.ReleaseDomain()
+	assert.Equal(t, runtime.Success, e, "ReleasDomain failed")
 }
 
 // func TestNttArbitraryCoset(t *testing.T) {

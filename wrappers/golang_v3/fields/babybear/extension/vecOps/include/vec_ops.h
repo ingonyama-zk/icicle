@@ -1,8 +1,7 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
-#ifndef _babybear_extension_VEC_OPS_H
-#define _babybear_extension_VEC_OPS_H
+#ifndef _BABYBEAR_EXTENSION_VEC_OPS_H
+#define _BABYBEAR_EXTENSION_VEC_OPS_H
 
 #ifdef __cplusplus
 extern "C" {

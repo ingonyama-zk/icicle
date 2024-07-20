@@ -5,12 +5,11 @@ import (
 	"testing"
 	
 	{{if or .SupportsNTT .SupportsPoly -}}
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}"{{end}}
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/{{.BaseImportPath}}"{{end}}
 	{{if .SupportsNTT -}}
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
-	{{if .SupportsPoly -}}
-	poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/polynomial"{{end}}
+	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/{{.BaseImportPath}}/ntt"{{end}}
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 
 	{{if ne .GnarkImport "" -}}
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"
@@ -21,7 +20,7 @@ const (
 	largestTestSize = 20
 )
 {{if or .SupportsNTT .SupportsPoly -}}
-func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
+func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	{{if ne .GnarkImport "" -}}
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
@@ -33,17 +32,19 @@ func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleEr
 	rouIcicle := {{.Field}}.{{.FieldPrefix}}Field{}
 	rouIcicle.FromUint32({{.ROU}})
 	{{end -}}
-	e := ntt.InitDomain(rouIcicle, cfg.Ctx, false)
+	e := ntt.InitDomain(rouIcicle, cfg)
 	return e
 }{{end}}
 
 func TestMain(m *testing.M) {
-	{{if .SupportsPoly -}}poly.InitPolyBackend(){{end}}
+	runtime.LoadBackendFromEnv()
+	device := runtime.CreateDevice("CUDA", 0)
+	runtime.SetDevice(&device)
 
 	{{if or .SupportsNTT .SupportsPoly -}}// setup domain
-	cfg := ntt.GetDefaultNttConfig()
+	cfg := core.GetDefaultNTTInitDomainConfig()
 	e := initDomain(largestTestSize, cfg)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
+	if e != runtime.Success {
 		panic("initDomain failed")
 	}{{end}}
 
@@ -51,8 +52,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 
 	{{if or .SupportsNTT .SupportsPoly -}}// release domain
-	e = ntt.ReleaseDomain(cfg.Ctx)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
+	e = ntt.ReleaseDomain()
+	if e != runtime.Success {
 		panic("ReleaseDomain failed")
 	}{{end}}
 }

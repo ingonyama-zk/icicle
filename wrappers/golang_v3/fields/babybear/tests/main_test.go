@@ -7,8 +7,6 @@ import (
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
 	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/fields/babybear"
 	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/fields/babybear/ntt"
-
-	// poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/fields/babybear/polynomial"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 )
 

@@ -3,10 +3,9 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/vecOps"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,30 +37,27 @@ func TestBls12_381VecOps(t *testing.T) {
 func TestBls12_381Transpose(t *testing.T) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
-	onDevice := false
-	isAsync := false
 
 	matrix := bls12_381.GenerateScalars(rowSize * columnSize)
 
 	out := make(core.HostSlice[bls12_381.ScalarField], rowSize*columnSize)
 	out2 := make(core.HostSlice[bls12_381.ScalarField], rowSize*columnSize)
 
-	ctx, _ := cr.GetDefaultDeviceContext()
+	cfg := core.DefaultVecOpsConfig()
 
-	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
-	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, cfg)
+	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, cfg)
 
 	assert.Equal(t, matrix, out2)
 
 	var dMatrix, dOut, dOut2 core.DeviceSlice
-	onDevice = true
 
 	matrix.CopyToDevice(&dMatrix, true)
 	dOut.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
 	dOut2.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
 
-	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, ctx, onDevice, isAsync)
-	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, cfg)
+	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, cfg)
 	output := make(core.HostSlice[bls12_381.ScalarField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 

@@ -6,8 +6,8 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 	"unsafe"
 )
 
@@ -99,23 +99,20 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 	return scalarSlice
 }
 
-func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.scalar_t)(scalars.AsUnsafePointer())
-	cSize := (C.size_t)(scalars.Len())
-	cIsInto := (C._Bool)(isInto)
-	defaultCtx, _ := cr.GetDefaultDeviceContext()
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bn254_scalar_convert_montgomery(cValues, cSize, cIsInto, cCtx)
-	err := (cr.CudaError)(__ret)
+func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+	defaultCfg := core.DefaultVecOpsConfig()
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(*scalars, *scalars, *scalars, &defaultCfg)
+	cErr := C.bn254_scalar_convert_montgomery((*C.scalar_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.scalar_t)(cValues))
+	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func ToMontgomery(scalars *core.DeviceSlice) cr.CudaError {
+func ToMontgomery(scalars *core.DeviceSlice) runtime.EIcicleError {
 	scalars.CheckDevice()
 	return convertScalarsMontgomery(scalars, true)
 }
 
-func FromMontgomery(scalars *core.DeviceSlice) cr.CudaError {
+func FromMontgomery(scalars *core.DeviceSlice) runtime.EIcicleError {
 	scalars.CheckDevice()
 	return convertScalarsMontgomery(scalars, false)
 }

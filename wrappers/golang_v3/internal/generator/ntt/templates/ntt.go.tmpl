@@ -5,17 +5,15 @@ package {{.PackageName}}
 import "C"
 
 import (
-	{{if .WithDomain}}{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}"{{end}}
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	{{if .WithDomain}}
+	"unsafe"
+
+	{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/{{.BaseImportPath}}"{{end}}
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 )
 
-{{if .WithDomain}}
-import (
-	"unsafe"
-){{end}}
-
-func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError {
 	scalarsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](scalars, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
@@ -24,9 +22,9 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.scalar_t)(resultsPointer)
 
-	__ret := C.{{if .WithDomain}}{{.Field}}{{else}}{{.FieldNoDomain}}{{end}}_ntt_cuda(cScalars, cSize, cDir, cCfg, cResults)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+	__ret := C.{{if .WithDomain}}{{.Field}}{{else}}{{.FieldNoDomain}}{{end}}_ntt(cScalars, cSize, cDir, cCfg, cResults)
+	err := runtime.EIcicleError(__ret)
+	return err
 }
 {{if .WithDomain}}
 func GetDefaultNttConfig() core.NTTConfig[[{{.Field}}.{{toConst .FieldPrefix}}LIMBS]uint32] {
@@ -40,19 +38,24 @@ func GetDefaultNttConfig() core.NTTConfig[[{{.Field}}.{{toConst .FieldPrefix}}LI
 	return core.GetDefaultNTTConfig(cosetGen)
 }
 
-func InitDomain(primitiveRoot {{.Field}}.{{.FieldPrefix}}Field, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError {
-	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	cFastTwiddles := (C._Bool)(fastTwiddles)
-	__ret := C.{{.Field}}_initialize_domain(cPrimitiveRoot, cCtx, cFastTwiddles)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+func GetRootOfUnity(size uint64) {{.Field}}.{{.FieldPrefix}}Field {
+	cRes := C.{{.Field}}_get_root_of_unity((C.size_t)(size))
+	var res {{.Field}}.{{.FieldPrefix}}Field
+	res.FromLimbs(*(*[]uint32)(unsafe.Pointer(cRes)))
+	return res
 }
 
-func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError {
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	__ret := C.{{.Field}}_release_domain(cCtx)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+func InitDomain(primitiveRoot {{.Field}}.{{.FieldPrefix}}Field, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
+	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
+	cCfg := (*C.NTTInitDomainConfig)(unsafe.Pointer(&cfg))
+	__ret := C.{{.Field}}_ntt_init_domain(cPrimitiveRoot, cCfg)
+	err := runtime.EIcicleError(__ret)
+	return err
+}
+
+func ReleaseDomain() runtime.EIcicleError {
+	__ret := C.{{.Field}}_ntt_release_domain()
+	err := runtime.EIcicleError(__ret)
+	return err
 }
 {{end}}

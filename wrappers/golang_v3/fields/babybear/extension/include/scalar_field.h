@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _BABYBEAR_EXTENSION_FIELD_H
@@ -9,7 +8,6 @@ extern "C" {
 #endif
 
 typedef struct scalar_t scalar_t;
-typedef struct DeviceContext DeviceContext;
 typedef struct VecOpsConfig VecOpsConfig;
 
 void babybear_extension_generate_scalars(scalar_t* scalars, int size);

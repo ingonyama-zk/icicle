@@ -3,11 +3,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	// "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/ntt"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/polynomial"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/vecOps"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254"
+	// "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254/ntt"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254/polynomial"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 

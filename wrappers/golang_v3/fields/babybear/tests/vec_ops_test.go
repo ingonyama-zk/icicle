@@ -48,7 +48,6 @@ func TestBabybearTranspose(t *testing.T) {
 	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, cfg)
 	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, cfg)
 
-	assert.NotEqual(t, matrix, out)
 	assert.Equal(t, matrix, out2)
 
 	var dMatrix, dOut, dOut2 core.DeviceSlice

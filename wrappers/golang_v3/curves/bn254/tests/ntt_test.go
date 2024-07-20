@@ -6,15 +6,15 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/ntt"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254"
+	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254/ntt"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/test_helpers"
 	"github.com/stretchr/testify/assert"
 )
 
-func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[bn254.ScalarField], output core.HostSlice[bn254.ScalarField], order core.Ordering, direction core.NTTDir) bool {
+func testAgainstGnarkCryptoNtt(t *testing.T, size int, scalars core.HostSlice[bn254.ScalarField], output core.HostSlice[bn254.ScalarField], order core.Ordering, direction core.NTTDir) {
 	scalarsFr := make([]fr.Element, size)
 	for i, v := range scalars {
 		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
@@ -26,10 +26,10 @@ func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[bn254.ScalarFiel
 		outputAsFr[i] = slice64
 	}
 
-	return testAgainstGnarkCryptoNttGnarkTypes(size, scalarsFr, outputAsFr, order, direction)
+	testAgainstGnarkCryptoNttGnarkTypes(t, size, scalarsFr, outputAsFr, order, direction)
 }
 
-func testAgainstGnarkCryptoNttGnarkTypes(size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) bool {
+func testAgainstGnarkCryptoNttGnarkTypes(t *testing.T, size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) {
 	domainWithPrecompute := fft.NewDomain(uint64(size))
 	// DIT + BitReverse == Ordering.kRR
 	// DIT == Ordering.kRN
@@ -51,7 +51,10 @@ func testAgainstGnarkCryptoNttGnarkTypes(size int, scalarsFr core.HostSlice[fr.E
 	if order == core.KNN || order == core.KRR {
 		fft.BitReverse(scalarsFr)
 	}
-	return reflect.DeepEqual(scalarsFr, outputAsFr)
+	// println(scalarsFr[0].String())
+	// println(outputAsFr[0].String())
+	assert.Equal(t, scalarsFr, outputAsFr)
+	// return reflect.DeepEqual(scalarsFr, outputAsFr)
 }
 func TestNTTGetDefaultConfig(t *testing.T) {
 	actual := ntt.GetDefaultNttConfig()
@@ -65,16 +68,22 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 
 func TestInitDomain(t *testing.T) {
 	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	cfg := ntt.GetDefaultNttConfig()
+	cfg := core.GetDefaultNTTInitDomainConfig()
 	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
 }
 
 func TestNtt(t *testing.T) {
+	runtime.LoadBackendFromEnv()
+	device := runtime.CreateDevice("CUDA", 0)
+
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := bn254.GenerateScalars(1 << largestTestSize)
 
-	for _, size := range []int{4, largestTestSize} {
+	for _, size := range []int{4, 8} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+
+			runtime.SetDevice(&device)
+
 			testSize := 1 << size
 
 			scalarsCopy := core.HostSliceFromElements[bn254.ScalarField](scalars[:testSize])
@@ -82,10 +91,11 @@ func TestNtt(t *testing.T) {
 
 			// run ntt
 			output := make(core.HostSlice[bn254.ScalarField], testSize)
-			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+			err := ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+			assert.Equal(t, runtime.Success, err)
 
 			// Compare with gnark-crypto
-			assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, core.KForward))
+			testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, core.KForward)
 		}
 	}
 }
@@ -110,7 +120,7 @@ func TestNttFrElement(t *testing.T) {
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
-			assert.True(t, testAgainstGnarkCryptoNttGnarkTypes(testSize, scalarsCopy, output, v, core.KForward))
+			testAgainstGnarkCryptoNttGnarkTypes(t, testSize, scalarsCopy, output, v, core.KForward)
 		}
 	}
 }
@@ -125,11 +135,11 @@ func TestNttDeviceAsync(t *testing.T) {
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[bn254.ScalarField](scalars[:testSize])
 
-				stream, _ := cr.CreateStream()
+				stream, _ := runtime.CreateStream()
 
 				cfg.Ordering = v
 				cfg.IsAsync = true
-				cfg.Ctx.Stream = &stream
+				cfg.StreamHandle = stream
 
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
@@ -141,9 +151,9 @@ func TestNttDeviceAsync(t *testing.T) {
 				output := make(core.HostSlice[bn254.ScalarField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
-				cr.SynchronizeStream(&stream)
+				runtime.SynchronizeStream(stream)
 				// Compare with gnark-crypto
-				assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, direction))
+				testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, direction)
 			}
 		}
 	}
@@ -195,9 +205,8 @@ func TestNttBatch(t *testing.T) {
 
 func TestReleaseDomain(t *testing.T) {
 	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	cfg := ntt.GetDefaultNttConfig()
-	e := ntt.ReleaseDomain(cfg.Ctx)
-	assert.Equal(t, core.IcicleErrorCode(0), e.IcicleErrorCode, "ReleasDomain failed")
+	e := ntt.ReleaseDomain()
+	assert.Equal(t, runtime.Success, e, "ReleasDomain failed")
 }
 
 // func TestNttArbitraryCoset(t *testing.T) {

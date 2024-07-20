@@ -5,13 +5,11 @@ package vecOps
 import "C"
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-
-	"unsafe"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 )
 
-func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret cr.CudaError) {
+func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret runtime.EIcicleError) {
 	aPointer, bPointer, outPointer, cfgPointer, size := core.VecOpCheck(a, b, out, &config)
 
 	cA := (*C.scalar_t)(aPointer)
@@ -22,27 +20,25 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 
 	switch op {
 	case core.Sub:
-		ret = (cr.CudaError)(C.bw6_761_sub_cuda(cA, cB, cSize, cConfig, cOut))
+		ret = (runtime.EIcicleError)(C.bw6_761_vector_sub(cA, cB, cSize, cConfig, cOut))
 	case core.Add:
-		ret = (cr.CudaError)(C.bw6_761_add_cuda(cA, cB, cSize, cConfig, cOut))
+		ret = (runtime.EIcicleError)(C.bw6_761_vector_add(cA, cB, cSize, cConfig, cOut))
 	case core.Mul:
-		ret = (cr.CudaError)(C.bw6_761_mul_cuda(cA, cB, cSize, cConfig, cOut))
+		ret = (runtime.EIcicleError)(C.bw6_761_vector_mul(cA, cB, cSize, cConfig, cOut))
 	}
 
 	return ret
 }
 
-func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError) {
-	core.TransposeCheck(in, out, onDevice)
+func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, config core.VecOpsConfig) runtime.EIcicleError {
+	inPointer, _, outPointer, cfgPointer, _ := core.VecOpCheck(in, in, out, &config)
 
-	cIn := (*C.scalar_t)(in.AsUnsafePointer())
-	cOut := (*C.scalar_t)(out.AsUnsafePointer())
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
+	cIn := (*C.scalar_t)(inPointer)
 	cRowSize := (C.int)(rowSize)
 	cColumnSize := (C.int)(columnSize)
-	cOnDevice := (C._Bool)(onDevice)
-	cIsAsync := (C._Bool)(isAsync)
+	cConfig := (*C.VecOpsConfig)(cfgPointer)
+	cOut := (*C.scalar_t)(outPointer)
 
-	err := (cr.CudaError)(C.bw6_761_transpose_matrix_cuda(cIn, cRowSize, cColumnSize, cOut, cCtx, cOnDevice, cIsAsync))
-	return core.FromCudaError(err)
+	err := (C.bw6_761_matrix_transpose(cIn, cRowSize, cColumnSize, cConfig, cOut))
+	return runtime.EIcicleError(err)
 }

@@ -4,23 +4,23 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
-	grumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/grumpkin"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/grumpkin/vecOps"
+	babybear_extension "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/fields/babybear/extension"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/fields/babybear/extension/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGrumpkinVecOps(t *testing.T) {
+func TestBabybear_extensionVecOps(t *testing.T) {
 	testSize := 1 << 14
 
-	a := grumpkin.GenerateScalars(testSize)
-	b := grumpkin.GenerateScalars(testSize)
-	var scalar grumpkin.ScalarField
+	a := babybear_extension.GenerateScalars(testSize)
+	b := babybear_extension.GenerateScalars(testSize)
+	var scalar babybear_extension.ExtensionField
 	scalar.One()
 	ones := core.HostSliceWithValue(scalar, testSize)
 
-	out := make(core.HostSlice[grumpkin.ScalarField], testSize)
-	out2 := make(core.HostSlice[grumpkin.ScalarField], testSize)
-	out3 := make(core.HostSlice[grumpkin.ScalarField], testSize)
+	out := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
+	out2 := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
+	out3 := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 
 	cfg := core.DefaultVecOpsConfig()
 
@@ -34,14 +34,14 @@ func TestGrumpkinVecOps(t *testing.T) {
 	assert.Equal(t, a, out3)
 }
 
-func TestGrumpkinTranspose(t *testing.T) {
+func TestBabybear_extensionTranspose(t *testing.T) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 
-	matrix := grumpkin.GenerateScalars(rowSize * columnSize)
+	matrix := babybear_extension.GenerateScalars(rowSize * columnSize)
 
-	out := make(core.HostSlice[grumpkin.ScalarField], rowSize*columnSize)
-	out2 := make(core.HostSlice[grumpkin.ScalarField], rowSize*columnSize)
+	out := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
+	out2 := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 
 	cfg := core.DefaultVecOpsConfig()
 
@@ -58,7 +58,7 @@ func TestGrumpkinTranspose(t *testing.T) {
 
 	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, cfg)
 	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, cfg)
-	output := make(core.HostSlice[grumpkin.ScalarField], rowSize*columnSize)
+	output := make(core.HostSlice[babybear_extension.ExtensionField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 
 	assert.Equal(t, matrix, output)

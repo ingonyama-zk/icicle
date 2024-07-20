@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	grumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/grumpkin"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	grumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/grumpkin"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/test_helpers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -100,7 +100,7 @@ func TestGrumpkinGenerateScalars(t *testing.T) {
 }
 
 func TestGrumpkinMongtomeryConversion(t *testing.T) {
-	size := 1 << 15
+	size := 1 << 20
 	scalars := grumpkin.GenerateScalars(size)
 
 	var deviceScalars core.DeviceSlice
@@ -108,7 +108,7 @@ func TestGrumpkinMongtomeryConversion(t *testing.T) {
 
 	grumpkin.ToMontgomery(&deviceScalars)
 
-	scalarsMontHost := grumpkin.GenerateScalars(size)
+	scalarsMontHost := make(core.HostSlice[grumpkin.ScalarField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)

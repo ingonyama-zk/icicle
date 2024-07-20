@@ -6,10 +6,9 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	"unsafe"
-
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
+	"unsafe"
 )
 
 const (
