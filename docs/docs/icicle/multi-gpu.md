@@ -42,7 +42,7 @@ To dive deeper and learn about the API check out the docs for our different ICIC
 
 ## Best practices
 
-- Never hardcode device IDs, if you want your software to take advantage of all GPUs on a machine use methods such as `get_device_count` to support arbitrary number of GPUs.
+- Never hardcode device IDs, if you want your software to take advantage of all GPUs on a machine use methods such as `get_device_count` to support an arbitrary number of GPUs.
 
 - Launch one CPU thread per GPU. To avoid [nasty errors](https://developer.nvidia.com/blog/cuda-pro-tip-always-set-current-device-avoid-multithreading-bugs/) and hard to read code we suggest that for every GPU you create a dedicated thread. Within a CPU thread you should be able to launch as many tasks as you wish for a GPU as long as they all run on the same GPU id. This will make your code way more manageable, easy to read and performant.
 
