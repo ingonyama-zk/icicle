@@ -251,10 +251,9 @@ int main(int argc, char** argv)
     msm::precompute_msm_points<test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h);
   }
   // warm up
-  // config.points_size = chunk_size;
-  // msm::msm<test_scalar, test_affine, test_projective>(
-  //   scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d);
-  // cudaDeviceSynchronize();
+  msm::msm<test_scalar, test_affine, test_projective>(
+    scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d);
+  cudaDeviceSynchronize();
 
   // cudaStream_t transfer_stream;
   // cudaStreamCreate(&transfer_stream);
@@ -320,10 +319,12 @@ int main(int argc, char** argv)
   config.init_buckets = true;
   config.return_buckets = false;
   config.nof_chunks = 1;
+  config.are_points_on_device = true;
+  config.are_scalars_on_device = true;
   // config.segments_reduction = false;
   for (int i = 0; i < batch_size; i++) {
     msm::msm<test_scalar, test_affine, test_projective>(
-      scalars_d + i * msm_size, points_d + i * msm_size, msm_size, config, ref_d + i);
+      scalars_d + i * msm_size, points_d + (same_points? 0 : i * msm_size), msm_size, config, ref_d + i);
   }
 
   // config.are_results_on_device = false;

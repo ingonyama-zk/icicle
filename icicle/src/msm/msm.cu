@@ -383,6 +383,9 @@ namespace msm {
       unsigned c,
       const S* scalars,
       const A* points,
+      A** points_processed,
+      bool return_processed_points,
+      bool init_points,
       unsigned batch_size,      // number of MSMs to compute
       unsigned single_msm_size, // number of elements per MSM (a.k.a N)
       unsigned nof_points,      // number of EC points in 'points' array. Must be either (1) single_msm_size if MSMs are
@@ -522,26 +525,32 @@ namespace msm {
       const A* d_points;
       A* d_allocated_points = nullptr;
       cudaStream_t stream_points = nullptr;
-      if (!are_points_on_device || are_points_montgomery_form) CHK_IF_RETURN(cudaStreamCreate(&stream_points));
-      if (!are_points_on_device) {
-        // copy points to gpu
-        CHK_IF_RETURN(cudaMallocAsync(&d_allocated_points, sizeof(A) * nof_points, stream_points));
-        CHK_IF_RETURN(
-          cudaMemcpyAsync(d_allocated_points, points, sizeof(A) * nof_points, cudaMemcpyHostToDevice, stream_points));
-
-        if (are_points_montgomery_form) {
-          CHK_IF_RETURN(mont::from_montgomery(d_allocated_points, nof_points, stream_points, d_allocated_points));
-        }
-        d_points = d_allocated_points;
-      } else { // already on device
-        if (are_points_montgomery_form) {
+      if (init_points){
+        if (!are_points_on_device || are_points_montgomery_form) CHK_IF_RETURN(cudaStreamCreate(&stream_points));
+        if (!are_points_on_device) {
+          // copy points to gpu
           CHK_IF_RETURN(cudaMallocAsync(&d_allocated_points, sizeof(A) * nof_points, stream_points));
-          CHK_IF_RETURN(mont::from_montgomery(points, nof_points, stream_points, d_allocated_points));
+          CHK_IF_RETURN(
+            cudaMemcpyAsync(d_allocated_points, points, sizeof(A) * nof_points, cudaMemcpyHostToDevice, stream_points));
+
+          if (are_points_montgomery_form) {
+            CHK_IF_RETURN(mont::from_montgomery(d_allocated_points, nof_points, stream_points, d_allocated_points));
+          }
           d_points = d_allocated_points;
-        } else {
-          d_points = points;
+        } else { // already on device
+          if (are_points_montgomery_form) {
+            CHK_IF_RETURN(cudaMallocAsync(&d_allocated_points, sizeof(A) * nof_points, stream_points));
+            CHK_IF_RETURN(mont::from_montgomery(points, nof_points, stream_points, d_allocated_points));
+            d_points = d_allocated_points;
+          } else {
+            d_points = points;
+          }
         }
       }
+      else{
+        d_points = *points_processed;
+      }
+      if (return_processed_points) *points_processed = d_allocated_points; //return pointer to processed points for the next msm in batch
 
       cudaEvent_t event_points_uploaded;
       if (stream_points) {
@@ -907,7 +916,7 @@ namespace msm {
 
       // free memory
       if (d_allocated_scalars) CHK_IF_RETURN(cudaFreeAsync(d_allocated_scalars, stream));
-      if (d_allocated_points) CHK_IF_RETURN(cudaFreeAsync(d_allocated_points, stream));
+      if (d_allocated_points && !return_processed_points) CHK_IF_RETURN(cudaFreeAsync(d_allocated_points, stream));
       if (d_allocated_final_result) CHK_IF_RETURN(cudaFreeAsync(d_allocated_final_result, stream));
       CHK_IF_RETURN(cudaFreeAsync(buckets, stream));
 
@@ -937,9 +946,10 @@ namespace msm {
     bool internal_are_points_on_device = config.are_points_on_device;
     cudaStream_t transfer_stream;
     cudaStreamCreate(&transfer_stream);
-    int total_size = config.points_size? config.points_size : msm_size;
+    int total_size = config.batch_size * msm_size;
     bool multi_batch_mode = config.batch_size > 1;
     bool multi_points = config.points_size > msm_size;
+    bool batch_same_points = multi_batch_mode && !multi_points;
     int scalars_chunk_size = (total_size + nof_chunks - 1) / nof_chunks;
     if (multi_batch_mode) scalars_chunk_size = ((config.batch_size + nof_chunks - 1) / nof_chunks) * msm_size;
     int points_chunk_size = scalars_chunk_size * config.precompute_factor;
@@ -969,7 +979,7 @@ namespace msm {
       bool is_last_iter = i == nof_chunks - 1; 
       int sub_batch_size = multi_batch_mode? sub_scalars_size / msm_size : config.batch_size;
       int sub_msm_size = multi_batch_mode? msm_size : sub_scalars_size;
-      int sub_stupid_parameter_points_size = sub_scalars_size;
+      int sub_stupid_parameter_points_size = batch_same_points? sub_msm_size : sub_scalars_size;
       bool init_buckets = (i == 0) || multi_batch_mode;
       bool return_buckets = (!is_last_iter) && (!multi_batch_mode);
       if (i){
@@ -977,20 +987,22 @@ namespace msm {
         internal_are_points_on_device = true;
       }
       printf("sub_batch_size %d sub_scalars_size %d\n", sub_batch_size, sub_scalars_size);
+      bool internal_are_points_montgomery_form = (batch_same_points && i)? false : config.are_points_montgomery_form;
+      bool return_points_poiter = (i == 0) && batch_same_points && (config.are_points_montgomery_form || !config.are_points_on_device);
+      bool init_points = (i == 0) || !batch_same_points;
       bucket_method_msm(
-      bitsize, c, (internal_are_scalars_on_device? scalars_d : scalars_h) + (config.are_scalars_on_device? i : i%2)*scalars_chunk_size, (internal_are_points_on_device? points_d : points_h) + (config.are_points_on_device? i : i%2)*points_chunk_size, sub_batch_size, sub_msm_size,
-      sub_stupid_parameter_points_size, &buckets_d, init_buckets, return_buckets ,results + (multi_batch_mode? i * batch_chunk_size : 0), config.are_scalars_on_device,
-      config.are_scalars_montgomery_form, config.are_points_on_device, config.are_points_montgomery_form,
+      bitsize, c, (internal_are_scalars_on_device? scalars_d : scalars_h) + (config.are_scalars_on_device? i : i%2)*scalars_chunk_size, (internal_are_points_on_device? points_d : points_h) + (batch_same_points? 0 : (config.are_points_on_device? i : i%2)*points_chunk_size), &points_d, return_points_poiter, init_points, sub_batch_size, sub_msm_size,
+      sub_stupid_parameter_points_size, &buckets_d, init_buckets, return_buckets ,results + (multi_batch_mode? i * batch_chunk_size : 0), internal_are_scalars_on_device,
+      config.are_scalars_montgomery_form, internal_are_points_on_device, internal_are_points_montgomery_form,
       config.are_results_on_device, config.is_big_triangle, config.large_bucket_factor, config.precompute_factor,
       config.is_async, stream);
       if (is_last_iter) break;
       // copy for next iteration
-      // is_last_iter = i == nof_chunks - 2; 
       sub_scalars_size = min(total_size - scalars_chunk_size * (i + 1), scalars_chunk_size);
       if (sub_scalars_size <= 0) break; //if last chunk size is 0 - break;
       sub_points_size = sub_scalars_size * config.precompute_factor;
       if (!config.are_scalars_on_device) cudaMemcpyAsync(scalars_d + ((i+1)%2)*scalars_chunk_size, scalars_h + (i+1)*scalars_chunk_size, sizeof(S) * sub_scalars_size, cudaMemcpyHostToDevice, transfer_stream);
-      if (!config.are_points_on_device) cudaMemcpyAsync(points_d + ((i+1)%2)*points_chunk_size, points_h + (i+1)*points_chunk_size, sizeof(A) * sub_points_size, cudaMemcpyHostToDevice, transfer_stream);
+      if (!config.are_points_on_device && !batch_same_points) cudaMemcpyAsync(points_d + ((i+1)%2)*points_chunk_size, points_h + (i+1)*points_chunk_size, sizeof(A) * sub_points_size, cudaMemcpyHostToDevice, transfer_stream);
       cudaEvent_t finish_transfer;
       cudaEventCreateWithFlags(&finish_transfer, cudaEventDisableTiming);
       cudaEventRecord(finish_transfer, transfer_stream);
