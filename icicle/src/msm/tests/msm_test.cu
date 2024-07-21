@@ -228,9 +228,7 @@ int main(int argc, char** argv)
     true,           // are_results_on_device
     false,          // is_big_triangle
     true,           // is_async
-    true,           // init_buckets
-    false,          // return_buckets
-    // false,  // segments_reduction
+    same_points,           // are_points_shared_in_batch
   };
 
   cudaEventCreate(&start);
@@ -316,8 +314,6 @@ int main(int argc, char** argv)
   config.is_big_triangle = true;
   config.batch_size = 1;
   config.points_size = msm_size;
-  config.init_buckets = true;
-  config.return_buckets = false;
   config.nof_chunks = 1;
   config.are_points_on_device = true;
   config.are_scalars_on_device = true;

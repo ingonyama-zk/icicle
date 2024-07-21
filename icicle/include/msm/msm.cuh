@@ -80,8 +80,7 @@ namespace msm {
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */
-    bool init_buckets;
-    bool return_buckets;
+    bool are_points_shared_in_batch;
   };
 
   /**
@@ -93,13 +92,12 @@ namespace msm {
   {
     MSMConfig config = {
       ctx,   // ctx
-      0,     // points_size
       1,     // precompute_factor
       0,     // c
       0,     // bitsize
       10,    // large_bucket_factor
       1,     // batch_size
-      1,     // nof_chunks
+      0,     // nof_chunks
       false, // are_scalars_on_device
       false, // are_scalars_montgomery_form
       false, // are_points_on_device
@@ -107,8 +105,7 @@ namespace msm {
       false, // are_results_on_device
       false, // is_big_triangle
       false, // is_async
-      true,  // init_buckets  //TODO - remove
-      false, // return_buckets //TODO - remove
+      true,  // are_points_shared_in_batch
     };
     return config;
   }
@@ -131,7 +128,7 @@ namespace msm {
    *
    */
   template <typename S, typename A, typename P>
-  cudaError_t msm(const S* scalars, const A* points, int msm_size, MSMConfig& config, P* results, P* buckets);
+  cudaError_t msm(const S* scalars, const A* points, int msm_size, const MSMConfig& config, P* results);
 
   /**
    * A function that precomputes MSM bases by extending them with their shifted copies.
