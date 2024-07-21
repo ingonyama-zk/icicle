@@ -310,6 +310,14 @@ TYPED_TEST(FieldApiTest, ntt)
     coset_gen = scalar_t::one();
   }
 
+  // TODO Yuval : remove those once the bug is fixed
+  ICICLE_LOG_INFO << "NTT test: logn=" << logn;
+  ICICLE_LOG_INFO << "NTT test: batch=" << log_batch_size;
+  ICICLE_LOG_INFO << "NTT test: columns_batch=" << columns_batch;
+  ICICLE_LOG_INFO << "NTT test: ordering=" << int(ordering);
+  ICICLE_LOG_INFO << "NTT test: dir=" << (dir == NTTDir::kForward ? "forward" : "inverse");
+  ICICLE_LOG_INFO << "NTT test: coset_gen=" << coset_gen;
+
   const int total_size = N * batch_size;
   auto scalars = std::make_unique<TypeParam[]>(total_size);
   FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);

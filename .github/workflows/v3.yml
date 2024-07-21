@@ -67,7 +67,7 @@ jobs:
     - name: Run C++ curve Tests
       working-directory: ./icicle_v3/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ctest
+      run: ctest --verbose
 
   test-linux-field:
     name: Test on Linux
@@ -101,4 +101,4 @@ jobs:
     - name: Run C++ field Tests
       working-directory: ./icicle_v3/build/tests
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: ctest
+      run: ctest --verbose
