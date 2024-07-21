@@ -421,12 +421,7 @@ namespace msm {
 
       const unsigned nof_scalars = batch_size * single_msm_size; // assuming scalars not shared between batch elements
       unsigned nof_points = are_points_shared_in_batch? single_msm_size : nof_scalars;
-      // const bool is_nof_points_valid = ((single_msm_size * batch_size) % nof_points == 0);
-        printf("single_msm_size %d nof_points %d\n", single_msm_size, nof_points);
-      // if (!is_nof_points_valid) {
-      //   THROW_ICICLE_ERR(
-      //     IcicleError_t::InvalidArgument, "bucket_method_msm: #points must be divisible by single_msm_size*batch_size");
-      // }
+        // printf("single_msm_size %d nof_points %d\n", single_msm_size, nof_points);
 
       const S* d_scalars;
       S* d_allocated_scalars = nullptr;
@@ -941,7 +936,7 @@ namespace msm {
 
 
   template <typename S, typename A, typename P>
-  cudaError_t msm(const S* scalars, const A* points, int msm_size, const MSMConfig& config, P* results) //todo-fix consts
+  cudaError_t msm(const S* scalars, const A* points, int msm_size, const MSMConfig& config, P* results)
   {
     const int bitsize = (config.bitsize == 0) ? S::NBITS : config.bitsize;
     cudaStream_t& stream = config.ctx.stream;
@@ -953,7 +948,7 @@ namespace msm {
   }
 
   template <typename S, typename A, typename P>
-  cudaError_t multi_chunked_msm(const S* scalars, const A* points, int msm_size, int nof_chunks, const MSMConfig& config, P* results, int bitsize, int c, cudaStream_t stream){ //TODO: solve const problems
+  cudaError_t multi_chunked_msm(const S* scalars, const A* points, int msm_size, int nof_chunks, const MSMConfig& config, P* results, int bitsize, int c, cudaStream_t stream){
     printf("multi chunked\n");
     bool internal_are_scalars_on_device = config.are_scalars_on_device;
     bool internal_are_points_on_device = config.are_points_on_device;
@@ -985,7 +980,6 @@ namespace msm {
       bool is_last_iter = i == nof_chunks - 1; 
       int sub_batch_size = multi_batch_mode? sub_scalars_size / msm_size : config.batch_size;
       int sub_msm_size = multi_batch_mode? msm_size : sub_scalars_size;
-      // int sub_stupid_parameter_points_size = batch_same_points? sub_msm_size : sub_scalars_size;
       bool init_buckets = (i == 0) || multi_batch_mode;
       bool return_buckets = (!is_last_iter) && (!multi_batch_mode);
       if (i){
@@ -996,7 +990,6 @@ namespace msm {
       bool internal_are_points_montgomery_form = (batch_same_points && i)? false : config.are_points_montgomery_form;
       bool return_points_poiter = (i == 0) && batch_same_points && (config.are_points_montgomery_form || !config.are_points_on_device);
       bool init_points = (i == 0) || !process_batch_same_points;
-      // printf("init_points %d return_points_poiter %d\n",init_points, return_points_poiter);
       CHK_IF_RETURN(bucket_method_msm(
       bitsize, c, (internal_are_scalars_on_device && !config.are_scalars_on_device? scalars_d : scalars) + (config.are_scalars_on_device? i : i%2)*scalars_chunk_size, //use scalars_d from second round if scalars are on host, o.w. use scalars, which are on device
       (internal_are_points_on_device && ((!config.are_points_on_device) || process_batch_same_points)? points_d : points) + (batch_same_points? 0 : (config.are_points_on_device? i : i%2)*points_chunk_size), //use points_d from second round if points are on host or in same points if the points were processed, o.w. use points, which are on device
@@ -1087,11 +1080,9 @@ namespace msm {
   cudaError_t chunked_precompute(const A* points, int msm_size, const MSMConfig& config, A* points_precomputed, int nof_chunks){
     A *points_d;
     A *points_precomputed_d, *points_precomputed_h;
-    int points_size = config.points_size? config.points_size : msm_size;
-    // int points_size = config.are_points_shared_in_batch? config.batch_size * msm_size : msm_size;
+    int points_size = config.are_points_shared_in_batch? msm_size : config.batch_size * msm_size;
     bool multi_batch_mode = config.batch_size > 1;
-    bool multi_points = config.points_size > msm_size;
-    // bool multi_points = !config.are_points_shared_in_batch;
+    bool multi_points = !config.are_points_shared_in_batch;
     if (multi_batch_mode && !multi_points) nof_chunks = 1;
     if (config.are_points_on_device){
       points_precomputed_d = points_precomputed;
@@ -1116,7 +1107,7 @@ namespace msm {
         CHK_IF_RETURN((precompute_msm_points_chunk<A, P>(points + i*chunk_size, sub_msm_size, config.precompute_factor, config.c, true, config.ctx.stream, points_precomputed_d + i*chunk_size*config.precompute_factor))); //poinst are on device
       }
     }
-    return CHK_LAST(); //TODO: forward precompute function return
+    return CHK_LAST();
   }
 
   template <typename A, typename P>

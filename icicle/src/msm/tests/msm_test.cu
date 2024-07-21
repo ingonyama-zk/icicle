@@ -214,7 +214,6 @@ int main(int argc, char** argv)
   };
   msm::MSMConfig config = {
     ctx,            // DeviceContext
-    batch_size>1? points_size : 0,              // points_size
     precomp_factor, // precompute_factor
     user_c,         // c
     0,              // bitsize
@@ -313,7 +312,6 @@ int main(int argc, char** argv)
   config.precompute_factor = 1;
   config.is_big_triangle = true;
   config.batch_size = 1;
-  config.points_size = msm_size;
   config.nof_chunks = 1;
   config.are_points_on_device = true;
   config.are_scalars_on_device = true;

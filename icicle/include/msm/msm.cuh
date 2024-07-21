@@ -37,11 +37,6 @@ namespace msm {
    */
   struct MSMConfig {
     device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    int points_size;         /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be
-                              *   a number of different points. So, if each MSM re-uses the same set of points, this
-                              *   variable is set equal to the MSM size. And if every MSM uses a distinct set of
-                              *   points, it should be set to the product of MSM size and [batch_size](@ref
-                              *   batch_size). Default value: 0 (meaning it's equal to the MSM size). */
     int precompute_factor;   /**< The number of extra points to pre-compute for each point. See the
                               *   [precompute_msm_points](@ref precompute_msm_points) function, `precompute_factor` passed
                               *   there needs to be equal to the one used here. Larger values decrease the
