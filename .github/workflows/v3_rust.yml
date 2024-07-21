@@ -34,10 +34,32 @@ jobs:
       # causing rustfmt to fail.
       run: if [[ $(find . -path ./icicle-curves/icicle-curve-template -prune -o -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
 
+  extract-cuda-backend-branch:
+    name: Extract cuda branch name
+    runs-on: ubuntu-22.04
+    outputs:
+      cuda-backend-branch: ${{ steps.extract.outputs.cuda-backend-branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Extract Private Branch from PR Description
+        id: extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DESCRIPTION=$(gh pr view ${{ github.event.pull_request.number }} --json body -q '.body')
+          echo "PR Description: $DESCRIPTION"
+          CUDA_BE_BRANCH=$(echo "$DESCRIPTION" | grep -oP 'cuda-backend-branch:\s*\K[^\s]+')
+          if [ -z "$CUDA_BE_BRANCH" ]; then
+            CUDA_BE_BRANCH="main" # Default branch if not specified
+          fi
+          echo "Extracted CUDA Backend Branch: $CUDA_BE_BRANCH"
+          echo "::set-output name=cuda-backend-branch::$CUDA_BE_BRANCH"
+
   test-linux:
     name: Test on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -48,7 +70,7 @@ jobs:
         path: ./icicle_v3/backend/cuda
         token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: main
+        ref: ${{ needs.extract-branch.outputs.cuda-backend-branch }}
     - name: Run tests
       working-directory: ./wrappers/rust_v3
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
