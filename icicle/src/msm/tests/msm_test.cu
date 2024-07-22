@@ -197,8 +197,8 @@ int main(int argc, char** argv)
   cudaMalloc(&precomp_points_d, sizeof(test_affine) * points_size * precomp_factor);
   cudaMalloc(&res_d, sizeof(test_projective) * batch_size);
   cudaMalloc(&ref_d, sizeof(test_projective) * batch_size);
-  cudaMemcpy(scalars_d, scalars_h, sizeof(test_scalar) * scalars_size, cudaMemcpyHostToDevice);
-  cudaMemcpy(points_d, points_h, sizeof(test_affine) * points_size, cudaMemcpyHostToDevice);
+  if (scalars_on_device) cudaMemcpy(scalars_d, scalars_h, sizeof(test_scalar) * scalars_size, cudaMemcpyHostToDevice);
+  if (points_on_device) cudaMemcpy(points_d, points_h, sizeof(test_affine) * points_size, cudaMemcpyHostToDevice);
 
   std::cout << "finished copying" << std::endl;
 
@@ -313,12 +313,12 @@ int main(int argc, char** argv)
   config.is_big_triangle = true;
   config.batch_size = 1;
   config.nof_chunks = 1;
-  config.are_points_on_device = true;
-  config.are_scalars_on_device = true;
+  config.are_points_on_device = false;
+  config.are_scalars_on_device = false;
   // config.segments_reduction = false;
   for (int i = 0; i < batch_size; i++) {
     msm::msm<test_scalar, test_affine, test_projective>(
-      scalars_d + i * msm_size, points_d + (same_points? 0 : i * msm_size), msm_size, config, ref_d + i);
+      scalars_h + i * msm_size, points_h + (same_points? 0 : i * msm_size), msm_size, config, ref_d + i);
   }
 
   // config.are_results_on_device = false;
