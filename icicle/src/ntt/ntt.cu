@@ -408,8 +408,9 @@ namespace ntt {
     S* fast_basic_twiddles_inv = nullptr;    // required by mixed-radix NTT (fast-twiddles mode)
 
   public:
-    template <typename U>
-    friend cudaError_t init_domain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+    template <typename U, typename R>
+    friend cudaError_t
+    init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw, bool dcct_mode);
 
     template <typename U>
     friend cudaError_t release_domain(device_context::DeviceContext& ctx);
@@ -427,8 +428,8 @@ namespace ntt {
   template <typename S>
   static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
 
-  template <typename S>
-  cudaError_t init_domain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+  template <typename S, typename R>
+  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode, bool dcct_mode)
   {
     CHK_INIT_IF_RETURN();
 
@@ -445,27 +446,48 @@ namespace ntt {
       if (domain.initialized) return CHK_LAST(); // another thread is already initializing the domain
 
       bool found_logn = false;
-      S omega = primitive_root;
-      unsigned omegas_count = S::get_omegas_count();
+      R omega = primitive_root;
+      unsigned omegas_count = R::get_omegas_count();
       for (int i = 0; i < omegas_count; i++) {
-        omega = S::sqr(omega);
+        omega = R::sqr(omega);
         if (!found_logn) {
           ++domain.max_log_size;
-          found_logn = omega == S::one();
+          found_logn = omega == R::one();
           if (found_logn) break;
         }
       }
+      domain.max_log_size--;
+      std::cout << "max log: " << domain.max_log_size << std::endl;
 
       domain.max_size = (int)pow(2, domain.max_log_size);
-      if (omega != S::one()) {
+      if (omega != R::one()) {
         THROW_ICICLE_ERR(
           IcicleError_t::InvalidArgument, "Primitive root provided to the InitDomain function is not in the subgroup");
       }
 
+#define DCCT
+#ifdef DCCT
+      // allocate and calculate twiddles on GPU
+      // N * (2 ** (N - 1))
+      size_t number_of_twiddles = domain.max_log_size * (int)pow(2, domain.max_log_size - 1);
+      CHK_IF_RETURN(cudaMallocManaged(&domain.twiddles, number_of_twiddles * sizeof(S)));
+      CHK_IF_RETURN(cudaMemset(domain.twiddles, 0, number_of_twiddles * sizeof(S)));
+
+      CHK_IF_RETURN(mxntt::generate_twiddles_dcct(
+        primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
+        ctx.stream));
+
+      S* tmp = static_cast<S*>(malloc(number_of_twiddles * sizeof(S)));
+      cudaMemcpy(tmp, domain.twiddles, number_of_twiddles * sizeof(S), cudaMemcpyDeviceToHost);
+      for (size_t i = 0; i < number_of_twiddles; i++) {
+        std::cout << tmp[i] << std::endl;
+      }
+#else
       // allocate and calculate twiddles on GPU
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
       // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
       CHK_IF_RETURN(cudaMallocManaged(&domain.twiddles, (domain.max_size + 1) * sizeof(S)));
+
       CHK_IF_RETURN(mxntt::generate_external_twiddles_generic(
         primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
         ctx.stream));
@@ -505,6 +527,7 @@ namespace ntt {
           domain.coset_index[domain.twiddles[i]] = i;
         }
       }
+#endif
       domain.initialized = true;
     }
 

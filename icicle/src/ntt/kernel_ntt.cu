@@ -531,6 +531,54 @@ namespace mxntt {
     data[tid] = data[tid] * norm_factor;
   }
 
+#define DCCT
+#ifdef DCCT
+  template <typename S, typename R>
+  __global__ void
+  generate_dcct_twiddles_layer(S* external_twiddles, R basic_root, R step, uint32_t stage, bool is_first)
+  {
+    uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+    R twiddle = basic_root * (R::pow(step, bit_rev(tid, stage)));
+    external_twiddles[tid] = is_first ? twiddle.imaginary : twiddle.real;
+  }
+
+  template <typename S, typename R>
+  cudaError_t generate_twiddles_dcct(
+    const R& basic_root,
+    S* external_twiddles,
+    S*& internal_twiddles,
+    S*& basic_twiddles,
+    uint32_t log_size,
+    cudaStream_t& stream)
+  {
+    R step = R::pow(basic_root, 4);
+    R temp_root = basic_root;
+
+    int stage = log_size - 1;
+    S* stage_ptr = external_twiddles + (stage * (1 << stage));
+    int NOF_BLOCKS = (stage >= 8) ? (1 << (stage - 8)) : 1;
+    int NOF_THREADS = (stage >= 8) ? 256 : (1 << stage);
+    // std::cout << "Stage: " << stage << "; nof_blocks: " << NOF_BLOCKS << "; nof_threads: " << NOF_THREADS << "; step:
+    // " << step << "; temp_root: " << temp_root <<"; stage_ptr: " << stage_ptr << std::endl;
+    generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, temp_root, step, stage, true);
+    CHK_IF_RETURN(cudaPeekAtLastError());
+
+    for (--stage; stage >= 0; stage--) {
+      stage_ptr -= 1 << (log_size - 1);
+      NOF_BLOCKS = (stage >= 8) ? (1 << (stage - 8)) : 1;
+      NOF_THREADS = (stage >= 8) ? 256 : (1 << stage);
+      // std::cout << "Stage: " << stage << "; nof_blocks: " << NOF_BLOCKS << "; nof_threads: " << NOF_THREADS << ";
+      // step: " << step << "; temp_root: " << temp_root <<"; stage_ptr: " << stage_ptr<< std::endl;
+      generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, temp_root, step, stage, false);
+      CHK_IF_RETURN(cudaPeekAtLastError());
+
+      temp_root = R::sqr(temp_root);
+      step = R::sqr(step);
+    }
+
+    return CHK_LAST();
+  }
+#else
   template <typename S>
   __global__ void generate_base_table(S basic_root, S* base_table, uint32_t skip)
   {
@@ -750,6 +798,7 @@ namespace mxntt {
     return CHK_LAST();
   }
 
+#endif
   template <typename E, typename S>
   cudaError_t large_ntt(
     const E* in,
@@ -1015,6 +1064,15 @@ namespace mxntt {
     return CHK_LAST();
   }
 
+#ifdef DCCT
+  template cudaError_t generate_twiddles_dcct(
+    const quad_extension_t& basic_root,
+    scalar_t* external_twiddles,
+    scalar_t*& internal_twiddles,
+    scalar_t*& basic_twiddles,
+    uint32_t log_size,
+    cudaStream_t& stream);
+#else
   // Explicit instantiation for scalar type
   template cudaError_t generate_external_twiddles_generic(
     const scalar_t& basic_root,
@@ -1031,6 +1089,7 @@ namespace mxntt {
     scalar_t*& basic_twiddles,
     uint32_t log_size,
     cudaStream_t& stream);
+#endif
 
   template cudaError_t mixed_radix_ntt<scalar_t, scalar_t>(
     const scalar_t* d_input,
