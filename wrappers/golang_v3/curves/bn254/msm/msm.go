@@ -50,15 +50,15 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 // 	return err
 // }
 
-func PrecomputeBases(points core.HostOrDeviceSlice, cfg *core.MSMConfig, outputBases core.DeviceSlice) runtime.EIcicleError {
+func PrecomputeBases(points core.HostOrDeviceSlice, size int, cfg *core.MSMConfig, outputBases core.DeviceSlice) runtime.EIcicleError {
 	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, cfg, outputBases)
 
 	cPoints := (*C.affine_t)(pointsPointer)
-	cMsmSize := (C.int)(points.Len())
+	cSize := (C.int)(size)
 	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
-	__ret := C.bn254_msm_precompute_bases(cPoints, cMsmSize, cCfg, cOutputBases)
+	__ret := C.bn254_msm_precompute_bases(cPoints, cSize, cCfg, cOutputBases)
 	err := runtime.EIcicleError(__ret)
 	return err
 }

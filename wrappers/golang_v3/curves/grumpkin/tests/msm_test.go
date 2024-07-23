@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	icicleGrumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/grumpkin"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/grumpkin/msm"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
+	icicleGrumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/grumpkin"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/grumpkin/msm"
 )
 
 func TestMSM(t *testing.T) {

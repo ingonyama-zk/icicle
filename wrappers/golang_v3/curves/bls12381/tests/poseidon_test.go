@@ -3,12 +3,13 @@ package tests
 import (
 	"testing"
 
-	core "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381"
-	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381/poseidon"
+	core "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
+	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381"
+	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381/poseidon"
 
 	"fmt"
+
 	"github.com/stretchr/testify/assert"
 )
 

@@ -5,9 +5,10 @@ package msm
 import "C"
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
 	"unsafe"
+
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
 )
 
 func GetDefaultMSMConfig() core.MSMConfig {

@@ -7,7 +7,7 @@ const MAX_TYPE_SIZE = 64
 
 type Device struct {
 	DeviceType [MAX_TYPE_SIZE]C.char
-	Id         C.int
+	Id         int
 }
 
 type DeviceProperties struct {
@@ -16,7 +16,7 @@ type DeviceProperties struct {
 	SupportsPinnedMemory bool
 }
 
-func CreateDevice(deviceType string, id int32) Device {
+func CreateDevice(deviceType string, id int) Device {
 	var cDeviceType [MAX_TYPE_SIZE]C.char
 	for i, v := range deviceType {
 		if i >= MAX_TYPE_SIZE {
@@ -28,7 +28,7 @@ func CreateDevice(deviceType string, id int32) Device {
 	if len(deviceType) >= MAX_TYPE_SIZE {
 		cDeviceType[MAX_TYPE_SIZE-1] = C.char(0)
 	}
-	return Device{DeviceType: cDeviceType, Id: C.int(id)}
+	return Device{DeviceType: cDeviceType, Id: id}
 }
 
 func (self *Device) GetDeviceType() string {

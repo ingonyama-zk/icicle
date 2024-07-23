@@ -1,8 +1,8 @@
 package tests
 
 // import (
-// 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
-// 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
+// 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254/g2"
+// 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/test_helpers"
 // 	"github.com/stretchr/testify/assert"
 // 	"testing"
 // )

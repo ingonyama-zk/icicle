@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,6 +16,10 @@ import (
 	icicleBn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bn254/msm"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
+
+	coreV2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v2/core"
+	crV2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v2/cuda_runtime"
+	msmV2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v2/curves/bn254/msm"
 )
 
 func projectiveToGnarkAffine(p icicleBn254.Projective) bn254.G1Affine {
@@ -52,11 +58,12 @@ func testAgainstGnarkCryptoMsmGnarkCryptoTypes(t *testing.T, scalarsFr core.Host
 	var msmRes bn254.G1Jac
 	msmRes.MultiExp(pointsFp, scalarsFr, ecc.MultiExpConfig{})
 
-	var icicleResAsJac bn254.G1Jac
-	proj := projectiveToGnarkAffine(out)
-	icicleResAsJac.FromAffine(&proj)
+	var msmResAffine bn254.G1Affine
+	msmResAffine.FromJacobian(&msmRes)
 
-	assert.True(t, msmRes.Equal(&icicleResAsJac))
+	icicleResAffine := projectiveToGnarkAffine(out)
+
+	assert.Equal(t, msmResAffine, icicleResAffine)
 }
 
 func convertIcicleAffineToG1Affine(iciclePoints []icicleBn254.Affine) []bn254.G1Affine {
@@ -79,7 +86,8 @@ func convertIcicleAffineToG1Affine(iciclePoints []icicleBn254.Affine) []bn254.G1
 func TestMSM(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	cfg.IsAsync = true
-	for _, power := range []int{2, 3, 4, 5} {
+	for _, power := range []int{2, 3, 4, 5, 10} {
+		runtime.SetDevice(&MAIN_DEVICE)
 		size := 1 << power
 
 		scalars := icicleBn254.GenerateScalars(size)
@@ -158,12 +166,13 @@ func TestMSM(t *testing.T) {
 func TestMSMGnarkCryptoTypes(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	for _, power := range []int{3} {
+		runtime.SetDevice(&MAIN_DEVICE)
 		size := 1 << power
 
 		scalars := make([]fr.Element, size)
 		var x fr.Element
 		for i := 0; i < size; i++ {
-			x.SetRandom()
+			x.SetInt64(int64(10000 * (i + 1)))
 			scalars[i] = x
 		}
 		scalarsHost := (core.HostSlice[fr.Element])(scalars)
@@ -184,6 +193,19 @@ func TestMSMGnarkCryptoTypes(t *testing.T) {
 		outHost.CopyFromDevice(&out)
 		out.Free()
 
+		cfgV2 := coreV2.GetDefaultMSMConfig()
+		cfgV2.ArePointsMontgomeryForm = true
+		cfgV2.AreScalarsMontgomeryForm = true
+
+		scalarsHostV2 := (coreV2.HostSlice[fr.Element])(scalars)
+		pointsHostV2 := (coreV2.HostSlice[bn254.G1Affine])(pointsGnark)
+
+		outHostV2 := make(coreV2.HostSlice[icicleBn254.Projective], 1)
+
+		eV2 := msmV2.Msm(scalarsHostV2, pointsHostV2, &cfgV2, outHostV2)
+		assert.Equal(t, crV2.CudaSuccess, eV2)
+
+		testAgainstGnarkCryptoMsmGnarkCryptoTypes(t, (core.HostSlice[fr.Element])(scalarsHostV2), (core.HostSlice[bn254.G1Affine])(pointsHostV2), outHostV2[0])
 		// Check with gnark-crypto
 		testAgainstGnarkCryptoMsmGnarkCryptoTypes(t, scalarsHost, pointsHost, outHost[0])
 	}
@@ -193,6 +215,7 @@ func TestMSMBatch(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	for _, power := range []int{5} {
 		for _, batchSize := range []int{1, 3} {
+			runtime.SetDevice(&MAIN_DEVICE)
 			size := 1 << power
 			totalSize := size * batchSize
 			scalars := icicleBn254.GenerateScalars(totalSize)
@@ -219,50 +242,54 @@ func TestMSMBatch(t *testing.T) {
 	}
 }
 
-// func TestPrecomputePoints(t *testing.T) {
-// 	cfg := msm.GetDefaultMSMConfig()
-// 	const precomputeFactor = 8
-// 	cfg.PrecomputeFactor = precomputeFactor
+func TestPrecomputePoints(t *testing.T) {
+	cfg := core.GetDefaultMSMConfig()
+	const precomputeFactor = 8
+	cfg.PrecomputeFactor = precomputeFactor
 
-// 	for _, power := range []int{10, 16} {
-// 		for _, batchSize := range []int{1, 3} {
-// 			size := 1 << power
-// 			totalSize := size * batchSize
-// 			scalars := icicleBn254.GenerateScalars(totalSize)
-// 			points := icicleBn254.GenerateAffinePoints(totalSize)
+	for _, power := range []int{10, 16} {
+		for _, batchSize := range []int{1, 3} {
+			runtime.SetDevice(&MAIN_DEVICE)
 
-// 			var precomputeOut core.DeviceSlice
-// 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
-// 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for PrecomputeBases results failed")
+			size := 1 << power
+			totalSize := size * batchSize
+			scalars := icicleBn254.GenerateScalars(totalSize)
+			points := icicleBn254.GenerateAffinePoints(totalSize)
 
-// 			e = msm.PrecomputeBases(points, &cfg, precomputeOut)
-// 			assert.Equal(t, runtime.Success, e, "PrecomputeBases failed")
+			var precomputeOut core.DeviceSlice
+			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for PrecomputeBases results failed")
 
-// 			var p icicleBn254.Projective
-// 			var out core.DeviceSlice
-// 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
-// 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for Projective results failed")
+			e = msm.PrecomputeBases(points, size, &cfg, precomputeOut)
+			assert.Equal(t, runtime.Success, e, "PrecomputeBases failed")
 
-// 			e = msm.Msm(scalars, precomputeOut, &cfg, out)
-// 			assert.Equal(t, runtime.Success, e, "Msm failed")
-// 			outHost := make(core.HostSlice[icicleBn254.Projective], batchSize)
-// 			outHost.CopyFromDevice(&out)
-// 			out.Free()
-// 			precomputeOut.Free()
-// 			// Check with gnark-crypto
-// 			for i := 0; i < batchSize; i++ {
-// 				scalarsSlice := scalars[i*size : (i+1)*size]
-// 				pointsSlice := points[i*size : (i+1)*size]
-// 				out := outHost[i]
-// 				assert.True(t, testAgainstGnarkCryptoMsm(scalarsSlice, pointsSlice, out))
-// 			}
-// 		}
-// 	}
-// }
+			var p icicleBn254.Projective
+			var out core.DeviceSlice
+			_, e = out.Malloc(batchSize*p.Size(), p.Size())
+			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for Projective results failed")
+
+			e = msm.Msm(scalars, precomputeOut, &cfg, out)
+			assert.Equal(t, runtime.Success, e, "Msm failed")
+			outHost := make(core.HostSlice[icicleBn254.Projective], batchSize)
+			outHost.CopyFromDevice(&out)
+			out.Free()
+			precomputeOut.Free()
+			// Check with gnark-crypto
+			for i := 0; i < batchSize; i++ {
+				scalarsSlice := scalars[i*size : (i+1)*size]
+				pointsSlice := points[i*size : (i+1)*size]
+				out := outHost[i]
+				testAgainstGnarkCryptoMsm(t, scalarsSlice, pointsSlice, out)
+			}
+		}
+	}
+}
 
 func TestMSMSkewedDistribution(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+		runtime.SetDevice(&MAIN_DEVICE)
+
 		size := 1 << power
 
 		scalars := icicleBn254.GenerateScalars(size)
@@ -289,40 +316,52 @@ func TestMSMSkewedDistribution(t *testing.T) {
 	}
 }
 
-// func TestMSMMultiDevice(t *testing.T) {
-// 	numDevices, _ := runtime.GetDeviceCount()
-// 	fmt.Println("There are ", numDevices, " devices available")
-// 	wg := sync.WaitGroup{}
+func TestMSMMultiDevice(t *testing.T) {
+	deviceTypes, _ := runtime.GetRegisteredDevices()
+	for _, deviceType := range deviceTypes {
+		device := runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&device)
+		runtime.GetDeviceCount()
 
-// 	for i := 0; i < numDevices; i++ {
-// 		wg.Add(1)
-// 		runtime.RunOnDevice(i, func(args ...any) {
-// 			defer wg.Done()
-// 			cfg := msm.GetDefaultMSMConfig()
-// 			cfg.IsAsync = true
-// 			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
-// 				size := 1 << power
-// 				scalars := icicleBn254.GenerateScalars(size)
-// 				points := icicleBn254.GenerateAffinePoints(size)
+		numDevices, _ := runtime.GetDeviceCount()
+		fmt.Println("There are ", numDevices, " ", deviceType, " devices available")
+		wg := sync.WaitGroup{}
 
-// 				stream, _ := runtime.CreateStream()
-// 				var p icicleBn254.Projective
-// 				var out core.DeviceSlice
-// 				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
-// 				assert.Equal(t, e, runtime.Success, "Allocating bytes on device for Projective results failed")
-// 				cfg.Ctx.Stream = &stream
+		for i := 0; i < numDevices; i++ {
+			currentDevice := runtime.Device{DeviceType: device.DeviceType, Id: i}
+			wg.Add(1)
+			runtime.RunOnDevice(&currentDevice, func(args ...any) {
+				defer wg.Done()
 
-// 				e = msm.Msm(scalars, points, &cfg, out)
-// 				assert.Equal(t, e, runtime.Success, "Msm failed")
-// 				outHost := make(core.HostSlice[icicleBn254.Projective], 1)
-// 				outHost.CopyFromDeviceAsync(&out, stream)
-// 				out.FreeAsync(stream)
+				fmt.Println("Running on ", currentDevice.GetDeviceType(), " ", currentDevice.Id, " device")
 
-// 				runtime.SynchronizeStream(&stream)
-// 				// Check with gnark-crypto
-// 				assert.True(t, testAgainstGnarkCryptoMsm(scalars, points, outHost[0]))
-// 			}
-// 		})
-// 	}
-// 	wg.Wait()
-// }
+				cfg := msm.GetDefaultMSMConfig()
+				cfg.IsAsync = true
+				for _, power := range []int{2, 3, 4, 5} {
+					size := 1 << power
+					scalars := icicleBn254.GenerateScalars(size)
+					points := icicleBn254.GenerateAffinePoints(size)
+
+					stream, _ := runtime.CreateStream()
+					var p icicleBn254.Projective
+					var out core.DeviceSlice
+					_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+					assert.Equal(t, e, runtime.Success, "Allocating bytes on device for Projective results failed")
+					cfg.StreamHandle = stream
+
+					e = msm.Msm(scalars, points, &cfg, out)
+					assert.Equal(t, e, runtime.Success, "Msm failed")
+					outHost := make(core.HostSlice[icicleBn254.Projective], 1)
+					outHost.CopyFromDeviceAsync(&out, stream)
+					out.FreeAsync(stream)
+
+					runtime.SynchronizeStream(stream)
+					// Check with gnark-crypto
+					testAgainstGnarkCryptoMsm(t, scalars, points, outHost[0])
+				}
+			})
+		}
+		wg.Wait()
+	}
+
+}

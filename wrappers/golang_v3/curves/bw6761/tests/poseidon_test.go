@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
-	core "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bw6_761 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761"
-	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761/poseidon"
+	core "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
+	bw6_761 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bw6761"
+	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bw6761/poseidon"
 )
 
 func TestPoseidon(t *testing.T) {

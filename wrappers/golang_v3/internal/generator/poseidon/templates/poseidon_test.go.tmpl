@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 	
-	core "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}"
-	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/poseidon"
+	core "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
+	{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/{{.BaseImportPath}}"
+	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/{{.BaseImportPath}}/poseidon"
 
 	{{if eq .Field "bls12_381"}}
 	"fmt"

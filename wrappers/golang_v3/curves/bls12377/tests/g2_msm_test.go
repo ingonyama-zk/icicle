@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/ecc/bls12-377"
+	bls12377 "github.com/consensys/gnark-crypto/ecc/bls12-377"
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fp"
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	icicleBls12_377 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377/g2"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
+	icicleBls12_377 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12377"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12377/g2"
 )
 
 func projectiveToGnarkAffineG2(p g2.G2Projective) bls12377.G2Affine {

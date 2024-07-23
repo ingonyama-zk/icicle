@@ -13,7 +13,7 @@ import (
 
 const (
 	// Since path.Join joins from the cwd we only need to go up two directories
-	// from wrappers/golang/internal/generator/main.go to get to wrappers/golang
+	// from wrappers/golang_v3/internal/generator/main.go to get to wrappers/golang
 	GOLANG_WRAPPER_ROOT_DIR = "../../"
 )
 

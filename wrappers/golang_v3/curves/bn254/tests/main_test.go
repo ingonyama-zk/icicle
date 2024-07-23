@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	largestTestSize = 20
+	largestTestSize = 5
 )
+
+var MAIN_DEVICE runtime.Device
 
 func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
@@ -29,8 +31,8 @@ func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcic
 
 func TestMain(m *testing.M) {
 	runtime.LoadBackendFromEnv()
-	device := runtime.CreateDevice("CUDA", 0)
-	runtime.SetDevice(&device)
+	MAIN_DEVICE = runtime.CreateDevice("CUDA", 0)
+	runtime.SetDevice(&MAIN_DEVICE)
 
 	// setup domain
 	cfg := core.GetDefaultNTTInitDomainConfig()

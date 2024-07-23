@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bls12_377 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377"
-	ecntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377/ecntt"
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377/ntt"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
+	bls12_377 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12377"
+	ecntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12377/ecntt"
+	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12377/ntt"
 	"github.com/stretchr/testify/assert"
 )
 

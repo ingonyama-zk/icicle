@@ -79,6 +79,8 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 		panic(errorString)
 	}
 
+	cfg.basesSize = int32(pointsLength)
+	cfg.batchSize = int32(resultsLength)
 	cfg.areScalarsOnDevice = scalars.IsOnDevice()
 	cfg.areBasesOnDevice = points.IsOnDevice()
 	cfg.areResultsOnDevice = results.IsOnDevice()
@@ -116,6 +118,7 @@ func PrecomputePointsCheck(points HostOrDeviceSlice, cfg *MSMConfig, outputBases
 
 	cfg.basesSize = int32(pointsLength)
 	cfg.areBasesOnDevice = points.IsOnDevice()
+	cfg.areResultsOnDevice = points.IsOnDevice()
 
 	return points.AsUnsafePointer(), outputBases.AsUnsafePointer()
 }

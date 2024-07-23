@@ -53,7 +53,7 @@ If you wish to build for a specific curve, for example bn254, without G2 or ECNT
 To run the tests for curve bn254.
 
 ```sh
-go test ./wrappers/golang/curves/bn254/tests -count=1 -v
+go test ./wrappers/golang_v3/curves/bn254/tests -count=1 -v
 ```
 
 To run all the tests in the golang bindings
@@ -106,9 +106,9 @@ This is normally fixed by exporting the path to the shared library location in t
 ### cuda_runtime.h: No such file or directory
 
 ```sh
-# github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381
-In file included from wrappers/golang/curves/bls12381/curve.go:5:
-wrappers/golang/curves/bls12381/include/curve.h:1:10: fatal error: cuda_runtime.h: No such file or directory
+# github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381
+In file included from wrappers/golang_v3/curves/bls12381/curve.go:5:
+wrappers/golang_v3/curves/bls12381/include/curve.h:1:10: fatal error: cuda_runtime.h: No such file or directory
     1 | #include <cuda_runtime.h>
       |          ^~~~~~~~~~~~~~~~
 compilation terminated.
