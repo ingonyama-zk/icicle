@@ -1,6 +1,6 @@
 #include "fields/id.h"
 // #define FIELD_ID 2
-#define CURVE_ID 1
+#define CURVE_ID 3
 #include "curves/curve_config.cuh"
 // #include "fields/field_config.cuh"
 
@@ -14,6 +14,8 @@
 #include "fields/field.cuh"
 #include "curves/projective.cuh"
 #include "gpu-utils/device_context.cuh"
+
+// #define PERFORMANCE_ONLY
 
 // using namespace bn254;
 
@@ -140,7 +142,7 @@ int main(int argc, char** argv)
   //   unsigned msm_size = 1<<21;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
   int user_c = (argc > 4) ? atoi(argv[4]) : 15;
-  int nof_chunks = (argc > 5) ? atoi(argv[5]) : 3;
+  int nof_chunks = (argc > 5) ? atoi(argv[5]) : 0;
   bool scalars_on_device = (argc > 6) ? atoi(argv[6]) : 0;
   bool points_on_device = (argc > 7) ? atoi(argv[7]) : 0;
   bool same_points = (argc > 8) ? atoi(argv[8]) : 0;
@@ -154,15 +156,17 @@ int main(int argc, char** argv)
   test_scalar* scalars_h = new test_scalar[scalars_size];
   test_affine* points_h = new test_affine[points_size];
   test_affine* points_precomputed_h = new test_affine[points_size*precomp_factor];
-  int chunk_size = batch_size > 1? scalars_size : (msm_size + nof_chunks - 1) / nof_chunks;
+  // int chunk_size = batch_size > 1? scalars_size : (msm_size + nof_chunks - 1) / nof_chunks;
   // int chunk_size = N;
 
+  #ifndef PERFORMANCE_ONLY
   // test_scalar::rand_host_many(scalars, N);
   // test_projective::rand_host_many_affine(points, N);
   for (int i = 0; i < scalars_size; i++)
   {
     // scalars[i] = i? scalars[i-1] + test_scalar::one() : test_scalar::zero();
-    scalars_h[i] = i>chunk_size-1? scalars_h[i-chunk_size+1] : test_scalar::rand_host();
+    // scalars_h[i] = i>chunk_size-1? scalars_h[i-chunk_size+1] : test_scalar::rand_host();
+    scalars_h[i] = test_scalar::rand_host();
     if (i<points_size) points_h[i] = i>100? points_h[i-100] : test_projective::to_affine(test_projective::rand_host());
     // points[i] = test_projective::to_affine(test_projective::generator());
     // std::cout << i << ": "<< points[i] << "\n";
@@ -171,6 +175,7 @@ int main(int argc, char** argv)
   
 
   std::cout << "finished generating" << std::endl;
+  #endif
 
   // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
   // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
@@ -234,23 +239,14 @@ int main(int argc, char** argv)
   cudaEventCreate(&stop);
 
   if (precomp_factor > 1){
-    // for (int i = 0; i < nof_chunks; i++)
-    // {
-    //   bool is_last_iter = i == nof_chunks - 1; 
-    //   int sub_msm_size = is_last_iter? N % chunk_size : chunk_size;
-    //   if (sub_msm_size == 0) sub_msm_size = chunk_size;
-    //   // config.points_size = sub_msm_size;
-    //   cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(test_affine) * sub_msm_size, cudaMemcpyHostToDevice);
-    //   msm::precompute_msm_points<test_affine, test_projective>(points_d + (i%2)*chunk_size, sub_msm_size, config, precomp_points_d + (i%2)*chunk_size*precomp_factor);
-    //   cudaMemcpyAsync(points_precomputed_h + i*chunk_size*precomp_factor, precomp_points_d + (i%2)*chunk_size*precomp_factor, sizeof(test_affine) * sub_msm_size*precomp_factor, cudaMemcpyDeviceToHost);
-    // }
-    // msm::chunked_precompute<test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h, nof_chunks);
-    msm::precompute_msm_points<test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h);
+    msm::precompute_msm_points<test_scalar, test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h);
   }
   // warm up
   msm::msm<test_scalar, test_affine, test_projective>(
     scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d);
   cudaDeviceSynchronize();
+
+  // return 0;
 
   // cudaStream_t transfer_stream;
   // cudaStreamCreate(&transfer_stream);
@@ -306,6 +302,10 @@ int main(int argc, char** argv)
   // auto end1 = std::chrono::high_resolution_clock::now();
   // auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
   printf("msm time : %.3f ms.\n", msm_time);
+
+  // #ifdef PERFORMANCE_ONLY
+  // return 0;
+  // #endif
 
   // reference
   config.c = 16;

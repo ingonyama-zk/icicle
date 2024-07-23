@@ -17,6 +17,8 @@
 
 // using namespace bn254;
 
+// #define PERFORMANCE_ONLY
+
 class Dummy_Scalar
 {
 public:
@@ -140,7 +142,7 @@ int main(int argc, char** argv)
   //   unsigned msm_size = 1<<21;
   int precomp_factor = (argc > 3) ? atoi(argv[3]) : 1;
   int user_c = (argc > 4) ? atoi(argv[4]) : 15;
-  int nof_chunks = (argc > 5) ? atoi(argv[5]) : 3;
+  int nof_chunks = (argc > 5) ? atoi(argv[5]) : 0;
   bool scalars_on_device = (argc > 6) ? atoi(argv[6]) : 0;
   bool points_on_device = (argc > 7) ? atoi(argv[7]) : 0;
   bool same_points = (argc > 8) ? atoi(argv[8]) : 0;
@@ -154,63 +156,8 @@ int main(int argc, char** argv)
   test_scalar* scalars_h = new test_scalar[scalars_size];
   test_affine* points_h = new test_affine[points_size];
   test_affine* points_precomputed_h = new test_affine[points_size*precomp_factor];
-  int chunk_size = batch_size > 1? scalars_size : (msm_size + nof_chunks - 1) / nof_chunks;
-  // int chunk_size = N;
 
-  // test_scalar::rand_host_many(scalars, N);
-  // test_projective::rand_host_many_affine(points, N);
-  for (int i = 0; i < scalars_size; i++)
-  {
-    // scalars[i] = i? scalars[i-1] + test_scalar::one() : test_scalar::zero();
-    scalars_h[i] = i>chunk_size-1? scalars_h[i-chunk_size+1] : test_scalar::rand_host();
-    if (i<points_size) points_h[i] = i>100? points_h[i-100] : test_projective::to_affine(test_projective::rand_host());
-    // points[i] = test_projective::to_affine(test_projective::generator());
-    // std::cout << i << ": "<< points[i] << "\n";
-  }
 
-  // for (int i = 0; i < N*precomp_factor; i++)
-  // {
-  //   points_precomputed[i] = test_affine::zero();
-  // }
-  
-  
-
-  std::cout << "finished generating" << std::endl;
-
-  // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
-  // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
-  test_projective res[1];
-  test_projective ref[nof_chunks];
-  // test_projective batched_large_res[batch_size];
-  // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
-  // fake_point batched_large_res[256];
-
-  // short_msm<scalar_t, projective_t, affine_t>(scalars, points, N, short_res);
-  // for (unsigned i=0;i<batch_size;i++){
-  // large_msm<test_scalar, test_projective, test_affine>(scalars+msm_size*i, points+msm_size*i, msm_size, large_res+i,
-  // false); std::cout<<"final result large"<<std::endl; std::cout<<test_projective::to_affine(*large_res)<<std::endl;
-  // }
-
-  test_scalar* scalars_d;
-  test_affine* points_d;
-  test_affine* precomp_points_d;
-  test_projective* res_d;
-  test_projective* ref_d;
-
-  cudaMalloc(&scalars_d, sizeof(test_scalar) * chunk_size*2);
-  cudaMalloc(&points_d, sizeof(test_affine) * chunk_size*2);
-  // cudaMalloc(&scalars_d, sizeof(test_scalar) * N);
-  // cudaMalloc(&points_d, sizeof(test_affine) * N);
-  cudaMalloc(&precomp_points_d, sizeof(test_affine) * points_size * precomp_factor);
-  cudaMalloc(&res_d, sizeof(test_projective));
-  cudaMalloc(&ref_d, sizeof(test_projective) * nof_chunks);
-  // cudaMemcpy(scalars_d, scalars_h, sizeof(test_scalar) * N, cudaMemcpyHostToDevice);
-  // cudaMemcpy(points_d, points_h, sizeof(test_affine) * N, cudaMemcpyHostToDevice);
-
-  // std::cout << "finished copying" << std::endl;
-
-  // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size,
-  // batched_large_res, false);
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
@@ -237,27 +184,78 @@ int main(int argc, char** argv)
     same_points,           // are_points_shared_in_batch
   };
 
+
+  nof_chunks = nof_chunks? nof_chunks : msm::get_optimal_nof_chunks<test_scalar, test_affine, test_projective>(config,msm_size, user_c? user_c : msm::get_optimal_c(msm_size), test_scalar::NBITS);
+  int chunk_size = (msm_size + nof_chunks - 1) / nof_chunks;
+  // int chunk_size = N;
+
+  #ifndef PERFORMANCE_ONLY
+
+  // test_scalar::rand_host_many(scalars, N);
+  // test_projective::rand_host_many_affine(points, N);
+  for (int i = 0; i < scalars_size; i++)
+  {
+    // scalars[i] = i? scalars[i-1] + test_scalar::one() : test_scalar::zero();
+    scalars_h[i] = i>chunk_size-1? scalars_h[i-chunk_size+1] : test_scalar::rand_host();
+    if (i<points_size) points_h[i] = i>100? points_h[i-100] : test_projective::to_affine(test_projective::rand_host());
+    // points[i] = test_projective::to_affine(test_projective::generator());
+    // std::cout << i << ": "<< points[i] << "\n";
+  }
+
+  // for (int i = 0; i < N*precomp_factor; i++)
+  // {
+  //   points_precomputed[i] = test_affine::zero();
+  // }
+  
+  std::cout << "finished generating" << std::endl;
+
+  #endif
+
+  // projective_t *short_res = (projective_t*)malloc(sizeof(projective_t));
+  // test_projective *large_res = (test_projective*)malloc(sizeof(test_projective));
+  test_projective res[1];
+  test_projective ref[nof_chunks];
+  // test_projective batched_large_res[batch_size];
+  // fake_point *large_res = (fake_point*)malloc(sizeof(fake_point));
+  // fake_point batched_large_res[256];
+
+  // short_msm<scalar_t, projective_t, affine_t>(scalars, points, N, short_res);
+  // for (unsigned i=0;i<batch_size;i++){
+  // large_msm<test_scalar, test_projective, test_affine>(scalars+msm_size*i, points+msm_size*i, msm_size, large_res+i,
+  // false); std::cout<<"final result large"<<std::endl; std::cout<<test_projective::to_affine(*large_res)<<std::endl;
+  // }
+
+  test_scalar* scalars_d;
+  test_affine* points_d;
+  test_affine* precomp_points_d;
+  test_projective* res_d;
+  test_projective* ref_d;
+
+  cudaMalloc(&scalars_d, sizeof(test_scalar) * chunk_size*2);
+  cudaMalloc(&points_d, sizeof(test_affine) * chunk_size*2);
+  cudaMalloc(&precomp_points_d, sizeof(test_affine) * chunk_size*2 * precomp_factor);
+  cudaMalloc(&res_d, sizeof(test_projective));
+  cudaMalloc(&ref_d, sizeof(test_projective) * nof_chunks);
+  // cudaMemcpy(scalars_d, scalars_h, sizeof(test_scalar) * N, cudaMemcpyHostToDevice);
+  // cudaMemcpy(points_d, points_h, sizeof(test_affine) * N, cudaMemcpyHostToDevice);
+
+  // std::cout << "finished copying" << std::endl;
+
+  // batched_large_msm<test_scalar, test_projective, test_affine>(scalars, points, batch_size, msm_size,
+  // batched_large_res, false);
+  
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
   if (precomp_factor > 1){
-    // for (int i = 0; i < nof_chunks; i++)
-    // {
-    //   bool is_last_iter = i == nof_chunks - 1; 
-    //   int sub_msm_size = is_last_iter? N % chunk_size : chunk_size;
-    //   if (sub_msm_size == 0) sub_msm_size = chunk_size;
-    //   // config.points_size = sub_msm_size;
-    //   cudaMemcpyAsync(points_d + (i%2)*chunk_size, points_h + i*chunk_size, sizeof(test_affine) * sub_msm_size, cudaMemcpyHostToDevice);
-    //   msm::precompute_msm_points<test_affine, test_projective>(points_d + (i%2)*chunk_size, sub_msm_size, config, precomp_points_d + (i%2)*chunk_size*precomp_factor);
-    //   cudaMemcpyAsync(points_precomputed_h + i*chunk_size*precomp_factor, precomp_points_d + (i%2)*chunk_size*precomp_factor, sizeof(test_affine) * sub_msm_size*precomp_factor, cudaMemcpyDeviceToHost);
-    // }
-    // msm::chunked_precompute<test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h, nof_chunks);
-    msm::precompute_msm_points<test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h);
+    msm::precompute_msm_points<test_scalar, test_affine, test_projective>(points_on_device? points_d : points_h, msm_size, config, points_on_device? precomp_points_d : points_precomputed_h);
   }
+
   // warm up
   msm::msm<test_scalar, test_affine, test_projective>(
     scalars_on_device? scalars_d : scalars_h, precomp_factor > 1 ? (points_on_device? precomp_points_d : points_precomputed_h) : (points_on_device? points_d : points_h), msm_size, config, res_d);
   cudaDeviceSynchronize();
+  // return 0;
 
   // cudaStream_t transfer_stream;
   // cudaStreamCreate(&transfer_stream);
@@ -309,6 +307,9 @@ int main(int argc, char** argv)
   // auto elapsed1 = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - begin1);
   printf("msm time : %.3f ms.\n", msm_time);
 
+  #ifdef PERFORMANCE_ONLY
+  return 0;
+  #endif
   // reference
   // config.c = 16;
   // config.precompute_factor = 1;
