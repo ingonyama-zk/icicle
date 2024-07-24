@@ -1,6 +1,7 @@
-#include "icicle/ntt.h"
+#include "icicle/backend/ntt_backend.h"
 #include "icicle/dispatcher.h"
 
+using namespace field_config;
 namespace icicle {
 
   /*************************** NTT ***************************/

@@ -1,5 +1,5 @@
 #include "cpu_ntt.h"
-#include "icicle/ntt.h"
+
 using namespace field_config;
 using namespace icicle;
 

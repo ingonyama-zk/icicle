@@ -1,4 +1,4 @@
-#include "icicle/vec_ops.h"
+#include "icicle/backend/vec_ops_backend.h"
 #include "icicle/dispatcher.h"
 
 namespace icicle {

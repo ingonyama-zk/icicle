@@ -1,5 +1,5 @@
 
-#include "icicle/vec_ops.h"
+#include "icicle/backend/vec_ops_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"

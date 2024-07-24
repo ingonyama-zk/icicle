@@ -1,5 +1,5 @@
 
-#include "icicle/msm.h"
+#include "icicle/backend/msm_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 

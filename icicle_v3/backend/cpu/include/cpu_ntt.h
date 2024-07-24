@@ -1,4 +1,5 @@
-#include "icicle/ntt.h"
+#pragma once
+#include "icicle/backend/ntt_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
