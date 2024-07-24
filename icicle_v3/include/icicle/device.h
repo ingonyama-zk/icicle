@@ -37,6 +37,12 @@ namespace icicle {
       return (id == other.id) && (0 == strncmp(type, other.type, MAX_TYPE_LEN));
     }
     bool operator!=(const Device& other) const { return !(*this == other); }
+
+    friend std::ostream& operator<<(std::ostream& os, const Device& device)
+    {
+      os << "Device(type: " << device.type << ", id: " << device.id << ")";
+      return os;
+    }
   };
 
   /**
