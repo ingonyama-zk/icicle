@@ -277,8 +277,8 @@ TYPED_TEST(FieldApiTest, Slice)
       END_TIMER(SLICE, oss.str().c_str(), measure);
     };
 
-  run(s_reference_target, elements_main.get(), elements_ref.get(), true /*=measure*/, "slice", 1);
-  run(s_main_target, elements_main.get(), elements_out.get(), true /*=measure*/, "slice", 1);
+  run(s_reference_target, elements_main.get(), elements_ref.get(), VERBOSE /*=measure*/, "slice", 1);
+  run(s_main_target, elements_main.get(), elements_out.get(), VERBOSE /*=measure*/, "slice", 1);
   ASSERT_EQ(0, memcmp(elements_ref.get(), elements_out.get(), size * sizeof(TypeParam)));
 }
 
@@ -312,10 +312,11 @@ TYPED_TEST(FieldApiTest, ntt)
 
   // TODO Yuval : remove those once the bug is fixed
   ICICLE_LOG_INFO << "NTT test: logn=" << logn;
-  ICICLE_LOG_INFO << "NTT test: batch=" << log_batch_size;
+  ICICLE_LOG_INFO << "NTT test: log_batch_size=" << log_batch_size;
   ICICLE_LOG_INFO << "NTT test: columns_batch=" << columns_batch;
   ICICLE_LOG_INFO << "NTT test: ordering=" << int(ordering);
   ICICLE_LOG_INFO << "NTT test: dir=" << (dir == NTTDir::kForward ? "forward" : "inverse");
+  ICICLE_LOG_INFO << "NTT test: log_coset_stride=" << log_coset_stride;
   ICICLE_LOG_INFO << "NTT test: coset_gen=" << coset_gen;
 
   const int total_size = N * batch_size;
@@ -329,7 +330,7 @@ TYPED_TEST(FieldApiTest, ntt)
     icicle_set_device(dev);
 
     icicleStreamHandle stream = nullptr;
-    icicle_create_stream(&stream);
+    ICICLE_CHECK(icicle_create_stream(&stream));
 
     auto init_domain_config = default_ntt_init_domain_config();
     init_domain_config.stream = stream;
@@ -346,13 +347,13 @@ TYPED_TEST(FieldApiTest, ntt)
     config.ordering = ordering;           // default: kNN
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
-    config.is_async = true; // default: false
+    config.is_async = false;
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
 
     TypeParam *d_in, *d_out;
-    icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream);
-    icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream);
-    icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream);
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
+    ICICLE_CHECK(icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream));
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
@@ -363,10 +364,11 @@ TYPED_TEST(FieldApiTest, ntt)
     }
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
-    icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream);
-    icicle_stream_synchronize(config.stream);
-    icicle_free_async(d_in, config.stream);
-    icicle_free_async(d_out, config.stream);
+    ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
+    ICICLE_CHECK(icicle_free_async(d_in, config.stream));
+    ICICLE_CHECK(icicle_free_async(d_out, config.stream));
+    ICICLE_CHECK(icicle_stream_synchronize(config.stream));
+    ICICLE_CHECK(icicle_destroy_stream(stream));
 
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
