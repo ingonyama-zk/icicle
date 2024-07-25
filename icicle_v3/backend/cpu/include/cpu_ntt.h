@@ -15,7 +15,6 @@
 
 using namespace field_config;
 using namespace icicle;
-#define DEBUG 0
 
 namespace ntt_cpu {
 
@@ -159,13 +158,6 @@ namespace ntt_cpu {
     uint64_t original_size =(1 << log_original_size);
     int stride = columns_batch? batch_size : 1;
     for (int batch = 0; batch < batch_size; ++batch) {
-      // #if DEBUG
-      //   ICICLE_LOG_DEBUG << "";
-      //   ICICLE_LOG_DEBUG << "block_idx=" << block_idx << ", subntt_idx=" << subntt_idx << ", layer=" << layer << ", batch=" << batch;
-      //   for (int e=0; e<original_size*batch_size; e++) {
-      //     ICICLE_LOG_DEBUG << "elements[" << e << "]=" << elements[e];
-      //   }
-      // #endif
       E* current_elements = columns_batch? elements + batch : elements + batch * original_size;
       uint64_t rev;
       uint64_t i_mem_idx;
@@ -182,10 +174,6 @@ namespace ntt_cpu {
         if (i < rev) {
           if (i_mem_idx < original_size && rev_mem_idx < original_size) { // Ensure indices are within bounds
             std::swap(current_elements[stride*i_mem_idx], current_elements[stride*rev_mem_idx]);
-            #if DEBUG
-              ICICLE_LOG_DEBUG << "SWAP " << stride*i_mem_idx << " and " << stride*rev_mem_idx << "(mem_idx)";
-              ICICLE_LOG_DEBUG << "SWAP " << i << " and " << rev << "(idex)";
-            #endif
           } else {
             // Handle out-of-bounds error
             ICICLE_LOG_ERROR << "i=" << i << ", rev=" << rev << ", original_size=" << original_size;
@@ -194,12 +182,6 @@ namespace ntt_cpu {
           }
         }
       }
-      // #if DEBUG
-      //   ICICLE_LOG_DEBUG << "After reordering";
-      //   for (int e=0; e<original_size*batch_size; e++) {
-      //     ICICLE_LOG_DEBUG << "elements[" << e << "]=" << elements[e];
-      //   }
-      // #endif
     }
     return eIcicleError::SUCCESS;
   }
@@ -208,15 +190,8 @@ namespace ntt_cpu {
   void dit_ntt(E* elements, uint64_t total_ntt_size, int batch_size, bool columns_batch, const S* twiddles, NTTDir dir, int domain_max_size, int block_idx=0, int subntt_idx=0, const std::unique_ptr<std::vector<int>>& layers_sntt_log_size=nullptr, int layer=0) // R --> N
   {
     uint64_t subntt_size = 1 << layers_sntt_log_size->at(layer);
-    #if DEBUG
-      // ICICLE_LOG_DEBUG << "total_ntt_size=" << total_ntt_size << ", subntt_size=" << subntt_size << ", batch_size=" << batch_size;
-      // for (int e=0; e<total_ntt_size*batch_size; e++) {
-      //   ICICLE_LOG_DEBUG << "elements[" << e << "]=" << elements[e];
-      // }
-    #endif
     int stride = columns_batch? batch_size : 1;
     for (int batch = 0; batch < batch_size; ++batch) {
-      // ICICLE_LOG_DEBUG << "block_idx=" << block_idx << ", subntt_idx=" << subntt_idx << ", layer=" << layer << ", batch=" << batch;
       E* current_elements = columns_batch? elements + batch : elements + batch * total_ntt_size;
       for (int len = 2; len <= subntt_size; len <<= 1) {
         int half_len = len / 2;
@@ -233,11 +208,6 @@ namespace ntt_cpu {
           }
         }
       }
-      #if DEBUG
-        // for (int e=0; e<total_ntt_size*batch_size; e++) {
-        //   ICICLE_LOG_DEBUG << "elements[" << e << "]=" << elements[e];
-        // }
-      #endif
 
     }
   }
@@ -263,16 +233,6 @@ namespace ntt_cpu {
             current_elements[v_mem_idx] = (u - v) * twiddles[tw_idx];
           }
         }
-      }
-    }
-  }
-
-  template <typename E = scalar_t>
-  void transpose(const E* input, E* output, int rows, int cols) //TODO SHANIE - implement in-place transpose (using a flag of "transpose" in the function and take the correct indices)
-  {
-    for (int col = 0; col < cols; ++col) {
-      for (int row = 0; row < rows; ++row) {
-        output[col * rows + row] = input[row * cols + col];
       }
     }
   }
@@ -353,8 +313,6 @@ namespace ntt_cpu {
             i = (layer==0)? elem : elem + sntt_idx*subntt_size;
             j = (layer==0)? sntt_idx : block_idx;
             uint64_t tw_idx = (dir == NTTDir::kForward) ? ((domain_max_size / ntt_size) * j * i) : domain_max_size - ((domain_max_size / ntt_size) * j * i);
-            ICICLE_ASSERT (tw_idx <= domain_max_size) << "Index out of bounds: elem_mem_idx=" << elem_mem_idx <<", ntt_size="<< ntt_size << ", tw_idx=" << tw_idx << ", domain_max_size="<< domain_max_size; //TODO SHANIE - remove this line after testing
-            
             current_next_layer_input[elem_mem_idx] = current_layer_output[elem_mem_idx] * twiddles[tw_idx];
           }
         }
@@ -425,9 +383,6 @@ namespace ntt_cpu {
           element = i & ((1 << s1) - 1);
           new_idx = subntt_idx + (element << s0);
           current_temp_output[stride*new_idx] = current_elements[stride*i];
-          // # if DEBUG 
-          //   ICICLE_LOG_DEBUG <<"new_idx=" << stride*new_idx << ", i=" << stride*new_idx;
-          // # endif
         }              
       }
     }
@@ -439,9 +394,6 @@ namespace ntt_cpu {
   eIcicleError
   cpu_ntt_basic(const icicle::Device& device, E* input, uint64_t original_size, icicle::NTTDir dir, icicle::NTTConfig<S>& config, E* output, int block_idx=0, int subntt_idx=0, const std::unique_ptr<std::vector<int>>& layers_sntt_log_size=nullptr, int layer=0)
   {
-    // #if DEBUG
-    //   ICICLE_LOG_DEBUG << "cpu_ntt_basic: " << "original_size=" << original_size << ", block_idx=" << block_idx << ", subntt_idx=" << subntt_idx << ", layer=" << layer;
-    // #endif
     const uint64_t subntt_size = (1 << layers_sntt_log_size->at(layer));
     const uint64_t total_memory_size = original_size * config.batch_size;
     const int log_original_size = int(log2(original_size));
@@ -509,45 +461,13 @@ namespace ntt_cpu {
     // Instead of sorting, we are using the function idx_in_mem to calculate the memory index of each element.
     for (int layer = 0; layer < layers_sntt_log_size->size(); layer++) {
       if (layer == 0) {
-        // # if DEBUG
-        //   ICICLE_LOG_DEBUG << "Before layer 0";
-        //   for (int b=0; b<config.batch_size; b++) {
-        //     for (int e=0; e<size; e++) {
-        //       ICICLE_LOG_DEBUG << "output[" << b*original_size+e << "]=" << output[b*original_size+e];
-        //     }
-        //   }
-        // #endif
         int log_nof_subntts = layers_sntt_log_size->at(1);
         int log_nof_blocks = layers_sntt_log_size->at(2);
         for (int block_idx = 0; block_idx < (1<<log_nof_blocks); block_idx++) {
           for (int subntt_idx = 0; subntt_idx < (1<<log_nof_subntts); subntt_idx++) {
-            // # if DEBUG
-            //   ICICLE_LOG_DEBUG << "Before cpu_ntt_basic. block_idx=" << block_idx << ", subntt_idx=" << subntt_idx << ", layer=" << layer;
-            //   for (int b=0; b<config.batch_size; b++) {
-            //     for (int e=0; e<size; e++) {
-            //       ICICLE_LOG_DEBUG << "output[" << b*original_size+e << "]=" << output[b*original_size+e];
-            //     }
-            //   }
-            // #endif
             cpu_ntt_basic(device, output, original_size, dir, config, output, block_idx, subntt_idx, layers_sntt_log_size, layer);
-            // # if DEBUG
-            //   ICICLE_LOG_DEBUG << "After cpu_ntt_basic. block_idx=" << block_idx << ", subntt_idx=" << subntt_idx << ", layer=" << layer;
-            //   for (int b=0; b<config.batch_size; b++) {
-            //     for (int e=0; e<size; e++) {
-            //       ICICLE_LOG_DEBUG << "output[" << b*original_size+e << "]=" << output[b*original_size+e];
-            //     }
-            //   }
-            // #endif
           }
         }
-        // # if DEBUG
-        //   ICICLE_LOG_DEBUG << "After layer 0";
-        //   for (int b=0; b<config.batch_size; b++) {
-        //     for (int e=0; e<size; e++) {
-        //       ICICLE_LOG_DEBUG << "output[" << b*original_size+e << "]=" << output[b*original_size+e];
-        //     }
-        //   }
-        // # endif
       }
       if (layer == 1 && layers_sntt_log_size->at(1)) {
         int log_nof_subntts = layers_sntt_log_size->at(0);
@@ -558,14 +478,6 @@ namespace ntt_cpu {
             cpu_ntt_basic(device, output /*input*/, original_size, dir, config, output, block_idx, subntt_idx, layers_sntt_log_size, layer); //input=output (in-place)
           }
         }
-        // # if DEBUG
-        //   ICICLE_LOG_DEBUG << "After layer 1";
-        //   for (int b=0; b<config.batch_size; b++) {
-        //     for (int e=0; e<size; e++) {
-        //       ICICLE_LOG_DEBUG << "output[" << b*original_size+e << "]=" << output[b*original_size+e];
-        //     }
-        //   }
-        // # endif
       }
       if (layer == 2 && layers_sntt_log_size->at(2)) {
         int log_nof_blocks = layers_sntt_log_size->at(0)+layers_sntt_log_size->at(1);
@@ -575,14 +487,6 @@ namespace ntt_cpu {
       }
       if (layer!=2 && layers_sntt_log_size->at(layer+1) != 0) {
         refactor_output<S, E>(output, output /*input fot next layer*/,original_size, config.batch_size, config.columns_batch, twiddles, domain_max_size, layers_sntt_log_size, layer, dir);
-        // #if DEBUG
-        //   ICICLE_LOG_DEBUG << "After refactor_output. layer=" << layer;
-        //   for (int b=0; b<config.batch_size; b++) {
-        //     for (int e=0; e<size; e++) {
-        //       ICICLE_LOG_DEBUG << "output[" << b*original_size+e << "]=" << output[b*original_size+e];
-        //     }
-        //   }
-        // #endif
       }
     }
     // Sort the output at the end so that elements will be in right order. 
@@ -593,20 +497,8 @@ namespace ntt_cpu {
         reorder_output(output, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
       } else {
         for (int b=0; b<config.batch_size; b++) {
-          // # if DEBUG
-          //   ICICLE_LOG_DEBUG << "Before reorder_output of batch =" << b;
-          //   for (int e=0; e<original_size*config.batch_size; e++) {
-          //     ICICLE_LOG_DEBUG << "output[" << e << "]=" << output[e];
-          //   }
-          // # endif
 
           reorder_output(output + b*original_size, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
-          // # if DEBUG
-          //   ICICLE_LOG_DEBUG << "After reorder_output of batch =" << b;
-          //   for (int e=0; e<original_size*config.batch_size; e++) {
-          //     ICICLE_LOG_DEBUG << "output[" << e << "]=" << output[e];
-          //   }
-          // # endif
         }
       }
     }
@@ -625,11 +517,6 @@ namespace ntt_cpu {
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
     const int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
 
-    # if DEBUG
-      for (int i = 0; i < size*config.batch_size; i++) {
-        ICICLE_LOG_DEBUG << "input[" << i << "] = " << input[i];
-      }
-    # endif
     
     //TODO SHANIE - move to init domain
     int coset_stride = 0;
@@ -666,11 +553,6 @@ namespace ntt_cpu {
       std::end(layers_subntt_log_size[logn])
     );
 
-    // # if DEBUG
-    //   if (logn > 3) 
-    // # else 
-    //   if (logn > 15) 
-    // # endif
     if (logn > 15) 
     {
     // TODO future - maybe can start 4'rth layer in parallel to 3'rd layer? 
@@ -679,69 +561,22 @@ namespace ntt_cpu {
     // Sorting is done between the layers, so that the elements needed for each sunbtt are close to each other in memory.
       
       int stride = config.columns_batch? config.batch_size : 1;
-      // # if DEBUG
-      //   ICICLE_LOG_DEBUG <<"";
-      //   ICICLE_LOG_DEBUG <<"";
-      //   ICICLE_LOG_DEBUG << "FIRST LAYER INPUT";
-      //   for (int i=0; i<size*config.batch_size; i++) {
-      //     ICICLE_LOG_DEBUG << "output[" << i << "] = " << output[i];
-      //   }
-      // # endif
       reorder_input(output, size, config.batch_size, config.columns_batch, layers_sntt_log_size);
-      // # if DEBUG
-      //   ICICLE_LOG_DEBUG <<"after reorder_input";
-      //   for (int i=0; i<size*config.batch_size; i++) {
-      //     ICICLE_LOG_DEBUG << "output[" << i << "] = " << output[i];
-      //   }
-      // # endif
       for (int subntt_idx = 0; subntt_idx < (1<<layers_sntt_log_size->at(1)); subntt_idx++) {
         E* current_elements = output + stride*(subntt_idx << layers_sntt_log_size->at(0)); //output + subntt_idx * subntt_size
         cpu_ntt_parallel(device, (1<<layers_sntt_log_size->at(0)), size, dir, config, current_elements, twiddles, domain_max_size);
-        // # if DEBUG
-        //   ICICLE_LOG_DEBUG <<"";
-        //   ICICLE_LOG_DEBUG <<"";
-        //   ICICLE_LOG_DEBUG << "FIRST LAYER OUTPUT - subntt_idx=" << subntt_idx;
-        //   for (int i=0; i<size*config.batch_size; i++) {
-        //     ICICLE_LOG_DEBUG << "output[" << i << "] = " << output[i];
-        //   }
-        // # endif
       }
       refactor_and_reorder<S, E>(output, output /*input fot next layer*/, twiddles, config.batch_size, config.columns_batch, domain_max_size, layers_sntt_log_size,  0/*layer*/, dir);
-      // # if DEBUG
-      //   ICICLE_LOG_DEBUG <<"";
-      //   ICICLE_LOG_DEBUG <<"";
-      //   ICICLE_LOG_DEBUG << "SECOND LAYER INPUT (after refactor and reorder)";
-      //   for (int i=0; i<size*config.batch_size; i++) {
-      //     ICICLE_LOG_DEBUG << "output[" << i << "] = " << output[i];
-      //   }
-      // #endif
       for (int subntt_idx = 0; subntt_idx < (1<<layers_sntt_log_size->at(0)); subntt_idx++) {
         E* current_elements = output + stride*(subntt_idx << layers_sntt_log_size->at(1)); //output + subntt_idx * subntt_size 
         cpu_ntt_parallel(device, (1<<layers_sntt_log_size->at(1)), size, dir, config, current_elements, twiddles, domain_max_size);
       }
-      // # if DEBUG
-      //   ICICLE_LOG_DEBUG <<"";
-      //   ICICLE_LOG_DEBUG <<"";
-      //   ICICLE_LOG_DEBUG << "SECOND LAYER OUTPUT";
-      //   for (int i=0; i<size*config.batch_size; i++) {
-      //     ICICLE_LOG_DEBUG << "output[" << i << "] = " << output[i];
-      //   }
-      // #endif
-
       if (config.columns_batch) {
         reorder_output(output, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
       } else {
         for (int b=0; b<config.batch_size; b++) {
           reorder_output(output + b*size, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
         }
-        // # if DEBUG
-        //   ICICLE_LOG_DEBUG <<"";
-        //   ICICLE_LOG_DEBUG <<"";
-        //   ICICLE_LOG_DEBUG << "FINAL OUTPUT (after reorder)";
-        //   for (int i=0; i<size*config.batch_size; i++) {
-        //     ICICLE_LOG_DEBUG << "output[" << i << "] = " << output[i];
-        //   }
-        // #endif
       }
 
 
@@ -771,13 +606,6 @@ namespace ntt_cpu {
       reorder_by_bit_reverse(logn, output, config.batch_size, config.columns_batch); //TODO - check if access the fixed indexes instead of reordering may be more efficient?
     }
 
-    # if DEBUG
-      ICICLE_LOG_DEBUG <<"";
-      ICICLE_LOG_DEBUG <<"MOST FINAL OUTPUT";
-      for (int i = 0; i < size*config.batch_size; i++) {
-        ICICLE_LOG_DEBUG << "output[" << i << "] = " << output[i];
-      }
-    # endif
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu
