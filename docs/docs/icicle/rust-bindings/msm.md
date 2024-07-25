@@ -27,7 +27,7 @@ pub struct MSMConfig {
     pub c: i32,
     pub bitsize: i32,    
     batch_size: i32,
-    are_bases_shared: bool,
+    are_points_shared_in_batch: bool,
     are_scalars_on_device: bool,
     pub are_scalars_montgomery_form: bool,
     are_points_on_device: bool,
@@ -86,7 +86,7 @@ fn main() {
 
 ## Batched msm
 
-For batch msm, simply allocate the results array with size corresponding to batch size and set the `are_bases_shared` flag in config struct.
+For batch msm, simply allocate the results array with size corresponding to batch size and set the `are_points_shared_in_batch` flag in config struct.
 
 ## Precomputationg
 
