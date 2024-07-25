@@ -1,4 +1,4 @@
 package bw6761
 
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/lib -lingo_curve_bw6_761 -lingo_field_bw6_761 -lstdc++ -lm
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle_v3/build -licicle_field_bw6_761 -licicle_curve_bw6_761 -lstdc++ -Wl,-rpath=${SRCDIR}/../../../../icicle_v3/build
 import "C"

@@ -33,6 +33,8 @@ func TestNtt(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 
 			scalarsCopy := core.HostSliceFromElements[babybear.ScalarField](scalars[:testSize])
@@ -53,6 +55,8 @@ func TestNttDeviceAsync(t *testing.T) {
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+				runtime.SetDevice(&DEVICE)
+
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[babybear.ScalarField](scalars[:testSize])
 
@@ -86,6 +90,8 @@ func TestNttBatch(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{2, 16, largestBatchSize} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 

@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _BW6_761_MSM_H
@@ -12,11 +11,9 @@ typedef struct scalar_t scalar_t;
 typedef struct projective_t projective_t;
 typedef struct affine_t affine_t;
 typedef struct MSMConfig MSMConfig;
-typedef struct DeviceContext DeviceContext;
 
-cudaError_t bw6_761_msm_cuda(const scalar_t* scalars,const  affine_t* points, int count, MSMConfig* config, projective_t* out);
-cudaError_t bw6_761_precompute_msm_bases_cuda(affine_t* points, int count, int precompute_factor, int _c, bool bases_on_device, DeviceContext* ctx, affine_t* out);
-cudaError_t bw6_761_precompute_msm_points_cuda(affine_t* points, int msm_size, MSMConfig* config, affine_t* out);
+int bw6_761_msm(const scalar_t* scalars, const affine_t* points, int count, MSMConfig* config, projective_t* out);
+int bw6_761_msm_precompute_bases(affine_t* input_bases, int bases_size, MSMConfig* config, affine_t* output_bases);
 
 #ifdef __cplusplus
 }

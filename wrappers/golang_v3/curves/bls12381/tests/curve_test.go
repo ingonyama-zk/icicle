@@ -1,11 +1,10 @@
 package tests
 
 import (
-	"testing"
-
 	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/bls12381"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/test_helpers"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestAffineZero(t *testing.T) {

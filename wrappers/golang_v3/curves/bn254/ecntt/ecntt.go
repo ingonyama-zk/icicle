@@ -6,10 +6,10 @@ import "C"
 
 import (
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 )
 
-func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) cr.EIcicleError {
+func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError {
 	pointsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](points, cfg, results)
 
 	cPoints := (*C.projective_t)(pointsPointer)
@@ -19,6 +19,6 @@ func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTC
 	cResults := (*C.projective_t)(resultsPointer)
 
 	__ret := C.bn254_ecntt(cPoints, cSize, cDir, cCfg, cResults)
-	err := (cr.EIcicleError)(__ret)
+	err := runtime.EIcicleError(__ret)
 	return err
 }

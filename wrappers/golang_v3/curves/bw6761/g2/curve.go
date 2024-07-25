@@ -8,7 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 )
 
 type G2Projective struct {
@@ -134,44 +134,38 @@ func G2GenerateAffinePoints(size int) core.HostSlice[G2Affine] {
 	return pointsSlice
 }
 
-func convertG2AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.g2_affine_t)(points.AsUnsafePointer())
-	cSize := (C.size_t)(points.Len())
-	cIsInto := (C._Bool)(isInto)
-	defaultCtx, _ := cr.GetDefaultDeviceContext()
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761_g2_affine_convert_montgomery(cValues, cSize, cIsInto, cCtx)
-	err := (cr.CudaError)(__ret)
+func convertG2AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+	defaultCfg := core.DefaultVecOpsConfig()
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(*points, *points, *points, &defaultCfg)
+	cErr := C.bw6_761_g2_affine_convert_montgomery((*C.g2_affine_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.g2_affine_t)(cValues))
+	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func G2AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
+func G2AffineToMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
 	points.CheckDevice()
 	return convertG2AffinePointsMontgomery(points, true)
 }
 
-func G2AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+func G2AffineFromMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
 	points.CheckDevice()
 	return convertG2AffinePointsMontgomery(points, false)
 }
 
-func convertG2ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.g2_projective_t)(points.AsUnsafePointer())
-	cSize := (C.size_t)(points.Len())
-	cIsInto := (C._Bool)(isInto)
-	defaultCtx, _ := cr.GetDefaultDeviceContext()
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761_g2_projective_convert_montgomery(cValues, cSize, cIsInto, cCtx)
-	err := (cr.CudaError)(__ret)
+func convertG2ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+	defaultCfg := core.DefaultVecOpsConfig()
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(*points, *points, *points, &defaultCfg)
+	cErr := C.bw6_761_g2_projective_convert_montgomery((*C.g2_projective_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.g2_projective_t)(cValues))
+	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func G2ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
+func G2ProjectiveToMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
 	points.CheckDevice()
 	return convertG2ProjectivePointsMontgomery(points, true)
 }
 
-func G2ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
+func G2ProjectiveFromMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
 	points.CheckDevice()
 	return convertG2ProjectivePointsMontgomery(points, false)
 }

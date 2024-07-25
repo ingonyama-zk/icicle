@@ -1,4 +1,4 @@
 package grumpkin
 
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/lib -lingo_curve_grumpkin -lingo_field_grumpkin -lstdc++ -lm
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle_v3/build -licicle_field_grumpkin -licicle_curve_grumpkin -lstdc++ -Wl,-rpath=${SRCDIR}/../../../../icicle_v3/build
 import "C"

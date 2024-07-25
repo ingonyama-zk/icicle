@@ -29,27 +29,6 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 	return err
 }
 
-// Deprecated: PrecomputeBases exists for backward compatibility.
-// It may cause issues if an MSM with a different `c` value is used with precomputed points and it will be removed in a future version.
-// PrecomputePoints should be used instead.
-// func PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) runtime.EIcicleError {
-// 	cfg := GetDefaultMSMConfig()
-// 	cfg.PrecomputeFactor = precomputeFactor
-// 	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, &cfg, outputBases)
-
-//  cPoints := (*C.affine_t)(pointsPointer)
-// 	cPointsLen := (C.int)(points.Len())
-// 	cPrecomputeFactor := (C.int)(precomputeFactor)
-// 	cC := (C.int)(c)
-// 	cPointsIsOnDevice := (C._Bool)(points.IsOnDevice())
-// 	cCtx := (*C.DeviceContext)(unsafe.Pointer(ctx))
-// 	cOutputBases := (*C.affine_t)(outputBasesPointer)
-
-// 	__ret := C.bn254_precompute_msm_bases(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
-// 	err := (runtime.EIcicleError)(__ret)
-// 	return err
-// }
-
 func PrecomputeBases(bases core.HostOrDeviceSlice, cfg *core.MSMConfig, outputBases core.DeviceSlice) runtime.EIcicleError {
 	basesPointer, outputBasesPointer := core.PrecomputeBasesCheck(bases, cfg, outputBases)
 

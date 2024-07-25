@@ -7,7 +7,7 @@ const MAX_TYPE_SIZE = 64
 
 type Device struct {
 	DeviceType [MAX_TYPE_SIZE]C.char
-	Id         int
+	Id         int32
 }
 
 type DeviceProperties struct {
@@ -28,7 +28,7 @@ func CreateDevice(deviceType string, id int) Device {
 	if len(deviceType) >= MAX_TYPE_SIZE {
 		cDeviceType[MAX_TYPE_SIZE-1] = C.char(0)
 	}
-	return Device{DeviceType: cDeviceType, Id: id}
+	return Device{DeviceType: cDeviceType, Id: int32(id)}
 }
 
 func (self *Device) GetDeviceType() string {

@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"os"
+	"fmt"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
@@ -14,6 +14,8 @@ const (
 	largestTestSize = 20
 )
 
+var DEVICE runtime.Device
+
 func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	rouIcicle := babybear.ScalarField{}
 	rouIcicle.FromUint32(1461624142)
@@ -23,22 +25,36 @@ func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcic
 
 func TestMain(m *testing.M) {
 	runtime.LoadBackendFromEnv()
-	device := runtime.CreateDevice("CUDA", 0)
-	runtime.SetDevice(&device)
-
-	// setup domain
-	cfg := core.GetDefaultNTTInitDomainConfig()
-	e := initDomain(largestTestSize, cfg)
+	devices, e := runtime.GetRegisteredDevices()
 	if e != runtime.Success {
-		panic("initDomain failed")
+		panic("Failed to load registered devices")
 	}
+	for _, deviceType := range devices {
+		DEVICE = runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&DEVICE)
 
-	// execute tests
-	os.Exit(m.Run())
+		// setup domain
+		cfg := core.GetDefaultNTTInitDomainConfig()
+		e = initDomain(largestTestSize, cfg)
+		if e != runtime.Success {
+			if e != runtime.ApiNotImplemented {
+				fmt.Println("initDomain is not implemented for ", deviceType, " device type")
+			} else {
+				panic("initDomain failed")
+			}
+		}
 
-	// release domain
-	e = ntt.ReleaseDomain()
-	if e != runtime.Success {
-		panic("ReleaseDomain failed")
+		// execute tests
+		m.Run()
+
+		// release domain
+		e = ntt.ReleaseDomain()
+		if e != runtime.Success {
+			if e != runtime.ApiNotImplemented {
+				fmt.Println("ReleaseDomain is not implemented for ", deviceType, " device type")
+			} else {
+				panic("ReleaseDomain failed")
+			}
+		}
 	}
 }

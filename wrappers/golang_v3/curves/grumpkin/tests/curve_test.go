@@ -1,11 +1,10 @@
 package tests
 
 import (
-	"testing"
-
 	grumpkin "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/curves/grumpkin"
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/test_helpers"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestAffineZero(t *testing.T) {

@@ -10,10 +10,10 @@ func TestVecOpsDefaultConfig(t *testing.T) {
 	actual := DefaultVecOpsConfig()
 	expected := VecOpsConfig{
 		actual.StreamHandle, // Ctx
-		true,                // isAOnDevice
-		true,                // isBOnDevice
-		true,                // isResultOnDevice
-		true,                // IsAsync
+		false,               // isAOnDevice
+		false,               // isBOnDevice
+		false,               // isResultOnDevice
+		false,               // IsAsync
 		actual.Ext,          // Ext
 	}
 

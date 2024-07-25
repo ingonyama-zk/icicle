@@ -21,7 +21,6 @@ func TestECNtt(t *testing.T) {
 
 	for _, size := range []int{4, 5, 6, 7, 8} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
-
 			runtime.SetDevice(&DEVICE)
 
 			testSize := 1 << size

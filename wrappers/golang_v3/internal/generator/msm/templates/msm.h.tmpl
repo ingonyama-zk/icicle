@@ -12,8 +12,8 @@ typedef struct {{toCName .CurvePrefix}}projective_t {{toCName .CurvePrefix}}proj
 typedef struct {{toCName .CurvePrefix}}affine_t {{toCName .CurvePrefix}}affine_t;
 typedef struct MSMConfig MSMConfig;
 
-cudaError_t {{.Curve}}{{toCNameBackwards .CurvePrefix}}_msm(const scalar_t* scalars, const {{toCName .CurvePrefix}}affine_t* points, int count, MSMConfig* config, {{toCName .CurvePrefix}}projective_t* out);
-cudaError_t {{.Curve}}{{toCNameBackwards .CurvePrefix}}_msm_precompute_bases({{toCName .CurvePrefix}}affine_t* input_bases, int bases_size, MSMConfig* config, {{toCName .CurvePrefix}}affine_t* output_bases);
+int {{.Curve}}{{toCNameBackwards .CurvePrefix}}_msm(const scalar_t* scalars, const {{toCName .CurvePrefix}}affine_t* points, int count, MSMConfig* config, {{toCName .CurvePrefix}}projective_t* out);
+int {{.Curve}}{{toCNameBackwards .CurvePrefix}}_msm_precompute_bases({{toCName .CurvePrefix}}affine_t* input_bases, int bases_size, MSMConfig* config, {{toCName .CurvePrefix}}affine_t* output_bases);
 
 #ifdef __cplusplus
 }

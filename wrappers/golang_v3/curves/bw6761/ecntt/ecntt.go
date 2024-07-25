@@ -6,10 +6,10 @@ import "C"
 
 import (
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/runtime"
 )
 
-func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError {
 	pointsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](points, cfg, results)
 
 	cPoints := (*C.projective_t)(pointsPointer)
@@ -18,7 +18,7 @@ func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTC
 	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.projective_t)(resultsPointer)
 
-	__ret := C.bw6_761_ecntt_cuda(cPoints, cSize, cDir, cCfg, cResults)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+	__ret := C.bw6_761_ecntt(cPoints, cSize, cDir, cCfg, cResults)
+	err := runtime.EIcicleError(__ret)
+	return err
 }

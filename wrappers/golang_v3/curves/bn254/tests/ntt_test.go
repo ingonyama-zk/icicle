@@ -51,10 +51,7 @@ func testAgainstGnarkCryptoNttGnarkTypes(t *testing.T, size int, scalarsFr core.
 	if order == core.KNN || order == core.KRR {
 		fft.BitReverse(scalarsFr)
 	}
-	// println(scalarsFr[0].String())
-	// println(outputAsFr[0].String())
 	assert.Equal(t, scalarsFr, outputAsFr)
-	// return reflect.DeepEqual(scalarsFr, outputAsFr)
 }
 func TestNTTGetDefaultConfig(t *testing.T) {
 	actual := ntt.GetDefaultNttConfig()
@@ -76,7 +73,7 @@ func TestNtt(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := bn254.GenerateScalars(1 << largestTestSize)
 
-	for _, size := range []int{4, 8} {
+	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
 			runtime.SetDevice(&DEVICE)
 
@@ -87,11 +84,7 @@ func TestNtt(t *testing.T) {
 
 			// run ntt
 			output := make(core.HostSlice[bn254.ScalarField], testSize)
-			err := ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
-			if err == runtime.ApiNotImplemented {
-				t.Skipf("NTT is not implemented for %s device type. Skipping test", DEVICE.GetDeviceType())
-			}
-			assert.Equal(t, runtime.Success, err)
+			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
 			testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, core.KForward)
@@ -118,11 +111,7 @@ func TestNttFrElement(t *testing.T) {
 
 			// run ntt
 			output := make(core.HostSlice[fr.Element], testSize)
-			err := ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
-			if err == runtime.ApiNotImplemented {
-				t.Skipf("NTT is not implemented for %s device type. Skipping test", DEVICE.GetDeviceType())
-			}
-			assert.Equal(t, runtime.Success, err)
+			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
 			testAgainstGnarkCryptoNttGnarkTypes(t, testSize, scalarsCopy, output, v, core.KForward)
@@ -143,32 +132,24 @@ func TestNttDeviceAsync(t *testing.T) {
 				scalarsCopy := core.HostSliceFromElements[bn254.ScalarField](scalars[:testSize])
 
 				stream, _ := runtime.CreateStream()
-				defer runtime.DestroyStream(stream)
 
 				cfg.Ordering = v
 				cfg.IsAsync = true
 				cfg.StreamHandle = stream
 
 				var deviceInput core.DeviceSlice
-				defer deviceInput.FreeAsync(stream)
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
-				defer deviceOutput.FreeAsync(stream)
 				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
 
 				// run ntt
-				err := ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
-				if err == runtime.ApiNotImplemented {
-					t.Skipf("NTT is not implemented for %s device type. Skipping test", DEVICE.GetDeviceType())
-				}
-				assert.Equal(t, runtime.Success, err)
+				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
 				output := make(core.HostSlice[bn254.ScalarField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				runtime.SynchronizeStream(stream)
 				// Compare with gnark-crypto
 				testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, direction)
-
 			}
 		}
 	}
@@ -193,11 +174,7 @@ func TestNttBatch(t *testing.T) {
 			cfg.BatchSize = int32(batchSize)
 			// run ntt
 			output := make(core.HostSlice[bn254.ScalarField], totalSize)
-			err := ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
-			if err == runtime.ApiNotImplemented {
-				t.Skip("NTT is not implemented for ", DEVICE.GetDeviceType(), " device type. Skipping test")
-			}
-			assert.Equal(t, runtime.Success, err)
+			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
 			domainWithPrecompute := fft.NewDomain(uint64(testSize))

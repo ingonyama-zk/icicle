@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[bw6_761.ScalarField], output core.HostSlice[bw6_761.ScalarField], order core.Ordering, direction core.NTTDir) bool {
+func testAgainstGnarkCryptoNtt(t *testing.T, size int, scalars core.HostSlice[bw6_761.ScalarField], output core.HostSlice[bw6_761.ScalarField], order core.Ordering, direction core.NTTDir) {
 	scalarsFr := make([]fr.Element, size)
 	for i, v := range scalars {
 		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
@@ -26,10 +26,10 @@ func testAgainstGnarkCryptoNtt(size int, scalars core.HostSlice[bw6_761.ScalarFi
 		outputAsFr[i] = slice64
 	}
 
-	return testAgainstGnarkCryptoNttGnarkTypes(size, scalarsFr, outputAsFr, order, direction)
+	testAgainstGnarkCryptoNttGnarkTypes(t, size, scalarsFr, outputAsFr, order, direction)
 }
 
-func testAgainstGnarkCryptoNttGnarkTypes(size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) bool {
+func testAgainstGnarkCryptoNttGnarkTypes(t *testing.T, size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) {
 	domainWithPrecompute := fft.NewDomain(uint64(size))
 	// DIT + BitReverse == Ordering.kRR
 	// DIT == Ordering.kRN
@@ -51,7 +51,7 @@ func testAgainstGnarkCryptoNttGnarkTypes(size int, scalarsFr core.HostSlice[fr.E
 	if order == core.KNN || order == core.KRR {
 		fft.BitReverse(scalarsFr)
 	}
-	return reflect.DeepEqual(scalarsFr, outputAsFr)
+	assert.Equal(t, scalarsFr, outputAsFr)
 }
 func TestNTTGetDefaultConfig(t *testing.T) {
 	actual := ntt.GetDefaultNttConfig()
@@ -75,6 +75,8 @@ func TestNtt(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 
 			scalarsCopy := core.HostSliceFromElements[bw6_761.ScalarField](scalars[:testSize])
@@ -85,7 +87,7 @@ func TestNtt(t *testing.T) {
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
-			assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, core.KForward))
+			testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, core.KForward)
 		}
 	}
 }
@@ -100,6 +102,8 @@ func TestNttFrElement(t *testing.T) {
 
 	for _, size := range []int{4} {
 		for _, v := range [1]core.Ordering{core.KNN} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := size
 
 			scalarsCopy := (core.HostSlice[fr.Element])(scalars[:testSize])
@@ -110,7 +114,7 @@ func TestNttFrElement(t *testing.T) {
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
-			assert.True(t, testAgainstGnarkCryptoNttGnarkTypes(testSize, scalarsCopy, output, v, core.KForward))
+			testAgainstGnarkCryptoNttGnarkTypes(t, testSize, scalarsCopy, output, v, core.KForward)
 		}
 	}
 }
@@ -122,6 +126,8 @@ func TestNttDeviceAsync(t *testing.T) {
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+				runtime.SetDevice(&DEVICE)
+
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[bw6_761.ScalarField](scalars[:testSize])
 
@@ -143,7 +149,7 @@ func TestNttDeviceAsync(t *testing.T) {
 
 				runtime.SynchronizeStream(stream)
 				// Compare with gnark-crypto
-				assert.True(t, testAgainstGnarkCryptoNtt(testSize, scalarsCopy, output, v, direction))
+				testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, direction)
 			}
 		}
 	}
@@ -157,6 +163,8 @@ func TestNttBatch(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{2, 16, largestBatchSize} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 

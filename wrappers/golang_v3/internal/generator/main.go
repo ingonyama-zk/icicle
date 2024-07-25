@@ -74,7 +74,7 @@ func generateFiles() {
 			fields.Generate(extensionsDir, "extension", extensionField, extensionFieldPrefix, true, field.ExtensionLimbsNum)
 			vecops.Generate(extensionsDir, extensionField, extensionFieldPrefix)
 			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
-			lib_linker.Generate(extensionsDir, "extension", field.Field, lib_linker.FIELD, 1)
+			// lib_linker.Generate(extensionsDir, "extension", field.Field, lib_linker.FIELD, 1)
 		}
 
 		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, field.SupportsNTT, field.SupportsPoly)
