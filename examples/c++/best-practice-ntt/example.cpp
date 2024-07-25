@@ -64,7 +64,7 @@ int main(int argc, char** argv)
   ConfigExtension backend_cfg_ext;
   backend_cfg_ext.set("fast_twiddles", true);
   ntt_init_domain_cfg.ext = &backend_cfg_ext;
-  bn254_ntt_init_domain(&basic_root, ntt_init_domain_cfg);
+  ICICLE_CHECK(bn254_ntt_init_domain(&basic_root, ntt_init_domain_cfg));
 
   // ntt configuration
   NTTConfig<scalar_t> config_compute = default_ntt_config<scalar_t>();

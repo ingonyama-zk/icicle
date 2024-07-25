@@ -1,2 +1,5 @@
 #!/bin/bash
-./build/example/example
+
+# update for V3 or remove
+
+# ./build/example/example
