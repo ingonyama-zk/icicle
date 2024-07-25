@@ -1,6 +1,6 @@
 # MSM - Multi scalar multiplication
 
-MSM stands for Multi scalar multiplication, its defined as:
+MSM stands for Multi scalar multiplication, it's defined as:
 
 <math xmlns="http://www.w3.org/1998/Math/MathML">
   <mi>M</mi>
@@ -43,7 +43,7 @@ $a_0, \ldots, a_n$ - Scalars
 
 $MSM(a, G) \in G$ - a single EC (elliptic curve) point
 
-In words, MSM is the sum of scalar and EC point multiplications. We can see from this definition that the core operations occurring are Modular Multiplication and Elliptic curve point addition. Its obvious that multiplication can be computed in parallel and then the products summed, making MSM inherently parallelizable.
+In words, MSM is the sum of scalar and EC point multiplications. We can see from this definition that the core operations occurring are Modular Multiplication and Elliptic curve point addition. It's obvious that multiplication can be computed in parallel and then the products summed, making MSM inherently parallelizable.
 
 Accelerating MSM is crucial to a ZK protocol's performance due to the [large percent of run time](https://hackmd.io/@0xMonia/SkQ6-oRz3#Hardware-acceleration-in-action) they take when generating proofs.
 
@@ -131,7 +131,7 @@ Large buckets exist in two cases:
 2. When `c` does not divide the scalar bit-size.
 
 `large_bucket_factor` that is equal to 10 yields good results for most cases, but it's best to fine tune this parameter per `c` and per scalar distribution.
-The two most important parameters for performance are `c` and the `precompute_factor`. They affect the number of EC additions as well as the memory size. When the points are not known in advance we cannot use precomputation. In this case the best `c` value is usually around $log_2(msmSize) - 4$. However, in most protocols the points are known in advanced and precomputation can be used unless limited by memory. Usually it's best to use maximum precomputation (such that we end up with only a single bucket module) combined we a `c` value around $log_2(msmSize) - 1$.
+The two most important parameters for performance are `c` and the `precompute_factor`. They affect the number of EC additions as well as the memory size. When the points are not known in advance we cannot use precomputation. In this case the best `c` value is usually around $log_2(msmSize) - 4$. However, in most protocols the points are known in advance and precomputation can be used unless limited by memory. Usually it's best to use maximum precomputation (such that we end up with only a single bucket module) combined with a `c` value around $log_2(msmSize) - 1$.
 
 ## Memory usage estimation
 

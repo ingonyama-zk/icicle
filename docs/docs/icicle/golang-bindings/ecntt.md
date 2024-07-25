@@ -47,7 +47,7 @@ type NTTConfig[T any] struct {
 - **`areInputsOnDevice`**: Indicates if input scalars are located on the device.
 - **`areOutputsOnDevice`**: Indicates if results are stored on the device.
 - **`IsAsync`**: Controls whether the NTT operation runs asynchronously.
-- **`NttAlgorithm`**: Explicitly select the NTT algorithm. ECNTT supports running on `Radix2` algoruithm.
+- **`NttAlgorithm`**: Explicitly select the NTT algorithm. ECNTT supports running on `Radix2` algorithm.
 
 ### Default Configuration
 
