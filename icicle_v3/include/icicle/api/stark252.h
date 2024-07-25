@@ -37,11 +37,11 @@ extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size)
 extern "C" void stark252_scalar_convert_montgomery(
   const stark252::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, stark252::scalar_t* output);
 
-extern "C" eIcicleError stark252_initialize_domain(
+extern "C" eIcicleError stark252_ntt_init_domain(
   stark252::scalar_t* primitive_root, const NTTInitDomainConfig& config);
 
 extern "C" eIcicleError stark252_ntt(
   const stark252::scalar_t* input, int size, NTTDir dir, NTTConfig<stark252::scalar_t>& config, stark252::scalar_t* output);
 
-extern "C" eIcicleError stark252_release_domain();
+extern "C" eIcicleError stark252_ntt_release_domain();
 

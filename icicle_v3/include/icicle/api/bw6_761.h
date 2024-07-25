@@ -87,11 +87,11 @@ extern "C" void bw6_761_generate_scalars(bw6_761::scalar_t* scalars, int size);
 extern "C" void bw6_761_scalar_convert_montgomery(
   const bw6_761::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, bw6_761::scalar_t* output);
 
-extern "C" eIcicleError bw6_761_initialize_domain(
+extern "C" eIcicleError bw6_761_ntt_init_domain(
   bw6_761::scalar_t* primitive_root, const NTTInitDomainConfig& config);
 
 extern "C" eIcicleError bw6_761_ntt(
   const bw6_761::scalar_t* input, int size, NTTDir dir, NTTConfig<bw6_761::scalar_t>& config, bw6_761::scalar_t* output);
 
-extern "C" eIcicleError bw6_761_release_domain();
+extern "C" eIcicleError bw6_761_ntt_release_domain();
 

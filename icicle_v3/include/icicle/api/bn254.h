@@ -87,11 +87,11 @@ extern "C" void bn254_generate_scalars(bn254::scalar_t* scalars, int size);
 extern "C" void bn254_scalar_convert_montgomery(
   const bn254::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, bn254::scalar_t* output);
 
-extern "C" eIcicleError bn254_initialize_domain(
+extern "C" eIcicleError bn254_ntt_init_domain(
   bn254::scalar_t* primitive_root, const NTTInitDomainConfig& config);
 
 extern "C" eIcicleError bn254_ntt(
   const bn254::scalar_t* input, int size, NTTDir dir, NTTConfig<bn254::scalar_t>& config, bn254::scalar_t* output);
 
-extern "C" eIcicleError bn254_release_domain();
+extern "C" eIcicleError bn254_ntt_release_domain();
 

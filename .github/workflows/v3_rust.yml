@@ -49,7 +49,7 @@ jobs:
         run: |
           DESCRIPTION=$(gh pr view ${{ github.event.pull_request.number }} --json body -q '.body')
           echo "PR Description: $DESCRIPTION"
-          CUDA_BE_BRANCH=$(echo "$DESCRIPTION" | grep -oP 'cuda-backend-branch:\s*\K[^\s]+')
+          CUDA_BE_BRANCH=$(echo "$DESCRIPTION" | grep -oP 'cuda-backend-branch:\s*\K[^\s]+') || true
           if [ -z "$CUDA_BE_BRANCH" ]; then
             CUDA_BE_BRANCH="main" # Default branch if not specified
           fi

@@ -40,13 +40,13 @@ extern "C" void babybear_generate_scalars(babybear::scalar_t* scalars, int size)
 extern "C" void babybear_scalar_convert_montgomery(
   const babybear::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, babybear::scalar_t* output);
 
-extern "C" eIcicleError babybear_initialize_domain(
+extern "C" eIcicleError babybear_ntt_init_domain(
   babybear::scalar_t* primitive_root, const NTTInitDomainConfig& config);
 
 extern "C" eIcicleError babybear_ntt(
   const babybear::scalar_t* input, int size, NTTDir dir, NTTConfig<babybear::scalar_t>& config, babybear::scalar_t* output);
 
-extern "C" eIcicleError babybear_release_domain();
+extern "C" eIcicleError babybear_ntt_release_domain();
 
 extern "C" void babybear_extension_generate_scalars(babybear::extension_t* scalars, int size);
 

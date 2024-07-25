@@ -87,11 +87,11 @@ extern "C" void bls12_381_generate_scalars(bls12_381::scalar_t* scalars, int siz
 extern "C" void bls12_381_scalar_convert_montgomery(
   const bls12_381::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, bls12_381::scalar_t* output);
 
-extern "C" eIcicleError bls12_381_initialize_domain(
+extern "C" eIcicleError bls12_381_ntt_init_domain(
   bls12_381::scalar_t* primitive_root, const NTTInitDomainConfig& config);
 
 extern "C" eIcicleError bls12_381_ntt(
   const bls12_381::scalar_t* input, int size, NTTDir dir, NTTConfig<bls12_381::scalar_t>& config, bls12_381::scalar_t* output);
 
-extern "C" eIcicleError bls12_381_release_domain();
+extern "C" eIcicleError bls12_381_ntt_release_domain();
 
