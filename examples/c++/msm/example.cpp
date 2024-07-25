@@ -3,44 +3,15 @@
 #include <iomanip>
 
 #include "icicle/runtime.h"
-
 #include "icicle/api/bn254.h"
 using namespace bn254;
 
-using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg)                                                                                          \
-  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+#include "examples_utils.h"
 
-void try_load_and_set_cuda_backend(const char* selected_device = nullptr)
-{
-  std::cout << "Trying to load and select backend device" << std::endl;
-#ifdef BACKEND_DIR
-  ICICLE_CHECK(icicle_load_backend(BACKEND_DIR, true));
-#endif
-
-  if (selected_device) {
-    std::cout << "selecting " << selected_device << " device" << std::endl;
-    ICICLE_CHECK(icicle_set_device(selected_device));
-    return;
-  }
-
-  // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
-  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
-  if (is_cuda_device_available) {
-    Device device = {"CUDA", 0}; // GPU-0
-    std::cout << "setting " << device << std::endl;
-    ICICLE_CHECK(icicle_set_device(device));
-    return;
-  }
-
-  std::cout << "CUDA device not available, falling back to CPU" << std::endl;
-}
 
 int main(int argc, char* argv[])
 {
-  bool is_device_passed_as_param = (argc > 1);
-  try_load_and_set_cuda_backend(is_device_passed_as_param ? argv[1] : nullptr);
+  try_load_and_set_backend_device(argc, argv);
 
   std::cout << "\nIcicle example: Muli-Scalar Multiplication (MSM)" << std::endl;
   std::cout << "Example parameters" << std::endl;
