@@ -9,8 +9,6 @@ import (
 
 type MSMConfig struct {
 	StreamHandle runtime.Stream
-	basesSize    int32
-
 	/// The number of extra bases to pre-compute for each point. See the `precompute_bases` function, `precompute_factor` passed
 	/// there needs to be equal to the one used here. Larger values decrease the number of computations
 	/// to make, on-line memory footprint, but increase the static memory footprint. Default value: 1 (i.e. don't pre-compute).
@@ -28,7 +26,8 @@ type MSMConfig struct {
 	/// (better) upper bound is known, it should be reflected in this variable. Default value: 0 (set to the bitsize of scalar field).
 	Bitsize int32
 
-	batchSize                int32
+	BatchSize                int32
+	AreBasesShared           bool
 	areScalarsOnDevice       bool
 	AreScalarsMontgomeryForm bool
 	areBasesOnDevice         bool
@@ -44,28 +43,36 @@ type MSMConfig struct {
 
 func GetDefaultMSMConfig() MSMConfig {
 	return MSMConfig{
-		nil,   // StreamHandle
-		0,     // basesSize
-		1,     // PrecomputeFactor
-		0,     // C
-		0,     // Bitsize
-		1,     // 	batchSize
-		false, // areScalarsOnDevice
-		false, // AreScalarsMontgomeryForm
-		false, // areBasesOnDevice
-		false, // AreBasesMontgomeryForm
-		false, // areResultsOnDevice
-		false, // 	IsAsync
-		nil,   // Ext
+		StreamHandle:             nil,
+		PrecomputeFactor:         1,
+		C:                        0,
+		Bitsize:                  0,
+		BatchSize:                1,
+		AreBasesShared:           true,
+		areScalarsOnDevice:       false,
+		AreScalarsMontgomeryForm: false,
+		areBasesOnDevice:         false,
+		AreBasesMontgomeryForm:   false,
+		areResultsOnDevice:       false,
+		IsAsync:                  false,
+		Ext:                      nil,
 	}
 }
 
-func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int, unsafe.Pointer) {
-	scalarsLength, pointsLength, resultsLength := scalars.Len(), points.Len()/int(cfg.PrecomputeFactor), results.Len()
-	if scalarsLength%pointsLength != 0 {
+func MsmCheck(scalars HostOrDeviceSlice, bases HostOrDeviceSlice, cfg *MSMConfig, results HostOrDeviceSlice) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {
+	if bases.Len()%int(cfg.PrecomputeFactor) != 0 {
 		errorString := fmt.Sprintf(
-			"Number of points %d does not divide the number of scalars %d",
-			pointsLength,
+			"Precompute factor %d does not divide the number of bases %d",
+			cfg.PrecomputeFactor,
+			bases.Len(),
+		)
+		panic(errorString)
+	}
+	scalarsLength, basesLength, resultsLength := scalars.Len(), bases.Len()/int(cfg.PrecomputeFactor), results.Len()
+	if scalarsLength%basesLength != 0 {
+		errorString := fmt.Sprintf(
+			"Number of bases %d does not divide the number of scalars %d",
+			basesLength,
 			scalarsLength,
 		)
 		panic(errorString)
@@ -79,18 +86,19 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 		panic(errorString)
 	}
 
-	cfg.basesSize = int32(pointsLength)
-	cfg.batchSize = int32(resultsLength)
+	// cfg.basesSize = int32(basesLength)
+	cfg.AreBasesShared = basesLength < scalarsLength
+	cfg.BatchSize = int32(resultsLength)
 	cfg.areScalarsOnDevice = scalars.IsOnDevice()
-	cfg.areBasesOnDevice = points.IsOnDevice()
+	cfg.areBasesOnDevice = bases.IsOnDevice()
 	cfg.areResultsOnDevice = results.IsOnDevice()
 
 	if scalars.IsOnDevice() {
 		scalars.(DeviceSlice).CheckDevice()
 	}
 
-	if points.IsOnDevice() {
-		points.(DeviceSlice).CheckDevice()
+	if bases.IsOnDevice() {
+		bases.(DeviceSlice).CheckDevice()
 	}
 
 	if results.IsOnDevice() {
@@ -98,27 +106,29 @@ func MsmCheck(scalars HostOrDeviceSlice, points HostOrDeviceSlice, cfg *MSMConfi
 	}
 
 	size := scalars.Len() / results.Len()
-	return scalars.AsUnsafePointer(), points.AsUnsafePointer(), results.AsUnsafePointer(), size, unsafe.Pointer(cfg)
+	return scalars.AsUnsafePointer(), bases.AsUnsafePointer(), results.AsUnsafePointer(), size
 }
 
-func PrecomputePointsCheck(points HostOrDeviceSlice, cfg *MSMConfig, outputBases DeviceSlice) (unsafe.Pointer, unsafe.Pointer) {
-	outputBasesLength, pointsLength := outputBases.Len(), points.Len()
-	if outputBasesLength != pointsLength*int(cfg.PrecomputeFactor) {
+func PrecomputeBasesCheck(bases HostOrDeviceSlice, cfg *MSMConfig, outputBases DeviceSlice) (unsafe.Pointer, unsafe.Pointer) {
+	outputBasesLength, basesLength := outputBases.Len(), bases.Len()
+	if outputBasesLength != basesLength*int(cfg.PrecomputeFactor) {
 		errorString := fmt.Sprintf(
 			"Precompute factor is probably incorrect: expected %d but got %d",
-			outputBasesLength/pointsLength,
+			outputBasesLength/basesLength,
 			cfg.PrecomputeFactor,
 		)
 		panic(errorString)
 	}
 
-	if points.IsOnDevice() {
-		points.(DeviceSlice).CheckDevice()
+	if bases.IsOnDevice() {
+		bases.(DeviceSlice).CheckDevice()
 	}
+	outputBases.CheckDevice()
 
-	cfg.basesSize = int32(pointsLength)
-	cfg.areBasesOnDevice = points.IsOnDevice()
-	cfg.areResultsOnDevice = points.IsOnDevice()
+	// cfg.basesSize = int32(basesLength)
+	// cfg.areBasesShared = cfg.BatchSize > 1
+	cfg.areBasesOnDevice = bases.IsOnDevice()
+	cfg.areResultsOnDevice = bases.IsOnDevice()
 
-	return points.AsUnsafePointer(), outputBases.AsUnsafePointer()
+	return bases.AsUnsafePointer(), outputBases.AsUnsafePointer()
 }

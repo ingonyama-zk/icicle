@@ -73,16 +73,12 @@ func TestInitDomain(t *testing.T) {
 }
 
 func TestNtt(t *testing.T) {
-	runtime.LoadBackendFromEnv()
-	device := runtime.CreateDevice("CUDA", 0)
-
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := bn254.GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{4, 8} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
-
-			runtime.SetDevice(&device)
+			runtime.SetDevice(&DEVICE)
 
 			testSize := 1 << size
 
@@ -92,6 +88,9 @@ func TestNtt(t *testing.T) {
 			// run ntt
 			output := make(core.HostSlice[bn254.ScalarField], testSize)
 			err := ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+			if err == runtime.ApiNotImplemented {
+				t.Skipf("NTT is not implemented for %s device type. Skipping test", DEVICE.GetDeviceType())
+			}
 			assert.Equal(t, runtime.Success, err)
 
 			// Compare with gnark-crypto
@@ -110,7 +109,7 @@ func TestNttFrElement(t *testing.T) {
 
 	for _, size := range []int{4} {
 		for _, v := range [1]core.Ordering{core.KNN} {
-			runtime.SetDevice(&MAIN_DEVICE)
+			runtime.SetDevice(&DEVICE)
 
 			testSize := size
 
@@ -119,7 +118,11 @@ func TestNttFrElement(t *testing.T) {
 
 			// run ntt
 			output := make(core.HostSlice[fr.Element], testSize)
-			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+			err := ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+			if err == runtime.ApiNotImplemented {
+				t.Skipf("NTT is not implemented for %s device type. Skipping test", DEVICE.GetDeviceType())
+			}
+			assert.Equal(t, runtime.Success, err)
 
 			// Compare with gnark-crypto
 			testAgainstGnarkCryptoNttGnarkTypes(t, testSize, scalarsCopy, output, v, core.KForward)
@@ -134,30 +137,38 @@ func TestNttDeviceAsync(t *testing.T) {
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
-				runtime.SetDevice(&MAIN_DEVICE)
+				runtime.SetDevice(&DEVICE)
 
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[bn254.ScalarField](scalars[:testSize])
 
 				stream, _ := runtime.CreateStream()
+				defer runtime.DestroyStream(stream)
 
 				cfg.Ordering = v
 				cfg.IsAsync = true
 				cfg.StreamHandle = stream
 
 				var deviceInput core.DeviceSlice
+				defer deviceInput.FreeAsync(stream)
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
+				defer deviceOutput.FreeAsync(stream)
 				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
 
 				// run ntt
-				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
+				err := ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
+				if err == runtime.ApiNotImplemented {
+					t.Skipf("NTT is not implemented for %s device type. Skipping test", DEVICE.GetDeviceType())
+				}
+				assert.Equal(t, runtime.Success, err)
 				output := make(core.HostSlice[bn254.ScalarField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				runtime.SynchronizeStream(stream)
 				// Compare with gnark-crypto
 				testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, direction)
+
 			}
 		}
 	}
@@ -171,7 +182,7 @@ func TestNttBatch(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{2, 16, largestBatchSize} {
-			runtime.SetDevice(&MAIN_DEVICE)
+			runtime.SetDevice(&DEVICE)
 
 			testSize := 1 << size
 			totalSize := testSize * batchSize
@@ -182,7 +193,11 @@ func TestNttBatch(t *testing.T) {
 			cfg.BatchSize = int32(batchSize)
 			// run ntt
 			output := make(core.HostSlice[bn254.ScalarField], totalSize)
-			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+			err := ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+			if err == runtime.ApiNotImplemented {
+				t.Skip("NTT is not implemented for ", DEVICE.GetDeviceType(), " device type. Skipping test")
+			}
+			assert.Equal(t, runtime.Success, err)
 
 			// Compare with gnark-crypto
 			domainWithPrecompute := fft.NewDomain(uint64(testSize))

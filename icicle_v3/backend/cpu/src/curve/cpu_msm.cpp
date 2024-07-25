@@ -18,7 +18,7 @@ cpu_msm(const Device& device, const S* scalars, const A* bases, int msm_size, co
     const S* batch_scalars = scalars + msm_size * batch_idx;
     const A* batch_bases = config.are_bases_shared ? bases : bases + msm_size * batch_idx;
     for (auto i = 0; i < msm_size; ++i) {
-      res = res + P::from_affine(batch_bases[i]) * batch_scalars[i];
+      res = res + P::from_affine(config.are_points_montgomery_form ? A::from_montgomery(batch_bases[i]) : batch_bases[i]) * (config.are_scalars_montgomery_form ? S::from_montgomery(batch_scalars[i]) : batch_scalars[i]);
     }
     results[batch_idx] = res;
   }

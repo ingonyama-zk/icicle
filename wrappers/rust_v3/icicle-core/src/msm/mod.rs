@@ -32,8 +32,8 @@ pub struct MSMConfig {
     /// (better) upper bound is known, it should be reflected in this variable. Default value: 0 (set to the bitsize of scalar field).
     pub bitsize: i32,
 
-    batch_size: i32,
-    are_bases_shared: bool, /// MSMs in batch share the bases. If false, expecting #bases==#scalars
+    pub batch_size: i32,
+    pub are_bases_shared: bool, /// MSMs in batch share the bases. If false, expecting #bases==#scalars
     are_scalars_on_device: bool,
     pub are_scalars_montgomery_form: bool,
     are_bases_on_device: bool,
@@ -246,7 +246,7 @@ macro_rules! impl_msm {
                 unsafe {
                     $curve_prefix_ident::precompute_bases_ffi(
                         points.as_ptr(),
-                        points.len() as i32,
+                        points.len() as i32 / config.batch_size,
                         config,
                         output_bases.as_mut_ptr(),
                     )
@@ -278,6 +278,18 @@ macro_rules! impl_msm_tests {
         fn test_msm_batch() {
             initialize();
             check_msm_batch::<$curve>()
+        }
+
+        #[test]
+        fn test_msm_batch_shared() {
+            initialize();
+            check_msm_batch_shared::<$curve>()
+        }
+
+        #[test]
+        fn test_msm_batch_not_shared() {
+            initialize();
+            check_msm_batch_not_shared::<$curve>()
         }
 
         #[test]

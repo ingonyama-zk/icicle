@@ -19,7 +19,6 @@ func LoadBackend(path string, isRecursive bool) EIcicleError {
 
 func LoadBackendFromEnv() EIcicleError {
 	path := os.Getenv("DEFAULT_BACKEND_INSTALL_DIR")
-	path = "/home/administrator/users/Timur/Projects/icicle/icicle_v3/build"
 	return LoadBackend(path, true)
 }
 

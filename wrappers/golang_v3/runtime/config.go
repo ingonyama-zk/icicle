@@ -4,7 +4,6 @@ package runtime
 // #include "config_extension.h"
 import "C"
 import (
-	"runtime"
 	"unsafe"
 )
 
@@ -16,7 +15,7 @@ type ConfigExtension struct {
 
 func CreateConfigExtension() *ConfigExtension {
 	ext := &ConfigExtension{handler: C.create_config_extension()}
-	runtime.SetFinalizer(ext, Delete)
+	// runtime.SetFinalizer(ext, Delete)
 	return ext
 }
 
@@ -46,6 +45,6 @@ func (ext *ConfigExtension) GetBool(key string) bool {
 	return C.config_extension_get_bool(ext.handler, cKey) == C._Bool(true)
 }
 
-func (ext *ConfigExtension) AsUnsafePointer() unsafe.Pointer {
+func (ext ConfigExtension) AsUnsafePointer() unsafe.Pointer {
 	return ext.handler
 }

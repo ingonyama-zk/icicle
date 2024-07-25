@@ -33,6 +33,9 @@ const (
 	MixedRadix
 )
 
+const CUDA_NTT_FAST_TWIDDLES_MODE = "fast_twiddles"
+const CUDA_NTT_ALGORITHM = "ntt_algorithm"
+
 type NTTConfig[T any] struct {
 	/// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
 	StreamHandle runtime.Stream

@@ -2,7 +2,6 @@ package core
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/ingonyama-zk/icicle/v2/wrappers/golang_v3/core/internal"
 	"github.com/stretchr/testify/assert"
@@ -11,21 +10,20 @@ import (
 func TestMSMDefaultConfig(t *testing.T) {
 	actual := GetDefaultMSMConfig()
 
-	stream := unsafe.Pointer(nil)
 	expected := MSMConfig{
-		stream,     // Ctx
-		0,          // basesSize
-		1,          // PrecomputeFactor
-		0,          // C
-		0,          // Bitsize
-		1,          // 	batchSize
-		false,      // areScalarsOnDevice
-		false,      // AreScalarsMontgomeryForm
-		false,      // areBasesOnDevice
-		false,      // AreBasesMontgomeryForm
-		false,      // areResultsOnDevice
-		false,      // 	IsAsync
-		actual.Ext, // Ext
+		StreamHandle:             nil,
+		PrecomputeFactor:         1,
+		C:                        0,
+		Bitsize:                  0,
+		BatchSize:                1,
+		AreBasesShared:           true,
+		areScalarsOnDevice:       false,
+		AreScalarsMontgomeryForm: false,
+		areBasesOnDevice:         false,
+		AreBasesMontgomeryForm:   false,
+		areResultsOnDevice:       false,
+		IsAsync:                  false,
+		Ext:                      actual.Ext,
 	}
 
 	assert.EqualValues(t, expected, actual)
@@ -58,7 +56,7 @@ func TestMSMCheckHostSlices(t *testing.T) {
 	assert.False(t, cfg.areScalarsOnDevice)
 	assert.False(t, cfg.areBasesOnDevice)
 	assert.False(t, cfg.areResultsOnDevice)
-	assert.Equal(t, int32(1), cfg.batchSize)
+	assert.Equal(t, int32(1), cfg.BatchSize)
 
 	output2 := make(HostSlice[internal.MockProjective], 3)
 	assert.Panics(t, func() { MsmCheck(scalars, points, &cfg, output2) })
@@ -95,7 +93,7 @@ func TestMSMCheckDeviceSlices(t *testing.T) {
 	assert.True(t, cfg.areScalarsOnDevice)
 	assert.True(t, cfg.areBasesOnDevice)
 	assert.False(t, cfg.areResultsOnDevice)
-	assert.Equal(t, int32(1), cfg.batchSize)
+	assert.Equal(t, int32(1), cfg.BatchSize)
 
 	output2 := make(HostSlice[internal.MockProjective], 3)
 	assert.Panics(t, func() { MsmCheck(scalarsOnDevice, pointsOnDevice, &cfg, output2) })

@@ -16,13 +16,13 @@ func GetDefaultMSMConfig() core.MSMConfig {
 }
 
 func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) runtime.EIcicleError {
-	scalarsPointer, pointsPointer, resultsPointer, size, cfgPointer := core.MsmCheck(scalars, points, cfg, results)
+	scalarsPointer, pointsPointer, resultsPointer, size := core.MsmCheck(scalars, points, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
 	cPoints := (*C.affine_t)(pointsPointer)
 	cResults := (*C.projective_t)(resultsPointer)
 	cSize := (C.int)(size)
-	cCfg := (*C.MSMConfig)(cfgPointer)
+	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 
 	__ret := C.bn254_msm(cScalars, cPoints, cSize, cCfg, cResults)
 	err := runtime.EIcicleError(__ret)
@@ -50,15 +50,20 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 // 	return err
 // }
 
-func PrecomputeBases(points core.HostOrDeviceSlice, size int, cfg *core.MSMConfig, outputBases core.DeviceSlice) runtime.EIcicleError {
-	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, cfg, outputBases)
+func PrecomputeBases(bases core.HostOrDeviceSlice, cfg *core.MSMConfig, outputBases core.DeviceSlice) runtime.EIcicleError {
+	basesPointer, outputBasesPointer := core.PrecomputeBasesCheck(bases, cfg, outputBases)
 
-	cPoints := (*C.affine_t)(pointsPointer)
-	cSize := (C.int)(size)
+	cBases := (*C.affine_t)(basesPointer)
+	var cBasesLen C.int
+	if cfg.AreBasesShared {
+		cBasesLen = (C.int)(bases.Len())
+	} else {
+		cBasesLen = (C.int)(bases.Len() / int(cfg.BatchSize))
+	}
 	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
 	cOutputBases := (*C.affine_t)(outputBasesPointer)
 
-	__ret := C.bn254_msm_precompute_bases(cPoints, cSize, cCfg, cOutputBases)
+	__ret := C.bn254_msm_precompute_bases(cBases, cBasesLen, cCfg, cOutputBases)
 	err := runtime.EIcicleError(__ret)
 	return err
 }
