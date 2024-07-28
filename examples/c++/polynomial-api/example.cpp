@@ -1,14 +1,13 @@
 #include <iostream>
 #include <cassert>
-#include "polynomials/polynomials.h"
-#include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
-#include "ntt/ntt.cuh"
 
-#include "api/bn254.h"
-#include <chrono>
+#include "icicle/api/bn254.h"
+#include "icicle/polynomials/polynomials.h"
 
-using namespace polynomials;
-using namespace bn254;
+#include "examples_utils.h"
+
+using namespace icicle;
+using namespace bn254; // typedef scalar_t as bn254-scalar type
 
 // define the polynomial type
 typedef Polynomial<scalar_t> Polynomial_t;
@@ -310,14 +309,14 @@ void example_device_memory_view()
   const int log_size = 6;
   const int size = 1 << log_size;
   auto f = randomize_polynomial(size);
-  auto [d_coeffs, N, device_id] = f.get_coefficients_view();
+  auto [d_coeffs, N] = f.get_coefficients_view();
 
   // compute coset evaluations
   auto coset_evals = std::make_unique<scalar_t[]>(size);
-  auto ntt_config = ntt::default_ntt_config<scalar_t>();
+  auto ntt_config = default_ntt_config<scalar_t>();
   ntt_config.are_inputs_on_device = true; // using the device data directly as a view
-  ntt_config.coset_gen = ntt::get_root_of_unity<scalar_t>(size * 2);
-  ntt::ntt(d_coeffs.get(), size, ntt::NTTDir::kForward, ntt_config, coset_evals.get());
+  ntt_config.coset_gen = get_root_of_unity<scalar_t>(size * 2);
+  ntt(d_coeffs.get(), size, NTTDir::kForward, ntt_config, coset_evals.get());
 }
 
 
@@ -337,9 +336,9 @@ void example_commit_with_device_memory_view()
   auto SRS = generate_SRS(2*N);
   //Allocate memory on device (points)
   affine_t* points_d;
-  cudaMalloc(&points_d, sizeof(affine_t)* 2 * N);
+  ICICLE_CHECK(icicle_malloc((void**)&points_d, sizeof(affine_t)* 2 * N));
   // copy SRS to device (could have generated on device, but gives an indicator)
-  cudaMemcpy(points_d, SRS.get(), sizeof(affine_t)* 2 * N, cudaMemcpyHostToDevice);
+  ICICLE_CHECK(icicle_copy(points_d, SRS.get(), sizeof(affine_t)* 2 * N));
   end = std::chrono::high_resolution_clock::now();
   duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
   std::cout << "Setup: SRS of length "<< N << " generated and loaded to device. Took: " << duration.count() << " milliseconds" << std::endl;
@@ -369,14 +368,14 @@ void example_commit_with_device_memory_view()
   std::cout << "Computing constraints..done. Took: " << duration.count() << " milliseconds"<< std::endl;
   
   // extract coeff using coeff view
-  auto [viewL1, sizeL1, device_idL1] = L1.get_coefficients_view();
-  auto [viewL2, sizeL2, device_idL2] = L2.get_coefficients_view(); 
-  auto [viewR1, sizeR1, device_idR1] = R1.get_coefficients_view();
-  auto [viewR2, sizeR2, device_idR2] = R2.get_coefficients_view();
+  auto [viewL1, sizeL1] = L1.get_coefficients_view();
+  auto [viewL2, sizeL2] = L2.get_coefficients_view(); 
+  auto [viewR1, sizeR1] = R1.get_coefficients_view();
+  auto [viewR2, sizeR2] = R2.get_coefficients_view();
   
   std::cout << "Computing Commitments with poly view"<< std::endl;
   start = std::chrono::high_resolution_clock::now();
-  msm::MSMConfig config = msm::default_msm_config();
+  MSMConfig config = default_msm_config();
   config.are_points_on_device = true;
   config.are_scalars_on_device = true;
  
@@ -384,10 +383,10 @@ void example_commit_with_device_memory_view()
   projective_t hL1{}, hL2{}, hR1{}, hR2{};
 
   //straightforward msm bn254 api: no batching
-  bn254_msm_cuda(viewL1.get(),points_d,N,config,&hL1);
-  bn254_msm_cuda(viewL2.get(),points_d,N,config,&hL2);
-  bn254_msm_cuda(viewR1.get(),points_d,N,config,&hR1);
-  bn254_msm_cuda(viewR2.get(),points_d,N,config,&hR2);
+  msm(viewL1.get(),points_d,N,config,&hL1);
+  msm(viewL2.get(),points_d,N,config,&hL2);
+  msm(viewR1.get(),points_d,N,config,&hR1);
+  msm(viewR2.get(),points_d,N,config,&hR2);
 
   end = std::chrono::high_resolution_clock::now();
   duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -418,14 +417,14 @@ void example_commit_with_device_memory_view()
 
 int main(int argc, char** argv)
 {
-  // Initialize NTT. TODO: can we hide this in the library?
-  static const int MAX_NTT_LOG_SIZE = 24;
-  auto ntt_config = ntt::default_ntt_config<scalar_t>();
+   try_load_and_set_backend_device(argc, argv);  
+  
+  static const int MAX_NTT_LOG_SIZE = 24;  
   const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
-  ntt::init_domain(basic_root, ntt_config.ctx);
+  ntt_init_domain(basic_root, default_ntt_init_domain_config());  
 
-  // Virtual factory design pattern: initializing polynomimals factory for CUDA backend
-  Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
+
+  START_TIMER(polyapi);
 
   example_evaluate();
   example_clone(10);
@@ -443,6 +442,8 @@ int main(int argc, char** argv)
   example_slice();
   example_device_memory_view();
   example_commit_with_device_memory_view();
+
+  END_TIMER(polyapi, "polyapi example took");
 
   return 0;
 }

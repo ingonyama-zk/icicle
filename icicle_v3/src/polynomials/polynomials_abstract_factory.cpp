@@ -1,5 +1,7 @@
 #include "icicle/polynomials/polynomial_abstract_factory.h"
 #include "icicle/dispatcher.h"
+#include "icicle/fields/field_config.h"
+using namespace field_config;
 
 namespace icicle {
 

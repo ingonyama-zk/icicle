@@ -1,4 +1,8 @@
 #include "icicle/polynomials/polynomials.h"
+#include "icicle/fields/field_config.h"
+
+using namespace field_config;
+
 
 namespace icicle {
 

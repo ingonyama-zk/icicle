@@ -3,13 +3,10 @@
 #include <iostream>
 #include <memory>
 #include "icicle/utils/integrity_pointer.h"
-#include "icicle/fields/field_config.h"
 
 #include "polynomial_context.h"
 #include "polynomial_backend.h"
 #include "polynomial_abstract_factory.h"
-
-using namespace field_config;
 
 namespace icicle {
 
@@ -106,14 +103,5 @@ namespace icicle {
 
     std::shared_ptr<IPolynomialContext<Coeff, Domain, Image>> get_context() { return m_context; }
   };
-
-  // explicit instantiation
-
-  // Friend operator to allow multiplication with a scalar from the left-hand side
-  template <typename C = scalar_t, typename D = C, typename I = C>
-  Polynomial<C, D, I> operator*(const D& scalar, const Polynomial<C, D, I>& rhs);
-
-  // External template instantiation to ensure the template is compiled for specific types.
-  extern template class Polynomial<scalar_t>;
 
 } // namespace icicle

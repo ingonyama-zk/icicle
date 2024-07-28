@@ -2,10 +2,8 @@
 
 #include "polynomial_context.h"
 #include "polynomial_backend.h"
-#include "icicle/fields/field_config.h"
 #include <memory> // For std::shared_ptr
 
-using namespace field_config;
 
 namespace icicle {
 
@@ -49,17 +47,5 @@ namespace icicle {
     virtual ~AbstractPolynomialFactory() = default;
   };
 
-  /*************************** Backend registration ***************************/
-
-  void register_polynomial_factory(
-    const std::string& deviceType, std::shared_ptr<AbstractPolynomialFactory<scalar_t>> factory);
-
-#define REGISTER_SCALAR_POLYNOMIAL_FACTORY_BACKEND(DEVICE_TYPE, FACTORY)                                               \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_polynomial_factory) = []() -> bool {                                                       \
-      register_polynomial_factory(DEVICE_TYPE, std::make_shared<FACTORY>());                                           \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
 
 } // namespace icicle
