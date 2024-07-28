@@ -13,6 +13,9 @@ template <typename S, typename A, typename P>
 eIcicleError
 cpu_msm(const Device& device, const S* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
+  const bool is_shared_bases = config.bases_size == 0 || config.bases_size == msm_size;
+  const bool is_valid_nof_bases = is_shared_bases || config.bases_size == config.batch_size * msm_size;
+  ICICLE_ASSERT(is_valid_nof_bases) << "CPU MSM invalid nof bases";
   for (auto batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
     P res = P::zero();
     const S* batch_scalars = scalars + msm_size * batch_idx;
