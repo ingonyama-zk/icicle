@@ -24,12 +24,9 @@ In this example we use `BN254` curve. The function computes $result = \sum_{i=0}
 
 Running the example:
 ```sh
-./run.sh CPU # to use CPU backend
-./run.sh CUDA # to load and use CUDA backend
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
 ```
 
-> [!NOTE]
-> The default sizes are 2^10 - 2^10. You can change this by passing the `--lower_bound_log_size <size> --upper_bound_log_size <size>` options. To change the size range to 2^21 - 2^24, run the example like this:
-> ```sh
-> cargo run --release -- -l 21 -u 24
-> ```

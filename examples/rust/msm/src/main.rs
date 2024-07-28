@@ -11,7 +11,6 @@ use icicle_bn254::curve::{CurveCfg, G1Projective, G2CurveCfg, G2Projective, Scal
 
 use clap::Parser;
 use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
-use std::env;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -24,28 +23,31 @@ struct Args {
     upper_bound_log_size: u8,
 
     /// Device type (e.g., "CPU", "CUDA")
-    #[arg(short, long, default_value = "CUDA")]
+    #[arg(short, long, default_value = "CPU")]
     device_type: String,
+
+    /// Backend installation directory
+    #[arg(short, long, default_value = "")]
+    backend_install_dir: String,
 }
 
 // Load backend and set device
-fn try_load_and_set_backend_device(device: &str) {
-    println!("Trying to load and backend device");
-    if let Ok(backend_install_dir) = env::var("ICICLE_CUDA_BACKEND_DIR") {
-        println!("loading backend from {}", &backend_install_dir);
-        icicle_runtime::runtime::load_backend(&backend_install_dir, true /*recursive */).unwrap();
+fn try_load_and_set_backend_device(args: &Args) {
+    if !args
+        .backend_install_dir
+        .is_empty()
+    {
+        println!("trying to load backend from {}", &args.backend_install_dir);
+        icicle_runtime::runtime::load_backend(&args.backend_install_dir, true /*recursive */).unwrap();
     }
-    println!("Setting device {}", device);
-    icicle_runtime::set_device(&icicle_runtime::Device::new(device, 0)).unwrap();
+    println!("Setting device {}", args.device_type);
+    icicle_runtime::set_device(&icicle_runtime::Device::new(&args.device_type, 0)).unwrap();
 }
 
 fn main() {
-    #[cfg(feature = "cuda")]
-    try_load_and_set_backend_device("CUDA");
-    #[cfg(not(feature = "cuda"))]
-    try_load_and_set_backend_device("CPU");
-
     let args = Args::parse();
+    try_load_and_set_backend_device(&args);
+
     let lower_bound = args.lower_bound_log_size;
     let upper_bound = args.upper_bound_log_size;
     println!("Running Icicle Examples: Rust MSM");

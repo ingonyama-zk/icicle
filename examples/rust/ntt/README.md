@@ -34,16 +34,20 @@ In this example we use the `BN254` and `BLS12377` fields.
 Running the example:
 
 ```sh
-cargo run --release
+./run.sh CPU # to use CPU backend
+./run.sh CUDA # to load and use CUDA backend
 ```
 
 You can add the `--feature profile` flag to measure times of both ICICLE and arkworks.
 
 > [!NOTE]
-> The default size is 2^20. You can change this by passing the `--size <size>` option. To change the size to 2^23, run the example like this:
+> The default size is 2^20. You can change this by passing the argument.
 
 ```sh
-cargo run --release -- -s 23
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
 ```
 
 ## Benchmarks
