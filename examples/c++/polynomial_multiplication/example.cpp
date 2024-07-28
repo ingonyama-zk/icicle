@@ -30,23 +30,12 @@ void incremental_values(scalar_t* res, uint32_t count)
 
 int main(int argc, char** argv)
 {
-  try_load_and_set_backend_device(argc - 1, argv + 1);
+  try_load_and_set_backend_device(argc, argv);
 
-  int NTT_LOG_SIZE = 18;
+  int NTT_LOG_SIZE = 20;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
 
   // init domain
-  auto ntt_config = default_ntt_config<scalar_t>();
-  ConfigExtension ntt_cfg_ext;
-  ntt_config.ext = &ntt_cfg_ext;
-  if (argc > 1) {
-    int ntt_algorithm = atoi(argv[1]);
-    ICICLE_ASSERT(ntt_algorithm >= 1 && ntt_algorithm <= 2) << "Invalid ntt-algorithm index";
-    ntt_cfg_ext.set("ntt_algorithm", ntt_algorithm);
-    const char* ntt_algorithm_str = ntt_algorithm == 1 ? "Radix-2" : "Mixed-Radix";
-    std::cout << "Polynomial multiplication with " << ntt_algorithm_str << " NTT: ";
-  }
-
   scalar_t basic_root = scalar_t::omega(NTT_LOG_SIZE);
   bn254_ntt_init_domain(&basic_root, default_ntt_init_domain_config());
 
@@ -71,6 +60,7 @@ int main(int argc, char** argv)
     START_TIMER(poly_multiply)
 
     // (3) NTT for A,B from host memory to device-memory
+    auto ntt_config = default_ntt_config<scalar_t>();
     ntt_config.are_inputs_on_device = false;
     ntt_config.are_outputs_on_device = true;
     ntt_config.ordering = Ordering::kNM;
@@ -94,7 +84,7 @@ int main(int argc, char** argv)
     ntt_config.ordering = Ordering::kMN;
     ICICLE_CHECK(bn254_ntt(d_polyRes, NTT_SIZE, NTTDir::kInverse, ntt_config, d_polyRes));
 
-    if (print) { END_TIMER(poly_multiply, ""); }
+    if (print) { END_TIMER(poly_multiply, "polynomial multiplication took"); }
 
     ICICLE_CHECK(icicle_free(d_polyA));
     ICICLE_CHECK(icicle_free(d_polyB));

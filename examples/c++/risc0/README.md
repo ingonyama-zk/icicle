@@ -21,9 +21,10 @@ The key enabler for *recursion* is the *redundancy* of polynomial commitments, h
 To run example, from project root directory:
 
 ```sh
-cd examples/c++/risc0
-./compile.sh
-./run.sh
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
 ```
 
 ## What's in the example

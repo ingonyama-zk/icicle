@@ -10,10 +10,12 @@ An example of MSM is [here](../msm/README.md).
 
 ## Running the example
 
-- `cd` to your example directory
-- compile with  `./compile.sh`
-- run with `./run.sh`
-
+```sh
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
+```
 ## Concise Explanation
 
 We recommend this simple [explanation](https://www.rareskills.io/post/pedersen-commitment).

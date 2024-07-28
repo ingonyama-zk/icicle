@@ -23,11 +23,13 @@ Typically, you concurrently
 
 ## Running the example
 
-To change the default curve BN254, edit `compile.sh` and `CMakeLists.txt`
+To change the default curve BN254, edit `run.sh` and `CMakeLists.txt`
 
 ```sh
-./compile.sh
-./run.sh
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
 ```
 
 To compare with ICICLE baseline (i.e. non-concurrent) NTT, you can run [this example](../ntt/README.md).

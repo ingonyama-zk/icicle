@@ -12,10 +12,11 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
 // Load and choose backend
 void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
 {
-#ifdef BACKEND_DIR
-  std::cout << "Trying to load and backend device" << std::endl;
-  ICICLE_CHECK(icicle_load_backend(BACKEND_DIR, true));
-#endif
+  if (argc > 2 && 0 != strcmp(argv[2], "")) {
+    const char* backend_install_dir = argv[2];
+    std::cout << "Trying to load and backend device from " << backend_install_dir << std::endl;
+    ICICLE_CHECK(icicle_load_backend(backend_install_dir, true));
+  }
 
   const char* selected_device = argc > 1 ? argv[1] : nullptr;
   if (selected_device) {

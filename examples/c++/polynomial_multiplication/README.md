@@ -14,9 +14,12 @@ Icicle provides polynomial multiplication using the Number Theoretical Transform
 
 ## Running the example
 
-- `cd` to your example directory
-- compile with  `./compile.sh`
-- run with `./run.sh`
+```sh
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
+```
 
 ## What's in the example
 
