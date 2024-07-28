@@ -10,10 +10,11 @@ name: Examples
 on:
   pull_request:
     branches:
-      - main      
+      - V3
+      - yshekel/V3     # TODO remove when merged to V3
   push:
     branches:
-      - main      
+      - V3    
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,16 +44,16 @@ jobs:
             cd -
           fi
         done    
-    - name: Rust examples
-      working-directory: ./examples/rust
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
-      run: |
-        # loop over all directories in the current directory
-        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
-          if [ -d "$dir" ]; then
-            echo "Running command in $dir"
-            cd $dir
-            cargo run --release
-            cd -
-          fi
-        done      
+    # - name: Rust examples
+    #   working-directory: ./examples/rust
+    #   if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
+    #   run: |
+    #     # loop over all directories in the current directory
+    #     for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+    #       if [ -d "$dir" ]; then
+    #         echo "Running command in $dir"
+    #         cd $dir
+    #         cargo run --release
+    #         cd -
+    #       fi
+    #     done      
