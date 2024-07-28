@@ -1,5 +1,7 @@
-#pragma once 
+#pragma once
 
+#include <chrono>
+#include "icicle/runtime.h"
 
 // Timer
 using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
@@ -8,7 +10,7 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
   printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 // Load and choose backend
-void try_load_and_set_backend_device(int argc, char** argv)
+void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
 {
 #ifdef BACKEND_DIR
   std::cout << "Trying to load and backend device" << std::endl;

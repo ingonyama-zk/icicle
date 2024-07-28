@@ -8,7 +8,6 @@ using namespace bn254;
 
 #include "examples_utils.h"
 
-
 int main(int argc, char* argv[])
 {
   try_load_and_set_backend_device(argc, argv);
@@ -33,11 +32,8 @@ int main(int argc, char* argv[])
 
   std::cout << "Using default MSM configuration with on-host inputs" << std::endl;
 
-  icicleStreamHandle stream;
-  ICICLE_CHECK(icicle_create_stream(&stream));
   auto config = default_msm_config();
   config.batch_size = batch_size;
-  config.stream = stream;
 
   std::cout << "\nRunning MSM kernel with on-host inputs" << std::endl;
   // Execute the MSM kernel

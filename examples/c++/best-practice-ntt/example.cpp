@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
   initialize_input(ntt_size, batch_size, h_inp[1]);
 
   // ntt configuration
-  NTTConfig<scalar_t> config_compute = default_ntt_config<scalar_t>();  
+  NTTConfig<scalar_t> config_compute = default_ntt_config<scalar_t>();
   config_compute.batch_size = batch_size;
   config_compute.are_inputs_on_device = true;
   config_compute.are_outputs_on_device = true;
@@ -115,8 +115,8 @@ int main(int argc, char* argv[])
   // Clean-up
   for (int i = 0; i < 2; i++) {
     ICICLE_CHECK(icicle_free(d_vec[i]));
-    delete[] (h_inp[i]);
-    delete[] (h_out[i]);
+    delete[](h_inp[i]);
+    delete[](h_out[i]);
   }
   ICICLE_CHECK(icicle_destroy_stream(stream_compute));
   ICICLE_CHECK(icicle_destroy_stream(stream_d2h));

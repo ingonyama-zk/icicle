@@ -1,8 +1,6 @@
 #include <iostream>
 #include <iomanip>
-#include <chrono>
 #include <cassert>
-#include <nvml.h>
 
 #include "icicle/runtime.h"
 #include "icicle/api/bn254.h"
@@ -10,8 +8,6 @@
 using namespace bn254;
 
 #include "examples_utils.h"
-
-// typedef point_field_t T;
 
 // modular power
 template <typename T>
@@ -32,7 +28,10 @@ T modPow(T base, T exp)
 
 // Check if y2 is a quadratic residue using Euler's Criterion
 template <typename T>
-bool quadratic_residue(T y2) { return modPow(y2, T::div2(T::zero() - T::one())) == T::one(); }
+bool quadratic_residue(T y2)
+{
+  return modPow(y2, T::div2(T::zero() - T::one())) == T::one();
+}
 
 // modular square root adapted from:
 // https://github.com/ShahjalalShohag/code-library/blob/main/Number%20Theory/Tonelli%20Shanks%20Algorithm.cpp
@@ -80,7 +79,7 @@ bool mySQRT(T a, T* result)
 
 template <typename T>
 void point_near_x(T x, affine_t* point)
-{  
+{
   const T wb = T{G1::weierstrass_b};
   T y2;
   while (y2 = x * x * x + wb, quadratic_residue(y2) == false) {
@@ -108,7 +107,6 @@ static T rand_host_seed()
   //   value = value - Field{get_modulus()};
   return value;
 }
-
 
 int main(int argc, char** argv)
 {

@@ -1,4 +1,3 @@
-#include <chrono>
 #include <iostream>
 
 #include "icicle/runtime.h"
@@ -27,7 +26,7 @@ int main(int argc, char* argv[])
   std::cout << "\nGenerating input data for lowest and highest harmonics" << std::endl;
   auto input = std::make_unique<scalar_t[]>(batch_size * ntt_size);
   auto output = std::make_unique<scalar_t[]>(batch_size * ntt_size);
-  initialize_input(ntt_size, batch_size, input.get());  
+  initialize_input(ntt_size, batch_size, input.get());
 
   // Initialize NTT domain
   std::cout << "\nInit NTT domain" << std::endl;
@@ -45,11 +44,11 @@ int main(int argc, char* argv[])
   config.batch_size = batch_size;
 
   // warmup
-  ICICLE_CHECK(bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get())); 
+  ICICLE_CHECK(bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get()));
 
   // NTT radix-2 alg
   std::cout << "\nRunning NTT radix-2 alg with on-host data" << std::endl;
-  ntt_cfg_ext.set("ntt_algorithm", 1);                                        // radix-2
+  ntt_cfg_ext.set("ntt_algorithm", 1); // radix-2
   START_TIMER(Radix2);
   ICICLE_CHECK(bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get()));
   END_TIMER(Radix2, "Radix2 NTT");
