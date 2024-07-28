@@ -1,4 +1,4 @@
 package {{.PackageName}}
 
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../{{.UpDirs}}icicle_v3/build -licicle_field_{{.Field}} -licicle_curve_{{.Field}} -lstdc++ -Wl,-rpath=${SRCDIR}/../../../../{{.UpDirs}}icicle_v3/build
+// #cgo LDFLAGS: -Lusr/local/ -licicle_field_{{.Field}} -licicle_curve_{{.Field}} -lstdc++ -Wl,-rpath=usr/local/
 import "C"

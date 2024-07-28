@@ -231,7 +231,7 @@ func TestPrecomputePoints(t *testing.T) {
 	const precomputeFactor = 8
 	cfg.PrecomputeFactor = precomputeFactor
 
-	for _, power := range []int{10} {
+	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			runtime.SetDevice(&DEVICE)
 

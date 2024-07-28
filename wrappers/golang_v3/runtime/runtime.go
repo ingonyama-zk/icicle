@@ -18,7 +18,10 @@ func LoadBackend(path string, isRecursive bool) EIcicleError {
 }
 
 func LoadBackendFromEnv() EIcicleError {
-	path := os.Getenv("DEFAULT_BACKEND_INSTALL_DIR")
+	path, exists := os.LookupEnv("DEFAULT_BACKEND_INSTALL_DIR")
+	if !exists {
+		path = "usr/local/"
+	}
 	return LoadBackend(path, true)
 }
 
