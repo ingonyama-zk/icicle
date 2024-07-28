@@ -3,7 +3,6 @@
 
 using namespace field_config;
 
-
 namespace icicle {
 
   std::shared_ptr<AbstractPolynomialFactory<scalar_t>> get_polynomial_abstract_factory();

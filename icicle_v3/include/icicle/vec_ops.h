@@ -9,7 +9,6 @@
 #include "icicle/utils/utils.h"
 #include "icicle/config_extension.h"
 
-
 namespace icicle {
 
   /*************************** Frontend APIs ***************************/

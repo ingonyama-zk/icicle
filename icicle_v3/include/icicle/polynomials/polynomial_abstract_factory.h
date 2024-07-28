@@ -4,7 +4,6 @@
 #include "polynomial_backend.h"
 #include <memory> // For std::shared_ptr
 
-
 namespace icicle {
 
   /**
@@ -46,6 +45,5 @@ namespace icicle {
      */
     virtual ~AbstractPolynomialFactory() = default;
   };
-
 
 } // namespace icicle

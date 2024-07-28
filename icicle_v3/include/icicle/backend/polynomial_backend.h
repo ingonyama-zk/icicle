@@ -7,7 +7,7 @@ using namespace field_config;
 
 namespace icicle {
 
-/*************************** Backend registration ***************************/
+  /*************************** Backend registration ***************************/
 
   void register_polynomial_factory(
     const std::string& deviceType, std::shared_ptr<AbstractPolynomialFactory<scalar_t>> factory);
@@ -20,7 +20,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-// explicit instantiation
+  // explicit instantiation
 
   // Friend operator to allow multiplication with a scalar from the left-hand side
   template <typename C = scalar_t, typename D = C, typename I = C>
