@@ -17,9 +17,9 @@ Typically, you concurrently
 
 ## Best-Practices
 
-1. Use three separate CUDA streams for Download, Upload, and Compute operations
-2. Use pinned (page-locked) memory on host to speed data bus transfers. Calling `cudaHostAlloc` allocates pinned memory.
-3. Use in-place NTT to save on device memory.
+1. Use three separate streams for Download to device, Upload from device, and Compute operations
+2. Future: Use pinned (page-locked) memory on host to speed data bus transfers.
+3. Compute in-place NTT.
 
 ## Running the example
 

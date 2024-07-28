@@ -13,7 +13,7 @@
 ```c++
 #include "icicle/api/bn254.h"
 ...
-MSMConfig config = {...};
+MSMConfig config = default_msm_config();
 ...
 bn254_msm(scalars, points, size, config, &result);
 ```
