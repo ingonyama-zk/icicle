@@ -1,7 +1,6 @@
-use icicle_runtime::memory::{DeviceVec, HostSlice};
-
 use icicle_bls12_377::curve::{ScalarCfg as BLS12377ScalarCfg, ScalarField as BLS12377ScalarField};
 use icicle_bn254::curve::{ScalarCfg as Bn254ScalarCfg, ScalarField as Bn254ScalarField};
+use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 use clap::Parser;
 use icicle_core::{
@@ -32,7 +31,7 @@ fn try_load_and_set_backend_device(args: &Args) {
         .backend_install_dir
         .is_empty()
     {
-        println!("trying to load backend from {}", &args.backend_install_dir);
+        println!("Trying to load backend from {}", &args.backend_install_dir);
         icicle_runtime::runtime::load_backend(&args.backend_install_dir, true /*recursive */).unwrap();
     }
     println!("Setting device {}", args.device_type);
@@ -41,15 +40,18 @@ fn try_load_and_set_backend_device(args: &Args) {
 
 fn main() {
     let args = Args::parse();
+    println!("{:?}", args);
+
     try_load_and_set_backend_device(&args);
 
     println!("Running Icicle Examples: Rust NTT");
     let log_size = args.size;
     let size = 1 << log_size;
     println!(
-        "---------------------- NTT size 2^{}={} ------------------------",
+        "---------------------- NTT size 2^{} = {} ------------------------",
         log_size, size
     );
+
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
     let scalars = Bn254ScalarCfg::generate_random(size);
@@ -74,7 +76,6 @@ fn main() {
     let cfg = ntt::NTTConfig::<Bn254ScalarField>::default();
 
     println!("Setting up bls12377 Domain...");
-    // reusing ctx from above
     initialize_domain(
         ntt::get_root_of_unity::<BLS12377ScalarField>(
             size.try_into()
@@ -119,7 +120,7 @@ fn main() {
             .as_micros()
     );
 
-    println!("Moving results to host..");
+    println!("Moving results to host...");
     let mut host_bn254_results = vec![Bn254ScalarField::zero(); size];
     ntt_results
         .copy_to_host(HostSlice::from_mut_slice(&mut host_bn254_results[..]))
@@ -129,4 +130,7 @@ fn main() {
     ntt_results_bls12377
         .copy_to_host(HostSlice::from_mut_slice(&mut host_bls12377_results[..]))
         .unwrap();
+
+    println!("Results for bn254: {:?}", host_bn254_results);
+    println!("Results for bls12377: {:?}", host_bls12377_results);
 }

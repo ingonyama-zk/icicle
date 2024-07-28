@@ -3,7 +3,7 @@ use icicle_runtime::{
     stream::IcicleStream,
 };
 
-// using both bn254 and bls12-377 curves
+// Using both bn254 and bls12-377 curves
 use icicle_bls12_377::curve::{
     CurveCfg as BLS12377CurveCfg, G1Projective as BLS12377G1Projective, ScalarCfg as BLS12377ScalarCfg,
 };
@@ -37,7 +37,7 @@ fn try_load_and_set_backend_device(args: &Args) {
         .backend_install_dir
         .is_empty()
     {
-        println!("trying to load backend from {}", &args.backend_install_dir);
+        println!("Trying to load backend from {}", &args.backend_install_dir);
         icicle_runtime::runtime::load_backend(&args.backend_install_dir, true /*recursive */).unwrap();
     }
     println!("Setting device {}", args.device_type);
@@ -46,12 +46,15 @@ fn try_load_and_set_backend_device(args: &Args) {
 
 fn main() {
     let args = Args::parse();
+    println!("{:?}", args);
+
     try_load_and_set_backend_device(&args);
 
     let lower_bound = args.lower_bound_log_size;
     let upper_bound = args.upper_bound_log_size;
     println!("Running Icicle Examples: Rust MSM");
-    let upper_size = 1 << (upper_bound);
+    let upper_size = 1 << upper_bound;
+
     println!("Generating random inputs on host for bn254...");
     let upper_points = CurveCfg::generate_random_affine_points(upper_size);
     let g2_upper_points = G2CurveCfg::generate_random_affine_points(upper_size);
@@ -65,17 +68,17 @@ fn main() {
         let log_size = i;
         let size = 1 << log_size;
         println!(
-            "---------------------- MSM size 2^{}={} ------------------------",
+            "---------------------- MSM size 2^{} = {} ------------------------",
             log_size, size
         );
+
         // Setting Bn254 points and scalars
         let points = HostSlice::from_slice(&upper_points[..size]);
         let g2_points = HostSlice::from_slice(&g2_upper_points[..size]);
         let scalars = HostSlice::from_slice(&upper_scalars[..size]);
 
         // Setting bls12377 points and scalars
-        // let points_bls12377 = &upper_points_bls12377[..size];
-        let points_bls12377 = HostSlice::from_slice(&upper_points_bls12377[..size]); //  &upper_points_bls12377[..size];
+        let points_bls12377 = HostSlice::from_slice(&upper_points_bls12377[..size]);
         let scalars_bls12377 = HostSlice::from_slice(&upper_scalars_bls12377[..size]);
 
         println!("Configuring bn254 MSM...");
@@ -110,7 +113,7 @@ fn main() {
         )
         .unwrap();
 
-        println!("Moving results to host..");
+        println!("Moving results to host...");
         let mut msm_host_result = vec![G1Projective::zero(); 1];
         let mut g2_msm_host_result = vec![G2Projective::zero(); 1];
         let mut msm_host_result_bls12377 = vec![BLS12377G1Projective::zero(); 1];

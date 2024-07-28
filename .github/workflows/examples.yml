@@ -1,8 +1,7 @@
 # This workflow is a demo of how to run all examples in the Icicle repository.
-# For each language directory (c++, Rust, etc.) the workflow 
-#   (1) loops over all examples (msm, ntt, etc.) and 
-#   (2) runs ./compile.sh and ./run.sh in each directory.
-# The script ./compile.sh should compile the example and ./run.sh should run it.
+# For each language directory (c++, Rust, etc.) the workflow
+#   (1) loops over all examples (msm, ntt, etc.) and
+#   (2) runs ./run.sh in each directory.
 # Each script should return 0 for success and 1 otherwise.
 
 name: Examples
@@ -14,7 +13,7 @@ on:
       - yshekel/V3     # TODO remove when merged to V3
   push:
     branches:
-      - V3    
+      - V3
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -47,8 +46,8 @@ jobs:
           echo "::set-output name=cuda-backend-branch::$CUDA_BE_BRANCH"
 
   run-examples:
-    runs-on: [self-hosted, Linux, X64, icicle, examples, extract-cuda-backend-branch]
-    needs: check-changed-files
+    runs-on: [self-hosted, Linux, X64, icicle, examples]
+    needs: [check-changed-files, extract-cuda-backend-branch]
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -68,21 +67,21 @@ jobs:
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
           if [ -d "$dir" ]; then
             echo "Running command in $dir"
-            cd $dir            
+            cd $dir
             ./run.sh -d CUDA
             cd -
           fi
-        done    
-    # - name: Rust examples
-    #   working-directory: ./examples/rust
-    #   if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
-    #   run: |
-    #     # loop over all directories in the current directory
-    #     for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
-    #       if [ -d "$dir" ]; then
-    #         echo "Running command in $dir"
-    #         cd $dir
-    #         cargo run --release
-    #         cd -
-    #       fi
-    #     done      
+        done
+    - name: Rust examples
+      working-directory: ./examples/rust
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        # loop over all directories in the current directory
+        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+          if [ -d "$dir" ]; then
+            echo "Running command in $dir"
+            cd $dir
+            ./run.sh -d CUDA
+            cd -
+          fi
+        done
