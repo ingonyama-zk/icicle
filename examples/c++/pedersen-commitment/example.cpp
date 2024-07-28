@@ -4,13 +4,17 @@
 #include <cassert>
 #include <nvml.h>
 
-#include "api/bn254.h"
-#include "msm/msm.cuh"
+#include "icicle/runtime.h"
+#include "icicle/api/bn254.h"
+#include "icicle/curves/params/bn254.h"
 using namespace bn254;
 
-typedef point_field_t T;
+#include "examples_utils.h"
+
+// typedef point_field_t T;
 
 // modular power
+template <typename T>
 T modPow(T base, T exp)
 {
   T r = T::one();
@@ -27,10 +31,12 @@ T modPow(T base, T exp)
 }
 
 // Check if y2 is a quadratic residue using Euler's Criterion
+template <typename T>
 bool quadratic_residue(T y2) { return modPow(y2, T::div2(T::zero() - T::one())) == T::one(); }
 
 // modular square root adapted from:
 // https://github.com/ShahjalalShohag/code-library/blob/main/Number%20Theory/Tonelli%20Shanks%20Algorithm.cpp
+template <typename T>
 bool mySQRT(T a, T* result)
 {
   if (a == T::zero()) {
@@ -72,9 +78,10 @@ bool mySQRT(T a, T* result)
   }
 }
 
+template <typename T>
 void point_near_x(T x, affine_t* point)
-{
-  const T wb = T{weierstrass_b};
+{  
+  const T wb = T{G1::weierstrass_b};
   T y2;
   while (y2 = x * x * x + wb, quadratic_residue(y2) == false) {
     x = x + T::one();
@@ -87,7 +94,8 @@ void point_near_x(T x, affine_t* point)
 }
 
 static int seed = 0;
-static HOST_INLINE T rand_host_seed()
+template <typename T>
+static T rand_host_seed()
 {
   std::mt19937_64 generator(seed++);
   std::uniform_int_distribution<unsigned> distribution;
@@ -101,16 +109,14 @@ static HOST_INLINE T rand_host_seed()
   return value;
 }
 
-using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg)                                                                                          \
-  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int main(int argc, char** argv)
 {
+  try_load_and_set_backend_device(argc, argv);
+
   const unsigned N = pow(2, 10);
   std::cout << "Commitment vector size: " << N << "+1 for salt (a.k.a blinding factor)" << std::endl;
-  T* xs = new T[N + 1];
+  point_field_t* xs = new point_field_t[N + 1];
 
   std::cout << "Generating random points transparently using publicly chosen seed" << std::endl;
   std::cout << "Public seed prevents committer from knowing the discrete logs of points used in the commitment"
@@ -119,9 +125,8 @@ int main(int argc, char** argv)
   std::cout << "Using seed: " << seed << std::endl;
   std::cout << "Generating random field values" << std::endl;
   START_TIMER(gen);
-
   for (unsigned i = 0; i < N; i++) {
-    xs[i] = rand_host_seed();
+    xs[i] = rand_host_seed<point_field_t>();
   }
   END_TIMER(gen, "Time to generate field values");
   std::cout << "xs[0]: " << xs[0] << std::endl;
@@ -145,9 +150,9 @@ int main(int argc, char** argv)
   scalars[N] = scalar_t::rand_host();
 
   std::cout << "Executing MSM" << std::endl;
-  auto config = msm::default_msm_config();
+  auto config = default_msm_config();
   START_TIMER(msm);
-  bn254_msm_cuda(scalars, points, N + 1, config, &result);
+  bn254_msm(scalars, points, N + 1, config, &result);
   END_TIMER(msm, "Time to execute MSM");
 
   std::cout << "Computed commitment: " << result << std::endl;
