@@ -109,9 +109,9 @@ if __name__ == "__main__":
         if any(header.name.startswith("vec_ops") for header in headers):
             includes.append('#include "icicle/vec_ops.h"')
         if any(header.name.startswith("poseidon.h") for header in headers):
-            includes.append('#include "poseidon/poseidon.cuh"')
+            includes.append('#include "poseidon/poseidon.h"')
         if any(header.name.startswith("poseidon2.h") for header in headers):
-            includes.append('#include "poseidon2/poseidon2.cuh"')
+            includes.append('#include "poseidon2/poseidon2.h"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(curve.upper()) + "\n".join(includes) + "\n\n"
         for header in headers:
@@ -135,15 +135,15 @@ if __name__ == "__main__":
         
         # Collect includes
         includes = COMMON_INCLUDES.copy()
-        includes.append(f'#include "fields/stark_fields/{field}.cuh"')
+        includes.append(f'#include "icicle/fields/stark_fields/{field}.h"')
         if any(header.name.startswith("ntt") for header in headers):
-            includes.append('#include "ntt/ntt.cuh"')
+            includes.append('#include "icicle/ntt.h"')
         if any(header.name.startswith("vec_ops") for header in headers):
-            includes.append('#include "vec_ops/vec_ops.cuh"')
+            includes.append('#include "icicle/vec_ops.h"')
         if any(header.name.startswith("poseidon.h") for header in headers):
-            includes.append('#include "poseidon/poseidon.cuh"')
+            includes.append('#include "icicle/poseidon/poseidon.h"')
         if any(header.name.startswith("poseidon2.h") for header in headers):
-            includes.append('#include "poseidon2/poseidon2.cuh"')
+            includes.append('#include "icicle/poseidon2/poseidon2.h"')
 
         contents = WARN_TEXT + INCLUDE_ONCE.format(field.upper()) + "\n".join(includes) + "\n\n"
         for header in headers:

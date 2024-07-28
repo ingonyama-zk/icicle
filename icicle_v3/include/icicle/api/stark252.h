@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "fields/stark_fields/stark252.cuh"
-#include "ntt/ntt.cuh"
-#include "vec_ops/vec_ops.cuh"
+#include "icicle/fields/stark_fields/stark252.h"
+#include "icicle/ntt.h"
+#include "icicle/vec_ops.h"
 
 extern "C" eIcicleError stark252_vector_mul(
   const stark252::scalar_t* vec_a, const stark252::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, stark252::scalar_t* result);

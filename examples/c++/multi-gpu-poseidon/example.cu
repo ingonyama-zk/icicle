@@ -28,7 +28,7 @@ void threadPoseidon(
   unsigned size_partition,
   scalar_t* layers,
   scalar_t* column_hashes,
-  Poseidon<scalar_t> * poseidon)
+  Poseidon<scalar_t>* poseidon)
 {
   cudaError_t err_result = CHK_STICKY(cudaSetDevice(ctx.device_id));
   if (err_result != cudaSuccess) {
@@ -36,7 +36,7 @@ void threadPoseidon(
     return;
   }
   HashConfig column_config = default_hash_config(ctx);
-  cudaError_t err = poseidon->hash_many(layers, column_hashes, (size_t) size_partition, size_col, 1, column_config);
+  cudaError_t err = poseidon->hash_many(layers, column_hashes, (size_t)size_partition, size_col, 1, column_config);
   checkCudaError(err);
 }
 
@@ -51,10 +51,11 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
     exit(EXIT_FAILURE);                                                                                                \
   }
 
-#define CHECK_ALLOC(ptr) if ((ptr) == nullptr) { \
-    std::cerr << "Memory allocation for '" #ptr "' failed." << std::endl; \
-    exit(EXIT_FAILURE); \
-}
+#define CHECK_ALLOC(ptr)                                                                                               \
+  if ((ptr) == nullptr) {                                                                                              \
+    std::cerr << "Memory allocation for '" #ptr "' failed." << std::endl;                                              \
+    exit(EXIT_FAILURE);                                                                                                \
+  }
 
 int main()
 {
@@ -113,13 +114,13 @@ int main()
   scalar_t* column_hash1 = static_cast<scalar_t*>(malloc(size_partition * sizeof(scalar_t)));
   CHECK_ALLOC(column_hash1);
 
-    Poseidon<scalar_t> column_poseidon0(size_col, ctx0);
-    cudaError_t err_result =  CHK_STICKY(cudaSetDevice(ctx1.device_id));
-    if (err_result != cudaSuccess) {
-        std::cerr << "CUDA error: " << cudaGetErrorString(err_result) << std::endl;
-        return; 
-    }
-    Poseidon<scalar_t> column_poseidon1(size_col, ctx1);
+  Poseidon<scalar_t> column_poseidon0(size_col, ctx0);
+  cudaError_t err_result = CHK_STICKY(cudaSetDevice(ctx1.device_id));
+  if (err_result != cudaSuccess) {
+    std::cerr << "CUDA error: " << cudaGetErrorString(err_result) << std::endl;
+    return;
+  }
+  Poseidon<scalar_t> column_poseidon1(size_col, ctx1);
 
   std::cout << "Parallel execution of Poseidon threads" << std::endl;
   START_TIMER(parallel);

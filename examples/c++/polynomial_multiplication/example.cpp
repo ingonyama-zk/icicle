@@ -30,7 +30,7 @@ void incremental_values(scalar_t* res, uint32_t count)
 
 int main(int argc, char** argv)
 {
-  try_load_and_set_backend_device(argc-1, argv+1);
+  try_load_and_set_backend_device(argc - 1, argv + 1);
 
   int NTT_LOG_SIZE = 18;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
@@ -41,9 +41,9 @@ int main(int argc, char** argv)
   ntt_config.ext = &ntt_cfg_ext;
   if (argc > 1) {
     int ntt_algorithm = atoi(argv[1]);
-    ICICLE_ASSERT(ntt_algorithm >=1 && ntt_algorithm <=2) << "Invalid ntt-algorithm index";
-    ntt_cfg_ext.set("ntt_algorithm", ntt_algorithm);    
-    const char* ntt_algorithm_str = ntt_algorithm==1 ? "Radix-2" : "Mixed-Radix";
+    ICICLE_ASSERT(ntt_algorithm >= 1 && ntt_algorithm <= 2) << "Invalid ntt-algorithm index";
+    ntt_cfg_ext.set("ntt_algorithm", ntt_algorithm);
+    const char* ntt_algorithm_str = ntt_algorithm == 1 ? "Radix-2" : "Mixed-Radix";
     std::cout << "Polynomial multiplication with " << ntt_algorithm_str << " NTT: ";
   }
 
@@ -60,16 +60,16 @@ int main(int argc, char** argv)
 
   DeviceProperties device_props;
   ICICLE_CHECK(icicle_get_device_properties(device_props));
-      
+
   auto benchmark = [&](bool print) {
-    // (2) device input allocation. If device does not share memory with host, copy inputs explicitly and     
+    // (2) device input allocation. If device does not share memory with host, copy inputs explicitly and
     ICICLE_CHECK(icicle_malloc((void**)&d_polyA, sizeof(scalar_t) * NTT_SIZE));
     ICICLE_CHECK(icicle_malloc((void**)&d_polyB, sizeof(scalar_t) * NTT_SIZE));
     ICICLE_CHECK(icicle_malloc((void**)&d_polyRes, sizeof(scalar_t) * NTT_SIZE));
 
     // start recording
     START_TIMER(poly_multiply)
-    
+
     // (3) NTT for A,B from host memory to device-memory
     ntt_config.are_inputs_on_device = false;
     ntt_config.are_outputs_on_device = true;
@@ -77,13 +77,13 @@ int main(int argc, char** argv)
     ICICLE_CHECK(bn254_ntt(polyA.get(), NTT_SIZE, NTTDir::kForward, ntt_config, d_polyA));
     ICICLE_CHECK(bn254_ntt(polyB.get(), NTT_SIZE, NTTDir::kForward, ntt_config, d_polyB));
 
-    // (4) multiply A,B      
+    // (4) multiply A,B
     VecOpsConfig config{
       nullptr,
       true,   // is_a_on_device
       true,   // is_b_on_device
       true,   // is_result_on_device
-      false,   // is_async
+      false,  // is_async
       nullptr // ext
     };
     ICICLE_CHECK(bn254_vector_mul(d_polyA, d_polyB, NTT_SIZE, config, d_polyRes));
@@ -92,8 +92,8 @@ int main(int argc, char** argv)
     ntt_config.are_inputs_on_device = true;
     ntt_config.are_outputs_on_device = true;
     ntt_config.ordering = Ordering::kMN;
-    ICICLE_CHECK(bn254_ntt(d_polyRes, NTT_SIZE, NTTDir::kInverse, ntt_config, d_polyRes));         
-    
+    ICICLE_CHECK(bn254_ntt(d_polyRes, NTT_SIZE, NTTDir::kInverse, ntt_config, d_polyRes));
+
     if (print) { END_TIMER(poly_multiply, ""); }
 
     ICICLE_CHECK(icicle_free(d_polyA));

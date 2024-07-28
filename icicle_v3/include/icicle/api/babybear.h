@@ -5,12 +5,12 @@
 
 #pragma once
 
-#include "fields/stark_fields/babybear.cuh"
-#include "ntt/ntt.cuh"
-#include "vec_ops/vec_ops.cuh"
+#include "icicle/fields/stark_fields/babybear.h"
+#include "icicle/ntt.h"
+#include "icicle/vec_ops.h"
 
-extern "C" cudaError_t babybear_extension_ntt(
-  const babybear::extension_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
+extern "C" eIcicleError babybear_extension_ntt(
+  const babybear::extension_t* input, int size, NTTDir dir, NTTConfig<babybear::scalar_t>& config, babybear::extension_t* output);
 
 extern "C" eIcicleError babybear_vector_mul(
   const babybear::scalar_t* vec_a, const babybear::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, babybear::scalar_t* result);
