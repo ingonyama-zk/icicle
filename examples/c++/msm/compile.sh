@@ -15,7 +15,7 @@ if [ -d "${ICICLE_CUDA_BACKEND_DIR}" ]; then
     cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example -DBACKEND_DIR=$(realpath "build/icicle/backend")
 else
     echo "building icicle without CUDA backend"
-    cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICILE_DIR}" -B build/icicle    
+    cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DG2=ON -S "${ICILE_DIR}" -B build/icicle    
     cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
 fi
 cmake --build build/icicle -j
