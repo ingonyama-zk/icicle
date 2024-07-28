@@ -15,9 +15,8 @@ pub(crate) mod tests {
 
     impl_ntt_tests!(ScalarField);
 
-
     use icicle_core::{
-        ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTInitDomainConfig, NTTDir},
+        ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
         traits::{FieldImpl, GenerateRandom},
     };
     use icicle_runtime::memory::HostSlice;
@@ -39,9 +38,13 @@ pub(crate) mod tests {
 
         release_domain::<ScalarField>().unwrap(); // release domain from previous tests, if exists
 
-        let log_sizes = [15, 20];        
+        let log_sizes = [15, 20];
         let lw_root_of_unity = Stark252PrimeField::get_primitive_root_of_unity(log_sizes[log_sizes.len() - 1]).unwrap();
-        initialize_domain(ScalarField::from_bytes_le(&lw_root_of_unity.to_bytes_le()), &NTTInitDomainConfig::default()).unwrap();
+        initialize_domain(
+            ScalarField::from_bytes_le(&lw_root_of_unity.to_bytes_le()),
+            &NTTInitDomainConfig::default(),
+        )
+        .unwrap();
         for log_size in log_sizes {
             let ntt_size = 1 << log_size;
 

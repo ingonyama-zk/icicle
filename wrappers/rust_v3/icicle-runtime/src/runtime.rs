@@ -61,12 +61,12 @@ pub fn get_active_device() -> Result<Device, eIcicleError> {
     unsafe { icicle_get_active_device(&mut device).wrap_value::<Device>(device) }
 }
 
-pub fn is_host_memory(ptr: *const c_void) -> bool{
-    unsafe {eIcicleError::Success == icicle_is_host_memory(ptr)}
+pub fn is_host_memory(ptr: *const c_void) -> bool {
+    unsafe { eIcicleError::Success == icicle_is_host_memory(ptr) }
 }
 
 pub fn is_active_device_memory(ptr: *const c_void) -> bool {
-    unsafe {eIcicleError::Success == icicle_is_active_device_memory(ptr)}
+    unsafe { eIcicleError::Success == icicle_is_active_device_memory(ptr) }
 }
 
 pub fn get_device_count() -> Result<i32, eIcicleError> {

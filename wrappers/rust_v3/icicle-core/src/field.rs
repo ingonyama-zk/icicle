@@ -190,7 +190,7 @@ macro_rules! impl_scalar_field {
         }
 
         impl MontgomeryConvertibleField<$field_name> for $field_cfg {
-            fn to_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {                
+            fn to_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
                 // check device slice is on active device
                 if !values.is_on_active_device() {
                     panic!("input not allocated on an inactive device");

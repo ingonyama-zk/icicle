@@ -140,7 +140,7 @@ macro_rules! impl_univariate_polynomial_api {
 
             pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<$field> {
                 unsafe {
-                    let mut len: u64 = 0;                    
+                    let mut len: u64 = 0;
                     let mut coeffs_mut = get_coeffs_ptr(self.handle, &mut len);
                     let s = slice::from_raw_parts_mut(coeffs_mut, len as usize);
                     DeviceSlice::from_mut_slice(s)
@@ -413,9 +413,12 @@ macro_rules! impl_polynomial_tests {
         $field:ident
     ) => {
         use super::*;
-        use icicle_core::ntt::{get_root_of_unity, initialize_domain, release_domain, NTTDomain, NTTInitDomainConfig, CUDA_NTT_FAST_TWIDDLES_MODE};
-        use icicle_core::vec_ops::{add_scalars, mul_scalars, sub_scalars, VecOps, VecOpsConfig};
+        use icicle_core::ntt::{
+            get_root_of_unity, initialize_domain, release_domain, NTTDomain, NTTInitDomainConfig,
+            CUDA_NTT_FAST_TWIDDLES_MODE,
+        };
         use icicle_core::test_utilities;
+        use icicle_core::vec_ops::{add_scalars, mul_scalars, sub_scalars, VecOps, VecOpsConfig};
         use icicle_runtime::memory::{DeviceVec, HostSlice};
         use std::sync::Once;
 
@@ -497,7 +500,7 @@ macro_rules! impl_polynomial_tests {
 
         fn randomize_poly(size: usize) -> Poly {
             let coeffs = randomize_coeffs::<$field>(size);
-            Poly::from_coeffs(HostSlice::from_slice(&coeffs), size)            
+            Poly::from_coeffs(HostSlice::from_slice(&coeffs), size)
         }
 
         static INIT: Once = Once::new();

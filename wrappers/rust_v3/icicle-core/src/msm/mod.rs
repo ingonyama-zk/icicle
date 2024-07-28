@@ -33,7 +33,8 @@ pub struct MSMConfig {
     pub bitsize: i32,
 
     pub batch_size: i32,
-    pub are_bases_shared: bool, /// MSMs in batch share the bases. If false, expecting #bases==#scalars
+    pub are_bases_shared: bool,
+    /// MSMs in batch share the bases. If false, expecting #bases==#scalars
     are_scalars_on_device: bool,
     pub are_scalars_montgomery_form: bool,
     are_bases_on_device: bool,
@@ -54,7 +55,7 @@ pub const IS_BIG_TRIANGLE: &str = "is_big_triangle";
 impl Default for MSMConfig {
     fn default() -> Self {
         Self {
-            stream_handle: std::ptr::null_mut(),            
+            stream_handle: std::ptr::null_mut(),
             precompute_factor: 1,
             c: 0,
             bitsize: 0,
