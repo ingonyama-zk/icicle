@@ -21,48 +21,49 @@ using namespace icicle;
 using aff_test = affine_t;
 using proj_test = projective_t;
 using sca_test = scalar_t;
-# else 
+#else
 #include <iostream>
 #include <random>
 
-  struct MSMConfig {
-    int nof_bases; /**< Number of bases in the MSM for batched MSM. Set to 0 if all MSMs use the same bases or set to
-                    * 'batch X #scalars' otherwise.  Default value: 0 (that is reuse bases for all batch elements). */
-    int precompute_factor;            /**< The number of extra points to pre-compute for each point. See the
-                                       *   [precompute_msm_bases](@ref precompute_msm_bases) function, `precompute_factor` passed
-                                       *   there needs to be equal to the one used here. Larger values decrease the
-                                       *   number of computations to make, on-line memory footprint, but increase the static
-                                       *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
-    int batch_size;                   /**< The number of MSMs to compute. Default value: 1. */
-    bool are_scalars_on_device;       /**< True if scalars are on device and false if they're on host. Default value:
-                                       *   false. */
-    bool are_scalars_montgomery_form; /**< True if scalars are in Montgomery form and false otherwise. Default value:
-                                       *   true. */
-    bool are_points_on_device; /**< True if points are on device and false if they're on host. Default value: false. */
-    bool are_points_montgomery_form; /**< True if coordinates of points are in Montgomery form and false otherwise.
-                                      *   Default value: true. */
-    bool are_results_on_device; /**< True if the results should be on device and false if they should be on host. If set
-                                 *   to false, `is_async` won't take effect because a synchronization is needed to
-                                 *   transfer results to the host. Default value: false. */
-    bool is_async;              /**< Whether to run the MSM asynchronously. If set to true, the MSM function will be
-                                 *   non-blocking and you'd need to synchronize it explicitly by running
-                                 *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
-                                 *   function will block the current CPU thread. */
+struct MSMConfig {
+  int nof_bases; /**< Number of bases in the MSM for batched MSM. Set to 0 if all MSMs use the same bases or set to
+                  * 'batch X #scalars' otherwise.  Default value: 0 (that is reuse bases for all batch elements). */
+  int precompute_factor;            /**< The number of extra points to pre-compute for each point. See the
+                                     *   [precompute_msm_bases](@ref precompute_msm_bases) function, `precompute_factor` passed
+                                     *   there needs to be equal to the one used here. Larger values decrease the
+                                     *   number of computations to make, on-line memory footprint, but increase the static
+                                     *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
+  int batch_size;                   /**< The number of MSMs to compute. Default value: 1. */
+  bool are_scalars_on_device;       /**< True if scalars are on device and false if they're on host. Default value:
+                                     *   false. */
+  bool are_scalars_montgomery_form; /**< True if scalars are in Montgomery form and false otherwise. Default value:
+                                     *   true. */
+  bool are_points_on_device; /**< True if points are on device and false if they're on host. Default value: false. */
+  bool are_points_montgomery_form; /**< True if coordinates of points are in Montgomery form and false otherwise.
+                                    *   Default value: true. */
+  bool are_results_on_device; /**< True if the results should be on device and false if they should be on host. If set
+                               *   to false, `is_async` won't take effect because a synchronization is needed to
+                               *   transfer results to the host. Default value: false. */
+  bool is_async;              /**< Whether to run the MSM asynchronously. If set to true, the MSM function will be
+                               *   non-blocking and you'd need to synchronize it explicitly by running
+                               *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
+                               *   function will block the current CPU thread. */
 
-    ConfigExtension ext; /** backend specific extensions*/
-  };
+  ConfigExtension ext; /** backend specific extensions*/
+};
 
-  struct MsmPreComputeConfig {    
-    bool is_input_on_device;
-    bool is_output_on_device;
-    bool is_async;
+struct MsmPreComputeConfig {
+  bool is_input_on_device;
+  bool is_output_on_device;
+  bool is_async;
 
-    ConfigExtension ext; /** backend specific extensions*/
-  };
+  ConfigExtension ext; /** backend specific extensions*/
+};
 
 #define P_MACRO 1000
 
-struct Device {};
+struct Device {
+};
 
 class Dummy_Scalar
 {
@@ -73,41 +74,35 @@ public:
   unsigned p = P_MACRO;
   // unsigned p = 1<<30;
 
-  static  Dummy_Scalar zero() { return {0}; }
+  static Dummy_Scalar zero() { return {0}; }
 
-  static  Dummy_Scalar one() { return {1}; }
+  static Dummy_Scalar one() { return {1}; }
 
-  static  Dummy_Scalar to_montgomery(const Dummy_Scalar& s) { return {s.x}; }
+  static Dummy_Scalar to_montgomery(const Dummy_Scalar& s) { return {s.x}; }
 
-  static  Dummy_Scalar from_montgomery(const Dummy_Scalar& s) { return {s.x}; }
+  static Dummy_Scalar from_montgomery(const Dummy_Scalar& s) { return {s.x}; }
 
-  friend  std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar)
+  friend std::ostream& operator<<(std::ostream& os, const Dummy_Scalar& scalar)
   {
     os << scalar.x;
     return os;
   }
 
-   unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
+  unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
   {
     return (x >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
   }
 
-  friend  Dummy_Scalar operator+(Dummy_Scalar p1, const Dummy_Scalar& p2)
-  {
-    return {(p1.x + p2.x) % p1.p};
-  }
+  friend Dummy_Scalar operator+(Dummy_Scalar p1, const Dummy_Scalar& p2) { return {(p1.x + p2.x) % p1.p}; }
 
-   friend  Dummy_Scalar operator-(Dummy_Scalar p1, const Dummy_Scalar& p2)
-  {
-    return p1 + neg(p2);
-  }
+  friend Dummy_Scalar operator-(Dummy_Scalar p1, const Dummy_Scalar& p2) { return p1 + neg(p2); }
 
-  friend  bool operator==(const Dummy_Scalar& p1, const Dummy_Scalar& p2) { return (p1.x == p2.x); }
+  friend bool operator==(const Dummy_Scalar& p1, const Dummy_Scalar& p2) { return (p1.x == p2.x); }
 
-  friend  bool operator==(const Dummy_Scalar& p1, const unsigned p2) { return (p1.x == p2); }
+  friend bool operator==(const Dummy_Scalar& p1, const unsigned p2) { return (p1.x == p2); }
 
-  static  Dummy_Scalar neg(const Dummy_Scalar& scalar) { return {scalar.p - scalar.x}; }
-  static  Dummy_Scalar rand_host(std::mt19937_64& rand_generator)
+  static Dummy_Scalar neg(const Dummy_Scalar& scalar) { return {scalar.p - scalar.x}; }
+  static Dummy_Scalar rand_host(std::mt19937_64& rand_generator)
   {
     // return {(unsigned)rand() % P_MACRO};
     std::uniform_int_distribution<unsigned> distribution(0, P_MACRO - 1);
@@ -127,45 +122,39 @@ class Dummy_Projective
 public:
   Dummy_Scalar x;
 
-  static  Dummy_Projective zero() { return {0}; }
+  static Dummy_Projective zero() { return {0}; }
 
-  static  Dummy_Projective one() { return {1}; }
+  static Dummy_Projective one() { return {1}; }
 
-  static  Dummy_Projective to_affine(const Dummy_Projective& point) { return {point.x}; }
+  static Dummy_Projective to_affine(const Dummy_Projective& point) { return {point.x}; }
 
-  static  Dummy_Projective from_affine(const Dummy_Projective& point) { return {point.x}; }
+  static Dummy_Projective from_affine(const Dummy_Projective& point) { return {point.x}; }
 
-  static  Dummy_Projective to_montgomery(const Dummy_Projective& point) { return {point.x}; }
+  static Dummy_Projective to_montgomery(const Dummy_Projective& point) { return {point.x}; }
 
-  static  Dummy_Projective from_montgomery(const Dummy_Projective& point) { return {point.x}; }
+  static Dummy_Projective from_montgomery(const Dummy_Projective& point) { return {point.x}; }
 
-  static  Dummy_Projective neg(const Dummy_Projective& point) { return {Dummy_Scalar::neg(point.x)}; }
+  static Dummy_Projective neg(const Dummy_Projective& point) { return {Dummy_Scalar::neg(point.x)}; }
 
   static Dummy_Projective copy(const Dummy_Projective& point) { return {point.x}; }
 
-  friend  Dummy_Projective operator+(Dummy_Projective p1, const Dummy_Projective& p2)
-  {
-    return {p1.x + p2.x};
-  }
+  friend Dummy_Projective operator+(Dummy_Projective p1, const Dummy_Projective& p2) { return {p1.x + p2.x}; }
 
-  friend  Dummy_Projective operator-(Dummy_Projective p1, const Dummy_Projective& p2)
-  {
-    return {p1.x - p2.x};
-  }
+  friend Dummy_Projective operator-(Dummy_Projective p1, const Dummy_Projective& p2) { return {p1.x - p2.x}; }
 
-  static  Dummy_Projective dbl(const Dummy_Projective& point) { return {point.x + point.x}; }
+  static Dummy_Projective dbl(const Dummy_Projective& point) { return {point.x + point.x}; }
 
   // friend  Dummy_Projective operator-(Dummy_Projective p1, const Dummy_Projective& p2) {
   //   return p1 + neg(p2);
   // }
 
-  friend  std::ostream& operator<<(std::ostream& os, const Dummy_Projective& point)
+  friend std::ostream& operator<<(std::ostream& os, const Dummy_Projective& point)
   {
     os << point.x;
     return os;
   }
 
-  friend  Dummy_Projective operator*(Dummy_Scalar scalar, const Dummy_Projective& point)
+  friend Dummy_Projective operator*(Dummy_Scalar scalar, const Dummy_Projective& point)
   {
     Dummy_Projective res = zero();
 #ifdef CUDA_ARCH
@@ -178,14 +167,11 @@ public:
     return res;
   }
 
-  friend  bool operator==(const Dummy_Projective& p1, const Dummy_Projective& p2)
-  {
-    return (p1.x == p2.x);
-  }
+  friend bool operator==(const Dummy_Projective& p1, const Dummy_Projective& p2) { return (p1.x == p2.x); }
 
-  static  bool is_zero(const Dummy_Projective& point) { return point.x == 0; }
+  static bool is_zero(const Dummy_Projective& point) { return point.x == 0; }
 
-  static  Dummy_Projective rand_host(std::mt19937_64& rand_generator)
+  static Dummy_Projective rand_host(std::mt19937_64& rand_generator)
   {
     return {(unsigned)rand() % P_MACRO};
     // return {(unsigned)rand()};
@@ -211,121 +197,117 @@ using sca_test = Dummy_Scalar;
 #ifndef STANDALONE
 using namespace curve_config;
 using namespace icicle;
-#endif 
+#endif
 
-template<typename Point> // TODO add support for two different point types
+template <typename Point> // TODO add support for two different point types
 class ThreadTask
 { // TODO turn to class and check which members can be private (or at least function by getter/setter)
 public:
-    std::atomic<bool> in_ready{false};
-    int return_idx;
-    int pidx=0; // TODO remove after debugging done
-    Point p1;
-    Point p2; // TODO allow different types of points to be added
-    Point result; // TODO Remove and result will be stored in p1
-    std::atomic<bool> out_done{true};
+  std::atomic<bool> in_ready{false};
+  int return_idx;
+  int pidx = 0; // TODO remove after debugging done
+  Point p1;
+  Point p2;     // TODO allow different types of points to be added
+  Point result; // TODO Remove and result will be stored in p1
+  std::atomic<bool> out_done{true};
 
-    ThreadTask();
-    ThreadTask(const ThreadTask<Point>& other);
-    void run(int tid, std::vector<int>& idle_idxs, bool& kill_thread);
-    void new_task(const int in_idx, const Point& in_p1, const Point& in_p2);
-    void chain_task(const Point in_p2);
-    // TODO implement bellow to make class members private
-    inline bool set_ready();
-    inline bool is_done();
-    inline Point get_result();
-    inline void set_idle();
+  ThreadTask();
+  ThreadTask(const ThreadTask<Point>& other);
+  void run(int tid, std::vector<int>& idle_idxs, bool& kill_thread);
+  void new_task(const int in_idx, const Point& in_p1, const Point& in_p2);
+  void chain_task(const Point in_p2);
+  // TODO implement below to make class members private
+  inline bool set_ready();
+  inline bool is_done();
+  inline Point get_result();
+  inline void set_idle();
 };
 
-template<typename Point>
+template <typename Point>
 struct WorkThread { // TODO turn to class and check which members can be private (or at least function by getter/setter)
-    int tid;
-    std::vector<int> idle_idxs;
-    std::thread thread;
-    int task_round_robin=0;
-    std::vector<ThreadTask<Point>> tasks;
-    std::condition_variable idle;
-    std::mutex idle_mtx;
-    bool kill_thread=false; // TODO rethink kill thread as phase already allows breaking
+  int tid;
+  std::vector<int> idle_idxs;
+  std::thread thread;
+  int task_round_robin = 0;
+  std::vector<ThreadTask<Point>> tasks;
+  std::condition_variable idle;
+  std::mutex idle_mtx;
+  bool kill_thread = false; // TODO rethink kill thread as phase already allows breaking
 
-    ~WorkThread();
-    void thread_setup(const int tid, const int task_per_thread);
-    void add_ec_tasks(bool& kill_thread);
+  ~WorkThread();
+  void thread_setup(const int tid, const int task_per_thread);
+  void add_ec_tasks(bool& kill_thread);
 };
 
 template <typename Point>
 class Msm
 {
 private:
-    // std::vector<WorkThread<Point>> threads;
-    WorkThread<Point>* threads;
-    const unsigned int n_threads;
-    const unsigned int tasks_per_thread; // TODO check effect of the num of tasks one p1 performance and maybe have separate tasks_per_thread values for p1 and p2
-    int thread_round_robin;
-    bool any_thread_free;
+  // std::vector<WorkThread<Point>> threads;
+  WorkThread<Point>* threads;
+  const unsigned int n_threads;
+  const unsigned int tasks_per_thread; // TODO check effect of the num of tasks one p1 performance and maybe have
+                                       // separate tasks_per_thread values for p1 and p2
+  int thread_round_robin;
+  bool any_thread_free;
 
-    bool kill_threads;
+  bool kill_threads;
 
-    const unsigned int c;
-    const unsigned int num_bkts;
-    const unsigned int num_bms;
-    const unsigned int precomp_f;
-    const bool are_scalars_mont;
-    const bool are_points_mont;
+  const unsigned int c;
+  const unsigned int num_bkts;
+  const unsigned int num_bms;
+  const unsigned int precomp_f;
+  const bool are_scalars_mont;
+  const bool are_points_mont;
 
-    int loop_count = 0;
-    int num_additions = 0;
+  int loop_count = 0;
+  int num_additions = 0;
 
-    // Phase 1
-    Point* bkts;
-    bool* bkts_occupancy;
-    // Phase 2
-    const int log_num_segments;
-    const int num_bm_segments;
-    const int segment_size;
-    Point* phase2_sums;
-    std::tuple<int, int>* task_assigned_to_sum;
-    Point* bm_sums;
-    // Phase 3
-    bool mid_phase3;
-    int num_valid_results;
-    Point* results;
+  // Phase 1
+  Point* bkts;
+  bool* bkts_occupancy;
+  // Phase 2
+  const int log_num_segments;
+  const int num_bm_segments;
+  const int segment_size;
+  Point* phase2_sums;
+  std::tuple<int, int>* task_assigned_to_sum;
+  Point* bm_sums;
+  // Phase 3
+  bool mid_phase3;
+  int num_valid_results;
+  Point* results;
 
-    std::ofstream bkts_f; // TODO remove files
-    std::ofstream trace_f;
+  std::ofstream bkts_f; // TODO remove files
+  std::ofstream trace_f;
 
-    void wait_for_idle();
+  void wait_for_idle();
 
-    // template <typename Base>
-    // void push_addition( const unsigned int task_bkt_idx,
-    //                     const Point bkt,
-    //                     const Base& base,
-    //                     int pidx,
-    //                     Point* result_arr,
-    //                     bool* );
+  // template <typename Base>
+  // void push_addition( const unsigned int task_bkt_idx,
+  //                     const Point bkt,
+  //                     const Base& base,
+  //                     int pidx,
+  //                     Point* result_arr,
+  //                     bool* );
 
-    template <typename Base>
-    void phase1_push_addition(  const unsigned int task_bkt_idx,
-                                const Point bkt,
-                                const Base& base,
-                                int pidx );
+  template <typename Base>
+  void phase1_push_addition(const unsigned int task_bkt_idx, const Point bkt, const Base& base, int pidx);
 
-    std::tuple<int, int> phase2_push_addition(  const unsigned int task_bkt_idx,
-                                                const Point& bkt,
-                                                const Point& base );
+  std::tuple<int, int> phase2_push_addition(const unsigned int task_bkt_idx, const Point& bkt, const Point& base);
 
-    void bkt_file(); // TODO remove
+  void bkt_file(); // TODO remove
 
 public:
+  Msm(const MSMConfig& config);
+  ~Msm();
 
-    Msm(const MSMConfig& config);
-    ~Msm();
+  Point* bucket_accumulator(
+    const sca_test* scalars,
+    const aff_test* bases,
+    const unsigned int msm_size); // TODO change type in the end to void
 
-    Point* bucket_accumulator(  const sca_test* scalars,
-                                const aff_test* bases,
-                                const unsigned int msm_size); // TODO change type in the end to void
-
-    Point* bm_sum();
+  Point* bm_sum();
 };
 
 #endif
