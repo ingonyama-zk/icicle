@@ -1,7 +1,7 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
-#include <list>
+#include <fstream>
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"
@@ -57,17 +57,68 @@ public:
   }
 };
 
+template <typename T>
+bool read_inputs(T* arr, const int arr_size, const std::string fname)
+{
+  std::ifstream in_file(fname);
+  bool status = in_file.is_open();
+  if (status)
+  {
+    for (int i = 0; i < arr_size; i++)
+    {
+      in_file.read(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+    }
+    in_file.close();
+  }
+  return status;
+}
+
+template <typename T>
+void store_inputs(T* arr, const int arr_size, const std::string fname)
+{
+  std::ofstream out_file(fname);
+  if (!out_file.is_open())
+  {
+    std::cerr << "Failed to open " << fname << " for writing.\n";
+    return; 
+  }
+  for (int i = 0; i < arr_size; i++)
+  {
+    out_file.write(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+  }
+  out_file.close();
+}
+
+void get_inputs(affine_t* bases, scalar_t* scalars, const int n) // TODO add precompute factor
+{
+  // Scalars
+  std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n) + ".dat";
+  if (!read_inputs<scalar_t>(scalars, n, scalar_file))
+  {
+    std::cout << "Generating scalars.\n";
+    scalar_t::rand_host_many(scalars, n);
+    store_inputs<scalar_t>(scalars, n, scalar_file);
+  }
+  // Bases
+  std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
+  if (!read_inputs<affine_t>(bases, n, base_file))
+  {
+    std::cout << "Generating bases.\n";
+    projective_t::rand_host_many_affine(bases, n);
+    store_inputs<affine_t>(bases, n, base_file);
+  }
+}
+
 TEST_F(CurveApiTest, MSM)
 {
-  const int logn = 10;
+  const int logn = 12;
   const int N = 1 << logn;
   auto scalars = std::make_unique<scalar_t[]>(N);
   auto bases = std::make_unique<affine_t[]>(N);
 
   bool conv_mont = false;
+  get_inputs(bases.get(), scalars.get(), N);
 
-  scalar_t::rand_host_many(scalars.get(), N);
-  projective_t::rand_host_many_affine(bases.get(), N);
   if (conv_mont) {for (int i=0; i<N; i++) bases[i] = affine_t::to_montgomery(bases[i]); }
   projective_t result_cpu{};
   projective_t result_cpu_dbl_n_add{};
@@ -82,8 +133,14 @@ TEST_F(CurveApiTest, MSM)
     const int log_p = 2;
     const int c = std::max(logn, 8) - 1;
     const int pcf = 1 << log_p;
+
+    const int n_threads = 8;
+    const int tasks_per_thread = 2;
+
     auto config = default_msm_config();
     config.ext.set("c", c);
+    config.ext.set("n_threads", n_threads);
+    config.ext.set("tasks_per_thread", tasks_per_thread);
     config.precompute_factor = pcf;
     config.are_scalars_montgomery_form = false;
     config.are_points_montgomery_form = conv_mont;
@@ -93,20 +150,49 @@ TEST_F(CurveApiTest, MSM)
     pc_config.ext.set("is_mont", config.are_points_montgomery_form);
 
     auto precomp_bases = std::make_unique<affine_t[]>(N*pcf);
-    msm_precompute_bases(bases.get(), N, pcf, pc_config, precomp_bases.get());
+    // TODO update cmake to include directory?
+    std::string precomp_fname = "build/generated_data/precomp_N" + std::to_string(N) + "_pcf" + std::to_string(pcf) + ".dat";
+    if (!read_inputs<affine_t>(precomp_bases.get(), N*pcf, precomp_fname))
+    {
+      std::cout << "Precomputing bases." << '\n';
+      msm_precompute_bases(bases.get(), N, pcf, pc_config, precomp_bases.get());
+      store_inputs<affine_t>(precomp_bases.get(), N*pcf, precomp_fname);
+    }
+
+    // int test_size = 10000;
+    // std::cout << "NUm additions:\t" << test_size << '\n';
+    // scalar_t* a = new scalar_t[test_size];
+    // scalar_t* b = new scalar_t[test_size];
+    // scalar_t* apb = new scalar_t[test_size];
+    // {
+    //   scalar_t* bases_p = scalars.get();
+    //   for (int i = 0; i < test_size; i++)
+    //   {
+    //     a[i] = bases_p[i];
+    //     b[i] = bases_p[i + test_size];
+    //     apb[i] = scalar_t::zero();
+    //   }
+    // }
+    
     START_TIMER(MSM_sync)
     for (int i = 0; i < iters; ++i) {
-      // TODO real test
-      // msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
       msm(scalars.get(), precomp_bases.get(), N, config, result);
     }
+    // for (int i = 0; i < test_size; i++)
+    // {
+    //   apb[i] = a[i] * b[i];
+    // }
     END_TIMER(MSM_sync, msg, measure);
   };
 
   // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
-  run("CPU", &result_cpu, "CPU msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run("CPU_REF", &result_cpu_ref, "CPU_REF msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-  ASSERT_EQ((result_cpu),(result_cpu_ref));
+  int iters = 1;
+  run("CPU", &result_cpu, "CPU msm", VERBOSE /*=measure*/, iters /*=iters*/);
+  run("CPU_REF", &result_cpu_ref, "CPU_REF msm", VERBOSE /*=measure*/, iters /*=iters*/);
+
+  std::cout << projective_t::to_affine(result_cpu) << std::endl;
+  std::cout << projective_t::to_affine(result_cpu_ref) << std::endl;
+  ASSERT_EQ(result_cpu,result_cpu_ref);
 }
 
 int main(int argc, char** argv)

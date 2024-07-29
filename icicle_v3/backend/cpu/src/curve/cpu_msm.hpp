@@ -2,9 +2,13 @@
 #define CPU_MSM
 
 // #define STANDALONE
+#include <atomic>
+#include <mutex>
+#include <tuple>
+
+#include <unistd.h> // TODO remove
 
 #include "icicle/errors.h"
-#include <atomic>
 #include "icicle/config_extension.h"
 using namespace icicle;
 #ifndef STANDALONE
@@ -211,39 +215,56 @@ using namespace icicle;
 
 template<typename Point> // TODO add support for two different point types
 class ThreadTask
-{
+{ // TODO turn to class and check which members can be private (or at least function by getter/setter)
 public:
     std::atomic<bool> in_ready{false};
-    int bkt_idx;
-    Point p1; // TODO Result will be stored here
+    int return_idx;
+    int pidx=0; // TODO remove after debugging done
+    Point p1;
     Point p2; // TODO allow different types of points to be added
-    Point result;
+    Point result; // TODO Remove and result will be stored in p1
     std::atomic<bool> out_done{true};
 
     ThreadTask();
     ThreadTask(const ThreadTask<Point>& other);
-    void run();
-    void new_task(int in_idx, const Point& in_p1, const Point& in_p2);
+    void run(int tid, std::vector<int>& idle_idxs, bool& kill_thread);
+    void new_task(const int in_idx, const Point& in_p1, const Point& in_p2);
     void chain_task(const Point in_p2);
+    // TODO implement bellow to make class members private
+    inline bool set_ready();
+    inline bool is_done();
+    inline Point get_result();
+    inline void set_idle();
 };
 
 template<typename Point>
-struct WorkThread {
+struct WorkThread { // TODO turn to class and check which members can be private (or at least function by getter/setter)
     int tid;
+    std::vector<int> idle_idxs;
     std::thread thread;
+    int task_round_robin=0;
     std::vector<ThreadTask<Point>> tasks;
+    std::condition_variable idle;
+    std::mutex idle_mtx;
+    bool kill_thread=false; // TODO rethink kill thread as phase already allows breaking
+
+    ~WorkThread();
+    void thread_setup(const int tid, const int task_per_thread);
+    void add_ec_tasks(bool& kill_thread);
 };
 
 template <typename Point>
 class Msm
 {
 private:
+    // std::vector<WorkThread<Point>> threads;
     WorkThread<Point>* threads;
     const unsigned int n_threads;
-    const unsigned int tasks_per_thread;
-    bool kill_threads;
+    const unsigned int tasks_per_thread; // TODO check effect of the num of tasks one p1 performance and maybe have separate tasks_per_thread values for p1 and p2
     int thread_round_robin;
     bool any_thread_free;
+
+    bool kill_threads;
 
     const unsigned int c;
     const unsigned int num_bkts;
@@ -252,10 +273,18 @@ private:
     const bool are_scalars_mont;
     const bool are_points_mont;
 
+    int loop_count = 0;
+    int num_additions = 0;
+
     // Phase 1
     Point* bkts;
     bool* bkts_occupancy;
     // Phase 2
+    const int log_num_segments;
+    const int num_bm_segments;
+    const int segment_size;
+    Point* phase2_sums;
+    std::tuple<int, int>* task_assigned_to_sum;
     Point* bm_sums;
     // Phase 3
     bool mid_phase3;
@@ -267,10 +296,23 @@ private:
 
     void wait_for_idle();
 
+    // template <typename Base>
+    // void push_addition( const unsigned int task_bkt_idx,
+    //                     const Point bkt,
+    //                     const Base& base,
+    //                     int pidx,
+    //                     Point* result_arr,
+    //                     bool* );
+
     template <typename Base>
-    void push_addition( const unsigned int task_bkt_idx,
-                        const Point bkt,
-                        const Base& base);
+    void phase1_push_addition(  const unsigned int task_bkt_idx,
+                                const Point bkt,
+                                const Base& base,
+                                int pidx );
+
+    std::tuple<int, int> phase2_push_addition(  const unsigned int task_bkt_idx,
+                                                const Point& bkt,
+                                                const Point& base );
 
     void bkt_file(); // TODO remove
 
@@ -281,11 +323,9 @@ public:
 
     Point* bucket_accumulator(  const sca_test* scalars,
                                 const aff_test* bases,
-                                const unsigned int msm_size);
-    
-    Point* bm_sum(  Point* bkts,
-                    const unsigned int c,
-                    const unsigned int num_bms);
+                                const unsigned int msm_size); // TODO change type in the end to void
+
+    Point* bm_sum();
 };
 
 #endif
