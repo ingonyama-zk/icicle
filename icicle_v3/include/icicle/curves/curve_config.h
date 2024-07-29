@@ -1,6 +1,4 @@
 #pragma once
-#ifndef CURVE_CONFIG_H
-#define CURVE_CONFIG_H
 
 #include "icicle/fields/id.h"
 #include "icicle/curves/projective.h"
@@ -30,5 +28,4 @@ namespace curve_config = bw6_761;
 #elif CURVE_ID == GRUMPKIN
 #include "icicle/curves/params/grumpkin.h"
 namespace curve_config = grumpkin;
-#endif
 #endif

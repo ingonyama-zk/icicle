@@ -1,5 +1,5 @@
 
-#include "icicle/ecntt.h"
+#include "icicle/backend/ecntt_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "cpu_ntt.h"

@@ -1,4 +1,4 @@
-#include "icicle/msm.h"
+#include "icicle/backend/msm_backend.h"
 #include "icicle/dispatcher.h"
 #include "icicle/curves/curve_config.h"
 

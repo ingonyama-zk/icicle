@@ -1,33 +1,35 @@
 # Icicle example: Number-Theoretical Transform (NTT)
 
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
-
 ## Key-Takeaway
 
 `Icicle` provides CUDA C++ template function NTT for [Number Theoretical Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md), also known as Discrete Fourier Transform.
 
 ## Concise Usage Explanation
 
+1. Include the curve api
+2. Init NTT domain
+3. Call ntt api
+
 ```c++
-// Select the curve
-#define CURVE_ID 1
-// Include NTT template
-#include "appUtils/ntt/ntt.cu"
-using namespace curve_config;
-using namespace ntt;
-// Configure NTT
-NTTConfig<S> config=DefaultNTTConfig<S>();
-// Call NTT
-NTT<S, E>(input, ntt_size, NTTDir::kForward, config, output);
+#include "icicle/api/bn254.h"
+...
+auto ntt_init_domain_cfg = default_ntt_init_domain_config();
+...
+bn254_ntt_init_domain(&basic_root, ntt_init_domain_cfg);
+NTTConfig<scalar_t> config = default_ntt_config<scalar_t>();
+...
+bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get())
 ```
+
 
 ## Running the example
 
-- `cd` to your example directory
-- compile with  `./compile.sh`
-- run with `./run.sh`
+```sh
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
+```
 
 ## What's in the example
 

@@ -1,5 +1,5 @@
 
-#include "icicle/ecntt.h"
+#include "icicle/backend/ecntt_backend.h"
 #include "icicle/dispatcher.h"
 
 namespace icicle {

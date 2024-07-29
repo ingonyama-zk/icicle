@@ -4,17 +4,12 @@ version = "1.2.0"
 edition = "2018"
 
 [dependencies]
-icicle-cuda-runtime = { path = "../../../wrappers/rust/icicle-cuda-runtime" }
-icicle-core = { path = "../../../wrappers/rust/icicle-core", features = ["arkworks"] }
-icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254", features = ["arkworks"] }
-icicle-bls12-377 = { path = "../../../wrappers/rust/icicle-curves/icicle-bls12-377", features = ["arkworks"] }
+icicle-runtime = { path = "../../../wrappers/rust_v3/icicle-runtime" }
+icicle-core = { path = "../../../wrappers/rust_v3/icicle-core" }
+icicle-bn254 = { path = "../../../wrappers/rust_v3/icicle-curves/icicle-bn254", features = ["g2"] }
+icicle-bls12-377 = { path = "../../../wrappers/rust_v3/icicle-curves/icicle-bls12-377" }
 
-ark-ff = { version = "0.4.0" }
-ark-poly = "0.4.0"
-ark-std = "0.4.0"
-ark-bn254 = { version = "0.4.0" }
-ark-bls12-377 = { version = "0.4.0" }
 clap = { version = "<=4.4.12", features = ["derive"] }
 
 [features]
-profile = []
+cuda = ["icicle-runtime/cuda_backend", "icicle-bn254/cuda_backend", "icicle-bls12-377/cuda_backend"]

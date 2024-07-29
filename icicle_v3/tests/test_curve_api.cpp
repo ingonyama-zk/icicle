@@ -5,7 +5,7 @@
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"
-#include "icicle/ecntt.h"
+#include "icicle/ntt.h"
 #include "icicle/msm.h"
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"

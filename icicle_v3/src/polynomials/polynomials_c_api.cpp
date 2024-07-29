@@ -3,6 +3,8 @@
 #include "icicle/utils/utils.h"
 #include "icicle/utils/integrity_pointer.h"
 
+using namespace field_config;
+
 namespace icicle {
   extern "C" {
 

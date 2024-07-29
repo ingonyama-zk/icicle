@@ -7,11 +7,11 @@
 #include "gpu-utils/sharedmem.h"
 #endif // __CUDACC__
 
-template <typename CONFIG>
+template <typename CONFIG, class T>
 class ExtensionField
 {
 private:
-  typedef typename Field<CONFIG>::Wide FWide;
+  typedef typename T::Wide FWide;
 
   struct ExtensionWide {
     FWide real;
@@ -31,7 +31,7 @@ private:
   };
 
 public:
-  typedef Field<CONFIG> FF;
+  typedef T FF;
   static constexpr unsigned TLC = 4 * CONFIG::limbs_count;
 
   FF real;
@@ -52,15 +52,14 @@ public:
   static constexpr HOST_DEVICE_INLINE ExtensionField to_montgomery(const ExtensionField& xs)
   {
     return ExtensionField{
-      xs.real * FF{CONFIG::montgomery_r}, xs.im1 * FF{CONFIG::montgomery_r}, xs.im2 * FF{CONFIG::montgomery_r},
-      xs.im3 * FF{CONFIG::montgomery_r}};
+      FF::to_montgomery(xs.real), FF::to_montgomery(xs.im1), FF::to_montgomery(xs.im2), FF::to_montgomery(xs.im3)};
   }
 
   static constexpr HOST_DEVICE_INLINE ExtensionField from_montgomery(const ExtensionField& xs)
   {
     return ExtensionField{
-      xs.real * FF{CONFIG::montgomery_r_inv}, xs.im1 * FF{CONFIG::montgomery_r_inv},
-      xs.im2 * FF{CONFIG::montgomery_r_inv}, xs.im3 * FF{CONFIG::montgomery_r_inv}};
+      FF::from_montgomery(xs.real), FF::from_montgomery(xs.im1), FF::from_montgomery(xs.im2),
+      FF::from_montgomery(xs.im3)};
   }
 
   static HOST_INLINE ExtensionField rand_host()
@@ -249,13 +248,12 @@ public:
     };
   }
 };
-
 #if __CUDACC__
-template <class CONFIG>
-struct SharedMemory<ExtensionField<CONFIG>> {
-  __device__ ExtensionField<CONFIG>* getPointer()
+template <class CONFIG, class T>
+struct SharedMemory<ExtensionField<CONFIG, T>> {
+  __device__ ExtensionField<CONFIG, T>* getPointer()
   {
-    extern __shared__ ExtensionField<CONFIG> s_ext4_scalar_[];
+    extern __shared__ ExtensionField<CONFIG, T> s_ext4_scalar_[];
     return s_ext4_scalar_;
   }
 };

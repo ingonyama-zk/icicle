@@ -1,5 +1,5 @@
 
-#include "icicle/polynomials/polynomials.h"
+#include "icicle/backend/polynomial_backend.h"
 #include "icicle/polynomials/default_backend/default_poly_context.h"
 #include "icicle/polynomials/default_backend/default_poly_backend.h"
 

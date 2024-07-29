@@ -6,13 +6,13 @@
 #include "gpu-utils/sharedmem.h"
 #endif // __CUDACC__
 
-template <typename CONFIG>
+template <typename CONFIG, class T>
 class ExtensionField
 {
 private:
-  friend Field<CONFIG>;
+  friend T;
 
-  typedef typename Field<CONFIG>::Wide FWide;
+  typedef typename T::Wide FWide;
 
   struct ExtensionWide {
     FWide real;
@@ -30,7 +30,7 @@ private:
   };
 
 public:
-  typedef Field<CONFIG> FF;
+  typedef T FF;
   static constexpr unsigned TLC = 2 * CONFIG::limbs_count;
 
   FF real;
@@ -199,11 +199,11 @@ public:
 };
 
 #ifdef __CUDACC__
-template <class CONFIG>
-struct SharedMemory<ExtensionField<CONFIG>> {
-  __device__ ExtensionField<CONFIG>* getPointer()
+template <typename CONFIG, class T>
+struct SharedMemory<ExtensionField<CONFIG, T>> {
+  __device__ ExtensionField<CONFIG, T>* getPointer()
   {
-    extern __shared__ ExtensionField<CONFIG> s_ext2_scalar_[];
+    extern __shared__ ExtensionField<CONFIG, T> s_ext2_scalar_[];
     return s_ext2_scalar_;
   }
 };
