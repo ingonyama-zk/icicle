@@ -13,6 +13,7 @@ BUILD_HASHES=( )
 SUPPORTED_CURVES=("bn254" "bls12_377" "bls12_381" "bw6_761", "grumpkin")
 SUPPORTED_FIELDS=("babybear")
 # SUPPORTED_HASHES=("keccak")
+CUDA_BACKEND=OFF
 
 BUILD_DIR="${ICICLE_BUILD_DIR:-$(realpath "$PWD/../../icicle_v3/build")}"
 DEFAULT_BACKEND_INSTALL_DIR="${DEFAULT_BACKEND_INSTALL_DIR:="/usr/local/"}"
@@ -32,7 +33,8 @@ if [[ $1 == "-help" ]]; then
   echo "  -field=<field_name>       The field that should be built. If \"all\" is supplied,"
   echo "                            all fields will be built with any other supplied field options"
   echo "  -field-ext                Builds the field lib with the extension field enabled"
-  echo "  -backend                  Path to the folder where libraries will be installed"
+  echo "  -install_dir              Path to the folder where libraries will be installed"
+  echo "  -cuda_backend             "
   echo "  -devmode                  Enables devmode debugging and fast build times"
   echo "  -cuda_version=<version>   The version of cuda to use for compiling"
   echo ""
@@ -47,7 +49,10 @@ do
             cuda_version=$(echo "$arg" | cut -d'=' -f2)
             CUDA_COMPILER_PATH=/usr/local/cuda-$cuda_version/bin/nvcc
             ;;
-        -backend=*)
+        -cuda_backend=*)
+            CUDA_BACKEND=$(echo "$arg_lower" | cut -d'=' -f2)
+            ;;
+        -install_dir=*)
             DEFAULT_BACKEND_INSTALL_DIR=$(echo "$arg_lower" | cut -d'=' -f2)
             ;;
         -ecntt)
@@ -107,7 +112,7 @@ do
   echo "G2=${G2_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "DEFAULT_BACKEND_INSTALL_DIR=${DEFAULT_BACKEND_INSTALL_DIR}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$DEFAULT_BACKEND_INSTALL_DIR -DCURVE=$CURVE -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$DEFAULT_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done
 
@@ -120,7 +125,7 @@ do
   echo "FIELD=${FIELD}" > build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "DEFAULT_BACKEND_INSTALL_DIR=${DEFAULT_BACKEND_INSTALL_DIR}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$DEFAULT_BACKEND_INSTALL_DIR -DFIELD=$FIELD -DEXT_FIELD=$EXT_FIELD -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$DEFAULT_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DEXT_FIELD=$EXT_FIELD -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done
 

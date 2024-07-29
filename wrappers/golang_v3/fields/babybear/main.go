@@ -1,4 +1,4 @@
 package babybear
 
-// #cgo LDFLAGS: -Lusr/local/ -licicle_field_babybear -lstdc++ -Wl,-rpath=usr/local/
+// #cgo LDFLAGS: -Lusr/local/lib/ -licicle_field_babybear -lstdc++ -Wl,-rpath=usr/local/lib/
 import "C"
