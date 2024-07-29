@@ -48,7 +48,7 @@ The Polynomial class encapsulates a polynomial, providing a variety of operation
 - **Construction**: Create polynomials from coefficients or evaluations on roots-of-unity domains.
 - **Arithmetic Operations**: Perform addition, subtraction, multiplication, and division.
 - **Evaluation**: Directly evaluate polynomials at specific points or across a domain.
-- **Manipulation**: Features like slicing polynomials, adding or subtracting monomials inplace, and computing polynomial degrees.
+- **Manipulation**: Features like slicing polynomials, adding or subtracting monomials in place, and computing polynomial degrees.
 - **Memory Access**: Access internal states or obtain device-memory views of polynomials.
 
 ## Usage

@@ -53,7 +53,7 @@ You should see two indirect dependencies added.
 ```
 
 :::info
-As you may notice we are using ICICLE v0.1 here since golang bindings are only support in ICICLE v0.1 for the time being.
+As you may notice we are using ICICLE v0.1 here since golang bindings are only supported in ICICLE v0.1 for the time being.
 :::
 
 To switch over to ICICLE proving, make sure to change the backend you are using, below is an example of how this should be done.
