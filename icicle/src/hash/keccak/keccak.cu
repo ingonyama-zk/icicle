@@ -180,8 +180,13 @@ namespace keccak {
   }
 
   template <const int R>
-  __global__ void
-  keccak_hash_blocks(const uint8_t* input, int input_block_size, int output_len, int number_of_blocks, uint64_t* output)
+  __global__ void keccak_hash_blocks(
+    const uint8_t* input,
+    int input_block_size,
+    int output_len,
+    int number_of_blocks,
+    uint64_t* output,
+    int padding_const)
   {
     int sid = (blockIdx.x * blockDim.x) + threadIdx.x;
     if (sid >= number_of_blocks) { return; }
@@ -209,7 +214,7 @@ namespace keccak {
     }
 
     // pad 10*1
-    last_block[input_len] = 1;
+    last_block[input_len] = padding_const;
     for (int i = 0; i < R - input_len - 1; i++) {
       last_block[input_len + i + 1] = 0;
     }
@@ -240,11 +245,11 @@ namespace keccak {
     switch (rate) {
     case KECCAK_256_RATE:
       keccak_hash_blocks<KECCAK_256_RATE><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
-        input, input_len, output_len, number_of_states, output);
+        input, input_len, output_len, number_of_states, output, PADDING_CONST);
       break;
     case KECCAK_512_RATE:
       keccak_hash_blocks<KECCAK_512_RATE><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
-        input, input_len, output_len, number_of_states, output);
+        input, input_len, output_len, number_of_states, output, PADDING_CONST);
       break;
     default:
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "KeccakHash: #rate must be one of [136, 72]");

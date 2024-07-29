@@ -110,6 +110,7 @@ func (a Affine) ToProjective() Projective {
 	cP := (*C.projective_t)(unsafe.Pointer(&p))
 	C.bn254_from_affine(cA, cP)
 	return p
+
 }
 
 func AffineFromProjective(p *Projective) Affine {

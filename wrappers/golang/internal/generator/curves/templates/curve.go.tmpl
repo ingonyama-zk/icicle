@@ -40,6 +40,7 @@ func (p *{{.CurvePrefix}}Projective) FromLimbs(x, y, z []uint32) {{.CurvePrefix}
 }
 
 
+
 {{if ne .CurvePrefix "Mock"}}
 func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.CurvePrefix}}Projective {
 	

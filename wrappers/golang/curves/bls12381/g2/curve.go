@@ -110,6 +110,7 @@ func (a G2Affine) ToProjective() G2Projective {
 	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
 	C.bls12_381_g2_from_affine(cA, cP)
 	return p
+
 }
 
 func G2AffineFromProjective(p *G2Projective) G2Affine {
