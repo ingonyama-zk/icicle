@@ -25,6 +25,10 @@ struct Args {
     /// Device type (e.g., "CPU", "CUDA")
     #[arg(short, long, default_value = "CPU")]
     device_type: String,
+
+    /// Backend installation directory
+    #[arg(short, long, default_value = "/opt/icicle/backend")]
+    backend_install_dir: String,
 }
 
 // Load backend and set device
