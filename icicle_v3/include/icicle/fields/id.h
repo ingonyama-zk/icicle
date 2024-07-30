@@ -10,5 +10,7 @@
 
 #define BABY_BEAR 1001
 #define STARK_252 1002
+#define M31 1003 // m31 is not implemented yet 
+#define GOLDILOCKS 1004
 
 #endif

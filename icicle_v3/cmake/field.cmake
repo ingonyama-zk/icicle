@@ -1,5 +1,7 @@
 function(check_field)
-  set(SUPPORTED_FIELDS babybear;stark252)
+  # set(SUPPORTED_FIELDS babybear;stark252)
+  set(SUPPORTED_FIELDS babybear;stark252;m31;goldilocks)# m31 is not implemented yet 
+
 
   set(IS_FIELD_SUPPORTED FALSE)
   set(I 1000)

@@ -31,4 +31,7 @@ namespace field_config = babybear;
 #elif FIELD_ID == STARK_252
 #include "icicle/fields/stark_fields/stark252.h"
 namespace field_config = stark252;
+#elif FIELD_ID == GOLDILOCKS
+#include "icicle/fields/stark_fields/goldilocks.h"
+namespace field_config = goldilocks;
 #endif
