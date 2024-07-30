@@ -46,12 +46,12 @@ mkdir -p build/example
 mkdir -p build/icicle
 
 ICILE_DIR=$(realpath "../../../icicle_v3/")
-ICICLE_CUDA_BACKEND_DIR="${ICILE_DIR}/backend/cuda"
+ICICLE_CUDA_SOURCE_DIR="${ICILE_DIR}/backend/cuda"
 
 # Build Icicle and the example app that links to it
-if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_BACKEND_DIR}" ]; then
+if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_SOURCE_DIR}" ]; then
   echo "Building icicle with CUDA backend"
-  BACKEND_INSTALL_DIR=$(realpath ./target/release/deps/icicle/lib/backend)
+  BACKEND_INSTALL_DIR="./target/release/deps/icicle/lib/backend"
   cargo run --release --features=cuda -- --device-type "${DEVICE_TYPE}" --backend-install-dir "${BACKEND_INSTALL_DIR}"
 else
   echo "Building icicle without CUDA backend, BACKEND_INSTALL_DIR=${BACKEND_INSTALL_DIR}"

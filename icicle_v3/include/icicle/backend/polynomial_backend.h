@@ -20,12 +20,6 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  // explicit instantiation
-
-  // Friend operator to allow multiplication with a scalar from the left-hand side
-  template <typename C = scalar_t, typename D = C, typename I = C>
-  Polynomial<C, D, I> operator*(const D& scalar, const Polynomial<C, D, I>& rhs);
-
   // External template instantiation to ensure the template is compiled for specific types.
   extern template class Polynomial<scalar_t>;
 

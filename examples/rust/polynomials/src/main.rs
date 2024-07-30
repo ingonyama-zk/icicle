@@ -38,10 +38,10 @@ fn try_load_and_set_backend_device(args: &Args) {
         .is_empty()
     {
         println!("Trying to load backend from {}", &args.backend_install_dir);
-        icicle_runtime::runtime::load_backend(&args.backend_install_dir, true /*recursive */).unwrap();
+        icicle_runtime::runtime::load_backend(&args.backend_install_dir).unwrap();
     }
     println!("Setting device {}", args.device_type);
-    icicle_runtime::set_device(&icicle_runtime::Device::new(&args.device_type, 0)).unwrap();
+    icicle_runtime::set_device(&icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/)).unwrap();
 }
 
 fn init(max_ntt_size: u64) {
@@ -83,40 +83,40 @@ fn main() {
 
     let poly_size = 1 << args.poly_log_size;
 
-    println!("Randomizing polynomials over bn254 scalar field...");
+    println!("Randomizing polynomials [f(x),g(x),h(x)] over bn254 scalar field...");
     let f = randomize_poly::<PolynomialBn254>(poly_size, true /*from random coeffs*/);
     let g = randomize_poly::<PolynomialBn254>(poly_size / 2, true /*from random coeffs*/);
     let h = randomize_poly::<PolynomialBn254>(poly_size / 4, false /*from random evaluations on rou*/);
 
-    println!("Randomizing polynomials over babybear field...");
+    println!("Randomizing polynomials [f_babybear(x), g_babyber(x)] over babybear field...");
     let f_babybear = randomize_poly::<PolynomialBabyBear>(poly_size, true /*from random coeffs*/);
     let g_babybear = randomize_poly::<PolynomialBabyBear>(poly_size / 2, true /*from random coeffs*/);
 
     let start = Instant::now();
     // Arithmetic
-    println!("Computing f + g");
+    println!("Computing t0(x) = f(x) + g(x)");
     let t0 = &f + &g;
-    println!("Computing f * h");
+    println!("Computing t1(x) f(x) * h(x)");
     let t1 = &f * &h;
-    println!("Computing q and r for t1(x) = q(x) * t0(x) + r(x)");
+    println!("Computing q(x),r(x) = t1(x)/t0(x) (where t1(x) = q(x) * t0(x) + r(x))");
     let (q, r) = t1.divide(&t0);
 
-    println!("Computing f_babybear * g_babybear");
+    println!("Computing f_babybear(x) * g_babybear(x)");
     let _r_babybear = &f_babybear * &g_babybear;
 
     // Check degree
-    println!("Degree of r: {}", r.degree());
+    println!("Degree of r(x): {}", r.degree());
 
     // Evaluate in single domain point
     let five = bn254Scalar::from_u32(5);
-    println!("Evaluating q at 5");
+    println!("Evaluating q(5)");
     let q_at_five = q.eval(&five);
 
     // Evaluate on domain
     let host_domain = [five, bn254Scalar::from_u32(30)];
     let mut device_image = DeviceVec::<bn254Scalar>::device_malloc(host_domain.len()).unwrap();
-    println!("Evaluating t1 on domain {:?}", host_domain);
-    t1.eval_on_domain(HostSlice::from_slice(&host_domain), &mut device_image[..]);
+    println!("Evaluating t1(x) on domain {:?}", host_domain);
+    t1.eval_on_domain(HostSlice::from_slice(&host_domain), &mut device_image[..]); // for NTT use eval_on_rou_domain()
 
     // Slicing
     println!("Performing slicing operations on h");
@@ -127,9 +127,9 @@ fn main() {
     let _coeff = fold.get_coeff(2); // Coeff of x^2
 
     println!(
-        "Polynomial computation on selected device took: {} μs",
+        "Polynomial computation on selected device took: {} ms",
         start
             .elapsed()
-            .as_micros()
+            .as_millis()
     );
 }

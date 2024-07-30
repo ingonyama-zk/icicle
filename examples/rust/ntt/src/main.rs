@@ -130,7 +130,4 @@ fn main() {
     ntt_results_bls12377
         .copy_to_host(HostSlice::from_mut_slice(&mut host_bls12377_results[..]))
         .unwrap();
-
-    println!("Results for bn254: {:?}", host_bn254_results);
-    println!("Results for bls12377: {:?}", host_bls12377_results);
 }
