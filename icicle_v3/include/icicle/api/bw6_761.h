@@ -20,16 +20,6 @@ extern "C" eIcicleError bw6_761_g2_msm(
   const MSMConfig& config,
   bw6_761::g2_projective_t* out);
 
-extern "C" eIcicleError bw6_761_precompute_msm_bases(
-  const bw6_761::affine_t* bases, int nof_bases, const MSMConfig& config, bw6_761::affine_t* output_bases);
-
-extern "C" eIcicleError bw6_761_msm(
-  const bw6_761::scalar_t* scalars,
-  const bw6_761::affine_t* points,
-  int msm_size,
-  const MSMConfig& config,
-  bw6_761::projective_t* out);
-
 extern "C" bool bw6_761_g2_eq(bw6_761::g2_projective_t* point1, bw6_761::g2_projective_t* point2);
 
 extern "C" void bw6_761_g2_to_affine(bw6_761::g2_projective_t* point, bw6_761::g2_affine_t* point_out);
@@ -48,13 +38,6 @@ extern "C" eIcicleError bw6_761_g2_projective_convert_montgomery(
   const VecOpsConfig& config,
   bw6_761::g2_projective_t* output);
 
-extern "C" eIcicleError bw6_761_ecntt(
-  const bw6_761::projective_t* input,
-  int size,
-  NTTDir dir,
-  NTTConfig<bw6_761::scalar_t>& config,
-  bw6_761::projective_t* output);
-
 extern "C" bool bw6_761_eq(bw6_761::projective_t* point1, bw6_761::projective_t* point2);
 
 extern "C" void bw6_761_to_affine(bw6_761::projective_t* point, bw6_761::affine_t* point_out);
@@ -72,6 +55,39 @@ extern "C" eIcicleError bw6_761_projective_convert_montgomery(
   bool is_into,
   const VecOpsConfig& config,
   bw6_761::projective_t* output);
+
+extern "C" eIcicleError bw6_761_precompute_msm_bases(
+  const bw6_761::affine_t* bases, int nof_bases, const MSMConfig& config, bw6_761::affine_t* output_bases);
+
+extern "C" eIcicleError bw6_761_msm(
+  const bw6_761::scalar_t* scalars,
+  const bw6_761::affine_t* points,
+  int msm_size,
+  const MSMConfig& config,
+  bw6_761::projective_t* out);
+
+extern "C" eIcicleError bw6_761_ecntt(
+  const bw6_761::projective_t* input,
+  int size,
+  NTTDir dir,
+  NTTConfig<bw6_761::scalar_t>& config,
+  bw6_761::projective_t* output);
+
+extern "C" eIcicleError bw6_761_ntt_init_domain(bw6_761::scalar_t* primitive_root, const NTTInitDomainConfig& config);
+
+extern "C" eIcicleError bw6_761_ntt(
+  const bw6_761::scalar_t* input,
+  int size,
+  NTTDir dir,
+  NTTConfig<bw6_761::scalar_t>& config,
+  bw6_761::scalar_t* output);
+
+extern "C" eIcicleError bw6_761_ntt_release_domain();
+
+extern "C" void bw6_761_generate_scalars(bw6_761::scalar_t* scalars, int size);
+
+extern "C" void bw6_761_scalar_convert_montgomery(
+  const bw6_761::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, bw6_761::scalar_t* output);
 
 extern "C" eIcicleError bw6_761_vector_mul(
   const bw6_761::scalar_t* vec_a,
@@ -106,19 +122,3 @@ extern "C" eIcicleError bw6_761_transpose_matrix(
 
 extern "C" eIcicleError
 bw6_761_bit_reverse(const bw6_761::scalar_t* input, uint64_t n, const VecOpsConfig& config, bw6_761::scalar_t* output);
-
-extern "C" void bw6_761_generate_scalars(bw6_761::scalar_t* scalars, int size);
-
-extern "C" void bw6_761_scalar_convert_montgomery(
-  const bw6_761::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, bw6_761::scalar_t* output);
-
-extern "C" eIcicleError bw6_761_ntt_init_domain(bw6_761::scalar_t* primitive_root, const NTTInitDomainConfig& config);
-
-extern "C" eIcicleError bw6_761_ntt(
-  const bw6_761::scalar_t* input,
-  int size,
-  NTTDir dir,
-  NTTConfig<bw6_761::scalar_t>& config,
-  bw6_761::scalar_t* output);
-
-extern "C" eIcicleError bw6_761_ntt_release_domain();

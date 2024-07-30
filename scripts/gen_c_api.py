@@ -16,37 +16,37 @@ A set corresponding to each curve contains headers that shouldn't be included.
 """
 CURVES_CONFIG = {
     "bn254": [
-        "field_ext.h",
-        "vec_ops_ext.h",
-        "ntt_ext.h",
+        "field_ext.template",
+        "vec_ops_ext.template",
+        "ntt_ext.template",
     ],
     "bls12_381": [
-        # "poseidon2.h",
-        "field_ext.h",
-        "vec_ops_ext.h",
-        "ntt_ext.h",
+        # "poseidon2.template",
+        "field_ext.template",
+        "vec_ops_ext.template",
+        "ntt_ext.template",
     ],
     "bls12_377": [
-        # "poseidon2.h",
-        "field_ext.h",
-        "vec_ops_ext.h",
-        "ntt_ext.h",
+        # "poseidon2.template",
+        "field_ext.template",
+        "vec_ops_ext.template",
+        "ntt_ext.template",
     ],
     "bw6_761": [
-        # "poseidon2.h",
-        "field_ext.h",
-        "vec_ops_ext.h",
-        "ntt_ext.h",
+        # "poseidon2.template",
+        "field_ext.template",
+        "vec_ops_ext.template",
+        "ntt_ext.template",
     ],
     "grumpkin": {
-        # "poseidon2.h",
-        "curve_g2.h",
-        "msm_g2.h",
-        "ecntt.h",
-        "ntt.h",
-        "vec_ops_ext.h",
-        "field_ext.h",
-        "ntt_ext.h",
+        # "poseidon2.template",
+        "curve_g2.template",
+        "msm_g2.template",
+        "ecntt.template",
+        "ntt.template",
+        "vec_ops_ext.template",
+        "field_ext.template",
+        "ntt_ext.template",
     },
 }
 
@@ -56,20 +56,20 @@ A set corresponding to each field contains headers that shouldn't be included.
 """
 FIELDS_CONFIG = {
     "babybear": {
-        # "poseidon.h",
+        # "poseidon.template",
     },
     "stark252": {
-        # "poseidon.h",
-        # "poseidon2.h",
-        "field_ext.h",
-        "vec_ops_ext.h",
-        "ntt_ext.h",
+        # "poseidon.template",
+        # "poseidon2.template",
+        "field_ext.template",
+        "vec_ops_ext.template",
+        "ntt_ext.template",
     },
     # "m31": {
-    #     "ntt_ext.h",
-    #     "ntt.h",
-    #     "poseidon.h",
-    #     "poseidon2.h",
+    #     "ntt_ext.template",
+    #     "ntt.template",
+    #     "poseidon.template",
+    #     "poseidon2.template",
     # }
 }
 
