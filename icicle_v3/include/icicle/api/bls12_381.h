@@ -20,16 +20,6 @@ extern "C" eIcicleError bls12_381_g2_msm(
   const MSMConfig& config,
   bls12_381::g2_projective_t* out);
 
-extern "C" eIcicleError bls12_381_precompute_msm_bases(
-  const bls12_381::affine_t* bases, int nof_bases, const MSMConfig& config, bls12_381::affine_t* output_bases);
-
-extern "C" eIcicleError bls12_381_msm(
-  const bls12_381::scalar_t* scalars,
-  const bls12_381::affine_t* points,
-  int msm_size,
-  const MSMConfig& config,
-  bls12_381::projective_t* out);
-
 extern "C" bool bls12_381_g2_eq(bls12_381::g2_projective_t* point1, bls12_381::g2_projective_t* point2);
 
 extern "C" void bls12_381_g2_to_affine(bls12_381::g2_projective_t* point, bls12_381::g2_affine_t* point_out);
@@ -52,13 +42,6 @@ extern "C" eIcicleError bls12_381_g2_projective_convert_montgomery(
   const VecOpsConfig& config,
   bls12_381::g2_projective_t* output);
 
-extern "C" eIcicleError bls12_381_ecntt(
-  const bls12_381::projective_t* input,
-  int size,
-  NTTDir dir,
-  NTTConfig<bls12_381::scalar_t>& config,
-  bls12_381::projective_t* output);
-
 extern "C" bool bls12_381_eq(bls12_381::projective_t* point1, bls12_381::projective_t* point2);
 
 extern "C" void bls12_381_to_affine(bls12_381::projective_t* point, bls12_381::affine_t* point_out);
@@ -76,6 +59,44 @@ extern "C" eIcicleError bls12_381_projective_convert_montgomery(
   bool is_into,
   const VecOpsConfig& config,
   bls12_381::projective_t* output);
+
+extern "C" eIcicleError bls12_381_precompute_msm_bases(
+  const bls12_381::affine_t* bases, int nof_bases, const MSMConfig& config, bls12_381::affine_t* output_bases);
+
+extern "C" eIcicleError bls12_381_msm(
+  const bls12_381::scalar_t* scalars,
+  const bls12_381::affine_t* points,
+  int msm_size,
+  const MSMConfig& config,
+  bls12_381::projective_t* out);
+
+extern "C" eIcicleError bls12_381_ecntt(
+  const bls12_381::projective_t* input,
+  int size,
+  NTTDir dir,
+  NTTConfig<bls12_381::scalar_t>& config,
+  bls12_381::projective_t* output);
+
+extern "C" eIcicleError
+bls12_381_ntt_init_domain(bls12_381::scalar_t* primitive_root, const NTTInitDomainConfig& config);
+
+extern "C" eIcicleError bls12_381_ntt(
+  const bls12_381::scalar_t* input,
+  int size,
+  NTTDir dir,
+  NTTConfig<bls12_381::scalar_t>& config,
+  bls12_381::scalar_t* output);
+
+extern "C" eIcicleError bls12_381_ntt_release_domain();
+
+extern "C" void bls12_381_generate_scalars(bls12_381::scalar_t* scalars, int size);
+
+extern "C" void bls12_381_scalar_convert_montgomery(
+  const bls12_381::scalar_t* input,
+  uint64_t size,
+  bool is_into,
+  const VecOpsConfig& config,
+  bls12_381::scalar_t* output);
 
 extern "C" eIcicleError bls12_381_vector_mul(
   const bls12_381::scalar_t* vec_a,
@@ -110,24 +131,3 @@ extern "C" eIcicleError bls12_381_transpose_matrix(
 
 extern "C" eIcicleError bls12_381_bit_reverse(
   const bls12_381::scalar_t* input, uint64_t n, const VecOpsConfig& config, bls12_381::scalar_t* output);
-
-extern "C" void bls12_381_generate_scalars(bls12_381::scalar_t* scalars, int size);
-
-extern "C" void bls12_381_scalar_convert_montgomery(
-  const bls12_381::scalar_t* input,
-  uint64_t size,
-  bool is_into,
-  const VecOpsConfig& config,
-  bls12_381::scalar_t* output);
-
-extern "C" eIcicleError
-bls12_381_ntt_init_domain(bls12_381::scalar_t* primitive_root, const NTTInitDomainConfig& config);
-
-extern "C" eIcicleError bls12_381_ntt(
-  const bls12_381::scalar_t* input,
-  int size,
-  NTTDir dir,
-  NTTConfig<bls12_381::scalar_t>& config,
-  bls12_381::scalar_t* output);
-
-extern "C" eIcicleError bls12_381_ntt_release_domain();
