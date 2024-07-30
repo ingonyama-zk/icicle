@@ -253,7 +253,7 @@ eIcicleError cpu_msm_single_thread(
   // TODO remove at the end
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
-  const unsigned int c = config.ext.get<int>("c"); // TODO calculate instead of param
+  const unsigned int c = config.ext->get<int>("c"); // TODO calculate instead of param
   const unsigned int precomp_f = config.precompute_factor;
   const int num_bms = ((sca_test::NBITS - 1) / (precomp_f * c)) + 1;
 
@@ -366,9 +366,8 @@ Point int_mult(Point p, int x)
 
 template <typename Point>
 Msm<Point>::Msm(const MSMConfig& config)
-    : n_threads(config.ext.get<int>("n_threads")),
-      // tasks_per_thread(config.ext.get<int>("tasks_per_thread")), // TODO add tp config?
-      c(config.ext.get<int>("c")), // TODO calculate instead of param
+    : n_threads(config.ext->get<int>("n_threads")),
+      c(config.ext->get<int>("c")), // TODO calculate instead of param
       precomp_f(config.precompute_factor), num_bms(((sca_test::NBITS - 1) / (config.precompute_factor * c)) + 1),
       are_scalars_mont(config.are_scalars_montgomery_form), are_points_mont(config.are_points_montgomery_form),
       kill_threads(false),
@@ -376,7 +375,7 @@ Msm<Point>::Msm(const MSMConfig& config)
       trace_f("trace_bucket_multi.txt"), // TODO delete
 #endif
       thread_round_robin(0), num_bkts(1 << (c - 1)),
-      log_num_segments(std::max((int)std::ceil(std::log2(num_bms / n_threads)), 0)),
+      log_num_segments(std::max((int)std::ceil(std::log2(n_threads / num_bms)), 0)),
       num_bm_segments(1 << log_num_segments), segment_size(num_bkts >> log_num_segments),
       tasks_per_thread(std::max(((int)(num_bms / n_threads)) << (log_num_segments + 1), 2))
 {
@@ -733,11 +732,11 @@ eIcicleError cpu_msm(
   // TODO remove at the end
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
-  const unsigned int c = config.ext.get<int>("c"); // TODO calculate instead of param
+  const unsigned int c = config.ext->get<int>("c"); // TODO calculate instead of param
   const unsigned int precomp_f = config.precompute_factor;
   const int num_bms = ((sca_test::NBITS - 1) / (precomp_f * c)) + 1;
 
-  if (config.ext.get<int>("n_threads") <= 0) { return eIcicleError::INVALID_ARGUMENT; }
+  if (config.ext->get<int>("n_threads") <= 0) { return eIcicleError::INVALID_ARGUMENT; }
 
   Point* bkts = msm->bucket_accumulator(scalars, bases, msm_size);
   // Point* bm_sums = msm->bm_sum(bkts, c, num_bms);
@@ -782,12 +781,12 @@ eIcicleError cpu_msm_precompute_bases(
   const Device& device,
   const A* input_bases,
   int nof_bases,
-  int precompute_factor,
-  const MsmPreComputeConfig& config,
+  const MSMConfig& config,
   A* output_bases) // Pre assigned?
 {
-  bool is_mont = config.ext.get<bool>("is_mont");
-  const unsigned int c = config.ext.get<int>("c");
+  int precompute_factor = config.precompute_factor;
+  bool is_mont = config.ext->get<bool>("is_mont");
+  const unsigned int c = config.ext->get<int>("c");
   const unsigned int num_bms_no_precomp = (sca_test::NBITS - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   // std::cout << "Starting precompute\n";
@@ -819,9 +818,9 @@ REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU", cpu_msm_precompute_bases<aff_test>
 REGISTER_MSM_BACKEND("CPU", cpu_msm<proj_test>);
 // REGISTER_MSM_BACKEND("CPU", cpu_msm_single_thread<proj_test>);
 
-REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU_REF", cpu_msm_precompute_bases<aff_test>);
-// REGISTER_MSM_BACKEND("CPU_REF", cpu_msm_ref<proj_test>); // TODO revert to yuval's ref when testing batched msm
-REGISTER_MSM_BACKEND("CPU_REF", cpu_msm_single_thread<proj_test>);
+// REGISTER_MSM_PRE_COMPUTE_BASES_BACKEND("CPU_REF", cpu_msm_precompute_bases<aff_test>);
+// // REGISTER_MSM_BACKEND("CPU_REF", cpu_msm_ref<proj_test>); // TODO revert to yuval's ref when testing batched msm
+// REGISTER_MSM_BACKEND("CPU_REF", cpu_msm_single_thread<proj_test>);
 #else
 
 static MSMConfig default_msm_config()

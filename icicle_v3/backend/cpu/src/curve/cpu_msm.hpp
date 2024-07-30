@@ -12,7 +12,7 @@
 #include "icicle/config_extension.h"
 using namespace icicle;
 #ifndef STANDALONE
-#include "icicle/msm.h"
+#include "icicle/backend/msm_backend.h"
 #include "icicle/runtime.h"
 
 #include "icicle/curves/projective.h"
