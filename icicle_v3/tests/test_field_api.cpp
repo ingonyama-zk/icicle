@@ -91,7 +91,7 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
 
 TYPED_TEST(FieldApiTest, vectorOps)
 {
-  const uint64_t N = 1 << 15;
+  const uint64_t N = 1 << 22;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
   FieldApiTest<TypeParam>::random_samples(in_a.get(), N);
@@ -167,7 +167,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 
       config.is_a_on_device = true;
       config.is_result_on_device = true;
-      config.is_async = true;
+      config.is_async = false;
     }
 
     TypeParam* in = device_props.using_host_memory ? h_in.get() : d_in;
@@ -310,15 +310,6 @@ TYPED_TEST(FieldApiTest, ntt)
     coset_gen = scalar_t::one();
   }
 
-  // TODO Yuval : remove those once the bug is fixed
-  ICICLE_LOG_INFO << "NTT test: logn=" << logn;
-  ICICLE_LOG_INFO << "NTT test: log_batch_size=" << log_batch_size;
-  ICICLE_LOG_INFO << "NTT test: columns_batch=" << columns_batch;
-  ICICLE_LOG_INFO << "NTT test: ordering=" << int(ordering);
-  ICICLE_LOG_INFO << "NTT test: dir=" << (dir == NTTDir::kForward ? "forward" : "inverse");
-  ICICLE_LOG_INFO << "NTT test: log_coset_stride=" << log_coset_stride;
-  ICICLE_LOG_INFO << "NTT test: coset_gen=" << coset_gen;
-
   const int total_size = N * batch_size;
   auto scalars = std::make_unique<TypeParam[]>(total_size);
   FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
@@ -375,8 +366,8 @@ TYPED_TEST(FieldApiTest, ntt)
 
   run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
 
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }

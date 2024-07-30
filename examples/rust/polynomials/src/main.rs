@@ -27,7 +27,7 @@ struct Args {
     device_type: String,
 
     /// Backend installation directory
-    #[arg(short, long, default_value = "")]
+    #[arg(short, long, default_value = "/opt/icicle/backend")]
     backend_install_dir: String,
 }
 
@@ -41,10 +41,11 @@ fn try_load_and_set_backend_device(args: &Args) {
         icicle_runtime::runtime::load_backend(&args.backend_install_dir).unwrap();
     }
     println!("Setting device {}", args.device_type);
-    icicle_runtime::set_device(&icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/)).unwrap();
+    let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
+    icicle_runtime::set_device(&device).unwrap();
 }
 
-fn init(max_ntt_size: u64) {
+fn init_ntt_domain(max_ntt_size: u64) {
     // Initialize NTT domain for all fields. Polynomial operations rely on NTT.
     println!(
         "Initializing NTT domain for max size 2^{}",
@@ -79,7 +80,7 @@ fn main() {
 
     try_load_and_set_backend_device(&args);
 
-    init(1 << args.max_ntt_log_size);
+    init_ntt_domain(1 << args.max_ntt_log_size);
 
     let poly_size = 1 << args.poly_log_size;
 
