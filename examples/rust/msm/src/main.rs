@@ -38,7 +38,7 @@ fn try_load_and_set_backend_device(args: &Args) {
         .is_empty()
     {
         println!("Trying to load backend from {}", &args.backend_install_dir);
-        icicle_runtime::runtime::load_backend(&args.backend_install_dir, true /*recursive */).unwrap();
+        icicle_runtime::runtime::load_backend(&args.backend_install_dir).unwrap();
     }
     println!("Setting device {}", args.device_type);
     icicle_runtime::set_device(&icicle_runtime::Device::new(&args.device_type, 0)).unwrap();
