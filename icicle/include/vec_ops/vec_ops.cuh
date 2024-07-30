@@ -27,7 +27,8 @@ namespace vec_ops {
                     *   non-blocking and you'd need to synchronize it explicitly by running
                     *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the
                     *   function will block the current CPU thread. */
-    bool is_in_montgomery_form;    /**< If true then vec_a, vec_b and result are in montgomery form. Default value: false.  */
+    bool
+      is_in_montgomery_form; /**< If true then vec_a, vec_b and result are in montgomery form. Default value: false.  */
   };
 
   /**

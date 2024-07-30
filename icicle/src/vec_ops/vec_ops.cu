@@ -102,19 +102,20 @@ namespace vec_ops {
         CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(E), config.ctx.stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
         CHK_IF_RETURN(mont::from_montgomery(d_alloc_vec_a, n * sizeof(E), config.ctx.stream, d_alloc_vec_a));
-        is_d_alloc_vec_a_allocated = 1;        
+        is_d_alloc_vec_a_allocated = 1;
         d_vec_a = d_alloc_vec_a;
       } else {
         CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(E), config.ctx.stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
-        is_d_alloc_vec_a_allocated = 1;        
+        is_d_alloc_vec_a_allocated = 1;
         d_vec_a = d_alloc_vec_a;
       }
     } else {
       if (config.is_in_montgomery_form) {
-        CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(E), config.ctx.stream));   // Allocate in order not to change the input.
+        CHK_IF_RETURN(cudaMallocAsync(
+          &d_alloc_vec_a, n * sizeof(E), config.ctx.stream)); // Allocate in order not to change the input.
         CHK_IF_RETURN(mont::from_montgomery(vec_a, n * sizeof(E), config.ctx.stream, d_alloc_vec_a));
-        is_d_alloc_vec_a_allocated = 1;        
+        is_d_alloc_vec_a_allocated = 1;
         d_vec_a = d_alloc_vec_a;
       } else {
         d_vec_a = vec_a;
@@ -132,14 +133,15 @@ namespace vec_ops {
       } else {
         CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_b, n * sizeof(E), config.ctx.stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
-        is_d_alloc_vec_b_allocated = 1;        
+        is_d_alloc_vec_b_allocated = 1;
         d_vec_b = d_alloc_vec_b;
       }
     } else {
       if (config.is_in_montgomery_form) {
-        CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_b, n * sizeof(E), config.ctx.stream));   // Allocate in order not to change the input.
+        CHK_IF_RETURN(cudaMallocAsync(
+          &d_alloc_vec_b, n * sizeof(E), config.ctx.stream)); // Allocate in order not to change the input.
         CHK_IF_RETURN(mont::from_montgomery(vec_b, n * sizeof(E), config.ctx.stream, d_alloc_vec_b));
-        is_d_alloc_vec_b_allocated = 1;        
+        is_d_alloc_vec_b_allocated = 1;
         d_vec_b = d_alloc_vec_b;
       } else {
         d_vec_b = vec_b;
@@ -167,14 +169,14 @@ namespace vec_ops {
 
     if (!config.is_result_on_device) {
       if (config.is_in_montgomery_form) {
-        CHK_IF_RETURN(mont::to_montgomery(d_result, n * sizeof(E), config.ctx.stream, d_result));   // Convert in-place.
+        CHK_IF_RETURN(mont::to_montgomery(d_result, n * sizeof(E), config.ctx.stream, d_result)); // Convert in-place.
         CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
       } else {
         CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
       }
     } else {
       if (config.is_in_montgomery_form) {
-        CHK_IF_RETURN(mont::to_montgomery(d_result, n * sizeof(E), config.ctx.stream, d_result));   // Convert in-place.
+        CHK_IF_RETURN(mont::to_montgomery(d_result, n * sizeof(E), config.ctx.stream, d_result)); // Convert in-place.
       }
     }
 

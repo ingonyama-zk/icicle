@@ -1,4 +1,4 @@
-# Icicle example: Montgomery vector operations (mul, add, sub) for allpossible options:
+#Icicle example : Montgomery vector operations(mul, add, sub) for allpossible options:
 is_a_on_device
 is_b_on_device
 is_result_on_device
@@ -39,4 +39,3 @@ typedef scalar_t T;
 3. Copy them on-device
 4. Execute element-wise vector multiplication on-device
 5. Copy results on-host
-

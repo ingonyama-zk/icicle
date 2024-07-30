@@ -12,22 +12,30 @@ using namespace bn254;
 
 typedef scalar_t T;
 
-enum Op {
-  MUL,
-  ADD,
-  SUB,
-  LAST
-};
+enum Op { MUL, ADD, SUB, LAST };
 
 // bn254 p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
 
-int vector_op(T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_context::DeviceContext ctx, vec_ops::VecOpsConfig config, Op op)
+int vector_op(
+  T* vec_a,
+  T* vec_b,
+  T* vec_result,
+  size_t n_elements,
+  device_context::DeviceContext ctx,
+  vec_ops::VecOpsConfig config,
+  Op op)
 {
   cudaError_t err;
   switch (op) {
-    case MUL: err = bn254_mul_cuda(vec_a, vec_b, n_elements, config, vec_result); break;
-    case ADD: err = bn254_add_cuda(vec_a, vec_b, n_elements, config, vec_result); break;
-    case SUB: err = bn254_sub_cuda(vec_a, vec_b, n_elements, config, vec_result); break;
+  case MUL:
+    err = bn254_mul_cuda(vec_a, vec_b, n_elements, config, vec_result);
+    break;
+  case ADD:
+    err = bn254_add_cuda(vec_a, vec_b, n_elements, config, vec_result);
+    break;
+  case SUB:
+    err = bn254_sub_cuda(vec_a, vec_b, n_elements, config, vec_result);
+    break;
   }
   // cudaError_t err = bn254_mul_cuda(vec_a, vec_b, n_elements, config, vec_result);
   if (err != cudaSuccess) {
@@ -36,7 +44,8 @@ int vector_op(T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_conte
   }
   return 0;
 }
-int vector_mul(T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_context::DeviceContext ctx, vec_ops::VecOpsConfig config)
+int vector_mul(
+  T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_context::DeviceContext ctx, vec_ops::VecOpsConfig config)
 {
   cudaError_t err = bn254_mul_cuda(vec_a, vec_b, n_elements, config, vec_result);
   if (err != cudaSuccess) {
@@ -45,7 +54,8 @@ int vector_mul(T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_cont
   }
   return 0;
 }
-int vector_add(T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_context::DeviceContext ctx, vec_ops::VecOpsConfig config)
+int vector_add(
+  T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_context::DeviceContext ctx, vec_ops::VecOpsConfig config)
 {
   cudaError_t err = bn254_add_cuda(vec_a, vec_b, n_elements, config, vec_result);
   if (err != cudaSuccess) {
@@ -54,7 +64,8 @@ int vector_add(T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_cont
   }
   return 0;
 }
-int vector_sub(T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_context::DeviceContext ctx, vec_ops::VecOpsConfig config)
+int vector_sub(
+  T* vec_a, T* vec_b, T* vec_result, size_t n_elements, device_context::DeviceContext ctx, vec_ops::VecOpsConfig config)
 {
   cudaError_t err = bn254_sub_cuda(vec_a, vec_b, n_elements, config, vec_result);
   if (err != cudaSuccess) {
@@ -105,10 +116,16 @@ int main(int argc, char** argv)
   T::rand_host_many(host_in1_init, vector_size);
   T::rand_host_many(host_in2_init, vector_size);
   std::cout << "Allocate memory for the output vectors" << std::endl;
-  T* host_out = (T*)malloc(vector_size * sizeof(T));        // This memory will be used for the test output.
-  T* host_out_ref_mul = (T*)malloc(vector_size * sizeof(T));    // This memory will be used as a reference result for mul (will be compared to host_out content).
-  T* host_out_ref_add = (T*)malloc(vector_size * sizeof(T));    // This memory will be used as a reference result for add (will be compared to host_out content).
-  T* host_out_ref_sub = (T*)malloc(vector_size * sizeof(T));    // This memory will be used as a reference result for sub (will be compared to host_out content).
+  T* host_out = (T*)malloc(vector_size * sizeof(T)); // This memory will be used for the test output.
+  T* host_out_ref_mul = (T*)malloc(
+    vector_size *
+    sizeof(T)); // This memory will be used as a reference result for mul (will be compared to host_out content).
+  T* host_out_ref_add = (T*)malloc(
+    vector_size *
+    sizeof(T)); // This memory will be used as a reference result for add (will be compared to host_out content).
+  T* host_out_ref_sub = (T*)malloc(
+    vector_size *
+    sizeof(T)); // This memory will be used as a reference result for sub (will be compared to host_out content).
   std::cout << "Initializing output vectors with random data" << std::endl;
   T::rand_host_many(host_out, vector_size);
   T::rand_host_many(host_out_ref_mul, vector_size);
@@ -154,15 +171,21 @@ int main(int argc, char** argv)
   }
   std::cout << "Starting warm-up run" << std::endl;
   // Warm-up loop
-  for ( int op = MUL; op != LAST; op++ ) {
+  for (int op = MUL; op != LAST; op++) {
     for (int i = 0; i < repetitions; i++) {
       // vector_mul(device_in1, device_in2, device_out, vector_size, ctx, config);
       vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, (Op)op);
     }
     switch (op) {
-      case MUL: err = cudaMemcpy(host_out_ref_mul, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost); break;
-      case ADD: err = cudaMemcpy(host_out_ref_add, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost); break;
-      case SUB: err = cudaMemcpy(host_out_ref_sub, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost); break;
+    case MUL:
+      err = cudaMemcpy(host_out_ref_mul, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
+      break;
+    case ADD:
+      err = cudaMemcpy(host_out_ref_add, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
+      break;
+    case SUB:
+      err = cudaMemcpy(host_out_ref_sub, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
+      break;
     }
   }
   // copy the result from device to host_out_ref_mul to keep it for later comparisons.
@@ -193,14 +216,16 @@ int main(int argc, char** argv)
   // Loop for (mul, add, sub):
   //   Loop (is_a_on_device, is_b_on_device, is_result_on_device, is_in_montgomery_form):
   //*******************************************************
-  T* host_in1 = (T*)malloc(vector_size * sizeof(T));  // This buffer is used to load the data from host_in1_init for the benchmark.
-  T* host_in2 = (T*)malloc(vector_size * sizeof(T));  // This buffer is used to load the data from host_in2_init for the benchmark.
+  T* host_in1 =
+    (T*)malloc(vector_size * sizeof(T)); // This buffer is used to load the data from host_in1_init for the benchmark.
+  T* host_in2 =
+    (T*)malloc(vector_size * sizeof(T)); // This buffer is used to load the data from host_in2_init for the benchmark.
   // Test when the result is not in-place
-  for ( int op = MUL; op != LAST; op++ ) {
+  for (int op = MUL; op != LAST; op++) {
     // for (int config_idx = 0; config_idx < 0; config_idx++) {
     for (int config_idx = 0; config_idx < 16; config_idx++) {
       std::cout << "Start benchmark loop for config_idx " << config_idx << std::endl;
-      for (int i=0; i<vector_size; i++) {
+      for (int i = 0; i < vector_size; i++) {
         host_in1[i] = host_in1_init[i];
         host_in2[i] = host_in2_init[i];
       }
@@ -209,25 +234,30 @@ int main(int argc, char** argv)
       config.is_result_on_device = (config_idx >> 1) & 0x1;
       config.is_in_montgomery_form = (config_idx >> 0) & 0x1;
 
-      // Copy from host to device (copy again in order to be used later in the loop and device_inX was already overwritten by warmup.
+      // Copy from host to device (copy again in order to be used later in the loop and device_inX was already
+      // overwritten by warmup.
       if (config.is_a_on_device) {
         if (config.is_in_montgomery_form) {
-          err = cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          err =
+            cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-          CHK_IF_RETURN(mont::to_montgomery(device_in1, vector_size, config.ctx.stream, device_in1));   // Convert in-place.
-        } else {    // Normal presentation.
-          err = cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          CHK_IF_RETURN(
+            mont::to_montgomery(device_in1, vector_size, config.ctx.stream, device_in1)); // Convert in-place.
+        } else {                                                                          // Normal presentation.
+          err =
+            cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
         }
       } else {
-        if (config.is_in_montgomery_form) {   // Copy to device, cnvert to montgomery and copy back to host.
-          err = cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+        if (config.is_in_montgomery_form) { // Copy to device, cnvert to montgomery and copy back to host.
+          err =
+            cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
@@ -242,23 +272,27 @@ int main(int argc, char** argv)
       }
       if (config.is_b_on_device) {
         if (config.is_in_montgomery_form) {
-          err = cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          err =
+            cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in2 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-          CHK_IF_RETURN(mont::to_montgomery(device_in2, vector_size, config.ctx.stream, device_in2));   // Convert in-place.
+          CHK_IF_RETURN(
+            mont::to_montgomery(device_in2, vector_size, config.ctx.stream, device_in2)); // Convert in-place.
         } else {
           // Normal presentation.
-          err = cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          err =
+            cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in2 to device_in2 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
         }
       } else {
-        if (config.is_in_montgomery_form) {   // Copy to device, cnvert to montgomery and copy back to host.
-          err = cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+        if (config.is_in_montgomery_form) { // Copy to device, cnvert to montgomery and copy back to host.
+          err =
+            cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in2 to device_in2 - " << cudaGetErrorString(err) << std::endl;
             return 0;
@@ -276,15 +310,31 @@ int main(int argc, char** argv)
       auto start_time = std::chrono::high_resolution_clock::now();
       // Benchmark loop
       for (int i = 0; i < repetitions; i++) {
-        switch (config_idx >> 1) {   // {is_a_on_device, is_b_on_device, is_result_on_device}
-          case 0b000: vector_op(host_in1,   host_in2,   host_out,   vector_size, ctx, config, (Op)op); break;
-          case 0b001: vector_op(host_in1,   host_in2,   device_out, vector_size, ctx, config, (Op)op); break;
-          case 0b010: vector_op(host_in1,   device_in2, host_out,   vector_size, ctx, config, (Op)op); break;
-          case 0b011: vector_op(host_in1,   device_in2, device_out, vector_size, ctx, config, (Op)op); break;
-          case 0b100: vector_op(device_in1, host_in2,   host_out,   vector_size, ctx, config, (Op)op); break;
-          case 0b101: vector_op(device_in1, host_in2,   device_out, vector_size, ctx, config, (Op)op); break;
-          case 0b110: vector_op(device_in1, device_in2, host_out,   vector_size, ctx, config, (Op)op); break;
-          case 0b111: vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, (Op)op); break;
+        switch (config_idx >> 1) { // {is_a_on_device, is_b_on_device, is_result_on_device}
+        case 0b000:
+          vector_op(host_in1, host_in2, host_out, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b001:
+          vector_op(host_in1, host_in2, device_out, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b010:
+          vector_op(host_in1, device_in2, host_out, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b011:
+          vector_op(host_in1, device_in2, device_out, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b100:
+          vector_op(device_in1, host_in2, host_out, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b101:
+          vector_op(device_in1, host_in2, device_out, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b110:
+          vector_op(device_in1, device_in2, host_out, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b111:
+          vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, (Op)op);
+          break;
         }
         CHK_IF_RETURN(cudaPeekAtLastError());
       }
@@ -292,34 +342,54 @@ int main(int argc, char** argv)
       auto end_time = std::chrono::high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
       switch (op) {
-        case MUL: std::cout << "Elapsed time: " << duration.count() << " microseconds, operation MUL for config_idx " << config_idx << " and result not in-place" << std::endl; break;
-        case ADD: std::cout << "Elapsed time: " << duration.count() << " microseconds, operation ADD for config_idx " << config_idx << " and result not in-place" << std::endl; break;
-        case SUB: std::cout << "Elapsed time: " << duration.count() << " microseconds, operation SUB for config_idx " << config_idx << " and result not in-place" << std::endl; break;
+      case MUL:
+        std::cout << "Elapsed time: " << duration.count() << " microseconds, operation MUL for config_idx "
+                  << config_idx << " and result not in-place" << std::endl;
+        break;
+      case ADD:
+        std::cout << "Elapsed time: " << duration.count() << " microseconds, operation ADD for config_idx "
+                  << config_idx << " and result not in-place" << std::endl;
+        break;
+      case SUB:
+        std::cout << "Elapsed time: " << duration.count() << " microseconds, operation SUB for config_idx "
+                  << config_idx << " and result not in-place" << std::endl;
+        break;
       }
 
-      if (config.is_result_on_device) {   // Copy the data to host_out in order to compare it vs. host_out_ref_mul value.
-        if (config.is_in_montgomery_form) {    // Convert to normal from montgomery if needed.
-          CHK_IF_RETURN(mont::from_montgomery(device_out, vector_size, config.ctx.stream, device_out));   // Convert to normal in order to check vs. host_out_ref_mul.
+      if (config.is_result_on_device) { // Copy the data to host_out in order to compare it vs. host_out_ref_mul value.
+        if (config.is_in_montgomery_form) { // Convert to normal from montgomery if needed.
+          CHK_IF_RETURN(mont::from_montgomery(
+            device_out, vector_size, config.ctx.stream,
+            device_out)); // Convert to normal in order to check vs. host_out_ref_mul.
         }
-        err = cudaMemcpy(host_out, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);    // Copy to host_out in order to check vs. host_out_ref_mul.
+        err = cudaMemcpy(
+          host_out, device_out, vector_size * sizeof(T),
+          cudaMemcpyDeviceToHost); // Copy to host_out in order to check vs. host_out_ref_mul.
         if (err != cudaSuccess) {
           std::cerr << "Failed to copy data from device_out to host - " << cudaGetErrorString(err) << std::endl;
           return 0;
         }
-      } else {    // Data is not on device but it is in host_out.
-        if (config.is_in_montgomery_form) {    // host_out should be written to device, converted to mmontgomery and written back to host. Then compared vs. host_out_ref_mul.
-          err = cudaMemcpy(device_out, host_out, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy to host_out in order to check vs. host_out_ref_mul.
+      } else {                              // Data is not on device but it is in host_out.
+        if (config.is_in_montgomery_form) { // host_out should be written to device, converted to mmontgomery and
+                                            // written back to host. Then compared vs. host_out_ref_mul.
+          err = cudaMemcpy(
+            device_out, host_out, vector_size * sizeof(T),
+            cudaMemcpyHostToDevice); // Copy to host_out in order to check vs. host_out_ref_mul.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_out to device_out - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-          CHK_IF_RETURN(mont::from_montgomery(device_out, vector_size, config.ctx.stream, device_out));   // Convert to normal in order to check vs. host_out_ref_mul.          
-          err = cudaMemcpy(host_out, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);    // Copy to host_out in order to check vs. host_out_ref_mul.
+          CHK_IF_RETURN(mont::from_montgomery(
+            device_out, vector_size, config.ctx.stream,
+            device_out)); // Convert to normal in order to check vs. host_out_ref_mul.
+          err = cudaMemcpy(
+            host_out, device_out, vector_size * sizeof(T),
+            cudaMemcpyDeviceToHost); // Copy to host_out in order to check vs. host_out_ref_mul.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from device_out to host_out - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-        } else {    // host_out could be compared vs. host_out_ref_mul as is.
+        } else { // host_out could be compared vs. host_out_ref_mul as is.
         }
       }
       //****************************************
@@ -336,30 +406,37 @@ int main(int argc, char** argv)
       // std::cout << "===>>> host_out_ref_mul[" << i << "]: " << host_out_ref_mul[i] << std::endl;
       // std::cout << "===>>> host_out[" << i << "] after test run: " << host_out[i] << std::endl;
       switch (op) {
-        case MUL: for (int i=0; i<vector_size; i++) {
-                    if (host_out_ref_mul[i] != host_out[i]) { 
-                      std::cout << "===>>> ERROR!!! MUL: Test failed for vector index " << i << ", config is printed below:" << std::endl;
-                      test_failed = 1;
-                    }
-                  }
+      case MUL:
+        for (int i = 0; i < vector_size; i++) {
+          if (host_out_ref_mul[i] != host_out[i]) {
+            std::cout << "===>>> ERROR!!! MUL: Test failed for vector index " << i
+                      << ", config is printed below:" << std::endl;
+            test_failed = 1;
+          }
+        }
         break;
-        case ADD: for (int i=0; i<vector_size; i++) {
-                    if (host_out_ref_add[i] != host_out[i]) { 
-                      std::cout << "===>>> ERROR!!! ADD: Test failed for vector index " << i << ", config is printed below:" << std::endl;
-                      test_failed = 1;
-                    }
-                  }
+      case ADD:
+        for (int i = 0; i < vector_size; i++) {
+          if (host_out_ref_add[i] != host_out[i]) {
+            std::cout << "===>>> ERROR!!! ADD: Test failed for vector index " << i
+                      << ", config is printed below:" << std::endl;
+            test_failed = 1;
+          }
+        }
         break;
-        case SUB: for (int i=0; i<vector_size; i++) {
-                    if (host_out_ref_sub[i] != host_out[i]) { 
-                      std::cout << "===>>> ERROR!!! SUB: Test failed for vector index " << i << ", config is printed below:" << std::endl;
-                      test_failed = 1;
-                    }
-                  }
+      case SUB:
+        for (int i = 0; i < vector_size; i++) {
+          if (host_out_ref_sub[i] != host_out[i]) {
+            std::cout << "===>>> ERROR!!! SUB: Test failed for vector index " << i
+                      << ", config is printed below:" << std::endl;
+            test_failed = 1;
+          }
+        }
         break;
       }
       if (test_failed) {
-        // std::cout << "===>>> ERROR!!! Test failed for vector index " << i << ", config is printed below:" << std::endl;
+        // std::cout << "===>>> ERROR!!! Test failed for vector index " << i << ", config is printed below:" <<
+        // std::endl;
         std::cout << "===>>> result is not in-place: " << std::endl;
         std::cout << "===>>> is_a_on_device: " << config.is_a_on_device << std::endl;
         std::cout << "===>>> is_b_on_device: " << config.is_b_on_device << std::endl;
@@ -371,8 +448,8 @@ int main(int argc, char** argv)
       unsigned power_after;
       nvmlDeviceGetPowerUsage(device, &power_after);
       std::cout << "Power after: " << std::fixed << std::setprecision(3) << 1.0e-3 * power_after << " W" << std::endl;
-      std::cout << "Power utilization: " << std::fixed << std::setprecision(1) << (float)100.0 * power_after / power_limit
-                << " %" << std::endl;
+      std::cout << "Power utilization: " << std::fixed << std::setprecision(1)
+                << (float)100.0 * power_after / power_limit << " %" << std::endl;
       unsigned temperature_after;
       if (nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temperature_after) == NVML_SUCCESS) {
         std::cout << "GPU Temperature after: " << temperature_after << " C" << std::endl;
@@ -387,9 +464,9 @@ int main(int argc, char** argv)
   }
 
   // Test when the result is in-place
-  for ( int op = MUL; op != LAST; op++ ) {
+  for (int op = MUL; op != LAST; op++) {
     for (int config_idx = 0; config_idx < 16; config_idx++) {
-      for (int i=0; i<vector_size; i++) {
+      for (int i = 0; i < vector_size; i++) {
         host_in1[i] = host_in1_init[i];
         host_in2[i] = host_in2_init[i];
       }
@@ -397,29 +474,32 @@ int main(int argc, char** argv)
       config.is_b_on_device = (config_idx >> 3) & 0x1;
       config.is_result_on_device = (config_idx >> 2) & 0x1;
       config.is_in_montgomery_form = (config_idx >> 1) & 0x1;
-      if (config.is_a_on_device ^ config.is_result_on_device == 1) {
-        continue;
-      }
+      if (config.is_a_on_device ^ config.is_result_on_device == 1) { continue; }
 
-      // Copy from host to device (copy again in order to be used later in the loop and device_inX was already overwritten by warmup.
+      // Copy from host to device (copy again in order to be used later in the loop and device_inX was already
+      // overwritten by warmup.
       if (config.is_a_on_device) {
         if (config.is_in_montgomery_form) {
-          err = cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          err =
+            cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-          CHK_IF_RETURN(mont::to_montgomery(device_in1, vector_size, config.ctx.stream, device_in1));   // Convert in-place.
-        } else {    // Normal presentation.
-          err = cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          CHK_IF_RETURN(
+            mont::to_montgomery(device_in1, vector_size, config.ctx.stream, device_in1)); // Convert in-place.
+        } else {                                                                          // Normal presentation.
+          err =
+            cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
         }
       } else {
-        if (config.is_in_montgomery_form) {   // Copy to device, cnvert to montgomery and copy back to host.
-          err = cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+        if (config.is_in_montgomery_form) { // Copy to device, cnvert to montgomery and copy back to host.
+          err =
+            cudaMemcpy(device_in1, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
@@ -434,23 +514,27 @@ int main(int argc, char** argv)
       }
       if (config.is_b_on_device) {
         if (config.is_in_montgomery_form) {
-          err = cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          err =
+            cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in2 to device_in1 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-          CHK_IF_RETURN(mont::to_montgomery(device_in2, vector_size, config.ctx.stream, device_in2));   // Convert in-place.
+          CHK_IF_RETURN(
+            mont::to_montgomery(device_in2, vector_size, config.ctx.stream, device_in2)); // Convert in-place.
         } else {
           // Normal presentation.
-          err = cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+          err =
+            cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in2 to device_in2 - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
         }
       } else {
-        if (config.is_in_montgomery_form) {   // Copy to device, cnvert to montgomery and copy back to host.
-          err = cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy data to device.
+        if (config.is_in_montgomery_form) { // Copy to device, cnvert to montgomery and copy back to host.
+          err =
+            cudaMemcpy(device_in2, host_in2, vector_size * sizeof(T), cudaMemcpyHostToDevice); // Copy data to device.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in2 to device_in2 - " << cudaGetErrorString(err) << std::endl;
             return 0;
@@ -468,15 +552,27 @@ int main(int argc, char** argv)
       auto start_time = std::chrono::high_resolution_clock::now();
       // Benchmark loop
       for (int i = 0; i < repetitions; i++) {
-        switch (config_idx >> 2) {   // {is_a_on_device, is_b_on_device, is_result_on_device}
-          case 0b000: vector_op(host_in1,   host_in2,   host_in1,   vector_size, ctx, config, (Op)op); break;
-          case 0b001: break;
-          case 0b010: vector_op(host_in1,   device_in2, host_in1,   vector_size, ctx, config, (Op)op); break;
-          case 0b011: break;
-          case 0b100: break;
-          case 0b101: vector_op(device_in1, host_in2,   device_in1, vector_size, ctx, config, (Op)op); break;
-          case 0b110: break;
-          case 0b111: vector_op(device_in1, device_in2, device_in1, vector_size, ctx, config, (Op)op); break;
+        switch (config_idx >> 2) { // {is_a_on_device, is_b_on_device, is_result_on_device}
+        case 0b000:
+          vector_op(host_in1, host_in2, host_in1, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b001:
+          break;
+        case 0b010:
+          vector_op(host_in1, device_in2, host_in1, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b011:
+          break;
+        case 0b100:
+          break;
+        case 0b101:
+          vector_op(device_in1, host_in2, device_in1, vector_size, ctx, config, (Op)op);
+          break;
+        case 0b110:
+          break;
+        case 0b111:
+          vector_op(device_in1, device_in2, device_in1, vector_size, ctx, config, (Op)op);
+          break;
         }
         CHK_IF_RETURN(cudaPeekAtLastError());
       }
@@ -484,40 +580,64 @@ int main(int argc, char** argv)
       auto end_time = std::chrono::high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
       switch (op) {
-        case MUL: std::cout << "Elapsed time: " << duration.count() << " microseconds, operation MUL for config_idx " << config_idx << " and result in-place" << std::endl; break;
-        case ADD: std::cout << "Elapsed time: " << duration.count() << " microseconds, operation ADD for config_idx " << config_idx << " and result in-place" << std::endl; break;
-        case SUB: std::cout << "Elapsed time: " << duration.count() << " microseconds, operation SUB for config_idx " << config_idx << " and result in-place" << std::endl; break;
+      case MUL:
+        std::cout << "Elapsed time: " << duration.count() << " microseconds, operation MUL for config_idx "
+                  << config_idx << " and result in-place" << std::endl;
+        break;
+      case ADD:
+        std::cout << "Elapsed time: " << duration.count() << " microseconds, operation ADD for config_idx "
+                  << config_idx << " and result in-place" << std::endl;
+        break;
+      case SUB:
+        std::cout << "Elapsed time: " << duration.count() << " microseconds, operation SUB for config_idx "
+                  << config_idx << " and result in-place" << std::endl;
+        break;
       }
 
-      if (config.is_result_on_device) {   // Copy the data to host_out in order to compare it vs. host_out_ref_mul value.
-        if (config.is_in_montgomery_form) {    // Convert to normal from montgomery if needed.
-          CHK_IF_RETURN(mont::from_montgomery(device_in1, vector_size, config.ctx.stream, device_in1));   // Convert to normal in order to check vs. host_out_ref_mul.
+      if (config.is_result_on_device) { // Copy the data to host_out in order to compare it vs. host_out_ref_mul value.
+        if (config.is_in_montgomery_form) { // Convert to normal from montgomery if needed.
+          CHK_IF_RETURN(mont::from_montgomery(
+            device_in1, vector_size, config.ctx.stream,
+            device_in1)); // Convert to normal in order to check vs. host_out_ref_mul.
         }
-        err = cudaMemcpy(host_out, device_in1, vector_size * sizeof(T), cudaMemcpyDeviceToHost);    // Copy to host_out in order to check vs. host_out_ref_mul.
+        err = cudaMemcpy(
+          host_out, device_in1, vector_size * sizeof(T),
+          cudaMemcpyDeviceToHost); // Copy to host_out in order to check vs. host_out_ref_mul.
         if (err != cudaSuccess) {
           std::cerr << "Failed to copy data from device_in1 to host_out - " << cudaGetErrorString(err) << std::endl;
           return 0;
         }
-      } else {    // Data is not on device but it is in host_in1. It should be moved to host_out for test pass/fail check.
-        if (config.is_in_montgomery_form) {    // host_out should be written to device, converted to mmontgomery and written back to host. Then compared vs. host_out_ref_mul.
-          err = cudaMemcpy(device_out, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy to host_out in order to check vs. host_out_ref_mul.
+      } else { // Data is not on device but it is in host_in1. It should be moved to host_out for test pass/fail check.
+        if (config.is_in_montgomery_form) { // host_out should be written to device, converted to mmontgomery and
+                                            // written back to host. Then compared vs. host_out_ref_mul.
+          err = cudaMemcpy(
+            device_out, host_in1, vector_size * sizeof(T),
+            cudaMemcpyHostToDevice); // Copy to host_out in order to check vs. host_out_ref_mul.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_out - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-          CHK_IF_RETURN(mont::from_montgomery(device_out, vector_size, config.ctx.stream, device_out));   // Convert to normal in order to check vs. host_out_ref_mul.          
-          err = cudaMemcpy(host_out, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);    // Copy to host_out in order to check vs. host_out_ref_mul.
+          CHK_IF_RETURN(mont::from_montgomery(
+            device_out, vector_size, config.ctx.stream,
+            device_out)); // Convert to normal in order to check vs. host_out_ref_mul.
+          err = cudaMemcpy(
+            host_out, device_out, vector_size * sizeof(T),
+            cudaMemcpyDeviceToHost); // Copy to host_out in order to check vs. host_out_ref_mul.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from device_out to host_out - " << cudaGetErrorString(err) << std::endl;
             return 0;
           }
-        } else {    // host_out could be compared vs. host_out_ref_mul as is.
-          err = cudaMemcpy(device_out, host_in1, vector_size * sizeof(T), cudaMemcpyHostToDevice);    // Copy to host_out in order to check vs. host_out_ref_mul.
+        } else { // host_out could be compared vs. host_out_ref_mul as is.
+          err = cudaMemcpy(
+            device_out, host_in1, vector_size * sizeof(T),
+            cudaMemcpyHostToDevice); // Copy to host_out in order to check vs. host_out_ref_mul.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from host_in1 to device_out - " << cudaGetErrorString(err) << std::endl;
             return 0;
-          }      
-          err = cudaMemcpy(host_out, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);    // Copy to host_out in order to check vs. host_out_ref_mul.
+          }
+          err = cudaMemcpy(
+            host_out, device_out, vector_size * sizeof(T),
+            cudaMemcpyDeviceToHost); // Copy to host_out in order to check vs. host_out_ref_mul.
           if (err != cudaSuccess) {
             std::cerr << "Failed to copy data from device_out to host_out - " << cudaGetErrorString(err) << std::endl;
             return 0;
@@ -538,33 +658,40 @@ int main(int argc, char** argv)
       // std::cout << "===>>> host_out_ref_mul[" << i << "]: " << host_out_ref_mul[i] << std::endl;
       // std::cout << "===>>> host_out[" << i << "] after test run: " << host_out[i] << std::endl;
       switch (op) {
-        case MUL: for (int i=0; i<vector_size; i++) {
-                    if (host_out_ref_mul[i] != host_out[i]) { 
-                      std::cout << "===>>> ERROR!!! MUL: Test failed for vector index " << i << ", config is printed below:" << std::endl;
-                      std::cout << "host_out_ref_mul[0] = " << host_out_ref_mul[0] << std::endl;
-                      test_failed = 1;
-                    }
-                  }
+      case MUL:
+        for (int i = 0; i < vector_size; i++) {
+          if (host_out_ref_mul[i] != host_out[i]) {
+            std::cout << "===>>> ERROR!!! MUL: Test failed for vector index " << i
+                      << ", config is printed below:" << std::endl;
+            std::cout << "host_out_ref_mul[0] = " << host_out_ref_mul[0] << std::endl;
+            test_failed = 1;
+          }
+        }
         break;
-        case ADD: for (int i=0; i<vector_size; i++) {
-                    if (host_out_ref_add[i] != host_out[i]) { 
-                      std::cout << "===>>> ERROR!!! ADD: Test failed for vector index " << i << ", config is printed below:" << std::endl;
-                      std::cout << "host_out_ref_add[0] = " << host_out_ref_add[0] << std::endl;
-                      test_failed = 1;
-                    }
-                  }
+      case ADD:
+        for (int i = 0; i < vector_size; i++) {
+          if (host_out_ref_add[i] != host_out[i]) {
+            std::cout << "===>>> ERROR!!! ADD: Test failed for vector index " << i
+                      << ", config is printed below:" << std::endl;
+            std::cout << "host_out_ref_add[0] = " << host_out_ref_add[0] << std::endl;
+            test_failed = 1;
+          }
+        }
         break;
-        case SUB: for (int i=0; i<vector_size; i++) {
-                    if (host_out_ref_sub[i] != host_out[i]) { 
-                      std::cout << "===>>> ERROR!!! SUB: Test failed for vector index " << i << ", config is printed below:" << std::endl;
-                      std::cout << "host_out_ref_sub[0] = " << host_out_ref_sub[0] << std::endl;
-                      test_failed = 1;
-                    }
-                  }
+      case SUB:
+        for (int i = 0; i < vector_size; i++) {
+          if (host_out_ref_sub[i] != host_out[i]) {
+            std::cout << "===>>> ERROR!!! SUB: Test failed for vector index " << i
+                      << ", config is printed below:" << std::endl;
+            std::cout << "host_out_ref_sub[0] = " << host_out_ref_sub[0] << std::endl;
+            test_failed = 1;
+          }
+        }
         break;
       }
       if (test_failed) {
-        // std::cout << "===>>> ERROR!!! Test failed for vector index " << i << ", config is printed below:" << std::endl;
+        // std::cout << "===>>> ERROR!!! Test failed for vector index " << i << ", config is printed below:" <<
+        // std::endl;
         std::cout << "===>>> result is in-place: " << std::endl;
         std::cout << "===>>> is_a_on_device: " << config.is_a_on_device << std::endl;
         std::cout << "===>>> is_b_on_device: " << config.is_b_on_device << std::endl;
@@ -577,8 +704,8 @@ int main(int argc, char** argv)
       unsigned power_after;
       nvmlDeviceGetPowerUsage(device, &power_after);
       std::cout << "Power after: " << std::fixed << std::setprecision(3) << 1.0e-3 * power_after << " W" << std::endl;
-      std::cout << "Power utilization: " << std::fixed << std::setprecision(1) << (float)100.0 * power_after / power_limit
-                << " %" << std::endl;
+      std::cout << "Power utilization: " << std::fixed << std::setprecision(1)
+                << (float)100.0 * power_after / power_limit << " %" << std::endl;
       unsigned temperature_after;
       if (nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temperature_after) == NVML_SUCCESS) {
         std::cout << "GPU Temperature after: " << temperature_after << " C" << std::endl;
