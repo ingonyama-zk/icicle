@@ -34,7 +34,7 @@ mod tests {
     fn initialize() {
         INIT.call_once(|| {
             // load backends to process
-            load_backend(&env!("DEFAULT_BACKEND_INSTALL_DIR"), true).unwrap();
+            load_backend(&env!("DEFAULT_BACKEND_INSTALL_DIR")).unwrap();
             let _ = runtime::get_registered_devices().unwrap();
         });
     }

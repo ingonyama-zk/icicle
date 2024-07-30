@@ -122,7 +122,7 @@ namespace icicle {
 
   void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
   {
-    ICICLE_LOG_DEBUG << "deviceAPI registered for " << deviceType;
+    ICICLE_LOG_DEBUG << " Registering DEVICE: device=" << deviceType;
     DeviceAPIRegistry::Global().register_deviceAPI(deviceType, api);
   }
 

@@ -42,9 +42,14 @@ extern "C" {
     fn icicle_get_registered_devices(output: *mut c_char, output_size: usize) -> eIcicleError;
 }
 
-pub fn load_backend(path: &str, is_recursive: bool) -> Result<(), eIcicleError> {
+pub fn load_backend(path: &str) -> Result<(), eIcicleError> {
     let c_path = CString::new(path).unwrap();
-    unsafe { icicle_load_backend(c_path.as_ptr(), is_recursive).wrap() }
+    unsafe { icicle_load_backend(c_path.as_ptr(), true).wrap() }
+}
+
+pub fn load_backend_non_recursive(path: &str) -> Result<(), eIcicleError> {
+    let c_path = CString::new(path).unwrap();
+    unsafe { icicle_load_backend(c_path.as_ptr(), false).wrap() }
 }
 
 pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
@@ -61,12 +66,12 @@ pub fn get_active_device() -> Result<Device, eIcicleError> {
     unsafe { icicle_get_active_device(&mut device).wrap_value::<Device>(device) }
 }
 
-pub fn is_host_memory(ptr: *const c_void) -> bool{
-    unsafe {eIcicleError::Success == icicle_is_host_memory(ptr)}
+pub fn is_host_memory(ptr: *const c_void) -> bool {
+    unsafe { eIcicleError::Success == icicle_is_host_memory(ptr) }
 }
 
 pub fn is_active_device_memory(ptr: *const c_void) -> bool {
-    unsafe {eIcicleError::Success == icicle_is_active_device_memory(ptr)}
+    unsafe { eIcicleError::Success == icicle_is_active_device_memory(ptr) }
 }
 
 pub fn get_device_count() -> Result<i32, eIcicleError> {
