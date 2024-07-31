@@ -88,13 +88,13 @@ fn check_vec_ops_args<'a, F>(
     }
 
     // check device slices are on active device
-    if a.is_on_device() && !a.is_on_active_device(){
+    if a.is_on_device() && !a.is_on_active_device() {
         panic!("input a is allocated on an inactive device");
     }
-    if b.is_on_device() && !b.is_on_active_device(){
+    if b.is_on_device() && !b.is_on_active_device() {
         panic!("input b is allocated on an inactive device");
     }
-    if result.is_on_device() && !result.is_on_active_device(){
+    if result.is_on_device() && !result.is_on_active_device() {
         panic!("output is allocated on an inactive device");
     }
 
@@ -196,7 +196,7 @@ macro_rules! impl_vec_ops_field {
     ) => {
         mod $field_prefix_ident {
 
-            use crate::vec_ops::{$field, HostOrDeviceSlice};            
+            use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 

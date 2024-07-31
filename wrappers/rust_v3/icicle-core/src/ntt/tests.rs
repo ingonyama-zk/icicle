@@ -239,7 +239,7 @@ where
         let coset_generators = [
             F::Config::generate_random(1)[0],
             get_root_of_unity::<F>(test_size as u64),
-            F::one(),            
+            F::one(),
         ];
         for coset_gen in coset_generators {
             let mut scalars = F::Config::generate_random(test_size);

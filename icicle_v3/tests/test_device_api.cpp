@@ -23,8 +23,9 @@ public:
   static void SetUpTestSuite()
   {
 #ifdef BACKEND_BUILD_DIR
-    icicle_load_backend(BACKEND_BUILD_DIR, true);
+    setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif
+    icicle_load_backend_from_env_or_default();
     s_regsitered_devices = get_registered_devices_list();
     ASSERT_GT(s_regsitered_devices.size(), 0);
   }

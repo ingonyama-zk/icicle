@@ -76,4 +76,3 @@ impl fmt::Debug for Device {
             .finish()
     }
 }
-

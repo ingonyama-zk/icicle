@@ -55,9 +55,11 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         true
     }
 
-
     fn is_on_active_device(&self) -> bool {
-        runtime::is_active_device_memory(self.0.as_ptr() as *const c_void)
+        runtime::is_active_device_memory(
+            self.0
+                .as_ptr() as *const c_void,
+        )
     }
 
     unsafe fn as_ptr(&self) -> *const T {
@@ -125,11 +127,11 @@ impl<T> DeviceSlice<T> {
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
         );
-        
+
         if self.is_empty() {
             return Ok(());
         }
-        if !self.is_on_active_device(){
+        if !self.is_on_active_device() {
             panic!("not allocated on an inactive device");
         }
 
@@ -148,7 +150,7 @@ impl<T> DeviceSlice<T> {
         if self.is_empty() {
             return Ok(());
         }
-        if !self.is_on_active_device(){
+        if !self.is_on_active_device() {
             panic!("not allocated on an inactive device");
         }
 
@@ -166,7 +168,7 @@ impl<T> DeviceSlice<T> {
         if self.is_empty() {
             return Ok(());
         }
-        if !self.is_on_active_device(){
+        if !self.is_on_active_device() {
             panic!("not allocated on an inactive device");
         }
 
@@ -190,10 +192,10 @@ impl<T> DeviceSlice<T> {
         if self.is_empty() {
             return Ok(());
         }
-        if !self.is_on_active_device(){
+        if !self.is_on_active_device() {
             panic!("not allocated on an inactive device");
         }
-        
+
         let size = size_of::<T>() * self.len();
         unsafe {
             runtime::icicle_copy_to_host_async(
