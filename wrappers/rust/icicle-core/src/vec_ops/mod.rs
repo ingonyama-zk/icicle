@@ -270,15 +270,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    <<F as FieldImpl>::Config as VecOps<F>>::transpose(
-        input,
-        row_size,
-        column_size,
-        output,
-        ctx,
-        on_device,
-        is_async,
-    )
+    <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, row_size, column_size, output, ctx, on_device, is_async)
 }
 
 pub fn bit_reverse<F>(
@@ -307,102 +299,103 @@ where
 }
 
 #[macro_export]
-macro_rules !impl_vec_ops_field
-{
-  ($field_prefix : literal, $field_prefix_ident : ident, $field : ident, $field_config : ident) =>
-  {
-    mod $field_prefix_ident
-    {
-      use crate::vec_ops::{$field, CudaError, DeviceContext, HostOrDeviceSlice};
-      use icicle_core::vec_ops::BitReverseConfig;
-      use icicle_core::vec_ops::VecOpsConfig;
+macro_rules! impl_vec_ops_field {
+    ($field_prefix : literal, $field_prefix_ident : ident, $field : ident, $field_config : ident) => {
+        mod $field_prefix_ident {
+            use crate::vec_ops::{$field, CudaError, DeviceContext, HostOrDeviceSlice};
+            use icicle_core::vec_ops::BitReverseConfig;
+            use icicle_core::vec_ops::VecOpsConfig;
 
-      extern "C" {
-#[link_name = concat !($field_prefix, "_add_cuda")]
-      pub(crate) fn add_scalars_cuda(a
-                                     : * const $field, b
-                                     : * const $field, size
-                                     : u32, cfg
-                                     : * const VecOpsConfig, result
-                                     : *mut $field, )
-        ->CudaError;
+            extern "C" {
+                #[link_name = concat !($field_prefix, "_add_cuda")]
+                pub(crate) fn add_scalars_cuda(
+                    a: *const $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $field,
+                ) -> CudaError;
 
-#[link_name = concat !($field_prefix, "_accumulate_cuda")]
-      pub(crate) fn accumulate_scalars_cuda(a
-                                            : *mut $field, b
-                                            : * const $field, size
-                                            : u32, cfg
-                                            : * const VecOpsConfig, )
-        ->CudaError;
+                #[link_name = concat !($field_prefix, "_accumulate_cuda")]
+                pub(crate) fn accumulate_scalars_cuda(
+                    a: *mut $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                ) -> CudaError;
 
-#[link_name = concat !($field_prefix, "_sub_cuda")]
-      pub(crate) fn sub_scalars_cuda(a
-                                     : * const $field, b
-                                     : * const $field, size
-                                     : u32, cfg
-                                     : * const VecOpsConfig, result
-                                     : *mut $field, )
-        ->CudaError;
+                #[link_name = concat !($field_prefix, "_sub_cuda")]
+                pub(crate) fn sub_scalars_cuda(
+                    a: *const $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $field,
+                ) -> CudaError;
 
-#[link_name = concat !($field_prefix, "_mul_cuda")]
-      pub(crate) fn mul_scalars_cuda(a
-                                     : * const $field, b
-                                     : * const $field, size
-                                     : u32, cfg
-                                     : * const VecOpsConfig, result
-                                     : *mut $field, )
-        ->CudaError;
+                #[link_name = concat !($field_prefix, "_mul_cuda")]
+                pub(crate) fn mul_scalars_cuda(
+                    a: *const $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $field,
+                ) -> CudaError;
 
-#[link_name = concat !($field_prefix, "_transpose_matrix_cuda")]
-      pub(crate) fn transpose_cuda(input
-                                   : * const $field, row_size
-                                   : u32, column_size
-                                   : u32, output
-                                   : *mut $field, ctx
-                                   : * const DeviceContext, on_device
-                                   : bool, is_async
-                                   : bool, )
-        ->CudaError;
+                #[link_name = concat !($field_prefix, "_transpose_matrix_cuda")]
+                pub(crate) fn transpose_cuda(
+                    input: *const $field,
+                    row_size: u32,
+                    column_size: u32,
+                    output: *mut $field,
+                    ctx: *const DeviceContext,
+                    on_device: bool,
+                    is_async: bool,
+                ) -> CudaError;
 
-#[link_name = concat !($field_prefix, "_bit_reverse_cuda")]
-      pub(crate) fn bit_reverse_cuda(input
-                                     : * const $field, size
-                                     : u64, config
-                                     : * const BitReverseConfig, output
-                                     : *mut $field, )
-        ->CudaError;
-      }
-    }
+                #[link_name = concat !($field_prefix, "_bit_reverse_cuda")]
+                pub(crate) fn bit_reverse_cuda(
+                    input: *const $field,
+                    size: u64,
+                    config: *const BitReverseConfig,
+                    output: *mut $field,
+                ) -> CudaError;
+            }
+        }
 
-        impl VecOps<$field> for $field_config
-        {
+        impl VecOps<$field> for $field_config {
             fn add(
                 a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
-            ) -> IcicleResult<()>
-            {
-              unsafe
-              {
-                $field_prefix_ident::add_scalars_cuda(
-                  a.as_ptr(), b.as_ptr(), a.len() as u32, cfg as* const VecOpsConfig, result.as_mut_ptr(), )
-                  .wrap()
-              }
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::add_scalars_cuda(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
 
             fn accumulate(
                 a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
-            ) -> IcicleResult<()>
-            {
-              unsafe
-              {
-                $field_prefix_ident::accumulate_scalars_cuda(
-                  a.as_mut_ptr(), b.as_ptr(), a.len() as u32, cfg as* const VecOpsConfig, )
-                  .wrap()
-              }
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::accumulate_scalars_cuda(
+                        a.as_mut_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                    )
+                    .wrap()
+                }
             }
 
             fn sub(
@@ -410,14 +403,17 @@ macro_rules !impl_vec_ops_field
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
-            ) -> IcicleResult<()>
-            {
-              unsafe
-              {
-                $field_prefix_ident::sub_scalars_cuda(
-                  a.as_ptr(), b.as_ptr(), a.len() as u32, cfg as* const VecOpsConfig, result.as_mut_ptr(), )
-                  .wrap()
-              }
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::sub_scalars_cuda(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
 
             fn mul(
@@ -425,14 +421,17 @@ macro_rules !impl_vec_ops_field
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
-            ) -> IcicleResult<()>
-            {
-              unsafe
-              {
-                $field_prefix_ident::mul_scalars_cuda(
-                  a.as_ptr(), b.as_ptr(), a.len() as u32, cfg as* const VecOpsConfig, result.as_mut_ptr(), )
-                  .wrap()
-              }
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::mul_scalars_cuda(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
 
             fn transpose(
@@ -443,63 +442,71 @@ macro_rules !impl_vec_ops_field
                 ctx: &DeviceContext,
                 on_device: bool,
                 is_async: bool,
-            ) -> IcicleResult<()>
-            {
-              unsafe
-              {
-                $field_prefix_ident::transpose_cuda(
-                  input.as_ptr(), row_size, column_size, output.as_mut_ptr(), ctx as* const _ as* const DeviceContext,
-                  on_device, is_async)
-                  .wrap()
-              }
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::transpose_cuda(
+                        input.as_ptr(),
+                        row_size,
+                        column_size,
+                        output.as_mut_ptr(),
+                        ctx as *const _ as *const DeviceContext,
+                        on_device,
+                        is_async,
+                    )
+                    .wrap()
+                }
             }
 
             fn bit_reverse(
                 input: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &BitReverseConfig,
                 output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-            ) -> IcicleResult<()>
-            {
-              unsafe
-              {
-                $field_prefix_ident::bit_reverse_cuda(
-                  input.as_ptr(), input.len() as u64, cfg as* const BitReverseConfig, output.as_mut_ptr(), )
-                  .wrap()
-              }
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::bit_reverse_cuda(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg as *const BitReverseConfig,
+                        output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
 
             fn bit_reverse_inplace(
                 input: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &BitReverseConfig,
-            ) -> IcicleResult<()>
-            {
-              unsafe
-              {
-                $field_prefix_ident::bit_reverse_cuda(
-                  input.as_ptr(), input.len() as u64, cfg as* const BitReverseConfig, input.as_mut_ptr(), )
-                  .wrap()
-              }
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::bit_reverse_cuda(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg as *const BitReverseConfig,
+                        input.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
         }
-  };
+    };
 }
 
 #[macro_export]
-macro_rules !impl_vec_add_tests
-{
-  ($field
+macro_rules! impl_vec_add_tests {
+    ($field
    : ident) => {
-#[test]
-                  pub fn test_vec_add_scalars(){check_vec_ops_scalars::<$field>();
-}
+        #[test]
+        pub fn test_vec_add_scalars() {
+            check_vec_ops_scalars::<$field>();
+        }
 
-#[test]
-pub fn test_bit_reverse(){check_bit_reverse::<$field>()}
-#[test]
-pub fn test_bit_reverse_inplace()
-{
-  check_bit_reverse_inplace::<$field>()
-}
-}
-;
+        #[test]
+        pub fn test_bit_reverse() {
+            check_bit_reverse::<$field>()
+        }
+        #[test]
+        pub fn test_bit_reverse_inplace() {
+            check_bit_reverse_inplace::<$field>()
+        }
+    };
 }
