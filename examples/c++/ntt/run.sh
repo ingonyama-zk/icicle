@@ -21,7 +21,7 @@ while getopts ":d:b:h" opt; do
       DEVICE_TYPE=$OPTARG
       ;;
     b )
-      BACKEND_INSTALL_DIR="$(realpath ${OPTARG})"
+      ICICLE_BACKEND_INSTALL_DIR="$(realpath ${OPTARG})"
       ;;
     h )
       show_help
@@ -39,27 +39,27 @@ done
 
 # Set default values if not provided
 : "${DEVICE_TYPE:=CPU}"
-: "${BACKEND_INSTALL_DIR:=}"
+: "${ICICLE_BACKEND_INSTALL_DIR:=}"
 
 # Create necessary directories
 mkdir -p build/example
 mkdir -p build/icicle
 
 ICILE_DIR=$(realpath "../../../icicle_v3/")
-ICICLE_CUDA_BACKEND_DIR="${ICILE_DIR}/backend/cuda"
+ICICLE_CUDA_SOURCE_DIR="${ICILE_DIR}/backend/cuda"
 
 # Build Icicle and the example app that links to it
-if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_BACKEND_DIR}" ]; then
+if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_SOURCE_DIR}" ]; then
   echo "Building icicle with CUDA backend"
   cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DMSM=OFF -DCUDA_BACKEND=local -S "${ICILE_DIR}" -B build/icicle
-  BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")  
+  export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")
 else
-  echo "Building icicle without CUDA backend, BACKEND_INSTALL_DIR=${BACKEND_INSTALL_DIR}"
-  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DMSM=OFF -S "${ICILE_DIR}" -B build/icicle  
+  echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
+  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DMSM=OFF -S "${ICILE_DIR}" -B build/icicle
 fi
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
 
 cmake --build build/icicle -j
 cmake --build build/example -j
 
-./build/example/example "$DEVICE_TYPE" "$BACKEND_INSTALL_DIR"
+./build/example/example "$DEVICE_TYPE"

@@ -5,11 +5,11 @@ set -e
 
 # Function to display usage information
 show_help() {
-  echo "Usage: $0 [-d DEVICE_TYPE] [-b BACKEND_INSTALL_DIR]"
+  echo "Usage: $0 [-d DEVICE_TYPE] [-b ICICLE_BACKEND_INSTALL_DIR]"
   echo
   echo "Options:"
   echo "  -d DEVICE_TYPE            Specify the device type (default: CPU)"
-  echo "  -b BACKEND_INSTALL_DIR    Specify the backend installation directory (default: empty)"
+  echo "  -b ICICLE_BACKEND_INSTALL_DIR    Specify the backend installation directory (default: empty)"
   echo "  -h                        Show this help message"
   exit 0
 }
@@ -21,7 +21,7 @@ while getopts ":d:b:h" opt; do
       DEVICE_TYPE=$OPTARG
       ;;
     b )
-      BACKEND_INSTALL_DIR="$(realpath ${OPTARG})"
+      ICICLE_BACKEND_INSTALL_DIR="$(realpath ${OPTARG})"
       ;;
     h )
       show_help
@@ -39,22 +39,22 @@ done
 
 # Set default values if not provided
 : "${DEVICE_TYPE:=CPU}"
-: "${BACKEND_INSTALL_DIR:=}"
+: "${ICICLE_BACKEND_INSTALL_DIR:=}"
 
 # Create necessary directories
 mkdir -p build/example
 mkdir -p build/icicle
 
 ICILE_DIR=$(realpath "../../../icicle_v3/")
-ICICLE_CUDA_BACKEND_DIR="${ICILE_DIR}/backend/cuda"
+ICICLE_CUDA_SOURCE_DIR="${ICILE_DIR}/backend/cuda"
 
 # Build Icicle and the example app that links to it
-if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_BACKEND_DIR}" ]; then
+if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_SOURCE_DIR}" ]; then
   echo "Building icicle with CUDA backend"
   cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DCUDA_BACKEND=local -S "${ICILE_DIR}" -B build/icicle
-  BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")  
+  export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")  
 else
-  echo "Building icicle without CUDA backend, BACKEND_INSTALL_DIR=${BACKEND_INSTALL_DIR}"
+  echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -S "${ICILE_DIR}" -B build/icicle  
 fi
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
@@ -62,4 +62,4 @@ cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
 cmake --build build/icicle -j
 cmake --build build/example -j
 
-./build/example/example "$DEVICE_TYPE" "$BACKEND_INSTALL_DIR"
+./build/example/example "$DEVICE_TYPE"
