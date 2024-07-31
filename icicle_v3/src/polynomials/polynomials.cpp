@@ -5,12 +5,13 @@ using namespace field_config;
 
 namespace icicle {
 
-  std::shared_ptr<AbstractPolynomialFactory<scalar_t>> get_polynomial_abstract_factory();
+  template <typename S>
+  std::shared_ptr<AbstractPolynomialFactory<S>> get_polynomial_abstract_factory(const S* phantom = nullptr);
 
   template <typename C, typename D, typename I>
   Polynomial<C, D, I>::Polynomial()
   {
-    auto backend_factory = get_polynomial_abstract_factory();
+    auto backend_factory = get_polynomial_abstract_factory<C>();
     m_context = backend_factory->create_context();
     m_backend = backend_factory->create_backend();
   }

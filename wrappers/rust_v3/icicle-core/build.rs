@@ -15,7 +15,7 @@ fn main() {
 
     // default backends dir
     println!(
-        "cargo:rustc-env=DEFAULT_BACKEND_INSTALL_DIR={}/icicle/lib/backend",
+        "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/icicle/lib/backend",
         deps_dir.display()
     );
 }

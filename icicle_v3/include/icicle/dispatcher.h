@@ -5,8 +5,22 @@
 #include "icicle/device.h"
 #include "icicle/device_api.h"
 #include <unordered_map>
+#include <typeinfo>
+#include <cxxabi.h>
+#include <memory>
 
 using namespace icicle;
+
+// Template function to demangle the name of the type
+template <typename T>
+std::string demangle()
+{
+  int status = -4;
+  std::unique_ptr<char, void (*)(void*)> res{
+    abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, &status), std::free};
+
+  return (status == 0) ? res.get() : typeid(T).name();
+}
 
 // Generalized executor-dispatcher template
 template <typename FuncType, const char* api_name>
@@ -53,7 +67,8 @@ public:
   using dispatcher_class_name = tIcicleExecuteDispatcher<type, ST_name_##api_name>;                                    \
   void register_##api_name(const std::string& deviceType, type impl)                                                   \
   {                                                                                                                    \
-    ICICLE_LOG_DEBUG << #api_name << " registered for " << deviceType;                                                 \
+    ICICLE_LOG_DEBUG << " Registering API: device=" << deviceType << ", api=" << #api_name << "<" << demangle<type>()  \
+                     << ">";                                                                                           \
     dispatcher_class_name::Global()._register(deviceType, impl);                                                       \
   }
 
@@ -102,6 +117,7 @@ public:
   using dispatcher_class_name = tIcicleObjectDispatcher<type, ST_name_##api_name>;                                     \
   void register_##api_name(const std::string& deviceType, std::shared_ptr<type> factory)                               \
   {                                                                                                                    \
-    ICICLE_LOG_DEBUG << #api_name << " registered for " << deviceType;                                                 \
+    ICICLE_LOG_DEBUG << " Registering API: device=" << deviceType << ", api=" << #api_name << "<"                      \
+                     << demangle<type> << ">";                                                                         \
     dispatcher_class_name::Global()._register(deviceType, factory);                                                    \
   }

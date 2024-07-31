@@ -9,15 +9,6 @@
 #include "icicle/msm.h"
 #include "icicle/vec_ops.h"
 
-extern "C" eIcicleError grumpkin_precompute_msm_bases(
-  const grumpkin::affine_t* bases,
-  int nof_bases,
-  const MSMConfig& config,
-  grumpkin::affine_t* output_bases);
-
-extern "C" eIcicleError grumpkin_msm(
-  const grumpkin::scalar_t* scalars, const grumpkin::affine_t* points, int msm_size, const MSMConfig& config, grumpkin::projective_t* out);
-
 extern "C" bool grumpkin_eq(grumpkin::projective_t* point1, grumpkin::projective_t* point2);
 
 extern "C" void grumpkin_to_affine(grumpkin::projective_t* point, grumpkin::affine_t* point_out);
@@ -30,19 +21,50 @@ extern "C" eIcicleError grumpkin_affine_convert_montgomery(
   const grumpkin::affine_t* input, size_t n, bool is_into, const VecOpsConfig& config, grumpkin::affine_t* output);
 
 extern "C" eIcicleError grumpkin_projective_convert_montgomery(
-  const grumpkin::projective_t* input, size_t n, bool is_into, const VecOpsConfig& config, grumpkin::projective_t* output);  
+  const grumpkin::projective_t* input,
+  size_t n,
+  bool is_into,
+  const VecOpsConfig& config,
+  grumpkin::projective_t* output);
+
+extern "C" eIcicleError grumpkin_precompute_msm_bases(
+  const grumpkin::affine_t* bases, int nof_bases, const MSMConfig& config, grumpkin::affine_t* output_bases);
+
+extern "C" eIcicleError grumpkin_msm(
+  const grumpkin::scalar_t* scalars,
+  const grumpkin::affine_t* points,
+  int msm_size,
+  const MSMConfig& config,
+  grumpkin::projective_t* out);
+
+extern "C" void grumpkin_generate_scalars(grumpkin::scalar_t* scalars, int size);
+
+extern "C" void grumpkin_scalar_convert_montgomery(
+  const grumpkin::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, grumpkin::scalar_t* output);
 
 extern "C" eIcicleError grumpkin_vector_mul(
-  const grumpkin::scalar_t* vec_a, const grumpkin::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, grumpkin::scalar_t* result);
+  const grumpkin::scalar_t* vec_a,
+  const grumpkin::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig& config,
+  grumpkin::scalar_t* result);
 
 extern "C" eIcicleError grumpkinvector_add(
-  const grumpkin::scalar_t* vec_a, const grumpkin::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, grumpkin::scalar_t* result);
+  const grumpkin::scalar_t* vec_a,
+  const grumpkin::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig& config,
+  grumpkin::scalar_t* result);
 
 // extern "C" eIcicleError grumpkin_accumulate_cuda(
 //   const grumpkin::scalar_t* vec_a, const grumpkin::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config);
 
 extern "C" eIcicleError grumpkin_vector_sub(
-  const grumpkin::scalar_t* vec_a, const grumpkin::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, grumpkin::scalar_t* result);
+  const grumpkin::scalar_t* vec_a,
+  const grumpkin::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig& config,
+  grumpkin::scalar_t* result);
 
 extern "C" eIcicleError grumpkin_transpose_matrix(
   const grumpkin::scalar_t* input,
@@ -53,10 +75,3 @@ extern "C" eIcicleError grumpkin_transpose_matrix(
 
 extern "C" eIcicleError grumpkin_bit_reverse(
   const grumpkin::scalar_t* input, uint64_t n, const VecOpsConfig& config, grumpkin::scalar_t* output);
-
-
-extern "C" void grumpkin_generate_scalars(grumpkin::scalar_t* scalars, int size);
-
-extern "C" void grumpkin_scalar_convert_montgomery(
-  const grumpkin::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, grumpkin::scalar_t* output);
-

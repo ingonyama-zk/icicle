@@ -9,6 +9,7 @@ pub type IcicleStreamHandle = *mut c_void;
 
 extern "C" {
     fn icicle_load_backend(path: *const c_char, is_recursive: bool) -> eIcicleError;
+    fn icicle_load_backend_from_env_or_default() -> eIcicleError;
     fn icicle_set_device(device: &Device) -> eIcicleError;
     fn icicle_get_active_device(device: &mut Device) -> eIcicleError;
     fn icicle_is_host_memory(ptr: *const c_void) -> eIcicleError;
@@ -42,9 +43,18 @@ extern "C" {
     fn icicle_get_registered_devices(output: *mut c_char, output_size: usize) -> eIcicleError;
 }
 
-pub fn load_backend(path: &str, is_recursive: bool) -> Result<(), eIcicleError> {
+pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError> {
+    unsafe { icicle_load_backend_from_env_or_default().wrap() }
+}
+
+pub fn load_backend(path: &str) -> Result<(), eIcicleError> {
     let c_path = CString::new(path).unwrap();
-    unsafe { icicle_load_backend(c_path.as_ptr(), is_recursive).wrap() }
+    unsafe { icicle_load_backend(c_path.as_ptr(), true).wrap() }
+}
+
+pub fn load_backend_non_recursive(path: &str) -> Result<(), eIcicleError> {
+    let c_path = CString::new(path).unwrap();
+    unsafe { icicle_load_backend(c_path.as_ptr(), false).wrap() }
 }
 
 pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
