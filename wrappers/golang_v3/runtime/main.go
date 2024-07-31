@@ -1,4 +1,4 @@
 package runtime
 
-// #cgo LDFLAGS: -Lusr/local/lib/ -licicle_device -lstdc++ -lm -Wl,-rpath=usr/local/lib/
+// #cgo LDFLAGS: -L${SRCDIR}/../../../build/lib -licicle_device -lstdc++ -lm -Wl,-rpath=${SRCDIR}/../../../build/lib
 import "C"

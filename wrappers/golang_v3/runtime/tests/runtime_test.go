@@ -56,29 +56,3 @@ func TestActiveDevice(t *testing.T) {
 	assert.Greater(t, memory1.Total, uint(0))
 	assert.Greater(t, memory1.Free, uint(0))
 }
-
-// func TestDestroyStream(t *testing.T) {
-// 	stream, err := runtime.CreateStream()
-// 	assert.Equal(t, runtime.Success, err, "Unable to create stream due to %d", err)
-
-// 	err = runtime.DestroyStream(stream)
-// 	assert.Equal(t, runtime.Success, err, "Unable to destroy stream due to %d", err)
-// }
-
-// func TestSyncStream(t *testing.T) {
-// 	stream, err := runtime.CreateStream()
-// 	assert.Equal(t, runtime.Success, err, "Unable to create stream due to %d", err)
-
-// 	_, err = MallocAsync(200000, stream)
-// 	assert.Equal(t, CudaSuccess, err, "Unable to allocate device memory due to %d", err)
-
-// 	dp, err := Malloc(20)
-// 	assert.NotNil(t, dp)
-// 	assert.Equal(t, CudaSuccess, err, "Unable to allocate device memory due to %d", err)
-
-// 	err = SynchronizeStream(&stream)
-// 	assert.Equal(t, CudaSuccess, err, "Unable to sync stream due to %d", err)
-
-// 	err = DestroyStream(&stream)
-// 	assert.Equal(t, CudaSuccess, err, "Unable to destroy stream due to %d", err)
-// }

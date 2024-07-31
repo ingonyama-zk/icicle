@@ -60,13 +60,16 @@ jobs:
       working-directory: ./wrappers/golang_v3
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # builds a single curve with the curve's specified build args
-      run: ./build.sh -curve=${{ matrix.curve.name }} ${{ matrix.curve.build_args }}
+      run: |
+        export DEFAULT_BACKEND_INSTALL_DIR=$PWD/../../build/
+        ./build.sh -curve=${{ matrix.curve.name }} ${{ matrix.curve.build_args }}
     - name: Test
       working-directory: ./wrappers/golang_v3/curves
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export CPATH=$CPATH:/usr/local/cuda/include
+        export DEFAULT_BACKEND_INSTALL_DIR=$PWD/../../../build/
         go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
  
   build-fields-linux:
@@ -89,13 +92,16 @@ jobs:
       working-directory: ./wrappers/golang_v3
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # builds a single field with the fields specified build args
-      run: ./build.sh -field=${{ matrix.field.name }} ${{ matrix.field.build_args }}
+      run:  |
+        export DEFAULT_BACKEND_INSTALL_DIR=$PWD/../../build/
+        ./build.sh -field=${{ matrix.field.name }} ${{ matrix.field.build_args }}
     - name: Test
       working-directory: ./wrappers/golang_v3/fields
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
         export CPATH=$CPATH:/usr/local/cuda/include
+        export DEFAULT_BACKEND_INSTALL_DIR=$PWD/../../../build/
         go test ./$FIELD/tests -count=1 -failfast -p 2 -timeout 60m -v
     
   # build-hashes-linux:
