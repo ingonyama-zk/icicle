@@ -8,13 +8,25 @@
 using namespace icicle;
 
 /**
- * @brief Search and load icicle backed to process
+ * @brief load icicle backed to process from install dir
  *
 
  * @param path Path of the backend library or directory where backend libraries are installed
  * @return eIcicleError Status of the loaded backend
  */
 extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive);
+
+/**
+ * @brief Attempts to load the backend from either the environment variable or the default install directory.
+ *
+ * This function first checks if the environment variable `ICICLE_BACKEND_INSTALL_DIR` is set and points to an existing
+ * directory. If so, it attempts to load the backend from that directory. If the environment variable is not set or the
+ * directory does not exist, it falls back to the default directory (`/opt/icicle/backend`). If neither option is
+ * successful, the function returns an error.
+ *
+ * @return eIcicleError The status of the backend loading operation, indicating success or failure.
+ */
+extern "C" eIcicleError icicle_load_backend_from_env_or_default();
 
 /**
  * @brief Set active device for thread

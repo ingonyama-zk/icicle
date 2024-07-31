@@ -1,7 +1,10 @@
 #![allow(unused_imports)]
 use crate::test_utilities;
 use crate::traits::GenerateRandom;
-use crate::vec_ops::{add_scalars, mul_scalars, sub_scalars, bit_reverse, bit_reverse_inplace, transpose_matrix, FieldImpl, VecOps, VecOpsConfig};
+use crate::vec_ops::{
+    add_scalars, bit_reverse, bit_reverse_inplace, mul_scalars, sub_scalars, transpose_matrix, FieldImpl, VecOps,
+    VecOpsConfig,
+};
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_runtime::{runtime, stream::IcicleStream};
@@ -108,7 +111,7 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     test_utilities::test_set_main_device();
-    
+
     const LOG_SIZE: u32 = 20;
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::Config::generate_random(TEST_SIZE);
