@@ -24,3 +24,6 @@ cmake = "0.1.50"
 default = []
 g2 = ["icicle-bls12-377/bw6-761-g2"]
 
+[[bench]]
+name = "ntt"
+harness = false
