@@ -42,7 +42,7 @@ pub struct MSMConfig {
     are_results_on_device: bool,
 
     /// Whether to run the MSM asynchronously. If set to `true`, the MSM function will be non-blocking
-    /// and you'd need to synchronize it explicitly by running `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
+    /// and you'd need to synchronize it explicitly by running `stream.synchronize()`
     /// If set to `false`, the MSM function will block the current CPU thread.
     pub is_async: bool,
     pub ext: ConfigExtension,
@@ -289,4 +289,131 @@ macro_rules! impl_msm_tests {
     };
 }
 
-// TODO Yuval : becnhmarks
+#[macro_export]
+macro_rules! impl_msm_bench {
+    (
+      $field_prefix:literal,
+      $curve:ident
+    ) => {
+        use criterion::{criterion_group, criterion_main, Criterion};
+        use icicle_core::curve::{Affine, Curve, Projective};
+        use icicle_core::msm::{msm, MSMConfig, LARGE_BUCKET_FACTOR, MSM};
+        use icicle_core::traits::{FieldImpl, GenerateRandom};
+        use icicle_runtime::{
+            device::Device,
+            get_active_device, is_device_available,
+            memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
+            runtime::{load_backend_from_env_or_default, warmup},
+            set_device,
+            stream::IcicleStream,
+        };
+        use std::env;
+
+        fn load_and_init_backend_device() {
+            // Attempt to load the backends
+            let _ = load_backend_from_env_or_default(); // try loading from /opt/icicle/backend or env ${ICICLE_BACKEND_INSTALL_DIR}
+
+            // Check if BENCH_TARGET is defined
+            let target = env::var("BENCH_TARGET").unwrap_or_else(|_| {
+                // If not defined, try CUDA first, fallback to CPU
+                if is_device_available(&Device::new("CUDA", 0)) {
+                    "CUDA".to_string()
+                } else {
+                    "CPU".to_string()
+                }
+            });
+
+            // Initialize the device with the determined target
+            let device = Device::new(&target, 0);
+            set_device(&device).unwrap();
+
+            println!("ICICLE benchmark with {:?}", device);
+        }
+
+        fn check_msm_batch<C: Curve + MSM<C>>(c: &mut Criterion)
+        where
+            <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
+        {
+            use criterion::black_box;
+            use criterion::SamplingMode;
+            use icicle_core::msm::precompute_bases;
+            use icicle_core::msm::tests::generate_random_affine_points_with_zeroes;
+
+            load_and_init_backend_device();
+
+            let group_id = format!("{} MSM ", $field_prefix);
+            let mut group = c.benchmark_group(&group_id);
+            group.sampling_mode(SamplingMode::Flat);
+            group.sample_size(10);
+
+            const MIN_LOG2: u32 = 13; // min msm length = 2 ^ MIN_LOG2
+            const MAX_LOG2: u32 = 25; // max msm length = 2 ^ MAX_LOG2
+
+            let min_log2 = env::var("MIN_LOG2")
+                .unwrap_or_else(|_| MIN_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MIN_LOG2);
+
+            let max_log2 = env::var("MAX_LOG2")
+                .unwrap_or_else(|_| MAX_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MAX_LOG2);
+
+            let mut stream = IcicleStream::create().unwrap();
+            let mut cfg = MSMConfig::default();
+            cfg.stream_handle = *stream;
+            cfg.is_async = true;
+            cfg.ext
+                .set_int(LARGE_BUCKET_FACTOR, 5);
+            cfg.c = 4;
+
+            warmup(&stream).unwrap();
+
+            for test_size_log2 in (min_log2..=max_log2) {
+                let test_size = 1 << test_size_log2;
+
+                let points = generate_random_affine_points_with_zeroes(test_size, 10);
+                for precompute_factor in [1, 4, 8] {
+                    let mut precomputed_points_d = DeviceVec::device_malloc(precompute_factor * test_size).unwrap();
+                    cfg.precompute_factor = precompute_factor as i32;
+                    precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+                    for batch_size_log2 in [0, 4, 7] {
+                        let batch_size = 1 << batch_size_log2;
+                        let full_size = batch_size * test_size;
+
+                        if full_size > 1 << max_log2 {
+                            continue;
+                        }
+
+                        let mut scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
+                        let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
+                        // a version of batched msm without using `cfg.points_size`, requires copying bases
+
+                        let scalars_h = HostSlice::from_slice(&scalars);
+
+                        let mut msm_results = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
+
+                        let bench_descr = format!(
+                            " {} x {} with precomp = {:?}",
+                            test_size, batch_size, precompute_factor
+                        );
+
+                        group.bench_function(&bench_descr, |b| {
+                            b.iter(|| msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results[..]))
+                        });
+
+                        stream
+                            .synchronize()
+                            .unwrap();
+                    }
+                }
+            }
+            stream
+                .destroy()
+                .unwrap();
+        }
+
+        criterion_group!(benches, check_msm_batch<$curve>);
+        criterion_main!(benches);
+    };
+}

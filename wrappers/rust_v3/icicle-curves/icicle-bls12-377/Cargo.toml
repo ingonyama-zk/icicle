@@ -33,4 +33,7 @@ pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 name = "ntt"
 harness = false
 
+[[bench]]
+name = "msm"
+harness = false
 
