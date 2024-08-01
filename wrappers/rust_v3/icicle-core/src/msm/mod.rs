@@ -49,8 +49,8 @@ pub struct MSMConfig {
 }
 
 // backend specific options
-pub const LARGE_BUCKET_FACTOR: &str = "large_bucket_factor";
-pub const IS_BIG_TRIANGLE: &str = "is_big_triangle";
+pub const CUDA_MSM_LARGE_BUCKET_FACTOR: &str = "large_bucket_factor";
+pub const CUDA_MSM_IS_BIG_TRIANGLE: &str = "is_big_triangle";
 
 impl Default for MSMConfig {
     fn default() -> Self {
@@ -297,7 +297,7 @@ macro_rules! impl_msm_bench {
     ) => {
         use criterion::{criterion_group, criterion_main, Criterion};
         use icicle_core::curve::{Affine, Curve, Projective};
-        use icicle_core::msm::{msm, MSMConfig, LARGE_BUCKET_FACTOR, MSM};
+        use icicle_core::msm::{msm, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
         use icicle_core::traits::{FieldImpl, GenerateRandom};
         use icicle_runtime::{
             device::Device,
@@ -364,7 +364,7 @@ macro_rules! impl_msm_bench {
             cfg.stream_handle = *stream;
             cfg.is_async = true;
             cfg.ext
-                .set_int(LARGE_BUCKET_FACTOR, 5);
+                .set_int(CUDA_MSM_LARGE_BUCKET_FACTOR, 5);
             cfg.c = 4;
 
             warmup(&stream).unwrap();

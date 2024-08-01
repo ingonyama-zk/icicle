@@ -6,6 +6,7 @@
 using namespace bn254;
 
 #include "examples_utils.h"
+#include "icicle/backend/ntt_config.h"
 
 void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, scalar_t* elements);
 int validate_output(const unsigned ntt_size, const unsigned nof_ntts, scalar_t* elements);
@@ -33,7 +34,8 @@ int main(int argc, char* argv[])
   scalar_t basic_root = scalar_t::omega(log_ntt_size /*NTT_LOG_SIZscalar_t*/);
   auto ntt_init_domain_cfg = default_ntt_init_domain_config();
   ConfigExtension backend_cfg_ext;
-  backend_cfg_ext.set("fast_twiddles", true); // optionally construct fast_twiddles for CUDA backend
+  backend_cfg_ext.set(
+    CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true); // optionally construct fast_twiddles for CUDA backend
   ntt_init_domain_cfg.ext = &backend_cfg_ext;
   ICICLE_CHECK(bn254_ntt_init_domain(&basic_root, ntt_init_domain_cfg));
 
@@ -48,7 +50,7 @@ int main(int argc, char* argv[])
 
   // NTT radix-2 alg
   std::cout << "\nRunning NTT radix-2 alg with on-host data" << std::endl;
-  ntt_cfg_ext.set("ntt_algorithm", 1); // radix-2
+  ntt_cfg_ext.set(CudaBackendConfig::CUDA_NTT_ALGORITHM, CudaBackendConfig::NttAlgorithm::Radix2);
   START_TIMER(Radix2);
   ICICLE_CHECK(bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get()));
   END_TIMER(Radix2, "Radix2 NTT");
@@ -58,7 +60,7 @@ int main(int argc, char* argv[])
 
   // NTT mixed-radix alg
   std::cout << "\nRunning NTT mixed-radix alg with on-host data" << std::endl;
-  ntt_cfg_ext.set("ntt_algorithm", 2); // mixed-radix
+  ntt_cfg_ext.set(CudaBackendConfig::CUDA_NTT_ALGORITHM, CudaBackendConfig::NttAlgorithm::MixedRadix);
   START_TIMER(MixedRadix);
   ICICLE_CHECK(bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get()));
   END_TIMER(MixedRadix, "MixedRadix NTT");
