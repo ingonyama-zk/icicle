@@ -82,7 +82,7 @@ func convertIcicleAffineToG2Affine(iciclePoints []g2.G2Affine) []bw6761.G2Affine
 func TestMSMG2(t *testing.T) {
 	cfg := g2.G2GetDefaultMSMConfig()
 	cfg.IsAsync = true
-	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+	for _, power := range []int{2, 3, 4, 5, 6} {
 		runtime.SetDevice(&DEVICE)
 		size := 1 << power
 

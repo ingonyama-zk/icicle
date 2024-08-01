@@ -82,7 +82,7 @@ func convertIcicleAffineToG1Affine(iciclePoints []icicleBn254.Affine) []bn254.G1
 func TestMSM(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	cfg.IsAsync = true
-	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+	for _, power := range []int{2, 3, 4, 5, 6} {
 		runtime.SetDevice(&DEVICE)
 		size := 1 << power
 

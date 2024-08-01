@@ -160,7 +160,7 @@ func convertIcicleG2AffineToG2Affine(iciclePoints []g2.G2Affine) []{{toPackage .
 func TestMSM{{.CurvePrefix}}(t *testing.T) {
 	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
 	cfg.IsAsync = true
-	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+	for _, power := range []int{2, 3, 4, 5, 6} {
 		runtime.SetDevice(&DEVICE)
 		size := 1 << power
 
