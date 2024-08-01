@@ -29,3 +29,7 @@ pull_cuda_backend = ["icicle-bls12-377/pull_cuda_backend"]
 [[bench]]
 name = "ntt"
 harness = false
+
+[[bench]]
+name = "msm"
+harness = false

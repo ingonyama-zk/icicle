@@ -442,24 +442,11 @@ macro_rules! impl_ntt_bench {
             vec_ops::VecOps,
         };
 
-        fn ntt_for_bench<T, F: FieldImpl>(
-            input: &(impl HostOrDeviceSlice<F> + ?Sized),
-            mut batch_ntt_result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-            dir: NTTDir,
-            config: &mut NTTConfig<F>,
-            _seed: u32,
-        ) where
-        <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
-        <F as FieldImpl>::Config: VecOps<F>,
-        {
-            ntt(input, dir, config, batch_ntt_result).unwrap();
-        }
-
         static INIT: OnceLock<()> = OnceLock::new();
 
         fn load_and_init_backend_device() {
             // Attempt to load the backends
-            load_backend_from_env_or_default(); // try loading from /opt/icicle/backend or env ${ICICLE_BACKEND_INSTALL_DIR}
+            let _ = load_backend_from_env_or_default(); // try loading from /opt/icicle/backend or env ${ICICLE_BACKEND_INSTALL_DIR}
 
             // Check if BENCH_TARGET is defined
             let target = env::var("BENCH_TARGET").unwrap_or_else(|_| {
@@ -541,12 +528,11 @@ macro_rules! impl_ntt_bench {
                             );
                             group.bench_function(&bench_descr, |b| {
                                 b.iter(|| {
-                                    ntt_for_bench::<F, F>(
+                                    ntt::<F, F>(
                                         input,
-                                        batch_ntt_result,
                                         dir,
                                         &mut config,
-                                        black_box(1),
+                                        batch_ntt_result
                                     )
                                 })
                             });
