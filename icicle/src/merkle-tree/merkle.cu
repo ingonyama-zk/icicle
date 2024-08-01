@@ -129,8 +129,9 @@ namespace merkle_tree {
 
     while (number_of_states > 0) {
       CHK_IF_RETURN(compression.run_hash_many_kernel(
-        (L*)prev_layer, next_layer, number_of_states, tree_config.digest_elements * tree_config.arity,
-        tree_config.digest_elements, hash_config.ctx));
+        (L*)prev_layer, next_layer, number_of_states,
+        tree_config.digest_elements * tree_config.arity * (sizeof(D) / sizeof(L)), tree_config.digest_elements,
+        hash_config.ctx));
 
       if (!keep_rows || subtree_height < keep_rows) {
         D* digests_with_offset =
@@ -298,8 +299,9 @@ namespace merkle_tree {
       size_t segment_offset = start_segment_offset;
       while (number_of_states > 0) {
         CHK_IF_RETURN(compression.run_hash_many_kernel(
-          (L*)prev_layer, next_layer, number_of_states, tree_config.digest_elements * tree_config.arity,
-          tree_config.digest_elements, tree_config.ctx));
+          (L*)prev_layer, next_layer, number_of_states,
+          tree_config.digest_elements * tree_config.arity * (sizeof(D) / sizeof(L)), tree_config.digest_elements,
+          tree_config.ctx));
         if (!tree_config.keep_rows || cap_height < tree_config.keep_rows + (int)caps_mode) {
           D* digests_with_offset = digests + segment_offset;
           CHK_IF_RETURN(cudaMemcpyAsync(

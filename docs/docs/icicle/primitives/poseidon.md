@@ -1,6 +1,6 @@
 # Poseidon
 
-[Poseidon](https://eprint.iacr.org/2019/458.pdf) is a popular hash in the ZK ecosystem primarily because its optimized to work over large prime fields, a common setting for ZK proofs, thereby minimizing the number of multiplicative operations required.
+[Poseidon](https://eprint.iacr.org/2019/458.pdf) is a popular hash in the ZK ecosystem primarily because it's optimized to work over large prime fields, a common setting for ZK proofs, thereby minimizing the number of multiplicative operations required.
 
 Poseidon has also been specifically designed to be efficient when implemented within ZK circuits, Poseidon uses far less constraints compared to other hash functions like Keccak or SHA-256 in the context of ZK circuits.
 
@@ -42,7 +42,7 @@ To generate a secure hash output, the algorithm goes through a series of "full r
 
 **Linear Transformation and Round Constants:** A linear transformation is performed and round constants are added. The linear transformation in partial rounds can be designed to be less computationally intensive (this is done by using a sparse matrix) than in full rounds, further optimizing the function's efficiency.
 
-The user of Poseidon can often choose how many partial or full rounds he wishes to apply; more full rounds will increase security but degrade performance. The choice and balance is highly dependent on the use case.
+The user of Poseidon can often choose how many partial or full rounds he wishes to apply; more full rounds will increase security but degrade performance. The choice and balance are highly dependent on the use case.
 
 ## Using Poseidon
 
@@ -60,7 +60,7 @@ So for Poseidon of arity 2 and input of size 1024 * 2, we would expect 1024 elem
 
 Poseidon is extremely customizable and using different constants will produce different hashes, security levels and performance results.
 
-We support pre-calculated and optimized constants for each of the [supported curves](../core#supported-curves-and-operations).The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon/constants) and are labeled clearly per curve `<curve_name>_poseidon.h`.
+We support pre-calculated and optimized constants for each of the [supported curves](../core#supported-curves-and-operations). The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon/constants) and are labeled clearly per curve `<curve_name>_poseidon.h`.
 
 If you wish to generate your own constants you can use our python script which can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon/constants/generate_parameters.py).
 
@@ -135,7 +135,7 @@ impl<'a> Default for HashConfig<'a> {
 }
 ```
 
-In the example above `Poseidon::load(arity, &ctx).unwrap();` is used which will load the correct constants based on arity and curve. Its possible to [generate](#constants) your own constants and load them.
+In the example above `Poseidon::load(arity, &ctx).unwrap();` is used which will load the correct constants based on arity and curve. It's possible to [generate](#constants) your own constants and load them.
 
 ```rust
 let ctx = get_default_device_context();

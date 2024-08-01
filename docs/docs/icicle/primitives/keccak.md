@@ -12,6 +12,10 @@ At its core, Keccak consists of a permutation function operating on a state arra
 - **Chi:** This step applies a nonlinear mixing operation to each lane of the state array.
 - **Iota:** This step introduces a round constant to the state array.
 
+## Keccak vs Sha3
+
+There exists a [confusion](https://www.cybertest.com/blog/keccak-vs-sha3) between what is called `Keccak` and `Sha3`. In ICICLE we support both. `Keccak256` relates to the old hash function used in Ethereum, and `Sha3-256` relates to the modern hash function.
+
 ## Using Keccak
 
 ICICLE Keccak supports batch hashing, which can be utilized for constructing a merkle tree or running multiple hashes in parallel.
@@ -35,7 +39,7 @@ let input_block_len = 136;
 let number_of_hashes = 1024;
 
 let preimages = vec![1u8; number_of_hashes * input_block_len];
-let mut digests = vec![0u8; number_of_hashes * 64];
+let mut digests = vec![0u8; number_of_hashes * 32];
 
 let preimages_slice = HostSlice::from_slice(&preimages);
 let digests_slice = HostSlice::from_mut_slice(&mut digests);

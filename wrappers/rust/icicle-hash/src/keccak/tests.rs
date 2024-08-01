@@ -15,7 +15,7 @@ pub(crate) mod tests {
         let number_of_hashes = 1024;
 
         let preimages = vec![1u8; number_of_hashes * input_block_len];
-        let mut digests = vec![0u8; number_of_hashes * 64];
+        let mut digests = vec![0u8; number_of_hashes * 32];
 
         let preimages_slice = HostSlice::from_slice(&preimages);
         let digests_slice = HostSlice::from_mut_slice(&mut digests);

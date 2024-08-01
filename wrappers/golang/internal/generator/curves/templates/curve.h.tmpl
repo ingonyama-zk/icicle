@@ -14,6 +14,7 @@ typedef struct DeviceContext DeviceContext;
 
 bool {{.Curve}}{{toCNameBackwards .CurvePrefix}}_eq({{toCName .CurvePrefix}}projective_t* point1, {{toCName .CurvePrefix}}projective_t* point2);
 void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_to_affine({{toCName .CurvePrefix}}projective_t* point, {{toCName .CurvePrefix}}affine_t* point_out);
+void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_from_affine({{toCName .CurvePrefix}}affine_t* point, {{toCName .CurvePrefix}}projective_t* point_out);
 void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_generate_projective_points({{toCName .CurvePrefix}}projective_t* points, int size);
 void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_generate_affine_points({{toCName .CurvePrefix}}affine_t* points, int size);
 cudaError_t {{.Curve}}{{toCNameBackwards .CurvePrefix}}_affine_convert_montgomery({{toCName .CurvePrefix}}affine_t* points, size_t n, bool is_into, DeviceContext* ctx);

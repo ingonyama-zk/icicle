@@ -40,17 +40,10 @@ func (p *G2Projective) FromLimbs(x, y, z []uint32) G2Projective {
 }
 
 func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
-	z := G2BaseField{}
-	z.One()
 
-	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		p.Zero()
-	} else {
-		p.X = a.X
-		p.Y = a.Y
-		p.Z = z.One()
-	}
-
+	cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
+	cP := (*C.g2_projective_t)(unsafe.Pointer(p))
+	C.bls12_377_g2_from_affine(cA, cP)
 	return *p
 }
 
@@ -65,7 +58,7 @@ func (p *G2Projective) ProjectiveToAffine() G2Affine {
 	var a G2Affine
 
 	cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
-	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
+	cP := (*C.g2_projective_t)(unsafe.Pointer(p))
 	C.bls12_377_g2_to_affine(cP, cA)
 	return a
 }
@@ -111,18 +104,12 @@ func (a *G2Affine) FromLimbs(x, y []uint32) G2Affine {
 }
 
 func (a G2Affine) ToProjective() G2Projective {
-	var z G2BaseField
+	var p G2Projective
 
-	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		var p G2Projective
-		return p.Zero()
-	}
-
-	return G2Projective{
-		X: a.X,
-		Y: a.Y,
-		Z: z.One(),
-	}
+	cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
+	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
+	C.bls12_377_g2_from_affine(cA, cP)
+	return p
 }
 
 func G2AffineFromProjective(p *G2Projective) G2Affine {
