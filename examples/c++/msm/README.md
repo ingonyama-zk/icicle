@@ -1,9 +1,5 @@
 # Icicle example: Muli-Scalar Multiplication (MSM)
 
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
-
 ## Key-Takeaway
 
 `Icicle` provides CUDA C++ template function `MSM` to accelerate [Multi-Scalar Multiplication](https://github.com/ingonyama-zk/ingopedia/blob/master/src/msm.md).
