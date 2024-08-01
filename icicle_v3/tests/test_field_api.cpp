@@ -10,6 +10,7 @@
 
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/log.h"
+#include "icicle/backend/ntt_config.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -25,10 +26,6 @@ static bool VERBOSE = true;
 static int ITERS = 16;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
-
-// TODO Yuval: better include the CUDA configs and use instead of redefine
-#define CUDA_NTT_FAST_TWIDDLES_MODE "fast_twiddles"
-#define CUDA_NTT_ALGORITHM          "ntt_algorithm"
 
 template <typename T>
 class FieldApiTest : public ::testing::Test
@@ -328,7 +325,7 @@ TYPED_TEST(FieldApiTest, ntt)
     init_domain_config.stream = stream;
     init_domain_config.is_async = false;
     ConfigExtension ext;
-    ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
 
     auto config = default_ntt_config<scalar_t>();
