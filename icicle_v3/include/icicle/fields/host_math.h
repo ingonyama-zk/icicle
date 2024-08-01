@@ -64,6 +64,15 @@ namespace host_math {
     return result;
   }
 
+  static constexpr __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
+  {
+    __uint128_t r = static_cast<__uint128_t>(x) * y + z + carry;
+    carry = (uint64_t)(r >> 64);
+    uint64_t result = r & 0xffffffffffffffff;
+    return result;
+  }
+
+
   template <unsigned OPS_COUNT = UINT32_MAX, bool CARRY_IN = false, bool CARRY_OUT = false>
   struct carry_chain {
     unsigned index;
@@ -99,7 +108,7 @@ namespace host_math {
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static constexpr HOST_INLINE void
-  multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
+  multiply_raw_32(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
@@ -111,6 +120,48 @@ namespace host_math {
       r[NLIMBS_A + i] = carry;
     }
   }
+
+  template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
+  static HOST_INLINE void
+  multiply_raw_64(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
+  {
+    const uint64_t* a64 = as.limbs64;
+    const uint64_t* b64 = bs.limbs64;
+    uint64_t* r64 = rs.limbs64;
+    for (unsigned i = 0; i < NLIMBS_B/2; i++) {
+      uint64_t carry = 0;
+      for (unsigned j = 0; j < NLIMBS_A/2; j++)
+        r64[j + i] = host_math::madc_cc_64(a64[j], b64[i], r64[j + i], carry);
+      r64[NLIMBS_A/2 + i] = carry;
+    }
+  }
+
+template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool IS_CONSTEXPR = false>
+static constexpr HOST_INLINE void
+multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs) {
+  if (IS_CONSTEXPR){
+    multiply_raw_32<NLIMBS_A, NLIMBS_B>(as,bs,rs);
+    return;
+  }
+  if ((NLIMBS_A == 1 && NLIMBS_B == 2) || (NLIMBS_A == 2 && NLIMBS_B == 1)){
+    multiply_raw_32<NLIMBS_A, NLIMBS_B>(as,bs,rs);
+    return;
+  }
+  if (NLIMBS_A == 1 && NLIMBS_B == 1){
+    rs.limbs[0] = host_math::madc_cc(as.limbs[0], bs.limbs[0], 0, rs.limbs[1]);
+    return;
+  }
+  static_assert((NLIMBS_A%2 == 0 || NLIMBS_A == 1) && (NLIMBS_B%2 == 0  || NLIMBS_B == 1), "odd number of limbs is not supported\n");
+  if (NLIMBS_A == 2 && NLIMBS_B == 2){
+    const uint64_t* a64 = as.limbs64; //nof limbs should be even
+    const uint64_t* b64 = bs.limbs64;
+    uint64_t* r64 = rs.limbs64;
+    r64[0] = host_math::madc_cc_64(a64[0], b64[0], 0, r64[1]);
+    return;
+  }
+  multiply_raw_64<NLIMBS_A, NLIMBS_B>(as,bs,rs);
+}
+  
 
   template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
   static constexpr HOST_INLINE uint32_t
