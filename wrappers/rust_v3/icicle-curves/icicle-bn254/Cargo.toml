@@ -33,3 +33,7 @@ harness = false
 [[bench]]
 name = "msm"
 harness = false
+
+[[bench]]
+name = "ecntt"
+harness = false

@@ -37,3 +37,7 @@ harness = false
 name = "msm"
 harness = false
 
+[[bench]]
+name = "ecntt"
+harness = false
+
