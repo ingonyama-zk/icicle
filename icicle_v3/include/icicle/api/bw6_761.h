@@ -70,7 +70,7 @@ extern "C" eIcicleError bw6_761_ecntt(
   const bw6_761::projective_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<bw6_761::scalar_t>& config,
+  const NTTConfig<bw6_761::scalar_t>& config,
   bw6_761::projective_t* output);
 
 extern "C" eIcicleError bw6_761_ntt_init_domain(bw6_761::scalar_t* primitive_root, const NTTInitDomainConfig& config);
@@ -79,7 +79,7 @@ extern "C" eIcicleError bw6_761_ntt(
   const bw6_761::scalar_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<bw6_761::scalar_t>& config,
+  const NTTConfig<bw6_761::scalar_t>& config,
   bw6_761::scalar_t* output);
 
 extern "C" eIcicleError bw6_761_ntt_release_domain();
@@ -102,9 +102,6 @@ extern "C" eIcicleError bw6_761vector_add(
   uint64_t n,
   const VecOpsConfig& config,
   bw6_761::scalar_t* result);
-
-// extern "C" eIcicleError bw6_761_accumulate_cuda(
-//   const bw6_761::scalar_t* vec_a, const bw6_761::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config);
 
 extern "C" eIcicleError bw6_761_vector_sub(
   const bw6_761::scalar_t* vec_a,

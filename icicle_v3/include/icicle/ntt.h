@@ -122,7 +122,7 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename S, typename E>
-  eIcicleError ntt(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output);
+  eIcicleError ntt(const E* input, int size, NTTDir dir, const NTTConfig<S>& config, E* output);
 
   /**
    * @brief Initializes the NTT domain.

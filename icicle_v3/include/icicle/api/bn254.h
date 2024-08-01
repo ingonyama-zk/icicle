@@ -66,13 +66,17 @@ extern "C" eIcicleError bn254_ecntt(
   const bn254::projective_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<bn254::scalar_t>& config,
+  const NTTConfig<bn254::scalar_t>& config,
   bn254::projective_t* output);
 
 extern "C" eIcicleError bn254_ntt_init_domain(bn254::scalar_t* primitive_root, const NTTInitDomainConfig& config);
 
 extern "C" eIcicleError bn254_ntt(
-  const bn254::scalar_t* input, int size, NTTDir dir, NTTConfig<bn254::scalar_t>& config, bn254::scalar_t* output);
+  const bn254::scalar_t* input,
+  int size,
+  NTTDir dir,
+  const NTTConfig<bn254::scalar_t>& config,
+  bn254::scalar_t* output);
 
 extern "C" eIcicleError bn254_ntt_release_domain();
 
@@ -94,9 +98,6 @@ extern "C" eIcicleError bn254vector_add(
   uint64_t n,
   const VecOpsConfig& config,
   bn254::scalar_t* result);
-
-// extern "C" eIcicleError bn254_accumulate_cuda(
-//   const bn254::scalar_t* vec_a, const bn254::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config);
 
 extern "C" eIcicleError bn254_vector_sub(
   const bn254::scalar_t* vec_a,

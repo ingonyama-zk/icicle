@@ -74,7 +74,7 @@ extern "C" eIcicleError bls12_381_ecntt(
   const bls12_381::projective_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<bls12_381::scalar_t>& config,
+  const NTTConfig<bls12_381::scalar_t>& config,
   bls12_381::projective_t* output);
 
 extern "C" eIcicleError
@@ -84,7 +84,7 @@ extern "C" eIcicleError bls12_381_ntt(
   const bls12_381::scalar_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<bls12_381::scalar_t>& config,
+  const NTTConfig<bls12_381::scalar_t>& config,
   bls12_381::scalar_t* output);
 
 extern "C" eIcicleError bls12_381_ntt_release_domain();
@@ -111,9 +111,6 @@ extern "C" eIcicleError bls12_381vector_add(
   uint64_t n,
   const VecOpsConfig& config,
   bls12_381::scalar_t* result);
-
-// extern "C" eIcicleError bls12_381_accumulate_cuda(
-//   const bls12_381::scalar_t* vec_a, const bls12_381::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config);
 
 extern "C" eIcicleError bls12_381_vector_sub(
   const bls12_381::scalar_t* vec_a,

@@ -18,7 +18,7 @@ namespace icicle {
     const projective_t* input,
     int size,
     NTTDir dir,
-    NTTConfig<scalar_t>& config,
+    const NTTConfig<scalar_t>& config,
     projective_t* output)>;
 
   void register_ecntt(const std::string& deviceType, ECNttFieldImpl impl);
