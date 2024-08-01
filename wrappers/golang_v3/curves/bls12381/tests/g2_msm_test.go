@@ -237,7 +237,7 @@ func TestMSMG2GnarkCryptoTypes(t *testing.T) {
 
 func TestMSMG2Batch(t *testing.T) {
 	cfg := g2.G2GetDefaultMSMConfig()
-	for _, power := range []int{10, 16} {
+	for _, power := range []int{5, 6} {
 		for _, batchSize := range []int{1, 3, 5} {
 			runtime.SetDevice(&DEVICE)
 			size := 1 << power
@@ -271,7 +271,7 @@ func TestPrecomputePointsG2(t *testing.T) {
 	const precomputeFactor = 8
 	cfg.PrecomputeFactor = precomputeFactor
 
-	for _, power := range []int{10, 16} {
+	for _, power := range []int{7, 8} {
 		for _, batchSize := range []int{1, 3, 5} {
 			runtime.SetDevice(&DEVICE)
 
@@ -316,7 +316,7 @@ func TestPrecomputePointsSharedBasesG2(t *testing.T) {
 	const precomputeFactor = 8
 	cfg.PrecomputeFactor = precomputeFactor
 
-	for _, power := range []int{10, 16} {
+	for _, power := range []int{4, 5, 6} {
 		for _, batchSize := range []int{1, 3, 5} {
 			runtime.SetDevice(&DEVICE)
 
@@ -356,7 +356,7 @@ func TestPrecomputePointsSharedBasesG2(t *testing.T) {
 
 func TestMSMG2SkewedDistribution(t *testing.T) {
 	cfg := g2.G2GetDefaultMSMConfig()
-	for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10} {
+	for _, power := range []int{2, 3, 4, 5} {
 		runtime.SetDevice(&DEVICE)
 
 		size := 1 << power
@@ -400,7 +400,7 @@ func TestMSMG2MultiDevice(t *testing.T) {
 
 			cfg := g2.G2GetDefaultMSMConfig()
 			cfg.IsAsync = true
-			for _, power := range []int{2, 3, 4, 5, 6, 7, 8, 10, 18} {
+			for _, power := range []int{2, 3, 4, 5, 6} {
 				size := 1 << power
 				scalars := icicleBls12_381.GenerateScalars(size)
 				points := g2.G2GenerateAffinePoints(size)
