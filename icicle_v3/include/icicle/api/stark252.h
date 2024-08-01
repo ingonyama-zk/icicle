@@ -15,7 +15,7 @@ extern "C" eIcicleError stark252_ntt(
   const stark252::scalar_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<stark252::scalar_t>& config,
+  const NTTConfig<stark252::scalar_t>& config,
   stark252::scalar_t* output);
 
 extern "C" eIcicleError stark252_ntt_release_domain();
@@ -38,9 +38,6 @@ extern "C" eIcicleError stark252vector_add(
   uint64_t n,
   const VecOpsConfig& config,
   stark252::scalar_t* result);
-
-// extern "C" eIcicleError stark252_accumulate_cuda(
-//   const stark252::scalar_t* vec_a, const stark252::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config);
 
 extern "C" eIcicleError stark252_vector_sub(
   const stark252::scalar_t* vec_a,

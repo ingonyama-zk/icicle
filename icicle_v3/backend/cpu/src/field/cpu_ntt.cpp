@@ -25,7 +25,8 @@ eIcicleError cpu_get_root_of_unity_from_domain(const Device& device, uint64_t lo
 }
 
 template <typename S, typename E>
-eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output)
+eIcicleError
+cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, const NTTConfig<S>& config, E* output)
 {
   auto err = ntt_cpu::cpu_ntt<S, E>(device, input, size, dir, config, output);
   return err;

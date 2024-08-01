@@ -10,7 +10,7 @@ using namespace curve_config;
 using namespace icicle;
 
 template <typename S, typename E>
-eIcicleError cpu_ntt(const Device& device, const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
+eIcicleError cpu_ntt(const Device& device, const E* input, int size, NTTDir dir, const NTTConfig<S>& config, E* output)
 {
   auto err = ntt_cpu::cpu_ntt<S, E>(device, input, size, dir, config, output);
   return err;

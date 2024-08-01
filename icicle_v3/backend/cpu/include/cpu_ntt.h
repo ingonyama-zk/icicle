@@ -35,11 +35,11 @@ namespace ntt_cpu {
 
     template <typename U, typename E>
     eIcicleError
-    cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output);
+    cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, const NTTConfig<S>& config, E* output);
 
     template <typename U, typename E>
     eIcicleError
-    cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output);
+    cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, const NTTConfig<S>& config, E* output);
 
     const S* get_twiddles() const { return twiddles.get(); }
     const int get_max_size() const { return max_size; }
@@ -233,7 +233,7 @@ namespace ntt_cpu {
 
   template <typename S = scalar_t, typename E = scalar_t>
   eIcicleError
-  cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output)
+  cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, const NTTConfig<S>& config, E* output)
   {
     if (size & (size - 1)) {
       ICICLE_LOG_ERROR << "Size must be a power of 2. Size = " << size;
@@ -350,7 +350,8 @@ namespace ntt_cpu {
   }
 
   template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output)
+  eIcicleError
+  cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, const NTTConfig<S>& config, E* output)
   {
     return cpu_ntt_ref(device, input, size, dir, config, output);
   }
