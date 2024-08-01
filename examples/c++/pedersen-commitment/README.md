@@ -1,9 +1,5 @@
 # ICICLE example: Pedersen Commitment
 
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
-
 ## Key-Takeaway
 
 A Pedersen Commitment is a cryptographic primitive to commit to a value or a vector of values while keeping it hidden, yet enabling the committer to reveal the value later. It provides both hiding (the commitment does not reveal any information about the value) and binding properties (once a value is committed, it cannot be changed without detection).

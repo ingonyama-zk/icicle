@@ -1,9 +1,5 @@
 # Icicle example: Number-Theoretical Transform (NTT)
 
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
-
 ## Key-Takeaway
 
 `Icicle` provides CUDA C++ template function NTT for [Number Theoretical Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md), also known as Discrete Fourier Transform.

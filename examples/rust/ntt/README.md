@@ -4,10 +4,6 @@
 
 `ICICLE` provides Rust bindings to CUDA-accelerated C++ implementation of [Number Theoretic Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md).
 
-## Best Practices
-
-In order to save time and setting up prerequisites manually, we recommend running this example in our [ZKContainer](../../ZKContainer.md).
-
 ## Usage
 
 ```rust

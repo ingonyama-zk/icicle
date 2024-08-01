@@ -1,9 +1,5 @@
 # Icicle example: Multiplication
 
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
-
 ## Key-Takeaway
 
 `Icicle` accelerates multiplication operation `*` using [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm)
