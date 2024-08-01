@@ -8,7 +8,7 @@ namespace params_gen {
   static constexpr HOST_INLINE storage<2 * NLIMBS> get_square(const storage<NLIMBS>& xs)
   {
     storage<2 * NLIMBS> rs = {};
-    host_math::template multiply_raw<NLIMBS>(xs, xs, rs);
+    host_math::template multiply_raw<NLIMBS, NLIMBS, true>(xs, xs, rs);
     return host_math::template left_shift<2 * NLIMBS, BIT_SHIFT>(rs);
   }
 
@@ -57,11 +57,11 @@ namespace params_gen {
     storage<2 * NLIMBS> x1 = {};
     storage<3 * NLIMBS> x2 = {};
     storage<3 * NLIMBS> x3 = {};
-    host_math::template multiply_raw<NLIMBS>(modulus, m, x1);
-    host_math::template multiply_raw<NLIMBS, 2 * NLIMBS>(modulus, x1, x2);
+    host_math::template multiply_raw<NLIMBS, NLIMBS, true>(modulus, m, x1);
+    host_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, x1, x2);
     storage<2 * NLIMBS> one = {1};
     storage<2 * NLIMBS> pow_of_2 = host_math::template left_shift<2 * NLIMBS, NBITS>(one);
-    host_math::template multiply_raw<NLIMBS, 2 * NLIMBS>(modulus, pow_of_2, x3);
+    host_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, pow_of_2, x3);
     host_math::template add_sub_limbs<3 * NLIMBS, true, false>(x3, x2, x2);
     double err = (double)x2.limbs[2 * NLIMBS - 1] / pow_of_2.limbs[2 * NLIMBS - 1];
     err += (double)m.limbs[NLIMBS - 1] / 0xffffffff;

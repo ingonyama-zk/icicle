@@ -87,6 +87,27 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
+
+TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
+{
+  auto a = TypeParam::rand_host();
+  auto b = a;
+  std::ostringstream oss;
+  std::cout <<a<<std::endl;
+  START_TIMER(MULT_sync)
+  for (int i = 0; i < 100; i++)
+  {    
+    typename TypeParam::Wide r_wide = {};   
+    typename TypeParam::Wide r2_wide = {};   
+    host_math::template multiply_raw<TypeParam::TLC>(a.limbs_storage, a.limbs_storage, r_wide.limbs_storage);
+    host_math::template multiply_raw<TypeParam::TLC,TypeParam::TLC,true>(b.limbs_storage, b.limbs_storage, r2_wide.limbs_storage);
+    a = TypeParam::Wide::get_lower(r_wide);
+    b = TypeParam::Wide::get_lower(r2_wide);
+  }
+  END_TIMER(MULT_sync, oss.str().c_str(), true);
+  ASSERT_EQ(a, b);
+}
+
 TYPED_TEST(FieldApiTest, vectorOps)
 {
   const uint64_t N = 1 << 22;
