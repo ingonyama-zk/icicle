@@ -16,7 +16,7 @@
  #include <stdlib.h>
  #include <string.h>
  #include <stdio.h>
- 
+ #include <stdint.h>
  extern "C" {
  void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE * in, WORD inlen, BYTE * out, WORD n_outbit, WORD n_batch);
  }

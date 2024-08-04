@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     BYTE *input;
     size_t inlen;
     const char *input_filename;
-    const char *default_input = "a";
+    const char *default_input = "aaaaaaaaaaa";
 
     if (argc < 2) {
         // Use default input if no file is provided
