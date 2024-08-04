@@ -39,17 +39,17 @@ func (p *{{.CurvePrefix}}Projective) FromLimbs(x, y, z []uint32) {{.CurvePrefix}
 	return *p
 }
 
+
+
+{{if ne .CurvePrefix "Mock"}}
 func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.CurvePrefix}}Projective {
-	z := {{.CurvePrefix}}BaseField{}
-	z.One()
-
-	p.X = a.X
-	p.Y = a.Y
-	p.Z = z
-
+	
+	cA := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&a))
+	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(p))
+	C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_from_affine(cA, cP)
 	return *p
 }
-{{if ne .CurvePrefix "Mock"}}
+
 func (p {{.CurvePrefix}}Projective) ProjectiveEq(p2 *{{.CurvePrefix}}Projective) bool {
 	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
 	cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p2))
@@ -61,7 +61,7 @@ func (p *{{.CurvePrefix}}Projective) ProjectiveToAffine() {{.CurvePrefix}}Affine
 	var a {{.CurvePrefix}}Affine
 
 	cA := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&a))
-	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
+	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(p))
 	C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_to_affine(cP, cA)
 	return a
 }
@@ -106,16 +106,17 @@ func (a *{{.CurvePrefix}}Affine) FromLimbs(x, y []uint32) {{.CurvePrefix}}Affine
 	return *a
 }
 
-func (a {{.CurvePrefix}}Affine) ToProjective() {{.CurvePrefix}}Projective {
-	var z {{.CurvePrefix}}BaseField
 
-	return {{.CurvePrefix}}Projective{
-		X: a.X,
-		Y: a.Y,
-		Z: z.One(),
-	}
-}
 {{if ne .CurvePrefix "Mock"}}
+func (a {{.CurvePrefix}}Affine) ToProjective() {{.CurvePrefix}}Projective {
+	var p {{.CurvePrefix}}Projective
+
+	cA := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&a))
+	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
+	C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_from_affine(cA, cP)
+	return p
+}
+
 func {{.CurvePrefix}}AffineFromProjective(p *{{.CurvePrefix}}Projective) {{.CurvePrefix}}Affine {
 	return p.ProjectiveToAffine()
 }

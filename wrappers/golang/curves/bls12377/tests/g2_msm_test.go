@@ -146,6 +146,58 @@ func TestMSMG2(t *testing.T) {
 
 	}
 }
+
+func TestMSMG2PinnedHostMemory(t *testing.T) {
+	cfg := g2.G2GetDefaultMSMConfig()
+	for _, power := range []int{10} {
+		size := 1 << power
+
+		scalars := icicleBls12_377.GenerateScalars(size)
+		points := g2.G2GenerateAffinePoints(size)
+
+		pinnable := cr.GetDeviceAttribute(cr.CudaDevAttrHostRegisterSupported, 0)
+		lockable := cr.GetDeviceAttribute(cr.CudaDevAttrPageableMemoryAccessUsesHostPageTables, 0)
+
+		pinnableAndLockable := pinnable == 1 && lockable == 0
+
+		var pinnedPoints core.HostSlice[g2.G2Affine]
+		if pinnableAndLockable {
+			points.Pin(cr.CudaHostRegisterDefault)
+			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
+			assert.Equal(t, points, pinnedPoints, "Allocating newly pinned memory resulted in bad points")
+		}
+
+		var p g2.G2Projective
+		var out core.DeviceSlice
+		_, e := out.Malloc(p.Size(), p.Size())
+		assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
+		outHost := make(core.HostSlice[g2.G2Projective], 1)
+
+		e = g2.G2Msm(scalars, points, &cfg, out)
+		assert.Equal(t, e, cr.CudaSuccess, "Msm allocated pinned host mem failed")
+
+		outHost.CopyFromDevice(&out)
+		// Check with gnark-crypto
+		assert.True(t, testAgainstGnarkCryptoMsmG2(scalars, points, outHost[0]))
+
+		if pinnableAndLockable {
+			e = g2.G2Msm(scalars, pinnedPoints, &cfg, out)
+			assert.Equal(t, e, cr.CudaSuccess, "Msm registered pinned host mem failed")
+
+			outHost.CopyFromDevice(&out)
+			// Check with gnark-crypto
+			assert.True(t, testAgainstGnarkCryptoMsmG2(scalars, pinnedPoints, outHost[0]))
+
+		}
+
+		out.Free()
+
+		if pinnableAndLockable {
+			points.Unpin()
+			pinnedPoints.FreePinned()
+		}
+	}
+}
 func TestMSMG2GnarkCryptoTypes(t *testing.T) {
 	cfg := g2.G2GetDefaultMSMConfig()
 	for _, power := range []int{3} {
@@ -210,9 +262,11 @@ func TestMSMG2Batch(t *testing.T) {
 	}
 }
 
-func TestPrecomputeBaseG2(t *testing.T) {
+func TestPrecomputePointsG2(t *testing.T) {
 	cfg := g2.G2GetDefaultMSMConfig()
 	const precomputeFactor = 8
+	cfg.PrecomputeFactor = precomputeFactor
+
 	for _, power := range []int{10, 16} {
 		for _, batchSize := range []int{1, 3, 16} {
 			size := 1 << power
@@ -222,20 +276,18 @@ func TestPrecomputeBaseG2(t *testing.T) {
 
 			var precomputeOut core.DeviceSlice
 			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for PrecomputeBases results failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for PrecomputeBases results failed")
 
-			e = g2.G2PrecomputeBases(points, precomputeFactor, 0, &cfg.Ctx, precomputeOut)
-			assert.Equal(t, e, cr.CudaSuccess, "PrecomputeBases failed")
+			e = g2.G2PrecomputePoints(points, size, &cfg, precomputeOut)
+			assert.Equal(t, cr.CudaSuccess, e, "PrecomputeBases failed")
 
 			var p g2.G2Projective
 			var out core.DeviceSlice
 			_, e = out.Malloc(batchSize*p.Size(), p.Size())
-			assert.Equal(t, e, cr.CudaSuccess, "Allocating bytes on device for Projective results failed")
-
-			cfg.PrecomputeFactor = precomputeFactor
+			assert.Equal(t, cr.CudaSuccess, e, "Allocating bytes on device for Projective results failed")
 
 			e = g2.G2Msm(scalars, precomputeOut, &cfg, out)
-			assert.Equal(t, e, cr.CudaSuccess, "Msm failed")
+			assert.Equal(t, cr.CudaSuccess, e, "Msm failed")
 			outHost := make(core.HostSlice[g2.G2Projective], batchSize)
 			outHost.CopyFromDevice(&out)
 			out.Free()

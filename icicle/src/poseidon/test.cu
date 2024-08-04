@@ -4,7 +4,6 @@
 using namespace curve_config;
 
 #include "gpu-utils/device_context.cuh"
-#include "poseidon.cu"
 
 #ifndef __CUDA_ARCH__
 #include <cassert>
@@ -12,6 +11,10 @@ using namespace curve_config;
 #include <fstream>
 #include <iostream>
 
+#include "api/bls12_381.h"
+using namespace bls12_381;
+
+#include "poseidon/poseidon.cuh"
 using namespace poseidon;
 
 #define A 2
@@ -29,8 +32,7 @@ int main(int argc, char* argv[])
   // Load poseidon constants
   START_TIMER(timer_const);
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  PoseidonConstants<scalar_t> constants;
-  init_optimized_poseidon_constants<scalar_t>(A, ctx, &constants);
+  Poseidon<scalar_t> poseidon(A, ctx);
   END_TIMER(timer_const, "Load poseidon constants");
 
   START_TIMER(allocation_timer);
@@ -46,9 +48,10 @@ int main(int argc, char* argv[])
 
   scalar_t* out_ptr = static_cast<scalar_t*>(malloc(number_of_blocks * sizeof(scalar_t)));
 
+  HashConfig cfg = default_hash_config();
+
   START_TIMER(poseidon_timer);
-  PoseidonConfig config = default_poseidon_config(T);
-  poseidon_hash<curve_config::scalar_t, T>(in_ptr, out_ptr, number_of_blocks, constants, config);
+  poseidon.hash_many(in_ptr, out_ptr, number_of_blocks, A, 1, cfg);
   END_TIMER(poseidon_timer, "Poseidon")
 
   scalar_t expected[1024] = {
@@ -1080,7 +1083,7 @@ int main(int argc, char* argv[])
   if (number_of_blocks == 1024) {
     for (int i = 0; i < number_of_blocks; i++) {
 #ifdef DEBUG
-      std::cout << out_ptr[i] << std::endl;
+      // std::cout << out_ptr[i] << std::endl;
 #endif
       assert((out_ptr[i] == expected[i]));
     }

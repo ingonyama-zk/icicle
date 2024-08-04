@@ -2,7 +2,8 @@ use icicle_bls12_381::curve::ScalarField as F;
 
 use icicle_cuda_runtime::device_context::DeviceContext;
 
-use icicle_core::poseidon::{load_optimized_poseidon_constants, poseidon_hash_many, PoseidonConfig};
+use icicle_core::hash::{SpongeHash, HashConfig};
+use icicle_core::poseidon::Poseidon;
 use icicle_core::traits::FieldImpl;
 use icicle_cuda_runtime::memory::HostSlice;
 
@@ -24,14 +25,14 @@ fn main() {
     let test_size = 1 << size;
 
     println!("Running Icicle Examples: Rust Poseidon Hash");
-    let arity = 2u32;
+    let arity = 2;
     println!(
         "---------------------- Loading optimized Poseidon constants for arity={} ------------------------",
         arity
     );
     let ctx = DeviceContext::default();
-    let constants = load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap();
-    let config = PoseidonConfig::default();
+    let poseidon = Poseidon::load(arity, &ctx).unwrap();
+    let config = HashConfig::default();
 
     println!(
         "---------------------- Input size 2^{}={} ------------------------",
@@ -45,12 +46,12 @@ fn main() {
     println!("Executing BLS12-381 Poseidon Hash on device...");
     #[cfg(feature = "profile")]
     let start = Instant::now();
-    poseidon_hash_many::<F>(
+    poseidon.hash_many(
         input_slice,
         output_slice,
-        test_size as u32,
-        arity as u32,
-        &constants,
+        test_size,
+        arity,
+        1,
         &config,
     )
     .unwrap();

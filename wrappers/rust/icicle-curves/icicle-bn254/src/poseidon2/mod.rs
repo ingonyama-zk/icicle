@@ -1,8 +1,9 @@
 use crate::curve::{ScalarCfg, ScalarField};
 
 use icicle_core::error::IcicleResult;
+use icicle_core::hash::HashConfig;
 use icicle_core::impl_poseidon2;
-use icicle_core::poseidon2::{DiffusionStrategy, MdsType, Poseidon2, Poseidon2Config, Poseidon2Constants};
+use icicle_core::poseidon2::{DiffusionStrategy, MdsType, Poseidon2Handle, Poseidon2Impl};
 use icicle_core::traits::IcicleResultWrap;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
@@ -29,7 +30,7 @@ pub(crate) mod tests {
             ScalarField::from_hex("0x1ed25194542b12eef8617361c3ba7c52e660b145994427cc86296242cf766ec8"),
         ];
 
-        let constants = init_poseidon::<ScalarField>(3, MdsType::Default, DiffusionStrategy::Default);
-        check_poseidon_kats(3, &kats, &constants);
+        let poseidon = init_poseidon::<ScalarField>(3, MdsType::Default, DiffusionStrategy::Default);
+        check_poseidon_kats(3, &kats, &poseidon);
     }
 }

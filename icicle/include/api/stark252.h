@@ -9,15 +9,37 @@
 
 #include <cuda_runtime.h>
 #include "gpu-utils/device_context.cuh"
+#include "merkle-tree/merkle.cuh"
+#include "matrix/matrix.cuh"
 #include "fields/stark_fields/stark252.cuh"
 #include "ntt/ntt.cuh"
 #include "vec_ops/vec_ops.cuh"
+
+extern "C" cudaError_t stark252_build_merkle_tree(
+  const stark252::scalar_t* leaves,
+  stark252::scalar_t* digests,
+  unsigned int height,
+  unsigned int input_block_len, 
+  const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* compression,
+  const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* bottom_layer,
+  const merkle_tree::TreeBuilderConfig& tree_config);
+
+  extern "C" cudaError_t stark252_mmcs_commit_cuda(
+    const matrix::Matrix<stark252::scalar_t>* leaves,
+    unsigned int number_of_inputs,
+    stark252::scalar_t* digests,
+    const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* hasher,
+    const hash::Hasher<stark252::scalar_t, stark252::scalar_t>* compression,
+    const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t stark252_mul_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
 
 extern "C" cudaError_t stark252_add_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
+
+extern "C" cudaError_t stark252_accumulate_cuda(
+  stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
 
 extern "C" cudaError_t stark252_sub_cuda(
   stark252::scalar_t* vec_a, stark252::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, stark252::scalar_t* result);
@@ -32,10 +54,8 @@ extern "C" cudaError_t stark252_transpose_matrix_cuda(
   bool is_async);
 
 extern "C" cudaError_t stark252_bit_reverse_cuda(
-  const stark252::scalar_t* input,
-  uint64_t n,
-  vec_ops::BitReverseConfig& config,
-  stark252::scalar_t* output);
+  const stark252::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, stark252::scalar_t* output);
+
 
 extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
 

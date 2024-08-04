@@ -28,8 +28,13 @@ func {{.CurvePrefix}}Msm(scalars core.HostOrDeviceSlice, points core.HostOrDevic
 	return err
 }
 
+// Deprecated: {{.CurvePrefix}}PrecomputeBases exists for backward compatibility.
+// It may cause issues if an MSM with a different `c` value is used with precomputed points and it will be removed in a future version.
+// {{.CurvePrefix}}PrecomputePoints should be used instead.
 func {{.CurvePrefix}}PrecomputeBases(points core.HostOrDeviceSlice, precomputeFactor int32, c int32, ctx *cr.DeviceContext, outputBases core.DeviceSlice) cr.CudaError {
-	pointsPointer, outputBasesPointer := core.PrecomputeBasesCheck(points, precomputeFactor, outputBases)
+	cfg := {{.CurvePrefix}}GetDefaultMSMConfig()
+	cfg.PrecomputeFactor = precomputeFactor
+	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, &cfg, outputBases)
 
 	cPoints := (*C.{{toCName .CurvePrefix}}affine_t)(pointsPointer)
 	cPointsLen := (C.int)(points.Len())
@@ -40,6 +45,19 @@ func {{.CurvePrefix}}PrecomputeBases(points core.HostOrDeviceSlice, precomputeFa
 	cOutputBases := (*C.{{toCName .CurvePrefix}}affine_t)(outputBasesPointer)
 
 	__ret := C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_precompute_msm_bases_cuda(cPoints, cPointsLen, cPrecomputeFactor, cC, cPointsIsOnDevice, cCtx, cOutputBases)
+	err := (cr.CudaError)(__ret)
+	return err
+}
+
+func {{.CurvePrefix}}PrecomputePoints(points core.HostOrDeviceSlice, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError {
+	pointsPointer, outputBasesPointer := core.PrecomputePointsCheck(points, cfg, outputBases)
+
+	cPoints := (*C.{{toCName .CurvePrefix}}affine_t)(pointsPointer)
+	cMsmSize := (C.int)(msmSize)
+	cCfg := (*C.MSMConfig)(unsafe.Pointer(cfg))
+	cOutputBases := (*C.{{toCName .CurvePrefix}}affine_t)(outputBasesPointer)
+
+	__ret := C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_precompute_msm_points_cuda(cPoints, cMsmSize, cCfg, cOutputBases)
 	err := (cr.CudaError)(__ret)
 	return err
 }

@@ -566,7 +566,7 @@ public:
   friend __host__ __device__ dummy_g2_t operator+(const dummy_g2_t& xs, const dummy_g2_t& ys)
   {
     scalar_t rs = {};
-    scalar_t::add_limbs<false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+    scalar_t::add_limbs<scalar_t::TLC, false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
     return dummy_g2_t{scalar_t::sub_modulus<1>(rs)};
   }
 };

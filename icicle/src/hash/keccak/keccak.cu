@@ -1,6 +1,16 @@
+#include <cstdint>
+#include "gpu-utils/device_context.cuh"
+#include "gpu-utils/error_handler.cuh"
+#include "gpu-utils/modifiers.cuh"
+
+#include "hash/hash.cuh"
 #include "hash/keccak/keccak.cuh"
 
+using namespace hash;
+
 namespace keccak {
+  using u64 = uint64_t;
+
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
 
 #define TH_ELT(t, c0, c1, c2, c3, c4, d0, d1, d2, d3, d4)                                                              \
@@ -144,16 +154,16 @@ namespace keccak {
     element ^= rc;                                                                                                     \
   }
 
-  __device__ const uint64_t RC[24] = {0x0000000000000001, 0x0000000000008082, 0x800000000000808a, 0x8000000080008000,
-                                      0x000000000000808b, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
-                                      0x000000000000008a, 0x0000000000000088, 0x0000000080008009, 0x000000008000000a,
-                                      0x000000008000808b, 0x800000000000008b, 0x8000000000008089, 0x8000000000008003,
-                                      0x8000000000008002, 0x8000000000000080, 0x000000000000800a, 0x800000008000000a,
-                                      0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008};
+  __device__ const u64 RC[24] = {0x0000000000000001, 0x0000000000008082, 0x800000000000808a, 0x8000000080008000,
+                                 0x000000000000808b, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
+                                 0x000000000000008a, 0x0000000000000088, 0x0000000080008009, 0x000000008000000a,
+                                 0x000000008000808b, 0x800000000000008b, 0x8000000000008089, 0x8000000000008003,
+                                 0x8000000000008002, 0x8000000000000080, 0x000000000000800a, 0x800000008000000a,
+                                 0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008};
 
-  __device__ void keccakf(uint64_t s[25])
+  __device__ void keccakf(u64 s[KECCAK_STATE_SIZE])
   {
-    uint64_t t0, t1, t2, t3, t4;
+    u64 t0, t1, t2, t3, t4;
 
     for (int i = 0; i < 24; i++) {
       THETA(
@@ -169,107 +179,83 @@ namespace keccak {
     }
   }
 
-  template <int C, int D>
-  __global__ void keccak_hash_blocks(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output)
+  template <const int R>
+  __global__ void keccak_hash_blocks(
+    const uint8_t* input,
+    int input_block_size,
+    int output_len,
+    int number_of_blocks,
+    uint64_t* output,
+    int padding_const)
   {
-    int bid = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if (bid >= number_of_blocks) { return; }
+    int sid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (sid >= number_of_blocks) { return; }
 
-    const int r_bits = 1600 - C;
-    const int r_bytes = r_bits / 8;
-    const int d_bytes = D / 8;
-
-    uint8_t* b_input = input + bid * input_block_size;
-    uint8_t* b_output = output + bid * d_bytes;
-    uint64_t state[25] = {}; // Initialize with zeroes
+    const uint8_t* b_input = input + sid * input_block_size;
+    uint64_t* b_output = output + sid * output_len;
+    uint64_t state[KECCAK_STATE_SIZE] = {}; // Initialize with zeroes
 
     int input_len = input_block_size;
 
     // absorb
-    while (input_len >= r_bytes) {
-      // #pragma unroll
-      for (int i = 0; i < r_bytes; i += 8) {
+    while (input_len >= R) {
+      for (int i = 0; i < R; i += 8) {
         state[i / 8] ^= *(uint64_t*)(b_input + i);
       }
       keccakf(state);
-      b_input += r_bytes;
-      input_len -= r_bytes;
+      b_input += R;
+      input_len -= R;
     }
 
     // last block (if any)
-    uint8_t last_block[r_bytes];
+    uint8_t last_block[R];
     for (int i = 0; i < input_len; i++) {
       last_block[i] = b_input[i];
     }
 
     // pad 10*1
-    last_block[input_len] = 1;
-    for (int i = 0; i < r_bytes - input_len - 1; i++) {
+    last_block[input_len] = padding_const;
+    for (int i = 0; i < R - input_len - 1; i++) {
       last_block[input_len + i + 1] = 0;
     }
     // last bit
-    last_block[r_bytes - 1] |= 0x80;
+    last_block[R - 1] |= 0x80;
 
-    // #pragma unroll
-    for (int i = 0; i < r_bytes; i += 8) {
+    for (int i = 0; i < R; i += 8) {
       state[i / 8] ^= *(uint64_t*)(last_block + i);
     }
     keccakf(state);
 
-#pragma unroll
-    for (int i = 0; i < d_bytes; i += 8) {
-      *(uint64_t*)(b_output + i) = state[i / 8];
+    for (int i = 0; i < output_len; i++) {
+      b_output[i] = state[i];
     }
   }
 
-  template <int C, int D>
-  cudaError_t
-  keccak_hash(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config)
+  cudaError_t Keccak::run_hash_many_kernel(
+    const uint8_t* input,
+    uint64_t* output,
+    unsigned int number_of_states,
+    unsigned int input_len,
+    unsigned int output_len,
+    const device_context::DeviceContext& ctx) const
   {
-    CHK_INIT_IF_RETURN();
-    cudaStream_t& stream = config.ctx.stream;
+    int number_of_threads = 256;
+    int number_of_gpu_blocks = (number_of_states - 1) / number_of_threads + 1;
 
-    uint8_t* input_device;
-    if (config.are_inputs_on_device) {
-      input_device = input;
-    } else {
-      CHK_IF_RETURN(cudaMallocAsync(&input_device, number_of_blocks * input_block_size, stream));
-      CHK_IF_RETURN(
-        cudaMemcpyAsync(input_device, input, number_of_blocks * input_block_size, cudaMemcpyHostToDevice, stream));
+    switch (rate) {
+    case KECCAK_256_RATE:
+      keccak_hash_blocks<KECCAK_256_RATE><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
+        input, input_len, output_len, number_of_states, output, PADDING_CONST);
+      break;
+    case KECCAK_512_RATE:
+      keccak_hash_blocks<KECCAK_512_RATE><<<number_of_gpu_blocks, number_of_threads, 0, ctx.stream>>>(
+        input, input_len, output_len, number_of_states, output, PADDING_CONST);
+      break;
+    default:
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "KeccakHash: #rate must be one of [136, 72]");
     }
 
-    uint8_t* output_device;
-    if (config.are_outputs_on_device) {
-      output_device = output;
-    } else {
-      CHK_IF_RETURN(cudaMallocAsync(&output_device, number_of_blocks * (D / 8), stream));
-    }
-
-    int number_of_threads = 512;
-    int number_of_gpu_blocks = (number_of_blocks - 1) / number_of_threads + 1;
-    keccak_hash_blocks<C, D><<<number_of_gpu_blocks, number_of_threads, 0, stream>>>(
-      input_device, input_block_size, number_of_blocks, output_device);
-
-    if (!config.are_inputs_on_device) CHK_IF_RETURN(cudaFreeAsync(input_device, stream));
-
-    if (!config.are_outputs_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(output, output_device, number_of_blocks * (D / 8), cudaMemcpyDeviceToHost, stream));
-      CHK_IF_RETURN(cudaFreeAsync(output_device, stream));
-    }
-
-    if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(stream));
+    CHK_IF_RETURN(cudaPeekAtLastError());
     return CHK_LAST();
-  }
-
-  extern "C" cudaError_t
-  keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config)
-  {
-    return keccak_hash<512, 256>(input, input_block_size, number_of_blocks, output, config);
-  }
-
-  extern "C" cudaError_t
-  keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, KeccakConfig& config)
-  {
-    return keccak_hash<1024, 512>(input, input_block_size, number_of_blocks, output, config);
   }
 } // namespace keccak

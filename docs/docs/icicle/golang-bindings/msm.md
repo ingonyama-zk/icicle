@@ -122,7 +122,7 @@ func GetDefaultMSMConfig() MSMConfig
 
 ## How do I toggle between the supported algorithms?
 
-When creating your MSM Config you may state which algorithm you wish to use. `cfg.Ctx.IsBigTriangle = true` will activate Large triangle accumulation and `cfg.Ctx.IsBigTriangle = false` will activate Bucket accumulation.
+When creating your MSM Config you may state which algorithm you wish to use. `cfg.Ctx.IsBigTriangle = true` will activate Large triangle reduction and `cfg.Ctx.IsBigTriangle = false` will activate iterative reduction.
 
 ```go
 ...
@@ -139,7 +139,7 @@ cfg.Ctx.IsBigTriangle = true
 
 Toggling between MSM modes occurs automatically based on the number of results you are expecting from the `MSM` function.
 
-The number of results is interpreted from the size of `var out core.DeviceSlice`. Thus its important when allocating memory for `var out core.DeviceSlice` to make sure that you are allocating `<number of results> X <size of a single point>`.
+The number of results is interpreted from the size of `var out core.DeviceSlice`. Thus it's important when allocating memory for `var out core.DeviceSlice` to make sure that you are allocating `<number of results> X <size of a single point>`.
 
 ```go
 ... 
@@ -151,6 +151,10 @@ out.Malloc(batchSize*p.Size(), p.Size())
 
 ...
 ```
+
+## Parameters for optimal performance
+
+Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
 
 ## Support for G2 group
 
@@ -164,7 +168,7 @@ import (
 )
 ```
 
-This package include `G2Projective` and `G2Affine` points as well as a `G2Msm` method.
+This package includes `G2Projective` and `G2Affine` points as well as a `G2Msm` method.
 
 ```go
 package main

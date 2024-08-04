@@ -105,12 +105,12 @@ namespace vec_ops {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename E>
-  cudaError_t transpose_batch(
+  cudaError_t transpose_matrix(
     const E* mat_in,
     E* mat_out,
     uint32_t row_size,
     uint32_t column_size,
-    device_context::DeviceContext& ctx,
+    const device_context::DeviceContext& ctx,
     bool on_device,
     bool is_async);
 

@@ -1,5 +1,5 @@
 #include "gpu-utils/device_context.cuh"
-#include "keccak.cu"
+#include "extern.cu"
 
 // #define DEBUG
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
   uint8_t* out_ptr = static_cast<uint8_t*>(malloc(number_of_blocks * (D / 8)));
 
   START_TIMER(keccak_timer);
-  KeccakConfig config = default_keccak_config();
+  HashConfig config = default_hash_config();
   keccak256_cuda(in_ptr, input_block_size, number_of_blocks, out_ptr, config);
   END_TIMER(keccak_timer, "Keccak")
 

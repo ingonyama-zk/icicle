@@ -1,8 +1,9 @@
 use crate::field::{ScalarCfg, ScalarField};
 
 use icicle_core::error::IcicleResult;
+use icicle_core::hash::HashConfig;
 use icicle_core::impl_poseidon2;
-use icicle_core::poseidon2::{DiffusionStrategy, MdsType, Poseidon2, Poseidon2Config, Poseidon2Constants};
+use icicle_core::poseidon2::{DiffusionStrategy, MdsType, Poseidon2Handle, Poseidon2Impl};
 use icicle_core::traits::IcicleResultWrap;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
@@ -16,14 +17,14 @@ impl_poseidon2!("babybear", babybear, ScalarField, ScalarCfg);
 pub(crate) mod tests {
     use crate::field::ScalarField;
     use icicle_core::impl_poseidon2_tests;
-    use icicle_core::poseidon2::{create_poseidon2_constants, tests::*, DiffusionStrategy, MdsType};
+    use icicle_core::poseidon2::{tests::*, DiffusionStrategy, MdsType, Poseidon2};
     use icicle_core::traits::FieldImpl;
     use icicle_cuda_runtime::device_context::DeviceContext;
 
     use p3_baby_bear::BabyBear;
     use p3_baby_bear::DiffusionMatrixBabyBear;
     use p3_field::{AbstractField, PrimeField32};
-    use p3_poseidon2::{Poseidon2, Poseidon2ExternalMatrixGeneral};
+    use p3_poseidon2::{Poseidon2 as PlonkyPoseidon2, Poseidon2ExternalMatrixGeneral};
     use p3_symmetric::Permutation;
 
     impl_poseidon2_tests!(ScalarField);
@@ -57,12 +58,13 @@ pub(crate) mod tests {
             ScalarField::from_hex("0x57a99864"),
         ];
 
-        let constants = init_poseidon::<ScalarField>(24, MdsType::Default, DiffusionStrategy::Default);
-        check_poseidon_kats(24, &kats, &constants);
+        let poseidon = init_poseidon::<ScalarField>(24, MdsType::Default, DiffusionStrategy::Default);
+        check_poseidon_kats(24, &kats, &poseidon);
     }
 
-    #[test]
-    fn test_poseidon2_plonky3_t16() {
+    type PlonkyPoseidon2T16 = PlonkyPoseidon2<BabyBear, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBabyBear, 16, 7>;
+
+    pub(crate) fn get_plonky3_poseidon2_t16(rate: usize) -> (Poseidon2<ScalarField>, PlonkyPoseidon2T16) {
         let rounds_p = 13;
         let rounds_f = 8;
         const ALPHA: u64 = 7;
@@ -232,27 +234,20 @@ pub(crate) mod tests {
             cnv(605745517),
         ];
 
-        let poseidon2: Poseidon2<BabyBear, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBabyBear, WIDTH, ALPHA> =
-            Poseidon2::new(
-                rounds_f,
-                external_constants.clone(),
-                Poseidon2ExternalMatrixGeneral::default(),
-                rounds_p,
-                internal_constants.clone(),
-                DiffusionMatrixBabyBear::default(),
-            );
-
-        let mut input: [BabyBear; WIDTH] = [BabyBear::zero(); WIDTH];
-        for i in 0..WIDTH {
-            input[i] = BabyBear::from_canonical_u32(i as u32);
-        }
-
-        let output = poseidon2.permute(input);
-
-        let mut kats: [ScalarField; WIDTH] = [ScalarField::zero(); WIDTH];
-        for i in 0..WIDTH {
-            kats[i] = ScalarField::from_u32(output[i].as_canonical_u32());
-        }
+        let plonky_poseidon2: PlonkyPoseidon2<
+            BabyBear,
+            Poseidon2ExternalMatrixGeneral,
+            DiffusionMatrixBabyBear,
+            WIDTH,
+            ALPHA,
+        > = PlonkyPoseidon2::new(
+            rounds_f,
+            external_constants.clone(),
+            Poseidon2ExternalMatrixGeneral::default(),
+            rounds_p,
+            internal_constants.clone(),
+            DiffusionMatrixBabyBear::default(),
+        );
 
         let ctx = DeviceContext::default();
         let mut round_constants = vec![ScalarField::zero(); rounds_f * WIDTH + rounds_p];
@@ -291,19 +286,43 @@ pub(crate) mod tests {
             ScalarField::from_u32(1 << 13),
             ScalarField::from_u32(1 << 15),
         ];
-        let constants = create_poseidon2_constants(
-            WIDTH as u32,
+
+        let poseidon = Poseidon2::new(
+            WIDTH,
+            rate,
             ALPHA as u32,
-            &ctx,
             rounds_p as u32,
             rounds_f as u32,
             &mut round_constants,
             &mut internal_matrix_diag,
             MdsType::Plonky,
             DiffusionStrategy::Montgomery,
+            &ctx,
         )
         .unwrap();
-        check_poseidon_kats(WIDTH, &kats, &constants);
+
+        (poseidon, plonky_poseidon2)
+    }
+
+    #[test]
+    fn test_poseidon2_plonky3_t16() {
+        const WIDTH: usize = 16;
+
+        let (poseidon, plonky_poseidon2) = get_plonky3_poseidon2_t16(16);
+
+        let mut input: [BabyBear; WIDTH] = [BabyBear::zero(); WIDTH];
+        for i in 0..WIDTH {
+            input[i] = BabyBear::from_canonical_u32(i as u32);
+        }
+
+        let output = plonky_poseidon2.permute(input);
+
+        let mut kats: [ScalarField; WIDTH] = [ScalarField::zero(); WIDTH];
+        for i in 0..WIDTH {
+            kats[i] = ScalarField::from_u32(output[i].as_canonical_u32());
+        }
+
+        check_poseidon_kats(WIDTH, &kats, &poseidon);
     }
 
     #[test]
@@ -549,22 +568,27 @@ pub(crate) mod tests {
             cnv(1810596765),
         ];
 
-        let poseidon2: Poseidon2<BabyBear, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBabyBear, WIDTH, ALPHA> =
-            Poseidon2::new(
-                rounds_f,
-                external_constants.clone(),
-                Poseidon2ExternalMatrixGeneral::default(),
-                rounds_p,
-                internal_constants.clone(),
-                DiffusionMatrixBabyBear::default(),
-            );
+        let plonky_poseidon2: PlonkyPoseidon2<
+            BabyBear,
+            Poseidon2ExternalMatrixGeneral,
+            DiffusionMatrixBabyBear,
+            WIDTH,
+            ALPHA,
+        > = PlonkyPoseidon2::new(
+            rounds_f,
+            external_constants.clone(),
+            Poseidon2ExternalMatrixGeneral::default(),
+            rounds_p,
+            internal_constants.clone(),
+            DiffusionMatrixBabyBear::default(),
+        );
 
         let mut input: [BabyBear; WIDTH] = [BabyBear::zero(); WIDTH];
         for i in 0..WIDTH {
             input[i] = BabyBear::from_canonical_u32(i as u32);
         }
 
-        let output = poseidon2.permute(input);
+        let output = plonky_poseidon2.permute(input);
 
         let mut kats: [ScalarField; WIDTH] = [ScalarField::zero(); WIDTH];
         for i in 0..WIDTH {
@@ -616,18 +640,19 @@ pub(crate) mod tests {
             ScalarField::from_u32(1 << 22),
             ScalarField::from_u32(1 << 23),
         ];
-        let constants = create_poseidon2_constants(
-            WIDTH as u32,
+        let poseidon = Poseidon2::new(
+            WIDTH,
+            24,
             ALPHA as u32,
-            &ctx,
             rounds_p as u32,
             rounds_f as u32,
             &mut round_constants,
             &mut internal_matrix_diag,
             MdsType::Plonky,
             DiffusionStrategy::Montgomery,
+            &ctx,
         )
         .unwrap();
-        check_poseidon_kats(WIDTH, &kats, &constants);
+        check_poseidon_kats(WIDTH, &kats, &poseidon);
     }
 }

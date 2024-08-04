@@ -1,105 +1,48 @@
+use crate::hash::SpongeHash;
 use crate::traits::FieldImpl;
 use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
-use std::io::Read;
-use std::path::PathBuf;
-use std::{env, fs::File};
+use super::{Poseidon, PoseidonImpl};
 
-use super::{
-    create_optimized_poseidon_constants, load_optimized_poseidon_constants, poseidon_hash_many, Poseidon,
-    PoseidonConfig, PoseidonConstants,
-};
-
-pub fn init_poseidon<'a, F: FieldImpl>(arity: u32) -> PoseidonConstants<'a, F>
+pub fn init_poseidon<F: FieldImpl>(arity: usize) -> Poseidon<F>
 where
-    <F as FieldImpl>::Config: Poseidon<F>,
+    <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
     let ctx = DeviceContext::default();
-
-    load_optimized_poseidon_constants::<F>(arity, &ctx).unwrap()
+    Poseidon::load(arity, &ctx).unwrap()
 }
 
-pub fn _check_poseidon_hash_many<F: FieldImpl>(constants: PoseidonConstants<F>) -> (F, F)
+pub fn _check_poseidon_hash_many<F: FieldImpl>(poseidon: Poseidon<F>)
 where
-    <F as FieldImpl>::Config: Poseidon<F>,
+    <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
     let test_size = 1 << 10;
-    let arity = 2u32;
-    let mut inputs = vec![F::one(); test_size * arity as usize];
+    let arity = poseidon.width - 1;
+    let mut inputs = vec![F::one(); test_size * arity];
     let mut outputs = vec![F::zero(); test_size];
 
     let input_slice = HostSlice::from_mut_slice(&mut inputs);
     let output_slice = HostSlice::from_mut_slice(&mut outputs);
 
-    let config = PoseidonConfig::default();
-    poseidon_hash_many::<F>(
-        input_slice,
-        output_slice,
-        test_size as u32,
-        arity as u32,
-        &constants,
-        &config,
-    )
-    .unwrap();
+    let cfg = poseidon.default_config();
+    poseidon
+        .hash_many(input_slice, output_slice, test_size, arity, 1, &cfg)
+        .unwrap();
 
     let a1 = output_slice[0];
-    let a2 = output_slice[output_slice.len() - 2];
+    let a2 = output_slice[output_slice.len() - 1];
 
-    println!("first: {:?}, last: {:?}", a1, a2);
     assert_eq!(a1, a2);
-
-    (a1, a2)
 }
 
 pub fn check_poseidon_hash_many<F: FieldImpl>()
 where
-    <F as FieldImpl>::Config: Poseidon<F>,
+    <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
-    for arity in [2, 4] {
-        let constants = init_poseidon::<F>(arity as u32);
+    for arity in [2, 4, 8, 11] {
+        let poseidon = init_poseidon::<F>(arity);
 
-        _check_poseidon_hash_many(constants);
+        _check_poseidon_hash_many(poseidon);
     }
-}
-
-pub fn check_poseidon_custom_config<F: FieldImpl>(field_bytes: usize, field_prefix: &str, partial_rounds: u32)
-where
-    <F as FieldImpl>::Config: Poseidon<F>,
-{
-    let arity = 2u32;
-    let constants = init_poseidon::<F>(arity as u32);
-
-    let full_rounds_half = 4;
-
-    let ctx = DeviceContext::default();
-    let cargo_manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let constants_file = PathBuf::from(cargo_manifest_dir)
-        .join("tests")
-        .join(format!("{}_constants.bin", field_prefix));
-    let mut constants_buf = vec![];
-    File::open(constants_file)
-        .unwrap()
-        .read_to_end(&mut constants_buf)
-        .unwrap();
-
-    let mut custom_constants = vec![];
-    for chunk in constants_buf.chunks(field_bytes) {
-        custom_constants.push(F::from_bytes_le(chunk));
-    }
-
-    let custom_constants = create_optimized_poseidon_constants::<F>(
-        arity as u32,
-        &ctx,
-        full_rounds_half,
-        partial_rounds,
-        &mut custom_constants,
-    )
-    .unwrap();
-
-    let (a1, a2) = _check_poseidon_hash_many(constants);
-    let (b1, b2) = _check_poseidon_hash_many(custom_constants);
-
-    assert_eq!(a1, b1);
-    assert_eq!(a2, b2);
 }

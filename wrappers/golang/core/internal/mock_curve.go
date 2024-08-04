@@ -28,17 +28,6 @@ func (p *MockProjective) FromLimbs(x, y, z []uint32) MockProjective {
 	return *p
 }
 
-func (p *MockProjective) FromAffine(a MockAffine) MockProjective {
-	z := MockBaseField{}
-	z.One()
-
-	p.X = a.X
-	p.Y = a.Y
-	p.Z = z
-
-	return *p
-}
-
 type MockAffine struct {
 	X, Y MockBaseField
 }
@@ -63,14 +52,4 @@ func (a *MockAffine) FromLimbs(x, y []uint32) MockAffine {
 	a.Y.FromLimbs(y)
 
 	return *a
-}
-
-func (a MockAffine) ToProjective() MockProjective {
-	var z MockBaseField
-
-	return MockProjective{
-		X: a.X,
-		Y: a.Y,
-		Z: z.One(),
-	}
 }

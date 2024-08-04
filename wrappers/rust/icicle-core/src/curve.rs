@@ -22,6 +22,8 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     #[doc(hidden)]
     fn to_affine(point: *const Projective<Self>, point_aff: *mut Affine<Self>);
     #[doc(hidden)]
+    fn from_affine(point: *const Affine<Self>, point_proj: *mut Projective<Self>);
+    #[doc(hidden)]
     fn generate_random_projective_points(size: usize) -> Vec<Projective<Self>>;
     #[doc(hidden)]
     fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
@@ -79,24 +81,17 @@ impl<C: Curve> Affine<C> {
     }
 
     pub fn to_projective(&self) -> Projective<C> {
-        Projective {
-            x: self.x,
-            y: self.y,
-            z: C::BaseField::one(),
-        }
+        let mut proj = Projective::<C>::zero();
+        C::from_affine(self as *const Self, &mut proj as *mut Projective<C>);
+        proj
     }
 }
 
 impl<C: Curve> From<Affine<C>> for Projective<C> {
     fn from(item: Affine<C>) -> Self {
-        if item == (Affine::<C>::zero()) {
-            return Self::zero();
-        }
-        Self {
-            x: item.x,
-            y: item.y,
-            z: C::BaseField::one(),
-        }
+        let mut proj = Self::zero();
+        C::from_affine(&item as *const Affine<C>, &mut proj as *mut Self);
+        proj
     }
 }
 
@@ -279,6 +274,8 @@ macro_rules! impl_curve {
                 pub(crate) fn eq(point1: *const $projective_type, point2: *const $projective_type) -> bool;
                 #[link_name = concat!($curve_prefix, "_to_affine")]
                 pub(crate) fn proj_to_affine(point: *const $projective_type, point_out: *mut $affine_type);
+                #[link_name = concat!($curve_prefix, "_from_affine")]
+                pub(crate) fn proj_from_affine(point: *const $affine_type, point_out: *mut $projective_type);
                 #[link_name = concat!($curve_prefix, "_generate_projective_points")]
                 pub(crate) fn generate_projective_points(points: *mut $projective_type, size: usize);
                 #[link_name = concat!($curve_prefix, "_generate_affine_points")]
@@ -310,6 +307,10 @@ macro_rules! impl_curve {
 
             fn to_affine(point: *const $projective_type, point_out: *mut $affine_type) {
                 unsafe { $curve_prefix_ident::proj_to_affine(point, point_out) };
+            }
+
+            fn from_affine(point: *const $affine_type, point_out: *mut $projective_type) {
+                unsafe { $curve_prefix_ident::proj_from_affine(point, point_out) };
             }
 
             fn generate_random_projective_points(size: usize) -> Vec<$projective_type> {

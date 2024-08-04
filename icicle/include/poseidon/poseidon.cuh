@@ -8,132 +8,87 @@
 #include "gpu-utils/error_handler.cuh"
 #include "utils/utils.h"
 
+#include "poseidon/kernels.cuh"
+#include "poseidon/constants.cuh"
+#include "hash/hash.cuh"
+using namespace hash;
+
 /**
  * @namespace poseidon
  * Implementation of the [Poseidon hash function](https://eprint.iacr.org/2019/458.pdf)
  * Specifically, the optimized [Filecoin version](https://spec.filecoin.io/algorithms/crypto/poseidon/)
  */
 namespace poseidon {
-#define FIRST_FULL_ROUNDS  true
-#define SECOND_FULL_ROUNDS false
-
-  /**
-   * For most of the Poseidon configurations this is the case
-   * TODO: Add support for different full rounds numbers
-   */
-  const int FULL_ROUNDS_DEFAULT = 4;
-
-  /**
-   * @struct PoseidonConstants
-   * This constants are enough to define a Poseidon instantce
-   * @param round_constants A pointer to round constants allocated on the device
-   * @param mds_matrix A pointer to an mds matrix allocated on the device
-   * @param non_sparse_matrix A pointer to non sparse matrix allocated on the device
-   * @param sparse_matrices A pointer to sparse matrices allocated on the device
-   */
   template <typename S>
-  struct PoseidonConstants {
-    int arity;
-    int partial_rounds;
-    int full_rounds_half;
-    S* round_constants = nullptr;
-    S* mds_matrix = nullptr;
-    S* non_sparse_matrix = nullptr;
-    S* sparse_matrices = nullptr;
-    S domain_tag;
-  };
-
-  /**
-   * @class PoseidonKernelsConfiguration
-   * Describes the logic of deriving CUDA kernels parameters
-   * such as the number of threads and the number of blocks
-   */
-  template <int T>
-  class PoseidonKernelsConfiguration
+  class Poseidon : public Hasher<S, S>
   {
   public:
-    // The logic behind this is that 1 thread only works on 1 element
-    // We have {T} elements in each state, and {number_of_states} states total
-    static const int number_of_threads = 256 / T * T;
+    const std::size_t device_id;
+    PoseidonConstants<S> constants;
 
-    // The partial rounds operates on the whole state, so we define
-    // the parallelism params for processing a single hash preimage per thread
-    static const int singlehash_block_size = 128;
-
-    static const int hashes_per_block = number_of_threads / T;
-
-    static int number_of_full_blocks(size_t number_of_states)
+    cudaError_t run_hash_many_kernel(
+      const S* input,
+      S* output,
+      unsigned int number_of_states,
+      unsigned int input_len,
+      unsigned int output_len,
+      const device_context::DeviceContext& ctx) const override
     {
-      int total_number_of_threads = number_of_states * T;
-      return total_number_of_threads / number_of_threads +
-             static_cast<bool>(total_number_of_threads % number_of_threads);
+      cudaError_t permutation_error;
+#define P_PERM_T(width)                                                                                                \
+  case width:                                                                                                          \
+    permutation_error = poseidon_permutation_kernel<S, width>(                                                         \
+      input, output, number_of_states, input_len, output_len, this->constants, ctx.stream);                            \
+    break;
+
+      switch (this->width) {
+        P_PERM_T(3)
+        P_PERM_T(5)
+        P_PERM_T(9)
+        P_PERM_T(12)
+      default:
+        THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "PoseidonPermutation: #width must be one of [3, 5, 9, 12]");
+      }
+
+      CHK_IF_RETURN(permutation_error);
+      return CHK_LAST();
     }
 
-    static int number_of_singlehash_blocks(size_t number_of_states)
+    Poseidon(
+      unsigned int arity,
+      unsigned int alpha,
+      unsigned int partial_rounds,
+      unsigned int full_rounds_half,
+      const S* round_constants,
+      const S* mds_matrix,
+      const S* non_sparse_matrix,
+      const S* sparse_matrices,
+      const S domain_tag,
+      device_context::DeviceContext& ctx)
+        : Hasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
     {
-      return number_of_states / singlehash_block_size + static_cast<bool>(number_of_states % singlehash_block_size);
+      PoseidonConstants<S> constants;
+      CHK_STICKY(create_optimized_poseidon_constants(
+        arity, alpha, partial_rounds, full_rounds_half, round_constants, mds_matrix, non_sparse_matrix, sparse_matrices,
+        domain_tag, &constants, ctx));
+      this->constants = constants;
+    }
+
+    Poseidon(int arity, device_context::DeviceContext& ctx)
+        : Hasher<S, S>(arity + 1, arity, arity, 1), device_id(ctx.device_id)
+    {
+      PoseidonConstants<S> constants{};
+      CHK_STICKY(init_optimized_poseidon_constants(arity, ctx, &constants));
+      this->constants = constants;
+    }
+
+    ~Poseidon()
+    {
+      auto ctx = device_context::get_default_device_context();
+      ctx.device_id = this->device_id;
+      CHK_STICKY(release_optimized_poseidon_constants<S>(&this->constants, ctx));
     }
   };
-
-  template <int T>
-  using PKC = PoseidonKernelsConfiguration<T>;
-
-  /**
-   * @struct PoseidonConfig
-   * Struct that encodes various Poseidon parameters.
-   */
-  struct PoseidonConfig {
-    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    bool are_inputs_on_device;  /**< True if inputs are on device and false if they're on host. Default value: false. */
-    bool are_outputs_on_device; /**< If true, output is preserved on device, otherwise on host. Default value: false. */
-    bool input_is_a_state;      /**< If true, input is considered to be a states vector, holding the preimages
-                                 * in aligned or not aligned format. Memory under the input pointer will be used for states
-                                 * If false, fresh states memory will be allocated and input will be copied into it */
-    bool aligned;               /**< If true - input should be already aligned for poseidon permutation.
-                                 * Aligned format: [0, A, B, 0, C, D, ...] (as you might get by using loop_state)
-                                 * not aligned format: [A, B, 0, C, D, 0, ...] (as you might get from cudaMemcpy2D) */
-    bool loop_state;            /**< If true, hash results will also be copied in the input pointer in aligned format */
-    bool is_async; /**< Whether to run the Poseidon asynchronously. If set to `true`, the poseidon_hash function will be
-                    *   non-blocking and you'd need to synchronize it explicitly by running
-                    *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the poseidon_hash
-                    *   function will block the current CPU thread. */
-  };
-
-  static PoseidonConfig default_poseidon_config(
-    int t, const device_context::DeviceContext& ctx = device_context::get_default_device_context())
-  {
-    PoseidonConfig config = {
-      ctx,   // ctx
-      false, // are_inputes_on_device
-      false, // are_outputs_on_device
-      false, // input_is_a_state
-      false, // aligned
-      false, // loop_state
-      false, // is_async
-    };
-    return config;
-  }
-
-  /**
-   * Loads pre-calculated optimized constants, moves them to the device
-   */
-  template <typename S>
-  cudaError_t
-  init_optimized_poseidon_constants(int arity, device_context::DeviceContext& ctx, PoseidonConstants<S>* constants);
-
-  /**
-   * Compute the poseidon hash over a sequence of preimages.
-   * Takes {number_of_states * (T-1)} elements of input and computes {number_of_states} hash images
-   * @param T size of the poseidon state, should be equal to {arity + 1}
-   * @param input a pointer to the input data. May be allocated on device or on host, regulated
-   * by the config. May point to a string of preimages or a string of states filled with preimages.
-   * @param output a pointer to the output data. May be allocated on device or on host, regulated
-   * by the config. Must be at least of size [number_of_states](@ref number_of_states)
-   * @param number_of_states number of input blocks of size T-1 (arity)
-   */
-  template <typename S, int T>
-  cudaError_t poseidon_hash(
-    S* input, S* output, size_t number_of_states, const PoseidonConstants<S>& constants, const PoseidonConfig& config);
 } // namespace poseidon
 
 #endif

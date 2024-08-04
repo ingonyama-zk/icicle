@@ -320,7 +320,8 @@ namespace ntt {
                                                           // less then max to allow more concurrent blocks on SM
       const int logn_shmem = is_shared_mem_enabled ? int(log(2 * num_threads) / log(2))
                                                    : 0; // TODO: shared memory support only for types <= 32 bytes
-      int num_threads_coset = max(min(n / 2, MAX_NUM_THREADS), 1);
+      // Note: for ecntt we limit block size (=#threads per block) since otherwise it doesn't fit the SM resources.
+      int num_threads_coset = max(min(n / 2, IS_ECNTT ? MAX_THREADS_BATCH_ECNTT : MAX_NUM_THREADS), 1);
       int num_blocks_coset = (n * batch_size + num_threads_coset - 1) / num_threads_coset;
 
       if (inverse) {
