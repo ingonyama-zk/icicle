@@ -193,11 +193,6 @@ module.exports = {
     },
     {
       type: "doc",
-      label: "ZK Containers",
-      id: "ZKContainers",
-    },
-    {
-      type: "doc",
       label: "Ingonyama Grant program",
       id: "grants",
     },
