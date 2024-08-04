@@ -1,9 +1,16 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <cuda_runtime.h>
-#include "blake2s.cuh"
 #include <chrono>
+#include "gpu-utils/device_context.cuh"
+
+#include <cassert>
+#include <chrono>
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+
+#include "hash/blake2s/blake2s.cuh"
+
+
+using namespace blake2s;
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg) \

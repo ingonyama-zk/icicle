@@ -1,12 +1,16 @@
 #include <assert.h>
-extern "C" {
-#include "blake2s.cuh"
-}
-// #include <chrono>
-// #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-// #define END_TIMER(timer, msg) \
-//   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+#include "gpu-utils/device_context.cuh"
+#include "gpu-utils/error_handler.cuh"
+#include "gpu-utils/modifiers.cuh"
+#include "hash/hash.cuh"
 
+#include "hash/blake2s/blake2s.cuh"
+
+
+
+using namespace hash;
+
+namespace blake2s {
 #define BLAKE2S_ROUNDS 10
 #define BLAKE2S_BLOCK_LENGTH 64
 #define BLAKE2S_CHAIN_SIZE 8
@@ -261,3 +265,4 @@ void mcm_cuda_blake2s_hash_batch(BYTE *key, WORD keylen, BYTE *in, WORD inlen, B
     cudaFree(cuda_outdata);
 }
 }
+} // namespace blake2s
