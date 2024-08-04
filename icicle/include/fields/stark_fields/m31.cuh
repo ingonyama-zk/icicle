@@ -285,3 +285,12 @@ struct std::hash<m31::MersenneField<CONFIG>> {
     return hash;
   }
 };
+
+template <class CONFIG>
+struct SharedMemory<m31::MersenneField<CONFIG>> {
+  __device__ m31::MersenneField<CONFIG>* getPointer()
+  {
+    extern __shared__ m31::MersenneField<CONFIG> s_scalar_[];
+    return s_scalar_;
+  }
+};

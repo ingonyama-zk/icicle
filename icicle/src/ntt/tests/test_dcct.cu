@@ -42,11 +42,11 @@ int main(int argc, char** argv)
   cudaEvent_t ntt_start, ntt_stop;
   float icicle_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 4;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 6;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
-  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 150;
+  int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
   const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
 
@@ -83,21 +83,20 @@ int main(int argc, char** argv)
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
 
-  return 0;
   // cpu allocation
   auto CpuScalars = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
-  auto CpuOutputOld = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
+  auto CpuOutput = std::make_unique<test_data[]>(NTT_SIZE * BATCH_SIZE);
 
   // gpu allocation
-  scalar_t *GpuScalars, *GpuOutputOld;
+  scalar_t *GpuScalars, *GpuOutput;
   scalar_t* GpuScalarsTransposed;
   CHK_IF_RETURN(cudaMalloc(&GpuScalars, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
   CHK_IF_RETURN(cudaMalloc(&GpuScalarsTransposed, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
-  CHK_IF_RETURN(cudaMalloc(&GpuOutputOld, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
+  CHK_IF_RETURN(cudaMalloc(&GpuOutput, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
 
   // init inputs
-  // incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
-  random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  // random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
@@ -109,11 +108,11 @@ int main(int argc, char** argv)
   auto iterations = 1;
 
   // OLD
+  ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
   CHK_IF_RETURN(cudaEventRecord(ntt_start, ntt_config.ctx.stream));
-  ntt_config.ntt_algorithm = ntt::NttAlgorithm::Radix2;
   for (size_t i = 0; i < iterations; i++) {
     CHK_IF_RETURN(
-      ntt::ntt(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutputOld));
+      ntt::ntt(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutput));
   }
   CHK_IF_RETURN(cudaEventRecord(ntt_stop, ntt_config.ctx.stream));
   CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
@@ -122,17 +121,26 @@ int main(int argc, char** argv)
   printf("Old Runtime=%0.3f MS\n", icicle_time / iterations);
 
   CHK_IF_RETURN(
-    cudaMemcpy(CpuOutputOld.get(), GpuOutputOld, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
+    cudaMemcpy(CpuOutput.get(), GpuOutput, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
+  // std::cout << "Input" << std::endl;
+  // for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
+  //   std::cout << CpuScalars[i] << std::endl;
+  // }
+
+  std::cout << "Output" << std::endl;
+  for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
+    std::cout << CpuOutput[i] << std::endl;
+  }
   bool success = true;
   // for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
   //   // if (i%64==0) printf("\n");
-  //   if (CpuOutputNew[i] != CpuOutputOld[i]) {
+  //   if (CpuOutputNew[i] != CpuOutput[i]) {
   //     success = false;
-  //     // std::cout << i << " ref " << CpuOutputOld[i] << " != " << CpuOutputNew[i] << std::endl;
+  //     // std::cout << i << " ref " << CpuOutput[i] << " != " << CpuOutputNew[i] << std::endl;
   //     // break;
   //   } else {
-  //     // std::cout << i << " ref " << CpuOutputOld[i] << " == " << CpuOutputNew[i] << std::endl;
+  //     // std::cout << i << " ref " << CpuOutput[i] << " == " << CpuOutputNew[i] << std::endl;
   //     // break;
   //   }
   // }
@@ -140,7 +148,7 @@ int main(int argc, char** argv)
   printf("%s\n", success_str);
 
   CHK_IF_RETURN(cudaFree(GpuScalars));
-  CHK_IF_RETURN(cudaFree(GpuOutputOld));
+  CHK_IF_RETURN(cudaFree(GpuOutput));
 
   ntt::release_domain<test_scalar>(ntt_config.ctx);
 

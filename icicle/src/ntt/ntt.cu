@@ -469,16 +469,14 @@ namespace ntt {
 #ifdef DCCT
       // allocate and calculate twiddles on GPU
       // N * (2 ** (N - 1))
-      size_t number_of_twiddles = domain.max_log_size * (int)pow(2, domain.max_log_size - 1);
-      CHK_IF_RETURN(cudaMallocManaged(&domain.twiddles, number_of_twiddles * sizeof(S)));
-      CHK_IF_RETURN(cudaMemset(domain.twiddles, 0, number_of_twiddles * sizeof(S)));
+      size_t number_of_twiddles = domain.max_log_size * (1 << (domain.max_log_size - 1));
+      CHK_IF_RETURN(cudaMalloc(&domain.basic_twiddles, number_of_twiddles * sizeof(S)));
 
       CHK_IF_RETURN(mxntt::generate_twiddles_dcct(
-        primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
-        ctx.stream));
+        primitive_root, domain.basic_twiddles, domain.max_log_size, ctx.stream));
 
       S* tmp = static_cast<S*>(malloc(number_of_twiddles * sizeof(S)));
-      cudaMemcpy(tmp, domain.twiddles, number_of_twiddles * sizeof(S), cudaMemcpyDeviceToHost);
+      cudaMemcpy(tmp, domain.basic_twiddles, number_of_twiddles * sizeof(S), cudaMemcpyDeviceToHost);
       for (size_t i = 0; i < number_of_twiddles; i++) {
         std::cout << tmp[i] << std::endl;
       }
@@ -752,6 +750,7 @@ namespace ntt {
                               ? (is_inverse ? domain.fast_basic_twiddles_inv : domain.fast_basic_twiddles)
                               : domain.basic_twiddles;
         S* linear_twiddles = domain.twiddles; // twiddles organized as [1,w,w^2,...]
+        std::cout << "Calling mixed radix" << std::endl;
         CHK_IF_RETURN(mxntt::mixed_radix_ntt(
           d_input, d_output, twiddles, internal_twiddles, basic_twiddles, linear_twiddles, size, domain.max_log_size,
           batch_size, config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index,

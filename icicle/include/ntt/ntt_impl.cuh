@@ -11,9 +11,7 @@ namespace mxntt {
   template <typename S, typename R>
   cudaError_t generate_twiddles_dcct(
     const R& basic_root,
-    S* external_twiddles,
-    S*& internal_twiddles,
-    S*& basic_twiddles,
+    S* basic_twiddles,
     uint32_t log_size,
     cudaStream_t& stream);
 #else

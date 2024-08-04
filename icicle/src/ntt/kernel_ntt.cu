@@ -379,6 +379,153 @@ namespace mxntt {
       engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
   }
 
+#define DCCT
+#ifdef DCCT
+  template <typename E, typename S>
+  __launch_bounds__(64) __global__ void ntt64_dcct(
+    const E* in,
+    E* out,
+    S* external_twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
+    uint32_t log_size,
+    uint32_t tw_log_size,
+    uint32_t columns_batch_size,
+    uint32_t nof_ntt_blocks,
+    uint32_t data_stride,
+    uint32_t log_data_stride,
+    uint32_t twiddle_stride,
+    bool strided,
+    uint32_t stage_num,
+    bool inv,
+    bool dit,
+    bool fast_tw)
+  {
+    DCCTEngine<E, S> engine;
+    stage_metadata s_meta;
+    SharedMemory<E> smem;
+    E* shmem = smem.getPointer();
+
+    s_meta.th_stride = 8;
+    s_meta.ntt_block_size = 64;
+    s_meta.ntt_block_id = columns_batch_size ? blockIdx.x / ((columns_batch_size + 7) / 8)
+                                             : (blockIdx.x << 3) + (strided ? (threadIdx.x & 0x7) : (threadIdx.x >> 3));
+    s_meta.ntt_inp_id = strided ? (threadIdx.x >> 3) : (threadIdx.x & 0x7);
+
+    s_meta.batch_id =
+      columns_batch_size ? (threadIdx.x & 0x7) + ((blockIdx.x % ((columns_batch_size + 7) / 8)) << 3) : 0;
+    if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
+      return;
+
+    if (columns_batch_size)
+      engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+    else
+      engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+
+    // if (threadIdx.x == 0) {
+      printf(
+        "T BEFORE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[0].limbs_storage.limbs[1],
+        engine.X[0].limbs_storage.limbs[2],
+        engine.X[0].limbs_storage.limbs[3],
+        engine.X[0].limbs_storage.limbs[4],
+        engine.X[0].limbs_storage.limbs[5],
+        engine.X[0].limbs_storage.limbs[6],
+        engine.X[0].limbs_storage.limbs[7]
+      );
+    // }
+    engine.loadBasicTwiddlesGeneric64(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, false);
+#pragma unroll 1
+    for (uint32_t phase = 0; phase < 2; phase++) {
+      engine.ntt8();
+
+      // if (threadIdx.x == 0) {
+        printf(
+          "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+          threadIdx.x,
+          engine.X[0].limbs_storage.limbs[0],
+          engine.X[0].limbs_storage.limbs[1],
+          engine.X[0].limbs_storage.limbs[2],
+          engine.X[0].limbs_storage.limbs[3],
+          engine.X[0].limbs_storage.limbs[4],
+          engine.X[0].limbs_storage.limbs[5],
+          engine.X[0].limbs_storage.limbs[6],
+          engine.X[0].limbs_storage.limbs[7]
+        );
+      // }
+      if (phase == 0) {
+        engine.loadBasicTwiddlesGeneric64(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, true);
+        engine.SharedData64Columns8(shmem, true, false, strided); // store
+        __syncthreads();
+        engine.SharedData64Rows8(shmem, false, false, strided); // load
+      }
+    }
+
+    if (columns_batch_size)
+      engine.storeGlobalDataColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+    else
+      engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
+  }
+
+  template <typename E, typename S>
+  __launch_bounds__(64) __global__ void ntt16_dcct(
+    const E* in,
+    E* out,
+    S* external_twiddles,
+    S* internal_twiddles,
+    S* basic_twiddles,
+    uint32_t log_size,
+    uint32_t tw_log_size,
+    uint32_t columns_batch_size,
+    uint32_t nof_ntt_blocks,
+    uint32_t data_stride,
+    uint32_t log_data_stride,
+    uint32_t twiddle_stride,
+    bool strided,
+    uint32_t stage_num,
+    bool inv,
+    bool dit,
+    bool fast_tw)
+  {
+    DCCTEngine<E, S> engine;
+    stage_metadata s_meta;
+
+    SharedMemory<E> smem;
+    E* shmem = smem.getPointer();
+
+    s_meta.th_stride = 2;
+    s_meta.ntt_block_size = 16;
+    s_meta.ntt_block_id = columns_batch_size
+                            ? blockIdx.x / ((columns_batch_size + 31) / 32)
+                            : (blockIdx.x << 5) + (strided ? (threadIdx.x & 0x1f) : (threadIdx.x >> 1));
+    s_meta.ntt_inp_id = strided ? (threadIdx.x >> 5) : (threadIdx.x & 0x1);
+
+    s_meta.batch_id =
+      columns_batch_size ? (threadIdx.x & 0x1f) + ((blockIdx.x % ((columns_batch_size + 31) / 32)) << 5) : 0;
+    if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
+      return;
+
+    engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv);
+
+    if (columns_batch_size)
+      engine.loadGlobalData16ColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+    else
+      engine.loadGlobalData16(in, data_stride, log_data_stride, strided, s_meta);
+
+    engine.ntt2_4();
+    engine.SharedData16Columns2_4(shmem, true, false, strided); // store
+    __syncthreads();
+    engine.SharedData16Rows8(shmem, false, false, strided); // load
+    engine.ntt8();
+    if (columns_batch_size)
+      engine.storeGlobalDataColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+    else
+      engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
+  }
+#endif
+
   template <typename E, typename S>
   __launch_bounds__(64) __global__ void ntt16(
     const E* in,
@@ -531,23 +678,20 @@ namespace mxntt {
     data[tid] = data[tid] * norm_factor;
   }
 
-#define DCCT
 #ifdef DCCT
   template <typename S, typename R>
   __global__ void
-  generate_dcct_twiddles_layer(S* external_twiddles, R basic_root, R step, uint32_t stage, bool is_first)
+  generate_dcct_twiddles_layer(S* external_twiddles, R basic_root, R step, uint32_t stage, uint32_t stage_rev, bool is_first)
   {
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    R twiddle = basic_root * (R::pow(step, bit_rev(tid, stage)));
+    R twiddle = basic_root * (R::pow(step, bit_rev(tid / (1 << stage_rev), stage)));
     external_twiddles[tid] = is_first ? twiddle.imaginary : twiddle.real;
   }
 
   template <typename S, typename R>
   cudaError_t generate_twiddles_dcct(
     const R& basic_root,
-    S* external_twiddles,
-    S*& internal_twiddles,
-    S*& basic_twiddles,
+    S* basic_twiddles,
     uint32_t log_size,
     cudaStream_t& stream)
   {
@@ -555,21 +699,21 @@ namespace mxntt {
     R temp_root = basic_root;
 
     int stage = log_size - 1;
-    S* stage_ptr = external_twiddles + (stage * (1 << stage));
-    int NOF_BLOCKS = (stage >= 8) ? (1 << (stage - 8)) : 1;
-    int NOF_THREADS = (stage >= 8) ? 256 : (1 << stage);
+    uint32_t stage_rev = 0;
+    S* stage_ptr = basic_twiddles;
+    const int NOF_BLOCKS = (stage >= 8) ? (1 << (stage - 8)) : 1;
+    const int NOF_THREADS = (stage >= 8) ? 256 : (1 << stage);
     // std::cout << "Stage: " << stage << "; nof_blocks: " << NOF_BLOCKS << "; nof_threads: " << NOF_THREADS << "; step:
     // " << step << "; temp_root: " << temp_root <<"; stage_ptr: " << stage_ptr << std::endl;
-    generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, temp_root, step, stage, true);
+    generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, temp_root, step, stage, stage_rev, true);
     CHK_IF_RETURN(cudaPeekAtLastError());
 
     for (--stage; stage >= 0; stage--) {
-      stage_ptr -= 1 << (log_size - 1);
-      NOF_BLOCKS = (stage >= 8) ? (1 << (stage - 8)) : 1;
-      NOF_THREADS = (stage >= 8) ? 256 : (1 << stage);
+      stage_ptr += 1 << (log_size - 1);
+      stage_rev++;
       // std::cout << "Stage: " << stage << "; nof_blocks: " << NOF_BLOCKS << "; nof_threads: " << NOF_THREADS << ";
       // step: " << step << "; temp_root: " << temp_root <<"; stage_ptr: " << stage_ptr<< std::endl;
-      generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, temp_root, step, stage, false);
+      generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, temp_root, step, stage, stage_rev, false);
       CHK_IF_RETURN(cudaPeekAtLastError());
 
       temp_root = R::sqr(temp_root);
@@ -578,7 +722,7 @@ namespace mxntt {
 
     return CHK_LAST();
   }
-#else
+// #else
   template <typename S>
   __global__ void generate_base_table(S basic_root, S* base_table, uint32_t skip)
   {
@@ -827,9 +971,15 @@ namespace mxntt {
       const int NOF_BLOCKS =
         columns_batch ? ((batch_size + 31) / 32) : (2 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
       if (dit) {
+#ifdef DCCT
+        ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
+#else
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
           columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
+#endif
       } else { // dif
         ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
@@ -862,9 +1012,18 @@ namespace mxntt {
       const int NOF_THREADS = columns_batch ? 64 : min(64, 8 * batch_size);
       const int NOF_BLOCKS =
         columns_batch ? ((batch_size + 7) / 8) : ((8 * batch_size + NOF_THREADS - 1) / NOF_THREADS);
+#ifdef DCCT
+      std::cout << NOF_BLOCKS << " " << NOF_THREADS << std::endl;
+      ntt64_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+        in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+        columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
+      CHK_IF_RETURN(cudaPeekAtLastError());
+      CHK_IF_RETURN(cudaDeviceSynchronize());
+#else
       ntt64<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
         in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
         columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit, fast_tw);
+#endif
       if (normalize)
         normalize_kernel<<<batch_size, 64, 0, cuda_stream>>>(out, S::inv_log_size(6), (1UL << log_size) * batch_size);
       return CHK_LAST();
@@ -1030,6 +1189,7 @@ namespace mxntt {
       d_input = d_output;
     }
 
+    #ifndef DCCT
     if (reverse_input != eRevType::None) {
       const bool is_reverse_in_place = (d_input == d_output);
       if (is_reverse_in_place) {
@@ -1043,11 +1203,14 @@ namespace mxntt {
       is_normalize = false;
       d_input = d_output;
     }
+    #endif
 
+    std::cout << "Entering large ntt" << std::endl;
     // inplace ntt
     CHK_IF_RETURN(large_ntt(
       d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size,
       columns_batch, is_inverse, (is_normalize && reverse_output == eRevType::None), dit, fast_tw, cuda_stream));
+    CHK_IF_RETURN(cudaDeviceSynchronize());
 
     if (reverse_output != eRevType::None) {
       reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
@@ -1067,9 +1230,7 @@ namespace mxntt {
 #ifdef DCCT
   template cudaError_t generate_twiddles_dcct(
     const quad_extension_t& basic_root,
-    scalar_t* external_twiddles,
-    scalar_t*& internal_twiddles,
-    scalar_t*& basic_twiddles,
+    scalar_t* basic_twiddles,
     uint32_t log_size,
     cudaStream_t& stream);
 #else
