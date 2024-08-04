@@ -5,9 +5,6 @@ is_result_on_device
 is_in_montgomery_form
 (is_async isn't checked)
 
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
 
 ## Key-Takeaway
 
