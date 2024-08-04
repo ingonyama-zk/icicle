@@ -11,12 +11,7 @@
 using namespace hash;
 
 namespace blake2s {
-#define BLAKE2S_ROUNDS 10
-#define BLAKE2S_BLOCK_LENGTH 64
-#define BLAKE2S_CHAIN_SIZE 8
-#define BLAKE2S_CHAIN_LENGTH (BLAKE2S_CHAIN_SIZE * sizeof(uint32_t))
-#define BLAKE2S_STATE_SIZE 16
-#define BLAKE2S_STATE_LENGTH (BLAKE2S_STATE_SIZE * sizeof(uint32_t))
+
 
 typedef struct {
     WORD digestlen;
@@ -82,7 +77,7 @@ __constant__ uint8_t BLAKE2S_SIGMA[10][16] = {
     { 10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0 }
 };
 
-__device__ uint32_t cuda_blake2s_leuint32(BYTE *in) {
+__device__ uint32_t cuda_blake2s_leuint32(const BYTE *in) {
     uint32_t a;
     memcpy(&a, in, 4);
     return a;
@@ -122,7 +117,7 @@ __device__ __forceinline__ void cuda_blake2s_init_state(cuda_blake2s_ctx_t *ctx)
     // ctx->state[14] = BLAKE2S_IVS[7];
 }
 
-__device__ __forceinline__ void cuda_blake2s_compress(cuda_blake2s_ctx_t *ctx, BYTE *in, WORD inoffset) {
+__device__ __forceinline__ void cuda_blake2s_compress(cuda_blake2s_ctx_t *ctx, const BYTE *in, WORD inoffset) {
     cuda_blake2s_init_state(ctx);
     uint32_t m[16] = { 0 };
     for (int j = 0; j < 16; j++)
@@ -167,7 +162,7 @@ __device__ void cuda_blake2s_init(cuda_blake2s_ctx_t *ctx, BYTE *key, WORD keyle
     ctx->pos = (keylen > 0) ? BLAKE2S_BLOCK_LENGTH : 0;
 }
 
-__device__ void cuda_blake2s_update(cuda_blake2s_ctx_t *ctx, BYTE *in, LONG inlen) {
+__device__ void cuda_blake2s_update(cuda_blake2s_ctx_t *ctx, const BYTE *in, LONG inlen) {
     if (inlen == 0)
         return;
 
@@ -225,12 +220,12 @@ __device__ void cuda_blake2s_final(cuda_blake2s_ctx_t *ctx, BYTE *out) {
     }
 }
 
-__global__ void kernel_blake2s_hash(BYTE *indata, WORD inlen, BYTE *outdata, WORD n_batch, WORD BLAKE2S_BLOCK_SIZE) {
+__global__ void kernel_blake2s_hash(const BYTE *indata, WORD inlen, BYTE *outdata, WORD n_batch, WORD BLAKE2S_BLOCK_SIZE) {
     WORD thread = blockIdx.x * blockDim.x + threadIdx.x;
     if (thread >= n_batch) {
         return;
     }
-    BYTE *in = indata + thread * inlen;
+    const BYTE *in = indata + thread * inlen;
     BYTE *out = outdata + thread * BLAKE2S_BLOCK_SIZE;
     CUDA_BLAKE2S_CTX ctx = c_CTX;
     cuda_blake2s_update(&ctx, in, inlen);
@@ -265,4 +260,36 @@ void mcm_cuda_blake2s_hash_batch(BYTE *key, WORD keylen, BYTE *in, WORD inlen, B
     cudaFree(cuda_outdata);
 }
 }
+
+cudaError_t Blake2s::run_hash_many_kernel(
+    const BYTE* input,
+    BYTE*       output,
+    WORD        number_of_states,
+    WORD        input_len,
+    WORD        output_len,
+    const device_context::DeviceContext& ctx) const
+    {
+        BYTE key[32] = "";  // Null key
+        WORD keylen = strlen((char *)key);
+        const WORD BLAKE2S_BLOCK_SIZE = (output_len >> 3);
+        CUDA_BLAKE2S_CTX blake_ctx;
+        cpu_blake2s_init(&blake_ctx, key, keylen, output_len);
+        cudaMemcpyToSymbol(c_CTX, &blake_ctx, sizeof(CUDA_BLAKE2S_CTX), 0, cudaMemcpyHostToDevice);
+    
+        WORD thread = 256;
+        WORD block = (number_of_states + thread - 1) / thread;
+
+        kernel_blake2s_hash<<<block, thread, 0, ctx.stream>>>(input, input_len, output, number_of_states, BLAKE2S_BLOCK_SIZE);
+        // cudaDeviceSynchronize();
+        // cudaError_t error = cudaGetLastError();
+        // if (error != cudaSuccess) {
+        //     printf("Error cuda blake2s hash: %s \n", cudaGetErrorString(error));
+        // }
+
+        CHK_IF_RETURN(cudaPeekAtLastError());
+        return CHK_LAST();
+
+    }
+
+
 } // namespace blake2s

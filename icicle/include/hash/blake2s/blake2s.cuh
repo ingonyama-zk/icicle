@@ -24,6 +24,31 @@
  using namespace hash;
 
 namespace blake2s{
+    #define BLAKE2S_ROUNDS 10
+    #define BLAKE2S_BLOCK_LENGTH 64
+    #define BLAKE2S_CHAIN_SIZE 8
+    #define BLAKE2S_CHAIN_LENGTH (BLAKE2S_CHAIN_SIZE * sizeof(uint32_t))
+    #define BLAKE2S_STATE_SIZE 16
+    #define BLAKE2S_STATE_LENGTH (BLAKE2S_STATE_SIZE * sizeof(uint32_t))
+
+    class Blake2s : public Hasher<BYTE, BYTE>
+    {
+    public:
+      cudaError_t run_hash_many_kernel(
+        const BYTE* input,
+        BYTE*       output,
+        WORD        number_of_states,
+        WORD        input_len,
+        WORD        output_len,
+        const device_context::DeviceContext& ctx) const override;
+        
+  
+      Blake2s()
+          : Hasher<BYTE, BYTE>(BLAKE2S_STATE_SIZE, BLAKE2S_STATE_SIZE, BLAKE2S_STATE_SIZE, 0)
+      {
+      }
+    };
+
  extern "C" {
  void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE * in, WORD inlen, BYTE * out, WORD n_outbit, WORD n_batch);
  }
