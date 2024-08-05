@@ -142,7 +142,8 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
       config.batch_size = batch;
       config.are_points_montgomery_form = false;
       config.are_scalars_montgomery_form = false;
-      config.precompute_factor = precompute_factor;
+      // config.precompute_factor = precompute_factor;
+      std::cout << "Precomput: " << config.precompute_factor << '\n';
 
       ConfigExtension ext;
       ext.set("c", c);
