@@ -77,131 +77,43 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
   return status;
 }
 
-template <typename T>
-void store_inputs(T* arr, const int arr_size, const std::string fname)
-{
-  std::ofstream out_file(fname);
-  if (!out_file.is_open()) {
-    std::cerr << "Failed to open " << fname << " for writing.\n";
-    return;
+  template <typename T>
+  void store_inputs(T* arr, const int arr_size, const std::string fname)
+  {
+    std::ofstream out_file(fname);
+    if (!out_file.is_open()) {
+      std::cerr << "Failed to open " << fname << " for writing.\n";
+      return;
+    }
+    for (int i = 0; i < arr_size; i++) {
+      out_file.write(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+    }
+    out_file.close();
   }
-  for (int i = 0; i < arr_size; i++) {
-    out_file.write(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+
+  void get_inputs(affine_t* bases, scalar_t* scalars, const int n) // TODO add precompute factor
+  {
+    // Scalars
+    std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n) + ".dat";
+    if (!read_inputs<scalar_t>(scalars, n, scalar_file)) {
+      std::cout << "Generating scalars.\n";
+      scalar_t::rand_host_many(scalars, n);
+      store_inputs<scalar_t>(scalars, n, scalar_file);
+    }
+    // Bases
+    std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
+    if (!read_inputs<affine_t>(bases, n, base_file)) {
+      std::cout << "Generating bases.\n";
+      projective_t::rand_host_many(bases, n);
+      store_inputs<affine_t>(bases, n, base_file);
+    }
   }
-  out_file.close();
-}
 
-void get_inputs(affine_t* bases, scalar_t* scalars, const int n) // TODO add precompute factor
-{
-  // Scalars
-  std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n) + ".dat";
-  if (!read_inputs<scalar_t>(scalars, n, scalar_file)) {
-    std::cout << "Generating scalars.\n";
-    scalar_t::rand_host_many(scalars, n);
-    store_inputs<scalar_t>(scalars, n, scalar_file);
-  }
-  // Bases
-  std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
-  if (!read_inputs<affine_t>(bases, n, base_file)) {
-    std::cout << "Generating bases.\n";
-    projective_t::rand_host_many(bases, n);
-    store_inputs<affine_t>(bases, n, base_file);
-  }
-}
-
-// TEST_F(CurveApiTest, MSM)
-// {
-//   const int logn = 12;
-//   const int N = 1 << logn;
-//   auto scalars = std::make_unique<scalar_t[]>(N);
-//   auto bases = std::make_unique<affine_t[]>(N);
-
-//   bool conv_mont = false;
-//   get_inputs(bases.get(), scalars.get(), N);
-
-//   if (conv_mont) {
-//     for (int i = 0; i < N; i++)
-//       bases[i] = affine_t::to_montgomery(bases[i]);
-//   }
-//   projective_t result_cpu{};
-//   projective_t result_cpu_dbl_n_add{};
-//   projective_t result_cpu_ref{};
-
-//   projective_t result{};
-
-//   auto run = [&](const char* dev_type, projective_t* result, const char* msg, bool measure, int iters) {
-//     Device dev = {dev_type, 0};
-//     icicle_set_device(dev);
-
-//     const int log_p = 2;
-//     const int c = std::max(logn, 8) - 1;
-//     const int pcf = 1 << log_p;
-
-//     const int n_threads = 8;
-//     const int tasks_per_thread = 2;
-
-//     auto config = default_msm_config();
-//     config.ext.set("c", c);
-//     config.ext.set("n_threads", n_threads);
-//     config.ext.set("tasks_per_thread", tasks_per_thread);
-//     config.precompute_factor = pcf;
-//     config.are_scalars_montgomery_form = false;
-//     config.are_points_montgomery_form = conv_mont;
-
-//     auto pc_config = default_msm_pre_compute_config();
-//     pc_config.ext.set("c", c);
-//     pc_config.ext.set("is_mont", config.are_points_montgomery_form);
-
-//     auto precomp_bases = std::make_unique<affine_t[]>(N * pcf);
-//     // TODO update cmake to include directory?
-//     std::string precomp_fname =
-//       "build/generated_data/precomp_N" + std::to_string(N) + "_pcf" + std::to_string(pcf) + ".dat";
-//     if (!read_inputs<affine_t>(precomp_bases.get(), N * pcf, precomp_fname)) {
-//       std::cout << "Precomputing bases." << '\n';
-//       msm_precompute_bases(bases.get(), N, pcf, pc_config, precomp_bases.get());
-//       store_inputs<affine_t>(precomp_bases.get(), N * pcf, precomp_fname);
-//     }
-
-//     // int test_size = 10000;
-//     // std::cout << "NUm additions:\t" << test_size << '\n';
-//     // scalar_t* a = new scalar_t[test_size];
-//     // scalar_t* b = new scalar_t[test_size];
-//     // scalar_t* apb = new scalar_t[test_size];
-//     // {
-//     //   scalar_t* bases_p = scalars.get();
-//     //   for (int i = 0; i < test_size; i++)
-//     //   {
-//     //     a[i] = bases_p[i];
-//     //     b[i] = bases_p[i + test_size];
-//     //     apb[i] = scalar_t::zero();
-//     //   }
-//     // }
-
-//     START_TIMER(MSM_sync)
-//     for (int i = 0; i < iters; ++i) {
-//       msm(scalars.get(), precomp_bases.get(), N, config, result);
-//     }
-//     // for (int i = 0; i < test_size; i++)
-//     // {
-//     //   apb[i] = a[i] * b[i];
-//     // }
-//     END_TIMER(MSM_sync, msg, measure);
-//   };
-
-//   // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
-//   int iters = 1;
-//   run("CPU", &result_cpu, "CPU msm", VERBOSE /*=measure*/, iters /*=iters*/);
-//   run("CPU_REF", &result_cpu_ref, "CPU_REF msm", VERBOSE /*=measure*/, iters /*=iters*/);
-
-//   std::cout << projective_t::to_affine(result_cpu) << std::endl;
-//   std::cout << projective_t::to_affine(result_cpu_ref) << std::endl;
-//   ASSERT_EQ(result_cpu, result_cpu_ref);
-// }
 
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 8;
+    const int logn = 17;
     const int batch = 1; // TODO test batch
     const int N = 1 << logn;
     const int precompute_factor = 4;
@@ -210,9 +122,11 @@ void get_inputs(affine_t* bases, scalar_t* scalars, const int n) // TODO add pre
     const int total_nof_elemets = batch * N;
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
+    std::cout << "Starting MSM\n";
 
-    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
-    P::rand_host_many(bases.get(), N);
+    // scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
+    // P::rand_host_many(bases.get(), N);
+    get_inputs(bases.get(), scalars.get(), N);
 
     auto result_main = std::make_unique<P[]>(batch);
     auto result_ref = std::make_unique<P[]>(batch);
@@ -361,6 +275,7 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 
 int main(int argc, char** argv)
 {
+  std::cout << "Start\n\n";
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

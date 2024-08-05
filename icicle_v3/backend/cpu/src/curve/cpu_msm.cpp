@@ -269,86 +269,6 @@ eIcicleError cpu_msm_single_thread(
 }
 
 template <typename Point>
-ThreadTask<Point>::ThreadTask() : return_idx(-1), p1(Point::zero()), p2(Point::zero()), result(Point::zero())
-{
-}
-
-template <typename Point>
-ThreadTask<Point>::ThreadTask(
-  const ThreadTask<Point>& other) // TODO delete when changing to task array instead of vector
-    : return_idx(-1), p1(Point::zero()), p2(Point::zero()), result(Point::zero())
-{
-}
-
-template <typename Point>
-void ThreadTask<Point>::run(int tid, std::vector<int>& idle_idxs, bool& kill_thread)
-{
-  bool rdy_status = in_ready.load(std::memory_order_acquire);
-  if (!rdy_status) idle_idxs.push_back(pidx); // TODO remove when finishing debugging
-  while (!rdy_status) {
-    std::this_thread::sleep_for(std::chrono::microseconds(10));
-    rdy_status = in_ready.load(std::memory_order_acquire);
-    if (kill_thread) return;
-  }
-  in_ready.store(false, std::memory_order_release);
-  result = p1 + p2;
-  out_done.store(true, std::memory_order_release);
-}
-
-template <typename Point>
-void ThreadTask<Point>::new_task(const int in_idx, const Point& in_p1, const Point& in_p2)
-{
-  out_done.store(false, std::memory_order_release);
-  return_idx = in_idx;
-  p1 = in_p1; // Copied by value to not be linked to the original bucket
-  p2 = in_p2;
-  in_ready.store(true, std::memory_order_release);
-}
-
-template <typename Point>
-void ThreadTask<Point>::chain_task(const Point in_p2)
-{
-  // std::unique_lock<std::mutex> temp_lock(idle_mtx);
-  out_done.store(false, std::memory_order_release);
-  p2 = in_p2;
-  p1 = result;
-  in_ready.store(true, std::memory_order_release);
-  // idle.notify_one();
-}
-
-template <typename Point>
-WorkThread<Point>::~WorkThread()
-{
-  kill_thread = true;
-  thread.join();
-}
-
-template <typename Point>
-void WorkThread<Point>::thread_setup(const int tid, const int task_per_thread)
-{
-  this->tid = tid;
-  for (int j = 0; j < task_per_thread; j++)
-    tasks.push_back(ThreadTask<Point>()); // TODO change to array
-  thread = std::thread(
-    &WorkThread<Point>::add_ec_tasks, this, std::ref(kill_thread)); // TODO kill_thread is accessible from this
-}
-
-template <typename Point>
-void WorkThread<Point>::add_ec_tasks(bool& kill_thread)
-{
-  while (!kill_thread) {
-    int i = 0;
-    for (ThreadTask<Point>& task : tasks) {
-      task.run(tid, idle_idxs, kill_thread);
-#ifdef DEBUG_PRINTS
-      if (tid == 2) std::cout << i << ", bkt_idx=" << tasks[task_round_robin].return_idx << "\tDone\n";
-      i++;
-#endif
-    }
-  }
-}
-
-template <typename Point>
 Point int_mult(Point p, int x)
 {
   if (Point::is_zero(p) || x == 0) return Point::zero();
@@ -370,14 +290,13 @@ Msm<Point>::Msm(const MSMConfig& config)
       c(config.ext->get<int>("c")), // TODO calculate instead of param
       precomp_f(config.precompute_factor), num_bms(((sca_test::NBITS - 1) / (config.precompute_factor * c)) + 1),
       are_scalars_mont(config.are_scalars_montgomery_form), are_points_mont(config.are_points_montgomery_form),
-      kill_threads(false),
+      manager(config.ext->get<int>("n_threads")),
 #ifdef DEBUG_PRINTS
       trace_f("trace_bucket_multi.txt"), // TODO delete
 #endif
-      thread_round_robin(0), num_bkts(1 << (c - 1)),
-      log_num_segments(std::max((int)std::ceil(std::log2(n_threads / num_bms)), 0)),
-      num_bm_segments(1 << log_num_segments), segment_size(num_bkts >> log_num_segments),
-      tasks_per_thread(std::max(((int)(num_bms / n_threads)) << (log_num_segments + 1), 2))
+      num_bkts(1 << (c - 1)),
+      log_num_segments(std::max((int)std::ceil(std::log2(n_threads * TASKS_PER_THREAD / (2 * num_bms))), 0)),
+      num_bm_segments(1 << log_num_segments), segment_size(num_bkts >> log_num_segments)
 {
   // Phase 1
   bkts = new Point[num_bms * num_bkts];
@@ -395,9 +314,9 @@ Msm<Point>::Msm(const MSMConfig& config)
 
   bm_sums = new Point[num_bms];
 
-  threads = new WorkThread<Point>[n_threads];
-  for (int i = 0; i < n_threads; i++)
-    threads[i].thread_setup(i, tasks_per_thread);
+  // threads = new WorkThread<Point>[n_threads];
+  // for (int i = 0; i < n_threads; i++)
+  //   threads[i].thread_setup(i, tasks_per_thread);
 
 #ifdef DEBUG_PRINTS
   if (!trace_f.good()) { throw std::invalid_argument("Can't open file"); } // TODO remove log
@@ -410,12 +329,11 @@ Msm<Point>::~Msm()
   std::cout << "\n\nDestroying msm object at the end of the run\n\n"; // COMMENT why am I not seeing it one the console?
                                                                       // Isn't the destructor automatically called when
                                                                       // msm goes out of scope?
-  kill_threads = true; // TODO check if it is used after kill_thread has been added to WorkThread destructor
 // for (int i = 0; i < n_threads; i++) threads[i].thread.join();
 #ifdef DEBUG_PRINTS
   trace_f.close();
 #endif
-  delete[] threads;
+  // delete[] threads;
   delete[] bkts;
   delete[] bkts_occupancy;
 
@@ -445,82 +363,117 @@ void Msm<Point>::wait_for_idle()
    * @param bkts_occupancy - boolean array holding the bkts_occupancy of each bucket
    * @return boolean, a flag indicating all threads are idle
    */
-  bool all_threads_idle = false;
+  ECaddTask<Point, Point>* task = nullptr;
+  manager.get_completed_task(task);
   int count = 0;
-  while (!all_threads_idle) {
-    all_threads_idle = true;
-
-    for (int i = 0; i < n_threads; i++) {
-      int og_task_round_robin = threads[i].task_round_robin;
-
+  while (task != nullptr)
+  {
+    // std::cout << count << ":\tNew completed task.\tstatus=" << task->status << " (Idle = " << task->is_idle() << ")" << "\n";
+    count++;
+    if (bkts_occupancy[task->return_idx])
+    {
+      task->p1 = task->result;
+      task->p2 = bkts[task->return_idx];
+      bkts_occupancy[task->return_idx] = false;
 #ifdef DEBUG_PRINTS
-      trace_f << "Finishing thread " << i << ", starting at task: " << og_task_round_robin << '\n';
+      trace_f << '#' << task->return_idx << ":\tFCollision addition - bkts' cell:\t"
+              << Point::to_affine(bkts[task->return_idx]).x << "\t(With add res point:\t"
+              << Point::to_affine(task->result).x << " = " << Point::to_affine(bkts[task->return_idx] + task->result).x
+              << ")\t(" << task << ")\n";
 #endif
-
-      for (int j = og_task_round_robin; j < og_task_round_robin + tasks_per_thread; j++) {
-        int task_idx = j;
-        if (task_idx >= tasks_per_thread) task_idx -= tasks_per_thread;
-
-        // For readability
-        ThreadTask<Point>& task = threads[i].tasks[task_idx];
-        if (task.out_done.load(std::memory_order_acquire)) {
-          if (task.return_idx >= 0) {
-            if (bkts_occupancy[task.return_idx]) {
-#ifdef DEBUG_PRINTS
-              trace_f << '#' << task.return_idx << ":\tFCollision addition - bkts' cell:\t"
-                      << Point::to_affine(bkts[task.return_idx]).x << "\t(With add res point:\t"
-                      << Point::to_affine(task.result).x << " = "
-                      << Point::to_affine(bkts[task.return_idx] + task.result).x << ")\t(" << i << ',' << task_idx
-                      << ")\n";
-#endif
-              // std::cout << "\n" << i << ":\t(" << task_idx << "->" << threads[i].task_round_robin <<
-              // ")\tChaining\n\n";
-              bkts_occupancy[task.return_idx] = false;
-              int bkt_idx = task.return_idx;
-              task.return_idx = -1;
-
-              threads[i].tasks[threads[i].task_round_robin].new_task(bkt_idx, task.result, bkts[bkt_idx]);
-              if (threads[i].task_round_robin == tasks_per_thread - 1)
-                threads[i].task_round_robin = 0;
-              else
-                threads[i].task_round_robin++;
-
-              all_threads_idle = false; // This thread isn't idle due to the newly assigned task
-            } else {
-              bkts[task.return_idx] = task.result;
-#ifdef DEBUG_PRINTS
-              trace_f << '#' << task.return_idx << ":\tFWrite (res) free cell:\t"
-                      << Point::to_affine(bkts[task.return_idx]).x << "\t(" << i << ',' << task_idx << ")\n";
-#endif
-              bkts_occupancy[task.return_idx] = true;
-              task.return_idx = -1; // To ensure no repeated handling of outputs
-            }
-          } else {
-#ifdef DEBUG_PRINTS
-            trace_f << "Task " << task_idx << " idle\n";
-#endif
-          }
-        } else {
-          all_threads_idle = false;
-          break;
-#ifdef DEBUG_PRINTS
-          trace_f << '#' << task.return_idx << ":\t(" << i << ',' << task_idx << ") not done\tres=" << task.result
-                  << "\tstatus:" << task.in_ready << ',' << task.out_done << '\n';
-#endif
-        }
-      }
+      task->dispatch();
     }
-    // std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    else bkts[task->return_idx] = task->result;
+    manager.get_completed_task(task);
   }
-  // trace_f.flush();
 }
 
+// template <typename Point>
+// void Msm<Point>::old_wait_for_idle()
+// {
+//   /**
+//    * Handle thread outputs and possible collisions between results and occupied bkts
+//    * @param threads - working threads array
+//    * @param n_threads - size of the above array
+//    * @param bkts - bucket array to store results / add stored value with result
+//    * @param bkts_occupancy - boolean array holding the bkts_occupancy of each bucket
+//    * @return boolean, a flag indicating all threads are idle
+//    */
+//   bool all_threads_idle = false;
+//   int count = 0;
+//   while (!all_threads_idle) {
+//     all_threads_idle = true;
+
+//     for (int i = 0; i < n_threads; i++) {
+//       int og_task_round_robin = threads[i].task_round_robin;
+
+// #ifdef DEBUG_PRINTS
+//       trace_f << "Finishing thread " << i << ", starting at task: " << og_task_round_robin << '\n';
+// #endif
+
+//       for (int j = og_task_round_robin; j < og_task_round_robin + tasks_per_thread; j++) {
+//         int task_idx = j;
+//         if (task_idx >= tasks_per_thread) task_idx -= tasks_per_thread;
+
+//         // For readability
+//         ThreadTask<Point>& task = threads[i].tasks[task_idx];
+//         if (task.out_done.load(std::memory_order_acquire)) {
+//           if (task.return_idx >= 0) {
+//             if (bkts_occupancy[task.return_idx]) {
+// #ifdef DEBUG_PRINTS
+//               trace_f << '#' << task.return_idx << ":\tFCollision addition - bkts' cell:\t"
+//                       << Point::to_affine(bkts[task.return_idx]).x << "\t(With add res point:\t"
+//                       << Point::to_affine(task.result).x << " = "
+//                       << Point::to_affine(bkts[task.return_idx] + task.result).x << ")\t(" << i << ',' << task_idx
+//                       << ")\n";
+// #endif
+//               // std::cout << "\n" << i << ":\t(" << task_idx << "->" << threads[i].task_round_robin <<
+//               // ")\tChaining\n\n";
+//               bkts_occupancy[task.return_idx] = false;
+//               int bkt_idx = task.return_idx;
+//               task.return_idx = -1;
+
+//               threads[i].tasks[threads[i].task_round_robin].new_task(bkt_idx, task.result, bkts[bkt_idx]);
+//               if (threads[i].task_round_robin == tasks_per_thread - 1)
+//                 threads[i].task_round_robin = 0;
+//               else
+//                 threads[i].task_round_robin++;
+
+//               all_threads_idle = false; // This thread isn't idle due to the newly assigned task
+//             } else {
+//               bkts[task.return_idx] = task.result;
+// #ifdef DEBUG_PRINTS
+//               trace_f << '#' << task.return_idx << ":\tFWrite (res) free cell:\t"
+//                       << Point::to_affine(bkts[task.return_idx]).x << "\t(" << i << ',' << task_idx << ")\n";
+// #endif
+//               bkts_occupancy[task.return_idx] = true;
+//               task.return_idx = -1; // To ensure no repeated handling of outputs
+//             }
+//           } else {
+// #ifdef DEBUG_PRINTS
+//             trace_f << "Task " << task_idx << " idle\n";
+// #endif
+//           }
+//         } else {
+//           all_threads_idle = false;
+//           break;
+// #ifdef DEBUG_PRINTS
+//           trace_f << '#' << task.return_idx << ":\t(" << i << ',' << task_idx << ") not done\tres=" << task.result
+//                   << "\tstatus:" << task.in_ready << ',' << task.out_done << '\n';
+// #endif
+//         }
+//       }
+//     }
+//     // std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+//   }
+//   // trace_f.flush();
+// }
+
 template <typename Point>
-template <typename Base>
 void Msm<Point>::phase1_push_addition(
   const unsigned int task_bkt_idx,
   const Point bkt,
-  const Base& base,
+  const Point& base,
   int pidx) // TODO add option of adding different types
 {
   /**
@@ -530,71 +483,119 @@ void Msm<Point>::phase1_push_addition(
    * an overwritten without affecting the working thread
    * @param p2 - point to be added
    */
-  int count_thread_iters = 0;
-  bool assigned_to_thread = false;
-  while (!assigned_to_thread) {
-    // For readability
-    ThreadTask<Point>& task = threads[thread_round_robin].tasks[threads[thread_round_robin].task_round_robin];
-    if (task.out_done.load(std::memory_order_acquire)) {
-      num_additions++;
-      if (task.return_idx >= 0) {
-        if (bkts_occupancy[task.return_idx]) {
+  ECaddTask<Point, Point>* task = nullptr; // TODO actually use the 2 types according to the phase and remove templates
+  while (task == nullptr) 
+  {
+    bool holds_result = manager.get_free_task(task);
+    if (holds_result)
+    {
+      if (bkts_occupancy[task->return_idx])
+      {
+        task->p1 = task->result;
+        task->p2 = bkts[task->return_idx];
+        bkts_occupancy[task->return_idx] = false;
 #ifdef DEBUG_PRINTS
-          trace_f << '#' << task.return_idx << ":\tCollision addition - bkts' cell:\t"
-                  << Point::to_affine(bkts[task.return_idx]).x << "\t(With add res point:\t"
-                  << Point::to_affine(task.result).x << " = " << Point::to_affine(bkts[task.return_idx] + task.result).x
-                  << ")\t(" << thread_round_robin << ',' << threads[thread_round_robin].task_round_robin << ")\n";
+        trace_f << '#' << task->return_idx << ":\tCollision addition - bkts' cell:\t"
+                << Point::to_affine(bkts[task->return_idx]).x << "\t(With add res point:\t"
+                << Point::to_affine(task->result).x << " = " << Point::to_affine(bkts[task->return_idx] + task->result).x
+                << ")\t(" << task << ")\n";
 #endif
-          bkts_occupancy[task.return_idx] = false;
-          ;
-          task.pidx = pidx;
-          task.chain_task(bkts[task.return_idx]);
-        } else {
-#ifdef DEBUG_PRINTS
-          trace_f << '#' << task.return_idx << ":\tWrite (res) free cell:\t" << Point::to_affine(task.result).x << "\t("
-                  << thread_round_robin << ',' << threads[thread_round_robin].task_round_robin << ")\n";
-#endif
-          bkts[task.return_idx] = task.result;
-          bkts_occupancy[task.return_idx] = true;
-          task.pidx = pidx;
-          task.new_task(task_bkt_idx, bkt, Point::from_affine(base)); // TODO support multiple types
-          assigned_to_thread = true;
-#ifdef DEBUG_PRINTS
-          trace_f << '#' << task_bkt_idx << ":\tAssigned to:\t(" << thread_round_robin << ','
-                  << threads[thread_round_robin].task_round_robin << ")\n";
-// trace_f.flush();
-#endif
-          // break;
-        }
-      } else {
-        task.pidx = pidx;
-        task.new_task(task_bkt_idx, bkt, Point::from_affine(base)); // TODO support multiple types
-        assigned_to_thread = true;
-#ifdef DEBUG_PRINTS
-        trace_f << '#' << task_bkt_idx << ":\tAssigned to:\t(" << thread_round_robin << ','
-                << threads[thread_round_robin].task_round_robin << ")\n";
-// trace_f.flush();
-#endif
-        // break;
+        task->dispatch();
+        task = nullptr;
+        continue;
       }
-      if (threads[thread_round_robin].task_round_robin == tasks_per_thread - 1)
-        threads[thread_round_robin].task_round_robin = 0;
-      else
-        threads[thread_round_robin].task_round_robin++;
+      else bkts[task->return_idx] = task->result;
     }
-
-    // Move to next thread after checking all current thread's tasks
-    if (thread_round_robin == n_threads - 1)
-      thread_round_robin = 0;
-    else
-      thread_round_robin++;
-    count_thread_iters++;
-    if (count_thread_iters == n_threads) {
-      count_thread_iters = 0;
-      loop_count++;
-    }
+    task->p1 = bkt;
+    task->p2 = base;
+    task->return_idx = task_bkt_idx;
+#ifdef DEBUG_PRINTS
+    trace_f << '#' << task_bkt_idx << ":\tAssigned to:\t(" << task << ")\n";
+#endif
+    task->dispatch();
   }
 }
+
+// template <typename Point>
+// template <typename Base>
+// void Msm<Point>::old_phase1_push_addition(
+//   const unsigned int task_bkt_idx,
+//   const Point bkt,
+//   const Base& base,
+//   int pidx) // TODO add option of adding different types
+// {
+//   /**
+//    * Assign EC addition to a free thread
+//    * @param task_bkt_idx - results address in the bkts array
+//    * @param bkt - bkt to be added. it is passed by value to allow the appropriate cell in the bucket array to be "free"
+//    * an overwritten without affecting the working thread
+//    * @param p2 - point to be added
+//    */
+//   int count_thread_iters = 0;
+//   bool assigned_to_thread = false;
+//   while (!assigned_to_thread) {
+//     // For readability
+//     ThreadTask<Point>& task = threads[thread_round_robin].tasks[threads[thread_round_robin].task_round_robin];
+//     if (task.out_done.load(std::memory_order_acquire)) {
+//       num_additions++;
+//       if (task.return_idx >= 0) {
+//         if (bkts_occupancy[task.return_idx]) {
+// #ifdef DEBUG_PRINTS
+//           trace_f << '#' << task.return_idx << ":\tCollision addition - bkts' cell:\t"
+//                   << Point::to_affine(bkts[task.return_idx]).x << "\t(With add res point:\t"
+//                   << Point::to_affine(task.result).x << " = " << Point::to_affine(bkts[task.return_idx] + task.result).x
+//                   << ")\t(" << thread_round_robin << ',' << threads[thread_round_robin].task_round_robin << ")\n";
+// #endif
+//           bkts_occupancy[task.return_idx] = false;
+//           ;
+//           task.pidx = pidx;
+//           task.chain_task(bkts[task.return_idx]);
+//         } else {
+// #ifdef DEBUG_PRINTS
+//           trace_f << '#' << task.return_idx << ":\tWrite (res) free cell:\t" << Point::to_affine(task.result).x << "\t("
+//                   << thread_round_robin << ',' << threads[thread_round_robin].task_round_robin << ")\n";
+// #endif
+//           bkts[task.return_idx] = task.result;
+//           bkts_occupancy[task.return_idx] = true;
+//           task.pidx = pidx;
+//           task.new_task(task_bkt_idx, bkt, Point::from_affine(base)); // TODO support multiple types
+//           assigned_to_thread = true;
+// #ifdef DEBUG_PRINTS
+//           trace_f << '#' << task_bkt_idx << ":\tAssigned to:\t(" << thread_round_robin << ','
+//                   << threads[thread_round_robin].task_round_robin << ")\n";
+// // trace_f.flush();
+// #endif
+//           // break;
+//         }
+//       } else {
+//         task.pidx = pidx;
+//         task.new_task(task_bkt_idx, bkt, Point::from_affine(base)); // TODO support multiple types
+//         assigned_to_thread = true;
+// #ifdef DEBUG_PRINTS
+//         trace_f << '#' << task_bkt_idx << ":\tAssigned to:\t(" << thread_round_robin << ','
+//                 << threads[thread_round_robin].task_round_robin << ")\n";
+// // trace_f.flush();
+// #endif
+//         // break;
+//       }
+//       if (threads[thread_round_robin].task_round_robin == tasks_per_thread - 1)
+//         threads[thread_round_robin].task_round_robin = 0;
+//       else
+//         threads[thread_round_robin].task_round_robin++;
+//     }
+
+//     // Move to next thread after checking all current thread's tasks
+//     if (thread_round_robin == n_threads - 1)
+//       thread_round_robin = 0;
+//     else
+//       thread_round_robin++;
+//     count_thread_iters++;
+//     if (count_thread_iters == n_threads) {
+//       count_thread_iters = 0;
+//       loop_count++;
+//     }
+//   }
+// }
 
 template <typename Point>
 Point* Msm<Point>::bucket_accumulator(const sca_test* scalars, const aff_test* bases, const unsigned int msm_size)
@@ -612,8 +613,7 @@ Point* Msm<Point>::bucket_accumulator(const sca_test* scalars, const aff_test* b
   const int num_windows_m1 = (sca_test::NBITS - 1) / c; // +1 for ceiling than -1 for m1
   int carry = 0;
 
-  std::cout << "\n\nc=" << c << "\tpcf=" << precomp_f << "\tnum bms=" << num_bms << "\tntrds,tasks=" << n_threads << ','
-            << tasks_per_thread << "\n\n\n";
+  std::cout << "\n\nc=" << c << "\tpcf=" << precomp_f << "\tnum bms=" << num_bms << "\tntrds,tasks=" << n_threads << "\n\n\n";
   std::cout << log_num_segments << '\n' << segment_size << "\n\n\n";
   for (int i = 0; i < msm_size; i++) {
     carry = 0;
@@ -645,7 +645,7 @@ Point* Msm<Point>::bucket_accumulator(const sca_test* scalars, const aff_test* b
                     << Point::to_affine(bkts[bkt_idx] + (carry > 0 ? aff_test::neg(point) : point)).x << ")\n";
 // trace_f.flush();
 #endif
-            phase1_push_addition<aff_test>(bkt_idx, bkts[bkt_idx], carry > 0 ? aff_test::neg(point) : point, i);
+            phase1_push_addition(bkt_idx, bkts[bkt_idx], carry > 0 ? Point::from_affine(aff_test::neg(point)) : Point::from_affine(point), i);
           } else {
             bkts_occupancy[bkt_idx] = true;
             bkts[bkt_idx] = carry > 0 ? Point::neg(Point::from_affine(point)) : Point::from_affine(point);
@@ -667,12 +667,12 @@ Point* Msm<Point>::bucket_accumulator(const sca_test* scalars, const aff_test* b
   return bkts;
 }
 
-template <typename Point>
-std::tuple<int, int>
-Msm<Point>::phase2_push_addition(const unsigned int task_bkt_idx, const Point& bkt, const Point& base)
-{
-  return std::make_tuple(-1, -1);
-}
+// template <typename Point>
+// std::tuple<int, int>
+// Msm<Point>::phase2_push_addition(const unsigned int task_bkt_idx, const Point& bkt, const Point& base);
+// {
+//   return std::make_tuple(-1, -1);
+// }
 
 template <typename Point>
 Point* Msm<Point>::bm_sum()
@@ -705,8 +705,8 @@ Point* Msm<Point>::bm_sum()
         int assigned_thread = std::get<0>(task_assigned_to_sum[line_sum_idx]);
         int assigned_task = std::get<1>(task_assigned_to_sum[line_sum_idx]);
         if (assigned_thread >= 0) {
-          while (!threads[assigned_thread].task[assigned_task].out_done.load(std::memory_order_acquire)) {
-          } // TODO add sleep
+          // while (!threads[assigned_thread].task[assigned_task].out_done.load(std::memory_order_acquire)) {
+          // } // TODO add sleep
           // task_assigned_to_sum[]
         }
 
@@ -766,8 +766,6 @@ eIcicleError cpu_msm_ref(
     sca_test scalar = config.are_scalars_montgomery_form ? sca_test::from_montgomery(scalars[i]) : scalars[i];
     aff_test point =
       config.are_points_montgomery_form ? aff_test::from_montgomery(bases[precomp_f * i]) : bases[precomp_f * i];
-
-    // std::cout << scalar << "\t*\t" << point << '\n';
     res = res + scalar * Point::from_affine(point);
   }
   // results[0] = config.are_points_montgomery_form? Point::to_montgomery(res) : res;
@@ -789,22 +787,16 @@ eIcicleError cpu_msm_precompute_bases(
   const unsigned int c = config.ext->get<int>("c");
   const unsigned int num_bms_no_precomp = (sca_test::NBITS - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
-  // std::cout << "Starting precompute\n";
-  // std::cout << c << ',' << shift << '\n';
   for (int i = 0; i < nof_bases; i++) {
     output_bases[precompute_factor * i] = input_bases[i]; // COMMENT Should I copy? (not by reference)
     proj_test point = proj_test::from_affine(is_mont ? A::from_montgomery(input_bases[i]) : input_bases[i]);
-    // std::cout << "OG point[" << i << "]:\t" << point << '\n';
     for (int j = 1; j < precompute_factor; j++) {
       for (int k = 0; k < shift; k++) {
         point = proj_test::dbl(point);
-        // std::cout << point << '\n';
       }
-      // std::cout << "Shifted point[" << i << "]:\t" << point << "\nStored in index=" << (precompute_factor*i+j) <<
-      // '\n';
       output_bases[precompute_factor * i + j] = is_mont
                                                   ? A::to_montgomery(proj_test::to_affine(point))
-                                                  : proj_test::to_affine(point); // TODO change here order of precomp
+                                                  : proj_test::to_affine(point);
     }
   }
   return eIcicleError::SUCCESS;
