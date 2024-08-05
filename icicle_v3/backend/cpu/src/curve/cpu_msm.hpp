@@ -18,7 +18,6 @@
 #include "tasks_manager.h"
 
 using namespace icicle;
-#define DUMMY_TYPES
 #ifdef DUMMY_TYPES
   using affine_t = DummyPoint;
   using projective_t = DummyPoint;
