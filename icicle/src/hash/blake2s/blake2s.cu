@@ -225,11 +225,15 @@ __global__ void kernel_blake2s_hash(const BYTE *indata, WORD inlen, BYTE *outdat
     if (thread >= n_batch) {
         return;
     }
+    BYTE key[32] = "";  // Null key
+    WORD keylen = 0;
+    CUDA_BLAKE2S_CTX blake_ctx;
     const BYTE *in = indata + thread * inlen;
     BYTE *out = outdata + thread * BLAKE2S_BLOCK_SIZE;
-    CUDA_BLAKE2S_CTX ctx = c_CTX;
-    cuda_blake2s_update(&ctx, in, inlen);
-    cuda_blake2s_final(&ctx, out);
+    
+    cuda_blake2s_init(&blake_ctx, key, keylen, (BLAKE2S_BLOCK_SIZE << 3));
+    cuda_blake2s_update(&blake_ctx, in, inlen);
+    cuda_blake2s_final(&blake_ctx, out);
 }
 
 extern "C" {
@@ -269,22 +273,11 @@ cudaError_t Blake2s::run_hash_many_kernel(
     WORD        output_len,
     const device_context::DeviceContext& ctx) const
     {
-        BYTE key[32] = "";  // Null key
-        WORD keylen = strlen((char *)key);
         const WORD BLAKE2S_BLOCK_SIZE = (output_len >> 3);
-        CUDA_BLAKE2S_CTX blake_ctx;
-        cpu_blake2s_init(&blake_ctx, key, keylen, output_len);
-        cudaMemcpyToSymbol(c_CTX, &blake_ctx, sizeof(CUDA_BLAKE2S_CTX), 0, cudaMemcpyHostToDevice);
-    
         WORD thread = 256;
         WORD block = (number_of_states + thread - 1) / thread;
 
         kernel_blake2s_hash<<<block, thread, 0, ctx.stream>>>(input, input_len, output, number_of_states, BLAKE2S_BLOCK_SIZE);
-        // cudaDeviceSynchronize();
-        // cudaError_t error = cudaGetLastError();
-        // if (error != cudaSuccess) {
-        //     printf("Error cuda blake2s hash: %s \n", cudaGetErrorString(error));
-        // }
 
         CHK_IF_RETURN(cudaPeekAtLastError());
         return CHK_LAST();
