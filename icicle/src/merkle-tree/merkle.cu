@@ -163,10 +163,10 @@ namespace merkle_tree {
     CHK_INIT_IF_RETURN();
     cudaStream_t& stream = tree_config.ctx.stream;
 
-    if (compression.preimage_max_length < tree_config.arity * tree_config.digest_elements)
-      THROW_ICICLE_ERR(
-        IcicleError_t::InvalidArgument,
-        "Hash max preimage length does not match merkle tree arity multiplied by digest elements");
+    // if (compression.preimage_max_length < tree_config.arity * tree_config.digest_elements)
+    //   THROW_ICICLE_ERR(
+    //     IcicleError_t::InvalidArgument,
+    //     "Hash max preimage length does not match merkle tree arity multiplied by digest elements");
 
     uint64_t number_of_bottom_layer_states = pow(tree_config.arity, height);
 

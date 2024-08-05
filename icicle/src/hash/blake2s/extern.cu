@@ -16,4 +16,18 @@ namespace blake2s {
       input, output, number_of_blocks, input_block_size, output_block_size, config);
   }
 
+  extern "C" cudaError_t build_blake2s_merkle_tree_cuda(
+    const BYTE* leaves,
+    BYTE* digests,
+    unsigned int height,
+    WORD input_block_len,
+    const merkle_tree::TreeBuilderConfig& tree_config)
+  {
+    Blake2s blake2s;
+    return merkle_tree::build_merkle_tree<BYTE, BYTE>(
+      leaves, digests, height, input_block_len, blake2s, blake2s, tree_config);
+  }
+
+
+
 } // namespace blake2s
