@@ -423,43 +423,67 @@ namespace mxntt {
       engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     // if (threadIdx.x == 0) {
-      printf(
-        "T BEFORE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        threadIdx.x,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[0].limbs_storage.limbs[1],
-        engine.X[0].limbs_storage.limbs[2],
-        engine.X[0].limbs_storage.limbs[3],
-        engine.X[0].limbs_storage.limbs[4],
-        engine.X[0].limbs_storage.limbs[5],
-        engine.X[0].limbs_storage.limbs[6],
-        engine.X[0].limbs_storage.limbs[7]
-      );
+      // printf(
+      //   "T BEFORE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   threadIdx.x,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[0].limbs_storage.limbs[1],
+      //   engine.X[0].limbs_storage.limbs[2],
+      //   engine.X[0].limbs_storage.limbs[3],
+      //   engine.X[0].limbs_storage.limbs[4],
+      //   engine.X[0].limbs_storage.limbs[5],
+      //   engine.X[0].limbs_storage.limbs[6],
+      //   engine.X[0].limbs_storage.limbs[7]
+      // );
     // }
     engine.loadBasicTwiddlesGeneric64(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, false);
 #pragma unroll 1
     for (uint32_t phase = 0; phase < 2; phase++) {
+      printf(
+        "T BEFORE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
       engine.ntt8();
 
       // if (threadIdx.x == 0) {
-        printf(
-          "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-          threadIdx.x,
-          engine.X[0].limbs_storage.limbs[0],
-          engine.X[0].limbs_storage.limbs[1],
-          engine.X[0].limbs_storage.limbs[2],
-          engine.X[0].limbs_storage.limbs[3],
-          engine.X[0].limbs_storage.limbs[4],
-          engine.X[0].limbs_storage.limbs[5],
-          engine.X[0].limbs_storage.limbs[6],
-          engine.X[0].limbs_storage.limbs[7]
-        );
+        // printf(
+        //   "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        //   threadIdx.x,
+        //   engine.X[0].limbs_storage.limbs[0],
+        //   engine.X[1].limbs_storage.limbs[0],
+        //   engine.X[2].limbs_storage.limbs[0],
+        //   engine.X[3].limbs_storage.limbs[0],
+        //   engine.X[4].limbs_storage.limbs[0],
+        //   engine.X[5].limbs_storage.limbs[0],
+        //   engine.X[6].limbs_storage.limbs[0],
+        //   engine.X[7].limbs_storage.limbs[0]
+        // );
       // }
       if (phase == 0) {
         engine.loadBasicTwiddlesGeneric64(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, true);
         engine.SharedData64Columns8(shmem, true, false, strided); // store
         __syncthreads();
         engine.SharedData64Rows8(shmem, false, false, strided); // load
+        printf(
+          "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+          threadIdx.x,
+          engine.X[0].limbs_storage.limbs[0],
+          engine.X[1].limbs_storage.limbs[0],
+          engine.X[2].limbs_storage.limbs[0],
+          engine.X[3].limbs_storage.limbs[0],
+          engine.X[4].limbs_storage.limbs[0],
+          engine.X[5].limbs_storage.limbs[0],
+          engine.X[6].limbs_storage.limbs[0],
+          engine.X[7].limbs_storage.limbs[0]
+        );
       }
     }
 
@@ -700,7 +724,7 @@ namespace mxntt {
 
     int stage = log_size - 1;
     uint32_t stage_rev = 0;
-    S* stage_ptr = basic_twiddles;
+    S* stage_ptr = basic_twiddles + (stage * (1 << stage));
     const int NOF_BLOCKS = (stage >= 8) ? (1 << (stage - 8)) : 1;
     const int NOF_THREADS = (stage >= 8) ? 256 : (1 << stage);
     // std::cout << "Stage: " << stage << "; nof_blocks: " << NOF_BLOCKS << "; nof_threads: " << NOF_THREADS << "; step:
@@ -709,7 +733,7 @@ namespace mxntt {
     CHK_IF_RETURN(cudaPeekAtLastError());
 
     for (--stage; stage >= 0; stage--) {
-      stage_ptr += 1 << (log_size - 1);
+      stage_ptr -= 1 << (log_size - 1);
       stage_rev++;
       // std::cout << "Stage: " << stage << "; nof_blocks: " << NOF_BLOCKS << "; nof_threads: " << NOF_THREADS << ";
       // step: " << step << "; temp_root: " << temp_root <<"; stage_ptr: " << stage_ptr<< std::endl;
