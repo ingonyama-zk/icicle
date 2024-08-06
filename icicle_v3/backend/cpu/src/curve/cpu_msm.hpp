@@ -565,7 +565,6 @@ Point* Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* b
   int carry = 0;
 
   std::cout << "\n\nc=" << c << "\tpcf=" << precomp_f << "\tnum bms=" << num_bms << "\tntrds,tasks=" << n_threads << "\n\n\n";
-  std::cout << log_num_segments << '\n' << segment_size << "\n\n\n";
   for (int i = 0; i < msm_size; i++) {
     carry = 0;
     scalar_t scalar = are_scalars_mont ? scalar_t::from_montgomery(scalars[i]) : scalars[i];
@@ -633,6 +632,7 @@ Point* Msm<Point>::bm_sum()
    * @param bkts - point array containing all bkts ordered by bucket module
    * @return bm_sums - point array containing the bucket modules' sums
    */
+  std::cout << "Num of segments in BM: " << log_num_segments << "\t(segment size: " << segment_size << ")\n\n\n";
   // Init values of partial (line) and total (triangle) sum
   for (int i = 0; i < num_bms; i++) {
     for (int j = 0; j < num_bm_segments - 1; j++) {
@@ -734,7 +734,8 @@ eIcicleError cpu_msm_precompute_bases(
   A* output_bases) // Pre assigned?
 {
   int precompute_factor = config.precompute_factor;
-  bool is_mont = config.ext->get<bool>("is_mont");
+  // bool is_mont = config.ext->get<bool>("is_mont");
+  bool is_mont=false;
   const unsigned int c = config.ext->get<int>("c");
   const unsigned int num_bms_no_precomp = (scalar_t::NBITS - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);

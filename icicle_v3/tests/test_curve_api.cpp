@@ -142,17 +142,26 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
       config.batch_size = batch;
       config.are_points_montgomery_form = false;
       config.are_scalars_montgomery_form = false;
-      // config.precompute_factor = precompute_factor;
-      std::cout << "Precomput: " << config.precompute_factor << '\n';
+      config.precompute_factor = precompute_factor;
 
       ConfigExtension ext;
       ext.set("c", c);
       ext.set("n_threads", n_threads);
       config.ext = &ext;
+
+      auto precomp_bases = std::make_unique<affine_t[]>(N * precompute_factor);
+      // TODO update cmake to include directory?
+      std::string precomp_fname =
+        "build/generated_data/precomp_N" + std::to_string(N) + "_precompute_factor" + std::to_string(precompute_factor) + ".dat";
+      if (!read_inputs<affine_t>(precomp_bases.get(), N * precompute_factor, precomp_fname)) {
+        std::cout << "Precomputing bases." << '\n';
+        msm_precompute_bases(bases.get(), N, config, precomp_bases.get());
+        store_inputs<affine_t>(precomp_bases.get(), N * precompute_factor, precomp_fname);
+      }
       
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
-        msm(scalars.get(), bases.get(), N, config, result);
+        msm(scalars.get(), precomp_bases.get(), N, config, result);
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };

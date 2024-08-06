@@ -5,7 +5,7 @@
 #include <cassert>
 
 // #define DUMMY_TYPES
-#define DEBUG_PRINTS
+// #define DEBUG_PRINTS
 #define P_MACRO 1000
 
 class DummyScalar
@@ -45,18 +45,16 @@ public:
   friend bool operator==(const DummyScalar& p1, const unsigned p2) { return (p1.x == p2); }
 
   static DummyScalar neg(const DummyScalar& scalar) { return {scalar.p - scalar.x}; }
-  static DummyScalar rand_host(std::mt19937_64& rand_generator)
+  static DummyScalar rand_host()
   {
-    // return {(unsigned)rand() % P_MACRO};
-    std::uniform_int_distribution<unsigned> distribution(0, P_MACRO - 1);
-    return {distribution(rand_generator)};
+    return {(unsigned)rand() % P_MACRO};
   }
 
-  static void rand_host_many(DummyScalar* out, int size, std::mt19937_64& rand_generator)
+  static void rand_host_many(DummyScalar* out, int size)
   {
     for (int i = 0; i < size; i++)
       // out[i] = (i % size < 100) ? rand_host(rand_generator) : out[i - 100];
-      out[i] = rand_host(rand_generator);
+      out[i] = rand_host();
   }
 };
 
@@ -114,67 +112,67 @@ public:
 
   static bool is_zero(const DummyPoint& point) { return point.x == 0; }
 
-  static DummyPoint rand_host(std::mt19937_64& rand_generator)
+  static DummyPoint rand_host()
   {
     return {(unsigned)rand() % P_MACRO};
-    // return {(unsigned)rand()};
   }
 
-  static void rand_host_many(DummyPoint* out, int size, std::mt19937_64& rand_generator)
+  static void rand_host_many(DummyPoint* out, int size)
   {
     for (int i = 0; i < size; i++)
-      out[i] = (i % size < 100) ? to_affine(rand_host(rand_generator)) : out[i - 100];
+      // out[i] = (i % size < 100) ? to_affine(rand_host()) : out[i - 100];
+      out[i] = to_affine(rand_host());
   }
 };
 
 #include "cpu_msm.hpp"
 using namespace icicle;
 
-// template <typename T>
-// bool read_inputs(T* arr, const int arr_size, const std::string fname)
-// {
-//   std::ifstream in_file(fname);
-//   bool status = in_file.is_open();
-//   if (status) {
-//     for (int i = 0; i < arr_size; i++) {
-//       in_file.read(reinterpret_cast<char*>(&arr[i]), sizeof(T));
-//     }
-//     in_file.close();
-//   }
-//   return status;
-// }
+template <typename T>
+bool read_inputs(T* arr, const int arr_size, const std::string fname)
+{
+  std::ifstream in_file(fname);
+  bool status = in_file.is_open();
+  if (status) {
+    for (int i = 0; i < arr_size; i++) {
+      in_file.read(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+    }
+    in_file.close();
+  }
+  return status;
+}
 
-// template <typename T>
-// void store_inputs(T* arr, const int arr_size, const std::string fname)
-// {
-//   std::ofstream out_file(fname);
-//   if (!out_file.is_open()) {
-//     std::cerr << "Failed to open " << fname << " for writing.\n";
-//     return;
-//   }
-//   for (int i = 0; i < arr_size; i++) {
-//     out_file.write(reinterpret_cast<char*>(&arr[i]), sizeof(T));
-//   }
-//   out_file.close();
-// }
+template <typename T>
+void store_inputs(T* arr, const int arr_size, const std::string fname)
+{
+  std::ofstream out_file(fname);
+  if (!out_file.is_open()) {
+    std::cerr << "Failed to open " << fname << " for writing.\n";
+    return;
+  }
+  for (int i = 0; i < arr_size; i++) {
+    out_file.write(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+  }
+  out_file.close();
+}
 
-// void get_inputs(affine_t* bases, scalar_t* scalars, const int n) // TODO add precompute factor
-// {
-//   // Scalars
-//   std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n) + ".dat";
-//   if (!read_inputs<scalar_t>(scalars, n, scalar_file)) {
-//     std::cout << "Generating scalars.\n";
-//     scalar_t::rand_host_many(scalars, n);
-//     store_inputs<scalar_t>(scalars, n, scalar_file);
-//   }
-//   // Bases
-//   std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
-//   if (!read_inputs<affine_t>(bases, n, base_file)) {
-//     std::cout << "Generating bases.\n";
-//     projective_t::rand_host_many(bases, n);
-//     store_inputs<affine_t>(bases, n, base_file);
-//   }
-// }
+void get_inputs(affine_t* bases, scalar_t* scalars, const int n) // TODO add precompute factor
+{
+  // Scalars
+  std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n) + ".dat";
+  if (!read_inputs<scalar_t>(scalars, n, scalar_file)) {
+    std::cout << "Generating scalars.\n";
+    scalar_t::rand_host_many(scalars, n);
+    store_inputs<scalar_t>(scalars, n, scalar_file);
+  }
+  // Bases
+  std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
+  if (!read_inputs<affine_t>(bases, n, base_file)) {
+    std::cout << "Generating bases.\n";
+    projective_t::rand_host_many(bases, n);
+    store_inputs<affine_t>(bases, n, base_file);
+  }
+}
 
 int main()
 {
@@ -182,22 +180,21 @@ int main()
   auto t = Timer("Time till failure");
 
   while (true) {
-    const int logn = 4;
+    const int logn = 17;
     const int N = 1 << logn;
     auto scalars = std::make_unique<scalar_t[]>(N);
     auto bases = std::make_unique<affine_t[]>(N);
 
     bool conv_mont = false;
 
-    std::mt19937_64 generator(seed);
-
     #ifdef DUMMY_TYPES
-    scalar_t::rand_host_many(scalars.get(), N, generator);
-    projective_t::rand_host_many(bases.get(), N, generator);
-    #else
-    scalar_t::rand_host_many(scalars.get(), N);
+    std::cout << "Generating dummy values\n";
+    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
     projective_t::rand_host_many(bases.get(), N);
+    #else
+    get_inputs(bases.get(), scalars.get(), N);
     #endif
+
     if (conv_mont) {
       for (int i = 0; i < N; i++)
         bases[i] = affine_t::to_montgomery(bases[i]);
@@ -206,18 +203,19 @@ int main()
     projective_t result_cpu_ref{};
 
     auto run = [&](const char* dev_type, projective_t* result, const char* msg, bool measure, int iters, auto cpu_msm) {
-      const int log_p = 0;
+      const int log_p = 2;
       const int c = std::max(logn, 8) - 1;
       const int pcf = 1 << log_p;
 
       int hw_threads = std::thread::hardware_concurrency();
       if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
-      // const int n_threads = (hw_threads > 1)? hw_threads-2 : 1;
-      const int n_threads = 8;
+      const int n_threads = (hw_threads > 1)? hw_threads-2 : 1;
+      std::cout << "Num threads: " << n_threads << '\n';
+      // const int n_threads = 8;
 
       const int tasks_per_thread = 4;
 
-      auto config = default_msm_config();
+      MSMConfig config = default_msm_config();
       ConfigExtension ext;
       ext.set("c", c);
       ext.set("n_threads", n_threads);
@@ -228,23 +226,29 @@ int main()
       config.are_scalars_montgomery_form = false;
       config.are_points_montgomery_form = conv_mont;
 
-      // auto precomp_bases = std::make_unique<scalar_t[]>(N * pcf);
-      // cpu_msm_precompute_bases<scalar_t>(Device(), bases.get(), N, pcf, config, precomp_bases.get());
+      auto precomp_bases = std::make_unique<affine_t[]>(N * pcf);
+      // TODO update cmake to include directory?
+      std::string precomp_fname =
+        "build/generated_data/precomp_N" + std::to_string(N) + "_pcf" + std::to_string(pcf) + ".dat";
+      if (!read_inputs<affine_t>(precomp_bases.get(), N * pcf, precomp_fname)) {
+        std::cout << "Precomputing bases." << '\n';
+        cpu_msm_precompute_bases<affine_t>("CPU", bases.get(), N, config, precomp_bases.get());
+        store_inputs<affine_t>(precomp_bases.get(), N * pcf, precomp_fname);
+      }
       // START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
         // TODO real test
         // msm_precompute_bases(bases.get(), N, 1, default_msm_pre_compute_config(), bases.get());
-        cpu_msm("CPU", scalars.get(), bases.get(), N, config, result);
+        cpu_msm("CPU", scalars.get(), precomp_bases.get(), N, config, result);
       }
       // END_TIMER(MSM_sync, msg, measure);
     };
 
     // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
-    run("CPU", &result_cpu, "CPU msm", true /*=measure*/, 1 /*=iters*/, cpu_msm<projective_t>);
     run("CPU_REF", &result_cpu_ref, "CPU_REF msm", true /*=measure*/, 1 /*=iters*/, cpu_msm_single_thread<projective_t>);
+    run("CPU", &result_cpu, "CPU msm", true /*=measure*/, 1 /*=iters*/, cpu_msm<projective_t>);
     std::cout << projective_t::to_affine(result_cpu) << std::endl;
     std::cout << projective_t::to_affine(result_cpu_ref) << std::endl;
-    std::cout << "Seed is: " << seed << '\n';
     assert(result_cpu == result_cpu_ref);
   }
 
