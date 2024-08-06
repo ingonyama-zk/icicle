@@ -17,7 +17,7 @@ namespace params_gen {
   get_difference_no_carry(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
   {
     storage<NLIMBS> rs = {};
-    host_math::template add_sub_limbs<NLIMBS, true, false>(xs, ys, rs);
+    host_math::template add_sub_limbs<NLIMBS, true, false, true, uint32_t>(xs, ys, rs);
     return rs;
   }
 
@@ -28,7 +28,7 @@ namespace params_gen {
     storage<NLIMBS> qs = {};
     storage<2 * NLIMBS> wide_one = {1};
     storage<2 * NLIMBS> pow_of_2 = host_math::template left_shift<2 * NLIMBS, EXP>(wide_one);
-    host_math::template integer_division<2 * NLIMBS, NLIMBS>(pow_of_2, modulus, qs, rs);
+    host_math::template integer_division<2 * NLIMBS, NLIMBS, NLIMBS, true, uint32_t>(pow_of_2, modulus, qs, rs);
     return qs;
   }
 
@@ -38,12 +38,12 @@ namespace params_gen {
     storage<NLIMBS> rs = {1};
     for (int i = 0; i < 32 * NLIMBS; i++) {
       if (INV) {
-        if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false>(rs, modulus, rs);
+        if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false, true, uint32_t>(rs, modulus, rs);
         rs = host_math::template right_shift<NLIMBS, 1>(rs);
       } else {
         rs = host_math::template left_shift<NLIMBS, 1>(rs);
         storage<NLIMBS> temp = {};
-        rs = host_math::template add_sub_limbs<NLIMBS, true, true>(rs, modulus, temp) ? rs : temp;
+        rs = host_math::template add_sub_limbs<NLIMBS, true, true, true, uint32_t>(rs, modulus, temp) ? rs : temp;
       }
     }
     return rs;
@@ -62,7 +62,7 @@ namespace params_gen {
     storage<2 * NLIMBS> one = {1};
     storage<2 * NLIMBS> pow_of_2 = host_math::template left_shift<2 * NLIMBS, NBITS>(one);
     host_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, pow_of_2, x3);
-    host_math::template add_sub_limbs<3 * NLIMBS, true, false>(x3, x2, x2);
+    host_math::template add_sub_limbs<3 * NLIMBS, true, false, true, uint32_t>(x3, x2, x2);
     double err = (double)x2.limbs[2 * NLIMBS - 1] / pow_of_2.limbs[2 * NLIMBS - 1];
     err += (double)m.limbs[NLIMBS - 1] / 0xffffffff;
     err += (double)NLIMBS / 0x80000000;
@@ -87,7 +87,7 @@ namespace params_gen {
     storage_array<TWO_ADICITY, NLIMBS> invs = {};
     storage<NLIMBS> rs = {1};
     for (int i = 0; i < TWO_ADICITY; i++) {
-      if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false>(rs, modulus, rs);
+      if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false, true, uint32_t>(rs, modulus, rs);
       rs = host_math::template right_shift<NLIMBS, 1>(rs);
       invs.storages[i] = rs;
     }
