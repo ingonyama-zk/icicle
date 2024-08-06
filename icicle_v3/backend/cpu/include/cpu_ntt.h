@@ -24,6 +24,11 @@ namespace ntt_cpu {
 
   // TODO SHANIE - after implementing real parallelism, try different sizes to choose the optimal one. Or consider using
   // a function to calculate subset sizes
+  // constexpr uint32_t layers_subntt_log_size[31][3] = {
+  //   {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 2, 1},   {4, 3, 0},
+  //   {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
+  //   {8, 8, 0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0},
+  //   {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
   constexpr uint32_t layers_subntt_log_size[31][3] = {
     {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
     {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
@@ -402,9 +407,44 @@ struct NttTaskCordinates {
   }
 
   template <typename S = scalar_t, typename E = scalar_t>
+  void refactor_subntt_output(
+    E* elements,
+    int batch_size,
+    bool columns_batch,
+    const S* twiddles,
+    int domain_max_size,
+    icicle::NTTDir direction = icicle::NTTDir::kForward,
+    NttTaskCordinates& cordinates = NttTaskCordinates())
+  {
+    int h0_subntt_size = 1 << cordinates.h0_layers_subntt_log_size[cordinates.h0_layer_idx];
+    int h0_nof_subntts = 1 << cordinates.h0_layers_subntt_log_size[0]; //only relevant for layer 1 
+    int i, j, i_0;
+    int ntt_size = cordinates.h0_layer_idx == 0 ? 1 << (cordinates.h0_layers_subntt_log_size[0] + cordinates.h0_layers_subntt_log_size[1])
+                                                : 1 << (cordinates.h0_layers_subntt_log_size[0] + cordinates.h0_layers_subntt_log_size[1] + cordinates.h0_layers_subntt_log_size[2]);
+    int stride = columns_batch ? batch_size : 1;
+    uint64_t original_size = (1 << cordinates.logn);
+    for (int batch = 0; batch < batch_size; ++batch) {
+      E* h1_subntt_elements =
+      elements + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
+      E* elements_of_current_batch = columns_batch ? h1_subntt_elements + batch : h1_subntt_elements + batch * original_size;
+      for (int elem = 0; elem < h0_subntt_size; elem++) {
+        uint64_t elem_mem_idx = stride * idx_in_mem(elem, cordinates.h0_block_idx, cordinates.h0_subntt_idx, cordinates.h0_layers_subntt_log_size, cordinates.h0_layer_idx);
+        i = (cordinates.h0_layer_idx == 0) ? elem : elem * h0_nof_subntts + cordinates.h0_subntt_idx;
+        j = (cordinates.h0_layer_idx == 0) ? cordinates.h0_subntt_idx : cordinates.h0_block_idx;
+        uint64_t tw_idx = (direction == NTTDir::kForward) ? ((domain_max_size / ntt_size) * j * i)
+                                                    : domain_max_size - ((domain_max_size / ntt_size) * j * i);
+        // if (cordinates.h0_layer_idx == 1){
+        //   ICICLE_LOG_DEBUG << "elem_mem_idx: " << elem_mem_idx << ", i: " << i << ", j: " << j << ", tw_idx: " << tw_idx;
+        // }
+        elements_of_current_batch[elem_mem_idx] = elements_of_current_batch[elem_mem_idx] * twiddles[tw_idx];
+      }
+    }
+  }
+
+
+  template <typename S = scalar_t, typename E = scalar_t>
   void refactor_output(
-    E* layer_output,
-    E* next_layer_input,
+    E* elements,
     uint64_t tot_ntt_size,
     int batch_size,
     bool columns_batch,
@@ -423,13 +463,9 @@ struct NttTaskCordinates {
                               : 1 << (layers_sntt_log_size[0] + layers_sntt_log_size[1] + layers_sntt_log_size[2]);
     int stride = columns_batch ? batch_size : 1;
     for (int batch = 0; batch < batch_size; ++batch) {
-      E* h1_subntt_layer_output =
-      layer_output + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
-      E* h1_subntt_next_layer_input =
-      next_layer_input + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
-
-      E* current_layer_output = columns_batch ? h1_subntt_layer_output + batch : h1_subntt_layer_output + batch * tot_ntt_size;
-      E* current_next_layer_input = columns_batch ? h1_subntt_next_layer_input + batch : h1_subntt_next_layer_input + batch * tot_ntt_size;
+      E* h1_subntt_elements =
+      elements + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
+      E* current_elements = columns_batch ? h1_subntt_elements + batch : h1_subntt_elements + batch * tot_ntt_size;
       for (int block_idx = 0; block_idx < nof_blocks; block_idx++) {
         for (int sntt_idx = 0; sntt_idx < nof_subntts; sntt_idx++) {
           for (int elem = 0; elem < subntt_size; elem++) {
@@ -438,7 +474,10 @@ struct NttTaskCordinates {
             j = (layer == 0) ? sntt_idx : block_idx;
             uint64_t tw_idx = (dir == NTTDir::kForward) ? ((domain_max_size / ntt_size) * j * i)
                                                         : domain_max_size - ((domain_max_size / ntt_size) * j * i);
-            current_next_layer_input[elem_mem_idx] = current_layer_output[elem_mem_idx] * twiddles[tw_idx];
+            // if (layer == 1){
+            //   ICICLE_LOG_DEBUG << "elem_mem_idx: " << elem_mem_idx << ", i: " << i << ", j: " << j << ", tw_idx: " << tw_idx << ", tw_idx: " << tw_idx;
+            // }
+            current_elements[elem_mem_idx] = current_elements[elem_mem_idx] * twiddles[tw_idx];
           }
         }
       }
@@ -556,6 +595,13 @@ struct NttTaskCordinates {
       current_input, original_size, config.batch_size, config.columns_batch, twiddles, direction, domain_max_size, cordinates.h0_block_idx,
       cordinates.h0_subntt_idx, cordinates.h0_layers_subntt_log_size, cordinates.h0_layer_idx); // R --> N
 
+    if (cordinates.h0_layer_idx != 2 && cordinates.h0_layers_subntt_log_size[cordinates.h0_layer_idx + 1] != 0) {
+      refactor_subntt_output<S, E>(
+        input, config.batch_size, config.columns_batch, twiddles,
+        domain_max_size, direction, cordinates);
+    }
+
+
     return eIcicleError::SUCCESS;
   }
 
@@ -585,10 +631,7 @@ struct NttTaskCordinates {
         for (int block_idx = 0; block_idx < (1 << log_nof_blocks); block_idx++) {
           for (int subntt_idx = 0; subntt_idx < (1 << log_nof_subntts); subntt_idx++) {
             cordinates.h0_block_idx = block_idx;
-            cordinates.h0_subntt_idx = subntt_idx;
-            // ICICLE_LOG_DEBUG<<"cordinates.h0_layers_subntt_log_size[0]: "<<cordinates.h0_layers_subntt_log_size[0];
-            // ICICLE_LOG_DEBUG<<"cordinates.h0_layers_subntt_log_size[1]: "<<cordinates.h0_layers_subntt_log_size[1];
-            
+            cordinates.h0_subntt_idx = subntt_idx;            
             cpu_ntt_basic(input, original_size, direction, config, cordinates);
           }
         }
@@ -601,9 +644,6 @@ struct NttTaskCordinates {
           for (int subntt_idx = 0; subntt_idx < (1 << log_nof_subntts); subntt_idx++) {
             cordinates.h0_block_idx = block_idx;
             cordinates.h0_subntt_idx = subntt_idx;
-            // ICICLE_LOG_DEBUG<<"cordinates.h0_layers_subntt_log_size[0]: "<<cordinates.h0_layers_subntt_log_size[0];
-            // ICICLE_LOG_DEBUG<<"cordinates.h0_layers_subntt_log_size[1]: "<<cordinates.h0_layers_subntt_log_size[1];
-
             cpu_ntt_basic(input, original_size, direction, config, cordinates); // input=output (in-place)
           }
         }
@@ -614,15 +654,13 @@ struct NttTaskCordinates {
         for (int block_idx = 0; block_idx < (1 << log_nof_blocks); block_idx++) {
           cordinates.h0_block_idx = block_idx;
           cpu_ntt_basic(input, original_size, direction, config, cordinates);
-            // input, original_size, direction, config, block_idx, 0 /*subntt_idx - not used*/,
-            // layers_sntt_log_size, layer); // input=output (in-place)
         }
       }
-      if (layer != 2 && layers_sntt_log_size[layer + 1] != 0) {
-        refactor_output<S, E>(
-          input, input, original_size, config.batch_size, config.columns_batch, twiddles,
-          domain_max_size, layers_sntt_log_size, layer, direction, cordinates);
-      }
+      // if (layer != 2 && layers_sntt_log_size[layer + 1] != 0) {
+      //   refactor_output<S, E>(
+      //     input, original_size, config.batch_size, config.columns_batch, twiddles,
+      //     domain_max_size, layers_sntt_log_size, layer, direction, cordinates);
+      // }
     }
     // Sort the output at the end so that elements will be in right order.
     // TODO SHANIE  - After implementing for different ordering, maybe this should be done in a different place
@@ -753,11 +791,11 @@ struct NttTaskCordinates {
         }
         #endif
       }
-      if (layer != 2 && layers_sntt_log_size[layer + 1] != 0) {
-        refactor_output<S, E>(
-          output, output /*input for next layer*/, original_size, config.batch_size, config.columns_batch, twiddles,
-          domain_max_size, layers_sntt_log_size, layer, dir);
-      }
+      // if (layer != 2 && layers_sntt_log_size[layer + 1] != 0) {
+      //   refactor_output<S, E>(
+      //     output, original_size, config.batch_size, config.columns_batch, twiddles,
+      //     domain_max_size, layers_sntt_log_size, layer, dir);
+      // }
     }
     // Sort the output at the end so that elements will be in right order.
     // TODO SHANIE  - After implementing for different ordering, maybe this should be done in a different place
