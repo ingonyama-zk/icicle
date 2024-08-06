@@ -300,14 +300,19 @@ where
 
 #[macro_export]
 macro_rules! impl_vec_ops_field {
-    ($field_prefix : literal, $field_prefix_ident : ident, $field : ident, $field_config : ident) => {
+    (
+        $field_prefix:literal,
+        $field_prefix_ident:ident,
+        $field:ident,
+        $field_config:ident
+    ) => {
         mod $field_prefix_ident {
             use crate::vec_ops::{$field, CudaError, DeviceContext, HostOrDeviceSlice};
             use icicle_core::vec_ops::BitReverseConfig;
             use icicle_core::vec_ops::VecOpsConfig;
 
             extern "C" {
-                #[link_name = concat !($field_prefix, "_add_cuda")]
+                #[link_name = concat!($field_prefix, "_add_cuda")]
                 pub(crate) fn add_scalars_cuda(
                     a: *const $field,
                     b: *const $field,
@@ -316,7 +321,7 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat !($field_prefix, "_accumulate_cuda")]
+                #[link_name = concat!($field_prefix, "_accumulate_cuda")]
                 pub(crate) fn accumulate_scalars_cuda(
                     a: *mut $field,
                     b: *const $field,
@@ -324,7 +329,7 @@ macro_rules! impl_vec_ops_field {
                     cfg: *const VecOpsConfig,
                 ) -> CudaError;
 
-                #[link_name = concat !($field_prefix, "_sub_cuda")]
+                #[link_name = concat!($field_prefix, "_sub_cuda")]
                 pub(crate) fn sub_scalars_cuda(
                     a: *const $field,
                     b: *const $field,
@@ -333,7 +338,7 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat !($field_prefix, "_mul_cuda")]
+                #[link_name = concat!($field_prefix, "_mul_cuda")]
                 pub(crate) fn mul_scalars_cuda(
                     a: *const $field,
                     b: *const $field,
@@ -342,7 +347,7 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
-                #[link_name = concat !($field_prefix, "_transpose_matrix_cuda")]
+                #[link_name = concat!($field_prefix, "_transpose_matrix_cuda")]
                 pub(crate) fn transpose_cuda(
                     input: *const $field,
                     row_size: u32,
@@ -353,7 +358,7 @@ macro_rules! impl_vec_ops_field {
                     is_async: bool,
                 ) -> CudaError;
 
-                #[link_name = concat !($field_prefix, "_bit_reverse_cuda")]
+                #[link_name = concat!($field_prefix, "_bit_reverse_cuda")]
                 pub(crate) fn bit_reverse_cuda(
                     input: *const $field,
                     size: u64,
@@ -493,8 +498,9 @@ macro_rules! impl_vec_ops_field {
 
 #[macro_export]
 macro_rules! impl_vec_add_tests {
-    ($field
-   : ident) => {
+    (
+        $field:ident
+    ) => {
         #[test]
         pub fn test_vec_add_scalars() {
             check_vec_ops_scalars::<$field>();
