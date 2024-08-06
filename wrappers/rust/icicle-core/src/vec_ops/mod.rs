@@ -499,7 +499,7 @@ macro_rules! impl_vec_ops_field {
 #[macro_export]
 macro_rules! impl_vec_add_tests {
     (
-        $field:ident
+      $field:ident
     ) => {
         #[test]
         pub fn test_vec_add_scalars() {
