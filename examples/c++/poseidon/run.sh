@@ -1,2 +1,4 @@
-#!/bin/bash
-./build/example/example
+# #!/bin/bash
+
+# TODO update for V3
+# ./build/example/example

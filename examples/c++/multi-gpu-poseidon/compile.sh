@@ -1,15 +1,18 @@
+
 #!/bin/bash
 
-# Exit immediately on error
-set -e
+# TODO update for V3
 
-mkdir -p build/example
-mkdir -p build/icicle
+# # Exit immediately on error
+# set -e
 
-# Configure and build Icicle
-cmake -S ../../../icicle/ -B build/icicle -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254
-cmake --build build/icicle
+# mkdir -p build/example
+# mkdir -p build/icicle
 
-# Configure and build the example application
-cmake -S . -B build/example
-cmake --build build/example
+# # Configure and build Icicle
+# cmake -S ../../../icicle/ -B build/icicle -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254
+# cmake --build build/icicle
+
+# # Configure and build the example application
+# cmake -S . -B build/example
+# cmake --build build/example

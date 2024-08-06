@@ -1,0 +1,8 @@
+extern "C" eIcicleError ${CURVE}_g2_precompute_msm_bases(
+  const ${CURVE}::g2_affine_t* bases,
+  int nof_bases,
+  const MSMConfig& config,
+  ${CURVE}::g2_affine_t* output_bases);
+
+extern "C" eIcicleError ${CURVE}_g2_msm(
+  const ${CURVE}::scalar_t* scalars, const ${CURVE}::g2_affine_t* points, int msm_size, const MSMConfig& config, ${CURVE}::g2_projective_t* out);
