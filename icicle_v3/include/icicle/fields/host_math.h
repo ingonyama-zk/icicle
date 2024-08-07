@@ -7,7 +7,10 @@ namespace host_math {
 
   // return x + y with T operands
   template <typename T>
-  static constexpr __host__ T add(const T x, const T y) { return x + y; }
+  static constexpr __host__ T add(const T x, const T y)
+  {
+    return x + y;
+  }
 
   // return x + y + carry with T operands
   template <typename T>
@@ -36,7 +39,10 @@ namespace host_math {
 
   // return x - y with T operands
   template <typename T>
-  static constexpr __host__ T sub(const T x, const T y) { return x - y; }
+  static constexpr __host__ T sub(const T x, const T y)
+  {
+    return x - y;
+  }
 
   //    return x - y - borrow with T operands
   template <typename T>
@@ -80,7 +86,6 @@ namespace host_math {
     return result;
   }
 
-
   template <unsigned OPS_COUNT = UINT32_MAX, bool CARRY_IN = false, bool CARRY_OUT = false>
   struct carry_chain {
     unsigned index;
@@ -116,10 +121,8 @@ namespace host_math {
     }
   };
 
-
   template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
-  static constexpr HOST_INLINE uint32_t
-  add_sub_limbs_32(const uint32_t* x, const uint32_t* y, uint32_t* r)
+  static constexpr HOST_INLINE uint32_t add_sub_limbs_32(const uint32_t* x, const uint32_t* y, uint32_t* r)
   {
     uint32_t carry = 0;
     carry_chain<NLIMBS, false, CARRY_OUT> chain;
@@ -129,12 +132,11 @@ namespace host_math {
   }
 
   template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
-  static constexpr HOST_INLINE uint64_t
-  add_sub_limbs_64(const uint64_t* x, const uint64_t* y, uint64_t* r)
+  static constexpr HOST_INLINE uint64_t add_sub_limbs_64(const uint64_t* x, const uint64_t* y, uint64_t* r)
   {
     uint64_t carry = 0;
     carry_chain<NLIMBS, false, CARRY_OUT> chain;
-    for (unsigned i = 0; i < NLIMBS/2; i++)
+    for (unsigned i = 0; i < NLIMBS / 2; i++)
       r[i] = SUBTRACT ? chain.sub(x[i], y[i], carry) : chain.add(x[i], y[i], carry);
     return CARRY_OUT ? carry : 0;
   }
@@ -143,17 +145,16 @@ namespace host_math {
   static constexpr HOST_INLINE T
   add_sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-    if (USE_32){
+    if (USE_32) {
       const uint32_t* x = xs.limbs;
       const uint32_t* y = ys.limbs;
       uint32_t* r = rs.limbs;
-      return add_sub_limbs_32<NLIMBS,SUBTRACT,CARRY_OUT>(x,y,r);
-    }
-    else{
+      return add_sub_limbs_32<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
+    } else {
       const uint64_t* x = xs.limbs64;
       const uint64_t* y = ys.limbs64;
       uint64_t* r = rs.limbs64;
-      return add_sub_limbs_64<NLIMBS,SUBTRACT,CARRY_OUT>(x,y,r);
+      return add_sub_limbs_64<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
     }
   }
 
@@ -173,23 +174,14 @@ namespace host_math {
   }
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
-  static HOST_INLINE void
-  multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
+  static HOST_INLINE void multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
-    for (unsigned i = 0; i < NLIMBS_B/2; i++) {
+    for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
       uint64_t carry = 0;
-      for (unsigned j = 0; j < NLIMBS_A/2; j++)
+      for (unsigned j = 0; j < NLIMBS_A / 2; j++)
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
-      r[NLIMBS_A/2 + i] = carry;
+      r[NLIMBS_A / 2 + i] = carry;
     }
-  }
-
-  template <unsigned NLIMBS>
-  static constexpr HOST_INLINE void
-  compute_karatsuba_middle_part(const uint64_t* a, const uint64_t* b, uint64_t* r, uint64_t* l, uint64_t* h){
-    multiply_raw_64<NLIMBS>(a, b, r);
-    add_sub_limbs_64<NLIMBS, false, false>(r, l , r);
-    add_sub_limbs_64<NLIMBS, false, false>(r, h , r);
   }
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
@@ -202,70 +194,34 @@ namespace host_math {
     multiply_raw_64<NLIMBS_A, NLIMBS_B>(a, b, r);
   }
 
-  template <unsigned NLIMBS>
-  static HOST_INLINE void
-  multiply_karatsuba_64(const storage<NLIMBS>& as, const storage<NLIMBS>& bs, storage<2*NLIMBS>& rs)
+  template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
+  static constexpr HOST_INLINE void
+  multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
-    const uint64_t* a = as.limbs64;
-    const uint64_t* b = bs.limbs64;
-    uint64_t* r = rs.limbs64;
-    multiply_raw_64<NLIMBS/2, NLIMBS/2>(a, b, r);
-    multiply_raw_64<NLIMBS/2, NLIMBS/2>(&a[NLIMBS/2 >> 1], &b[NLIMBS/2 >> 1], &r[NLIMBS/2]);
-    alignas(16) uint64_t middle_part[NLIMBS/2];
-    alignas(16) uint64_t diffs[NLIMBS/2];
-    // uint64_t middle_part[NLIMBS/2];
-    // uint64_t diffs[NLIMBS/2];
-    // Differences of halves \f$ a_{hi} - a_{lo}; b_{lo} - b_{hi} \$f are written into `diffs`, signs written to
-    // `carry1` and `carry2`.
-    uint64_t carry1 = add_sub_limbs_64<(NLIMBS >> 1), true, true>(&a[NLIMBS/2 >> 1], a, diffs);
-    uint64_t carry2 = add_sub_limbs_64<(NLIMBS >> 1), true, true>(b, &b[NLIMBS/2 >> 1], &diffs[NLIMBS/2 >> 1]);
-    // Compute the "middle part" of Karatsuba: \f$ a_{lo} \cdot b_{hi} + b_{lo} \cdot a_{hi} \f$.
-    // This is where the assumption about unset high bit of `a` and `b` is relevant.
-    compute_karatsuba_middle_part<NLIMBS/2>(diffs, &diffs[NLIMBS/2 >> 1], middle_part, r, &r[NLIMBS/2]); //TODO - implement
-    // Corrections that need to be performed when differences are negative.
-    // Again, carry doesn't need to be propagated due to unset high bits of `a` and `b`.
-    if (carry1) add_sub_limbs_64<(NLIMBS >> 1), true, false>(&middle_part[NLIMBS/2 >> 1], &diffs[NLIMBS/2 >> 1], &middle_part[NLIMBS/2 >> 1]);
-    if (carry2) add_sub_limbs_64<(NLIMBS >> 1), true, false>(&middle_part[NLIMBS/2 >> 1], diffs, &middle_part[NLIMBS/2 >> 1]);
-    // Now that middle part is fully correct, it can be added to the result.
-    add_sub_limbs_64<NLIMBS, false, true>(&r[NLIMBS/2 >> 1], middle_part, &r[NLIMBS/2 >> 1]);
-
-    // Carry from adding middle part has to be propagated to the highest limb.
-    for (size_t i = NLIMBS/2 + (NLIMBS/2 >> 1); i < NLIMBS; i++){
-      uint64_t carry = 0;
-      addc_cc(r[i], r[i], carry);
+    if (USE_32) {
+      multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
+      return;
     }
+    if ((NLIMBS_A == 1 && NLIMBS_B == 2) || (NLIMBS_A == 2 && NLIMBS_B == 1)) {
+      multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
+      return;
+    }
+    if (NLIMBS_A == 1 && NLIMBS_B == 1) {
+      rs.limbs[0] = host_math::madc_cc(as.limbs[0], bs.limbs[0], 0, rs.limbs[1]);
+      return;
+    }
+    static_assert(
+      (NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1),
+      "odd number of limbs is not supported\n");
+    if (NLIMBS_A == 2 && NLIMBS_B == 2) {
+      const uint64_t* a = as.limbs64; // nof limbs should be even
+      const uint64_t* b = bs.limbs64;
+      uint64_t* r = rs.limbs64;
+      r[0] = host_math::madc_cc_64(a[0], b[0], 0, r[1]);
+      return;
+    }
+    multiply_raw_64<NLIMBS_A, NLIMBS_B>(as, bs, rs);
   }
-
-template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
-static constexpr HOST_INLINE void
-multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs) {
-  if (USE_32){
-    multiply_raw_32<NLIMBS_A, NLIMBS_B>(as,bs,rs);
-    return;
-  }
-  if ((NLIMBS_A == 1 && NLIMBS_B == 2) || (NLIMBS_A == 2 && NLIMBS_B == 1)){
-    multiply_raw_32<NLIMBS_A, NLIMBS_B>(as,bs,rs);
-    return;
-  }
-  if (NLIMBS_A == 1 && NLIMBS_B == 1){
-    rs.limbs[0] = host_math::madc_cc(as.limbs[0], bs.limbs[0], 0, rs.limbs[1]);
-    return;
-  }
-  static_assert((NLIMBS_A%2 == 0 || NLIMBS_A == 1) && (NLIMBS_B%2 == 0  || NLIMBS_B == 1), "odd number of limbs is not supported\n");
-  if (NLIMBS_A == 2 && NLIMBS_B == 2){
-    const uint64_t* a = as.limbs64; //nof limbs should be even
-    const uint64_t* b = bs.limbs64;
-    uint64_t* r = rs.limbs64;
-    r[0] = host_math::madc_cc_64(a[0], b[0], 0, r[1]);
-    return;
-  }
-  // if constexpr (NLIMBS_A == NLIMBS_B){
-  //   multiply_karatsuba_64<NLIMBS_A>(as,bs,rs);
-  //   return;
-  // }
-  multiply_raw_64<NLIMBS_A, NLIMBS_B>(as,bs,rs);
-}
-  
 
   template <unsigned NLIMBS, unsigned BITS>
   static constexpr HOST_INLINE storage<NLIMBS> left_shift(const storage<NLIMBS>& xs)
@@ -303,7 +259,12 @@ multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<N
     }
   }
 
-  template <unsigned NLIMBS_NUM, unsigned NLIMBS_DENOM, unsigned NLIMBS_Q = (NLIMBS_NUM - NLIMBS_DENOM), bool USE_32 = false, typename T = uint64_t>
+  template <
+    unsigned NLIMBS_NUM,
+    unsigned NLIMBS_DENOM,
+    unsigned NLIMBS_Q = (NLIMBS_NUM - NLIMBS_DENOM),
+    bool USE_32 = false,
+    typename T = uint64_t>
   static constexpr HOST_INLINE void integer_division(
     const storage<NLIMBS_NUM>& num, const storage<NLIMBS_DENOM>& denom, storage<NLIMBS_Q>& q, storage<NLIMBS_DENOM>& r)
   {
