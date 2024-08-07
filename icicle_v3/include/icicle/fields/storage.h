@@ -11,7 +11,10 @@ struct
     storage
 {
   static constexpr unsigned LC = LIMBS_COUNT;
-  uint32_t limbs[LIMBS_COUNT];
+  union {
+    uint32_t limbs[LIMBS_COUNT];
+    uint64_t limbs64[(LIMBS_COUNT + 1) / 2];
+  };
 };
 
 template <unsigned OMEGAS_COUNT, unsigned LIMBS_COUNT>
