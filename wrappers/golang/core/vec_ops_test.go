@@ -15,6 +15,7 @@ func TestVecOpsDefaultConfig(t *testing.T) {
 		false, // isBOnDevice
 		false, // isResultOnDevice
 		false, // IsAsync
+		false, // IsInMontgomeryForm
 	}
 
 	actual := DefaultVecOpsConfig()
