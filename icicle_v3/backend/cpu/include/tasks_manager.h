@@ -1,7 +1,8 @@
 #pragma once 
 #include <atomic>
-#include <thread> // TODO check windows support
+#include <thread>
 #include <stdexcept>
+#include <cassert>
 
 #define LOG_TASKS_PER_THREAD 2
 #define TASKS_PER_THREAD (1 << LOG_TASKS_PER_THREAD)
@@ -10,12 +11,72 @@
 #define THREAD_SLEEP_USEC 1
 
 /**
+ * @class TaskBase
+ * @brief abstract base for a task supported by `TasksManager`.
+ * Important 
+ */
+class TaskBase {
+public:
+  /**
+   * @brief constructor for `TaskBase`.
+   */
+  TaskBase() : m_status(IDLE) {}
+
+  /**
+   * @brief pure virtual function to be executed by `TasksManager`. Implemented by derived class:
+   * This is the actual task to be calculated by `TaskManager` and its workers.
+   */
+  virtual void execute() = 0;
+
+  /**
+   * @brief Signal for the `Worker` owning the task that it is ready to be executed. 
+   * User function.
+   */
+  void dispatch() { m_status.store(READY, std::memory_order_release); }
+
+  // Getters and setter for the various states of the tasks `m_status`.
+  inline bool is_ready()      { return m_status.load(std::memory_order_acquire) == READY; }
+  inline bool is_completed()  { return m_status.load(std::memory_order_acquire) == COMPLETED; }
+  inline bool is_idle()       { return m_status.load(std::memory_order_acquire) == IDLE; }
+  inline void set_idle()      { m_status.store(IDLE, std::memory_order_release); }
+  
+  // COMMENT given that a setter for ready is implemented via dispatch, and a setter for idle is required to allow 
+  // users to handle completed results 2/3 setters have been implemented. As such one of the functions bellow 
+  // (set_completed, increment_status) is irrelevant - Help me choose which
+  inline void set_completed() { assert(is_ready()); m_status.store(COMPLETED, std::memory_order_release); }
+  
+  inline void increment_status() {
+    auto curr_status = m_status.load(std::memory_order_acquire);
+    if (curr_status == COMPLETED) { m_status.store(IDLE, std::memory_order_release); }
+    else { m_status.store(static_cast<eTaskStatus>(static_cast<int>(curr_status) + 1), std::memory_order_release); }
+  }
+
+  /**
+   * @brief wait for a specific task to finish executing. This is a blocking function.
+   */
+  void wait_completed() {
+    while (!is_completed()) {
+      std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
+    }
+  }
+
+private:
+  /**
+   * @enum containing the valid states of a task.
+   */
+  enum eTaskStatus {IDLE, READY, COMPLETED};
+  std::atomic<eTaskStatus> m_status; // current task state. Atomic to ensure proper rd/wr order to sync threads.
+};
+
+/**
  * @class TasksManager
  * @brief Class for managing parallel executions of small `Task`s which are child class of `TaskBase` described bellow.
  * 
  * The class manages a vector of `Worker`s, which are threads and additional required data members for executions of 
  * `Task`s. The `Task`s are split in a thread-pool fashion - finding free slot in the `Worker`s for the user to set up 
  * additional tasks, and fetching completed `Task`s back to the user.
+ * IMPORTANT NOTE: destroying this class or its worker members do not ensure handling of final task results, that is
+ * the user's responsibility.
  */
 template<class Task>
 class TasksManager {
@@ -24,24 +85,28 @@ public:
    * @brief Constructor for `TaskManager`.
    * @param nof_workers - number of workers / threads to be ran simultaneously
    */
-  TasksManager(const int nof_workers) : workers(nof_workers) {}
+  TasksManager(const int nof_workers) : m_workers(nof_workers), m_next_worker_idx(0) {}
 
   /**
    * @brief Get free slot to insert new task to be executed. This is a blocking function - until a free task is found.
-   * @param task_slot - pointer to the internal task to allow the user to edit in the new task.
-   * @return boolean value indication of the current content of the task - true indicates that `task_slot` holds a 
-   * previous result that should be handled by the user before writing the new task.
+   * @return Task* - pointer to allow the user to edit in the new task. nullptr if no task is available.
+   * NOTE: the users should check if the returned task is completed, and if they wish to handle the existing result.
    */
-  bool get_free_task(Task*& task_slot);
+  Task* get_idle_or_completed_task();
 
   /**
    * @brief Get task that holds previous result to be handled by the user. This function blocks the code until a 
    * completed task is found or all tasks are idle with no result.
-   * @param completed_task - pointer to the internal task holding a previous result. a nullptr is 
-   * returned in case that all internal tasks are idle with no result (And as such no completed task will be found).
-   * Again if using completed_task to assign additional tasks, the existing result must be handled before hand.
+   * @return Task* - pointer to a completed task. nullptr if no task is available (all are idle without results).
+   * NOTE: The task's status should be updated if new tasks are to be assigned / other completed tasks are requested.
+   * Use dispatch 
    */
-  void get_completed_task(Task*& completed_task);
+  Task* get_completed_task();
+
+  /**
+   * @brief Wait until all workers are done - i.e. all tasks are idle or completed.
+   */
+  void wait_done();
 private:
   /**
    * @class Worker
@@ -66,244 +131,169 @@ private:
      * Routinely checks for valid inputs in all of the worker's tasks. It executes valid tasks, later marking back that 
      * the tasks are complete. This loops until a kill signal is sent via the class's destructor.
      */
-    void run();
+    void worker_loop();
 
     /**
      * @brief Get free slot to insert new task to be executed. This isn't a blocking function - it checks all worker's 
      * tasks and if no free one is found a nullptr is returned.
-     * @param task_slot - pointer to the internal task of the worker to allow the user to edit in the new task.
-     * @return boolean value indication of the current content of the task - true indicates that `task_slot` holds a 
-     * previous result that should be handled by the user before writing the new task.
+     * @return Task* - pointer to the internal task of the worker to allow the user to edit in the new task.
+     * * NOTE: the users should check if the returned task is completed, and if they wish to handle the existing result.
      */
-    bool get_free_task(Task*& task_slot);
+    Task* get_idle_or_completed_task();
 
     /**
      * @brief Get task that holds previous result to be handled by the user. This isn't a blocking function - it checks 
      * all worker's tasks and if no completed one is found a nullptr is returned.
-     * @param completed_task - pointer to the internal task holding a previous result. 
-     * Again if using completed_task to assign additional tasks, the existing result must be handled before hand.
+     * @param is_idle - boolean flag indicating if all worker's tasks are idle.
+     * @return Task* - pointer to a completed task. nullptr if no task is available.
+     * NOTE: if using completed_task to assign additional tasks, the existing result must be handled before hand.
      */
-    void get_completed_task(Task*& completed_task);
+    Task* get_completed_task(bool& is_idle);
 
     /**
-     * @brief Check if all worker's tasks are idle (free with no result to be handled)
+     * @brief Blocking function until all worker's tasks are done - i.e. idle or completed.
      */
-    bool are_all_idle();
+    void wait_done();
   private:
     std::thread task_executor; // Thread to be run parallel to main
-    std::vector<Task> mTasksFifo; // vector containing the worker's task. a Vector is used to allow buffering.
-    int tail; // Tail (input) idx of the fifo above. Checks for free task start at this idx.
-    int head; // Head (output) idx of the fifo above, the thread works on task at this idx.
+    std::vector<Task> m_tasks; // vector containing the worker's task. a Vector is used to allow buffering.
+    int m_next_task_idx; // Tail (input) idx of the fifo above. Checks for free task start at this idx.
+    int m_head; // Head (output) idx of the fifo above, the thread works on task at this idx. // TODO remove after debug
     bool kill; // boolean to flag from main to the thread to finish.
   };
 
-  std::vector<Worker> workers; // Vector of workers/thread to be ran simultaneously.
+  std::vector<Worker> m_workers; // Vector of workers/threads to be ran simultaneously.
+  int m_next_worker_idx;
 };
-
-/**
- * @class TaskBase
- * @brief abstract base for the task supported by TasksManager above.
- */
-class TaskBase {
-public:
-  /**
-   * @brief constructor fo `TaskBase`.
-   */
-  TaskBase() : status(IDLE), father_fifo_tail(nullptr) {}
-
-  /**
-   * @brief function to be executed by `TasksManager`. Implemented by child class.
-   */
-  virtual void execute() = 0;
-
-  /**
-   * @brief Signal for the `Worker` owning the task that it is ready to be executed. 
-   * Also increase's the workers tail idx.
-   * User function.
-   */
-  void dispatch();
-
-  // Getters and setter for the various states of the tasks `status`.
-  inline bool is_ready_for_work(); // DISPATCHED
-  inline bool can_push_task(); // IDLE or PENDING_RESULT
-  inline bool has_result();
-  inline bool is_idle();
-  inline void set_working();
-  inline void set_pending_result();
-  inline void set_handled_result();
-
-  /**
-   * @brief link this task with the tail idx of the Worker it belongs to. Used only once after construction.
-   */
-  inline void link_father_tail(int* tail_pointer) { father_fifo_tail = tail_pointer; } 
-
-  /**
-   * @brief wait for a specific task to finish executing. This is a blocking function.
-   */
-  void wait_done(); // NOTE the user must handle this task's result before asking for new free tasks  
-
-private:
-  /**
-   * @enum containing the valid states of a task.
-   */
-  enum eTaskStatus {IDLE, DISPATCHED, WORKING, PENDING_RESULT}; // TODO CAPS and eTaskStatus
-  std::atomic<eTaskStatus> status; // current task state. Atomic to ensure proper sync between main and worker threads.
-  int* father_fifo_tail; // pointer to father's tail.
-};
-
-
-bool TaskBase::is_ready_for_work() {
-  return status.load(std::memory_order_acquire) == DISPATCHED;
-}
-
-bool TaskBase::can_push_task() {
-  eTaskStatus curr_status = status.load(std::memory_order_acquire);
-  return curr_status == PENDING_RESULT || curr_status == IDLE;
-}
-
-bool TaskBase::has_result() {
-  return status.load(std::memory_order_acquire) == PENDING_RESULT;
-}
-
-bool TaskBase::is_idle() {
-  return status.load(std::memory_order_acquire) == IDLE;
-}
-
-void TaskBase::dispatch() {
-  (*father_fifo_tail)++;
-  status.store(DISPATCHED, std::memory_order_release);
-}
-
-void TaskBase::set_working() {
-  status.store(WORKING, std::memory_order_release);
-}
-
-void TaskBase::set_pending_result() {
-  status.store(PENDING_RESULT, std::memory_order_release);
-}
-
-void TaskBase::set_handled_result() {
-  status.store(IDLE, std::memory_order_release);
-}
-
-void TaskBase::wait_done() {
-  while (!has_result()) {
-    std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
-  }
-}
 
 template<class Task>
 TasksManager<Task>::Worker::Worker() 
-: mTasksFifo(TASKS_PER_THREAD), 
-  tail(0),
-  head(0),
+: m_tasks(TASKS_PER_THREAD), 
+  m_next_task_idx(0),
+  m_head(0),
   kill(false)
   {
-    // Tail idx linking can only be done after task and worker initialization
-    for (Task& task : mTasksFifo) task.link_father_tail(&tail);
     // Init thread only after finishing all other setup to avoid data races
-    task_executor = std::thread(&TasksManager<Task>::Worker::run, this);
+    task_executor = std::thread(&TasksManager<Task>::Worker::worker_loop, this);
   }
 
 template<class Task>
 TasksManager<Task>::Worker::~Worker() {
   kill = true;
   task_executor.join();
+  task_executor.termin
 }
 
 template<class Task>
-void TasksManager<Task>::Worker::run() {
+void TasksManager<Task>::Worker::worker_loop() {
   while (true) {
-    for (head = 0; head < mTasksFifo.size(); head++)
+    bool all_tasks_idle = true;
+    for (m_head = 0; m_head < m_tasks.size(); m_head++)
     {      
-      Task* task = &mTasksFifo[head];
-      if (!task->is_ready_for_work()) {
-        // Sleep as the thread apparently isn't fully utilized currently
-        std::this_thread::sleep_for(std::chrono::microseconds(THREAD_SLEEP_USEC));       
-        continue;
+      Task* task = &m_tasks[m_head];
+      if (task->is_ready()) {
+        task->execute();
+        task->set_completed(); 
+        all_tasks_idle = false;
       }
-      task->set_working();
-      task->execute();
-      task->set_pending_result();
     }
-    if (kill) return;
+    if (kill) { return; }
+    if (all_tasks_idle)
+    {
+      // Sleep as the thread apparently isn't fully utilized currently
+      std::this_thread::sleep_for(std::chrono::microseconds(THREAD_SLEEP_USEC));  
+    }
   }
 }
 
 template<class Task>
-bool TasksManager<Task>::Worker::get_free_task(Task*& task_slot) {
-  for (int i = 0; i < mTasksFifo.size(); i++)
+Task* TasksManager<Task>::Worker::get_idle_or_completed_task() {
+  for (int i = 0; i < m_tasks.size(); i++)
   {
     // TASKS_PER_WORKER is a power of 2 so modulo is done via bitmask.
-    int tail_adjusted_idx = (i + tail) & TASK_IDX_MASK; 
+    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK; 
 
-    if (mTasksFifo[tail_adjusted_idx].can_push_task()) // Either IDLE or PENDING_RESULT are valid.
+    if (m_tasks[m_next_task_idx].is_idle() || m_tasks[m_next_task_idx].is_completed())
     {
-      task_slot = &mTasksFifo[tail_adjusted_idx];
-      return task_slot->has_result();
+      return &m_tasks[m_next_task_idx];
     }
   }
-  task_slot = nullptr;
-  return false;
+  return nullptr;
 }
 
 template<class Task>
-void TasksManager<Task>::Worker::get_completed_task(Task*& task_slot) {
-  for (int i = 0; i < mTasksFifo.size(); i++)
+Task* TasksManager<Task>::Worker::get_completed_task(bool& is_idle) {
+  for (int i = 0; i < m_tasks.size(); i++)
   {
-    int tail_adjusted_idx = (i + tail) & TASK_IDX_MASK;
+    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK; 
 
-    if (mTasksFifo[tail_adjusted_idx].has_result()) // Only PENDING_RESULT is valid.
+    if (m_tasks[m_next_task_idx].is_completed())
     {
-      task_slot = &mTasksFifo[tail_adjusted_idx];
-      return;
+      is_idle = false;
+      return &m_tasks[m_next_task_idx];
     }
+    if (!m_tasks[m_next_task_idx].is_idle()){ is_idle = false; }
   }
-  task_slot = nullptr;
+  return nullptr;
 }
 
 template<class Task>
-bool TasksManager<Task>::Worker::are_all_idle()
-{
-  bool all_tasks_idle = true;
-  for (Task& task : mTasksFifo) all_tasks_idle = all_tasks_idle && task.is_idle();
-  return all_tasks_idle;
-}
-
-template<class Task>
-bool TasksManager<Task>::get_free_task(Task*& task_slot) {
-  bool has_task = false;
-  do
+void TasksManager<Task>::Worker::wait_done() {
+  bool all_done = false;
+  while (!all_done) 
   {
-    for (Worker& worker : workers)
-    {
-      has_task = worker.get_free_task(task_slot);
-      if (task_slot != nullptr) break;
-    }
-  } while (task_slot == nullptr);
-  if (has_task) task_slot->set_handled_result(); // User will handle result outside before dispatching a new one.
-  return has_task;
-}
-
-template<class Task>
-void TasksManager<Task>::get_completed_task(Task*& completed_task) {
-  completed_task = nullptr;
-  bool all_tasks_idle = true;
-  do
-  {
-    all_tasks_idle = true;
-    for (Worker& worker : workers)
-    {
-      worker.get_completed_task(completed_task);
-      if (completed_task != nullptr)
-      {
-        completed_task->set_handled_result(); // User will handle result outside.
-        return;
+    all_done = true;
+    for (Task& task : m_tasks) 
+    { 
+      if (!(m_tasks[m_next_task_idx].is_idle() || m_tasks[m_next_task_idx].is_completed())) 
+      { 
+        all_done = false; 
       }
-
-      all_tasks_idle = all_tasks_idle && worker.are_all_idle();
     }
-  } while (!all_tasks_idle);
+  }
+}
+
+template<class Task>
+Task* TasksManager<Task>::get_idle_or_completed_task() {
+  Task* task = nullptr;
+  while (true)
+  {
+    for (int i = 0; i < m_workers.size(); i++)
+    {
+      m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1)? m_next_worker_idx + 1 : 0;
+
+      task = m_workers[m_next_worker_idx].get_idle_or_completed_task(task_slot);
+      if (task != nullptr) { return task; }
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
+  }
+}
+
+template<class Task>
+Task* TasksManager<Task>::get_completed_task() {
+  completed_task = nullptr;
+  bool all_idle = false;
+  while (!all_idle)
+  {
+    // Flag sent by reference to get_completed_task below - if a task that isn't idle is found the flag is set to false
+    all_idle = true; 
+    for (int i = 0; i < m_workers.size(); i++)
+    {
+      m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1)? m_next_worker_idx + 1 : 0;
+
+      completed_task = m_workers[m_next_worker_idx].get_completed_task(all_idle);
+      if (completed_task != nullptr) { return completed_task; }
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
+  }
   // No completed tasks were found in the loop - return null.
   completed_task = nullptr;
+}
+
+template<class Task>
+void TasksManager<Task>::wait_done() {
+  for (Worker& worker : m_workers)
+  {
+    worker.wait_done();
+  }
 }
