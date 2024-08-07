@@ -702,6 +702,11 @@ namespace mxntt {
   {
     CHK_INIT_IF_RETURN();
 
+    if (log_size < 4) {
+      // TODO: fast twiddles should be used only with mixed radix ntt
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "when using fast twiddles, log_size must be at least 4");
+    }
+
     S* w6_table;
     S* w12_table;
     S* w18_table;
