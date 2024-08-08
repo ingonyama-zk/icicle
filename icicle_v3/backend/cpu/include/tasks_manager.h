@@ -7,7 +7,7 @@
 #define LOG_TASKS_PER_THREAD 2
 #define TASKS_PER_THREAD (1 << LOG_TASKS_PER_THREAD)
 #define TASK_IDX_MASK (TASKS_PER_THREAD - 1)
-#define MANAGER_SLEEP_USEC 10
+#define MANAGER_SLEEP_USEC 1
 #define THREAD_SLEEP_USEC 1
 
 /**
@@ -181,7 +181,6 @@ template<class Task>
 TasksManager<Task>::Worker::~Worker() {
   kill = true;
   task_executor.join();
-  task_executor.termin
 }
 
 template<class Task>
@@ -262,16 +261,16 @@ Task* TasksManager<Task>::get_idle_or_completed_task() {
     {
       m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1)? m_next_worker_idx + 1 : 0;
 
-      task = m_workers[m_next_worker_idx].get_idle_or_completed_task(task_slot);
+      task = m_workers[m_next_worker_idx].get_idle_or_completed_task();
       if (task != nullptr) { return task; }
     }
-    std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
+    // std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
   }
 }
 
 template<class Task>
 Task* TasksManager<Task>::get_completed_task() {
-  completed_task = nullptr;
+  Task* completed_task = nullptr;
   bool all_idle = false;
   while (!all_idle)
   {
@@ -284,7 +283,7 @@ Task* TasksManager<Task>::get_completed_task() {
       completed_task = m_workers[m_next_worker_idx].get_completed_task(all_idle);
       if (completed_task != nullptr) { return completed_task; }
     }
-    std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
+    // std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
   }
   // No completed tasks were found in the loop - return null.
   completed_task = nullptr;
