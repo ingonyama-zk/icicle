@@ -273,7 +273,7 @@ Task* TasksManager<Task>::get_completed_task() {
     std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
   }
   // No completed tasks were found in the loop - return null.
-  completed_task = nullptr;
+  return nullptr;
 }
 
 template<class Task>
